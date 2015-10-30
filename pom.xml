@@ -103,6 +103,10 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <maven-clover2-plugin.version>3.3.0</maven-clover2-plugin.version>
     <maven-bundle-plugin.version>2.5.0</maven-bundle-plugin.version>
     <lifecycle-mapping.version>1.0.0</lifecycle-mapping.version>
+    <maven-checkstyle-plugin.version>2.15</maven-checkstyle-plugin.version>
+    <checkstyle.version>6.6</checkstyle.version>
+
+    <shell-executable>bash</shell-executable>
   </properties>
 
   <modules>
@@ -118,6 +122,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <module>hadoop-dist</module>
     <module>hadoop-client</module>
     <module>hadoop-minicluster</module>
+    <module>hadoop-build-tools</module>
   </modules>
 
   <build>
@@ -175,7 +180,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
             </dependency>
           </dependencies>
         </plugin>
-        <!--This plugin's configuration is used to store Eclipse m2e settings only. 
+        <!--This plugin's configuration is used to store Eclipse m2e settings only.
         It has no influence on the Maven build itself.-->
         <plugin>
           <groupId>org.eclipse.m2e</groupId>
@@ -292,6 +297,30 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
           <artifactId>maven-bundle-plugin</artifactId>
           <version>${maven-bundle-plugin.version}</version>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-checkstyle-plugin</artifactId>
+          <version>${maven-checkstyle-plugin.version}</version>
+          <dependencies>
+            <dependency>
+              <groupId>org.apache.hadoop</groupId>
+              <artifactId>hadoop-build-tools</artifactId>
+              <version>${project.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>com.puppycrawl.tools</groupId>
+              <artifactId>checkstyle</artifactId>
+              <version>${checkstyle.version}</version>
+            </dependency>
+          </dependencies>
+          <configuration>
+            <configLocation>checkstyle/checkstyle.xml</configLocation>
+            <failOnViolation>false</failOnViolation>
+            <format>xml</format>
+            <format>html</format>
+            <outputFile>${project.build.directory}/test/checkstyle-errors.xml</outputFile>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
 
@@ -334,6 +363,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
             <exclude>.git/**</exclude>
             <exclude>.idea/**</exclude>
 	    <exclude>**/build/**</exclude>
+            <exclude>**/patchprocess/**</exclude>
          </excludes>
        </configuration>
       </plugin>
@@ -357,9 +387,14 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         <inherited>true</inherited>
         <extensions>true</extensions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>${maven-checkstyle-plugin.version}</version>
+      </plugin>
     </plugins>
   </build>
-  
+
   <reporting>
     <excludeDefaults>true</excludeDefaults>
     <plugins>
@@ -409,15 +444,15 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
                 </docletArtifact>
               </docletArtifacts>
               <useStandardDocletOptions>true</useStandardDocletOptions>
-    
+
               <!-- switch on dependency-driven aggregation -->
               <includeDependencySources>false</includeDependencySources>
-    
+
               <dependencySourceIncludes>
                 <!-- include ONLY dependencies I control -->
                 <dependencySourceInclude>org.apache.hadoop:hadoop-annotations</dependencySourceInclude>
               </dependencySourceIncludes>
-    
+
             </configuration>
             <reports>
               <report>aggregate</report>
@@ -440,7 +475,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       </plugin>
     </plugins>
   </reporting>
-  
+
   <profiles>
     <profile>
       <id>src</id>
@@ -555,12 +590,12 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       <properties>
         <cloverLicenseLocation>${user.home}/.clover.license</cloverLicenseLocation>
         <cloverDatabase>${project.build.directory}/clover/hadoop-coverage.db</cloverDatabase>
-        <!-- NB: This additional parametrization is made in order 
+        <!-- NB: This additional parametrization is made in order
              to be able to re-define these properties with "-Dk=v" maven options.
-             By some reason the expressions declared in clover 
-             docs like "${maven.clover.generateHtml}" do not work in that way. 
-             However, the below properties are confirmed to work: e.g. 
-             -DcloverGenHtml=false switches off the Html generation.  
+             By some reason the expressions declared in clover
+             docs like "${maven.clover.generateHtml}" do not work in that way.
+             However, the below properties are confirmed to work: e.g.
+             -DcloverGenHtml=false switches off the Html generation.
              The default values provided here exactly correspond to Clover defaults, so
              the behavior is 100% backwards compatible. -->
         <cloverAlwaysReport>true</cloverAlwaysReport>

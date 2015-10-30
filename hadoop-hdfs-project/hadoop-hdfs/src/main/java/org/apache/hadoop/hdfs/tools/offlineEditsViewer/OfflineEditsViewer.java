@@ -39,7 +39,8 @@ import org.apache.commons.cli.PosixParser;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class OfflineEditsViewer extends Configured implements Tool {
-
+  private static final String HELP_OPT = "-h";
+  private static final String HELP_LONGOPT = "--help";
   private final static String defaultProcessor = "xml";
 
   /**
@@ -69,7 +70,7 @@ public class OfflineEditsViewer extends Configured implements Tool {
       "                       edits file)\n" +
       "-h,--help              Display usage information and exit\n" +
       "-f,--fix-txids         Renumber the transaction IDs in the input,\n" +
-      "                       so that there are no gaps or invalid " +
+      "                       so that there are no gaps or invalid\n" +
       "                       transaction IDs.\n" +
       "-r,--recover           When reading binary edit logs, use recovery \n" +
       "                       mode.  This will give you the chance to skip \n" +
@@ -136,7 +137,7 @@ public class OfflineEditsViewer extends Configured implements Tool {
         visitor = OfflineEditsVisitorFactory.getEditsVisitor(
             outputFileName, processor, flags.getPrintToScreen());
       }
-      boolean xmlInput = inputFileName.endsWith(".xml");
+      boolean xmlInput = inputFileName.toLowerCase().endsWith(".xml");
       OfflineEditsLoader loader = OfflineEditsLoaderFactory.
           createLoader(visitor, inputFileName, xmlInput, flags);
       loader.loadEdits();
@@ -192,7 +193,12 @@ public class OfflineEditsViewer extends Configured implements Tool {
     Options options = buildOptions();
     if(argv.length == 0) {
       printHelp();
-      return -1;
+      return 0;
+    }
+    // print help and exit with zero exit code
+    if (argv.length == 1 && isHelpOption(argv[0])) {
+      printHelp();
+      return 0;
     }
     CommandLineParser parser = new PosixParser();
     CommandLine cmd;
@@ -205,7 +211,9 @@ public class OfflineEditsViewer extends Configured implements Tool {
       return -1;
     }
     
-    if(cmd.hasOption("h")) { // print help and exit
+    if (cmd.hasOption("h")) {
+      // print help and exit with non zero exit code since
+      // it is not expected to give help and other options together.
       printHelp();
       return -1;
     }
@@ -236,5 +244,10 @@ public class OfflineEditsViewer extends Configured implements Tool {
   public static void main(String[] argv) throws Exception {
     int res = ToolRunner.run(new OfflineEditsViewer(), argv);
     System.exit(res);
+  }
+
+  private static boolean isHelpOption(String arg) {
+    return arg.equalsIgnoreCase(HELP_OPT) ||
+        arg.equalsIgnoreCase(HELP_LONGOPT);
   }
 }

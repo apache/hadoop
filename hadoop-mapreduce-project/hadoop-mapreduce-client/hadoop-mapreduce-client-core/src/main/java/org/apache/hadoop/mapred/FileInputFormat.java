@@ -57,9 +57,12 @@ import com.google.common.collect.Iterables;
  * <p><code>FileInputFormat</code> is the base class for all file-based 
  * <code>InputFormat</code>s. This provides a generic implementation of
  * {@link #getSplits(JobConf, int)}.
- * Subclasses of <code>FileInputFormat</code> can also override the 
- * {@link #isSplitable(FileSystem, Path)} method to ensure input-files are
- * not split-up and are processed as a whole by {@link Mapper}s.
+ *
+ * Implementations of <code>FileInputFormat</code> can also override the
+ * {@link #isSplitable(FileSystem, Path)} method to prevent input files
+ * from being split-up in certain situations. Implementations that may
+ * deal with non-splittable files <i>must</i> override this method, since
+ * the default implementation assumes splitting is always possible.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -116,9 +119,13 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
   }
 
   /**
-   * Is the given filename splitable? Usually, true, but if the file is
+   * Is the given filename splittable? Usually, true, but if the file is
    * stream compressed, it will not be.
-   * 
+   *
+   * The default implementation in <code>FileInputFormat</code> always returns
+   * true. Implementations that may deal with non-splittable files <i>must</i>
+   * override this method.
+   *
    * <code>FileInputFormat</code> implementations can override this and return
    * <code>false</code> to ensure that individual input files are never split-up
    * so that {@link Mapper}s process entire files.
@@ -246,7 +253,7 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
       LOG.debug("Time taken to get FileStatuses: "
           + sw.now(TimeUnit.MILLISECONDS));
     }
-    LOG.info("Total input paths to process : " + result.length);
+    LOG.info("Total input files to process : " + result.length);
     return result;
   }
   

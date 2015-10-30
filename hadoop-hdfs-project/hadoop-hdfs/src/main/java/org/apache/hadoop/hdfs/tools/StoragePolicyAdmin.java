@@ -22,14 +22,15 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.tools.TableListing;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -97,7 +98,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
     public int run(Configuration conf, List<String> args) throws IOException {
       final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
       try {
-        BlockStoragePolicy[] policies = dfs.getStoragePolicies();
+        Collection<BlockStoragePolicy> policies = dfs.getAllStoragePolicies();
         System.out.println("Block Storage Policies:");
         for (BlockStoragePolicy policy : policies) {
           if (policy != null) {
@@ -151,11 +152,11 @@ public class StoragePolicyAdmin extends Configured implements Tool {
           return 2;
         }
         byte storagePolicyId = status.getStoragePolicy();
-        if (storagePolicyId == BlockStoragePolicySuite.ID_UNSPECIFIED) {
+        if (storagePolicyId == HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
           System.out.println("The storage policy of " + path + " is unspecified");
           return 0;
         }
-        BlockStoragePolicy[] policies = dfs.getStoragePolicies();
+        Collection<BlockStoragePolicy> policies = dfs.getAllStoragePolicies();
         for (BlockStoragePolicy p : policies) {
           if (p.getId() == storagePolicyId) {
             System.out.println("The storage policy of " + path + ":\n" + p);

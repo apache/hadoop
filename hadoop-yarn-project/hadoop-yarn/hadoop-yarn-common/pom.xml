@@ -25,7 +25,7 @@
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn-common</artifactId>
   <version>3.0.0-SNAPSHOT</version>
-  <name>hadoop-yarn-common</name>
+  <name>Apache Hadoop YARN Common</name>
 
   <properties>
     <!-- Needed for generating FindBugs warnings using parent pom -->
@@ -215,6 +215,10 @@
             <exclude>src/main/resources/webapps/static/dt-1.9.4/css/demo_table.css</exclude>
             <exclude>src/main/resources/webapps/static/dt-1.9.4/images/Sorting icons.psd</exclude>
             <exclude>src/main/resources/webapps/static/jquery/themes-1.9.1/base/jquery-ui.css</exclude>
+            <exclude>src/test/resources/application_1440536969523_0001.har/_index</exclude>
+            <exclude>src/test/resources/application_1440536969523_0001.har/part-0</exclude>
+            <exclude>src/test/resources/application_1440536969523_0001.har/_masterindex</exclude>
+            <exclude>src/test/resources/application_1440536969523_0001.har/_SUCCESS</exclude>
           </excludes>
         </configuration>
       </plugin>
@@ -253,7 +257,7 @@
                 <param>${basedir}/src/main/proto</param>
               </imports>
               <source>
-                <directory>${basedir}/src/main/proto/server</directory>
+                <directory>${basedir}/src/main/proto</directory>
                 <includes>
                   <include>yarn_security_token.proto</include>
                 </includes>
@@ -293,7 +297,21 @@
           </execution>
         </executions>
       </plugin>
-
+      <plugin>
+        <artifactId>maven-clean-plugin</artifactId>
+        <configuration>
+          <filesets>
+            <fileset>
+              <directory>src/site/resources</directory>
+              <includes>
+                <include>configuration.xsl</include>
+                <include>yarn-default.xml</include>
+              </includes>
+              <followSymlinks>false</followSymlinks>
+            </fileset>
+          </filesets>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 </project>

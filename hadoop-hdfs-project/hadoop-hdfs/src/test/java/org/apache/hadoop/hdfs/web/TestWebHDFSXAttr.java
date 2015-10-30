@@ -31,6 +31,6 @@ public class TestWebHDFSXAttr extends FSXAttrBaseTest {
    */
   @Override
   protected WebHdfsFileSystem createFileSystem() throws Exception {
-    return WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsFileSystem.SCHEME);
+    return WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsConstants.WEBHDFS_SCHEME);
   }
 }

@@ -25,15 +25,16 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.EnumSet;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.Test;
 
@@ -41,8 +42,8 @@ import org.junit.Test;
  * newly introduced {@link FSDataOutputStream#hflush()} method */
 public class TestHFlush {
   {
-    ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
   }
   
   private final String fName = "hflushtest.dat";
@@ -386,7 +387,7 @@ public class TestHFlush {
     final int fileLen = 6;
     Configuration conf = new HdfsConfiguration();
     final int timeout = 2000;
-    conf.setInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 
+    conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY,
         timeout);
 
     final Path p = new Path("/pipelineHeartbeat/foo");

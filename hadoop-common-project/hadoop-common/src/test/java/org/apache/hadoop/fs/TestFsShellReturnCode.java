@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -402,7 +403,7 @@ public class TestFsShellReturnCode {
     // processing a file throws an interrupt, it should blow on first file
     assertEquals(1, InterruptCommand.processed);
     assertEquals(130, exitCode);
-    
+
     exitCode = shell.run(
         new String[]{ "-testInterrupt", d.toString() });
     // processing a file throws an interrupt, it should blow on file
@@ -412,17 +413,32 @@ public class TestFsShellReturnCode {
   }
 
   /**
+   * Faked Chown class for {@link testChownUserAndGroupValidity()}.
+   *
+   * The test only covers argument parsing, so override to skip processing.
+   */
+  private static class FakeChown extends FsShellPermissions.Chown {
+    public static String NAME = "chown";
+    @Override
+    protected void processArgument(PathData item) {
+    }
+  }
+
+  /**
    * Tests combinations of valid and invalid user and group arguments to chown.
    */
   @Test
   public void testChownUserAndGroupValidity() {
-    // This test only covers argument parsing, so override to skip processing.
-    FsCommand chown = new FsShellPermissions.Chown() {
-      @Override
-      protected void processArgument(PathData item) {
-      }
-    };
-    chown.setConf(new Configuration());
+    testChownUserAndGroupValidity(true);
+    testChownUserAndGroupValidity(false);
+  }
+
+  private void testChownUserAndGroupValidity(boolean enableWarning) {
+    Configuration conf = new Configuration();
+    conf.setBoolean(
+        HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_KEY, enableWarning);
+    FsCommand chown = new FakeChown();
+    chown.setConf(conf);
 
     // The following are valid (no exception expected).
     chown.run("user", "/path");
@@ -447,17 +463,31 @@ public class TestFsShellReturnCode {
   }
 
   /**
+   * Faked Chgrp class for {@link testChgrpGroupValidity()}.
+   * The test only covers argument parsing, so override to skip processing.
+   */
+  private static class FakeChgrp extends FsShellPermissions.Chgrp {
+    public static String NAME = "chgrp";
+    @Override
+    protected void processArgument(PathData item) {
+    }
+  }
+
+  /**
    * Tests valid and invalid group arguments to chgrp.
    */
   @Test
   public void testChgrpGroupValidity() {
-    // This test only covers argument parsing, so override to skip processing.
-    FsCommand chgrp = new FsShellPermissions.Chgrp() {
-      @Override
-      protected void processArgument(PathData item) {
-      }
-    };
-    chgrp.setConf(new Configuration());
+    testChgrpGroupValidity(true);
+    testChgrpGroupValidity(false);
+  }
+
+  private void testChgrpGroupValidity(boolean enableWarning) {
+    Configuration conf = new Configuration();
+    conf.setBoolean(
+        HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_KEY, enableWarning);
+    FsShellPermissions.Chgrp chgrp = new FakeChgrp();
+    chgrp.setConf(conf);
 
     // The following are valid (no exception expected).
     chgrp.run("group", "/path");

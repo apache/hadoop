@@ -77,31 +77,32 @@ public class JobFinishedEvent  implements HistoryEvent {
   public Object getDatum() {
     if (datum == null) {
       datum = new JobFinished();
-      datum.jobid = new Utf8(jobId.toString());
-      datum.finishTime = finishTime;
-      datum.finishedMaps = finishedMaps;
-      datum.finishedReduces = finishedReduces;
-      datum.failedMaps = failedMaps;
-      datum.failedReduces = failedReduces;
-      datum.mapCounters = EventWriter.toAvro(mapCounters, "MAP_COUNTERS");
-      datum.reduceCounters = EventWriter.toAvro(reduceCounters,
-        "REDUCE_COUNTERS");
-      datum.totalCounters = EventWriter.toAvro(totalCounters, "TOTAL_COUNTERS");
+      datum.setJobid(new Utf8(jobId.toString()));
+      datum.setFinishTime(finishTime);
+      datum.setFinishedMaps(finishedMaps);
+      datum.setFinishedReduces(finishedReduces);
+      datum.setFailedMaps(failedMaps);
+      datum.setFailedReduces(failedReduces);
+      datum.setMapCounters(EventWriter.toAvro(mapCounters, "MAP_COUNTERS"));
+      datum.setReduceCounters(EventWriter.toAvro(reduceCounters,
+          "REDUCE_COUNTERS"));
+      datum.setTotalCounters(EventWriter.toAvro(totalCounters,
+          "TOTAL_COUNTERS"));
     }
     return datum;
   }
 
   public void setDatum(Object oDatum) {
     this.datum = (JobFinished) oDatum;
-    this.jobId = JobID.forName(datum.jobid.toString());
-    this.finishTime = datum.finishTime;
-    this.finishedMaps = datum.finishedMaps;
-    this.finishedReduces = datum.finishedReduces;
-    this.failedMaps = datum.failedMaps;
-    this.failedReduces = datum.failedReduces;
-    this.mapCounters = EventReader.fromAvro(datum.mapCounters);
-    this.reduceCounters = EventReader.fromAvro(datum.reduceCounters);
-    this.totalCounters = EventReader.fromAvro(datum.totalCounters);
+    this.jobId = JobID.forName(datum.getJobid().toString());
+    this.finishTime = datum.getFinishTime();
+    this.finishedMaps = datum.getFinishedMaps();
+    this.finishedReduces = datum.getFinishedReduces();
+    this.failedMaps = datum.getFailedMaps();
+    this.failedReduces = datum.getFailedReduces();
+    this.mapCounters = EventReader.fromAvro(datum.getMapCounters());
+    this.reduceCounters = EventReader.fromAvro(datum.getReduceCounters());
+    this.totalCounters = EventReader.fromAvro(datum.getTotalCounters());
   }
 
   public EventType getEventType() {

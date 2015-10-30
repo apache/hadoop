@@ -22,4 +22,5 @@ public enum ContainersLauncherEventType {
   LAUNCH_CONTAINER,
   RECOVER_CONTAINER,
   CLEANUP_CONTAINER, // The process(grp) itself.
+  SIGNAL_CONTAINER,
 }

@@ -19,18 +19,19 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningQuotaException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.ResourceOverCommitException;
-
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.ReservationAgent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -74,20 +75,22 @@ public class TestCapacityOverTimePolicy {
     maxAlloc = Resource.newInstance(1024 * 8, 8);
 
     mAgent = mock(ReservationAgent.class);
-    ReservationSystemTestUtil testUtil = new ReservationSystemTestUtil();
     QueueMetrics rootQueueMetrics = mock(QueueMetrics.class);
-    String reservationQ = testUtil.getFullReservationQueueName();
-    Resource clusterResource = testUtil.calculateClusterResource(totCont);
+    String reservationQ =
+        ReservationSystemTestUtil.getFullReservationQueueName();
+    Resource clusterResource =
+        ReservationSystemTestUtil.calculateClusterResource(totCont);
     ReservationSchedulerConfiguration conf =
         ReservationSystemTestUtil.createConf(reservationQ, timeWindow,
             instConstraint, avgConstraint);
     CapacityOverTimePolicy policy = new CapacityOverTimePolicy();
     policy.init(reservationQ, conf);
+    RMContext context = ReservationSystemTestUtil.createMockRMContext();
 
     plan =
         new InMemoryPlan(rootQueueMetrics, policy, mAgent,
             clusterResource, step, res, minAlloc, maxAlloc,
-            "dedicated", null, true);
+            "dedicated", null, true, context);
   }
 
   public int[] generateData(int length, int val) {
@@ -102,12 +105,16 @@ public class TestCapacityOverTimePolicy {
   public void testSimplePass() throws IOException, PlanningException {
     // generate allocation that simply fit within all constraints
     int[] f = generateData(3600, (int) Math.ceil(0.2 * totCont));
+
+    ReservationDefinition rDef =
+        ReservationSystemTestUtil.createSimpleReservationDefinition(
+            initTime, initTime + f.length + 1, f.length);
     assertTrue(plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
-            ReservationSystemTestUtil.getNewReservationId(), null, "u1",
+            ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
             "dedicated", initTime, initTime + f.length,
             ReservationSystemTestUtil.generateAllocation(initTime, step, f),
-            res, minAlloc)));
+            res, minAlloc), false));
   }
 
   @Test
@@ -116,25 +123,31 @@ public class TestCapacityOverTimePolicy {
     // fit within
     // max instantanesou
     int[] f = generateData(3600, (int) Math.ceil(0.69 * totCont));
+    ReservationDefinition rDef =
+        ReservationSystemTestUtil.createSimpleReservationDefinition(
+            initTime, initTime + f.length + 1, f.length);
     assertTrue(plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
-            ReservationSystemTestUtil.getNewReservationId(), null, "u1",
+            ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
             "dedicated", initTime, initTime + f.length,
             ReservationSystemTestUtil.generateAllocation(initTime, step, f),
-            res, minAlloc)));
+            res, minAlloc), false));
   }
 
   @Test
   public void testMultiTenantPass() throws IOException, PlanningException {
     // generate allocation from multiple tenants that barely fit in tot capacity
     int[] f = generateData(3600, (int) Math.ceil(0.25 * totCont));
+    ReservationDefinition rDef =
+        ReservationSystemTestUtil.createSimpleReservationDefinition(
+            initTime, initTime + f.length + 1, f.length);
     for (int i = 0; i < 4; i++) {
       assertTrue(plan.toString(),
           plan.addReservation(new InMemoryReservationAllocation(
-              ReservationSystemTestUtil.getNewReservationId(), null, "u" + i,
+              ReservationSystemTestUtil.getNewReservationId(), rDef, "u" + i,
               "dedicated", initTime, initTime + f.length,
               ReservationSystemTestUtil.generateAllocation(initTime, step, f),
-              res, minAlloc)));
+              res, minAlloc), false));
     }
   }
 
@@ -142,13 +155,16 @@ public class TestCapacityOverTimePolicy {
   public void testMultiTenantFail() throws IOException, PlanningException {
     // generate allocation from multiple tenants that exceed tot capacity
     int[] f = generateData(3600, (int) Math.ceil(0.25 * totCont));
+    ReservationDefinition rDef =
+        ReservationSystemTestUtil.createSimpleReservationDefinition(
+            initTime, initTime + f.length + 1, f.length);
     for (int i = 0; i < 5; i++) {
       assertTrue(plan.toString(),
           plan.addReservation(new InMemoryReservationAllocation(
-              ReservationSystemTestUtil.getNewReservationId(), null, "u" + i,
+              ReservationSystemTestUtil.getNewReservationId(), rDef, "u" + i,
               "dedicated", initTime, initTime + f.length,
               ReservationSystemTestUtil.generateAllocation(initTime, step, f),
-              res, minAlloc)));
+              res, minAlloc), false));
     }
   }
 
@@ -156,12 +172,15 @@ public class TestCapacityOverTimePolicy {
   public void testInstFail() throws IOException, PlanningException {
     // generate allocation that exceed the instantaneous cap single-show
     int[] f = generateData(3600, (int) Math.ceil(0.71 * totCont));
+    ReservationDefinition rDef =
+        ReservationSystemTestUtil.createSimpleReservationDefinition(
+            initTime, initTime + f.length + 1, f.length);
     assertTrue(plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
-            ReservationSystemTestUtil.getNewReservationId(), null, "u1",
+            ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
             "dedicated", initTime, initTime + f.length,
             ReservationSystemTestUtil.generateAllocation(initTime, step, f),
-            res, minAlloc)));
+            res, minAlloc), false));
     Assert.fail("should not have accepted this");
   }
 
@@ -169,26 +188,28 @@ public class TestCapacityOverTimePolicy {
   public void testInstFailBySum() throws IOException, PlanningException {
     // generate allocation that exceed the instantaneous cap by sum
     int[] f = generateData(3600, (int) Math.ceil(0.3 * totCont));
-
+    ReservationDefinition rDef =
+        ReservationSystemTestUtil.createSimpleReservationDefinition(
+            initTime, initTime + f.length + 1, f.length);
     assertTrue(plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
-            ReservationSystemTestUtil.getNewReservationId(), null, "u1",
+            ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
             "dedicated", initTime, initTime + f.length,
             ReservationSystemTestUtil.generateAllocation(initTime, step, f),
-            res, minAlloc)));
+            res, minAlloc), false));
     assertTrue(plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
-            ReservationSystemTestUtil.getNewReservationId(), null, "u1",
+            ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
             "dedicated", initTime, initTime + f.length,
             ReservationSystemTestUtil.generateAllocation(initTime, step, f),
-            res, minAlloc)));
+            res, minAlloc), false));
     try {
       assertTrue(plan.toString(),
           plan.addReservation(new InMemoryReservationAllocation(
-              ReservationSystemTestUtil.getNewReservationId(), null, "u1",
+              ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
               "dedicated", initTime, initTime + f.length,
               ReservationSystemTestUtil.generateAllocation(initTime, step, f),
-              res, minAlloc)));
+              res, minAlloc), false));
       Assert.fail();
     } catch (PlanningQuotaException p) {
       // expected
@@ -198,38 +219,46 @@ public class TestCapacityOverTimePolicy {
   @Test(expected = PlanningQuotaException.class)
   public void testFailAvg() throws IOException, PlanningException {
     // generate an allocation which violates the 25% average single-shot
-    Map<ReservationInterval, ReservationRequest> req =
-        new TreeMap<ReservationInterval, ReservationRequest>();
+    Map<ReservationInterval, Resource> req =
+        new TreeMap<ReservationInterval, Resource>();
     long win = timeWindow / 2 + 100;
     int cont = (int) Math.ceil(0.5 * totCont);
     req.put(new ReservationInterval(initTime, initTime + win),
-        ReservationRequest.newInstance(Resource.newInstance(1024, 1), cont));
-
+        ReservationSystemUtil.toResource(
+            ReservationRequest.newInstance(Resource.newInstance(1024, 1),
+                cont)));
+    ReservationDefinition rDef =
+        ReservationSystemTestUtil.createSimpleReservationDefinition(
+            initTime, initTime + win, win);
     assertTrue(plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
-            ReservationSystemTestUtil.getNewReservationId(), null, "u1",
-            "dedicated", initTime, initTime + win, req, res, minAlloc)));
+            ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
+            "dedicated", initTime, initTime + win, req, res, minAlloc), false));
   }
 
   @Test
   public void testFailAvgBySum() throws IOException, PlanningException {
     // generate an allocation which violates the 25% average by sum
-    Map<ReservationInterval, ReservationRequest> req =
-        new TreeMap<ReservationInterval, ReservationRequest>();
+    Map<ReservationInterval, Resource> req =
+        new TreeMap<ReservationInterval, Resource>();
     long win = 86400000 / 4 + 1;
     int cont = (int) Math.ceil(0.5 * totCont);
     req.put(new ReservationInterval(initTime, initTime + win),
-        ReservationRequest.newInstance(Resource.newInstance(1024, 1), cont));
+        ReservationSystemUtil.toResource(ReservationRequest.newInstance(Resource
+            .newInstance(1024, 1), cont)));
+    ReservationDefinition rDef =
+        ReservationSystemTestUtil.createSimpleReservationDefinition(
+            initTime, initTime + win, win);
     assertTrue(plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
-            ReservationSystemTestUtil.getNewReservationId(), null, "u1",
-            "dedicated", initTime, initTime + win, req, res, minAlloc)));
+            ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
+            "dedicated", initTime, initTime + win, req, res, minAlloc), false));
 
     try {
       assertTrue(plan.toString(),
           plan.addReservation(new InMemoryReservationAllocation(
               ReservationSystemTestUtil.getNewReservationId(), null, "u1",
-              "dedicated", initTime, initTime + win, req, res, minAlloc)));
+              "dedicated", initTime, initTime + win, req, res, minAlloc), false));
 
       Assert.fail("should not have accepted this");
     } catch (PlanningQuotaException e) {

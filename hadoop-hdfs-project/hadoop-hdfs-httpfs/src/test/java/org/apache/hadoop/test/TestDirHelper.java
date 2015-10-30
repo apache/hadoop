@@ -89,7 +89,7 @@ public class TestDirHelper implements MethodRule {
     }
   }
 
-  private static ThreadLocal<File> TEST_DIR_TL = new InheritableThreadLocal<File>();
+  private static final ThreadLocal<File> TEST_DIR_TL = new InheritableThreadLocal<File>();
 
   @Override
   public Statement apply(final Statement statement, final FrameworkMethod frameworkMethod, final Object o) {

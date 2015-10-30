@@ -18,7 +18,7 @@
 package org.apache.hadoop.yarn.api.records.timeline;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -36,7 +36,7 @@ import java.util.List;
 @XmlRootElement(name = "response")
 @XmlAccessorType(XmlAccessType.NONE)
 @Public
-@Unstable
+@Evolving
 public class TimelinePutResponse {
 
   private List<TimelinePutError> errors = new ArrayList<TimelinePutError>();
@@ -92,7 +92,7 @@ public class TimelinePutResponse {
   @XmlRootElement(name = "error")
   @XmlAccessorType(XmlAccessType.NONE)
   @Public
-  @Unstable
+  @Evolving
   public static class TimelinePutError {
 
     /**
@@ -128,6 +128,12 @@ public class TimelinePutResponse {
      * one in different domain
      */
     public static final int FORBIDDEN_RELATION = 6;
+
+    /**
+     * Error code returned if the entity start time is before the eviction
+     * period of old data.
+     */
+    public static final int EXPIRED_ENTITY = 7;
 
     private String entityId;
     private String entityType;

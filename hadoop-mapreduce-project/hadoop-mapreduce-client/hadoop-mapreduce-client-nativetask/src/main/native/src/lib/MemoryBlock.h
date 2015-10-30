@@ -97,7 +97,7 @@ public:
     return _kvOffsets.size();
   }
 
-  KVBuffer * getKVBuffer(int index);
+  KVBuffer * getKVBuffer(uint32_t index);
 
   void sort(SortAlgorithm type, ComparatorPtr comparator);
 };

@@ -189,7 +189,9 @@ $H3 Update and Overwrite
   because it doesn't exist at the target. `10` and `20` are overwritten since
   the contents don't match the source.
 
-  If `-update` is used, `1` is overwritten as well.
+  If `-update` is used, `1` is skipped because the file-length and contents match. `2` is copied because it doesn’t exist at the target. `10` and `20` are overwritten since the contents don’t match the source. However, if `-append` is additionally used, then only `10` is overwritten (source length less than destination) and `20` is appended with the change in file (if the files match up to the destination's original length).
+
+  If `-overwrite` is used, `1` is overwritten as well.
 
 $H3 raw Namespace Extended Attribute Preservation
 
@@ -222,6 +224,7 @@ Flag              | Description                          | Notes
 `-m <num_maps>` | Maximum number of simultaneous copies | Specify the number of maps to copy data. Note that more maps may not necessarily improve throughput.
 `-overwrite` | Overwrite destination | If a map fails and `-i` is not specified, all the files in the split, not only those that failed, will be recopied. As discussed in the Usage documentation, it also changes the semantics for generating destination paths, so users should use this carefully.
 `-update` | Overwrite if source and destination differ in size, blocksize, or checksum | As noted in the preceding, this is not a "sync" operation. The criteria examined are the source and destination file sizes, blocksizes, and checksums; if they differ, the source file replaces the destination file. As discussed in the Usage documentation, it also changes the semantics for generating destination paths, so users should use this carefully.
+`-append` | Incremental copy of file with same name but different length | If the source file is greater in length than the destination file, the checksum of the common length part is compared. If the checksum matches, only the difference is copied using read and append functionalities. The -append option only works with `-update` without `-skipcrccheck`
 `-f <urilist_uri>` | Use list at \<urilist_uri\> as src list | This is equivalent to listing each source on the command line. The `urilist_uri` list should be a fully qualified URI.
 `-filelimit <n>` | Limit the total number of files to be <= n | **Deprecated!** Ignored in the new DistCp.
 `-sizelimit <n>` | Limit the total size to be <= n bytes | **Deprecated!** Ignored in the new DistCp.

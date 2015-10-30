@@ -90,15 +90,12 @@ public class TestPendingInvalidateBlock {
     Thread.sleep(6000);
     Assert.assertEquals(0, cluster.getNamesystem().getBlocksTotal());
     Assert.assertEquals(0, cluster.getNamesystem().getPendingDeletionBlocks());
-    String nnStartedStr = cluster.getNamesystem().getNNStarted();
-    long nnStarted = new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy")
-        .parse(nnStartedStr).getTime();
+    long nnStarted = cluster.getNamesystem().getNNStartedTimeInMillis();
     long blockDeletionStartTime = cluster.getNamesystem()
         .getBlockDeletionStartTime();
     Assert.assertTrue(String.format(
-        "Expect blockDeletionStartTime = %d > nnStarted = %d/nnStartedStr = %s.",
-        blockDeletionStartTime, nnStarted, nnStartedStr),
-        blockDeletionStartTime > nnStarted);
+        "Expect blockDeletionStartTime = %d > nnStarted = %d.",
+        blockDeletionStartTime, nnStarted), blockDeletionStartTime > nnStarted);
   }
 
   /**

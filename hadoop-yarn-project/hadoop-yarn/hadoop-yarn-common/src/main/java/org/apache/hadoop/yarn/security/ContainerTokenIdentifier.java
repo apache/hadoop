@@ -39,11 +39,14 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.LogAggregationContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PriorityPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerTypeProto;
 import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.ContainerTokenIdentifierProto;
+import org.apache.hadoop.yarn.server.api.ContainerType;
 
 import com.google.protobuf.TextFormat;
-
 
 /**
  * TokenIdentifier for a container. Encodes {@link ContainerId},
@@ -64,14 +67,25 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
       String hostName, String appSubmitter, Resource r, long expiryTimeStamp,
       int masterKeyId, long rmIdentifier, Priority priority, long creationTime) {
     this(containerID, hostName, appSubmitter, r, expiryTimeStamp, masterKeyId,
-        rmIdentifier, priority, creationTime, null);
+        rmIdentifier, priority, creationTime, null,
+        CommonNodeLabelsManager.NO_LABEL, ContainerType.TASK);
   }
 
   public ContainerTokenIdentifier(ContainerId containerID, String hostName,
       String appSubmitter, Resource r, long expiryTimeStamp, int masterKeyId,
       long rmIdentifier, Priority priority, long creationTime,
-      LogAggregationContext logAggregationContext) {
-    ContainerTokenIdentifierProto.Builder builder = 
+      LogAggregationContext logAggregationContext, String nodeLabelExpression) {
+    this(containerID, hostName, appSubmitter, r, expiryTimeStamp, masterKeyId,
+        rmIdentifier, priority, creationTime, logAggregationContext,
+        nodeLabelExpression, ContainerType.TASK);
+  }
+
+  public ContainerTokenIdentifier(ContainerId containerID, String hostName,
+      String appSubmitter, Resource r, long expiryTimeStamp, int masterKeyId,
+      long rmIdentifier, Priority priority, long creationTime,
+      LogAggregationContext logAggregationContext, String nodeLabelExpression,
+      ContainerType containerType) {
+    ContainerTokenIdentifierProto.Builder builder =
         ContainerTokenIdentifierProto.newBuilder();
     if (containerID != null) {
       builder.setContainerId(((ContainerIdPBImpl)containerID).getProto());
@@ -93,6 +107,12 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
       builder.setLogAggregationContext(
           ((LogAggregationContextPBImpl)logAggregationContext).getProto());
     }
+    
+    if (nodeLabelExpression != null) {
+      builder.setNodeLabelExpression(nodeLabelExpression);
+    }
+    builder.setContainerType(convertToProtoFormat(containerType));
+
     proto = builder.build();
   }
 
@@ -149,7 +169,18 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
   public long getRMIdentifier() {
     return proto.getRmIdentifier();
   }
-  
+
+  /**
+   * Get the ContainerType of container to allocate
+   * @return ContainerType
+   */
+  public ContainerType getContainerType(){
+    if (!proto.hasContainerType()) {
+      return null;
+    }
+    return convertFromProtoFormat(proto.getContainerType());
+  }
+
   public ContainerTokenIdentifierProto getProto() {
     return proto;
   }
@@ -186,6 +217,16 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     return UserGroupInformation.createRemoteUser(
         containerId);
   }
+  
+  /**
+   * Get the node-label-expression in the original ResourceRequest
+   */
+  public String getNodeLabelExpression() {
+    if (proto.hasNodeLabelExpression()) {
+      return proto.getNodeLabelExpression();
+    }
+    return CommonNodeLabelsManager.NO_LABEL;
+  }
 
   // TODO: Needed?
   @InterfaceAudience.Private
@@ -214,5 +255,14 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
   @Override
   public String toString() {
     return TextFormat.shortDebugString(getProto());
+  }
+
+  private ContainerTypeProto convertToProtoFormat(ContainerType containerType) {
+    return ProtoUtils.convertToProtoFormat(containerType);
+  }
+
+  private ContainerType convertFromProtoFormat(
+      ContainerTypeProto containerType) {
+    return ProtoUtils.convertFromProtoFormat(containerType);
   }
 }

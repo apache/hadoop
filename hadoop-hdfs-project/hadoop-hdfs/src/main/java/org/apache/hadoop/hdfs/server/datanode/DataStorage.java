@@ -35,8 +35,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
@@ -44,23 +44,20 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DiskChecker;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileLock;
+import java.nio.channels.OverlappingFileLockException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -83,7 +80,6 @@ import java.util.concurrent.Future;
 public class DataStorage extends Storage {
 
   public final static String BLOCK_SUBDIR_PREFIX = "subdir";
-  final static String COPY_FILE_PREFIX = "dncp_";
   final static String STORAGE_DIR_DETACHED = "detach";
   public final static String STORAGE_DIR_RBW = "rbw";
   public final static String STORAGE_DIR_FINALIZED = "finalized";
@@ -164,6 +160,7 @@ public class DataStorage extends Storage {
    */
   public void enableTrash(String bpid) {
     if (trashEnabledBpids.add(bpid)) {
+      getBPStorage(bpid).stopTrashCleaner();
       LOG.info("Enabled trash for bpid " + bpid);
     }
   }
@@ -466,7 +463,7 @@ public class DataStorage extends Storage {
   void recoverTransitionRead(DataNode datanode, NamespaceInfo nsInfo,
       Collection<StorageLocation> dataDirs, StartupOption startOpt) throws IOException {
     if (this.initialized) {
-      LOG.info("DataNode version: " + HdfsConstants.DATANODE_LAYOUT_VERSION
+      LOG.info("DataNode version: " + HdfsServerConstants.DATANODE_LAYOUT_VERSION
           + " and NameNode layout version: " + nsInfo.getLayoutVersion());
       this.storageDirs = new ArrayList<StorageDirectory>(dataDirs.size());
       // mark DN storage is initialized
@@ -509,7 +506,7 @@ public class DataStorage extends Storage {
   void format(StorageDirectory sd, NamespaceInfo nsInfo,
               String datanodeUuid) throws IOException {
     sd.clearDirectory(); // create directory
-    this.layoutVersion = HdfsConstants.DATANODE_LAYOUT_VERSION;
+    this.layoutVersion = HdfsServerConstants.DATANODE_LAYOUT_VERSION;
     this.clusterID = nsInfo.getClusterID();
     this.namespaceID = nsInfo.getNamespaceID();
     this.cTime = 0;
@@ -615,20 +612,22 @@ public class DataStorage extends Storage {
   @Override
   public boolean isPreUpgradableLayout(StorageDirectory sd) throws IOException {
     File oldF = new File(sd.getRoot(), "storage");
-    if (!oldF.exists())
+    if (!oldF.exists()) {
       return false;
+    }
     // check the layout version inside the storage file
     // Lock and Read old storage file
-    RandomAccessFile oldFile = new RandomAccessFile(oldF, "rws");
-    FileLock oldLock = oldFile.getChannel().tryLock();
-    try {
+    try (RandomAccessFile oldFile = new RandomAccessFile(oldF, "rws");
+      FileLock oldLock = oldFile.getChannel().tryLock()) {
+      if (null == oldLock) {
+        LOG.error("Unable to acquire file lock on path " + oldF.toString());
+        throw new OverlappingFileLockException();
+      }
       oldFile.seek(0);
       int oldVersion = oldFile.readInt();
-      if (oldVersion < LAST_PRE_UPGRADE_LAYOUT_VERSION)
+      if (oldVersion < LAST_PRE_UPGRADE_LAYOUT_VERSION) {
         return false;
-    } finally {
-      oldLock.release();
-      oldFile.close();
+      }
     }
     return true;
   }
@@ -664,7 +663,7 @@ public class DataStorage extends Storage {
     }
     readProperties(sd);
     checkVersionUpgradable(this.layoutVersion);
-    assert this.layoutVersion >= HdfsConstants.DATANODE_LAYOUT_VERSION :
+    assert this.layoutVersion >= HdfsServerConstants.DATANODE_LAYOUT_VERSION :
       "Future version is not allowed";
     
     boolean federationSupported = 
@@ -696,13 +695,13 @@ public class DataStorage extends Storage {
             DatanodeStorage.isValidStorageId(sd.getStorageUuid());
 
     // regular start up.
-    if (this.layoutVersion == HdfsConstants.DATANODE_LAYOUT_VERSION) {
+    if (this.layoutVersion == HdfsServerConstants.DATANODE_LAYOUT_VERSION) {
       createStorageID(sd, !haveValidStorageId);
       return; // regular startup
     }
 
     // do upgrade
-    if (this.layoutVersion > HdfsConstants.DATANODE_LAYOUT_VERSION) {
+    if (this.layoutVersion > HdfsServerConstants.DATANODE_LAYOUT_VERSION) {
       doUpgrade(datanode, sd, nsInfo);  // upgrade
       createStorageID(sd, !haveValidStorageId);
       return;
@@ -714,7 +713,7 @@ public class DataStorage extends Storage {
     // failed.
     throw new IOException("BUG: The stored LV = " + this.getLayoutVersion()
         + " is newer than the supported LV = "
-        + HdfsConstants.DATANODE_LAYOUT_VERSION);
+        + HdfsServerConstants.DATANODE_LAYOUT_VERSION);
   }
 
   /**
@@ -749,9 +748,9 @@ public class DataStorage extends Storage {
       // field and overwrite the file. The upgrade work is handled by
       // {@link BlockPoolSliceStorage#doUpgrade}
       LOG.info("Updating layout version from " + layoutVersion + " to "
-          + HdfsConstants.DATANODE_LAYOUT_VERSION + " for storage "
+          + HdfsServerConstants.DATANODE_LAYOUT_VERSION + " for storage "
           + sd.getRoot());
-      layoutVersion = HdfsConstants.DATANODE_LAYOUT_VERSION;
+      layoutVersion = HdfsServerConstants.DATANODE_LAYOUT_VERSION;
       writeProperties(sd);
       return;
     }
@@ -759,7 +758,7 @@ public class DataStorage extends Storage {
     LOG.info("Upgrading storage directory " + sd.getRoot()
              + ".\n   old LV = " + this.getLayoutVersion()
              + "; old CTime = " + this.getCTime()
-             + ".\n   new LV = " + HdfsConstants.DATANODE_LAYOUT_VERSION
+             + ".\n   new LV = " + HdfsServerConstants.DATANODE_LAYOUT_VERSION
              + "; new CTime = " + nsInfo.getCTime());
     
     File curDir = sd.getCurrentDir();
@@ -790,7 +789,7 @@ public class DataStorage extends Storage {
         STORAGE_DIR_CURRENT));
     
     // 4. Write version file under <SD>/current
-    layoutVersion = HdfsConstants.DATANODE_LAYOUT_VERSION;
+    layoutVersion = HdfsServerConstants.DATANODE_LAYOUT_VERSION;
     clusterID = nsInfo.getClusterID();
     writeProperties(sd);
     
@@ -848,11 +847,11 @@ public class DataStorage extends Storage {
     // This is a regular startup or a post-federation rollback
     if (!prevDir.exists()) {
       if (DataNodeLayoutVersion.supports(LayoutVersion.Feature.FEDERATION,
-          HdfsConstants.DATANODE_LAYOUT_VERSION)) {
-        readProperties(sd, HdfsConstants.DATANODE_LAYOUT_VERSION);
+          HdfsServerConstants.DATANODE_LAYOUT_VERSION)) {
+        readProperties(sd, HdfsServerConstants.DATANODE_LAYOUT_VERSION);
         writeProperties(sd);
         LOG.info("Layout version rolled back to "
-            + HdfsConstants.DATANODE_LAYOUT_VERSION + " for storage "
+            + HdfsServerConstants.DATANODE_LAYOUT_VERSION + " for storage "
             + sd.getRoot());
       }
       return;
@@ -862,16 +861,16 @@ public class DataStorage extends Storage {
 
     // We allow rollback to a state, which is either consistent with
     // the namespace state or can be further upgraded to it.
-    if (!(prevInfo.getLayoutVersion() >= HdfsConstants.DATANODE_LAYOUT_VERSION
+    if (!(prevInfo.getLayoutVersion() >= HdfsServerConstants.DATANODE_LAYOUT_VERSION
           && prevInfo.getCTime() <= nsInfo.getCTime()))  // cannot rollback
       throw new InconsistentFSStateException(sd.getRoot(),
           "Cannot rollback to a newer state.\nDatanode previous state: LV = "
               + prevInfo.getLayoutVersion() + " CTime = " + prevInfo.getCTime()
               + " is newer than the namespace state: LV = "
-              + HdfsConstants.DATANODE_LAYOUT_VERSION + " CTime = "
+              + HdfsServerConstants.DATANODE_LAYOUT_VERSION + " CTime = "
               + nsInfo.getCTime());
     LOG.info("Rolling back storage directory " + sd.getRoot()
-        + ".\n   target LV = " + HdfsConstants.DATANODE_LAYOUT_VERSION
+        + ".\n   target LV = " + HdfsServerConstants.DATANODE_LAYOUT_VERSION
         + "; target CTime = " + nsInfo.getCTime());
     File tmpDir = sd.getRemovedTmp();
     assert !tmpDir.exists() : "removed.tmp directory must not exist.";
@@ -1045,7 +1044,7 @@ public class DataStorage extends Storage {
               idBasedLayoutSingleLinks.size());
           for (int j = iCopy; j < upperBound; j++) {
             LinkArgs cur = idBasedLayoutSingleLinks.get(j);
-            NativeIO.link(cur.src, cur.dst);
+            HardLink.createHardLink(cur.src, cur.dst);
           }
           return null;
         }
@@ -1219,23 +1218,8 @@ public class DataStorage extends Storage {
       return;
     }
     if (!from.isDirectory()) {
-      if (from.getName().startsWith(COPY_FILE_PREFIX)) {
-        FileInputStream in = new FileInputStream(from);
-        try {
-          FileOutputStream out = new FileOutputStream(to);
-          try {
-            IOUtils.copyBytes(in, out, 16*1024);
-            hl.linkStats.countPhysicalFileCopies++;
-          } finally {
-            out.close();
-          }
-        } finally {
-          in.close();
-        }
-      } else {
-        HardLink.createHardLink(from, to);
-        hl.linkStats.countSingleLinks++;
-      }
+      HardLink.createHardLink(from, to);
+      hl.linkStats.countSingleLinks++;
       return;
     }
     // from is a directory
@@ -1286,8 +1270,7 @@ public class DataStorage extends Storage {
     String[] otherNames = from.list(new java.io.FilenameFilter() {
         @Override
         public boolean accept(File dir, String name) {
-          return name.startsWith(BLOCK_SUBDIR_PREFIX) 
-            || name.startsWith(COPY_FILE_PREFIX);
+          return name.startsWith(BLOCK_SUBDIR_PREFIX);
         }
       });
     for(int i = 0; i < otherNames.length; i++)

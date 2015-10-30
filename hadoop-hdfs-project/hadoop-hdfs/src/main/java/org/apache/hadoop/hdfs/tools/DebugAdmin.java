@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.tools;
 
 import java.io.DataInputStream;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -254,6 +255,11 @@ public class DebugAdmin extends Configured implements Tool {
         IOException ioe = null;
         try {
           recovered = dfs.recoverLease(new Path(pathStr));
+        } catch (FileNotFoundException e) {
+          System.err.println("recoverLease got exception: " + e.getMessage());
+          System.err.println("Giving up on recoverLease for " + pathStr +
+              " after 1 try");
+          return 1;
         } catch (IOException e) {
           ioe = e;
         }
@@ -262,8 +268,8 @@ public class DebugAdmin extends Configured implements Tool {
           return 0;
         }
         if (ioe != null) {
-          System.err.println("recoverLease got exception: ");
-          ioe.printStackTrace();
+          System.err.println("recoverLease got exception: " +
+              ioe.getMessage());
         } else {
           System.err.println("recoverLease returned false.");
         }

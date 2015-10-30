@@ -31,12 +31,6 @@ public class GenerationStamp extends SequentialNumber {
   public static final long LAST_RESERVED_STAMP = 1000L;
 
   /**
-   * Generation stamp of blocks that pre-date the introduction
-   * of a generation stamp.
-   */
-  public static final long GRANDFATHER_GENERATION_STAMP = 0;
-
-  /**
    * Create a new instance, initialized to {@link #LAST_RESERVED_STAMP}.
    */
   public GenerationStamp() {

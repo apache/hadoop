@@ -21,17 +21,28 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerHealth;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerLeafQueueInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionQueueCapacitiesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionResourceUsageInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
-import org.apache.hadoop.yarn.server.webapp.AppsBlock;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
@@ -51,63 +62,124 @@ class CapacitySchedulerPage extends RmView {
   static final float Q_MAX_WIDTH = 0.8f;
   static final float Q_STATS_POS = Q_MAX_WIDTH + 0.05f;
   static final String Q_END = "left:101%";
-  static final String Q_GIVEN = "left:0%;background:none;border:1px dashed rgba(0,0,0,0.25)";
-  static final String Q_OVER = "background:rgba(255, 140, 0, 0.8)";
-  static final String Q_UNDER = "background:rgba(50, 205, 50, 0.8)";
+  static final String Q_GIVEN =
+      "left:0%;background:none;border:1px dashed #BFBFBF";
+  static final String Q_OVER = "background:#FFA333";
+  static final String Q_UNDER = "background:#5BD75B";
 
   @RequestScoped
   static class CSQInfo {
     CapacitySchedulerInfo csinfo;
     CapacitySchedulerQueueInfo qinfo;
+    String label;
+    boolean isExclusiveNodeLabel;
   }
 
   static class LeafQueueInfoBlock extends HtmlBlock {
     final CapacitySchedulerLeafQueueInfo lqinfo;
+    private String nodeLabel;
 
     @Inject LeafQueueInfoBlock(ViewContext ctx, CSQInfo info) {
       super(ctx);
       lqinfo = (CapacitySchedulerLeafQueueInfo) info.qinfo;
+      nodeLabel = info.label;
     }
 
     @Override
     protected void render(Block html) {
+      if (nodeLabel == null) {
+        renderLeafQueueInfoWithoutParition(html);
+      } else {
+        renderLeafQueueInfoWithPartition(html);
+      }
+    }
 
-      ResponseInfo ri = info("\'" + lqinfo.getQueuePath().substring(5) + "\' Queue Status").
-          _("Queue State:", lqinfo.getQueueState()).
-          _("Used Capacity:", percent(lqinfo.getUsedCapacity() / 100)).
-          _("Absolute Used Capacity:", percent(lqinfo.getAbsoluteUsedCapacity() / 100)).
-          _("Absolute Capacity:", percent(lqinfo.getAbsoluteCapacity() / 100)).
-          _("Absolute Max Capacity:", percent(lqinfo.getAbsoluteMaxCapacity() / 100)).
-          _("Used Resources:", lqinfo.getResourcesUsed().toString()).
-          _("Num Schedulable Applications:", Integer.toString(lqinfo.getNumActiveApplications())).
-          _("Num Non-Schedulable Applications:", Integer.toString(lqinfo.getNumPendingApplications())).
-          _("Num Containers:", Integer.toString(lqinfo.getNumContainers())).
-          _("Max Applications:", Integer.toString(lqinfo.getMaxApplications())).
-          _("Max Applications Per User:", Integer.toString(lqinfo.getMaxApplicationsPerUser())).
-          _("Max Application Master Resources:", lqinfo.getAMResourceLimit().toString()).
-          _("Used Application Master Resources:", lqinfo.getUsedAMResource().toString()).
-          _("Max Application Master Resources Per User:", lqinfo.getUserAMResourceLimit().toString()).
-          _("Configured Capacity:", percent(lqinfo.getCapacity() / 100)).
-          _("Configured Max Capacity:", percent(lqinfo.getMaxCapacity() / 100)).
-          _("Configured Minimum User Limit Percent:", Integer.toString(lqinfo.getUserLimit()) + "%").
-          _("Configured User Limit Factor:", String.format("%.1f", lqinfo.getUserLimitFactor())).
-          _("Accessible Node Labels:", StringUtils.join(",", lqinfo.getNodeLabels())).
-          _("Preemption:", lqinfo.getPreemptionDisabled() ? "disabled" : "enabled");
+    private void renderLeafQueueInfoWithPartition(Block html) {
+      String nodeLabelDisplay = nodeLabel.length() == 0
+          ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION : nodeLabel;
+      // first display the queue's label specific details :
+      ResponseInfo ri =
+          info("\'" + lqinfo.getQueuePath().substring(5)
+              + "\' Queue Status for Partition \'" + nodeLabelDisplay + "\'");
+      renderQueueCapacityInfo(ri, nodeLabel);
+      html._(InfoBlock.class);
+      // clear the info contents so this queue's info doesn't accumulate into
+      // another queue's info
+      ri.clear();
+
+      // second display the queue specific details :
+      ri =
+          info("\'" + lqinfo.getQueuePath().substring(5) + "\' Queue Status")
+              ._("Queue State:", lqinfo.getQueueState());
+      renderCommonLeafQueueInfo(ri);
 
       html._(InfoBlock.class);
-
-      // clear the info contents so this queue's info doesn't accumulate into another queue's info
+      // clear the info contents so this queue's info doesn't accumulate into
+      // another queue's info
       ri.clear();
+    }
+
+    private void renderLeafQueueInfoWithoutParition(Block html) {
+      ResponseInfo ri =
+          info("\'" + lqinfo.getQueuePath().substring(5) + "\' Queue Status")
+              ._("Queue State:", lqinfo.getQueueState());
+      renderQueueCapacityInfo(ri, "");
+      renderCommonLeafQueueInfo(ri);
+      html._(InfoBlock.class);
+      // clear the info contents so this queue's info doesn't accumulate into
+      // another queue's info
+      ri.clear();
+    }
+
+    private void renderQueueCapacityInfo(ResponseInfo ri, String label) {
+      PartitionQueueCapacitiesInfo capacities =
+          lqinfo.getCapacities().getPartitionQueueCapacitiesInfo(label);
+      PartitionResourceUsageInfo resourceUsages =
+          lqinfo.getResources().getPartitionResourceUsageInfo(label);
+      ri.
+      _("Used Capacity:", percent(capacities.getUsedCapacity() / 100)).
+      _("Configured Capacity:", percent(capacities.getCapacity() / 100)).
+      _("Configured Max Capacity:", percent(capacities.getMaxCapacity() / 100)).
+      _("Absolute Used Capacity:", percent(capacities.getAbsoluteUsedCapacity() / 100)).
+      _("Absolute Configured Capacity:", percent(capacities.getAbsoluteCapacity() / 100)).
+      _("Absolute Configured Max Capacity:", percent(capacities.getAbsoluteMaxCapacity() / 100)).
+      _("Used Resources:", resourceUsages.getUsed().toString());
+    }
+
+    private void renderCommonLeafQueueInfo(ResponseInfo ri) {
+      ri.
+      _("Num Schedulable Applications:", Integer.toString(lqinfo.getNumActiveApplications())).
+      _("Num Non-Schedulable Applications:", Integer.toString(lqinfo.getNumPendingApplications())).
+      _("Num Containers:", Integer.toString(lqinfo.getNumContainers())).
+      _("Max Applications:", Integer.toString(lqinfo.getMaxApplications())).
+      _("Max Applications Per User:", Integer.toString(lqinfo.getMaxApplicationsPerUser())).
+      _("Max Application Master Resources:", lqinfo.getAMResourceLimit().toString()).
+      _("Used Application Master Resources:", lqinfo.getUsedAMResource().toString()).
+      _("Max Application Master Resources Per User:", lqinfo.getUserAMResourceLimit().toString()).
+      _("Configured Minimum User Limit Percent:", Integer.toString(lqinfo.getUserLimit()) + "%").
+      _("Configured User Limit Factor:", StringUtils.format(
+          "%.1f", lqinfo.getUserLimitFactor())).
+      _("Accessible Node Labels:", StringUtils.join(",", lqinfo.getNodeLabels())).
+      _("Ordering Policy: ", lqinfo.getOrderingPolicyInfo()).
+      _("Preemption:", lqinfo.getPreemptionDisabled() ? "disabled" : "enabled").
+      _("Default Node Label Expression:",
+              lqinfo.getDefaultNodeLabelExpression() == null
+                  ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION
+                  : lqinfo.getDefaultNodeLabelExpression()).
+      _("Default Application Priority:",
+              Integer.toString(lqinfo.getDefaultApplicationPriority()));
     }
   }
 
   static class QueueUsersInfoBlock extends HtmlBlock {
     final CapacitySchedulerLeafQueueInfo lqinfo;
+    private String nodeLabel;
 
     @Inject
     QueueUsersInfoBlock(ViewContext ctx, CSQInfo info) {
       super(ctx);
       lqinfo = (CapacitySchedulerLeafQueueInfo) info.qinfo;
+      nodeLabel = info.label;
     }
 
     @Override
@@ -125,9 +197,14 @@ class CapacitySchedulerPage extends RmView {
 
       ArrayList<UserInfo> users = lqinfo.getUsers().getUsersList();
       for (UserInfo userInfo : users) {
+        ResourceInfo resourcesUsed = userInfo.getResourcesUsed();
+        if (nodeLabel != null) {
+          resourcesUsed = userInfo.getResourceUsageInfo()
+              .getPartitionResourceUsageInfo(nodeLabel).getUsed();
+        }
         tbody.tr().td(userInfo.getUsername())
             .td(userInfo.getUserResourceLimit().toString())
-            .td(userInfo.getResourcesUsed().toString())
+            .td(resourcesUsed.toString())
             .td(lqinfo.getUserAMResourceLimit().toString())
             .td(userInfo.getAMResourcesUsed().toString())
             .td(Integer.toString(userInfo.getNumActiveApplications()))
@@ -148,15 +225,32 @@ class CapacitySchedulerPage extends RmView {
 
     @Override
     public void render(Block html) {
-      ArrayList<CapacitySchedulerQueueInfo> subQueues =
-          (csqinfo.qinfo == null) ? csqinfo.csinfo.getQueues().getQueueInfoList()
-              : csqinfo.qinfo.getQueues().getQueueInfoList();
+      ArrayList<CapacitySchedulerQueueInfo> subQueues = (csqinfo.qinfo == null)
+          ? csqinfo.csinfo.getQueues().getQueueInfoList()
+          : csqinfo.qinfo.getQueues().getQueueInfoList();
+
       UL<Hamlet> ul = html.ul("#pq");
+      float used;
+      float absCap;
+      float absMaxCap;
+      float absUsedCap;
       for (CapacitySchedulerQueueInfo info : subQueues) {
-        float used = info.getUsedCapacity() / 100;
-        float absCap = info.getAbsoluteCapacity() / 100;
-        float absMaxCap = info.getAbsoluteMaxCapacity() / 100;
-        float absUsedCap = info.getAbsoluteUsedCapacity() / 100;
+        String nodeLabel = (csqinfo.label == null) ? "" : csqinfo.label;
+        //DEFAULT_NODE_LABEL_PARTITION is accessible to all queues
+        //other exclsiveNodeLabels are accessible only if configured
+        if (!nodeLabel.isEmpty()// i.e. its DEFAULT_NODE_LABEL_PARTITION
+            && csqinfo.isExclusiveNodeLabel
+            && !info.getNodeLabels().contains("*")
+            && !info.getNodeLabels().contains(nodeLabel)) {
+          continue;
+        }
+        PartitionQueueCapacitiesInfo partitionQueueCapsInfo = info
+            .getCapacities().getPartitionQueueCapacitiesInfo(nodeLabel);
+        used = partitionQueueCapsInfo.getUsedCapacity() / 100;
+        absCap = partitionQueueCapsInfo.getAbsoluteCapacity() / 100;
+        absMaxCap = partitionQueueCapsInfo.getAbsoluteMaxCapacity() / 100;
+        absUsedCap = partitionQueueCapsInfo.getAbsoluteUsedCapacity() / 100;
+
         LI<UL<Hamlet>> li = ul.
           li().
             a(_Q).$style(width(absMaxCap * Q_MAX_WIDTH)).
@@ -166,7 +260,7 @@ class CapacitySchedulerPage extends RmView {
               span().$style(join(width(absUsedCap/absMaxCap),
                 ";font-size:1px;left:0%;", absUsedCap > absCap ? Q_OVER : Q_UNDER)).
                 _('.')._().
-              span(".q", info.getQueuePath().substring(5))._().
+              span(".q", "Queue: "+info.getQueuePath().substring(5))._().
             span().$class("qstats").$style(left(Q_STATS_POS)).
               _(join(percent(used), " used"))._();
 
@@ -187,15 +281,72 @@ class CapacitySchedulerPage extends RmView {
   static class QueuesBlock extends HtmlBlock {
     final CapacityScheduler cs;
     final CSQInfo csqinfo;
+    private final ResourceManager rm;
+    private List<RMNodeLabel> nodeLabelsInfo;
 
     @Inject QueuesBlock(ResourceManager rm, CSQInfo info) {
       cs = (CapacityScheduler) rm.getResourceScheduler();
       csqinfo = info;
+      this.rm = rm;
+      RMNodeLabelsManager nodeLabelManager =
+          rm.getRMContext().getNodeLabelManager();
+      nodeLabelsInfo = nodeLabelManager.pullRMNodeLabelsInfo();
     }
 
     @Override
     public void render(Block html) {
       html._(MetricsOverviewTable.class);
+
+      UserGroupInformation callerUGI = this.getCallerUGI();
+      boolean isAdmin = false;
+      ApplicationACLsManager aclsManager = rm.getApplicationACLsManager();
+      if (aclsManager.areACLsEnabled()) {
+        if (callerUGI != null && aclsManager.isAdmin(callerUGI)) {
+          isAdmin = true;
+        }
+      } else {
+        isAdmin = true;
+      }
+
+      // only show button to dump CapacityScheduler debug logs to admins
+      if (isAdmin) {
+        html.div()
+          .button()
+          .$style(
+              "border-style: solid; border-color: #000000; border-width: 1px;"
+                  + " cursor: hand; cursor: pointer; border-radius: 4px")
+          .$onclick("confirmAction()").b("Dump scheduler logs")._().select()
+          .$id("time").option().$value("60")._("1 min")._().option()
+          .$value("300")._("5 min")._().option().$value("600")._("10 min")._()
+          ._()._();
+
+        StringBuilder script = new StringBuilder();
+        script
+          .append("function confirmAction() {")
+          .append(" b = confirm(\"Are you sure you wish to generate"
+              + " scheduler logs?\");")
+          .append(" if (b == true) {")
+          .append(" var timePeriod = $(\"#time\").val();")
+          .append(" $.ajax({")
+          .append(" type: 'POST',")
+          .append(" url: '/ws/v1/cluster/scheduler/logs',")
+          .append(" contentType: 'text/plain',")
+          .append(" data: 'time=' + timePeriod,")
+          .append(" dataType: 'text'")
+          .append(" }).done(function(data){")
+          .append(" setTimeout(function(){")
+          .append(" alert(\"Scheduler log is being generated.\");")
+          .append(" }, 1000);")
+          .append(" }).fail(function(data){")
+          .append(
+              " alert(\"Scheduler log generation failed. Please check the"
+                  + " ResourceManager log for more informtion.\");")
+          .append(" console.log(data);").append(" });").append(" }")
+          .append("}");
+
+        html.script().$type("text/javascript")._(script.toString())._();
+      }
+
       UL<DIV<DIV<Hamlet>>> ul = html.
         div("#cs-wrapper.ui-widget").
           div(".ui-widget-header.ui-corner-top").
@@ -209,12 +360,6 @@ class CapacitySchedulerPage extends RmView {
               span().$style(Q_END)._("100% ")._().
               span(".q", "default")._()._();
       } else {
-        CSQueue root = cs.getRootQueue();
-        CapacitySchedulerInfo sinfo = new CapacitySchedulerInfo(root);
-        csqinfo.csinfo = sinfo;
-        csqinfo.qinfo = null;
-
-        float used = sinfo.getUsedCapacity() / 100;
         ul.
           li().$style("margin-bottom: 1em").
             span().$style("font-weight: bold")._("Legend:")._().
@@ -226,20 +371,152 @@ class CapacitySchedulerPage extends RmView {
               _("Used (over capacity)")._().
             span().$class("qlegend ui-corner-all ui-state-default").
               _("Max Capacity")._().
-          _().
-          li().
+          _();
+
+        float used = 0;
+
+        CSQueue root = cs.getRootQueue();
+        CapacitySchedulerInfo sinfo = new CapacitySchedulerInfo(root, cs);
+        csqinfo.csinfo = sinfo;
+
+        if (null == nodeLabelsInfo || (nodeLabelsInfo.size() == 1
+            && nodeLabelsInfo.get(0).getLabelName().isEmpty())) {
+          used = sinfo.getUsedCapacity() / 100;
+          //label is not enabled in the cluster or there's only "default" label,
+          ul.li().
             a(_Q).$style(width(Q_MAX_WIDTH)).
               span().$style(join(width(used), ";left:0%;",
                   used > 1 ? Q_OVER : Q_UNDER))._(".")._().
-              span(".q", "root")._().
+              span(".q", "Queue: root")._().
             span().$class("qstats").$style(left(Q_STATS_POS)).
               _(join(percent(used), " used"))._().
             _(QueueBlock.class)._();
+        } else {
+          for (RMNodeLabel label : nodeLabelsInfo) {
+            csqinfo.qinfo = null;
+            csqinfo.label = label.getLabelName();
+            csqinfo.isExclusiveNodeLabel = label.getIsExclusive();
+            String nodeLabelDisplay = csqinfo.label.length() == 0
+                ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION : csqinfo.label;
+            PartitionQueueCapacitiesInfo capacities = sinfo.getCapacities()
+                .getPartitionQueueCapacitiesInfo(csqinfo.label);
+            used = capacities.getUsedCapacity() / 100;
+            String partitionUiTag =
+                "Partition: " + nodeLabelDisplay + " " + label.getResource();
+            ul.li().
+            a(_Q).$style(width(Q_MAX_WIDTH)).
+              span().$style(join(width(used), ";left:0%;",
+                  used > 1 ? Q_OVER : Q_UNDER))._(".")._().
+              span(".q", partitionUiTag)._().
+            span().$class("qstats").$style(left(Q_STATS_POS)).
+              _(join(percent(used), " used"))._();
+
+            //for the queue hierarchy under label
+            UL<Hamlet> underLabel = html.ul("#pq");
+            underLabel.li().
+            a(_Q).$style(width(Q_MAX_WIDTH)).
+              span().$style(join(width(used), ";left:0%;",
+                  used > 1 ? Q_OVER : Q_UNDER))._(".")._().
+              span(".q", "Queue: root")._().
+            span().$class("qstats").$style(left(Q_STATS_POS)).
+              _(join(percent(used), " used"))._().
+            _(QueueBlock.class)._()._();
+          }
+        }
       }
       ul._()._().
       script().$type("text/javascript").
           _("$('#cs').hide();")._()._().
-      _(AppsBlock.class);
+      _(RMAppsBlock.class);
+      html._(HealthBlock.class);
+    }
+  }
+
+  public static class HealthBlock extends HtmlBlock {
+
+    final CapacityScheduler cs;
+
+    @Inject
+    HealthBlock(ResourceManager rm) {
+      cs = (CapacityScheduler) rm.getResourceScheduler();
+    }
+
+    @Override
+    public void render(HtmlBlock.Block html) {
+      SchedulerHealth healthInfo = cs.getSchedulerHealth();
+      DIV<Hamlet> div = html.div("#health");
+      div.h4("Aggregate scheduler counts");
+      TBODY<TABLE<DIV<Hamlet>>> tbody =
+          div.table("#lastrun").thead().$class("ui-widget-header").tr().th()
+            .$class("ui-state-default")._("Total Container Allocations(count)")
+            ._().th().$class("ui-state-default")
+            ._("Total Container Releases(count)")._().th()
+            .$class("ui-state-default")
+            ._("Total Fulfilled Reservations(count)")._().th()
+            .$class("ui-state-default")._("Total Container Preemptions(count)")
+            ._()._()._().tbody();
+      tbody
+        .$class("ui-widget-content")
+        .tr()
+        .td(
+          String.valueOf(cs.getRootQueueMetrics()
+            .getAggregateAllocatedContainers()))
+        .td(
+          String.valueOf(cs.getRootQueueMetrics()
+            .getAggegatedReleasedContainers()))
+        .td(healthInfo.getAggregateFulFilledReservationsCount().toString())
+        .td(healthInfo.getAggregatePreemptionCount().toString())._()._()._();
+      div.h4("Last scheduler run");
+      tbody =
+          div.table("#lastrun").thead().$class("ui-widget-header").tr().th()
+            .$class("ui-state-default")._("Time")._().th()
+            .$class("ui-state-default")._("Allocations(count - resources)")._()
+            .th().$class("ui-state-default")._("Reservations(count - resources)")
+            ._().th().$class("ui-state-default")._("Releases(count - resources)")
+            ._()._()._().tbody();
+      tbody
+        .$class("ui-widget-content")
+        .tr()
+        .td(Times.format(healthInfo.getLastSchedulerRunTime()))
+        .td(
+          healthInfo.getAllocationCount().toString() + " - "
+              + healthInfo.getResourcesAllocated().toString())
+        .td(
+          healthInfo.getReservationCount().toString() + " - "
+              + healthInfo.getResourcesReserved().toString())
+        .td(
+          healthInfo.getReleaseCount().toString() + " - "
+              + healthInfo.getResourcesReleased().toString())._()._()._();
+      Map<String, SchedulerHealth.DetailedInformation> info = new HashMap<>();
+      info.put("Allocation", healthInfo.getLastAllocationDetails());
+      info.put("Reservation", healthInfo.getLastReservationDetails());
+      info.put("Release", healthInfo.getLastReleaseDetails());
+      info.put("Preemption", healthInfo.getLastPreemptionDetails());
+
+      for (Map.Entry<String, SchedulerHealth.DetailedInformation> entry : info
+        .entrySet()) {
+        String containerId = "N/A";
+        String nodeId = "N/A";
+        String queue = "N/A";
+        String table = "#" + entry.getKey();
+        div.h4("Last " + entry.getKey());
+        tbody =
+            div.table(table).thead().$class("ui-widget-header").tr().th()
+              .$class("ui-state-default")._("Time")._().th()
+              .$class("ui-state-default")._("Container Id")._().th()
+              .$class("ui-state-default")._("Node Id")._().th()
+              .$class("ui-state-default")._("Queue")._()._()._().tbody();
+        SchedulerHealth.DetailedInformation di = entry.getValue();
+        if (di.getTimestamp() != 0) {
+          containerId = di.getContainerId().toString();
+          nodeId = di.getNodeId().toString();
+          queue = di.getQueue();
+        }
+        tbody.$class("ui-widget-content").tr()
+          .td(Times.format(di.getTimestamp())).td(containerId).td(nodeId)
+          .td(queue)._()._()._();
+      }
+      div._();
     }
   }
 
@@ -271,8 +548,11 @@ class CapacitySchedulerPage extends RmView {
           "  });",
           "  $('#cs').bind('select_node.jstree', function(e, data) {",
           "    var q = $('.q', data.rslt.obj).first().text();",
-          "    if (q == 'root') q = '';",
-          "    else q = '^' + q.substr(q.lastIndexOf('.') + 1) + '$';",
+          "    if (q == 'Queue: root') q = '';",
+          "    else {",
+          "      q = q.substr(q.lastIndexOf(':') + 2);",
+          "      q = '^' + q.substr(q.lastIndexOf('.') + 1) + '$';",
+          "    }",
           "    $('#apps').dataTable().fnFilter(q, 4, true);",
           "  });",
           "  $('#cs').show();",
@@ -285,14 +565,14 @@ class CapacitySchedulerPage extends RmView {
   }
 
   static String percent(float f) {
-    return String.format("%.1f%%", f * 100);
+    return StringUtils.formatPercent(f, 1);
   }
 
   static String width(float f) {
-    return String.format("width:%.1f%%", f * 100);
+    return StringUtils.format("width:%.1f%%", f * 100);
   }
 
   static String left(float f) {
-    return String.format("left:%.1f%%", f * 100);
+    return StringUtils.format("left:%.1f%%", f * 100);
   }
 }

@@ -29,8 +29,8 @@ import java.net.InetSocketAddress;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -67,7 +67,7 @@ public class TestDatanodeRegister {
     // Return a a good software version.
     doReturn(VersionInfo.getVersion()).when(fakeNsInfo).getSoftwareVersion();
     // Return a good layout version for now.
-    doReturn(HdfsConstants.NAMENODE_LAYOUT_VERSION).when(fakeNsInfo)
+    doReturn(HdfsServerConstants.NAMENODE_LAYOUT_VERSION).when(fakeNsInfo)
         .getLayoutVersion();
     
     DatanodeProtocolClientSideTranslatorPB fakeDnProt = 
@@ -104,12 +104,12 @@ public class TestDatanodeRegister {
   @Test
   public void testDifferentLayoutVersions() throws Exception {
     // We expect no exceptions to be thrown when the layout versions match.
-    assertEquals(HdfsConstants.NAMENODE_LAYOUT_VERSION,
+    assertEquals(HdfsServerConstants.NAMENODE_LAYOUT_VERSION,
         actor.retrieveNamespaceInfo().getLayoutVersion());
     
     // We expect an exception to be thrown when the NN reports a layout version
     // different from that of the DN.
-    doReturn(HdfsConstants.NAMENODE_LAYOUT_VERSION * 1000).when(fakeNsInfo)
+    doReturn(HdfsServerConstants.NAMENODE_LAYOUT_VERSION * 1000).when(fakeNsInfo)
         .getLayoutVersion();
     try {
       actor.retrieveNamespaceInfo();

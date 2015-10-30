@@ -32,6 +32,7 @@ option java_generate_equals_and_hash = true;
 package hadoop.hdfs.namenode;
 
 import "hdfs.proto";
+import "HdfsServer.proto";
 
 /**
  * Get list of blocks for a given datanode with the total length 
@@ -182,6 +183,16 @@ message GetEditLogManifestResponseProto {
 }
 
 /**
+ * void request
+ */
+message IsUpgradeFinalizedRequestProto {
+}
+
+message IsUpgradeFinalizedResponseProto {
+  required bool isUpgradeFinalized = 1;
+}
+
+/**
  * Protocol used by the sub-ordinate namenode to send requests
  * the active/primary namenode.
  *
@@ -250,4 +261,10 @@ service NamenodeProtocolService {
    */
   rpc getEditLogManifest(GetEditLogManifestRequestProto) 
       returns(GetEditLogManifestResponseProto);
+
+  /**
+   * Return whether the NameNode is in upgrade state (false) or not (true)
+   */
+  rpc isUpgradeFinalized(IsUpgradeFinalizedRequestProto)
+      returns (IsUpgradeFinalizedResponseProto);
 }

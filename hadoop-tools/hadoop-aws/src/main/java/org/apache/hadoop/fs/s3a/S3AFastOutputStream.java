@@ -267,7 +267,7 @@ public class S3AFastOutputStream extends OutputStream {
   private ObjectMetadata createDefaultMetadata() {
     ObjectMetadata om = new ObjectMetadata();
     if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
-      om.setServerSideEncryption(serverSideEncryptionAlgorithm);
+      om.setSSEAlgorithm(serverSideEncryptionAlgorithm);
     }
     return om;
   }

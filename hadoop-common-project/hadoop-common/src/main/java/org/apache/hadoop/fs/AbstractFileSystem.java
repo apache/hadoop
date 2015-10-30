@@ -23,6 +23,7 @@ import java.lang.reflect.Constructor;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -1189,6 +1190,75 @@ public abstract class AbstractFileSystem {
   public void removeXAttr(Path path, String name) throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
         + " doesn't support removeXAttr");
+  }
+
+  /**
+   * The specification of this method matches that of
+   * {@link FileContext#createSnapshot(Path, String)}.
+   */
+  public Path createSnapshot(final Path path, final String snapshotName)
+      throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support createSnapshot");
+  }
+
+  /**
+   * The specification of this method matches that of
+   * {@link FileContext#renameSnapshot(Path, String, String)}.
+   */
+  public void renameSnapshot(final Path path, final String snapshotOldName,
+      final String snapshotNewName) throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support renameSnapshot");
+  }
+
+  /**
+   * The specification of this method matches that of
+   * {@link FileContext#deleteSnapshot(Path, String)}.
+   */
+  public void deleteSnapshot(final Path snapshotDir, final String snapshotName)
+      throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support deleteSnapshot");
+  }
+
+  /**
+   * Set the storage policy for a given file or directory.
+   *
+   * @param path file or directory path.
+   * @param policyName the name of the target storage policy. The list
+   *                   of supported Storage policies can be retrieved
+   *                   via {@link #getAllStoragePolicies}.
+   */
+  public void setStoragePolicy(final Path path, final String policyName)
+      throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support setStoragePolicy");
+  }
+
+  /**
+   * Retrieve the storage policy for a given file or directory.
+   *
+   * @param src file or directory path.
+   * @return storage policy for give file.
+   * @throws IOException
+   */
+  public BlockStoragePolicySpi getStoragePolicy(final Path src)
+      throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support getStoragePolicy");
+  }
+
+  /**
+   * Retrieve all the storage policies supported by this file system.
+   *
+   * @return all storage policies supported by this filesystem.
+   * @throws IOException
+   */
+  public Collection<? extends BlockStoragePolicySpi> getAllStoragePolicies()
+      throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support getAllStoragePolicies");
   }
 
   @Override //Object

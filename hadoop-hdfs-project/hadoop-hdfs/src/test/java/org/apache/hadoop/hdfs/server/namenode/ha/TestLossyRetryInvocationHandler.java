@@ -18,15 +18,15 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.junit.Test;
 
 /**
  * This test makes sure that when
- * {@link DFSConfigKeys#DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY} is set,
+ * {@link HdfsClientConfigKeys#DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY} is set,
  * DFSClient instances can still be created within NN/DN (e.g., the fs instance
  * used by the trash emptier thread in NN)
  */
@@ -39,8 +39,8 @@ public class TestLossyRetryInvocationHandler {
     
     // enable both trash emptier and dropping response
     conf.setLong("fs.trash.interval", 360);
-    conf.setInt(DFSConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY, 2);
-    
+    conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY, 2);
+
     try {
       cluster = new MiniDFSCluster.Builder(conf)
           .nnTopology(MiniDFSNNTopology.simpleHATopology()).numDataNodes(0)

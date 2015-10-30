@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -27,7 +28,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.TestFileTruncate;
@@ -73,7 +73,7 @@ public class TestHAAppend {
       Path fileToTruncate = new Path("/FileToTruncate");
       
       final byte[] data = new byte[1 << 16];
-      DFSUtil.getRandom().nextBytes(data);
+      ThreadLocalRandom.current().nextBytes(data);
       final int[] appendPos = AppendTestUtil.randomFilePartition(
           data.length, COUNT);
       final int[] truncatePos = AppendTestUtil.randomFilePartition(
@@ -123,7 +123,7 @@ public class TestHAAppend {
 
       if (!isTruncateReady) {
         TestFileTruncate.checkBlockRecovery(fileToTruncate,
-            cluster.getFileSystem(1));
+            cluster.getFileSystem(1), 300, 200);
       }
       AppendTestUtil.checkFullFile(fs, fileToTruncate, truncatePos[0], data,
           fileToTruncate.toString());

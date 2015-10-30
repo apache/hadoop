@@ -30,9 +30,42 @@ public enum TaskAttemptStateInternal {
   UNASSIGNED, 
   ASSIGNED, 
   RUNNING, 
-  COMMIT_PENDING, 
-  SUCCESS_CONTAINER_CLEANUP, 
-  SUCCEEDED, 
+  COMMIT_PENDING,
+
+  // Transition into SUCCESS_FINISHING_CONTAINER
+  // After the attempt finishes successfully from
+  // TaskUmbilicalProtocol's point of view, it will transition to
+  // SUCCESS_FINISHING_CONTAINER state. That will give a chance for the
+  // container to exit by itself. In the transition,
+  // the attempt will notify the task via T_ATTEMPT_SUCCEEDED so that
+  // from job point of view, the task is considered succeeded.
+
+  // Transition out of SUCCESS_FINISHING_CONTAINER
+  // The attempt will transition from SUCCESS_FINISHING_CONTAINER to
+  // SUCCESS_CONTAINER_CLEANUP if it doesn't receive container exit
+  // notification within TASK_EXIT_TIMEOUT;
+  // Or it will transition to SUCCEEDED if it receives container exit
+  // notification from YARN.
+  SUCCESS_FINISHING_CONTAINER,
+
+  // Transition into FAIL_FINISHING_CONTAINER
+  // After the attempt fails from
+  // TaskUmbilicalProtocol's point of view, it will transition to
+  // FAIL_FINISHING_CONTAINER state. That will give a chance for the container
+  // to exit by itself. In the transition,
+  // the attempt will notify the task via T_ATTEMPT_FAILED so that
+  // from job point of view, the task is considered failed.
+
+  // Transition out of FAIL_FINISHING_CONTAINER
+  // The attempt will transition from FAIL_FINISHING_CONTAINER to
+  // FAIL_CONTAINER_CLEANUP if it doesn't receive container exit
+  // notification within TASK_EXIT_TIMEOUT;
+  // Or it will transition to FAILED if it receives container exit
+  // notification from YARN.
+  FAIL_FINISHING_CONTAINER,
+
+  SUCCESS_CONTAINER_CLEANUP,
+  SUCCEEDED,
   FAIL_CONTAINER_CLEANUP, 
   FAIL_TASK_CLEANUP, 
   FAILED, 

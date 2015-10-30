@@ -1219,7 +1219,7 @@ public class CBZip2InputStream extends InputStream implements BZip2Constants {
     * Initializes the {@link #tt} array.
     *
     * This method is called when the required length of the array is known.
-    * I don't initialize it at construction time to avoid unneccessary
+    * I don't initialize it at construction time to avoid unnecessary
     * memory allocation when compressing small files.
     */
     final int[] initTT(int length) {

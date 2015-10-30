@@ -21,6 +21,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNot.not;
+
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FileUtil;
@@ -45,9 +46,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
  *
  *  - DFS_NAMENODE_RPC_BIND_HOST_KEY
  *  - DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY
+ *  - DFS_NAMENODE_LIFELINE_RPC_BIND_HOST_KEY
  *  - DFS_NAMENODE_HTTP_BIND_HOST_KEY
  *  - DFS_NAMENODE_HTTPS_BIND_HOST_KEY
-
  */
 public class TestNameNodeRespectsBindHostKeys {
   public static final Log LOG = LogFactory.getLog(TestNameNodeRespectsBindHostKeys.class);
@@ -62,6 +63,12 @@ public class TestNameNodeRespectsBindHostKeys {
   private static String getServiceRpcServerAddress(MiniDFSCluster cluster) {
     NameNodeRpcServer rpcServer = (NameNodeRpcServer) cluster.getNameNodeRpc();
     return rpcServer.getServiceRpcServer().getListenerAddress().getAddress().toString();
+  }
+
+  private static String getLifelineRpcServerAddress(MiniDFSCluster cluster) {
+    NameNodeRpcServer rpcServer = (NameNodeRpcServer) cluster.getNameNodeRpc();
+    return rpcServer.getLifelineRpcServer().getListenerAddress().getAddress()
+        .toString();
   }
 
   @Test (timeout=300000)
@@ -146,6 +153,48 @@ public class TestNameNodeRespectsBindHostKeys {
     }
   }
 
+  @Test (timeout=300000)
+  public void testLifelineRpcBindHostKey() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+
+    LOG.info("Testing without " + DFS_NAMENODE_LIFELINE_RPC_BIND_HOST_KEY);
+
+    conf.set(DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY, LOCALHOST_SERVER_ADDRESS);
+
+    // NN should not bind the wildcard address by default.
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster.waitActive();
+      String address = getLifelineRpcServerAddress(cluster);
+      assertThat("Bind address not expected to be wildcard by default.",
+                 address, not("/" + WILDCARD_ADDRESS));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+        cluster = null;
+      }
+    }
+
+    LOG.info("Testing with " + DFS_NAMENODE_LIFELINE_RPC_BIND_HOST_KEY);
+
+    // Tell NN to bind the wildcard address.
+    conf.set(DFS_NAMENODE_LIFELINE_RPC_BIND_HOST_KEY, WILDCARD_ADDRESS);
+
+    // Verify that NN binds wildcard address now.
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster.waitActive();
+      String address = getLifelineRpcServerAddress(cluster);
+      assertThat("Bind address " + address + " is not wildcard.",
+                 address, is("/" + WILDCARD_ADDRESS));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   @Test(timeout=300000)
   public void testHttpBindHostKey() throws IOException {
     Configuration conf = new HdfsConfiguration();
@@ -194,7 +243,7 @@ public class TestNameNodeRespectsBindHostKeys {
   private static void setupSsl() throws Exception {
     Configuration conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTPS_ONLY.name());
-    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, "localhost:0");
+    conf.set(DFS_NAMENODE_HTTPS_ADDRESS_KEY, "localhost:0");
     conf.set(DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY, "localhost:0");
 
     File base = new File(BASEDIR);
@@ -220,6 +269,10 @@ public class TestNameNodeRespectsBindHostKeys {
     LOG.info("Testing behavior without " + DFS_NAMENODE_HTTPS_BIND_HOST_KEY);
 
     setupSsl();
+    conf.set(DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY,
+        KeyStoreTestUtil.getClientSSLConfigFileName());
+    conf.set(DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
+        KeyStoreTestUtil.getServerSSLConfigFileName());
 
     conf.set(DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTPS_ONLY.name());
 

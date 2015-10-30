@@ -302,12 +302,11 @@ Upgrade and Rollback
 When Hadoop is upgraded on an existing cluster, as with any software upgrade, it is possible there are new bugs or incompatible changes that affect existing applications and were not discovered earlier. In any non-trivial HDFS installation, it is not an option to loose any data, let alone to restart HDFS from scratch. HDFS allows administrators to go back to earlier version of Hadoop and rollback the cluster to the state it was in before the upgrade. HDFS upgrade is described in more detail in [Hadoop Upgrade](http://wiki.apache.org/hadoop/Hadoop_Upgrade) Wiki page. HDFS can have one such backup at a time. Before upgrading, administrators need to remove existing backup using bin/hadoop dfsadmin `-finalizeUpgrade` command. The following briefly describes the typical upgrade procedure:
 
 *   Before upgrading Hadoop software, finalize if there an existing
-    backup. `dfsadmin -upgradeProgress` status can tell if the cluster
-    needs to be finalized.
+    backup.
 
 *   Stop the cluster and distribute new version of Hadoop.
 
-*   Run the new version with `-upgrade` option (`bin/start-dfs.sh -upgrade`).
+*   Run the new version with `-upgrade` option (`sbin/start-dfs.sh -upgrade`).
 
 *   Most of the time, cluster works just fine. Once the new HDFS is
     considered working well (may be after a few days of operation),
@@ -319,7 +318,9 @@ When Hadoop is upgraded on an existing cluster, as with any software upgrade, it
 
     * stop the cluster and distribute earlier version of Hadoop.
 
-    * start the cluster with rollback option. (`bin/start-dfs.sh -rollback`).
+    * run the rollback command on the namenode (`bin/hdfs namenode -rollback`).
+
+    * start the cluster with rollback option. (`sbin/start-dfs.sh -rollback`).
 
 When upgrading to a new version of HDFS, it is necessary to rename or delete any paths that are reserved in the new version of HDFS. If the NameNode encounters a reserved path during upgrade, it will print an error like the following:
 

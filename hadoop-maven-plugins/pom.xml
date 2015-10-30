@@ -47,6 +47,14 @@
       <version>${maven.plugin-tools.version}</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-core-asl</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-mapper-asl</artifactId>
+    </dependency>
   </dependencies>
   <build>
     <plugins>

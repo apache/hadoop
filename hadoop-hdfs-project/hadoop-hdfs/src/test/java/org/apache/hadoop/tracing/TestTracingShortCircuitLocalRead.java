@@ -19,32 +19,33 @@ package org.apache.hadoop.tracing;
 
 import static org.junit.Assume.assumeTrue;
 
+import java.io.File;
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.apache.htrace.Sampler;
-import org.apache.htrace.Span;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
+import org.apache.htrace.core.TraceScope;
+import org.apache.htrace.core.Tracer;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import java.io.IOException;
 
 public class TestTracingShortCircuitLocalRead {
   private static Configuration conf;
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem dfs;
-  private static SpanReceiverHost spanReceiverHost;
   private static TemporarySocketDirectory sockDir;
   static final Path TEST_PATH = new Path("testShortCircuitTraceHooks");
   static final int TEST_LENGTH = 1234;
@@ -64,13 +65,18 @@ public class TestTracingShortCircuitLocalRead {
   public void testShortCircuitTraceHooks() throws IOException {
     assumeTrue(NativeCodeLoader.isNativeCodeLoaded() && !Path.WINDOWS);
     conf = new Configuration();
-    conf.set(SpanReceiverHost.SPAN_RECEIVERS_CONF_KEY,
-        TestTracing.SetSpanReceiver.class.getName());
+    conf.set(TraceUtils.DEFAULT_HADOOP_PREFIX +
+            Tracer.SPAN_RECEIVER_CLASSES_KEY,
+        SetSpanReceiver.class.getName());
+    conf.set(TraceUtils.DEFAULT_HADOOP_PREFIX +
+            Tracer.SAMPLER_CLASSES_KEY,
+        "AlwaysSampler");
     conf.setLong("dfs.blocksize", 100 * 1024);
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY, false);
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY, false);
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
-        "testShortCircuitTraceHooks._PORT");
+        new File(sockDir.getDir(),
+            "testShortCircuitTraceHooks._PORT.sock").getAbsolutePath());
     conf.set(DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY, "CRC32C");
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(1)
@@ -78,10 +84,10 @@ public class TestTracingShortCircuitLocalRead {
     dfs = cluster.getFileSystem();
 
     try {
-      spanReceiverHost = SpanReceiverHost.getInstance(conf);
       DFSTestUtil.createFile(dfs, TEST_PATH, TEST_LENGTH, (short)1, 5678L);
 
-      TraceScope ts = Trace.startSpan("testShortCircuitTraceHooks", Sampler.ALWAYS);
+      TraceScope ts = FsTracer.get(conf).
+          newScope("testShortCircuitTraceHooks");
       FSDataInputStream stream = dfs.open(TEST_PATH);
       byte buf[] = new byte[TEST_LENGTH];
       IOUtils.readFully(stream, buf, 0, TEST_LENGTH);
@@ -92,7 +98,7 @@ public class TestTracingShortCircuitLocalRead {
         "OpRequestShortCircuitAccessProto",
         "ShortCircuitShmRequestProto"
       };
-      TestTracing.assertSpanNamesFound(expectedSpanNames);
+      SetSpanReceiver.assertSpanNamesFound(expectedSpanNames);
     } finally {
       dfs.close();
       cluster.shutdown();

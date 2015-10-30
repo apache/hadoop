@@ -104,7 +104,7 @@ public class HttpFSServer {
    *
    * @return FileSystemExecutor response
    *
-   * @throws IOException thrown if an IO error occurrs.
+   * @throws IOException thrown if an IO error occurs.
    * @throws FileSystemAccessException thrown if a FileSystemAccess releated error occurred. Thrown
    * exceptions are handled by {@link HttpFSExceptionProvider}.
    */

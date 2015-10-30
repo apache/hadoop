@@ -26,7 +26,6 @@ import java.security.PrivilegedExceptionAction;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -44,6 +43,7 @@ import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.Test;
 
@@ -62,11 +62,11 @@ public class TestClientProtocolWithDelegationToken {
   }
 
   static {
-    ((Log4JLogger) Client.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) Server.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) SaslRpcClient.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) SaslRpcServer.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) SaslInputStream.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(Client.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(Server.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(SaslRpcClient.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(SaslRpcServer.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(SaslInputStream.LOG, Level.ALL);
   }
 
   @Test

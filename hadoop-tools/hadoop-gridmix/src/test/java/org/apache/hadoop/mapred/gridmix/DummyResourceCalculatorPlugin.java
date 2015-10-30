@@ -48,6 +48,18 @@ public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
       "mapred.tasktracker.cumulativecputime.testing";
   /** CPU usage percentage for testing */
   public static final String CPU_USAGE = "mapred.tasktracker.cpuusage.testing";
+  /** cumulative number of bytes read over the network */
+  public static final String NETWORK_BYTES_READ =
+      "mapred.tasktracker.networkread.testing";
+  /** cumulative number of bytes written over the network */
+  public static final String NETWORK_BYTES_WRITTEN =
+      "mapred.tasktracker.networkwritten.testing";
+  /** cumulative number of bytes read from disks */
+  public static final String STORAGE_BYTES_READ =
+      "mapred.tasktracker.storageread.testing";
+  /** cumulative number of bytes written to disks */
+  public static final String STORAGE_BYTES_WRITTEN =
+      "mapred.tasktracker.storagewritten.testing";
   /** process cumulative CPU usage time for testing */
   public static final String PROC_CUMULATIVE_CPU_TIME =
       "mapred.tasktracker.proccumulativecputime.testing";
@@ -90,6 +102,12 @@ public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
   /** {@inheritDoc} */
   @Override
+  public int getNumCores() {
+    return getNumProcessors();
+  }
+
+  /** {@inheritDoc} */
+  @Override
   public long getCpuFrequency() {
     return getConf().getLong(CPU_FREQUENCY, -1);
   }
@@ -104,5 +122,29 @@ public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   @Override
   public float getCpuUsage() {
     return getConf().getFloat(CPU_USAGE, -1);
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public long getNetworkBytesRead() {
+    return getConf().getLong(NETWORK_BYTES_READ, -1);
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public long getNetworkBytesWritten() {
+    return getConf().getLong(NETWORK_BYTES_WRITTEN, -1);
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public long getStorageBytesRead() {
+    return getConf().getLong(STORAGE_BYTES_READ, -1);
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public long getStorageBytesWritten() {
+    return getConf().getLong(STORAGE_BYTES_WRITTEN, -1);
   }
 }

@@ -21,7 +21,6 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -63,6 +62,10 @@ public class TestHttpsFileSystem {
     sslConfDir = KeyStoreTestUtil.getClasspathDir(TestHttpsFileSystem.class);
 
     KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, conf, false);
+    conf.set(DFSConfigKeys.DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY,
+        KeyStoreTestUtil.getClientSSLConfigFileName());
+    conf.set(DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
+        KeyStoreTestUtil.getServerSSLConfigFileName());
 
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();

@@ -258,6 +258,39 @@ class Fetcher<K,V> extends Thread {
     closeConnection();
   }
 
+  private DataInputStream openShuffleUrl(MapHost host,
+      Set<TaskAttemptID> remaining, URL url) {
+    DataInputStream input = null;
+
+    try {
+      setupConnectionsWithRetry(host, remaining, url);
+      if (stopped) {
+        abortConnect(host, remaining);
+      } else {
+        input = new DataInputStream(connection.getInputStream());
+      }
+    } catch (IOException ie) {
+      boolean connectExcpt = ie instanceof ConnectException;
+      ioErrs.increment(1);
+      LOG.warn("Failed to connect to " + host + " with " + remaining.size() +
+               " map outputs", ie);
+
+      // If connect did not succeed, just mark all the maps as failed,
+      // indirectly penalizing the host
+      scheduler.hostFailed(host.getHostName());
+      for(TaskAttemptID left: remaining) {
+        scheduler.copyFailed(left, host, false, connectExcpt);
+      }
+
+      // Add back all the remaining maps, WITHOUT marking them as failed
+      for(TaskAttemptID left: remaining) {
+        scheduler.putBackKnownMapOutput(host, left);
+      }
+    }
+
+    return input;
+  }
+
   /**
    * The crux of the matter...
    * 
@@ -286,37 +319,11 @@ class Fetcher<K,V> extends Thread {
     Set<TaskAttemptID> remaining = new HashSet<TaskAttemptID>(maps);
     
     // Construct the url and connect
-    DataInputStream input = null;
     URL url = getMapOutputURL(host, maps);
-    try {
-      setupConnectionsWithRetry(host, remaining, url);
-      
-      if (stopped) {
-        abortConnect(host, remaining);
-        return;
-      }
-    } catch (IOException ie) {
-      boolean connectExcpt = ie instanceof ConnectException;
-      ioErrs.increment(1);
-      LOG.warn("Failed to connect to " + host + " with " + remaining.size() + 
-               " map outputs", ie);
-
-      // If connect did not succeed, just mark all the maps as failed,
-      // indirectly penalizing the host
-      scheduler.hostFailed(host.getHostName());
-      for(TaskAttemptID left: remaining) {
-        scheduler.copyFailed(left, host, false, connectExcpt);
-      }
-     
-      // Add back all the remaining maps, WITHOUT marking them as failed
-      for(TaskAttemptID left: remaining) {
-        scheduler.putBackKnownMapOutput(host, left);
-      }
-      
+    DataInputStream input = openShuffleUrl(host, remaining, url);
+    if (input == null) {
       return;
     }
-    
-    input = new DataInputStream(connection.getInputStream());
     
     try {
       // Loop through available map-outputs and fetch them
@@ -328,19 +335,16 @@ class Fetcher<K,V> extends Thread {
         try {
           failedTasks = copyMapOutput(host, input, remaining, fetchRetryEnabled);
         } catch (IOException e) {
+          IOUtils.cleanup(LOG, input);
           //
           // Setup connection again if disconnected by NM
           connection.disconnect();
           // Get map output from remaining tasks only.
           url = getMapOutputURL(host, remaining);
-          
-          // Connect with retry as expecting host's recovery take sometime.
-          setupConnectionsWithRetry(host, remaining, url);
-          if (stopped) {
-            abortConnect(host, remaining);
+          input = openShuffleUrl(host, remaining, url);
+          if (input == null) {
             return;
           }
-          input = new DataInputStream(connection.getInputStream());
         }
       }
       
@@ -445,7 +449,7 @@ class Fetcher<K,V> extends Thread {
     LOG.debug("url="+msgToEncode+";encHash="+encHash+";replyHash="+replyHash);
     // verify that replyHash is HMac of encHash
     SecureShuffleUtils.verifyReply(replyHash, encHash, shuffleSecretKey);
-    LOG.info("for url="+msgToEncode+" sent hash and received reply");
+    LOG.debug("for url="+msgToEncode+" sent hash and received reply");
   }
 
   private void setupShuffleConnection(String encHash) {
@@ -550,7 +554,10 @@ class Fetcher<K,V> extends Thread {
       metrics.successFetch();
       return null;
     } catch (IOException ioe) {
-      
+      if (mapOutput != null) {
+        mapOutput.abort();
+      }
+
       if (canRetry) {
         checkTimeoutOrRetry(host, ioe);
       } 
@@ -571,7 +578,6 @@ class Fetcher<K,V> extends Thread {
                " from " + host.getHostName(), ioe); 
 
       // Inform the shuffle-scheduler
-      mapOutput.abort();
       metrics.failedFetch();
       return new TaskAttemptID[] {mapId};
     }
@@ -591,7 +597,7 @@ class Fetcher<K,V> extends Thread {
     // Retry is not timeout, let's do retry with throwing an exception.
     if (currentTime - retryStartTime < this.fetchRetryTimeout) {
       LOG.warn("Shuffle output from " + host.getHostName() +
-          " failed, retry it.");
+          " failed, retry it.", ioe);
       throw ioe;
     } else {
       // timeout, prepare to be failed.

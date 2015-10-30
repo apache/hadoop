@@ -31,7 +31,9 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.ipc.RemoteException;
@@ -88,7 +90,7 @@ abstract public class TestSymlinkHdfs extends SymlinkBaseTest {
     conf.set(FsPermission.UMASK_LABEL, "000");
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_KEY, 0);
     cluster = new MiniDFSCluster.Builder(conf).build();
-    webhdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsFileSystem.SCHEME);
+    webhdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsConstants.WEBHDFS_SCHEME);
     dfs = cluster.getFileSystem();
   }
 
@@ -258,7 +260,7 @@ abstract public class TestSymlinkHdfs extends SymlinkBaseTest {
   public void testCreateLinkMaxPathLink() throws IOException {
     Path dir  = new Path(testBaseDir1());
     Path file = new Path(testBaseDir1(), "file");
-    final int maxPathLen = HdfsConstants.MAX_PATH_LENGTH;
+    final int maxPathLen = HdfsServerConstants.MAX_PATH_LENGTH;
     final int dirLen     = dir.toString().length() + 1;
     int   len            = maxPathLen - dirLen;
     

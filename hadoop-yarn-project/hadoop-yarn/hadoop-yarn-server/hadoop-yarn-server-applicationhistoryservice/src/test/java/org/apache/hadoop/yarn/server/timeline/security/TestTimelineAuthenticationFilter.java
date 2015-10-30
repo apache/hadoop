@@ -240,12 +240,21 @@ public class TestTimelineAuthenticationFilter {
     Assert.assertEquals(new Text(HTTP_USER), tDT.getOwner());
 
     // Renew token
+    Assert.assertFalse(token.getService().toString().isEmpty());
+    // Renew the token from the token service address
     long renewTime1 = httpUserClient.renewDelegationToken(token);
     Thread.sleep(100);
+    token.setService(new Text());
+    Assert.assertTrue(token.getService().toString().isEmpty());
+    // If the token service address is not avaiable, it still can be renewed
+    // from the configured address
     long renewTime2 = httpUserClient.renewDelegationToken(token);
     Assert.assertTrue(renewTime1 < renewTime2);
 
     // Cancel token
+    Assert.assertTrue(token.getService().toString().isEmpty());
+    // If the token service address is not avaiable, it still can be canceled
+    // from the configured address
     httpUserClient.cancelDelegationToken(token);
     // Renew should not be successful because the token is canceled
     try {
@@ -280,6 +289,8 @@ public class TestTimelineAuthenticationFilter {
     Assert.assertTrue(renewTime1 < renewTime2);
 
     // Cancel token
+    Assert.assertFalse(tokenToRenew.getService().toString().isEmpty());
+    // Cancel the token from the token service address
     fooUserClient.cancelDelegationToken(tokenToRenew);
 
     // Renew should not be successful because the token is canceled

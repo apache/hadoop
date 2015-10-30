@@ -37,8 +37,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrSetFlag;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -183,7 +185,6 @@ class ChRootedFileSystem extends FilterFileSystem {
   }
   
   @Override
-  @Deprecated
   public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
       EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
@@ -240,7 +241,13 @@ class ChRootedFileSystem extends FilterFileSystem {
       throws IOException {
     return super.listStatus(fullPath(f));
   }
-  
+
+  @Override
+  public RemoteIterator<LocatedFileStatus> listLocatedStatus(Path f)
+      throws IOException {
+    return super.listLocatedStatus(fullPath(f));
+  }
+
   @Override
   public boolean mkdirs(final Path f, final FsPermission permission)
       throws IOException {
@@ -353,6 +360,23 @@ class ChRootedFileSystem extends FilterFileSystem {
   @Override
   public void removeXAttr(Path path, String name) throws IOException {
     super.removeXAttr(fullPath(path), name);
+  }
+
+  @Override
+  public Path createSnapshot(Path path, String name) throws IOException {
+    return super.createSnapshot(fullPath(path), name);
+  }
+
+  @Override
+  public void renameSnapshot(Path path, String snapshotOldName,
+      String snapshotNewName) throws IOException {
+    super.renameSnapshot(fullPath(path), snapshotOldName, snapshotNewName);
+  }
+
+  @Override
+  public void deleteSnapshot(Path snapshotDir, String snapshotName)
+      throws IOException {
+    super.deleteSnapshot(fullPath(snapshotDir), snapshotName);
   }
 
   @Override

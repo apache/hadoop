@@ -56,10 +56,20 @@ public class MiniDFSNNTopology {
    * Set up an HA topology with a single HA nameservice.
    */
   public static MiniDFSNNTopology simpleHATopology() {
-    return new MiniDFSNNTopology()
-      .addNameservice(new MiniDFSNNTopology.NSConf("minidfs-ns")
-        .addNN(new MiniDFSNNTopology.NNConf("nn1"))
-        .addNN(new MiniDFSNNTopology.NNConf("nn2")));
+    return simpleHATopology(2);
+  }
+
+  /**
+   * Set up an HA topology with a single HA nameservice.
+   * @param nnCount of namenodes to use with the nameservice
+   */
+  public static MiniDFSNNTopology simpleHATopology(int nnCount) {
+    MiniDFSNNTopology.NSConf nameservice = new MiniDFSNNTopology.NSConf("minidfs-ns");
+    for (int i = 1; i <= nnCount; i++) {
+      nameservice.addNN(new MiniDFSNNTopology.NNConf("nn" + i));
+    }
+    MiniDFSNNTopology topology = new MiniDFSNNTopology().addNameservice(nameservice);
+    return topology;
   }
 
   /**

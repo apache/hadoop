@@ -15,7 +15,7 @@
 
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration xmlns:xi="http://www.w3.org/2001/XInclude">
- 
+
   <!-- For tests against live azure, provide the following account information -->
   <!--
   <property>
@@ -26,8 +26,16 @@
     <name>fs.azure.account.key.{ACCOUNTNAME}.blob.core.windows.net</name>
     <value>{ACCOUNTKEY}</value>
   </property>
-  -->  
-  
+  -->
+
+  <!-- Save the above configuration properties in a separate file named -->
+  <!-- azure-auth-keys.xml in the same directory as this file. -->
+  <!-- DO NOT ADD azure-auth-keys.xml TO REVISION CONTROL.  The keys to your -->
+  <!-- Azure Storage account are a secret and must not be shared. -->
+  <include xmlns="http://www.w3.org/2001/XInclude" href="azure-auth-keys.xml">
+    <fallback />
+  </include>
+
   <!-- For tests against azure-emulator -->
   <!--
   <property>
@@ -35,4 +43,8 @@
     <value>true</value>
   </property>
   -->
+  <property>
+    <name>fs.AbstractFileSystem.wasb.impl</name>
+    <value>org.apache.hadoop.fs.azure.Wasb</value>
+  </property>
 </configuration>

@@ -25,15 +25,21 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.PathIsDirectoryException;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.fs.Trash;
+import org.apache.hadoop.util.ToolRunner;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SHELL_SAFELY_DELETE_LIMIT_NUM_FILES;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SHELL_SAFELY_DELETE_LIMIT_NUM_FILES_DEFAULT;
 
 /**
- * Classes that delete paths
+ * Classes that delete paths.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -49,28 +55,36 @@ class Delete {
   /** remove non-directory paths */
   public static class Rm extends FsCommand {
     public static final String NAME = "rm";
-    public static final String USAGE = "[-f] [-r|-R] [-skipTrash] <src> ...";
+    public static final String USAGE = "[-f] [-r|-R] [-skipTrash] " +
+        "[-safely] <src> ...";
     public static final String DESCRIPTION =
-      "Delete all files that match the specified file pattern. " +
-      "Equivalent to the Unix command \"rm <src>\"\n" +
-      "-skipTrash: option bypasses trash, if enabled, and immediately " +
-      "deletes <src>\n" +
-      "-f: If the file does not exist, do not display a diagnostic " +
-      "message or modify the exit status to reflect an error.\n" +
-      "-[rR]:  Recursively deletes directories";
+        "Delete all files that match the specified file pattern. " +
+            "Equivalent to the Unix command \"rm <src>\"\n" +
+            "-f: If the file does not exist, do not display a diagnostic " +
+            "message or modify the exit status to reflect an error.\n" +
+            "-[rR]:  Recursively deletes directories.\n" +
+            "-skipTrash: option bypasses trash, if enabled, and immediately " +
+            "deletes <src>.\n" +
+            "-safely: option requires safety confirmation, if enabled, " +
+            "requires confirmation before deleting large directory with more " +
+            "than <hadoop.shell.delete.limit.num.files> files. Delay is " +
+            "expected when walking over large directory recursively to count " +
+            "the number of files to be deleted before the confirmation.\n";
 
     private boolean skipTrash = false;
     private boolean deleteDirs = false;
     private boolean ignoreFNF = false;
-    
+    private boolean safeDelete = false;
+
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
       CommandFormat cf = new CommandFormat(
-          1, Integer.MAX_VALUE, "f", "r", "R", "skipTrash");
+          1, Integer.MAX_VALUE, "f", "r", "R", "skipTrash", "safely");
       cf.parse(args);
       ignoreFNF = cf.getOpt("f");
       deleteDirs = cf.getOpt("r") || cf.getOpt("R");
       skipTrash = cf.getOpt("skipTrash");
+      safeDelete = cf.getOpt("safely");
     }
 
     @Override
@@ -101,13 +115,35 @@ class Delete {
       // problem (ie. creating the trash dir, moving the item to be deleted,
       // etc), then the path will just be deleted because moveToTrash returns
       // false and it falls thru to fs.delete.  this doesn't seem right
-      if (moveToTrash(item)) {
+      if (moveToTrash(item) || !canBeSafelyDeleted(item)) {
         return;
       }
       if (!item.fs.delete(item.path, deleteDirs)) {
         throw new PathIOException(item.toString());
       }
       out.println("Deleted " + item);
+    }
+
+    private boolean canBeSafelyDeleted(PathData item)
+        throws IOException {
+      boolean shouldDelete = true;
+      if (safeDelete) {
+        final long deleteLimit = getConf().getLong(
+            HADOOP_SHELL_SAFELY_DELETE_LIMIT_NUM_FILES,
+            HADOOP_SHELL_SAFELY_DELETE_LIMIT_NUM_FILES_DEFAULT);
+        if (deleteLimit > 0) {
+          ContentSummary cs = item.fs.getContentSummary(item.path);
+          final long numFiles = cs.getFileCount();
+          if (numFiles > deleteLimit) {
+            if (!ToolRunner.confirmPrompt("Proceed deleting " + numFiles +
+                " files?")) {
+              System.err.println("Delete aborted at user request.\n");
+              shouldDelete = false;
+            }
+          }
+        }
+      }
+      return shouldDelete;
     }
 
     private boolean moveToTrash(PathData item) throws IOException {
@@ -121,7 +157,7 @@ class Delete {
           String msg = ioe.getMessage();
           if (ioe.getCause() != null) {
             msg += ": " + ioe.getCause().getMessage();
-	  }
+          }
           throw new IOException(msg + ". Consider using -skipTrash option", ioe);
         }
       }
@@ -141,7 +177,7 @@ class Delete {
 
     @Override
     public String getReplacementCommand() {
-      return "rm -r";
+      return "-rm -r";
     }
   }
 
@@ -179,11 +215,14 @@ class Delete {
     }
   }
 
-  /** empty the trash */
+  // delete files from the trash that are older
+  // than the retention threshold.
   static class Expunge extends FsCommand {
     public static final String NAME = "expunge";
     public static final String USAGE = "";
-    public static final String DESCRIPTION = "Empty the Trash";
+    public static final String DESCRIPTION =
+        "Delete files from the trash that are older " +
+            "than the retention threshold";
 
     // TODO: should probably allow path arguments for the filesystems
     @Override
@@ -195,9 +234,19 @@ class Delete {
     @Override
     protected void processArguments(LinkedList<PathData> args)
     throws IOException {
-      Trash trash = new Trash(getConf());
-      trash.expunge();
-      trash.checkpoint();    
+      FileSystem[] childFileSystems =
+          FileSystem.get(getConf()).getChildFileSystems();
+      if (null != childFileSystems) {
+        for (FileSystem fs : childFileSystems) {
+          Trash trash = new Trash(fs, getConf());
+          trash.expunge();
+          trash.checkpoint();
+        }
+      } else {
+        Trash trash = new Trash(getConf());
+        trash.expunge();
+        trash.checkpoint();
+      }
     }
   }
 }

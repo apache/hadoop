@@ -36,6 +36,10 @@ import org.junit.After;
  * Base test for symbolic links
  */
 public abstract class SymlinkBaseTest {
+  // Re-enable symlinks for tests, see HADOOP-10020 and HADOOP-10052
+  static {
+    FileSystem.enableSymlinks();
+  }
   static final long seed = 0xDEADBEEFL;
   static final int  blockSize =  8192;
   static final int  fileSize  = 16384;
@@ -47,13 +51,6 @@ public abstract class SymlinkBaseTest {
   abstract protected String testBaseDir1() throws IOException;
   abstract protected String testBaseDir2() throws IOException;
   abstract protected URI testURI();
-
-  // Returns true if the filesystem is emulating symlink support. Certain
-  // checks will be bypassed if that is the case.
-  //
-  protected boolean emulatingSymlinksOnWindows() {
-    return false;
-  }
 
   protected IOException unwrapException(IOException e) {
     return e;
@@ -231,7 +228,6 @@ public abstract class SymlinkBaseTest {
   @Test(timeout=10000)
   /** Stat a link to a file */
   public void testStatLinkToFile() throws IOException {
-    assumeTrue(!emulatingSymlinksOnWindows());
     Path file = new Path(testBaseDir1()+"/file");
     Path linkToFile = new Path(testBaseDir1()+"/linkToFile");
     createAndWriteFile(file);
@@ -357,11 +353,6 @@ public abstract class SymlinkBaseTest {
   /* Assert that the given link to a file behaves as expected. */
   private void checkLink(Path linkAbs, Path expectedTarget, Path targetQual)
       throws IOException {
-
-    // If we are emulating symlinks then many of these checks will fail
-    // so we skip them.
-    //
-    assumeTrue(!emulatingSymlinksOnWindows());
 
     Path dir = new Path(testBaseDir1());
     // isFile/Directory
@@ -659,7 +650,6 @@ public abstract class SymlinkBaseTest {
   @Test(timeout=10000)
   /** Create symlink through a symlink */
   public void testCreateLinkViaLink() throws IOException {
-    assumeTrue(!emulatingSymlinksOnWindows());
     Path dir1        = new Path(testBaseDir1());
     Path file        = new Path(testBaseDir1(), "file");
     Path linkToDir   = new Path(testBaseDir2(), "linkToDir");
@@ -702,7 +692,6 @@ public abstract class SymlinkBaseTest {
   @Test(timeout=10000)
   /** Test create symlink using the same path */
   public void testCreateLinkTwice() throws IOException {
-    assumeTrue(!emulatingSymlinksOnWindows());
     Path file = new Path(testBaseDir1(), "file");
     Path link = new Path(testBaseDir1(), "linkToFile");
     createAndWriteFile(file);
@@ -891,8 +880,7 @@ public abstract class SymlinkBaseTest {
     assertFalse(wrapper.exists(linkViaLink));
     // Check that we didn't rename the link target
     assertTrue(wrapper.exists(file));
-    assertTrue(wrapper.getFileLinkStatus(linkNewViaLink).isSymlink() ||
-        emulatingSymlinksOnWindows());
+    assertTrue(wrapper.getFileLinkStatus(linkNewViaLink).isSymlink());
     readFile(linkNewViaLink);
   }
 
@@ -1030,8 +1018,7 @@ public abstract class SymlinkBaseTest {
     createAndWriteFile(file);
     wrapper.createSymlink(file, link1, false);
     wrapper.rename(link1, link2);
-    assertTrue(wrapper.getFileLinkStatus(link2).isSymlink() ||
-        emulatingSymlinksOnWindows());
+    assertTrue(wrapper.getFileLinkStatus(link2).isSymlink());
     readFile(link2);
     readFile(file);
     assertFalse(wrapper.exists(link1));
@@ -1055,11 +1042,8 @@ public abstract class SymlinkBaseTest {
     }
     wrapper.rename(link, file1, Rename.OVERWRITE);
     assertFalse(wrapper.exists(link));
-
-    if (!emulatingSymlinksOnWindows()) {
-      assertTrue(wrapper.getFileLinkStatus(file1).isSymlink());
-      assertEquals(file2, wrapper.getLinkTarget(file1));
-    }
+    assertTrue(wrapper.getFileLinkStatus(file1).isSymlink());
+    assertEquals(file2, wrapper.getLinkTarget(file1));
   }
 
   @Test(timeout=10000)
@@ -1121,7 +1105,6 @@ public abstract class SymlinkBaseTest {
   @Test(timeout=10000)
   /** Rename a symlink */
   public void testRenameSymlink() throws IOException {
-    assumeTrue(!emulatingSymlinksOnWindows());
     Path file  = new Path(testBaseDir1(), "file");
     Path link1 = new Path(testBaseDir1(), "linkToFile1");
     Path link2 = new Path(testBaseDir1(), "linkToFile2");
@@ -1219,7 +1202,6 @@ public abstract class SymlinkBaseTest {
   @Test(timeout=10000)
   /** Test rename the symlink's target */
   public void testRenameLinkTarget() throws IOException {
-    assumeTrue(!emulatingSymlinksOnWindows());
     Path file    = new Path(testBaseDir1(), "file");
     Path fileNew = new Path(testBaseDir1(), "fileNew");
     Path link    = new Path(testBaseDir1(), "linkToFile");
@@ -1382,19 +1364,48 @@ public abstract class SymlinkBaseTest {
   }
 
   @Test(timeout=10000)
-  /** setTimes affects the target not the link */
-  public void testSetTimes() throws IOException {
+  /** setTimes affects the target file not the link */
+  public void testSetTimesSymlinkToFile() throws IOException {
     Path file = new Path(testBaseDir1(), "file");
     Path link = new Path(testBaseDir1(), "linkToFile");
     createAndWriteFile(file);
     wrapper.createSymlink(file, link, false);
     long at = wrapper.getFileLinkStatus(link).getAccessTime();
-    wrapper.setTimes(link, 2L, 3L);
-    // NB: local file systems don't implement setTimes
-    if (!"file".equals(getScheme())) {
-      assertEquals(at, wrapper.getFileLinkStatus(link).getAccessTime());
-      assertEquals(3, wrapper.getFileStatus(file).getAccessTime());
-      assertEquals(2, wrapper.getFileStatus(file).getModificationTime());
+    // the local file system may not support millisecond timestamps
+    wrapper.setTimes(link, 2000L, 3000L);
+    assertEquals(at, wrapper.getFileLinkStatus(link).getAccessTime());
+    assertEquals(2000, wrapper.getFileStatus(file).getModificationTime());
+    assertEquals(3000, wrapper.getFileStatus(file).getAccessTime());
+  }
+
+  @Test(timeout=10000)
+  /** setTimes affects the target directory not the link */
+  public void testSetTimesSymlinkToDir() throws IOException {
+    Path dir = new Path(testBaseDir1(), "dir");
+    Path link = new Path(testBaseDir1(), "linkToDir");
+    wrapper.mkdir(dir, FileContext.DEFAULT_PERM, false);
+    wrapper.createSymlink(dir, link, false);
+    long at = wrapper.getFileLinkStatus(link).getAccessTime();
+    // the local file system may not support millisecond timestamps
+    wrapper.setTimes(link, 2000L, 3000L);
+    assertEquals(at, wrapper.getFileLinkStatus(link).getAccessTime());
+    assertEquals(2000, wrapper.getFileStatus(dir).getModificationTime());
+    assertEquals(3000, wrapper.getFileStatus(dir).getAccessTime());
+  }
+
+  @Test(timeout=10000)
+  /** setTimes does not affect the link even though target does not exist */
+  public void testSetTimesDanglingLink() throws IOException {
+    Path file = new Path("/noSuchFile");
+    Path link = new Path(testBaseDir1()+"/link");
+    wrapper.createSymlink(file, link, false);
+    long at = wrapper.getFileLinkStatus(link).getAccessTime();
+    try {
+      wrapper.setTimes(link, 2000L, 3000L);
+      fail("set times to non-existant file");
+    } catch (IOException e) {
+      // Expected
     }
+    assertEquals(at, wrapper.getFileLinkStatus(link).getAccessTime());
   }
 }

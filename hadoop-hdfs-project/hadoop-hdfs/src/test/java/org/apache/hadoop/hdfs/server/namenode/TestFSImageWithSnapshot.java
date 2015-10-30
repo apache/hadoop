@@ -27,7 +27,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeat
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.util.Canceler;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
@@ -58,7 +58,7 @@ import org.junit.Test;
 public class TestFSImageWithSnapshot {
   {
     SnapshotTestHelper.disableLogs();
-    ((Log4JLogger)INode.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(INode.LOG, Level.ALL);
   }
 
   static final long seed = 0;
@@ -158,8 +158,7 @@ public class TestFSImageWithSnapshot {
     fsn.getFSDirectory().writeLock();
     try {
       loader.load(imageFile, false);
-      FSImage.updateCountForQuota(fsn.getBlockManager().getStoragePolicySuite(),
-          INodeDirectory.valueOf(fsn.getFSDirectory().getINode("/"), "/"));
+      fsn.getFSDirectory().updateCountForQuota();
     } finally {
       fsn.getFSDirectory().writeUnlock();
       fsn.writeUnlock();

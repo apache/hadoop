@@ -30,7 +30,6 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -62,8 +61,8 @@ public class TestBackupNode {
 
   
   static {
-    ((Log4JLogger)Checkpointer.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)BackupImage.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(Checkpointer.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(BackupImage.LOG, Level.ALL);
   }
   
   static final String BASE_DIR = MiniDFSCluster.getBaseDirectory();
@@ -319,7 +318,7 @@ public class TestBackupNode {
       if(fileSys != null) fileSys.close();
       if(cluster != null) cluster.shutdown();
     }
-    File nnCurDir = new File(BASE_DIR, "name1/current/");
+    File nnCurDir = new File(MiniDFSCluster.getNameNodeDirectory(BASE_DIR, 0, 0)[0], "current/");
     File bnCurDir = new File(getBackupNodeDir(op, 1), "/current/");
 
     FSImageTestUtil.assertParallelFilesAreIdentical(

@@ -78,14 +78,16 @@ public class QuotaCounts {
     this.tsCounts = builder.tsCounts;
   }
 
-  public void add(QuotaCounts that) {
+  public QuotaCounts add(QuotaCounts that) {
     this.nsSsCounts.add(that.nsSsCounts);
     this.tsCounts.add(that.tsCounts);
+    return this;
   }
 
-  public void subtract(QuotaCounts that) {
+  public QuotaCounts subtract(QuotaCounts that) {
     this.nsSsCounts.subtract(that.nsSsCounts);
     this.tsCounts.subtract(that.tsCounts);
+    return this;
   }
 
   /**
@@ -158,6 +160,13 @@ public class QuotaCounts {
   }
 
   @Override
+  public String toString() {
+    return "name space=" + getNameSpace() +
+        "\nstorage space=" + getStorageSpace() +
+        "\nstorage types=" + getTypeSpaces();
+  }
+
+  @Override
   public boolean equals(Object obj) {
     if (obj == this) {
       return true;
@@ -174,4 +183,5 @@ public class QuotaCounts {
     assert false : "hashCode not designed";
     return 42; // any arbitrary constant will do
   }
+
 }

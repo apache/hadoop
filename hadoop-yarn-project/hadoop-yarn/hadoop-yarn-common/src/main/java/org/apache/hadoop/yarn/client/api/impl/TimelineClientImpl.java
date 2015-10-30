@@ -43,7 +43,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.SecurityUtil;
@@ -83,7 +83,7 @@ import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
 import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
 
 @Private
-@Unstable
+@Evolving
 public class TimelineClientImpl extends TimelineClient {
 
   private static final Log LOG = LogFactory.getLog(TimelineClientImpl.class);
@@ -368,9 +368,12 @@ public class TimelineClientImpl extends TimelineClient {
   public long renewDelegationToken(
       final Token<TimelineDelegationTokenIdentifier> timelineDT)
           throws IOException, YarnException {
-    boolean useHttps = YarnConfiguration.useHttps(this.getConfig());
-    final String scheme = useHttps ? "https" : "http";
-    final InetSocketAddress address = SecurityUtil.getTokenServiceAddr(timelineDT);
+    final boolean isTokenServiceAddrEmpty =
+        timelineDT.getService().toString().isEmpty();
+    final String scheme = isTokenServiceAddrEmpty ? null
+        : (YarnConfiguration.useHttps(this.getConfig()) ? "https" : "http");
+    final InetSocketAddress address = isTokenServiceAddrEmpty ? null
+        : SecurityUtil.getTokenServiceAddr(timelineDT);
     PrivilegedExceptionAction<Long> renewDTAction =
         new PrivilegedExceptionAction<Long>() {
 
@@ -385,7 +388,10 @@ public class TimelineClientImpl extends TimelineClient {
             DelegationTokenAuthenticatedURL authUrl =
                 new DelegationTokenAuthenticatedURL(authenticator,
                     connConfigurator);
-            final URI serviceURI = new URI(scheme, null, address.getHostName(),
+            // If the token service address is not available, fall back to use
+            // the configured service address.
+            final URI serviceURI = isTokenServiceAddrEmpty ? resURI
+                : new URI(scheme, null, address.getHostName(),
                 address.getPort(), RESOURCE_URI_STR, null, null);
             return authUrl
                 .renewDelegationToken(serviceURI.toURL(), token, doAsUser);
@@ -399,9 +405,12 @@ public class TimelineClientImpl extends TimelineClient {
   public void cancelDelegationToken(
       final Token<TimelineDelegationTokenIdentifier> timelineDT)
           throws IOException, YarnException {
-    boolean useHttps = YarnConfiguration.useHttps(this.getConfig());
-    final String scheme = useHttps ? "https" : "http";
-    final InetSocketAddress address = SecurityUtil.getTokenServiceAddr(timelineDT);
+    final boolean isTokenServiceAddrEmpty =
+        timelineDT.getService().toString().isEmpty();
+    final String scheme = isTokenServiceAddrEmpty ? null
+        : (YarnConfiguration.useHttps(this.getConfig()) ? "https" : "http");
+    final InetSocketAddress address = isTokenServiceAddrEmpty ? null
+        : SecurityUtil.getTokenServiceAddr(timelineDT);
     PrivilegedExceptionAction<Void> cancelDTAction =
         new PrivilegedExceptionAction<Void>() {
 
@@ -416,7 +425,10 @@ public class TimelineClientImpl extends TimelineClient {
             DelegationTokenAuthenticatedURL authUrl =
                 new DelegationTokenAuthenticatedURL(authenticator,
                     connConfigurator);
-            final URI serviceURI = new URI(scheme, null, address.getHostName(),
+            // If the token service address is not available, fall back to use
+            // the configured service address.
+            final URI serviceURI = isTokenServiceAddrEmpty ? resURI
+                : new URI(scheme, null, address.getHostName(),
                 address.getPort(), RESOURCE_URI_STR, null, null);
             authUrl.cancelDelegationToken(serviceURI.toURL(), token, doAsUser);
             return null;
@@ -642,4 +654,9 @@ public class TimelineClientImpl extends TimelineClient {
     new HelpFormatter().printHelp("TimelineClient", opts);
   }
 
+  @VisibleForTesting
+  @Private
+  public UserGroupInformation getUgi() {
+    return authUgi;
+  }
 }

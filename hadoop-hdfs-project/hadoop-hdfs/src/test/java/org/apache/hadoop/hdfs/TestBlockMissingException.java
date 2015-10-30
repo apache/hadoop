@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.junit.Test;
@@ -52,7 +53,7 @@ public class TestBlockMissingException {
     int numBlocks = 4;
     conf = new HdfsConfiguration();
     // Set short retry timeouts so this test runs faster
-    conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 10);
+    conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
     try {
       dfs = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
       dfs.waitActive();
@@ -66,7 +67,8 @@ public class TestBlockMissingException {
           0, numBlocks * blockSize);
       // remove block of file
       LOG.info("Remove first block of file");
-      corruptBlock(file1, locations.get(0).getBlock());
+      dfs.corruptBlockOnDataNodesByDeletingBlockFile(
+          locations.get(0).getBlock());
 
       // validate that the system throws BlockMissingException
       validateFile(fileSys, file1);
@@ -116,17 +118,5 @@ public class TestBlockMissingException {
     }
     stm.close();
     assertTrue("Expected BlockMissingException ", gotException);
-  }
-
-  //
-  // Corrupt specified block of file
-  //
-  void corruptBlock(Path file, ExtendedBlock blk) {
-    // Now deliberately remove/truncate data blocks from the file.
-    File[] blockFiles = dfs.getAllBlockFiles(blk);
-    for (File f : blockFiles) {
-      f.delete();
-      LOG.info("Deleted block " + f);
-    }
   }
 }

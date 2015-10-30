@@ -30,7 +30,7 @@ import org.apache.hadoop.io.Text;
  * @param <T>
  *          T extends TokenIdentifier
  */
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public interface TokenSelector<T extends TokenIdentifier> {
   Token<T> selectToken(Text service,

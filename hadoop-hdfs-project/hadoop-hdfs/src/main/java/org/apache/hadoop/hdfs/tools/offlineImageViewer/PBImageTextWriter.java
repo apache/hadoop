@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf;
@@ -145,7 +146,8 @@ abstract class PBImageTextWriter implements Closeable {
           return "/";
         }
         if (this.path == null) {
-          this.path = new File(parent.getPath(), name).toString();
+          this.path = new Path(parent.getPath(), name.isEmpty() ? "/" : name).
+              toString();
           this.name = null;
         }
         return this.path;
@@ -364,7 +366,8 @@ abstract class PBImageTextWriter implements Closeable {
         }
         String parentName = toString(bytes);
         String parentPath =
-            new File(getParentPath(parent), parentName).toString();
+            new Path(getParentPath(parent),
+                parentName.isEmpty()? "/" : parentName).toString();
         dirPathCache.put(parent, parentPath);
       }
       return dirPathCache.get(parent);

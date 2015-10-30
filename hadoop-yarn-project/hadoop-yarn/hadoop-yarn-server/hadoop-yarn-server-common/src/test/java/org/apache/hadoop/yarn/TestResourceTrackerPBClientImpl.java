@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcClientFactoryPBImpl;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcServerFactoryPBImpl;
@@ -32,9 +33,12 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerResponse;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import static org.junit.Assert.*;
 
 /**
@@ -116,7 +120,27 @@ public class TestResourceTrackerPBClientImpl {
 
   }
 
-  
+  /**
+   * Test the method unRegisterNodeManager. Method should return a not null
+   * result.
+   *
+   */
+  @Test
+  public void testUnRegisterNodeManager() throws Exception {
+    UnRegisterNodeManagerRequest request = UnRegisterNodeManagerRequest
+        .newInstance(NodeId.newInstance("host1", 1234));
+    assertNotNull(client.unRegisterNodeManager(request));
+
+    ResourceTrackerTestImpl.exception = true;
+    try {
+      client.unRegisterNodeManager(request);
+      fail("there  should be YarnException");
+    } catch (YarnException e) {
+      assertTrue(e.getMessage().startsWith("testMessage"));
+    } finally {
+      ResourceTrackerTestImpl.exception = false;
+    }
+  }
 
   public static class ResourceTrackerTestImpl implements ResourceTracker {
 
@@ -140,5 +164,13 @@ public class TestResourceTrackerPBClientImpl {
       return recordFactory.newRecordInstance(NodeHeartbeatResponse.class);
     }
 
+    @Override
+    public UnRegisterNodeManagerResponse unRegisterNodeManager(
+        UnRegisterNodeManagerRequest request) throws YarnException, IOException {
+      if (exception) {
+        throw new YarnException("testMessage");
+      }
+      return UnRegisterNodeManagerResponse.newInstance();
+    }
   }
 }

@@ -32,7 +32,14 @@ public interface PeerServer extends Closeable {
   public void setReceiveBufferSize(int size) throws IOException;
 
   /**
-   * Listens for a connection to be made to this server and accepts 
+   * Get the receive buffer size of the PeerServer.
+   *
+   * @return     The receive buffer size.
+   */
+  int getReceiveBufferSize() throws IOException;
+
+  /**
+   * Listens for a connection to be made to this server and accepts
    * it. The method blocks until a connection is made.
    *
    * @exception IOException  if an I/O error occurs when waiting for a

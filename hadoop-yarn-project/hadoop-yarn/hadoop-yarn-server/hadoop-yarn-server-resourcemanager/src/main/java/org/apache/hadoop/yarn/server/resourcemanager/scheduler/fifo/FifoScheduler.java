@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerResourceChangeRequest;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -76,7 +77,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt.ContainersAndNMTokensAllocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
@@ -85,6 +86,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptA
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerExpiredSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerRescheduledEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeResourceUpdateSchedulerEvent;
@@ -209,6 +211,12 @@ public class FifoScheduler extends
     @Override
     public void decPendingResource(String nodeLabel, Resource resourceToDec) {
     }
+
+    @Override
+    public Priority getDefaultApplicationPriority() {
+      // TODO add implementation for FIFO scheduler
+      return null;
+    }
   };
 
   public FifoScheduler() {
@@ -303,9 +311,11 @@ public class FifoScheduler extends
   }
 
   @Override
-  public Allocation allocate(
-      ApplicationAttemptId applicationAttemptId, List<ResourceRequest> ask,
-      List<ContainerId> release, List<String> blacklistAdditions, List<String> blacklistRemovals) {
+  public Allocation allocate(ApplicationAttemptId applicationAttemptId,
+      List<ResourceRequest> ask, List<ContainerId> release,
+      List<String> blacklistAdditions, List<String> blacklistRemovals,
+      List<ContainerResourceChangeRequest> increaseRequests,
+      List<ContainerResourceChangeRequest> decreaseRequests) {
     FiCaSchedulerApp application = getApplicationAttempt(applicationAttemptId);
     if (application == null) {
       LOG.error("Calling allocate on removed " +
@@ -345,17 +355,22 @@ public class FifoScheduler extends
         application.showRequests();
 
         LOG.debug("allocate:" +
-            " applicationId=" + applicationAttemptId + 
+            " applicationId=" + applicationAttemptId +
             " #ask=" + ask.size());
       }
 
-      application.updateBlacklist(blacklistAdditions, blacklistRemovals);
-      ContainersAndNMTokensAllocation allocation =
-          application.pullNewlyAllocatedContainersAndNMTokens();
+      if (application.isWaitingForAMContainer(application.getApplicationId())) {
+        // Allocate is for AM and update AM blacklist for this
+        application.updateAMBlacklist(
+            blacklistAdditions, blacklistRemovals);
+      } else {
+        application.updateBlacklist(blacklistAdditions, blacklistRemovals);
+      }
+
       Resource headroom = application.getHeadroom();
       application.setApplicationHeadroomForMetrics(headroom);
-      return new Allocation(allocation.getContainerList(), headroom, null,
-          null, null, allocation.getNMTokenList());
+      return new Allocation(application.pullNewlyAllocatedContainers(),
+          headroom, null, null, null, application.pullUpdatedNMTokens());
     }
   }
 
@@ -846,6 +861,14 @@ public class FifoScheduler extends
           RMContainerEventType.EXPIRE);
     }
     break;
+    case CONTAINER_RESCHEDULED:
+    {
+      ContainerRescheduledEvent containerRescheduledEvent =
+          (ContainerRescheduledEvent) event;
+      RMContainer container = containerRescheduledEvent.getContainer();
+      recoverResourceRequestForContainer(container);
+    }
+    break;
     default:
       LOG.error("Invalid eventtype " + event.getType() + ". Ignoring!");
     }
@@ -982,5 +1005,13 @@ public class FifoScheduler extends
 
   public Resource getUsedResource() {
     return usedResource;
+  }
+
+  @Override
+  protected void decreaseContainer(
+      SchedContainerChangeRequest decreaseRequest,
+      SchedulerApplicationAttempt attempt) {
+    // TODO Auto-generated method stub
+    
   }
 }

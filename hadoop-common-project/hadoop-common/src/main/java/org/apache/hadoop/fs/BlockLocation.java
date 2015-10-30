@@ -34,11 +34,15 @@ public class BlockLocation {
   private String[] cachedHosts; // Datanode hostnames with a cached replica
   private String[] names; // Datanode IP:xferPort for accessing the block
   private String[] topologyPaths; // Full path name in network topology
+  private String[] storageIds; // Storage ID of each replica
+  private StorageType[] storageTypes; // Storage type of each replica
   private long offset;  // Offset of the block in the file
   private long length;
   private boolean corrupt;
 
   private static final String[] EMPTY_STR_ARRAY = new String[0];
+  private static final StorageType[] EMPTY_STORAGE_TYPE_ARRAY =
+      new StorageType[0];
 
   /**
    * Default Constructor
@@ -58,6 +62,8 @@ public class BlockLocation {
     this.offset = that.offset;
     this.length = that.length;
     this.corrupt = that.corrupt;
+    this.storageIds = that.storageIds;
+    this.storageTypes = that.storageTypes;
   }
 
   /**
@@ -95,6 +101,13 @@ public class BlockLocation {
 
   public BlockLocation(String[] names, String[] hosts, String[] cachedHosts,
       String[] topologyPaths, long offset, long length, boolean corrupt) {
+    this(names, hosts, cachedHosts, topologyPaths, null, null, offset, length,
+        corrupt);
+  }
+
+  public BlockLocation(String[] names, String[] hosts, String[] cachedHosts,
+      String[] topologyPaths, String[] storageIds, StorageType[] storageTypes,
+      long offset, long length, boolean corrupt) {
     if (names == null) {
       this.names = EMPTY_STR_ARRAY;
     } else {
@@ -114,6 +127,16 @@ public class BlockLocation {
       this.topologyPaths = EMPTY_STR_ARRAY;
     } else {
       this.topologyPaths = topologyPaths;
+    }
+    if (storageIds == null) {
+      this.storageIds = EMPTY_STR_ARRAY;
+    } else {
+      this.storageIds = storageIds;
+    }
+    if (storageTypes == null) {
+      this.storageTypes = EMPTY_STORAGE_TYPE_ARRAY;
+    } else {
+      this.storageTypes = storageTypes;
     }
     this.offset = offset;
     this.length = length;
@@ -148,7 +171,21 @@ public class BlockLocation {
   public String[] getTopologyPaths() throws IOException {
     return topologyPaths;
   }
-  
+
+  /**
+   * Get the storageID of each replica of the block.
+   */
+  public String[] getStorageIds() {
+    return storageIds;
+  }
+
+  /**
+   * Get the storage type of each replica of the block.
+   */
+  public StorageType[] getStorageTypes() {
+    return storageTypes;
+  }
+
   /**
    * Get the start offset of file associated with this block
    */
@@ -232,6 +269,22 @@ public class BlockLocation {
       this.topologyPaths = EMPTY_STR_ARRAY;
     } else {
       this.topologyPaths = topologyPaths;
+    }
+  }
+
+  public void setStorageIds(String[] storageIds) {
+    if (storageIds == null) {
+      this.storageIds = EMPTY_STR_ARRAY;
+    } else {
+      this.storageIds = storageIds;
+    }
+  }
+
+  public void setStorageTypes(StorageType[] storageTypes) {
+    if (storageTypes == null) {
+      this.storageTypes = EMPTY_STORAGE_TYPE_ARRAY;
+    } else {
+      this.storageTypes = storageTypes;
     }
   }
 

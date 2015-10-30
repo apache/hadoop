@@ -18,9 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
-import java.util.Set;
-import java.util.HashSet;
-import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.api.json.JSONJAXBContext;
@@ -39,6 +38,7 @@ import org.apache.hadoop.mapreduce.v2.app.webapp.dao.CounterGroupInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.CounterInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobCounterInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobInfo;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobTaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobsInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobTaskAttemptCounterInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobTaskCounterInfo;
@@ -55,8 +55,7 @@ import org.apache.hadoop.yarn.webapp.RemoteExceptionData;
 @Provider
 public class JAXBContextResolver implements ContextResolver<JAXBContext> {
 
-  private JAXBContext context;
-  private final Set<Class> types;
+  private final Map<Class, JAXBContext> typesContextMap;
 
   // you have to specify all the dao classes here
   private final Class[] cTypes = {AMAttemptInfo.class, AMAttemptsInfo.class,
@@ -67,14 +66,30 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
     TaskAttemptInfo.class, TaskInfo.class, TasksInfo.class,
     TaskAttemptsInfo.class, ConfEntryInfo.class, RemoteExceptionData.class};
 
+  // these dao classes need root unwrapping
+  private final Class[] rootUnwrappedTypes = {JobTaskAttemptState.class};
+
   public JAXBContextResolver() throws Exception {
-    this.types = new HashSet<Class>(Arrays.asList(cTypes));
-    this.context = new JSONJAXBContext(JSONConfiguration.natural().
-        rootUnwrapping(false).build(), cTypes);
+    JAXBContext context;
+    JAXBContext unWrappedRootContext;
+
+    this.typesContextMap = new HashMap<Class, JAXBContext>();
+    context =
+        new JSONJAXBContext(JSONConfiguration.natural().rootUnwrapping(false)
+            .build(), cTypes);
+    unWrappedRootContext =
+        new JSONJAXBContext(JSONConfiguration.natural().rootUnwrapping(true)
+            .build(), rootUnwrappedTypes);
+    for (Class type : cTypes) {
+      typesContextMap.put(type, context);
+    }
+    for (Class type : rootUnwrappedTypes) {
+      typesContextMap.put(type, unWrappedRootContext);
+    }
   }
 
   @Override
   public JAXBContext getContext(Class<?> objectType) {
-    return (types.contains(objectType)) ? context : null;
+    return typesContextMap.get(objectType);
   }
 }

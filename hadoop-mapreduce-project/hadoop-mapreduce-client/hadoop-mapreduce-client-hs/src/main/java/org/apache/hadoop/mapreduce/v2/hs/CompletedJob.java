@@ -64,6 +64,7 @@ import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -157,10 +158,10 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     String historyUrl = "N/A";
     try {
       historyUrl =
-          MRWebAppUtil.getApplicationWebURLOnJHSWithoutScheme(conf,
+          MRWebAppUtil.getApplicationWebURLOnJHSWithScheme(conf,
               jobId.getAppId());
     } catch (UnknownHostException e) {
-      //Ignore.
+        LOG.error("Problem determining local host: " + e.getMessage());
     }
     report.setTrackingUrl(historyUrl);
     report.setAMInfos(getAMInfos());
@@ -480,5 +481,11 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   @Override
   public void setQueueName(String queueName) {
     throw new UnsupportedOperationException("Can't set job's queue name in history");
+  }
+
+  @Override
+  public void setJobPriority(Priority priority) {
+    throw new UnsupportedOperationException(
+        "Can't set job's priority in history");
   }
 }

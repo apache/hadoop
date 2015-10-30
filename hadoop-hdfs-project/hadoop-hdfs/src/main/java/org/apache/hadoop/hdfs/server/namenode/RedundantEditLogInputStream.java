@@ -23,7 +23,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.io.IOUtils;
 
 import com.google.common.base.Preconditions;
@@ -88,8 +88,8 @@ class RedundantEditLogInputStream extends EditLogInputStream {
   RedundantEditLogInputStream(Collection<EditLogInputStream> streams,
       long startTxId) {
     this.curIdx = 0;
-    this.prevTxId = (startTxId == HdfsConstants.INVALID_TXID) ?
-      HdfsConstants.INVALID_TXID : (startTxId - 1);
+    this.prevTxId = (startTxId == HdfsServerConstants.INVALID_TXID) ?
+      HdfsServerConstants.INVALID_TXID : (startTxId - 1);
     this.state = (streams.isEmpty()) ? State.EOF : State.SKIP_UNTIL;
     this.prevException = null;
     // EditLogInputStreams in a RedundantEditLogInputStream must be finalized,
@@ -97,9 +97,9 @@ class RedundantEditLogInputStream extends EditLogInputStream {
     EditLogInputStream first = null;
     for (EditLogInputStream s : streams) {
       Preconditions.checkArgument(s.getFirstTxId() !=
-          HdfsConstants.INVALID_TXID, "invalid first txid in stream: %s", s);
+          HdfsServerConstants.INVALID_TXID, "invalid first txid in stream: %s", s);
       Preconditions.checkArgument(s.getLastTxId() !=
-          HdfsConstants.INVALID_TXID, "invalid last txid in stream: %s", s);
+          HdfsServerConstants.INVALID_TXID, "invalid last txid in stream: %s", s);
       if (first == null) {
         first = s;
       } else {
@@ -172,7 +172,7 @@ class RedundantEditLogInputStream extends EditLogInputStream {
       switch (state) {
       case SKIP_UNTIL:
        try {
-          if (prevTxId != HdfsConstants.INVALID_TXID) {
+          if (prevTxId != HdfsServerConstants.INVALID_TXID) {
             LOG.info("Fast-forwarding stream '" + streams[curIdx].getName() +
                 "' to transaction ID " + (prevTxId + 1));
             streams[curIdx].skipUntil(prevTxId + 1);

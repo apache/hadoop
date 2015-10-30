@@ -27,7 +27,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
 /**
  * The class that hosts a list of timeline entities.
@@ -35,7 +35,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 @XmlRootElement(name = "entities")
 @XmlAccessorType(XmlAccessType.NONE)
 @Public
-@Unstable
+@Evolving
 public class TimelineEntities {
 
   private List<TimelineEntity> entities =

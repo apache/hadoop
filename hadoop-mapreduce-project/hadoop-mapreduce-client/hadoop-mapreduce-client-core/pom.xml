@@ -25,7 +25,7 @@
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-mapreduce-client-core</artifactId>
   <version>3.0.0-SNAPSHOT</version>
-  <name>hadoop-mapreduce-client-core</name>
+  <name>Apache Hadoop MapReduce Core</name>
 
   <properties>
     <!-- Needed for generating FindBugs warnings using parent pom -->
@@ -93,7 +93,23 @@
             <exclude>.gitattributes</exclude>
             <exclude>src/test/resources/recordSpanningMultipleSplits.txt</exclude>
             <exclude>src/test/resources/testBOM.txt</exclude>
+            <exclude>src/test/resources/TestSafeguardSplittingUnsplittableFiles.txt.gz</exclude>
           </excludes>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-clean-plugin</artifactId>
+        <configuration>
+          <filesets>
+            <fileset>
+              <directory>src/site/resources</directory>
+              <includes>
+                <include>configuration.xsl</include>
+                <include>mapred-default.xml</include>
+              </includes>
+              <followSymlinks>false</followSymlinks>
+            </fileset>
+          </filesets>
         </configuration>
       </plugin>
     </plugins>

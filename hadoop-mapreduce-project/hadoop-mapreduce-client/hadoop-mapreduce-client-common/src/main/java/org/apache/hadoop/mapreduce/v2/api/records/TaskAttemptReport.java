@@ -31,6 +31,7 @@ public interface TaskAttemptReport {
   /** @return the sort/merge finish time. Applicable only for reduce attempts */
   public abstract long getSortFinishTime();
   public abstract Counters getCounters();
+  public abstract org.apache.hadoop.mapreduce.Counters getRawCounters();
   public abstract String getDiagnosticInfo();
   public abstract String getStateString();
   public abstract Phase getPhase();
@@ -45,6 +46,8 @@ public interface TaskAttemptReport {
   public abstract void setStartTime(long startTime);
   public abstract void setFinishTime(long finishTime);
   public abstract void setCounters(Counters counters);
+  public abstract void
+      setRawCounters(org.apache.hadoop.mapreduce.Counters rCounters);
   public abstract void setDiagnosticInfo(String diagnosticInfo);
   public abstract void setStateString(String stateString);
   public abstract void setPhase(Phase phase);

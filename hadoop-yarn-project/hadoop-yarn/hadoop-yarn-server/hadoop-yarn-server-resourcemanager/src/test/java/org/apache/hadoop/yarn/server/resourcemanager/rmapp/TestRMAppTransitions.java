@@ -212,11 +212,11 @@ public class TestRMAppTransitions {
           renewer, new AMRMTokenSecretManager(conf, this.rmContext),
           new RMContainerTokenSecretManager(conf),
           new NMTokenSecretManagerInRM(conf),
-          new ClientToAMTokenSecretManagerInRM(),
-          writer);
+          new ClientToAMTokenSecretManagerInRM());
     ((RMContextImpl)realRMContext).setStateStore(store);
     publisher = mock(SystemMetricsPublisher.class);
-    ((RMContextImpl)realRMContext).setSystemMetricsPublisher(publisher);
+    realRMContext.setSystemMetricsPublisher(publisher);
+    realRMContext.setRMApplicationHistoryWriter(writer);
 
     this.rmContext = spy(realRMContext);
 
@@ -261,10 +261,9 @@ public class TestRMAppTransitions {
     // but applicationId is still set for safety
     submissionContext.setApplicationId(applicationId);
 
-    RMApp application =
-        new RMAppImpl(applicationId, rmContext, conf, name, user, queue,
-          submissionContext, scheduler, masterService,
-          System.currentTimeMillis(), "YARN", null, null);
+    RMApp application = new RMAppImpl(applicationId, rmContext, conf, name,
+        user, queue, submissionContext, scheduler, masterService,
+        System.currentTimeMillis(), "YARN", null, mock(ResourceRequest.class));
 
     testAppStartState(applicationId, user, name, queue, application);
     this.rmContext.getRMApps().putIfAbsent(application.getApplicationId(),
@@ -474,8 +473,8 @@ public class TestRMAppTransitions {
       application = testCreateAppFinishing(submissionContext);
     }
     // RUNNING/FINISHING => FINISHED event RMAppEventType.ATTEMPT_FINISHED
-    RMAppEvent finishedEvent = new RMAppFinishedAttemptEvent(
-        application.getApplicationId(), diagnostics);
+    RMAppEvent finishedEvent = new RMAppEvent(application.getApplicationId(),
+        RMAppEventType.ATTEMPT_FINISHED, diagnostics);
     application.handle(finishedEvent);
     assertAppState(RMAppState.FINISHED, application);
     assertTimesAtFinish(application);
@@ -549,8 +548,9 @@ public class TestRMAppTransitions {
 
     RMApp application = createNewTestApp(null);
     // NEW => KILLED event RMAppEventType.KILL
-    RMAppEvent event = 
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
+    RMAppEvent event =
+        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
+        "Application killed by user.");
     application.handle(event);
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
@@ -567,8 +567,8 @@ public class TestRMAppTransitions {
     RMApp application = createNewTestApp(null);
     // NEW => FAILED event RMAppEventType.APP_REJECTED
     String rejectedText = "Test Application Rejected";
-    RMAppEvent event = 
-        new RMAppRejectedEvent(application.getApplicationId(), rejectedText);
+    RMAppEvent event = new RMAppEvent(application.getApplicationId(),
+        RMAppEventType.APP_REJECTED, rejectedText);
     application.handle(event);
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
@@ -584,8 +584,8 @@ public class TestRMAppTransitions {
     RMApp application = createNewTestApp(null);
     // NEW => FAILED event RMAppEventType.APP_REJECTED
     String rejectedText = "Test Application Rejected";
-    RMAppEvent event =
-        new RMAppRejectedEvent(application.getApplicationId(), rejectedText);
+    RMAppEvent event = new RMAppEvent(application.getApplicationId(),
+        RMAppEventType.APP_REJECTED, rejectedText);
     application.handle(event);
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
@@ -602,7 +602,8 @@ public class TestRMAppTransitions {
     RMApp application = testCreateAppNewSaving(null);
     // NEW_SAVING => KILLED event RMAppEventType.KILL
     RMAppEvent event =
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
+        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
+        "Application killed by user.");
     application.handle(event);
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
@@ -618,8 +619,8 @@ public class TestRMAppTransitions {
     RMApp application = testCreateAppNewSaving(null);
     // NEW_SAVING => FAILED event RMAppEventType.APP_REJECTED
     String rejectedText = "Test Application Rejected";
-    RMAppEvent event =
-        new RMAppRejectedEvent(application.getApplicationId(), rejectedText);
+    RMAppEvent event = new RMAppEvent(application.getApplicationId(),
+        RMAppEventType.APP_REJECTED, rejectedText);
     application.handle(event);
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
@@ -635,8 +636,8 @@ public class TestRMAppTransitions {
     RMApp application = testCreateAppSubmittedNoRecovery(null);
     // SUBMITTED => FAILED event RMAppEventType.APP_REJECTED
     String rejectedText = "app rejected";
-    RMAppEvent event = 
-        new RMAppRejectedEvent(application.getApplicationId(), rejectedText);
+    RMAppEvent event = new RMAppEvent(application.getApplicationId(),
+        RMAppEventType.APP_REJECTED, rejectedText);
     application.handle(event);
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
@@ -650,8 +651,9 @@ public class TestRMAppTransitions {
     LOG.info("--- START: testAppSubmittedKill---");
     RMApp application = testCreateAppSubmittedNoRecovery(null);
     // SUBMITTED => KILLED event RMAppEventType.KILL
-    RMAppEvent event = new RMAppEvent(application.getApplicationId(),
-        RMAppEventType.KILL);
+    RMAppEvent event =
+        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
+        "Application killed by user.");
     application.handle(event);
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
@@ -701,15 +703,16 @@ public class TestRMAppTransitions {
     LOG.info("--- START: testAppAcceptedKill ---");
     RMApp application = testCreateAppAccepted(null);
     // ACCEPTED => KILLED event RMAppEventType.KILL
-    RMAppEvent event = new RMAppEvent(application.getApplicationId(),
-        RMAppEventType.KILL);
+    RMAppEvent event =
+        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
+        "Application killed by user.");
     application.handle(event);
     rmDispatcher.await();
 
     assertAppState(RMAppState.KILLING, application);
     RMAppEvent appAttemptKilled =
         new RMAppEvent(application.getApplicationId(),
-          RMAppEventType.ATTEMPT_KILLED);
+          RMAppEventType.ATTEMPT_KILLED, "Application killed by user.");
     application.handle(appAttemptKilled);
     assertAppState(RMAppState.FINAL_SAVING, application);
     sendAppUpdateSavedEvent(application);
@@ -730,7 +733,7 @@ public class TestRMAppTransitions {
     // RUNNING.
     RMAppEvent event =
         new RMAppEvent(application.getApplicationId(),
-            RMAppEventType.ATTEMPT_KILLED);
+            RMAppEventType.ATTEMPT_KILLED, "Application killed by user.");
     application.handle(event);
     rmDispatcher.await();
 
@@ -748,8 +751,9 @@ public class TestRMAppTransitions {
 
     RMApp application = testCreateAppRunning(null);
     // RUNNING => KILLED event RMAppEventType.KILL
-    RMAppEvent event = 
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
+    RMAppEvent event =
+        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
+        "Application killed by user.");
     application.handle(event);
     rmDispatcher.await();
 
@@ -807,7 +811,9 @@ public class TestRMAppTransitions {
     assertAppFinalStateSaved(application);
 
     // FAILED => FAILED event RMAppEventType.KILL
-    event = new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
+    event =
+        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
+        "Application killed by user.");
     application.handle(event);
     rmDispatcher.await();
     assertFailed(application, ".*Failing the application.*");
@@ -822,7 +828,8 @@ public class TestRMAppTransitions {
     RMApp application = testCreateAppFinishing(null);
     // FINISHING => FINISHED event RMAppEventType.KILL
     RMAppEvent event =
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
+        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
+        "Application killed by user.");
     application.handle(event);
     rmDispatcher.await();
     assertAppState(RMAppState.FINISHING, application);
@@ -839,8 +846,8 @@ public class TestRMAppTransitions {
     RMApp application = testCreateAppFinalSaving(null);
     final String diagMsg = "some diagnostics";
     // attempt_finished event comes before attempt_saved event
-    RMAppEvent event =
-        new RMAppFinishedAttemptEvent(application.getApplicationId(), diagMsg);
+    RMAppEvent event = new RMAppEvent(application.getApplicationId(),
+        RMAppEventType.ATTEMPT_FINISHED, diagMsg);
     application.handle(event);
     assertAppState(RMAppState.FINAL_SAVING, application);
     RMAppEvent appUpdated =
@@ -861,8 +868,9 @@ public class TestRMAppTransitions {
 
     RMApp application = testCreateAppFinished(null, "");
     // FINISHED => FINISHED event RMAppEventType.KILL
-    RMAppEvent event = 
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
+    RMAppEvent event =
+        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
+        "Application killed by user.");
     application.handle(event);
     rmDispatcher.await();
     assertTimesAtFinish(application);
@@ -880,8 +888,8 @@ public class TestRMAppTransitions {
     RMApp application = testCreateAppNewSaving(null);
 
     // NEW_SAVING => FAILED event RMAppEventType.APP_REJECTED
-    RMAppEvent event =
-        new RMAppRejectedEvent(application.getApplicationId(), "");
+    RMAppEvent event = new RMAppEvent(application.getApplicationId(),
+        RMAppEventType.APP_REJECTED, "");
     application.handle(event);
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
@@ -890,7 +898,8 @@ public class TestRMAppTransitions {
 
     // FAILED => FAILED event RMAppEventType.KILL
     event =
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
+        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
+        "Application killed by user.");
     application.handle(event);
     rmDispatcher.await();
     assertTimesAtFinish(application);
@@ -908,8 +917,9 @@ public class TestRMAppTransitions {
     RMApp application = testCreateAppRunning(null);
 
     // RUNNING => KILLED event RMAppEventType.KILL
-    RMAppEvent event = 
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
+    RMAppEvent event =
+        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
+        "Application killed by user.");
     application.handle(event);
     rmDispatcher.await();
     sendAttemptUpdateSavedEvent(application);
@@ -918,8 +928,8 @@ public class TestRMAppTransitions {
     assertAppState(RMAppState.KILLED, application);
 
     // KILLED => KILLED event RMAppEventType.ATTEMPT_FINISHED
-    event = new RMAppFinishedAttemptEvent(
-        application.getApplicationId(), "");
+    event = new RMAppEvent(application.getApplicationId(),
+        RMAppEventType.ATTEMPT_FINISHED, "");
     application.handle(event);
     rmDispatcher.await();
     assertTimesAtFinish(application);
@@ -936,7 +946,9 @@ public class TestRMAppTransitions {
 
 
     // KILLED => KILLED event RMAppEventType.KILL
-    event = new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
+    event =
+        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
+        "Application killed by user.");
     application.handle(event);
     rmDispatcher.await();
     assertTimesAtFinish(application);
@@ -970,7 +982,7 @@ public class TestRMAppTransitions {
             appState.getApplicationSubmissionContext().getApplicationId(),
             rmContext, conf,
             submissionContext.getApplicationName(), null,
-            submissionContext.getQueue(), submissionContext, null, null,
+            submissionContext.getQueue(), submissionContext, scheduler, null,
             appState.getSubmitTime(), submissionContext.getApplicationType(),
             submissionContext.getApplicationTags(),
             BuilderUtils.newResourceRequest(

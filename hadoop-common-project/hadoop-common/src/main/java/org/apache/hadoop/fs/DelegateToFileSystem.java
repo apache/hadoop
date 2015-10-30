@@ -46,10 +46,25 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
       Configuration conf, String supportedScheme, boolean authorityRequired)
       throws IOException, URISyntaxException {
     super(theUri, supportedScheme, authorityRequired, 
-        theFsImpl.getDefaultPort());
+        getDefaultPortIfDefined(theFsImpl));
     fsImpl = theFsImpl;
     fsImpl.initialize(theUri, conf);
     fsImpl.statistics = getStatistics();
+  }
+
+  /**
+   * Returns the default port if the file system defines one.
+   * {@link FileSystem#getDefaultPort()} returns 0 to indicate the default port
+   * is undefined.  However, the logic that consumes this value expects to
+   * receive -1 to indicate the port is undefined, which agrees with the
+   * contract of {@link URI#getPort()}.
+   *
+   * @param theFsImpl file system to check for default port
+   * @return default port, or -1 if default port is undefined
+   */
+  private static int getDefaultPortIfDefined(FileSystem theFsImpl) {
+    int defaultPort = theFsImpl.getDefaultPort();
+    return defaultPort != 0 ? defaultPort : -1;
   }
 
   @Override

@@ -18,12 +18,20 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.when;
+
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.ReservationAgent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -35,11 +43,6 @@ import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.junit.Assert;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.when;
-
 public abstract class TestSchedulerPlanFollowerBase {
   final static int GB = 1024;
   protected Clock mClock = null;
@@ -50,6 +53,7 @@ public abstract class TestSchedulerPlanFollowerBase {
   protected CapacityOverTimePolicy policy = new CapacityOverTimePolicy();
   protected Plan plan;
   private ResourceCalculator res = new DefaultResourceCalculator();
+  private RMContext context = ReservationSystemTestUtil.createMockRMContext();
 
   protected void testPlanFollower(boolean isMove) throws PlanningException,
       InterruptedException, AccessControlException {
@@ -58,29 +62,32 @@ public abstract class TestSchedulerPlanFollowerBase {
         new InMemoryPlan(scheduler.getRootQueueMetrics(), policy, mAgent,
             scheduler.getClusterResource(), 1L, res,
             scheduler.getMinimumResourceCapability(), maxAlloc, "dedicated",
-            null, isMove);
+            null, isMove, context);
 
     // add a few reservations to the plan
     long ts = System.currentTimeMillis();
     ReservationId r1 = ReservationId.newInstance(ts, 1);
     int[] f1 = { 10, 10, 10, 10, 10 };
+    ReservationDefinition rDef =
+        ReservationSystemTestUtil.createSimpleReservationDefinition(
+            0, 0 + f1.length + 1, f1.length);
     assertTrue(plan.toString(),
-        plan.addReservation(new InMemoryReservationAllocation(r1, null, "u3",
+        plan.addReservation(new InMemoryReservationAllocation(r1, rDef, "u3",
             "dedicated", 0, 0 + f1.length, ReservationSystemTestUtil
-                .generateAllocation(0L, 1L, f1), res, minAlloc)));
+                .generateAllocation(0L, 1L, f1), res, minAlloc), false));
 
     ReservationId r2 = ReservationId.newInstance(ts, 2);
     assertTrue(plan.toString(),
-        plan.addReservation(new InMemoryReservationAllocation(r2, null, "u3",
+        plan.addReservation(new InMemoryReservationAllocation(r2, rDef, "u3",
             "dedicated", 3, 3 + f1.length, ReservationSystemTestUtil
-                .generateAllocation(3L, 1L, f1), res, minAlloc)));
+                .generateAllocation(3L, 1L, f1), res, minAlloc), false));
 
     ReservationId r3 = ReservationId.newInstance(ts, 3);
     int[] f2 = { 0, 10, 20, 10, 0 };
     assertTrue(plan.toString(),
-        plan.addReservation(new InMemoryReservationAllocation(r3, null, "u4",
+        plan.addReservation(new InMemoryReservationAllocation(r3, rDef, "u4",
             "dedicated", 10, 10 + f2.length, ReservationSystemTestUtil
-                .generateAllocation(10L, 1L, f2), res, minAlloc)));
+                .generateAllocation(10L, 1L, f2), res, minAlloc), false));
 
     AbstractSchedulerPlanFollower planFollower = createPlanFollower();
 

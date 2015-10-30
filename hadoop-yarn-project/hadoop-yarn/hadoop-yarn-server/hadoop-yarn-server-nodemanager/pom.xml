@@ -25,7 +25,7 @@
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn-server-nodemanager</artifactId>
   <version>3.0.0-SNAPSHOT</version>
-  <name>hadoop-yarn-server-nodemanager</name>
+  <name>Apache Hadoop YARN NodeManager</name>
 
   <properties>
     <!-- Basedir eeded for generating FindBugs warnings using parent pom -->
@@ -203,7 +203,7 @@
                 <phase>test</phase>
                 <configuration>
                   <target>
-                    <exec executable="sh" failonerror="true" dir="${project.build.directory}/native">
+                    <exec executable="${shell-executable}" failonerror="true" dir="${project.build.directory}/native">
                       <arg value="-c"/>
                       <arg value="[ x$SKIPTESTS = xtrue ] || test-container-executor"/>
                       <env key="SKIPTESTS" value="${skipTests}"/>

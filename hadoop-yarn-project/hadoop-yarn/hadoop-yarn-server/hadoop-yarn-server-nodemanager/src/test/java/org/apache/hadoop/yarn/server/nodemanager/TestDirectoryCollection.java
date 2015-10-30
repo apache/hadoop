@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.nodemanager.DirectoryCollection.DirsChangeListener;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -129,42 +130,66 @@ public class TestDirectoryCollection {
     Assert.assertEquals(0, dc.getGoodDirs().size());
     Assert.assertEquals(1, dc.getFailedDirs().size());
     Assert.assertEquals(1, dc.getFullDirs().size());
+    // no good dirs
+    Assert.assertEquals(0, dc.getGoodDirsDiskUtilizationPercentage());
 
     dc = new DirectoryCollection(dirs, 100.0F);
+    int utilizedSpacePerc =
+        (int) ((testDir.getTotalSpace() - testDir.getUsableSpace()) * 100 /
+            testDir.getTotalSpace());
     dc.checkDirs();
     Assert.assertEquals(1, dc.getGoodDirs().size());
     Assert.assertEquals(0, dc.getFailedDirs().size());
     Assert.assertEquals(0, dc.getFullDirs().size());
+    Assert.assertEquals(utilizedSpacePerc,
+      dc.getGoodDirsDiskUtilizationPercentage());
 
     dc = new DirectoryCollection(dirs, testDir.getTotalSpace() / (1024 * 1024));
     dc.checkDirs();
     Assert.assertEquals(0, dc.getGoodDirs().size());
     Assert.assertEquals(1, dc.getFailedDirs().size());
     Assert.assertEquals(1, dc.getFullDirs().size());
+    // no good dirs
+    Assert.assertEquals(0, dc.getGoodDirsDiskUtilizationPercentage());
 
-    dc = new DirectoryCollection(dirs, 100.0F, 0);
+    dc = new DirectoryCollection(dirs, 100.0F, 100.0F, 0);
+    utilizedSpacePerc =
+        (int)((testDir.getTotalSpace() - testDir.getUsableSpace()) * 100 /
+            testDir.getTotalSpace());
     dc.checkDirs();
     Assert.assertEquals(1, dc.getGoodDirs().size());
     Assert.assertEquals(0, dc.getFailedDirs().size());
     Assert.assertEquals(0, dc.getFullDirs().size());
+    Assert.assertEquals(utilizedSpacePerc,
+      dc.getGoodDirsDiskUtilizationPercentage());
   }
 
   @Test
   public void testDiskLimitsCutoffSetters() throws IOException {
 
     String[] dirs = { "dir" };
-    DirectoryCollection dc = new DirectoryCollection(dirs, 0.0F, 100);
+    DirectoryCollection dc = new DirectoryCollection(dirs, 0.0F, 0.0F, 100);
     float testValue = 57.5F;
     float delta = 0.1F;
-    dc.setDiskUtilizationPercentageCutoff(testValue);
-    Assert.assertEquals(testValue, dc.getDiskUtilizationPercentageCutoff(),
-      delta);
+    dc.setDiskUtilizationPercentageCutoff(testValue, 50.0F);
+    Assert.assertEquals(testValue, dc.getDiskUtilizationPercentageCutoffHigh(),
+        delta);
+    Assert.assertEquals(50.0F, dc.getDiskUtilizationPercentageCutoffLow(),
+        delta);
+
     testValue = -57.5F;
-    dc.setDiskUtilizationPercentageCutoff(testValue);
-    Assert.assertEquals(0.0F, dc.getDiskUtilizationPercentageCutoff(), delta);
+    dc.setDiskUtilizationPercentageCutoff(testValue, testValue);
+    Assert.assertEquals(0.0F, dc.getDiskUtilizationPercentageCutoffHigh(),
+        delta);
+    Assert.assertEquals(0.0F, dc.getDiskUtilizationPercentageCutoffLow(),
+        delta);
+
     testValue = 157.5F;
-    dc.setDiskUtilizationPercentageCutoff(testValue);
-    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoff(), delta);
+    dc.setDiskUtilizationPercentageCutoff(testValue, testValue);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffHigh(),
+        delta);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffLow(),
+        delta);
 
     long spaceValue = 57;
     dc.setDiskUtilizationSpaceCutoff(spaceValue);
@@ -185,7 +210,7 @@ public class TestDirectoryCollection {
     Assert.assertEquals(1, dc.getFailedDirs().size());
     Assert.assertEquals(1, dc.getFullDirs().size());
 
-    dc.setDiskUtilizationPercentageCutoff(100.0F);
+    dc.setDiskUtilizationPercentageCutoff(100.0F, 100.0F);
     dc.checkDirs();
     Assert.assertEquals(1, dc.getGoodDirs().size());
     Assert.assertEquals(0, dc.getFailedDirs().size());
@@ -221,27 +246,91 @@ public class TestDirectoryCollection {
     String[] dirs = { "dir" };
     float delta = 0.1F;
     DirectoryCollection dc = new DirectoryCollection(dirs);
-    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoff(), delta);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffHigh(),
+        delta);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffLow(),
+        delta);
     Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoff());
 
     dc = new DirectoryCollection(dirs, 57.5F);
-    Assert.assertEquals(57.5F, dc.getDiskUtilizationPercentageCutoff(), delta);
+    Assert.assertEquals(57.5F, dc.getDiskUtilizationPercentageCutoffHigh(),
+        delta);
+    Assert.assertEquals(57.5F, dc.getDiskUtilizationPercentageCutoffLow(),
+        delta);
     Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoff());
 
     dc = new DirectoryCollection(dirs, 57);
-    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoff(), delta);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffHigh(),
+        delta);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffLow(),
+        delta);
     Assert.assertEquals(57, dc.getDiskUtilizationSpaceCutoff());
 
-    dc = new DirectoryCollection(dirs, 57.5F, 67);
-    Assert.assertEquals(57.5F, dc.getDiskUtilizationPercentageCutoff(), delta);
+    dc = new DirectoryCollection(dirs, 57.5F, 50.5F, 67);
+    Assert.assertEquals(57.5F, dc.getDiskUtilizationPercentageCutoffHigh(),
+        delta);
+    Assert.assertEquals(50.5F, dc.getDiskUtilizationPercentageCutoffLow(),
+        delta);
     Assert.assertEquals(67, dc.getDiskUtilizationSpaceCutoff());
 
-    dc = new DirectoryCollection(dirs, -57.5F, -67);
-    Assert.assertEquals(0.0F, dc.getDiskUtilizationPercentageCutoff(), delta);
+    dc = new DirectoryCollection(dirs, -57.5F, -57.5F, -67);
+    Assert.assertEquals(0.0F, dc.getDiskUtilizationPercentageCutoffHigh(),
+        delta);
+    Assert.assertEquals(0.0F, dc.getDiskUtilizationPercentageCutoffLow(),
+        delta);
     Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoff());
 
-    dc = new DirectoryCollection(dirs, 157.5F, -67);
-    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoff(), delta);
+    dc = new DirectoryCollection(dirs, 157.5F, 157.5F, -67);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffHigh(),
+        delta);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffLow(),
+        delta);
     Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoff());
+  }
+
+  @Test
+  public void testDirsChangeListener() {
+    DirsChangeListenerTest listener1 = new DirsChangeListenerTest();
+    DirsChangeListenerTest listener2 = new DirsChangeListenerTest();
+    DirsChangeListenerTest listener3 = new DirsChangeListenerTest();
+
+    String dirA = new File(testDir, "dirA").getPath();
+    String[] dirs = { dirA };
+    DirectoryCollection dc = new DirectoryCollection(dirs, 0.0F);
+    Assert.assertEquals(1, dc.getGoodDirs().size());
+    Assert.assertEquals(listener1.num, 0);
+    Assert.assertEquals(listener2.num, 0);
+    Assert.assertEquals(listener3.num, 0);
+    dc.registerDirsChangeListener(listener1);
+    dc.registerDirsChangeListener(listener2);
+    dc.registerDirsChangeListener(listener3);
+    Assert.assertEquals(listener1.num, 1);
+    Assert.assertEquals(listener2.num, 1);
+    Assert.assertEquals(listener3.num, 1);
+
+    dc.deregisterDirsChangeListener(listener3);
+    dc.checkDirs();
+    Assert.assertEquals(0, dc.getGoodDirs().size());
+    Assert.assertEquals(listener1.num, 2);
+    Assert.assertEquals(listener2.num, 2);
+    Assert.assertEquals(listener3.num, 1);
+
+    dc.deregisterDirsChangeListener(listener2);
+    dc.setDiskUtilizationPercentageCutoff(100.0F, 100.0F);
+    dc.checkDirs();
+    Assert.assertEquals(1, dc.getGoodDirs().size());
+    Assert.assertEquals(listener1.num, 3);
+    Assert.assertEquals(listener2.num, 2);
+    Assert.assertEquals(listener3.num, 1);
+  }
+
+  static class DirsChangeListenerTest implements DirsChangeListener {
+    public int num = 0;
+    public DirsChangeListenerTest() {
+    }
+    @Override
+    public void onDirsChanged() {
+      num++;
+    }
   }
 }

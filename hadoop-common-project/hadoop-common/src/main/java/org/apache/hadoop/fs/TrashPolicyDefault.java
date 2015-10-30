@@ -89,9 +89,6 @@ public class TrashPolicyDefault extends TrashPolicy {
     this.emptierInterval = (long)(conf.getFloat(
         FS_TRASH_CHECKPOINT_INTERVAL_KEY, FS_TRASH_CHECKPOINT_INTERVAL_DEFAULT)
         * MSECS_PER_MINUTE);
-    LOG.info("Namenode trash configuration: Deletion interval = " +
-             (this.deletionInterval / MSECS_PER_MINUTE) + " minutes, Emptier interval = " +
-             (this.emptierInterval / MSECS_PER_MINUTE) + " minutes.");
    }
 
   private Path makeTrashRelativePath(Path basePath, Path rmFilePath) {
@@ -134,11 +131,11 @@ public class TrashPolicyDefault extends TrashPolicy {
     for (int i = 0; i < 2; i++) {
       try {
         if (!fs.mkdirs(baseTrashPath, PERMISSION)) {      // create current
-          LOG.warn("Can't create(mkdir) trash directory: "+baseTrashPath);
+          LOG.warn("Can't create(mkdir) trash directory: " + baseTrashPath);
           return false;
         }
       } catch (IOException e) {
-        LOG.warn("Can't create trash directory: "+baseTrashPath);
+        LOG.warn("Can't create trash directory: " + baseTrashPath, e);
         cause = e;
         break;
       }
@@ -164,12 +161,19 @@ public class TrashPolicyDefault extends TrashPolicy {
   @SuppressWarnings("deprecation")
   @Override
   public void createCheckpoint() throws IOException {
+    createCheckpoint(new Date());
+  }
+
+  @SuppressWarnings("deprecation")
+  public void createCheckpoint(Date date) throws IOException {
+
     if (!fs.exists(current))                     // no trash, no checkpoint
       return;
 
     Path checkpointBase;
     synchronized (CHECKPOINT) {
-      checkpointBase = new Path(trash, CHECKPOINT.format(new Date()));
+      checkpointBase = new Path(trash, CHECKPOINT.format(date));
+
     }
     Path checkpoint = checkpointBase;
 
@@ -251,6 +255,10 @@ public class TrashPolicyDefault extends TrashPolicy {
                  " minutes that is used for deletion instead");
         this.emptierInterval = deletionInterval;
       }
+      LOG.info("Namenode trash configuration: Deletion interval = "
+          + (deletionInterval / MSECS_PER_MINUTE)
+          + " minutes, Emptier interval = "
+          + (emptierInterval / MSECS_PER_MINUTE) + " minutes.");
     }
 
     @Override
@@ -286,7 +294,7 @@ public class TrashPolicyDefault extends TrashPolicy {
                 TrashPolicyDefault trash = new TrashPolicyDefault(
                     fs, home.getPath(), conf);
                 trash.deleteCheckpoint();
-                trash.createCheckpoint();
+                trash.createCheckpoint(new Date(now));
               } catch (IOException e) {
                 LOG.warn("Trash caught: "+e+". Skipping "+home.getPath()+".");
               } 

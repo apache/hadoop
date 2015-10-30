@@ -20,29 +20,16 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.nodemanager.Context;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.Controller;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 
 import com.google.inject.Inject;
 
 public class NMController extends Controller implements YarnWebParams {
-
-  private Context nmContext;
-  private Configuration nmConf;
   
   @Inject
-  public NMController(Configuration nmConf, RequestContext requestContext,
-      Context nmContext) {
+  public NMController(RequestContext requestContext) {
     super(requestContext);
-    this.nmContext = nmContext;
-    this.nmConf = nmConf;
   }
 
   @Override
@@ -75,32 +62,11 @@ public class NMController extends Controller implements YarnWebParams {
     render(ContainerPage.class);
   }
 
+  public void errorsAndWarnings() {
+    render(NMErrorsAndWarningsPage.class);
+  }
+
   public void logs() {
-    String containerIdStr = $(CONTAINER_ID);
-    ContainerId containerId = null;
-    try {
-      containerId = ConverterUtils.toContainerId(containerIdStr);
-    } catch (IllegalArgumentException e) {
-      render(ContainerLogsPage.class);
-      return;
-    }
-    ApplicationId appId =
-        containerId.getApplicationAttemptId().getApplicationId();
-    Application app = nmContext.getApplications().get(appId);
-    if (app == null
-        && nmConf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
-            YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED)) {
-      String logServerUrl = nmConf.get(YarnConfiguration.YARN_LOG_SERVER_URL);
-      String redirectUrl = null;
-      if (logServerUrl == null || logServerUrl.isEmpty()) {
-        redirectUrl = "false";
-      } else {
-        redirectUrl =
-            url(logServerUrl, nmContext.getNodeId().toString(), containerIdStr,
-                containerIdStr, $(APP_OWNER));
-      }
-      set(ContainerLogsPage.REDIRECT_URL, redirectUrl);
-    }
     render(ContainerLogsPage.class);
   }
 }

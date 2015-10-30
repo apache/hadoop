@@ -34,7 +34,6 @@ import java.util.HashMap;
 import java.util.Random;
 
 import org.apache.commons.io.output.NullOutputStream;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -57,7 +56,6 @@ import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper.TestDirectoryTree;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper.TestDirectoryTree.Node;
 import org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
@@ -75,7 +73,7 @@ import org.junit.rules.ExpectedException;
  */
 public class TestSnapshot {
   {
-    ((Log4JLogger)INode.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(INode.LOG, Level.ALL);
     SnapshotTestHelper.disableLogs();
   }
 

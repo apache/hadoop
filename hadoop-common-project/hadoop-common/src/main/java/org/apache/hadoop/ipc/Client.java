@@ -43,6 +43,8 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -89,7 +91,8 @@ import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.htrace.Trace;
+import org.apache.htrace.core.Span;
+import org.apache.htrace.core.Tracer;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -124,8 +127,8 @@ public class Client {
     retryCount.set(rc);
   }
 
-  private Hashtable<ConnectionId, Connection> connections =
-    new Hashtable<ConnectionId, Connection>();
+  private ConcurrentMap<ConnectionId, Connection> connections =
+      new ConcurrentHashMap<>();
 
   private Class<? extends Writable> valueClass;   // class of call values
   private AtomicBoolean running = new AtomicBoolean(true); // if client runs
@@ -194,9 +197,10 @@ public class Client {
             clientExecutor.shutdownNow();
           }
         } catch (InterruptedException e) {
-          LOG.error("Interrupted while waiting for clientExecutor" +
-              "to stop", e);
+          LOG.warn("Interrupted while waiting for clientExecutor" +
+              " to stop");
           clientExecutor.shutdownNow();
+          Thread.currentThread().interrupt();
         }
         clientExecutor = null;
       }
@@ -253,6 +257,10 @@ public class Client {
     conf.setInt(CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_KEY, timeout);
   }
 
+  @VisibleForTesting
+  public static final ExecutorService getClientExecutor() {
+    return Client.clientExcecutorFactory.clientExecutor;
+  }
   /**
    * Increment this client's reference count
    *
@@ -714,8 +722,9 @@ public class Client {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Connecting to "+server);
         }
-        if (Trace.isTracing()) {
-          Trace.addTimelineAnnotation("IPC client connecting to " + server);
+        Span span = Tracer.getCurrentSpan();
+        if (span != null) {
+          span.addTimelineAnnotation("IPC client connecting to " + server);
         }
         short numRetries = 0;
         Random rand = null;
@@ -740,7 +749,12 @@ public class Client {
                       return setupSaslConnection(in2, out2);
                     }
                   });
-            } catch (Exception ex) {
+            } catch (IOException ex) {
+              if (saslRpcClient == null) {
+                // whatever happened -it can't be handled, so rethrow
+                throw ex;
+              }
+              // otherwise, assume a connection problem
               authMethod = saslRpcClient.getAuthMethod();
               if (rand == null) {
                 rand = new Random();
@@ -788,8 +802,9 @@ public class Client {
           // update last activity time
           touch();
 
-          if (Trace.isTracing()) {
-            Trace.addTimelineAnnotation("IPC client connected to " + server);
+          span = Tracer.getCurrentSpan();
+          if (span != null) {
+            span.addTimelineAnnotation("IPC client connected to " + server);
           }
 
           // start the receiver thread after the socket connection has been set
@@ -801,7 +816,7 @@ public class Client {
         if (t instanceof IOException) {
           markClosed((IOException)t);
         } else {
-          markClosed(new IOException("Couldn't set up IO streams", t));
+          markClosed(new IOException("Couldn't set up IO streams: " + t, t));
         }
         close();
       }
@@ -1139,10 +1154,7 @@ public class Client {
           if (erCode == null) {
              LOG.warn("Detailed error code not set by server on rpc error");
           }
-          RemoteException re = 
-              ( (erCode == null) ? 
-                  new RemoteException(exceptionClassName, errorMsg) :
-              new RemoteException(exceptionClassName, errorMsg, erCode));
+          RemoteException re = new RemoteException(exceptionClassName, errorMsg, erCode);
           if (status == RpcStatusProto.ERROR) {
             calls.remove(callId);
             call.setException(re);
@@ -1170,13 +1182,10 @@ public class Client {
         return;
       }
 
-      // release the resources
-      // first thing to do;take the connection out of the connection list
-      synchronized (connections) {
-        if (connections.get(remoteId) == this) {
-          connections.remove(remoteId);
-        }
-      }
+      // We have marked this connection as closed. Other thread could have
+      // already known it and replace this closedConnection with a new one.
+      // We should only remove this closedConnection.
+      connections.remove(remoteId, this);
 
       // close the streams and therefore the socket
       IOUtils.closeStream(out);
@@ -1263,10 +1272,8 @@ public class Client {
     }
     
     // wake up all connections
-    synchronized (connections) {
-      for (Connection conn : connections.values()) {
-        conn.interrupt();
-      }
+    for (Connection conn : connections.values()) {
+      conn.interrupt();
     }
     
     // wait until all connections are closed
@@ -1286,56 +1293,11 @@ public class Client {
    */
   public Writable call(Writable param, InetSocketAddress address)
       throws IOException {
-    return call(RPC.RpcKind.RPC_BUILTIN, param, address);
-    
-  }
-  /** Make a call, passing <code>param</code>, to the IPC server running at
-   * <code>address</code>, returning the value.  Throws exceptions if there are
-   * network problems or if the remote code threw an exception.
-   * @deprecated Use {@link #call(RPC.RpcKind, Writable,
-   *  ConnectionId)} instead 
-   */
-  @Deprecated
-  public Writable call(RPC.RpcKind rpcKind, Writable param, InetSocketAddress address)
-  throws IOException {
-      return call(rpcKind, param, address, null);
-  }
-  
-  /** Make a call, passing <code>param</code>, to the IPC server running at
-   * <code>address</code> with the <code>ticket</code> credentials, returning 
-   * the value.  
-   * Throws exceptions if there are network problems or if the remote code 
-   * threw an exception.
-   * @deprecated Use {@link #call(RPC.RpcKind, Writable, 
-   * ConnectionId)} instead 
-   */
-  @Deprecated
-  public Writable call(RPC.RpcKind rpcKind, Writable param, InetSocketAddress addr, 
-      UserGroupInformation ticket) throws IOException {
-    ConnectionId remoteId = ConnectionId.getConnectionId(addr, null, ticket, 0,
+    ConnectionId remoteId = ConnectionId.getConnectionId(address, null, null, 0,
         conf);
-    return call(rpcKind, param, remoteId);
-  }
-  
-  /** Make a call, passing <code>param</code>, to the IPC server running at
-   * <code>address</code> which is servicing the <code>protocol</code> protocol, 
-   * with the <code>ticket</code> credentials and <code>rpcTimeout</code> as 
-   * timeout, returning the value.  
-   * Throws exceptions if there are network problems or if the remote code 
-   * threw an exception. 
-   * @deprecated Use {@link #call(RPC.RpcKind, Writable,
-   *  ConnectionId)} instead 
-   */
-  @Deprecated
-  public Writable call(RPC.RpcKind rpcKind, Writable param, InetSocketAddress addr, 
-                       Class<?> protocol, UserGroupInformation ticket,
-                       int rpcTimeout) throws IOException {
-    ConnectionId remoteId = ConnectionId.getConnectionId(addr, protocol,
-        ticket, rpcTimeout, conf);
-    return call(rpcKind, param, remoteId);
+    return call(RpcKind.RPC_BUILTIN, param, remoteId);
   }
 
-  
   /**
    * Same as {@link #call(RPC.RpcKind, Writable, InetSocketAddress,
    * Class, UserGroupInformation, int, Configuration)}
@@ -1471,20 +1433,14 @@ public class Client {
       throw new IOException(e);
     }
 
-    boolean interrupted = false;
     synchronized (call) {
       while (!call.done) {
         try {
           call.wait();                           // wait for the result
         } catch (InterruptedException ie) {
-          // save the fact that we were interrupted
-          interrupted = true;
+          Thread.currentThread().interrupt();
+          throw new InterruptedIOException("Call interrupted");
         }
-      }
-
-      if (interrupted) {
-        // set the interrupt flag now that we are done waiting
-        Thread.currentThread().interrupt();
       }
 
       if (call.error != null) {
@@ -1509,9 +1465,7 @@ public class Client {
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   Set<ConnectionId> getConnectionIds() {
-    synchronized (connections) {
-      return connections.keySet();
-    }
+    return connections.keySet();
   }
   
   /** Get a connection from the pool, or create a new one and add it to the
@@ -1528,20 +1482,30 @@ public class Client {
      * connectionsId object and with set() method. We need to manage the
      * refs for keys in HashMap properly. For now its ok.
      */
-    do {
-      synchronized (connections) {
-        connection = connections.get(remoteId);
-        if (connection == null) {
-          connection = new Connection(remoteId, serviceClass);
-          connections.put(remoteId, connection);
+    while (true) {
+      // These lines below can be shorten with computeIfAbsent in Java8
+      connection = connections.get(remoteId);
+      if (connection == null) {
+        connection = new Connection(remoteId, serviceClass);
+        Connection existing = connections.putIfAbsent(remoteId, connection);
+        if (existing != null) {
+          connection = existing;
         }
       }
-    } while (!connection.addCall(call));
-    
-    //we don't invoke the method below inside "synchronized (connections)"
-    //block above. The reason for that is if the server happens to be slow,
-    //it will take longer to establish a connection and that will slow the
-    //entire system down.
+
+      if (connection.addCall(call)) {
+        break;
+      } else {
+        // This connection is closed, should be removed. But other thread could
+        // have already known this closedConnection, and replace it with a new
+        // connection. So we should call conditional remove to make sure we only
+        // remove this closedConnection.
+        connections.remove(remoteId, connection);
+      }
+    }
+
+    // If the server happens to be slow, the method below will take longer to
+    // establish a connection.
     connection.setupIOstreams(fallbackToSimpleAuth);
     return connection;
   }

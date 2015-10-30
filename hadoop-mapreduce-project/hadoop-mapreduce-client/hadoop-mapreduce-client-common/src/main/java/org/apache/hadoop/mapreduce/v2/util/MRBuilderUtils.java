@@ -30,6 +30,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.util.Records;
 
 public class MRBuilderUtils {
@@ -63,10 +64,21 @@ public class MRBuilderUtils {
   }
 
   public static JobReport newJobReport(JobId jobId, String jobName,
+      String userName, JobState state, long submitTime, long startTime,
+      long finishTime, float setupProgress, float mapProgress,
+      float reduceProgress, float cleanupProgress, String jobFile,
+      List<AMInfo> amInfos, boolean isUber, String diagnostics) {
+    return newJobReport(jobId, jobName, userName, state, submitTime, startTime,
+        finishTime, setupProgress, mapProgress, reduceProgress,
+        cleanupProgress, jobFile, amInfos, isUber, diagnostics,
+        Priority.newInstance(0));
+  }
+
+  public static JobReport newJobReport(JobId jobId, String jobName,
       String userName, JobState state, long submitTime, long startTime, long finishTime,
       float setupProgress, float mapProgress, float reduceProgress,
       float cleanupProgress, String jobFile, List<AMInfo> amInfos,
-      boolean isUber, String diagnostics) {
+      boolean isUber, String diagnostics, Priority priority) {
     JobReport report = Records.newRecord(JobReport.class);
     report.setJobId(jobId);
     report.setJobName(jobName);
@@ -83,6 +95,7 @@ public class MRBuilderUtils {
     report.setAMInfos(amInfos);
     report.setIsUber(isUber);
     report.setDiagnostics(diagnostics);
+    report.setJobPriority(priority);
     return report;
   }
 

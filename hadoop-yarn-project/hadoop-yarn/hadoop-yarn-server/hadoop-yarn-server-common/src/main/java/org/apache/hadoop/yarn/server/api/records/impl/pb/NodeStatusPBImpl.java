@@ -24,20 +24,24 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerStatusPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeHealthStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.ResourceUtilizationProto;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
-    
+import org.apache.hadoop.yarn.server.api.records.ResourceUtilization;
 
 public class NodeStatusPBImpl extends NodeStatus {
   NodeStatusProto proto = NodeStatusProto.getDefaultInstance();
@@ -48,7 +52,8 @@ public class NodeStatusPBImpl extends NodeStatus {
   private List<ContainerStatus> containers = null;
   private NodeHealthStatus nodeHealthStatus = null;
   private List<ApplicationId> keepAliveApplications = null;
-  
+  private List<Container> increasedContainers = null;
+
   public NodeStatusPBImpl() {
     builder = NodeStatusProto.newBuilder();
   }
@@ -77,6 +82,9 @@ public class NodeStatusPBImpl extends NodeStatus {
     }
     if (this.keepAliveApplications != null) {
       addKeepAliveApplicationsToProto();
+    }
+    if (this.increasedContainers != null) {
+      addIncreasedContainersToProto();
     }
   }
 
@@ -162,6 +170,37 @@ public class NodeStatusPBImpl extends NodeStatus {
       }
     };
     builder.addAllKeepAliveApplications(iterable);
+  }
+
+  private synchronized void addIncreasedContainersToProto() {
+    maybeInitBuilder();
+    builder.clearIncreasedContainers();
+    if (increasedContainers == null) {
+      return;
+    }
+    Iterable<ContainerProto> iterable = new
+        Iterable<ContainerProto>() {
+      @Override
+      public Iterator<ContainerProto> iterator() {
+        return new Iterator<ContainerProto>() {
+          private Iterator<Container> iter =
+                  increasedContainers.iterator();
+          @Override
+          public boolean hasNext() {
+            return iter.hasNext();
+          }
+          @Override
+          public ContainerProto next() {
+            return convertToProtoFormat(iter.next());
+          }
+          @Override
+          public void remove() {
+            throw new UnsupportedOperationException();
+          }
+        };
+      }
+    };
+    builder.addAllIncreasedContainers(iterable);
   }
 
   @Override
@@ -291,6 +330,75 @@ public class NodeStatusPBImpl extends NodeStatus {
     this.nodeHealthStatus = healthStatus;
   }
 
+  @Override
+  public synchronized ResourceUtilization getContainersUtilization() {
+    NodeStatusProtoOrBuilder p =
+        this.viaProto ? this.proto : this.builder;
+    if (!p.hasContainersUtilization()) {
+      return null;
+    }
+    return convertFromProtoFormat(p.getContainersUtilization());
+  }
+
+  @Override
+  public synchronized void setContainersUtilization(
+      ResourceUtilization containersUtilization) {
+    maybeInitBuilder();
+    if (containersUtilization == null) {
+      this.builder.clearContainersUtilization();
+      return;
+    }
+    this.builder
+        .setContainersUtilization(convertToProtoFormat(containersUtilization));
+  }
+
+  @Override
+  public synchronized ResourceUtilization getNodeUtilization() {
+    NodeStatusProtoOrBuilder p =
+        this.viaProto ? this.proto : this.builder;
+    if (!p.hasNodeUtilization()) {
+      return null;
+    }
+    return convertFromProtoFormat(p.getNodeUtilization());
+  }
+
+  @Override
+  public synchronized void setNodeUtilization(
+      ResourceUtilization nodeUtilization) {
+    maybeInitBuilder();
+    if (nodeUtilization == null) {
+      this.builder.clearNodeUtilization();
+      return;
+    }
+    this.builder
+        .setNodeUtilization(convertToProtoFormat(nodeUtilization));
+  }
+
+  @Override
+  public synchronized List<Container> getIncreasedContainers() {
+    if (increasedContainers != null) {
+      return increasedContainers;
+    }
+    NodeStatusProtoOrBuilder p = viaProto ? proto : builder;
+    List<ContainerProto> list = p.getIncreasedContainersList();
+    this.increasedContainers = new ArrayList<>();
+    for (ContainerProto c : list) {
+      this.increasedContainers.add(convertFromProtoFormat(c));
+    }
+    return this.increasedContainers;
+  }
+
+  @Override
+  public synchronized void setIncreasedContainers(
+      List<Container> increasedContainers) {
+    maybeInitBuilder();
+    if (increasedContainers == null) {
+      builder.clearIncreasedContainers();
+      return;
+    }
+    this.increasedContainers = increasedContainers;
+  }
+
   private NodeIdProto convertToProtoFormat(NodeId nodeId) {
     return ((NodeIdPBImpl)nodeId).getProto();
   }
@@ -322,5 +430,24 @@ public class NodeStatusPBImpl extends NodeStatus {
   
   private ApplicationIdProto convertToProtoFormat(ApplicationId c) {
     return ((ApplicationIdPBImpl)c).getProto();
+  }
+
+  private ResourceUtilizationProto convertToProtoFormat(ResourceUtilization r) {
+    return ((ResourceUtilizationPBImpl) r).getProto();
+  }
+
+  private ResourceUtilizationPBImpl convertFromProtoFormat(
+      ResourceUtilizationProto p) {
+    return new ResourceUtilizationPBImpl(p);
+  }
+
+  private ContainerPBImpl convertFromProtoFormat(
+      ContainerProto c) {
+    return new ContainerPBImpl(c);
+  }
+
+  private ContainerProto convertToProtoFormat(
+      Container c) {
+    return ((ContainerPBImpl)c).getProto();
   }
 }

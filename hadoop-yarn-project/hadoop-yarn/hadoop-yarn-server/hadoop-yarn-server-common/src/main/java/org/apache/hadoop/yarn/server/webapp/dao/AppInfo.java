@@ -24,11 +24,16 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
+
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.util.Times;
 
+@Public
+@Evolving
 @XmlRootElement(name = "app")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class AppInfo {
@@ -42,6 +47,7 @@ public class AppInfo {
   protected String host;
   protected int rpcPort;
   protected YarnApplicationState appState;
+  protected int runningContainers;
   protected float progress;
   protected String diagnosticsInfo;
   protected String originalTrackingUrl;
@@ -52,6 +58,12 @@ public class AppInfo {
   protected long finishedTime;
   protected long elapsedTime;
   protected String applicationTags;
+  protected int priority;
+  private int allocatedCpuVcores;
+  private int allocatedMemoryMB;
+  protected boolean unmanagedApplication;
+  private String appNodeLabelExpression;
+  private String amNodeLabelExpression;
 
   public AppInfo() {
     // JAXB needs this
@@ -77,10 +89,27 @@ public class AppInfo {
     finishedTime = app.getFinishTime();
     elapsedTime = Times.elapsed(startedTime, finishedTime);
     finalAppStatus = app.getFinalApplicationStatus();
+    priority = 0;
+    if (app.getPriority() != null) {
+      priority = app.getPriority().getPriority();
+    }
+    if (app.getApplicationResourceUsageReport() != null) {
+      runningContainers = app.getApplicationResourceUsageReport()
+          .getNumUsedContainers();
+      if (app.getApplicationResourceUsageReport().getUsedResources() != null) {
+        allocatedCpuVcores = app.getApplicationResourceUsageReport()
+            .getUsedResources().getVirtualCores();
+        allocatedMemoryMB = app.getApplicationResourceUsageReport()
+            .getUsedResources().getMemory();
+      }
+    }
     progress = app.getProgress() * 100; // in percent
     if (app.getApplicationTags() != null && !app.getApplicationTags().isEmpty()) {
       this.applicationTags = CSV_JOINER.join(app.getApplicationTags());
     }
+    unmanagedApplication = app.isUnmanagedApp();
+    appNodeLabelExpression = app.getAppNodeLabelExpression();
+    amNodeLabelExpression = app.getAmNodeLabelExpression();
   }
 
   public String getAppId() {
@@ -117,6 +146,18 @@ public class AppInfo {
 
   public YarnApplicationState getAppState() {
     return appState;
+  }
+
+  public int getRunningContainers() {
+    return runningContainers;
+  }
+
+  public int getAllocatedCpuVcores() {
+    return allocatedCpuVcores;
+  }
+
+  public int getAllocatedMemoryMB() {
+    return allocatedMemoryMB;
   }
 
   public float getProgress() {
@@ -157,5 +198,21 @@ public class AppInfo {
 
   public String getApplicationTags() {
     return applicationTags;
+  }
+
+  public boolean isUnmanagedApp() {
+    return unmanagedApplication;
+  }
+
+  public int getPriority() {
+    return priority;
+  }
+
+  public String getAppNodeLabelExpression() {
+    return appNodeLabelExpression;
+  }
+
+  public String getAmNodeLabelExpression() {
+    return amNodeLabelExpression;
   }
 }

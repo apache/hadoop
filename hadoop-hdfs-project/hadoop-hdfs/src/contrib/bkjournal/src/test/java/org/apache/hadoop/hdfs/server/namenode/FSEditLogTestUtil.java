@@ -33,7 +33,8 @@ public class FSEditLogTestUtil {
 
   public static long countTransactionsInStream(EditLogInputStream in) 
       throws IOException {
-    FSEditLogLoader.EditLogValidation validation = FSEditLogLoader.validateEditLog(in);
+    FSEditLogLoader.EditLogValidation validation =
+        FSEditLogLoader.scanEditLog(in, Long.MAX_VALUE);
     return (validation.getEndTxId() - in.getFirstTxId()) + 1;
   }
 }

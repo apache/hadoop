@@ -28,7 +28,7 @@
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn-server-applicationhistoryservice</artifactId>
   <version>3.0.0-SNAPSHOT</version>
-  <name>hadoop-yarn-server-applicationhistoryservice</name>
+  <name>Apache Hadoop YARN ApplicationHistoryService</name>
 
   <properties>
     <!-- Needed for generating FindBugs warnings using parent pom -->
@@ -180,6 +180,11 @@
       <artifactId>bcprov-jdk16</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>de.ruedigermoeller</groupId>
+      <artifactId>fst</artifactId>
+      <version>2.24</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -200,7 +205,7 @@
               <imports>
                 <param>${basedir}/../../../../hadoop-common-project/hadoop-common/src/main/proto</param>
                 <param>${basedir}/../../hadoop-yarn-api/src/main/proto</param>
-                <param>${basedir}/../../hadoop-yarn-common/src/main/proto/server/</param>
+                <param>${basedir}/../../hadoop-yarn-common/src/main/proto</param>
                 <param>${basedir}/../hadoop-yarn-server-common/src/main/proto</param>
                 <param>${basedir}/src/main/proto</param>
               </imports>

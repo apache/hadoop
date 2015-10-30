@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.base.Preconditions;
+
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.StorageType;
@@ -28,7 +29,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotException;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.List;
 
@@ -88,7 +89,7 @@ class FSDirConcatOp {
   private static void verifyTargetFile(FSDirectory fsd, final String target,
       final INodesInPath targetIIP) throws IOException {
     // check the target
-    if (fsd.getEZForPath(targetIIP) != null) {
+    if (FSDirEncryptionZoneOp.getEZForPath(fsd, targetIIP) != null) {
       throw new HadoopIllegalArgumentException(
           "concat can not be called for files in an encryption zone.");
     }
@@ -103,7 +104,7 @@ class FSDirConcatOp {
   private static INodeFile[] verifySrcFiles(FSDirectory fsd, String[] srcs,
       INodesInPath targetIIP, FSPermissionChecker pc) throws IOException {
     // to make sure no two files are the same
-    Set<INodeFile> si = new HashSet<>();
+    Set<INodeFile> si = new LinkedHashSet<>();
     final INodeFile targetINode = targetIIP.getLastINode().asFile();
     final INodeDirectory targetParent = targetINode.getParent();
     // now check the srcs
@@ -143,6 +144,7 @@ class FSDirConcatOp {
         throw new HadoopIllegalArgumentException("concat: source file " + src
             + " is invalid or empty or underConstruction");
       }
+
       // source file's preferred block size cannot be greater than the target
       // file
       if (srcINodeFile.getPreferredBlockSize() >
@@ -151,6 +153,12 @@ class FSDirConcatOp {
             + " has preferred block size " + srcINodeFile.getPreferredBlockSize()
             + " which is greater than the target file's preferred block size "
             + targetINode.getPreferredBlockSize());
+      }
+      if(srcINodeFile.getErasureCodingPolicyID() !=
+          targetINode.getErasureCodingPolicyID()) {
+        throw new HadoopIllegalArgumentException("Source file " + src
+            + " and target file " + targetIIP.getPath()
+            + " have different erasure coding policy");
       }
       si.add(srcINodeFile);
     }
@@ -167,9 +175,9 @@ class FSDirConcatOp {
   private static QuotaCounts computeQuotaDeltas(FSDirectory fsd,
       INodeFile target, INodeFile[] srcList) {
     QuotaCounts deltas = new QuotaCounts.Builder().build();
-    final short targetRepl = target.getBlockReplication();
+    final short targetRepl = target.getPreferredBlockReplication();
     for (INodeFile src : srcList) {
-      short srcRepl = src.getBlockReplication();
+      short srcRepl = src.getFileReplication();
       long fileSize = src.computeFileSize();
       if (targetRepl != srcRepl) {
         deltas.addStorageSpace(fileSize * (targetRepl - srcRepl));
@@ -222,13 +230,13 @@ class FSDirConcatOp {
     // the target file can be included in a snapshot
     trgInode.recordModification(targetIIP.getLatestSnapshotId());
     INodeDirectory trgParent = targetIIP.getINode(-2).asDirectory();
-    trgInode.concatBlocks(srcList);
+    trgInode.concatBlocks(srcList, fsd.getBlockManager());
 
     // since we are in the same dir - we can use same parent to remove files
     int count = 0;
     for (INodeFile nodeToRemove : srcList) {
       if(nodeToRemove != null) {
-        nodeToRemove.setBlocks(null);
+        nodeToRemove.clearBlocks();
         nodeToRemove.getParent().removeChild(nodeToRemove);
         fsd.getINodeMap().remove(nodeToRemove);
         count++;

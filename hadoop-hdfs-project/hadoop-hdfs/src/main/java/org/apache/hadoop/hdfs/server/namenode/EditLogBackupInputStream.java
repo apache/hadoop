@@ -21,8 +21,8 @@ import java.io.DataInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 
 /**
  * An implementation of the abstract class {@link EditLogInputStream},
@@ -119,7 +119,7 @@ class EditLogBackupInputStream extends EditLogInputStream {
 
     this.version = version;
 
-    reader = new FSEditLogOp.Reader(in, tracker, version);
+    reader = FSEditLogOp.Reader.create(in, tracker, version);
   }
 
   void clear() throws IOException {
@@ -130,12 +130,12 @@ class EditLogBackupInputStream extends EditLogInputStream {
 
   @Override
   public long getFirstTxId() {
-    return HdfsConstants.INVALID_TXID;
+    return HdfsServerConstants.INVALID_TXID;
   }
 
   @Override
   public long getLastTxId() {
-    return HdfsConstants.INVALID_TXID;
+    return HdfsServerConstants.INVALID_TXID;
   }
 
   @Override

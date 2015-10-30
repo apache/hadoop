@@ -74,6 +74,10 @@ public class TestNameNodeHttpServer {
     KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, conf, false);
     connectionFactory = URLConnectionFactory
         .newDefaultURLConnectionFactory(conf);
+    conf.set(DFSConfigKeys.DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY,
+        KeyStoreTestUtil.getClientSSLConfigFileName());
+    conf.set(DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
+        KeyStoreTestUtil.getServerSSLConfigFileName());
   }
 
   @AfterClass

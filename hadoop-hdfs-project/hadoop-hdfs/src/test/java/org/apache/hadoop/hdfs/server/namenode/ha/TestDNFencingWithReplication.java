@@ -20,8 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -29,6 +27,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.io.retry.RetryInvocationHandler;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
@@ -46,11 +45,9 @@ import com.google.common.base.Supplier;
  */
 public class TestDNFencingWithReplication {
   static {
-    ((Log4JLogger)FSNamesystem.auditLog).getLogger().setLevel(Level.WARN);
-    ((Log4JLogger)Server.LOG).getLogger().setLevel(Level.FATAL);
-    ((Log4JLogger)LogFactory.getLog(
-        "org.apache.hadoop.io.retry.RetryInvocationHandler"))
-        .getLogger().setLevel(Level.FATAL);
+    GenericTestUtils.setLogLevel(FSNamesystem.auditLog, Level.WARN);
+    GenericTestUtils.setLogLevel(Server.LOG, Level.FATAL);
+    GenericTestUtils.setLogLevel(RetryInvocationHandler.LOG, Level.FATAL);
   }
 
   private static final int NUM_THREADS = 20;
@@ -107,6 +104,7 @@ public class TestDNFencingWithReplication {
   @Test
   public void testFencingStress() throws Exception {
     HAStressTestHarness harness = new HAStressTestHarness();
+    harness.setNumberOfNameNodes(3);
     harness.conf.setInt(
         DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000);
     harness.conf.setInt(

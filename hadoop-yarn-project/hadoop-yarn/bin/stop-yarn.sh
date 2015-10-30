@@ -16,15 +16,14 @@
 # limitations under the License.
 
 
-# Stop all yarn daemons.  Run this on master node.
+MYNAME="${BASH_SOURCE-$0}"
 
 function hadoop_usage
 {
-  echo "Usage: stop-yarn.sh [--config confdir]"
+  hadoop_generate_usage "${MYNAME}" false
 }
 
-this="${BASH_SOURCE-$0}"
-bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
+bin=$(cd -P -- "$(dirname -- "${MYNAME}")" >/dev/null && pwd -P)
 
 # let's locate libexec...
 if [[ -n "${HADOOP_PREFIX}" ]]; then
@@ -44,10 +43,47 @@ else
 fi
 
 # stop resourceManager
-echo "Stopping resourcemanager"
-"${HADOOP_YARN_HOME}/bin/yarn" --config "${HADOOP_CONF_DIR}" --daemon stop resourcemanager
-# stop nodeManager
+HARM=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -confKey yarn.resourcemanager.ha.enabled 2>&-)
+if [[ ${HARM} = "false" ]]; then
+  echo "Stopping resourcemanager"
+  "${HADOOP_YARN_HOME}/bin/yarn" \
+      --config "${HADOOP_CONF_DIR}" \
+      --daemon stop \
+      resourcemanager
+else
+  logicals=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -confKey yarn.resourcemanager.ha.rm-ids 2>&-)
+  logicals=${logicals//,/ }
+  for id in ${logicals}
+  do
+      rmhost=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -confKey "yarn.resourcemanager.hostname.${id}" 2>&-)
+      RMHOSTS="${RMHOSTS} ${rmhost}"
+  done
+  echo "Stopping resourcemanagers on [${RMHOSTS}]"
+  "${HADOOP_YARN_HOME}/bin/yarn" \
+      --config "${HADOOP_CONF_DIR}" \
+      --daemon stop \
+      --slaves \
+      --hostnames "${RMHOSTS}" \
+      resourcemanager
+fi
+
+# stop nodemanager
 echo "Stopping nodemanagers"
-"${bin}/yarn-daemons.sh" --config "${HADOOP_CONF_DIR}"  stop nodemanager
+"${HADOOP_YARN_HOME}/bin/yarn" \
+    --config "${HADOOP_CONF_DIR}" \
+    --slaves \
+    --daemon stop \
+    nodemanager
+
 # stop proxyserver
-#"${HADOOP_YARN_HOME}/bin/yarn" --config "${HADOOP_CONF_DIR}" --daemon stop proxyserver
+PROXYSERVER=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -confKey  yarn.web-proxy.address 2>&- | cut -f1 -d:)
+if [[ -n ${PROXYSERVER} ]]; then
+  echo "Stopping proxy server [${PROXYSERVER}]"
+  "${HADOOP_YARN_HOME}/bin/yarn" \
+      --config "${HADOOP_CONF_DIR}" \
+      --slaves \
+      --hostnames "${PROXYSERVER}" \
+      --daemon stop \
+      proxyserver
+fi
+

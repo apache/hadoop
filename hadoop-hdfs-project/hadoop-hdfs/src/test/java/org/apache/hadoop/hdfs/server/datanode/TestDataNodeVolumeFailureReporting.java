@@ -30,7 +30,6 @@ import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.fs.FileSystem;
@@ -45,6 +44,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
@@ -57,7 +57,8 @@ public class TestDataNodeVolumeFailureReporting {
 
   private static final Log LOG = LogFactory.getLog(TestDataNodeVolumeFailureReporting.class);
   {
-    ((Log4JLogger)TestDataNodeVolumeFailureReporting.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(TestDataNodeVolumeFailureReporting.LOG,
+        Level.ALL);
   }
 
   private FileSystem fs;
@@ -76,9 +77,8 @@ public class TestDataNodeVolumeFailureReporting {
 
   @Before
   public void setUp() throws Exception {
-    // These tests simulate volume failures by denying execute permission on the
-    // volume's path.  On Windows, the owner of an object is always allowed
-    // access, so we can't run these tests on Windows.
+    // These tests use DataNodeTestUtils#injectDataDirFailure() to simulate
+    // volume failures which is currently not supported on Windows.
     assumeTrue(!Path.WINDOWS);
     // Allow a single volume failure (there are two volumes)
     initCluster(1, 2, 1);

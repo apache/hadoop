@@ -73,32 +73,32 @@ public class NodeLabelPBImpl extends NodeLabel {
   }
 
   @Override
-  public String getNodeLabel() {
+  public String getName() {
     NodeLabelProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasNodeLabel()) {
+    if (!p.hasName()) {
       return null;
     }
-    return (p.getNodeLabel());
+    return (p.getName());
   }
 
   @Override
-  public void setNodeLabel(String nodeLabel) {
+  public void setName(String name) {
     maybeInitBuilder();
-    if (nodeLabel == null) {
-      builder.clearNodeLabel();
+    if (name == null) {
+      builder.clearName();
       return;
     }
-    builder.setNodeLabel(nodeLabel);
+    builder.setName(name);
   }
 
   @Override
-  public boolean getIsExclusive() {
+  public boolean isExclusive() {
     NodeLabelProtoOrBuilder p = viaProto ? proto : builder;
     return p.getIsExclusive();
   }
 
   @Override
-  public void setIsExclusive(boolean isExclusive) {
+  public void setExclusivity(boolean isExclusive) {
     maybeInitBuilder();
     builder.setIsExclusive(isExclusive);
   }

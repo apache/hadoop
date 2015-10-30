@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs;
 
-import java.util.regex.PatternSyntaxException;
+import com.google.re2j.PatternSyntaxException;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;

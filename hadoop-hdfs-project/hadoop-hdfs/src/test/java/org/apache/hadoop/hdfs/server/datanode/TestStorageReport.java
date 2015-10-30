@@ -106,7 +106,7 @@ public class TestStorageReport {
         any(DatanodeRegistration.class),
         captor.capture(),
         anyLong(), anyLong(), anyInt(), anyInt(), anyInt(),
-        Mockito.any(VolumeFailureSummary.class));
+        Mockito.any(VolumeFailureSummary.class), Mockito.anyBoolean());
 
     StorageReport[] reports = captor.getValue();
 

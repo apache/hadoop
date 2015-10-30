@@ -22,8 +22,11 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestNodeManager {
@@ -53,5 +56,50 @@ public class TestNodeManager {
       nm.stop();
     }
   }
-  
+
+  @Test
+  public void testCreationOfNodeLabelsProviderService()
+      throws InterruptedException {
+    try {
+      NodeManager nodeManager = new NodeManager();
+      Configuration conf = new Configuration();
+      NodeLabelsProvider labelsProviderService =
+          nodeManager.createNodeLabelsProvider(conf);
+      Assert
+          .assertNull(
+              "LabelsProviderService should not be initialized in default configuration",
+              labelsProviderService);
+
+      // With valid className
+      conf.set(
+          YarnConfiguration.NM_NODE_LABELS_PROVIDER_CONFIG,
+          "org.apache.hadoop.yarn.server.nodemanager.nodelabels.ConfigurationNodeLabelsProvider");
+      labelsProviderService = nodeManager.createNodeLabelsProvider(conf);
+      Assert.assertNotNull("LabelsProviderService should be initialized When "
+          + "node labels provider class is configured", labelsProviderService);
+
+      // With invalid className
+      conf.set(YarnConfiguration.NM_NODE_LABELS_PROVIDER_CONFIG,
+          "org.apache.hadoop.yarn.server.nodemanager.NodeManager");
+      try {
+        labelsProviderService = nodeManager.createNodeLabelsProvider(conf);
+        Assert.fail("Expected to throw IOException on Invalid configuration");
+      } catch (IOException e) {
+        // exception expected on invalid configuration
+      }
+      Assert.assertNotNull("LabelsProviderService should be initialized When "
+          + "node labels provider class is configured", labelsProviderService);
+
+      // With valid whitelisted configurations
+      conf.set(YarnConfiguration.NM_NODE_LABELS_PROVIDER_CONFIG,
+          YarnConfiguration.CONFIG_NODE_LABELS_PROVIDER);
+      labelsProviderService = nodeManager.createNodeLabelsProvider(conf);
+      Assert.assertNotNull("LabelsProviderService should be initialized When "
+          + "node labels provider class is configured", labelsProviderService);
+
+    } catch (Exception e) {
+      Assert.fail("Exception caught");
+      e.printStackTrace();
+    }
+  }
 }

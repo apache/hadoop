@@ -60,7 +60,17 @@ abstract public class MountdBase {
     SimpleUdpServer udpServer = new SimpleUdpServer(rpcProgram.getPort(),
         rpcProgram, 1);
     rpcProgram.startDaemons();
-    udpServer.run();
+    try {
+      udpServer.run();
+    } catch (Throwable e) {
+      LOG.fatal("Failed to start the UDP server.", e);
+      if (udpServer.getBoundPort() > 0) {
+        rpcProgram.unregister(PortmapMapping.TRANSPORT_UDP,
+            udpServer.getBoundPort());
+      }
+      udpServer.shutdown();
+      terminate(1, e);
+    }
     udpBoundPort = udpServer.getBoundPort();
   }
 
@@ -69,7 +79,17 @@ abstract public class MountdBase {
     SimpleTcpServer tcpServer = new SimpleTcpServer(rpcProgram.getPort(),
         rpcProgram, 1);
     rpcProgram.startDaemons();
-    tcpServer.run();
+    try {
+      tcpServer.run();
+    } catch (Throwable e) {
+      LOG.fatal("Failed to start the TCP server.", e);
+      if (tcpServer.getBoundPort() > 0) {
+        rpcProgram.unregister(PortmapMapping.TRANSPORT_TCP,
+            tcpServer.getBoundPort());
+      }
+      tcpServer.shutdown();
+      terminate(1, e);
+    }
     tcpBoundPort = tcpServer.getBoundPort();
   }
 
@@ -83,7 +103,7 @@ abstract public class MountdBase {
         rpcProgram.register(PortmapMapping.TRANSPORT_UDP, udpBoundPort);
         rpcProgram.register(PortmapMapping.TRANSPORT_TCP, tcpBoundPort);
       } catch (Throwable e) {
-        LOG.fatal("Failed to start the server. Cause:", e);
+        LOG.fatal("Failed to register the MOUNT service.", e);
         terminate(1, e);
       }
     }

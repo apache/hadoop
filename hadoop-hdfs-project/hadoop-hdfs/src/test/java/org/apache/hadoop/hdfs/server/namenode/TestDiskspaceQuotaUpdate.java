@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.EnumSet;
+import java.util.HashMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
@@ -35,6 +36,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.QuotaByStorageTypeExceededException;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.ipc.RemoteException;
 import org.junit.After;
 import org.junit.Assert;
@@ -212,11 +215,12 @@ public class TestDiskspaceQuotaUpdate {
       // ignore
     }
 
+    LeaseManager lm = cluster.getNamesystem().getLeaseManager();
     // check that the file exists, isn't UC, and has no dangling lease
     INodeFile inode = fsdir.getINode(file.toString()).asFile();
     Assert.assertNotNull(inode);
     Assert.assertFalse("should not be UC", inode.isUnderConstruction());
-    Assert.assertNull("should not have a lease", cluster.getNamesystem().getLeaseManager().getLeaseByPath(file.toString()));
+    Assert.assertNull("should not have a lease", lm.getLease(inode));
     // make sure the quota usage is unchanged
     final long newSpaceUsed = dirNode.getDirectoryWithQuotaFeature()
         .getSpaceConsumed().getStorageSpace();
@@ -250,16 +254,16 @@ public class TestDiskspaceQuotaUpdate {
     try {
       DFSTestUtil.appendFile(dfs, file, BLOCKSIZE);
       Assert.fail("append didn't fail");
-    } catch (RemoteException e) {
-      assertTrue(e.getClassName().contains("QuotaByStorageTypeExceededException"));
+    } catch (QuotaByStorageTypeExceededException e) {
+      //ignore
     }
 
     // check that the file exists, isn't UC, and has no dangling lease
+    LeaseManager lm = cluster.getNamesystem().getLeaseManager();
     INodeFile inode = fsdir.getINode(file.toString()).asFile();
     Assert.assertNotNull(inode);
     Assert.assertFalse("should not be UC", inode.isUnderConstruction());
-    Assert.assertNull("should not have a lease", cluster.getNamesystem()
-        .getLeaseManager().getLeaseByPath(file.toString()));
+    Assert.assertNull("should not have a lease", lm.getLease(inode));
     // make sure the quota usage is unchanged
     final long newSpaceUsed = dirNode.getDirectoryWithQuotaFeature()
         .getSpaceConsumed().getStorageSpace();
@@ -295,11 +299,11 @@ public class TestDiskspaceQuotaUpdate {
     }
 
     // check that the file exists, isn't UC, and has no dangling lease
+    LeaseManager lm = cluster.getNamesystem().getLeaseManager();
     INodeFile inode = fsdir.getINode(file.toString()).asFile();
     Assert.assertNotNull(inode);
     Assert.assertFalse("should not be UC", inode.isUnderConstruction());
-    Assert.assertNull("should not have a lease", cluster.getNamesystem()
-        .getLeaseManager().getLeaseByPath(file.toString()));
+    Assert.assertNull("should not have a lease", lm.getLease(inode));
     // make sure the quota usage is unchanged
     final long newSpaceUsed = dirNode.getDirectoryWithQuotaFeature()
         .getSpaceConsumed().getStorageSpace();
@@ -307,5 +311,64 @@ public class TestDiskspaceQuotaUpdate {
     // make sure edits aren't corrupted
     dfs.recoverLease(file);
     cluster.restartNameNodes();
+  }
+
+  /**
+   * Check whether the quota is initialized correctly.
+   */
+  @Test
+  public void testQuotaInitialization() throws Exception {
+    final int size = 500;
+    Path testDir = new Path("/testDir");
+    long expectedSize = 3 * BLOCKSIZE + BLOCKSIZE/2;
+    dfs.mkdirs(testDir);
+    dfs.setQuota(testDir, size*4, expectedSize*size*2);
+
+    Path[] testDirs = new Path[size];
+    for (int i = 0; i < size; i++) {
+      testDirs[i] = new Path(testDir, "sub" + i);
+      dfs.mkdirs(testDirs[i]);
+      dfs.setQuota(testDirs[i], 100, 1000000);
+      DFSTestUtil.createFile(dfs, new Path(testDirs[i], "a"), expectedSize,
+          (short)1, 1L);
+    }
+
+    // Directly access the name system to obtain the current cached usage.
+    INodeDirectory root = fsdir.getRoot();
+    HashMap<String, Long> nsMap = new HashMap<String, Long>();
+    HashMap<String, Long> dsMap = new HashMap<String, Long>();
+    scanDirsWithQuota(root, nsMap, dsMap, false);
+
+    fsdir.updateCountForQuota(1);
+    scanDirsWithQuota(root, nsMap, dsMap, true);
+
+    fsdir.updateCountForQuota(2);
+    scanDirsWithQuota(root, nsMap, dsMap, true);
+
+    fsdir.updateCountForQuota(4);
+    scanDirsWithQuota(root, nsMap, dsMap, true);
+  }
+
+  private void scanDirsWithQuota(INodeDirectory dir,
+      HashMap<String, Long> nsMap,
+      HashMap<String, Long> dsMap, boolean verify) {
+    if (dir.isQuotaSet()) {
+      // get the current consumption
+      QuotaCounts q = dir.getDirectoryWithQuotaFeature().getSpaceConsumed();
+      String name = dir.getFullPathName();
+      if (verify) {
+        assertEquals(nsMap.get(name).longValue(), q.getNameSpace());
+        assertEquals(dsMap.get(name).longValue(), q.getStorageSpace());
+      } else {
+        nsMap.put(name, Long.valueOf(q.getNameSpace()));
+        dsMap.put(name, Long.valueOf(q.getStorageSpace()));
+      }
+    }
+
+    for (INode child : dir.getChildrenList(Snapshot.CURRENT_STATE_ID)) {
+      if (child instanceof INodeDirectory) {
+        scanDirsWithQuota((INodeDirectory)child, nsMap, dsMap, verify);
+      }
+    }
   }
 }

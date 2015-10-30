@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.util;
 
+import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Random;
@@ -378,6 +379,11 @@ public class TestLightWeightCache {
       hashMap.clear();
       cache.clear();
       Assert.assertEquals(0, size());
+    }
+
+    @Override
+    public Collection<IntEntry> values() {
+      throw new UnsupportedOperationException();
     }
   }
 

@@ -22,8 +22,8 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.junit.After;
 import org.junit.Test;
 
@@ -79,7 +79,7 @@ public class TestMetadataVersionOutput {
       assertExceptionContains("ExitException", e);
     }
     /* Check if meta data version is printed correctly. */
-    final String verNumStr = HdfsConstants.NAMENODE_LAYOUT_VERSION + "";
+    final String verNumStr = HdfsServerConstants.NAMENODE_LAYOUT_VERSION + "";
     assertTrue(baos.toString("UTF-8").
       contains("HDFS Image Version: " + verNumStr));
     assertTrue(baos.toString("UTF-8").

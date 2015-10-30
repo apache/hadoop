@@ -89,9 +89,15 @@ prints applicationattempt(s) report
 
 ### `classpath`
 
-Usage: `yarn classpath`
+Usage: `yarn classpath [--glob |--jar <path> |-h |--help]`
 
-Prints the class path needed to get the Hadoop jar and the required libraries
+| COMMAND\_OPTION | Description |
+|:---- |:---- |
+| `--glob` | expand wildcards |
+| `--jar` *path* | write classpath as manifest in jar named *path* |
+| `-h`, `--help` | print help |
+
+Prints the class path needed to get the Hadoop jar and the required libraries. If called without arguments, then prints the classpath set up by the command scripts, which is likely to contain wildcards in the classpath entries. Additional options print the classpath after wildcard expansion or write the classpath into the manifest of a jar file. The latter is useful in environments where wildcards cannot be used and the expanded classpath exceeds the maximum supported command line length.
 
 ### `container`
 
@@ -197,6 +203,7 @@ Usage: `yarn resourcemanager [-format-state-store]`
 | COMMAND\_OPTIONS | Description |
 |:---- |:---- |
 | -format-state-store | Formats the RMStateStore. This will clear the RMStateStore and is useful if past applications are no longer needed. This should be run only when the ResourceManager is not running. |
+| -remove-application-from-state-store \<appId\> | Remove the application from RMStateStore. This should be run only when the ResourceManager is not running. |
 
 Start the ResourceManager
 

@@ -30,6 +30,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -309,6 +310,20 @@ public abstract class Storage extends StorageInfo {
     public StorageDirType getStorageDirType() {
       return dirType;
     }    
+
+    /**
+     * Get storage directory size.
+     */
+    public long getDirecorySize() {
+      try {
+        if (!isShared() && root != null && root.exists()) {
+          return FileUtils.sizeOfDirectory(root);
+        }
+      } catch (Exception e) {
+        LOG.warn("Failed to get directory size :" + root, e);
+      }
+      return 0;
+    }
 
     public void read(File from, Storage storage) throws IOException {
       Properties props = readPropertiesFile(from);
@@ -709,6 +724,7 @@ public abstract class Storage extends StorageInfo {
       try {
         res = file.getChannel().tryLock();
         if (null == res) {
+          LOG.error("Unable to acquire file lock on path " + lockF.toString());
           throw new OverlappingFileLockException();
         }
         file.write(jvmName.getBytes(Charsets.UTF_8));
@@ -972,35 +988,28 @@ public abstract class Storage extends StorageInfo {
   public void writeProperties(File to, StorageDirectory sd) throws IOException {
     Properties props = new Properties();
     setPropertiesFromFields(props, sd);
-    writeProperties(to, sd, props);
+    writeProperties(to, props);
   }
 
-  public static void writeProperties(File to, StorageDirectory sd,
-      Properties props) throws IOException {
-    RandomAccessFile file = new RandomAccessFile(to, "rws");
-    FileOutputStream out = null;
-    try {
+  public static void writeProperties(File to, Properties props)
+      throws IOException {
+    try (RandomAccessFile file = new RandomAccessFile(to, "rws");
+        FileOutputStream out = new FileOutputStream(file.getFD())) {
       file.seek(0);
-      out = new FileOutputStream(file.getFD());
       /*
-       * If server is interrupted before this line, 
+       * If server is interrupted before this line,
        * the version file will remain unchanged.
        */
       props.store(out, null);
       /*
-       * Now the new fields are flushed to the head of the file, but file 
-       * length can still be larger then required and therefore the file can 
+       * Now the new fields are flushed to the head of the file, but file
+       * length can still be larger then required and therefore the file can
        * contain whole or corrupted fields from its old contents in the end.
        * If server is interrupted here and restarted later these extra fields
        * either should not effect server behavior or should be handled
        * by the server correctly.
        */
       file.setLength(out.getChannel().position());
-    } finally {
-      if (out != null) {
-        out.close();
-      }
-      file.close();
     }
   }
 

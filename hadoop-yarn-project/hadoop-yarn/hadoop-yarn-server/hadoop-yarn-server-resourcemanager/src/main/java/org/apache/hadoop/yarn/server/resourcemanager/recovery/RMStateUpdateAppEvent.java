@@ -22,13 +22,26 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.Applicatio
 
 public class RMStateUpdateAppEvent extends RMStateStoreEvent {
   private final ApplicationStateData appState;
+  // After application state is updated in state store,
+  // should notify back to application or not
+  private boolean notifyApplication;
 
   public RMStateUpdateAppEvent(ApplicationStateData appState) {
     super(RMStateStoreEventType.UPDATE_APP);
     this.appState = appState;
+    this.notifyApplication = true;
+  }
+
+  public RMStateUpdateAppEvent(ApplicationStateData appState, boolean notifyApp) {
+    this(appState);
+    this.notifyApplication = notifyApp;
   }
 
   public ApplicationStateData getAppState() {
     return appState;
+  }
+
+  public boolean isNotifyApplication() {
+    return notifyApplication;
   }
 }

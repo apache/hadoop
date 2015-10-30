@@ -19,12 +19,12 @@ package org.apache.hadoop.contrib.bkjournal;
 
 import java.io.IOException;
 import java.util.Comparator;
+
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.KeeperException;
-
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -67,7 +67,7 @@ public class EditLogLedgerMetadata {
     this.dataLayoutVersion = dataLayoutVersion;
     this.ledgerId = ledgerId;
     this.firstTxId = firstTxId;
-    this.lastTxId = HdfsConstants.INVALID_TXID;
+    this.lastTxId = HdfsServerConstants.INVALID_TXID;
     this.inprogress = true;
   }
   
@@ -107,7 +107,7 @@ public class EditLogLedgerMetadata {
   }
 
   void finalizeLedger(long newLastTxId) {
-    assert this.lastTxId == HdfsConstants.INVALID_TXID;
+    assert this.lastTxId == HdfsServerConstants.INVALID_TXID;
     this.lastTxId = newLastTxId;
     this.inprogress = false;      
   }

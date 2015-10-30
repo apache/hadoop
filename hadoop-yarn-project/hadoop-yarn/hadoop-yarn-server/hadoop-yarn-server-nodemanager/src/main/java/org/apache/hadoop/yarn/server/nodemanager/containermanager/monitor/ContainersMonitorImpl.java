@@ -18,13 +18,11 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -32,11 +30,14 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.server.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
@@ -54,17 +55,18 @@ public class ContainersMonitorImpl extends AbstractService implements
   private MonitoringThread monitoringThread;
   private boolean containerMetricsEnabled;
   private long containerMetricsPeriodMs;
+  private long containerMetricsUnregisterDelayMs;
 
-  final List<ContainerId> containersToBeRemoved;
-  final Map<ContainerId, ProcessTreeInfo> containersToBeAdded;
-  Map<ContainerId, ProcessTreeInfo> trackingContainers =
-      new HashMap<ContainerId, ProcessTreeInfo>();
+  @VisibleForTesting
+  final Map<ContainerId, ProcessTreeInfo> trackingContainers =
+      new ConcurrentHashMap<>();
 
-  final ContainerExecutor containerExecutor;
+  private final ContainerExecutor containerExecutor;
   private final Dispatcher eventDispatcher;
   private final Context context;
   private ResourceCalculatorPlugin resourceCalculatorPlugin;
   private Configuration conf;
+  private static float vmemRatio;
   private Class<? extends ResourceCalculatorProcessTree> processTreeClass;
 
   private long maxVmemAllottedForContainers = UNKNOWN_MEMORY_LIMIT;
@@ -72,11 +74,16 @@ public class ContainersMonitorImpl extends AbstractService implements
 
   private boolean pmemCheckEnabled;
   private boolean vmemCheckEnabled;
+  private boolean containersMonitorEnabled;
 
   private long maxVCoresAllottedForContainers;
 
   private static final long UNKNOWN_MEMORY_LIMIT = -1L;
   private int nodeCpuPercentageForYARN;
+
+  private ResourceUtilization containersUtilization;
+
+  private volatile boolean stopped = false;
 
   public ContainersMonitorImpl(ContainerExecutor exec,
       AsyncDispatcher dispatcher, Context context) {
@@ -86,19 +93,23 @@ public class ContainersMonitorImpl extends AbstractService implements
     this.eventDispatcher = dispatcher;
     this.context = context;
 
-    this.containersToBeAdded = new HashMap<ContainerId, ProcessTreeInfo>();
-    this.containersToBeRemoved = new ArrayList<ContainerId>();
     this.monitoringThread = new MonitoringThread();
+
+    this.containersUtilization = ResourceUtilization.newInstance(0, 0, 0.0f);
   }
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     this.monitoringInterval =
         conf.getLong(YarnConfiguration.NM_CONTAINER_MON_INTERVAL_MS,
-            YarnConfiguration.DEFAULT_NM_CONTAINER_MON_INTERVAL_MS);
+            conf.getLong(YarnConfiguration.NM_RESOURCE_MON_INTERVAL_MS,
+                YarnConfiguration.DEFAULT_NM_RESOURCE_MON_INTERVAL_MS));
 
     Class<? extends ResourceCalculatorPlugin> clazz =
-        conf.getClass(YarnConfiguration.NM_CONTAINER_MON_RESOURCE_CALCULATOR, null,
+        conf.getClass(YarnConfiguration.NM_CONTAINER_MON_RESOURCE_CALCULATOR,
+            conf.getClass(
+                YarnConfiguration.NM_MON_RESOURCE_CALCULATOR, null,
+                ResourceCalculatorPlugin.class),
             ResourceCalculatorPlugin.class);
     this.resourceCalculatorPlugin =
         ResourceCalculatorPlugin.getResourceCalculatorPlugin(clazz, conf);
@@ -116,15 +127,15 @@ public class ContainersMonitorImpl extends AbstractService implements
     this.containerMetricsPeriodMs =
         conf.getLong(YarnConfiguration.NM_CONTAINER_METRICS_PERIOD_MS,
             YarnConfiguration.DEFAULT_NM_CONTAINER_METRICS_PERIOD_MS);
+    this.containerMetricsUnregisterDelayMs = conf.getLong(
+        YarnConfiguration.NM_CONTAINER_METRICS_UNREGISTER_DELAY_MS,
+        YarnConfiguration.DEFAULT_NM_CONTAINER_METRICS_UNREGISTER_DELAY_MS);
 
-    long configuredPMemForContainers = conf.getLong(
-        YarnConfiguration.NM_PMEM_MB,
-        YarnConfiguration.DEFAULT_NM_PMEM_MB) * 1024 * 1024l;
+    long configuredPMemForContainers =
+        NodeManagerHardwareUtils.getContainerMemoryMB(conf) * 1024 * 1024L;
 
-    long configuredVCoresForContainers = conf.getLong(
-        YarnConfiguration.NM_VCORES,
-        YarnConfiguration.DEFAULT_NM_VCORES);
-
+    long configuredVCoresForContainers =
+        NodeManagerHardwareUtils.getVCores(conf);
 
     // Setting these irrespective of whether checks are enabled. Required in
     // the UI.
@@ -133,7 +144,7 @@ public class ContainersMonitorImpl extends AbstractService implements
     this.maxVCoresAllottedForContainers = configuredVCoresForContainers;
 
     // ///////// Virtual memory configuration //////
-    float vmemRatio = conf.getFloat(YarnConfiguration.NM_VMEM_PMEM_RATIO,
+    vmemRatio = conf.getFloat(YarnConfiguration.NM_VMEM_PMEM_RATIO,
         YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO);
     Preconditions.checkArgument(vmemRatio > 0.99f,
         YarnConfiguration.NM_VMEM_PMEM_RATIO + " should be at least 1.0");
@@ -146,6 +157,9 @@ public class ContainersMonitorImpl extends AbstractService implements
         YarnConfiguration.DEFAULT_NM_VMEM_CHECK_ENABLED);
     LOG.info("Physical memory check enabled: " + pmemCheckEnabled);
     LOG.info("Virtual memory check enabled: " + vmemCheckEnabled);
+
+    containersMonitorEnabled = isEnabled();
+    LOG.info("ContainersMonitor enabled: " + containersMonitorEnabled);
 
     nodeCpuPercentageForYARN =
         NodeManagerHardwareUtils.getNodeCpuPercentage(conf);
@@ -199,7 +213,7 @@ public class ContainersMonitorImpl extends AbstractService implements
 
   @Override
   protected void serviceStart() throws Exception {
-    if (this.isEnabled()) {
+    if (containersMonitorEnabled) {
       this.monitoringThread.start();
     }
     super.serviceStart();
@@ -207,7 +221,8 @@ public class ContainersMonitorImpl extends AbstractService implements
 
   @Override
   protected void serviceStop() throws Exception {
-    if (this.isEnabled()) {
+    if (containersMonitorEnabled) {
+      stopped = true;
       this.monitoringThread.interrupt();
       try {
         this.monitoringThread.join();
@@ -218,7 +233,8 @@ public class ContainersMonitorImpl extends AbstractService implements
     super.serviceStop();
   }
 
-  private static class ProcessTreeInfo {
+  @VisibleForTesting
+  static class ProcessTreeInfo {
     private ContainerId containerId;
     private String pid;
     private ResourceCalculatorProcessTree pTree;
@@ -257,26 +273,43 @@ public class ContainersMonitorImpl extends AbstractService implements
       this.pTree = pTree;
     }
 
-    public long getVmemLimit() {
+    /**
+     * @return Virtual memory limit for the process tree in bytes
+     */
+    public synchronized long getVmemLimit() {
       return this.vmemLimit;
     }
 
     /**
      * @return Physical memory limit for the process tree in bytes
      */
-    public long getPmemLimit() {
+    public synchronized long getPmemLimit() {
       return this.pmemLimit;
     }
 
     /**
-     * Return the number of cpu vcores assigned
-     * @return
+     * @return Number of cpu vcores assigned
      */
-    public int getCpuVcores() {
+    public synchronized int getCpuVcores() {
       return this.cpuVcores;
     }
-  }
 
+    /**
+     * Set resource limit for enforcement
+     * @param pmemLimit
+     *          Physical memory limit for the process tree in bytes
+     * @param vmemLimit
+     *          Virtual memory limit for the process tree in bytes
+     * @param cpuVcores
+     *          Number of cpu vcores assigned
+     */
+    public synchronized void setResourceLimit(
+        long pmemLimit, long vmemLimit, int cpuVcores) {
+      this.pmemLimit = pmemLimit;
+      this.vmemLimit = vmemLimit;
+      this.cpuVcores = cpuVcores;
+    }
+  }
 
   /**
    * Check whether a container's process tree's current memory usage is over
@@ -349,8 +382,7 @@ public class ContainersMonitorImpl extends AbstractService implements
     @Override
     public void run() {
 
-      while (true) {
-
+      while (!stopped && !Thread.currentThread().isInterrupted()) {
         // Print the processTrees for debugging.
         if (LOG.isDebugEnabled()) {
           StringBuilder tmp = new StringBuilder("[ ");
@@ -362,39 +394,19 @@ public class ContainersMonitorImpl extends AbstractService implements
               + tmp.substring(0, tmp.length()) + "]");
         }
 
-        // Add new containers
-        synchronized (containersToBeAdded) {
-          for (Entry<ContainerId, ProcessTreeInfo> entry : containersToBeAdded
-              .entrySet()) {
-            ContainerId containerId = entry.getKey();
-            ProcessTreeInfo processTreeInfo = entry.getValue();
-            LOG.info("Starting resource-monitoring for " + containerId);
-            trackingContainers.put(containerId, processTreeInfo);
-          }
-          containersToBeAdded.clear();
-        }
-
-        // Remove finished containers
-        synchronized (containersToBeRemoved) {
-          for (ContainerId containerId : containersToBeRemoved) {
-            if (containerMetricsEnabled) {
-              ContainerMetrics.forContainer(
-                  containerId, containerMetricsPeriodMs).finished();
-            }
-            trackingContainers.remove(containerId);
-            LOG.info("Stopping resource-monitoring for " + containerId);
-          }
-          containersToBeRemoved.clear();
-        }
+        // Temporary structure to calculate the total resource utilization of
+        // the containers
+        ResourceUtilization trackedContainersUtilization  =
+            ResourceUtilization.newInstance(0, 0, 0.0f);
 
         // Now do the monitoring for the trackingContainers
         // Check memory usage and kill any overflowing containers
-        long vmemStillInUsage = 0;
-        long pmemStillInUsage = 0;
-        for (Iterator<Map.Entry<ContainerId, ProcessTreeInfo>> it =
-            trackingContainers.entrySet().iterator(); it.hasNext();) {
-
-          Map.Entry<ContainerId, ProcessTreeInfo> entry = it.next();
+        long vmemUsageByAllContainers = 0;
+        long pmemByAllContainers = 0;
+        long cpuUsagePercentPerCoreByAllContainers = 0;
+        long cpuUsageTotalCoresByAllContainers = 0;
+        for (Entry<ContainerId, ProcessTreeInfo> entry : trackingContainers
+            .entrySet()) {
           ContainerId containerId = entry.getKey();
           ProcessTreeInfo ptInfo = entry.getValue();
           try {
@@ -417,12 +429,8 @@ public class ContainersMonitorImpl extends AbstractService implements
 
                 if (containerMetricsEnabled) {
                   ContainerMetrics usageMetrics = ContainerMetrics
-                      .forContainer(containerId, containerMetricsPeriodMs);
-                  int cpuVcores = ptInfo.getCpuVcores();
-                  final int vmemLimit = (int) (ptInfo.getVmemLimit() >> 20);
-                  final int pmemLimit = (int) (ptInfo.getPmemLimit() >> 20);
-                  usageMetrics.recordResourceLimit(
-                      vmemLimit, pmemLimit, cpuVcores);
+                      .forContainer(containerId, containerMetricsPeriodMs,
+                      containerMetricsUnregisterDelayMs);
                   usageMetrics.recordProcessId(pId);
                 }
               }
@@ -455,19 +463,30 @@ public class ContainersMonitorImpl extends AbstractService implements
             long curRssMemUsageOfAgedProcesses = pTree.getRssMemorySize(1);
             long vmemLimit = ptInfo.getVmemLimit();
             long pmemLimit = ptInfo.getPmemLimit();
-            LOG.info(String.format(
-                "Memory usage of ProcessTree %s for container-id %s: ",
-                     pId, containerId.toString()) +
-                formatUsageString(
-                    currentVmemUsage, vmemLimit, currentPmemUsage, pmemLimit));
+            if (LOG.isDebugEnabled()) {
+              LOG.debug(String.format(
+                  "Memory usage of ProcessTree %s for container-id %s: ",
+                  pId, containerId.toString()) +
+                  formatUsageString(
+                      currentVmemUsage, vmemLimit,
+                      currentPmemUsage, pmemLimit));
+            }
+
+            // Add resource utilization for this container
+            trackedContainersUtilization.addTo(
+                (int) (currentPmemUsage >> 20),
+                (int) (currentVmemUsage >> 20),
+                milliVcoresUsed / 1000.0f);
 
             // Add usage to container metrics
             if (containerMetricsEnabled) {
               ContainerMetrics.forContainer(
-                  containerId, containerMetricsPeriodMs).recordMemoryUsage(
+                  containerId, containerMetricsPeriodMs,
+                  containerMetricsUnregisterDelayMs).recordMemoryUsage(
                   (int) (currentPmemUsage >> 20));
               ContainerMetrics.forContainer(
-                  containerId, containerMetricsPeriodMs).recordCpuUsage
+                  containerId, containerMetricsPeriodMs,
+                  containerMetricsUnregisterDelayMs).recordCpuUsage
                   ((int)cpuUsagePercentPerCore, milliVcoresUsed);
             }
 
@@ -501,6 +520,13 @@ public class ContainersMonitorImpl extends AbstractService implements
               containerExitStatus = ContainerExitStatus.KILLED_EXCEEDED_PMEM;
             }
 
+            // Accounting the total memory in usage for all containers
+            vmemUsageByAllContainers += currentVmemUsage;
+            pmemByAllContainers += currentPmemUsage;
+            // Accounting the total cpu usage for all containers
+            cpuUsagePercentPerCoreByAllContainers += cpuUsagePercentPerCore;
+            cpuUsageTotalCoresByAllContainers += cpuUsagePercentPerCore;
+
             if (isMemoryOverLimit) {
               // Virtual or physical memory over limit. Fail the container and
               // remove
@@ -515,14 +541,8 @@ public class ContainersMonitorImpl extends AbstractService implements
               eventDispatcher.getEventHandler().handle(
                   new ContainerKillEvent(containerId,
                       containerExitStatus, msg));
-              it.remove();
+              trackingContainers.remove(containerId);
               LOG.info("Removed ProcessTree with root " + pId);
-            } else {
-              // Accounting the total memory in usage for all containers that
-              // are still
-              // alive and within limits.
-              vmemStillInUsage += currentVmemUsage;
-              pmemStillInUsage += currentPmemUsage;
             }
           } catch (Exception e) {
             // Log the exception and proceed to the next container.
@@ -530,6 +550,17 @@ public class ContainersMonitorImpl extends AbstractService implements
                 + "while managing memory of " + containerId, e);
           }
         }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Total Resource Usage stats in NM by all containers : "
+              + "Virtual Memory= " + vmemUsageByAllContainers
+              + ", Physical Memory= " + pmemByAllContainers
+              + ", Total CPU usage= " + cpuUsageTotalCoresByAllContainers
+              + ", Total CPU(% per core) usage"
+              + cpuUsagePercentPerCoreByAllContainers);
+        }
+
+        // Save the aggregated utilization of the containers
+        setContainersUtilization(trackedContainersUtilization);
 
         try {
           Thread.sleep(monitoringInterval);
@@ -564,6 +595,61 @@ public class ContainersMonitorImpl extends AbstractService implements
           TraditionalBinaryPrefix.long2String(pmemLimit, "", 1),
           TraditionalBinaryPrefix.long2String(currentVmemUsage, "", 1),
           TraditionalBinaryPrefix.long2String(vmemLimit, "", 1));
+    }
+  }
+
+  private void changeContainerResource(
+      ContainerId containerId, Resource resource) {
+    Container container = context.getContainers().get(containerId);
+    // Check container existence
+    if (container == null) {
+      LOG.warn("Container " + containerId.toString() + "does not exist");
+      return;
+    }
+    container.setResource(resource);
+  }
+
+  private void updateContainerMetrics(ContainersMonitorEvent monitoringEvent) {
+    if (!containerMetricsEnabled || monitoringEvent == null) {
+      return;
+    }
+
+    ContainerId containerId = monitoringEvent.getContainerId();
+    ContainerMetrics usageMetrics = ContainerMetrics
+        .forContainer(containerId, containerMetricsPeriodMs,
+        containerMetricsUnregisterDelayMs);
+
+    int vmemLimitMBs;
+    int pmemLimitMBs;
+    int cpuVcores;
+    switch (monitoringEvent.getType()) {
+    case START_MONITORING_CONTAINER:
+      ContainerStartMonitoringEvent startEvent =
+          (ContainerStartMonitoringEvent) monitoringEvent;
+      usageMetrics.recordStateChangeDurations(
+          startEvent.getLaunchDuration(),
+          startEvent.getLocalizationDuration());
+      cpuVcores = startEvent.getCpuVcores();
+      vmemLimitMBs = (int) (startEvent.getVmemLimit() >> 20);
+      pmemLimitMBs = (int) (startEvent.getPmemLimit() >> 20);
+      usageMetrics.recordResourceLimit(
+          vmemLimitMBs, pmemLimitMBs, cpuVcores);
+      break;
+    case STOP_MONITORING_CONTAINER:
+      usageMetrics.finished();
+      break;
+    case CHANGE_MONITORING_CONTAINER_RESOURCE:
+      ChangeMonitoringContainerResourceEvent changeEvent =
+          (ChangeMonitoringContainerResourceEvent) monitoringEvent;
+      Resource resource = changeEvent.getResource();
+      pmemLimitMBs = resource.getMemory();
+      vmemLimitMBs = (int) (pmemLimitMBs * vmemRatio);
+      cpuVcores = resource.getVirtualCores();
+      usageMetrics.recordResourceLimit(
+          vmemLimitMBs, pmemLimitMBs, cpuVcores);
+      break;
+    default:
+      break;
     }
   }
 
@@ -603,29 +689,62 @@ public class ContainersMonitorImpl extends AbstractService implements
   }
 
   @Override
-  public void handle(ContainersMonitorEvent monitoringEvent) {
+  public ResourceUtilization getContainersUtilization() {
+    return this.containersUtilization;
+  }
 
-    if (!isEnabled()) {
+  public void setContainersUtilization(ResourceUtilization utilization) {
+    this.containersUtilization = utilization;
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public void handle(ContainersMonitorEvent monitoringEvent) {
+    ContainerId containerId = monitoringEvent.getContainerId();
+    if (!containersMonitorEnabled) {
+      if (monitoringEvent.getType() == ContainersMonitorEventType
+          .CHANGE_MONITORING_CONTAINER_RESOURCE) {
+        // Nothing to enforce. Update container resource immediately.
+        ChangeMonitoringContainerResourceEvent changeEvent =
+            (ChangeMonitoringContainerResourceEvent) monitoringEvent;
+        changeContainerResource(containerId, changeEvent.getResource());
+      }
       return;
     }
 
-    ContainerId containerId = monitoringEvent.getContainerId();
     switch (monitoringEvent.getType()) {
     case START_MONITORING_CONTAINER:
       ContainerStartMonitoringEvent startEvent =
           (ContainerStartMonitoringEvent) monitoringEvent;
-      synchronized (this.containersToBeAdded) {
-        ProcessTreeInfo processTreeInfo =
-            new ProcessTreeInfo(containerId, null, null,
-                startEvent.getVmemLimit(), startEvent.getPmemLimit(),
-                startEvent.getCpuVcores());
-        this.containersToBeAdded.put(containerId, processTreeInfo);
-      }
+      LOG.info("Starting resource-monitoring for " + containerId);
+      updateContainerMetrics(monitoringEvent);
+      trackingContainers.put(containerId,
+          new ProcessTreeInfo(containerId, null, null,
+              startEvent.getVmemLimit(), startEvent.getPmemLimit(),
+              startEvent.getCpuVcores()));
       break;
     case STOP_MONITORING_CONTAINER:
-      synchronized (this.containersToBeRemoved) {
-        this.containersToBeRemoved.add(containerId);
+      LOG.info("Stopping resource-monitoring for " + containerId);
+      updateContainerMetrics(monitoringEvent);
+      trackingContainers.remove(containerId);
+      break;
+    case CHANGE_MONITORING_CONTAINER_RESOURCE:
+      ChangeMonitoringContainerResourceEvent changeEvent =
+          (ChangeMonitoringContainerResourceEvent) monitoringEvent;
+      ProcessTreeInfo processTreeInfo = trackingContainers.get(containerId);
+      if (processTreeInfo == null) {
+        LOG.warn("Failed to track container "
+            + containerId.toString()
+            + ". It may have already completed.");
+        break;
       }
+      LOG.info("Changing resource-monitoring for " + containerId);
+      updateContainerMetrics(monitoringEvent);
+      long pmemLimit = changeEvent.getResource().getMemory() * 1024L * 1024L;
+      long vmemLimit = (long) (pmemLimit * vmemRatio);
+      int cpuVcores = changeEvent.getResource().getVirtualCores();
+      processTreeInfo.setResourceLimit(pmemLimit, vmemLimit, cpuVcores);
+      changeContainerResource(containerId, changeEvent.getResource());
       break;
     default:
       // TODO: Wrong event.

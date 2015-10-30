@@ -147,6 +147,12 @@ public abstract class TestConfigurationFieldsBase {
   private Set<String> xmlFieldsMissingInConfiguration = null;
 
   /**
+   * Member variable for debugging base class operation
+   */
+  protected boolean configDebug = false;
+  protected boolean xmlDebug = false;
+
+  /**
    * Abstract method to be used by subclasses for initializing base
    * members.
    */
@@ -168,13 +174,16 @@ public abstract class TestConfigurationFieldsBase {
     HashMap<String,String> retVal = new HashMap<String,String>();
 
     // Setup regexp for valid properties
-    String propRegex = "^[A-Za-z_-]+(\\.[A-Za-z_-]+)+$";
+    String propRegex = "^[A-Za-z][A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)+$";
     Pattern p = Pattern.compile(propRegex);
 
     // Iterate through class member variables
     int totalFields = 0;
     String value;
     for (Field f : fields) {
+      if (configDebug) {
+        System.out.println("Field: " + f);
+      }
       // Filter out anything that isn't "public static final"
       if (!Modifier.isStatic(f.getModifiers()) ||
           !Modifier.isPublic(f.getModifiers()) ||
@@ -191,6 +200,9 @@ public abstract class TestConfigurationFieldsBase {
         value = (String) f.get(null);
       } catch (IllegalAccessException iaException) {
         continue;
+      }
+      if (configDebug) {
+        System.out.println("  Value: " + value);
       }
       // Special Case: Detect and ignore partial properties (ending in x)
       //               or file properties (ending in .xml)
@@ -221,11 +233,23 @@ public abstract class TestConfigurationFieldsBase {
       //                  something like: blah.blah2(.blah3.blah4...)
       Matcher m = p.matcher(value);
       if (!m.find()) {
+        if (configDebug) {
+          System.out.println("  Passes Regex: false");
+        }
         continue;
+      }
+      if (configDebug) {
+        System.out.println("  Passes Regex: true");
       }
 
       // Save member variable/value as hash
-      retVal.put(value,f.getName());
+      if (!retVal.containsKey(value)) {
+        retVal.put(value,f.getName());
+      } else {
+        if (configDebug) {
+          System.out.println("ERROR: Already found key for property " + value);
+        }
+      }
     }
 
     return retVal;
@@ -256,6 +280,9 @@ public abstract class TestConfigurationFieldsBase {
       // Ignore known xml props
       if (xmlPropsToSkipCompare != null) {
         if (xmlPropsToSkipCompare.contains(key)) {
+          if (xmlDebug) {
+            System.out.println("  Skipping Full Key: " + key);
+          }
           continue;
         }
       }
@@ -270,14 +297,23 @@ public abstract class TestConfigurationFieldsBase {
 	}
       }
       if (skipPrefix) {
+        if (xmlDebug) {
+          System.out.println("  Skipping Prefix Key: " + key);
+        }
         continue;
       }
       if (conf.onlyKeyExists(key)) {
         retVal.put(key,null);
+        if (xmlDebug) {
+          System.out.println("  XML Key,Null Value: " + key);
+        }
       } else {
         String value = conf.get(key);
         if (value!=null) {
           retVal.put(key,entry.getValue());
+          if (xmlDebug) {
+            System.out.println("  XML Key,Valid Value: " + key);
+          }
         }
       }
       kvItr.remove();
@@ -312,6 +348,10 @@ public abstract class TestConfigurationFieldsBase {
 
     // Create class member/value map
     configurationMemberVariables = new HashMap<String,String>();
+    if (configDebug) {
+      System.out.println("Reading configuration classes");
+      System.out.println("");
+    }
     for (Class c : configurationClasses) {
       Field[] fields = c.getDeclaredFields();
       Map<String,String> memberMap =
@@ -320,9 +360,23 @@ public abstract class TestConfigurationFieldsBase {
         configurationMemberVariables.putAll(memberMap);
       }
     }
+    if (configDebug) {
+      System.out.println("");
+      System.out.println("=====");
+      System.out.println("");
+    }
 
     // Create XML key/value map
+    if (xmlDebug) {
+      System.out.println("Reading XML property files");
+      System.out.println("");
+    }
     xmlKeyValueMap = extractPropertiesFromXml(xmlFilename);
+    if (xmlDebug) {
+      System.out.println("");
+      System.out.println("=====");
+      System.out.println("");
+    }
 
     // Find class members not in the XML file
     configurationFieldsMissingInXmlFile = compareConfigurationToXmlFields

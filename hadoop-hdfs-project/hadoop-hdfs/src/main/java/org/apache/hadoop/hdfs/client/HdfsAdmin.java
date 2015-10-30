@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 
 /**
  * The public API for performing administrative functions on HDFS. Those writing
@@ -362,5 +363,40 @@ public class HdfsAdmin {
   public void setStoragePolicy(final Path src, final String policyName)
       throws IOException {
     dfs.setStoragePolicy(src, policyName);
+  }
+
+  /**
+   * Set the source path to the specified erasure coding policy.
+   *
+   * @param path The source path referring to a directory.
+   * @param ecPolicy The erasure coding policy for the directory.
+   *                 If null, the default will be used.
+   * @throws IOException
+   */
+  public void setErasureCodingPolicy(final Path path,
+      final ErasureCodingPolicy ecPolicy) throws IOException {
+    dfs.setErasureCodingPolicy(path, ecPolicy);
+  }
+
+  /**
+   * Get the erasure coding policy information for the specified path
+   *
+   * @param path
+   * @return Returns the policy information if file or directory on the path is
+   *          erasure coded. Null otherwise.
+   * @throws IOException
+   */
+  public ErasureCodingPolicy getErasureCodingPolicy(final Path path)
+      throws IOException {
+    return dfs.getErasureCodingPolicy(path);
+  }
+
+  /**
+   * Get the Erasure coding policies supported.
+   *
+   * @throws IOException
+   */
+  public ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException {
+    return dfs.getClient().getErasureCodingPolicies();
   }
 }

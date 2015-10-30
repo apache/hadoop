@@ -41,7 +41,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceRecoveredEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceReleaseEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceRequestEvent;
-import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
+import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
@@ -196,7 +196,7 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
       ResourceState newState = null;
       try {
         newState = this.stateMachine.doTransition(event.getType(), event);
-      } catch (InvalidStateTransitonException e) {
+      } catch (InvalidStateTransitionException e) {
         LOG.warn("Can't handle this event at current state", e);
       }
       if (oldState != newState) {

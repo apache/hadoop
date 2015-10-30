@@ -146,7 +146,11 @@ public abstract class QueuePlacementRule {
     protected String getQueueForApp(String requestedQueue, String user,
         Groups groups, Map<FSQueueType, Set<String>> configuredQueues)
         throws IOException {
-      return "root." + cleanName(groups.getGroups(user).get(0));
+      final List<String> groupList = groups.getGroups(user);
+      if (groupList.isEmpty()) {
+        throw new IOException("No groups returned for user " + user);
+      }
+      return "root." + cleanName(groupList.get(0));
     }
     
     @Override
@@ -345,9 +349,11 @@ public abstract class QueuePlacementRule {
   }
 
   /**
-   * Replace the periods in the username or groupname with "_dot_".
+   * Replace the periods in the username or groupname with "_dot_" and
+   * remove trailing and leading whitespace.
    */
   protected String cleanName(String name) {
+    name = name.trim();
     if (name.contains(".")) {
       String converted = name.replaceAll("\\.", "_dot_");
       LOG.warn("Name " + name + " is converted to " + converted

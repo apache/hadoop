@@ -126,8 +126,10 @@ public class LightWeightHashSet<T> implements Collection<T> {
     this.shrinkThreshold = (int) (capacity * minLoadFactor);
 
     entries = new LinkedElement[capacity];
-    LOG.debug("initial capacity=" + initialCapacity + ", max load factor= "
-        + maxLoadFactor + ", min load factor= " + minLoadFactor);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("initial capacity=" + initialCapacity + ", max load factor= "
+          + maxLoadFactor + ", min load factor= " + minLoadFactor);
+    }
   }
 
   public LightWeightHashSet() {
@@ -525,12 +527,13 @@ public class LightWeightHashSet<T> implements Collection<T> {
   }
 
   private class LinkedSetIterator implements Iterator<T> {
-    /** The starting modification for fail-fast. */
-    private final int startModification = modification;
+    /** The current modification epoch. */
+    private int expectedModification = modification;
     /** The current index of the entry array. */
     private int index = -1;
     /** The next element to return. */
     private LinkedElement<T> next = nextNonemptyEntry();
+    private LinkedElement<T> current;
 
     private LinkedElement<T> nextNonemptyEntry() {
       for (index++; index < entries.length && entries[index] == null; index++);
@@ -544,13 +547,14 @@ public class LightWeightHashSet<T> implements Collection<T> {
 
     @Override
     public T next() {
-      if (modification != startModification) {
+      if (modification != expectedModification) {
         throw new ConcurrentModificationException("modification="
-            + modification + " != startModification = " + startModification);
+            + modification + " != expectedModification = " + expectedModification);
       }
       if (next == null) {
         throw new NoSuchElementException();
       }
+      current = next;
       final T e = next.element;
       // find the next element
       final LinkedElement<T> n = next.next;
@@ -560,7 +564,16 @@ public class LightWeightHashSet<T> implements Collection<T> {
 
     @Override
     public void remove() {
-      throw new UnsupportedOperationException("Remove is not supported.");
+      if (current == null) {
+        throw new NoSuchElementException();
+      }
+      if (modification != expectedModification) {
+        throw new ConcurrentModificationException("modification="
+            + modification + " != expectedModification = " + expectedModification);
+      }
+      LightWeightHashSet.this.removeElem(current.element);
+      current = null;
+      expectedModification = modification;
     }
   }
 

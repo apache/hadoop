@@ -41,6 +41,8 @@ import org.apache.hadoop.net.NetUtils;
  */
 @InterfaceAudience.Private
 public class OfflineImageViewerPB {
+  private static final String HELP_OPT = "-h";
+  private static final String HELP_LONGOPT = "--help";
   public static final Log LOG = LogFactory.getLog(OfflineImageViewerPB.class);
 
   private final static String usage = "Usage: bin/hdfs oiv [OPTIONS] -i INPUTFILE -o OUTPUTFILE\n"
@@ -131,7 +133,11 @@ public class OfflineImageViewerPB {
       printUsage();
       return 0;
     }
-
+    // print help and exit with zero exit code
+    if (args.length == 1 && isHelpOption(args[0])) {
+      printUsage();
+      return 0;
+    }
     CommandLineParser parser = new PosixParser();
     CommandLine cmd;
 
@@ -143,9 +149,11 @@ public class OfflineImageViewerPB {
       return -1;
     }
 
-    if (cmd.hasOption("h")) { // print help and exit
+    if (cmd.hasOption("h")) {
+      // print help and exit with non zero exit code since
+      // it is not expected to give help and other options together.
       printUsage();
-      return 0;
+      return -1;
     }
 
     String inputFile = cmd.getOptionValue("i");
@@ -182,6 +190,10 @@ public class OfflineImageViewerPB {
             writer.visit(new RandomAccessFile(inputFile, "r"));
           }
           break;
+        default:
+          System.err.println("Invalid processor specified : " + processor);
+          printUsage();
+          return -1;
       }
       return 0;
     } catch (EOFException e) {
@@ -197,5 +209,10 @@ public class OfflineImageViewerPB {
    */
   private static void printUsage() {
     System.out.println(usage);
+  }
+
+  private static boolean isHelpOption(String arg) {
+    return arg.equalsIgnoreCase(HELP_OPT) ||
+        arg.equalsIgnoreCase(HELP_LONGOPT);
   }
 }

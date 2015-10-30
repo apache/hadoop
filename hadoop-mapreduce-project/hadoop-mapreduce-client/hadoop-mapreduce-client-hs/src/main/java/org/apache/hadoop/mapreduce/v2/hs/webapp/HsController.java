@@ -18,9 +18,13 @@
 
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.ENTITY_STRING;
+
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.v2.app.webapp.App;
 import org.apache.hadoop.mapreduce.v2.app.webapp.AppController;
 import org.apache.hadoop.yarn.webapp.View;
@@ -32,8 +36,7 @@ import com.google.inject.Inject;
  * This class renders the various pages that the History Server WebApp supports
  */
 public class HsController extends AppController {
-  
-  
+
   @Inject HsController(App app, Configuration conf, RequestContext ctx) {
     super(app, conf, ctx, "History");
   }
@@ -175,6 +178,27 @@ public class HsController extends AppController {
    * Render the logs page.
    */
   public void logs() {
+    String logEntity = $(ENTITY_STRING);
+    JobID jid = null;
+    try {
+      jid = JobID.forName(logEntity);
+      set(JOB_ID, logEntity);
+      requireJob();
+    } catch (Exception e) {
+      // fall below
+    }
+
+    if (jid == null) {
+      try {
+        TaskAttemptID taskAttemptId = TaskAttemptID.forName(logEntity);
+        set(TASK_ID, taskAttemptId.getTaskID().toString());
+        set(JOB_ID, taskAttemptId.getJobID().toString());
+        requireTask();
+        requireJob();
+      } catch (Exception e) {
+        // fall below
+      }
+    }
     render(HsLogsPage.class);
   }
 

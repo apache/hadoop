@@ -49,8 +49,8 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.Time;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
+import org.apache.htrace.core.TraceScope;
+import org.apache.htrace.core.Tracer;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
@@ -206,12 +206,13 @@ public class ProtobufRpcEngine implements RpcEngine {
             + method.getName() + "]");
       }
 
-      TraceScope traceScope = null;
       // if Tracing is on then start a new span for this rpc.
       // guard it in the if statement to make sure there isn't
       // any extra string manipulation.
-      if (Trace.isTracing()) {
-        traceScope = Trace.startSpan(RpcClientUtil.methodToTraceString(method));
+      Tracer tracer = Tracer.curThreadTracer();
+      TraceScope traceScope = null;
+      if (tracer != null) {
+        traceScope = tracer.newScope(RpcClientUtil.methodToTraceString(method));
       }
 
       RequestHeaderProto rpcRequestHeader = constructRpcRequestHeader(method);
@@ -236,9 +237,9 @@ public class ProtobufRpcEngine implements RpcEngine {
               remoteId + ": " + method.getName() +
                 " {" + e + "}");
         }
-        if (Trace.isTracing()) {
-          traceScope.getSpan().addTimelineAnnotation(
-              "Call got exception: " + e.getMessage());
+        if (traceScope != null) {
+          traceScope.addTimelineAnnotation("Call got exception: " +
+              e.toString());
         }
         throw new ServiceException(e);
       } finally {
@@ -567,7 +568,7 @@ public class ProtobufRpcEngine implements RpcEngine {
       /**
        * This is a server side method, which is invoked over RPC. On success
        * the return response has protobuf response payload. On failure, the
-       * exception name and the stack trace are return in the resposne.
+       * exception name and the stack trace are returned in the response.
        * See {@link HadoopRpcResponseProto}
        * 
        * In this method there three types of exceptions possible and they are
@@ -657,6 +658,9 @@ public class ProtobufRpcEngine implements RpcEngine {
           server.rpcMetrics.addRpcProcessingTime(processingTime);
           server.rpcDetailedMetrics.addProcessingTime(detailedMetricsName,
               processingTime);
+          if (server.isLogSlowRPC()) {
+            server.logSlowRpcCalls(methodName, processingTime);
+          }
         }
         return new RpcResponseWrapper(result);
       }

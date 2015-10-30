@@ -101,6 +101,20 @@ public class TokenCache {
     }
   }
 
+  static boolean isTokenRenewalExcluded(FileSystem fs, Configuration conf) {
+    String [] nns =
+        conf.getStrings(MRJobConfig.JOB_NAMENODES_TOKEN_RENEWAL_EXCLUDE);
+    if (nns != null) {
+      String host = fs.getUri().getHost();
+      for(int i=0; i< nns.length; i++) {
+        if (nns[i].equals(host)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   /**
    * get delegation token for a specific FS
    * @param fs
@@ -110,11 +124,16 @@ public class TokenCache {
    */
   static void obtainTokensForNamenodesInternal(FileSystem fs, 
       Credentials credentials, Configuration conf) throws IOException {
-    String delegTokenRenewer = Master.getMasterPrincipal(conf);
-    if (delegTokenRenewer == null || delegTokenRenewer.length() == 0) {
-      throw new IOException(
-          "Can't get Master Kerberos principal for use as renewer");
+    // RM skips renewing token with empty renewer
+    String delegTokenRenewer = "";
+    if (!isTokenRenewalExcluded(fs, conf)) {
+      delegTokenRenewer = Master.getMasterPrincipal(conf);
+      if (delegTokenRenewer == null || delegTokenRenewer.length() == 0) {
+        throw new IOException(
+            "Can't get Master Kerberos principal for use as renewer");
+      }
     }
+
     mergeBinaryTokens(credentials, conf);
 
     final Token<?> tokens[] = fs.addDelegationTokens(delegTokenRenewer,
@@ -157,6 +176,7 @@ public class TokenCache {
   public static final String JOB_TOKENS_FILENAME = "mapreduce.job.jobTokenFile";
   private static final Text JOB_TOKEN = new Text("JobToken");
   private static final Text SHUFFLE_TOKEN = new Text("MapReduceShuffleToken");
+  private static final Text ENC_SPILL_KEY = new Text("MapReduceEncryptedSpillKey");
   
   /**
    * load job token from a file
@@ -225,6 +245,15 @@ public class TokenCache {
     return getSecretKey(credentials, SHUFFLE_TOKEN);
   }
 
+  @InterfaceAudience.Private
+  public static void setEncryptedSpillKey(byte[] key, Credentials credentials) {
+    credentials.addSecretKey(ENC_SPILL_KEY, key);
+  }
+
+  @InterfaceAudience.Private
+  public static byte[] getEncryptedSpillKey(Credentials credentials) {
+    return getSecretKey(credentials, ENC_SPILL_KEY);
+  }
   /**
    * @deprecated Use {@link Credentials#getToken(org.apache.hadoop.io.Text)}
    * instead, this method is included for compatibility against Hadoop-1

@@ -26,8 +26,8 @@ import java.net.URI;
 import java.util.regex.Matcher;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -54,7 +54,7 @@ public class StorageLocation {
       // drop any (illegal) authority in the URI for backwards compatibility
       this.file = new File(uri.getPath());
     } else {
-      throw new IllegalArgumentException("Unsupported URI schema in " + uri);
+      throw new IllegalArgumentException("Unsupported URI ecPolicy in " + uri);
     }
   }
 
@@ -94,7 +94,7 @@ public class StorageLocation {
       }
     }
 
-    return new StorageLocation(storageType, Util.stringAsURI(location));
+    return new StorageLocation(storageType, new Path(location).toUri());
   }
 
   @Override

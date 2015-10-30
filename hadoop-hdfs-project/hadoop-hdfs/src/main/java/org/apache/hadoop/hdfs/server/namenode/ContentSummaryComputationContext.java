@@ -32,6 +32,8 @@ public class ContentSummaryComputationContext {
   private long nextCountLimit = 0;
   private long limitPerRun = 0;
   private long yieldCount = 0;
+  private long sleepMilliSec = 0;
+  private int sleepNanoSec = 0;
 
   /**
    * Constructor
@@ -43,17 +45,19 @@ public class ContentSummaryComputationContext {
    *        no limit (i.e. no yielding)
    */
   public ContentSummaryComputationContext(FSDirectory dir,
-      FSNamesystem fsn, long limitPerRun) {
+      FSNamesystem fsn, long limitPerRun, long sleepMicroSec) {
     this.dir = dir;
     this.fsn = fsn;
     this.limitPerRun = limitPerRun;
     this.nextCountLimit = limitPerRun;
     this.counts = new ContentCounts.Builder().build();
+    this.sleepMilliSec = sleepMicroSec/1000;
+    this.sleepNanoSec = (int)((sleepMicroSec%1000)*1000);
   }
 
   /** Constructor for blocking computation. */
   public ContentSummaryComputationContext(BlockStoragePolicySuite bsps) {
-    this(null, null, 0);
+    this(null, null, 0, 1000);
     this.bsps = bsps;
   }
 
@@ -105,7 +109,7 @@ public class ContentSummaryComputationContext {
     fsn.readUnlock();
 
     try {
-      Thread.sleep(1);
+      Thread.sleep(sleepMilliSec, sleepNanoSec);
     } catch (InterruptedException ie) {
     } finally {
       // reacquire

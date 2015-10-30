@@ -1,0 +1,62 @@
+<FindBugsFilter>
+  <Match>
+    <Or>
+      <Class name="org.apache.hadoop.fs.XAttr"/>
+      <Class name="org.apache.hadoop.fs.XAttr$Builder"/>
+      <Class name="org.apache.hadoop.hdfs.inotify.EventBatch"/>
+      <Class name="org.apache.hadoop.hdfs.protocol.HdfsFileStatus"/>
+      <Class name="org.apache.hadoop.hdfs.protocol.LocatedBlock"/>
+      <Class name="org.apache.hadoop.hdfs.protocol.BlockStoragePolicy"/>
+      <Class name="org.apache.hadoop.hdfs.protocol.CorruptFileBlocks"/>
+      <Class name="org.apache.hadoop.hdfs.protocol.DirectoryListing"/>
+      <Class name="org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier"/>
+      <Class name="org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey"/>
+      <Class name="org.apache.hadoop.hdfs.protocol.SnapshotDiffReport$DiffReportEntry"/>
+      <Class name="org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus"/>
+      <Class name="org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport"/>
+      <Class name="org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslResponseWithNegotiatedCipherOption"/>
+      <Class name="org.apache.hadoop.hdfs.DFSPacket"/>
+      <Class name="org.apache.hadoop.hdfs.protocol.LocatedStripedBlock"/>
+      <Class name="org.apache.hadoop.hdfs.util.StripedBlockUtil$ChunkByteArray"/>
+    </Or>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Package name="org.apache.hadoop.hdfs.protocol.proto" />
+    <Bug pattern="SE_BAD_FIELD,MS_SHOULD_BE_FINAL,UCF_USELESS_CONTROL_FLOW" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.hdfs.shortcircuit.DfsClientShmManager$EndpointShmManager" />
+    <Method name="allocSlot" />
+    <Bug pattern="UL_UNRELEASED_LOCK_EXCEPTION_PATH" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.hdfs.shortcircuit.DfsClientShmManager$EndpointShmManager" />
+    <Method name="allocSlot" />
+    <Bug pattern="UL_UNRELEASED_LOCK" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.hdfs.DFSInputStream"/>
+    <Field name="tcpReadsDisabledForTesting"/>
+    <Bug pattern="MS_SHOULD_BE_FINAL"/>
+  </Match>
+
+  <!--
+    ResponseProccessor is thread that is designed to catch RuntimeException.
+  -->
+  <Match>
+    <Class name="org.apache.hadoop.hdfs.DataStreamer$ResponseProcessor" />
+    <Method name="run" />
+    <Bug pattern="REC_CATCH_EXCEPTION" />
+  </Match>
+
+  <!--
+    We use a separate lock to guard cachingStrategy in order to separate
+    locks for p-reads from seek + read invocations.
+  -->
+  <Match>
+    <Class name="org.apache.hadoop.hdfs.DFSInputStream" />
+    <Field name="cachingStrategy" />
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
+</FindBugsFilter>

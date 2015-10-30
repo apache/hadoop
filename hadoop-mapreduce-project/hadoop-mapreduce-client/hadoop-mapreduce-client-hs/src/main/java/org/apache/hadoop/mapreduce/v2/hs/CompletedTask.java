@@ -135,7 +135,7 @@ public class CompletedTask implements Task {
     if (counters == null) {
       counters = EMPTY_COUNTERS;
     }
-    report.setCounters(TypeConverter.toYarn(counters));
+    report.setRawCounters(counters);
     if (successfulAttempt != null) {
       report.setSuccessfulAttempt(successfulAttempt);
     }

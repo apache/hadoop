@@ -62,11 +62,18 @@ import time
 DEFAULT_JENKINS_URL = "https://builds.apache.org"
 DEFAULT_JOB_NAME = "Hadoop-Common-trunk"
 DEFAULT_NUM_PREVIOUS_DAYS = 14
+DEFAULT_TOP_NUM_FAILED_TEST = -1
 
 SECONDS_PER_DAY = 86400
 
 # total number of runs to examine
 numRunsToExamine = 0
+
+#summary mode
+summary_mode = False
+
+#total number of errors
+error_count = 0
 
 """ Parse arguments """
 def parse_args():
@@ -80,6 +87,10 @@ def parse_args():
   parser.add_option("-n", "--num-days", type="int",
                     dest="num_prev_days", help="Number of days to examine",
                     default=DEFAULT_NUM_PREVIOUS_DAYS)
+  parser.add_option("-t", "--top", type="int",
+                    dest="num_failed_tests",
+                    help="Summary Mode, only show top number of failed tests",
+                    default=DEFAULT_TOP_NUM_FAILED_TEST)
 
   (options, args) = parser.parse_args()
   if args:
@@ -100,6 +111,7 @@ def load_url_data(url):
  
 """ List all builds of the target project. """
 def list_builds(jenkins_url, job_name):
+  global summary_mode
   url = "%(jenkins)s/job/%(job_name)s/api/json?tree=builds[url,result,timestamp]" % dict(
       jenkins=jenkins_url,
       job_name=job_name)
@@ -108,19 +120,25 @@ def list_builds(jenkins_url, job_name):
     data = load_url_data(url)
 
   except:
-    logging.error("Could not fetch: %s" % url)
+    if not summary_mode:
+      logging.error("Could not fetch: %s" % url)
+    error_count += 1
     raise
   return data['builds']
 
 """ Find the names of any tests which failed in the given build output URL. """
 def find_failing_tests(testReportApiJson, jobConsoleOutput):
+  global summary_mode
+  global error_count
   ret = set()
   try:
     data = load_url_data(testReportApiJson)
 
   except:
-    logging.error("    Could not open testReport, check " +
+    if not summary_mode:
+      logging.error("    Could not open testReport, check " +
         jobConsoleOutput + " for why it was reported failed")
+    error_count += 1
     return ret
 
   for suite in data['suites']:
@@ -130,7 +148,7 @@ def find_failing_tests(testReportApiJson, jobConsoleOutput):
       if (status == 'REGRESSION' or status == 'FAILED' or (errDetails is not None)):
         ret.add(cs['className'] + "." + cs['name'])
 
-  if len(ret) == 0:
+  if len(ret) == 0 and (not summary_mode):
     logging.info("    No failed tests in testReport, check " +
         jobConsoleOutput + " for why it was reported failed.")
   return ret
@@ -138,6 +156,7 @@ def find_failing_tests(testReportApiJson, jobConsoleOutput):
 """ Iterate runs of specfied job within num_prev_days and collect results """
 def find_flaky_tests(jenkins_url, job_name, num_prev_days):
   global numRunsToExamine
+  global summary_mode
   all_failing = dict()
   # First list all builds
   builds = list_builds(jenkins_url, job_name)
@@ -153,7 +172,8 @@ def find_flaky_tests(jenkins_url, job_name, num_prev_days):
   tnum = len(builds)
   num = len(failing_build_urls)
   numRunsToExamine = tnum
-  logging.info("    THERE ARE " + str(num) + " builds (out of " + str(tnum)
+  if not summary_mode:
+    logging.info("    THERE ARE " + str(num) + " builds (out of " + str(tnum)
       + ") that have failed tests in the past " + str(num_prev_days) + " days"
       + ((".", ", as listed below:\n")[num > 0]))
 
@@ -165,17 +185,20 @@ def find_flaky_tests(jenkins_url, job_name, num_prev_days):
 
     ts = float(failed_build_with_time[1]) / 1000.
     st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
-    logging.info("===>%s" % str(testReport) + " (" + st + ")")
+    if not summary_mode:
+      logging.info("===>%s" % str(testReport) + " (" + st + ")")
     failing = find_failing_tests(testReportApiJson, jobConsoleOutput)
     if failing:
       for ftest in failing:
-        logging.info("    Failed test: %s" % ftest)
+        if not summary_mode:
+          logging.info("    Failed test: %s" % ftest)
         all_failing[ftest] = all_failing.get(ftest,0)+1
 
   return all_failing
 
 def main():
   global numRunsToExamine
+  global summary_mode
   logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
   # set up logger to write to stdout
@@ -189,16 +212,34 @@ def main():
   logging.info("****Recently FAILED builds in url: " + opts.jenkins_url
       + "/job/" + opts.job_name + "")
 
+  if opts.num_failed_tests != -1:
+    summary_mode = True
+
   all_failing = find_flaky_tests(opts.jenkins_url, opts.job_name,
       opts.num_prev_days)
   if len(all_failing) == 0:
     raise SystemExit(0)
-  logging.info("\nAmong " + str(numRunsToExamine) + " runs examined, all failed "
-      + "tests <#failedRuns: testName>:")
+
+  if summary_mode and opts.num_failed_tests < len(all_failing):
+    logging.info("\nAmong " + str(numRunsToExamine) +
+                 " runs examined, top " + str(opts.num_failed_tests) +
+                 " failed tests <#failedRuns: testName>:")
+  else:
+      logging.info("\nAmong " + str(numRunsToExamine) +
+                   " runs examined, all failed tests <#failedRuns: testName>:")
 
   # print summary section: all failed tests sorted by how many times they failed
+  line_count = 0
   for tn in sorted(all_failing, key=all_failing.get, reverse=True):
     logging.info("    " + str(all_failing[tn])+ ": " + tn)
+    if summary_mode:
+      line_count += 1
+      if line_count == opts.num_failed_tests:
+        break
+
+  if summary_mode and error_count > 0:
+    logging.info("\n" + str(error_count) + " errors found, you may "
+                 + "re-run in non summary mode to see error details.");
 
 if __name__ == "__main__":
   main()

@@ -53,7 +53,7 @@ import org.junit.Test;
 
 public class TestWebHdfsUrl {
   // NOTE: port is never used 
-  final URI uri = URI.create(WebHdfsFileSystem.SCHEME + "://" + "127.0.0.1:0");
+  final URI uri = URI.create(WebHdfsConstants.WEBHDFS_SCHEME + "://" + "127.0.0.1:0");
 
   @Before
   public void resetUGI() {
@@ -328,7 +328,7 @@ public class TestWebHdfsUrl {
           dtId, dtSecretManager);
       SecurityUtil.setTokenService(
           token, NetUtils.createSocketAddr(uri.getAuthority()));
-      token.setKind(WebHdfsFileSystem.TOKEN_KIND);
+      token.setKind(WebHdfsConstants.WEBHDFS_TOKEN_KIND);
       ugi.addToken(token);
     }
     return (WebHdfsFileSystem) FileSystem.get(uri, conf);

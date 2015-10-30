@@ -60,6 +60,8 @@ import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.util.ExitUtil.ExitException;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -87,6 +89,8 @@ public class TestStartup {
 
   @Before
   public void setUp() throws Exception {
+    ExitUtil.disableSystemExit();
+    ExitUtil.resetFirstExitException();
     config = new HdfsConfiguration();
     hdfsDir = new File(MiniDFSCluster.getBaseDirectory());
 
@@ -403,7 +407,19 @@ public class TestStartup {
         cluster.shutdown();
     }
   }
-  
+
+  @Test(timeout = 30000)
+  public void testSNNStartupWithRuntimeException() throws Exception {
+    String[] argv = new String[] { "-checkpoint" };
+    try {
+      SecondaryNameNode.main(argv);
+      fail("Failed to handle runtime exceptions during SNN startup!");
+    } catch (ExitException ee) {
+      GenericTestUtils.assertExceptionContains("ExitException", ee);
+      assertTrue("Didn't termiated properly ", ExitUtil.terminateCalled());
+    }
+  }
+
   @Test
   public void testCompression() throws IOException {
     LOG.info("Test compressing image.");
@@ -639,7 +655,7 @@ public class TestStartup {
       fail("Expected exception with negative xattr size");
     } catch (IllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains(
-          "Cannot set a negative value for the maximum size of an xattr", e);
+          "The maximum size of an xattr should be > 0", e);
     } finally {
       conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY,
           DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_DEFAULT);
@@ -659,31 +675,6 @@ public class TestStartup {
     } finally {
       conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY,
           DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_DEFAULT);
-      if (cluster != null) {
-        cluster.shutdown();
-      }
-    }
-
-    try {
-      // Set up a logger to check log message
-      final LogVerificationAppender appender = new LogVerificationAppender();
-      final Logger logger = Logger.getRootLogger();
-      logger.addAppender(appender);
-      int count = appender.countLinesWithMessage(
-          "Maximum size of an xattr: 0 (unlimited)");
-      assertEquals("Expected no messages about unlimited xattr size", 0, count);
-
-      conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY, 0);
-      cluster =
-          new MiniDFSCluster.Builder(conf).numDataNodes(0).format(true).build();
-
-      count = appender.countLinesWithMessage(
-          "Maximum size of an xattr: 0 (unlimited)");
-      // happens twice because we format then run
-      assertEquals("Expected unlimited xattr size", 2, count);
-    } finally {
-      conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY,
-          DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_DEFAULT);
       if (cluster != null) {
         cluster.shutdown();
       }

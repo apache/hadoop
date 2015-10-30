@@ -21,14 +21,15 @@ package org.apache.hadoop.util;
 import java.io.DataInput;
 import java.io.IOException;
 
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.IpcConnectionContextProto;
 import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.UserInformationProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.*;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.htrace.Span;
-import org.apache.htrace.Trace;
+import org.apache.htrace.core.Span;
+import org.apache.htrace.core.Tracer;
 
 import com.google.protobuf.ByteString;
 
@@ -169,11 +170,24 @@ public abstract class ProtoUtil {
         .setRetryCount(retryCount).setClientId(ByteString.copyFrom(uuid));
 
     // Add tracing info if we are currently tracing.
-    if (Trace.isTracing()) {
-      Span s = Trace.currentSpan();
+    Span span = Tracer.getCurrentSpan();
+    if (span != null) {
       result.setTraceInfo(RPCTraceInfoProto.newBuilder()
-          .setParentId(s.getSpanId())
-          .setTraceId(s.getTraceId()).build());
+          .setTraceId(span.getSpanId().getHigh())
+          .setParentId(span.getSpanId().getLow())
+            .build());
+    }
+
+    // Add caller context if it is not null
+    CallerContext callerContext = CallerContext.getCurrent();
+    if (callerContext != null && callerContext.isValid()) {
+      RPCCallerContextProto.Builder contextBuilder = RPCCallerContextProto
+          .newBuilder().setContext(callerContext.getContext());
+      if (callerContext.getSignature() != null) {
+        contextBuilder.setSignature(
+            ByteString.copyFrom(callerContext.getSignature()));
+      }
+      result.setCallerContext(contextBuilder);
     }
 
     return result.build();

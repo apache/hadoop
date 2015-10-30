@@ -17,14 +17,17 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.hamcrest.CoreMatchers.equalTo;
+
 import java.io.File;
+
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.junit.AfterClass;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import static org.hamcrest.CoreMatchers.*;
 
 /**
  * This class tests short-circuit local reads without any FileInputStream or
@@ -41,23 +44,23 @@ public class TestParallelShortCircuitReadUnCached extends TestParallelReadUtil {
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
       new File(sockDir.getDir(), 
         "TestParallelShortCircuitReadUnCached._PORT.sock").getAbsolutePath());
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
     // Enabling data transfer encryption should have no effect when using
     // short-circuit local reads.  This is a regression test for HDFS-5353.
     conf.setBoolean(DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
-    conf.setBoolean(DFSConfigKeys.
-        DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY, false);
-    conf.setBoolean(DFSConfigKeys.
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY,
+        false);
+    conf.setBoolean(HdfsClientConfigKeys.
         DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC, true);
     // We want to test reading from stale sockets.
     conf.setInt(DFSConfigKeys.DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_KEY, 1);
-    conf.setLong(DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY,
+    conf.setLong(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY,
         5 * 60 * 1000);
-    conf.setInt(DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY, 32);
+    conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY, 32);
     // Avoid using the FileInputStreamCache.
-    conf.setInt(DFSConfigKeys.
-        DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_SIZE_KEY, 0);
+    conf.setInt(HdfsClientConfigKeys.Read.ShortCircuit.STREAMS_CACHE_SIZE_KEY,
+        0);
     DomainSocket.disableBindPathValidation();
     DFSInputStream.tcpReadsDisabledForTesting = true;
     setupCluster(1, conf);

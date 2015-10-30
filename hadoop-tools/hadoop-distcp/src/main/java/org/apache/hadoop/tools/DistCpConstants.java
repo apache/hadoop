@@ -23,11 +23,14 @@ package org.apache.hadoop.tools;
  */
 public class DistCpConstants {
 
+  /* Default number of threads to use for building file listing */
+  public static final int DEFAULT_LISTSTATUS_THREADS = 1;
+
   /* Default number of maps to use for DistCp */
   public static final int DEFAULT_MAPS = 20;
 
   /* Default bandwidth if none specified */
-  public static final int DEFAULT_BANDWIDTH_MB = 100;
+  public static final float DEFAULT_BANDWIDTH_MB = 100;
 
   /* Default strategy for copying. Implementation looked up
      from distcp-default.xml
@@ -47,6 +50,7 @@ public class DistCpConstants {
   public static final String CONF_LABEL_SYNC_FOLDERS = "distcp.sync.folders";
   public static final String CONF_LABEL_DELETE_MISSING = "distcp.delete.missing.source";
   public static final String CONF_LABEL_SSL_CONF = "distcp.keystore.resource";
+  public static final String CONF_LABEL_LISTSTATUS_THREADS = "distcp.liststatus.threads";
   public static final String CONF_LABEL_MAX_MAPS = "distcp.max.maps";
   public static final String CONF_LABEL_SOURCE_LISTING = "distcp.source.listing";
   public static final String CONF_LABEL_COPY_STRATEGY = "distcp.copy.strategy";
@@ -55,7 +59,8 @@ public class DistCpConstants {
   public static final String CONF_LABEL_APPEND = "distcp.copy.append";
   public static final String CONF_LABEL_DIFF = "distcp.copy.diff";
   public static final String CONF_LABEL_BANDWIDTH_MB = "distcp.map.bandwidth.mb";
-  
+  public static final String CONF_LABEL_FILTERS_FILE =
+      "distcp.filters.file";
   public static final String CONF_LABEL_MAX_CHUNKS_TOLERABLE =
       "distcp.dynamic.max.chunks.tolerable";
   public static final String CONF_LABEL_MAX_CHUNKS_IDEAL =

@@ -54,7 +54,8 @@ import org.apache.hadoop.util.Time;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
-  static ThreadLocal<Long> shuffleStart = new ThreadLocal<Long>() {
+  private static final ThreadLocal<Long> SHUFFLE_START =
+      new ThreadLocal<Long>() {
     protected Long initialValue() {
       return 0L;
     }
@@ -239,7 +240,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
   }
   
   private void updateStatus() {
-    updateStatus(null);	
+    updateStatus(null);
   }
 
   public synchronized void hostFailed(String hostname) {
@@ -263,9 +264,17 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
       failureCounts.put(mapId, new IntWritable(1));
     }
     String hostname = host.getHostName();
+    IntWritable hostFailedNum = hostFailures.get(hostname);
+    // MAPREDUCE-6361: hostname could get cleanup from hostFailures in another
+    // thread with copySucceeded.
+    // In this case, add back hostname to hostFailures to get rid of NPE issue.
+    if (hostFailedNum == null) {
+      hostFailures.put(hostname, new IntWritable(1));
+    }
     //report failure if already retried maxHostFailures times
-    boolean hostFail = hostFailures.get(hostname).get() > getMaxHostFailures() ? true : false;
-    
+    boolean hostFail = hostFailures.get(hostname).get() >
+        getMaxHostFailures() ? true : false;
+
     if (failures >= abortFailureLimit) {
       try {
         throw new IOException(failures + " failures downloading " + mapId);
@@ -413,9 +422,9 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
       pendingHosts.remove(host);
       host.markBusy();
 
-      LOG.info("Assigning " + host + " with " + host.getNumKnownMapOutputs() +
+      LOG.debug("Assigning " + host + " with " + host.getNumKnownMapOutputs() +
                " to " + Thread.currentThread().getName());
-      shuffleStart.set(Time.monotonicNow());
+      SHUFFLE_START.set(Time.monotonicNow());
 
       return host;
   }
@@ -443,7 +452,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
         host.addKnownMap(id);
       }
     }
-    LOG.info("assigned " + includedMaps + " of " + totalSize + " to " +
+    LOG.debug("assigned " + includedMaps + " of " + totalSize + " to " +
              host + " to " + Thread.currentThread().getName());
     return result;
   }
@@ -456,7 +465,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
       }
     }
     LOG.info(host + " freed by " + Thread.currentThread().getName() + " in " +
-             (Time.monotonicNow()-shuffleStart.get()) + "ms");
+             (Time.monotonicNow()-SHUFFLE_START.get()) + "ms");
   }
 
   public synchronized void resetKnownMaps() {

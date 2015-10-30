@@ -23,12 +23,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.junit.Assert;
 import org.junit.Test;
 
 import javax.management.*;
+
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 
@@ -58,7 +60,7 @@ public class TestMissingBlocksAlert {
       Configuration conf = new HdfsConfiguration();
       //minimize test delay
       conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 0);
-      conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 10);
+      conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
       int fileLen = 10*1024;
       conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, fileLen/2);
 
@@ -79,7 +81,7 @@ public class TestMissingBlocksAlert {
 
       // Corrupt the block
       ExtendedBlock block = DFSTestUtil.getFirstBlock(dfs, corruptFile);
-      assertTrue(cluster.corruptReplica(0, block));
+      cluster.corruptReplica(0, block);
 
       // read the file so that the corrupt block is reported to NN
       FSDataInputStream in = dfs.open(corruptFile); 
@@ -124,7 +126,7 @@ public class TestMissingBlocksAlert {
       DFSTestUtil.createFile(dfs, replOneFile, fileLen, (short)1, 0);
       ExtendedBlock replOneBlock = DFSTestUtil.getFirstBlock(
           dfs, replOneFile);
-      assertTrue(cluster.corruptReplica(0, replOneBlock));
+      cluster.corruptReplica(0, replOneBlock);
 
       // read the file so that the corrupt block is reported to NN
       in = dfs.open(replOneFile);

@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -35,19 +37,19 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
-import org.apache.hadoop.hdfs.CorruptFileBlockIterator;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSInputStream;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.client.impl.CorruptFileBlockIterator;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -75,7 +77,8 @@ public class Hdfs extends AbstractFileSystem {
    * @throws IOException
    */
   Hdfs(final URI theUri, final Configuration conf) throws IOException, URISyntaxException {
-    super(theUri, HdfsConstants.HDFS_URI_SCHEME, true, NameNode.DEFAULT_PORT);
+    super(theUri, HdfsConstants.HDFS_URI_SCHEME, true,
+        HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
 
     if (!theUri.getScheme().equalsIgnoreCase(HdfsConstants.HDFS_URI_SCHEME)) {
       throw new IllegalArgumentException("Passed URI's scheme is not for Hdfs");
@@ -90,7 +93,7 @@ public class Hdfs extends AbstractFileSystem {
 
   @Override
   public int getUriDefaultPort() {
-    return NameNode.DEFAULT_PORT;
+    return HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT;
   }
 
   @Override
@@ -235,7 +238,7 @@ public class Hdfs extends AbstractFileSystem {
      * @return the next item in the list
      * 
      * @throws IOException if there is any error
-     * @throws NoSuchElmentException if no more entry is available
+     * @throws NoSuchElementException if no more entry is available
      */
     public HdfsFileStatus getNext() throws IOException {
       if (hasNext()) {
@@ -465,6 +468,22 @@ public class Hdfs extends AbstractFileSystem {
     dfs.checkAccess(getUriPath(path), mode);
   }
 
+  @Override
+  public void setStoragePolicy(Path path, String policyName) throws IOException {
+    dfs.setStoragePolicy(getUriPath(path), policyName);
+  }
+
+  @Override
+  public BlockStoragePolicySpi getStoragePolicy(Path src) throws IOException {
+    return dfs.getStoragePolicy(getUriPath(src));
+  }
+
+  @Override
+  public Collection<? extends BlockStoragePolicySpi> getAllStoragePolicies()
+      throws IOException {
+    return Arrays.asList(dfs.getStoragePolicies());
+  }
+
   /**
    * Renew an existing delegation token.
    * 
@@ -494,5 +513,23 @@ public class Hdfs extends AbstractFileSystem {
       Token<? extends AbstractDelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
     dfs.cancelDelegationToken((Token<DelegationTokenIdentifier>) token);
+  }
+
+  @Override
+  public Path createSnapshot(final Path path, final String snapshotName)
+      throws IOException {
+    return new Path(dfs.createSnapshot(getUriPath(path), snapshotName));
+  }
+
+  @Override
+  public void renameSnapshot(final Path path, final String snapshotOldName,
+      final String snapshotNewName) throws IOException {
+    dfs.renameSnapshot(getUriPath(path), snapshotOldName, snapshotNewName);
+  }
+
+  @Override
+  public void deleteSnapshot(final Path snapshotDir, final String snapshotName)
+      throws IOException {
+    dfs.deleteSnapshot(getUriPath(snapshotDir), snapshotName);
   }
 }

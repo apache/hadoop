@@ -38,11 +38,11 @@ public class TestJobSummary {
     JobId mockJobId = mock(JobId.class);
     when(mockJobId.toString()).thenReturn("testJobId");
     summary.setJobId(mockJobId);
-    summary.setJobSubmitTime(2);
-    summary.setJobLaunchTime(3);
-    summary.setFirstMapTaskLaunchTime(4);
-    summary.setFirstReduceTaskLaunchTime(5);
-    summary.setJobFinishTime(6);
+    summary.setJobSubmitTime(2L);
+    summary.setJobLaunchTime(3L);
+    summary.setFirstMapTaskLaunchTime(4L);
+    summary.setFirstReduceTaskLaunchTime(5L);
+    summary.setJobFinishTime(6L);
     summary.setNumFinishedMaps(1);
     summary.setNumFailedMaps(0);
     summary.setNumFinishedReduces(1);

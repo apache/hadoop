@@ -18,6 +18,7 @@
 package org.apache.hadoop.mapreduce;
 
 import org.apache.hadoop.util.StringUtils;
+
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -35,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -201,10 +203,12 @@ public class TestTypeConverter {
     jobReport.setJobState(state);
     jobReport.setStartTime(jobStartTime);
     jobReport.setFinishTime(jobFinishTime);
-    jobReport.setUser("TestTypeConverter-user");    
+    jobReport.setUser("TestTypeConverter-user");
+    jobReport.setJobPriority(Priority.newInstance(0));
     JobStatus jobStatus = TypeConverter.fromYarn(jobReport, "dummy-jobfile");
     Assert.assertEquals(jobStartTime, jobStatus.getStartTime());
     Assert.assertEquals(jobFinishTime, jobStatus.getFinishTime());    
     Assert.assertEquals(state.toString(), jobStatus.getState().toString());
-  }  
+    Assert.assertEquals(JobPriority.DEFAULT, jobStatus.getPriority());
+  }
 }

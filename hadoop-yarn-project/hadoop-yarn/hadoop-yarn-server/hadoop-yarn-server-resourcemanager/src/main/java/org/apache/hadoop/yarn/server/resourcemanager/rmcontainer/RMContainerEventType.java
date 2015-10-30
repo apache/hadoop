@@ -25,6 +25,10 @@ public enum RMContainerEventType {
   ACQUIRED,
   KILL, // Also from Node on NodeRemoval
   RESERVED,
+  
+  // when a container acquired by AM after
+  // it increased/decreased
+  ACQUIRE_UPDATED_CONTAINER, 
 
   LAUNCHED,
   FINISHED,
@@ -35,5 +39,12 @@ public enum RMContainerEventType {
   // Source: ContainerAllocationExpirer  
   EXPIRE,
 
-  RECOVER
+  RECOVER,
+  
+  // Source: Scheduler
+  // Resource change approved by scheduler
+  CHANGE_RESOURCE,
+  
+  // NM reported resource change is done
+  NM_DONE_CHANGE_RESOURCE 
 }

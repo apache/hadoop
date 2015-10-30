@@ -42,7 +42,7 @@ class BoundedRangeFileInputStream extends InputStream {
    * @param in
    *          The FSDataInputStream we connect to.
    * @param offset
-   *          Begining offset of the region.
+   *          Beginning offset of the region.
    * @param length
    *          Length of the region.
    * 

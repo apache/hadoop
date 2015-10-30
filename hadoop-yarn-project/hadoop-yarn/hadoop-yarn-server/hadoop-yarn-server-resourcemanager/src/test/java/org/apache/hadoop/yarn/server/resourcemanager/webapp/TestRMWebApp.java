@@ -173,10 +173,10 @@ public class TestRMWebApp {
     
     final List<RMNode> deactivatedNodes =
         MockNodes.deactivatedNodes(racks, numNodes, newResource(mbsPerNode));
-    final ConcurrentMap<String, RMNode> deactivatedNodesMap =
+    final ConcurrentMap<NodeId, RMNode> deactivatedNodesMap =
         Maps.newConcurrentMap();
     for (RMNode node : deactivatedNodes) {
-      deactivatedNodesMap.put(node.getHostName(), node);
+      deactivatedNodesMap.put(node.getNodeID(), node);
     }
 
     RMContextImpl rmContext = new RMContextImpl(null, null, null, null,
@@ -186,7 +186,7 @@ public class TestRMWebApp {
          return applicationsMaps;
        }
        @Override
-       public ConcurrentMap<String, RMNode> getInactiveRMNodes() {
+       public ConcurrentMap<NodeId, RMNode> getInactiveRMNodes() {
          return deactivatedNodesMap;
        }
        @Override

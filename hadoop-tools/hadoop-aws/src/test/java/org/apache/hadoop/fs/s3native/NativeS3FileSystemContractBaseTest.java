@@ -165,14 +165,15 @@ public abstract class NativeS3FileSystemContractBaseTest
   
   public void testRetryOnIoException() throws Exception {
     class TestInputStream extends InputStream {
-      boolean shouldThrow = false;
+      boolean shouldThrow = true;
       int throwCount = 0;
       int pos = 0;
       byte[] bytes;
+      boolean threwException = false;
       
       public TestInputStream() {
         bytes = new byte[256];
-        for (int i = 0; i < 256; i++) {
+        for (int i = pos; i < 256; i++) {
           bytes[i] = (byte)i;
         }
       }
@@ -182,8 +183,10 @@ public abstract class NativeS3FileSystemContractBaseTest
         shouldThrow = !shouldThrow;
         if (shouldThrow) {
           throwCount++;
+          threwException = true;
           throw new IOException();
         }
+        assertFalse("IOException was thrown. InputStream should be reopened", threwException);
         return pos++;
       }
       
@@ -192,9 +195,10 @@ public abstract class NativeS3FileSystemContractBaseTest
         shouldThrow = !shouldThrow;
         if (shouldThrow) {
           throwCount++;
+          threwException = true;
           throw new IOException();
         }
-        
+        assertFalse("IOException was thrown. InputStream should be reopened", threwException);
         int sizeToRead = Math.min(len, 256 - pos);
         for (int i = 0; i < sizeToRead; i++) {
           b[i] = bytes[pos + i];
@@ -202,13 +206,20 @@ public abstract class NativeS3FileSystemContractBaseTest
         pos += sizeToRead;
         return sizeToRead;
       }
+
+      public void reopenAt(long byteRangeStart) {
+        threwException = false;
+        pos = Long.valueOf(byteRangeStart).intValue();
+      }
+
     }
     
-    final InputStream is = new TestInputStream();
+    final TestInputStream is = new TestInputStream();
     
     class MockNativeFileSystemStore extends Jets3tNativeFileSystemStore {
       @Override
       public InputStream retrieve(String key, long byteRangeStart) throws IOException {
+        is.reopenAt(byteRangeStart);
         return is;
       }
     }
@@ -233,8 +244,9 @@ public abstract class NativeS3FileSystemContractBaseTest
     }
     
     // Test to make sure the throw path was exercised.
-    // 144 = 128 + (128 / 8)
-    assertEquals(144, ((TestInputStream)is).throwCount);
+    // every read should have thrown 1 IOException except for the first read
+    // 144 = 128 - 1 + (128 / 8)
+    assertEquals(143, ((TestInputStream)is).throwCount);
   }
 
 }

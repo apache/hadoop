@@ -35,7 +35,11 @@ import org.apache.hadoop.net.DNS;
  * Context for sending metrics to Ganglia version 3.1.x.
  * 
  * 3.1.1 has a slightly different wire portal compared to 3.0.x.
+ *
+ * @deprecated Use {@link org.apache.hadoop.metrics2.sink.ganglia.GangliaSink31}
+ * instead.
  */
+@Deprecated
 public class GangliaContext31 extends GangliaContext {
 
   String hostName = "UNKNOWN.example.com";

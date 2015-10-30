@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INode;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INodeSymlink;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
@@ -79,8 +79,10 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
   @Override
   public String getEntry(String parent, INode inode) {
     StringBuffer buffer = new StringBuffer();
-    String path = new File(parent, inode.getName().toStringUtf8()).toString();
-    buffer.append(path);
+    String inodeName = inode.getName().toStringUtf8();
+    Path path = new Path(parent.isEmpty() ? "/" : parent,
+      inodeName.isEmpty() ? "/" : inodeName);
+    buffer.append(path.toString());
     PermissionStatus p = null;
 
     switch (inode.getType()) {

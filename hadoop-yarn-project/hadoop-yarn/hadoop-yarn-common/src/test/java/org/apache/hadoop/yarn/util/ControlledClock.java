@@ -21,6 +21,11 @@ package org.apache.hadoop.yarn.util;
 public class ControlledClock implements Clock {
   private long time = -1;
   private final Clock actualClock;
+  // Convenience for getting a controlled clock with overridden time
+  public ControlledClock() {
+    this(new SystemClock());
+    setTime(0);
+  }
   public ControlledClock(Clock actualClock) {
     this.actualClock = actualClock;
   }
@@ -29,6 +34,16 @@ public class ControlledClock implements Clock {
   }
   public synchronized void reset() {
     time = -1;
+  }
+  public synchronized void tickSec(int seconds) {
+    tickMsec(seconds * 1000L);
+  }
+  public synchronized void tickMsec(long millisec) {
+    if (time == -1) {
+      throw new IllegalStateException("ControlledClock setTime should be " +
+          "called before incrementing time");
+    }
+    time = time + millisec;
   }
 
   @Override

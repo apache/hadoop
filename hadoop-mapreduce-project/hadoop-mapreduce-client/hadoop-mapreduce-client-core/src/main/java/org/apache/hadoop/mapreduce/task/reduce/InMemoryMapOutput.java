@@ -42,10 +42,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-class InMemoryMapOutput<K, V> extends MapOutput<K, V> {
+class InMemoryMapOutput<K, V> extends IFileWrappedMapOutput<K, V> {
   private static final Log LOG = LogFactory.getLog(InMemoryMapOutput.class);
-  private Configuration conf;
-  private final MergeManagerImpl<K, V> merger;
   private final byte[] memory;
   private BoundedByteArrayOutputStream byteStream;
   // Decompression of map-outputs
@@ -56,9 +54,7 @@ class InMemoryMapOutput<K, V> extends MapOutput<K, V> {
                            MergeManagerImpl<K, V> merger,
                            int size, CompressionCodec codec,
                            boolean primaryMapOutput) {
-    super(mapId, (long)size, primaryMapOutput);
-    this.conf = conf;
-    this.merger = merger;
+    super(conf, merger, mapId, (long)size, primaryMapOutput);
     this.codec = codec;
     byteStream = new BoundedByteArrayOutputStream(size);
     memory = byteStream.getBuffer();
@@ -78,15 +74,12 @@ class InMemoryMapOutput<K, V> extends MapOutput<K, V> {
   }
 
   @Override
-  public void shuffle(MapHost host, InputStream input,
+  protected void doShuffle(MapHost host, IFileInputStream iFin,
                       long compressedLength, long decompressedLength,
                       ShuffleClientMetrics metrics,
                       Reporter reporter) throws IOException {
-    IFileInputStream checksumIn = 
-      new IFileInputStream(input, compressedLength, conf);
+    InputStream input = iFin;
 
-    input = checksumIn;       
-  
     // Are map-outputs compressed?
     if (codec != null) {
       decompressor.reset();
@@ -111,13 +104,6 @@ class InMemoryMapOutput<K, V> extends MapOutput<K, V> {
         throw new IOException("Unexpected extra bytes from input stream for " +
                                getMapId());
       }
-
-    } catch (IOException ioe) {      
-      // Close the streams
-      IOUtils.cleanup(LOG, input);
-
-      // Re-throw
-      throw ioe;
     } finally {
       CodecPool.returnDecompressor(decompressor);
     }
@@ -125,12 +111,12 @@ class InMemoryMapOutput<K, V> extends MapOutput<K, V> {
 
   @Override
   public void commit() throws IOException {
-    merger.closeInMemoryFile(this);
+    getMerger().closeInMemoryFile(this);
   }
   
   @Override
   public void abort() {
-    merger.unreserve(memory.length);
+    getMerger().unreserve(memory.length);
   }
 
   @Override

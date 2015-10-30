@@ -37,6 +37,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEven
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 
@@ -190,10 +192,13 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @param clusterResource the resource of the cluster.
    * @param node node on which resources are available
    * @param resourceLimits how much overall resource of this queue can use. 
+   * @param schedulingMode Type of exclusive check when assign container on a 
+   * NodeManager, see {@link SchedulingMode}.
    * @return the assignment
    */
   public CSAssignment assignContainers(Resource clusterResource,
-      FiCaSchedulerNode node, ResourceLimits resourceLimits);
+      FiCaSchedulerNode node, ResourceLimits resourceLimits,
+      SchedulingMode schedulingMode);
   
   /**
    * A container assigned to the queue has completed.
@@ -213,6 +218,14 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
       RMContainer container, ContainerStatus containerStatus, 
       RMContainerEventType event, CSQueue childQueue,
       boolean sortQueues);
+
+  /**
+   * We have a reserved increased container in the queue, we need to unreserve
+   * it. Since we just want to cancel the reserved increase request instead of
+   * stop the container, we shouldn't call completedContainer for such purpose.
+   */
+  public void unreserveIncreasedContainer(Resource clusterResource,
+      FiCaSchedulerApp app, FiCaSchedulerNode node, RMContainer rmContainer);
 
   /**
    * Get the number of applications in the queue.
@@ -284,4 +297,36 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @return resourceUsage
    */
   public ResourceUsage getQueueResourceUsage();
+
+  /**
+   * When partition of node updated, we will update queue's resource usage if it
+   * has container(s) running on that.
+   */
+  public void incUsedResource(String nodePartition, Resource resourceToInc,
+      SchedulerApplicationAttempt application);
+
+  /**
+   * When partition of node updated, we will update queue's resource usage if it
+   * has container(s) running on that.
+   */
+  public void decUsedResource(String nodePartition, Resource resourceToDec,
+      SchedulerApplicationAttempt application);
+
+  /**
+   * When an outstanding resource is fulfilled or canceled, calling this will
+   * decrease pending resource in a queue.
+   *
+   * @param nodeLabel
+   *          asked by application
+   * @param resourceToDec
+   *          new resource asked
+   */
+  public void decPendingResource(String nodeLabel, Resource resourceToDec);
+  
+  /**
+   * Decrease container resource in the queue
+   */
+  public void decreaseContainer(Resource clusterResource,
+      SchedContainerChangeRequest decreaseRequest,
+      FiCaSchedulerApp app);
 }

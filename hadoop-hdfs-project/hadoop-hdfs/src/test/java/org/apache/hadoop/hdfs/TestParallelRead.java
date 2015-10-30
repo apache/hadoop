@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
-import org.apache.log4j.Level;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -29,8 +27,8 @@ public class TestParallelRead extends TestParallelReadUtil {
     // This is a test of the normal (TCP) read path.  For this reason, we turn
     // off both short-circuit local reads and UNIX domain socket data traffic.
     HdfsConfiguration conf = new HdfsConfiguration();
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, false);
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC,
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, false);
+    conf.setBoolean(HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC,
                     false);
     // dfs.domain.socket.path should be ignored because the previous two keys
     // were set to false.  This is a regression test for HDFS-4473.

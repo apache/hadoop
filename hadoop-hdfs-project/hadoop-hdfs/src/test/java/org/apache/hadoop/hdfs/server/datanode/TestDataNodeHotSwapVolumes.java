@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
@@ -64,6 +65,8 @@ import java.util.concurrent.TimeoutException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.hamcrest.CoreMatchers.anyOf;
@@ -75,8 +78,10 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.timeout;
 
 public class TestDataNodeHotSwapVolumes {
@@ -512,9 +517,12 @@ public class TestDataNodeHotSwapVolumes {
 
     // Make sure that vol0 and vol2's metadata are not left in memory.
     FsDatasetSpi<?> dataset = dn.getFSDataset();
-    for (FsVolumeSpi volume : dataset.getVolumes()) {
-      assertThat(volume.getBasePath(), is(not(anyOf(
-          is(newDirs.get(0)), is(newDirs.get(2))))));
+    try (FsDatasetSpi.FsVolumeReferences volumes =
+        dataset.getFsVolumeReferences()) {
+      for (FsVolumeSpi volume : volumes) {
+        assertThat(volume.getBasePath(), is(not(anyOf(
+            is(newDirs.get(0)), is(newDirs.get(2))))));
+      }
     }
     DataStorage storage = dn.getStorage();
     for (int i = 0; i < storage.getNumStorageDirs(); i++) {
@@ -577,6 +585,7 @@ public class TestDataNodeHotSwapVolumes {
     final DataNode dn = cluster.getDataNodes().get(dataNodeIdx);
     final FileSystem fs = cluster.getFileSystem();
     final Path testFile = new Path("/test");
+    final long lastTimeDiskErrorCheck = dn.getLastDiskErrorCheck();
 
     FSDataOutputStream out = fs.create(testFile, REPLICATION);
 
@@ -585,6 +594,23 @@ public class TestDataNodeHotSwapVolumes {
     rb.nextBytes(writeBuf);
     out.write(writeBuf);
     out.hflush();
+
+    // Make FsDatasetSpi#finalizeBlock a time-consuming operation. So if the
+    // BlockReceiver releases volume reference before finalizeBlock(), the blocks
+    // on the volume will be removed, and finalizeBlock() throws IOE.
+    final FsDatasetSpi<? extends FsVolumeSpi> data = dn.data;
+    dn.data = Mockito.spy(data);
+    doAnswer(new Answer<Object>() {
+          public Object answer(InvocationOnMock invocation)
+              throws IOException, InterruptedException {
+            Thread.sleep(1000);
+            // Bypass the argument to FsDatasetImpl#finalizeBlock to verify that
+            // the block is not removed, since the volume reference should not
+            // be released at this point.
+            data.finalizeBlock((ExtendedBlock) invocation.getArguments()[0]);
+            return null;
+          }
+        }).when(dn.data).finalizeBlock(any(ExtendedBlock.class));
 
     final CyclicBarrier barrier = new CyclicBarrier(2);
 
@@ -612,13 +638,19 @@ public class TestDataNodeHotSwapVolumes {
     out.hflush();
     out.close();
 
+    reconfigThread.join();
+
     // Verify the file has sufficient replications.
     DFSTestUtil.waitReplication(fs, testFile, REPLICATION);
     // Read the content back
     byte[] content = DFSTestUtil.readFileBuffer(fs, testFile);
     assertEquals(BLOCK_SIZE, content.length);
 
-    reconfigThread.join();
+    // If an IOException thrown from BlockReceiver#run, it triggers
+    // DataNode#checkDiskError(). So we can test whether checkDiskError() is called,
+    // to see whether there is IOException in BlockReceiver#run().
+    assertEquals(lastTimeDiskErrorCheck, dn.getLastDiskErrorCheck());
+
     if (!exceptions.isEmpty()) {
       throw new IOException(exceptions.get(0).getCause());
     }
@@ -659,10 +691,14 @@ public class TestDataNodeHotSwapVolumes {
   }
 
   /** Get the FsVolume on the given basePath */
-  private FsVolumeImpl getVolume(DataNode dn, File basePath) {
-    for (FsVolumeSpi vol : dn.getFSDataset().getVolumes()) {
-      if (vol.getBasePath().equals(basePath.getPath())) {
-        return (FsVolumeImpl)vol;
+  private FsVolumeImpl getVolume(DataNode dn, File basePath)
+      throws IOException {
+    try (FsDatasetSpi.FsVolumeReferences volumes =
+      dn.getFSDataset().getFsVolumeReferences()) {
+      for (FsVolumeSpi vol : volumes) {
+        if (vol.getBasePath().equals(basePath.getPath())) {
+          return (FsVolumeImpl) vol;
+        }
       }
     }
     return null;
@@ -677,6 +713,10 @@ public class TestDataNodeHotSwapVolumes {
   public void testDirectlyReloadAfterCheckDiskError()
       throws IOException, TimeoutException, InterruptedException,
       ReconfigurationException {
+    // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
+    // volume failures which is currently not supported on Windows.
+    assumeTrue(!Path.WINDOWS);
+
     startDFSCluster(1, 2);
     createFile(new Path("/test"), 32, (short)2);
 

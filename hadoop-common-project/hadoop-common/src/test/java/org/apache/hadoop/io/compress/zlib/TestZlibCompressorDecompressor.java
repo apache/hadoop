@@ -100,7 +100,6 @@ public class TestZlibCompressorDecompressor {
   @Test
   public void testZlibCompressorDecompressorWithConfiguration() {
     Configuration conf = new Configuration();
-    conf.setBoolean(CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY, true);
     if (ZlibFactory.isNativeZlibLoaded(conf)) {
       byte[] rawData;
       int tryNumber = 5;
@@ -214,7 +213,6 @@ public class TestZlibCompressorDecompressor {
   @Test
   public void testZlibCompressorDecompressorSetDictionary() {
     Configuration conf = new Configuration();
-    conf.setBoolean(CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY, true);
     if (ZlibFactory.isNativeZlibLoaded(conf)) {
       Compressor zlibCompressor = ZlibFactory.getZlibCompressor(conf);
       Decompressor zlibDecompressor = ZlibFactory.getZlibDecompressor(conf);

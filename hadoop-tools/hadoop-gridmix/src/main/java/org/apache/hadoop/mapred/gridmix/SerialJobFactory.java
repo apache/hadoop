@@ -130,7 +130,7 @@ public class SerialJobFactory extends JobFactory<JobStats> {
                   return;
                 }
                 if (LOG.isDebugEnabled()) {
-                  LOG.info(" job " + job.getName() + " completed ");
+                  LOG.debug(" job " + job.getName() + " completed ");
                 }
                 break;
               }

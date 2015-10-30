@@ -73,9 +73,9 @@ public class TestCorruptReplicaInfo {
       
       // Make sure initial values are returned correctly
       assertEquals("Number of corrupt blocks must initially be 0", 0, crm.size());
-      assertNull("Param n cannot be less than 0", crm.getCorruptReplicaBlockIds(-1, null));
-      assertNull("Param n cannot be greater than 100", crm.getCorruptReplicaBlockIds(101, null));
-      long[] l = crm.getCorruptReplicaBlockIds(0, null);
+      assertNull("Param n cannot be less than 0", crm.getCorruptReplicaBlockIdsForTesting(-1, null));
+      assertNull("Param n cannot be greater than 100", crm.getCorruptReplicaBlockIdsForTesting(101, null));
+      long[] l = crm.getCorruptReplicaBlockIdsForTesting(0, null);
       assertNotNull("n = 0 must return non-null", l);
       assertEquals("n = 0 must return an empty list", 0, l.length);
 
@@ -118,14 +118,14 @@ public class TestCorruptReplicaInfo {
       
       assertTrue("First five block ids not returned correctly ",
                 Arrays.equals(new long[]{0,1,2,3,4},
-                              crm.getCorruptReplicaBlockIds(5, null)));
+                              crm.getCorruptReplicaBlockIdsForTesting(5, null)));
                               
-      LOG.info(crm.getCorruptReplicaBlockIds(10, 7L));
+      LOG.info(crm.getCorruptReplicaBlockIdsForTesting(10, 7L));
       LOG.info(block_ids.subList(7, 18));
 
       assertTrue("10 blocks after 7 not returned correctly ",
                 Arrays.equals(new long[]{8,9,10,11,12,13,14,15,16,17},
-                              crm.getCorruptReplicaBlockIds(10, 7L)));
+                              crm.getCorruptReplicaBlockIdsForTesting(10, 7L)));
       
   }
   

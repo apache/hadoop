@@ -18,6 +18,7 @@
 #include "configuration.h"
 #include "container-executor.h"
 
+#include <inttypes.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -30,8 +31,8 @@
 
 #define TEST_ROOT "/tmp/test-container-executor"
 #define DONT_TOUCH_FILE "dont-touch-me"
-#define NM_LOCAL_DIRS       TEST_ROOT "/local-1," TEST_ROOT "/local-2," \
-               TEST_ROOT "/local-3," TEST_ROOT "/local-4," TEST_ROOT "/local-5"
+#define NM_LOCAL_DIRS       TEST_ROOT "/local-1%" TEST_ROOT "/local-2%" \
+               TEST_ROOT "/local-3%" TEST_ROOT "/local-4%" TEST_ROOT "/local-5"
 #define NM_LOG_DIRS         TEST_ROOT "/logs/userlogs"
 #define ARRAY_SIZE 1000
 
@@ -73,17 +74,17 @@ void run(const char *cmd) {
   } else {
     int status = 0;
     if (waitpid(child, &status, 0) <= 0) {
-      printf("FAIL: failed waiting for child process %s pid %d - %s\n", 
-	     cmd, child, strerror(errno));
+      printf("FAIL: failed waiting for child process %s pid %" PRId64 " - %s\n",
+	     cmd, (int64_t)child, strerror(errno));
       exit(1);
     }
     if (!WIFEXITED(status)) {
-      printf("FAIL: process %s pid %d did not exit\n", cmd, child);
+      printf("FAIL: process %s pid %" PRId64 " did not exit\n", cmd, (int64_t)child);
       exit(1);
     }
     if (WEXITSTATUS(status) != 0) {
-      printf("FAIL: process %s pid %d exited with error status %d\n", cmd, 
-	     child, WEXITSTATUS(status));
+      printf("FAIL: process %s pid %" PRId64 " exited with error status %d\n", cmd,
+	     (int64_t)child, WEXITSTATUS(status));
       exit(1);
     }
   }
@@ -144,10 +145,11 @@ void check_pid_file(const char* pid_file, pid_t mypid) {
   }
 
   char myPidBuf[33];
-  snprintf(myPidBuf, 33, "%d", mypid);
+  snprintf(myPidBuf, 33, "%" PRId64, (int64_t)(mypid + 1));
   if (strncmp(pidBuf, myPidBuf, strlen(myPidBuf)) != 0) {
     printf("FAIL: failed to find matching pid in pid file\n");
-    printf("FAIL: Expected pid %d : Got %.*s", mypid, (int)bytes, pidBuf);
+    printf("FAIL: Expected pid %" PRId64 " : Got %.*s", (int64_t)mypid,
+      (int)bytes, pidBuf);
     exit(1);
   }
 }
@@ -210,15 +212,15 @@ void test_get_app_log_dir() {
   free(logdir);
 }
 
-void test_check_user() {
+void test_check_user(int expectedFailure) {
   printf("\nTesting test_check_user\n");
   struct passwd *user = check_user(username);
-  if (user == NULL) {
+  if (user == NULL && !expectedFailure) {
     printf("FAIL: failed check for user %s\n", username);
     exit(1);
   }
   free(user);
-  if (check_user("lp") != NULL) {
+  if (check_user("lp") != NULL && !expectedFailure) {
     printf("FAIL: failed check for system user lp\n");
     exit(1);
   }
@@ -226,7 +228,7 @@ void test_check_user() {
     printf("FAIL: failed check for system user root\n");
     exit(1);
   }
-  if (check_user("daemon") == NULL) {
+  if (check_user("daemon") == NULL && !expectedFailure) {
     printf("FAIL: failed check for whitelisted system user daemon\n");
     exit(1);
   }
@@ -408,6 +410,17 @@ void test_delete_user() {
     exit(1);
   }
 
+  sprintf(buffer, "%s", app_dir);
+  char missing_dir[20];
+  strcpy(missing_dir, "/some/missing/dir");
+  char * dirs_with_missing[] = {missing_dir, buffer, 0};
+  ret = delete_as_user(yarn_username, "" , dirs_with_missing);
+  printf("%d" , ret);
+  if (access(buffer, R_OK) == 0) {
+    printf("FAIL: directory not deleted\n");
+    exit(1);
+  }
+
   sprintf(buffer, "%s/local-1/usercache/%s", TEST_ROOT, yarn_username);
   if (access(buffer, R_OK) != 0) {
     printf("FAIL: directory missing before test\n");
@@ -441,16 +454,16 @@ void run_test_in_child(const char* test_name, void (*func)()) {
   } else {
     int status = 0;
     if (waitpid(child, &status, 0) == -1) {
-      printf("FAIL: waitpid %d failed - %s\n", child, strerror(errno));
+      printf("FAIL: waitpid %" PRId64 " failed - %s\n", (int64_t)child, strerror(errno));
       exit(1);
     }
     if (!WIFEXITED(status)) {
-      printf("FAIL: child %d didn't exit - %d\n", child, status);
+      printf("FAIL: child %" PRId64 " didn't exit - %d\n", (int64_t)child, status);
       exit(1);
     }
     if (WEXITSTATUS(status) != 0) {
-      printf("FAIL: child %d exited with bad status %d\n",
-	     child, WEXITSTATUS(status));
+      printf("FAIL: child %" PRId64 " exited with bad status %d\n",
+	     (int64_t)child, WEXITSTATUS(status));
       exit(1);
     }
   }
@@ -465,13 +478,18 @@ void test_signal_container() {
     printf("FAIL: fork failed\n");
     exit(1);
   } else if (child == 0) {
+    printf("\nSwitching to user %d\n", user_detail->pw_uid);
     if (change_user(user_detail->pw_uid, user_detail->pw_gid) != 0) {
       exit(1);
     }
     sleep(3600);
     exit(0);
   } else {
-    printf("Child container launched as %d\n", child);
+    printf("Child container launched as %" PRId64 "\n", (int64_t)child);
+    printf("Signaling container as user %s\n", yarn_username);
+    // there's a race condition for child calling change_user and us
+    // calling signal_container_as_user, hence sleeping
+    sleep(3);
     if (signal_container_as_user(yarn_username, child, SIGQUIT) != 0) {
       exit(1);
     }
@@ -508,7 +526,7 @@ void test_signal_container_group() {
     sleep(3600);
     exit(0);
   }
-  printf("Child container launched as %d\n", child);
+  printf("Child container launched as %" PRId64 "\n", (int64_t)child);
   // there's a race condition for child calling change_user and us 
   // calling signal_container_as_user, hence sleeping
   sleep(3);
@@ -586,7 +604,7 @@ void test_init_app() {
   }
   int status = 0;
   if (waitpid(child, &status, 0) <= 0) {
-    printf("FAIL: failed waiting for process %d - %s\n", child, 
+    printf("FAIL: failed waiting for process %" PRId64 " - %s\n", (int64_t)child,
 	   strerror(errno));
     exit(1);
   }
@@ -687,7 +705,7 @@ void test_run_container() {
   }
   int status = 0;
   if (waitpid(child, &status, 0) <= 0) {
-    printf("FAIL: failed waiting for process %d - %s\n", child, 
+    printf("FAIL: failed waiting for process %" PRId64 " - %s\n", (int64_t)child,
 	   strerror(errno));
     exit(1);
   }
@@ -803,7 +821,7 @@ int main(int argc, char **argv) {
   printf("\nTesting delete_app()\n");
   test_delete_app();
 
-  test_check_user();
+  test_check_user(0);
 
   // the tests that change user need to be run in a subshell, so that
   // when they change user they don't give up our privs
@@ -830,7 +848,10 @@ int main(int argc, char **argv) {
 
   read_config(TEST_ROOT "/test.cfg");
   username = "bin";
-  test_check_user();
+  test_check_user(1);
+
+  username = "sys";
+  test_check_user(1);
 
   run("rm -fr " TEST_ROOT);
   printf("\nFinished tests\n");

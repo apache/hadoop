@@ -43,10 +43,12 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.htrace.core.Tracer;
 import org.mortbay.util.ajax.JSON;
 
 import com.google.common.base.Preconditions;
@@ -69,6 +71,7 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
   private ObjectName journalNodeInfoBeanName;
   private String httpServerURI;
   private File localDir;
+  Tracer tracer;
 
   static {
     HdfsConfiguration.init();
@@ -105,6 +108,11 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
     this.localDir = new File(
         conf.get(DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_KEY,
         DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_DEFAULT).trim());
+    if (this.tracer == null) {
+      this.tracer = new Tracer.Builder("JournalNode").
+          conf(TraceUtils.wrapHadoopConf("journalnode.htrace", conf)).
+          build();
+    }
   }
 
   private static void validateAndCreateJournalDir(File dir) throws IOException {
@@ -202,6 +210,10 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
     if (journalNodeInfoBeanName != null) {
       MBeans.unregister(journalNodeInfoBeanName);
       journalNodeInfoBeanName = null;
+    }
+    if (tracer != null) {
+      tracer.close();
+      tracer = null;
     }
   }
 
@@ -326,5 +338,4 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
   public Long getJournalCTime(String journalId) throws IOException {
     return getOrCreateJournal(journalId).getJournalCTime();
   }
-
 }

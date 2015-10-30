@@ -36,11 +36,11 @@ import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AccessType;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-
-import com.google.common.collect.Sets;
 
 /**
  * Utilities shared by schedulers. 
@@ -190,14 +190,75 @@ public class SchedulerUtils {
     ask.setCapability(normalized);
   }
 
+  private static void normalizeNodeLabelExpressionInRequest(
+      ResourceRequest resReq, QueueInfo queueInfo) {
+
+    String labelExp = resReq.getNodeLabelExpression();
+
+    // if queue has default label expression, and RR doesn't have, use the
+    // default label expression of queue
+    if (labelExp == null && queueInfo != null && ResourceRequest.ANY
+        .equals(resReq.getResourceName())) {
+      labelExp = queueInfo.getDefaultNodeLabelExpression();
+    }
+
+    // If labelExp still equals to null, set it to be NO_LABEL
+    if (labelExp == null) {
+      labelExp = RMNodeLabelsManager.NO_LABEL;
+    }
+    resReq.setNodeLabelExpression(labelExp);
+  }
+
+  public static void normalizeAndValidateRequest(ResourceRequest resReq,
+      Resource maximumResource, String queueName, YarnScheduler scheduler,
+      boolean isRecovery, RMContext rmContext)
+      throws InvalidResourceRequestException {
+    normalizeAndValidateRequest(resReq, maximumResource, queueName, scheduler,
+        isRecovery, rmContext, null);
+  }
+
+  public static void normalizeAndValidateRequest(ResourceRequest resReq,
+      Resource maximumResource, String queueName, YarnScheduler scheduler,
+      boolean isRecovery, RMContext rmContext, QueueInfo queueInfo)
+      throws InvalidResourceRequestException {
+    if (null == queueInfo) {
+      try {
+        queueInfo = scheduler.getQueueInfo(queueName, false, false);
+      } catch (IOException e) {
+        // it is possible queue cannot get when queue mapping is set, just ignore
+        // the queueInfo here, and move forward
+      }
+    }
+    SchedulerUtils.normalizeNodeLabelExpressionInRequest(resReq, queueInfo);
+    if (!isRecovery) {
+      validateResourceRequest(resReq, maximumResource, queueInfo, rmContext);
+    }
+  }
+
+  public static void normalizeAndvalidateRequest(ResourceRequest resReq,
+      Resource maximumResource, String queueName, YarnScheduler scheduler,
+      RMContext rmContext)
+      throws InvalidResourceRequestException {
+    normalizeAndvalidateRequest(resReq, maximumResource, queueName, scheduler,
+        rmContext, null);
+  }
+
+  public static void normalizeAndvalidateRequest(ResourceRequest resReq,
+      Resource maximumResource, String queueName, YarnScheduler scheduler,
+      RMContext rmContext, QueueInfo queueInfo)
+      throws InvalidResourceRequestException {
+    normalizeAndValidateRequest(resReq, maximumResource, queueName, scheduler,
+        false, rmContext, queueInfo);
+  }
+
   /**
    * Utility method to validate a resource request, by insuring that the
    * requested memory/vcore is non-negative and not greater than max
    * 
    * @throws InvalidResourceRequestException when there is invalid request
    */
-  public static void validateResourceRequest(ResourceRequest resReq,
-      Resource maximumResource, String queueName, YarnScheduler scheduler)
+  private static void validateResourceRequest(ResourceRequest resReq,
+      Resource maximumResource, QueueInfo queueInfo, RMContext rmContext)
       throws InvalidResourceRequestException {
     if (resReq.getCapability().getMemory() < 0 ||
         resReq.getCapability().getMemory() > maximumResource.getMemory()) {
@@ -217,27 +278,7 @@ public class SchedulerUtils {
           + resReq.getCapability().getVirtualCores()
           + ", maxVirtualCores=" + maximumResource.getVirtualCores());
     }
-    
-    // Get queue from scheduler
-    QueueInfo queueInfo = null;
-    try {
-      queueInfo = scheduler.getQueueInfo(queueName, false, false);
-    } catch (IOException e) {
-      // it is possible queue cannot get when queue mapping is set, just ignore
-      // the queueInfo here, and move forward
-    }
-
-    // check labels in the resource request.
     String labelExp = resReq.getNodeLabelExpression();
-    
-    // if queue has default label expression, and RR doesn't have, use the
-    // default label expression of queue
-    if (labelExp == null && queueInfo != null
-        && ResourceRequest.ANY.equals(resReq.getResourceName())) {
-      labelExp = queueInfo.getDefaultNodeLabelExpression();
-      resReq.setNodeLabelExpression(labelExp);
-    }
-    
     // we don't allow specify label expression other than resourceName=ANY now
     if (!ResourceRequest.ANY.equals(resReq.getResourceName())
         && labelExp != null && !labelExp.trim().isEmpty()) {
@@ -259,7 +300,7 @@ public class SchedulerUtils {
     
     if (labelExp != null && !labelExp.trim().isEmpty() && queueInfo != null) {
       if (!checkQueueLabelExpression(queueInfo.getAccessibleNodeLabels(),
-          labelExp)) {
+          labelExp, rmContext)) {
         throw new InvalidResourceRequestException("Invalid resource request"
             + ", queue="
             + queueInfo.getQueueName()
@@ -272,79 +313,37 @@ public class SchedulerUtils {
       }
     }
   }
-  
-  public static boolean checkQueueAccessToNode(Set<String> queueLabels,
-      Set<String> nodeLabels) {
-    // if queue's label is *, it can access any node
-    if (queueLabels != null && queueLabels.contains(RMNodeLabelsManager.ANY)) {
-      return true;
-    }
-    // any queue can access to a node without label
-    if (nodeLabels == null || nodeLabels.isEmpty()) {
-      return true;
-    }
-    // a queue can access to a node only if it contains any label of the node
-    if (queueLabels != null
-        && Sets.intersection(queueLabels, nodeLabels).size() > 0) {
-      return true;
-    }
-    // sorry, you cannot access
-    return false;
-  }
-  
-  public static void checkIfLabelInClusterNodeLabels(RMNodeLabelsManager mgr,
-      Set<String> labels) throws IOException {
-    if (mgr == null) {
-      if (labels != null && !labels.isEmpty()) {
-        throw new IOException("NodeLabelManager is null, please check");
-      }
-      return;
-    }
 
-    if (labels != null) {
-      for (String label : labels) {
-        if (!label.equals(RMNodeLabelsManager.ANY)
-            && !mgr.containsNodeLabel(label)) {
-          throw new IOException("NodeLabelManager doesn't include label = "
-              + label + ", please check.");
-        }
-      }
-    }
-  }
-  
-  public static boolean checkNodeLabelExpression(Set<String> nodeLabels,
-      String labelExpression) {
-    // empty label expression can only allocate on node with empty labels
-    if (labelExpression == null || labelExpression.trim().isEmpty()) {
-      if (!nodeLabels.isEmpty()) {
-        return false;
-      }
-    }
-
-    if (labelExpression != null) {
-      for (String str : labelExpression.split("&&")) {
-        if (!str.trim().isEmpty()
-            && (nodeLabels == null || !nodeLabels.contains(str.trim()))) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
+  /**
+   * Check queue label expression, check if node label in queue's
+   * node-label-expression existed in clusterNodeLabels if rmContext != null
+   */
   public static boolean checkQueueLabelExpression(Set<String> queueLabels,
-      String labelExpression) {
-    if (queueLabels != null && queueLabels.contains(RMNodeLabelsManager.ANY)) {
-      return true;
-    }
+      String labelExpression, RMContext rmContext) {
     // if label expression is empty, we can allocate container on any node
     if (labelExpression == null) {
       return true;
     }
     for (String str : labelExpression.split("&&")) {
-      if (!str.trim().isEmpty()
-          && (queueLabels == null || !queueLabels.contains(str.trim()))) {
-        return false;
+      str = str.trim();
+      if (!str.trim().isEmpty()) {
+        // check queue label
+        if (queueLabels == null) {
+          return false; 
+        } else {
+          if (!queueLabels.contains(str)
+              && !queueLabels.contains(RMNodeLabelsManager.ANY)) {
+            return false;
+          }
+        }
+        
+        // check node label manager contains this label
+        if (null != rmContext) {
+          RMNodeLabelsManager nlm = rmContext.getNodeLabelManager();
+          if (nlm != null && !nlm.containsNodeLabel(str)) {
+            return false;
+          }
+        }
       }
     }
     return true;
@@ -359,5 +358,43 @@ public class SchedulerUtils {
       return AccessType.SUBMIT_APP;
     }
     return null;
+  }
+  
+  public static boolean checkResourceRequestMatchingNodePartition(
+      String requestedPartition, String nodePartition,
+      SchedulingMode schedulingMode) {
+    // We will only look at node label = nodeLabelToLookAt according to
+    // schedulingMode and partition of node.
+    String nodePartitionToLookAt = null;
+    if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY) {
+      nodePartitionToLookAt = nodePartition;
+    } else {
+      nodePartitionToLookAt = RMNodeLabelsManager.NO_LABEL;
+    }
+
+    if (null == requestedPartition) {
+      requestedPartition = RMNodeLabelsManager.NO_LABEL;
+    }
+    return requestedPartition.equals(nodePartitionToLookAt);
+  }
+  
+  private static boolean hasPendingResourceRequest(ResourceCalculator rc,
+      ResourceUsage usage, String partitionToLookAt, Resource cluster) {
+    if (Resources.greaterThan(rc, cluster,
+        usage.getPending(partitionToLookAt), Resources.none())) {
+      return true;
+    }
+    return false;
+  }
+
+  @Private
+  public static boolean hasPendingResourceRequest(ResourceCalculator rc,
+      ResourceUsage usage, String nodePartition, Resource cluster,
+      SchedulingMode schedulingMode) {
+    String partitionToLookAt = nodePartition;
+    if (schedulingMode == SchedulingMode.IGNORE_PARTITION_EXCLUSIVITY) {
+      partitionToLookAt = RMNodeLabelsManager.NO_LABEL;
+    }
+    return hasPendingResourceRequest(rc, usage, partitionToLookAt, cluster);
   }
 }

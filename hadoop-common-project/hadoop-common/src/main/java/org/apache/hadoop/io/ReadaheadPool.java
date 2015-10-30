@@ -29,6 +29,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.nativeio.NativeIO;
 
+import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_WILLNEED;
+
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -204,7 +206,7 @@ public class ReadaheadPool {
       // other FD, which may be wasted work, but won't cause a problem.
       try {
         NativeIO.POSIX.getCacheManipulator().posixFadviseIfPossible(identifier,
-            fd, off, len, NativeIO.POSIX.POSIX_FADV_WILLNEED);
+            fd, off, len, POSIX_FADV_WILLNEED);
       } catch (IOException ioe) {
         if (canceled) {
           // no big deal - the reader canceled the request and closed

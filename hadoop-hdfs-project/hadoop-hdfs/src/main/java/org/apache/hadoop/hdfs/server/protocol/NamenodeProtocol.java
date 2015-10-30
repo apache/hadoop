@@ -186,5 +186,12 @@ public interface NamenodeProtocol {
   @Idempotent
   public RemoteEditLogManifest getEditLogManifest(long sinceTxId)
     throws IOException;
+
+  /**
+   * @return Whether the NameNode is in upgrade state (false) or not (true)
+   */
+  @Idempotent
+  public boolean isUpgradeFinalized() throws IOException;
+
 }
 

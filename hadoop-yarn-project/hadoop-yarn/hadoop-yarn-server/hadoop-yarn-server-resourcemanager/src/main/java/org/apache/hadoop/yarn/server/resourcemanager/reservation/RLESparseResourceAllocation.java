@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
@@ -31,9 +30,7 @@ import java.util.TreeMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -41,7 +38,7 @@ import com.google.gson.stream.JsonWriter;
 
 /**
  * This is a run length encoded sparse data structure that maintains resource
- * allocations over time
+ * allocations over time.
  */
 public class RLESparseResourceAllocation {
 
@@ -77,17 +74,14 @@ public class RLESparseResourceAllocation {
 
   /**
    * Add a resource for the specified interval
-   * 
+   *
    * @param reservationInterval the interval for which the resource is to be
    *          added
-   * @param capacity the resource to be added
+   * @param totCap the resource to be added
    * @return true if addition is successful, false otherwise
    */
   public boolean addInterval(ReservationInterval reservationInterval,
-      ReservationRequest capacity) {
-    Resource totCap =
-        Resources.multiply(capacity.getCapability(),
-            (float) capacity.getNumContainers());
+      Resource totCap) {
     if (totCap.equals(ZERO_RESOURCE)) {
       return true;
     }
@@ -143,44 +137,15 @@ public class RLESparseResourceAllocation {
   }
 
   /**
-   * Add multiple resources for the specified interval
-   * 
-   * @param reservationInterval the interval for which the resource is to be
-   *          added
-   * @param ReservationRequests the resources to be added
-   * @param clusterResource the total resources in the cluster
-   * @return true if addition is successful, false otherwise
-   */
-  public boolean addCompositeInterval(ReservationInterval reservationInterval,
-      List<ReservationRequest> ReservationRequests, Resource clusterResource) {
-    ReservationRequest aggregateReservationRequest =
-        Records.newRecord(ReservationRequest.class);
-    Resource capacity = Resource.newInstance(0, 0);
-    for (ReservationRequest ReservationRequest : ReservationRequests) {
-      Resources.addTo(capacity, Resources.multiply(
-          ReservationRequest.getCapability(),
-          ReservationRequest.getNumContainers()));
-    }
-    aggregateReservationRequest.setNumContainers((int) Math.ceil(Resources
-        .divide(resourceCalculator, clusterResource, capacity, minAlloc)));
-    aggregateReservationRequest.setCapability(minAlloc);
-
-    return addInterval(reservationInterval, aggregateReservationRequest);
-  }
-
-  /**
    * Removes a resource for the specified interval
-   * 
+   *
    * @param reservationInterval the interval for which the resource is to be
    *          removed
-   * @param capacity the resource to be removed
+   * @param totCap the resource to be removed
    * @return true if removal is successful, false otherwise
    */
   public boolean removeInterval(ReservationInterval reservationInterval,
-      ReservationRequest capacity) {
-    Resource totCap =
-        Resources.multiply(capacity.getCapability(),
-            (float) capacity.getNumContainers());
+      Resource totCap) {
     if (totCap.equals(ZERO_RESOURCE)) {
       return true;
     }
@@ -224,7 +189,7 @@ public class RLESparseResourceAllocation {
   /**
    * Returns the capacity, i.e. total resources allocated at the specified point
    * of time
-   * 
+   *
    * @param tick the time (UTC in ms) at which the capacity is requested
    * @return the resources allocated at the specified time
    */
@@ -243,7 +208,7 @@ public class RLESparseResourceAllocation {
 
   /**
    * Get the timestamp of the earliest resource allocation
-   * 
+   *
    * @return the timestamp of the first resource allocation
    */
   public long getEarliestStartTime() {
@@ -261,7 +226,7 @@ public class RLESparseResourceAllocation {
 
   /**
    * Get the timestamp of the latest resource allocation
-   * 
+   *
    * @return the timestamp of the last resource allocation
    */
   public long getLatestEndTime() {
@@ -279,7 +244,7 @@ public class RLESparseResourceAllocation {
 
   /**
    * Returns true if there are no non-zero entries
-   * 
+   *
    * @return true if there are no allocations or false otherwise
    */
   public boolean isEmpty() {
@@ -322,7 +287,7 @@ public class RLESparseResourceAllocation {
   /**
    * Returns the JSON string representation of the current resources allocated
    * over time
-   * 
+   *
    * @return the JSON string representation of the current resources allocated
    *         over time
    */
@@ -345,6 +310,45 @@ public class RLESparseResourceAllocation {
     } finally {
       readLock.unlock();
     }
+  }
+
+  /**
+   * Returns the representation of the current resources allocated over time as
+   * an interval map.
+   *
+   * @return the representation of the current resources allocated over time as
+   *         an interval map.
+   */
+  public Map<ReservationInterval, Resource> toIntervalMap() {
+
+    readLock.lock();
+    try {
+      Map<ReservationInterval, Resource> allocations =
+          new TreeMap<ReservationInterval, Resource>();
+
+      // Empty
+      if (isEmpty()) {
+        return allocations;
+      }
+
+      Map.Entry<Long, Resource> lastEntry = null;
+      for (Map.Entry<Long, Resource> entry : cumulativeCapacity.entrySet()) {
+
+        if (lastEntry != null) {
+          ReservationInterval interval =
+              new ReservationInterval(lastEntry.getKey(), entry.getKey());
+          Resource resource = lastEntry.getValue();
+
+          allocations.put(interval, resource);
+        }
+
+        lastEntry = entry;
+      }
+      return allocations;
+    } finally {
+      readLock.unlock();
+    }
+
   }
 
 }

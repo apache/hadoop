@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_INTERNAL_NAMESERVICES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY;
@@ -60,6 +59,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -110,9 +110,9 @@ public class TestDFSUtil {
     l2.setCorrupt(true);
 
     List<LocatedBlock> ls = Arrays.asList(l1, l2);
-    LocatedBlocks lbs = new LocatedBlocks(10, false, ls, l2, true, null);
+    LocatedBlocks lbs = new LocatedBlocks(10, false, ls, l2, true, null, null);
 
-    BlockLocation[] bs = DFSUtil.locatedBlocks2Locations(lbs);
+    BlockLocation[] bs = DFSUtilClient.locatedBlocks2Locations(lbs);
 
     assertTrue("expected 2 blocks but got " + bs.length,
                bs.length == 2);
@@ -128,7 +128,7 @@ public class TestDFSUtil {
         corruptCount == 1);
 
     // test an empty location
-    bs = DFSUtil.locatedBlocks2Locations(new LocatedBlocks());
+    bs = DFSUtilClient.locatedBlocks2Locations(new LocatedBlocks());
     assertEquals(0, bs.length);
   }
 
@@ -216,13 +216,13 @@ public class TestDFSUtil {
   }
 
   /**
-   * Test {@link DFSUtil#getNameServiceIds(Configuration)}
+   * Test {@link DFSUtilClient#getNameServiceIds(Configuration)}
    */
   @Test
   public void testGetNameServiceIds() {
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.set(DFS_NAMESERVICES, "nn1,nn2");
-    Collection<String> nameserviceIds = DFSUtil.getNameServiceIds(conf);
+    Collection<String> nameserviceIds = DFSUtilClient.getNameServiceIds(conf);
     Iterator<String> it = nameserviceIds.iterator();
     assertEquals(2, nameserviceIds.size());
     assertEquals("nn1", it.next().toString());
@@ -587,7 +587,7 @@ public class TestDFSUtil {
     Configuration conf = createWebHDFSHAConfiguration(LOGICAL_HOST_NAME, NS1_NN1_ADDR, NS1_NN2_ADDR);
 
     Map<String, Map<String, InetSocketAddress>> map =
-        DFSUtil.getHaNnWebHdfsAddresses(conf, "webhdfs");
+        DFSUtilClient.getHaNnWebHdfsAddresses(conf, "webhdfs");
 
     assertEquals(NS1_NN1_ADDR, map.get("ns1").get("nn1").toString());
     assertEquals(NS1_NN2_ADDR, map.get("ns1").get("nn2").toString());
@@ -603,7 +603,7 @@ public class TestDFSUtil {
     conf.set(DFSUtil.addKeySuffixes(
         DFS_NAMENODE_HTTP_ADDRESS_KEY, "ns1", "nn2"), nnaddr2);
 
-    conf.set(DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "." + logicalHostName,
+    conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX + "." + logicalHostName,
         ConfiguredFailoverProxyProvider.class.getName());
     return conf;
   }
@@ -616,78 +616,142 @@ public class TestDFSUtil {
         DFSUtil.substituteForWildcardAddress("127.0.0.1:12345", "foo"));
   }
   
+  /**
+   * Test how name service URIs are handled with a variety of configuration
+   * settings
+   * @throws Exception
+   */
   @Test
   public void testGetNNUris() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
-    
+
     final String NS1_NN1_ADDR   = "ns1-nn1.example.com:8020";
     final String NS1_NN2_ADDR   = "ns1-nn2.example.com:8020";
     final String NS2_NN_ADDR    = "ns2-nn.example.com:8020";
     final String NN1_ADDR       = "nn.example.com:8020";
     final String NN1_SRVC_ADDR  = "nn.example.com:8021";
     final String NN2_ADDR       = "nn2.example.com:8020";
-    
+
+    conf.set(DFS_NAMESERVICES, "ns1");
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "ns1"), NS1_NN1_ADDR);
+
+    conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "hdfs://" + NN2_ADDR);
+    conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "hdfs://" + NN1_ADDR);
+
+    Collection<URI> uris = DFSUtil.getNameServiceUris(conf,
+        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,  DFS_NAMENODE_RPC_ADDRESS_KEY);
+
+    assertEquals("Incorrect number of URIs returned", 2, uris.size());
+    assertTrue("Missing URI for name service ns1",
+        uris.contains(new URI("hdfs://" + NS1_NN1_ADDR)));
+    assertTrue("Missing URI for service address",
+        uris.contains(new URI("hdfs://" + NN2_ADDR)));
+
+    conf = new HdfsConfiguration();
     conf.set(DFS_NAMESERVICES, "ns1,ns2");
-    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX, "ns1"),"nn1,nn2");
+    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX, "ns1"),
+        "nn1,nn2");
     conf.set(DFSUtil.addKeySuffixes(
         DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn1"), NS1_NN1_ADDR);
     conf.set(DFSUtil.addKeySuffixes(
         DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn2"), NS1_NN2_ADDR);
-    
-    conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "ns2"),
-        NS2_NN_ADDR);
-    
+
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "ns2"), NS2_NN_ADDR);
+
     conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, "hdfs://" + NN1_ADDR);
-    
+
     conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "hdfs://" + NN2_ADDR);
-    
-    Collection<URI> uris = DFSUtil.getNameServiceUris(conf,
+
+    uris = DFSUtil.getNameServiceUris(conf,
         DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,  DFS_NAMENODE_RPC_ADDRESS_KEY);
-    
-    assertEquals(4, uris.size());
-    assertTrue(uris.contains(new URI("hdfs://ns1")));
-    assertTrue(uris.contains(new URI("hdfs://" + NS2_NN_ADDR)));
-    assertTrue(uris.contains(new URI("hdfs://" + NN1_ADDR)));
-    assertTrue(uris.contains(new URI("hdfs://" + NN2_ADDR)));
-    
+
+    assertEquals("Incorrect number of URIs returned", 3, uris.size());
+    assertTrue("Missing URI for name service ns1",
+        uris.contains(new URI("hdfs://ns1")));
+    assertTrue("Missing URI for name service ns2",
+        uris.contains(new URI("hdfs://" + NS2_NN_ADDR)));
+    assertTrue("Missing URI for RPC address",
+        uris.contains(new URI("hdfs://" + NN1_ADDR)));
+
     // Make sure that non-HDFS URIs in fs.defaultFS don't get included.
     conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY,
         "viewfs://vfs-name.example.com");
-    
-    uris = DFSUtil.getNameServiceUris(conf, DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, 
-        DFS_NAMENODE_RPC_ADDRESS_KEY);
-    
-    assertEquals(3, uris.size());
-    assertTrue(uris.contains(new URI("hdfs://ns1")));
-    assertTrue(uris.contains(new URI("hdfs://" + NS2_NN_ADDR)));
-    assertTrue(uris.contains(new URI("hdfs://" + NN1_ADDR)));
-    
+
+    uris = DFSUtil.getNameServiceUris(conf,
+        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, DFS_NAMENODE_RPC_ADDRESS_KEY);
+
+    assertEquals("Incorrect number of URIs returned", 3, uris.size());
+    assertTrue("Missing URI for name service ns1",
+        uris.contains(new URI("hdfs://ns1")));
+    assertTrue("Missing URI for name service ns2",
+        uris.contains(new URI("hdfs://" + NS2_NN_ADDR)));
+    assertTrue("Missing URI for RPC address",
+        uris.contains(new URI("hdfs://" + NN1_ADDR)));
+
     // Make sure that an HA URI being the default URI doesn't result in multiple
     // entries being returned.
     conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "hdfs://ns1");
     
-    uris = DFSUtil.getNameServiceUris(conf, DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, 
-        DFS_NAMENODE_RPC_ADDRESS_KEY);
-    
-    assertEquals(3, uris.size());
-    assertTrue(uris.contains(new URI("hdfs://ns1")));
-    assertTrue(uris.contains(new URI("hdfs://" + NS2_NN_ADDR)));
-    assertTrue(uris.contains(new URI("hdfs://" + NN1_ADDR)));
-    
+    uris = DFSUtil.getNameServiceUris(conf,
+        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, DFS_NAMENODE_RPC_ADDRESS_KEY);
+
+    assertEquals("Incorrect number of URIs returned", 3, uris.size());
+    assertTrue("Missing URI for name service ns1",
+        uris.contains(new URI("hdfs://ns1")));
+    assertTrue("Missing URI for name service ns2",
+        uris.contains(new URI("hdfs://" + NS2_NN_ADDR)));
+    assertTrue("Missing URI for RPC address",
+        uris.contains(new URI("hdfs://" + NN1_ADDR)));
+
+    // Check that the default URI is returned if there's nothing else to return.
+    conf = new HdfsConfiguration();
+    conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "hdfs://" + NN1_ADDR);
+
+    uris = DFSUtil.getNameServiceUris(conf,
+        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, DFS_NAMENODE_RPC_ADDRESS_KEY);
+
+    assertEquals("Incorrect number of URIs returned", 1, uris.size());
+    assertTrue("Missing URI for RPC address (defaultFS)",
+        uris.contains(new URI("hdfs://" + NN1_ADDR)));
+
+    // Check that the RPC address is the only address returned when the RPC
+    // and the default FS is given.
+    conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, NN2_ADDR);
+
+    uris = DFSUtil.getNameServiceUris(conf,
+        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, DFS_NAMENODE_RPC_ADDRESS_KEY);
+
+    assertEquals("Incorrect number of URIs returned", 1, uris.size());
+    assertTrue("Missing URI for RPC address",
+        uris.contains(new URI("hdfs://" + NN2_ADDR)));
+
     // Make sure that when a service RPC address is used that is distinct from
     // the client RPC address, and that client RPC address is also used as the
     // default URI, that the client URI does not end up in the set of URIs
     // returned.
+    conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, NN1_ADDR);
+
+    uris = DFSUtil.getNameServiceUris(conf,
+        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, DFS_NAMENODE_RPC_ADDRESS_KEY);
+
+    assertEquals("Incorrect number of URIs returned", 1, uris.size());
+    assertTrue("Missing URI for service ns1",
+        uris.contains(new URI("hdfs://" + NN1_ADDR)));
+
+    // Check that when the default FS and service address are given, but
+    // the RPC address isn't, that only the service address is returned.
     conf = new HdfsConfiguration();
     conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "hdfs://" + NN1_ADDR);
-    conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, NN1_ADDR);
     conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, NN1_SRVC_ADDR);
     
-    uris = DFSUtil.getNameServiceUris(conf, DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, 
-        DFS_NAMENODE_RPC_ADDRESS_KEY);
-    
-    assertEquals(1, uris.size());
-    assertTrue(uris.contains(new URI("hdfs://" + NN1_SRVC_ADDR)));
+    uris = DFSUtil.getNameServiceUris(conf,
+        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, DFS_NAMENODE_RPC_ADDRESS_KEY);
+
+    assertEquals("Incorrect number of URIs returned", 1, uris.size());
+    assertTrue("Missing URI for service address",
+        uris.contains(new URI("hdfs://" + NN1_SRVC_ADDR)));
   }
 
   @Test (timeout=15000)
@@ -896,5 +960,23 @@ public class TestDFSUtil {
       fail("Should fail for misconfiguration");
     } catch (IOException ignored) {
     }
+  }
+
+  @Test
+  public void testEncryptionProbe() throws Throwable {
+    Configuration conf = new Configuration(false);
+    conf.unset(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI);
+    assertFalse("encryption enabled on no provider key",
+        DFSUtilClient.isHDFSEncryptionEnabled(conf));
+    conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, "");
+    assertFalse("encryption enabled on empty provider key",
+        DFSUtilClient.isHDFSEncryptionEnabled(conf));
+    conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, "\n\t\n");
+    assertFalse("encryption enabled on whitespace provider key",
+        DFSUtilClient.isHDFSEncryptionEnabled(conf));
+    conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, "http://hadoop.apache.org");
+    assertTrue("encryption disabled on valid provider key",
+        DFSUtilClient.isHDFSEncryptionEnabled(conf));
+
   }
 }

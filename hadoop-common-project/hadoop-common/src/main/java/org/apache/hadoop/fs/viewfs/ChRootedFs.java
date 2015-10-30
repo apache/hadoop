@@ -20,6 +20,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -361,7 +363,42 @@ class ChRootedFs extends AbstractFileSystem {
   }
 
   @Override
-  public void setVerifyChecksum(final boolean verifyChecksum) 
+  public Path createSnapshot(Path path, String name) throws IOException {
+    return myFs.createSnapshot(fullPath(path), name);
+  }
+
+  @Override
+  public void renameSnapshot(Path path, String snapshotOldName,
+      String snapshotNewName) throws IOException {
+    myFs.renameSnapshot(fullPath(path), snapshotOldName, snapshotNewName);
+  }
+
+  @Override
+  public void deleteSnapshot(Path snapshotDir, String snapshotName)
+      throws IOException {
+    myFs.deleteSnapshot(fullPath(snapshotDir), snapshotName);
+  }
+
+  @Override
+  public void setStoragePolicy(Path path, String policyName)
+    throws IOException {
+    myFs.setStoragePolicy(fullPath(path), policyName);
+  }
+
+  @Override
+  public BlockStoragePolicySpi getStoragePolicy(final Path src)
+      throws IOException {
+    return myFs.getStoragePolicy(src);
+  }
+
+  @Override
+  public Collection<? extends BlockStoragePolicySpi> getAllStoragePolicies()
+      throws IOException {
+    return myFs.getAllStoragePolicies();
+  }
+
+  @Override
+  public void setVerifyChecksum(final boolean verifyChecksum)
       throws IOException, UnresolvedLinkException {
     myFs.setVerifyChecksum(verifyChecksum);
   }

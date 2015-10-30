@@ -18,11 +18,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 
@@ -32,15 +35,37 @@ public class RMNodeStatusEvent extends RMNodeEvent {
   private final List<ContainerStatus> containersCollection;
   private final NodeHeartbeatResponse latestResponse;
   private final List<ApplicationId> keepAliveAppIds;
-
+  private List<LogAggregationReport> logAggregationReportsForApps;
+  private final List<Container> nmReportedIncreasedContainers;
+  
+  // Used by tests
   public RMNodeStatusEvent(NodeId nodeId, NodeHealthStatus nodeHealthStatus,
       List<ContainerStatus> collection, List<ApplicationId> keepAliveAppIds,
       NodeHeartbeatResponse latestResponse) {
+    this(nodeId, nodeHealthStatus, collection, keepAliveAppIds,
+        latestResponse, null);
+  }
+
+  public RMNodeStatusEvent(NodeId nodeId, NodeHealthStatus nodeHealthStatus,
+      List<ContainerStatus> collection, List<ApplicationId> keepAliveAppIds,
+      NodeHeartbeatResponse latestResponse,
+      List<Container> nmReportedIncreasedContainers) {
+    this(nodeId, nodeHealthStatus, collection, keepAliveAppIds, latestResponse,
+        null, nmReportedIncreasedContainers);
+  }
+
+  public RMNodeStatusEvent(NodeId nodeId, NodeHealthStatus nodeHealthStatus,
+      List<ContainerStatus> collection, List<ApplicationId> keepAliveAppIds,
+      NodeHeartbeatResponse latestResponse,
+      List<LogAggregationReport> logAggregationReportsForApps,
+      List<Container> nmReportedIncreasedContainers) {
     super(nodeId, RMNodeEventType.STATUS_UPDATE);
     this.nodeHealthStatus = nodeHealthStatus;
     this.containersCollection = collection;
     this.keepAliveAppIds = keepAliveAppIds;
     this.latestResponse = latestResponse;
+    this.logAggregationReportsForApps = logAggregationReportsForApps;
+    this.nmReportedIncreasedContainers = nmReportedIncreasedContainers;
   }
 
   public NodeHealthStatus getNodeHealthStatus() {
@@ -57,5 +82,20 @@ public class RMNodeStatusEvent extends RMNodeEvent {
   
   public List<ApplicationId> getKeepAliveAppIds() {
     return this.keepAliveAppIds;
+  }
+
+  public List<LogAggregationReport> getLogAggregationReportsForApps() {
+    return this.logAggregationReportsForApps;
+  }
+
+  public void setLogAggregationReportsForApps(
+      List<LogAggregationReport> logAggregationReportsForApps) {
+    this.logAggregationReportsForApps = logAggregationReportsForApps;
+  }
+  
+  @SuppressWarnings("unchecked")
+  public List<Container> getNMReportedIncreasedContainers() {
+    return nmReportedIncreasedContainers == null ? Collections.EMPTY_LIST
+        : nmReportedIncreasedContainers;
   }
 }

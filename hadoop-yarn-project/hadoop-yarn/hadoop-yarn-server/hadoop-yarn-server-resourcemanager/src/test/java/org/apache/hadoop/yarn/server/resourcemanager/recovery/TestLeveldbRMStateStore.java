@@ -91,9 +91,21 @@ public class TestLeveldbRMStateStore extends RMStateStoreTestBase {
   }
 
   @Test(timeout = 60000)
+  public void testRemoveApplication() throws Exception {
+    LeveldbStateStoreTester tester = new LeveldbStateStoreTester();
+    testRemoveApplication(tester);
+  }
+
+  @Test(timeout = 60000)
   public void testAMTokens() throws Exception {
     LeveldbStateStoreTester tester = new LeveldbStateStoreTester();
     testAMRMTokenSecretManagerStateStore(tester);
+  }
+
+  @Test(timeout = 60000)
+  public void testReservation() throws Exception {
+    LeveldbStateStoreTester tester = new LeveldbStateStoreTester();
+    testReservationStateStore(tester);
   }
 
   class LeveldbStateStoreTester implements RMStateStoreHelper {

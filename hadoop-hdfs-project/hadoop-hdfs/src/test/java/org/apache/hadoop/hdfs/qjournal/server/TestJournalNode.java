@@ -34,11 +34,11 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.qjournal.QJMTestUtil;
 import org.apache.hadoop.hdfs.qjournal.client.IPCLoggerChannel;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -106,7 +106,9 @@ public class TestJournalNode {
     MetricsAsserts.assertCounter("BatchesWritten", 0L, metrics);
     MetricsAsserts.assertCounter("BatchesWrittenWhileLagging", 0L, metrics);
     MetricsAsserts.assertGauge("CurrentLagTxns", 0L, metrics);
+    MetricsAsserts.assertGauge("LastJournalTimestamp", 0L, metrics);
 
+    long beginTimestamp = System.currentTimeMillis();
     IPCLoggerChannel ch = new IPCLoggerChannel(
         conf, FAKE_NSINFO, journalId, jn.getBoundIpcAddress());
     ch.newEpoch(1).get();
@@ -119,6 +121,10 @@ public class TestJournalNode {
     MetricsAsserts.assertCounter("BatchesWritten", 1L, metrics);
     MetricsAsserts.assertCounter("BatchesWrittenWhileLagging", 0L, metrics);
     MetricsAsserts.assertGauge("CurrentLagTxns", 0L, metrics);
+    long lastJournalTimestamp = MetricsAsserts.getLongGauge(
+        "LastJournalTimestamp", metrics);
+    assertTrue(lastJournalTimestamp > beginTimestamp);
+    beginTimestamp = lastJournalTimestamp;
 
     ch.setCommittedTxId(100L);
     ch.sendEdits(1L, 2, 1, "goodbye".getBytes(Charsets.UTF_8)).get();
@@ -128,6 +134,9 @@ public class TestJournalNode {
     MetricsAsserts.assertCounter("BatchesWritten", 2L, metrics);
     MetricsAsserts.assertCounter("BatchesWrittenWhileLagging", 1L, metrics);
     MetricsAsserts.assertGauge("CurrentLagTxns", 98L, metrics);
+    lastJournalTimestamp = MetricsAsserts.getLongGauge(
+        "LastJournalTimestamp", metrics);
+    assertTrue(lastJournalTimestamp > beginTimestamp);
 
   }
   
@@ -185,7 +194,7 @@ public class TestJournalNode {
     byte[] retrievedViaHttp = DFSTestUtil.urlGetBytes(new URL(urlRoot +
         "/getJournal?segmentTxId=1&jid=" + journalId));
     byte[] expected = Bytes.concat(
-            Ints.toByteArray(HdfsConstants.NAMENODE_LAYOUT_VERSION),
+            Ints.toByteArray(HdfsServerConstants.NAMENODE_LAYOUT_VERSION),
             (new byte[] { 0, 0, 0, 0 }), // layout flags section
             EDITS_DATA);
 

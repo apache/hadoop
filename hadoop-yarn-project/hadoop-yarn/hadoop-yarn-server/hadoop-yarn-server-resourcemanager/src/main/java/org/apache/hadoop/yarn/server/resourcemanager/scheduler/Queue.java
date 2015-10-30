@@ -24,6 +24,7 @@ import java.util.Set;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
@@ -110,4 +111,11 @@ public interface Queue {
    *          new resource asked
    */
   public void decPendingResource(String nodeLabel, Resource resourceToDec);
+
+  /**
+   * Get the Default Application Priority for this queue
+   *
+   * @return default application priority
+   */
+  public Priority getDefaultApplicationPriority();
 }

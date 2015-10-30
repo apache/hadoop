@@ -19,4 +19,7 @@
  * This package provides access to JMX primarily through the
  * {@link org.apache.hadoop.jmx.JMXJsonServlet} class.
  */
+@InterfaceAudience.Private
 package org.apache.hadoop.jmx;
+
+import org.apache.hadoop.classification.InterfaceAudience;

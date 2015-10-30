@@ -236,7 +236,7 @@ public class TestClusterId {
     NameNode.createNameNode(argv, config);
 
     // Check if usage is printed
-    assertTrue(baos.toString("UTF-8").contains("Usage: java NameNode"));
+    assertTrue(baos.toString("UTF-8").contains("Usage: hdfs namenode"));
     System.setErr(origErr);
 
     // check if the version file does not exists.
@@ -262,7 +262,7 @@ public class TestClusterId {
     NameNode.createNameNode(argv, config);
 
     // Check if usage is printed
-    assertTrue(baos.toString("UTF-8").contains("Usage: java NameNode"));
+    assertTrue(baos.toString("UTF-8").contains("Usage: hdfs namenode"));
     System.setErr(origErr);
 
     // check if the version file does not exists.
@@ -289,7 +289,7 @@ public class TestClusterId {
     NameNode.createNameNode(argv, config);
 
     // Check if usage is printed
-    assertTrue(baos.toString("UTF-8").contains("Usage: java NameNode"));
+    assertTrue(baos.toString("UTF-8").contains("Usage: hdfs namenode"));
     System.setErr(origErr);
 
     // check if the version file does not exists.

@@ -31,26 +31,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
-import org.apache.hadoop.yarn.util.Clock;
+
+import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 public class TestFSAppAttempt extends FairSchedulerTestBase {
-
-  private class MockClock implements Clock {
-    private long time = 0;
-    @Override
-    public long getTime() {
-      return time;
-    }
-
-    public void tick(int seconds) {
-      time = time + seconds * 1000;
-    }
-
-  }
 
   @Before
   public void setup() {
@@ -125,7 +113,7 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     Priority prio = Mockito.mock(Priority.class);
     Mockito.when(prio.getPriority()).thenReturn(1);
 
-    MockClock clock = new MockClock();
+    ControlledClock clock = new ControlledClock();
     scheduler.setClock(clock);
 
     long nodeLocalityDelayMs = 5 * 1000L;    // 5 seconds
@@ -143,13 +131,13 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
                     nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
 
     // after 4 seconds should remain node local
-    clock.tick(4);
+    clock.tickSec(4);
     assertEquals(NodeType.NODE_LOCAL,
             schedulerApp.getAllowedLocalityLevelByTime(prio,
                     nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
 
     // after 6 seconds should switch to rack local
-    clock.tick(2);
+    clock.tickSec(2);
     assertEquals(NodeType.RACK_LOCAL,
             schedulerApp.getAllowedLocalityLevelByTime(prio,
                     nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
@@ -162,12 +150,12 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
                     nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
 
     // Now escalate again to rack-local, then to off-switch
-    clock.tick(6);
+    clock.tickSec(6);
     assertEquals(NodeType.RACK_LOCAL,
             schedulerApp.getAllowedLocalityLevelByTime(prio,
                     nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
 
-    clock.tick(7);
+    clock.tickSec(7);
     assertEquals(NodeType.OFF_SWITCH,
             schedulerApp.getAllowedLocalityLevelByTime(prio,
                     nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
@@ -198,18 +186,24 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     Mockito.when(mockScheduler.getClock()).thenReturn(scheduler.getClock());
 
     final FSLeafQueue mockQueue = Mockito.mock(FSLeafQueue.class);
-    final Resource queueFairShare = Resources.createResource(4096, 4);
-    final Resource queueUsage = Resource.newInstance(1024, 1);
+
+    final Resource queueMaxResources = Resource.newInstance(5 * 1024, 3);
+    final Resource queueFairShare = Resources.createResource(4096, 2);
+    final Resource queueUsage = Resource.newInstance(2048, 2);
+
+    final Resource queueStarvation =
+        Resources.subtract(queueFairShare, queueUsage);
+    final Resource queueMaxResourcesAvailable =
+        Resources.subtract(queueMaxResources, queueUsage);
+
     final Resource clusterResource = Resources.createResource(8192, 8);
-    final Resource clusterUsage = Resources.createResource(6144, 2);
+    final Resource clusterUsage = Resources.createResource(2048, 2);
+    final Resource clusterAvailable =
+        Resources.subtract(clusterResource, clusterUsage);
+
     final QueueMetrics fakeRootQueueMetrics = Mockito.mock(QueueMetrics.class);
 
-    ApplicationAttemptId applicationAttemptId = createAppAttemptId(1, 1);
-    RMContext rmContext = resourceManager.getRMContext();
-    FSAppAttempt schedulerApp =
-        new FSAppAttempt(mockScheduler, applicationAttemptId, "user1", mockQueue ,
-            null, rmContext);
-
+    Mockito.when(mockQueue.getMaxShare()).thenReturn(queueMaxResources);
     Mockito.when(mockQueue.getFairShare()).thenReturn(queueFairShare);
     Mockito.when(mockQueue.getResourceUsage()).thenReturn(queueUsage);
     Mockito.when(mockScheduler.getClusterResource()).thenReturn
@@ -219,27 +213,51 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     Mockito.when(mockScheduler.getRootQueueMetrics()).thenReturn
         (fakeRootQueueMetrics);
 
-    int minClusterAvailableMemory = 2048;
-    int minClusterAvailableCPU = 6;
-    int minQueueAvailableCPU = 3;
+    ApplicationAttemptId applicationAttemptId = createAppAttemptId(1, 1);
+    RMContext rmContext = resourceManager.getRMContext();
+    FSAppAttempt schedulerApp =
+        new FSAppAttempt(mockScheduler, applicationAttemptId, "user1", mockQueue ,
+            null, rmContext);
 
     // Min of Memory and CPU across cluster and queue is used in
     // DominantResourceFairnessPolicy
     Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
         .getInstance(DominantResourceFairnessPolicy.class));
-    verifyHeadroom(schedulerApp, minClusterAvailableMemory,
-        minQueueAvailableCPU);
+    verifyHeadroom(schedulerApp,
+        min(queueStarvation.getMemory(),
+            clusterAvailable.getMemory(),
+            queueMaxResourcesAvailable.getMemory()),
+        min(queueStarvation.getVirtualCores(),
+            clusterAvailable.getVirtualCores(),
+            queueMaxResourcesAvailable.getVirtualCores())
+    );
 
     // Fair and Fifo ignore CPU of queue, so use cluster available CPU
     Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
         .getInstance(FairSharePolicy.class));
-    verifyHeadroom(schedulerApp, minClusterAvailableMemory,
-        minClusterAvailableCPU);
+    verifyHeadroom(schedulerApp,
+        min(queueStarvation.getMemory(),
+            clusterAvailable.getMemory(),
+            queueMaxResourcesAvailable.getMemory()),
+        Math.min(
+            clusterAvailable.getVirtualCores(),
+            queueMaxResourcesAvailable.getVirtualCores())
+    );
 
     Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
         .getInstance(FifoPolicy.class));
-    verifyHeadroom(schedulerApp, minClusterAvailableMemory,
-        minClusterAvailableCPU);
+    verifyHeadroom(schedulerApp,
+        min(queueStarvation.getMemory(),
+            clusterAvailable.getMemory(),
+            queueMaxResourcesAvailable.getMemory()),
+        Math.min(
+            clusterAvailable.getVirtualCores(),
+            queueMaxResourcesAvailable.getVirtualCores())
+    );
+  }
+
+  private static int min(int value1, int value2, int value3) {
+    return Math.min(Math.min(value1, value2), value3);
   }
 
   protected void verifyHeadroom(FSAppAttempt schedulerApp,

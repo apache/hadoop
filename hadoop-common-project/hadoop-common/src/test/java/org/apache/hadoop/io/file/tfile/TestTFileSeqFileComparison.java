@@ -247,8 +247,6 @@ public class TestTFileSeqFileComparison extends TestCase {
     public SeqFileAppendable(FileSystem fs, Path path, int osBufferSize,
         String compress, int minBlkSize) throws IOException {
       Configuration conf = new Configuration();
-      conf.setBoolean(CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY,
-                      true);
 
       CompressionCodec codec = null;
       if ("lzo".equals(compress)) {

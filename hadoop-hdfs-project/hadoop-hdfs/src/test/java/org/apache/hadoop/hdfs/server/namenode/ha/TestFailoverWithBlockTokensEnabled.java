@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
@@ -55,18 +56,19 @@ public class TestFailoverWithBlockTokensEnabled {
   
   private static final Path TEST_PATH = new Path("/test-path");
   private static final String TEST_DATA = "very important text";
-  
+  private static final int numNNs = 3;
+
   private Configuration conf;
   private MiniDFSCluster cluster;
-  
+
   @Before
   public void startCluster() throws IOException {
     conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
     // Set short retry timeouts so this test runs faster
-    conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 10);
+    conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
     cluster = new MiniDFSCluster.Builder(conf)
-        .nnTopology(MiniDFSNNTopology.simpleHATopology())
+        .nnTopology(MiniDFSNNTopology.simpleHATopology(numNNs))
         .numDataNodes(1)
         .build();
   }
@@ -77,33 +79,41 @@ public class TestFailoverWithBlockTokensEnabled {
       cluster.shutdown();
     }
   }
-  
+
   @Test
   public void ensureSerialNumbersNeverOverlap() {
     BlockTokenSecretManager btsm1 = cluster.getNamesystem(0).getBlockManager()
         .getBlockTokenSecretManager();
     BlockTokenSecretManager btsm2 = cluster.getNamesystem(1).getBlockManager()
         .getBlockTokenSecretManager();
-    
-    btsm1.setSerialNo(0);
-    btsm2.setSerialNo(0);
-    assertFalse(btsm1.getSerialNoForTesting() == btsm2.getSerialNoForTesting());
-    
-    btsm1.setSerialNo(Integer.MAX_VALUE);
-    btsm2.setSerialNo(Integer.MAX_VALUE);
-    assertFalse(btsm1.getSerialNoForTesting() == btsm2.getSerialNoForTesting());
-    
-    btsm1.setSerialNo(Integer.MIN_VALUE);
-    btsm2.setSerialNo(Integer.MIN_VALUE);
-    assertFalse(btsm1.getSerialNoForTesting() == btsm2.getSerialNoForTesting());
-    
-    btsm1.setSerialNo(Integer.MAX_VALUE / 2);
-    btsm2.setSerialNo(Integer.MAX_VALUE / 2);
-    assertFalse(btsm1.getSerialNoForTesting() == btsm2.getSerialNoForTesting());
+    BlockTokenSecretManager btsm3 = cluster.getNamesystem(2).getBlockManager()
+        .getBlockTokenSecretManager();
 
-    btsm1.setSerialNo(Integer.MIN_VALUE / 2);
-    btsm2.setSerialNo(Integer.MIN_VALUE / 2);
-    assertFalse(btsm1.getSerialNoForTesting() == btsm2.getSerialNoForTesting());
+    setAndCheckSerialNumber(0, btsm1, btsm2, btsm3);
+    setAndCheckSerialNumber(Integer.MAX_VALUE, btsm1, btsm2, btsm3);
+    setAndCheckSerialNumber(Integer.MIN_VALUE, btsm1, btsm2, btsm3);
+    setAndCheckSerialNumber(Integer.MAX_VALUE / 2, btsm1, btsm2, btsm3);
+    setAndCheckSerialNumber(Integer.MIN_VALUE / 2, btsm1, btsm2, btsm3);
+    setAndCheckSerialNumber(Integer.MAX_VALUE / 3, btsm1, btsm2, btsm3);
+    setAndCheckSerialNumber(Integer.MIN_VALUE / 3, btsm1, btsm2, btsm3);
+  }
+
+  private void setAndCheckSerialNumber(int serialNumber, BlockTokenSecretManager... btsms) {
+    for (BlockTokenSecretManager btsm : btsms) {
+      btsm.setSerialNo(serialNumber);
+    }
+
+    for (int i = 0; i < btsms.length; i++) {
+      for (int j = 0; j < btsms.length; j++) {
+        if (j == i) {
+          continue;
+        }
+        int first = btsms[i].getSerialNoForTesting();
+        int second = btsms[j].getSerialNoForTesting();
+        assertFalse("Overlap found for set serial number (" + serialNumber + ") is " + i + ": "
+            + first + " == " + j + ": " + second, first == second);
+      }
+    }
   }
   
   @Test

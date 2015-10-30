@@ -1,0 +1,84 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.yarn.server.resourcemanager.blacklist;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+/**
+ * Maintains a list of failed nodes and returns that as long as number of
+ * blacklisted nodes is below a threshold percentage of total nodes. If more
+ * than threshold number of nodes are marked as failure they all are returned
+ * as removal from blacklist so previous additions are reversed.
+ */
+public class SimpleBlacklistManager implements BlacklistManager {
+
+  private int numberOfNodeManagerHosts;
+  private final double blacklistDisableFailureThreshold;
+  private final Set<String> blacklistNodes = new HashSet<>();
+  private static final ArrayList<String> EMPTY_LIST = new ArrayList<>();
+
+  private static final Log LOG = LogFactory.getLog(SimpleBlacklistManager.class);
+
+  public SimpleBlacklistManager(int numberOfNodeManagerHosts,
+      double blacklistDisableFailureThreshold) {
+    this.numberOfNodeManagerHosts = numberOfNodeManagerHosts;
+    this.blacklistDisableFailureThreshold = blacklistDisableFailureThreshold;
+  }
+
+  @Override
+  public void addNode(String node) {
+    blacklistNodes.add(node);
+  }
+
+  @Override
+  public void refreshNodeHostCount(int nodeHostCount) {
+    this.numberOfNodeManagerHosts = nodeHostCount;
+  }
+
+  @Override
+  public BlacklistUpdates getBlacklistUpdates() {
+    BlacklistUpdates ret;
+    List<String> blacklist = new ArrayList<>(blacklistNodes);
+    final int currentBlacklistSize = blacklist.size();
+    final double failureThreshold = this.blacklistDisableFailureThreshold *
+        numberOfNodeManagerHosts;
+    if (currentBlacklistSize < failureThreshold) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("blacklist size " + currentBlacklistSize + " is less than " +
+            "failure threshold ratio " + blacklistDisableFailureThreshold +
+            " out of total usable nodes " + numberOfNodeManagerHosts);
+      }
+      ret = new BlacklistUpdates(blacklist, EMPTY_LIST);
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("blacklist size " + currentBlacklistSize + " is more than " +
+            "failure threshold ratio " + blacklistDisableFailureThreshold +
+            " out of total usable nodes " + numberOfNodeManagerHosts);
+      }
+      ret = new BlacklistUpdates(EMPTY_LIST, blacklist);
+    }
+    return ret;
+  }
+}

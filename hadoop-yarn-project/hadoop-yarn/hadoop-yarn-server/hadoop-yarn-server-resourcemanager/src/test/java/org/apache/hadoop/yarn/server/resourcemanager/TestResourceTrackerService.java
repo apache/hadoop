@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -57,8 +58,10 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeLabelsUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -337,7 +340,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.start();
 
     try {
-      nodeLabelsMgr.addToCluserNodeLabels(toSet("A", "B", "C"));
+      nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("A", "B", "C"));
     } catch (IOException e) {
       Assert.fail("Caught Exception while intializing");
       e.printStackTrace();
@@ -353,14 +356,14 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
     registerReq.setNMVersion(YarnVersionInfo.getVersion());
-    registerReq.setNodeLabels(toSet("A"));
+    registerReq.setNodeLabels(toSet(NodeLabel.newInstance("A")));
     RegisterNodeManagerResponse response =
         resourceTrackerService.registerNodeManager(registerReq);
 
     Assert.assertEquals("Action should be normal on valid Node Labels",
         NodeAction.NORMAL, response.getNodeAction());
     assertCollectionEquals(nodeLabelsMgr.getNodeLabels().get(nodeId),
-        registerReq.getNodeLabels());
+        NodeLabelsUtils.convertToStringSet(registerReq.getNodeLabels()));
     Assert.assertTrue("Valid Node Labels were not accepted by RM",
         response.getAreNodeLabelsAcceptedByRM());
     rm.stop();
@@ -386,7 +389,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.start();
 
     try {
-      nodeLabelsMgr.addToCluserNodeLabels(toSet("X", "Y", "Z"));
+      nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("X", "Y", "Z"));
     } catch (IOException e) {
       Assert.fail("Caught Exception while intializing");
       e.printStackTrace();
@@ -402,7 +405,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
     registerReq.setNMVersion(YarnVersionInfo.getVersion());
-    registerReq.setNodeLabels(toSet("A", "B", "C"));
+    registerReq.setNodeLabels(toNodeLabelSet("A", "B", "C"));
     RegisterNodeManagerResponse response =
         resourceTrackerService.registerNodeManager(registerReq);
 
@@ -439,7 +442,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.start();
 
     try {
-      nodeLabelsMgr.addToCluserNodeLabels(toSet("X", "Y", "Z"));
+      nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("X", "Y", "Z"));
     } catch (IOException e) {
       Assert.fail("Caught Exception while intializing");
       e.printStackTrace();
@@ -455,7 +458,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
     req.setNMVersion(YarnVersionInfo.getVersion());
-    req.setNodeLabels(toSet("#Y"));
+    req.setNodeLabels(toNodeLabelSet("#Y"));
     RegisterNodeManagerResponse response =
         resourceTrackerService.registerNodeManager(req);
 
@@ -491,7 +494,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     };
     rm.start();
     try {
-      nodeLabelsMgr.addToCluserNodeLabels(toSet("A", "B", "C"));
+      nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("A", "B", "C"));
     } catch (IOException e) {
       Assert.fail("Caught Exception while intializing");
       e.printStackTrace();
@@ -506,7 +509,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
     req.setNMVersion(YarnVersionInfo.getVersion());
-    req.setNodeLabels(toSet("A"));
+    req.setNodeLabels(toNodeLabelSet("A"));
     RegisterNodeManagerResponse response =
         resourceTrackerService.registerNodeManager(req);
     // registered to RM with central label config
@@ -551,7 +554,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.start();
     // adding valid labels
     try {
-      nodeLabelsMgr.addToCluserNodeLabels(toSet("A", "B", "C"));
+      nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("A", "B", "C"));
     } catch (IOException e) {
       Assert.fail("Caught Exception while intializing");
       e.printStackTrace();
@@ -568,14 +571,14 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
     registerReq.setNMVersion(YarnVersionInfo.getVersion());
-    registerReq.setNodeLabels(toSet("A")); // Node register label
+    registerReq.setNodeLabels(toNodeLabelSet("A")); // Node register label
     RegisterNodeManagerResponse registerResponse =
         resourceTrackerService.registerNodeManager(registerReq);
 
     // modification of labels during heartbeat
     NodeHeartbeatRequest heartbeatReq =
         Records.newRecord(NodeHeartbeatRequest.class);
-    heartbeatReq.setNodeLabels(toSet("B")); // Node heartbeat label update
+    heartbeatReq.setNodeLabels(toNodeLabelSet("B")); // Node heartbeat label update
     NodeStatus nodeStatusObject = getNodeStatusObject(nodeId);
     heartbeatReq.setNodeStatus(nodeStatusObject);
     heartbeatReq.setLastKnownNMTokenMasterKey(registerResponse
@@ -588,7 +591,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     Assert.assertEquals("InValid Node Labels were not accepted by RM",
         NodeAction.NORMAL, nodeHeartbeatResponse.getNodeAction());
     assertCollectionEquals(nodeLabelsMgr.getNodeLabels().get(nodeId),
-        heartbeatReq.getNodeLabels());
+        NodeLabelsUtils.convertToStringSet(heartbeatReq.getNodeLabels()));
     Assert.assertTrue("Valid Node Labels were not accepted by RM",
         nodeHeartbeatResponse.getAreNodeLabelsAcceptedByRM());
     
@@ -636,7 +639,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.start();
 
     try {
-      nodeLabelsMgr.addToCluserNodeLabels(toSet("A", "B", "C"));
+      nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("A", "B", "C"));
     } catch (IOException e) {
       Assert.fail("Caught Exception while intializing");
       e.printStackTrace();
@@ -652,13 +655,13 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
     registerReq.setNMVersion(YarnVersionInfo.getVersion());
-    registerReq.setNodeLabels(toSet("A"));
+    registerReq.setNodeLabels(toNodeLabelSet("A"));
     RegisterNodeManagerResponse registerResponse =
         resourceTrackerService.registerNodeManager(registerReq);
 
     NodeHeartbeatRequest heartbeatReq =
         Records.newRecord(NodeHeartbeatRequest.class);
-    heartbeatReq.setNodeLabels(toSet("B", "#C")); // Invalid heart beat labels
+    heartbeatReq.setNodeLabels(toNodeLabelSet("B", "#C")); // Invalid heart beat labels
     heartbeatReq.setNodeStatus(getNodeStatusObject(nodeId));
     heartbeatReq.setLastKnownNMTokenMasterKey(registerResponse
         .getNMTokenMasterKey());
@@ -705,13 +708,13 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
     req.setNMVersion(YarnVersionInfo.getVersion());
-    req.setNodeLabels(toSet("A", "B", "C"));
+    req.setNodeLabels(toNodeLabelSet("A", "B", "C"));
     RegisterNodeManagerResponse registerResponse =
         resourceTrackerService.registerNodeManager(req);
 
     NodeHeartbeatRequest heartbeatReq =
         Records.newRecord(NodeHeartbeatRequest.class);
-    heartbeatReq.setNodeLabels(toSet("B")); // Valid heart beat labels
+    heartbeatReq.setNodeLabels(toNodeLabelSet("B")); // Valid heart beat labels
     heartbeatReq.setNodeStatus(getNodeStatusObject(nodeId));
     heartbeatReq.setLastKnownNMTokenMasterKey(registerResponse
         .getNMTokenMasterKey());
@@ -920,7 +923,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         ClusterMetrics.getMetrics().getUnhealthyNMs());
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   @Test
   public void testHandleContainerStatusInvalidCompletions() throws Exception {
     rm = new MockRM(new YarnConfiguration());
@@ -1074,6 +1077,113 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
 
   }
 
+  @Test
+  public void testNMUnregistration() throws Exception {
+    Configuration conf = new Configuration();
+    rm = new MockRM(conf);
+    rm.start();
+
+    ResourceTrackerService resourceTrackerService = rm
+        .getResourceTrackerService();
+    MockNM nm1 = rm.registerNode("host1:1234", 5120);
+
+    int shutdownNMsCount = ClusterMetrics.getMetrics()
+        .getNumShutdownNMs();
+    NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
+    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+
+    UnRegisterNodeManagerRequest request = Records
+        .newRecord(UnRegisterNodeManagerRequest.class);
+    request.setNodeId(nm1.getNodeId());
+    resourceTrackerService.unRegisterNodeManager(request);
+    checkShutdownNMCount(rm, ++shutdownNMsCount);
+
+    // The RM should remove the node after unregistration, hence send a reboot
+    // command.
+    nodeHeartbeat = nm1.nodeHeartbeat(true);
+    Assert.assertTrue(NodeAction.RESYNC.equals(nodeHeartbeat.getNodeAction()));
+  }
+
+  @Test
+  public void testUnhealthyNMUnregistration() throws Exception {
+    Configuration conf = new Configuration();
+    rm = new MockRM(conf);
+    rm.start();
+
+    ResourceTrackerService resourceTrackerService = rm
+        .getResourceTrackerService();
+    MockNM nm1 = rm.registerNode("host1:1234", 5120);
+    Assert.assertEquals(0, ClusterMetrics.getMetrics().getUnhealthyNMs());
+    // node healthy
+    nm1.nodeHeartbeat(true);
+    int shutdownNMsCount = ClusterMetrics.getMetrics().getNumShutdownNMs();
+
+    // node unhealthy
+    nm1.nodeHeartbeat(false);
+    checkUnealthyNMCount(rm, nm1, true, 1);
+    UnRegisterNodeManagerRequest request = Records
+        .newRecord(UnRegisterNodeManagerRequest.class);
+    request.setNodeId(nm1.getNodeId());
+    resourceTrackerService.unRegisterNodeManager(request);
+    checkShutdownNMCount(rm, ++shutdownNMsCount);
+  }
+
+  @Test
+  public void testInvalidNMUnregistration() throws Exception {
+    Configuration conf = new Configuration();
+    rm = new MockRM(conf);
+    rm.start();
+    ResourceTrackerService resourceTrackerService = rm
+        .getResourceTrackerService();
+    int shutdownNMsCount = ClusterMetrics.getMetrics()
+        .getNumShutdownNMs();
+    int decommisionedNMsCount = ClusterMetrics.getMetrics()
+        .getNumDecommisionedNMs();
+
+    // Node not found for unregister
+    UnRegisterNodeManagerRequest request = Records
+        .newRecord(UnRegisterNodeManagerRequest.class);
+    request.setNodeId(BuilderUtils.newNodeId("host", 1234));
+    resourceTrackerService.unRegisterNodeManager(request);
+    checkShutdownNMCount(rm, 0);
+    checkDecommissionedNMCount(rm, 0);
+
+    // 1. Register the Node Manager
+    // 2. Exclude the same Node Manager host
+    // 3. Give NM heartbeat to RM
+    // 4. Unregister the Node Manager
+    MockNM nm1 = new MockNM("host1:1234", 5120, resourceTrackerService);
+    RegisterNodeManagerResponse response = nm1.registerNode();
+    Assert.assertEquals(NodeAction.NORMAL, response.getNodeAction());
+    writeToHostsFile("host2");
+    conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
+        hostFile.getAbsolutePath());
+    rm.getNodesListManager().refreshNodes(conf);
+    NodeHeartbeatResponse heartbeatResponse = nm1.nodeHeartbeat(true);
+    Assert.assertEquals(NodeAction.SHUTDOWN, heartbeatResponse.getNodeAction());
+    checkShutdownNMCount(rm, shutdownNMsCount);
+    checkDecommissionedNMCount(rm, ++decommisionedNMsCount);
+    request.setNodeId(nm1.getNodeId());
+    resourceTrackerService.unRegisterNodeManager(request);
+    checkShutdownNMCount(rm, shutdownNMsCount);
+    checkDecommissionedNMCount(rm, decommisionedNMsCount);
+
+    // 1. Register the Node Manager
+    // 2. Exclude the same Node Manager host
+    // 3. Unregister the Node Manager
+    MockNM nm2 = new MockNM("host2:1234", 5120, resourceTrackerService);
+    RegisterNodeManagerResponse response2 = nm2.registerNode();
+    Assert.assertEquals(NodeAction.NORMAL, response2.getNodeAction());
+    writeToHostsFile("host1");
+    conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
+        hostFile.getAbsolutePath());
+    rm.getNodesListManager().refreshNodes(conf);
+    request.setNodeId(nm2.getNodeId());
+    resourceTrackerService.unRegisterNodeManager(request);
+    checkShutdownNMCount(rm, shutdownNMsCount);
+    checkDecommissionedNMCount(rm, ++decommisionedNMsCount);
+  }
+
   private void writeToHostsFile(String... hosts) throws IOException {
     if (!hostFile.exists()) {
       TEMP_DIR.mkdirs();
@@ -1107,6 +1217,19 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         .getNumDecommisionedNMs());
     Assert.assertEquals("The decommisioned metrics are not updated", count,
         ClusterMetrics.getMetrics().getNumDecommisionedNMs());
+  }
+
+  private void checkShutdownNMCount(MockRM rm, int count)
+      throws InterruptedException {
+    int waitCount = 0;
+    while (ClusterMetrics.getMetrics().getNumShutdownNMs() != count
+        && waitCount++ < 20) {
+      synchronized (this) {
+        wait(100);
+      }
+    }
+    Assert.assertEquals("The shutdown metrics are not updated", count,
+        ClusterMetrics.getMetrics().getNumShutdownNMs());
   }
 
   @After

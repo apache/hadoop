@@ -20,9 +20,11 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.assertTrue;
 
 import java.lang.management.ManagementFactory;
+import java.io.File;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
@@ -126,7 +128,12 @@ public class TestHostsFiles {
       assertTrue("Live nodes should contain the decommissioned node",
               nodes.contains("Decommissioned"));
     } finally {
-      cluster.shutdown();
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      if (localFileSys.exists(dir)) {
+        FileUtils.deleteQuietly(new File(dir.toUri().getPath()));
+      }
     }
   }
 
@@ -166,6 +173,9 @@ public class TestHostsFiles {
     } finally {
       if (cluster != null) {
         cluster.shutdown();
+      }
+      if (localFileSys.exists(dir)) {
+        FileUtils.deleteQuietly(new File(dir.toUri().getPath()));
       }
     }
   }

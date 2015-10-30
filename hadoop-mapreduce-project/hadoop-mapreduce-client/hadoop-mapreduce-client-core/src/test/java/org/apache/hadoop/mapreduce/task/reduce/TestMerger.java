@@ -87,7 +87,7 @@ public class TestMerger {
     jobConf.setBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA, true);
     conf.setBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA, true);
     Credentials credentials = UserGroupInformation.getCurrentUser().getCredentials();
-    TokenCache.setShuffleSecretKey(new byte[16], credentials);
+    TokenCache.setEncryptedSpillKey(new byte[16], credentials);
     UserGroupInformation.getCurrentUser().addCredentials(credentials);
     testInMemoryAndOnDiskMerger();
   }

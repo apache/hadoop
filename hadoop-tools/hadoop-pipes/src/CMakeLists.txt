@@ -6,7 +6,7 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
- 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
@@ -17,25 +17,11 @@
 #
 
 cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
+
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/../../../hadoop-common-project/hadoop-common)
+include(HadoopCommon)
+
 find_package(OpenSSL REQUIRED)
-
-set(CMAKE_BUILD_TYPE, Release)
-
-set(PIPES_FLAGS "-g -Wall -O2 -D_REENTRANT -D_GNU_SOURCE")
-set(PIPES_FLAGS "${PIPES_FLAGS} -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${PIPES_FLAGS}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${PIPES_FLAGS}")
-
-include(../../../hadoop-common-project/hadoop-common/src/JNIFlags.cmake NO_POLICY_SCOPE)
-
-function(output_directory TGT DIR)
-    SET_TARGET_PROPERTIES(${TGT} PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${DIR}")
-   SET_TARGET_PROPERTIES(${TGT} PROPERTIES
-        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${DIR}")
-    SET_TARGET_PROPERTIES(${TGT} PROPERTIES
-        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${DIR}")
-endfunction(output_directory TGT DIR)
 
 include_directories(
     main/native/utils/api
@@ -47,19 +33,19 @@ include_directories(
 # Example programs
 add_executable(wordcount-simple main/native/examples/impl/wordcount-simple.cc)
 target_link_libraries(wordcount-simple hadooppipes hadooputils)
-output_directory(wordcount-simple examples)
+hadoop_output_directory(wordcount-simple examples)
 
 add_executable(wordcount-part main/native/examples/impl/wordcount-part.cc)
 target_link_libraries(wordcount-part hadooppipes hadooputils)
-output_directory(wordcount-part examples)
+hadoop_output_directory(wordcount-part examples)
 
 add_executable(wordcount-nopipe main/native/examples/impl/wordcount-nopipe.cc)
 target_link_libraries(wordcount-nopipe hadooppipes hadooputils)
-output_directory(wordcount-nopipe examples)
+hadoop_output_directory(wordcount-nopipe examples)
 
 add_executable(pipes-sort main/native/examples/impl/sort.cc)
 target_link_libraries(pipes-sort hadooppipes hadooputils)
-output_directory(pipes-sort examples)
+hadoop_output_directory(pipes-sort examples)
 
 add_library(hadooputils STATIC
     main/native/utils/impl/StringUtils.cc
@@ -69,7 +55,23 @@ add_library(hadooputils STATIC
 add_library(hadooppipes STATIC
     main/native/pipes/impl/HadoopPipes.cc
 )
+
+include(CheckLibraryExists)
+check_library_exists(dl dlopen "" NEED_LINK_DL)
+
+if(NEED_LINK_DL)
+    set(LIB_DL "dl")
+endif()
+
+if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+    exec_program("uname" ARGS "-r" OUTPUT_VARIABLE OS_VERSION)
+    if(OS_VERSION VERSION_LESS "5.12")
+        set(LIB_NET "socket" "nsl")
+    endif()
+endif()
+
 target_link_libraries(hadooppipes
     ${OPENSSL_LIBRARIES}
-    pthread
+    ${LIB_DL}
+    ${LIB_NET}
 )

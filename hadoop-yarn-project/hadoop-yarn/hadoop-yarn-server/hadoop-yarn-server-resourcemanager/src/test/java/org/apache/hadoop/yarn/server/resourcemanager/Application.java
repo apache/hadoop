@@ -54,6 +54,9 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.Task.State;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -167,6 +170,16 @@ public class Application {
     
     resourceManager.getClientRMService().submitApplication(request);
 
+    RMAppEvent event =
+        new RMAppEvent(this.applicationId, RMAppEventType.START);
+    resourceManager.getRMContext().getRMApps().get(applicationId).handle(event);
+    event =
+        new RMAppEvent(this.applicationId, RMAppEventType.APP_NEW_SAVED);
+    resourceManager.getRMContext().getRMApps().get(applicationId).handle(event);
+    event =
+        new RMAppEvent(this.applicationId, RMAppEventType.APP_ACCEPTED);
+    resourceManager.getRMContext().getRMApps().get(applicationId).handle(event);
+
     // Notify scheduler
     AppAddedSchedulerEvent addAppEvent =
         new AppAddedSchedulerEvent(this.applicationId, this.queue, "user");
@@ -277,6 +290,9 @@ public class Application {
     } else {
       request.setNumContainers(request.getNumContainers() + 1);
     }
+    if (request.getNodeLabelExpression() == null) {
+      request.setNodeLabelExpression(RMNodeLabelsManager.NO_LABEL);
+    }
     
     // Note this down for next interaction with ResourceManager
     ask.remove(request);
@@ -307,7 +323,7 @@ public class Application {
     // Get resources from the ResourceManager
     Allocation allocation = resourceManager.getResourceScheduler().allocate(
         applicationAttemptId, new ArrayList<ResourceRequest>(ask),
-        new ArrayList<ContainerId>(), null, null);
+        new ArrayList<ContainerId>(), null, null, null, null);
     System.out.println("-=======" + applicationAttemptId);
     System.out.println("----------" + resourceManager.getRMContext().getRMApps()
         .get(applicationId).getRMAppAttempt(applicationAttemptId));

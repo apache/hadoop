@@ -611,8 +611,9 @@ public class TestJobCounters {
     jobConf.setOutputValueClass(Text.class);
     jobConf.setMaxMapAttempts(1);
     jobConf.setMaxReduceAttempts(1);
-    jobConf.set(JobConf.MAPRED_TASK_JAVA_OPTS, heapOptions);
-    
+    jobConf.set(JobConf.MAPRED_MAP_TASK_JAVA_OPTS, heapOptions);
+    jobConf.set(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS, heapOptions);
+
     // set the targets
     jobConf.setLong(MemoryLoaderMapper.TARGET_VALUE, targetMapValue);
     jobConf.setLong(MemoryLoaderReducer.TARGET_VALUE, targetReduceValue);

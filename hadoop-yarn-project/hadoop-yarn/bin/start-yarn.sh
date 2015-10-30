@@ -16,13 +16,14 @@
 # limitations under the License.
 
 
+MYNAME="${BASH_SOURCE-$0}"
+
 function hadoop_usage
 {
-  echo "Usage: start-yarn.sh [--config confdir]"
+  hadoop_generate_usage "${MYNAME}" false
 }
 
-this="${BASH_SOURCE-$0}"
-bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
+bin=$(cd -P -- "$(dirname -- "${MYNAME}")" >/dev/null && pwd -P)
 
 # let's locate libexec...
 if [[ -n "${HADOOP_PREFIX}" ]]; then
@@ -42,10 +43,46 @@ else
 fi
 
 # start resourceManager
-echo "Starting resourcemanager" 
-"${HADOOP_YARN_HOME}/bin/yarn" --config "${HADOOP_CONF_DIR}" --daemon start resourcemanager
-# start nodeManager
-echo "Starting nodemanagers" 
-"${bin}/yarn-daemons.sh" --config "${HADOOP_CONF_DIR}"  start nodemanager
+HARM=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -confKey yarn.resourcemanager.ha.enabled 2>&-)
+if [[ ${HARM} = "false" ]]; then
+  echo "Starting resourcemanager"
+  "${HADOOP_YARN_HOME}/bin/yarn" \
+      --config "${HADOOP_CONF_DIR}" \
+      --daemon start \
+      resourcemanager
+else
+  logicals=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -confKey yarn.resourcemanager.ha.rm-ids 2>&-)
+  logicals=${logicals//,/ }
+  for id in ${logicals}
+  do
+      rmhost=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -confKey "yarn.resourcemanager.hostname.${id}" 2>&-)
+      RMHOSTS="${RMHOSTS} ${rmhost}"
+  done
+  echo "Starting resourcemanagers on [${RMHOSTS}]"
+  "${HADOOP_YARN_HOME}/bin/yarn" \
+      --config "${HADOOP_CONF_DIR}" \
+      --daemon start \
+      --slaves \
+      --hostnames "${RMHOSTS}" \
+      resourcemanager
+fi
+
+# start nodemanager
+echo "Starting nodemanagers"
+"${HADOOP_YARN_HOME}/bin/yarn" \
+    --config "${HADOOP_CONF_DIR}" \
+    --slaves \
+    --daemon start \
+    nodemanager
+
 # start proxyserver
-#"${HADOOP_YARN_HOME}/bin/yarn" --config "${HADOOP_CONF_DIR}" --daemon start proxyserver
+PROXYSERVER=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -confKey  yarn.web-proxy.address 2>&- | cut -f1 -d:)
+if [[ -n ${PROXYSERVER} ]]; then
+  "${HADOOP_YARN_HOME}/bin/yarn" \
+      --config "${HADOOP_CONF_DIR}" \
+      --slaves \
+      --hostnames "${PROXYSERVER}" \
+      --daemon start \
+      proxyserver
+fi
+

@@ -978,8 +978,9 @@ public class MapTask extends Task {
         throw new IOException(
             "Invalid \"" + JobContext.IO_SORT_MB + "\": " + sortmb);
       }
-      sorter = ReflectionUtils.newInstance(job.getClass("map.sort.class",
-            QuickSort.class, IndexedSorter.class), job);
+      sorter = ReflectionUtils.newInstance(job.getClass(
+                   MRJobConfig.MAP_SORT_CLASS, QuickSort.class,
+                   IndexedSorter.class), job);
       // buffers and accounting
       int maxMemUsage = sortmb << 20;
       maxMemUsage -= maxMemUsage % METASIZE;

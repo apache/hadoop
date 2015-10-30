@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.metrics2.impl;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
@@ -482,6 +484,77 @@ public class TestMetricsSystemImpl {
       proceedSignal.countDown();
       ms.stop();
     }
+  }
+
+  /**
+   * Class to verify HADOOP-11932. Instead of reading from HTTP, going in loop
+   * until closed.
+   */
+  private static class TestClosableSink implements MetricsSink, Closeable {
+
+    boolean closed = false;
+    CountDownLatch collectingLatch;
+
+    public TestClosableSink(CountDownLatch collectingLatch) {
+      this.collectingLatch = collectingLatch;
+    }
+
+    @Override
+    public void init(SubsetConfiguration conf) {
+    }
+
+    @Override
+    public void close() throws IOException {
+      closed = true;
+    }
+
+    @Override
+    public void putMetrics(MetricsRecord record) {
+      while (!closed) {
+        collectingLatch.countDown();
+      }
+    }
+
+    @Override
+    public void flush() {
+    }
+  }
+
+  /**
+   * HADOOP-11932
+   */
+  @Test(timeout = 5000)
+  public void testHangOnSinkRead() throws Exception {
+    new ConfigBuilder().add("*.period", 8)
+        .add("test.sink.test.class", TestSink.class.getName())
+        .save(TestMetricsConfig.getTestFilename("hadoop-metrics2-test"));
+    MetricsSystemImpl ms = new MetricsSystemImpl("Test");
+    ms.start();
+    try {
+      CountDownLatch collectingLatch = new CountDownLatch(1);
+      MetricsSink sink = new TestClosableSink(collectingLatch);
+      ms.registerSink("closeableSink",
+          "The sink will be used to test closeability", sink);
+      // trigger metric collection first time
+      ms.onTimerEvent();
+      // Make sure that sink is collecting metrics
+      assertTrue(collectingLatch.await(1, TimeUnit.SECONDS));
+    } finally {
+      ms.stop();
+    }
+  }
+
+  @Test
+  public void testRegisterSourceJmxCacheTTL() {
+    MetricsSystem ms = new MetricsSystemImpl();
+    ms.init("TestMetricsSystem");
+    TestSource ts = new TestSource("ts");
+    ms.register(ts);
+    MetricsSourceAdapter sa = ((MetricsSystemImpl) ms)
+        .getSourceAdapter("TestSource");
+    assertEquals(MetricsConfig.PERIOD_DEFAULT * 1000 + 1,
+        sa.getJmxCacheTTL());
+    ms.shutdown();
   }
 
   @Metrics(context="test")

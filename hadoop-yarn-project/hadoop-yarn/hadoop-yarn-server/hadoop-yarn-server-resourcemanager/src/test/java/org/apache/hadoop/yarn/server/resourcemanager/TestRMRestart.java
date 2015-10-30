@@ -21,10 +21,12 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.base.Supplier;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -53,6 +55,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.service.Service.STATE;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
@@ -586,10 +589,19 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
             .getAppAttemptState());
     Assert.assertEquals(RMAppAttemptState.LAUNCHED,rmApp.getAppAttempts()
         .get(latestAppAttemptId).getAppAttemptState());
-    
+
     rm3.waitForState(latestAppAttemptId, RMAppAttemptState.FAILED);
     rm3.waitForState(rmApp.getApplicationId(), RMAppState.ACCEPTED);
-    Assert.assertEquals(4, rmApp.getAppAttempts().size());
+    final int maxRetry = 10;
+    final RMApp rmAppForCheck = rmApp;
+    GenericTestUtils.waitFor(
+        new Supplier<Boolean>() {
+          @Override
+          public Boolean get() {
+            return new Boolean(rmAppForCheck.getAppAttempts().size() == 4);
+          }
+        },
+        100, maxRetry);
     Assert.assertEquals(RMAppAttemptState.FAILED,
         rmApp.getAppAttempts().get(latestAppAttemptId).getAppAttemptState());
     
@@ -965,9 +977,10 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     List<ApplicationReport> appList2 = response2.getApplicationList();
     Assert.assertTrue(3 == appList2.size());
 
-    // check application summary is logged for the completed apps after RM restart.
-    verify(rm2.getRMAppManager(), times(3)).logApplicationSummary(
-      isA(ApplicationId.class));
+    // check application summary is logged for the completed apps with timeout
+    // to make sure APP_COMPLETED events are processed, after RM restart.
+    verify(rm2.getRMAppManager(), timeout(1000).times(3)).
+        logApplicationSummary(isA(ApplicationId.class));
   }
 
   private MockAM launchAM(RMApp app, MockRM rm, MockNM nm)
@@ -1166,24 +1179,24 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
 
     // Need to wait for a while as now token renewal happens on another thread
     // and is asynchronous in nature.
-    waitForTokensToBeRenewed(rm2);
+    waitForTokensToBeRenewed(rm2, tokenSet);
 
     // verify tokens are properly populated back to rm2 DelegationTokenRenewer
     Assert.assertEquals(tokenSet, rm2.getRMContext()
       .getDelegationTokenRenewer().getDelegationTokens());
   }
 
-  private void waitForTokensToBeRenewed(MockRM rm2) throws Exception {
-    int waitCnt = 20;
-    boolean atleastOneAppInNEWState = true;
-    while (waitCnt-- > 0 && atleastOneAppInNEWState) {
-      atleastOneAppInNEWState = false;
-      for (RMApp rmApp : rm2.getRMContext().getRMApps().values()) {
-        if (rmApp.getState() == RMAppState.NEW) {
-          Thread.sleep(1000);
-          atleastOneAppInNEWState = true;
-          break;
-        }
+  private void waitForTokensToBeRenewed(MockRM rm2,
+      HashSet<Token<RMDelegationTokenIdentifier>> tokenSet) throws Exception {
+    // Max wait time to get the token renewal can be kept as 1sec (100 * 10ms)
+    int waitCnt = 100;
+    while (waitCnt-- > 0) {
+      if (tokenSet.equals(rm2.getRMContext().getDelegationTokenRenewer()
+          .getDelegationTokens())) {
+        // Stop waiting as tokens are populated to DelegationTokenRenewer.
+        break;
+      } else {
+        Thread.sleep(10);
       }
     }
   }
@@ -1984,14 +1997,21 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
       }
     }
   }
-
+  
   public static NMContainerStatus createNMContainerStatus(
       ApplicationAttemptId appAttemptId, int id, ContainerState containerState) {
+    return createNMContainerStatus(appAttemptId, id, containerState,
+        RMNodeLabelsManager.NO_LABEL);
+  }
+
+  public static NMContainerStatus createNMContainerStatus(
+      ApplicationAttemptId appAttemptId, int id, ContainerState containerState,
+      String nodeLabelExpression) {
     ContainerId containerId = ContainerId.newContainerId(appAttemptId, id);
     NMContainerStatus containerReport =
         NMContainerStatus.newInstance(containerId, containerState,
-          Resource.newInstance(1024, 1), "recover container", 0,
-          Priority.newInstance(0), 0);
+            Resource.newInstance(1024, 1), "recover container", 0,
+            Priority.newInstance(0), 0, nodeLabelExpression);
     return containerReport;
   }
 
@@ -2097,7 +2117,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     clusterNodeLabels.add("y");
     clusterNodeLabels.add("z");
     // Add node label x,y,z
-    nodeLabelManager.addToCluserNodeLabels(clusterNodeLabels);
+    nodeLabelManager.addToCluserNodeLabelsWithDefaultExclusivity(clusterNodeLabels);
 
     // Add node Label to Node h1->x
     NodeId n1 = NodeId.newInstance("h1", 0);
@@ -2122,7 +2142,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     }
 
     Assert.assertEquals(clusterNodeLabels.size(), nodeLabelManager
-        .getClusterNodeLabels().size());
+        .getClusterNodeLabelNames().size());
 
     Map<NodeId, Set<String>> nodeLabels = nodeLabelManager.getNodeLabels();
     Assert.assertEquals(1, nodeLabelManager.getNodeLabels().size());
@@ -2141,13 +2161,75 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
 
     nodeLabelManager = rm2.getRMContext().getNodeLabelManager();
     Assert.assertEquals(clusterNodeLabels.size(), nodeLabelManager
-        .getClusterNodeLabels().size());
+        .getClusterNodeLabelNames().size());
 
     nodeLabels = nodeLabelManager.getNodeLabels();
     Assert.assertEquals(1, nodeLabelManager.getNodeLabels().size());
     Assert.assertTrue(nodeLabels.get(n1).equals(toSet("y")));
     rm1.stop();
     rm2.stop();
+  }
+
+  @Test(timeout = 60000)
+  public void testRMRestartFailAppAttempt() throws Exception {
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+    int maxAttempt =
+        conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+            YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+    RMState rmState = memStore.getState();
+    Map<ApplicationId, ApplicationStateData> rmAppState =
+        rmState.getApplicationState();
+
+    // start RM
+    MockRM rm1 = createMockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    // create app and launch the AM
+    RMApp app0 = rm1.submitApp(200);
+    MockAM am0 = launchAM(app0, rm1, nm1);
+
+    ApplicationId applicationId = app0.getApplicationId();
+    ApplicationAttemptId appAttemptId1 =
+        app0.getCurrentAppAttempt().getAppAttemptId();
+    Assert.assertEquals(1, appAttemptId1.getAttemptId());
+
+    // fail the 1st app attempt.
+    rm1.failApplicationAttempt(appAttemptId1);
+
+    rm1.waitForState(appAttemptId1, RMAppAttemptState.FAILED);
+    rm1.waitForState(applicationId, RMAppState.ACCEPTED);
+
+    ApplicationAttemptId appAttemptId2 =
+        app0.getCurrentAppAttempt().getAppAttemptId();
+    Assert.assertEquals(2, appAttemptId2.getAttemptId());
+    rm1.waitForState(appAttemptId2, RMAppAttemptState.SCHEDULED);
+
+    // restart rm
+    MockRM rm2 = createMockRM(conf, memStore);
+    rm2.start();
+    RMApp loadedApp0 = rm2.getRMContext().getRMApps().get(applicationId);
+    rm2.waitForState(applicationId, RMAppState.ACCEPTED);
+    rm2.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.FAILED);
+
+
+    Assert.assertEquals(2, loadedApp0.getAppAttempts().size());
+    rm2.waitForState(appAttemptId2, RMAppAttemptState.SCHEDULED);
+
+    appAttemptId2 = loadedApp0.getCurrentAppAttempt().getAppAttemptId();
+    Assert.assertEquals(2, appAttemptId2.getAttemptId());
+
+    // fail 2nd attempt
+    rm2.failApplicationAttempt(appAttemptId2);
+
+    rm2.waitForState(appAttemptId2, RMAppAttemptState.FAILED);
+    rm2.waitForState(applicationId, RMAppState.FAILED);
+    Assert.assertEquals(maxAttempt, loadedApp0.getAppAttempts().size());
   }
 
   private <E> Set<E> toSet(E... elements) {

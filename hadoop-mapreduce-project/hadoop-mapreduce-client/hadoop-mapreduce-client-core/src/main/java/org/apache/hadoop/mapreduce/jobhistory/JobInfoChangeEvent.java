@@ -42,9 +42,9 @@ public class JobInfoChangeEvent implements HistoryEvent {
    * @param launchTime Launch time of the job
    */
   public JobInfoChangeEvent(JobID id, long submitTime, long launchTime) {
-    datum.jobid = new Utf8(id.toString());
-    datum.submitTime = submitTime;
-    datum.launchTime = launchTime;
+    datum.setJobid(new Utf8(id.toString()));
+    datum.setSubmitTime(submitTime);
+    datum.setLaunchTime(launchTime);
   }
 
   JobInfoChangeEvent() { }
@@ -55,11 +55,11 @@ public class JobInfoChangeEvent implements HistoryEvent {
   }
 
   /** Get the Job ID */
-  public JobID getJobId() { return JobID.forName(datum.jobid.toString()); }
+  public JobID getJobId() { return JobID.forName(datum.getJobid().toString()); }
   /** Get the Job submit time */
-  public long getSubmitTime() { return datum.submitTime; }
+  public long getSubmitTime() { return datum.getSubmitTime(); }
   /** Get the Job launch time */
-  public long getLaunchTime() { return datum.launchTime; }
+  public long getLaunchTime() { return datum.getLaunchTime(); }
 
   public EventType getEventType() {
     return EventType.JOB_INFO_CHANGED;

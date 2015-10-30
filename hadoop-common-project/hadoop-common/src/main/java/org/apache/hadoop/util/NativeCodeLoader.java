@@ -22,8 +22,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 
 /**
  * A helper to load the native hadoop code i.e. libhadoop.so.
@@ -85,29 +83,5 @@ public class NativeCodeLoader {
   public static native boolean buildSupportsOpenssl();
 
   public static native String getLibraryName();
-
-  /**
-   * Return if native hadoop libraries, if present, can be used for this job.
-   * @param conf configuration
-   * 
-   * @return <code>true</code> if native hadoop libraries, if present, can be 
-   *         used for this job; <code>false</code> otherwise.
-   */
-  public boolean getLoadNativeLibraries(Configuration conf) {
-    return conf.getBoolean(CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY, 
-                           CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_DEFAULT);
-  }
-  
-  /**
-   * Set if native hadoop libraries, if present, can be used for this job.
-   * 
-   * @param conf configuration
-   * @param loadNativeLibraries can native hadoop libraries be loaded
-   */
-  public void setLoadNativeLibraries(Configuration conf, 
-                                     boolean loadNativeLibraries) {
-    conf.setBoolean(CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY,
-                    loadNativeLibraries);
-  }
 
 }

@@ -18,14 +18,20 @@
 
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.MiniDFSCluster.NameNodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.test.PathUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -137,6 +143,90 @@ public class TestMiniDFSCluster {
           cluster5.getDataNodes().get(0).getDatanodeId().getHostName());
     } finally {
       MiniDFSCluster.shutdownCluster(cluster5);
+    }
+  }
+
+  @Test
+  public void testClusterSetDatanodeDifferentStorageType() throws IOException {
+    final Configuration conf = new HdfsConfiguration();
+    StorageType[][] storageType = new StorageType[][] {
+        {StorageType.DISK, StorageType.ARCHIVE}, {StorageType.DISK},
+        {StorageType.ARCHIVE}};
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(3).storageTypes(storageType).build();
+    try {
+      cluster.waitActive();
+      ArrayList<DataNode> dataNodes = cluster.getDataNodes();
+      // Check the number of directory in DN's
+      for (int i = 0; i < storageType.length; i++) {
+        assertEquals(DataNode.getStorageLocations(dataNodes.get(i).getConf())
+            .size(), storageType[i].length);
+      }
+    } finally {
+      MiniDFSCluster.shutdownCluster(cluster);
+    }
+  }
+
+  @Test
+  public void testClusterNoStorageTypeSetForDatanodes() throws IOException {
+    final Configuration conf = new HdfsConfiguration();
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(3).build();
+    try {
+      cluster.waitActive();
+      ArrayList<DataNode> dataNodes = cluster.getDataNodes();
+      // Check the number of directory in DN's
+      for (DataNode datanode : dataNodes) {
+        assertEquals(DataNode.getStorageLocations(datanode.getConf()).size(),
+            2);
+      }
+    } finally {
+      MiniDFSCluster.shutdownCluster(cluster);
+    }
+  }
+
+  @Test
+  public void testSetUpFederatedCluster() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster  cluster =
+            new MiniDFSCluster.Builder(conf).nnTopology(
+                    MiniDFSNNTopology.simpleHAFederatedTopology(2))
+                .numDataNodes(2)
+                .build();
+    try {
+      cluster.waitActive();
+      cluster.transitionToActive(1);
+      cluster.transitionToActive(3);
+      assertEquals("standby", cluster.getNamesystem(0).getHAState());
+      assertEquals("active", cluster.getNamesystem(1).getHAState());
+      assertEquals("standby", cluster.getNamesystem(2).getHAState());
+      assertEquals("active", cluster.getNamesystem(3).getHAState());
+
+      String ns0nn0 = conf.get(
+          DFSUtil.addKeySuffixes(DFS_NAMENODE_HTTP_ADDRESS_KEY, "ns0", "nn0"));
+      String ns0nn1 = conf.get(
+          DFSUtil.addKeySuffixes(DFS_NAMENODE_HTTP_ADDRESS_KEY, "ns0", "nn1"));
+      String ns1nn0 = conf.get(
+          DFSUtil.addKeySuffixes(DFS_NAMENODE_HTTP_ADDRESS_KEY, "ns1", "nn0"));
+      String ns1nn1 = conf.get(
+          DFSUtil.addKeySuffixes(DFS_NAMENODE_HTTP_ADDRESS_KEY, "ns1", "nn1"));
+
+      for(NameNodeInfo nnInfo : cluster.getNameNodeInfos()) {
+        assertEquals(ns0nn0, nnInfo.conf.get(
+            DFSUtil.addKeySuffixes(
+            DFS_NAMENODE_HTTP_ADDRESS_KEY, "ns0", "nn0")));
+        assertEquals(ns0nn1, nnInfo.conf.get(
+            DFSUtil.addKeySuffixes(
+            DFS_NAMENODE_HTTP_ADDRESS_KEY, "ns0", "nn1")));
+        assertEquals(ns1nn0, nnInfo.conf.get(
+            DFSUtil.addKeySuffixes(
+            DFS_NAMENODE_HTTP_ADDRESS_KEY, "ns1", "nn0")));
+        assertEquals(ns1nn1, nnInfo.conf.get(
+            DFSUtil.addKeySuffixes(
+            DFS_NAMENODE_HTTP_ADDRESS_KEY, "ns1", "nn1")));
+      }
+    } finally {
+      MiniDFSCluster.shutdownCluster(cluster);
     }
   }
 }

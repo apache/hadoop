@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FifoSchedulerInfo;
@@ -37,8 +38,8 @@ class DefaultSchedulerPage extends RmView {
   static final String _Q = ".ui-state-default.ui-corner-all";
   static final float WIDTH_F = 0.8f;
   static final String Q_END = "left:101%";
-  static final String OVER = "font-size:1px;background:rgba(255, 140, 0, 0.8)";
-  static final String UNDER = "font-size:1px;background:rgba(50, 205, 50, 0.8)";
+  static final String OVER = "font-size:1px;background:#FFA333";
+  static final String UNDER = "font-size:1px;background:#5BD75B";
   static final float EPSILON = 1e-8f;
 
   static class QueueInfoBlock extends HtmlBlock {
@@ -149,14 +150,14 @@ class DefaultSchedulerPage extends RmView {
   }
 
   static String percent(float f) {
-    return String.format("%.1f%%", f * 100);
+    return StringUtils.formatPercent(f, 1);
   }
 
   static String width(float f) {
-    return String.format("width:%.1f%%", f * 100);
+    return StringUtils.format("width:%.1f%%", f * 100);
   }
 
   static String left(float f) {
-    return String.format("left:%.1f%%", f * 100);
+    return StringUtils.format("left:%.1f%%", f * 100);
   }
 }

@@ -21,8 +21,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.security.PrivilegedExceptionAction;
 
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -33,6 +31,7 @@ import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
@@ -40,8 +39,8 @@ import org.junit.Test;
 /** Test reading from hdfs while a file is being written. */
 public class TestReadWhileWriting {
   {
-    ((Log4JLogger)LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
   }
 
   private static final String DIR = "/"

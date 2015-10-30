@@ -187,7 +187,7 @@ Perform the following steps:
 * Refresh the Datanodes to pickup the newly added Namenode by running
   the following command against all the Datanodes in the cluster:
 
-        [hdfs]$ $HADOOP_PREFIX/bin/hdfs dfsadmin -refreshNameNode <datanode_host_name>:<datanode_rpc_port>
+        [hdfs]$ $HADOOP_PREFIX/bin/hdfs dfsadmin -refreshNamenodes <datanode_host_name>:<datanode_rpc_port>
 
 Managing the cluster
 --------------------
@@ -219,7 +219,7 @@ The policy parameter can be any of the following:
   level which also balances at the Datanode level.
 
 Note that Balancer only balances the data and does not balance the namespace.
-For the complete command usage, see [balancer](../hadoop-common/CommandsManual.html#balancer).
+For the complete command usage, see [balancer](./HDFSCommands.html#balancer).
 
 ### Decommissioning
 

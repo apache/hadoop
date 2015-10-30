@@ -122,6 +122,12 @@ public class HardLink {
   @VisibleForTesting
   static class HardLinkCGWin extends HardLinkCommandGetter {
 
+    /**
+     * Build the windows link command. This must not
+     * use an exception-raising reference to WINUTILS, as
+     * some tests examine the command.
+     */
+    @SuppressWarnings("deprecation")
     static String[] getLinkCountCommand = {
         Shell.WINUTILS, "hardlink", "stat", null};
 
@@ -130,6 +136,8 @@ public class HardLink {
      */
     @Override
     String[] linkCount(File file) throws IOException {
+      // trigger the check for winutils
+      Shell.getWinUtilsFile();
       String[] buf = new String[getLinkCountCommand.length];
       System.arraycopy(getLinkCountCommand, 0, buf, 0, 
                        getLinkCountCommand.length);

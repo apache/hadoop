@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PriorityPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
@@ -207,6 +208,25 @@ public class NMContainerStatusPBImpl extends NMContainerStatus {
     maybeInitBuilder();
     builder.setCreationTime(creationTime);
   }
+  
+  @Override
+  public String getNodeLabelExpression() {
+    NMContainerStatusProtoOrBuilder p = viaProto ? proto : builder;
+    if (p.hasNodeLabelExpression()) {
+      return p.getNodeLabelExpression();
+    }
+    return CommonNodeLabelsManager.NO_LABEL;
+  }
+
+  @Override
+  public void setNodeLabelExpression(String nodeLabelExpression) {
+    maybeInitBuilder();
+    if (nodeLabelExpression == null) {
+      builder.clearNodeLabelExpression();
+      return;
+    }
+    builder.setNodeLabelExpression(nodeLabelExpression);
+  }
 
   private void mergeLocalToBuilder() {
     if (this.containerId != null
@@ -274,5 +294,4 @@ public class NMContainerStatusPBImpl extends NMContainerStatus {
   private PriorityProto convertToProtoFormat(Priority t) {
     return ((PriorityPBImpl)t).getProto();
   }
-
 }

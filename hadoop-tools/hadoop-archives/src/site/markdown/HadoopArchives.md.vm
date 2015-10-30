@@ -53,7 +53,7 @@ How to Create an Archive
   sections.
 
   -r indicates the desired replication factor; if this optional argument is
-  not specified, a replication factor of 10 will be used.
+  not specified, a replication factor of 3 will be used.
 
   If you just want to archive a single directory /foo/bar then you can just use
 

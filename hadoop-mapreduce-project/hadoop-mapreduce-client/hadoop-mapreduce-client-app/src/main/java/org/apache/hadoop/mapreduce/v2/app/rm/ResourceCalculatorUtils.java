@@ -35,10 +35,13 @@ public class ResourceCalculatorUtils {
   public static int computeAvailableContainers(Resource available,
       Resource required, EnumSet<SchedulerResourceTypes> resourceTypes) {
     if (resourceTypes.contains(SchedulerResourceTypes.CPU)) {
-      return Math.min(available.getMemory() / required.getMemory(),
-        available.getVirtualCores() / required.getVirtualCores());
+      return Math.min(
+        calculateRatioOrMaxValue(available.getMemory(), required.getMemory()),
+        calculateRatioOrMaxValue(available.getVirtualCores(), required
+            .getVirtualCores()));
     }
-    return available.getMemory() / required.getMemory();
+    return calculateRatioOrMaxValue(
+      available.getMemory(), required.getMemory());
   }
 
   public static int divideAndCeilContainers(Resource required, Resource factor,
@@ -48,5 +51,12 @@ public class ResourceCalculatorUtils {
         divideAndCeil(required.getVirtualCores(), factor.getVirtualCores()));
     }
     return divideAndCeil(required.getMemory(), factor.getMemory());
+  }
+
+  private static int calculateRatioOrMaxValue(int numerator, int denominator) {
+    if (denominator == 0) {
+      return Integer.MAX_VALUE;
+    }
+    return numerator / denominator;
   }
 }

@@ -413,7 +413,7 @@ public class TestAMWebServicesJobs extends JerseyTest {
 
   public void verifyAMJob(JSONObject info, Job job) throws JSONException {
 
-    assertEquals("incorrect number of elements", 30, info.length());
+    assertEquals("incorrect number of elements", 31, info.length());
 
     // everyone access fields
     verifyAMJobGeneric(job, info.getString("id"), info.getString("user"),

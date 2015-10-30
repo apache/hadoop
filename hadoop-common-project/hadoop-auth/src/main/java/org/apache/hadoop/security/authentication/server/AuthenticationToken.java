@@ -42,6 +42,7 @@ public class AuthenticationToken extends AuthToken {
 
   private AuthenticationToken(AuthToken token) {
     super(token.getUserName(), token.getName(), token.getType());
+    setMaxInactives(token.getMaxInactives());
     setExpires(token.getExpires());
   }
 
@@ -56,6 +57,18 @@ public class AuthenticationToken extends AuthToken {
    */
   public AuthenticationToken(String userName, String principal, String type) {
     super(userName, principal, type);
+  }
+
+  /**
+   * Sets the max inactive time of the token.
+   *
+   * @param maxInactives inactive time of the token in milliseconds
+   *                     since the epoch.
+   */
+  public void setMaxInactives(long maxInactives) {
+    if (this != AuthenticationToken.ANONYMOUS) {
+      super.setMaxInactives(maxInactives);
+    }
   }
 
   /**

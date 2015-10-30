@@ -64,11 +64,11 @@ public abstract class AbstractCounters<C extends Counter,
   /**
    * A cache from enum values to the associated counter.
    */
-  private Map<Enum<?>, C> cache = Maps.newIdentityHashMap();
+  private final Map<Enum<?>, C> cache = Maps.newIdentityHashMap();
   //framework & fs groups
-  private Map<String, G> fgroups = new ConcurrentSkipListMap<String, G>();
+  private final Map<String, G> fgroups = new ConcurrentSkipListMap<String, G>();
   // other groups
-  private Map<String, G> groups = new ConcurrentSkipListMap<String, G>();
+  private final Map<String, G> groups = new ConcurrentSkipListMap<String, G>();
   private final CounterGroupFactory<C, G> groupFactory;
 
   // For framework counter serialization without strings

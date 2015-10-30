@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.timeline;
 
-import static org.apache.hadoop.yarn.util.StringHelper.CSV_JOINER;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -33,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
@@ -43,7 +42,6 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
-import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -51,7 +49,7 @@ import com.google.common.annotations.VisibleForTesting;
  * The class wrap over the timeline store and the ACLs manager. It does some non
  * trivial manipulation of the timeline data before putting or after getting it
  * from the timeline store, and checks the user's access to it.
- * 
+ *
  */
 public class TimelineDataManager extends AbstractService {
 
@@ -59,6 +57,7 @@ public class TimelineDataManager extends AbstractService {
   @VisibleForTesting
   public static final String DEFAULT_DOMAIN_ID = "DEFAULT";
 
+  private TimelineDataManagerMetrics metrics;
   private TimelineStore store;
   private TimelineACLsManager timelineACLsManager;
 
@@ -72,6 +71,7 @@ public class TimelineDataManager extends AbstractService {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
+    metrics = TimelineDataManagerMetrics.create();
     TimelineDomain domain = store.getDomain("DEFAULT");
     // it is okay to reuse an existing domain even if it was created by another
     // user of the timeline server before, because it allows everybody to access.
@@ -119,10 +119,42 @@ public class TimelineDataManager extends AbstractService {
    * Get the timeline entities that the given user have access to. The meaning
    * of each argument has been documented with
    * {@link TimelineReader#getEntities}.
-   * 
+   *
    * @see TimelineReader#getEntities
    */
   public TimelineEntities getEntities(
+      String entityType,
+      NameValuePair primaryFilter,
+      Collection<NameValuePair> secondaryFilter,
+      Long windowStart,
+      Long windowEnd,
+      String fromId,
+      Long fromTs,
+      Long limit,
+      EnumSet<Field> fields,
+      UserGroupInformation callerUGI) throws YarnException, IOException {
+    long startTime = Time.monotonicNow();
+    metrics.incrGetEntitiesOps();
+    try {
+      TimelineEntities entities = doGetEntities(
+          entityType,
+          primaryFilter,
+          secondaryFilter,
+          windowStart,
+          windowEnd,
+          fromId,
+          fromTs,
+          limit,
+          fields,
+          callerUGI);
+      metrics.incrGetEntitiesTotal(entities.getEntities().size());
+      return entities;
+    } finally {
+      metrics.addGetEntitiesTime(Time.monotonicNow() - startTime);
+    }
+  }
+
+  private TimelineEntities doGetEntities(
       String entityType,
       NameValuePair primaryFilter,
       Collection<NameValuePair> secondaryFilter,
@@ -156,10 +188,24 @@ public class TimelineDataManager extends AbstractService {
    * Get the single timeline entity that the given user has access to. The
    * meaning of each argument has been documented with
    * {@link TimelineReader#getEntity}.
-   * 
+   *
    * @see TimelineReader#getEntity
    */
   public TimelineEntity getEntity(
+      String entityType,
+      String entityId,
+      EnumSet<Field> fields,
+      UserGroupInformation callerUGI) throws YarnException, IOException {
+    long startTime = Time.monotonicNow();
+    metrics.incrGetEntityOps();
+    try {
+      return doGetEntity(entityType, entityId, fields, callerUGI);
+    } finally {
+      metrics.addGetEntityTime(Time.monotonicNow() - startTime);
+    }
+  }
+
+  private TimelineEntity doGetEntity(
       String entityType,
       String entityId,
       EnumSet<Field> fields,
@@ -182,10 +228,36 @@ public class TimelineDataManager extends AbstractService {
    * Get the events whose entities the given user has access to. The meaning of
    * each argument has been documented with
    * {@link TimelineReader#getEntityTimelines}.
-   * 
+   *
    * @see TimelineReader#getEntityTimelines
    */
   public TimelineEvents getEvents(
+      String entityType,
+      SortedSet<String> entityIds,
+      SortedSet<String> eventTypes,
+      Long windowStart,
+      Long windowEnd,
+      Long limit,
+      UserGroupInformation callerUGI) throws YarnException, IOException {
+    long startTime = Time.monotonicNow();
+    metrics.incrGetEventsOps();
+    try {
+      TimelineEvents events = doGetEvents(
+          entityType,
+          entityIds,
+          eventTypes,
+          windowStart,
+          windowEnd,
+          limit,
+          callerUGI);
+      metrics.incrGetEventsTotal(events.getAllEvents().size());
+      return events;
+    } finally {
+      metrics.addGetEventsTime(Time.monotonicNow() - startTime);
+    }
+  }
+
+  private TimelineEvents doGetEvents(
       String entityType,
       SortedSet<String> entityIds,
       SortedSet<String> eventTypes,
@@ -218,7 +290,7 @@ public class TimelineDataManager extends AbstractService {
             eventsItr.remove();
           }
         } catch (Exception e) {
-          LOG.error("Error when verifying access for user " + callerUGI
+          LOG.warn("Error when verifying access for user " + callerUGI
               + " on the events of the timeline entity "
               + new EntityIdentifier(eventsOfOneEntity.getEntityId(),
                   eventsOfOneEntity.getEntityType()), e);
@@ -239,16 +311,26 @@ public class TimelineDataManager extends AbstractService {
   public TimelinePutResponse postEntities(
       TimelineEntities entities,
       UserGroupInformation callerUGI) throws YarnException, IOException {
+    long startTime = Time.monotonicNow();
+    metrics.incrPostEntitiesOps();
+    try {
+      return doPostEntities(entities, callerUGI);
+    } finally {
+      metrics.addPostEntitiesTime(Time.monotonicNow() - startTime);
+    }
+  }
+
+  private TimelinePutResponse doPostEntities(
+      TimelineEntities entities,
+      UserGroupInformation callerUGI) throws YarnException, IOException {
     if (entities == null) {
       return new TimelinePutResponse();
     }
-    List<EntityIdentifier> entityIDs = new ArrayList<EntityIdentifier>();
+    metrics.incrPostEntitiesTotal(entities.getEntities().size());
     TimelineEntities entitiesToPut = new TimelineEntities();
     List<TimelinePutResponse.TimelinePutError> errors =
         new ArrayList<TimelinePutResponse.TimelinePutError>();
     for (TimelineEntity entity : entities.getEntities()) {
-      EntityIdentifier entityID =
-          new EntityIdentifier(entity.getEntityId(), entity.getEntityType());
 
       // if the domain id is not specified, the entity will be put into
       // the default domain
@@ -261,44 +343,42 @@ public class TimelineDataManager extends AbstractService {
       TimelineEntity existingEntity = null;
       try {
         existingEntity =
-            store.getEntity(entityID.getId(), entityID.getType(),
+            store.getEntity(entity.getEntityId(), entity.getEntityType(),
                 EnumSet.of(Field.PRIMARY_FILTERS));
         if (existingEntity != null) {
           addDefaultDomainIdIfAbsent(existingEntity);
           if (!existingEntity.getDomainId().equals(entity.getDomainId())) {
             throw new YarnException("The domain of the timeline entity "
-              + entityID + " is not allowed to be changed.");
+              + "{ id: " + entity.getEntityId() + ", type: "
+              + entity.getEntityType() + " } is not allowed to be changed from "
+              + existingEntity.getDomainId() + " to " + entity.getDomainId());
           }
         }
         if (!timelineACLsManager.checkAccess(
             callerUGI, ApplicationAccessType.MODIFY_APP, entity)) {
           throw new YarnException(callerUGI
-              + " is not allowed to put the timeline entity " + entityID
-              + " into the domain " + entity.getDomainId() + ".");
+              + " is not allowed to put the timeline entity "
+              + "{ id: " + entity.getEntityId() + ", type: "
+              + entity.getEntityType() + " } into the domain "
+              + entity.getDomainId() + ".");
         }
       } catch (Exception e) {
         // Skip the entity which already exists and was put by others
-        LOG.error("Skip the timeline entity: " + entityID, e);
+        LOG.warn("Skip the timeline entity: { id: " + entity.getEntityId()
+            + ", type: "+ entity.getEntityType() + " }", e);
         TimelinePutResponse.TimelinePutError error =
             new TimelinePutResponse.TimelinePutError();
-        error.setEntityId(entityID.getId());
-        error.setEntityType(entityID.getType());
+        error.setEntityId(entity.getEntityId());
+        error.setEntityType(entity.getEntityType());
         error.setErrorCode(
             TimelinePutResponse.TimelinePutError.ACCESS_DENIED);
         errors.add(error);
         continue;
       }
 
-      entityIDs.add(entityID);
       entitiesToPut.addEntity(entity);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Storing the entity " + entityID + ", JSON-style content: "
-            + TimelineUtils.dumpTimelineRecordtoJSON(entity));
-      }
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Storing entities: " + CSV_JOINER.join(entityIDs));
-    }
+
     TimelinePutResponse response = store.put(entitiesToPut);
     // add the errors of timeline system filter key conflict
     response.addErrors(errors);
@@ -310,6 +390,17 @@ public class TimelineDataManager extends AbstractService {
    * and the admin can update it.
    */
   public void putDomain(TimelineDomain domain,
+      UserGroupInformation callerUGI) throws YarnException, IOException {
+    long startTime = Time.monotonicNow();
+    metrics.incrPutDomainOps();
+    try {
+      doPutDomain(domain, callerUGI);
+    } finally {
+      metrics.addPutDomainTime(Time.monotonicNow() - startTime);
+    }
+  }
+
+  private void doPutDomain(TimelineDomain domain,
       UserGroupInformation callerUGI) throws YarnException, IOException {
     TimelineDomain existingDomain =
         store.getDomain(domain.getId());
@@ -337,6 +428,17 @@ public class TimelineDataManager extends AbstractService {
    */
   public TimelineDomain getDomain(String domainId,
       UserGroupInformation callerUGI) throws YarnException, IOException {
+    long startTime = Time.monotonicNow();
+    metrics.incrGetDomainOps();
+    try {
+      return doGetDomain(domainId, callerUGI);
+    } finally {
+      metrics.addGetDomainTime(Time.monotonicNow() - startTime);
+    }
+  }
+
+  private TimelineDomain doGetDomain(String domainId,
+      UserGroupInformation callerUGI) throws YarnException, IOException {
     TimelineDomain domain = store.getDomain(domainId);
     if (domain != null) {
       if (timelineACLsManager.checkAccess(callerUGI, domain)) {
@@ -351,6 +453,19 @@ public class TimelineDataManager extends AbstractService {
    * the owner or the admin of the domain, empty list is going to be returned.
    */
   public TimelineDomains getDomains(String owner,
+      UserGroupInformation callerUGI) throws YarnException, IOException {
+    long startTime = Time.monotonicNow();
+    metrics.incrGetDomainsOps();
+    try {
+      TimelineDomains domains = doGetDomains(owner, callerUGI);
+      metrics.incrGetDomainsTotal(domains.getDomains().size());
+      return domains;
+    } finally {
+      metrics.addGetDomainsTime(Time.monotonicNow() - startTime);
+    }
+  }
+
+  private TimelineDomains doGetDomains(String owner,
       UserGroupInformation callerUGI) throws YarnException, IOException {
     TimelineDomains domains = store.getDomains(owner);
     boolean hasAccess = true;

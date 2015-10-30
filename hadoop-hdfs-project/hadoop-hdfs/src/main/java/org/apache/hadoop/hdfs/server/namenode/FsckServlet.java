@@ -66,7 +66,7 @@ public class FsckServlet extends DfsServlet {
               namesystem.getNumberOfDatanodes(DatanodeReportType.LIVE); 
           new NamenodeFsck(conf, nn,
               bm.getDatanodeManager().getNetworkTopology(), pmap, out,
-              totalDatanodes, bm.minReplication, remoteAddress).fsck();
+              totalDatanodes, remoteAddress).fsck();
           
           return null;
         }

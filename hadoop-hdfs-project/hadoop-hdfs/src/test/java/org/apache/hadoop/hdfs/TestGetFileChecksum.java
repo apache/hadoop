@@ -17,7 +17,12 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.Path;
 import org.junit.After;
@@ -67,6 +72,20 @@ public class TestGetFileChecksum {
     }
   }
 
+  @Test
+  public void testGetFileChecksumForBlocksUnderConstruction() {
+    try {
+      FSDataOutputStream file = dfs.create(new Path("/testFile"));
+      file.write("Performance Testing".getBytes());
+      dfs.getFileChecksum(new Path("/testFile"));
+      fail("getFileChecksum should fail for files "
+          + "with blocks under construction");
+    } catch (IOException ie) {
+      Assert.assertTrue(ie.getMessage().contains(
+          "Fail to get checksum, since file /testFile "
+              + "is under construction."));
+    }
+  }
   @Test
   public void testGetFileChecksum() throws Exception {
     testGetFileChecksum(new Path("/foo"), BLOCKSIZE / 4);

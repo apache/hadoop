@@ -80,16 +80,16 @@ public class TaskFailedEvent implements HistoryEvent {
   public Object getDatum() {
     if(datum == null) {
       datum = new TaskFailed();
-      datum.taskid = new Utf8(id.toString());
-      datum.error = new Utf8(error);
-      datum.finishTime = finishTime;
-      datum.taskType = new Utf8(taskType.name());
-      datum.failedDueToAttempt =
+      datum.setTaskid(new Utf8(id.toString()));
+      datum.setError(new Utf8(error));
+      datum.setFinishTime(finishTime);
+      datum.setTaskType(new Utf8(taskType.name()));
+      datum.setFailedDueToAttempt(
           failedDueToAttempt == null
           ? null
-          : new Utf8(failedDueToAttempt.toString());
-      datum.status = new Utf8(status);
-      datum.counters = EventWriter.toAvro(counters);
+          : new Utf8(failedDueToAttempt.toString()));
+      datum.setStatus(new Utf8(status));
+      datum.setCounters(EventWriter.toAvro(counters));
     }
     return datum;
   }
@@ -97,19 +97,19 @@ public class TaskFailedEvent implements HistoryEvent {
   public void setDatum(Object odatum) {
     this.datum = (TaskFailed)odatum;
     this.id =
-        TaskID.forName(datum.taskid.toString());
+        TaskID.forName(datum.getTaskid().toString());
     this.taskType =
-        TaskType.valueOf(datum.taskType.toString());
-    this.finishTime = datum.finishTime;
-    this.error = datum.error.toString();
+        TaskType.valueOf(datum.getTaskType().toString());
+    this.finishTime = datum.getFinishTime();
+    this.error = datum.getError().toString();
     this.failedDueToAttempt =
-        datum.failedDueToAttempt == null
+        datum.getFailedDueToAttempt() == null
         ? null
         : TaskAttemptID.forName(
-            datum.failedDueToAttempt.toString());
-    this.status = datum.status.toString();
+            datum.getFailedDueToAttempt().toString());
+    this.status = datum.getStatus().toString();
     this.counters =
-        EventReader.fromAvro(datum.counters);
+        EventReader.fromAvro(datum.getCounters());
   }
 
   /** Get the task id */

@@ -36,6 +36,7 @@ message RefreshQueuesResponseProto {
 }
 
 message RefreshNodesRequestProto {
+  optional DecommissionTypeProto decommissionType = 1 [default = NORMAL];
 }
 message RefreshNodesResponseProto {
 }
@@ -75,8 +76,14 @@ message UpdateNodeResourceRequestProto {
 message UpdateNodeResourceResponseProto {
 }
 
+message RefreshNodesResourcesRequestProto {
+}
+
+message RefreshNodesResourcesResponseProto {
+}
+
 message AddToClusterNodeLabelsRequestProto {
-  repeated string nodeLabels = 1;
+  repeated NodeLabelProto nodeLabels = 1;
 }
 
 message AddToClusterNodeLabelsResponseProto {
@@ -90,21 +97,37 @@ message RemoveFromClusterNodeLabelsResponseProto {
 }
 
 message ReplaceLabelsOnNodeRequestProto {
-  repeated NodeIdToLabelsProto nodeToLabels = 1;
+  repeated NodeIdToLabelsNameProto nodeToLabels = 1;
 }
 
 message ReplaceLabelsOnNodeResponseProto {
   
 }
 
-message UpdateNodeLabelsRequestProto {
-  repeated NodeLabelProto nodeLabels = 1;
-}
-
-
 message UpdateNodeLabelsResponseProto {
 }
 
+message CheckForDecommissioningNodesRequestProto {
+}
+message CheckForDecommissioningNodesResponseProto {
+  repeated NodeIdProto decommissioningNodes = 1;
+}
+
+message RefreshClusterMaxPriorityRequestProto {
+}
+message RefreshClusterMaxPriorityResponseProto {
+}
+
+message NodeIdToLabelsNameProto {
+  optional NodeIdProto nodeId = 1;
+  repeated string nodeLabels = 2;
+}
+
+enum DecommissionTypeProto {
+  NORMAL = 1;
+  GRACEFUL = 2;
+  FORCEFUL = 3;
+}
 //////////////////////////////////////////////////////////////////
 ///////////// RM Failover related records ////////////////////////
 //////////////////////////////////////////////////////////////////

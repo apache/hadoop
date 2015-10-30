@@ -18,10 +18,8 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_CONTEXT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CONTEXT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -43,6 +41,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.shortcircuit.DfsClientShmManager.PerDatanodeVisitorInfo;
@@ -81,8 +80,8 @@ public class TestBlockReaderFactory {
     conf.setLong(DFS_BLOCK_SIZE_KEY, 4096);
     conf.set(DFS_DOMAIN_SOCKET_PATH_KEY, new File(sockDir.getDir(),
         testName + "._PORT").getAbsolutePath());
-    conf.setBoolean(DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
-    conf.setBoolean(DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY,
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY,
         false);
     conf.setBoolean(DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC, false);
     return conf;
@@ -108,7 +107,7 @@ public class TestBlockReaderFactory {
         "testFallbackFromShortCircuitToUnixDomainTraffic_clientContext");
     clientConf.setBoolean(DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC, true);
     Configuration serverConf = new Configuration(clientConf);
-    serverConf.setBoolean(DFS_CLIENT_READ_SHORTCIRCUIT_KEY, false);
+    serverConf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, false);
 
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(serverConf).numDataNodes(1).build();
@@ -251,8 +250,8 @@ public class TestBlockReaderFactory {
           LocatedBlock lblock = locatedBlocks.get(0); // first block
           BlockReader blockReader = null;
           try {
-            blockReader = BlockReaderTestUtil.
-                getBlockReader(cluster, lblock, 0, TEST_FILE_LEN);
+            blockReader = BlockReaderTestUtil.getBlockReader(
+                cluster.getFileSystem(), lblock, 0, TEST_FILE_LEN);
             Assert.fail("expected getBlockReader to fail the first time.");
           } catch (Throwable t) { 
             Assert.assertTrue("expected to see 'TCP reads were disabled " +
@@ -266,8 +265,8 @@ public class TestBlockReaderFactory {
 
           // Second time should succeed.
           try {
-            blockReader = BlockReaderTestUtil.
-                getBlockReader(cluster, lblock, 0, TEST_FILE_LEN);
+            blockReader = BlockReaderTestUtil.getBlockReader(
+                cluster.getFileSystem(), lblock, 0, TEST_FILE_LEN);
           } catch (Throwable t) { 
             LOG.error("error trying to retrieve a block reader " +
                 "the second time.", t);
@@ -475,8 +474,8 @@ public class TestBlockReaderFactory {
           while (true) {
             BlockReader blockReader = null;
             try {
-              blockReader = BlockReaderTestUtil.
-                  getBlockReader(cluster, lblock, 0, TEST_FILE_LEN);
+              blockReader = BlockReaderTestUtil.getBlockReader(
+                  cluster.getFileSystem(), lblock, 0, TEST_FILE_LEN);
               sem.release();
               try {
                 blockReader.readAll(buf, 0, TEST_FILE_LEN);
@@ -515,8 +514,8 @@ public class TestBlockReaderFactory {
     // getting a ClosedChannelException.
     BlockReader blockReader = null;
     try {
-      blockReader = BlockReaderTestUtil.
-          getBlockReader(cluster, lblock, 0, TEST_FILE_LEN);
+      blockReader = BlockReaderTestUtil.getBlockReader(
+          cluster.getFileSystem(), lblock, 0, TEST_FILE_LEN);
       blockReader.readFully(buf, 0, TEST_FILE_LEN);
     } finally {
       if (blockReader != null) blockReader.close();

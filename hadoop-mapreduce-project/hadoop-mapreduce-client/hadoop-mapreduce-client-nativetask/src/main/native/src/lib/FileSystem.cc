@@ -167,10 +167,17 @@ class RawFileSystem : public FileSystem {
     FileEntry temp;
     while ((dirp = readdir(dp)) != NULL) {
       temp.name = dirp->d_name;
-      temp.isDirectory = dirp->d_type & DT_DIR;
       if (temp.name == "." || temp.name == "..") {
         continue;
       }
+/* Use Linux d_type if available, otherwise stat(2) the path */
+#ifdef DT_DIR
+      temp.isDirectory = dirp->d_type & DT_DIR;
+#else
+      const string p = path + "/" + temp.name;
+      struct stat sb;
+      temp.isDirectory = stat(p.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode) == 0;
+#endif
       status.push_back(temp);
     }
     closedir(dp);

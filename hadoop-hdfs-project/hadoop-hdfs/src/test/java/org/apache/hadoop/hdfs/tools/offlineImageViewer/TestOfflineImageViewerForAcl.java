@@ -17,13 +17,22 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.io.RandomAccessFile;
+import java.io.StringReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.HashMap;
+
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,6 +51,9 @@ import org.apache.hadoop.net.NetUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
 
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryScope.DEFAULT;
@@ -201,5 +213,17 @@ public class TestOfflineImageViewerForAcl {
       // shutdown the viewer
       viewer.close();
     }
+  }
+
+  @Test
+  public void testPBImageXmlWriterForAcl() throws Exception{
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+    PrintStream o = new PrintStream(output);
+    PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), o);
+    v.visit(new RandomAccessFile(originalFsimage, "r"));
+    SAXParserFactory spf = SAXParserFactory.newInstance();
+    SAXParser parser = spf.newSAXParser();
+    final String xml = output.toString();
+    parser.parse(new InputSource(new StringReader(xml)), new DefaultHandler());
   }
 }

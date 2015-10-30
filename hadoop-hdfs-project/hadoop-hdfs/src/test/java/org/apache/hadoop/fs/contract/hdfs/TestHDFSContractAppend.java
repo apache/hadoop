@@ -17,11 +17,9 @@ package org.apache.hadoop.fs.contract.hdfs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractAppendTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
 public class TestHDFSContractAppend extends AbstractContractAppendTest {
@@ -39,18 +37,5 @@ public class TestHDFSContractAppend extends AbstractContractAppendTest {
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new HDFSContract(conf);
-  }
-
-  @Override
-  public void testRenameFileBeingAppended() throws Throwable {
-    try {
-      super.testRenameFileBeingAppended();
-      fail("Expected a FileNotFoundException");
-    } catch (FileNotFoundException e) {
-      // downgrade
-      ContractTestUtils.downgrade("Renaming an open file" +
-                                  "still creates the old path", e);
-
-    }
   }
 }

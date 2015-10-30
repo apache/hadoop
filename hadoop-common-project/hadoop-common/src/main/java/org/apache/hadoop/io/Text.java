@@ -53,7 +53,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 public class Text extends BinaryComparable
     implements WritableComparable<BinaryComparable> {
   
-  private static ThreadLocal<CharsetEncoder> ENCODER_FACTORY =
+  private static final ThreadLocal<CharsetEncoder> ENCODER_FACTORY =
     new ThreadLocal<CharsetEncoder>() {
       @Override
       protected CharsetEncoder initialValue() {
@@ -63,7 +63,7 @@ public class Text extends BinaryComparable
     }
   };
   
-  private static ThreadLocal<CharsetDecoder> DECODER_FACTORY =
+  private static final ThreadLocal<CharsetDecoder> DECODER_FACTORY =
     new ThreadLocal<CharsetDecoder>() {
     @Override
     protected CharsetDecoder initialValue() {
@@ -146,12 +146,12 @@ public class Text extends BinaryComparable
   }
   
   /**
-   * Finds any occurence of <code>what</code> in the backing
+   * Finds any occurrence of <code>what</code> in the backing
    * buffer, starting as position <code>start</code>. The starting
    * position is measured in bytes and the return value is in
    * terms of byte position in the buffer. The backing buffer is
    * not converted to a string for this operation.
-   * @return byte position of the first occurence of the search
+   * @return byte position of the first occurrence of the search
    *         string in the UTF-8 buffer or -1 if not found
    */
   public int find(String what, int start) {

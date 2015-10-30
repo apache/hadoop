@@ -184,4 +184,28 @@ public interface FSNamesystemMBean {
    * @return JSON string
    */
   public String getTopUserOpCounts();
+
+  /**
+   * Return the number of encryption zones in the system.
+   */
+  int getNumEncryptionZones();
+
+  /**
+   * Returns the length of the wait Queue for the FSNameSystemLock.
+   *
+   * A larger number here indicates lots of threads are waiting for
+   * FSNameSystemLock.
+   * @return int - Number of Threads waiting to acquire FSNameSystemLock
+   */
+  int getFsLockQueueLength();
+
+  /**
+   * Return total number of Sync Operations on FSEditLog.
+   */
+  long getTotalSyncCount();
+
+  /**
+   * Return total time spent doing sync operations on FSEditLog.
+   */
+  String getTotalSyncTimes();
 }

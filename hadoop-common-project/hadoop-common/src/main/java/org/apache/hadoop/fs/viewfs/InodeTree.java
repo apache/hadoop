@@ -362,7 +362,7 @@ abstract class InodeTree<T> {
       kind = k;
       targetFileSystem = targetFs;
       resolvedPath = resolveP;
-      remainingPath = remainingP;  
+      remainingPath = remainingP;
     }
     
     // isInternalDir of path resolution completed within the mount table 

@@ -101,7 +101,7 @@ public class SerializedExceptionPBImpl extends SerializedException {
     } else if (RuntimeException.class.isAssignableFrom(realClass)) {
       classType = RuntimeException.class;
     } else {
-      classType = Exception.class;
+      classType = Throwable.class;
     }
     return instantiateException(realClass.asSubclass(classType), getMessage(),
       cause == null ? null : cause.deSerialize());
@@ -158,15 +158,31 @@ public class SerializedExceptionPBImpl extends SerializedException {
     viaProto = false;
   }
 
-  private static <T extends Throwable> T instantiateException(
-      Class<? extends T> cls, String message, Throwable cause) {
+  private static <T extends Throwable> T instantiateExceptionImpl(
+      String message, Class<? extends T> cls, Throwable cause)
+      throws NoSuchMethodException, InstantiationException,
+      IllegalAccessException, InvocationTargetException {
     Constructor<? extends T> cn;
     T ex = null;
+    cn =
+        cls.getConstructor(message == null ? new Class[0]
+            : new Class[] {String.class});
+    cn.setAccessible(true);
+    ex = message == null ? cn.newInstance() : cn.newInstance(message);
+    ex.initCause(cause);
+    return ex;
+  }
+
+  private static <T extends Throwable> T instantiateException(
+      Class<? extends T> cls, String message, Throwable cause) {
+    T ex = null;
     try {
-      cn = cls.getConstructor(String.class);
-      cn.setAccessible(true);
-      ex = cn.newInstance(message);
-      ex.initCause(cause);
+      // Try constructor with String argument, if it fails, try default.
+      try {
+        ex = instantiateExceptionImpl(message, cls, cause);
+      } catch (NoSuchMethodException e) {
+        ex = instantiateExceptionImpl(null, cls, cause);
+      }
     } catch (SecurityException e) {
       throw new YarnRuntimeException(e);
     } catch (NoSuchMethodException e) {

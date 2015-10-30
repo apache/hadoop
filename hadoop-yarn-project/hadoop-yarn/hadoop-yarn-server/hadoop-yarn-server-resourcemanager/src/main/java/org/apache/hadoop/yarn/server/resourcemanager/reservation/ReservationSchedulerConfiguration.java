@@ -33,11 +33,11 @@ public abstract class ReservationSchedulerConfiguration extends Configuration {
 
   @InterfaceAudience.Private
   public static final String DEFAULT_RESERVATION_AGENT_NAME =
-      "org.apache.hadoop.yarn.server.resourcemanager.reservation.GreedyReservationAgent";
+      "org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.AlignedPlannerWithGreedy";
 
   @InterfaceAudience.Private
   public static final String DEFAULT_RESERVATION_PLANNER_NAME =
-      "org.apache.hadoop.yarn.server.resourcemanager.reservation.SimpleCapacityReplanner";
+      "org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.SimpleCapacityReplanner";
 
   @InterfaceAudience.Private
   public static final boolean DEFAULT_RESERVATION_MOVE_ON_EXPIRY = true;
@@ -62,7 +62,7 @@ public abstract class ReservationSchedulerConfiguration extends Configuration {
 
   /**
    * Checks if the queue participates in reservation based scheduling
-   * @param queue
+   * @param queue name of the queue
    * @return true if the queue participates in reservation based scheduling
    */
   public abstract boolean isReservable(String queue);
@@ -108,10 +108,10 @@ public abstract class ReservationSchedulerConfiguration extends Configuration {
   }
 
   /**
-   * Gets the name of the {@link ReservationAgent} class associated with the
+   * Gets the name of the {@code ReservationAgent} class associated with the
    * queue
    * @param queue name of the queue
-   * @return the class name of the {@link ReservationAgent}
+   * @return the class name of the {@code ReservationAgent}
    */
   public String getReservationAgent(String queue) {
     return DEFAULT_RESERVATION_AGENT_NAME;
@@ -127,10 +127,10 @@ public abstract class ReservationSchedulerConfiguration extends Configuration {
   }
 
   /**
-   * Gets the name of the {@link Planner} class associated with the
+   * Gets the name of the {@code Planner} class associated with the
    * queue
    * @param queue name of the queue
-   * @return the class name of the {@link Planner}
+   * @return the class name of the {@code Planner}
    */
   public String getReplanner(String queue) {
     return DEFAULT_RESERVATION_PLANNER_NAME;
@@ -148,7 +148,7 @@ public abstract class ReservationSchedulerConfiguration extends Configuration {
   }
 
   /**
-   * Gets the time in milliseconds for which the {@link Planner} will verify
+   * Gets the time in milliseconds for which the {@code Planner} will verify
    * the {@link Plan}s satisfy the constraints
    * @param queue name of the queue
    * @return the time in milliseconds for which to check constraints

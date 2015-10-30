@@ -489,18 +489,23 @@ public class AggregatedLogFormat {
      * @throws IOException
      */
     public String getApplicationOwner() throws IOException {
-      TFile.Reader.Scanner ownerScanner = reader.createScanner();
-      LogKey key = new LogKey();
-      while (!ownerScanner.atEnd()) {
-        TFile.Reader.Scanner.Entry entry = ownerScanner.entry();
-        key.readFields(entry.getKeyStream());
-        if (key.toString().equals(APPLICATION_OWNER_KEY.toString())) {
-          DataInputStream valueStream = entry.getValueStream();
-          return valueStream.readUTF();
+      TFile.Reader.Scanner ownerScanner = null;
+      try {
+        ownerScanner = reader.createScanner();
+        LogKey key = new LogKey();
+        while (!ownerScanner.atEnd()) {
+          TFile.Reader.Scanner.Entry entry = ownerScanner.entry();
+          key.readFields(entry.getKeyStream());
+          if (key.toString().equals(APPLICATION_OWNER_KEY.toString())) {
+            DataInputStream valueStream = entry.getValueStream();
+            return valueStream.readUTF();
+          }
+          ownerScanner.advance();
         }
-        ownerScanner.advance();
+        return null;
+      } finally {
+        IOUtils.cleanup(LOG, ownerScanner);
       }
-      return null;
     }
 
     /**
@@ -513,38 +518,42 @@ public class AggregatedLogFormat {
     public Map<ApplicationAccessType, String> getApplicationAcls()
         throws IOException {
       // TODO Seek directly to the key once a comparator is specified.
-      TFile.Reader.Scanner aclScanner = reader.createScanner();
-      LogKey key = new LogKey();
-      Map<ApplicationAccessType, String> acls =
-          new HashMap<ApplicationAccessType, String>();
-      while (!aclScanner.atEnd()) {
-        TFile.Reader.Scanner.Entry entry = aclScanner.entry();
-        key.readFields(entry.getKeyStream());
-        if (key.toString().equals(APPLICATION_ACL_KEY.toString())) {
-          DataInputStream valueStream = entry.getValueStream();
-          while (true) {
-            String appAccessOp = null;
-            String aclString = null;
-            try {
-              appAccessOp = valueStream.readUTF();
-            } catch (EOFException e) {
-              // Valid end of stream.
-              break;
+      TFile.Reader.Scanner aclScanner = null;
+      try {
+        aclScanner = reader.createScanner();
+        LogKey key = new LogKey();
+        Map<ApplicationAccessType, String> acls =
+            new HashMap<ApplicationAccessType, String>();
+        while (!aclScanner.atEnd()) {
+          TFile.Reader.Scanner.Entry entry = aclScanner.entry();
+          key.readFields(entry.getKeyStream());
+          if (key.toString().equals(APPLICATION_ACL_KEY.toString())) {
+            DataInputStream valueStream = entry.getValueStream();
+            while (true) {
+              String appAccessOp = null;
+              String aclString = null;
+              try {
+                appAccessOp = valueStream.readUTF();
+              } catch (EOFException e) {
+                // Valid end of stream.
+                break;
+              }
+              try {
+                aclString = valueStream.readUTF();
+              } catch (EOFException e) {
+                throw new YarnRuntimeException("Error reading ACLs", e);
+              }
+              acls.put(ApplicationAccessType.valueOf(appAccessOp), aclString);
             }
-            try {
-              aclString = valueStream.readUTF();
-            } catch (EOFException e) {
-              throw new YarnRuntimeException("Error reading ACLs", e);
-            }
-            acls.put(ApplicationAccessType.valueOf(appAccessOp), aclString);
           }
-
+          aclScanner.advance();
         }
-        aclScanner.advance();
+        return acls;
+      } finally {
+        IOUtils.cleanup(LOG, aclScanner);
       }
-      return acls;
     }
-    
+
     /**
      * Read the next key and return the value-stream.
      * 
@@ -743,6 +752,60 @@ public class AggregatedLogFormat {
         DataInputStream valueStream, PrintStream out)
           throws IOException {
       readAContainerLogsForALogType(valueStream, out, -1);
+    }
+
+    /**
+     * Keep calling this till you get a {@link EOFException} for getting logs of
+     * the specific types for a single container.
+     * @param valueStream
+     * @param out
+     * @param logUploadedTime
+     * @param logType
+     * @throws IOException
+     */
+    public static int readContainerLogsForALogType(
+        DataInputStream valueStream, PrintStream out, long logUploadedTime,
+        List<String> logType) throws IOException {
+      byte[] buf = new byte[65535];
+
+      String fileType = valueStream.readUTF();
+      String fileLengthStr = valueStream.readUTF();
+      long fileLength = Long.parseLong(fileLengthStr);
+      if (logType.contains(fileType)) {
+        out.print("LogType:");
+        out.println(fileType);
+        if (logUploadedTime != -1) {
+          out.print("Log Upload Time:");
+          out.println(Times.format(logUploadedTime));
+        }
+        out.print("LogLength:");
+        out.println(fileLengthStr);
+        out.println("Log Contents:");
+
+        long curRead = 0;
+        long pendingRead = fileLength - curRead;
+        int toRead = pendingRead > buf.length ? buf.length : (int) pendingRead;
+        int len = valueStream.read(buf, 0, toRead);
+        while (len != -1 && curRead < fileLength) {
+          out.write(buf, 0, len);
+          curRead += len;
+
+          pendingRead = fileLength - curRead;
+          toRead = pendingRead > buf.length ? buf.length : (int) pendingRead;
+          len = valueStream.read(buf, 0, toRead);
+        }
+        out.println("End of LogType:" + fileType);
+        out.println("");
+        return 0;
+      } else {
+        long totalSkipped = 0;
+        long currSkipped = 0;
+        while (currSkipped != -1 && totalSkipped < fileLength) {
+          currSkipped = valueStream.skip(fileLength - totalSkipped);
+          totalSkipped += currSkipped;
+        }
+        return -1;
+      }
     }
 
     public void close() {

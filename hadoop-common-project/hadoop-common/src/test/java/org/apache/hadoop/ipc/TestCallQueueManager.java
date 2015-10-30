@@ -143,21 +143,21 @@ public class TestCallQueueManager {
 
   @Test
   public void testCallQueueCapacity() throws InterruptedException {
-    manager = new CallQueueManager<FakeCall>(queueClass, 10, "", null);
+    manager = new CallQueueManager<FakeCall>(queueClass, false, 10, "", null);
 
     assertCanPut(manager, 10, 20); // Will stop at 10 due to capacity
   }
 
   @Test
   public void testEmptyConsume() throws InterruptedException {
-    manager = new CallQueueManager<FakeCall>(queueClass, 10, "", null);
+    manager = new CallQueueManager<FakeCall>(queueClass, false, 10, "", null);
 
     assertCanTake(manager, 0, 1); // Fails since it's empty
   }
 
   @Test(timeout=60000)
   public void testSwapUnderContention() throws InterruptedException {
-    manager = new CallQueueManager<FakeCall>(queueClass, 5000, "", null);
+    manager = new CallQueueManager<FakeCall>(queueClass, false, 5000, "", null);
 
     ArrayList<Putter> producers = new ArrayList<Putter>();
     ArrayList<Taker> consumers = new ArrayList<Taker>();
@@ -165,7 +165,7 @@ public class TestCallQueueManager {
     HashMap<Runnable, Thread> threads = new HashMap<Runnable, Thread>();
 
     // Create putters and takers
-    for (int i=0; i < 50; i++) {
+    for (int i=0; i < 1000; i++) {
       Putter p = new Putter(manager, -1, -1);
       Thread pt = new Thread(p);
       producers.add(p);
@@ -174,7 +174,7 @@ public class TestCallQueueManager {
       pt.start();
     }
 
-    for (int i=0; i < 20; i++) {
+    for (int i=0; i < 100; i++) {
       Taker t = new Taker(manager, -1, -1);
       Thread tt = new Thread(t);
       consumers.add(t);
@@ -183,7 +183,7 @@ public class TestCallQueueManager {
       tt.start();
     }
 
-    Thread.sleep(10);
+    Thread.sleep(500);
 
     for (int i=0; i < 5; i++) {
       manager.swapQueue(queueClass, 5000, "", null);

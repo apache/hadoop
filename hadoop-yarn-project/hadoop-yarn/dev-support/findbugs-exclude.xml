@@ -109,6 +109,11 @@
     <Method name="handle" />
     <Bug pattern="BC_UNCONFIRMED_CAST" />
   </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncher" />
+    <Method name="handle" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
 
 
   <!-- Ignore intentional switch fallthroughs -->
@@ -139,6 +144,22 @@
   </Match>
   <Match>
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.resource.Priority$Comparator" />
+    <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoComparator" />
+    <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy$FairComparator" />
+    <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
+  </Match>
+    <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.CompoundComparator" />
+    <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PartitionedQueueComparator" />
     <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
   </Match>
   <!-- Ignore some irrelevant class name warning -->
@@ -461,5 +482,22 @@
     <Method name="recoverContainersOnNode" />
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE" />
   </Match>
-
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler" />
+    <Or>
+      <Field name="rmContext" />
+      <Field name="applications" />
+    </Or>
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
+  
+  <!-- Following fields are used in ErrorsAndWarningsBlock, which is not a part of analysis of findbugs -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.util.Log4jWarningErrorMetricsAppender$Element" />
+    <Or>
+      <Field name="count" />
+      <Field name="timestampSeconds" />
+    </Or>
+    <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD" />
+  </Match>
 </FindBugsFilter>

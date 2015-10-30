@@ -67,6 +67,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -341,6 +342,39 @@ public class TestOfflineImageViewer {
         new FileSystemTestHelper().getTestRootDir() + "/delimited.db");
   }
 
+  @Test
+  public void testInvalidProcessorOption() throws Exception {
+    int status =
+        OfflineImageViewerPB.run(new String[] { "-i",
+            originalFsimage.getAbsolutePath(), "-o", "-", "-p", "invalid" });
+    assertTrue("Exit code returned for invalid processor option is incorrect",
+        status != 0);
+  }
+
+  @Test
+  public void testOfflineImageViewerHelpMessage() throws Throwable {
+    final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    final PrintStream out = new PrintStream(bytes);
+    final PrintStream oldOut = System.out;
+    try {
+      System.setOut(out);
+      int status = OfflineImageViewerPB.run(new String[] { "-h" });
+      assertTrue("Exit code returned for help option is incorrect", status == 0);
+      Assert.assertFalse(
+          "Invalid Command error displayed when help option is passed.", bytes
+              .toString().contains("Error parsing command-line options"));
+      status =
+          OfflineImageViewerPB.run(new String[] { "-h", "-i",
+              originalFsimage.getAbsolutePath(), "-o", "-", "-p",
+              "FileDistribution", "-maxSize", "512", "-step", "8" });
+      Assert.assertTrue(
+          "Exit code returned for help with other option is incorrect",
+          status == -1);
+    } finally {
+      System.setOut(oldOut);
+      IOUtils.closeStream(out);
+    }
+  }
   private void testPBDelimitedWriter(String db)
       throws IOException, InterruptedException {
     final String DELIMITER = "\t";

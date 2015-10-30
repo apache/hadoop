@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.util;
 
-import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.OpensslCipher;
 import org.apache.hadoop.io.compress.Lz4Codec;
@@ -27,10 +26,17 @@ import org.apache.hadoop.io.compress.bzip2.Bzip2Factory;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class NativeLibraryChecker {
+  public static final Logger LOG =
+      LoggerFactory.getLogger(NativeLibraryChecker.class);
+
   /**
    * A tool to test native library availability, 
    */
@@ -99,12 +105,17 @@ public class NativeLibraryChecker {
       }
     }
 
-    // winutils.exe is required on Windows
-    winutilsPath = Shell.getWinUtilsPath();
-    if (winutilsPath != null) {
-      winutilsExists = true;
-    } else {
-      winutilsPath = "";
+    if (Shell.WINDOWS) {
+      // winutils.exe is required on Windows
+      try {
+        winutilsPath = Shell.getWinUtilsFile().getCanonicalPath();
+        winutilsExists = true;
+      } catch (IOException e) {
+        LOG.debug("No Winutils: ", e);
+        winutilsPath = e.getMessage();
+        winutilsExists = false;
+      }
+      System.out.printf("winutils: %b %s%n", winutilsExists, winutilsPath);
     }
 
     System.out.println("Native library checking:");

@@ -27,7 +27,13 @@ public interface ContainerLauncher
 
   enum EventType {
     CONTAINER_REMOTE_LAUNCH,
-    CONTAINER_REMOTE_CLEANUP
+    CONTAINER_REMOTE_CLEANUP,
+    // When TaskAttempt receives TA_CONTAINER_COMPLETED,
+    // it will notify ContainerLauncher so that the container can be removed
+    // from ContainerLauncher's launched containers list
+    // Otherwise, ContainerLauncher will try to stop the containers as part of
+    // serviceStop.
+    CONTAINER_COMPLETED
   }
 
 }

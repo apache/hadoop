@@ -28,6 +28,7 @@ MapReduce Application Master REST API's.
     * [Task Counters API](#Task_Counters_API)
     * [Task Attempts API](#Task_Attempts_API)
     * [Task Attempt API](#Task_Attempt_API)
+    * [Task Attempt State API](#Task_Attempt_State_API)
     * [Task Attempt Counters API](#Task_Attempt_Counters_API)
 
 Overview
@@ -1916,7 +1917,7 @@ A Task Attempt resource contains information about a particular task attempt wit
 
 Use the following URI to obtain an Task Attempt Object, from a task identified by the attemptid value.
 
-      * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempt/{attemptid}
+      * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}
 
 ### HTTP Operations Supported
 
@@ -2024,6 +2025,172 @@ Response Body:
       <elapsedReduceTime>0</elapsedReduceTime>
     </taskAttempt>
 
+Task Attempt State API
+-------------------------
+With the task attempt state API, you can query the state of a submitted task attempt as well kill a running task attempt by modifying the state of a running task attempt using a PUT request with the state set to "KILLED". To perform the PUT operation, authentication has to be setup for the AM web services. In addition, you must be authorized to kill the task attempt. Currently you can only change the state to "KILLED"; an attempt to change the state to any other results in a 400 error response. Examples of the unauthorized and bad request errors are below. When you carry out a successful PUT, the iniital response may be a 202. You can confirm that the app is killed by repeating the PUT request until you get a 200, querying the state using the GET method or querying for task attempt information and checking the state. In the examples below, we repeat the PUT request and get a 200 response.
+
+Please note that in order to kill a task attempt, you must have an authentication filter setup for the HTTP interface. The functionality requires that a username is set in the HttpServletRequest. If no filter is setup, the response will be an "UNAUTHORIZED" response.
+
+This feature is currently in the alpha stage and may change in the future.
+
+### URI
+
+      * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}/state
+
+### HTTP Operations Supported
+
+      * GET
+      * POST
+
+### Query Parameters Supported
+
+      None
+
+### Elements of *jobTaskAttemptState* object
+
+When you make a request for the state of an app, the information returned has the following fields
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| state | string | The application state - can be one of "NEW", "STARTING", "RUNNING", "COMMIT_PENDING", "SUCCEEDED", "FAILED", "KILLED" |
+
+### Response Examples
+
+**JSON responses**
+
+HTTP Request
+
+      GET http://<proxy http address:port>/proxy/application_1429692837321_0001/ws/v1/mapreduce/jobs/job_1429692837321_0001/tasks/task_1429692837321_0001_m_000000/attempts/attempt_1429692837321_0001_m_000000_0/state
+
+Response Header:
+
+    HTTP/1.1 200 OK
+    Content-Type: application/json
+    Server: Jetty(6.1.26)
+    Content-Length: 20
+
+Response Body:
+
+    {
+      "state":"STARTING"
+    }
+
+HTTP Request
+
+      PUT http://<proxy http address:port>/proxy/application_1429692837321_0001/ws/v1/mapreduce/jobs/job_1429692837321_0001/tasks/task_1429692837321_0001_m_000000/attempts/attempt_1429692837321_0001_m_000000_0/state
+
+Request Body:
+
+    {
+      "state":"KILLED"
+    }
+
+Response Header:
+
+    HTTP/1.1 200 OK
+    Content-Type: application/json
+    Server: Jetty(6.1.26)
+    Content-Length: 18
+
+Response Body:
+
+    {
+      "state":"KILLED"
+    }
+
+**XML responses**
+
+HTTP Request
+
+      GET http://<proxy http address:port>/proxy/application_1429692837321_0001/ws/v1/mapreduce/jobs/job_1429692837321_0001/tasks/task_1429692837321_0001_m_000000/attempts/attempt_1429692837321_0001_m_000000_0/state
+
+Response Header:
+
+    HTTP/1.1 200 OK
+    Content-Type: application/xml
+    Server: Jetty(6.1.26)
+    Content-Length: 121
+
+Response Body:
+
+    <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <jobTaskAttemptState>
+      <state>STARTING</state>
+    </jobTaskAttemptState>
+
+HTTP Request
+
+      PUT http://<proxy http address:port>/proxy/application_1429692837321_0001/ws/v1/mapreduce/jobs/job_1429692837321_0001/tasks/task_1429692837321_0001_m_000000/attempts/attempt_1429692837321_0001_m_000000_0/state
+
+Request Body:
+
+    <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <jobTaskAttemptState>
+      <state>KILLED</state>
+    </jobTaskAttemptState>
+
+Response Header:
+
+    HTTP/1.1 200 OK
+    Content-Type: application/xml
+    Server: Jetty(6.1.26)
+    Content-Length: 121
+
+Response Body:
+
+    <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <jobTaskAttemptState>
+      <state>KILLED</state>
+    </jobTaskAttemptState>
+
+**Unauthorized Error Response**
+
+HTTP Request
+
+      PUT http://<proxy http address:port>/proxy/application_1429692837321_0001/ws/v1/mapreduce/jobs/job_1429692837321_0001/tasks/task_1429692837321_0001_m_000000/attempts/attempt_1429692837321_0001_m_000000_0/state
+
+Request Body:
+
+    <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <jobTaskAttemptState>
+      <state>KILLED</state>
+    </jobTaskAttemptState>
+
+Response Header:
+
+    HTTP/1.1 403 Unauthorized
+    Content-Type: application/json
+    Server: Jetty(6.1.26)
+
+**Bad Request Error Response**
+
+HTTP Request
+
+      PUT http://<proxy http address:port>/proxy/application_1429692837321_0001/ws/v1/mapreduce/jobs/job_1429692837321_0001/tasks/task_1429692837321_0001_m_000000/attempts/attempt_1429692837321_0001_m_000000_0/state
+
+Request Body:
+
+    <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <jobTaskAttemptState>
+      <state>RUNNING</state>
+    </jobTaskAttemptState>
+
+Response Header:
+
+    HTTP/1.1 400
+    Content-Length: 295
+    Content-Type: application/xml
+    Server: Jetty(6.1.26)
+
+Response Body:
+
+    <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <RemoteException>
+      <exception>BadRequestException</exception>
+      <message>java.lang.Exception: Only 'KILLED' is allowed as a target state.</message>
+      <javaClassName>org.apache.hadoop.yarn.webapp.BadRequestException</javaClassName>
+    </RemoteException>
+
 Task Attempt Counters API
 -------------------------
 
@@ -2031,7 +2198,7 @@ With the task attempt counters API, you can object a collection of resources tha
 
 ### URI
 
-      * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempt/{attemptid}/counters
+      * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}/counters
 
 ### HTTP Operations Supported
 

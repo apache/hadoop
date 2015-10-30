@@ -41,8 +41,10 @@ public class TypedBytesInput {
     this.in = in;
   }
 
-  private static ThreadLocal tbIn = new ThreadLocal() {
-    protected synchronized Object initialValue() {
+  private static final ThreadLocal<TypedBytesInput> TB_IN =
+      new ThreadLocal<TypedBytesInput>() {
+    @Override
+    protected TypedBytesInput initialValue() {
       return new TypedBytesInput();
     }
   };
@@ -53,7 +55,7 @@ public class TypedBytesInput {
    * @return typed bytes input corresponding to the supplied {@link DataInput}.
    */
   public static TypedBytesInput get(DataInput in) {
-    TypedBytesInput bin = (TypedBytesInput) tbIn.get();
+    TypedBytesInput bin = TB_IN.get();
     bin.setDataInput(in);
     return bin;
   }

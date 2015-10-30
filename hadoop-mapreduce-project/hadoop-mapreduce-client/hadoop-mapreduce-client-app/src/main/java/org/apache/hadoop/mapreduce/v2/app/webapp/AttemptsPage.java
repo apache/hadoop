@@ -26,11 +26,14 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.mapreduce.v2.util.MRApps.TaskAttemptStateUI;
 import org.apache.hadoop.yarn.webapp.SubView;
@@ -40,13 +43,19 @@ import com.google.inject.Inject;
 public class AttemptsPage extends TaskPage {
   static class FewAttemptsBlock extends TaskPage.AttemptsBlock {
     @Inject
-    FewAttemptsBlock(App ctx) {
-      super(ctx);
+    FewAttemptsBlock(App ctx, Configuration conf) {
+      super(ctx, conf);
     }
 
     @Override
     protected boolean isValidRequest() {
       return true;
+    }
+
+    @Override
+    protected String getAttemptId(TaskId taskId, TaskAttemptInfo ta) {
+      return "<a href='" + url("task", taskId.toString()) +
+          "'>" + ta.getId() + "</a>";
     }
 
     @Override

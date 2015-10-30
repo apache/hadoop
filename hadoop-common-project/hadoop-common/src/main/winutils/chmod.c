@@ -105,7 +105,7 @@ static BOOL ChangeFileModeRecursively(__in LPCWSTR path, __in_opt INT mode,
 //
 int Chmod(__in int argc, __in_ecount(argc) wchar_t *argv[])
 {
-  LPWSTR pathName = NULL;
+  LPCWSTR pathName = NULL;
   LPWSTR longPathName = NULL;
 
   BOOL recursive = FALSE;
@@ -128,7 +128,7 @@ int Chmod(__in int argc, __in_ecount(argc) wchar_t *argv[])
     return EXIT_FAILURE;
   }
 
-  // Convert the path the the long path
+  // Convert the path to the long path
   //
   dwRtnCode = ConvertToLongPath(pathName, &longPathName);
   if (dwRtnCode != ERROR_SUCCESS)
@@ -763,7 +763,7 @@ static BOOL ParseMode(LPCWSTR modeString, PMODE_CHANGE_ACTION *pActions)
     {
       switch (c)
       {
-      case NULL:
+      case L'\0':
         __fallthrough;
       case L',':
         i++;

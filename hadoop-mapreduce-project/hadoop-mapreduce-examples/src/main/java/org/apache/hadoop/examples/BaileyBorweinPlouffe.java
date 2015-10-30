@@ -400,7 +400,7 @@ public class BaileyBorweinPlouffe extends Configured implements Tool {
    */
   public int run(String[] args) throws IOException {
     if (args.length != 4) {
-      System.err.println("Usage: java " + getClass().getName()
+      System.err.println("Usage: bbp "
           + " <startDigit> <nDigits> <nMaps> <workingDir>");
       ToolRunner.printGenericCommandUsage(System.err);
       return -1;

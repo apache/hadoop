@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.junit.Test;
 
 /**
@@ -46,7 +47,7 @@ public class TestDisableConnCache {
     // Configure a new instance with no peer caching, ensure that it doesn't
     // cache anything
     confWithoutCache.setInt(
-        DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY, 0);
+        HdfsClientConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY, 0);
     BlockReaderTestUtil util = new BlockReaderTestUtil(1, confWithoutCache);
     final Path testFile = new Path("/testConnCache.dat");
     util.writeFile(testFile, FILE_SIZE / 1024);

@@ -21,17 +21,26 @@ package org.apache.hadoop.mapreduce.v2.hs;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileNotFoundException;
 import java.util.UUID;
+import java.util.List;
 
 import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.test.CoreTestDriver;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -44,6 +53,8 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+
+import static org.mockito.Mockito.*;
 
 public class TestHistoryFileManager {
   private static MiniDFSCluster dfsCluster = null;
@@ -199,4 +210,50 @@ public class TestHistoryFileManager {
     testCreateHistoryDirs(dfsCluster.getConfiguration(0), clock);
   }
 
+  @Test
+  public void testScanDirectory() throws Exception {
+
+    Path p = new Path("any");
+    FileContext fc = mock(FileContext.class);
+    when(fc.makeQualified(p)).thenReturn(p);
+    when(fc.listStatus(p)).thenThrow(new FileNotFoundException());
+
+    List<FileStatus> lfs = HistoryFileManager.scanDirectory(p, fc, null);
+
+    //primarily, succcess is that an exception was not thrown.  Also nice to
+    //check this
+    Assert.assertNotNull(lfs);
+
+  }
+
+  @Test
+  public void testHistoryFileInfoSummaryFileNotExist() throws Exception {
+    HistoryFileManagerTest hmTest = new HistoryFileManagerTest();
+    String job = "job_1410889000000_123456";
+    Path summaryFile = new Path(job + ".summary");
+    JobIndexInfo jobIndexInfo = new JobIndexInfo();
+    jobIndexInfo.setJobId(TypeConverter.toYarn(JobID.forName(job)));
+    Configuration conf = dfsCluster.getConfiguration(0);
+    conf.set(JHAdminConfig.MR_HISTORY_DONE_DIR,
+        "/" + UUID.randomUUID());
+    conf.set(JHAdminConfig.MR_HISTORY_INTERMEDIATE_DONE_DIR,
+        "/" + UUID.randomUUID());
+    hmTest.serviceInit(conf);
+    HistoryFileInfo info = hmTest.getHistoryFileInfo(null, null,
+        summaryFile, jobIndexInfo, false);
+    info.moveToDone();
+    Assert.assertFalse(info.didMoveFail());
+  }
+
+  static class HistoryFileManagerTest extends HistoryFileManager {
+    public HistoryFileManagerTest() {
+      super();
+    }
+    public HistoryFileInfo getHistoryFileInfo(Path historyFile,
+        Path confFile, Path summaryFile, JobIndexInfo jobIndexInfo,
+        boolean isInDone) {
+      return new HistoryFileInfo(historyFile, confFile, summaryFile,
+          jobIndexInfo, isInDone);
+    }
+  }
 }

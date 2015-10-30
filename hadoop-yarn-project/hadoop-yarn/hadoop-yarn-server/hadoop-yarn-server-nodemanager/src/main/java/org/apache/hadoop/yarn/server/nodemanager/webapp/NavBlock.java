@@ -18,8 +18,13 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.util.Log4jWarningErrorMetricsAppender;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
@@ -36,10 +41,19 @@ public class NavBlock extends HtmlBlock implements YarnWebParams {
   
   @Override
   protected void render(Block html) {
+
+    boolean addErrorsAndWarningsLink = false;
+    Log log = LogFactory.getLog(NMErrorsAndWarningsPage.class);
+    if (log instanceof Log4JLogger) {
+      Log4jWarningErrorMetricsAppender appender = Log4jWarningErrorMetricsAppender.findAppender();
+      if (appender != null) {
+        addErrorsAndWarningsLink = true;
+      }
+    }
 	
     String RMWebAppURL =
-        WebAppUtils.getResolvedRemoteRMWebAppURLWithScheme(this.conf);
-	  html
+        WebAppUtils.getResolvedRMWebAppURLWithScheme(this.conf);
+	  Hamlet.UL<Hamlet.DIV<Hamlet>> ul = html
       .div("#nav")
       .h3()._("ResourceManager")._()
         .ul()
@@ -59,7 +73,11 @@ public class NavBlock extends HtmlBlock implements YarnWebParams {
           .li().a("/conf", "Configuration")._()
           .li().a("/logs", "Local logs")._()
           .li().a("/stacks", "Server stacks")._()
-          .li().a("/jmx?qry=Hadoop:*", "Server metrics")._()._()._();
+          .li().a("/jmx?qry=Hadoop:*", "Server metrics")._();
+    if (addErrorsAndWarningsLink) {
+      ul.li().a(url("errors-and-warnings"), "Errors/Warnings")._();
+    }
+    ul._()._();
   }
 
 }

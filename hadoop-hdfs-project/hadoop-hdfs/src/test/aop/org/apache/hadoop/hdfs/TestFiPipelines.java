@@ -24,11 +24,11 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fi.FiTestUtil;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.BlockReceiverAspects;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -226,22 +226,22 @@ public class TestFiPipelines {
     conf = new Configuration();
     int customPerChecksumSize = 700;
     int customBlockSize = customPerChecksumSize * 3;
-    conf.setInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 100);
-    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, customPerChecksumSize);
+    conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 100);
+    conf.setInt(HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, customPerChecksumSize);
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, customBlockSize);
-    conf.setInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, customBlockSize / 2);
-    conf.setInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 0);
+    conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, customBlockSize / 2);
+    conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 0);
   }
 
   private static void initLoggers() {
-    ((Log4JLogger) NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) DataNode.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) TestFiPipelines.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) DFSClient.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) FiTestUtil.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) BlockReceiverAspects.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) DFSClientAspects.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(NameNode.stateChangeLog, Level.ALL);
+    GenericTestUtils.setLogLevel(LogFactory.getLog(FSNamesystem.class), Level.ALL);
+    GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(TestFiPipelines.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(FiTestUtil.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(BlockReceiverAspects.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DFSClientAspects.LOG, Level.ALL);
   }
 
 }

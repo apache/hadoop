@@ -193,6 +193,13 @@ public class TestDFSAdminWithHA {
   }
 
   @Test (timeout = 30000)
+  public void testSetNegativeBalancerBandwidth() throws Exception {
+    setUpHaCluster(false);
+    int exitCode = admin.run(new String[] {"-setBalancerBandwidth", "-10"});
+    assertEquals("Negative bandwidth value must fail the command", -1, exitCode);
+  }
+
+  @Test (timeout = 30000)
   public void testMetaSave() throws Exception {
     setUpHaCluster(false);
     int exitCode = admin.run(new String[] {"-metasave", "dfs.meta"});

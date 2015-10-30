@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRespo
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerResourceChangeRequest;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -43,9 +44,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.log4j.Logger;
 import org.junit.Assert;
 
 public class MockAM {
+
+  private static final Logger LOG = Logger.getLogger(MockAM.class);
 
   private volatile int responseId = 0;
   private final ApplicationAttemptId attemptId;
@@ -73,18 +77,28 @@ public class MockAM {
   public void waitForState(RMAppAttemptState finalState) throws Exception {
     RMApp app = context.getRMApps().get(attemptId.getApplicationId());
     RMAppAttempt attempt = app.getRMAppAttempt(attemptId);
-    int timeoutSecs = 0;
+    final int timeoutMsecs = 40000;
+    final int minWaitMsecs = 1000;
+    final int waitMsPerLoop = 500;
+    int loop = 0;
     while (!finalState.equals(attempt.getAppAttemptState())
-        && timeoutSecs++ < 40) {
-      System.out
-          .println("AppAttempt : " + attemptId + " State is : " 
-              + attempt.getAppAttemptState()
-              + " Waiting for state : " + finalState);
-      Thread.sleep(1000);
+        && waitMsPerLoop * loop < timeoutMsecs) {
+      LOG.info("AppAttempt : " + attemptId + " State is : " +
+          attempt.getAppAttemptState() + " Waiting for state : " +
+          finalState);
+      Thread.yield();
+      Thread.sleep(waitMsPerLoop);
+      loop++;
     }
-    System.out.println("AppAttempt State is : " + attempt.getAppAttemptState());
-    Assert.assertEquals("AppAttempt state is not correct (timedout)",
-        finalState, attempt.getAppAttemptState());
+    int waitedMsecs = waitMsPerLoop * loop;
+    if (minWaitMsecs > waitedMsecs) {
+      Thread.sleep(minWaitMsecs - waitedMsecs);
+    }
+    LOG.info("Attempt State is : " + attempt.getAppAttemptState());
+    if (waitedMsecs >= timeoutMsecs) {
+      Assert.fail("Attempt state is not correct (timedout): expected: "
+          + finalState + " actual: " + attempt.getAppAttemptState());
+    }
   }
 
   public RegisterApplicationMasterResponse registerAppAttempt()
@@ -150,8 +164,14 @@ public class MockAM {
   public AllocateResponse allocate(
       String host, int memory, int numContainers,
       List<ContainerId> releases, String labelExpression) throws Exception {
+    return allocate(host, memory, numContainers, 1, releases, labelExpression);
+  }
+  
+  public AllocateResponse allocate(
+      String host, int memory, int numContainers, int priority,
+      List<ContainerId> releases, String labelExpression) throws Exception {
     List<ResourceRequest> reqs =
-        createReq(new String[] { host }, memory, 1, numContainers,
+        createReq(new String[] { host }, memory, priority, numContainers,
             labelExpression);
     return allocate(reqs, releases);
   }
@@ -214,6 +234,14 @@ public class MockAM {
     final AllocateRequest req =
         AllocateRequest.newInstance(0, 0F, resourceRequest,
           releases, null);
+    return allocate(req);
+  }
+  
+  public AllocateResponse sendContainerResizingRequest(
+      List<ContainerResourceChangeRequest> increaseRequests,
+      List<ContainerResourceChangeRequest> decreaseRequests) throws Exception {
+    final AllocateRequest req = AllocateRequest.newInstance(0, 0F, null, null,
+        null, increaseRequests, decreaseRequests);
     return allocate(req);
   }
 
@@ -290,16 +318,20 @@ public class MockAM {
   public ApplicationAttemptId getApplicationAttemptId() {
     return this.attemptId;
   }
-  
+
   public List<Container> allocateAndWaitForContainers(int nContainer,
       int memory, MockNM nm) throws Exception {
+    return allocateAndWaitForContainers("ANY", nContainer, memory, nm);
+  }
+
+  public List<Container> allocateAndWaitForContainers(String host,
+      int nContainer, int memory, MockNM nm) throws Exception {
     // AM request for containers
-    allocate("ANY", memory, nContainer, null);
+    allocate(host, memory, nContainer, null);
     // kick the scheduler
     nm.nodeHeartbeat(true);
-    List<Container> conts =
-        allocate(new ArrayList<ResourceRequest>(), null)
-            .getAllocatedContainers();
+    List<Container> conts = allocate(new ArrayList<ResourceRequest>(), null)
+        .getAllocatedContainers();
     while (conts.size() < nContainer) {
       nm.nodeHeartbeat(true);
       conts.addAll(allocate(new ArrayList<ResourceRequest>(),

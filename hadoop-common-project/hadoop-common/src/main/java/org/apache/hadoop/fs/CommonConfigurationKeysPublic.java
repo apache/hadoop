@@ -38,11 +38,6 @@ public class CommonConfigurationKeysPublic {
   
   // The Keys
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
-  public static final String  IO_NATIVE_LIB_AVAILABLE_KEY =
-    "io.native.lib.available";
-  /** Default value for IO_NATIVE_LIB_AVAILABLE_KEY */
-  public static final boolean IO_NATIVE_LIB_AVAILABLE_DEFAULT = true;
-  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  NET_TOPOLOGY_SCRIPT_NUMBER_ARGS_KEY =
     "net.topology.script.number.args";
   /** Default value for NET_TOPOLOGY_SCRIPT_NUMBER_ARGS_KEY */
@@ -89,6 +84,13 @@ public class CommonConfigurationKeysPublic {
     "fs.trash.checkpoint.interval";
   /** Default value for FS_TRASH_CHECKPOINT_INTERVAL_KEY */
   public static final long    FS_TRASH_CHECKPOINT_INTERVAL_DEFAULT = 0;
+
+  /**
+   * Directories that cannot be removed unless empty, even by an
+   * administrator.
+   */
+  public static final String FS_PROTECTED_DIRECTORIES =
+      "fs.protected.directories";
 
   // TBD: Code is still using hardcoded values (e.g. "fs.automatic.close")
   // instead of constant (e.g. FS_AUTOMATIC_CLOSE_KEY)
@@ -181,6 +183,17 @@ public class CommonConfigurationKeysPublic {
   /** Default value for TFILE_FS_OUTPUT_BUFFER_SIZE_KEY */
   public static final int     TFILE_FS_OUTPUT_BUFFER_SIZE_DEFAULT = 256*1024;
 
+  public static final String  HADOOP_CALLER_CONTEXT_ENABLED_KEY =
+      "hadoop.caller.context.enabled";
+  public static final boolean HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT = false;
+  public static final String  HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY =
+      "hadoop.caller.context.max.size";
+  public static final int     HADOOP_CALLER_CONTEXT_MAX_SIZE_DEFAULT = 128;
+  public static final String  HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY =
+      "hadoop.caller.context.signature.max.size";
+  public static final int     HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_DEFAULT =
+      40;
+
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY =
     "ipc.client.connection.maxidletime";
@@ -240,6 +253,11 @@ public class CommonConfigurationKeysPublic {
   /** Default value for IPC_SERVER_MAX_CONNECTIONS_KEY */
   public static final int     IPC_SERVER_MAX_CONNECTIONS_DEFAULT = 0;
 
+  /** Logs if a RPC is really slow compared to rest of RPCs. */
+  public static final String IPC_SERVER_LOG_SLOW_RPC =
+                                                "ipc.server.log.slow.rpc";
+  public static final boolean IPC_SERVER_LOG_SLOW_RPC_DEFAULT = false;
+
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  HADOOP_RPC_SOCKET_FACTORY_CLASS_DEFAULT_KEY =
     "hadoop.rpc.socket.factory.class.default";
@@ -287,6 +305,12 @@ public class CommonConfigurationKeysPublic {
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  HADOOP_SECURITY_AUTH_TO_LOCAL =
     "hadoop.security.auth_to_local";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_SECURITY_DNS_INTERFACE_KEY =
+    "hadoop.security.dns.interface";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_SECURITY_DNS_NAMESERVER_KEY =
+    "hadoop.security.dns.nameserver";
 
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN =
@@ -368,5 +392,17 @@ public class CommonConfigurationKeysPublic {
     "hadoop.security.random.device.file.path";
   public static final String HADOOP_SECURITY_SECURE_RANDOM_DEVICE_FILE_PATH_DEFAULT = 
     "/dev/urandom";
+
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_KEY =
+      "hadoop.shell.missing.defaultFs.warning";
+  public static final boolean HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_DEFAULT =
+      false;
+
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_SHELL_SAFELY_DELETE_LIMIT_NUM_FILES =
+      "hadoop.shell.safely.delete.limit.num.files";
+  public static final long HADOOP_SHELL_SAFELY_DELETE_LIMIT_NUM_FILES_DEFAULT =
+      100;
 }
 

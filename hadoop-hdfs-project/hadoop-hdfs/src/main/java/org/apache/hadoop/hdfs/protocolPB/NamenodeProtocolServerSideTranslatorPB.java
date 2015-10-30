@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.protocolPB;
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.VersionRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.VersionResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.EndCheckpointRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.EndCheckpointResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.ErrorReportRequestProto;
@@ -36,6 +36,8 @@ import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetMostRecen
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetMostRecentCheckpointTxIdResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetTransactionIdRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetTransactionIdResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.IsUpgradeFinalizedRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.IsUpgradeFinalizedResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RegisterRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RegisterResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RollEditLogRequestProto;
@@ -76,7 +78,7 @@ public class NamenodeProtocolServerSideTranslatorPB implements
   @Override
   public GetBlocksResponseProto getBlocks(RpcController unused,
       GetBlocksRequestProto request) throws ServiceException {
-    DatanodeInfo dnInfo = new DatanodeInfo(PBHelper.convert(request
+    DatanodeInfo dnInfo = new DatanodeInfo(PBHelperClient.convert(request
         .getDatanode()));
     BlocksWithLocations blocks;
     try {
@@ -221,5 +223,19 @@ public class NamenodeProtocolServerSideTranslatorPB implements
     }
     return VersionResponseProto.newBuilder()
         .setInfo(PBHelper.convert(info)).build();
+  }
+
+  @Override
+  public IsUpgradeFinalizedResponseProto isUpgradeFinalized(
+      RpcController controller, IsUpgradeFinalizedRequestProto request)
+      throws ServiceException {
+    boolean isUpgradeFinalized;
+    try {
+      isUpgradeFinalized = impl.isUpgradeFinalized();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return IsUpgradeFinalizedResponseProto.newBuilder()
+        .setIsUpgradeFinalized(isUpgradeFinalized).build();
   }
 }

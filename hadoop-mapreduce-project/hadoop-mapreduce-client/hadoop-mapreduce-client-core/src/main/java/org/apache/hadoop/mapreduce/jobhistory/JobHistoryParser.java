@@ -565,7 +565,7 @@ public class JobHistoryParser implements HistoryEventHandler {
     /** @return the AMInfo for the job's AppMaster */
     public List<AMInfo> getAMInfos() { return amInfos; }
     /** @return the AMInfo for the newest AppMaster */
-    public AMInfo getLatestAMInfo() { return latestAmInfo; };
+    public AMInfo getLatestAMInfo() { return latestAmInfo; }
   }
   
   /**

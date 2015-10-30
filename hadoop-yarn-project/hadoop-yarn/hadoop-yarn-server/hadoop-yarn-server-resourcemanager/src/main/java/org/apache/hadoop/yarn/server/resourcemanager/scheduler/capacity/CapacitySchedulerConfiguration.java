@@ -23,8 +23,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.StringTokenizer;
 
@@ -42,8 +44,13 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.QueueMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoOrderingPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.SchedulableEntity;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -78,7 +85,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @Private
   public static final String MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT =
     PREFIX + MAXIMUM_AM_RESOURCE_SUFFIX;
-  
+
   @Private
   public static final String QUEUES = "queues";
   
@@ -116,14 +123,22 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @Private
   public static final String MAXIMUM_ALLOCATION_VCORES =
       "maximum-allocation-vcores";
+  
+  public static final String ORDERING_POLICY = "ordering-policy";
+  
+  public static final String FIFO_ORDERING_POLICY = "fifo";
 
+  public static final String FAIR_ORDERING_POLICY = "fair";
+
+  public static final String DEFAULT_ORDERING_POLICY = FIFO_ORDERING_POLICY;
+  
   @Private
   public static final int DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS = 10000;
   
   @Private
   public static final float 
   DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT = 0.1f;
-  
+
   @Private
   public static final float UNDEFINED = -1;
   
@@ -167,7 +182,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
      PREFIX + "node-locality-delay";
 
   @Private 
-  public static final int DEFAULT_NODE_LOCALITY_DELAY = -1;
+  public static final int DEFAULT_NODE_LOCALITY_DELAY = 40;
 
   @Private
   public static final String SCHEDULE_ASYNCHRONOUSLY_PREFIX =
@@ -193,33 +208,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String QUEUE_PREEMPTION_DISABLED = "disable_preemption";
 
   @Private
-  public static class QueueMapping {
+  public static final String DEFAULT_APPLICATION_PRIORITY = "default-application-priority";
 
-    public enum MappingType {
-
-      USER("u"),
-      GROUP("g");
-      private final String type;
-      private MappingType(String type) {
-        this.type = type;
-      }
-
-      public String toString() {
-        return type;
-      }
-
-    };
-
-    MappingType type;
-    String source;
-    String queue;
-
-    public QueueMapping(MappingType type, String source, String queue) {
-      this.type = type;
-      this.source = source;
-      this.queue = queue;
-    }
-  }
+  @Private
+  public static final Integer DEFAULT_CONFIGURATION_APPLICATION_PRIORITY = 0;
   
   @Private
   public static final String AVERAGE_CAPACITY = "average-capacity";
@@ -319,6 +311,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     		getMaximumApplicationMasterResourcePercent());
   }
   
+  public void setMaximumApplicationMasterResourcePerQueuePercent(String queue,
+      float percent) {
+    setFloat(getQueuePrefix(queue) + MAXIMUM_AM_RESOURCE_SUFFIX, percent);
+  }
+  
   public float getNonLabeledQueueCapacity(String queue) {
     float capacity = queue.equals("root") ? 100.0f : getFloat(
         getQueuePrefix(queue) + CAPACITY, UNDEFINED);
@@ -372,6 +369,40 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     int userLimit = getInt(getQueuePrefix(queue) + USER_LIMIT,
         DEFAULT_USER_LIMIT);
     return userLimit;
+  }
+  
+  @SuppressWarnings("unchecked")
+  public <S extends SchedulableEntity> OrderingPolicy<S> getOrderingPolicy(
+      String queue) {
+  
+    String policyType = get(getQueuePrefix(queue) + ORDERING_POLICY, 
+      DEFAULT_ORDERING_POLICY);
+    
+    OrderingPolicy<S> orderingPolicy;
+    
+    if (policyType.trim().equals(FIFO_ORDERING_POLICY)) {
+       policyType = FifoOrderingPolicy.class.getName();
+    }
+    if (policyType.trim().equals(FAIR_ORDERING_POLICY)) {
+       policyType = FairOrderingPolicy.class.getName();
+    }
+    try {
+      orderingPolicy = (OrderingPolicy<S>)
+        Class.forName(policyType).newInstance();
+    } catch (Exception e) {
+      String message = "Unable to construct ordering policy for: " + policyType + ", " + e.getMessage();
+      throw new RuntimeException(message, e);
+    }
+
+    Map<String, String> config = new HashMap<String, String>();
+    String confPrefix = getQueuePrefix(queue) + ORDERING_POLICY + ".";
+    for (Map.Entry<String, String> kv : this) {
+      if (kv.getKey().startsWith(confPrefix)) {
+         config.put(kv.getKey().substring(confPrefix.length()), kv.getValue());
+      }
+    }
+    orderingPolicy.configure(config);
+    return orderingPolicy;
   }
 
   public void setUserLimit(String queue, int userLimit) {
@@ -471,11 +502,31 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
   
   public String getDefaultNodeLabelExpression(String queue) {
-    return get(getQueuePrefix(queue) + DEFAULT_NODE_LABEL_EXPRESSION);
+    String defaultLabelExpression = get(getQueuePrefix(queue)
+        + DEFAULT_NODE_LABEL_EXPRESSION);
+    if (defaultLabelExpression == null) {
+      return null;
+    }
+    return defaultLabelExpression.trim();
   }
   
   public void setDefaultNodeLabelExpression(String queue, String exp) {
     set(getQueuePrefix(queue) + DEFAULT_NODE_LABEL_EXPRESSION, exp);
+  }
+
+  public float getMaximumAMResourcePercentPerPartition(String queue,
+      String label) {
+    // If per-partition max-am-resource-percent is not configured,
+    // use default value as max-am-resource-percent for this queue.
+    return getFloat(getNodeLabelPrefix(queue, label)
+        + MAXIMUM_AM_RESOURCE_SUFFIX,
+        getMaximumApplicationMasterResourcePerQueuePercent(queue));
+  }
+
+  public void setMaximumAMResourcePercentPerPartition(String queue,
+      String label, float percent) {
+    setFloat(getNodeLabelPrefix(queue, label)
+        + MAXIMUM_AM_RESOURCE_SUFFIX, percent);
   }
 
   /*
@@ -611,8 +662,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   public int getNodeLocalityDelay() {
-    int delay = getInt(NODE_LOCALITY_DELAY, DEFAULT_NODE_LOCALITY_DELAY);
-    return (delay == DEFAULT_NODE_LOCALITY_DELAY) ? 0 : delay;
+    return getInt(NODE_LOCALITY_DELAY, DEFAULT_NODE_LOCALITY_DELAY);
   }
   
   public ResourceCalculator getResourceCalculator() {
@@ -684,7 +734,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    */
   public List<QueueMapping> getQueueMappings() {
     List<QueueMapping> mappings =
-        new ArrayList<CapacitySchedulerConfiguration.QueueMapping>();
+        new ArrayList<QueueMapping>();
     Collection<String> mappingsString =
         getTrimmedStringCollection(QUEUE_MAPPING);
     for (String mappingValue : mappingsString) {
@@ -858,5 +908,43 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         getBoolean(getQueuePrefix(queue) + QUEUE_PREEMPTION_DISABLED,
                    defaultVal);
     return preemptionDisabled;
+  }
+
+  /**
+   * Get configured node labels in a given queuePath
+   */
+  public Set<String> getConfiguredNodeLabels(String queuePath) {
+    Set<String> configuredNodeLabels = new HashSet<String>();
+    Entry<String, String> e = null;
+    
+    Iterator<Entry<String, String>> iter = iterator();
+    while (iter.hasNext()) {
+      e = iter.next();
+      String key = e.getKey();
+
+      if (key.startsWith(getQueuePrefix(queuePath) + ACCESSIBLE_NODE_LABELS
+          + DOT)) {
+        // Find <label-name> in
+        // <queue-path>.accessible-node-labels.<label-name>.property
+        int labelStartIdx =
+            key.indexOf(ACCESSIBLE_NODE_LABELS)
+                + ACCESSIBLE_NODE_LABELS.length() + 1;
+        int labelEndIndx = key.indexOf('.', labelStartIdx);
+        String labelName = key.substring(labelStartIdx, labelEndIndx);
+        configuredNodeLabels.add(labelName);
+      }
+    }
+    
+    // always add NO_LABEL
+    configuredNodeLabels.add(RMNodeLabelsManager.NO_LABEL);
+    
+    return configuredNodeLabels;
+  }
+
+  public Integer getDefaultApplicationPriorityConfPerQueue(String queue) {
+    Integer defaultPriority = getInt(getQueuePrefix(queue)
+        + DEFAULT_APPLICATION_PRIORITY,
+        DEFAULT_CONFIGURATION_APPLICATION_PRIORITY);
+    return defaultPriority;
   }
 }

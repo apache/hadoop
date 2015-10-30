@@ -19,11 +19,13 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -187,12 +189,21 @@ public class MockNodes {
     }
 
     @Override
+    public List<ApplicationId> getRunningApps() {
+      return null;
+    }
+
+    @Override
     public void updateNodeHeartbeatResponseForCleanup(NodeHeartbeatResponse response) {
     }
 
     @Override
     public NodeHeartbeatResponse getLastNodeHeartBeatResponse() {
       return null;
+    }
+
+    @Override
+    public void resetLastNodeHeartBeatResponse() {
     }
 
     @Override
@@ -221,6 +232,17 @@ public class MockNodes {
         return labels;
       }
       return CommonNodeLabelsManager.EMPTY_STRING_SET;
+    }
+
+    @Override
+    public void updateNodeHeartbeatResponseForContainersDecreasing(
+        NodeHeartbeatResponse response) {
+      
+    }
+
+    @Override
+    public List<Container> pullNewlyIncreasedContainers() {
+      return Collections.emptyList();
     }
   };
 

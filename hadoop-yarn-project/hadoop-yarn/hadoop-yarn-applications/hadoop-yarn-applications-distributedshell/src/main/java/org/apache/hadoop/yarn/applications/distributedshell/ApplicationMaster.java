@@ -30,10 +30,12 @@ import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -180,6 +182,8 @@ public class ApplicationMaster {
     DS_APP_ATTEMPT, DS_CONTAINER
   }
 
+  private static final String YARN_SHELL_ID = "YARN_SHELL_ID";
+
   // Configuration
   private Configuration conf;
 
@@ -188,13 +192,14 @@ public class ApplicationMaster {
   private AMRMClientAsync amRMClient;
 
   // In both secure and non-secure modes, this points to the job-submitter.
-  private UserGroupInformation appSubmitterUgi;
+  @VisibleForTesting
+  UserGroupInformation appSubmitterUgi;
 
   // Handle to communicate with the Node Manager
   private NMClientAsync nmClientAsync;
   // Listen to process the response from the Node Manager
   private NMCallbackHandler containerListener;
-  
+
   // Application Attempt Id ( combination of attemptId and fail count )
   @VisibleForTesting
   protected ApplicationAttemptId appAttemptID;
@@ -270,10 +275,17 @@ public class ApplicationMaster {
   private List<Thread> launchThreads = new ArrayList<Thread>();
 
   // Timeline Client
-  private TimelineClient timelineClient;
+  @VisibleForTesting
+  TimelineClient timelineClient;
 
   private final String linux_bash_command = "bash";
   private final String windows_command = "cmd /c";
+
+  private int yarnShellIdCounter = 1;
+
+  @VisibleForTesting
+  protected final Set<ContainerId> launchedContainers =
+      Collections.newSetFromMap(new ConcurrentHashMap<ContainerId, Boolean>());
 
   /**
    * @param args Command line args
@@ -496,18 +508,6 @@ public class ApplicationMaster {
     }
     requestPriority = Integer.parseInt(cliParser
         .getOptionValue("priority", "0"));
-
-    if (conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
-      YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED)) {
-      // Creating the Timeline Client
-      timelineClient = TimelineClient.createTimelineClient();
-      timelineClient.init(conf);
-      timelineClient.start();
-    } else {
-      timelineClient = null;
-      LOG.warn("Timeline service is not enabled");
-    }
-
     return true;
   }
 
@@ -527,7 +527,7 @@ public class ApplicationMaster {
    * @throws IOException
    */
   @SuppressWarnings({ "unchecked" })
-  public void run() throws YarnException, IOException {
+  public void run() throws YarnException, IOException, InterruptedException {
     LOG.info("Starting ApplicationMaster");
 
     // Note: Credentials, Token, UserGroupInformation, DataOutputBuffer class
@@ -554,11 +554,7 @@ public class ApplicationMaster {
     appSubmitterUgi =
         UserGroupInformation.createRemoteUser(appSubmitterUserName);
     appSubmitterUgi.addCredentials(credentials);
-    
-    if(timelineClient != null) {
-      publishApplicationAttemptEvent(timelineClient, appAttemptID.toString(),
-          DSEvent.DS_APP_ATTEMPT_START, domainId, appSubmitterUgi);
-    }
+
 
     AMRMClientAsync.CallbackHandler allocListener = new RMCallbackHandler();
     amRMClient = AMRMClientAsync.createAMRMClientAsync(1000, allocListener);
@@ -569,6 +565,12 @@ public class ApplicationMaster {
     nmClientAsync = new NMClientAsyncImpl(containerListener);
     nmClientAsync.init(conf);
     nmClientAsync.start();
+
+    startTimelineClient(conf);
+    if(timelineClient != null) {
+      publishApplicationAttemptEvent(timelineClient, appAttemptID.toString(),
+          DSEvent.DS_APP_ATTEMPT_START, domainId, appSubmitterUgi);
+    }
 
     // Setup local RPC Server to accept status requests directly from clients
     // TODO need to setup a protocol for client to be able to communicate to
@@ -585,10 +587,10 @@ public class ApplicationMaster {
     // Dump out information about cluster capability as seen by the
     // resource manager
     int maxMem = response.getMaximumResourceCapability().getMemory();
-    LOG.info("Max mem capabililty of resources in this cluster " + maxMem);
+    LOG.info("Max mem capability of resources in this cluster " + maxMem);
     
     int maxVCores = response.getMaximumResourceCapability().getVirtualCores();
-    LOG.info("Max vcores capabililty of resources in this cluster " + maxVCores);
+    LOG.info("Max vcores capability of resources in this cluster " + maxVCores);
 
     // A resource ask cannot exceed the max.
     if (containerMemory > maxMem) {
@@ -609,7 +611,11 @@ public class ApplicationMaster {
         response.getContainersFromPreviousAttempts();
     LOG.info(appAttemptID + " received " + previousAMRunningContainers.size()
       + " previous attempts' running containers on AM registration.");
+    for(Container container: previousAMRunningContainers) {
+      launchedContainers.add(container.getId());
+    }
     numAllocatedContainers.addAndGet(previousAMRunningContainers.size());
+
 
     int numTotalContainersToRequest =
         numTotalContainers - previousAMRunningContainers.size();
@@ -624,10 +630,30 @@ public class ApplicationMaster {
       amRMClient.addContainerRequest(containerAsk);
     }
     numRequestedContainers.set(numTotalContainers);
+  }
 
-    if(timelineClient != null) {
-      publishApplicationAttemptEvent(timelineClient, appAttemptID.toString(),
-          DSEvent.DS_APP_ATTEMPT_END, domainId, appSubmitterUgi);
+  @VisibleForTesting
+  void startTimelineClient(final Configuration conf)
+      throws YarnException, IOException, InterruptedException {
+    try {
+      appSubmitterUgi.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          if (conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
+              YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED)) {
+            // Creating the Timeline Client
+            timelineClient = TimelineClient.createTimelineClient();
+            timelineClient.init(conf);
+            timelineClient.start();
+          } else {
+            timelineClient = null;
+            LOG.warn("Timeline service is not enabled");
+          }
+          return null;
+        }
+      });
+    } catch (UndeclaredThrowableException e) {
+      throw new YarnException(e.getCause());
     }
   }
 
@@ -644,6 +670,11 @@ public class ApplicationMaster {
       try {
         Thread.sleep(200);
       } catch (InterruptedException ex) {}
+    }
+
+    if(timelineClient != null) {
+      publishApplicationAttemptEvent(timelineClient, appAttemptID.toString(),
+          DSEvent.DS_APP_ATTEMPT_END, domainId, appSubmitterUgi);
     }
 
     // Join all launched threads
@@ -698,8 +729,9 @@ public class ApplicationMaster {
 
     return success;
   }
-  
-  private class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
+
+  @VisibleForTesting
+  class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
     @SuppressWarnings("unchecked")
     @Override
     public void onContainersCompleted(List<ContainerStatus> completedContainers) {
@@ -714,6 +746,14 @@ public class ApplicationMaster {
 
         // non complete containers should not be here
         assert (containerStatus.getState() == ContainerState.COMPLETE);
+        // ignore containers we know nothing about - probably from a previous
+        // attempt
+        if (!launchedContainers.contains(containerStatus.getContainerId())) {
+          LOG.info("Ignoring completed status of "
+              + containerStatus.getContainerId()
+              + "; unknown container(probably launched by previous attempt)");
+          continue;
+        }
 
         // increment counters for completed/failed containers
         int exitStatus = containerStatus.getExitStatus();
@@ -767,8 +807,11 @@ public class ApplicationMaster {
           + allocatedContainers.size());
       numAllocatedContainers.addAndGet(allocatedContainers.size());
       for (Container allocatedContainer : allocatedContainers) {
+        String yarnShellId = Integer.toString(yarnShellIdCounter);
+        yarnShellIdCounter++;
         LOG.info("Launching shell command on a new container."
             + ", containerId=" + allocatedContainer.getId()
+            + ", yarnShellId=" + yarnShellId
             + ", containerNode=" + allocatedContainer.getNodeId().getHost()
             + ":" + allocatedContainer.getNodeId().getPort()
             + ", containerNodeURI=" + allocatedContainer.getNodeHttpAddress()
@@ -779,14 +822,14 @@ public class ApplicationMaster {
         // + ", containerToken"
         // +allocatedContainer.getContainerToken().getIdentifier().toString());
 
-        LaunchContainerRunnable runnableLaunchContainer =
-            new LaunchContainerRunnable(allocatedContainer, containerListener);
-        Thread launchThread = new Thread(runnableLaunchContainer);
+        Thread launchThread = createLaunchContainerThread(allocatedContainer,
+            yarnShellId);
 
         // launch and start the container on a separate thread to keep
         // the main thread unblocked
         // as all containers may not be allocated at one go.
         launchThreads.add(launchThread);
+        launchedContainers.add(allocatedContainer.getId());
         launchThread.start();
       }
     }
@@ -892,7 +935,8 @@ public class ApplicationMaster {
   private class LaunchContainerRunnable implements Runnable {
 
     // Allocated container
-    Container container;
+    private Container container;
+    private String shellId;
 
     NMCallbackHandler containerListener;
 
@@ -900,10 +944,11 @@ public class ApplicationMaster {
      * @param lcontainer Allocated container
      * @param containerListener Callback handler of the container
      */
-    public LaunchContainerRunnable(
-        Container lcontainer, NMCallbackHandler containerListener) {
+    public LaunchContainerRunnable(Container lcontainer,
+        NMCallbackHandler containerListener, String shellId) {
       this.container = lcontainer;
       this.containerListener = containerListener;
+      this.shellId = shellId;
     }
 
     @Override
@@ -914,7 +959,7 @@ public class ApplicationMaster {
      */
     public void run() {
       LOG.info("Setting up container launch container for containerid="
-          + container.getId());
+          + container.getId() + " with shellid=" + shellId);
 
       // Set the local resources
       Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
@@ -1003,8 +1048,11 @@ public class ApplicationMaster {
       // download anyfiles in the distributed file-system. The tokens are
       // otherwise also useful in cases, for e.g., when one is running a
       // "hadoop dfs" command inside the distributed shell.
+      Map<String, String> myShellEnv = new HashMap<String, String>(shellEnv);
+      myShellEnv.put(YARN_SHELL_ID, shellId);
       ContainerLaunchContext ctx = ContainerLaunchContext.newInstance(
-        localResources, shellEnv, commands, null, allTokens.duplicate(), null);
+        localResources, myShellEnv, commands, null, allTokens.duplicate(),
+          null);
       containerListener.addContainer(container.getId(), container);
       nmClientAsync.startContainerAsync(container, ctx);
     }
@@ -1104,18 +1152,11 @@ public class ApplicationMaster {
     event.addEventInfo("State", container.getState().name());
     event.addEventInfo("Exit Status", container.getExitStatus());
     entity.addEvent(event);
-
     try {
-      ugi.doAs(new PrivilegedExceptionAction<TimelinePutResponse>() {
-        @Override
-        public TimelinePutResponse run() throws Exception {
-          return timelineClient.putEntities(entity);
-        }
-      });
-    } catch (Exception e) {
+      timelineClient.putEntities(entity);
+    } catch (YarnException | IOException e) {
       LOG.error("Container end event could not be published for "
-          + container.getContainerId().toString(),
-          e instanceof UndeclaredThrowableException ? e.getCause() : e);
+          + container.getContainerId().toString(), e);
     }
   }
 
@@ -1131,20 +1172,41 @@ public class ApplicationMaster {
     event.setEventType(appEvent.toString());
     event.setTimestamp(System.currentTimeMillis());
     entity.addEvent(event);
-
     try {
-      ugi.doAs(new PrivilegedExceptionAction<TimelinePutResponse>() {
-        @Override
-        public TimelinePutResponse run() throws Exception {
-          return timelineClient.putEntities(entity);
-        }
-      });
-    } catch (Exception e) {
+      timelineClient.putEntities(entity);
+    } catch (YarnException | IOException e) {
       LOG.error("App Attempt "
           + (appEvent.equals(DSEvent.DS_APP_ATTEMPT_START) ? "start" : "end")
           + " event could not be published for "
-          + appAttemptId.toString(),
-          e instanceof UndeclaredThrowableException ? e.getCause() : e);
+          + appAttemptId.toString(), e);
     }
+  }
+
+  RMCallbackHandler getRMCallbackHandler() {
+    return new RMCallbackHandler();
+  }
+
+  @VisibleForTesting
+  void setAmRMClient(AMRMClientAsync client) {
+    this.amRMClient = client;
+  }
+
+  @VisibleForTesting
+  int getNumCompletedContainers() {
+    return numCompletedContainers.get();
+  }
+
+  @VisibleForTesting
+  boolean getDone() {
+    return done;
+  }
+
+  @VisibleForTesting
+  Thread createLaunchContainerThread(Container allocatedContainer,
+      String shellId) {
+    LaunchContainerRunnable runnableLaunchContainer =
+        new LaunchContainerRunnable(allocatedContainer, containerListener,
+            shellId);
+    return new Thread(runnableLaunchContainer);
   }
 }

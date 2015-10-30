@@ -349,31 +349,31 @@ public:
     return this->_capacity;
   }
 
-  int remain() {
+  uint32_t remain() {
     return _limit - _position;
   }
 
-  int limit() {
+  uint32_t limit() {
     return _limit;
   }
 
-  int advance(int positionOffset) {
+  uint32_t advance(int positionOffset) {
     _position += positionOffset;
     return _position;
   }
 
-  int position() {
+  uint32_t position() {
     return this->_position;
   }
 
-  void position(int newPos) {
+  void position(uint32_t newPos) {
     this->_position = newPos;
   }
 
-  void rewind(int newPos, int newLimit) {
+  void rewind(uint32_t newPos, uint32_t newLimit) {
     this->_position = newPos;
-    if (newLimit < 0 || newLimit > this->_capacity) {
-      THROW_EXCEPTION(IOException, "length smaller than zero or larger than input buffer capacity");
+    if (newLimit > this->_capacity) {
+      THROW_EXCEPTION(IOException, "length larger than input buffer capacity");
     }
     this->_limit = newLimit;
   }
@@ -474,11 +474,10 @@ public:
    * return the length of actually filled data.
    */
   uint32_t fill(const char * source, uint32_t maxSize) {
-    int remain = _size - _pos;
-    if (remain <= 0) {
+    if (_pos > _size) {
       return 0;
     }
-
+    uint32_t remain = _size - _pos;
     uint32_t length = (maxSize < remain) ? maxSize : remain;
     simple_memcpy(_buff + _pos, source, length);
     _pos += length;

@@ -69,9 +69,10 @@ public class BlockManagerTestUtil {
     final BlockManager bm = namesystem.getBlockManager();
     namesystem.readLock();
     try {
+      final BlockInfo storedBlock = bm.getStoredBlock(b);
       return new int[]{getNumberOfRacks(bm, b),
-          bm.countNodes(b).liveReplicas(),
-          bm.neededReplications.contains(b) ? 1 : 0};
+          bm.countNodes(storedBlock).liveReplicas(),
+          bm.neededReplications.contains(storedBlock) ? 1 : 0};
     } finally {
       namesystem.readUnlock();
     }
@@ -160,7 +161,7 @@ public class BlockManagerTestUtil {
    */
   public static int computeAllPendingWork(BlockManager bm) {
     int work = computeInvalidationWork(bm);
-    work += bm.computeReplicationWork(Integer.MAX_VALUE);
+    work += bm.computeBlockRecoveryWork(Integer.MAX_VALUE);
     return work;
   }
 
@@ -304,5 +305,13 @@ public class BlockManagerTestUtil {
   public static void recheckDecommissionState(DatanodeManager dm)
       throws ExecutionException, InterruptedException {
     dm.getDecomManager().runMonitor();
+  }
+
+  /**
+   * add block to the replicateBlocks queue of the Datanode
+   */
+  public static void addBlockToBeReplicated(DatanodeDescriptor node,
+      Block block, DatanodeStorageInfo[] targets) {
+    node.addBlockToBeReplicated(block, targets);
   }
 }

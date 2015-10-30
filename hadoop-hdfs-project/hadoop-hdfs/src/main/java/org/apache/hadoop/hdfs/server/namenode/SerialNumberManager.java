@@ -17,11 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
-
-
 /** Manage name-to-serial-number maps for users and groups. */
 class SerialNumberManager {
   /** This is the only instance of {@link SerialNumberManager}.*/
@@ -40,44 +35,5 @@ class SerialNumberManager {
   {
     getUserSerialNumber(null);
     getGroupSerialNumber(null);
-  }
-
-  private static class SerialNumberMap<T> {
-    private final AtomicInteger max = new AtomicInteger(1);
-    private final ConcurrentMap<T, Integer> t2i = new ConcurrentHashMap<T, Integer>();
-    private final ConcurrentMap<Integer, T> i2t = new ConcurrentHashMap<Integer, T>();
-
-    int get(T t) {
-      if (t == null) {
-        return 0;
-      }
-      Integer sn = t2i.get(t);
-      if (sn == null) {
-        sn = max.getAndIncrement();
-        Integer old = t2i.putIfAbsent(t, sn);
-        if (old != null) {
-          return old;
-        }
-        i2t.put(sn, t);
-      }
-      return sn;
-    }
-
-    T get(int i) {
-      if (i == 0) {
-        return null;
-      }
-      T t = i2t.get(i);
-      if (t == null) {
-        throw new IllegalStateException("!i2t.containsKey(" + i
-            + "), this=" + this);
-      }
-      return t;
-    }
-
-    @Override
-    public String toString() {
-      return "max=" + max + ",\n  t2i=" + t2i + ",\n  i2t=" + i2t;
-    }
   }
 }

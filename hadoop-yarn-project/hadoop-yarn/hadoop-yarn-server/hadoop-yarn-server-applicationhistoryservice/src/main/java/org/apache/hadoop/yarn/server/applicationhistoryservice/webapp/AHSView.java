@@ -40,7 +40,7 @@ public class AHSView extends TwoColumnLayout {
   protected void preHead(Page.HTML<_> html) {
     commonPreHead(html);
     set(DATATABLES_ID, "apps");
-    set(initID(DATATABLES, "apps"), WebPageUtils.appsTableInit());
+    set(initID(DATATABLES, "apps"), WebPageUtils.appsTableInit(false));
     setTableStyles(html, "apps", ".queue {width:6em}", ".ui {width:8em}");
 
     // Set the correct title.

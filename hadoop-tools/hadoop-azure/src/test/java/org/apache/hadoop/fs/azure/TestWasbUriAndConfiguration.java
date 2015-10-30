@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azure;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -35,6 +36,8 @@ import java.util.Date;
 import java.util.EnumSet;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.AbstractFileSystem;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.CreateOptions;
@@ -362,7 +365,7 @@ public class TestWasbUriAndConfiguration {
         Configuration conf = testAccount.getFileSystem().getConf();
         String authority = testAccount.getFileSystem().getUri().getAuthority();
         URI defaultUri = new URI(defaultScheme, authority, null, null, null);
-        conf.set("fs.default.name", defaultUri.toString());
+        conf.set(FS_DEFAULT_NAME_KEY, defaultUri.toString());
         
         // Add references to file system implementations for wasb and wasbs.
         conf.addResource("azure-test.xml");
@@ -385,11 +388,34 @@ public class TestWasbUriAndConfiguration {
     // authority for the Azure file system should throw.
     testAccount = AzureBlobStorageTestAccount.createMock();
     Configuration conf = testAccount.getFileSystem().getConf();
-    conf.set("fs.default.name", "file:///");
+    conf.set(FS_DEFAULT_NAME_KEY, "file:///");
     try {
       FileSystem.get(new URI("wasb:///random/path"), conf);
       fail("Should've thrown.");
     } catch (IllegalArgumentException e) {
+    }
+  }
+
+  @Test
+  public void testWasbAsDefaultFileSystemHasNoPort() throws Exception {
+    try {
+      testAccount = AzureBlobStorageTestAccount.createMock();
+      Configuration conf = testAccount.getFileSystem().getConf();
+      String authority = testAccount.getFileSystem().getUri().getAuthority();
+      URI defaultUri = new URI("wasb", authority, null, null, null);
+      conf.set(FS_DEFAULT_NAME_KEY, defaultUri.toString());
+      conf.addResource("azure-test.xml");
+
+      FileSystem fs = FileSystem.get(conf);
+      assertTrue(fs instanceof NativeAzureFileSystem);
+      assertEquals(-1, fs.getUri().getPort());
+
+      AbstractFileSystem afs = FileContext.getFileContext(conf)
+          .getDefaultFileSystem();
+      assertTrue(afs instanceof Wasb);
+      assertEquals(-1, afs.getUri().getPort());
+    } finally {
+      FileSystem.closeAll();
     }
   }
 }

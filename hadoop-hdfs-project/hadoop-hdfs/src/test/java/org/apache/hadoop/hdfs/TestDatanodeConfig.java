@@ -81,7 +81,7 @@ public class TestDatanodeConfig {
   public void testDataDirectories() throws IOException {
     File dataDir = new File(BASE_DIR, "data").getCanonicalFile();
     Configuration conf = cluster.getConfiguration(0);
-    // 1. Test unsupported schema. Only "file:" is supported.
+    // 1. Test unsupported ecPolicy. Only "file:" is supported.
     String dnDir = makeURI("shv", null, fileAsURI(dataDir).getPath());
     conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dnDir);
     DataNode dn = null;
@@ -97,7 +97,7 @@ public class TestDatanodeConfig {
     }
     assertNull("Data-node startup should have failed.", dn);
 
-    // 2. Test "file:" schema and no schema (path-only). Both should work.
+    // 2. Test "file:" ecPolicy and no ecPolicy (path-only). Both should work.
     String dnDir1 = fileAsURI(dataDir).toString() + "1";
     String dnDir2 = makeURI("file", "localhost",
                     fileAsURI(dataDir).getPath() + "2");

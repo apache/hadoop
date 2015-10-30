@@ -24,7 +24,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
 /**
  * <p>
@@ -43,7 +43,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 @XmlRootElement(name = "domain")
 @XmlAccessorType(XmlAccessType.NONE)
 @Public
-@Unstable
+@Evolving
 public class TimelineDomain {
 
   private String id;

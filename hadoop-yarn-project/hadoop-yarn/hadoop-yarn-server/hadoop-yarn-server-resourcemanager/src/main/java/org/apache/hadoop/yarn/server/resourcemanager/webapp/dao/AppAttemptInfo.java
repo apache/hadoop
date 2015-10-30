@@ -21,8 +21,12 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
@@ -36,16 +40,19 @@ public class AppAttemptInfo {
   protected String nodeHttpAddress;
   protected String nodeId;
   protected String logsLink;
+  protected String blacklistedNodes;
 
   public AppAttemptInfo() {
   }
 
-  public AppAttemptInfo(RMAppAttempt attempt, String user) {
+  public AppAttemptInfo(ResourceManager rm, RMAppAttempt attempt, String user,
+      String schemePrefix) {
     this.startTime = 0;
     this.containerId = "";
     this.nodeHttpAddress = "";
     this.nodeId = "";
     this.logsLink = "";
+    this.blacklistedNodes = "";
     if (attempt != null) {
       this.id = attempt.getAppAttemptId().getAttemptId();
       this.startTime = attempt.getStartTime();
@@ -54,9 +61,19 @@ public class AppAttemptInfo {
         this.containerId = masterContainer.getId().toString();
         this.nodeHttpAddress = masterContainer.getNodeHttpAddress();
         this.nodeId = masterContainer.getNodeId().toString();
-        this.logsLink =
-            WebAppUtils.getRunningLogURL("//" + masterContainer.getNodeHttpAddress(),
-                ConverterUtils.toString(masterContainer.getId()), user);
+        this.logsLink = WebAppUtils.getRunningLogURL(schemePrefix
+            + masterContainer.getNodeHttpAddress(),
+            ConverterUtils.toString(masterContainer.getId()), user);
+        if (rm.getResourceScheduler() instanceof AbstractYarnScheduler) {
+          AbstractYarnScheduler ayScheduler =
+              (AbstractYarnScheduler) rm.getResourceScheduler();
+          SchedulerApplicationAttempt sattempt =
+              ayScheduler.getApplicationAttempt(attempt.getAppAttemptId());
+          if (sattempt != null) {
+            blacklistedNodes =
+                StringUtils.join(sattempt.getBlacklistedNodes(), ", ");
+          }
+        }
       }
     }
   }

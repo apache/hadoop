@@ -15,37 +15,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.yarn.util;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.SysInfo;
 
 /**
  * Plugin to calculate resource information on the system.
- *
  */
 @InterfaceAudience.LimitedPrivate({"YARN", "MAPREDUCE"})
 @InterfaceStability.Unstable
-public abstract class ResourceCalculatorPlugin extends Configured {
+public class ResourceCalculatorPlugin extends Configured {
+  private static final Log LOG =
+      LogFactory.getLog(ResourceCalculatorPlugin.class);
+
+  private final SysInfo sys;
+
+  protected ResourceCalculatorPlugin() {
+    this(SysInfo.newInstance());
+  }
+
+  public ResourceCalculatorPlugin(SysInfo sys) {
+    this.sys = sys;
+  }
 
   /**
    * Obtain the total size of the virtual memory present in the system.
    *
    * @return virtual memory size in bytes.
    */
-  public abstract long getVirtualMemorySize();
+  public long getVirtualMemorySize() {
+    return sys.getVirtualMemorySize();
+  }
 
   /**
    * Obtain the total size of the physical memory present in the system.
    *
    * @return physical memory size bytes.
    */
-  public abstract long getPhysicalMemorySize();
+  public long getPhysicalMemorySize() {
+    return sys.getPhysicalMemorySize();
+  }
 
   /**
    * Obtain the total size of the available virtual memory present
@@ -53,7 +69,9 @@ public abstract class ResourceCalculatorPlugin extends Configured {
    *
    * @return available virtual memory size in bytes.
    */
-  public abstract long getAvailableVirtualMemorySize();
+  public long getAvailableVirtualMemorySize() {
+    return sys.getAvailableVirtualMemorySize();
+  }
 
   /**
    * Obtain the total size of the available physical memory present
@@ -61,35 +79,88 @@ public abstract class ResourceCalculatorPlugin extends Configured {
    *
    * @return available physical memory size bytes.
    */
-  public abstract long getAvailablePhysicalMemorySize();
+  public long getAvailablePhysicalMemorySize() {
+    return sys.getAvailablePhysicalMemorySize();
+  }
 
   /**
-   * Obtain the total number of processors present on the system.
+   * Obtain the total number of logical processors present on the system.
    *
-   * @return number of processors
+   * @return number of logical processors
    */
-  public abstract int getNumProcessors();
+  public int getNumProcessors() {
+    return sys.getNumProcessors();
+  }
+
+  /**
+   * Obtain total number of physical cores present on the system.
+   *
+   * @return number of physical cores
+   */
+  public int getNumCores() {
+    return sys.getNumCores();
+  }
 
   /**
    * Obtain the CPU frequency of on the system.
    *
    * @return CPU frequency in kHz
    */
-  public abstract long getCpuFrequency();
+  public long getCpuFrequency() {
+    return sys.getCpuFrequency();
+  }
 
   /**
    * Obtain the cumulative CPU time since the system is on.
    *
    * @return cumulative CPU time in milliseconds
    */
-  public abstract long getCumulativeCpuTime();
+  public long getCumulativeCpuTime() {
+    return sys.getCumulativeCpuTime();
+  }
 
   /**
    * Obtain the CPU usage % of the machine. Return -1 if it is unavailable
    *
    * @return CPU usage in %
    */
-  public abstract float getCpuUsage();
+  public float getCpuUsage() {
+    return sys.getCpuUsage();
+  }
+
+   /**
+   * Obtain the aggregated number of bytes read over the network.
+   * @return total number of bytes read.
+   */
+  public long getNetworkBytesRead() {
+    return sys.getNetworkBytesRead();
+  }
+
+  /**
+   * Obtain the aggregated number of bytes written to the network.
+   * @return total number of bytes written.
+   */
+  public long getNetworkBytesWritten() {
+    return sys.getNetworkBytesWritten();
+  }
+
+  /**
+   * Obtain the aggregated number of bytes read from disks.
+   *
+   * @return total number of bytes read.
+   */
+  public long getStorageBytesRead() {
+    return sys.getStorageBytesRead();
+  }
+
+  /**
+   * Obtain the aggregated number of bytes written to disks.
+   *
+   * @return total number of bytes written.
+   */
+  public long getStorageBytesWritten() {
+    return sys.getStorageBytesWritten();
+  }
 
   /**
    * Create the ResourceCalculatorPlugin from the class name and configure it. If
@@ -107,21 +178,12 @@ public abstract class ResourceCalculatorPlugin extends Configured {
     if (clazz != null) {
       return ReflectionUtils.newInstance(clazz, conf);
     }
-
-    // No class given, try a os specific class
     try {
-      if (Shell.LINUX) {
-        return new LinuxResourceCalculatorPlugin();
-      }
-      if (Shell.WINDOWS) {
-        return new WindowsResourceCalculatorPlugin();
-      }
-    } catch (SecurityException se) {
-      // Failed to get Operating System name.
-      return null;
+      return new ResourceCalculatorPlugin();
+    } catch (Throwable t) {
+      LOG.warn(t + ": Failed to instantiate default resource calculator.", t);
     }
-
-    // Not supported on this system.
     return null;
   }
+
 }

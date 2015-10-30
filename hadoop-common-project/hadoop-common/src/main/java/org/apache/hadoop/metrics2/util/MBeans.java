@@ -18,6 +18,8 @@
 package org.apache.hadoop.metrics2.util;
 
 import java.lang.management.ManagementFactory;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.management.InstanceAlreadyExistsException;
 import javax.management.MBeanServer;
@@ -38,6 +40,13 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 @InterfaceStability.Stable
 public class MBeans {
   private static final Log LOG = LogFactory.getLog(MBeans.class);
+  private static final String DOMAIN_PREFIX = "Hadoop:";
+  private static final String SERVICE_PREFIX = "service=";
+  private static final String NAME_PREFIX = "name=";
+
+  private static final Pattern MBEAN_NAME_PATTERN = Pattern.compile(
+      "^" + DOMAIN_PREFIX + SERVICE_PREFIX + "([^,]+)," +
+      NAME_PREFIX + "(.+)$");
 
   /**
    * Register the MBean using our standard MBeanName format
@@ -72,6 +81,26 @@ public class MBeans {
     return null;
   }
 
+  public static String getMbeanNameService(final ObjectName objectName) {
+    Matcher matcher = MBEAN_NAME_PATTERN.matcher(objectName.toString());
+    if (matcher.matches()) {
+      return matcher.group(1);
+    } else {
+      throw new IllegalArgumentException(
+          objectName + " is not a valid Hadoop mbean");
+    }
+  }
+
+  public static String getMbeanNameName(final ObjectName objectName) {
+    Matcher matcher = MBEAN_NAME_PATTERN.matcher(objectName.toString());
+    if (matcher.matches()) {
+      return matcher.group(2);
+    } else {
+      throw new IllegalArgumentException(
+          objectName + " is not a valid Hadoop mbean");
+    }
+  }
+
   static public void unregister(ObjectName mbeanName) {
     LOG.debug("Unregistering "+ mbeanName);
     final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
@@ -88,13 +117,13 @@ public class MBeans {
   }
 
   static private ObjectName getMBeanName(String serviceName, String nameName) {
-    ObjectName name = null;
-    String nameStr = "Hadoop:service="+ serviceName +",name="+ nameName;
+    String nameStr = DOMAIN_PREFIX + SERVICE_PREFIX + serviceName + "," +
+        NAME_PREFIX + nameName;
     try {
-      name = DefaultMetricsSystem.newMBeanName(nameStr);
+      return DefaultMetricsSystem.newMBeanName(nameStr);
     } catch (Exception e) {
       LOG.warn("Error creating MBean object name: "+ nameStr, e);
+      return null;
     }
-    return name;
   }
 }

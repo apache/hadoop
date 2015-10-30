@@ -33,12 +33,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.BlockMissingException;
-import org.apache.hadoop.hdfs.CorruptFileBlockIterator;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.client.impl.CorruptFileBlockIterator;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -69,7 +70,7 @@ public class TestListCorruptFileBlocks {
       conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1); // datanode scans directories
       conf.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 3 * 1000); // datanode sends block reports
       // Set short retry timeouts so this test runs faster
-      conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 10);
+      conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
       cluster = new MiniDFSCluster.Builder(conf).build();
       FileSystem fs = cluster.getFileSystem();
 
@@ -148,7 +149,7 @@ public class TestListCorruptFileBlocks {
       conf.setFloat(DFSConfigKeys.DFS_NAMENODE_REPL_QUEUE_THRESHOLD_PCT_KEY,
                     0f);
       // Set short retry timeouts so this test runs faster
-      conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 10);
+      conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
       cluster = new MiniDFSCluster.Builder(conf).waitSafeMode(false).build();
       cluster.getNameNodeRpc().setSafeMode(
           HdfsConstants.SafeModeAction.SAFEMODE_LEAVE, false);
@@ -209,7 +210,8 @@ public class TestListCorruptFileBlocks {
       fs = cluster.getFileSystem();
 
       // wait until replication queues have been initialized
-      while (!cluster.getNameNode().namesystem.isPopulatingReplQueues()) {
+      while (!cluster.getNameNode().namesystem.getBlockManager()
+          .isPopulatingReplQueues()) {
         try {
           LOG.info("waiting for replication queues");
           Thread.sleep(1000);
@@ -528,4 +530,72 @@ public class TestListCorruptFileBlocks {
     }
   }
 
+  @Test(timeout = 60000)
+  public void testListCorruptFileBlocksOnRelativePath() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000);
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1);
+
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
+      DistributedFileSystem dfs = (DistributedFileSystem) fs;
+      final Path baseDir = new Path("/somewhere/base");
+      fs.mkdirs(baseDir);
+      // set working dir
+      fs.setWorkingDirectory(baseDir);
+
+      DFSTestUtil util = new DFSTestUtil.Builder()
+          .setName("testGetCorruptFilesOnRelativePath").setNumFiles(3)
+          .setMaxLevels(1).setMaxSize(1024).build();
+      util.createFiles(fs, "corruptData");
+
+      RemoteIterator<Path> corruptFileBlocks = dfs
+          .listCorruptFileBlocks(new Path("corruptData"));
+      int numCorrupt = countPaths(corruptFileBlocks);
+      assertTrue(numCorrupt == 0);
+
+      // delete the blocks
+      String bpid = cluster.getNamesystem().getBlockPoolId();
+      // For loop through number of data directories per datanode (2)
+      for (int i = 0; i < 2; i++) {
+        File storageDir = cluster.getInstanceStorageDir(0, i);
+        File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
+        List<File> metadataFiles = MiniDFSCluster
+            .getAllBlockMetadataFiles(data_dir);
+        if (metadataFiles == null)
+          continue;
+        for (File metadataFile : metadataFiles) {
+          File blockFile = Block.metaToBlockFile(metadataFile);
+          LOG.info("Deliberately removing file " + blockFile.getName());
+          assertTrue("Cannot remove file.", blockFile.delete());
+          LOG.info("Deliberately removing file " + metadataFile.getName());
+          assertTrue("Cannot remove file.", metadataFile.delete());
+        }
+      }
+
+      int count = 0;
+      corruptFileBlocks = dfs.listCorruptFileBlocks(new Path("corruptData"));
+      numCorrupt = countPaths(corruptFileBlocks);
+      while (numCorrupt < 3) {
+        Thread.sleep(1000);
+        corruptFileBlocks = dfs.listCorruptFileBlocks(new Path("corruptData"));
+        numCorrupt = countPaths(corruptFileBlocks);
+        count++;
+        if (count > 30)
+          break;
+      }
+      // Validate we get all the corrupt files
+      LOG.info("Namenode has bad files. " + numCorrupt);
+      assertTrue("Failed to get corrupt files!", numCorrupt == 3);
+
+      util.cleanup(fs, "corruptData");
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 }

@@ -93,8 +93,8 @@ public class KeyAuthorizationKeyProvider extends KeyProviderCryptoExtension {
    * The constructor takes a {@link KeyProviderCryptoExtension} and an
    * implementation of <code>KeyACLs</code>. All calls are delegated to the
    * provider keyProvider after authorization check (if required)
-   * @param keyProvider 
-   * @param acls
+   * @param keyProvider  the key provider
+   * @param acls the Key ACLs
    */
   public KeyAuthorizationKeyProvider(KeyProviderCryptoExtension keyProvider,
       KeyACLs acls) {

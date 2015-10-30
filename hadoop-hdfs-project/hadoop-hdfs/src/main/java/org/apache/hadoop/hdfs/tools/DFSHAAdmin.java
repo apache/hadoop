@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.tools;
 
 import java.io.PrintStream;
+import java.util.Arrays;
 import java.util.Collection;
 
 import org.apache.commons.logging.Log;
@@ -28,6 +29,7 @@ import org.apache.hadoop.ha.HAAdmin;
 import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -88,7 +90,7 @@ public class DFSHAAdmin extends HAAdmin {
 
   @Override
   protected String getUsageString() {
-    return "Usage: haadmin";
+    return "Usage: haadmin [-ns <nameserviceId>]";
   }
 
   @Override
@@ -97,6 +99,25 @@ public class DFSHAAdmin extends HAAdmin {
       printUsage(errOut);
       return -1;
     }
+
+    int i = 0;
+    String cmd = argv[i++];
+
+    if ("-ns".equals(cmd)) {
+      if (i == argv.length) {
+        errOut.println("Missing nameservice ID");
+        printUsage(errOut);
+        return -1;
+      }
+      nameserviceId = argv[i++];
+      if (i >= argv.length) {
+        errOut.println("Missing command");
+        printUsage(errOut);
+        return -1;
+      }
+      argv = Arrays.copyOfRange(argv, i, argv.length);
+    }
+
     return super.runCmd(argv);
   }
   
@@ -105,7 +126,9 @@ public class DFSHAAdmin extends HAAdmin {
    */
   @Override
   protected Collection<String> getTargetIds(String namenodeToActivate) {
-    return DFSUtil.getNameNodeIds(getConf(), (nameserviceId != null)? nameserviceId : DFSUtil.getNamenodeNameServiceId(getConf()));
+    return DFSUtilClient.getNameNodeIds(getConf(),
+                                        (nameserviceId != null) ? nameserviceId : DFSUtil.getNamenodeNameServiceId(
+                                            getConf()));
   }
   
   public static void main(String[] argv) throws Exception {

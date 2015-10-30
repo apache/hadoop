@@ -19,16 +19,28 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.util.Random;
 
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.mapred.SortedRanges.Range;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.checkpoint.TaskCheckpointID;
+import org.apache.hadoop.util.ExitUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class TestTaskProgressReporter {
   private static int statusUpdateTimes = 0;
+
+  // set to true if the thread is existed with ExitUtil.terminate
+  volatile boolean threadExited = false;
+
+  final static int LOCAL_BYTES_WRITTEN = 1024;
+
   private FakeUmbilical fakeUmbilical = new FakeUmbilical();
 
   private static class DummyTask extends Task {
@@ -133,12 +145,21 @@ public class TestTaskProgressReporter {
   }
 
   private class DummyTaskReporter extends Task.TaskReporter {
+    volatile boolean taskLimitIsChecked = false;
+
     public DummyTaskReporter(Task task) {
       task.super(task.getProgress(), fakeUmbilical);
     }
+
     @Override
     public void setProgress(float progress) {
       super.setProgress(progress);
+    }
+
+    @Override
+    protected void checkTaskLimits() throws TaskLimitException {
+      taskLimitIsChecked = true;
+      super.checkTaskLimits();
     }
   }
 
@@ -156,5 +177,64 @@ public class TestTaskProgressReporter {
     reporter.resetDoneFlag();
     t.join();
     Assert.assertEquals(statusUpdateTimes, 2);
+  }
+
+  @Test(timeout=10000)
+  public void testBytesWrittenRespectingLimit() throws Exception {
+    // add 1024 to the limit to account for writes not controlled by the test
+    testBytesWrittenLimit(LOCAL_BYTES_WRITTEN + 1024, false);
+  }
+
+  @Test(timeout=10000)
+  public void testBytesWrittenExceedingLimit() throws Exception {
+    testBytesWrittenLimit(LOCAL_BYTES_WRITTEN - 1, true);
+  }
+
+  /**
+   * This is to test the limit on BYTES_WRITTEN. The test is limited in that
+   * the check is done only once at the first loop of TaskReport#run.
+   * @param limit the limit on BYTES_WRITTEN in local file system
+   * @param failFast should the task fail fast with such limit?
+   * @throws Exception
+   */
+  public void testBytesWrittenLimit(long limit, boolean failFast)
+          throws Exception {
+    ExitUtil.disableSystemExit();
+    threadExited = false;
+    Thread.UncaughtExceptionHandler h = new Thread.UncaughtExceptionHandler() {
+      public void uncaughtException(Thread th, Throwable ex) {
+        System.out.println("Uncaught exception: " + ex);
+        if (ex instanceof ExitUtil.ExitException) {
+          threadExited = true;
+        }
+      }
+    };
+    JobConf conf = new JobConf();
+    // To disable task reporter sleeping
+    conf.getLong(MRJobConfig.TASK_PROGRESS_REPORT_INTERVAL, 0);
+    conf.setLong(MRJobConfig.TASK_LOCAL_WRITE_LIMIT_BYTES, limit);
+    LocalFileSystem localFS = FileSystem.getLocal(conf);
+    Path tmpPath = new Path("/tmp/testBytesWrittenLimit-tmpFile-"
+            + new Random(System.currentTimeMillis()).nextInt());
+    FSDataOutputStream out = localFS.create(tmpPath, true);
+    out.write(new byte[LOCAL_BYTES_WRITTEN]);
+    out.close();
+
+    Task task = new DummyTask();
+    task.setConf(conf);
+    DummyTaskReporter reporter = new DummyTaskReporter(task);
+    Thread t = new Thread(reporter);
+    t.setUncaughtExceptionHandler(h);
+    reporter.setProgressFlag();
+
+    t.start();
+    while (!reporter.taskLimitIsChecked) {
+      Thread.yield();
+    }
+
+    task.setTaskDone();
+    reporter.resetDoneFlag();
+    t.join();
+    Assert.assertEquals(failFast, threadExited);
   }
 }

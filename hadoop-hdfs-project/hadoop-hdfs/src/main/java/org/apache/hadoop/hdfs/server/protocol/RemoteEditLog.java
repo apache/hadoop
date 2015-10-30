@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-
 import com.google.common.base.Function;
 import com.google.common.collect.ComparisonChain;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 
 public class RemoteEditLog implements Comparable<RemoteEditLog> {
-  private long startTxId = HdfsConstants.INVALID_TXID;
-  private long endTxId = HdfsConstants.INVALID_TXID;
+  private long startTxId = HdfsServerConstants.INVALID_TXID;
+  private long endTxId = HdfsServerConstants.INVALID_TXID;
   private boolean isInProgress = false;
   
   public RemoteEditLog() {
@@ -33,7 +32,7 @@ public class RemoteEditLog implements Comparable<RemoteEditLog> {
   public RemoteEditLog(long startTxId, long endTxId) {
     this.startTxId = startTxId;
     this.endTxId = endTxId;
-    this.isInProgress = (endTxId == HdfsConstants.INVALID_TXID);
+    this.isInProgress = (endTxId == HdfsServerConstants.INVALID_TXID);
   }
   
   public RemoteEditLog(long startTxId, long endTxId, boolean inProgress) {
@@ -90,7 +89,7 @@ public class RemoteEditLog implements Comparable<RemoteEditLog> {
       @Override
       public Long apply(RemoteEditLog log) {
         if (null == log) {
-          return HdfsConstants.INVALID_TXID;
+          return HdfsServerConstants.INVALID_TXID;
         }
         return log.getStartTxId();
       }

@@ -22,6 +22,7 @@ import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.apache.hadoop.test.MockitoMaker.make;
 import static org.apache.hadoop.test.MockitoMaker.stub;
+import static org.junit.Assert.assertTrue;
 import static org.jboss.netty.buffer.ChannelBuffers.wrappedBuffer;
 import static org.jboss.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.jboss.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -79,17 +80,88 @@ import org.apache.hadoop.yarn.server.records.Version;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.socket.SocketChannel;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.AbstractChannel;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import org.mockito.Mockito;
 import org.mortbay.jetty.HttpHeaders;
 
 public class TestShuffleHandler {
   static final long MiB = 1024 * 1024; 
   private static final Log LOG = LogFactory.getLog(TestShuffleHandler.class);
+
+  class MockShuffleHandler extends org.apache.hadoop.mapred.ShuffleHandler {
+    @Override
+    protected Shuffle getShuffle(final Configuration conf) {
+      return new Shuffle(conf) {
+        @Override
+        protected void verifyRequest(String appid, ChannelHandlerContext ctx,
+            HttpRequest request, HttpResponse response, URL requestUri)
+            throws IOException {
+        }
+        @Override
+        protected MapOutputInfo getMapOutputInfo(String base, String mapId,
+            int reduce, String user) throws IOException {
+          // Do nothing.
+          return null;
+        }
+        @Override
+        protected void populateHeaders(List<String> mapIds, String jobId,
+            String user, int reduce, HttpRequest request,
+            HttpResponse response, boolean keepAliveParam,
+            Map<String, MapOutputInfo> infoMap) throws IOException {
+          // Do nothing.
+        }
+        @Override
+        protected ChannelFuture sendMapOutput(ChannelHandlerContext ctx,
+            Channel ch, String user, String mapId, int reduce,
+            MapOutputInfo info) throws IOException {
+
+          ShuffleHeader header =
+              new ShuffleHeader("attempt_12345_1_m_1_0", 5678, 5678, 1);
+          DataOutputBuffer dob = new DataOutputBuffer();
+          header.write(dob);
+          ch.write(wrappedBuffer(dob.getData(), 0, dob.getLength()));
+          dob = new DataOutputBuffer();
+          for (int i = 0; i < 100; ++i) {
+            header.write(dob);
+          }
+          return ch.write(wrappedBuffer(dob.getData(), 0, dob.getLength()));
+        }
+      };
+    }
+  }
+
+  private static class MockShuffleHandler2 extends org.apache.hadoop.mapred.ShuffleHandler {
+    boolean socketKeepAlive = false;
+
+    @Override
+    protected Shuffle getShuffle(final Configuration conf) {
+      return new Shuffle(conf) {
+        @Override
+        protected void verifyRequest(String appid, ChannelHandlerContext ctx,
+            HttpRequest request, HttpResponse response, URL requestUri)
+            throws IOException {
+          SocketChannel channel = (SocketChannel)(ctx.getChannel());
+          socketKeepAlive = channel.getConfig().isKeepAlive();
+        }
+      };
+    }
+
+    protected boolean isSocketKeepAlive() {
+      return socketKeepAlive;
+    }
+  }
 
   /**
    * Test the validation of ShuffleHandler's meta-data's serialization and
@@ -374,6 +446,42 @@ public class TestShuffleHandler {
     input.close();
   }
 
+  @Test(timeout = 10000)
+  public void testSocketKeepAlive() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
+    conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, true);
+    // try setting to -ve keep alive timeout.
+    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, -100);
+    HttpURLConnection conn = null;
+    MockShuffleHandler2 shuffleHandler = new MockShuffleHandler2();
+    try {
+      shuffleHandler.init(conf);
+      shuffleHandler.start();
+
+      String shuffleBaseURL = "http://127.0.0.1:"
+              + shuffleHandler.getConfig().get(
+                ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY);
+      URL url =
+          new URL(shuffleBaseURL + "/mapOutput?job=job_12345_1&reduce=1&"
+              + "map=attempt_12345_1_m_1_0");
+      conn = (HttpURLConnection) url.openConnection();
+      conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
+          ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
+      conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
+          ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
+      conn.connect();
+      conn.getInputStream();
+      Assert.assertTrue("socket should be set KEEP_ALIVE",
+          shuffleHandler.isSocketKeepAlive());
+    } finally {
+      if (conn != null) {
+        conn.disconnect();
+      }
+      shuffleHandler.stop();
+    }
+  }
+
   /**
    * simulate a reducer that sends an invalid shuffle-header - sometimes a wrong
    * header_name and sometimes a wrong version
@@ -601,6 +709,7 @@ public class TestShuffleHandler {
       Assert.assertTrue((new String(byteArr)).contains(message));
     } finally {
       shuffleHandler.stop();
+      FileUtil.fullyDelete(absLogDir);
     }
   }
 
@@ -828,5 +937,189 @@ public class TestShuffleHandler {
     int rc = conn.getResponseCode();
     conn.disconnect();
     return rc;
+  }
+
+  @Test(timeout = 100000)
+  public void testGetMapOutputInfo() throws Exception {
+    final ArrayList<Throwable> failures = new ArrayList<Throwable>(1);
+    Configuration conf = new Configuration();
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
+    conf.setInt(ShuffleHandler.MAX_SHUFFLE_CONNECTIONS, 3);
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "simple");
+    UserGroupInformation.setConfiguration(conf);
+    File absLogDir = new File("target", TestShuffleHandler.class.
+        getSimpleName() + "LocDir").getAbsoluteFile();
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS, absLogDir.getAbsolutePath());
+    ApplicationId appId = ApplicationId.newInstance(12345, 1);
+    String appAttemptId = "attempt_12345_1_m_1_0";
+    String user = "randomUser";
+    String reducerId = "0";
+    List<File> fileMap = new ArrayList<File>();
+    createShuffleHandlerFiles(absLogDir, user, appId.toString(), appAttemptId,
+        conf, fileMap);
+    ShuffleHandler shuffleHandler = new ShuffleHandler() {
+      @Override
+      protected Shuffle getShuffle(Configuration conf) {
+        // replace the shuffle handler with one stubbed for testing
+        return new Shuffle(conf) {
+          @Override
+          protected void populateHeaders(List<String> mapIds,
+              String outputBaseStr, String user, int reduce,
+              HttpRequest request, HttpResponse response,
+              boolean keepAliveParam, Map<String, MapOutputInfo> infoMap)
+              throws IOException {
+            // Only set response headers and skip everything else
+            // send some dummy value for content-length
+            super.setResponseHeaders(response, keepAliveParam, 100);
+          }
+          @Override
+          protected void verifyRequest(String appid,
+              ChannelHandlerContext ctx, HttpRequest request,
+              HttpResponse response, URL requestUri) throws IOException {
+            // Do nothing.
+          }
+          @Override
+          protected void sendError(ChannelHandlerContext ctx, String message,
+              HttpResponseStatus status) {
+            if (failures.size() == 0) {
+              failures.add(new Error(message));
+              ctx.getChannel().close();
+            }
+          }
+          @Override
+          protected ChannelFuture sendMapOutput(ChannelHandlerContext ctx,
+              Channel ch, String user, String mapId, int reduce,
+              MapOutputInfo info) throws IOException {
+            // send a shuffle header
+            ShuffleHeader header =
+                new ShuffleHeader("attempt_12345_1_m_1_0", 5678, 5678, 1);
+            DataOutputBuffer dob = new DataOutputBuffer();
+            header.write(dob);
+            return ch.write(wrappedBuffer(dob.getData(), 0, dob.getLength()));
+          }
+        };
+      }
+    };
+    shuffleHandler.init(conf);
+    try {
+      shuffleHandler.start();
+      DataOutputBuffer outputBuffer = new DataOutputBuffer();
+      outputBuffer.reset();
+      Token<JobTokenIdentifier> jt =
+          new Token<JobTokenIdentifier>("identifier".getBytes(),
+          "password".getBytes(), new Text(user), new Text("shuffleService"));
+      jt.write(outputBuffer);
+      shuffleHandler
+          .initializeApplication(new ApplicationInitializationContext(user,
+          appId, ByteBuffer.wrap(outputBuffer.getData(), 0,
+          outputBuffer.getLength())));
+      URL url =
+          new URL(
+              "http://127.0.0.1:"
+                  + shuffleHandler.getConfig().get(
+                      ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
+                  + "/mapOutput?job=job_12345_0001&reduce=" + reducerId
+                  + "&map=attempt_12345_1_m_1_0");
+      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
+          ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
+      conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
+          ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
+      conn.connect();
+      try {
+        DataInputStream is = new DataInputStream(conn.getInputStream());
+        ShuffleHeader header = new ShuffleHeader();
+        header.readFields(is);
+        is.close();
+      } catch (EOFException e) {
+        // ignore
+      }
+      Assert.assertEquals("sendError called due to shuffle error",
+          0, failures.size());
+    } finally {
+      shuffleHandler.stop();
+      FileUtil.fullyDelete(absLogDir);
+    }
+  }
+
+  @Test(timeout = 4000)
+  public void testSendMapCount() throws Exception {
+    final List<ShuffleHandler.ReduceMapFileCount> listenerList =
+        new ArrayList<ShuffleHandler.ReduceMapFileCount>();
+
+    final ChannelHandlerContext mockCtx =
+        Mockito.mock(ChannelHandlerContext.class);
+    final MessageEvent mockEvt = Mockito.mock(MessageEvent.class);
+    final Channel mockCh = Mockito.mock(AbstractChannel.class);
+
+    // Mock HttpRequest and ChannelFuture
+    final HttpRequest mockHttpRequest = createMockHttpRequest();
+    final ChannelFuture mockFuture = createMockChannelFuture(mockCh,
+        listenerList);
+
+    // Mock Netty Channel Context and Channel behavior
+    Mockito.doReturn(mockCh).when(mockCtx).getChannel();
+    Mockito.when(mockCtx.getChannel()).thenReturn(mockCh);
+    Mockito.doReturn(mockFuture).when(mockCh).write(Mockito.any(Object.class));
+    Mockito.when(mockCh.write(Object.class)).thenReturn(mockFuture);
+
+    //Mock MessageEvent behavior
+    Mockito.doReturn(mockCh).when(mockEvt).getChannel();
+    Mockito.when(mockEvt.getChannel()).thenReturn(mockCh);
+    Mockito.doReturn(mockHttpRequest).when(mockEvt).getMessage();
+
+    final ShuffleHandler sh = new MockShuffleHandler();
+    Configuration conf = new Configuration();
+    sh.init(conf);
+    sh.start();
+    int maxOpenFiles =conf.getInt(ShuffleHandler.SHUFFLE_MAX_SESSION_OPEN_FILES,
+        ShuffleHandler.DEFAULT_SHUFFLE_MAX_SESSION_OPEN_FILES);
+    sh.getShuffle(conf).messageReceived(mockCtx, mockEvt);
+    assertTrue("Number of Open files should not exceed the configured " +
+            "value!-Not Expected",
+        listenerList.size() <= maxOpenFiles);
+    while(!listenerList.isEmpty()) {
+      listenerList.remove(0).operationComplete(mockFuture);
+      assertTrue("Number of Open files should not exceed the configured " +
+              "value!-Not Expected",
+          listenerList.size() <= maxOpenFiles);
+    }
+    sh.close();
+  }
+
+  public ChannelFuture createMockChannelFuture(Channel mockCh,
+      final List<ShuffleHandler.ReduceMapFileCount> listenerList) {
+    final ChannelFuture mockFuture = Mockito.mock(ChannelFuture.class);
+    Mockito.when(mockFuture.getChannel()).thenReturn(mockCh);
+    Mockito.doReturn(true).when(mockFuture).isSuccess();
+    Mockito.doAnswer(new Answer() {
+      @Override
+      public Object answer(InvocationOnMock invocation) throws Throwable {
+        //Add ReduceMapFileCount listener to a list
+        if (invocation.getArguments()[0].getClass() ==
+            ShuffleHandler.ReduceMapFileCount.class)
+          listenerList.add((ShuffleHandler.ReduceMapFileCount)
+              invocation.getArguments()[0]);
+        return null;
+      }
+    }).when(mockFuture).addListener(Mockito.any(
+        ShuffleHandler.ReduceMapFileCount.class));
+    return mockFuture;
+  }
+
+  public HttpRequest createMockHttpRequest() {
+    HttpRequest mockHttpRequest = Mockito.mock(HttpRequest.class);
+    Mockito.doReturn(HttpMethod.GET).when(mockHttpRequest).getMethod();
+    Mockito.doAnswer(new Answer() {
+      @Override
+      public Object answer(InvocationOnMock invocation) throws Throwable {
+        String uri = "/mapOutput?job=job_12345_1&reduce=1";
+        for (int i = 0; i < 100; i++)
+          uri = uri.concat("&map=attempt_12345_1_m_" + i + "_0");
+        return uri;
+      }
+    }).when(mockHttpRequest).getUri();
+    return mockHttpRequest;
   }
 }

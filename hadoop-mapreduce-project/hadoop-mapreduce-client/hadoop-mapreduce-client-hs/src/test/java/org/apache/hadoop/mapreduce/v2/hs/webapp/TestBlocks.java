@@ -65,6 +65,7 @@ import org.apache.hadoop.yarn.webapp.log.AggregatedLogsPage;
 import org.apache.hadoop.yarn.webapp.view.BlockForTest;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock.Block;
+import org.junit.Assert;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -77,6 +78,23 @@ import static org.mockito.Mockito.*;
 
 public class TestBlocks {
   private ByteArrayOutputStream data = new ByteArrayOutputStream();
+
+  @Test
+  public void testPullTaskLink(){
+    Task task = getTask(0);
+    String taskId = task.getID().toString();
+
+    Assert.assertEquals("pull links doesn't work correctly",
+        "Task failed <a href=\"/jobhistory/task/" + taskId + "\">" +
+        taskId + "</a>"
+        , HsJobBlock.addTaskLinks("Task failed " + taskId));
+
+    Assert.assertEquals("pull links doesn't work correctly",
+        "Task failed <a href=\"/jobhistory/task/" + taskId + "\">" +
+        taskId + "</a>\n Job failed as tasks failed. failedMaps:1 failedReduces:0"
+        , HsJobBlock.addTaskLinks("Task failed " + taskId + "\n " +
+        "Job failed as tasks failed. failedMaps:1 failedReduces:0"));
+  }
 
   /**
    * test HsTasksBlock's rendering.
@@ -182,7 +200,7 @@ public class TestBlocks {
     block.render(html);
     pWriter.flush();
     // should be printed information about attempts
-    assertTrue(data.toString().contains("0 attempt_0_0001_r_000000_0"));
+    assertTrue(data.toString().contains("attempt_0_0001_r_000000_0"));
     assertTrue(data.toString().contains("SUCCEEDED"));
     assertFalse(data.toString().contains("Processed 128/128 records <p> \n"));
     assertTrue(data.toString().contains("Processed 128\\/128 records &lt;p&gt; \\n"));
@@ -241,7 +259,7 @@ public class TestBlocks {
     assertEquals(HsAttemptsPage.class, controller.attemptsPage());
 
     controller.set(AMParams.JOB_ID, "job_01_01");
-    controller.set(AMParams.TASK_ID, "task_01_01_m01_01");
+    controller.set(AMParams.TASK_ID, "task_01_01_m_01");
     controller.set(AMParams.TASK_TYPE, "m");
     controller.set(AMParams.ATTEMPT_STATE, "State");
 

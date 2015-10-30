@@ -1,0 +1,377 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="testConf.xsl"?>
+
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<configuration>
+  <!-- Normal mode is test. To run just the commands and dump the output
+       to the log, set it to nocompare -->
+  <mode>test</mode>
+
+  <!--  Comparator types:
+           ExactComparator
+           SubstringComparator
+           RegexpComparator
+           TokenComparator
+           -->
+  <tests>
+
+  <!-- Test help options -->
+    <test>
+      <description>help: help for erasure coding command</description>
+      <test-commands>
+        <ec-admin-command>-help</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Usage: hdfs erasurecode [generic options]</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>help: setPolicy command</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -help setPolicy</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^[ \t]*Set a specified erasure coding policy to a directory( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-setPolicy \[-p &lt;policyName&gt;\] &lt;path&gt;(.)*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>help: getPolicy command</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -help getPolicy</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Get erasure coding policy information about at specified path</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-getPolicy &lt;path&gt;(.)*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>help: listPolicies command</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -help listPolicies</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Get the list of erasure coding policies supported</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-listPolicies (.)*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+  <!-- Test erasure code commands -->
+    <test>
+      <description>setPolicy : set erasure coding policy on a directory to encode files</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -p RS-6-3-64k /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>EC policy set successfully at NAMENODE/ecdir</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>setPolicy : set a policy twice</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Directory /ecdir already has an erasure coding policy</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>setPolicy : default policy</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -getPolicy /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>ErasureCodingPolicy=[Name=RS-6-3-64k</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>getPolicy : get EC policy information at specified path, which doesn't have an EC policy</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /noec</command>
+        <ec-admin-command>-fs NAMENODE -getPolicy /noec</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /noec</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Path NAMENODE/noec is not erasure coded</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>getPolicy : get EC policy information at specified path, which doesn't have an EC policy</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -p RS-6-3-64k /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -getPolicy /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>ErasureCodingPolicy=[Name=RS-6-3-64k</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>getPolicy : get EC policy information at specified path, which doesn't have an EC policy</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -p RS-6-3-64k /ecdir</ec-admin-command>
+        <command>-fs NAMENODE -touchz /ecdir/ecfile</command>
+        <ec-admin-command>-fs NAMENODE -getPolicy /ecdir/ecfile</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm /ecdir/ecfile</command>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>ErasureCodingPolicy=[Name=RS-6-3-64k</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>listPolicies : get the list of ECPolicies supported</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -listPolicies</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>RS-6-3</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+<!-- Test illegal parameters -->
+    <test>
+      <description>setPolicy : illegal parameters - path is missing</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-setPolicy: &lt;path&gt; is missing(.)*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>setPolicy : illegal parameters - policy name is missing</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -p</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-setPolicy: option -p requires 1 argument(.)*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>setPolicy : illegal parameters - too many arguments</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy /ecdir1 /ecdir2</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>-setPolicy: Too many arguments</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>setPolicy : illegal parameters - invalidpolicy</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -p invalidpolicy /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Policy 'invalidpolicy' does not match any of the supported policies. Please select any one of [RS-6-3-64k]</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>setPolicy : illegal parameters - no such file</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -setPolicy /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^setPolicy: `/ecdir': No such file or directory(.)*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>getPolicy : illegal parameters - path is missing</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -getPolicy </ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-getPolicy: &lt;path&gt; is missing(.)*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>getPolicy : illegal parameters - too many arguments</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -getPolicy /ecdir /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>-getPolicy: Too many arguments</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>getPolicy : illegal parameters - no such file</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -getPolicy /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^getPolicy: `/ecdir': No such file or directory(.)*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>listPolicies : illegal parameters - too many parameters</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -listPolicies /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>-listPolicies: Too many parameters</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+  </tests>
+</configuration>

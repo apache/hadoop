@@ -1249,7 +1249,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     byte[] bb = new byte[(int)len];
     FSDataInputStream fsdis = fc.open(path);
     try {
-      fsdis.read(bb);
+      fsdis.readFully(bb);
     } finally {
       fsdis.close();
     }
@@ -1310,7 +1310,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     byte[] bb = new byte[data.length];
     FSDataInputStream fsdis = fc.open(path);
     try {
-      fsdis.read(bb);
+      fsdis.readFully(bb);
     } finally {
       fsdis.close();
     }

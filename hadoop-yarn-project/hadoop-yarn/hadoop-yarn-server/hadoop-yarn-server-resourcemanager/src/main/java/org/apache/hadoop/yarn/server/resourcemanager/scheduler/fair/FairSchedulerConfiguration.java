@@ -18,8 +18,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -49,7 +47,17 @@ public class FairSchedulerConfiguration extends Configuration {
   public static final String RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES =
     YarnConfiguration.YARN_PREFIX + "scheduler.increment-allocation-vcores";
   public static final int DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES = 1;
-  
+
+  /** Threshold for container size for making a container reservation as a
+   * multiple of increment allocation. Only container sizes above this are
+   * allowed to reserve a node */
+  public static final String
+      RM_SCHEDULER_RESERVATION_THRESHOLD_INCERMENT_MULTIPLE =
+      YarnConfiguration.YARN_PREFIX +
+          "scheduler.reservation-threshold.increment-multiple";
+  public static final float
+      DEFAULT_RM_SCHEDULER_RESERVATION_THRESHOLD_INCREMENT_MULTIPLE = 2f;
+
   private static final String CONF_PREFIX =  "yarn.scheduler.fair.";
 
   public static final String ALLOCATION_FILE = CONF_PREFIX + "allocation.file";
@@ -129,6 +137,11 @@ public class FairSchedulerConfiguration extends Configuration {
       CONF_PREFIX + "update-interval-ms";
   public static final int DEFAULT_UPDATE_INTERVAL_MS = 500;
 
+  /** Ratio of nodes available for an app to make an reservation on. */
+  public static final String RESERVABLE_NODES =
+          CONF_PREFIX + "reservable-nodes";
+  public static final float RESERVABLE_NODES_DEFAULT = 0.05f;
+
   public FairSchedulerConfiguration() {
     super();
   }
@@ -166,7 +179,13 @@ public class FairSchedulerConfiguration extends Configuration {
       DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES);
     return Resources.createResource(incrementMemory, incrementCores);
   }
-  
+
+  public float getReservationThresholdIncrementMultiple() {
+    return getFloat(
+      RM_SCHEDULER_RESERVATION_THRESHOLD_INCERMENT_MULTIPLE,
+      DEFAULT_RM_SCHEDULER_RESERVATION_THRESHOLD_INCREMENT_MULTIPLE);
+  }
+
   public float getLocalityThresholdNode() {
     return getFloat(LOCALITY_THRESHOLD_NODE, DEFAULT_LOCALITY_THRESHOLD_NODE);
   }
@@ -233,6 +252,10 @@ public class FairSchedulerConfiguration extends Configuration {
         YarnConfiguration.DEFAULT_RM_SCHEDULER_USE_PORT_FOR_NODE_NAME);
   }
 
+  public float getReservableNodes() {
+    return getFloat(RESERVABLE_NODES, RESERVABLE_NODES_DEFAULT);
+  }
+
   /**
    * Parses a resource config value of a form like "1024", "1024 mb",
    * or "1024 mb, 3 vcores". If no units are given, megabytes are assumed.
@@ -260,7 +283,7 @@ public class FairSchedulerConfiguration extends Configuration {
   
   private static int findResource(String val, String units)
     throws AllocationConfigurationException {
-    Pattern pattern = Pattern.compile("(\\d+)\\s*" + units);
+    Pattern pattern = Pattern.compile("(\\d+)(\\.\\d*)?\\s*" + units);
     Matcher matcher = pattern.matcher(val);
     if (!matcher.find()) {
       throw new AllocationConfigurationException("Missing resource: " + units);

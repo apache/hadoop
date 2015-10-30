@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
@@ -37,21 +38,19 @@ import org.apache.hadoop.mapreduce.v2.proto.MRProtos.TaskStateProto;
 import org.apache.hadoop.mapreduce.v2.util.MRProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoBase;
 
-
-    
 public class TaskReportPBImpl extends ProtoBase<TaskReportProto> implements TaskReport {
   TaskReportProto proto = TaskReportProto.getDefaultInstance();
   TaskReportProto.Builder builder = null;
   boolean viaProto = false;
-  
+
   private TaskId taskId = null;
   private Counters counters = null;
+  private org.apache.hadoop.mapreduce.Counters rawCounters = null;
   private List<TaskAttemptId> runningAttempts = null;
   private TaskAttemptId successfulAttemptId = null;
   private List<String> diagnostics = null;
   private String status;
-  
-  
+
   public TaskReportPBImpl() {
     builder = TaskReportProto.newBuilder();
   }
@@ -72,6 +71,7 @@ public class TaskReportPBImpl extends ProtoBase<TaskReportProto> implements Task
     if (this.taskId != null) {
       builder.setTaskId(convertToProtoFormat(this.taskId));
     }
+    convertRawCountersToCounters();
     if (this.counters != null) {
       builder.setCounters(convertToProtoFormat(this.counters));
     }
@@ -100,11 +100,11 @@ public class TaskReportPBImpl extends ProtoBase<TaskReportProto> implements Task
     }
     viaProto = false;
   }
-    
-  
+
   @Override
   public Counters getCounters() {
     TaskReportProtoOrBuilder p = viaProto ? proto : builder;
+    convertRawCountersToCounters();
     if (this.counters != null) {
       return this.counters;
     }
@@ -118,10 +118,32 @@ public class TaskReportPBImpl extends ProtoBase<TaskReportProto> implements Task
   @Override
   public void setCounters(Counters counters) {
     maybeInitBuilder();
-    if (counters == null) 
+    if (counters == null) {
       builder.clearCounters();
+    }
     this.counters = counters;
+    this.rawCounters = null;
   }
+
+  @Override
+  public org.apache.hadoop.mapreduce.Counters
+      getRawCounters() {
+    return this.rawCounters;
+  }
+
+  @Override
+  public void setRawCounters(org.apache.hadoop.mapreduce.Counters rCounters) {
+    setCounters(null);
+    this.rawCounters = rCounters;
+  }
+
+  private void convertRawCountersToCounters() {
+    if (this.counters == null && this.rawCounters != null) {
+      this.counters = TypeConverter.toYarn(rawCounters);
+      this.rawCounters = null;
+    }
+  }
+
   @Override
   public long getStartTime() {
     TaskReportProtoOrBuilder p = viaProto ? proto : builder;

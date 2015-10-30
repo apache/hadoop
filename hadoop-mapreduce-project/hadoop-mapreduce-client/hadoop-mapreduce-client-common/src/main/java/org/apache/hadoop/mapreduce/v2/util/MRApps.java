@@ -241,7 +241,7 @@ public class MRApps extends Apps {
     boolean userClassesTakesPrecedence = 
       conf.getBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, false);
 
-    String classpathEnvVar = 
+    String classpathEnvVar =
       conf.getBoolean(MRJobConfig.MAPREDUCE_JOB_CLASSLOADER, false)
         ? Environment.APP_CLASSPATH.name() : Environment.CLASSPATH.name();
 
@@ -378,7 +378,7 @@ public class MRApps extends Apps {
   public static void setClassLoader(ClassLoader classLoader,
       Configuration conf) {
     if (classLoader != null) {
-      LOG.info("Setting classloader " + classLoader.getClass().getName() +
+      LOG.info("Setting classloader " + classLoader +
           " on the configuration and as the thread context classloader");
       conf.setClassLoader(classLoader);
       Thread.currentThread().setContextClassLoader(classLoader);

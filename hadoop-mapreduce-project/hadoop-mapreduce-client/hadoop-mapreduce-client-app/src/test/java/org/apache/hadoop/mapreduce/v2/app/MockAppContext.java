@@ -95,7 +95,7 @@ public class MockAppContext implements AppContext {
   @SuppressWarnings("rawtypes")
   @Override
   public EventHandler getEventHandler() {
-    return null;
+    return new MockEventHandler();
   }
 
   @Override
@@ -148,4 +148,10 @@ public class MockAppContext implements AppContext {
     // bogus - Not Required
     return null;
   }
+
+  @Override
+  public TaskAttemptFinishingMonitor getTaskAttemptFinishingMonitor() {
+      return null;
+  }
+
 }

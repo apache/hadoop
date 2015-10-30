@@ -21,7 +21,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -30,9 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.CopyOnWriteArrayList;
 
-import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -41,12 +39,13 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.VolumeChoosingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Time;
 
 class FsVolumeList {
-  private final AtomicReference<FsVolumeImpl[]> volumes =
-      new AtomicReference<>(new FsVolumeImpl[0]);
+  private final CopyOnWriteArrayList<FsVolumeImpl> volumes =
+      new CopyOnWriteArrayList<>();
   // Tracks volume failures, sorted by volume path.
   private final Map<String, VolumeFailureInfo> volumeFailureInfos =
       Collections.synchronizedMap(new TreeMap<String, VolumeFailureInfo>());
@@ -70,7 +69,7 @@ class FsVolumeList {
    * Return an immutable list view of all the volumes.
    */
   List<FsVolumeImpl> getVolumes() {
-    return Collections.unmodifiableList(Arrays.asList(volumes.get()));
+    return Collections.unmodifiableList(volumes);
   }
 
   private FsVolumeReference chooseVolume(List<FsVolumeImpl> list, long blockSize)
@@ -97,10 +96,8 @@ class FsVolumeList {
    */
   FsVolumeReference getNextVolume(StorageType storageType, long blockSize)
       throws IOException {
-    // Get a snapshot of currently available volumes.
-    final FsVolumeImpl[] curVolumes = volumes.get();
-    final List<FsVolumeImpl> list = new ArrayList<>(curVolumes.length);
-    for(FsVolumeImpl v : curVolumes) {
+    final List<FsVolumeImpl> list = new ArrayList<>(volumes.size());
+    for(FsVolumeImpl v : volumes) {
       if (v.getStorageType() == storageType) {
         list.add(v);
       }
@@ -128,7 +125,7 @@ class FsVolumeList {
 
   long getDfsUsed() throws IOException {
     long dfsUsed = 0L;
-    for (FsVolumeImpl v : volumes.get()) {
+    for (FsVolumeImpl v : volumes) {
       try(FsVolumeReference ref = v.obtainReference()) {
         dfsUsed += v.getDfsUsed();
       } catch (ClosedChannelException e) {
@@ -140,7 +137,7 @@ class FsVolumeList {
 
   long getBlockPoolUsed(String bpid) throws IOException {
     long dfsUsed = 0L;
-    for (FsVolumeImpl v : volumes.get()) {
+    for (FsVolumeImpl v : volumes) {
       try (FsVolumeReference ref = v.obtainReference()) {
         dfsUsed += v.getBlockPoolUsed(bpid);
       } catch (ClosedChannelException e) {
@@ -152,7 +149,7 @@ class FsVolumeList {
 
   long getCapacity() {
     long capacity = 0L;
-    for (FsVolumeImpl v : volumes.get()) {
+    for (FsVolumeImpl v : volumes) {
       try (FsVolumeReference ref = v.obtainReference()) {
         capacity += v.getCapacity();
       } catch (IOException e) {
@@ -164,7 +161,7 @@ class FsVolumeList {
     
   long getRemaining() throws IOException {
     long remaining = 0L;
-    for (FsVolumeSpi vol : volumes.get()) {
+    for (FsVolumeSpi vol : volumes) {
       try (FsVolumeReference ref = vol.obtainReference()) {
         remaining += vol.getAvailable();
       } catch (ClosedChannelException e) {
@@ -182,7 +179,7 @@ class FsVolumeList {
     final List<IOException> exceptions = Collections.synchronizedList(
         new ArrayList<IOException>());
     List<Thread> replicaAddingThreads = new ArrayList<Thread>();
-    for (final FsVolumeImpl v : volumes.get()) {
+    for (final FsVolumeImpl v : volumes) {
       Thread t = new Thread() {
         public void run() {
           try (FsVolumeReference ref = v.obtainReference()) {
@@ -266,7 +263,7 @@ class FsVolumeList {
 
   @Override
   public String toString() {
-    return Arrays.toString(volumes.get());
+    return volumes.toString();
   }
 
   /**
@@ -275,29 +272,20 @@ class FsVolumeList {
    * @param ref       a reference to the new FsVolumeImpl instance.
    */
   void addVolume(FsVolumeReference ref) {
-    while (true) {
-      final FsVolumeImpl[] curVolumes = volumes.get();
-      final List<FsVolumeImpl> volumeList = Lists.newArrayList(curVolumes);
-      volumeList.add((FsVolumeImpl)ref.getVolume());
-      if (volumes.compareAndSet(curVolumes,
-          volumeList.toArray(new FsVolumeImpl[volumeList.size()]))) {
-        break;
-      } else {
-        if (FsDatasetImpl.LOG.isDebugEnabled()) {
-          FsDatasetImpl.LOG.debug(
-              "The volume list has been changed concurrently, " +
-                  "retry to remove volume: " + ref.getVolume().getStorageID());
-        }
-      }
-    }
+    FsVolumeImpl volume = (FsVolumeImpl) ref.getVolume();
+    volumes.add(volume);
     if (blockScanner != null) {
       blockScanner.addVolumeScanner(ref);
+    } else {
+      // If the volume is not put into a volume scanner, it does not need to
+      // hold the reference.
+      IOUtils.cleanup(FsDatasetImpl.LOG, ref);
     }
     // If the volume is used to replace a failed volume, it needs to reset the
     // volume failure info for this volume.
-    removeVolumeFailureInfo(new File(ref.getVolume().getBasePath()));
+    removeVolumeFailureInfo(new File(volume.getBasePath()));
     FsDatasetImpl.LOG.info("Added new volume: " +
-        ref.getVolume().getStorageID());
+        volume.getStorageID());
   }
 
   /**
@@ -305,37 +293,22 @@ class FsVolumeList {
    * @param target the volume instance to be removed.
    */
   private void removeVolume(FsVolumeImpl target) {
-    while (true) {
-      final FsVolumeImpl[] curVolumes = volumes.get();
-      final List<FsVolumeImpl> volumeList = Lists.newArrayList(curVolumes);
-      if (volumeList.remove(target)) {
-        if (volumes.compareAndSet(curVolumes,
-            volumeList.toArray(new FsVolumeImpl[volumeList.size()]))) {
-          if (blockScanner != null) {
-            blockScanner.removeVolumeScanner(target);
-          }
-          try {
-            target.closeAndWait();
-          } catch (IOException e) {
-            FsDatasetImpl.LOG.warn(
-                "Error occurs when waiting volume to close: " + target, e);
-          }
-          target.shutdown();
-          FsDatasetImpl.LOG.info("Removed volume: " + target);
-          break;
-        } else {
-          if (FsDatasetImpl.LOG.isDebugEnabled()) {
-            FsDatasetImpl.LOG.debug(
-                "The volume list has been changed concurrently, " +
-                "retry to remove volume: " + target);
-          }
-        }
-      } else {
-        if (FsDatasetImpl.LOG.isDebugEnabled()) {
-          FsDatasetImpl.LOG.debug("Volume " + target +
-              " does not exist or is removed by others.");
-        }
-        break;
+    if (volumes.remove(target)) {
+      if (blockScanner != null) {
+        blockScanner.removeVolumeScanner(target);
+      }
+      try {
+        target.closeAndWait();
+      } catch (IOException e) {
+        FsDatasetImpl.LOG.warn(
+            "Error occurs when waiting volume to close: " + target, e);
+      }
+      target.shutdown();
+      FsDatasetImpl.LOG.info("Removed volume: " + target);
+    } else {
+      if (FsDatasetImpl.LOG.isDebugEnabled()) {
+        FsDatasetImpl.LOG.debug("Volume " + target +
+            " does not exist or is removed by others.");
       }
     }
   }
@@ -346,16 +319,10 @@ class FsVolumeList {
    * @param clearFailure set true to remove failure info for this volume.
    */
   void removeVolume(File volume, boolean clearFailure) {
-    // Make a copy of volumes to remove one volume.
-    final FsVolumeImpl[] curVolumes = volumes.get();
-    final List<FsVolumeImpl> volumeList = Lists.newArrayList(curVolumes);
-    for (Iterator<FsVolumeImpl> it = volumeList.iterator(); it.hasNext(); ) {
-      FsVolumeImpl fsVolume = it.next();
-      String basePath, targetPath;
-      basePath = new File(fsVolume.getBasePath()).getAbsolutePath();
-      targetPath = volume.getAbsolutePath();
+    for (FsVolumeImpl fsVolume : volumes) {
+      String basePath = new File(fsVolume.getBasePath()).getAbsolutePath();
+      String targetPath = volume.getAbsolutePath();
       if (basePath.equals(targetPath)) {
-        // Make sure the removed volume is the one in the curVolumes.
         removeVolume(fsVolume);
       }
     }
@@ -391,7 +358,7 @@ class FsVolumeList {
     final List<IOException> exceptions = Collections.synchronizedList(
         new ArrayList<IOException>());
     List<Thread> blockPoolAddingThreads = new ArrayList<Thread>();
-    for (final FsVolumeImpl v : volumes.get()) {
+    for (final FsVolumeImpl v : volumes) {
       Thread t = new Thread() {
         public void run() {
           try (FsVolumeReference ref = v.obtainReference()) {
@@ -432,13 +399,13 @@ class FsVolumeList {
   
   void removeBlockPool(String bpid, Map<DatanodeStorage, BlockListAsLongs>
       blocksPerVolume) {
-    for (FsVolumeImpl v : volumes.get()) {
+    for (FsVolumeImpl v : volumes) {
       v.shutdownBlockPool(bpid, blocksPerVolume.get(v.toDatanodeStorage()));
     }
   }
 
   void shutdown() {
-    for (FsVolumeImpl volume : volumes.get()) {
+    for (FsVolumeImpl volume : volumes) {
       if(volume != null) {
         volume.shutdown();
       }

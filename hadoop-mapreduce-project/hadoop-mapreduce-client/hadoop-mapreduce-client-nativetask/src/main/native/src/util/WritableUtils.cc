@@ -155,7 +155,8 @@ int64_t WritableUtils::ReadVLong(InputStream * stream) {
   }
   uint32_t len = DecodeVLongSize(buff);
   if (len > 1) {
-    if (stream->readFully(buff + 1, len - 1) != len - 1) {
+    len--;
+    if (stream->readFully(buff + 1, len) != (int32_t)len) {
       THROW_EXCEPTION(IOException, "ReadVLong reach EOF");
     }
   }

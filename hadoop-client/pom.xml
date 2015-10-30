@@ -95,18 +95,18 @@
           <groupId>com.jcraft</groupId>
           <artifactId>jsch</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.apache.zookeeper</groupId>
+          <artifactId>zookeeper</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-hdfs</artifactId>
+      <artifactId>hadoop-hdfs-client</artifactId>
       <scope>compile</scope>
       <exclusions>
-        <exclusion>
-          <groupId>commons-daemon</groupId>
-          <artifactId>commons-daemon</artifactId>
-        </exclusion>
         <exclusion>
           <groupId>org.apache.avro</groupId>
           <artifactId>avro</artifactId>
@@ -170,6 +170,10 @@
         <exclusion>
           <groupId>io.netty</groupId>
           <artifactId>netty</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.zookeeper</groupId>
+          <artifactId>zookeeper</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

@@ -25,6 +25,8 @@ import java.text.NumberFormat;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -58,6 +60,9 @@ import org.apache.hadoop.io.WritableUtils;
 public class TaskID extends org.apache.hadoop.mapred.ID {
   protected static final String TASK = "task";
   protected static final NumberFormat idFormat = NumberFormat.getInstance();
+  public static final String TASK_ID_REGEX = TASK + "_(\\d+)_(\\d+)_" +
+      CharTaskTypeMaps.allTaskTypes + "_(\\d+)";
+  public static final Pattern taskIdPattern = Pattern.compile(TASK_ID_REGEX);
   static {
     idFormat.setGroupingUsed(false);
     idFormat.setMinimumIntegerDigits(6);
@@ -207,29 +212,15 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
     throws IllegalArgumentException {
     if(str == null)
       return null;
-    String exceptionMsg = null;
-    try {
-      String[] parts = str.split("_");
-      if(parts.length == 5) {
-        if(parts[0].equals(TASK)) {
-          String type = parts[3];
-          TaskType t = CharTaskTypeMaps.getTaskType(type.charAt(0));
-          if(t != null) {
-          
-            return new org.apache.hadoop.mapred.TaskID(parts[1], 
-                                                     Integer.parseInt(parts[2]),
-                                                     t, 
-                                                     Integer.parseInt(parts[4]));
-          } else
-            exceptionMsg = "Bad TaskType identifier. TaskId string : " + str
-                + " is not properly formed.";
-        }
-      }
-    }catch (Exception ex) {//fall below
+    Matcher m = taskIdPattern.matcher(str);
+    if (m.matches()) {
+      return new org.apache.hadoop.mapred.TaskID(m.group(1),
+          Integer.parseInt(m.group(2)),
+          CharTaskTypeMaps.getTaskType(m.group(3).charAt(0)),
+          Integer.parseInt(m.group(4)));
     }
-    if (exceptionMsg == null) {
-      exceptionMsg = "TaskId string : " + str + " is not properly formed";
-    }
+    String exceptionMsg = "TaskId string : " + str + " is not properly formed" +
+        "\nReason: " + m.toString();
     throw new IllegalArgumentException(exceptionMsg);
   }
   /**

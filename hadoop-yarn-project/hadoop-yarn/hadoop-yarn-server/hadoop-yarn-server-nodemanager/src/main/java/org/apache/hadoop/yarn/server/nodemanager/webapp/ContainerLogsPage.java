@@ -59,9 +59,6 @@ public class ContainerLogsPage extends NMView {
       if (redirectUrl.equals("false")) {
         set(TITLE, join("Failed redirect for ", $(CONTAINER_ID)));
         //Error getting redirect url. Fall through.
-      } else {
-        set(TITLE, join("Redirecting to log server for ", $(CONTAINER_ID)));
-        html.meta_http("refresh", "1; url=" + redirectUrl);
       }
     }
     

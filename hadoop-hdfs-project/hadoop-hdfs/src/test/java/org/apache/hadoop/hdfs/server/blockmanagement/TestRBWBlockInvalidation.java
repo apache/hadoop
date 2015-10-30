@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
@@ -37,10 +36,8 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.FsDatasetTestUtils.MaterializedReplica;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.ha.TestDNFencing.RandomDeleterPolicy;
@@ -58,7 +55,9 @@ public class TestRBWBlockInvalidation {
   
   private static NumberReplicas countReplicas(final FSNamesystem namesystem,
       ExtendedBlock block) {
-    return namesystem.getBlockManager().countNodes(block.getLocalBlock());
+    final BlockManager blockManager = namesystem.getBlockManager();
+    return blockManager.countNodes(blockManager.getStoredBlock(
+        block.getLocalBlock()));
   }
 
   /**
@@ -89,19 +88,14 @@ public class TestRBWBlockInvalidation {
       out.writeBytes("HDFS-3157: " + testPath);
       out.hsync();
       cluster.startDataNodes(conf, 1, true, null, null, null);
-      String bpid = namesystem.getBlockPoolId();
       ExtendedBlock blk = DFSTestUtil.getFirstBlock(fs, testPath);
-      Block block = blk.getLocalBlock();
-      DataNode dn = cluster.getDataNodes().get(0);
 
       // Delete partial block and its meta information from the RBW folder
       // of first datanode.
-      File blockFile = DataNodeTestUtils.getBlockFile(dn, bpid, block);
-      File metaFile = DataNodeTestUtils.getMetaFile(dn, bpid, block);
-      assertTrue("Could not delete the block file from the RBW folder",
-          blockFile.delete());
-      assertTrue("Could not delete the block meta file from the RBW folder",
-          metaFile.delete());
+      MaterializedReplica replica = cluster.getMaterializedReplica(0, blk);
+
+      replica.deleteData();
+      replica.deleteMeta();
 
       out.close();
       

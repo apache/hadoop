@@ -115,7 +115,22 @@ public class DelegationTokenAuthenticationFilter
   protected Properties getConfiguration(String configPrefix,
       FilterConfig filterConfig) throws ServletException {
     Properties props = super.getConfiguration(configPrefix, filterConfig);
+    setAuthHandlerClass(props);
+    return props;
+  }
+
+  /**
+   * Set AUTH_TYPE property to the name of the corresponding authentication
+   * handler class based on the input properties.
+   * @param props input properties.
+   */
+  protected void setAuthHandlerClass(Properties props)
+      throws ServletException {
     String authType = props.getProperty(AUTH_TYPE);
+    if (authType == null) {
+      throw new ServletException("Config property "
+          + AUTH_TYPE + " doesn't exist");
+    }
     if (authType.equals(PseudoAuthenticationHandler.TYPE)) {
       props.setProperty(AUTH_TYPE,
           PseudoDelegationTokenAuthenticationHandler.class.getName());
@@ -123,7 +138,6 @@ public class DelegationTokenAuthenticationFilter
       props.setProperty(AUTH_TYPE,
           KerberosDelegationTokenAuthenticationHandler.class.getName());
     }
-    return props;
   }
 
   /**
@@ -239,7 +253,7 @@ public class DelegationTokenAuthenticationFilter
         if (doAsUser != null) {
           ugi = UserGroupInformation.createProxyUser(doAsUser, ugi);
           try {
-            ProxyUsers.authorize(ugi, request.getRemoteHost());
+            ProxyUsers.authorize(ugi, request.getRemoteAddr());
           } catch (AuthorizationException ex) {
             HttpExceptionUtils.createServletExceptionResponse(response,
                 HttpServletResponse.SC_FORBIDDEN, ex);

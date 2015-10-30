@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.StorageType;
@@ -88,6 +89,35 @@ public class BlocksWithLocations {
       return b.append("[").append(storageTypes[i]).append("]")
               .append(storageIDs[i])
               .append("@").append(datanodeUuids[i]);
+    }
+  }
+
+  public static class StripedBlockWithLocations extends BlockWithLocations {
+    final byte[] indices;
+    final short dataBlockNum;
+    final int cellSize;
+
+    public StripedBlockWithLocations(BlockWithLocations blk, byte[] indices,
+         short dataBlockNum, int cellSize) {
+      super(blk.getBlock(), blk.getDatanodeUuids(), blk.getStorageIDs(),
+          blk.getStorageTypes());
+      Preconditions.checkArgument(
+          blk.getDatanodeUuids().length == indices.length);
+      this.indices = indices;
+      this.dataBlockNum = dataBlockNum;
+      this.cellSize = cellSize;
+    }
+
+    public byte[] getIndices() {
+      return indices;
+    }
+
+    public short getDataBlockNum() {
+      return dataBlockNum;
+    }
+
+    public int getCellSize() {
+      return cellSize;
     }
   }
 

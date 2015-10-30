@@ -34,13 +34,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.Builder;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.TestRollingUpgrade;
-import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -294,9 +294,9 @@ public class TestDataNodeRollingUpgrade {
       String testFile2 = "/" + GenericTestUtils.getMethodName() + ".02.dat";
       String testFile3 = "/" + GenericTestUtils.getMethodName() + ".03.dat";
 
-      DFSClient client1 = new DFSClient(NameNode.getAddress(conf), conf);
-      DFSClient client2 = new DFSClient(NameNode.getAddress(conf), conf);
-      DFSClient client3 = new DFSClient(NameNode.getAddress(conf), conf);
+      DFSClient client1 = new DFSClient(DFSUtilClient.getNNAddress(conf), conf);
+      DFSClient client2 = new DFSClient(DFSUtilClient.getNNAddress(conf), conf);
+      DFSClient client3 = new DFSClient(DFSUtilClient.getNNAddress(conf), conf);
 
       DFSOutputStream s1 = (DFSOutputStream) client1.create(testFile1, true);
       DFSOutputStream s2 = (DFSOutputStream) client2.create(testFile2, true);

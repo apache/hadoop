@@ -18,17 +18,33 @@
 
 package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.util.Log4jWarningErrorMetricsAppender;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 public class NavBlock extends HtmlBlock {
 
   @Override
   public void render(Block html) {
-    html.
+    boolean addErrorsAndWarningsLink = false;
+    Log log = LogFactory.getLog(NavBlock.class);
+    if (log instanceof Log4JLogger) {
+      Log4jWarningErrorMetricsAppender appender =
+          Log4jWarningErrorMetricsAppender.findAppender();
+      if (appender != null) {
+        addErrorsAndWarningsLink = true;
+      }
+    }
+    Hamlet.DIV<Hamlet> nav = html.
         div("#nav").
             h3("Application History").
                 ul().
+                    li().a(url("about"), "About").
+                    _().
                     li().a(url("apps"), "Applications").
                         ul().
                             li().a(url("apps",
@@ -45,7 +61,17 @@ public class NavBlock extends HtmlBlock {
                             _().
                         _().
                     _().
-                _().
-            _();
+                _();
+
+    Hamlet.UL<Hamlet.DIV<Hamlet>> tools = nav.h3("Tools").ul();
+    tools.li().a("/conf", "Configuration")._()
+        .li().a("/logs", "Local logs")._()
+        .li().a("/stacks", "Server stacks")._()
+        .li().a("/jmx?qry=Hadoop:*", "Server metrics")._();
+
+    if (addErrorsAndWarningsLink) {
+      tools.li().a(url("errors-and-warnings"), "Errors/Warnings")._();
+    }
+    tools._()._();
   }
 }

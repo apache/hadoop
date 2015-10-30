@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
@@ -47,9 +48,13 @@ public class TestClientDistributedCacheManager {
       new File(System.getProperty("test.build.data", "/tmp")).toURI()
       .toString().replace(' ', '+');
   
+  private static final String TEST_VISIBILITY_DIR =
+      new File(TEST_ROOT_DIR, "TestCacheVisibility").toURI()
+      .toString().replace(' ', '+');
   private FileSystem fs;
   private Path firstCacheFile;
   private Path secondCacheFile;
+  private Path thirdCacheFile;
   private Configuration conf;
   
   @Before
@@ -58,8 +63,10 @@ public class TestClientDistributedCacheManager {
     fs = FileSystem.get(conf);
     firstCacheFile = new Path(TEST_ROOT_DIR, "firstcachefile");
     secondCacheFile = new Path(TEST_ROOT_DIR, "secondcachefile");
+    thirdCacheFile = new Path(TEST_VISIBILITY_DIR,"thirdCachefile");
     createTempFile(firstCacheFile, conf);
     createTempFile(secondCacheFile, conf);
+    createTempFile(thirdCacheFile, conf);
   }
   
   @After
@@ -69,6 +76,9 @@ public class TestClientDistributedCacheManager {
     }
     if (!fs.delete(secondCacheFile, false)) {
       LOG.warn("Failed to delete secondcachefile");
+    }
+    if (!fs.delete(thirdCacheFile, false)) {
+      LOG.warn("Failed to delete thirdCachefile");
     }
   }
   
@@ -93,6 +103,24 @@ public class TestClientDistributedCacheManager {
     Assert.assertEquals(expected, jobConf.get(MRJobConfig.CACHE_FILE_TIMESTAMPS));
   }
   
+  @Test
+  public void testDetermineCacheVisibilities() throws IOException {
+    Path workingdir = new Path(TEST_VISIBILITY_DIR);
+    fs.setWorkingDirectory(workingdir);
+    fs.setPermission(workingdir, new FsPermission((short)00777));
+    fs.setPermission(new Path(TEST_ROOT_DIR), new FsPermission((short)00700));
+    Job job = Job.getInstance(conf);
+    Path relativePath = new Path("thirdCachefile");
+    job.addCacheFile(relativePath.toUri());
+    Configuration jobConf = job.getConfiguration();
+
+    Map<URI, FileStatus> statCache = new HashMap<URI, FileStatus>();
+    ClientDistributedCacheManager.
+        determineCacheVisibilities(jobConf, statCache);
+    Assert.assertFalse(jobConf.
+               getBoolean(MRJobConfig.CACHE_FILE_VISIBILITIES,true));
+  }
+
   @SuppressWarnings("deprecation")
   void createTempFile(Path p, Configuration conf) throws IOException {
     SequenceFile.Writer writer = null;

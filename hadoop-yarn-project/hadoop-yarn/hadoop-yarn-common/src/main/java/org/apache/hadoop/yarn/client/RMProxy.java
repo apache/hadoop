@@ -224,19 +224,21 @@ public class RMProxy<T> {
           failoverSleepBaseMs, failoverSleepMaxMs);
     }
 
-    if (waitForEver) {
-      return RetryPolicies.RETRY_FOREVER;
-    }
-
     if (rmConnectionRetryIntervalMS < 0) {
       throw new YarnRuntimeException("Invalid Configuration. " +
           YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS +
           " should not be negative.");
     }
 
-    RetryPolicy retryPolicy =
-        RetryPolicies.retryUpToMaximumTimeWithFixedSleep(rmConnectWaitMS,
-            rmConnectionRetryIntervalMS, TimeUnit.MILLISECONDS);
+    RetryPolicy retryPolicy = null;
+    if (waitForEver) {
+      retryPolicy = RetryPolicies.retryForeverWithFixedSleep(
+          rmConnectionRetryIntervalMS, TimeUnit.MILLISECONDS);
+    } else {
+      retryPolicy =
+          RetryPolicies.retryUpToMaximumTimeWithFixedSleep(rmConnectWaitMS,
+              rmConnectionRetryIntervalMS, TimeUnit.MILLISECONDS);
+    }
 
     Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap =
         new HashMap<Class<? extends Exception>, RetryPolicy>();
@@ -248,8 +250,10 @@ public class RMProxy<T> {
     exceptionToPolicyMap.put(ConnectTimeoutException.class, retryPolicy);
     exceptionToPolicyMap.put(RetriableException.class, retryPolicy);
     exceptionToPolicyMap.put(SocketException.class, retryPolicy);
-
-    return RetryPolicies.retryByException(
+    // YARN-4288: local IOException is also possible.
+    exceptionToPolicyMap.put(IOException.class, retryPolicy);
+    // Not retry on remote IO exception.
+    return RetryPolicies.retryOtherThanRemoteException(
         RetryPolicies.TRY_ONCE_THEN_FAIL, exceptionToPolicyMap);
   }
 }

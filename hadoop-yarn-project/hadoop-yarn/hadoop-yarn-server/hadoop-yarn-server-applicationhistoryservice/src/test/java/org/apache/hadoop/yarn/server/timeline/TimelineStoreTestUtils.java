@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -69,7 +70,7 @@ public class TimelineStoreTestUtils {
   protected String entityId6;
   protected String entityId7;
   protected String entityType7;
-  
+
   protected Map<String, Set<Object>> primaryFilters;
   protected Map<String, Object> secondaryFilters;
   protected Map<String, Object> allFilters;
@@ -104,7 +105,7 @@ public class TimelineStoreTestUtils {
     Set<Object> l1 = new HashSet<Object>();
     l1.add("username");
     Set<Object> l2 = new HashSet<Object>();
-    l2.add((long)Integer.MAX_VALUE);
+    l2.add(Integer.MAX_VALUE);
     Set<Object> l3 = new HashSet<Object>();
     l3.add("123abc");
     Set<Object> l4 = new HashSet<Object>();
@@ -114,7 +115,7 @@ public class TimelineStoreTestUtils {
     primaryFilters.put("other", l3);
     primaryFilters.put("long", l4);
     Map<String, Object> secondaryFilters = new HashMap<String, Object>();
-    secondaryFilters.put("startTime", 123456l);
+    secondaryFilters.put("startTime", 123456);
     secondaryFilters.put("status", "RUNNING");
     Map<String, Object> otherInfo1 = new HashMap<String, Object>();
     otherInfo1.put("info1", "val1");
@@ -138,7 +139,7 @@ public class TimelineStoreTestUtils {
     relatedEntities.put(entityType2, Collections.singleton(entityId2));
 
     TimelineEvent ev3 = createEvent(789l, "launch_event", null);
-    TimelineEvent ev4 = createEvent(-123l, "init_event", null);
+    TimelineEvent ev4 = createEvent(0l, "init_event", null);
     List<TimelineEvent> events = new ArrayList<TimelineEvent>();
     events.add(ev3);
     events.add(ev4);
@@ -301,7 +302,7 @@ public class TimelineStoreTestUtils {
     relEntityMap2.put(entityType4, Collections.singleton(entityId4));
 
     ev3 = createEvent(789l, "launch_event", null);
-    ev4 = createEvent(-123l, "init_event", null);
+    ev4 = createEvent(0l, "init_event", null);
     events2 = new ArrayList<TimelineEvent>();
     events2.add(ev3);
     events2.add(ev4);
@@ -383,7 +384,7 @@ public class TimelineStoreTestUtils {
         entityType1, EnumSet.allOf(Field.class)), domainId1);
 
     verifyEntityInfo(entityId2, entityType2, events2, relEntityMap,
-        EMPTY_PRIMARY_FILTERS, EMPTY_MAP, -123l, store.getEntity(entityId2,
+        EMPTY_PRIMARY_FILTERS, EMPTY_MAP, 0l, store.getEntity(entityId2,
         entityType2, EnumSet.allOf(Field.class)), domainId1);
 
     verifyEntityInfo(entityId4, entityType4, EMPTY_EVENTS, EMPTY_REL_ENTITIES,
@@ -485,6 +486,13 @@ public class TimelineStoreTestUtils {
       throws IOException {
     return store.getEntities(entityType, null, null, null, null, null,
         primaryFilter, secondaryFilters, null, null).getEntities();
+  }
+
+  protected List<TimelineEntity> getEntitiesWithFilters(String entityType,
+      NameValuePair primaryFilter, Collection<NameValuePair> secondaryFilters,
+      EnumSet<Field> fields) throws IOException {
+    return store.getEntities(entityType, null, null, null, null, null,
+        primaryFilter, secondaryFilters, fields, null).getEntities();
   }
 
   protected List<TimelineEntity> getEntities(String entityType, Long limit,
@@ -751,38 +759,73 @@ public class TimelineStoreTestUtils {
   }
 
   public void testGetEntitiesWithSecondaryFilters() throws IOException {
-    // test using secondary filter
-    List<TimelineEntity> entities = getEntitiesWithFilters("type_1", null,
-        goodTestingFilters);
-    assertEquals(3, entities.size());
-    verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
-        primaryFilters, otherInfo, entities.get(0), domainId1);
-    verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
-        primaryFilters, otherInfo, entities.get(1), domainId1);
-    verifyEntityInfo(entityId6, entityType1, EMPTY_EVENTS, EMPTY_REL_ENTITIES,
-        primaryFilters, otherInfo, entities.get(2), domainId2);
+    for (int i = 0; i < 4; ++i) {
+      // Verify the secondary filter works both other info is included or not.
+      EnumSet<Field> fields = null;
+      if (i == 1) {
+        fields = EnumSet.noneOf(Field.class);
+      } else if (i == 2) {
+        fields = EnumSet.of(Field.PRIMARY_FILTERS);
+      } else if (i == 3) {
+        fields = EnumSet.of(Field.OTHER_INFO);
+      }
+      // test using secondary filter
+      List<TimelineEntity> entities = getEntitiesWithFilters("type_1", null,
+          goodTestingFilters, fields);
+      assertEquals(3, entities.size());
+      verifyEntityInfo(entityId1, entityType1,
+          (i == 0 ? events1 : null),
+          (i == 0 ? EMPTY_REL_ENTITIES : null),
+          (i == 0 || i == 2 ? primaryFilters : null),
+          (i == 0 || i == 3 ? otherInfo : null), entities.get(0), domainId1);
+      verifyEntityInfo(entityId1b, entityType1,
+          (i == 0 ? events1 : null),
+          (i == 0 ? EMPTY_REL_ENTITIES : null),
+          (i == 0 || i == 2 ? primaryFilters : null),
+          (i == 0 || i == 3 ? otherInfo : null), entities.get(1), domainId1);
+      verifyEntityInfo(entityId6, entityType1,
+          (i == 0 ? EMPTY_EVENTS : null),
+          (i == 0 ? EMPTY_REL_ENTITIES : null),
+          (i == 0 || i == 2 ? primaryFilters : null),
+          (i == 0 || i == 3 ? otherInfo : null), entities.get(2), domainId2);
 
-    entities = getEntitiesWithFilters("type_1", userFilter, goodTestingFilters);
-    assertEquals(3, entities.size());
-    verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
-        primaryFilters, otherInfo, entities.get(0), domainId1);
-    verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
-        primaryFilters, otherInfo, entities.get(1), domainId1);
-    verifyEntityInfo(entityId6, entityType1, EMPTY_EVENTS, EMPTY_REL_ENTITIES,
-        primaryFilters, otherInfo, entities.get(2), domainId2);
+      entities =
+          getEntitiesWithFilters("type_1", userFilter, goodTestingFilters, fields);
+      assertEquals(3, entities.size());
+      if (i == 0) {
+        verifyEntityInfo(entityId1, entityType1,
+            (i == 0 ? events1 : null),
+            (i == 0 ? EMPTY_REL_ENTITIES : null),
+            (i == 0 || i == 2 ? primaryFilters : null),
+            (i == 0 || i == 3 ? otherInfo : null), entities.get(0), domainId1);
+        verifyEntityInfo(entityId1b, entityType1,
+            (i == 0 ? events1 : null),
+            (i == 0 ? EMPTY_REL_ENTITIES : null),
+            (i == 0 || i == 2 ? primaryFilters : null),
+            (i == 0 || i == 3 ? otherInfo : null), entities.get(1), domainId1);
+        verifyEntityInfo(entityId6, entityType1,
+            (i == 0 ? EMPTY_EVENTS : null),
+            (i == 0 ? EMPTY_REL_ENTITIES : null),
+            (i == 0 || i == 2 ? primaryFilters : null),
+            (i == 0 || i == 3 ? otherInfo : null), entities.get(2), domainId2);
+      }
 
-    entities = getEntitiesWithFilters("type_1", null,
-        Collections.singleton(new NameValuePair("user", "none")));
-    assertEquals(0, entities.size());
+      entities = getEntitiesWithFilters("type_1", null,
+          Collections.singleton(new NameValuePair("user", "none")), fields);
+      assertEquals(0, entities.size());
 
-    entities = getEntitiesWithFilters("type_1", null, badTestingFilters);
-    assertEquals(0, entities.size());
+      entities =
+          getEntitiesWithFilters("type_1", null, badTestingFilters, fields);
+      assertEquals(0, entities.size());
 
-    entities = getEntitiesWithFilters("type_1", userFilter, badTestingFilters);
-    assertEquals(0, entities.size());
+      entities =
+          getEntitiesWithFilters("type_1", userFilter, badTestingFilters, fields);
+      assertEquals(0, entities.size());
 
-    entities = getEntitiesWithFilters("type_5", null, badTestingFilters);
-    assertEquals(0, entities.size());
+      entities =
+          getEntitiesWithFilters("type_5", null, badTestingFilters, fields);
+      assertEquals(0, entities.size());
+    }
   }
 
   public void testGetEvents() throws IOException {

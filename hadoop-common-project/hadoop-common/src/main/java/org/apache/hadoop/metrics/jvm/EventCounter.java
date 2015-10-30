@@ -20,7 +20,10 @@ package org.apache.hadoop.metrics.jvm;
 /**
  * A log4J Appender that simply counts logging events in three levels:
  * fatal, error and warn.
+ *
+ * @deprecated Use org.apache.hadoop.metrics2 package instead.
  */
+@Deprecated
 public class EventCounter extends org.apache.hadoop.log.metrics.EventCounter {
 
   static {

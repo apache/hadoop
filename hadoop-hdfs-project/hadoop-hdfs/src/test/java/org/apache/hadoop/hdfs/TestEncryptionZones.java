@@ -21,10 +21,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.io.StringReader;
-import java.io.StringWriter;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -44,7 +42,6 @@ import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
 import org.apache.hadoop.crypto.key.KeyProvider;
-import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.CreateFlag;
@@ -72,7 +69,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
 import org.apache.hadoop.hdfs.tools.DFSck;
 import org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter;
-import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.security.AccessControlException;
@@ -100,6 +97,8 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyString;
 import static org.apache.hadoop.hdfs.DFSTestUtil.verifyFilesEqual;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
+import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -123,6 +122,7 @@ public class TestEncryptionZones {
   protected DistributedFileSystem fs;
   private File testRootDir;
   protected final String TEST_KEY = "test_key";
+  private static final String NS_METRICS = "FSNamesystem";
 
   protected FileSystemTestWrapper fsWrapper;
   protected FileContextTestWrapper fcWrapper;
@@ -361,6 +361,9 @@ public class TestEncryptionZones {
     fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
     cluster.restartNameNode(true);
     assertNumZones(numZones);
+    assertEquals("Unexpected number of encryption zones!", numZones, cluster
+        .getNamesystem().getNumEncryptionZones());
+    assertGauge("NumEncryptionZones", numZones, getMetrics(NS_METRICS));
     assertZonePresent(null, zone1.toString());
 
     // Verify newly added ez is present after restarting the NameNode
@@ -612,7 +615,7 @@ public class TestEncryptionZones {
     final HdfsAdmin dfsAdmin =
         new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
     final FileSystem webHdfsFs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
-        WebHdfsFileSystem.SCHEME);
+        WebHdfsConstants.WEBHDFS_SCHEME);
 
     final Path zone = new Path("/zone");
     fs.mkdirs(zone);
@@ -702,7 +705,7 @@ public class TestEncryptionZones {
     // Flushing the KP on the NN, since it caches, and init a test one
     cluster.getNamesystem().getProvider().flush();
     KeyProvider provider = KeyProviderFactory
-        .get(new URI(conf.get(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI)),
+        .get(new URI(conf.getTrimmed(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI)),
             conf);
     List<String> keys = provider.getKeys();
     assertEquals("Expected NN to have created one key per zone", 1,
@@ -740,7 +743,7 @@ public class TestEncryptionZones {
             version, new byte[suite.getAlgorithmBlockSize()],
             new byte[suite.getAlgorithmBlockSize()],
             "fakeKey", "fakeVersion"),
-            (byte) 0))
+            (byte) 0, null))
         .when(mcp)
         .create(anyString(), (FsPermission) anyObject(), anyString(),
             (EnumSetWritable<CreateFlag>) anyObject(), anyBoolean(),
@@ -1309,5 +1312,23 @@ public class TestEncryptionZones {
     assertEquals("File is encrypted",
         true, fs.getFileStatus(zoneFile).isEncrypted());
     DFSTestUtil.verifyFilesNotEqual(fs, zoneFile, rawFile, len);
+  }
+
+  @Test(timeout = 60000)
+  public void testEncryptionZonesOnRelativePath() throws Exception {
+    final int len = 8196;
+    final Path baseDir = new Path("/somewhere/base");
+    final Path zoneDir = new Path("zone");
+    final Path zoneFile = new Path("file");
+    fs.setWorkingDirectory(baseDir);
+    fs.mkdirs(zoneDir);
+    dfsAdmin.createEncryptionZone(zoneDir, TEST_KEY);
+    DFSTestUtil.createFile(fs, zoneFile, len, (short) 1, 0xFEED);
+
+    assertNumZones(1);
+    assertZonePresent(TEST_KEY, "/somewhere/base/zone");
+
+    assertEquals("Got unexpected ez path", "/somewhere/base/zone", dfsAdmin
+        .getEncryptionZoneForPath(zoneDir).getPath().toString());
   }
 }

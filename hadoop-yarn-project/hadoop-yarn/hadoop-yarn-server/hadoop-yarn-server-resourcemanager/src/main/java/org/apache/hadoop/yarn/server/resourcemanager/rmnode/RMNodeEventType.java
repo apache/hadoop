@@ -24,6 +24,8 @@ public enum RMNodeEventType {
   
   // Source: AdminService
   DECOMMISSION,
+  GRACEFUL_DECOMMISSION,
+  RECOMMISSION,
   
   // Source: AdminService, ResourceTrackerService
   RESOURCE_UPDATE,
@@ -32,6 +34,7 @@ public enum RMNodeEventType {
   STATUS_UPDATE,
   REBOOTING,
   RECONNECTED,
+  SHUTDOWN,
 
   // Source: Application
   CLEANUP_APP,
@@ -39,6 +42,10 @@ public enum RMNodeEventType {
   // Source: Container
   CONTAINER_ALLOCATED,
   CLEANUP_CONTAINER,
+  DECREASE_CONTAINER,
+
+  // Source: ClientRMService
+  SIGNAL_CONTAINER,
 
   // Source: RMAppAttempt
   FINISHED_CONTAINERS_PULLED_BY_AM,

@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -510,8 +511,45 @@ public class TestDFSPermission {
     }
   }
 
-  /* Check if namenode performs permission checking correctly 
-   * for the given user for operations mkdir, open, setReplication, 
+  @Test
+  public void testPermissionMessageOnNonDirAncestor()
+      throws IOException, InterruptedException {
+    FileSystem rootFs = FileSystem.get(conf);
+    Path p4 = new Path("/p4");
+    rootFs.mkdirs(p4);
+    rootFs.setOwner(p4, USER1_NAME, GROUP1_NAME);
+
+    final Path fpath = new Path("/p4/file");
+    DataOutputStream out = rootFs.create(fpath);
+    out.writeBytes("dhruba: " + fpath);
+    out.close();
+    rootFs.setOwner(fpath, USER1_NAME, GROUP1_NAME);
+    assertTrue(rootFs.exists(fpath));
+
+    fs = USER1.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
+      public FileSystem run() throws Exception {
+        return FileSystem.get(conf);
+      }
+    });
+
+    final Path nfpath = new Path("/p4/file/nonexisting");
+    assertFalse(rootFs.exists(nfpath));
+
+    try {
+      fs.exists(nfpath);
+      fail("The exists call should have failed.");
+    } catch (AccessControlException e) {
+      assertTrue("Permission denied messages must carry file path",
+          e.getMessage().contains(fpath.getName()));
+      assertTrue("Permission denied messages must specify existing_file is not "
+              + "a directory, when checked on /existing_file/non_existing_name",
+          e.getMessage().contains("is not a directory"));
+    }
+  }
+
+  /* Check if namenode performs permission checking correctly
+   * for the given user for operations mkdir, open, setReplication,
    * getFileInfo, isDirectory, exists, getContentLength, list, rename,
    * and delete */
   private void testPermissionCheckingPerUser(UserGroupInformation ugi,

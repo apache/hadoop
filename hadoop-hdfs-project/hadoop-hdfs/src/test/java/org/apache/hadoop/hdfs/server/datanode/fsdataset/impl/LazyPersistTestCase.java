@@ -17,41 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CreateFlag;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
-import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
-import org.apache.hadoop.hdfs.tools.JMXGet;
-import org.apache.hadoop.net.unix.TemporarySocketDirectory;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.rules.Timeout;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import com.google.common.base.Supplier;
+import org.apache.commons.lang.UnhandledException;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.LAZY_PERSIST;
@@ -63,16 +31,58 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeoutException;
+
+import com.google.common.base.Preconditions;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.tools.JMXGet;
+import org.apache.hadoop.io.nativeio.NativeIO;
+import org.apache.hadoop.net.unix.TemporarySocketDirectory;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.log4j.Level;
+import org.junit.After;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
+
 public abstract class LazyPersistTestCase {
+  static final byte LAZY_PERSIST_POLICY_ID = (byte) 15;
 
   static {
-    DFSTestUtil.setNameNodeLogLevel(Level.ALL);
-    GenericTestUtils.setLogLevel(FsDatasetImpl.LOG, Level.ALL);
+    DFSTestUtil.setNameNodeLogLevel(Level.DEBUG);
+    GenericTestUtils.setLogLevel(FsDatasetImpl.LOG, Level.DEBUG);
   }
 
   protected static final int BLOCK_SIZE = 5 * 1024 * 1024;
   protected static final int BUFFER_LENGTH = 4096;
-  protected static final int EVICTION_LOW_WATERMARK = 1;
   private static final long HEARTBEAT_INTERVAL_SEC = 1;
   private static final int HEARTBEAT_RECHECK_INTERVAL_MSEC = 500;
   private static final String JMX_RAM_DISK_METRICS_PATTERN = "^RamDisk";
@@ -81,6 +91,8 @@ public abstract class LazyPersistTestCase {
   protected static final int LAZY_WRITER_INTERVAL_SEC = 1;
   protected static final Log LOG = LogFactory.getLog(LazyPersistTestCase.class);
   protected static final short REPL_FACTOR = 1;
+  protected final long osPageSize =
+      NativeIO.POSIX.getCacheManipulator().getOperatingSystemPageSize();
 
   protected MiniDFSCluster cluster;
   protected DistributedFileSystem fs;
@@ -140,30 +152,34 @@ public abstract class LazyPersistTestCase {
   protected final void ensureLazyPersistBlocksAreSaved(
       LocatedBlocks locatedBlocks) throws IOException, InterruptedException {
     final String bpid = cluster.getNamesystem().getBlockPoolId();
-    List<? extends FsVolumeSpi> volumes =
-      cluster.getDataNodes().get(0).getFSDataset().getVolumes();
+
     final Set<Long> persistedBlockIds = new HashSet<Long>();
 
-    while (persistedBlockIds.size() < locatedBlocks.getLocatedBlocks().size()) {
-      // Take 1 second sleep before each verification iteration
-      Thread.sleep(1000);
+    try (FsDatasetSpi.FsVolumeReferences volumes =
+        cluster.getDataNodes().get(0).getFSDataset().getFsVolumeReferences()) {
+      while (persistedBlockIds.size() < locatedBlocks.getLocatedBlocks()
+          .size()) {
+        // Take 1 second sleep before each verification iteration
+        Thread.sleep(1000);
 
-      for (LocatedBlock lb : locatedBlocks.getLocatedBlocks()) {
-        for (FsVolumeSpi v : volumes) {
-          if (v.isTransientStorage()) {
-            continue;
-          }
+        for (LocatedBlock lb : locatedBlocks.getLocatedBlocks()) {
+          for (FsVolumeSpi v : volumes) {
+            if (v.isTransientStorage()) {
+              continue;
+            }
 
-          FsVolumeImpl volume = (FsVolumeImpl) v;
-          File lazyPersistDir = volume.getBlockPoolSlice(bpid).getLazypersistDir();
+            FsVolumeImpl volume = (FsVolumeImpl) v;
+            File lazyPersistDir =
+                volume.getBlockPoolSlice(bpid).getLazypersistDir();
 
-          long blockId = lb.getBlock().getBlockId();
-          File targetDir =
-            DatanodeUtil.idToBlockDir(lazyPersistDir, blockId);
-          File blockFile = new File(targetDir, lb.getBlock().getBlockName());
-          if (blockFile.exists()) {
-            // Found a persisted copy for this block and added to the Set
-            persistedBlockIds.add(blockId);
+            long blockId = lb.getBlock().getBlockId();
+            File targetDir =
+                DatanodeUtil.idToBlockDir(lazyPersistDir, blockId);
+            File blockFile = new File(targetDir, lb.getBlock().getBlockName());
+            if (blockFile.exists()) {
+              // Found a persisted copy for this block and added to the Set
+              persistedBlockIds.add(blockId);
+            }
           }
         }
       }
@@ -176,7 +192,7 @@ public abstract class LazyPersistTestCase {
   protected final void makeRandomTestFile(Path path, long length,
       boolean isLazyPersist, long seed) throws IOException {
     DFSTestUtil.createFile(fs, path, isLazyPersist, BUFFER_LENGTH, length,
-      BLOCK_SIZE, REPL_FACTOR, seed, true);
+                           BLOCK_SIZE, REPL_FACTOR, seed, true);
   }
 
   protected final void makeTestFile(Path path, long length,
@@ -217,32 +233,43 @@ public abstract class LazyPersistTestCase {
    * If ramDiskStorageLimit is >=0, then RAM_DISK capacity is artificially
    * capped. If ramDiskStorageLimit < 0 then it is ignored.
    */
-  protected final void startUpCluster(boolean hasTransientStorage,
-                                      final int ramDiskReplicaCapacity,
-                                      final boolean useSCR,
-                                      final boolean useLegacyBlockReaderLocal)
-      throws IOException {
+  protected final void startUpCluster(
+      int numDatanodes,
+      boolean hasTransientStorage,
+      StorageType[] storageTypes,
+      int ramDiskReplicaCapacity,
+      long ramDiskStorageLimit,
+      long maxLockedMemory,
+      boolean useSCR,
+      boolean useLegacyBlockReaderLocal,
+      boolean disableScrubber) throws IOException {
 
+    initCacheManipulator();
     Configuration conf = new Configuration();
     conf.setLong(DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
-    conf.setInt(DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC,
-                LAZY_WRITE_FILE_SCRUBBER_INTERVAL_SEC);
+    if (disableScrubber) {
+      conf.setInt(DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC, 0);
+    } else {
+      conf.setInt(DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC,
+          LAZY_WRITE_FILE_SCRUBBER_INTERVAL_SEC);
+    }
     conf.setLong(DFS_HEARTBEAT_INTERVAL_KEY, HEARTBEAT_INTERVAL_SEC);
     conf.setInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
                 HEARTBEAT_RECHECK_INTERVAL_MSEC);
     conf.setInt(DFS_DATANODE_LAZY_WRITER_INTERVAL_SEC,
                 LAZY_WRITER_INTERVAL_SEC);
-    conf.setInt(DFS_DATANODE_RAM_DISK_LOW_WATERMARK_BYTES,
-                EVICTION_LOW_WATERMARK * BLOCK_SIZE);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY, 1);
+    conf.setLong(DFS_DATANODE_MAX_LOCKED_MEMORY_KEY, maxLockedMemory);
 
     if (useSCR) {
-      conf.setBoolean(DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
+      conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
       // Do not share a client context across tests.
-      conf.set(DFS_CLIENT_CONTEXT, UUID.randomUUID().toString());
+      conf.set(HdfsClientConfigKeys.DFS_CLIENT_CONTEXT, UUID.randomUUID().toString());
+      conf.set(DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY,
+          UserGroupInformation.getCurrentUser().getShortUserName());
       if (useLegacyBlockReaderLocal) {
-        conf.setBoolean(DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL, true);
-        conf.set(DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY,
-            UserGroupInformation.getCurrentUser().getShortUserName());
+        conf.setBoolean(
+            HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL, true);
       } else {
         sockDir = new TemporarySocketDirectory();
         conf.set(DFS_DOMAIN_SOCKET_PATH_KEY, new File(sockDir.getDir(),
@@ -250,22 +277,29 @@ public abstract class LazyPersistTestCase {
       }
     }
 
-    long[] capacities = null;
+    Preconditions.checkState(
+        ramDiskReplicaCapacity < 0 || ramDiskStorageLimit < 0,
+        "Cannot specify non-default values for both ramDiskReplicaCapacity "
+            + "and ramDiskStorageLimit");
+
+    long[] capacities;
     if (hasTransientStorage && ramDiskReplicaCapacity >= 0) {
       // Convert replica count to byte count, add some delta for .meta and
       // VERSION files.
-      long ramDiskStorageLimit = ((long) ramDiskReplicaCapacity * BLOCK_SIZE) +
+      ramDiskStorageLimit = ((long) ramDiskReplicaCapacity * BLOCK_SIZE) +
           (BLOCK_SIZE - 1);
-      capacities = new long[] { ramDiskStorageLimit, -1 };
     }
+    capacities = new long[] { ramDiskStorageLimit, -1 };
 
     cluster = new MiniDFSCluster
         .Builder(conf)
-        .numDataNodes(REPL_FACTOR)
+        .numDataNodes(numDatanodes)
         .storageCapacities(capacities)
-        .storageTypes(hasTransientStorage ?
-            new StorageType[]{ RAM_DISK, DEFAULT } : null)
+        .storageTypes(storageTypes != null ? storageTypes :
+                          (hasTransientStorage ? new StorageType[]{RAM_DISK, DEFAULT} : null))
         .build();
+    cluster.waitActive();
+
     fs = cluster.getFileSystem();
     client = fs.getClient();
     try {
@@ -277,64 +311,106 @@ public abstract class LazyPersistTestCase {
   }
 
   /**
-   * If ramDiskStorageLimit is >=0, then RAM_DISK capacity is artificially
-   * capped. If ramDiskStorageLimit < 0 then it is ignored.
+   * Use a dummy cache manipulator for testing.
    */
-  protected final void startUpCluster(final int numDataNodes,
-                                      final StorageType[] storageTypes,
-                                      final long ramDiskStorageLimit,
-                                      final boolean useSCR)
-    throws IOException {
-
-    Configuration conf = new Configuration();
-    conf.setLong(DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
-    conf.setInt(DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC,
-      LAZY_WRITE_FILE_SCRUBBER_INTERVAL_SEC);
-    conf.setLong(DFS_HEARTBEAT_INTERVAL_KEY, HEARTBEAT_INTERVAL_SEC);
-    conf.setInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
-      HEARTBEAT_RECHECK_INTERVAL_MSEC);
-    conf.setInt(DFS_DATANODE_LAZY_WRITER_INTERVAL_SEC,
-      LAZY_WRITER_INTERVAL_SEC);
-
-    if (useSCR)
-    {
-      conf.setBoolean(DFS_CLIENT_READ_SHORTCIRCUIT_KEY,useSCR);
-      conf.set(DFS_CLIENT_CONTEXT, UUID.randomUUID().toString());
-      sockDir = new TemporarySocketDirectory();
-      conf.set(DFS_DOMAIN_SOCKET_PATH_KEY, new File(sockDir.getDir(),
-          this.getClass().getSimpleName() + "._PORT.sock").getAbsolutePath());
-      conf.set(DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY,
-        UserGroupInformation.getCurrentUser().getShortUserName());
-    }
-
-    cluster = new MiniDFSCluster
-      .Builder(conf)
-      .numDataNodes(numDataNodes)
-      .storageTypes(storageTypes != null ?
-          storageTypes : new StorageType[] { DEFAULT, DEFAULT })
-      .build();
-    fs = cluster.getFileSystem();
-    client = fs.getClient();
-
-    // Artificially cap the storage capacity of the RAM_DISK volume.
-    if (ramDiskStorageLimit >= 0) {
-      List<? extends FsVolumeSpi> volumes =
-        cluster.getDataNodes().get(0).getFSDataset().getVolumes();
-
-      for (FsVolumeSpi volume : volumes) {
-        if (volume.getStorageType() == RAM_DISK) {
-          ((FsVolumeImpl) volume).setCapacityForTesting(ramDiskStorageLimit);
-        }
+  public static void initCacheManipulator() {
+    NativeIO.POSIX.setCacheManipulator(new NativeIO.POSIX.CacheManipulator() {
+      @Override
+      public void mlock(String identifier,
+                        ByteBuffer mmap, long length) throws IOException {
+        LOG.info("LazyPersistTestCase: faking mlock of " + identifier + " bytes.");
       }
-    }
 
-    LOG.info("Cluster startup complete");
+      @Override
+      public long getMemlockLimit() {
+        LOG.info("LazyPersistTestCase: fake return " + Long.MAX_VALUE);
+        return Long.MAX_VALUE;
+      }
+
+      @Override
+      public boolean verifyCanMlock() {
+        LOG.info("LazyPersistTestCase: fake return " + true);
+        return true;
+      }
+    });
   }
 
-  protected final void startUpCluster(boolean hasTransientStorage,
-                                      final int ramDiskReplicaCapacity)
-      throws IOException {
-    startUpCluster(hasTransientStorage, ramDiskReplicaCapacity, false, false);
+  ClusterWithRamDiskBuilder getClusterBuilder() {
+    return new ClusterWithRamDiskBuilder();
+  }
+
+  /**
+   * Builder class that allows controlling RAM disk-specific properties for a
+   * MiniDFSCluster.
+   */
+  class ClusterWithRamDiskBuilder {
+    public ClusterWithRamDiskBuilder setNumDatanodes(
+        int numDatanodes) {
+      this.numDatanodes = numDatanodes;
+      return this;
+    }
+
+    public ClusterWithRamDiskBuilder setStorageTypes(
+        StorageType[] storageTypes) {
+      this.storageTypes = storageTypes;
+      return this;
+    }
+
+    public ClusterWithRamDiskBuilder setRamDiskReplicaCapacity(
+        int ramDiskReplicaCapacity) {
+      this.ramDiskReplicaCapacity = ramDiskReplicaCapacity;
+      return this;
+    }
+
+    public ClusterWithRamDiskBuilder setRamDiskStorageLimit(
+        long ramDiskStorageLimit) {
+      this.ramDiskStorageLimit = ramDiskStorageLimit;
+      return this;
+    }
+
+    public ClusterWithRamDiskBuilder setMaxLockedMemory(long maxLockedMemory) {
+      this.maxLockedMemory = maxLockedMemory;
+      return this;
+    }
+
+    public ClusterWithRamDiskBuilder setUseScr(boolean useScr) {
+      this.useScr = useScr;
+      return this;
+    }
+
+    public ClusterWithRamDiskBuilder setHasTransientStorage(
+        boolean hasTransientStorage) {
+      this.hasTransientStorage = hasTransientStorage;
+      return this;
+    }
+
+    public ClusterWithRamDiskBuilder setUseLegacyBlockReaderLocal(
+        boolean useLegacyBlockReaderLocal) {
+      this.useLegacyBlockReaderLocal = useLegacyBlockReaderLocal;
+      return this;
+    }
+
+    public ClusterWithRamDiskBuilder disableScrubber() {
+      this.disableScrubber = true;
+      return this;
+    }
+
+    public void build() throws IOException {
+      LazyPersistTestCase.this.startUpCluster(
+          numDatanodes, hasTransientStorage, storageTypes, ramDiskReplicaCapacity,
+          ramDiskStorageLimit, maxLockedMemory, useScr, useLegacyBlockReaderLocal,
+          disableScrubber);
+    }
+
+    private int numDatanodes = REPL_FACTOR;
+    private StorageType[] storageTypes = null;
+    private int ramDiskReplicaCapacity = -1;
+    private long ramDiskStorageLimit = -1;
+    private long maxLockedMemory = Long.MAX_VALUE;
+    private boolean hasTransientStorage = true;
+    private boolean useScr = false;
+    private boolean useLegacyBlockReaderLocal = false;
+    private boolean disableScrubber=false;
   }
 
   protected final void triggerBlockReport()
@@ -382,18 +458,21 @@ public abstract class LazyPersistTestCase {
     }
 
     final String bpid = cluster.getNamesystem().getBlockPoolId();
-    List<? extends FsVolumeSpi> volumes =
-      cluster.getDataNodes().get(0).getFSDataset().getVolumes();
+    final FsDatasetSpi<?> dataset =
+        cluster.getDataNodes().get(0).getFSDataset();
 
     // Make sure deleted replica does not have a copy on either finalized dir of
     // transient volume or finalized dir of non-transient volume
-    for (FsVolumeSpi v : volumes) {
-      FsVolumeImpl volume = (FsVolumeImpl) v;
-      File targetDir = (v.isTransientStorage()) ?
-          volume.getBlockPoolSlice(bpid).getFinalizedDir() :
-          volume.getBlockPoolSlice(bpid).getLazypersistDir();
-      if (verifyBlockDeletedFromDir(targetDir, locatedBlocks) == false) {
-        return false;
+    try (FsDatasetSpi.FsVolumeReferences volumes =
+        dataset.getFsVolumeReferences()) {
+      for (FsVolumeSpi vol : volumes) {
+        FsVolumeImpl volume = (FsVolumeImpl) vol;
+        File targetDir = (volume.isTransientStorage()) ?
+            volume.getBlockPoolSlice(bpid).getFinalizedDir() :
+            volume.getBlockPoolSlice(bpid).getLazypersistDir();
+        if (verifyBlockDeletedFromDir(targetDir, locatedBlocks) == false) {
+          return false;
+        }
       }
     }
     return true;
@@ -401,6 +480,7 @@ public abstract class LazyPersistTestCase {
 
   protected final void verifyRamDiskJMXMetric(String metricName,
       long expectedValue) throws Exception {
+    waitForMetric(metricName, (int)expectedValue);
     assertEquals(expectedValue, Integer.parseInt(jmx.getValue(metricName)));
   }
 
@@ -427,5 +507,15 @@ public abstract class LazyPersistTestCase {
     } catch (Exception e) {
       e.printStackTrace();
     }
+  }
+
+  protected void waitForMetric(final String metricName, final int expectedValue)
+      throws TimeoutException, InterruptedException {
+    DFSTestUtil.waitForMetric(jmx, metricName, expectedValue);
+  }
+
+  protected void triggerEviction(DataNode dn) {
+    FsDatasetImpl fsDataset = (FsDatasetImpl) dn.getFSDataset();
+    fsDataset.evictLazyPersistBlocks(Long.MAX_VALUE); // Run one eviction cycle.
   }
 }

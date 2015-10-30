@@ -43,6 +43,7 @@ public class RMAuditLogger {
     static final String KEY_VAL_SEPARATOR = "=";
     static final char PAIR_SEPARATOR = '\t';
 
+    public static final String FAIL_ATTEMPT_REQUEST = "Fail Attempt Request";
     public static final String KILL_APP_REQUEST = "Kill Application Request";
     public static final String SUBMIT_APP_REQUEST = "Submit Application Request";
     public static final String MOVE_APP_REQUEST = "Move Application Request";
@@ -54,6 +55,11 @@ public class RMAuditLogger {
     public static final String UNREGISTER_AM = "Unregister App Master";
     public static final String ALLOC_CONTAINER = "AM Allocated Container";
     public static final String RELEASE_CONTAINER = "AM Released Container";
+    public static final String UPDATE_APP_PRIORITY =
+        "Update Application Priority Request";
+    public static final String CHANGE_CONTAINER_RESOURCE =
+        "AM Changed Container Resource";
+    public static final String SIGNAL_CONTAINER = "Signal Container Request";
 
     // Some commonly used descriptions
     public static final String UNAUTHORIZED_USER = "Unauthorized user";

@@ -126,50 +126,50 @@ public class ReduceAttemptFinishedEvent  implements HistoryEvent {
   public Object getDatum() {
     if (datum == null) {
       datum = new ReduceAttemptFinished();
-      datum.taskid = new Utf8(attemptId.getTaskID().toString());
-      datum.attemptId = new Utf8(attemptId.toString());
-      datum.taskType = new Utf8(taskType.name());
-      datum.taskStatus = new Utf8(taskStatus);
-      datum.shuffleFinishTime = shuffleFinishTime;
-      datum.sortFinishTime = sortFinishTime;
-      datum.finishTime = finishTime;
-      datum.hostname = new Utf8(hostname);
-      datum.port = port;
+      datum.setTaskid(new Utf8(attemptId.getTaskID().toString()));
+      datum.setAttemptId(new Utf8(attemptId.toString()));
+      datum.setTaskType(new Utf8(taskType.name()));
+      datum.setTaskStatus(new Utf8(taskStatus));
+      datum.setShuffleFinishTime(shuffleFinishTime);
+      datum.setSortFinishTime(sortFinishTime);
+      datum.setFinishTime(finishTime);
+      datum.setHostname(new Utf8(hostname));
+      datum.setPort(port);
       if (rackName != null) {
-        datum.rackname = new Utf8(rackName);
+        datum.setRackname(new Utf8(rackName));
       }
-      datum.state = new Utf8(state);
-      datum.counters = EventWriter.toAvro(counters);
+      datum.setState(new Utf8(state));
+      datum.setCounters(EventWriter.toAvro(counters));
 
-      datum.clockSplits = AvroArrayUtils.toAvro(ProgressSplitsBlock
-        .arrayGetWallclockTime(allSplits));
-      datum.cpuUsages = AvroArrayUtils.toAvro(ProgressSplitsBlock
-        .arrayGetCPUTime(allSplits));
-      datum.vMemKbytes = AvroArrayUtils.toAvro(ProgressSplitsBlock
-        .arrayGetVMemKbytes(allSplits));
-      datum.physMemKbytes = AvroArrayUtils.toAvro(ProgressSplitsBlock
-        .arrayGetPhysMemKbytes(allSplits));
+      datum.setClockSplits(AvroArrayUtils.toAvro(ProgressSplitsBlock
+          .arrayGetWallclockTime(allSplits)));
+      datum.setCpuUsages(AvroArrayUtils.toAvro(ProgressSplitsBlock
+          .arrayGetCPUTime(allSplits)));
+      datum.setVMemKbytes(AvroArrayUtils.toAvro(ProgressSplitsBlock
+          .arrayGetVMemKbytes(allSplits)));
+      datum.setPhysMemKbytes(AvroArrayUtils.toAvro(ProgressSplitsBlock
+          .arrayGetPhysMemKbytes(allSplits)));
     }
     return datum;
   }
 
   public void setDatum(Object oDatum) {
     this.datum = (ReduceAttemptFinished)oDatum;
-    this.attemptId = TaskAttemptID.forName(datum.attemptId.toString());
-    this.taskType = TaskType.valueOf(datum.taskType.toString());
-    this.taskStatus = datum.taskStatus.toString();
-    this.shuffleFinishTime = datum.shuffleFinishTime;
-    this.sortFinishTime = datum.sortFinishTime;
-    this.finishTime = datum.finishTime;
-    this.hostname = datum.hostname.toString();
-    this.rackName = datum.rackname.toString();
-    this.port = datum.port;
-    this.state = datum.state.toString();
-    this.counters = EventReader.fromAvro(datum.counters);
-    this.clockSplits = AvroArrayUtils.fromAvro(datum.clockSplits);
-    this.cpuUsages = AvroArrayUtils.fromAvro(datum.cpuUsages);
-    this.vMemKbytes = AvroArrayUtils.fromAvro(datum.vMemKbytes);
-    this.physMemKbytes = AvroArrayUtils.fromAvro(datum.physMemKbytes);
+    this.attemptId = TaskAttemptID.forName(datum.getAttemptId().toString());
+    this.taskType = TaskType.valueOf(datum.getTaskType().toString());
+    this.taskStatus = datum.getTaskStatus().toString();
+    this.shuffleFinishTime = datum.getShuffleFinishTime();
+    this.sortFinishTime = datum.getSortFinishTime();
+    this.finishTime = datum.getFinishTime();
+    this.hostname = datum.getHostname().toString();
+    this.rackName = datum.getRackname().toString();
+    this.port = datum.getPort();
+    this.state = datum.getState().toString();
+    this.counters = EventReader.fromAvro(datum.getCounters());
+    this.clockSplits = AvroArrayUtils.fromAvro(datum.getClockSplits());
+    this.cpuUsages = AvroArrayUtils.fromAvro(datum.getCpuUsages());
+    this.vMemKbytes = AvroArrayUtils.fromAvro(datum.getVMemKbytes());
+    this.physMemKbytes = AvroArrayUtils.fromAvro(datum.getPhysMemKbytes());
   }
 
   /** Get the Task ID */

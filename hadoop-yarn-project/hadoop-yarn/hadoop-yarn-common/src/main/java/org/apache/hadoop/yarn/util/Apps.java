@@ -44,6 +44,14 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 public class Apps {
   public static final String APP = "application";
   public static final String ID = "ID";
+  private static final Pattern VAR_SUBBER =
+      Pattern.compile(Shell.getEnvironmentVariableRegex());
+  private static final Pattern VARVAL_SPLITTER = Pattern.compile(
+        "(?<=^|,)"                            // preceded by ',' or line begin
+      + '(' + Shell.ENV_NAME_REGEX + ')'      // var group
+      + '='
+      + "([^,]*)"                             // val group
+      );
 
   public static ApplicationId toAppID(String aid) {
     Iterator<String> it = _split(aid).iterator();
@@ -73,11 +81,10 @@ public class Apps {
   public static void setEnvFromInputString(Map<String, String> env,
       String envString,  String classPathSeparator) {
     if (envString != null && envString.length() > 0) {
-      String childEnvs[] = envString.split(",");
-      Pattern p = Pattern.compile(Shell.getEnvironmentVariableRegex());
-      for (String cEnv : childEnvs) {
-        String[] parts = cEnv.split("="); // split on '='
-        Matcher m = p.matcher(parts[1]);
+      Matcher varValMatcher = VARVAL_SPLITTER.matcher(envString);
+      while (varValMatcher.find()) {
+        String envVar = varValMatcher.group(1);
+        Matcher m = VAR_SUBBER.matcher(varValMatcher.group(2));
         StringBuffer sb = new StringBuffer();
         while (m.find()) {
           String var = m.group(1);
@@ -93,7 +100,7 @@ public class Apps {
           m.appendReplacement(sb, Matcher.quoteReplacement(replace));
         }
         m.appendTail(sb);
-        addToEnvironment(env, parts[0], sb.toString(), classPathSeparator);
+        addToEnvironment(env, envVar, sb.toString(), classPathSeparator);
       }
     }
   }

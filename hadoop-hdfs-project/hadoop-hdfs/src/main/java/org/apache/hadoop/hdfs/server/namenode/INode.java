@@ -21,7 +21,10 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
+import java.util.Map;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -29,10 +32,11 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
@@ -221,7 +225,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
   /** Is this inode in the latest snapshot? */
   public final boolean isInLatestSnapshot(final int latestSnapshotId) {
-    if (latestSnapshotId == Snapshot.CURRENT_STATE_ID || latestSnapshotId == Snapshot.NO_SNAPSHOT_ID) {
+    if (latestSnapshotId == Snapshot.CURRENT_STATE_ID ||
+        latestSnapshotId == Snapshot.NO_SNAPSHOT_ID) {
       return false;
     }
     // if parent is a reference node, parent must be a renamed node. We can 
@@ -386,29 +391,20 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * snapshot in its diff list. Recursively clean its children.
    * </pre>
    *
-   * @param bsps
-   *          block storage policy suite to calculate intended storage type usage
+   * @param reclaimContext
+   *        Record blocks and inodes that need to be reclaimed.
    * @param snapshotId
-   *          The id of the snapshot to delete. 
-   *          {@link Snapshot#CURRENT_STATE_ID} means to delete the current
-   *          file/directory.
+   *        The id of the snapshot to delete.
+   *        {@link Snapshot#CURRENT_STATE_ID} means to delete the current
+   *        file/directory.
    * @param priorSnapshotId
-   *          The id of the latest snapshot before the to-be-deleted snapshot.
-   *          When deleting a current inode, this parameter captures the latest
-   *          snapshot.
-   * @param collectedBlocks
-   *          blocks collected from the descents for further block
-   *          deletion/update will be added to the given map.
-   * @param removedINodes
-   *          INodes collected from the descents for further cleaning up of 
-   *          inodeMap
-   * @return quota usage delta when deleting a snapshot
+   *        The id of the latest snapshot before the to-be-deleted snapshot.
+   *        When deleting a current inode, this parameter captures the latest
+   *        snapshot.
    */
-  public abstract QuotaCounts cleanSubtree(final BlockStoragePolicySuite bsps,
-      final int snapshotId,
-      int priorSnapshotId, BlocksMapUpdateInfo collectedBlocks,
-      List<INode> removedINodes);
-  
+  public abstract void cleanSubtree(ReclaimContext reclaimContext,
+      final int snapshotId, int priorSnapshotId);
+
   /**
    * Destroy self and clear everything! If the INode is a file, this method
    * collects its blocks for further block deletion. If the INode is a
@@ -416,33 +412,24 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * descents, and clears its parent/children references as well. The method
    * also clears the diff list if the INode contains snapshot diff list.
    *
-   * @param bsps
-   *          block storage policy suite to calculate intended storage type usage
-   *          This is needed because INodeReference#destroyAndCollectBlocks() needs
-   *          to call INode#cleanSubtree(), which calls INode#computeQuotaUsage().
-   * @param collectedBlocks
-   *          blocks collected from the descents for further block
-   *          deletion/update will be added to this map.
-   * @param removedINodes
-   *          INodes collected from the descents for further cleaning up of
-   *          inodeMap
+   * @param reclaimContext
+   *        Record blocks and inodes that need to be reclaimed.
    */
-  public abstract void destroyAndCollectBlocks(
-      BlockStoragePolicySuite bsps,
-      BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes);
+  public abstract void destroyAndCollectBlocks(ReclaimContext reclaimContext);
 
   /** Compute {@link ContentSummary}. Blocking call */
   public final ContentSummary computeContentSummary(BlockStoragePolicySuite bsps) {
-    return computeAndConvertContentSummary(
+    return computeAndConvertContentSummary(Snapshot.CURRENT_STATE_ID,
         new ContentSummaryComputationContext(bsps));
   }
 
   /**
    * Compute {@link ContentSummary}. 
    */
-  public final ContentSummary computeAndConvertContentSummary(
+  public final ContentSummary computeAndConvertContentSummary(int snapshotId,
       ContentSummaryComputationContext summary) {
-    ContentCounts counts = computeContentSummary(summary).getCounts();
+    ContentCounts counts = computeContentSummary(snapshotId, summary)
+        .getCounts();
     final QuotaCounts q = getQuotaCounts();
     return new ContentSummary.Builder().
         length(counts.getLength()).
@@ -459,11 +446,16 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   /**
    * Count subtree content summary with a {@link ContentCounts}.
    *
+   * @param snapshotId Specify the time range for the calculation. If this
+   *                   parameter equals to {@link Snapshot#CURRENT_STATE_ID},
+   *                   the result covers both the current states and all the
+   *                   snapshots. Otherwise the result only covers all the
+   *                   files/directories contained in the specific snapshot.
    * @param summary the context object holding counts for the subtree.
    * @return The same objects as summary.
    */
   public abstract ContentSummaryComputationContext computeContentSummary(
-      ContentSummaryComputationContext summary);
+      int snapshotId, ContentSummaryComputationContext summary);
 
 
   /**
@@ -505,9 +497,14 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
   /**
    * Count subtree {@link Quota#NAMESPACE} and {@link Quota#STORAGESPACE} usages.
+   * Entry point for FSDirectory where blockStoragePolicyId is given its initial
+   * value.
    */
   public final QuotaCounts computeQuotaUsage(BlockStoragePolicySuite bsps) {
-    return computeQuotaUsage(bsps, new QuotaCounts.Builder().build(), true);
+    final byte storagePolicyId = isSymlink() ?
+        HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED : getStoragePolicyID();
+    return computeQuotaUsage(bsps, storagePolicyId, true,
+        Snapshot.CURRENT_STATE_ID);
   }
 
   /**
@@ -532,22 +529,24 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * <pre>
    *
    * @param bsps Block storage policy suite to calculate intended storage type usage
-   * @param counts The subtree counts for returning.
+   * @param blockStoragePolicyId block storage policy id of the current INode
    * @param useCache Whether to use cached quota usage. Note that 
    *                 {@link WithName} node never uses cache for its subtree.
    * @param lastSnapshotId {@link Snapshot#CURRENT_STATE_ID} indicates the 
    *                       computation is in the current tree. Otherwise the id
    *                       indicates the computation range for a 
    *                       {@link WithName} node.
-   * @return The same objects as the counts parameter.
+   * @return The subtree quota counts.
    */
-  public abstract QuotaCounts computeQuotaUsage(
-    BlockStoragePolicySuite bsps,
-    QuotaCounts counts, boolean useCache, int lastSnapshotId);
+  public abstract QuotaCounts computeQuotaUsage(BlockStoragePolicySuite bsps,
+      byte blockStoragePolicyId, boolean useCache, int lastSnapshotId);
 
-  public final QuotaCounts computeQuotaUsage(
-    BlockStoragePolicySuite bsps, QuotaCounts counts, boolean useCache) {
-    return computeQuotaUsage(bsps, counts, useCache, Snapshot.CURRENT_STATE_ID);
+  public final QuotaCounts computeQuotaUsage(BlockStoragePolicySuite bsps,
+      boolean useCache) {
+    final byte storagePolicyId = isSymlink() ?
+        HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED : getStoragePolicyID();
+    return computeQuotaUsage(bsps, storagePolicyId, useCache,
+        Snapshot.CURRENT_STATE_ID);
   }
 
   /**
@@ -702,10 +701,24 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
   /**
    * @return the storage policy directly specified on the INode. Return
-   * {@link BlockStoragePolicySuite#ID_UNSPECIFIED} if no policy has
+   * {@link HdfsConstants#BLOCK_STORAGE_POLICY_ID_UNSPECIFIED} if no policy has
    * been specified.
    */
   public abstract byte getLocalStoragePolicyID();
+
+  /**
+   * Get the storage policy ID while computing quota usage
+   * @param parentStoragePolicyId the storage policy ID of the parent directory
+   * @return the storage policy ID of this INode. Note that for an
+   * {@link INodeSymlink} we return {@link HdfsConstants#BLOCK_STORAGE_POLICY_ID_UNSPECIFIED}
+   * instead of throwing Exception
+   */
+  public byte getStoragePolicyIDForQuota(byte parentStoragePolicyId) {
+    byte localId = isSymlink() ?
+        HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED : getLocalStoragePolicyID();
+    return localId != HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED ?
+        localId : parentStoragePolicyId;
+  }
 
   /**
    * Breaks {@code path} into components.
@@ -735,14 +748,15 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    */
   public static String[] getPathNames(String path) {
     if (path == null || !path.startsWith(Path.SEPARATOR)) {
-      throw new AssertionError("Absolute path required");
+      throw new AssertionError("Absolute path required, but got '"
+          + path + "'");
     }
     return StringUtils.split(path, Path.SEPARATOR_CHAR);
   }
 
   @Override
   public final int compareTo(byte[] bytes) {
-    return DFSUtil.compareBytes(getLocalNameBytes(), bytes);
+    return DFSUtilClient.compareBytes(getLocalNameBytes(), bytes);
   }
 
   @Override
@@ -796,42 +810,219 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     out.print(getParentString());
     out.print(", " + getPermissionStatus(snapshotId));
   }
-  
+
+  /**
+   * Information used to record quota usage delta. This data structure is
+   * usually passed along with an operation like {@link #cleanSubtree}. Note
+   * that after the operation the delta counts should be decremented from the
+   * ancestral directories' quota usage.
+   */
+  public static class QuotaDelta {
+    private final QuotaCounts counts;
+    /**
+     * The main usage of this map is to track the quota delta that should be
+     * applied to another path. This usually happens when we reclaim INodes and
+     * blocks while deleting snapshots, and hit an INodeReference. Because the
+     * quota usage for a renamed+snapshotted file/directory is counted in both
+     * the current and historical parents, any change of its quota usage may
+     * need to be propagated along its parent paths both before and after the
+     * rename.
+     */
+    private final Map<INode, QuotaCounts> updateMap;
+
+    /**
+     * When deleting a snapshot we may need to update the quota for directories
+     * with quota feature. This map is used to capture these directories and
+     * their quota usage updates.
+     */
+    private final Map<INodeDirectory, QuotaCounts> quotaDirMap;
+
+    public QuotaDelta() {
+      counts = new QuotaCounts.Builder().build();
+      updateMap = Maps.newHashMap();
+      quotaDirMap = Maps.newHashMap();
+    }
+
+    public void add(QuotaCounts update) {
+      counts.add(update);
+    }
+
+    public void addUpdatePath(INodeReference inode, QuotaCounts update) {
+      QuotaCounts c = updateMap.get(inode);
+      if (c == null) {
+        c = new QuotaCounts.Builder().build();
+        updateMap.put(inode, c);
+      }
+      c.add(update);
+    }
+
+    public void addQuotaDirUpdate(INodeDirectory dir, QuotaCounts update) {
+      Preconditions.checkState(dir.isQuotaSet());
+      QuotaCounts c = quotaDirMap.get(dir);
+      if (c == null) {
+        quotaDirMap.put(dir, update);
+      } else {
+        c.add(update);
+      }
+    }
+
+    public QuotaCounts getCountsCopy() {
+      final QuotaCounts copy = new QuotaCounts.Builder().build();
+      copy.add(counts);
+      return copy;
+    }
+
+    public void setCounts(QuotaCounts c) {
+      this.counts.setNameSpace(c.getNameSpace());
+      this.counts.setStorageSpace(c.getStorageSpace());
+      this.counts.setTypeSpaces(c.getTypeSpaces());
+    }
+
+    public long getNsDelta() {
+      long nsDelta = counts.getNameSpace();
+      for (Map.Entry<INode, QuotaCounts> entry : updateMap.entrySet()) {
+        nsDelta += entry.getValue().getNameSpace();
+      }
+      return nsDelta;
+    }
+
+    public Map<INode, QuotaCounts> getUpdateMap() {
+      return ImmutableMap.copyOf(updateMap);
+    }
+
+    public Map<INodeDirectory, QuotaCounts> getQuotaDirMap() {
+      return ImmutableMap.copyOf(quotaDirMap);
+    }
+  }
+
+  /**
+   * Context object to record blocks and inodes that need to be reclaimed
+   */
+  public static class ReclaimContext {
+    protected final BlockStoragePolicySuite bsps;
+    protected final BlocksMapUpdateInfo collectedBlocks;
+    protected final List<INode> removedINodes;
+    protected final List<Long> removedUCFiles;
+    /** Used to collect quota usage delta */
+    private final QuotaDelta quotaDelta;
+
+    /**
+     * @param bsps
+ *          block storage policy suite to calculate intended storage type
+ *          usage
+     * @param collectedBlocks
+*          blocks collected from the descents for further block
+*          deletion/update will be added to the given map.
+     * @param removedINodes
+*          INodes collected from the descents for further cleaning up of
+     * @param removedUCFiles
+     */
+    public ReclaimContext(
+        BlockStoragePolicySuite bsps, BlocksMapUpdateInfo collectedBlocks,
+        List<INode> removedINodes, List<Long> removedUCFiles) {
+      this.bsps = bsps;
+      this.collectedBlocks = collectedBlocks;
+      this.removedINodes = removedINodes;
+      this.removedUCFiles = removedUCFiles;
+      this.quotaDelta = new QuotaDelta();
+    }
+
+    public BlockStoragePolicySuite storagePolicySuite() {
+      return bsps;
+    }
+
+    public BlocksMapUpdateInfo collectedBlocks() {
+      return collectedBlocks;
+    }
+
+    public QuotaDelta quotaDelta() {
+      return quotaDelta;
+    }
+
+    /**
+     * make a copy with the same collectedBlocks, removedINodes, and
+     * removedUCFiles but a new quotaDelta.
+     */
+    public ReclaimContext getCopy() {
+      return new ReclaimContext(bsps, collectedBlocks, removedINodes,
+          removedUCFiles);
+    }
+  }
+
   /**
    * Information used for updating the blocksMap when deleting files.
    */
   public static class BlocksMapUpdateInfo {
     /**
+     * The blocks whose replication factor need to be updated.
+     */
+    public static class UpdatedReplicationInfo {
+      /**
+       * the expected replication after the update.
+       */
+      private final short targetReplication;
+      /**
+       * The block whose replication needs to be updated.
+       */
+      private final BlockInfo block;
+
+      public UpdatedReplicationInfo(short targetReplication, BlockInfo block) {
+        this.targetReplication = targetReplication;
+        this.block = block;
+      }
+
+      public BlockInfo block() {
+        return block;
+      }
+
+      public short targetReplication() {
+        return targetReplication;
+      }
+    }
+    /**
      * The list of blocks that need to be removed from blocksMap
      */
-    private final List<Block> toDeleteList;
-    
+    private final List<BlockInfo> toDeleteList;
+    /**
+     * The list of blocks whose replication factor needs to be adjusted
+     */
+    private final List<UpdatedReplicationInfo> toUpdateReplicationInfo;
+
     public BlocksMapUpdateInfo() {
-      toDeleteList = new ChunkedArrayList<Block>();
+      toDeleteList = new ChunkedArrayList<>();
+      toUpdateReplicationInfo = new ChunkedArrayList<>();
     }
     
     /**
      * @return The list of blocks that need to be removed from blocksMap
      */
-    public List<Block> getToDeleteList() {
+    public List<BlockInfo> getToDeleteList() {
       return toDeleteList;
     }
-    
+
+    public List<UpdatedReplicationInfo> toUpdateReplicationInfo() {
+      return toUpdateReplicationInfo;
+    }
+
     /**
      * Add a to-be-deleted block into the
      * {@link BlocksMapUpdateInfo#toDeleteList}
      * @param toDelete the to-be-deleted block
      */
-    public void addDeleteBlock(Block toDelete) {
+    public void addDeleteBlock(BlockInfo toDelete) {
       assert toDelete != null : "toDelete is null";
       toDeleteList.add(toDelete);
     }
 
-    public void removeDeleteBlock(Block block) {
+    public void removeDeleteBlock(BlockInfo block) {
       assert block != null : "block is null";
       toDeleteList.remove(block);
     }
 
+    public void addUpdateReplicationFactor(BlockInfo block, short targetRepl) {
+      toUpdateReplicationInfo.add(
+          new UpdatedReplicationInfo(targetRepl, block));
+    }
     /**
      * Clear {@link BlocksMapUpdateInfo#toDeleteList}
      */

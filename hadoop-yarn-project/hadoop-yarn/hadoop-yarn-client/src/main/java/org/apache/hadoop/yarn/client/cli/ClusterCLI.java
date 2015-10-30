@@ -25,9 +25,7 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
@@ -38,6 +36,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
@@ -74,7 +73,7 @@ public class ClusterCLI extends YarnCLI {
         "List cluster node-label collection");
     opts.addOption("h", HELP_CMD, false, "Displays help for all commands.");
     opts.addOption("dnl", DIRECTLY_ACCESS_NODE_LABEL_STORE, false,
-        "Directly access node label store, "
+        "This is DEPRECATED, will be removed in future releases. Directly access node label store, "
             + "with this option, all node label related operations"
             + " will NOT connect RM. Instead, they will"
             + " access/modify stored node labels directly."
@@ -113,23 +112,16 @@ public class ClusterCLI extends YarnCLI {
     return 0;
   }
 
-  private List<String> sortStrSet(Set<String> labels) {
-    List<String> list = new ArrayList<String>();
-    list.addAll(labels);
-    Collections.sort(list);
-    return list;
-  }
-
   void printClusterNodeLabels() throws YarnException, IOException {
-    Set<String> nodeLabels = null;
+    List<NodeLabel> nodeLabels = null;
     if (accessLocal) {
       nodeLabels =
-          getNodeLabelManagerInstance(getConf()).getClusterNodeLabels();
+          new ArrayList<>(getNodeLabelManagerInstance(getConf()).getClusterNodeLabels());
     } else {
-      nodeLabels = client.getClusterNodeLabels();
+      nodeLabels = new ArrayList<>(client.getClusterNodeLabels());
     }
     sysout.println(String.format("Node Labels: %s",
-        StringUtils.join(sortStrSet(nodeLabels).iterator(), ",")));
+        StringUtils.join(nodeLabels.iterator(), ",")));
   }
 
   @VisibleForTesting

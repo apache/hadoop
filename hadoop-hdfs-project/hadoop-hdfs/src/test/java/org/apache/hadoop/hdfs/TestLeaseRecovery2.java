@@ -28,7 +28,6 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -48,6 +47,7 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -59,9 +59,9 @@ public class TestLeaseRecovery2 {
   public static final Log LOG = LogFactory.getLog(TestLeaseRecovery2.class);
   
   {
-    ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(LeaseManager.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.ALL);
   }
 
   static final private long BLOCK_SIZE = 1024;

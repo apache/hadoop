@@ -28,8 +28,10 @@ import javax.xml.bind.annotation.XmlSeeAlso;
 import javax.xml.bind.annotation.XmlTransient;
 
 import org.apache.hadoop.yarn.api.records.QueueState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlanQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -55,11 +57,17 @@ public class CapacitySchedulerQueueInfo {
   protected ResourceInfo resourcesUsed;
   private boolean hideReservationQueues = false;
   protected ArrayList<String> nodeLabels = new ArrayList<String>();
+  protected long allocatedContainers;
+  protected long reservedContainers;
+  protected long pendingContainers;
+  protected QueueCapacitiesInfo capacities;
+  protected ResourceUsageInfo resources;
 
   CapacitySchedulerQueueInfo() {
   };
 
   CapacitySchedulerQueueInfo(CSQueue q) {
+
     queuePath = q.getQueuePath();
     capacity = q.getCapacity() * 100;
     usedCapacity = q.getUsedCapacity() * 100;
@@ -69,24 +77,38 @@ public class CapacitySchedulerQueueInfo {
       maxCapacity = 1f;
     maxCapacity *= 100;
 
-    absoluteCapacity = cap(q.getAbsoluteCapacity(), 0f, 1f) * 100;
-    absoluteMaxCapacity = cap(q.getAbsoluteMaximumCapacity(), 0f, 1f) * 100;
-    absoluteUsedCapacity = cap(q.getAbsoluteUsedCapacity(), 0f, 1f) * 100;
+    absoluteCapacity =
+        cap(q.getAbsoluteCapacity(), 0f, 1f) * 100;
+    absoluteMaxCapacity =
+        cap(q.getAbsoluteMaximumCapacity(), 0f, 1f) * 100;
+    absoluteUsedCapacity =
+        cap(q.getAbsoluteUsedCapacity(), 0f, 1f) * 100;
     numApplications = q.getNumApplications();
+    allocatedContainers = q.getMetrics().getAllocatedContainers();
+    pendingContainers = q.getMetrics().getPendingContainers();
+    reservedContainers = q.getMetrics().getReservedContainers();
     queueName = q.getQueueName();
     state = q.getState();
     resourcesUsed = new ResourceInfo(q.getUsedResources());
-    if(q instanceof PlanQueue &&
-       !((PlanQueue)q).showReservationsAsQueues()) {
+    if (q instanceof PlanQueue && !((PlanQueue) q).showReservationsAsQueues()) {
       hideReservationQueues = true;
     }
-    
+
     // add labels
     Set<String> labelSet = q.getAccessibleNodeLabels();
     if (labelSet != null) {
       nodeLabels.addAll(labelSet);
       Collections.sort(nodeLabels);
     }
+    QueueCapacities qCapacities = q.getQueueCapacities();
+    capacities = new QueueCapacitiesInfo(qCapacities);
+
+    ResourceUsage queueResourceUsage = q.getQueueResourceUsage();
+    populateQueueResourceUsage(queueResourceUsage);
+  }
+
+  protected void populateQueueResourceUsage(ResourceUsage queueResourceUsage) {
+    resources = new ResourceUsageInfo(queueResourceUsage, false);
   }
 
   public float getCapacity() {
@@ -115,6 +137,18 @@ public class CapacitySchedulerQueueInfo {
 
   public int getNumApplications() {
     return numApplications;
+  }
+
+  public long getAllocatedContainers() {
+    return allocatedContainers;
+  }
+
+  public long getReservedContainers() {
+    return reservedContainers;
+  }
+
+  public long getPendingContainers() {
+    return pendingContainers;
   }
 
   public String getQueueName() {
@@ -153,5 +187,13 @@ public class CapacitySchedulerQueueInfo {
   
   public ArrayList<String> getNodeLabels() {
     return this.nodeLabels;
+  }
+
+  public QueueCapacitiesInfo getCapacities() {
+    return capacities;
+  }
+
+  public ResourceUsageInfo getResources() {
+    return resources;
   }
 }

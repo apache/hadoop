@@ -46,12 +46,15 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
@@ -131,6 +134,23 @@ public abstract class YarnClient extends AbstractService {
    */
   public abstract ApplicationId submitApplication(
       ApplicationSubmissionContext appContext) throws YarnException,
+      IOException;
+
+  /**
+   * <p>
+   * Fail an application attempt identified by given ID.
+   * </p>
+   *
+   * @param applicationAttemptId
+   *          {@link ApplicationAttemptId} of the attempt to fail.
+   * @throws YarnException
+   *           in case of errors or if YARN rejects the request due to
+   *           access-control restrictions.
+   * @throws IOException
+   * @see #getQueueAclsInfo()
+   */
+  public abstract void failApplicationAttempt(
+      ApplicationAttemptId applicationAttemptId) throws YarnException,
       IOException;
 
   /**
@@ -237,7 +257,7 @@ public abstract class YarnClient extends AbstractService {
    * {@link #getApplicationReport(ApplicationId)}.
    * </p>
    *
-   * @param applicationTypes
+   * @param applicationTypes set of application types you are interested in
    * @return a list of reports of applications
    * @throws YarnException
    * @throws IOException
@@ -257,7 +277,7 @@ public abstract class YarnClient extends AbstractService {
    * {@link #getApplicationReport(ApplicationId)}.
    * </p>
    *
-   * @param applicationStates
+   * @param applicationStates set of application states you are interested in
    * @return a list of reports of applications
    * @throws YarnException
    * @throws IOException
@@ -278,14 +298,40 @@ public abstract class YarnClient extends AbstractService {
    * {@link #getApplicationReport(ApplicationId)}.
    * </p>
    *
-   * @param applicationTypes
-   * @param applicationStates
+   * @param applicationTypes set of application types you are interested in
+   * @param applicationStates set of application states you are interested in
    * @return a list of reports of applications
    * @throws YarnException
    * @throws IOException
    */
   public abstract List<ApplicationReport> getApplications(
       Set<String> applicationTypes,
+      EnumSet<YarnApplicationState> applicationStates) throws YarnException,
+      IOException;
+
+  /**
+   * <p>
+   * Get a report (ApplicationReport) of Applications matching the given users,
+   * queues, application types and application states in the cluster. If any of
+   * the params is set to null, it is not used when filtering.
+   * </p>
+   *
+   * <p>
+   * If the user does not have <code>VIEW_APP</code> access for an application
+   * then the corresponding report will be filtered as described in
+   * {@link #getApplicationReport(ApplicationId)}.
+   * </p>
+   *
+   * @param queues set of queues you are interested in
+   * @param users set of users you are interested in
+   * @param applicationTypes set of application types you are interested in
+   * @param applicationStates set of application states you are interested in
+   * @return a list of reports of applications
+   * @throws YarnException
+   * @throws IOException
+   */
+  public abstract List<ApplicationReport> getApplications(Set<String> queues,
+      Set<String> users, Set<String> applicationTypes,
       EnumSet<YarnApplicationState> applicationStates) throws YarnException,
       IOException;
 
@@ -426,7 +472,7 @@ public abstract class YarnClient extends AbstractService {
    * Get a report of all (ApplicationAttempts) of Application in the cluster.
    * </p>
    * 
-   * @param applicationId
+   * @param applicationId application id of the app
    * @return a list of reports for all application attempts for specified
    *         application.
    * @throws YarnException
@@ -460,7 +506,7 @@ public abstract class YarnClient extends AbstractService {
    * Get a report of all (Containers) of ApplicationAttempt in the cluster.
    * </p>
    * 
-   * @param applicationAttemptId
+   * @param applicationAttemptId application attempt id
    * @return a list of reports of all containers for specified application
    *         attempts
    * @throws YarnException
@@ -592,7 +638,7 @@ public abstract class YarnClient extends AbstractService {
    */
   @Public
   @Unstable
-  public abstract Map<NodeId, Set<String>> getNodeToLabels()
+  public abstract Map<NodeId, Set<NodeLabel>> getNodeToLabels()
       throws YarnException, IOException;
 
   /**
@@ -607,7 +653,7 @@ public abstract class YarnClient extends AbstractService {
    */
   @Public
   @Unstable
-  public abstract Map<String, Set<NodeId>> getLabelsToNodes()
+  public abstract Map<NodeLabel, Set<NodeId>> getLabelsToNodes()
       throws YarnException, IOException;
 
   /**
@@ -623,8 +669,8 @@ public abstract class YarnClient extends AbstractService {
    */
   @Public
   @Unstable
-  public abstract Map<String, Set<NodeId>> getLabelsToNodes(Set<String> labels)
-      throws YarnException, IOException;
+  public abstract Map<NodeLabel, Set<NodeId>> getLabelsToNodes(
+      Set<String> labels) throws YarnException, IOException;
 
   /**
    * <p>
@@ -637,6 +683,34 @@ public abstract class YarnClient extends AbstractService {
    */
   @Public
   @Unstable
-  public abstract Set<String> getClusterNodeLabels()
+  public abstract List<NodeLabel> getClusterNodeLabels()
       throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by client to set priority of an application
+   * </p>
+   * @param applicationId
+   * @param priority
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  public abstract void updateApplicationPriority(ApplicationId applicationId,
+      Priority priority) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * Signal a container identified by given ID.
+   * </p>
+   *
+   * @param containerId
+   *          {@link ContainerId} of the container that needs to be signaled
+   * @param command the signal container command
+   * @throws YarnException
+   * @throws IOException
+   */
+  public abstract void signalContainer(ContainerId containerId,
+      SignalContainerCommand command) throws YarnException, IOException;
 }

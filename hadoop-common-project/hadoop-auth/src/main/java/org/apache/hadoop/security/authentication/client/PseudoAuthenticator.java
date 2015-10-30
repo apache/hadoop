@@ -57,7 +57,7 @@ public class PseudoAuthenticator implements Authenticator {
    * If the response is successful it will update the authentication token.
    *
    * @param url the URl to authenticate against.
-   * @param token the authencation token being used for the user.
+   * @param token the authentication token being used for the user.
    *
    * @throws IOException if an IO error occurred.
    * @throws AuthenticationException if an authentication error occurred.

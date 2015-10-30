@@ -19,7 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.StringReader;
 
@@ -314,11 +316,14 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     JSONObject info = json.getJSONObject("scheduler");
     assertEquals("incorrect number of elements", 1, info.length());
     info = info.getJSONObject("schedulerInfo");
-    assertEquals("incorrect number of elements", 6, info.length());
+    assertEquals("incorrect number of elements", 8, info.length());
     verifyClusterSchedulerGeneric(info.getString("type"),
         (float) info.getDouble("usedCapacity"),
         (float) info.getDouble("capacity"),
         (float) info.getDouble("maxCapacity"), info.getString("queueName"));
+    JSONObject health = info.getJSONObject("health");
+    assertNotNull(health);
+    assertEquals("incorrect number of elements", 3, health.length());
 
     JSONArray arr = info.getJSONObject("queues").getJSONArray("queue");
     assertEquals("incorrect number of elements", 2, arr.length());
@@ -344,10 +349,10 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   private void verifySubQueue(JSONObject info, String q, 
       float parentAbsCapacity, float parentAbsMaxCapacity)
       throws JSONException, Exception {
-    int numExpectedElements = 13;
+    int numExpectedElements = 18;
     boolean isParentQueue = true;
     if (!info.has("queues")) {
-      numExpectedElements = 25;
+      numExpectedElements = 31;
       isParentQueue = false;
     }
     assertEquals("incorrect number of elements", numExpectedElements, info.length());
@@ -570,6 +575,15 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
         user.getInt("numActiveApplications");
         user.getInt("numPendingApplications");
         checkResourcesUsed(user);
+      }
+
+      // Verify 'queues' field is omitted from CapacitySchedulerLeafQueueInfo.
+      try {
+        b1.getJSONObject("queues");
+        fail("CapacitySchedulerQueueInfo should omit field 'queues'" +
+             "if child queue is empty.");
+      } catch (JSONException je) {
+        assertEquals("JSONObject[\"queues\"] not found.", je.getMessage());
       }
     } finally {
       rm.stop();

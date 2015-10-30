@@ -18,9 +18,11 @@
 package org.apache.hadoop.net;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -52,9 +54,9 @@ import com.google.common.collect.Lists;
 public class NetworkTopology {
   public final static String DEFAULT_RACK = "/default-rack";
   public final static int DEFAULT_HOST_LEVEL = 2;
-  public static final Log LOG = 
+  public static final Log LOG =
     LogFactory.getLog(NetworkTopology.class);
-    
+
   public static class InvalidTopologyException extends RuntimeException {
     private static final long serialVersionUID = 1L;
     public InvalidTopologyException(String msg) {
@@ -80,6 +82,7 @@ public class NetworkTopology {
    */
   static class InnerNode extends NodeBase {
     protected List<Node> children=new ArrayList<Node>();
+    private Map<String, Node> childrenMap = new HashMap<String, Node>();
     private int numOfLeaves;
         
     /** Construct an InnerNode from a path-like string */
@@ -163,18 +166,22 @@ public class NetworkTopology {
      * @return true if the node is added; false otherwise
      */
     boolean add(Node n) {
-      if (!isAncestor(n))
-        throw new IllegalArgumentException(n.getName()+", which is located at "
-                +n.getNetworkLocation()+", is not a decendent of "
-                +getPath(this));
+      if (!isAncestor(n)) {
+        throw new IllegalArgumentException(n.getName()
+            + ", which is located at " + n.getNetworkLocation()
+            + ", is not a descendent of " + getPath(this));
+      }
       if (isParent(n)) {
         // this node is the parent of n; add n directly
         n.setParent(this);
         n.setLevel(this.level+1);
-        for(int i=0; i<children.size(); i++) {
-          if (children.get(i).getName().equals(n.getName())) {
-            children.set(i, n);
-            return false;
+        Node prev = childrenMap.put(n.getName(), n);
+        if (prev != null) {
+          for(int i=0; i<children.size(); i++) {
+            if (children.get(i).getName().equals(n.getName())) {
+              children.set(i, n);
+              return false;
+            }
           }
         }
         children.add(n);
@@ -183,17 +190,12 @@ public class NetworkTopology {
       } else {
         // find the next ancestor node
         String parentName = getNextAncestorName(n);
-        InnerNode parentNode = null;
-        for(int i=0; i<children.size(); i++) {
-          if (children.get(i).getName().equals(parentName)) {
-            parentNode = (InnerNode)children.get(i);
-            break;
-          }
-        }
+        InnerNode parentNode = (InnerNode)childrenMap.get(parentName);
         if (parentNode == null) {
           // create a new InnerNode
           parentNode = createParentNode(parentName);
           children.add(parentNode);
+          childrenMap.put(parentNode.getName(), parentNode);
         }
         // add n to the subtree of the next ancestor node
         if (parentNode.add(n)) {
@@ -226,35 +228,30 @@ public class NetworkTopology {
      * @return true if the node is deleted; false otherwise
      */
     boolean remove(Node n) {
-      String parent = n.getNetworkLocation();
-      String currentPath = getPath(this);
-      if (!isAncestor(n))
+      if (!isAncestor(n)) {
         throw new IllegalArgumentException(n.getName()
-                                           +", which is located at "
-                                           +parent+", is not a descendent of "+currentPath);
+            + ", which is located at " + n.getNetworkLocation()
+            + ", is not a descendent of " + getPath(this));
+      }
       if (isParent(n)) {
         // this node is the parent of n; remove n directly
-        for(int i=0; i<children.size(); i++) {
-          if (children.get(i).getName().equals(n.getName())) {
-            children.remove(i);
-            numOfLeaves--;
-            n.setParent(null);
-            return true;
+        if (childrenMap.containsKey(n.getName())) {
+          for (int i=0; i<children.size(); i++) {
+            if (children.get(i).getName().equals(n.getName())) {
+              children.remove(i);
+              childrenMap.remove(n.getName());
+              numOfLeaves--;
+              n.setParent(null);
+              return true;
+            }
           }
         }
         return false;
       } else {
         // find the next ancestor node: the parent node
         String parentName = getNextAncestorName(n);
-        InnerNode parentNode = null;
-        int i;
-        for(i=0; i<children.size(); i++) {
-          if (children.get(i).getName().equals(parentName)) {
-            parentNode = (InnerNode)children.get(i);
-            break;
-          }
-        }
-        if (parentNode==null) {
+        InnerNode parentNode = (InnerNode)childrenMap.get(parentName);
+        if (parentNode == null) {
           return false;
         }
         // remove n from the parent node
@@ -262,7 +259,13 @@ public class NetworkTopology {
         // if the parent node has no children, remove the parent node too
         if (isRemoved) {
           if (parentNode.getNumOfChildren() == 0) {
-            children.remove(i);
+            for(int i=0; i < children.size(); i++) {
+              if (children.get(i).getName().equals(parentName)) {
+                children.remove(i);
+                childrenMap.remove(parentName);
+                break;
+              }
+            }
           }
           numOfLeaves--;
         }
@@ -279,12 +282,7 @@ public class NetworkTopology {
       if (loc == null || loc.length() == 0) return this;
             
       String[] path = loc.split(PATH_SEPARATOR_STR, 2);
-      Node childnode = null;
-      for(int i=0; i<children.size(); i++) {
-        if (children.get(i).getName().equals(path[0])) {
-          childnode = children.get(i);
-        }
-      }
+      Node childnode = childrenMap.get(path[0]);
       if (childnode == null) return null; // non-existing node
       if (path.length == 1) return childnode;
       if (childnode instanceof InnerNode) {
@@ -311,10 +309,13 @@ public class NetworkTopology {
         isLeaf ? 1 : ((InnerNode)excludedNode).getNumOfLeaves();
       if (isLeafParent()) { // children are leaves
         if (isLeaf) { // excluded node is a leaf node
-          int excludedIndex = children.indexOf(excludedNode);
-          if (excludedIndex != -1 && leafIndex >= 0) {
-            // excluded node is one of the children so adjust the leaf index
-            leafIndex = leafIndex>=excludedIndex ? leafIndex+1 : leafIndex;
+          if (excludedNode != null &&
+              childrenMap.containsKey(excludedNode.getName())) {
+            int excludedIndex = children.indexOf(excludedNode);
+            if (excludedIndex != -1 && leafIndex >= 0) {
+              // excluded node is one of the children so adjust the leaf index
+              leafIndex = leafIndex>=excludedIndex ? leafIndex+1 : leafIndex;
+            }
           }
         }
         // range check
@@ -378,6 +379,13 @@ public class NetworkTopology {
   private int depthOfAllLeaves = -1;
   /** rack counter */
   protected int numOfRacks = 0;
+
+  /**
+   * Whether or not this cluster has ever consisted of more than 1 rack,
+   * according to the NetworkTopology.
+   */
+  private boolean clusterEverBeenMultiRack = false;
+
   /** the lock used to manage access */
   protected ReadWriteLock netlock = new ReentrantReadWriteLock();
 
@@ -396,14 +404,13 @@ public class NetworkTopology {
     int newDepth = NodeBase.locationToDepth(node.getNetworkLocation()) + 1;
     netlock.writeLock().lock();
     try {
-      String oldTopoStr = this.toString();
       if( node instanceof InnerNode ) {
         throw new IllegalArgumentException(
           "Not allow to add an inner node: "+NodeBase.getPath(node));
       }
       if ((depthOfAllLeaves != -1) && (depthOfAllLeaves != newDepth)) {
         LOG.error("Error: can't add leaf node " + NodeBase.getPath(node) +
-            " at depth " + newDepth + " to topology:\n" + oldTopoStr);
+            " at depth " + newDepth + " to topology:\n" + this.toString());
         throw new InvalidTopologyException("Failed to add " + NodeBase.getPath(node) +
             ": You cannot have a rack and a non-rack node at the same " +
             "level of the network topology.");
@@ -417,7 +424,7 @@ public class NetworkTopology {
       if (clusterMap.add(node)) {
         LOG.info("Adding a new node: "+NodeBase.getPath(node));
         if (rack == null) {
-          numOfRacks++;
+          incrementRacks();
         }
         if (!(node instanceof InnerNode)) {
           if (depthOfAllLeaves == -1) {
@@ -432,7 +439,14 @@ public class NetworkTopology {
       netlock.writeLock().unlock();
     }
   }
-  
+
+  protected void incrementRacks() {
+    numOfRacks++;
+    if (!clusterEverBeenMultiRack && numOfRacks > 1) {
+      clusterEverBeenMultiRack = true;
+    }
+  }
+
   /**
    * Return a reference to the node given its string representation.
    * Default implementation delegates to {@link #getNode(String)}.
@@ -540,10 +554,18 @@ public class NetworkTopology {
       netlock.readLock().unlock();
     }
   }
-  
+
+  /**
+   * @return true if this cluster has ever consisted of multiple racks, even if
+   *         it is not now a multi-rack cluster.
+   */
+  public boolean hasClusterEverBeenMultiRack() {
+    return clusterEverBeenMultiRack;
+  }
+
   /** Given a string representation of a rack for a specific network
    *  location
-   * 
+   *
    * To be overridden in subclasses for specific NetworkTopology 
    * implementations, as alternative to overriding the full 
    * {@link #getRack(String)} method.

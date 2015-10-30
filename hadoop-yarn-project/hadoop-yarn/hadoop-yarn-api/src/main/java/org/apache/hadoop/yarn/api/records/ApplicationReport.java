@@ -83,6 +83,30 @@ public abstract class ApplicationReport {
     return report;
   }
 
+  @Private
+  @Unstable
+  public static ApplicationReport newInstance(ApplicationId applicationId,
+      ApplicationAttemptId applicationAttemptId, String user, String queue,
+      String name, String host, int rpcPort, Token clientToAMToken,
+      YarnApplicationState state, String diagnostics, String url,
+      long startTime, long finishTime, FinalApplicationStatus finalStatus,
+      ApplicationResourceUsageReport appResources, String origTrackingUrl,
+      float progress, String applicationType, Token amRmToken, Set<String> tags,
+      boolean unmanagedApplication, Priority priority,
+      String appNodeLabelExpression, String amNodeLabelExpression) {
+    ApplicationReport report =
+        newInstance(applicationId, applicationAttemptId, user, queue, name,
+          host, rpcPort, clientToAMToken, state, diagnostics, url, startTime,
+          finishTime, finalStatus, appResources, origTrackingUrl, progress,
+          applicationType, amRmToken);
+    report.setApplicationTags(tags);
+    report.setUnmanagedApp(unmanagedApplication);
+    report.setPriority(priority);
+    report.setAppNodeLabelExpression(appNodeLabelExpression);
+    report.setAmNodeLabelExpression(amNodeLabelExpression);
+    return report;
+  }
+
   /**
    * Get the <code>ApplicationId</code> of the application.
    * @return <code>ApplicationId</code> of the application
@@ -361,5 +385,66 @@ public abstract class ApplicationReport {
   @Public
   @Stable
   public abstract Token getAMRMToken();
-  
+
+  /**
+   * Get log aggregation status for the application
+   * @return Application's log aggregation status
+   */
+  @Public
+  @Stable
+  public abstract LogAggregationStatus getLogAggregationStatus();
+
+  @Private
+  @Unstable
+  public abstract void setLogAggregationStatus(
+      LogAggregationStatus logAggregationStatus);
+
+  /**
+   * @return true if the AM is not managed by the RM
+   */
+  @Public
+  @Unstable
+  public abstract boolean isUnmanagedApp();
+
+  /**
+   * @param unmanagedApplication true if RM should not manage the AM
+   */
+  @Public
+  @Unstable
+  public abstract void setUnmanagedApp(boolean unmanagedApplication);
+
+  /**
+   * Get priority of the application
+   *
+   * @return Application's priority
+   */
+  @Public
+  @Stable
+  public abstract Priority getPriority();
+
+  @Private
+  @Unstable
+  public abstract void setPriority(Priority priority);
+
+  /**
+   * Get the default Node Label expression for all the application's containers
+   *
+   * @return Application's NodeLabelExpression
+   */
+  @Unstable
+  public abstract String getAppNodeLabelExpression();
+
+  @Unstable
+  public abstract void setAppNodeLabelExpression(String appNodeLabelExpression);
+
+  /**
+   * Get the default Node Label expression for all the application's containers
+   *
+   * @return Application's NodeLabelExpression
+   */
+  @Unstable
+  public abstract String getAmNodeLabelExpression();
+
+  @Unstable
+  public abstract void setAmNodeLabelExpression(String amNodeLabelExpression);
 }

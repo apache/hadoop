@@ -126,7 +126,7 @@ The prefix for a given crypto codec, contains a comma-separated list of implemen
 
 #### hadoop.security.crypto.codec.classes.aes.ctr.nopadding
 
-Default: `org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec,org.apache.hadoop.crypto.JceAesCtrCryptoCodec`
+Default: `org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec, org.apache.hadoop.crypto.JceAesCtrCryptoCodec`
 
 Comma-separated list of crypto codec implementations for AES/CTR/NoPadding. The first implementation will be used if available, others are fallbacks.
 

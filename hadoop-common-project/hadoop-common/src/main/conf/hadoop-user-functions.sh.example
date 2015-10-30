@@ -50,7 +50,7 @@
 #
 
 #
-# Another example:  finding java
+# Example:  finding java
 #
 # By default, Hadoop assumes that $JAVA_HOME is always defined
 # outside of its configuration. Eons ago, Apple standardized
@@ -84,4 +84,31 @@
 #    echo "ERROR: ${JAVA} is not executable." 1>&2
 #    exit 1
 #  fi
+#}
+
+#
+# Example:  efficient command execution for the slaves
+#
+# To improve performance, you can use xargs -P
+# instead of the for loop, if supported.
+#
+#function hadoop_connect_to_hosts_without_pdsh
+#{
+#  # quoting here gets tricky. it's easier to push it into a function
+#  # so that we don't have to deal with it. However...
+#  # xargs can't use a function so instead we'll export it out
+#  # and force it into a subshell
+#  # moral of the story: just use pdsh.
+#  export -f hadoop_actual_ssh
+#  export HADOOP_SSH_OPTS
+#
+#  # xargs is used with option -I to replace the placeholder in arguments
+#  # list with each hostname read from stdin/pipe. But it consider one
+#  # line as one argument while reading from stdin/pipe. So place each
+#  # hostname in different lines while passing via pipe.
+#  SLAVE_NAMES=$(echo "$SLAVE_NAMES" | tr ' ' '\n' )
+#  echo "${SLAVE_NAMES}" | \
+#  xargs -n 1 -P"${HADOOP_SSH_PARALLEL}" \
+#  -I {} bash -c --  "hadoop_actual_ssh {} ${params}"
+#  wait
 #}

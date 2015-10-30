@@ -31,16 +31,16 @@ import org.apache.hadoop.yarn.event.InlineDispatcher;
 
 public class DummyCommonNodeLabelsManager extends CommonNodeLabelsManager {
   Map<NodeId, Set<String>> lastNodeToLabels = null;
-  Collection<String> lastAddedlabels = null;
+  Collection<NodeLabel> lastAddedlabels = null;
   Collection<String> lastRemovedlabels = null;
-  List<NodeLabel> lastUpdatedNodeLabels = null;
 
   @Override
   public void initNodeLabelStore(Configuration conf) {
     this.store = new NodeLabelsStore(this) {
 
       @Override
-      public void recover() throws IOException {
+      public void recover(boolean ignoreNodeToLabelsMappings)
+          throws IOException {
       }
 
       @Override
@@ -56,14 +56,8 @@ public class DummyCommonNodeLabelsManager extends CommonNodeLabelsManager {
       }
 
       @Override
-      public void storeNewClusterNodeLabels(Set<String> label) throws IOException {
+      public void storeNewClusterNodeLabels(List<NodeLabel> label) throws IOException {
         lastAddedlabels = label;
-      }
-
-      @Override
-      public void updateNodeLabels(List<NodeLabel> updatedNodeLabels)
-        throws IOException {
-        lastUpdatedNodeLabels = updatedNodeLabels;
       }
 
       @Override

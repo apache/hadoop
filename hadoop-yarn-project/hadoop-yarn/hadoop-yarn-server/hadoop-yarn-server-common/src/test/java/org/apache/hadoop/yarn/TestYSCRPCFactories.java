@@ -35,6 +35,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerResponse;
 import org.junit.Test;
 
 public class TestYSCRPCFactories {
@@ -115,6 +117,12 @@ public class TestYSCRPCFactories {
       // TODO Auto-generated method stub
       return null;
     }
-    
+
+    @Override
+    public UnRegisterNodeManagerResponse unRegisterNodeManager(
+        UnRegisterNodeManagerRequest request) throws YarnException, IOException {
+      // TODO Auto-generated method stub
+      return null;
+    }
   }
 }

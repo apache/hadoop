@@ -56,6 +56,7 @@ public class AHSWebApp extends WebApp implements YarnWebParams {
     bind(ApplicationBaseProtocol.class).toInstance(historyClientService);
     bind(TimelineDataManager.class).toInstance(timelineDataManager);
     route("/", AHSController.class);
+    route("/about", AHSController.class, "about");
     route(pajoin("/apps", APP_STATE), AHSController.class);
     route(pajoin("/app", APPLICATION_ID), AHSController.class, "app");
     route(pajoin("/appattempt", APPLICATION_ATTEMPT_ID), AHSController.class,
@@ -64,5 +65,6 @@ public class AHSWebApp extends WebApp implements YarnWebParams {
     route(
       pajoin("/logs", NM_NODENAME, CONTAINER_ID, ENTITY_STRING, APP_OWNER,
         CONTAINER_LOG_TYPE), AHSController.class, "logs");
+    route("/errors-and-warnings", AHSController.class, "errorsAndWarnings");
   }
 }

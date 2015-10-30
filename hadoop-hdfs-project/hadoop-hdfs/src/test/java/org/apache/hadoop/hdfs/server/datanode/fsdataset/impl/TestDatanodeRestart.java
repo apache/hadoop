@@ -34,12 +34,14 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
@@ -52,7 +54,7 @@ public class TestDatanodeRestart {
     // bring up a cluster of 3
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024L);
-    conf.setInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 512);
+    conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 512);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
@@ -76,7 +78,7 @@ public class TestDatanodeRestart {
   public void testRbwReplicas() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024L);
-    conf.setInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 512);
+    conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 512);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     cluster.waitActive();
     try {
@@ -101,13 +103,18 @@ public class TestDatanodeRestart {
       out.write(writeBuf);
       out.hflush();
       DataNode dn = cluster.getDataNodes().get(0);
-      for (FsVolumeSpi v : dataset(dn).getVolumes()) {
-        final FsVolumeImpl volume = (FsVolumeImpl)v;
-        File currentDir = volume.getCurrentDir().getParentFile().getParentFile();
-        File rbwDir = new File(currentDir, "rbw");
-        for (File file : rbwDir.listFiles()) {
-          if (isCorrupt && Block.isBlockFilename(file)) {
-            new RandomAccessFile(file, "rw").setLength(fileLen-1); // corrupt
+      try (FsDatasetSpi.FsVolumeReferences volumes =
+          dataset(dn).getFsVolumeReferences()) {
+        for (FsVolumeSpi vol : volumes) {
+          final FsVolumeImpl volume = (FsVolumeImpl) vol;
+          File currentDir =
+              volume.getCurrentDir().getParentFile().getParentFile();
+          File rbwDir = new File(currentDir, "rbw");
+          for (File file : rbwDir.listFiles()) {
+            if (isCorrupt && Block.isBlockFilename(file)) {
+              new RandomAccessFile(file, "rw")
+                  .setLength(fileLen - 1); // corrupt
+            }
           }
         }
       }
@@ -136,79 +143,7 @@ public class TestDatanodeRestart {
     }      
   }
 
-  // test recovering unlinked tmp replicas
-  @Test public void testRecoverReplicas() throws Exception {
-    Configuration conf = new HdfsConfiguration();
-    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024L);
-    conf.setInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 512);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    cluster.waitActive();
-    try {
-      FileSystem fs = cluster.getFileSystem();
-      for (int i=0; i<4; i++) {
-        Path fileName = new Path("/test"+i);
-        DFSTestUtil.createFile(fs, fileName, 1, (short)1, 0L);
-        DFSTestUtil.waitReplication(fs, fileName, (short)1);
-      }
-      String bpid = cluster.getNamesystem().getBlockPoolId();
-      DataNode dn = cluster.getDataNodes().get(0);
-      Iterator<ReplicaInfo> replicasItor = 
-          dataset(dn).volumeMap.replicas(bpid).iterator();
-      ReplicaInfo replica = replicasItor.next();
-      createUnlinkTmpFile(replica, true, true); // rename block file
-      createUnlinkTmpFile(replica, false, true); // rename meta file
-      replica = replicasItor.next();
-      createUnlinkTmpFile(replica, true, false); // copy block file
-      createUnlinkTmpFile(replica, false, false); // copy meta file
-      replica = replicasItor.next();
-      createUnlinkTmpFile(replica, true, true); // rename block file
-      createUnlinkTmpFile(replica, false, false); // copy meta file
-
-      cluster.restartDataNodes();
-      cluster.waitActive();
-      dn = cluster.getDataNodes().get(0);
-
-      // check volumeMap: 4 finalized replica
-      Collection<ReplicaInfo> replicas = dataset(dn).volumeMap.replicas(bpid);
-      Assert.assertEquals(4, replicas.size());
-      replicasItor = replicas.iterator();
-      while (replicasItor.hasNext()) {
-        Assert.assertEquals(ReplicaState.FINALIZED, 
-            replicasItor.next().getState());
-      }
-    } finally {
-      cluster.shutdown();
-    }
-  }
-
   private static FsDatasetImpl dataset(DataNode dn) {
     return (FsDatasetImpl)DataNodeTestUtils.getFSDataset(dn);
-  }
-
-  private static void createUnlinkTmpFile(ReplicaInfo replicaInfo, 
-      boolean changeBlockFile, 
-      boolean isRename) throws IOException {
-    File src;
-    if (changeBlockFile) {
-      src = replicaInfo.getBlockFile();
-    } else {
-      src = replicaInfo.getMetaFile();
-    }
-    File dst = DatanodeUtil.getUnlinkTmpFile(src);
-    if (isRename) {
-      src.renameTo(dst);
-    } else {
-      FileInputStream in = new FileInputStream(src);
-      try {
-        FileOutputStream out = new FileOutputStream(dst);
-        try {
-          IOUtils.copyBytes(in, out, 1);
-        } finally {
-          out.close();
-        }
-      } finally {
-        in.close();
-      }
-    }
   }
 }

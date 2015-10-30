@@ -205,6 +205,7 @@ public class TestAzureFileSystemErrorConditions {
         @Override
         public boolean isTargetConnection(HttpURLConnection connection) {
           return connection.getRequestMethod().equals("PUT")
+              && connection.getURL().getQuery() != null
               && connection.getURL().getQuery().contains("blocklist");
         }
       });

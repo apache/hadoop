@@ -41,8 +41,8 @@ public class JobStatusChangedEvent implements HistoryEvent {
    * @param jobStatus The new job status
    */
   public JobStatusChangedEvent(JobID id, String jobStatus) {
-    datum.jobid = new Utf8(id.toString());
-    datum.jobStatus = new Utf8(jobStatus);
+    datum.setJobid(new Utf8(id.toString()));
+    datum.setJobStatus(new Utf8(jobStatus));
   }
 
   JobStatusChangedEvent() {}
@@ -53,9 +53,9 @@ public class JobStatusChangedEvent implements HistoryEvent {
   }
 
   /** Get the Job Id */
-  public JobID getJobId() { return JobID.forName(datum.jobid.toString()); }
+  public JobID getJobId() { return JobID.forName(datum.getJobid().toString()); }
   /** Get the event status */
-  public String getStatus() { return datum.jobStatus.toString(); }
+  public String getStatus() { return datum.getJobStatus().toString(); }
   /** Get the event type */
   public EventType getEventType() {
     return EventType.JOB_STATUS_CHANGED;

@@ -43,7 +43,9 @@ import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -163,6 +165,20 @@ public class NameNodeConnector implements Closeable {
     return namenode.getBlocks(datanode, size);
   }
 
+  /**
+   * @return true if an upgrade is in progress, false if not.
+   * @throws IOException
+   */
+  public boolean isUpgrading() throws IOException {
+    // fsimage upgrade
+    final boolean isUpgrade = !namenode.isUpgradeFinalized();
+    // rolling upgrade
+    RollingUpgradeInfo info = fs.rollingUpgrade(
+        HdfsConstants.RollingUpgradeAction.QUERY);
+    final boolean isRollingUpgrade = (info != null && !info.isFinalized());
+    return (isUpgrade || isRollingUpgrade);
+  }
+
   /** @return live datanode storage reports. */
   public DatanodeStorageReport[] getLiveDatanodeStorageReport()
       throws IOException {
@@ -219,12 +235,20 @@ public class NameNodeConnector implements Closeable {
    */
   private OutputStream checkAndMarkRunning() throws IOException {
     try {
-      final FSDataOutputStream out = fs.create(idPath);
-      if (write2IdFile) {
-        out.writeBytes(InetAddress.getLocalHost().getHostName());
-        out.hflush();
+      if (fs.exists(idPath)) {
+        // try appending to it so that it will fail fast if another balancer is
+        // running.
+        IOUtils.closeStream(fs.append(idPath));
+        fs.delete(idPath, true);
       }
-      return out;
+      final FSDataOutputStream fsout = fs.create(idPath, false);
+      // mark balancer idPath to be deleted during filesystem closure
+      fs.deleteOnExit(idPath);
+      if (write2IdFile) {
+        fsout.writeBytes(InetAddress.getLocalHost().getHostName());
+        fsout.hflush();
+      }
+      return fsout;
     } catch(RemoteException e) {
       if(AlreadyBeingCreatedException.class.getName().equals(e.getClassName())){
         return null;

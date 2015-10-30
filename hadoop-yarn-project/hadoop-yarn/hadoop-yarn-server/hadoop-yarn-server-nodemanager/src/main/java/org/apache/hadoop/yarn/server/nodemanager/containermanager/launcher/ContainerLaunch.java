@@ -24,7 +24,6 @@ import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -52,6 +51,7 @@ import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -72,6 +72,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.nodemanager.WindowsSecureContainerExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
@@ -299,9 +301,17 @@ public class ContainerLaunch implements Callable<Integer> {
       }
       else {
         exec.activateContainer(containerID, pidFilePath);
-        ret = exec.launchContainer(container, nmPrivateContainerScriptPath,
-                nmPrivateTokensPath, user, appIdStr, containerWorkDir,
-                localDirs, logDirs);
+        ret = exec.launchContainer(new ContainerStartContext.Builder()
+            .setContainer(container)
+            .setLocalizedResources(localResources)
+            .setNmPrivateContainerScriptPath(nmPrivateContainerScriptPath)
+            .setNmPrivateTokensPath(nmPrivateTokensPath)
+            .setUser(user)
+            .setAppId(appIdStr)
+            .setContainerWorkDir(containerWorkDir)
+            .setLocalDirs(localDirs)
+            .setLogDirs(logDirs)
+            .build());
       }
     } catch (Throwable e) {
       LOG.warn("Failed to launch container.", e);
@@ -416,7 +426,13 @@ public class ContainerLaunch implements Callable<Integer> {
           ? Signal.TERM
           : Signal.KILL;
 
-        boolean result = exec.signalContainer(user, processId, signal);
+        boolean result = exec.signalContainer(
+            new ContainerSignalContext.Builder()
+                .setContainer(container)
+                .setUser(user)
+                .setPid(processId)
+                .setSignal(signal)
+                .build());
 
         LOG.debug("Sent signal " + signal + " to pid " + processId
           + " as user " + user
@@ -443,6 +459,100 @@ public class ContainerLaunch implements Callable<Integer> {
         lfs.delete(pidFilePath.suffix(EXIT_CODE_FILE_SUFFIX), false);
       }
     }
+  }
+
+  /**
+   * Send a signal to the container.
+   *
+   *
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked") // dispatcher not typed
+  public void signalContainer(SignalContainerCommand command)
+      throws IOException {
+    ContainerId containerId =
+        container.getContainerTokenIdentifier().getContainerID();
+    String containerIdStr = ConverterUtils.toString(containerId);
+    String user = container.getUser();
+    Signal signal = translateCommandToSignal(command);
+    if (signal.equals(Signal.NULL)) {
+      LOG.info("ignore signal command " + command);
+      return;
+    }
+
+    LOG.info("Sending signal " + command + " to container " + containerIdStr);
+
+    boolean alreadyLaunched = !shouldLaunchContainer.compareAndSet(false, true);
+    if (!alreadyLaunched) {
+      LOG.info("Container " + containerIdStr + " not launched."
+          + " Not sending the signal");
+      return;
+    }
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Getting pid for container " + containerIdStr
+          + " to send signal to from pid file "
+          + (pidFilePath != null ? pidFilePath.toString() : "null"));
+    }
+
+    try {
+      // get process id from pid file if available
+      // else if shell is still active, get it from the shell
+      String processId = null;
+      if (pidFilePath != null) {
+        processId = getContainerPid(pidFilePath);
+      }
+
+      if (processId != null) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Sending signal to pid " + processId
+              + " as user " + user
+              + " for container " + containerIdStr);
+        }
+
+        boolean result = exec.signalContainer(
+            new ContainerSignalContext.Builder()
+                .setContainer(container)
+                .setUser(user)
+                .setPid(processId)
+                .setSignal(signal)
+                .build());
+
+        String diagnostics = "Sent signal " + command
+            + " (" + signal + ") to pid " + processId
+            + " as user " + user
+            + " for container " + containerIdStr
+            + ", result=" + (result ? "success" : "failed");
+        LOG.info(diagnostics);
+
+        dispatcher.getEventHandler().handle(
+            new ContainerDiagnosticsUpdateEvent(containerId, diagnostics));
+      }
+    } catch (Exception e) {
+      String message =
+          "Exception when sending signal to container " + containerIdStr
+              + ": " + StringUtils.stringifyException(e);
+      LOG.warn(message);
+    }
+  }
+
+  @VisibleForTesting
+  public static Signal translateCommandToSignal(
+      SignalContainerCommand command) {
+    Signal signal = Signal.NULL;
+    switch (command) {
+      case OUTPUT_THREAD_DUMP:
+        // TODO for windows support.
+        signal = Shell.WINDOWS ? Signal.NULL: Signal.QUIT;
+        break;
+      case GRACEFUL_SHUTDOWN:
+        signal = Signal.TERM;
+        break;
+      case FORCEFUL_SHUTDOWN:
+        signal = Signal.KILL;
+        break;
+    }
+    return signal;
   }
 
   /**
@@ -514,6 +624,8 @@ public class ContainerLaunch implements Callable<Integer> {
 
     public abstract void command(List<String> command) throws IOException;
 
+    public abstract void whitelistedEnv(String key, String value) throws IOException;
+
     public abstract void env(String key, String value) throws IOException;
 
     public final void symlink(Path src, Path dst) throws IOException {
@@ -572,6 +684,11 @@ public class ContainerLaunch implements Callable<Integer> {
     }
 
     @Override
+    public void whitelistedEnv(String key, String value) {
+      line("export ", key, "=${", key, ":-", "\"", value, "\"}");
+    }
+
+    @Override
     public void env(String key, String value) {
       line("export ", key, "=\"", value, "\"");
     }
@@ -613,6 +730,12 @@ public class ContainerLaunch implements Callable<Integer> {
     }
 
     @Override
+    public void whitelistedEnv(String key, String value) throws IOException {
+      lineWithLenCheck("@set ", key, "=", value);
+      errorCheck();
+    }
+
+    @Override
     public void env(String key, String value) throws IOException {
       lineWithLenCheck("@set ", key, "=", value);
       errorCheck();
@@ -623,16 +746,9 @@ public class ContainerLaunch implements Callable<Integer> {
       File srcFile = new File(src.toUri().getPath());
       String srcFileStr = srcFile.getPath();
       String dstFileStr = new File(dst.toString()).getPath();
-      // If not on Java7+ on Windows, then copy file instead of symlinking.
-      // See also FileUtil#symLink for full explanation.
-      if (!Shell.isJava7OrAbove() && srcFile.isFile()) {
-        lineWithLenCheck(String.format("@copy \"%s\" \"%s\"", srcFileStr, dstFileStr));
-        errorCheck();
-      } else {
-        lineWithLenCheck(String.format("@%s symlink \"%s\" \"%s\"", Shell.WINUTILS,
-          dstFileStr, srcFileStr));
-        errorCheck();
-      }
+      lineWithLenCheck(String.format("@%s symlink \"%s\" \"%s\"",
+          Shell.getWinUtilsPath(), dstFileStr, srcFileStr));
+      errorCheck();
     }
 
     @Override
@@ -726,8 +842,29 @@ public class ContainerLaunch implements Callable<Integer> {
     if (Shell.WINDOWS) {
       
       String inputClassPath = environment.get(Environment.CLASSPATH.name());
+
       if (inputClassPath != null && !inputClassPath.isEmpty()) {
-        StringBuilder newClassPath = new StringBuilder(inputClassPath);
+
+        //On non-windows, localized resources
+        //from distcache are available via the classpath as they were placed
+        //there but on windows they are not available when the classpath
+        //jar is created and so they "are lost" and have to be explicitly
+        //added to the classpath instead.  This also means that their position
+        //is lost relative to other non-distcache classpath entries which will
+        //break things like mapreduce.job.user.classpath.first.  An environment
+        //variable can be set to indicate that distcache entries should come
+        //first
+
+        boolean preferLocalizedJars = Boolean.valueOf(
+          environment.get(Environment.CLASSPATH_PREPEND_DISTCACHE.name())
+          );
+
+        boolean needsSeparator = false;
+        StringBuilder newClassPath = new StringBuilder();
+        if (!preferLocalizedJars) {
+          newClassPath.append(inputClassPath);
+          needsSeparator = true;
+        }
 
         // Localized resources do not exist at the desired paths yet, because the
         // container launch script has not run to create symlinks yet.  This
@@ -741,7 +878,12 @@ public class ContainerLaunch implements Callable<Integer> {
 
           for (String linkName : entry.getValue()) {
             // Append resource.
-            newClassPath.append(File.pathSeparator).append(pwd.toString())
+            if (needsSeparator) {
+              newClassPath.append(File.pathSeparator);
+            } else {
+              needsSeparator = true;
+            }
+            newClassPath.append(pwd.toString())
               .append(Path.SEPARATOR).append(linkName);
 
             // FileUtil.createJarWithClassPath must use File.toURI to convert
@@ -757,6 +899,12 @@ public class ContainerLaunch implements Callable<Integer> {
               newClassPath.append(Path.SEPARATOR);
             }
           }
+        }
+        if (preferLocalizedJars) {
+          if (needsSeparator) {
+            newClassPath.append(File.pathSeparator);
+          }
+          newClassPath.append(inputClassPath);
         }
 
         // When the container launches, it takes the parent process's environment

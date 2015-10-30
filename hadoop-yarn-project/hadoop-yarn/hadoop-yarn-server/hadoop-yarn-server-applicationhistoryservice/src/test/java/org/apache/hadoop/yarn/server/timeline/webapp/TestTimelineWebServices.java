@@ -29,7 +29,6 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -59,6 +58,8 @@ import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilter;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
+import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
@@ -184,10 +185,24 @@ public class TestTimelineWebServices extends JerseyTestBase {
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    TimelineWebServices.AboutInfo about =
-        response.getEntity(TimelineWebServices.AboutInfo.class);
-    Assert.assertNotNull(about);
-    Assert.assertEquals("Timeline API", about.getAbout());
+    TimelineAbout actualAbout = response.getEntity(TimelineAbout.class);
+    TimelineAbout expectedAbout =
+        TimelineUtils.createTimelineAbout("Timeline API");
+    Assert.assertNotNull(
+        "Timeline service about response is null", actualAbout);
+    Assert.assertEquals(expectedAbout.getAbout(), actualAbout.getAbout());
+    Assert.assertEquals(expectedAbout.getTimelineServiceVersion(),
+        actualAbout.getTimelineServiceVersion());
+    Assert.assertEquals(expectedAbout.getTimelineServiceBuildVersion(),
+        actualAbout.getTimelineServiceBuildVersion());
+    Assert.assertEquals(expectedAbout.getTimelineServiceVersionBuiltOn(),
+        actualAbout.getTimelineServiceVersionBuiltOn());
+    Assert.assertEquals(expectedAbout.getHadoopVersion(),
+        actualAbout.getHadoopVersion());
+    Assert.assertEquals(expectedAbout.getHadoopBuildVersion(),
+        actualAbout.getHadoopBuildVersion());
+    Assert.assertEquals(expectedAbout.getHadoopVersionBuiltOn(),
+        actualAbout.getHadoopVersionBuiltOn());
   }
 
   private static void verifyEntities(TimelineEntities entities) {

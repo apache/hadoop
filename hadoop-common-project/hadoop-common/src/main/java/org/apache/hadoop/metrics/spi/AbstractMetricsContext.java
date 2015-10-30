@@ -51,7 +51,10 @@ import org.apache.hadoop.metrics.Updater;
  * on which data is to be sent to the metrics system.  Subclasses must
  * override the abstract <code>emitRecord</code> method in order to transmit
  * the data. <p/>
+ *
+ * @deprecated Use org.apache.hadoop.metrics2 package instead.
  */
+@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract class AbstractMetricsContext implements MetricsContext {

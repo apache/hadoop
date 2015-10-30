@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.management.ObjectName;
 
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshotInfo;
@@ -39,7 +40,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.metrics2.util.MBeans;
@@ -210,7 +210,6 @@ public class SnapshotManager implements SnapshotStatsMXBean {
       // We have reached the maximum allowable snapshot ID and since we don't
       // handle rollover we will fail all subsequent snapshot creation
       // requests.
-      //
       throw new SnapshotException(
           "Failed to create the snapshot. The FileSystem has run out of " +
           "snapshot IDs and ID rollover is not supported.");
@@ -227,15 +226,13 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   /**
    * Delete a snapshot for a snapshottable directory
    * @param snapshotName Name of the snapshot to be deleted
-   * @param collectedBlocks Used to collect information to update blocksMap 
-   * @throws IOException
+   * @param reclaimContext Used to collect information to reclaim blocks
+   *                       and inodes
    */
   public void deleteSnapshot(final INodesInPath iip, final String snapshotName,
-      BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes)
-      throws IOException {
+      INode.ReclaimContext reclaimContext) throws IOException {
     INodeDirectory srcRoot = getSnapshottableRoot(iip);
-    srcRoot.removeSnapshot(fsdir.getBlockStoragePolicySuite(), snapshotName,
-        collectedBlocks, removedINodes);
+    srcRoot.removeSnapshot(reclaimContext, snapshotName);
     numSnapshots.getAndDecrement();
   }
 
@@ -265,7 +262,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   public int getNumSnapshots() {
     return numSnapshots.get();
   }
-  
+
   void setNumSnapshots(int num) {
     numSnapshots.set(num);
   }
@@ -342,7 +339,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
             dir.getChildrenNum(Snapshot.CURRENT_STATE_ID),
             dir.getDirectorySnapshottableFeature().getNumSnapshots(),
             dir.getDirectorySnapshottableFeature().getSnapshotQuota(),
-            dir.getParent() == null ? DFSUtil.EMPTY_BYTES :
+            dir.getParent() == null ? DFSUtilClient.EMPTY_BYTES :
                 DFSUtil.string2Bytes(dir.getParent().getFullPathName()));
         statusList.add(status);
       }

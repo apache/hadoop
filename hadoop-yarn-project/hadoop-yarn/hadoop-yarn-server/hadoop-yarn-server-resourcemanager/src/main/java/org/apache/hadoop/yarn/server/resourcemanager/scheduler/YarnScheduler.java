@@ -28,12 +28,16 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerResourceChangeRequest;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
@@ -130,16 +134,17 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @param release
    * @param blacklistAdditions 
    * @param blacklistRemovals 
+   * @param increaseRequests
+   * @param decreaseRequests
    * @return the {@link Allocation} for the application
    */
   @Public
   @Stable
-  Allocation 
-  allocate(ApplicationAttemptId appAttemptId, 
-      List<ResourceRequest> ask,
-      List<ContainerId> release, 
-      List<String> blacklistAdditions, 
-      List<String> blacklistRemovals);
+  Allocation allocate(ApplicationAttemptId appAttemptId,
+      List<ResourceRequest> ask, List<ContainerId> release,
+      List<String> blacklistAdditions, List<String> blacklistRemovals,
+      List<ContainerResourceChangeRequest> increaseRequests,
+      List<ContainerResourceChangeRequest> decreaseRequests);
 
   /**
    * Get node resource usage report.
@@ -286,4 +291,74 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @return an EnumSet containing the resource types
    */
   public EnumSet<SchedulerResourceTypes> getSchedulingResourceTypes();
+
+  /**
+   *
+   * Verify whether a submitted application priority is valid as per configured
+   * Queue
+   *
+   * @param priorityFromContext
+   *          Submitted Application priority.
+   * @param user
+   *          User who submitted the Application
+   * @param queueName
+   *          Name of the Queue
+   * @param applicationId
+   *          Application ID
+   * @return Updated Priority from scheduler
+   */
+  public Priority checkAndGetApplicationPriority(Priority priorityFromContext,
+      String user, String queueName, ApplicationId applicationId)
+      throws YarnException;
+
+  /**
+   *
+   * Change application priority of a submitted application at runtime
+   *
+   * @param newPriority Submitted Application priority.
+   *
+   * @param applicationId Application ID
+   */
+  public void updateApplicationPriority(Priority newPriority,
+      ApplicationId applicationId) throws YarnException;
+
+  /**
+   *
+   * Get previous attempts' live containers for work-preserving AM restart.
+   *
+   * @param appAttemptId the id of the application attempt
+   *
+   * @return list of live containers for the given attempt
+   */
+  List<Container> getTransferredContainers(ApplicationAttemptId appAttemptId);
+
+  /**
+   * Set the cluster max priority
+   * 
+   * @param conf
+   * @throws YarnException
+   */
+  void setClusterMaxPriority(Configuration conf) throws YarnException;
+
+  /**
+   * @param attemptId
+   */
+  List<ResourceRequest> getPendingResourceRequestsForAttempt(
+      ApplicationAttemptId attemptId);
+
+  /**
+   * Get cluster max priority.
+   * 
+   * @return maximum priority of cluster
+   */
+  Priority getMaxClusterLevelAppPriority();
+
+  /**
+   * Get SchedulerNode corresponds to nodeId.
+   *
+   * @param nodeId the node id of RMNode
+   *
+   * @return SchedulerNode corresponds to nodeId
+   */
+  SchedulerNode getSchedulerNode(NodeId nodeId);
 }

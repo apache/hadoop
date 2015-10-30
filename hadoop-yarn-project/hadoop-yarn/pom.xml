@@ -23,7 +23,7 @@
   <artifactId>hadoop-yarn</artifactId>
   <version>3.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <name>hadoop-yarn</name>
+  <name>Apache Hadoop YARN</name>
 
   <properties>
     <test.logs>true</test.logs>

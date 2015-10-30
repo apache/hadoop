@@ -18,13 +18,11 @@
 package org.apache.hadoop.mapreduce.task.reduce;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -46,41 +44,46 @@ import com.google.common.annotations.VisibleForTesting;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
+class OnDiskMapOutput<K, V> extends IFileWrappedMapOutput<K, V> {
   private static final Log LOG = LogFactory.getLog(OnDiskMapOutput.class);
   private final FileSystem fs;
   private final Path tmpOutputPath;
   private final Path outputPath;
-  private final MergeManagerImpl<K, V> merger;
   private final OutputStream disk; 
   private long compressedSize;
-  private final Configuration conf;
 
+  @Deprecated
   public OnDiskMapOutput(TaskAttemptID mapId, TaskAttemptID reduceId,
                          MergeManagerImpl<K,V> merger, long size,
                          JobConf conf,
                          MapOutputFile mapOutputFile,
                          int fetcher, boolean primaryMapOutput)
       throws IOException {
-    this(mapId, reduceId, merger, size, conf, mapOutputFile, fetcher,
+    this(mapId, merger, size, conf, fetcher,
         primaryMapOutput, FileSystem.getLocal(conf).getRaw(),
         mapOutputFile.getInputFileForWrite(mapId.getTaskID(), size));
   }
 
-  @VisibleForTesting
+  @Deprecated
   OnDiskMapOutput(TaskAttemptID mapId, TaskAttemptID reduceId,
                          MergeManagerImpl<K,V> merger, long size,
                          JobConf conf,
                          MapOutputFile mapOutputFile,
                          int fetcher, boolean primaryMapOutput,
                          FileSystem fs, Path outputPath) throws IOException {
-    super(mapId, size, primaryMapOutput);
+    this(mapId, merger, size, conf, fetcher, primaryMapOutput, fs, outputPath);
+  }
+
+  OnDiskMapOutput(TaskAttemptID mapId,
+                  MergeManagerImpl<K, V> merger, long size,
+                  JobConf conf,
+                  int fetcher, boolean primaryMapOutput,
+                  FileSystem fs, Path outputPath) throws IOException {
+    super(conf, merger, mapId, size, primaryMapOutput);
     this.fs = fs;
-    this.merger = merger;
     this.outputPath = outputPath;
     tmpOutputPath = getTempPath(outputPath, fetcher);
     disk = CryptoUtils.wrapIfNecessary(conf, fs.create(tmpOutputPath));
-    this.conf = conf;
   }
 
   @VisibleForTesting
@@ -89,18 +92,18 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
   }
 
   @Override
-  public void shuffle(MapHost host, InputStream input,
+  protected void doShuffle(MapHost host, IFileInputStream input,
                       long compressedLength, long decompressedLength,
                       ShuffleClientMetrics metrics,
                       Reporter reporter) throws IOException {
-    input = new IFileInputStream(input, compressedLength, conf);
     // Copy data to local-disk
     long bytesLeft = compressedLength;
     try {
       final int BYTES_TO_READ = 64 * 1024;
       byte[] buf = new byte[BYTES_TO_READ];
       while (bytesLeft > 0) {
-        int n = ((IFileInputStream)input).readWithChecksum(buf, 0, (int) Math.min(bytesLeft, BYTES_TO_READ));
+        int n = input.readWithChecksum(buf, 0,
+                                      (int) Math.min(bytesLeft, BYTES_TO_READ));
         if (n < 0) {
           throw new IOException("read past end of stream reading " + 
                                 getMapId());
@@ -117,7 +120,7 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
       disk.close();
     } catch (IOException ioe) {
       // Close the streams
-      IOUtils.cleanup(LOG, input, disk);
+      IOUtils.cleanup(LOG, disk);
 
       // Re-throw
       throw ioe;
@@ -139,7 +142,7 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
     fs.rename(tmpOutputPath, outputPath);
     CompressAwarePath compressAwarePath = new CompressAwarePath(outputPath,
         getSize(), this.compressedSize);
-    merger.closeOnDiskFile(compressAwarePath);
+    getMerger().closeOnDiskFile(compressAwarePath);
   }
   
   @Override

@@ -29,7 +29,7 @@ public class TestDSFailedAppMaster extends ApplicationMaster {
   private static final Log LOG = LogFactory.getLog(TestDSFailedAppMaster.class);
 
   @Override
-  public void run() throws YarnException, IOException {
+  public void run() throws YarnException, IOException, InterruptedException {
     super.run();
 
     // for the 2nd attempt.

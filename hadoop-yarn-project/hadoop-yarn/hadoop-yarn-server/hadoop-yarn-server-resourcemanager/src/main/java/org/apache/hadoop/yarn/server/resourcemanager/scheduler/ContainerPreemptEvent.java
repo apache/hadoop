@@ -19,20 +19,20 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.event.AbstractEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 
 /**
  * Simple event class used to communicate containers unreservations, preemption, killing
  */
-public class ContainerPreemptEvent
-    extends AbstractEvent<ContainerPreemptEventType> {
+public class ContainerPreemptEvent extends SchedulerEvent {
 
   private final ApplicationAttemptId aid;
   private final RMContainer container;
 
   public ContainerPreemptEvent(ApplicationAttemptId aid, RMContainer container,
-      ContainerPreemptEventType type) {
+      SchedulerEventType type) {
     super(type);
     this.aid = aid;
     this.container = container;

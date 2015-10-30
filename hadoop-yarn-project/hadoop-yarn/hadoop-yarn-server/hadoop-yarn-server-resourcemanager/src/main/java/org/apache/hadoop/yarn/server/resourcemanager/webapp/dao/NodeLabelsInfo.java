@@ -22,31 +22,63 @@ import java.util.*;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 
 @XmlRootElement(name = "nodeLabelsInfo")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class NodeLabelsInfo {
 
-  protected ArrayList<String> nodeLabels = new ArrayList<String>();
+  @XmlElement(name = "nodeLabelInfo")
+  private ArrayList<NodeLabelInfo> nodeLabelsInfo =
+    new ArrayList<NodeLabelInfo>();
 
   public NodeLabelsInfo() {
-  } // JAXB needs this
-  
-  public NodeLabelsInfo(ArrayList<String> nodeLabels) {
-   this.nodeLabels = nodeLabels; 
+    // JAXB needs this
+  }
+
+  public NodeLabelsInfo(ArrayList<NodeLabelInfo> nodeLabels) {
+    this.nodeLabelsInfo = nodeLabels;
+  }
+
+  public NodeLabelsInfo(List<NodeLabel> nodeLabels) {
+    this.nodeLabelsInfo = new ArrayList<NodeLabelInfo>();
+    for (NodeLabel label : nodeLabels) {
+      this.nodeLabelsInfo.add(new NodeLabelInfo(label));
+    }
   }
   
-  public NodeLabelsInfo(Set<String> nodeLabelsSet) {
-   this.nodeLabels = new ArrayList<String>(nodeLabelsSet); 
+  public NodeLabelsInfo(Set<String> nodeLabelsName) {
+    this.nodeLabelsInfo = new ArrayList<NodeLabelInfo>();
+    for (String labelName : nodeLabelsName) {
+      this.nodeLabelsInfo.add(new NodeLabelInfo(labelName));
+    }
   }
-  
-  public ArrayList<String> getNodeLabels() {
+
+  public ArrayList<NodeLabelInfo> getNodeLabelsInfo() {
+    return nodeLabelsInfo;
+  }
+
+  public Set<NodeLabel> getNodeLabels() {
+    Set<NodeLabel> nodeLabels = new HashSet<NodeLabel>();
+    for (NodeLabelInfo label : nodeLabelsInfo) {
+      nodeLabels.add(NodeLabel.newInstance(label.getName(),
+          label.getExclusivity()));
+    }
     return nodeLabels;
   }
   
-  public void setNodeLabels(ArrayList<String> nodeLabels) {
-    this.nodeLabels = nodeLabels; 
+  public List<String> getNodeLabelsName() {
+    ArrayList<String> nodeLabelsName = new ArrayList<String>();
+    for (NodeLabelInfo label : nodeLabelsInfo) {
+      nodeLabelsName.add(label.getName());
+    }
+    return nodeLabelsName;
   }
-  
+
+  public void setNodeLabelsInfo(ArrayList<NodeLabelInfo> nodeLabelInfo) {
+    this.nodeLabelsInfo = nodeLabelInfo;
+  }
 }

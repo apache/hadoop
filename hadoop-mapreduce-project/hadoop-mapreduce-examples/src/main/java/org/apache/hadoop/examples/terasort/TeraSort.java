@@ -328,7 +328,6 @@ public class TeraSort extends Configured implements Tool {
     }
     
     job.getConfiguration().setInt("dfs.replication", getOutputReplication(job));
-    TeraOutputFormat.setFinalSync(job, true);
     int ret = job.waitForCompletion(true) ? 0 : 1;
     LOG.info("done");
     return ret;

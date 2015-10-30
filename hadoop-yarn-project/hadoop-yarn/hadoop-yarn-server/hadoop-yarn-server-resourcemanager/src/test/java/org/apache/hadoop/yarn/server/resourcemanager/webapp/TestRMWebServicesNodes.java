@@ -32,6 +32,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -263,8 +264,9 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     assertEquals("incorrect number of elements", 2, nodeArray.length());
     for (int i = 0; i < nodeArray.length(); ++i) {
       JSONObject info = nodeArray.getJSONObject(i);
-      String host = info.get("id").toString().split(":")[0];
-      RMNode rmNode = rm.getRMContext().getInactiveRMNodes().get(host);
+      String[] node = info.get("id").toString().split(":");
+      NodeId nodeId = NodeId.newInstance(node[0], Integer.parseInt(node[1]));
+      RMNode rmNode = rm.getRMContext().getInactiveRMNodes().get(nodeId);
       WebServicesTestUtils.checkStringMatch("nodeHTTPAddress", "",
           info.getString("nodeHTTPAddress"));
       WebServicesTestUtils.checkStringMatch("state", rmNode.getState()
@@ -295,7 +297,8 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
 
     assertEquals("Incorrect Node Information.", "h2:1234", id);
 
-    RMNode rmNode = rm.getRMContext().getInactiveRMNodes().get("h2");
+    NodeId nodeId = NodeId.newInstance("h2", 1234);
+    RMNode rmNode = rm.getRMContext().getInactiveRMNodes().get(nodeId);
     WebServicesTestUtils.checkStringMatch("nodeHTTPAddress", "",
         info.getString("nodeHTTPAddress"));
     WebServicesTestUtils.checkStringMatch("state",

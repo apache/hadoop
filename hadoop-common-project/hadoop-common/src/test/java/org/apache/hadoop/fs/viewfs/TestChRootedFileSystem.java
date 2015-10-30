@@ -395,11 +395,77 @@ public class TestChRootedFileSystem {
     verify(mockFs).getAclStatus(rawPath);
   }
 
+  @Test
+  public void testListLocatedFileStatus() throws IOException {
+    final Path mockMount = new Path("mockfs://foo/user");
+    final Path mockPath = new Path("/usermock");
+    final Configuration conf = new Configuration();
+    conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
+    ConfigUtil.addLink(conf, mockPath.toString(), mockMount.toUri());
+    FileSystem vfs = FileSystem.get(URI.create("viewfs:///"), conf);
+    vfs.listLocatedStatus(mockPath);
+    final FileSystem mockFs = ((MockFileSystem)mockMount.getFileSystem(conf))
+        .getRawFileSystem();
+    verify(mockFs).listLocatedStatus(new Path(mockMount.toUri().getPath()));
+  }
+
   static class MockFileSystem extends FilterFileSystem {
     MockFileSystem() {
       super(mock(FileSystem.class));
     }
     @Override
     public void initialize(URI name, Configuration conf) throws IOException {}
+  }
+
+  @Test(timeout = 30000)
+  public void testCreateSnapshot() throws Exception {
+    Path snapRootPath = new Path("/snapPath");
+    Path chRootedSnapRootPath = new Path("/a/b/snapPath");
+
+    Configuration conf = new Configuration();
+    conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
+
+    URI chrootUri = URI.create("mockfs://foo/a/b");
+    ChRootedFileSystem chrootFs = new ChRootedFileSystem(chrootUri, conf);
+    FileSystem mockFs = ((FilterFileSystem) chrootFs.getRawFileSystem())
+        .getRawFileSystem();
+
+    chrootFs.createSnapshot(snapRootPath, "snap1");
+    verify(mockFs).createSnapshot(chRootedSnapRootPath, "snap1");
+  }
+
+  @Test(timeout = 30000)
+  public void testDeleteSnapshot() throws Exception {
+    Path snapRootPath = new Path("/snapPath");
+    Path chRootedSnapRootPath = new Path("/a/b/snapPath");
+
+    Configuration conf = new Configuration();
+    conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
+
+    URI chrootUri = URI.create("mockfs://foo/a/b");
+    ChRootedFileSystem chrootFs = new ChRootedFileSystem(chrootUri, conf);
+    FileSystem mockFs = ((FilterFileSystem) chrootFs.getRawFileSystem())
+        .getRawFileSystem();
+
+    chrootFs.deleteSnapshot(snapRootPath, "snap1");
+    verify(mockFs).deleteSnapshot(chRootedSnapRootPath, "snap1");
+  }
+
+  @Test(timeout = 30000)
+  public void testRenameSnapshot() throws Exception {
+    Path snapRootPath = new Path("/snapPath");
+    Path chRootedSnapRootPath = new Path("/a/b/snapPath");
+
+    Configuration conf = new Configuration();
+    conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
+
+    URI chrootUri = URI.create("mockfs://foo/a/b");
+    ChRootedFileSystem chrootFs = new ChRootedFileSystem(chrootUri, conf);
+    FileSystem mockFs = ((FilterFileSystem) chrootFs.getRawFileSystem())
+        .getRawFileSystem();
+
+    chrootFs.renameSnapshot(snapRootPath, "snapOldName", "snapNewName");
+    verify(mockFs).renameSnapshot(chRootedSnapRootPath, "snapOldName",
+        "snapNewName");
   }
 }

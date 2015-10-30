@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.web.resources;
 
+import static org.mockito.Mockito.*;
+
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -42,7 +45,9 @@ import org.apache.hadoop.hdfs.web.resources.PostOpParam;
 import org.apache.hadoop.hdfs.web.resources.PutOpParam;
 import org.apache.log4j.Level;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 /**
  * Test WebHDFS which provides data locality using HTTP redirection.
@@ -56,6 +61,9 @@ public class TestWebHdfsDataLocality {
   private static final String RACK0 = "/rack0";
   private static final String RACK1 = "/rack1";
   private static final String RACK2 = "/rack2";
+
+  @Rule
+  public final ExpectedException exception = ExpectedException.none();
 
   @Test
   public void testDataLocality() throws Exception {
@@ -212,5 +220,15 @@ public class TestWebHdfsDataLocality {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testChooseDatanodeBeforeNamesystemInit() throws Exception {
+    NameNode nn = mock(NameNode.class);
+    when(nn.getNamesystem()).thenReturn(null);
+    exception.expect(IOException.class);
+    exception.expectMessage("Namesystem has not been intialized yet.");
+    NamenodeWebHdfsMethods.chooseDatanode(nn, "/path", PutOpParam.Op.CREATE, 0,
+        DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT, null);
   }
 }

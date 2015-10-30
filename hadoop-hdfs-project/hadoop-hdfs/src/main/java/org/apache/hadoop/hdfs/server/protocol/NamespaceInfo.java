@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
@@ -47,18 +47,27 @@ public class NamespaceInfo extends StorageInfo {
 
   // only authoritative on the server-side to determine advertisement to
   // clients.  enum will update the supported values
-  private static long CAPABILITIES_SUPPORTED = 0;
+  private static final long CAPABILITIES_SUPPORTED = getSupportedCapabilities();
+
+  private static long getSupportedCapabilities() {
+    long mask = 0;
+    for (Capability c : Capability.values()) {
+      if (c.supported) {
+        mask |= c.mask;
+      }
+    }
+    return mask;
+  }
 
   public enum Capability {
     UNKNOWN(false),
     STORAGE_BLOCK_REPORT_BUFFERS(true); // use optimized ByteString buffers
+    private final boolean supported;
     private final long mask;
     Capability(boolean isSupported) {
+      supported = isSupported;
       int bits = ordinal() - 1;
       mask = (bits < 0) ? 0 : (1L << bits);
-      if (isSupported) {
-        CAPABILITIES_SUPPORTED |= mask;
-      }
     }
     public long getMask() {
       return mask;
@@ -83,7 +92,7 @@ public class NamespaceInfo extends StorageInfo {
   public NamespaceInfo(int nsID, String clusterID, String bpID,
       long cT, String buildVersion, String softwareVersion,
       long capabilities) {
-    super(HdfsConstants.NAMENODE_LAYOUT_VERSION, nsID, clusterID, cT,
+    super(HdfsServerConstants.NAMENODE_LAYOUT_VERSION, nsID, clusterID, cT,
         NodeType.NAME_NODE);
     blockPoolID = bpID;
     this.buildVersion = buildVersion;

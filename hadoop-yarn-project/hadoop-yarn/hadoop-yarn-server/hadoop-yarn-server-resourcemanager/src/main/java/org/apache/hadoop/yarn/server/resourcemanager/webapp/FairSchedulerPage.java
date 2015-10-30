@@ -22,6 +22,7 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 
 import java.util.Collection;
 
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerInfo;
@@ -45,10 +46,12 @@ public class FairSchedulerPage extends RmView {
   static final float Q_MAX_WIDTH = 0.8f;
   static final float Q_STATS_POS = Q_MAX_WIDTH + 0.05f;
   static final String Q_END = "left:101%";
-  static final String Q_GIVEN = "left:0%;background:none;border:1px solid rgba(0,0,0,1)";
-  static final String Q_INSTANTANEOUS_FS = "left:0%;background:none;border:1px dashed rgba(0,0,0,1)";
-  static final String Q_OVER = "background:rgba(255, 140, 0, 0.8)";
-  static final String Q_UNDER = "background:rgba(50, 205, 50, 0.8)";
+  static final String Q_GIVEN =
+      "left:0%;background:none;border:1px solid #000000";
+  static final String Q_INSTANTANEOUS_FS =
+      "left:0%;background:none;border:1px dashed #000000";
+  static final String Q_OVER = "background:#FFA333";
+  static final String Q_UNDER = "background:#5BD75B";
   static final String STEADY_FAIR_SHARE = "Steady Fair Share";
   static final String INSTANTANEOUS_FAIR_SHARE = "Instantaneous Fair Share";
   @RequestScoped
@@ -237,18 +240,18 @@ public class FairSchedulerPage extends RmView {
 
   @Override
   protected String initAppsTable() {
-    return WebPageUtils.appsTableInit(true);
+    return WebPageUtils.appsTableInit(true, false);
   }
 
   static String percent(float f) {
-    return String.format("%.1f%%", f * 100);
+    return StringUtils.formatPercent(f, 1);
   }
 
   static String width(float f) {
-    return String.format("width:%.1f%%", f * 100);
+    return StringUtils.format("width:%.1f%%", f * 100);
   }
 
   static String left(float f) {
-    return String.format("left:%.1f%%", f * 100);
+    return StringUtils.format("left:%.1f%%", f * 100);
   }
 }

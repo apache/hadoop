@@ -40,8 +40,10 @@ public class TypedBytesRecordOutput implements RecordOutput {
     this.out = out;
   }
 
-  private static ThreadLocal tbOut = new ThreadLocal() {
-    protected synchronized Object initialValue() {
+  private static final ThreadLocal<TypedBytesRecordOutput> TB_OUT =
+      new ThreadLocal<TypedBytesRecordOutput>() {
+    @Override
+    protected TypedBytesRecordOutput initialValue() {
       return new TypedBytesRecordOutput();
     }
   };
@@ -55,7 +57,7 @@ public class TypedBytesRecordOutput implements RecordOutput {
    *         {@link TypedBytesOutput}.
    */
   public static TypedBytesRecordOutput get(TypedBytesOutput out) {
-    TypedBytesRecordOutput bout = (TypedBytesRecordOutput) tbOut.get();
+    TypedBytesRecordOutput bout = TB_OUT.get();
     bout.setTypedBytesOutput(out);
     return bout;
   }

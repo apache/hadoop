@@ -142,7 +142,23 @@ public class ContainersLauncher extends AbstractService
               + ". Ignoring.");
         }
         break;
+      case SIGNAL_CONTAINER:
+        SignalContainersLauncherEvent signalEvent =
+            (SignalContainersLauncherEvent) event;
+        ContainerLaunch runningContainer = running.get(containerId);
+        if (runningContainer == null) {
+          // Container not launched. So nothing needs to be done.
+          LOG.info("Container " + containerId + " not running, nothing to signal.");
+          return;
+        }
+
+        try {
+          runningContainer.signalContainer(signalEvent.getCommand());
+        } catch (IOException e) {
+          LOG.warn("Got exception while signaling container " + containerId
+              + " with command " + signalEvent.getCommand());
+        }
+        break;
     }
   }
-
 }

@@ -13,28 +13,27 @@
 #  limitations under the License.
 #
 
-function hadoop_usage()
+MYNAME="${BASH_SOURCE-$0}"
+
+function hadoop_usage
 {
-  echo "Usage: httpfs.sh [--config confdir] [--debug] --daemon start|status|stop"
-  echo "       httpfs.sh [--config confdir] [--debug] COMMAND"
-  echo "            where COMMAND is one of:"
-  echo "  run               Start httpfs in the current window"
-  echo "  run -security     Start in the current window with security manager"
-  echo "  start             Start httpfs in a separate window"
-  echo "  start -security   Start in a separate window with security manager"
-  echo "  status            Return the LSB compliant status"
-  echo "  stop              Stop httpfs, waiting up to 5 seconds for the process to end"
-  echo "  stop n            Stop httpfs, waiting up to n seconds for the process to end"
-  echo "  stop -force       Stop httpfs, wait up to 5 seconds and then use kill -KILL if still running"
-  echo "  stop n -force     Stop httpfs, wait up to n seconds and then use kill -KILL if still running"
+  hadoop_add_subcommand "run" "Start kms in the current window"
+  hadoop_add_subcommand "run -security" "Start in the current window with security manager"
+  hadoop_add_subcommand "start" "Start kms in a separate window"
+  hadoop_add_subcommand "start -security" "Start in a separate window with security manager"
+  hadoop_add_subcommand "status" "Return the LSB compliant status"
+  hadoop_add_subcommand "stop" "Stop kms, waiting up to 5 seconds for the process to end"
+  hadoop_add_subcommand "top n" "Stop kms, waiting up to n seconds for the process to end"
+  hadoop_add_subcommand "stop -force" "Stop kms, wait up to 5 seconds and then use kill -KILL if still running"
+  hadoop_add_subcommand "stop n -force" "Stop kms, wait up to n seconds and then use kill -KILL if still running"
+  hadoop_generate_usage "${MYNAME}" false
 }
 
 # let's locate libexec...
 if [[ -n "${HADOOP_PREFIX}" ]]; then
   DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
 else
-  this="${BASH_SOURCE-$0}"
-  bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
+  bin=$(cd -P -- "$(dirname -- "${MYNAME}")" >/dev/null && pwd -P)
   DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
 fi
 

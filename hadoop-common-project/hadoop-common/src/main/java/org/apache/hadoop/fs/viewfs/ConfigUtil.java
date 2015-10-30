@@ -104,7 +104,7 @@ public class ConfigUtil {
   }
   
   /**
-   * Get the value of the home dir conf value for specfied mount table
+   * Get the value of the home dir conf value for specified mount table
    * @param conf - from this conf
    * @param mountTableName - the mount table
    * @return home dir value, null if variable is not in conf

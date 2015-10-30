@@ -43,7 +43,11 @@ else
 fi
 
 if [[ "${EUID}" -eq 0 ]] && [[ -n "${HADOOP_SECURE_DN_USER}" ]]; then
-  exec "${bin}/hadoop-daemons.sh" --config "${HADOOP_CONF_DIR}" start datanode "${dataStartOpt}"
+  exec "${HADOOP_HDFS_HOME}/bin/hdfs" \
+     --config "${HADOOP_CONF_DIR}" \
+     --slaves \
+     --daemon start \
+     datanode
 else
   echo hadoop_usage_and_exit 1
 fi

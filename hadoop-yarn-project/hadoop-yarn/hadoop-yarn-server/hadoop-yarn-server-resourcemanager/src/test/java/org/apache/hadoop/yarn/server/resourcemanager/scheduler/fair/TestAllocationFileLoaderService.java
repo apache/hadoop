@@ -31,7 +31,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSche
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueuePlacementRule.NestedUserQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
-import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Test;
 
@@ -42,18 +42,6 @@ public class TestAllocationFileLoaderService {
 
   final static String ALLOC_FILE = new File(TEST_DIR,
       "test-queues").getAbsolutePath();
-  
-  private class MockClock implements Clock {
-    private long time = 0;
-    @Override
-    public long getTime() {
-      return time;
-    }
-
-    public void tick(long ms) {
-      time += ms;
-    }
-  }
   
   @Test
   public void testGetAllocationFileFromClasspath() {
@@ -81,7 +69,8 @@ public class TestAllocationFileLoaderService {
     out.println("</allocations>");
     out.close();
     
-    MockClock clock = new MockClock();
+    ControlledClock clock = new ControlledClock();
+    clock.setTime(0);
     Configuration conf = new Configuration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
@@ -126,7 +115,7 @@ public class TestAllocationFileLoaderService {
     out.println("</allocations>");
     out.close();
     
-    clock.tick(System.currentTimeMillis()
+    clock.tickMsec(System.currentTimeMillis()
         + AllocationFileLoaderService.ALLOC_RELOAD_WAIT_MS + 10000);
     allocLoader.start();
     
@@ -164,15 +153,18 @@ public class TestAllocationFileLoaderService {
     // Give queue A a minimum of 1024 M
     out.println("<queue name=\"queueA\">");
     out.println("<minResources>1024mb,0vcores</minResources>");
+    out.println("<maxResources>2048mb,10vcores</maxResources>");
     out.println("</queue>");
     // Give queue B a minimum of 2048 M
     out.println("<queue name=\"queueB\">");
     out.println("<minResources>2048mb,0vcores</minResources>");
+    out.println("<maxResources>5120mb,110vcores</maxResources>");
     out.println("<aclAdministerApps>alice,bob admins</aclAdministerApps>");
     out.println("<schedulingPolicy>fair</schedulingPolicy>");
     out.println("</queue>");
     // Give queue C no minimum
     out.println("<queue name=\"queueC\">");
+    out.println("<minResources>5120mb,0vcores</minResources>");
     out.println("<aclSubmitApps>alice,bob admins</aclSubmitApps>");
     out.println("</queue>");
     // Give queue D a limit of 3 running apps and 0.4f maxAMShare
@@ -201,6 +193,8 @@ public class TestAllocationFileLoaderService {
     out.println("</queue>");
     // Set default limit of apps per queue to 15
     out.println("<queueMaxAppsDefault>15</queueMaxAppsDefault>");
+    // Set default limit of max resource per queue to 4G and 100 cores
+    out.println("<queueMaxResourcesDefault>4096mb,100vcores</queueMaxResourcesDefault>");
     // Set default limit of apps per user to 5
     out.println("<userMaxAppsDefault>5</userMaxAppsDefault>");
     // Set default limit of AMResourceShare to 0.5f
@@ -233,11 +227,22 @@ public class TestAllocationFileLoaderService {
     assertEquals(Resources.createResource(0),
         queueConf.getMinResources("root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
 
+    assertEquals(Resources.createResource(2048, 10),
+        queueConf.getMaxResources("root.queueA"));
+    assertEquals(Resources.createResource(5120, 110),
+        queueConf.getMaxResources("root.queueB"));
+    assertEquals(Resources.createResource(5120, 0),
+        queueConf.getMaxResources("root.queueC"));
+    assertEquals(Resources.createResource(4096, 100),
+        queueConf.getMaxResources("root.queueD"));
+    assertEquals(Resources.createResource(4096, 100),
+        queueConf.getMaxResources("root.queueE"));
+
     assertEquals(Resources.createResource(1024, 0),
         queueConf.getMinResources("root.queueA"));
     assertEquals(Resources.createResource(2048, 0),
         queueConf.getMinResources("root.queueB"));
-    assertEquals(Resources.createResource(0),
+    assertEquals(Resources.createResource(5120, 0),
         queueConf.getMinResources("root.queueC"));
     assertEquals(Resources.createResource(0),
         queueConf.getMinResources("root.queueD"));

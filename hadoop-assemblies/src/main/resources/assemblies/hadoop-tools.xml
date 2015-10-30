@@ -52,6 +52,13 @@
       </includes>
     </fileSet>
     <fileSet>
+      <directory>../hadoop-archive-logs/target</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
+      <includes>
+        <include>*-sources.jar</include>
+      </includes>
+    </fileSet>
+    <fileSet>
       <directory>../hadoop-datajoin/target</directory>
       <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
       <includes>

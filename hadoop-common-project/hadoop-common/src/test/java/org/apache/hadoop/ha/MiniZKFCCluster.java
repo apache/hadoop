@@ -22,6 +22,8 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,7 +51,7 @@ public class MiniZKFCCluster {
   private final TestContext ctx;
   private final ZooKeeperServer zks;
 
-  private DummyHAService svcs[];
+  private List<DummyHAService> svcs;
   private DummyZKFCThread thrs[];
   private Configuration conf;
   
@@ -63,38 +65,67 @@ public class MiniZKFCCluster {
     conf.setInt(CommonConfigurationKeys.HA_HM_CHECK_INTERVAL_KEY, 50);
     conf.setInt(CommonConfigurationKeys.HA_HM_CONNECT_RETRY_INTERVAL_KEY, 50);
     conf.setInt(CommonConfigurationKeys.HA_HM_SLEEP_AFTER_DISCONNECT_KEY, 50);
-    svcs = new DummyHAService[2];
-    svcs[0] = new DummyHAService(HAServiceState.INITIALIZING,
-        new InetSocketAddress("svc1", 1234));
-    svcs[0].setSharedResource(sharedResource);
-    svcs[1] = new DummyHAService(HAServiceState.INITIALIZING,
-        new InetSocketAddress("svc2", 1234));
-    svcs[1].setSharedResource(sharedResource);
-    
+    svcs = new ArrayList<DummyHAService>(2);
+    // remove any existing instances we are keeping track of
+    DummyHAService.instances.clear();
+
+    for (int i = 0; i < 2; i++) {
+      addSvcs(svcs, i);
+    }
+
     this.ctx = new TestContext();
     this.zks = zks;
   }
-  
+
+  private void addSvcs(List<DummyHAService> svcs, int i) {
+    svcs.add(new DummyHAService(HAServiceState.INITIALIZING, new InetSocketAddress("svc" + (i + 1),
+        1234)));
+    svcs.get(i).setSharedResource(sharedResource);
+  }
+
   /**
    * Set up two services and their failover controllers. svc1 is started
    * first, so that it enters ACTIVE state, and then svc2 is started,
    * which enters STANDBY
    */
   public void start() throws Exception {
+    start(2);
+  }
+
+  /**
+   * Set up the specified number of services and their failover controllers. svc1 is
+   * started first, so that it enters ACTIVE state, and then svc2...svcN is started, which enters
+   * STANDBY.
+   * <p>
+   * Adds any extra svc needed beyond the first two before starting the rest of the cluster.
+   * @param count number of zkfcs to start
+   */
+  public void start(int count) throws Exception {
+    // setup the expected number of zkfcs, if we need to add more. This seemed the least invasive
+    // way to add the services - otherwise its a large test rewrite or changing a lot of assumptions
+    if (count > 2) {
+      for (int i = 2; i < count; i++) {
+        addSvcs(svcs, i);
+      }
+    }
+
     // Format the base dir, should succeed
-    thrs = new DummyZKFCThread[2];
-    thrs[0] = new DummyZKFCThread(ctx, svcs[0]);
+    thrs = new DummyZKFCThread[count];
+    thrs[0] = new DummyZKFCThread(ctx, svcs.get(0));
     assertEquals(0, thrs[0].zkfc.run(new String[]{"-formatZK"}));
     ctx.addThread(thrs[0]);
     thrs[0].start();
     
     LOG.info("Waiting for svc0 to enter active state");
     waitForHAState(0, HAServiceState.ACTIVE);
-    
-    LOG.info("Adding svc1");
-    thrs[1] = new DummyZKFCThread(ctx, svcs[1]);
-    thrs[1].start();
-    waitForHAState(1, HAServiceState.STANDBY);
+
+    // add the remaining zkfc
+    for (int i = 1; i < count; i++) {
+      LOG.info("Adding svc" + i);
+      thrs[i] = new DummyZKFCThread(ctx, svcs.get(i));
+      thrs[i].start();
+      waitForHAState(i, HAServiceState.STANDBY);
+    }
   }
   
   /**
@@ -122,7 +153,7 @@ public class MiniZKFCCluster {
   }
   
   public DummyHAService getService(int i) {
-    return svcs[i];
+    return svcs.get(i);
   }
 
   public ActiveStandbyElector getElector(int i) {
@@ -134,23 +165,23 @@ public class MiniZKFCCluster {
   }
   
   public void setHealthy(int idx, boolean healthy) {
-    svcs[idx].isHealthy = healthy;
+    svcs.get(idx).isHealthy = healthy;
   }
 
   public void setFailToBecomeActive(int idx, boolean doFail) {
-    svcs[idx].failToBecomeActive = doFail;
+    svcs.get(idx).failToBecomeActive = doFail;
   }
 
   public void setFailToBecomeStandby(int idx, boolean doFail) {
-    svcs[idx].failToBecomeStandby = doFail;
+    svcs.get(idx).failToBecomeStandby = doFail;
   }
   
   public void setFailToFence(int idx, boolean doFail) {
-    svcs[idx].failToFence = doFail;
+    svcs.get(idx).failToFence = doFail;
   }
   
   public void setUnreachable(int idx, boolean unreachable) {
-    svcs[idx].actUnreachable = unreachable;
+    svcs.get(idx).actUnreachable = unreachable;
   }
 
   /**
@@ -204,7 +235,7 @@ public class MiniZKFCCluster {
     byte[] data = zks.getZKDatabase().getData(
         DummyZKFC.LOCK_ZNODE, stat, null);
     
-    assertArrayEquals(Ints.toByteArray(svcs[idx].index), data);
+    assertArrayEquals(Ints.toByteArray(svcs.get(idx).index), data);
     long session = stat.getEphemeralOwner();
     LOG.info("Expiring svc " + idx + "'s zookeeper session " + session);
     zks.closeSession(session);
@@ -218,7 +249,7 @@ public class MiniZKFCCluster {
    */
   public void waitForActiveLockHolder(Integer idx)
       throws Exception {
-    DummyHAService svc = idx == null ? null : svcs[idx];
+    DummyHAService svc = idx == null ? null : svcs.get(idx);
     ActiveStandbyElectorTestUtil.waitForActiveLockData(ctx, zks,
         DummyZKFC.SCOPED_PARENT_ZNODE,
         (idx == null) ? null : Ints.toByteArray(svc.index));
@@ -319,6 +350,18 @@ public class MiniZKFCCluster {
     @Override
     protected PolicyProvider getPolicyProvider() {
       return null;
+    }
+
+    @Override
+    protected List<HAServiceTarget> getAllOtherNodes() {
+      List<HAServiceTarget> services = new ArrayList<HAServiceTarget>(
+          DummyHAService.instances.size());
+      for (DummyHAService service : DummyHAService.instances) {
+        if (service != this.localTarget) {
+          services.add(service);
+        }
+      }
+      return services;
     }
   }
 }

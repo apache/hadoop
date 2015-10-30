@@ -61,7 +61,6 @@ public class TestHdfsServerConstants {
     verifyStartupOptionResult("CHECKPOINT", StartupOption.CHECKPOINT, null);
     verifyStartupOptionResult("UPGRADE", StartupOption.UPGRADE, null);
     verifyStartupOptionResult("ROLLBACK", StartupOption.ROLLBACK, null);
-    verifyStartupOptionResult("FINALIZE", StartupOption.FINALIZE, null);
     verifyStartupOptionResult("ROLLINGUPGRADE", StartupOption.ROLLINGUPGRADE, null);
     verifyStartupOptionResult("IMPORT", StartupOption.IMPORT, null);
     verifyStartupOptionResult("INITIALIZESHAREDEDITS", StartupOption.INITIALIZESHAREDEDITS, null);

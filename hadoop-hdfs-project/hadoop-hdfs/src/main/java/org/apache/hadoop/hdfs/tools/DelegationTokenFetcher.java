@@ -38,8 +38,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 
-import org.apache.hadoop.hdfs.web.SWebHdfsFileSystem;
-import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -139,8 +138,8 @@ public class DelegationTokenFetcher {
 
     // For backward compatibility
     URI fsUri = URI.create(
-            url.replaceFirst("^http://", WebHdfsFileSystem.SCHEME + "://")
-               .replaceFirst("^https://", SWebHdfsFileSystem.SCHEME + "://"));
+            url.replaceFirst("^http://", WebHdfsConstants.WEBHDFS_SCHEME + "://")
+               .replaceFirst("^https://", WebHdfsConstants.SWEBHDFS_SCHEME + "://"));
 
     return FileSystem.get(fsUri, conf);
   }
@@ -177,14 +176,17 @@ public class DelegationTokenFetcher {
                                   final String renewer, final Path tokenFile)
           throws IOException {
     Token<?> token = fs.getDelegationToken(renewer);
+    if (null != token) {
+      Credentials cred = new Credentials();
+      cred.addToken(token.getService(), token);
+      cred.writeTokenStorageFile(tokenFile, conf);
 
-    Credentials cred = new Credentials();
-    cred.addToken(token.getKind(), token);
-    cred.writeTokenStorageFile(tokenFile, conf);
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Fetched token " + fs.getUri() + " for " + token.getService()
-              + " into " + tokenFile);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Fetched token " + fs.getUri() + " for " +
+            token.getService() + " into " + tokenFile);
+      }
+    } else {
+      System.err.println("ERROR: Failed to fetch token from " + fs.getUri());
     }
   }
 

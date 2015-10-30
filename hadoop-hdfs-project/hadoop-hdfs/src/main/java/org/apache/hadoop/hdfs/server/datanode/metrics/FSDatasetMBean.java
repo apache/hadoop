@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode.metrics;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.metrics2.MetricsSource;
 
 /**
  * 
@@ -37,7 +38,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  *
  */
 @InterfaceAudience.Private
-public interface FSDatasetMBean {
+public interface FSDatasetMBean extends MetricsSource {
   
   /**
    * Returns the total space (in bytes) used by a block pool

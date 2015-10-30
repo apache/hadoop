@@ -48,17 +48,35 @@ public class NodeManagerMetrics {
   @Metric MutableGaugeInt availableVCores;
   @Metric("Container launch duration")
       MutableRate containerLaunchDuration;
+  @Metric("# of bad local dirs")
+      MutableGaugeInt badLocalDirs;
+  @Metric("# of bad log dirs")
+      MutableGaugeInt badLogDirs;
+  @Metric("Disk utilization % on good local dirs")
+      MutableGaugeInt goodLocalDirsDiskUtilizationPerc;
+  @Metric("Disk utilization % on good log dirs")
+      MutableGaugeInt goodLogDirsDiskUtilizationPerc;
+
+  private JvmMetrics jvmMetrics = null;
 
   private long allocatedMB;
   private long availableMB;
+
+  public NodeManagerMetrics(JvmMetrics jvmMetrics) {
+    this.jvmMetrics = jvmMetrics;
+  }
 
   public static NodeManagerMetrics create() {
     return create(DefaultMetricsSystem.instance());
   }
 
   static NodeManagerMetrics create(MetricsSystem ms) {
-    JvmMetrics.create("NodeManager", null, ms);
-    return ms.register(new NodeManagerMetrics());
+    JvmMetrics jm = JvmMetrics.create("NodeManager", null, ms);
+    return ms.register(new NodeManagerMetrics(jm));
+  }
+
+  public JvmMetrics getJvmMetrics() {
+    return jvmMetrics;
   }
 
   // Potential instrumentation interface methods
@@ -115,6 +133,17 @@ public class NodeManagerMetrics {
     availableVCores.incr(res.getVirtualCores());
   }
 
+  public void changeContainer(Resource before, Resource now) {
+    int deltaMB = now.getMemory() - before.getMemory();
+    int deltaVCores = now.getVirtualCores() - before.getVirtualCores();
+    allocatedMB = allocatedMB + deltaMB;
+    allocatedGB.set((int)Math.ceil(allocatedMB/1024d));
+    availableMB = availableMB - deltaMB;
+    availableGB.set((int)Math.floor(availableMB/1024d));
+    allocatedVCores.incr(deltaVCores);
+    availableVCores.decr(deltaVCores);
+  }
+
   public void addResource(Resource res) {
     availableMB = availableMB + res.getMemory();
     availableGB.incr((int)Math.floor(availableMB/1024d));
@@ -123,6 +152,24 @@ public class NodeManagerMetrics {
 
   public void addContainerLaunchDuration(long value) {
     containerLaunchDuration.add(value);
+  }
+
+  public void setBadLocalDirs(int badLocalDirs) {
+    this.badLocalDirs.set(badLocalDirs);
+  }
+
+  public void setBadLogDirs(int badLogDirs) {
+    this.badLogDirs.set(badLogDirs);
+  }
+
+  public void setGoodLocalDirsDiskUtilizationPerc(
+      int goodLocalDirsDiskUtilizationPerc) {
+    this.goodLocalDirsDiskUtilizationPerc.set(goodLocalDirsDiskUtilizationPerc);
+  }
+
+  public void setGoodLogDirsDiskUtilizationPerc(
+      int goodLogDirsDiskUtilizationPerc) {
+    this.goodLogDirsDiskUtilizationPerc.set(goodLogDirsDiskUtilizationPerc);
   }
 
   public int getRunningContainers() {
@@ -143,4 +190,25 @@ public class NodeManagerMetrics {
   public int getCompletedContainers() {
     return containersCompleted.value();
   }
+
+  @VisibleForTesting
+  public int getBadLogDirs() {
+    return badLogDirs.value();
+  }
+
+  @VisibleForTesting
+  public int getBadLocalDirs() {
+    return badLocalDirs.value();
+  }
+
+  @VisibleForTesting
+  public int getGoodLogDirsDiskUtilizationPerc() {
+    return goodLogDirsDiskUtilizationPerc.value();
+  }
+
+  @VisibleForTesting
+  public int getGoodLocalDirsDiskUtilizationPerc() {
+    return goodLocalDirsDiskUtilizationPerc.value();
+  }
+
 }

@@ -18,27 +18,31 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords;
 
-import java.util.Set;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.util.Records;
 
 @Public
-@Evolving
+@Unstable
 public abstract class AddToClusterNodeLabelsRequest {
-  public static AddToClusterNodeLabelsRequest newInstance(Set<String> labels) {
+  @Public
+  @Unstable
+  public static AddToClusterNodeLabelsRequest newInstance(
+      List<NodeLabel> NodeLabels) {
     AddToClusterNodeLabelsRequest request =
-        Records.newRecord(AddToClusterNodeLabelsRequest.class);
-    request.setNodeLabels(labels);
+      Records.newRecord(AddToClusterNodeLabelsRequest.class);
+    request.setNodeLabels(NodeLabels);
     return request;
   }
 
   @Public
-  @Evolving
-  public abstract void setNodeLabels(Set<String> labels);
+  @Unstable
+  public abstract void setNodeLabels(List<NodeLabel> NodeLabels);
 
   @Public
-  @Evolving
-  public abstract Set<String> getNodeLabels();
+  @Unstable
+  public abstract List<NodeLabel> getNodeLabels();
 }

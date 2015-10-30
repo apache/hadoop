@@ -63,6 +63,7 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
@@ -85,7 +86,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
   @Before
   public void setup() throws IOException {
     conf.setClass(
-        YarnConfiguration.NM_CONTAINER_MON_RESOURCE_CALCULATOR,
+        YarnConfiguration.NM_MON_RESOURCE_CALCULATOR,
         LinuxResourceCalculatorPlugin.class, ResourceCalculatorPlugin.class);
     conf.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, true);
     super.setup();
@@ -207,7 +208,6 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     ApplicationId appId = ApplicationId.newInstance(0, 0);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(appId, 1);
     ContainerId cId = ContainerId.newContainerId(appAttemptId, 0);
-    int port = 12345;
 
     URL resource_alpha =
         ConverterUtils.getYarnUrlFromPath(localFS
@@ -288,8 +288,11 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
 
     // Assert that the process is not alive anymore
     Assert.assertFalse("Process is still alive!",
-        exec.signalContainer(user,
-            pid, Signal.NULL));
+        exec.signalContainer(new ContainerSignalContext.Builder()
+            .setUser(user)
+            .setPid(pid)
+            .setSignal(Signal.NULL)
+            .build()));
   }
 
   @Test(timeout = 20000)

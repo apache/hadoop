@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
+import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
 
 /**
  * Windows secure container executor (WSCE).
@@ -500,17 +501,14 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
         
         @Override
         public void run() {
-          try
-          {
-            BufferedReader lines = new BufferedReader(
-                new InputStreamReader(stream, Charset.forName("UTF-8")));
+          try (BufferedReader lines = new BufferedReader(
+                   new InputStreamReader(stream, Charset.forName("UTF-8")))) {
             char[] buf = new char[512];
             int nRead;
             while ((nRead = lines.read(buf, 0, buf.length)) > 0) {
               output.append(buf, 0, nRead);
             }
-          }
-          catch(Throwable t) {
+          } catch (Throwable t) {
             LOG.error("Error occured reading the process stdout", t);
           }
         }
@@ -580,7 +578,8 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
       LOG.debug(String.format("getRunCommand: %s exists:%b", 
           command, f.exists()));
     }
-    return new String[] { Shell.WINUTILS, "task", "createAsUser", groupId, 
+    return new String[] { Shell.getWinUtilsPath(), "task",
+        "createAsUser", groupId,
         userName, pidFile.toString(), "cmd /c " + command };
   }
   
@@ -643,91 +642,94 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
     return dst;
   }
 
- @Override
- public void startLocalizer(Path nmPrivateContainerTokens,
-     InetSocketAddress nmAddr, String user, String appId, String locId,
-     LocalDirsHandlerService dirsHandler) throws IOException,
-     InterruptedException {
-   
-     List<String> localDirs = dirsHandler.getLocalDirs();
-     List<String> logDirs = dirsHandler.getLogDirs();
-     
-     Path classpathJarPrivateDir = dirsHandler.getLocalPathForWrite(
-         ResourceLocalizationService.NM_PRIVATE_DIR);
-     createUserLocalDirs(localDirs, user);
-     createUserCacheDirs(localDirs, user);
-     createAppDirs(localDirs, user, appId);
-     createAppLogDirs(appId, logDirs, user);
+  @Override
+  public void startLocalizer(LocalizerStartContext ctx) throws IOException,
+      InterruptedException {
+    Path nmPrivateContainerTokensPath = ctx.getNmPrivateContainerTokens();
+    InetSocketAddress nmAddr = ctx.getNmAddr();
+    String user = ctx.getUser();
+    String appId = ctx.getAppId();
+    String locId = ctx.getLocId();
+    LocalDirsHandlerService dirsHandler = ctx.getDirsHandler();
+    List<String> localDirs = dirsHandler.getLocalDirs();
+    List<String> logDirs = dirsHandler.getLogDirs();
 
-     Path appStorageDir = getWorkingDir(localDirs, user, appId);
-     
-     String tokenFn = String.format(
-         ContainerLocalizer.TOKEN_FILE_NAME_FMT, locId);
-     Path tokenDst = new Path(appStorageDir, tokenFn);
-     copyFile(nmPrivateContainerTokens, tokenDst, user);
+    Path classpathJarPrivateDir = dirsHandler.getLocalPathForWrite(
+        ResourceLocalizationService.NM_PRIVATE_DIR);
+    createUserLocalDirs(localDirs, user);
+    createUserCacheDirs(localDirs, user);
+    createAppDirs(localDirs, user, appId);
+    createAppLogDirs(appId, logDirs, user);
 
-     File cwdApp = new File(appStorageDir.toString());
-     if (LOG.isDebugEnabled()) {
-       LOG.debug(String.format("cwdApp: %s", cwdApp));
-     }
-     
-     List<String> command ;
+    Path appStorageDir = getWorkingDir(localDirs, user, appId);
 
-     command = new ArrayList<String>();
+    String tokenFn = String.format(
+        ContainerLocalizer.TOKEN_FILE_NAME_FMT, locId);
+    Path tokenDst = new Path(appStorageDir, tokenFn);
+    copyFile(nmPrivateContainerTokensPath, tokenDst, user);
 
-   //use same jvm as parent
-     File jvm = new File(
-         new File(System.getProperty("java.home"), "bin"), "java.exe");
-     command.add(jvm.toString());
-     
-     Path cwdPath = new Path(cwdApp.getPath());
-     
-     // Build a temp classpath jar. See ContainerLaunch.sanitizeEnv().
-     // Passing CLASSPATH explicitly is *way* too long for command line.
-     String classPath = System.getProperty("java.class.path");
-     Map<String, String> env = new HashMap<String, String>(System.getenv());
-     String jarCp[] = FileUtil.createJarWithClassPath(classPath, 
-         classpathJarPrivateDir, cwdPath, env);
-     String classPathJar = localizeClasspathJar(
-         new Path(jarCp[0]), cwdPath, user).toString();
-     command.add("-classpath");
-     command.add(classPathJar + jarCp[1]);
+    File cwdApp = new File(appStorageDir.toString());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(String.format("cwdApp: %s", cwdApp));
+    }
 
-     String javaLibPath = System.getProperty("java.library.path");
-     if (javaLibPath != null) {
-       command.add("-Djava.library.path=" + javaLibPath);
-     }
-     
-     ContainerLocalizer.buildMainArgs(command, user, appId, locId, nmAddr, 
-         localDirs);
-     
-     String cmdLine = StringUtils.join(command, " ");
-     
-     String localizerPid = String.format(LOCALIZER_PID_FORMAT, locId);
-     
-     WintuilsProcessStubExecutor stubExecutor = new WintuilsProcessStubExecutor(
-         cwdApp.getAbsolutePath(), 
-         localizerPid, user, "nul:", cmdLine);
-     try {
-       stubExecutor.execute();
-       stubExecutor.validateResult();
-     }
-     finally {
-       stubExecutor.close();
-       try
-       {
-         killContainer(localizerPid, Signal.KILL);
-       }
-       catch(Throwable e) {
-         LOG.warn(String.format(
-             "An exception occured during the cleanup of localizer job %s:%n%s", 
-             localizerPid, 
-             org.apache.hadoop.util.StringUtils.stringifyException(e)));
-       }
-     }
-   }
- 
-   @Override
+    List<String> command ;
+
+    command = new ArrayList<String>();
+
+    //use same jvm as parent
+    File jvm = new File(
+        new File(System.getProperty("java.home"), "bin"), "java.exe");
+    command.add(jvm.toString());
+
+    Path cwdPath = new Path(cwdApp.getPath());
+
+    // Build a temp classpath jar. See ContainerLaunch.sanitizeEnv().
+    // Passing CLASSPATH explicitly is *way* too long for command line.
+    String classPath = System.getProperty("java.class.path");
+    Map<String, String> env = new HashMap<String, String>(System.getenv());
+    String jarCp[] = FileUtil.createJarWithClassPath(classPath,
+        classpathJarPrivateDir, cwdPath, env);
+    String classPathJar = localizeClasspathJar(
+        new Path(jarCp[0]), cwdPath, user).toString();
+    command.add("-classpath");
+    command.add(classPathJar + jarCp[1]);
+
+    String javaLibPath = System.getProperty("java.library.path");
+    if (javaLibPath != null) {
+      command.add("-Djava.library.path=" + javaLibPath);
+    }
+    command.addAll(ContainerLocalizer.getJavaOpts(getConf()));
+
+    ContainerLocalizer.buildMainArgs(command, user, appId, locId, nmAddr,
+        localDirs);
+
+    String cmdLine = StringUtils.join(command, " ");
+
+    String localizerPid = String.format(LOCALIZER_PID_FORMAT, locId);
+
+    WintuilsProcessStubExecutor stubExecutor = new WintuilsProcessStubExecutor(
+        cwdApp.getAbsolutePath(),
+        localizerPid, user, "nul:", cmdLine);
+    try {
+      stubExecutor.execute();
+      stubExecutor.validateResult();
+    } finally {
+      stubExecutor.close();
+      try
+      {
+        killContainer(localizerPid, Signal.KILL);
+      }
+      catch(Throwable e) {
+        LOG.warn(String.format(
+            "An exception occured during the cleanup of localizer job %s:%n%s",
+            localizerPid,
+            org.apache.hadoop.util.StringUtils.stringifyException(e)));
+      }
+    }
+  }
+
+  @Override
   protected CommandExecutor buildCommandExecutor(String wrapperScriptPath,
       String containerIdStr, String userName, Path pidFile, Resource resource,
       File wordDir, Map<String, String> environment) throws IOException {

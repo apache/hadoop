@@ -20,9 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
-
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NetworkTopologyWithNodeGroup;
@@ -33,7 +31,7 @@ import org.apache.hadoop.net.NodeBase;
  * for placing block replicas on environment with node-group layer.
  * The replica placement strategy is adjusted to:
  * If the writer is on a datanode, the 1st replica is placed on the local 
- *     node (or local node-group), otherwise a random datanode. 
+ *     node(or local node-group or on local rack), otherwise a random datanode.
  * The 2nd replica is placed on a datanode that is on a different rack with 1st
  *     replica node. 
  * The 3rd replica is placed on a datanode which is on a different node-group
@@ -56,57 +54,96 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
     super.initialize(conf, stats, clusterMap, host2datanodeMap);
   }
 
-  /** choose local node of localMachine as the target.
-   * if localMachine is not available, choose a node on the same nodegroup or 
-   * rack instead.
+  /**
+   * choose all good favored nodes as target.
+   * If no enough targets, then choose one replica from
+   * each bad favored node's node group.
+   * @throws NotEnoughReplicasException
+   */
+  @Override
+  protected void chooseFavouredNodes(String src, int numOfReplicas,
+      List<DatanodeDescriptor> favoredNodes,
+      Set<Node> favoriteAndExcludedNodes, long blocksize,
+      int maxNodesPerRack, List<DatanodeStorageInfo> results,
+      boolean avoidStaleNodes, EnumMap<StorageType, Integer> storageTypes)
+      throws NotEnoughReplicasException {
+    super.chooseFavouredNodes(src, numOfReplicas, favoredNodes,
+        favoriteAndExcludedNodes, blocksize, maxNodesPerRack, results,
+        avoidStaleNodes, storageTypes);
+    if (results.size() < numOfReplicas) {
+      // Not enough replicas, choose from unselected Favorednode's Nodegroup
+      for (int i = 0;
+          i < favoredNodes.size() && results.size() < numOfReplicas; i++) {
+        DatanodeDescriptor favoredNode = favoredNodes.get(i);
+        boolean chosenNode =
+            isNodeChosen(results, favoredNode);
+        if (chosenNode) {
+          continue;
+        }
+        NetworkTopologyWithNodeGroup clusterMapNodeGroup =
+            (NetworkTopologyWithNodeGroup) clusterMap;
+        // try a node on FavouredNode's node group
+        DatanodeStorageInfo target = null;
+        String scope =
+            clusterMapNodeGroup.getNodeGroup(favoredNode.getNetworkLocation());
+        try {
+          target =
+              chooseRandom(scope, favoriteAndExcludedNodes, blocksize,
+                maxNodesPerRack, results, avoidStaleNodes, storageTypes);
+        } catch (NotEnoughReplicasException e) {
+          // catch Exception and continue with other favored nodes
+          continue;
+        }
+        if (target == null) {
+          LOG.warn("Could not find a target for file "
+              + src + " within nodegroup of favored node " + favoredNode);
+          continue;
+        }
+        favoriteAndExcludedNodes.add(target.getDatanodeDescriptor());
+      }
+    }
+  }
+
+  private boolean isNodeChosen(
+      List<DatanodeStorageInfo> results, DatanodeDescriptor favoredNode) {
+    boolean chosenNode = false;
+    for (int j = 0; j < results.size(); j++) {
+      if (results.get(j).getDatanodeDescriptor().equals(favoredNode)) {
+        chosenNode = true;
+        break;
+      }
+    }
+    return chosenNode;
+  }
+
+  /** choose local node of <i>localMachine</i> as the target.
+   * If localMachine is not available, will fallback to nodegroup/rack
+   * when flag <i>fallbackToNodeGroupAndLocalRack</i> is set.
    * @return the chosen node
    */
   @Override
   protected DatanodeStorageInfo chooseLocalStorage(Node localMachine,
       Set<Node> excludedNodes, long blocksize, int maxNodesPerRack,
       List<DatanodeStorageInfo> results, boolean avoidStaleNodes,
-      EnumMap<StorageType, Integer> storageTypes, boolean fallbackToLocalRack)
+      EnumMap<StorageType, Integer> storageTypes,
+      boolean fallbackToNodeGroupAndLocalRack)
       throws NotEnoughReplicasException {
-    // if no local machine, randomly choose one node
-    if (localMachine == null)
-      return chooseRandom(NodeBase.ROOT, excludedNodes, 
-          blocksize, maxNodesPerRack, results, avoidStaleNodes, storageTypes);
-
-    // otherwise try local machine first
-    if (localMachine instanceof DatanodeDescriptor) {
-      DatanodeDescriptor localDataNode = (DatanodeDescriptor)localMachine;
-      if (excludedNodes.add(localMachine)) { // was not in the excluded list
-        for (Iterator<Map.Entry<StorageType, Integer>> iter = storageTypes
-            .entrySet().iterator(); iter.hasNext(); ) {
-          Map.Entry<StorageType, Integer> entry = iter.next();
-          for (DatanodeStorageInfo localStorage : DFSUtil.shuffle(
-              localDataNode.getStorageInfos())) {
-            StorageType type = entry.getKey();
-            if (addIfIsGoodTarget(localStorage, excludedNodes, blocksize,
-                maxNodesPerRack, false, results, avoidStaleNodes, type) >= 0) {
-              int num = entry.getValue();
-              if (num == 1) {
-                iter.remove();
-              } else {
-                entry.setValue(num - 1);
-              }
-              return localStorage;
-            }
-          }
-        }
-      }
+    DatanodeStorageInfo localStorage = chooseLocalStorage(localMachine,
+        excludedNodes, blocksize, maxNodesPerRack, results,
+        avoidStaleNodes, storageTypes);
+    if (localStorage != null) {
+      return localStorage;
     }
 
+    if (!fallbackToNodeGroupAndLocalRack) {
+      return null;
+    }
     // try a node on local node group
     DatanodeStorageInfo chosenStorage = chooseLocalNodeGroup(
         (NetworkTopologyWithNodeGroup)clusterMap, localMachine, excludedNodes, 
         blocksize, maxNodesPerRack, results, avoidStaleNodes, storageTypes);
     if (chosenStorage != null) {
       return chosenStorage;
-    }
-
-    if (!fallbackToLocalRack) {
-      return null;
     }
     // try a node on local rack
     return chooseLocalRack(localMachine, excludedNodes, 
@@ -190,7 +227,7 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
   /* choose one node from the nodegroup that <i>localMachine</i> is on.
    * if no such node is available, choose one node from the nodegroup where
    * a second replica is on.
-   * if still no such node is available, choose a random node in the cluster.
+   * if still no such node is available, return null.
    * @return the chosen node
    */
   private DatanodeStorageInfo chooseLocalNodeGroup(
@@ -220,14 +257,12 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
               excludedNodes, blocksize, maxNodesPerRack, results,
               avoidStaleNodes, storageTypes);
         } catch(NotEnoughReplicasException e2) {
-          //otherwise randomly choose one from the network
-          return chooseRandom(NodeBase.ROOT, excludedNodes, blocksize,
-              maxNodesPerRack, results, avoidStaleNodes, storageTypes);
+          //otherwise return null
+          return null;
         }
       } else {
-        //otherwise randomly choose one from the network
-        return chooseRandom(NodeBase.ROOT, excludedNodes, blocksize,
-            maxNodesPerRack, results, avoidStaleNodes, storageTypes);
+        //otherwise return null
+        return null;
       }
     }
   }

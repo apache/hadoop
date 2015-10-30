@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.webapp.view;
 
 import java.io.PrintWriter;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.webapp.View;
 
@@ -39,10 +40,23 @@ public abstract class TextView extends View {
   }
 
   /**
-   * Print strings as is (no newline, a la php echo).
+   * Print strings escaping html.
    * @param args the strings to print
    */
   public void echo(Object... args) {
+    PrintWriter out = writer();
+    for (Object s : args) {
+      String escapedString = StringEscapeUtils.escapeJavaScript(
+          StringEscapeUtils.escapeHtml(s.toString()));
+      out.print(escapedString);
+    }
+  }
+
+  /**
+   * Print strings as is (no newline, a la php echo).
+   * @param args the strings to print
+   */
+  public void echoWithoutEscapeHtml(Object... args) {
     PrintWriter out = writer();
     for (Object s : args) {
       out.print(s);
@@ -55,6 +69,15 @@ public abstract class TextView extends View {
    */
   public void puts(Object... args) {
     echo(args);
+    writer().println();
+  }
+
+  /**
+   * Print string as a line. This does not escapes the string for html
+   * @param args the strings to print
+   */
+  public void putWithoutEscapeHtml(Object args) {
+    echoWithoutEscapeHtml(args);
     writer().println();
   }
 }

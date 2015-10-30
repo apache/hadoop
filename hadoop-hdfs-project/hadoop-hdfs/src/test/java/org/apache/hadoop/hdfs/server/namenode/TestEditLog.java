@@ -56,7 +56,6 @@ import java.util.regex.Pattern;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FileSystem;
@@ -66,11 +65,13 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSInotifyEventInputStream;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
@@ -83,6 +84,9 @@ import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
+import org.apache.log4j.AppenderSkeleton;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.spi.LoggingEvent;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.xml.sax.ContentHandler;
@@ -97,7 +101,7 @@ import com.google.common.collect.Lists;
 public class TestEditLog {
   
   static {
-    ((Log4JLogger)FSEditLog.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(FSEditLog.LOG, Level.ALL);
   }
 
   /**
@@ -205,7 +209,7 @@ public class TestEditLog {
 
       for (int i = 0; i < numTransactions; i++) {
         INodeFile inode = new INodeFile(namesystem.dir.allocateNewInodeId(), null,
-            p, 0L, 0L, BlockInfoContiguous.EMPTY_ARRAY, replication, blockSize);
+            p, 0L, 0L, BlockInfo.EMPTY_ARRAY, replication, blockSize);
         inode.toUnderConstruction("", "");
 
         editLog.logOpenFile("/filename" + (startIndex + i), inode, false, false);
@@ -297,7 +301,7 @@ public class TestEditLog {
       editLog.logSetReplication("fakefile", (short) 1);
       editLog.logSync();
       
-      editLog.rollEditLog();
+      editLog.rollEditLog(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
 
       assertExistsInStorageDirs(
           cluster, NameNodeDirType.EDITS,
@@ -370,7 +374,7 @@ public class TestEditLog {
       
       // Roll log so new output buffer size takes effect
       // we should now be writing to edits_inprogress_3
-      fsimage.rollEditLog();
+      fsimage.rollEditLog(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     
       // Remember the current lastInodeId and will reset it back to test
       // loading editlog segments.The transactions in the following allocate new
@@ -401,7 +405,7 @@ public class TestEditLog {
       trans.run();
 
       // Roll another time to finalize edits_inprogress_3
-      fsimage.rollEditLog();
+      fsimage.rollEditLog(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       
       long expectedTxns = ((NUM_THREADS+1) * 2 * NUM_TRANSACTIONS) + 2; // +2 for start/end txns
    
@@ -875,17 +879,17 @@ public class TestEditLog {
       tracker = new FSEditLogLoader.PositionTrackingInputStream(in);
       in = new DataInputStream(tracker);
             
-      reader = new FSEditLogOp.Reader(in, tracker, version);
+      reader = FSEditLogOp.Reader.create(in, tracker, version);
     }
   
     @Override
     public long getFirstTxId() {
-      return HdfsConstants.INVALID_TXID;
+      return HdfsServerConstants.INVALID_TXID;
     }
     
     @Override
     public long getLastTxId() {
-      return HdfsConstants.INVALID_TXID;
+      return HdfsServerConstants.INVALID_TXID;
     }
   
     @Override
@@ -940,7 +944,7 @@ public class TestEditLog {
     FSEditLog log = FSImageTestUtil.createStandaloneEditLog(logDir);
     try {
       FileUtil.setWritable(logDir, false);
-      log.openForWrite();
+      log.openForWrite(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       fail("Did no throw exception on only having a bad dir");
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
@@ -965,7 +969,7 @@ public class TestEditLog {
         new byte[500]);
     
     try {
-      log.openForWrite();
+      log.openForWrite(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       NameNodeMetrics mockMetrics = Mockito.mock(NameNodeMetrics.class);
       log.setMetricsForTests(mockMetrics);
 
@@ -1139,7 +1143,7 @@ public class TestEditLog {
     // logGenerationStamp is used, simply because it doesn't 
     // require complex arguments.
     editlog.initJournalsForWrite();
-    editlog.openForWrite();
+    editlog.openForWrite(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     for (int i = 2; i < TXNS_PER_ROLL; i++) {
       editlog.logGenerationStampV2((long) 0);
     }
@@ -1151,7 +1155,7 @@ public class TestEditLog {
     // the specified journal is aborted. It will be brought
     // back into rotation automatically by rollEditLog
     for (int i = 0; i < numrolls; i++) {
-      editlog.rollEditLog();
+      editlog.rollEditLog(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       
       editlog.logGenerationStampV2((long) i);
       editlog.logSync();
@@ -1223,7 +1227,8 @@ public class TestEditLog {
                                                                           TXNS_PER_ROLL*11);
 
     for (EditLogInputStream edits : editStreams) {
-      FSEditLogLoader.EditLogValidation val = FSEditLogLoader.validateEditLog(edits);
+      FSEditLogLoader.EditLogValidation val =
+          FSEditLogLoader.scanEditLog(edits, Long.MAX_VALUE);
       long read = (val.getEndTxId() - edits.getFirstTxId()) + 1;
       LOG.info("Loading edits " + edits + " read " + read);
       assertEquals(startTxId, edits.getFirstTxId());
@@ -1485,7 +1490,7 @@ public class TestEditLog {
             cluster, NameNodeDirType.EDITS,
             NNStorage.getInProgressEditsFileName((i * 3) + 1));
         editLog.logSync();
-        editLog.rollEditLog();
+        editLog.rollEditLog(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
         assertExistsInStorageDirs(
             cluster, NameNodeDirType.EDITS,
             NNStorage.getFinalizedEditsFileName((i * 3) + 1, (i * 3) + 3));
@@ -1571,6 +1576,101 @@ public class TestEditLog {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  class TestAppender extends AppenderSkeleton {
+    private final List<LoggingEvent> log = new ArrayList<>();
+
+    @Override
+    public boolean requiresLayout() {
+      return false;
+    }
+
+    @Override
+    protected void append(final LoggingEvent loggingEvent) {
+      log.add(loggingEvent);
+    }
+
+    @Override
+    public void close() {
+    }
+
+    public List<LoggingEvent> getLog() {
+      return new ArrayList<>(log);
+    }
+  }
+
+  /**
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testReadActivelyUpdatedLog() throws Exception {
+    final TestAppender appender = new TestAppender();
+    LogManager.getRootLogger().addAppender(appender);
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+    // Set single handler thread, so all transactions hit same thread-local ops.
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HANDLER_COUNT_KEY, 1);
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+      FSImage fsimage = cluster.getNamesystem().getFSImage();
+      StorageDirectory sd = fsimage.getStorage().getStorageDir(0);
+
+      final DistributedFileSystem fileSys = cluster.getFileSystem();
+      DFSInotifyEventInputStream events = fileSys.getInotifyEventStream();
+      fileSys.mkdirs(new Path("/test"));
+      fileSys.mkdirs(new Path("/test/dir1"));
+      fileSys.delete(new Path("/test/dir1"), true);
+      fsimage.getEditLog().logSync();
+      fileSys.mkdirs(new Path("/test/dir2"));
+
+
+      final File inProgressEdit = NNStorage.getInProgressEditsFile(sd, 1);
+      assertTrue(inProgressEdit.exists());
+      EditLogFileInputStream elis = new EditLogFileInputStream(inProgressEdit);
+      FSEditLogOp op;
+      long pos = 0;
+
+      while (true) {
+        op = elis.readOp();
+        if (op != null && op.opCode != FSEditLogOpCodes.OP_INVALID) {
+          pos = elis.getPosition();
+        } else {
+          break;
+        }
+      }
+      elis.close();
+      assertTrue(pos > 0);
+
+      RandomAccessFile rwf = new RandomAccessFile(inProgressEdit, "rw");
+      rwf.seek(pos);
+      assertEquals(rwf.readByte(), (byte) -1);
+
+      rwf.seek(pos + 1);
+      rwf.writeByte(2);
+
+      rwf.close();
+
+      events.poll();
+      String pattern = "Caught exception after reading (.*) ops";
+      Pattern r = Pattern.compile(pattern);
+      final List<LoggingEvent> log = appender.getLog();
+      for (LoggingEvent event : log) {
+        Matcher m = r.matcher(event.getRenderedMessage());
+        if (m.find()) {
+          fail("Should not try to read past latest syned edit log op");
+        }
+      }
+
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      LogManager.getRootLogger().removeAppender(appender);
     }
   }
 }

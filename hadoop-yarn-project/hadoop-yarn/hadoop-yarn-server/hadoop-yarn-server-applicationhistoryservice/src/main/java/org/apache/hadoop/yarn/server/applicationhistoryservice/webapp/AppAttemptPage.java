@@ -53,7 +53,7 @@ public class AppAttemptPage extends AHSView {
 
   protected String getContainersTableColumnDefs() {
     StringBuilder sb = new StringBuilder();
-    return sb.append("[\n").append("{'sType':'numeric', 'aTargets': [0]")
+    return sb.append("[\n").append("{'sType':'string', 'aTargets': [0]")
       .append(", 'mRender': parseHadoopID }]").toString();
   }
 

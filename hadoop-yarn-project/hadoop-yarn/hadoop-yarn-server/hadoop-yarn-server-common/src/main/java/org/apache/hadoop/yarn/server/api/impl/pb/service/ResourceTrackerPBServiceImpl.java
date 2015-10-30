@@ -25,14 +25,19 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatR
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.RegisterNodeManagerRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.RegisterNodeManagerResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.UnRegisterNodeManagerRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.UnRegisterNodeManagerResponseProto;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.ResourceTrackerPB;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodeHeartbeatRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodeHeartbeatResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterNodeManagerRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterNodeManagerResponsePBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.UnRegisterNodeManagerRequestPBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.UnRegisterNodeManagerResponsePBImpl;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -53,9 +58,7 @@ public class ResourceTrackerPBServiceImpl implements ResourceTrackerPB {
     try {
       RegisterNodeManagerResponse response = real.registerNodeManager(request);
       return ((RegisterNodeManagerResponsePBImpl)response).getProto();
-    } catch (YarnException e) {
-      throw new ServiceException(e);
-    } catch (IOException e) {
+    } catch (YarnException | IOException e) {
       throw new ServiceException(e);
     }
   }
@@ -67,11 +70,23 @@ public class ResourceTrackerPBServiceImpl implements ResourceTrackerPB {
     try {
       NodeHeartbeatResponse response = real.nodeHeartbeat(request);
       return ((NodeHeartbeatResponsePBImpl)response).getProto();
-    } catch (YarnException e) {
-      throw new ServiceException(e);
-    } catch (IOException e) {
+    } catch (YarnException | IOException e) {
       throw new ServiceException(e);
     }
   }
 
+  @Override
+  public UnRegisterNodeManagerResponseProto unRegisterNodeManager(
+      RpcController controller, UnRegisterNodeManagerRequestProto proto)
+      throws ServiceException {
+    UnRegisterNodeManagerRequestPBImpl request =
+        new UnRegisterNodeManagerRequestPBImpl(proto);
+    try {
+      UnRegisterNodeManagerResponse response = real
+          .unRegisterNodeManager(request);
+      return ((UnRegisterNodeManagerResponsePBImpl) response).getProto();
+    } catch (YarnException | IOException e) {
+      throw new ServiceException(e);
+    }
+  }
 }

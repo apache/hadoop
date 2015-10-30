@@ -236,6 +236,7 @@ public class ClientDistributedCacheManager {
       Map<URI, FileStatus> statCache) throws IOException {
     FileSystem fs = FileSystem.get(uri, conf);
     Path current = new Path(uri.getPath());
+    current = fs.makeQualified(current);
     //the leaf level file should be readable by others
     if (!checkPermissionOfOther(fs, current, FsAction.READ, statCache)) {
       return false;

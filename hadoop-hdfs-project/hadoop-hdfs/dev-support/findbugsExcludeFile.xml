@@ -74,15 +74,6 @@
      </Match>
 
      <!--
-      ResponseProccessor is thread that is designed to catch RuntimeException.
-     -->
-     <Match>
-       <Class name="org.apache.hadoop.hdfs.DataStreamer$ResponseProcessor" />
-       <Method name="run" />
-       <Bug pattern="REC_CATCH_EXCEPTION" />
-     </Match>
-
-     <!--
       lastAppliedTxid is carefully unsynchronized in the BackupNode in a couple spots.
       See the comments in BackupImage for justification.
      -->
@@ -176,16 +167,6 @@
        <Method name="setDirInternal" />
        <Bug pattern="DM_STRING_CTOR" />
      </Match>
-    <Match>
-      <Class name="org.apache.hadoop.hdfs.shortcircuit.DfsClientShmManager$EndpointShmManager" />
-      <Method name="allocSlot" />
-      <Bug pattern="UL_UNRELEASED_LOCK_EXCEPTION_PATH" />
-    </Match>
-    <Match>
-      <Class name="org.apache.hadoop.hdfs.shortcircuit.DfsClientShmManager$EndpointShmManager" />
-      <Method name="allocSlot" />
-      <Bug pattern="UL_UNRELEASED_LOCK" />
-    </Match>
     <!-- Manually verified to be okay, we want to throw away the top bit here -->
     <Match>
       <Class name="org.apache.hadoop.hdfs.server.namenode.CachedBlock" />
@@ -205,15 +186,5 @@
       <Class name="org.apache.hadoop.hdfs.DFSUtil"/>
       <Method name="assertAllResultsEqual" />
       <Bug pattern="NP_LOAD_OF_KNOWN_NULL_VALUE" />
-    </Match>
-
-    <!--
-     We use a separate lock to guard cachingStrategy in order to separate
-     locks for p-reads from seek + read invocations.
-    -->
-    <Match>
-        <Class name="org.apache.hadoop.hdfs.DFSInputStream" />
-        <Field name="cachingStrategy" />
-        <Bug pattern="IS2_INCONSISTENT_SYNC" />
     </Match>
  </FindBugsFilter>

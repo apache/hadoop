@@ -55,6 +55,7 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
 import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -72,6 +73,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
 
+import com.google.common.annotations.VisibleForTesting;
 /**
  * The job history events get routed to this class. This class writes the Job
  * history events to the DFS directly into a staging dir and then moved to a
@@ -103,7 +105,8 @@ public class JobHistoryEventHandler extends AbstractService
 
   private int numUnflushedCompletionEvents = 0;
   private boolean isTimerActive;
-
+  private EventWriter.WriteMode jhistMode =
+      EventWriter.WriteMode.JSON;
 
   protected BlockingQueue<JobHistoryEvent> eventQueue =
     new LinkedBlockingQueue<JobHistoryEvent>();
@@ -256,6 +259,20 @@ public class JobHistoryEventHandler extends AbstractService
       }
     } else {
       LOG.info("Emitting job history data to the timeline server is not enabled");
+    }
+
+    // Flag for setting
+    String jhistFormat = conf.get(JHAdminConfig.MR_HS_JHIST_FORMAT,
+        JHAdminConfig.DEFAULT_MR_HS_JHIST_FORMAT);
+    if (jhistFormat.equals("json")) {
+      jhistMode = EventWriter.WriteMode.JSON;
+    } else if (jhistFormat.equals("binary")) {
+      jhistMode = EventWriter.WriteMode.BINARY;
+    } else {
+      LOG.warn("Unrecognized value '" + jhistFormat + "' for property " +
+          JHAdminConfig.MR_HS_JHIST_FORMAT + ".  Valid values are " +
+          "'json' or 'binary'.  Falling back to default value '" +
+          JHAdminConfig.DEFAULT_MR_HS_JHIST_FORMAT + "'.");
     }
 
     super.serviceInit(conf);
@@ -416,7 +433,7 @@ public class JobHistoryEventHandler extends AbstractService
   protected EventWriter createEventWriter(Path historyFilePath)
       throws IOException {
     FSDataOutputStream out = stagingDirFS.create(historyFilePath, true);
-    return new EventWriter(out);
+    return new EventWriter(out, this.jhistMode);
   }
   
   /**
@@ -425,10 +442,10 @@ public class JobHistoryEventHandler extends AbstractService
    * This should be the first call to history for a job
    * 
    * @param jobId the jobId.
-   * @param forcedJobStateOnShutDown
+   * @param amStartedEvent
    * @throws IOException
    */
-  protected void setupEventWriter(JobId jobId, String forcedJobStateOnShutDown)
+  protected void setupEventWriter(JobId jobId, AMStartedEvent amStartedEvent)
       throws IOException {
     if (stagingDirPath == null) {
       LOG.error("Log Directory is null, returning");
@@ -488,8 +505,13 @@ public class JobHistoryEventHandler extends AbstractService
     }
 
     MetaInfo fi = new MetaInfo(historyFile, logDirConfPath, writer,
-        user, jobName, jobId, forcedJobStateOnShutDown, queueName);
+        user, jobName, jobId, amStartedEvent.getForcedJobStateOnShutDown(),
+        queueName);
     fi.getJobSummary().setJobId(jobId);
+    fi.getJobSummary().setJobLaunchTime(amStartedEvent.getStartTime());
+    fi.getJobSummary().setJobSubmitTime(amStartedEvent.getSubmitTime());
+    fi.getJobIndexInfo().setJobStartTime(amStartedEvent.getStartTime());
+    fi.getJobIndexInfo().setSubmitTime(amStartedEvent.getSubmitTime());
     fileMap.put(jobId, fi);
   }
 
@@ -540,8 +562,7 @@ public class JobHistoryEventHandler extends AbstractService
         try {
           AMStartedEvent amStartedEvent =
               (AMStartedEvent) event.getHistoryEvent();
-          setupEventWriter(event.getJobID(),
-              amStartedEvent.getForcedJobStateOnShutDown());
+          setupEventWriter(event.getJobID(), amStartedEvent);
         } catch (IOException ioe) {
           LOG.error("Error JobHistoryEventHandler in handleEvent: " + event,
               ioe);
@@ -727,7 +748,7 @@ public class JobHistoryEventHandler extends AbstractService
         tEvent.addEventInfo("JOB_CONF_PATH", jse.getJobConfPath());
         tEvent.addEventInfo("ACLS", jse.getJobAcls());
         tEvent.addEventInfo("JOB_QUEUE_NAME", jse.getJobQueueName());
-        tEvent.addEventInfo("WORKLFOW_ID", jse.getWorkflowId());
+        tEvent.addEventInfo("WORKFLOW_ID", jse.getWorkflowId());
         tEvent.addEventInfo("WORKFLOW_NAME", jse.getWorkflowName());
         tEvent.addEventInfo("WORKFLOW_NAME_NAME", jse.getWorkflowNodeName());
         tEvent.addEventInfo("WORKFLOW_ADJACENCIES",
@@ -804,7 +825,7 @@ public class JobHistoryEventHandler extends AbstractService
         tEvent.addEventInfo("FINISHED_MAPS", jfe.getFinishedMaps());
         tEvent.addEventInfo("FINISHED_REDUCES", jfe.getFinishedReduces());
         tEvent.addEventInfo("MAP_COUNTERS_GROUPS",
-                countersToJSON(jfe.getTotalCounters()));
+                countersToJSON(jfe.getMapCounters()));
         tEvent.addEventInfo("REDUCE_COUNTERS_GROUPS",
                 countersToJSON(jfe.getReduceCounters()));
         tEvent.addEventInfo("TOTAL_COUNTERS_GROUPS",
@@ -981,6 +1002,7 @@ public class JobHistoryEventHandler extends AbstractService
         tEvent.addEventInfo("NODE_MANAGER_HTTP_PORT",
                 ase.getNodeManagerHttpPort());
         tEvent.addEventInfo("START_TIME", ase.getStartTime());
+        tEvent.addEventInfo("SUBMIT_TIME", ase.getSubmitTime());
         tEntity.addEvent(tEvent);
         tEntity.setEntityId(jobId.toString());
         tEntity.setEntityType(MAPREDUCE_JOB_ENTITY_TYPE);
@@ -1101,9 +1123,12 @@ public class JobHistoryEventHandler extends AbstractService
       if (mi.getHistoryFile() != null) {
         Path historyFile = mi.getHistoryFile();
         Path qualifiedLogFile = stagingDirFS.makeQualified(historyFile);
+        int jobNameLimit =
+            getConfig().getInt(JHAdminConfig.MR_HS_JOBNAME_LIMIT,
+            JHAdminConfig.DEFAULT_MR_HS_JOBNAME_LIMIT);
         String doneJobHistoryFileName =
             getTempFileName(FileNameIndexUtils.getDoneFileName(mi
-                .getJobIndexInfo()));
+                .getJobIndexInfo(), jobNameLimit));
         qualifiedDoneFile =
             doneDirFS.makeQualified(new Path(doneDirPrefixPath,
                 doneJobHistoryFileName));
@@ -1259,6 +1284,7 @@ public class JobHistoryEventHandler extends AbstractService
           if (!isTimerShutDown) {
             flushTimerTask = new FlushTimerTask(this);
             flushTimer.schedule(flushTimerTask, flushTimeout);
+            isTimerActive = true;
           }
         }
       }
@@ -1377,5 +1403,10 @@ public class JobHistoryEventHandler extends AbstractService
       return JobState.SUCCEEDED.toString();
     }
     return JobState.KILLED.toString();
+  }
+
+  @VisibleForTesting
+  boolean getFlushTimerStatus() {
+    return isTimerActive;
   }
 }

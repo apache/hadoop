@@ -20,7 +20,13 @@ package org.apache.hadoop.hdfs.protocol;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.*;
 
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.SortedSet;
 
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
@@ -103,7 +109,101 @@ public class TestLayoutVersion {
     assertEquals(LAST_COMMON_FEATURE.getInfo().getLayoutVersion() - 1,
         first.getInfo().getLayoutVersion());
   }
-  
+
+  /**
+   * Tests expected values for minimum compatible layout version in NameNode
+   * features.  TRUNCATE, APPEND_NEW_BLOCK and QUOTA_BY_STORAGE_TYPE are all
+   * features that launched in the same release.  TRUNCATE was added first, so
+   * we expect all 3 features to have a minimum compatible layout version equal
+   * to TRUNCATE's layout version.  All features older than that existed prior
+   * to the concept of a minimum compatible layout version, so for each one, the
+   * minimum compatible layout version must be equal to itself.
+   */
+  @Test
+  public void testNameNodeFeatureMinimumCompatibleLayoutVersions() {
+    int baseLV = NameNodeLayoutVersion.Feature.TRUNCATE.getInfo()
+        .getLayoutVersion();
+    EnumSet<NameNodeLayoutVersion.Feature> compatibleFeatures = EnumSet.of(
+        NameNodeLayoutVersion.Feature.TRUNCATE,
+        NameNodeLayoutVersion.Feature.APPEND_NEW_BLOCK,
+        NameNodeLayoutVersion.Feature.QUOTA_BY_STORAGE_TYPE,
+        NameNodeLayoutVersion.Feature.ERASURE_CODING);
+    for (LayoutFeature f : compatibleFeatures) {
+      assertEquals(String.format("Expected minimum compatible layout version " +
+          "%d for feature %s.", baseLV, f), baseLV,
+          f.getInfo().getMinimumCompatibleLayoutVersion());
+    }
+    List<LayoutFeature> features = new ArrayList<>();
+    features.addAll(EnumSet.allOf(LayoutVersion.Feature.class));
+    features.addAll(EnumSet.allOf(NameNodeLayoutVersion.Feature.class));
+    for (LayoutFeature f : features) {
+      if (!compatibleFeatures.contains(f)) {
+        assertEquals(String.format("Expected feature %s to have minimum " +
+            "compatible layout version set to itself.", f),
+            f.getInfo().getLayoutVersion(),
+            f.getInfo().getMinimumCompatibleLayoutVersion());
+      }
+    }
+  }
+
+  /**
+   * Tests that NameNode features are listed in order of minimum compatible
+   * layout version.  It would be inconsistent to have features listed out of
+   * order with respect to minimum compatible layout version, because it would
+   * imply going back in time to change compatibility logic in a software release
+   * that had already shipped.
+   */
+  @Test
+  public void testNameNodeFeatureMinimumCompatibleLayoutVersionAscending() {
+    LayoutFeature prevF = null;
+    for (LayoutFeature f : EnumSet.allOf(NameNodeLayoutVersion.Feature.class)) {
+      if (prevF != null) {
+        assertTrue(String.format("Features %s and %s not listed in order of " +
+            "minimum compatible layout version.", prevF, f),
+            f.getInfo().getMinimumCompatibleLayoutVersion() <=
+            prevF.getInfo().getMinimumCompatibleLayoutVersion());
+      } else {
+        prevF = f;
+      }
+    }
+  }
+
+  /**
+   * Tests that attempting to add a new NameNode feature out of order with
+   * respect to minimum compatible layout version will fail fast.
+   */
+  @Test(expected=AssertionError.class)
+  public void testNameNodeFeatureMinimumCompatibleLayoutVersionOutOfOrder() {
+    FeatureInfo ancestorF = LayoutVersion.Feature.RESERVED_REL2_4_0.getInfo();
+    LayoutFeature f = mock(LayoutFeature.class);
+    when(f.getInfo()).thenReturn(new FeatureInfo(
+        ancestorF.getLayoutVersion() - 1, ancestorF.getLayoutVersion(),
+        ancestorF.getMinimumCompatibleLayoutVersion() + 1, "Invalid feature.",
+        false));
+    Map<Integer, SortedSet<LayoutFeature>> features = new HashMap<>();
+    LayoutVersion.updateMap(features, LayoutVersion.Feature.values());
+    LayoutVersion.updateMap(features, new LayoutFeature[] { f });
+  }
+
+  /**
+   * Asserts the current minimum compatible layout version of the software, if a
+   * release were created from the codebase right now.  This test is meant to
+   * make developers stop and reconsider if they introduce a change that requires
+   * a new minimum compatible layout version.  This would make downgrade
+   * impossible.
+   */
+  @Test
+  public void testCurrentMinimumCompatibleLayoutVersion() {
+    int expectedMinCompatLV = NameNodeLayoutVersion.Feature.TRUNCATE.getInfo()
+        .getLayoutVersion();
+    int actualMinCompatLV = LayoutVersion.getMinimumCompatibleLayoutVersion(
+        NameNodeLayoutVersion.Feature.values());
+    assertEquals("The minimum compatible layout version has changed.  " +
+        "Downgrade to prior versions is no longer possible.  Please either " +
+        "restore compatibility, or if the incompatibility is intentional, " +
+        "then update this assertion.", expectedMinCompatLV, actualMinCompatLV);
+  }
+
   /**
    * Given feature {@code f}, ensures the layout version of that feature
    * supports all the features supported by it's ancestor.

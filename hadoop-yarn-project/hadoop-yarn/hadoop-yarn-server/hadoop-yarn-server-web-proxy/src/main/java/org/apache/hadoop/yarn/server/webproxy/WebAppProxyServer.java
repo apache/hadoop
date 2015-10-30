@@ -22,10 +22,13 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
@@ -48,7 +51,9 @@ public class WebAppProxyServer extends CompositeService {
       WebAppProxyServer.class);
 
   private WebAppProxy proxy = null;
-  
+
+  private JvmPauseMonitor pauseMonitor;
+
   public WebAppProxyServer() {
     super(WebAppProxyServer.class.getName());
   }
@@ -56,10 +61,33 @@ public class WebAppProxyServer extends CompositeService {
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     Configuration config = new YarnConfiguration(conf);
-    doSecureLogin(conf);      
+    doSecureLogin(conf);
     proxy = new WebAppProxy();
     addService(proxy);
+
+    DefaultMetricsSystem.initialize("WebAppProxyServer");
+    JvmMetrics jm = JvmMetrics.initSingleton("WebAppProxyServer", null);
+    pauseMonitor = new JvmPauseMonitor(conf);
+    jm.setPauseMonitor(pauseMonitor);
+
     super.serviceInit(config);
+  }
+
+  @Override
+  protected void serviceStart() throws Exception {
+    if (pauseMonitor != null) {
+      pauseMonitor.start();
+    }
+    super.serviceStart();
+  }
+
+  @Override
+  protected void serviceStop() throws Exception {
+    super.serviceStop();
+    DefaultMetricsSystem.shutdown();
+    if (pauseMonitor != null) {
+      pauseMonitor.stop();
+    }
   }
 
   /**

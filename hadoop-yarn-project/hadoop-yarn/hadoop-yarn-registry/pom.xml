@@ -24,7 +24,7 @@
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-registry</artifactId>
   <version>3.0.0-SNAPSHOT</version>
-  <name>hadoop-yarn-registry</name>
+  <name>Apache Hadoop YARN Registry</name>
 
   <properties>
     <!-- Needed for generating FindBugs warnings using parent pom -->
@@ -187,18 +187,18 @@
         </environmentVariables>
         <systemPropertyVariables>
 
+          <hadoop.log.dir>${project.build.directory}/log</hadoop.log.dir>
+          <hadoop.tmp.dir>${project.build.directory}/tmp</hadoop.tmp.dir>
 
           <!-- TODO: all references in testcases should be updated to this default -->
           <test.build.dir>${test.build.dir}</test.build.dir>
-          <hadoop.tmp.dir>${hadoop.tmp.dir}</hadoop.tmp.dir>
           <test.build.data>${test.build.data}</test.build.data>
           <test.build.webapps>${test.build.webapps}</test.build.webapps>
           <test.cache.data>${test.cache.data}</test.cache.data>
-          <hadoop.log.dir>${hadoop.log.dir}</hadoop.log.dir>
           <test.build.classes>${test.build.classes}</test.build.classes>
 
           <java.net.preferIPv4Stack>true</java.net.preferIPv4Stack>
-          <java.security.krb5.conf>${basedir}/src/test/resources/krb5.conf</java.security.krb5.conf>
+          <java.security.krb5.conf>${project.build.directory}/test-classes/krb5.conf</java.security.krb5.conf>
           <java.security.egd>${java.security.egd}</java.security.egd>
           <require.test.libhadoop>${require.test.libhadoop}</require.test.libhadoop>
         </systemPropertyVariables>

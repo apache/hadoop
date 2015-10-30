@@ -24,6 +24,8 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.io.retry.Idempotent;
+import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
@@ -51,18 +53,21 @@ import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
-import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
 /**
@@ -146,6 +151,32 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
   
   /**
    * <p>The interface used by clients to request the 
+   * <code>ResourceManager</code> to fail an application attempt.</p>
+   *
+   * <p>The client, via {@link FailApplicationAttemptRequest} provides the
+   * {@link ApplicationAttemptId} of the attempt to be failed.</p>
+   *
+   * <p> In secure mode,the <code>ResourceManager</code> verifies access to the
+   * application, queue etc. before failing the attempt.</p>
+   *
+   * <p>Currently, the <code>ResourceManager</code> returns an empty response
+   * on success and throws an exception on rejecting the request.</p>
+   *
+   * @param request request to fail an attempt
+   * @return <code>ResourceManager</code> returns an empty response
+   *         on success and throws an exception on rejecting the request
+   * @throws YarnException
+   * @throws IOException
+   * @see #getQueueUserAcls(GetQueueUserAclsInfoRequest)
+   */
+  @Public
+  @Unstable
+  public FailApplicationAttemptResponse failApplicationAttempt(
+      FailApplicationAttemptRequest request)
+  throws YarnException, IOException;
+
+  /**
+   * <p>The interface used by clients to request the
    * <code>ResourceManager</code> to abort submitted application.</p>
    * 
    * <p>The client, via {@link KillApplicationRequest} provides the
@@ -419,4 +450,48 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
   @Unstable
   public GetClusterNodeLabelsResponse getClusterNodeLabels(
       GetClusterNodeLabelsRequest request) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by client to set priority of an application.
+   * </p>
+   * @param request to set priority of an application
+   * @return an empty response
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  @Idempotent
+  public UpdateApplicationPriorityResponse updateApplicationPriority(
+      UpdateApplicationPriorityRequest request) throws YarnException,
+      IOException;
+
+  /**
+   * <p>The interface used by clients to request the
+   * <code>ResourceManager</code> to signal a container. For example,
+   * the client can send command OUTPUT_THREAD_DUMP to dump threads of the
+   * container.</p>
+   *
+   * <p>The client, via {@link SignalContainerRequest} provides the
+   * id of the container and the signal command. </p>
+   *
+   * <p> In secure mode,the <code>ResourceManager</code> verifies access to the
+   * application before signaling the container.
+   * The user needs to have <code>MODIFY_APP</code> permission.</p>
+   *
+   * <p>Currently, the <code>ResourceManager</code> returns an empty response
+   * on success and throws an exception on rejecting the request.</p>
+   *
+   * @param request request to signal a container
+   * @return <code>ResourceManager</code> returns an empty response
+   *         on success and throws an exception on rejecting the request
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  public SignalContainerResponse signalContainer(
+      SignalContainerRequest request) throws YarnException,
+      IOException;
 }

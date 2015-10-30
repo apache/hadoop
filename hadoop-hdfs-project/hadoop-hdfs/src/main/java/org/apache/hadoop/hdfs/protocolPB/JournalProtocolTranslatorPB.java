@@ -67,7 +67,7 @@ public class JournalProtocolTranslatorPB implements ProtocolMetaInterface,
         .setEpoch(epoch)
         .setFirstTxnId(firstTxnId)
         .setNumTxns(numTxns)
-        .setRecords(PBHelper.getByteString(records))
+        .setRecords(PBHelperClient.getByteString(records))
         .build();
     try {
       rpcProxy.journal(NULL_CONTROLLER, req);

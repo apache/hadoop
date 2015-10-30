@@ -28,7 +28,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
 /**
  * The class that contains the information of an event that is related to some
@@ -39,7 +39,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 @XmlRootElement(name = "event")
 @XmlAccessorType(XmlAccessType.NONE)
 @Public
-@Unstable
+@Evolving
 public class TimelineEvent implements Comparable<TimelineEvent> {
 
   private long timestamp;

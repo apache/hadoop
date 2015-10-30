@@ -34,6 +34,7 @@
     <module>hadoop-streaming</module>
     <module>hadoop-distcp</module>
     <module>hadoop-archives</module>
+    <module>hadoop-archive-logs</module>
     <module>hadoop-rumen</module>
     <module>hadoop-gridmix</module>
     <module>hadoop-datajoin</module>
@@ -45,6 +46,7 @@
     <module>hadoop-sls</module>
     <module>hadoop-azure</module>
     <module>hadoop-aws</module>
+    <module>hadoop-kafka</module>
   </modules>
 
   <build>

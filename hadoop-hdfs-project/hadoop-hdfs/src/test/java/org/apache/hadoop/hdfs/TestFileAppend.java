@@ -68,7 +68,7 @@ public class TestFileAppend{
   //
   // verify that the data written to the full blocks are sane
   // 
-  private void checkFile(FileSystem fileSys, Path name, int repl)
+  private void checkFile(DistributedFileSystem fileSys, Path name, int repl)
     throws IOException {
     boolean done = false;
 
@@ -96,9 +96,9 @@ public class TestFileAppend{
     byte[] expected = 
         new byte[AppendTestUtil.NUM_BLOCKS * AppendTestUtil.BLOCK_SIZE];
     if (simulatedStorage) {
-      for (int i= 0; i < expected.length; i++) {  
-        expected[i] = SimulatedFSDataset.DEFAULT_DATABYTE;
-      }
+      LocatedBlocks lbs = fileSys.getClient().getLocatedBlocks(name.toString(),
+          0, AppendTestUtil.FILE_SIZE);
+      DFSTestUtil.fillExpectedBuf(lbs, expected);
     } else {
       System.arraycopy(fileContents, 0, expected, 0, expected.length);
     }
@@ -107,78 +107,6 @@ public class TestFileAppend{
     AppendTestUtil.checkFullFile(fileSys, name,
         AppendTestUtil.NUM_BLOCKS * AppendTestUtil.BLOCK_SIZE,
         expected, "Read 1", false);
-  }
-
-  /**
-   * Test that copy on write for blocks works correctly
-   * @throws IOException an exception might be thrown
-   */
-  @Test
-  public void testCopyOnWrite() throws IOException {
-    Configuration conf = new HdfsConfiguration();
-    if (simulatedStorage) {
-      SimulatedFSDataset.setFactory(conf);
-    }
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fs = cluster.getFileSystem();
-    InetSocketAddress addr = new InetSocketAddress("localhost",
-                                                   cluster.getNameNodePort());
-    DFSClient client = new DFSClient(addr, conf);
-    try {
-
-      // create a new file, write to it and close it.
-      //
-      Path file1 = new Path("/filestatus.dat");
-      FSDataOutputStream stm = AppendTestUtil.createFile(fs, file1, 1);
-      writeFile(stm);
-      stm.close();
-
-      // Get a handle to the datanode
-      DataNode[] dn = cluster.listDataNodes();
-      assertTrue("There should be only one datanode but found " + dn.length,
-                  dn.length == 1);
-
-      LocatedBlocks locations = client.getNamenode().getBlockLocations(
-                                  file1.toString(), 0, Long.MAX_VALUE);
-      List<LocatedBlock> blocks = locations.getLocatedBlocks();
-
-      //
-      // Create hard links for a few of the blocks
-      //
-      for (int i = 0; i < blocks.size(); i = i + 2) {
-        ExtendedBlock b = blocks.get(i).getBlock();
-        final File f = DataNodeTestUtils.getFile(dn[0],
-            b.getBlockPoolId(), b.getLocalBlock().getBlockId());
-        File link = new File(f.toString() + ".link");
-        System.out.println("Creating hardlink for File " + f + " to " + link);
-        HardLink.createHardLink(f, link);
-      }
-
-      //
-      // Detach all blocks. This should remove hardlinks (if any)
-      //
-      for (int i = 0; i < blocks.size(); i++) {
-        ExtendedBlock b = blocks.get(i).getBlock();
-        System.out.println("testCopyOnWrite detaching block " + b);
-        assertTrue("Detaching block " + b + " should have returned true",
-            DataNodeTestUtils.unlinkBlock(dn[0], b, 1));
-      }
-
-      // Since the blocks were already detached earlier, these calls should
-      // return false
-      //
-      for (int i = 0; i < blocks.size(); i++) {
-        ExtendedBlock b = blocks.get(i).getBlock();
-        System.out.println("testCopyOnWrite detaching block " + b);
-        assertTrue("Detaching block " + b + " should have returned false",
-            !DataNodeTestUtils.unlinkBlock(dn[0], b, 1));
-      }
-
-    } finally {
-      client.close();
-      fs.close();
-      cluster.shutdown();
-    }
   }
 
   /**
@@ -193,7 +121,7 @@ public class TestFileAppend{
     }
     fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fs = cluster.getFileSystem();
+    DistributedFileSystem fs = cluster.getFileSystem();
     try {
 
       // create a new file.
@@ -249,7 +177,7 @@ public class TestFileAppend{
     }
     fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fs = cluster.getFileSystem();
+    DistributedFileSystem fs = cluster.getFileSystem();
     try {
 
       // create a new file.
@@ -331,7 +259,7 @@ public class TestFileAppend{
   
       //1st append does not add any data so that the last block remains full
       //and the last block in INodeFileUnderConstruction is a BlockInfo
-      //but not BlockInfoUnderConstruction. 
+      //but does not have a BlockUnderConstructionFeature.
       fs2.append(p);
       
       //2nd append should get AlreadyBeingCreatedException
@@ -369,7 +297,7 @@ public class TestFileAppend{
   
       //1st append does not add any data so that the last block remains full
       //and the last block in INodeFileUnderConstruction is a BlockInfo
-      //but not BlockInfoUnderConstruction.
+      //but does not have a BlockUnderConstructionFeature.
       ((DistributedFileSystem) fs2).append(p,
           EnumSet.of(CreateFlag.APPEND, CreateFlag.NEW_BLOCK), 4096, null);
 
@@ -599,6 +527,28 @@ public class TestFileAppend{
       }
     } finally {
       IOUtils.closeStream(fs);
+      cluster.shutdown();
+    }
+  }
+  
+  @Test(timeout = 10000)
+  public void testAppendCorruptedBlock() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
+    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
+    conf.setInt("dfs.min.replication", 1);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
+        .build();
+    try {
+      DistributedFileSystem fs = cluster.getFileSystem();
+      Path fileName = new Path("/appendCorruptBlock");
+      DFSTestUtil.createFile(fs, fileName, 512, (short) 1, 0);
+      DFSTestUtil.waitReplication(fs, fileName, (short) 1);
+      Assert.assertTrue("File not created", fs.exists(fileName));
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, fileName);
+      cluster.corruptBlockOnDataNodes(block);
+      DFSTestUtil.appendFile(fs, fileName, "appendCorruptBlock");
+    } finally {
       cluster.shutdown();
     }
   }

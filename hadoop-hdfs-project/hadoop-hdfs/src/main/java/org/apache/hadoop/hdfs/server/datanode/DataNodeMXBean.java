@@ -36,7 +36,14 @@ public interface DataNodeMXBean {
    * @return the version of Hadoop
    */
   public String getVersion();
-  
+
+  /**
+   * Get the version of software running on the DataNode
+   *
+   * @return a string representing the version
+   */
+  public String getSoftwareVersion();
+
   /**
    * Gets the rpc port.
    * 

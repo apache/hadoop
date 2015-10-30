@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.File;
 import java.io.FileDescriptor;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -277,7 +276,8 @@ class FsDatasetAsyncDiskService {
 
     @Override
     public void run() {
-      long dfsBytes = blockFile.length() + metaFile.length();
+      final long blockLength = blockFile.length();
+      final long metaLength = metaFile.length();
       boolean result;
 
       result = (trashDirectory == null) ? deleteFiles() : moveFiles();
@@ -291,7 +291,8 @@ class FsDatasetAsyncDiskService {
         if(block.getLocalBlock().getNumBytes() != BlockCommand.NO_ACK){
           datanode.notifyNamenodeDeletedBlock(block, volume.getStorageID());
         }
-        volume.decDfsUsed(block.getBlockPoolId(), dfsBytes);
+        volume.onBlockFileDeletion(block.getBlockPoolId(), blockLength);
+        volume.onMetaFileDeletion(block.getBlockPoolId(), metaLength);
         LOG.info("Deleted " + block.getBlockPoolId() + " "
             + block.getLocalBlock() + " file " + blockFile);
       }

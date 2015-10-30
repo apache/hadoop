@@ -38,10 +38,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DU;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportReplica;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
@@ -57,7 +57,9 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.Time;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.io.Files;
+
 /**
  * A block pool slice represents a portion of a block pool stored on a volume.  
  * Taken together, all BlockPoolSlices sharing a block pool ID across a 
@@ -76,6 +78,7 @@ class BlockPoolSlice {
   private final File lazypersistDir;
   private final File rbwDir; // directory store RBW replica
   private final File tmpDir; // directory store Temporary replica
+  private final int ioFileBufferSize;
   private static final String DU_CACHE_FILE = "dfsUsed";
   private volatile boolean dfsUsedSaved = false;
   private static final int SHUTDOWN_HOOK_PRIORITY = 30;
@@ -107,6 +110,8 @@ class BlockPoolSlice {
         throw new IOException("Failed to mkdirs " + this.finalizedDir);
       }
     }
+
+    this.ioFileBufferSize = DFSUtilClient.getIoFileBufferSize(conf);
 
     this.deleteDuplicateReplicas = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_DUPLICATE_REPLICA_DELETION,
@@ -298,7 +303,7 @@ class BlockPoolSlice {
   }
 
   void checkDirs() throws DiskErrorException {
-    DiskChecker.checkDirs(finalizedDir);
+    DiskChecker.checkDir(finalizedDir);
     DiskChecker.checkDir(tmpDir);
     DiskChecker.checkDir(rbwDir);
   }
@@ -472,7 +477,7 @@ class BlockPoolSlice {
     // eventually.
     if (newReplica.getVolume().isTransientStorage()) {
       lazyWriteReplicaMap.addReplica(bpid, blockId,
-          (FsVolumeImpl) newReplica.getVolume());
+          (FsVolumeImpl) newReplica.getVolume(), 0);
     } else {
       lazyWriteReplicaMap.discardReplica(bpid, blockId, false);
     }
@@ -547,10 +552,29 @@ class BlockPoolSlice {
       // Leave both block replicas in place.
       return replica1;
     }
+    final ReplicaInfo replicaToDelete =
+        selectReplicaToDelete(replica1, replica2);
+    final ReplicaInfo replicaToKeep =
+        (replicaToDelete != replica1) ? replica1 : replica2;
+    // Update volumeMap and delete the replica
+    volumeMap.add(bpid, replicaToKeep);
+    if (replicaToDelete != null) {
+      deleteReplica(replicaToDelete);
+    }
+    return replicaToKeep;
+  }
 
+  @VisibleForTesting
+  static ReplicaInfo selectReplicaToDelete(final ReplicaInfo replica1,
+      final ReplicaInfo replica2) {
     ReplicaInfo replicaToKeep;
     ReplicaInfo replicaToDelete;
 
+    // it's the same block so don't ever delete it, even if GS or size
+    // differs.  caller should keep the one it just discovered on disk
+    if (replica1.getBlockFile().equals(replica2.getBlockFile())) {
+      return null;
+    }
     if (replica1.getGenerationStamp() != replica2.getGenerationStamp()) {
       replicaToKeep = replica1.getGenerationStamp() > replica2.getGenerationStamp()
           ? replica1 : replica2;
@@ -570,10 +594,10 @@ class BlockPoolSlice {
       LOG.debug("resolveDuplicateReplicas decide to keep " + replicaToKeep
           + ".  Will try to delete " + replicaToDelete);
     }
+    return replicaToDelete;
+  }
 
-    // Update volumeMap.
-    volumeMap.add(bpid, replicaToKeep);
-
+  private void deleteReplica(final ReplicaInfo replicaToDelete) {
     // Delete the files on disk. Failure here is okay.
     final File blockFile = replicaToDelete.getBlockFile();
     if (!blockFile.delete()) {
@@ -583,10 +607,8 @@ class BlockPoolSlice {
     if (!metaFile.delete()) {
       LOG.warn("Failed to delete meta file " + metaFile);
     }
-
-    return replicaToKeep;
   }
-  
+
   /**
    * Find out the number of bytes in the block that match its crc.
    * 
@@ -612,7 +634,7 @@ class BlockPoolSlice {
       }
       checksumIn = new DataInputStream(
           new BufferedInputStream(new FileInputStream(metaFile),
-              HdfsConstants.IO_FILE_BUFFER_SIZE));
+              ioFileBufferSize));
 
       // read and handle the common header here. For now just a version
       final DataChecksum checksum = BlockMetadataHeader.readDataChecksum(
@@ -721,7 +743,12 @@ class BlockPoolSlice {
       // Now it is safe to add the replica into volumeMap
       // In case of any exception during parsing this cache file, fall back
       // to scan all the files on disk.
-      for (ReplicaInfo info: tmpReplicaMap.replicas(bpid)) {
+      for (Iterator<ReplicaInfo> iter =
+          tmpReplicaMap.replicas(bpid).iterator(); iter.hasNext(); ) {
+        ReplicaInfo info = iter.next();
+        // We use a lightweight GSet to store replicaInfo, we need to remove
+        // it from one GSet before adding to another.
+        iter.remove();
         volumeMap.add(bpid, info);
       }
       LOG.info("Successfully read replica from cache file : " 

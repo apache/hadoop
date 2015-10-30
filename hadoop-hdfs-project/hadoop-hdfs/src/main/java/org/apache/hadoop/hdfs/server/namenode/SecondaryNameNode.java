@@ -108,6 +108,7 @@ public class SecondaryNameNode implements Runnable,
 
   private final long starttime = Time.now();
   private volatile long lastCheckpointTime = 0;
+  private volatile long lastCheckpointWallclockTime = 0;
 
   private URL fsName;
   private CheckpointStorage checkpointImage;
@@ -134,8 +135,9 @@ public class SecondaryNameNode implements Runnable,
       + "\nName Node Address      : " + nameNodeAddr
       + "\nStart Time             : " + new Date(starttime)
       + "\nLast Checkpoint        : " + (lastCheckpointTime == 0? "--":
-				       ((Time.monotonicNow() - lastCheckpointTime) / 1000))
-	                            + " seconds ago"
+        new Date(lastCheckpointWallclockTime))
+      + " (" + ((Time.monotonicNow() - lastCheckpointTime) / 1000)
+      + " seconds ago)"
       + "\nCheckpoint Period      : " + checkpointConf.getPeriod() + " seconds"
       + "\nCheckpoint Transactions: " + checkpointConf.getTxnCount()
       + "\nCheckpoint Dirs        : " + checkpointDirs
@@ -250,46 +252,8 @@ public class SecondaryNameNode implements Runnable,
 
     // Initialize other scheduling parameters from the configuration
     checkpointConf = new CheckpointConf(conf);
-
-    final InetSocketAddress httpAddr = infoSocAddr;
-
-    final String httpsAddrString = conf.getTrimmed(
-        DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTPS_ADDRESS_KEY,
-        DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTPS_ADDRESS_DEFAULT);
-    InetSocketAddress httpsAddr = NetUtils.createSocketAddr(httpsAddrString);
-
-    HttpServer2.Builder builder = DFSUtil.httpServerTemplateForNNAndJN(conf,
-        httpAddr, httpsAddr, "secondary",
-        DFSConfigKeys.DFS_SECONDARY_NAMENODE_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY,
-        DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY);
-
     nameNodeStatusBeanName = MBeans.register("SecondaryNameNode",
             "SecondaryNameNodeInfo", this);
-
-    infoServer = builder.build();
-
-    infoServer.setAttribute("secondary.name.node", this);
-    infoServer.setAttribute("name.system.image", checkpointImage);
-    infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
-    infoServer.addInternalServlet("imagetransfer", ImageServlet.PATH_SPEC,
-        ImageServlet.class, true);
-    infoServer.start();
-
-    LOG.info("Web server init done");
-
-    HttpConfig.Policy policy = DFSUtil.getHttpPolicy(conf);
-    int connIdx = 0;
-    if (policy.isHttpEnabled()) {
-      InetSocketAddress httpAddress = infoServer.getConnectorAddress(connIdx++);
-      conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
-          NetUtils.getHostPortString(httpAddress));
-    }
-
-    if (policy.isHttpsEnabled()) {
-      InetSocketAddress httpsAddress = infoServer.getConnectorAddress(connIdx);
-      conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTPS_ADDRESS_KEY,
-          NetUtils.getHostPortString(httpsAddress));
-    }
 
     legacyOivImageDir = conf.get(
         DFSConfigKeys.DFS_NAMENODE_LEGACY_OIV_IMAGE_DIR_KEY);
@@ -388,12 +352,14 @@ public class SecondaryNameNode implements Runnable,
         if(UserGroupInformation.isSecurityEnabled())
           UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
         
-        final long now = Time.monotonicNow();
+        final long monotonicNow = Time.monotonicNow();
+        final long now = Time.now();
 
         if (shouldCheckpointBasedOnCount() ||
-            now >= lastCheckpointTime + 1000 * checkpointConf.getPeriod()) {
+            monotonicNow >= lastCheckpointTime + 1000 * checkpointConf.getPeriod()) {
           doCheckpoint();
-          lastCheckpointTime = now;
+          lastCheckpointTime = monotonicNow;
+          lastCheckpointWallclockTime = now;
         }
       } catch (IOException e) {
         LOG.error("Exception in doCheckpoint", e);
@@ -455,7 +421,7 @@ public class SecondaryNameNode implements Runnable,
               LOG.info("Image has changed. Downloading updated image from NN.");
               MD5Hash downloadedHash = TransferFsImage.downloadImageToStorage(
                   nnHostPort, sig.mostRecentCheckpointTxId,
-                  dstImage.getStorage(), true);
+                  dstImage.getStorage(), true, false);
               dstImage.saveDigestAndRenameCheckpointImage(NameNodeFile.IMAGE,
                   sig.mostRecentCheckpointTxId, downloadedHash);
             }
@@ -495,6 +461,49 @@ public class SecondaryNameNode implements Runnable,
         scheme);
     LOG.debug("Will connect to NameNode at " + address);
     return address.toURL();
+  }
+
+  /**
+   * Start the web server.
+   */
+  @VisibleForTesting
+  public void startInfoServer() throws IOException {
+    final InetSocketAddress httpAddr = getHttpAddress(conf);
+    final String httpsAddrString = conf.getTrimmed(
+        DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTPS_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTPS_ADDRESS_DEFAULT);
+    InetSocketAddress httpsAddr = NetUtils.createSocketAddr(httpsAddrString);
+
+    HttpServer2.Builder builder = DFSUtil.httpServerTemplateForNNAndJN(conf,
+        httpAddr, httpsAddr, "secondary", DFSConfigKeys.
+            DFS_SECONDARY_NAMENODE_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY,
+        DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY);
+
+    infoServer = builder.build();
+    infoServer.setAttribute("secondary.name.node", this);
+    infoServer.setAttribute("name.system.image", checkpointImage);
+    infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
+    infoServer.addInternalServlet("imagetransfer", ImageServlet.PATH_SPEC,
+        ImageServlet.class, true);
+    infoServer.start();
+
+    LOG.info("Web server init done");
+
+    HttpConfig.Policy policy = DFSUtil.getHttpPolicy(conf);
+    int connIdx = 0;
+    if (policy.isHttpEnabled()) {
+      InetSocketAddress httpAddress =
+          infoServer.getConnectorAddress(connIdx++);
+      conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
+          NetUtils.getHostPortString(httpAddress));
+    }
+
+    if (policy.isHttpsEnabled()) {
+      InetSocketAddress httpsAddress =
+          infoServer.getConnectorAddress(connIdx);
+      conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTPS_ADDRESS_KEY,
+          NetUtils.getHostPortString(httpsAddress));
+    }
   }
 
   /**
@@ -663,29 +672,34 @@ public class SecondaryNameNode implements Runnable,
       opts.usage();
       System.exit(0);
     }
-    
-    StringUtils.startupShutdownMessage(SecondaryNameNode.class, argv, LOG);
-    Configuration tconf = new HdfsConfiguration();
-    SecondaryNameNode secondary = null;
+
     try {
+      StringUtils.startupShutdownMessage(SecondaryNameNode.class, argv, LOG);
+      Configuration tconf = new HdfsConfiguration();
+      SecondaryNameNode secondary = null;
       secondary = new SecondaryNameNode(tconf, opts);
-    } catch (IOException ioe) {
-      LOG.fatal("Failed to start secondary namenode", ioe);
+
+      if (opts != null && opts.getCommand() != null) {
+        int ret = secondary.processStartupCommand(opts);
+        terminate(ret);
+      }
+
+      if (secondary != null) {
+        // The web server is only needed when starting SNN as a daemon,
+        // and not needed if called from shell command. Starting the web server
+        // from shell may fail when getting credentials, if the environment
+        // is not set up for it, which is most of the case.
+        secondary.startInfoServer();
+
+        secondary.startCheckpointThread();
+        secondary.join();
+      }
+    } catch (Throwable e) {
+      LOG.fatal("Failed to start secondary namenode", e);
       terminate(1);
     }
-
-    if (opts != null && opts.getCommand() != null) {
-      int ret = secondary.processStartupCommand(opts);
-      terminate(ret);
-    }
-
-    if (secondary != null) {
-      secondary.startCheckpointThread();
-      secondary.join();
-    }
   }
-  
-  
+
   public void startCheckpointThread() {
     Preconditions.checkState(checkpointThread == null,
         "Should not already have a thread");
@@ -695,22 +709,31 @@ public class SecondaryNameNode implements Runnable,
     checkpointThread.start();
   }
 
-  @Override // SecondaryNameNodeInfoMXXBean
+  @Override // SecondaryNameNodeInfoMXBean
   public String getHostAndPort() {
     return NetUtils.getHostPortString(nameNodeAddr);
   }
 
-  @Override // SecondaryNameNodeInfoMXXBean
+  @Override // SecondaryNameNodeInfoMXBean
   public long getStartTime() {
     return starttime;
   }
 
-  @Override // SecondaryNameNodeInfoMXXBean
+  @Override // SecondaryNameNodeInfoMXBean
   public long getLastCheckpointTime() {
-    return lastCheckpointTime;
+    return lastCheckpointWallclockTime;
   }
 
-  @Override // SecondaryNameNodeInfoMXXBean
+  @Override // SecondaryNameNodeInfoMXBean
+  public long getLastCheckpointDeltaMs() {
+    if (lastCheckpointTime == 0) {
+      return -1;
+    } else {
+      return (Time.monotonicNow() - lastCheckpointTime);
+    }
+  }
+
+  @Override // SecondaryNameNodeInfoMXBean
   public String[] getCheckpointDirectories() {
     ArrayList<String> r = Lists.newArrayListWithCapacity(checkpointDirs.size());
     for (URI d : checkpointDirs) {
@@ -719,7 +742,7 @@ public class SecondaryNameNode implements Runnable,
     return r.toArray(new String[r.size()]);
   }
 
-  @Override // SecondaryNameNodeInfoMXXBean
+  @Override // SecondaryNameNodeInfoMXBean
   public String[] getCheckpointEditlogDirectories() {
     ArrayList<String> r = Lists.newArrayListWithCapacity(checkpointEditsDirs.size());
     for (URI d : checkpointEditsDirs) {
@@ -895,7 +918,7 @@ public class SecondaryNameNode implements Runnable,
             throw new RuntimeException(ioe);
           }
           FileJournalManager.addStreamsToCollectionFromFiles(editFiles, streams,
-              fromTxId, inProgressOk);
+              fromTxId, Long.MAX_VALUE, inProgressOk);
         }
       }
       
@@ -1072,6 +1095,8 @@ public class SecondaryNameNode implements Runnable,
     Checkpointer.rollForwardByApplyingLogs(manifest, dstImage, dstNamesystem);
     // The following has the side effect of purging old fsimages/edit logs.
     dstImage.saveFSImageInAllDirs(dstNamesystem, dstImage.getLastAppliedTxId());
-    dstStorage.writeAll();
+    if (!dstNamesystem.isRollingUpgrade()) {
+      dstStorage.writeAll();
+    }
   }
 }

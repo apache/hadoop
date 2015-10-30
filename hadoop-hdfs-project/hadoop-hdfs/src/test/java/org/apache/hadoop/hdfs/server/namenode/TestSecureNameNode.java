@@ -24,71 +24,63 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.security.TestUGIWithSecurityOn;
+import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferTestCase;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
-import org.junit.Assume;
-import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
-public class TestSecureNameNode {
+
+public class TestSecureNameNode extends SaslDataTransferTestCase {
   final static private int NUM_OF_DATANODES = 0;
 
-  @Before
-  public void testKdcRunning() {
-    // Tests are skipped if KDC is not running
-    Assume.assumeTrue(TestUGIWithSecurityOn.isKdcRunning());
-  }
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
+
 
   @Test
-  public void testName() throws IOException, InterruptedException {
+  public void testName() throws Exception {
     MiniDFSCluster cluster = null;
+    HdfsConfiguration conf = createSecureConfig(
+        "authentication,privacy");
     try {
-      String keyTabDir = System.getProperty("kdc.resource.dir") + "/keytabs";
-      String nn1KeytabPath = keyTabDir + "/nn1.keytab";
-      String user1KeyTabPath = keyTabDir + "/user1.keytab";
-      Configuration conf = new HdfsConfiguration();
-      conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION,
-          "kerberos");
-      conf.set(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY,
-          "nn1/localhost@EXAMPLE.COM");
-      conf.set(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, nn1KeytabPath);
-
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_OF_DATANODES)
           .build();
       final MiniDFSCluster clusterRef = cluster;
       cluster.waitActive();
-      FileSystem fsForCurrentUser = cluster.getFileSystem();
-      fsForCurrentUser.mkdirs(new Path("/tmp"));
-      fsForCurrentUser.setPermission(new Path("/tmp"), new FsPermission(
+      FileSystem fsForSuperUser = UserGroupInformation
+          .loginUserFromKeytabAndReturnUGI(getHdfsPrincipal(), getHdfsKeytab()).doAs(new PrivilegedExceptionAction<FileSystem>() {
+            @Override
+            public FileSystem run() throws Exception {
+              return clusterRef.getFileSystem();
+            }
+          });
+      fsForSuperUser.mkdirs(new Path("/tmp"));
+      fsForSuperUser.setPermission(new Path("/tmp"), new FsPermission(
           (short) 511));
 
       UserGroupInformation ugi = UserGroupInformation
-          .loginUserFromKeytabAndReturnUGI("user1@EXAMPLE.COM", user1KeyTabPath);
+          .loginUserFromKeytabAndReturnUGI(getUserPrincipal(), getUserKeyTab());
       FileSystem fs = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
         @Override
         public FileSystem run() throws Exception {
           return clusterRef.getFileSystem();
         }
       });
-      try {
-        Path p = new Path("/users");
-        fs.mkdirs(p);
-        fail("user1 must not be allowed to write in /");
-      } catch (IOException expected) {
-      }
-
-      Path p = new Path("/tmp/alpha");
+      Path p = new Path("/mydir");
+      exception.expect(IOException.class);
       fs.mkdirs(p);
-      assertNotNull(fs.listStatus(p));
+
+      Path tmp = new Path("/tmp/alpha");
+      fs.mkdirs(tmp);
+      assertNotNull(fs.listStatus(tmp));
       assertEquals(AuthenticationMethod.KERBEROS,
           ugi.getAuthenticationMethod());
     } finally {
@@ -97,4 +89,32 @@ public class TestSecureNameNode {
       }
     }
   }
+
+  /**
+   * Verify the following scenario.
+   * 1. Kerberos is enabled.
+   * 2. HDFS block tokens are not enabled.
+   * 3. Start the NN.
+   * 4. NN should throw an IOException and abort
+   * @throws Exception
+   */
+  @Test
+  public void testKerberosHdfsBlockTokenInconsistencyNNStartup() throws Exception {
+    MiniDFSCluster dfsCluster = null;
+    HdfsConfiguration conf = createSecureConfig(
+        "authentication,privacy");
+    try {
+      conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, false);
+      exception.expect(IOException.class);
+      exception.expectMessage("Security is enabled but block access tokens");
+      dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      dfsCluster.waitActive();
+    } finally {
+      if (dfsCluster != null) {
+        dfsCluster.shutdown();
+      }
+    }
+    return;
+  }
+
 }

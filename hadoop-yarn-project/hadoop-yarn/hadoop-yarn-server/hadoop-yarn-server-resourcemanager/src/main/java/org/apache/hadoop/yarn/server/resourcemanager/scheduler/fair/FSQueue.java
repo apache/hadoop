@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
+import org.apache.hadoop.yarn.api.records.QueueStatistics;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -152,7 +153,29 @@ public abstract class FSQueue implements Queue, Schedulable {
     }
     queueInfo.setChildQueues(childQueueInfos);
     queueInfo.setQueueState(QueueState.RUNNING);
+    queueInfo.setQueueStatistics(getQueueStatistics());
     return queueInfo;
+  }
+
+  public QueueStatistics getQueueStatistics() {
+    QueueStatistics stats =
+        recordFactory.newRecordInstance(QueueStatistics.class);
+    stats.setNumAppsSubmitted(getMetrics().getAppsSubmitted());
+    stats.setNumAppsRunning(getMetrics().getAppsRunning());
+    stats.setNumAppsPending(getMetrics().getAppsPending());
+    stats.setNumAppsCompleted(getMetrics().getAppsCompleted());
+    stats.setNumAppsKilled(getMetrics().getAppsKilled());
+    stats.setNumAppsFailed(getMetrics().getAppsFailed());
+    stats.setNumActiveUsers(getMetrics().getActiveUsers());
+    stats.setAvailableMemoryMB(getMetrics().getAvailableMB());
+    stats.setAllocatedMemoryMB(getMetrics().getAllocatedMB());
+    stats.setPendingMemoryMB(getMetrics().getPendingMB());
+    stats.setReservedMemoryMB(getMetrics().getReservedMB());
+    stats.setAvailableVCores(getMetrics().getAvailableVirtualCores());
+    stats.setAllocatedVCores(getMetrics().getAllocatedVirtualCores());
+    stats.setPendingVCores(getMetrics().getPendingVirtualCores());
+    stats.setReservedVCores(getMetrics().getReservedVirtualCores());
+    return stats;
   }
   
   @Override
@@ -306,5 +329,26 @@ public abstract class FSQueue implements Queue, Schedulable {
   
   @Override
   public void decPendingResource(String nodeLabel, Resource resourceToDec) {
+  }
+
+  @Override
+  public Priority getDefaultApplicationPriority() {
+    // TODO add implementation for FSParentQueue
+    return null;
+  }
+
+  public boolean fitsInMaxShare(Resource additionalResource) {
+    Resource usagePlusAddition =
+        Resources.add(getResourceUsage(), additionalResource);
+
+    if (!Resources.fitsIn(usagePlusAddition, getMaxShare())) {
+      return false;
+    }
+
+    FSQueue parentQueue = getParent();
+    if (parentQueue != null) {
+      return parentQueue.fitsInMaxShare(additionalResource);
+    }
+    return true;
   }
 }

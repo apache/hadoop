@@ -83,16 +83,17 @@ public class QueueMetrics implements MetricsSource {
   static final MetricsInfo RECORD_INFO = info("QueueMetrics",
       "Metrics for the resource scheduler");
   protected static final MetricsInfo QUEUE_INFO = info("Queue", "Metrics by queue");
-  static final MetricsInfo USER_INFO = info("User", "Metrics by user");
+  protected static final MetricsInfo USER_INFO =
+      info("User", "Metrics by user");
   static final Splitter Q_SPLITTER =
       Splitter.on('.').omitEmptyStrings().trimResults();
 
-  final MetricsRegistry registry;
-  final String queueName;
-  final QueueMetrics parent;
-  final MetricsSystem metricsSystem;
-  private final Map<String, QueueMetrics> users;
-  private final Configuration conf;
+  protected final MetricsRegistry registry;
+  protected final String queueName;
+  protected final QueueMetrics parent;
+  protected final MetricsSystem metricsSystem;
+  protected final Map<String, QueueMetrics> users;
+  protected final Configuration conf;
 
   protected QueueMetrics(MetricsSystem ms, String queueName, Queue parent, 
 	       boolean enableUserMetrics, Configuration conf) {
@@ -372,17 +373,20 @@ public class QueueMetrics implements MetricsSource {
   }
 
   private void _decrPendingResources(int containers, Resource res) {
+    // if #container = 0, means change container resource
     pendingContainers.decr(containers);
-    pendingMB.decr(res.getMemory() * containers);
-    pendingVCores.decr(res.getVirtualCores() * containers);
+    pendingMB.decr(res.getMemory() * Math.max(containers, 1));
+    pendingVCores.decr(res.getVirtualCores() * Math.max(containers, 1));
   }
 
   public void allocateResources(String user, int containers, Resource res,
       boolean decrPending) {
+    // if #containers = 0, means change container resource
     allocatedContainers.incr(containers);
     aggregateContainersAllocated.incr(containers);
-    allocatedMB.incr(res.getMemory() * containers);
-    allocatedVCores.incr(res.getVirtualCores() * containers);
+
+    allocatedMB.incr(res.getMemory() * Math.max(containers, 1));
+    allocatedVCores.incr(res.getVirtualCores() * Math.max(containers, 1));
     if (decrPending) {
       _decrPendingResources(containers, res);
     }
@@ -396,10 +400,11 @@ public class QueueMetrics implements MetricsSource {
   }
 
   public void releaseResources(String user, int containers, Resource res) {
+    // if #container = 0, means change container resource.
     allocatedContainers.decr(containers);
     aggregateContainersReleased.incr(containers);
-    allocatedMB.decr(res.getMemory() * containers);
-    allocatedVCores.decr(res.getVirtualCores() * containers);
+    allocatedMB.decr(res.getMemory() * Math.max(containers, 1));
+    allocatedVCores.decr(res.getVirtualCores() * Math.max(containers, 1));
     QueueMetrics userMetrics = getUserMetrics(user);
     if (userMetrics != null) {
       userMetrics.releaseResources(user, containers, res);
@@ -551,5 +556,13 @@ public class QueueMetrics implements MetricsSource {
   
   public MetricsSystem getMetricsSystem() {
     return metricsSystem;
+  }
+
+  public long getAggregateAllocatedContainers() {
+    return aggregateContainersAllocated.value();
+  }
+
+  public long getAggegatedReleasedContainers() {
+    return aggregateContainersReleased.value();
   }
 }

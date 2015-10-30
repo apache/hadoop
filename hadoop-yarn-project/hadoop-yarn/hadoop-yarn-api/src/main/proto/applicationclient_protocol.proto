@@ -35,6 +35,7 @@ service ApplicationClientProtocolService {
   rpc getNewApplication (GetNewApplicationRequestProto) returns (GetNewApplicationResponseProto);
   rpc getApplicationReport (GetApplicationReportRequestProto) returns (GetApplicationReportResponseProto);
   rpc submitApplication (SubmitApplicationRequestProto) returns (SubmitApplicationResponseProto);
+  rpc failApplicationAttempt (FailApplicationAttemptRequestProto) returns (FailApplicationAttemptResponseProto);
   rpc forceKillApplication (KillApplicationRequestProto) returns (KillApplicationResponseProto);
   rpc getClusterMetrics (GetClusterMetricsRequestProto) returns (GetClusterMetricsResponseProto);
   rpc getApplications (GetApplicationsRequestProto) returns (GetApplicationsResponseProto);
@@ -55,4 +56,6 @@ service ApplicationClientProtocolService {
   rpc getNodeToLabels (GetNodesToLabelsRequestProto) returns (GetNodesToLabelsResponseProto);
   rpc getLabelsToNodes (GetLabelsToNodesRequestProto) returns (GetLabelsToNodesResponseProto);
   rpc getClusterNodeLabels (GetClusterNodeLabelsRequestProto) returns (GetClusterNodeLabelsResponseProto);
+  rpc updateApplicationPriority (UpdateApplicationPriorityRequestProto) returns (UpdateApplicationPriorityResponseProto);
+  rpc signalContainer(SignalContainerRequestProto) returns (SignalContainerResponseProto);
 }

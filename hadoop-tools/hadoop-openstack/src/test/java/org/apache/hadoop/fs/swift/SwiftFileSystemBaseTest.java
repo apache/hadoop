@@ -233,7 +233,7 @@ public class SwiftFileSystemBaseTest extends Assert implements
   /**
    * Get a string describing the outcome of a rename, by listing the dest
    * path and its parent along with some covering text
-   * @param src source patj
+   * @param src source path
    * @param dst dest path
    * @return a string for logs and exceptions
    * @throws IOException IO problems

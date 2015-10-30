@@ -29,6 +29,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy;
+
+import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType.*;
@@ -44,8 +47,10 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
 
   public static final String NAME = "DRF";
 
-  private DominantResourceFairnessComparator comparator =
+  private static final DominantResourceFairnessComparator COMPARATOR =
       new DominantResourceFairnessComparator();
+  private static final DominantResourceCalculator CALCULATOR =
+      new DominantResourceCalculator();
 
   @Override
   public String getName() {
@@ -59,9 +64,14 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
 
   @Override
   public Comparator<Schedulable> getComparator() {
-    return comparator;
+    return COMPARATOR;
   }
-  
+
+  @Override
+  public ResourceCalculator getResourceCalculator() {
+    return CALCULATOR;
+  }
+
   @Override
   public void computeShares(Collection<? extends Schedulable> schedulables,
       Resource totalResources) {
@@ -90,22 +100,22 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
 
   @Override
   public Resource getHeadroom(Resource queueFairShare, Resource queueUsage,
-                              Resource clusterAvailable) {
+                              Resource maxAvailable) {
     int queueAvailableMemory =
         Math.max(queueFairShare.getMemory() - queueUsage.getMemory(), 0);
     int queueAvailableCPU =
         Math.max(queueFairShare.getVirtualCores() - queueUsage
             .getVirtualCores(), 0);
     Resource headroom = Resources.createResource(
-        Math.min(clusterAvailable.getMemory(), queueAvailableMemory),
-        Math.min(clusterAvailable.getVirtualCores(),
+        Math.min(maxAvailable.getMemory(), queueAvailableMemory),
+        Math.min(maxAvailable.getVirtualCores(),
             queueAvailableCPU));
     return headroom;
   }
 
   @Override
   public void initialize(Resource clusterCapacity) {
-    comparator.setClusterCapacity(clusterCapacity);
+    COMPARATOR.setClusterCapacity(clusterCapacity);
   }
 
   public static class DominantResourceFairnessComparator implements Comparator<Schedulable> {

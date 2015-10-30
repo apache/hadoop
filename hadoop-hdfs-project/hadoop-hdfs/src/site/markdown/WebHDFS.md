@@ -97,6 +97,7 @@ WebHDFS REST API
         * [Access Time](#Access_Time)
         * [Block Size](#Block_Size)
         * [Buffer Size](#Buffer_Size)
+        * [Create Flag](#Create_Flag)
         * [Create Parent](#Create_Parent)
         * [Delegation](#Delegation)
         * [Destination](#Destination)
@@ -194,7 +195,6 @@ Below are the HDFS configuration options for WebHDFS.
 
 | Property Name | Description |
 |:---- |:---- |
-| `dfs.webhdfs.enabled ` | Enable/disable WebHDFS in Namenodes and Datanodes |
 | `dfs.web.authentication.kerberos.principal` | The HTTP Kerberos principal used by Hadoop-Auth in the HTTP endpoint. The HTTP Kerberos principal MUST start with 'HTTP/' per Kerberos HTTP SPNEGO specification. A value of "\*" will use all HTTP principals found in the keytab. |
 | `dfs.web.authentication.kerberos.keytab ` | The Kerberos keytab file with the credentials for the HTTP Kerberos principal used by Hadoop-Auth in the HTTP endpoint. |
 
@@ -220,6 +220,31 @@ Below are examples using the `curl` command tool.
         curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?delegation=<TOKEN>&op=..."
 
 See also: [Authentication for Hadoop HTTP web-consoles](../hadoop-common/HttpAuthentication.html)
+
+Additionally, WebHDFS supports OAuth2 on the client side. The Namenode and Datanodes do not currently support clients using OAuth2 but other backends that implement the WebHDFS REST interface may.
+
+WebHDFS supports two type of OAuth2 code grants (user-provided refresh and access token or user provided credential) by default and provides a pluggable mechanism for implementing other OAuth2 authentications per the [OAuth2 RFC](https://tools.ietf.org/html/rfc6749), or custom authentications.  When using either of the provided code grant mechanisms, the WebHDFS client will refresh the access token as necessary.
+
+OAuth2 should only be enabled for clients not running with Kerberos SPENGO.
+
+| OAuth2 code grant mechanism | Description | Value of `dfs.webhdfs.oauth2.access.token.provider` that implements code grant |
+|:---- |:---- |:----|
+| Authorization Code Grant | The user provides an initial access token and refresh token, which are then used to authenticate WebHDFS requests and obtain replacement access tokens, respectively. | org.apache.hadoop.hdfs.web.oauth2.ConfRefreshTokenBasedAccessTokenProvider |
+| Client Credentials Grant | The user provides a credential which is used to obtain access tokens, which are then used to authenticate WebHDFS requests. | org.apache.hadoop.hdfs.web.oauth2.ConfCredentialBasedAccessTokenProvider |
+
+
+The following properties control OAuth2 authentication.
+
+| OAuth2 related property | Description |
+|:---- |:---- |
+| `dfs.webhdfs.oauth2.enabled` | Boolean to enable/disable OAuth2 authentication |
+| `dfs.webhdfs.oauth2.access.token.provider` | Class name of an implementation of `org.apache.hadoop.hdfs.web.oauth.AccessTokenProvider.`  Two are provided with the code, as described above, or the user may specify a user-provided implementation. The default value for this configuration key is the `ConfCredentialBasedAccessTokenProvider` implementation. |
+| `dfs.webhdfs.oauth2.client.id` | Client id used to obtain access token with either credential or refresh token |
+| `dfs.webhdfs.oauth2.refresh.url` | URL against which to post for obtaining bearer token with either credential or refresh token |
+| `dfs.webhdfs.oauth2.access.token` | (required if using ConfRefreshTokenBasedAccessTokenProvider) Initial access token with which to authenticate |
+| `dfs.webhdfs.oauth2.refresh.token` | (required if using ConfRefreshTokenBasedAccessTokenProvider) Initial refresh token to use to obtain new access tokens  |
+| `dfs.webhdfs.oauth2.refresh.token.expires.ms.since.epoch` | (required if using ConfRefreshTokenBasedAccessTokenProvider) Access token expiration measured in milliseconds since Jan 1, 1970.  *Note this is a different value than provided by OAuth providers and has been munged as described in interface to be suitable for a client application*  |
+| `dfs.webhdfs.oauth2.credential` | (required if using ConfCredentialBasedAccessTokenProvider).  Credential used to obtain initial and subsequent access tokens. |
 
 Proxy Users
 -----------
@@ -426,8 +451,6 @@ See also: [`newlength`](#New_Length), [FileSystem](../../api/org/apache/hadoop/f
           {
             "accessTime"      : 0,
             "blockSize"       : 0,
-            "childrenNum"     : 1,
-            "fileId"          : 16386,
             "group"           : "supergroup",
             "length"          : 0,             //in bytes, zero for directories
             "modificationTime": 1320173277227,
@@ -461,8 +484,6 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileSt
               {
                 "accessTime"      : 1320171722771,
                 "blockSize"       : 33554432,
-                "childrenNum"     : 0,
-                "fileId"          : 16387,
                 "group"           : "supergroup",
                 "length"          : 24930,
                 "modificationTime": 1320171722771,
@@ -475,8 +496,6 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileSt
               {
                 "accessTime"      : 0,
                 "blockSize"       : 0,
-                "childrenNum"     : 2,
-                "fileId"          : 16388,
                 "group"           : "supergroup",
                 "length"          : 0,
                 "modificationTime": 1320895981256,
@@ -698,7 +717,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).setAcl
 
 * Submit a HTTP GET request.
 
-        curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETACLSTATUS"
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETACLSTATUS"
 
     The client receives a response with a [`AclStatus` JSON object](#ACL_Status_JSON_Schema):
 
@@ -725,7 +744,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getAclSta
 
 * Submit a HTTP GET request.
 
-        curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=CHECKACCESS
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=CHECKACCESS
                                       &fsaction=<FSACTION>
 
     The client receives a response with zero content length:
@@ -771,7 +790,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).removeXAt
 
 * Submit a HTTP GET request.
 
-        curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
                                       &xattr.name=<XATTRNAME>&encoding=<ENCODING>"
 
     The client receives a response with a [`XAttrs` JSON object](#XAttrs_JSON_Schema):
@@ -795,7 +814,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getXAttr
 
 * Submit a HTTP GET request.
 
-        curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
                                       &xattr.name=<XATTRNAME1>&xattr.name=<XATTRNAME2>
                                       &encoding=<ENCODING>"
 
@@ -824,7 +843,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getXAttrs
 
 * Submit a HTTP GET request.
 
-        curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
                                       &encoding=<ENCODING>"
 
     The client receives a response with a [`XAttrs` JSON object](#XAttrs_JSON_Schema):
@@ -856,7 +875,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getXAttrs
 
 * Submit a HTTP GET request.
 
-        curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=LISTXATTRS"
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=LISTXATTRS"
 
     The client receives a response with a [`XAttrNames` JSON object](#XAttrNames_JSON_Schema):
 
@@ -1009,7 +1028,7 @@ When an operation fails, the server may throw an exception. The JSON schema of e
 | `SecurityException ` | `401 Unauthorized ` |
 | `IOException ` | `403 Forbidden ` |
 | `FileNotFoundException ` | `404 Not Found ` |
-| `RumtimeException ` | `500 Internal Server Error` |
+| `RuntimeException ` | `500 Internal Server Error` |
 
 Below are examples of exception responses.
 
@@ -1320,18 +1339,6 @@ var fileStatusProperties =
     "blockSize":
     {
       "description": "The block size of a file.",
-      "type"       : "integer",
-      "required"   : true
-    },
-    "childrenNum":
-    {
-      "description": "The number of children.",
-      "type"       : "integer",
-      "required"   : true
-    },
-    "fileId":
-    {
-      "description": "The inode ID.",
       "type"       : "integer",
       "required"   : true
     },
@@ -1651,14 +1658,30 @@ See also: [`CREATE`](#Create_and_Write_to_a_File)
 
 See also: [`CREATE`](#Create_and_Write_to_a_File), [`APPEND`](#Append_to_a_File), [`OPEN`](#Open_and_Read_a_File)
 
+### Create Flag
+
+| Name | `createflag` |
+|:---- |:---- |
+| Description | Enum of possible flags to process while creating a file |
+| Type | enumerated strings |
+| Default Value | \<empty\> |
+| Valid Values | Legal combinations of create, overwrite, append and sync_block |
+| Syntax | See note below |
+
+The following combinations are not valid:
+* append,create
+* create,append,overwrite
+
+See also: [`CREATE`](#Create_and_Write_to_a_File)
+
 ### Create Parent
 
 | Name | `createparent` |
 |:---- |:---- |
 | Description | If the parent directories do not exist, should they be created? |
 | Type | boolean |
-| Default Value | false |
-| Valid Values | true |
+| Default Value | true |
+| Valid Values | true, false |
 | Syntax | true |
 
 See also: [`CREATESYMLINK`](#Create_a_Symbolic_Link)
@@ -1708,8 +1731,8 @@ See also: [Proxy Users](#Proxy_Users)
 | Description | File system operation read/write/execute |
 | Type | String |
 | Default Value | null (an invalid value) |
-| Valid Values | Strings matching regex pattern  "[rwx-]{3} " |
-| Syntax |  "[rwx-]{3} " |
+| Valid Values | Strings matching regex pattern  "[r-][w-][x-] " |
+| Syntax |  "[r-][w-][x-] " |
 
 See also: [`CHECKACCESS`](#Check_access),
 

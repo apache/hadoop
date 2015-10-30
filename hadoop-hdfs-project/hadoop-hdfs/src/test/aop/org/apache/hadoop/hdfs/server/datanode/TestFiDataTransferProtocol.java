@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fi.DataTransferTestUtil;
 import org.apache.hadoop.fi.DataTransferTestUtil.DataTransferTest;
@@ -37,8 +36,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
@@ -52,7 +53,7 @@ public class TestFiDataTransferProtocol {
   static {
     conf.setInt(DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, REPLICATION);
-    conf.setInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 5000);
+    conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 5000);
   }
 
   static private FSDataOutputStream createFile(FileSystem fs, Path p
@@ -63,7 +64,7 @@ public class TestFiDataTransferProtocol {
   }
 
   {
-    ((Log4JLogger)DataTransferProtocol.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(DataTransferProtocol.LOG, Level.ALL);
   }
 
   /**

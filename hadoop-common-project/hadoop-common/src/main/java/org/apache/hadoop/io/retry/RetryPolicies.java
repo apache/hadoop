@@ -28,7 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
@@ -37,6 +37,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.ConnectTimeoutException;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 
 /**
  * <p>
@@ -46,13 +47,6 @@ import org.apache.hadoop.net.ConnectTimeoutException;
 public class RetryPolicies {
   
   public static final Log LOG = LogFactory.getLog(RetryPolicies.class);
-  
-  private static ThreadLocal<Random> RANDOM = new ThreadLocal<Random>() {
-    @Override
-    protected Random initialValue() {
-      return new Random();
-    }
-  };
   
   /**
    * <p>
@@ -68,6 +62,17 @@ public class RetryPolicies {
    * </p>
    */
   public static final RetryPolicy RETRY_FOREVER = new RetryForever();
+
+  /**
+   * <p>
+   * Keep trying forever with a fixed time between attempts.
+   * </p>
+   */
+  public static final RetryPolicy retryForeverWithFixedSleep(long sleepTime,
+      TimeUnit timeUnit) {
+    return new RetryUpToMaximumCountWithFixedSleep(Integer.MAX_VALUE,
+        sleepTime, timeUnit);
+  }
 
   /**
    * <p>
@@ -134,7 +139,17 @@ public class RetryPolicies {
       Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap) {
     return new RemoteExceptionDependentRetry(defaultPolicy, exceptionToPolicyMap);
   }
-  
+
+  /**
+   * A retry policy for exceptions other than RemoteException.
+   */
+  public static final RetryPolicy retryOtherThanRemoteException(
+      RetryPolicy defaultPolicy,
+      Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap) {
+    return new OtherThanRemoteExceptionDependentRetry(defaultPolicy,
+        exceptionToPolicyMap);
+  }
+
   public static final RetryPolicy failoverOnNetworkException(int maxFailovers) {
     return failoverOnNetworkException(TRY_ONCE_THEN_FAIL, maxFailovers);
   }
@@ -157,7 +172,7 @@ public class RetryPolicies {
     return new FailoverOnNetworkExceptionRetry(fallbackPolicy, maxFailovers,
         maxRetries, delayMillis, maxDelayBase);
   }
-  
+
   static class TryOnceThenFail implements RetryPolicy {
     @Override
     public RetryAction shouldRetry(Exception e, int retries, int failovers,
@@ -321,7 +336,8 @@ public class RetryPolicies {
       }
 
       //calculate sleep time and return.
-      final double ratio = RANDOM.get().nextDouble() + 0.5;//0.5 <= ratio <=1.5
+      // ensure 0.5 <= ratio <=1.5
+      final double ratio = ThreadLocalRandom.current().nextDouble() + 0.5;
       final long sleepTime = Math.round(p.sleepMillis * ratio);
       return new RetryAction(RetryAction.RetryDecision.RETRY, sleepTime);
     }
@@ -365,7 +381,7 @@ public class RetryPolicies {
     /**
      * Parse the given string as a MultipleLinearRandomRetry object.
      * The format of the string is "t_1, n_1, t_2, n_2, ...",
-     * where t_i and n_i are the i-th pair of sleep time and number of retires.
+     * where t_i and n_i are the i-th pair of sleep time and number of retries.
      * Note that the white spaces in the string are ignored.
      *
      * @return the parsed object, or null if the parsing fails.
@@ -483,7 +499,37 @@ public class RetryPolicies {
       return policy.shouldRetry(e, retries, failovers, isIdempotentOrAtMostOnce);
     }
   }
-  
+
+  static class OtherThanRemoteExceptionDependentRetry implements RetryPolicy {
+
+    private RetryPolicy defaultPolicy;
+    private Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap;
+
+    public OtherThanRemoteExceptionDependentRetry(RetryPolicy defaultPolicy,
+        Map<Class<? extends Exception>,
+        RetryPolicy> exceptionToPolicyMap) {
+      this.defaultPolicy = defaultPolicy;
+      this.exceptionToPolicyMap = exceptionToPolicyMap;
+    }
+
+    @Override
+    public RetryAction shouldRetry(Exception e, int retries, int failovers,
+        boolean isIdempotentOrAtMostOnce) throws Exception {
+      RetryPolicy policy = null;
+      // ignore Remote Exception
+      if (e instanceof RemoteException) {
+        // do nothing
+      } else {
+        policy = exceptionToPolicyMap.get(e.getClass());
+      }
+      if (policy == null) {
+        policy = defaultPolicy;
+      }
+      return policy.shouldRetry(
+          e, retries, failovers, isIdempotentOrAtMostOnce);
+    }
+  }
+
   static class ExponentialBackoffRetry extends RetryLimited {
     
     public ExponentialBackoffRetry(
@@ -581,6 +627,9 @@ public class RetryPolicies {
         // RetriableException or RetriableException wrapped 
         return new RetryAction(RetryAction.RetryDecision.RETRY,
               getFailoverOrRetrySleepTime(retries));
+      } else if (e instanceof InvalidToken) {
+        return new RetryAction(RetryAction.RetryDecision.FAIL, 0,
+            "Invalid or Cancelled Token");
       } else if (e instanceof SocketException
           || (e instanceof IOException && !(e instanceof RemoteException))) {
         if (isIdempotentOrAtMostOnce) {
@@ -610,7 +659,7 @@ public class RetryPolicies {
   private static long calculateExponentialTime(long time, int retries,
       long cap) {
     long baseTime = Math.min(time * (1L << retries), cap);
-    return (long) (baseTime * (RANDOM.get().nextDouble() + 0.5));
+    return (long) (baseTime * (ThreadLocalRandom.current().nextDouble() + 0.5));
   }
 
   private static long calculateExponentialTime(long time, int retries) {
@@ -626,7 +675,7 @@ public class RetryPolicies {
     return unwrapped instanceof StandbyException;
   }
   
-  private static RetriableException getWrappedRetriableException(Exception e) {
+  static RetriableException getWrappedRetriableException(Exception e) {
     if (!(e instanceof RemoteException)) {
       return null;
     }

@@ -17,19 +17,34 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DataStreamer.LastExceptionInStreamer;
+import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
+import org.apache.htrace.core.SpanId;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.internal.util.reflection.Whitebox;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
 
 public class TestDFSOutputStream {
   static MiniDFSCluster cluster;
@@ -50,13 +65,13 @@ public class TestDFSOutputStream {
     FSDataOutputStream os = fs.create(new Path("/test"));
     DFSOutputStream dos = (DFSOutputStream) Whitebox.getInternalState(os,
         "wrappedStream");
-    @SuppressWarnings("unchecked")
     DataStreamer streamer = (DataStreamer) Whitebox
         .getInternalState(dos, "streamer");
     @SuppressWarnings("unchecked")
-    AtomicReference<IOException> ex = (AtomicReference<IOException>) Whitebox
+    LastExceptionInStreamer ex = (LastExceptionInStreamer) Whitebox
         .getInternalState(streamer, "lastException");
-    Assert.assertEquals(null, ex.get());
+    Throwable thrown = (Throwable) Whitebox.getInternalState(ex, "thrown");
+    Assert.assertNull(thrown);
 
     dos.close();
 
@@ -67,7 +82,8 @@ public class TestDFSOutputStream {
     } catch (IOException e) {
       Assert.assertEquals(e, dummy);
     }
-    Assert.assertEquals(null, ex.get());
+    thrown = (Throwable) Whitebox.getInternalState(ex, "thrown");
+    Assert.assertNull(thrown);
     dos.close();
   }
 
@@ -98,6 +114,38 @@ public class TestDFSOutputStream {
     // If PKT_MAX_HEADER_LEN is 257, actual packet size come to over 64KB
     // without a fix on HDFS-7308.
     Assert.assertTrue((Integer) field.get(dos) + 257 < packetSize);
+  }
+
+  @Test
+  public void testCongestionBackoff() throws IOException {
+    DfsClientConf dfsClientConf = mock(DfsClientConf.class);
+    DFSClient client = mock(DFSClient.class);
+    when(client.getConf()).thenReturn(dfsClientConf);
+    when(client.getTracer()).thenReturn(FsTracer.get(new Configuration()));
+    client.clientRunning = true;
+    DataStreamer stream = new DataStreamer(
+        mock(HdfsFileStatus.class),
+        mock(ExtendedBlock.class),
+        client,
+        "foo", null, null, null, null, null);
+
+    DataOutputStream blockStream = mock(DataOutputStream.class);
+    doThrow(new IOException()).when(blockStream).flush();
+    Whitebox.setInternalState(stream, "blockStream", blockStream);
+    Whitebox.setInternalState(stream, "stage",
+                              BlockConstructionStage.PIPELINE_CLOSE);
+    @SuppressWarnings("unchecked")
+    LinkedList<DFSPacket> dataQueue = (LinkedList<DFSPacket>)
+        Whitebox.getInternalState(stream, "dataQueue");
+    @SuppressWarnings("unchecked")
+    ArrayList<DatanodeInfo> congestedNodes = (ArrayList<DatanodeInfo>)
+        Whitebox.getInternalState(stream, "congestedNodes");
+    congestedNodes.add(mock(DatanodeInfo.class));
+    DFSPacket packet = mock(DFSPacket.class);
+    when(packet.getTraceParents()).thenReturn(new SpanId[] {});
+    dataQueue.add(packet);
+    stream.run();
+    Assert.assertTrue(congestedNodes.isEmpty());
   }
 
   @AfterClass

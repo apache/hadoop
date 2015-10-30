@@ -38,7 +38,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.HarFileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.JarFinder;
@@ -109,13 +111,9 @@ public class TestHadoopArchives {
     conf.set(CapacitySchedulerConfiguration.PREFIX
         + CapacitySchedulerConfiguration.ROOT + ".default."
         + CapacitySchedulerConfiguration.CAPACITY, "100");
-    dfscluster = new MiniDFSCluster
-      .Builder(conf)
-      .checkExitOnShutdown(true)
-      .numDataNodes(2)
-      .format(true)
-      .racks(null)
-      .build();
+    dfscluster =
+        new MiniDFSCluster.Builder(conf).checkExitOnShutdown(true)
+            .numDataNodes(3).format(true).racks(null).build();
 
     fs = dfscluster.getFileSystem();
     
@@ -175,8 +173,47 @@ public class TestHadoopArchives {
     final List<String> harPaths = lsr(shell, fullHarPathStr);
     Assert.assertEquals(originalPaths, harPaths);
   }
-  
-@Test
+
+  @Test
+  public void testOutputPathValidity() throws Exception {
+    final String inputPathStr = inputPath.toUri().getPath();
+    final URI uri = fs.getUri();
+    final String harName = "foo.har";
+    System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH,
+        HADOOP_ARCHIVES_JAR);
+    final HadoopArchives har = new HadoopArchives(conf);
+
+    PrintStream stderr = System.err;
+    ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+    PrintStream newErr = new PrintStream(byteStream);
+    System.setErr(newErr);
+
+    // fail if the archive path already exists
+    createFile(archivePath, fs, harName);
+    final String[] args = { "-archiveName", harName, "-p", inputPathStr, "*",
+        archivePath.toString() };
+    Assert.assertEquals(-1, ToolRunner.run(har, args));
+    String output = byteStream.toString();
+    final Path outputPath = new Path(archivePath, harName);
+    Assert.assertTrue(output.indexOf("Archive path: " + outputPath.toString()
+        + " already exists") != -1);
+
+    byteStream.reset();
+
+    // fail if the destination directory is a file
+    createFile(archivePath, fs, "sub1");
+    final Path archivePath2 = new Path(archivePath, "sub1");
+    final String[] args2 = { "-archiveName", harName, "-p", inputPathStr, "*",
+        archivePath2.toString() };
+    Assert.assertEquals(-1, ToolRunner.run(har, args2));
+    output = byteStream.toString();
+    Assert.assertTrue(output.indexOf("Destination " + archivePath2.toString()
+        + " should be a directory but is a file") != -1);
+
+    System.setErr(stderr);
+  }
+
+  @Test
   public void testPathWithSpaces() throws Exception {
     // create files/directories with spaces
     createFile(inputPath, fs, "c c");
@@ -713,12 +750,21 @@ public class TestHadoopArchives {
 
     final String harName = "foo.har";
     final String fullHarPathStr = prefix + harName;
-    final String[] args = { "-archiveName", harName, "-p", inputPathStr,
-        "-r 3", "*", archivePath.toString() };
+    final String[] args =
+        { "-archiveName", harName, "-p", inputPathStr, "-r", "2", "*",
+            archivePath.toString() };
     System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH,
         HADOOP_ARCHIVES_JAR);
     final HadoopArchives har = new HadoopArchives(conf);
     assertEquals(0, ToolRunner.run(har, args));
+    RemoteIterator<LocatedFileStatus> listFiles =
+        fs.listFiles(new Path(archivePath.toString() + "/" + harName), false);
+    while (listFiles.hasNext()) {
+      LocatedFileStatus next = listFiles.next();
+      if (!next.getPath().toString().endsWith("_SUCCESS")) {
+        assertEquals(next.getPath().toString(), 2, next.getReplication());
+      }
+    }
     return fullHarPathStr;
   }
   

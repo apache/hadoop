@@ -58,9 +58,12 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
+import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
@@ -291,6 +294,12 @@ public class ResourceMgrDelegate extends YarnClient {
   }
 
   @Override
+  public void failApplicationAttempt(ApplicationAttemptId attemptId)
+      throws YarnException, IOException {
+    client.failApplicationAttempt(attemptId);
+  }
+
+  @Override
   public void killApplication(ApplicationId applicationId)
       throws YarnException, IOException {
     client.killApplication(applicationId);
@@ -334,6 +343,15 @@ public class ResourceMgrDelegate extends YarnClient {
       EnumSet<YarnApplicationState> applicationStates)
       throws YarnException, IOException {
     return client.getApplications(applicationTypes, applicationStates);
+  }
+
+  @Override
+  public List<ApplicationReport> getApplications(Set<String> queues,
+      Set<String> users, Set<String> applicationTypes,
+      EnumSet<YarnApplicationState> applicationStates) throws YarnException,
+      IOException {
+    return client.getApplications(queues, users, applicationTypes,
+      applicationStates);
   }
 
   @Override
@@ -434,26 +452,38 @@ public class ResourceMgrDelegate extends YarnClient {
   }
 
   @Override
-  public Map<NodeId, Set<String>> getNodeToLabels() throws YarnException,
+  public Map<NodeId, Set<NodeLabel>> getNodeToLabels() throws YarnException,
       IOException {
     return client.getNodeToLabels();
   }
 
   @Override
-  public Map<String, Set<NodeId>> getLabelsToNodes() throws YarnException,
+  public Map<NodeLabel, Set<NodeId>> getLabelsToNodes() throws YarnException,
       IOException {
     return client.getLabelsToNodes();
   }
 
   @Override
-  public Map<String, Set<NodeId>> getLabelsToNodes(Set<String> labels)
+  public Map<NodeLabel, Set<NodeId>> getLabelsToNodes(Set<String> labels)
       throws YarnException, IOException {
     return client.getLabelsToNodes(labels);
   }
 
   @Override
-  public Set<String> getClusterNodeLabels()
+  public List<NodeLabel> getClusterNodeLabels()
       throws YarnException, IOException {
     return client.getClusterNodeLabels();
+  }
+
+  @Override
+  public void updateApplicationPriority(ApplicationId applicationId,
+      Priority priority) throws YarnException, IOException {
+    client.updateApplicationPriority(applicationId, priority);
+  }
+
+  @Override
+  public void signalContainer(ContainerId containerId, SignalContainerCommand command)
+      throws YarnException, IOException {
+    client.signalContainer(containerId, command);
   }
 }

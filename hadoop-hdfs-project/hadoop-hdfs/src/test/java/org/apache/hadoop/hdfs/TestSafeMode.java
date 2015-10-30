@@ -295,8 +295,8 @@ public class TestSafeMode {
       fail(msg);
     } catch (RemoteException re) {
       assertEquals(SafeModeException.class.getName(), re.getClassName());
-      GenericTestUtils.assertExceptionContains(
-          "Name node is in safe mode", re);
+      GenericTestUtils.assertExceptionContains("Name node is in safe mode", re);
+    } catch (SafeModeException ignored) {
     } catch (IOException ioe) {
       fail(msg + " " + StringUtils.stringifyException(ioe));
     }
@@ -552,7 +552,7 @@ public class TestSafeMode {
       if(cluster!= null) cluster.shutdown();
     }
   }
-  
+
   void checkGetBlockLocationsWorks(FileSystem fs, Path fileName) throws IOException {
     FileStatus stat = fs.getFileStatus(fileName);
     try {  
@@ -560,7 +560,7 @@ public class TestSafeMode {
     } catch (SafeModeException e) {
       assertTrue("Should have not got safemode exception", false);
     } catch (RemoteException re) {
-      assertTrue("Should have not got safemode exception", false);   
+      assertTrue("Should have not got remote exception", false);
     }    
   }
 }

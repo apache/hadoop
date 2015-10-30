@@ -37,6 +37,7 @@ import org.apache.hadoop.mapred.ClusterStatus.BlackListInfo;
 import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.ClusterMetrics;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.QueueInfo;
 import org.apache.hadoop.mapreduce.TaskTrackerInfo;
 import org.apache.hadoop.mapreduce.TaskType;
@@ -154,6 +155,10 @@ public class JobClient extends CLI {
   public static enum TaskStatusFilter { NONE, KILLED, FAILED, SUCCEEDED, ALL }
   private TaskStatusFilter taskOutputFilter = TaskStatusFilter.FAILED; 
   
+  private int maxRetry = MRJobConfig.DEFAULT_MR_CLIENT_JOB_MAX_RETRIES;
+  private long retryInterval =
+      MRJobConfig.DEFAULT_MR_CLIENT_JOB_RETRY_INTERVAL;
+
   static{
     ConfigUtil.loadResources();
   }
@@ -469,6 +474,14 @@ public class JobClient extends CLI {
     setConf(conf);
     cluster = new Cluster(conf);
     clientUgi = UserGroupInformation.getCurrentUser();
+
+    maxRetry = conf.getInt(MRJobConfig.MR_CLIENT_JOB_MAX_RETRIES,
+      MRJobConfig.DEFAULT_MR_CLIENT_JOB_MAX_RETRIES);
+
+    retryInterval =
+      conf.getLong(MRJobConfig.MR_CLIENT_JOB_RETRY_INTERVAL,
+        MRJobConfig.DEFAULT_MR_CLIENT_JOB_RETRY_INTERVAL);
+
   }
 
   /**
@@ -581,16 +594,8 @@ public class JobClient extends CLI {
       }
     });
   }
-  /**
-   * Get an {@link RunningJob} object to track an ongoing job.  Returns
-   * null if the id does not correspond to any known job.
-   * 
-   * @param jobid the jobid of the job.
-   * @return the {@link RunningJob} handle to track the job, null if the 
-   *         <code>jobid</code> doesn't correspond to any known job.
-   * @throws IOException
-   */
-  public RunningJob getJob(final JobID jobid) throws IOException {
+
+  protected RunningJob getJobInner(final JobID jobid) throws IOException {
     try {
       
       Job job = getJobUsingCluster(jobid);
@@ -607,7 +612,31 @@ public class JobClient extends CLI {
     return null;
   }
 
-  /**@deprecated Applications should rather use {@link #getJob(JobID)}. 
+  /**
+   * Get an {@link RunningJob} object to track an ongoing job.  Returns
+   * null if the id does not correspond to any known job.
+   *
+   * @param jobid the jobid of the job.
+   * @return the {@link RunningJob} handle to track the job, null if the
+   *         <code>jobid</code> doesn't correspond to any known job.
+   * @throws IOException
+   */
+  public RunningJob getJob(final JobID jobid) throws IOException {
+     for (int i = 0;i <= maxRetry;i++) {
+       if (i > 0) {
+         try {
+           Thread.sleep(retryInterval);
+         } catch (Exception e) { }
+       }
+       RunningJob job = getJobInner(jobid);
+       if (job != null) {
+         return job;
+       }
+     }
+     return null;
+  }
+
+  /**@deprecated Applications should rather use {@link #getJob(JobID)}.
    */
   @Deprecated
   public RunningJob getJob(String jobid) throws IOException {

@@ -594,8 +594,18 @@ public class TestTrash extends TestCase {
     TestLFS() {
       this(new Path(TEST_DIR, "user/test"));
     }
-    TestLFS(Path home) {
-      super();
+    TestLFS(final Path home) {
+      super(new RawLocalFileSystem() {
+        @Override
+        protected Path getInitialWorkingDirectory() {
+          return makeQualified(home);
+        }
+
+        @Override
+        public Path getHomeDirectory() {
+          return makeQualified(home);
+        }
+      });
       this.home = home;
     }
     @Override

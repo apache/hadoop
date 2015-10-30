@@ -48,7 +48,6 @@ import com.google.common.io.Files;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -109,7 +108,7 @@ import com.google.common.primitives.Ints;
 public class TestCheckpoint {
 
   static {
-    ((Log4JLogger)FSImage.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(FSImage.LOG, Level.ALL);
   }
 
   static final Log LOG = LogFactory.getLog(TestCheckpoint.class); 
@@ -1428,7 +1427,8 @@ public class TestCheckpoint {
       //
       secondary = startSecondaryNameNode(conf);
 
-      File secondaryDir = new File(MiniDFSCluster.getBaseDirectory(), "namesecondary1");
+      File secondaryDir = MiniDFSCluster.getCheckpointDirectory(MiniDFSCluster.getBaseDirectory(),
+        0, 0)[0];
       File secondaryCurrent = new File(secondaryDir, "current");
 
       long expectedTxIdToDownload = cluster.getNameNode().getFSImage()
@@ -2002,7 +2002,7 @@ public class TestCheckpoint {
         .when(dstImage).toColonSeparatedString();
 
       try {
-        TransferFsImage.downloadImageToStorage(fsName, 0, dstImage, false);
+        TransferFsImage.downloadImageToStorage(fsName, 0, dstImage, false, false);
         fail("Storage info was not verified");
       } catch (IOException ioe) {
         String msg = StringUtils.stringifyException(ioe);

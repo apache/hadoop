@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,10 +52,11 @@ import com.google.common.base.Strings;
  * This is intended to test the DockerContainerExecutor code, but it requires
  * docker to be installed.
  * <br><ol>
- * <li>Install docker, and Compile the code with docker-service-url set to the
- * host and port where docker service is running.
+ * <li>To run the tests, set the docker-service-url to the host and port where
+ * docker service is running (If docker-service-url is not specified then the
+ * local daemon will be used).
  * <br><pre><code>
- * > mvn clean install -Ddocker-service-url=tcp://0.0.0.0:4243 -DskipTests
+ * mvn test -Ddocker-service-url=tcp://0.0.0.0:4243 -Dtest=TestDockerContainerExecutor
  * </code></pre>
  */
 public class TestDockerContainerExecutor {
@@ -98,10 +100,13 @@ public class TestDockerContainerExecutor {
 
     dockerUrl = System.getProperty("docker-service-url");
     LOG.info("dockerUrl: " + dockerUrl);
-    if (Strings.isNullOrEmpty(dockerUrl)) {
+    if (!Strings.isNullOrEmpty(dockerUrl)) {
+      dockerUrl = " -H " + dockerUrl;
+    } else if(isDockerDaemonRunningLocally()) {
+      dockerUrl = "";
+    } else {
       return;
     }
-    dockerUrl = " -H " + dockerUrl;
     dockerExec = "docker " + dockerUrl;
     conf.set(
       YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME, yarnImage);
@@ -136,6 +141,17 @@ public class TestDockerContainerExecutor {
     return exec != null;
   }
 
+  private boolean isDockerDaemonRunningLocally() {
+    boolean dockerDaemonRunningLocally = true;
+      try {
+        shellExec("docker info");
+      } catch (Exception e) {
+        LOG.info("docker daemon is not running on local machine.");
+        dockerDaemonRunningLocally = false;
+      }
+      return dockerDaemonRunningLocally;
+  }
+
   /**
    * Test that a docker container can be launched to run a command
    * @param cId a fake ContainerID
@@ -164,9 +180,16 @@ public class TestDockerContainerExecutor {
     Path pidFile = new Path(workDir, "pid.txt");
 
     exec.activateContainer(cId, pidFile);
-    return exec.launchContainer(container, scriptPath, tokensPath,
-      appSubmitter, appId, workDir, dirsHandler.getLocalDirs(),
-      dirsHandler.getLogDirs());
+    return exec.launchContainer(new ContainerStartContext.Builder()
+        .setContainer(container)
+        .setNmPrivateContainerScriptPath(scriptPath)
+        .setNmPrivateTokensPath(tokensPath)
+        .setUser(appSubmitter)
+        .setAppId(appId)
+        .setContainerWorkDir(workDir)
+        .setLocalDirs(dirsHandler.getLocalDirs())
+        .setLogDirs(dirsHandler.getLogDirs())
+        .build());
   }
 
   // Write the script used to launch the docker container in a temp file
@@ -200,7 +223,7 @@ public class TestDockerContainerExecutor {
    * Test that a touch command can be launched successfully in a docker
    * container
    */
-  @Test
+  @Test(timeout=1000000)
   public void testLaunchContainer() throws IOException {
     if (!shouldRun()) {
       LOG.warn("Docker not installed, aborting test.");

@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -91,6 +92,9 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
             th(".finishtime", "FinishTime").
             th(".state", "State").
             th(".finalstatus", "FinalStatus").
+            th(".runningcontainer", "Running Containers").
+            th(".allocatedCpu", "Allocated CPU VCores").
+            th(".allocatedMemory", "Allocated Memory MB").
             th(".progress", "Progress").
             th(".ui", "Tracking UI")._()._().
         tbody();
@@ -109,14 +113,13 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
         continue;
       }
       AppInfo appInfo = new AppInfo(rm, app, true, WebAppUtils.getHttpSchemePrefix(conf));
-      String percent = String.format("%.1f", appInfo.getProgress());
+      String percent = StringUtils.format("%.1f", appInfo.getProgress());
       ApplicationAttemptId attemptId = app.getCurrentAppAttempt().getAppAttemptId();
       int fairShare = fsinfo.getAppFairShare(attemptId);
       if (fairShare == FairSchedulerInfo.INVALID_FAIR_SHARE) {
         // FairScheduler#applications don't have the entry. Skip it.
         continue;
       }
-      //AppID numerical value parsed by parseHadoopID in yarn.dt.plugins.js
       appsTableData.append("[\"<a href='")
       .append(url("app", appInfo.getAppId())).append("'>")
       .append(appInfo.getAppId()).append("</a>\",\"")
@@ -133,6 +136,12 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
       .append(appInfo.getFinishTime()).append("\",\"")
       .append(appInfo.getState()).append("\",\"")
       .append(appInfo.getFinalStatus()).append("\",\"")
+      .append(appInfo.getRunningContainers() == -1 ? "N/A" : String
+         .valueOf(appInfo.getRunningContainers())).append("\",\"")
+      .append(appInfo.getAllocatedVCores() == -1 ? "N/A" : String
+        .valueOf(appInfo.getAllocatedVCores())).append("\",\"")
+      .append(appInfo.getAllocatedMB() == -1 ? "N/A" : String
+        .valueOf(appInfo.getAllocatedMB())).append("\",\"")
       // Progress bar
       .append("<br title='").append(percent)
       .append("'> <div class='").append(C_PROGRESSBAR).append("' title='")

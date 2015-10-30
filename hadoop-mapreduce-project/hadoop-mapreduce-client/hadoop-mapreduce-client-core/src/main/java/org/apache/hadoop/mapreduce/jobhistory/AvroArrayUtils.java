@@ -45,7 +45,7 @@ public class AvroArrayUtils {
   }
 
   public static int[] fromAvro(List<Integer> avro) {
-    int[] result = new int[(int)avro.size()];
+    int[] result = new int[avro.size()];
 
     int i = 0;
       

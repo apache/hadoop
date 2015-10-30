@@ -82,8 +82,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import com.google.common.io.ByteArrayDataInput;
-import com.google.common.io.ByteStreams;
 
 @RunWith(Parameterized.class)
 public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
@@ -105,10 +103,20 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     testRootDir.mkdirs();
     httpSpnegoKeytabFile.deleteOnExit();
     getKdc().createPrincipal(httpSpnegoKeytabFile, httpSpnegoPrincipal);
+
+    yarnCluster =
+        new MiniYARNCluster(TestContainerManagerSecurity.class.getName(), 1, 1,
+            1);
+    yarnCluster.init(conf);
+    yarnCluster.start();
   }
  
   @After
   public void tearDown() {
+    if (yarnCluster != null) {
+      yarnCluster.stop();
+      yarnCluster = null;
+    }
     testRootDir.delete();
   }
 
@@ -144,11 +152,6 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
   
   @Test (timeout = 120000)
   public void testContainerManager() throws Exception {
-    try {
-      yarnCluster = new MiniYARNCluster(TestContainerManagerSecurity.class
-          .getName(), 1, 1, 1);
-      yarnCluster.init(conf);
-      yarnCluster.start();
       
       // TestNMTokens.
       testNMTokens(conf);
@@ -156,36 +159,11 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
       // Testing for container token tampering
       testContainerToken(conf);
       
-    } catch (Exception e) {
-      e.printStackTrace();
-      throw e;
-    } finally {
-      if (yarnCluster != null) {
-        yarnCluster.stop();
-        yarnCluster = null;
-      }
-    }
-  }
-
-  @Test (timeout = 120000)
-  public void testContainerManagerWithEpoch() throws Exception {
-    try {
-      yarnCluster = new MiniYARNCluster(TestContainerManagerSecurity.class
-          .getName(), 1, 1, 1);
-      yarnCluster.init(conf);
-      yarnCluster.start();
-
-      // Testing for container token tampering
+      // Testing for container token tampering with epoch
       testContainerTokenWithEpoch(conf);
 
-    } finally {
-      if (yarnCluster != null) {
-        yarnCluster.stop();
-        yarnCluster = null;
-      }
-    }
   }
-  
+
   private void testNMTokens(Configuration conf) throws Exception {
     NMTokenSecretManagerInRM nmTokenSecretManagerRM =
         yarnCluster.getResourceManager().getRMContext()

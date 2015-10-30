@@ -82,8 +82,9 @@ public class StandbyState extends HAState {
         (op == OperationCategory.READ && context.allowStaleReads())) {
       return;
     }
+    String faq = ". Visit https://s.apache.org/sbnn-error";
     String msg = "Operation category " + op + " is not supported in state "
-        + context.getState();
+        + context.getState() + faq;
     throw new StandbyException(msg);
   }
 

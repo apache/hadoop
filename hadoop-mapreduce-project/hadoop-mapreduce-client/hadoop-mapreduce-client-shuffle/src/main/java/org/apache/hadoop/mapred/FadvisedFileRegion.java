@@ -30,6 +30,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.ReadaheadPool;
 import org.apache.hadoop.io.ReadaheadPool.ReadaheadRequest;
 import org.apache.hadoop.io.nativeio.NativeIO;
+
+import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_DONTNEED;
+
 import org.jboss.netty.channel.DefaultFileRegion;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -155,8 +158,7 @@ public class FadvisedFileRegion extends DefaultFileRegion {
     if (manageOsCache && getCount() > 0) {
       try {
         NativeIO.POSIX.getCacheManipulator().posixFadviseIfPossible(identifier,
-           fd, getPosition(), getCount(),
-           NativeIO.POSIX.POSIX_FADV_DONTNEED);
+            fd, getPosition(), getCount(), POSIX_FADV_DONTNEED);
       } catch (Throwable t) {
         LOG.warn("Failed to manage OS cache for " + identifier, t);
       }

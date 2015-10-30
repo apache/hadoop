@@ -223,6 +223,8 @@ public class TestFail {
                 new TaskAttemptEvent(event.getTaskAttemptID(),
                     TaskAttemptEventType.TA_CONTAINER_CLEANED));
             break;
+          case CONTAINER_COMPLETED:
+            super.handle(event);
           }
         }
 

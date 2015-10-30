@@ -997,6 +997,15 @@ public class TestMRJobs {
         throws IOException, InterruptedException {
       super.setup(context);
       final Configuration conf = context.getConfiguration();
+      // check if the job classloader is enabled and verify the TCCL
+      if (conf.getBoolean(MRJobConfig.MAPREDUCE_JOB_CLASSLOADER, false)) {
+        ClassLoader tccl = Thread.currentThread().getContextClassLoader();
+        if (!(tccl instanceof ApplicationClassLoader)) {
+          throw new IOException("TCCL expected: " +
+              ApplicationClassLoader.class.getName() + ", actual: " +
+              tccl.getClass().getName());
+        }
+      }
       final String ioSortMb = conf.get(MRJobConfig.IO_SORT_MB);
       if (!TEST_IO_SORT_MB.equals(ioSortMb)) {
         throw new IOException("io.sort.mb expected: " + TEST_IO_SORT_MB

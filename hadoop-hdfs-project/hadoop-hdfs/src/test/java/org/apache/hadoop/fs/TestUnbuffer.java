@@ -20,12 +20,11 @@ package org.apache.hadoop.fs;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.PeerCache;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -42,17 +41,17 @@ public class TestUnbuffer {
     Configuration conf = new Configuration();
     // Set a new ClientContext.  This way, we will have our own PeerCache,
     // rather than sharing one with other unit tests.
-    conf.set(DFSConfigKeys.DFS_CLIENT_CONTEXT,
+    conf.set(HdfsClientConfigKeys.DFS_CLIENT_CONTEXT,
         "testUnbufferClosesSocketsContext");
 
     // Disable short-circuit reads.  With short-circuit, we wouldn't hold open a
     // TCP socket.
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, false);
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, false);
 
     // Set a really long socket timeout to avoid test timing issues.
-    conf.setLong(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY,
+    conf.setLong(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY,
         100000000L);
-    conf.setLong(DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY,
+    conf.setLong(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY,
         100000000L);
 
     MiniDFSCluster cluster = null;
@@ -100,7 +99,7 @@ public class TestUnbuffer {
   public void testOpenManyFilesViaTcp() throws Exception {
     final int NUM_OPENS = 500;
     Configuration conf = new Configuration();
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, false);
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, false);
     MiniDFSCluster cluster = null;
     FSDataInputStream[] streams = new FSDataInputStream[NUM_OPENS];
     try {

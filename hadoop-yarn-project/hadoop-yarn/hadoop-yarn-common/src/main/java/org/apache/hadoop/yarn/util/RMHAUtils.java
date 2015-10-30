@@ -28,6 +28,7 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.yarn.client.RMHAServiceTarget;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 @Private
@@ -71,23 +72,29 @@ public class RMHAUtils {
 
   public static List<String> getRMHAWebappAddresses(
       final YarnConfiguration conf) {
+    String prefix;
+    String defaultPort;
+    if (YarnConfiguration.useHttps(conf)) {
+      prefix = YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS;
+      defaultPort = ":" + YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_PORT;
+    } else {
+      prefix =YarnConfiguration.RM_WEBAPP_ADDRESS;
+      defaultPort = ":" + YarnConfiguration.DEFAULT_RM_WEBAPP_PORT;
+    }
     Collection<String> rmIds =
         conf.getStringCollection(YarnConfiguration.RM_HA_IDS);
     List<String> addrs = new ArrayList<String>();
-    if (YarnConfiguration.useHttps(conf)) {
-      for (String id : rmIds) {
-        String addr = conf.get(
-            YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS + "." + id);
-        if (addr != null) {
-          addrs.add(addr);
+    for (String id : rmIds) {
+      String addr = conf.get(HAUtil.addSuffix(prefix, id));
+      if (addr == null) {
+        String hostname =
+            conf.get(HAUtil.addSuffix(YarnConfiguration.RM_HOSTNAME, id));
+        if (hostname != null) {
+          addr = hostname + defaultPort;
         }
       }
-    } else {
-      for (String id : rmIds) {
-        String addr = conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS + "." + id);
-        if (addr != null) {
-          addrs.add(addr);
-        }
+      if (addr != null) {
+        addrs.add(addr);
       }
     }
     return addrs;

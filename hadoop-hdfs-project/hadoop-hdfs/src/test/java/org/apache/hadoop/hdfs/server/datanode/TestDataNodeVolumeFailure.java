@@ -34,36 +34,37 @@ import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.BlockReaderFactory;
 import org.apache.hadoop.hdfs.ClientContext;
-import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.RemotePeerFactory;
+import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.hdfs.net.Peer;
-import org.apache.hadoop.hdfs.net.TcpPeerServer;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
@@ -207,8 +208,12 @@ public class TestDataNodeVolumeFailure {
    * after failure.
    */
   @Test(timeout=150000)
-  public void testFailedVolumeBeingRemovedFromDataNode()
+    public void testFailedVolumeBeingRemovedFromDataNode()
       throws InterruptedException, IOException, TimeoutException {
+    // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
+    // volume failures which is currently not supported on Windows.
+    assumeTrue(!Path.WINDOWS);
+
     Path file1 = new Path("/test1");
     DFSTestUtil.createFile(fs, file1, 1024, (short) 2, 1L);
     DFSTestUtil.waitReplication(fs, file1, (short) 2);
@@ -216,12 +221,7 @@ public class TestDataNodeVolumeFailure {
     File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
     DataNodeTestUtils.injectDataDirFailure(dn0Vol1);
     DataNode dn0 = cluster.getDataNodes().get(0);
-    long lastDiskErrorCheck = dn0.getLastDiskErrorCheck();
-    dn0.checkDiskErrorAsync();
-    // Wait checkDiskError thread finish to discover volume failure.
-    while (dn0.getLastDiskErrorCheck() == lastDiskErrorCheck) {
-      Thread.sleep(100);
-    }
+    checkDiskErrorSync(dn0);
 
     // Verify dn0Vol1 has been completely removed from DN0.
     // 1. dn0Vol1 is removed from DataStorage.
@@ -245,9 +245,11 @@ public class TestDataNodeVolumeFailure {
 
     // 2. dn0Vol1 is removed from FsDataset
     FsDatasetSpi<? extends FsVolumeSpi> data = dn0.getFSDataset();
-    for (FsVolumeSpi volume : data.getVolumes()) {
-      assertNotEquals(new File(volume.getBasePath()).getAbsoluteFile(),
-          dn0Vol1.getAbsoluteFile());
+    try (FsDatasetSpi.FsVolumeReferences vols = data.getFsVolumeReferences()) {
+      for (FsVolumeSpi volume : vols) {
+        assertNotEquals(new File(volume.getBasePath()).getAbsoluteFile(),
+            dn0Vol1.getAbsoluteFile());
+      }
     }
 
     // 3. all blocks on dn0Vol1 have been removed.
@@ -265,14 +267,109 @@ public class TestDataNodeVolumeFailure {
     assertFalse(dataDirStrs[0].contains(dn0Vol1.getAbsolutePath()));
   }
 
+  private static void checkDiskErrorSync(DataNode dn)
+      throws InterruptedException {
+    final long lastDiskErrorCheck = dn.getLastDiskErrorCheck();
+    dn.checkDiskErrorAsync();
+    // Wait 10 seconds for checkDiskError thread to finish and discover volume
+    // failures.
+    int count = 100;
+    while (count > 0 && dn.getLastDiskErrorCheck() == lastDiskErrorCheck) {
+      Thread.sleep(100);
+      count--;
+    }
+    assertTrue("Disk checking thread does not finish in 10 seconds",
+        count > 0);
+  }
+
+  /**
+   * Test DataNode stops when the number of failed volumes exceeds
+   * dfs.datanode.failed.volumes.tolerated .
+   */
+  @Test(timeout=10000)
+  public void testDataNodeShutdownAfterNumFailedVolumeExceedsTolerated()
+      throws InterruptedException, IOException {
+    // make both data directories to fail on dn0
+    final File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
+    final File dn0Vol2 = new File(dataDir, "data" + (2 * 0 + 2));
+    DataNodeTestUtils.injectDataDirFailure(dn0Vol1, dn0Vol2);
+    DataNode dn0 = cluster.getDataNodes().get(0);
+    checkDiskErrorSync(dn0);
+
+    // DN0 should stop after the number of failure disks exceed tolerated
+    // value (1).
+    assertFalse(dn0.shouldRun());
+  }
+
+  /**
+   * Test that DN does not shutdown, as long as failure volumes being hot swapped.
+   */
+  @Test
+  public void testVolumeFailureRecoveredByHotSwappingVolume()
+      throws InterruptedException, ReconfigurationException, IOException {
+    final File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
+    final File dn0Vol2 = new File(dataDir, "data" + (2 * 0 + 2));
+    final DataNode dn0 = cluster.getDataNodes().get(0);
+    final String oldDataDirs = dn0.getConf().get(
+        DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
+
+    // Fail dn0Vol1 first.
+    DataNodeTestUtils.injectDataDirFailure(dn0Vol1);
+    checkDiskErrorSync(dn0);
+
+    // Hot swap out the failure volume.
+    String dataDirs = dn0Vol2.getPath();
+    dn0.reconfigurePropertyImpl(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
+        dataDirs);
+
+    // Fix failure volume dn0Vol1 and remount it back.
+    DataNodeTestUtils.restoreDataDirFromFailure(dn0Vol1);
+    dn0.reconfigurePropertyImpl(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
+        oldDataDirs);
+
+    // Fail dn0Vol2. Now since dn0Vol1 has been fixed, DN0 has sufficient
+    // resources, thus it should keep running.
+    DataNodeTestUtils.injectDataDirFailure(dn0Vol2);
+    checkDiskErrorSync(dn0);
+    assertTrue(dn0.shouldRun());
+  }
+
+  /**
+   * Test changing the number of volumes does not impact the disk failure
+   * tolerance.
+   */
+  @Test
+  public void testTolerateVolumeFailuresAfterAddingMoreVolumes()
+      throws InterruptedException, ReconfigurationException, IOException {
+    final File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
+    final File dn0Vol2 = new File(dataDir, "data" + (2 * 0 + 2));
+    final File dn0VolNew = new File(dataDir, "data_new");
+    final DataNode dn0 = cluster.getDataNodes().get(0);
+    final String oldDataDirs = dn0.getConf().get(
+        DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
+
+    // Add a new volume to DN0
+    dn0.reconfigurePropertyImpl(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
+        oldDataDirs + "," + dn0VolNew.getAbsolutePath());
+
+    // Fail dn0Vol1 first and hot swap it.
+    DataNodeTestUtils.injectDataDirFailure(dn0Vol1);
+    checkDiskErrorSync(dn0);
+    assertTrue(dn0.shouldRun());
+
+    // Fail dn0Vol2, now dn0 should stop, because we only tolerate 1 disk failure.
+    DataNodeTestUtils.injectDataDirFailure(dn0Vol2);
+    checkDiskErrorSync(dn0);
+    assertFalse(dn0.shouldRun());
+  }
+
   /**
    * Test that there are under replication blocks after vol failures
    */
   @Test
   public void testUnderReplicationAfterVolFailure() throws Exception {
-    // This test relies on denying access to data volumes to simulate data volume
-    // failure.  This doesn't work on Windows, because an owner of an object
-    // always has the ability to read and change permissions on the object.
+    // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
+    // volume failures which is currently not supported on Windows.
     assumeTrue(!Path.WINDOWS);
 
     // Bring up one more datanode
@@ -405,7 +502,7 @@ public class TestDataNodeVolumeFailure {
    
     targetAddr = NetUtils.createSocketAddr(datanode.getXferAddr());
 
-    BlockReader blockReader = new BlockReaderFactory(new DFSClient.Conf(conf)).
+    BlockReader blockReader = new BlockReaderFactory(new DfsClientConf(conf)).
       setInetSocketAddress(targetAddr).
       setBlock(block).
       setFileName(BlockReaderFactory.getFileName(targetAddr,
@@ -419,6 +516,7 @@ public class TestDataNodeVolumeFailure {
       setCachingStrategy(CachingStrategy.newDefaultStrategy()).
       setClientCacheContext(ClientContext.getFromConf(conf)).
       setConfiguration(conf).
+      setTracer(FsTracer.get(conf)).
       setRemotePeerFactory(new RemotePeerFactory() {
         @Override
         public Peer newConnectedPeer(InetSocketAddress addr,
@@ -427,9 +525,9 @@ public class TestDataNodeVolumeFailure {
           Peer peer = null;
           Socket sock = NetUtils.getDefaultSocketFactory(conf).createSocket();
           try {
-            sock.connect(addr, HdfsServerConstants.READ_TIMEOUT);
-            sock.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
-            peer = TcpPeerServer.peerFromSocket(sock);
+            sock.connect(addr, HdfsConstants.READ_TIMEOUT);
+            sock.setSoTimeout(HdfsConstants.READ_TIMEOUT);
+            peer = DFSUtilClient.peerFromSocket(sock);
           } finally {
             if (peer == null) {
               IOUtils.closeSocket(sock);

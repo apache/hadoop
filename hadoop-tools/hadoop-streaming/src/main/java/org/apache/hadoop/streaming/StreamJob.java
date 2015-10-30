@@ -617,7 +617,10 @@ public class StreamJob implements Tool {
         "/path/my-hadoop-streaming.jar");
     System.out.println("For more details about jobconf parameters see:");
     System.out.println("  http://wiki.apache.org/hadoop/JobConfFile");
-    System.out.println("To set an environement variable in a streaming " +
+    System.out.println("Truncate the values of the job configuration copied" +
+        "to the environment at the given length:");
+    System.out.println("   -D stream.jobconf.truncate.limit=-1");
+    System.out.println("To set an environment variable in a streaming " +
         "command:");
     System.out.println("   -cmdenv EXAMPLE_DIR=/home/example/dictionaries/");
     System.out.println();

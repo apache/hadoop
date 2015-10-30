@@ -76,7 +76,7 @@ import org.mockito.Mockito;
  *     @AfterClass    public static void ClusterShutdownAtEnd()
  * </p>
  */
-public class ViewFsBaseTest {
+abstract public class ViewFsBaseTest {
   FileContext fcView; // the view file system - the mounts are here
   FileContext fcTarget; // the target file system - the mount will point here
   Path targetTestRoot;
@@ -776,5 +776,26 @@ public class ViewFsBaseTest {
   @Test(expected=AccessControlException.class)
   public void testInternalRemoveXAttr() throws IOException {
     fcView.removeXAttr(new Path("/internalDir"), "xattrName");
+  }
+
+  @Test(expected = AccessControlException.class)
+  public void testInternalCreateSnapshot1() throws IOException {
+    fcView.createSnapshot(new Path("/internalDir"));
+  }
+
+  @Test(expected = AccessControlException.class)
+  public void testInternalCreateSnapshot2() throws IOException {
+    fcView.createSnapshot(new Path("/internalDir"), "snap1");
+  }
+
+  @Test(expected = AccessControlException.class)
+  public void testInternalRenameSnapshot() throws IOException {
+    fcView.renameSnapshot(new Path("/internalDir"), "snapOldName",
+        "snapNewName");
+  }
+
+  @Test(expected = AccessControlException.class)
+  public void testInternalDeleteSnapshot() throws IOException {
+    fcView.deleteSnapshot(new Path("/internalDir"), "snap1");
   }
 }

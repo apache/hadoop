@@ -68,30 +68,30 @@ public class TaskFinishedEvent implements HistoryEvent {
   public Object getDatum() {
     if (datum == null) {
       datum = new TaskFinished();
-      datum.taskid = new Utf8(taskid.toString());
+      datum.setTaskid(new Utf8(taskid.toString()));
       if(successfulAttemptId != null)
       {
-        datum.successfulAttemptId = new Utf8(successfulAttemptId.toString());
+        datum.setSuccessfulAttemptId(new Utf8(successfulAttemptId.toString()));
       }
-      datum.finishTime = finishTime;
-      datum.counters = EventWriter.toAvro(counters);
-      datum.taskType = new Utf8(taskType.name());
-      datum.status = new Utf8(status);
+      datum.setFinishTime(finishTime);
+      datum.setCounters(EventWriter.toAvro(counters));
+      datum.setTaskType(new Utf8(taskType.name()));
+      datum.setStatus(new Utf8(status));
     }
     return datum;
   }
 
   public void setDatum(Object oDatum) {
     this.datum = (TaskFinished)oDatum;
-    this.taskid = TaskID.forName(datum.taskid.toString());
-    if (datum.successfulAttemptId != null) {
+    this.taskid = TaskID.forName(datum.getTaskid().toString());
+    if (datum.getSuccessfulAttemptId() != null) {
       this.successfulAttemptId = TaskAttemptID
-          .forName(datum.successfulAttemptId.toString());
+          .forName(datum.getSuccessfulAttemptId().toString());
     }
-    this.finishTime = datum.finishTime;
-    this.taskType = TaskType.valueOf(datum.taskType.toString());
-    this.status = datum.status.toString();
-    this.counters = EventReader.fromAvro(datum.counters);
+    this.finishTime = datum.getFinishTime();
+    this.taskType = TaskType.valueOf(datum.getTaskType().toString());
+    this.status = datum.getStatus().toString();
+    this.counters = EventReader.fromAvro(datum.getCounters());
   }
 
   /** Get task id */

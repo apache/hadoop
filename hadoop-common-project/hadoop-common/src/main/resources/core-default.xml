@@ -39,15 +39,6 @@
 </property>
 
 <property>
-  <name>io.native.lib.available</name>
-  <value>true</value>
-  <description>Controls whether to use native libraries for bz2 and zlib
-    compression codecs or not. The property does not control any other native
-    libraries.
-  </description>
-</property>
-
-<property>
   <name>hadoop.http.filter.initializers</name>
   <value>org.apache.hadoop.http.lib.StaticUserWebFilter</value>
   <description>A comma separated list of class names. Each class in the list 
@@ -94,6 +85,31 @@
     implementation, ShellBasedUnixGroupsMapping, is used.  This implementation 
     shells out to the Linux/Unix environment with the 
     <code>bash -c groups</code> command to resolve a list of groups for a user.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.dns.interface</name>
+  <description>
+    The name of the Network Interface from which the service should determine
+    its host name for Kerberos login. e.g. eth2. In a multi-homed environment,
+    the setting can be used to affect the _HOST subsitution in the service
+    Kerberos principal. If this configuration value is not set, the service
+    will use its default hostname as returned by
+    InetAddress.getLocalHost().getCanonicalHostName().
+
+    Most clusters will not require this setting.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.dns.nameserver</name>
+  <description>
+    The host name or IP address of the name server (DNS) which a service Node
+    should use to determine its own host name for Kerberos Login. Requires
+    hadoop.security.dns.interface.
+
+    Most clusters will not require this setting.
   </description>
 </property>
 
@@ -331,6 +347,24 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
+  <name>hadoop.security.group.mapping.ldap.posix.attr.uid.name</name>
+  <value>uidNumber</value>
+  <description>
+    The attribute of posixAccount to use when groups for membership.
+    Mostly useful for schemas wherein groups have memberUids that use an
+    attribute other than uidNumber.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.posix.attr.gid.name</name>
+  <value>gidNumber</value>
+  <description>
+    The attribute of posixAccount indicating the group id.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.group.mapping.ldap.directory.search.timeout</name>
   <value>10000</value>
   <description>
@@ -475,7 +509,7 @@ for ldap providers in the same way as above does.
 
 <property>
   <name>io.serializations</name>
-  <value>org.apache.hadoop.io.serializer.WritableSerialization,org.apache.hadoop.io.serializer.avro.AvroSpecificSerialization,org.apache.hadoop.io.serializer.avro.AvroReflectSerialization</value>
+  <value>org.apache.hadoop.io.serializer.WritableSerialization, org.apache.hadoop.io.serializer.avro.AvroSpecificSerialization, org.apache.hadoop.io.serializer.avro.AvroReflectSerialization</value>
   <description>A list of serialization classes that can be used for
   obtaining serializers and deserializers.</description>
 </property>
@@ -556,6 +590,16 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
+  <name>fs.protected.directories</name>
+  <value></value>
+  <description>A comma-separated list of directories which cannot
+    be deleted even by the superuser unless they are empty. This
+    setting can be used to guard important system directories
+    against accidental deletion due to administrator error.
+  </description>
+</property>
+
+<property>
   <name>fs.AbstractFileSystem.file.impl</name>
   <value>org.apache.hadoop.fs.local.LocalFs</value>
   <description>The AbstractFileSystem for file: uris.</description>
@@ -584,6 +628,18 @@ for ldap providers in the same way as above does.
   <name>fs.AbstractFileSystem.ftp.impl</name>
   <value>org.apache.hadoop.fs.ftp.FtpFs</value>
   <description>The FileSystem for Ftp: uris.</description>
+</property>
+
+<property>
+  <name>fs.AbstractFileSystem.webhdfs.impl</name>
+  <value>org.apache.hadoop.fs.WebHdfs</value>
+  <description>The FileSystem for webhdfs: uris.</description>
+</property>
+
+<property>
+  <name>fs.AbstractFileSystem.swebhdfs.impl</name>
+  <value>org.apache.hadoop.fs.SWebHdfs</value>
+  <description>The FileSystem for swebhdfs: uris.</description>
 </property>
 
 <property>
@@ -762,7 +818,7 @@ for ldap providers in the same way as above does.
 
 <property>
   <name>fs.s3a.attempts.maximum</name>
-  <value>10</value>
+  <value>20</value>
   <description>How many times we should retry commands on transient errors.</description>
 </property>
 
@@ -774,7 +830,7 @@ for ldap providers in the same way as above does.
 
 <property>
   <name>fs.s3a.connection.timeout</name>
-  <value>50000</value>
+  <value>200000</value>
   <description>Socket connection timeout in milliseconds.</description>
 </property>
 
@@ -842,6 +898,12 @@ for ldap providers in the same way as above does.
   <name>fs.s3a.multipart.purge.age</name>
   <value>86400</value>
   <description>Minimum age in seconds of multipart uploads to purge</description>
+</property>
+
+<property>
+  <name>fs.s3a.signing-algorithm</name>
+  <description>Override the default signing algorithm so legacy
+    implementations can still be used</description>
 </property>
 
 <property>
@@ -1003,6 +1065,15 @@ for ldap providers in the same way as above does.
   <description>Indicates the length of the listen queue for servers accepting
                client connections.
   </description>
+</property>
+
+<property>
+    <name>ipc.server.log.slow.rpc</name>
+    <value>false</value>
+    <description>This setting is useful to troubleshoot performance issues for
+     various services. If this value is set to true then we log requests that
+     fall into 99th percentile as well as increment RpcSlowCalls counter.
+    </description>
 </property>
 
 <!-- Proxy Configuration -->
@@ -1331,6 +1402,42 @@ for ldap providers in the same way as above does.
     Location of the keytab file with the credentials for the principal.
     Referring to the same keytab file Oozie uses for its Kerberos credentials for Hadoop.
   </description>
+</property>
+
+<!-- HTTP CORS support -->
+<property>
+  <description>Enable/disable the cross-origin (CORS) filter.</description>
+  <name>hadoop.http.cross-origin.enabled</name>
+  <value>false</value>
+</property>
+
+<property>
+  <description>Comma separated list of origins that are allowed for web
+    services needing cross-origin (CORS) support. Wildcards (*) and patterns
+    allowed</description>
+  <name>hadoop.http.cross-origin.allowed-origins</name>
+  <value>*</value>
+</property>
+
+<property>
+  <description>Comma separated list of methods that are allowed for web
+    services needing cross-origin (CORS) support.</description>
+  <name>hadoop.http.cross-origin.allowed-methods</name>
+  <value>GET,POST,HEAD</value>
+</property>
+
+<property>
+  <description>Comma separated list of headers that are allowed for web
+    services needing cross-origin (CORS) support.</description>
+  <name>hadoop.http.cross-origin.allowed-headers</name>
+  <value>X-Requested-With,Content-Type,Accept,Origin</value>
+</property>
+
+<property>
+  <description>The number of seconds a pre-flighted request can be cached
+    for web services needing cross-origin (CORS) support.</description>
+  <name>hadoop.http.cross-origin.max-age</name>
+  <value>1800</value>
 </property>
 
 <property>
@@ -1664,7 +1771,7 @@ for ldap providers in the same way as above does.
 
 <property>
   <name>hadoop.security.crypto.codec.classes.aes.ctr.nopadding</name>
-  <value>org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec,org.apache.hadoop.crypto.JceAesCtrCryptoCodec</value>
+  <value>org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec, org.apache.hadoop.crypto.JceAesCtrCryptoCodec</value>
   <description>
     Comma-separated list of crypto codec implementations for AES/CTR/NoPadding. 
     The first implementation will be used if available, others are fallbacks.
@@ -1762,18 +1869,6 @@ for ldap providers in the same way as above does.
   <description>
     Cache expiry time for a Key, after which the cache Queue for this
     key will be dropped. Default = 12hrs
-  </description>
-</property>
-
-<property>
-  <name>hadoop.htrace.spanreceiver.classes</name>
-  <value></value>
-  <description>
-    A comma separated list of the fully-qualified class name of classes 
-    implementing SpanReceiver. The tracing system works by collecting 
-    information in structs called 'Spans'. It is up to you to choose 
-    how you want to receive this information by implementing the 
-    SpanReceiver interface.
   </description>
 </property>
 
@@ -1920,4 +2015,38 @@ for ldap providers in the same way as above does.
     <value>Client</value>
   </property>
 
+  <property>
+    <description>
+      Enable hdfs shell commands to display warnings if (fs.defaultFS) property
+      is not set.
+    </description>
+    <name>hadoop.shell.missing.defaultFs.warning</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <name>hadoop.shell.safely.delete.limit.num.files</name>
+    <value>100</value>
+    <description>Used by -safely option of hadoop fs shell -rm command to avoid
+      accidental deletion of large directories. When enabled, the -rm command
+      requires confirmation if the number of files to be deleted is greater than
+      this limit.  The default limit is 100 files. The warning is disabled if
+      the limit is 0 or the -safely is not specified in -rm command.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.client.htrace.sampler.classes</name>
+    <value></value>
+    <description>The class names of the HTrace Samplers to use for Hadoop
+      filesystem clients.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.htrace.span.receiver.classes</name>
+    <value></value>
+    <description>The class names of the Span Receivers to use for Hadoop.
+    </description>
+  </property>
 </configuration>

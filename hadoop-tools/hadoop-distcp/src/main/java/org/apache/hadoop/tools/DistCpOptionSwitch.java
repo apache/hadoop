@@ -83,7 +83,14 @@ public enum DistCpOptionSwitch {
   SSL_CONF(DistCpConstants.CONF_LABEL_SSL_CONF,
       new Option("mapredSslConf", true, "Configuration for ssl config file" +
           ", to use with hftps://")),
-
+  /**
+   * Number of threads for building source file listing (before map-reduce
+   * phase, max one listStatus per thread at a time).
+   */
+  NUM_LISTSTATUS_THREADS(DistCpConstants.CONF_LABEL_LISTSTATUS_THREADS,
+      new Option("numListstatusThreads", true, "Number of threads to " +
+          "use for building file listing (max " +
+          DistCpOptions.maxNumListstatusThreads + ").")),
   /**
    * Max number of maps to use during copy. DistCp will split work
    * as equally as possible among these maps
@@ -167,10 +174,20 @@ public enum DistCpOptionSwitch {
               "copied to <= n bytes")),
 
   /**
-   * Specify bandwidth per map in MB
+   * Specify bandwidth per map in MB, accepts bandwidth as a fraction
    */
   BANDWIDTH(DistCpConstants.CONF_LABEL_BANDWIDTH_MB,
-      new Option("bandwidth", true, "Specify bandwidth per map in MB"));
+      new Option("bandwidth", true, "Specify bandwidth per map in MB,"
+          + " accepts bandwidth as a fraction.")),
+
+  /**
+   * Path containing a list of strings, which when found in the path of
+   * a file to be copied excludes that file from the copy job.
+   */
+  FILTERS(DistCpConstants.CONF_LABEL_FILTERS_FILE,
+      new Option("filters", true, "The path to a file containing a list of"
+          + " strings for paths to be excluded from the copy."));
+
 
   public static final String PRESERVE_STATUS_DEFAULT = "-prbugpct";
   private final String confLabel;

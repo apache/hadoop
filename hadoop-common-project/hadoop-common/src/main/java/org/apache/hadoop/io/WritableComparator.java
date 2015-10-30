@@ -30,7 +30,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 /** A Comparator for {@link WritableComparable}s.
  *
- * <p>This base implemenation uses the natural ordering.  To define alternate
+ * <p>This base implementation uses the natural ordering.  To define alternate
  * orderings, override {@link #compare(WritableComparable,WritableComparable)}.
  *
  * <p>One may optimize compare-intensive operations by overriding

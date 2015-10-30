@@ -286,4 +286,28 @@ public class ApplicationAttemptReportPBImpl extends ApplicationAttemptReport {
       builder.clearAmContainerId();
     this.amContainerId = amContainerId;
   }
+
+  @Override
+  public void setStartTime(long startTime) {
+    maybeInitBuilder();
+    builder.setStartTime(startTime);
+  }
+
+  @Override
+  public void setFinishTime(long finishTime) {
+    maybeInitBuilder();
+    builder.setFinishTime(finishTime);
+  }
+
+  @Override
+  public long getStartTime() {
+    ApplicationAttemptReportProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getStartTime();
+  }
+
+  @Override
+  public long getFinishTime() {
+    ApplicationAttemptReportProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getFinishTime();
+  }
 }

@@ -90,6 +90,8 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String IPC_CALLQUEUE_NAMESPACE = "ipc";
   public static final String IPC_CALLQUEUE_IMPL_KEY = "callqueue.impl";
   public static final String IPC_CALLQUEUE_IDENTITY_PROVIDER_KEY = "identity-provider.impl";
+  public static final String IPC_BACKOFF_ENABLE = "backoff.enable";
+  public static final boolean IPC_BACKOFF_ENABLE_DEFAULT = false;
 
   /** This is for specifying the implementation for the mappings from
    * hostnames to the racks they belong to
@@ -133,6 +135,21 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /** Default value for IO_COMPRESSION_CODEC_USELZ4HC_KEY */
   public static final boolean IO_COMPRESSION_CODEC_LZ4_USELZ4HC_DEFAULT =
       false;
+
+  /**
+   * Erasure Coding configuration family
+   */
+
+  /** Supported erasure codec classes */
+  public static final String IO_ERASURECODE_CODECS_KEY = "io.erasurecode.codecs";
+
+  /** Raw coder factory for the RS codec. */
+  public static final String IO_ERASURECODE_CODEC_RS_RAWCODER_KEY =
+      "io.erasurecode.codec.rs.rawcoder";
+
+  /** Raw coder factory for the XOR codec. */
+  public static final String IO_ERASURECODE_CODEC_XOR_RAWCODER_KEY =
+      "io.erasurecode.codec.xor.rawcoder";
 
   /**
    * Service Authorization
@@ -293,4 +310,7 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String NFS_EXPORTS_ALLOWED_HOSTS_SEPARATOR = ";";
   public static final String NFS_EXPORTS_ALLOWED_HOSTS_KEY = "nfs.exports.allowed.hosts";
   public static final String NFS_EXPORTS_ALLOWED_HOSTS_KEY_DEFAULT = "* rw";
+
+  // HDFS client HTrace configuration.
+  public static final String  FS_CLIENT_HTRACE_PREFIX = "fs.client.htrace.";
 }

@@ -31,7 +31,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/ioctl.h> /* for FIONREAD */
+
+/* For FIONREAD */
+#if defined(__sun)
+#include <sys/filio.h>
+#else
+#include <sys/ioctl.h>
+#endif
+
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -112,9 +119,9 @@ static jthrowable newSocketException(JNIEnv *env, int errnum,
  * to the heap if necessary.
  */
 struct flexibleBuffer {
-  int8_t *curBuf;
-  int8_t *allocBuf;
-  int8_t stackBuf[8196];
+  jbyte *curBuf;
+  jbyte *allocBuf;
+  jbyte stackBuf[8196];
 };
 
 static jthrowable flexBufInit(JNIEnv *env, struct flexibleBuffer *flexBuf, jint length)
@@ -153,7 +160,7 @@ static jthrowable setup(JNIEnv *env, int *ofd, jobject jpath, int doConnect)
         terror(ret));
     goto done;
   }
-  memset(&addr, 0, sizeof(&addr));
+  memset(&addr, 0, sizeof(addr));
   addr.sun_family = AF_UNIX;
   cpath = (*env)->GetStringUTFChars(env, jpath, NULL);
   if (!cpath) {
@@ -261,7 +268,7 @@ Java_org_apache_hadoop_net_unix_DomainSocket_validateSocketPathSecurity0(
 JNIEnv *env, jclass clazz, jobject jstr, jint skipComponents)
 {
   jint utfLength;
-  char path[PATH_MAX], check[PATH_MAX], *token, *rest;
+  char path[PATH_MAX], check[PATH_MAX], *token, *rest, *rest_free;
   struct stat st;
   int ret, mode, strlenPath;
   uid_t uid;
@@ -273,6 +280,7 @@ JNIEnv *env, jclass clazz, jobject jstr, jint skipComponents)
         "no longer than %zd UTF-8 bytes.", (sizeof(path)-1));
     goto done;
   }
+
   (*env)->GetStringUTFRegion(env, jstr, 0, utfLength, path);
   path [ utfLength ] = 0;
   jthr = (*env)->ExceptionOccurred(env);
@@ -297,7 +305,16 @@ JNIEnv *env, jclass clazz, jobject jstr, jint skipComponents)
   // last one.  We don't validate the last component, since it's not supposed to
   // be a directory.  (If it is a directory, we will fail to create the socket
   // later with EISDIR or similar.)
-  for (check[0] = '/', check[1] = '\0', rest = path, token = "";
+  rest=strdup(path);
+  if ( rest == NULL ){
+    ret = errno;
+    jthr = newIOException(env,"memory allocation failure trying to copy a path"
+        " with %d length. error code %d (%s). ", strlenPath, ret, terror(ret));
+    goto done;
+  };
+  rest_free=rest;
+
+  for (check[0] = '/', check[1] = '\0', token = "";
        token && rest && rest[0];
        token = strtok_r(rest, "/", &rest)) {
     if (strcmp(check, "/") != 0) {
@@ -315,36 +332,51 @@ JNIEnv *env, jclass clazz, jobject jstr, jint skipComponents)
     }
     if (stat(check, &st) < 0) {
       ret = errno;
-      jthr = newIOException(env, "failed to stat a path component: '%s'.  "
-          "error code %d (%s)", check, ret, terror(ret));
+      jthr = newIOException(env, "failed to stat a path component: "
+          "'%s' in '%s'. error code %d (%s). "
+          "Ensure that the path is configured correctly.",
+          check, path, ret, terror(ret));
       goto done;
     }
     mode = st.st_mode & 0777;
     if (mode & 0002) {
-      jthr = newIOException(env, "the path component: '%s' is "
-        "world-writable.  Its permissions are 0%03o.  Please fix "
-        "this or select a different socket path.", check, mode);
+      jthr = newIOException(env, "The path component: '%s' in '%s' has "
+         "permissions 0%03o uid %ld and gid %ld. "
+         "It is not protected because it "
+         "is world-writable. This might help: 'chmod o-w %s'. "
+         "For more information: "
+         "https://wiki.apache.org/hadoop/SocketPathSecurity",
+         check, path, mode, (long long)st.st_uid, (long long)st.st_gid, check);
       goto done;
     }
     if ((mode & 0020) && (st.st_gid != 0)) {
-      jthr = newIOException(env, "the path component: '%s' is "
-        "group-writable, and the group is not root.  Its permissions are "
-        "0%03o, and it is owned by gid %d.  Please fix this or "
-        "select a different socket path.", check, mode, st.st_gid);
+      jthr = newIOException(env, "The path component: '%s' in '%s' has "
+         "permissions 0%03o uid %ld and gid %ld. "
+         "It is not protected because it "
+         "is group-writable and not owned by root. "
+         "This might help: 'chmod g-w %s' or 'chown root %s'. "
+         "For more information: "
+         "https://wiki.apache.org/hadoop/SocketPathSecurity",
+         check, path, mode, (long long)st.st_uid, (long long)st.st_gid,
+         check, check);
       goto done;
     }
-    if ((mode & 0200) && (st.st_uid != 0) &&
-        (st.st_uid != uid)) {
-      jthr = newIOException(env, "the path component: '%s' is "
-        "owned by a user who is not root and not you.  Your effective user "
-        "id is %d; the path is owned by user id %d, and its permissions are "
-        "0%03o.  Please fix this or select a different socket path.",
-        check, uid, st.st_uid, mode);
-        goto done;
+    if ((mode & 0200) && (st.st_uid != 0) && (st.st_uid != uid)) {
+      jthr = newIOException(env, "The path component: '%s' in '%s' has "
+         "permissions 0%03o uid %ld and gid %ld. "
+         "It is not protected because it "
+         "is owned by a user who is not root "
+         "and not the effective user: '%ld'. "
+         "This might help: 'chown root %s' or 'chown %ld %s'. "
+         "For more information: "
+         "https://wiki.apache.org/hadoop/SocketPathSecurity",
+         check, path, mode, (long long)st.st_uid, (long long)st.st_gid,
+         (long long)uid, check, (long long)uid, check);
       goto done;
     }
   }
 done:
+  if ( rest_free ) free(rest_free);
   if (jthr) {
     (*env)->Throw(env, jthr);
   }
@@ -637,7 +669,7 @@ JNIEnv *env, jclass clazz, jint fd)
  * @return               NULL on success; or the unraised exception representing
  *                       the problem.
  */
-static jthrowable write_fully(JNIEnv *env, int fd, int8_t *buf, int amt)
+static jthrowable write_fully(JNIEnv *env, int fd, jbyte *buf, int amt)
 {
   int err, res;
 

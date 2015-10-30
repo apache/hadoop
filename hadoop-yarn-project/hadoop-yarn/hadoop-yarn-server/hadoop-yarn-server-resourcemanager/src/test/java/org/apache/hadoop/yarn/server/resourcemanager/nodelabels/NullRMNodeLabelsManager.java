@@ -40,7 +40,8 @@ public class NullRMNodeLabelsManager extends RMNodeLabelsManager {
     this.store = new NodeLabelsStore(this) {
 
       @Override
-      public void recover() throws IOException {
+      public void recover(boolean ignoreNodeToLabelsMappings)
+          throws IOException {
         // do nothing
       }
 
@@ -57,18 +58,13 @@ public class NullRMNodeLabelsManager extends RMNodeLabelsManager {
       }
 
       @Override
-      public void storeNewClusterNodeLabels(Set<String> label) throws IOException {
+      public void storeNewClusterNodeLabels(List<NodeLabel> label)
+          throws IOException {
         // do nothing
       }
 
       @Override
       public void close() throws IOException {
-        // do nothing
-      }
-
-      @Override
-      public void updateNodeLabels(List<NodeLabel> updatedNodeLabels)
-          throws IOException {
         // do nothing
       }
     };

@@ -66,6 +66,7 @@ public class TestResourceManager {
 
   @After
   public void tearDown() throws Exception {
+    resourceManager.stop();
   }
 
   private org.apache.hadoop.yarn.server.resourcemanager.NodeManager

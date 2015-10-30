@@ -25,7 +25,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * General-purpose, unchecked metrics exception.
+ * @deprecated Use {@link org.apache.hadoop.metrics2.MetricsException} instead.
  */
+@Deprecated
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class MetricsException extends RuntimeException {

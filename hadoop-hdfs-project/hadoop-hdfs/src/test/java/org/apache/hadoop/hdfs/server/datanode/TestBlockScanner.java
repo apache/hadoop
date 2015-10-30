@@ -82,7 +82,7 @@ public class TestBlockScanner {
     final DataNode datanode;
     final BlockScanner blockScanner;
     final FsDatasetSpi<? extends FsVolumeSpi> data;
-    final List<? extends FsVolumeSpi> volumes;
+    final FsDatasetSpi.FsVolumeReferences volumes;
 
     TestContext(Configuration conf, int numNameServices) throws Exception {
       this.numNameServices = numNameServices;
@@ -109,11 +109,12 @@ public class TestBlockScanner {
         dfs[i].mkdirs(new Path("/test"));
       }
       data = datanode.getFSDataset();
-      volumes = data.getVolumes();
+      volumes = data.getFsVolumeReferences();
     }
 
     @Override
     public void close() throws IOException {
+      volumes.close();
       if (cluster != null) {
         for (int i = 0; i < numNameServices; i++) {
           dfs[i].delete(new Path("/test"), true);
@@ -611,14 +612,8 @@ public class TestBlockScanner {
 
     // We scan 5 bytes per file (1 byte in file, 4 bytes of checksum)
     final int BYTES_SCANNED_PER_FILE = 5;
-    final int NUM_FILES[] = new int[] { 1, 5, 10 };
-    int TOTAL_FILES = 0;
-    for (int i = 0; i < NUM_FILES.length; i++) {
-      TOTAL_FILES += NUM_FILES[i];
-    }
-    ctx.createFiles(0, NUM_FILES[0], 1);
-    ctx.createFiles(0, NUM_FILES[1], 1);
-    ctx.createFiles(0, NUM_FILES[2], 1);
+    int TOTAL_FILES = 16;
+    ctx.createFiles(0, TOTAL_FILES, 1);
 
     // start scanning
     final TestScanResultHandler.Info info =
@@ -713,8 +708,7 @@ public class TestBlockScanner {
     ctx.createFiles(0, NUM_EXPECTED_BLOCKS, 1);
     final TestScanResultHandler.Info info =
         TestScanResultHandler.getInfo(ctx.volumes.get(0));
-    String storageID = ctx.datanode.getFSDataset().
-        getVolumes().get(0).getStorageID();
+    String storageID = ctx.volumes.get(0).getStorageID();
     synchronized (info) {
       info.sem = new Semaphore(4);
       info.shouldRun = true;

@@ -34,6 +34,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -621,7 +622,8 @@ public class ViewFs extends AbstractFileSystem {
 
   @Override
   public boolean isValidName(String src) {
-    // Prefix validated at mount time and rest of path validated by mount target.
+    // Prefix validated at mount time and rest of path validated by mount
+    // target.
     return true;
   }
 
@@ -714,8 +716,53 @@ public class ViewFs extends AbstractFileSystem {
         fsState.resolve(getUriPath(path), true);
     res.targetFileSystem.removeXAttr(res.remainingPath, name);
   }
-  
-  
+
+  @Override
+  public Path createSnapshot(Path path, String snapshotName)
+      throws IOException {
+    InodeTree.ResolveResult<AbstractFileSystem> res = fsState.resolve(
+        getUriPath(path), true);
+    return res.targetFileSystem.createSnapshot(res.remainingPath, snapshotName);
+  }
+
+  @Override
+  public void renameSnapshot(Path path, String snapshotOldName,
+      String snapshotNewName) throws IOException {
+    InodeTree.ResolveResult<AbstractFileSystem> res = fsState.resolve(
+        getUriPath(path), true);
+    res.targetFileSystem.renameSnapshot(res.remainingPath, snapshotOldName,
+        snapshotNewName);
+  }
+
+  @Override
+  public void deleteSnapshot(Path path, String snapshotName) throws IOException {
+    InodeTree.ResolveResult<AbstractFileSystem> res = fsState.resolve(
+        getUriPath(path), true);
+    res.targetFileSystem.deleteSnapshot(res.remainingPath, snapshotName);
+  }
+
+  @Override
+  public void setStoragePolicy(final Path path, final String policyName)
+      throws IOException {
+    InodeTree.ResolveResult<AbstractFileSystem> res =
+        fsState.resolve(getUriPath(path), true);
+    res.targetFileSystem.setStoragePolicy(res.remainingPath, policyName);
+  }
+
+  /**
+   * Retrieve the storage policy for a given file or directory.
+   *
+   * @param src file or directory path.
+   * @return storage policy for give file.
+   * @throws IOException
+   */
+  public BlockStoragePolicySpi getStoragePolicy(final Path src)
+      throws IOException {
+    InodeTree.ResolveResult<AbstractFileSystem> res =
+        fsState.resolve(getUriPath(src), true);
+    return res.targetFileSystem.getStoragePolicy(res.remainingPath);
+  }
+
   /*
    * An instance of this class represents an internal dir of the viewFs 
    * ie internal dir of the mount table.
@@ -1024,6 +1071,33 @@ public class ViewFs extends AbstractFileSystem {
     public void removeXAttr(Path path, String name) throws IOException {
       checkPathIsSlash(path);
       throw readOnlyMountTable("removeXAttr", path);
+    }
+
+    @Override
+    public Path createSnapshot(Path path, String snapshotName)
+        throws IOException {
+      checkPathIsSlash(path);
+      throw readOnlyMountTable("createSnapshot", path);
+    }
+
+    @Override
+    public void renameSnapshot(Path path, String snapshotOldName,
+        String snapshotNewName) throws IOException {
+      checkPathIsSlash(path);
+      throw readOnlyMountTable("renameSnapshot", path);
+    }
+
+    @Override
+    public void deleteSnapshot(Path path, String snapshotName)
+        throws IOException {
+      checkPathIsSlash(path);
+      throw readOnlyMountTable("deleteSnapshot", path);
+    }
+
+    @Override
+    public void setStoragePolicy(Path path, String policyName)
+        throws IOException {
+      throw readOnlyMountTable("setStoragePolicy", path);
     }
   }
 }

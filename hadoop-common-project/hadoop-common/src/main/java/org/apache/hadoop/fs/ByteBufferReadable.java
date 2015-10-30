@@ -19,11 +19,15 @@ package org.apache.hadoop.fs;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Implementers of this interface provide a read API that writes to a
  * ByteBuffer, not a byte[].
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface ByteBufferReadable {
   /**
    * Reads up to buf.remaining() bytes into buf. Callers should use

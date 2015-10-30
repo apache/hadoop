@@ -383,7 +383,7 @@
                       cd "${project.build.directory}/tomcat.exp"
                       gzip -cd ../../downloads/apache-tomcat-${tomcat.version}.tar.gz | tar xf -
                     </echo>
-                    <exec executable="sh" dir="${project.build.directory}"
+                    <exec executable="${shell-executable}" dir="${project.build.directory}"
                           failonerror="true">
                       <arg line="./tomcat-untar.sh"/>
                     </exec>
@@ -426,7 +426,7 @@
                       cd "${project.build.directory}"
                       tar cf - ${project.artifactId}-${project.version} | gzip > ${project.artifactId}-${project.version}.tar.gz
                     </echo>
-                    <exec executable="sh" dir="${project.build.directory}"
+                    <exec executable="${shell-executable}" dir="${project.build.directory}"
                           failonerror="true">
                       <arg line="./dist-maketar.sh"/>
                     </exec>

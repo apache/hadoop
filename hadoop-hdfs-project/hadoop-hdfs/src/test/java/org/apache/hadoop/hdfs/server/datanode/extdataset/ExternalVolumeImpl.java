@@ -74,11 +74,15 @@ public class ExternalVolumeImpl implements FsVolumeSpi {
   }
 
   @Override
-  public void reserveSpaceForRbw(long bytesToReserve) {
+  public void reserveSpaceForReplica(long bytesToReserve) {
   }
 
   @Override
   public void releaseReservedSpace(long bytesToRelease) {
+  }
+
+  @Override
+  public void releaseLockedMemory(long bytesToRelease) {
   }
 
   @Override

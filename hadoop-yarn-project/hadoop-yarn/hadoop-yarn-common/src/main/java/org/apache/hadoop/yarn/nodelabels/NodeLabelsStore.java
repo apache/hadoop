@@ -46,7 +46,7 @@ public abstract class NodeLabelsStore implements Closeable {
   /**
    * Store new labels
    */
-  public abstract void storeNewClusterNodeLabels(Set<String> label)
+  public abstract void storeNewClusterNodeLabels(List<NodeLabel> label)
       throws IOException;
 
   /**
@@ -54,17 +54,20 @@ public abstract class NodeLabelsStore implements Closeable {
    */
   public abstract void removeClusterNodeLabels(Collection<String> labels)
       throws IOException;
-  
+
   /**
-   * Update node labels
+   * Recover labels and node to labels mappings from store, but if
+   * ignoreNodeToLabelsMappings is true then node to labels mappings should not
+   * be recovered. In case of Distributed NodeLabels setup
+   * ignoreNodeToLabelsMappings will be set to true and recover will be invoked
+   * as RM will collect the node labels from NM through registration/HB
+   *
+   * @param ignoreNodeToLabelsMappings
+   * @throws IOException
+   * @throws YarnException
    */
-  public abstract void updateNodeLabels(
-      List<NodeLabel> updatedNodeLabels) throws IOException;
-  
-  /**
-   * Recover labels and node to labels mappings from store
-   */
-  public abstract void recover() throws IOException, YarnException;
+  public abstract void recover(boolean ignoreNodeToLabelsMappings)
+      throws IOException, YarnException;
   
   public void init(Configuration conf) throws Exception {}
   

@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -43,7 +44,8 @@ public class FairSharePolicy extends SchedulingPolicy {
   public static final String NAME = "fair";
   private static final DefaultResourceCalculator RESOURCE_CALCULATOR =
       new DefaultResourceCalculator();
-  private FairShareComparator comparator = new FairShareComparator();
+  private static final FairShareComparator COMPARATOR =
+          new FairShareComparator();
 
   @Override
   public String getName() {
@@ -111,17 +113,22 @@ public class FairSharePolicy extends SchedulingPolicy {
 
   @Override
   public Comparator<Schedulable> getComparator() {
-    return comparator;
+    return COMPARATOR;
+  }
+
+  @Override
+  public ResourceCalculator getResourceCalculator() {
+    return RESOURCE_CALCULATOR;
   }
 
   @Override
   public Resource getHeadroom(Resource queueFairShare,
-                              Resource queueUsage, Resource clusterAvailable) {
+                              Resource queueUsage, Resource maxAvailable) {
     int queueAvailableMemory = Math.max(
         queueFairShare.getMemory() - queueUsage.getMemory(), 0);
     Resource headroom = Resources.createResource(
-        Math.min(clusterAvailable.getMemory(), queueAvailableMemory),
-        clusterAvailable.getVirtualCores());
+        Math.min(maxAvailable.getMemory(), queueAvailableMemory),
+        maxAvailable.getVirtualCores());
     return headroom;
   }
 

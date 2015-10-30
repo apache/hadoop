@@ -56,54 +56,54 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceStability.Unstable
 public class NativeIO {
   public static class POSIX {
-    // Flags for open() call from bits/fcntl.h
-    public static final int O_RDONLY   =    00;
-    public static final int O_WRONLY   =    01;
-    public static final int O_RDWR     =    02;
-    public static final int O_CREAT    =  0100;
-    public static final int O_EXCL     =  0200;
-    public static final int O_NOCTTY   =  0400;
-    public static final int O_TRUNC    = 01000;
-    public static final int O_APPEND   = 02000;
-    public static final int O_NONBLOCK = 04000;
-    public static final int O_SYNC   =  010000;
-    public static final int O_ASYNC  =  020000;
-    public static final int O_FSYNC = O_SYNC;
-    public static final int O_NDELAY = O_NONBLOCK;
+    // Flags for open() call from bits/fcntl.h - Set by JNI
+    public static int O_RDONLY = -1;
+    public static int O_WRONLY = -1;
+    public static int O_RDWR = -1;
+    public static int O_CREAT = -1;
+    public static int O_EXCL = -1;
+    public static int O_NOCTTY = -1;
+    public static int O_TRUNC = -1;
+    public static int O_APPEND = -1;
+    public static int O_NONBLOCK = -1;
+    public static int O_SYNC = -1;
 
-    // Flags for posix_fadvise() from bits/fcntl.h
+    // Flags for posix_fadvise() from bits/fcntl.h - Set by JNI
     /* No further special treatment.  */
-    public static final int POSIX_FADV_NORMAL = 0;
+    public static int POSIX_FADV_NORMAL = -1;
     /* Expect random page references.  */
-    public static final int POSIX_FADV_RANDOM = 1;
+    public static int POSIX_FADV_RANDOM = -1;
     /* Expect sequential page references.  */
-    public static final int POSIX_FADV_SEQUENTIAL = 2;
+    public static int POSIX_FADV_SEQUENTIAL = -1;
     /* Will need these pages.  */
-    public static final int POSIX_FADV_WILLNEED = 3;
+    public static int POSIX_FADV_WILLNEED = -1;
     /* Don't need these pages.  */
-    public static final int POSIX_FADV_DONTNEED = 4;
+    public static int POSIX_FADV_DONTNEED = -1;
     /* Data will be accessed once.  */
-    public static final int POSIX_FADV_NOREUSE = 5;
+    public static int POSIX_FADV_NOREUSE = -1;
 
 
+    // Updated by JNI when supported by glibc.  Leave defaults in case kernel
+    // supports sync_file_range, but glibc does not.
     /* Wait upon writeout of all pages
        in the range before performing the
        write.  */
-    public static final int SYNC_FILE_RANGE_WAIT_BEFORE = 1;
+    public static int SYNC_FILE_RANGE_WAIT_BEFORE = 1;
     /* Initiate writeout of all those
        dirty pages in the range which are
        not presently under writeback.  */
-    public static final int SYNC_FILE_RANGE_WRITE = 2;
-
+    public static int SYNC_FILE_RANGE_WRITE = 2;
     /* Wait upon writeout of all pages in
        the range after performing the
        write.  */
-    public static final int SYNC_FILE_RANGE_WAIT_AFTER = 4;
+    public static int SYNC_FILE_RANGE_WAIT_AFTER = 4;
 
     private static final Log LOG = LogFactory.getLog(NativeIO.class);
 
+    // Set to true via JNI if possible
+    public static boolean fadvisePossible = false;
+
     private static boolean nativeLoaded = false;
-    private static boolean fadvisePossible = true;
     private static boolean syncFileRangePossible = true;
 
     static final String WORKAROUND_NON_THREADSAFE_CALLS_KEY =
@@ -265,8 +265,6 @@ public class NativeIO {
       if (nativeLoaded && fadvisePossible) {
         try {
           posix_fadvise(fd, offset, len, flags);
-        } catch (UnsupportedOperationException uoe) {
-          fadvisePossible = false;
         } catch (UnsatisfiedLinkError ule) {
           fadvisePossible = false;
         }
@@ -347,22 +345,21 @@ public class NativeIO {
       private String owner, group;
       private int mode;
 
-      // Mode constants
-      public static final int S_IFMT = 0170000;      /* type of file */
-      public static final int   S_IFIFO  = 0010000;  /* named pipe (fifo) */
-      public static final int   S_IFCHR  = 0020000;  /* character special */
-      public static final int   S_IFDIR  = 0040000;  /* directory */
-      public static final int   S_IFBLK  = 0060000;  /* block special */
-      public static final int   S_IFREG  = 0100000;  /* regular */
-      public static final int   S_IFLNK  = 0120000;  /* symbolic link */
-      public static final int   S_IFSOCK = 0140000;  /* socket */
-      public static final int   S_IFWHT  = 0160000;  /* whiteout */
-      public static final int S_ISUID = 0004000;  /* set user id on execution */
-      public static final int S_ISGID = 0002000;  /* set group id on execution */
-      public static final int S_ISVTX = 0001000;  /* save swapped text even after use */
-      public static final int S_IRUSR = 0000400;  /* read permission, owner */
-      public static final int S_IWUSR = 0000200;  /* write permission, owner */
-      public static final int S_IXUSR = 0000100;  /* execute/search permission, owner */
+      // Mode constants - Set by JNI
+      public static int S_IFMT = -1;    /* type of file */
+      public static int S_IFIFO  = -1;  /* named pipe (fifo) */
+      public static int S_IFCHR  = -1;  /* character special */
+      public static int S_IFDIR  = -1;  /* directory */
+      public static int S_IFBLK  = -1;  /* block special */
+      public static int S_IFREG  = -1;  /* regular */
+      public static int S_IFLNK  = -1;  /* symbolic link */
+      public static int S_IFSOCK = -1;  /* socket */
+      public static int S_ISUID = -1;  /* set user id on execution */
+      public static int S_ISGID = -1;  /* set group id on execution */
+      public static int S_ISVTX = -1;  /* save swapped text even after use */
+      public static int S_IRUSR = -1;  /* read permission, owner */
+      public static int S_IWUSR = -1;  /* write permission, owner */
+      public static int S_IXUSR = -1;  /* execute/search permission, owner */
 
       Stat(int ownerId, int groupId, int mode) {
         this.ownerId = ownerId;
@@ -881,6 +878,17 @@ public class NativeIO {
     }
   }
 
+  /**
+   * Creates a hardlink "dst" that points to "src".
+   *
+   * This is deprecated since JDK7 NIO can create hardlinks via the
+   * {@link java.nio.file.Files} API.
+   *
+   * @param src source file
+   * @param dst hardlink location
+   * @throws IOException
+   */
+  @Deprecated
   public static void link(File src, File dst) throws IOException {
     if (!nativeLoaded) {
       HardLink.createHardLink(src, dst);

@@ -361,4 +361,20 @@ public class TestJobConf {
       jobConf.getMaxTaskFailuresPerTracker() < jobConf.getMaxReduceAttempts()
       );
   }
+
+  /**
+   * Test parsing various types of Java heap options.
+   */
+  @Test
+  public void testParseMaximumHeapSizeMB() {
+    // happy cases
+    Assert.assertEquals(4096, JobConf.parseMaximumHeapSizeMB("-Xmx4294967296"));
+    Assert.assertEquals(4096, JobConf.parseMaximumHeapSizeMB("-Xmx4194304k"));
+    Assert.assertEquals(4096, JobConf.parseMaximumHeapSizeMB("-Xmx4096m"));
+    Assert.assertEquals(4096, JobConf.parseMaximumHeapSizeMB("-Xmx4g"));
+
+    // sad cases
+    Assert.assertEquals(-1, JobConf.parseMaximumHeapSizeMB("-Xmx4?"));
+    Assert.assertEquals(-1, JobConf.parseMaximumHeapSizeMB(""));
+  }
 }

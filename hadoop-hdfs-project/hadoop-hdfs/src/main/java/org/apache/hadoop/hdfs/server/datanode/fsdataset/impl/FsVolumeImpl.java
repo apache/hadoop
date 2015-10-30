@@ -22,8 +22,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.nio.channels.ClosedChannelException;
 import java.io.OutputStreamWriter;
+import java.nio.channels.ClosedChannelException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -40,9 +40,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
@@ -54,20 +51,23 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
-import org.apache.hadoop.util.CloseableReferenceCount;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.CloseableReferenceCount;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
-
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.Time;
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * The underlying volume used to store replica.
@@ -90,8 +90,9 @@ public class FsVolumeImpl implements FsVolumeSpi {
   private final long reserved;
   private CloseableReferenceCount reference = new CloseableReferenceCount();
 
-  // Disk space reserved for open blocks.
-  private AtomicLong reservedForRbw;
+  // Disk space reserved for blocks (RBW or Re-replicating) open for write.
+  private AtomicLong reservedForReplicas;
+  private long recentReserved = 0;
 
   // Capacity configured. This is useful when we want to
   // limit the visible capacity for tests. If negative, then we just
@@ -113,8 +114,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
     this.reserved = conf.getLong(
         DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY,
         DFSConfigKeys.DFS_DATANODE_DU_RESERVED_DEFAULT);
-    this.reservedForRbw = new AtomicLong(0L);
-    this.currentDir = currentDir; 
+    this.reservedForReplicas = new AtomicLong(0L);
+    this.currentDir = currentDir;
     File parent = currentDir.getParentFile();
     this.usage = new DF(parent, conf);
     this.storageType = storageType;
@@ -198,7 +199,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   private static class FsVolumeReferenceImpl implements FsVolumeReference {
-    private final FsVolumeImpl volume;
+    private FsVolumeImpl volume;
 
     FsVolumeReferenceImpl(FsVolumeImpl volume) throws ClosedChannelException {
       this.volume = volume;
@@ -211,7 +212,10 @@ public class FsVolumeImpl implements FsVolumeSpi {
      */
     @Override
     public void close() throws IOException {
-      volume.unreference();
+      if (volume != null) {
+        volume.unreference();
+        volume = null;
+      }
     }
 
     @Override
@@ -271,7 +275,18 @@ public class FsVolumeImpl implements FsVolumeSpi {
     return getBlockPoolSlice(bpid).getTmpDir();
   }
 
-  void decDfsUsed(String bpid, long value) {
+  void onBlockFileDeletion(String bpid, long value) {
+    decDfsUsed(bpid, value);
+    if (isTransientStorage()) {
+      dataset.releaseLockedMemory(value, true);
+    }
+  }
+
+  void onMetaFileDeletion(String bpid, long value) {
+    decDfsUsed(bpid, value);
+  }
+
+  private void decDfsUsed(String bpid, long value) {
     synchronized(dataset) {
       BlockPoolSlice bp = bpSlices.get(bpid);
       if (bp != null) {
@@ -305,9 +320,11 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
   
   /**
-   * Calculate the capacity of the filesystem, after removing any
-   * reserved capacity.
-   * @return the unreserved number of bytes left in this filesystem. May be zero.
+   * Return either the configured capacity of the file system if configured; or
+   * the capacity of the file system excluding space reserved for non-HDFS.
+   * 
+   * @return the unreserved number of bytes left in this filesystem. May be
+   *         zero.
    */
   @VisibleForTesting
   public long getCapacity() {
@@ -329,10 +346,17 @@ public class FsVolumeImpl implements FsVolumeSpi {
     this.configuredCapacity = capacity;
   }
 
+  /*
+   * Calculate the available space of the filesystem, excluding space reserved
+   * for non-HDFS and space reserved for RBW
+   * 
+   * @return the available number of bytes left in this filesystem. May be zero.
+   */
   @Override
   public long getAvailable() throws IOException {
-    long remaining = getCapacity() - getDfsUsed() - reservedForRbw.get();
-    long available = usage.getAvailable();
+    long remaining = getCapacity() - getDfsUsed() - reservedForReplicas.get();
+    long available = usage.getAvailable() - reserved
+        - reservedForReplicas.get();
     if (remaining > available) {
       remaining = available;
     }
@@ -340,10 +364,15 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   @VisibleForTesting
-  public long getReservedForRbw() {
-    return reservedForRbw.get();
+  public long getReservedForReplicas() {
+    return reservedForReplicas.get();
   }
-    
+
+  @VisibleForTesting
+  long getRecentReserved() {
+    return recentReserved;
+  }
+
   long getReserved(){
     return reserved;
   }
@@ -390,13 +419,20 @@ public class FsVolumeImpl implements FsVolumeSpi {
    */
   File createTmpFile(String bpid, Block b) throws IOException {
     checkReference();
-    return getBlockPoolSlice(bpid).createTmpFile(b);
+    reserveSpaceForReplica(b.getNumBytes());
+    try {
+      return getBlockPoolSlice(bpid).createTmpFile(b);
+    } catch (IOException exception) {
+      releaseReservedSpace(b.getNumBytes());
+      throw exception;
+    }
   }
 
   @Override
-  public void reserveSpaceForRbw(long bytesToReserve) {
+  public void reserveSpaceForReplica(long bytesToReserve) {
     if (bytesToReserve != 0) {
-      reservedForRbw.addAndGet(bytesToReserve);
+      reservedForReplicas.addAndGet(bytesToReserve);
+      recentReserved = bytesToReserve;
     }
   }
 
@@ -406,14 +442,22 @@ public class FsVolumeImpl implements FsVolumeSpi {
 
       long oldReservation, newReservation;
       do {
-        oldReservation = reservedForRbw.get();
+        oldReservation = reservedForReplicas.get();
         newReservation = oldReservation - bytesToRelease;
         if (newReservation < 0) {
-          // Failsafe, this should never occur in practice, but if it does we don't
-          // want to start advertising more space than we have available.
+          // Failsafe, this should never occur in practice, but if it does we
+          // don't want to start advertising more space than we have available.
           newReservation = 0;
         }
-      } while (!reservedForRbw.compareAndSet(oldReservation, newReservation));
+      } while (!reservedForReplicas.compareAndSet(oldReservation,
+          newReservation));
+    }
+  }
+
+  @Override
+  public void releaseLockedMemory(long bytesToRelease) {
+    if (isTransientStorage()) {
+      dataset.releaseLockedMemory(bytesToRelease, false);
     }
   }
 
@@ -750,22 +794,26 @@ public class FsVolumeImpl implements FsVolumeSpi {
    */
   File createRbwFile(String bpid, Block b) throws IOException {
     checkReference();
-    reserveSpaceForRbw(b.getNumBytes());
-    return getBlockPoolSlice(bpid).createRbwFile(b);
+    reserveSpaceForReplica(b.getNumBytes());
+    try {
+      return getBlockPoolSlice(bpid).createRbwFile(b);
+    } catch (IOException exception) {
+      releaseReservedSpace(b.getNumBytes());
+      throw exception;
+    }
   }
 
   /**
    *
-   * @param bytesReservedForRbw Space that was reserved during
+   * @param bytesReserved Space that was reserved during
    *     block creation. Now that the block is being finalized we
    *     can free up this space.
    * @return
    * @throws IOException
    */
-  File addFinalizedBlock(String bpid, Block b,
-                         File f, long bytesReservedForRbw)
+  File addFinalizedBlock(String bpid, Block b, File f, long bytesReserved)
       throws IOException {
-    releaseReservedSpace(bytesReservedForRbw);
+    releaseReservedSpace(bytesReserved);
     return getBlockPoolSlice(bpid).addFinalizedBlock(b, f);
   }
 

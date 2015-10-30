@@ -216,6 +216,7 @@ public class TestHDFSServerPorts {
     org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode sn = null;
     try {
       sn = new org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode(conf);
+      sn.startInfoServer();
     } catch(IOException e) {
       if (e instanceof java.net.BindException)
         return false;

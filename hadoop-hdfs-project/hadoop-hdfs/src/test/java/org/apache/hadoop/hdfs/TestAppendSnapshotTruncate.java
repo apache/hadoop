@@ -27,8 +27,8 @@ import java.io.RandomAccessFile;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -41,6 +41,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TestFileTruncate;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -63,10 +65,10 @@ public class TestAppendSnapshotTruncate {
   }
   private static final Log LOG = LogFactory.getLog(TestAppendSnapshotTruncate.class);
   private static final int BLOCK_SIZE = 1024;
-  private static final int DATANODE_NUM = 3;
+  private static final int DATANODE_NUM = 4;
   private static final short REPLICATION = 3;
-  private static final int FILE_WORKER_NUM = 3;
-  private static final long TEST_TIME_SECOND = 10;
+  private static final int FILE_WORKER_NUM = 10;
+  private static final long TEST_TIME_SECOND = 20;
   private static final long TEST_TIMEOUT_SECOND = TEST_TIME_SECOND + 60;
 
   static final int SHORT_HEARTBEAT = 1;
@@ -84,10 +86,11 @@ public class TestAppendSnapshotTruncate {
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, SHORT_HEARTBEAT);
     conf.setLong(
         DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, 1);
+    conf.setBoolean(ReplaceDatanodeOnFailure.BEST_EFFORT_KEY, true);
     cluster = new MiniDFSCluster.Builder(conf)
         .format(true)
         .numDataNodes(DATANODE_NUM)
-        .nameNodePort(NameNode.DEFAULT_PORT)
+        .nameNodePort(HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT)
         .waitSafeMode(true)
         .build();
     dfs = cluster.getFileSystem();
@@ -214,8 +217,7 @@ public class TestAppendSnapshotTruncate {
     
     @Override
     public String call() throws Exception {
-      final Random r = DFSUtil.getRandom();
-      final int op = r.nextInt(6);
+      final int op = ThreadLocalRandom.current().nextInt(6);
       if (op <= 1) {
         pauseAllFiles();
         try {
@@ -229,7 +231,8 @@ public class TestAppendSnapshotTruncate {
         if (keys.length == 0) {
           return "NO-OP";
         }
-        final String snapshot = keys[r.nextInt(keys.length)];
+        final String snapshot = keys[ThreadLocalRandom.current()
+            .nextInt(keys.length)];
         final String s = checkSnapshot(snapshot);
         
         if (op == 2) {
@@ -292,13 +295,13 @@ public class TestAppendSnapshotTruncate {
 
     @Override
     public String call() throws IOException {
-      final Random r = DFSUtil.getRandom();
-      final int op = r.nextInt(9);
+      final int op = ThreadLocalRandom.current().nextInt(9);
       if (op == 0) {
         return checkFullFile();
       } else {
-        final int nBlocks = r.nextInt(4) + 1;
-        final int lastBlockSize = r.nextInt(BLOCK_SIZE) + 1;
+        final int nBlocks = ThreadLocalRandom.current().nextInt(4) + 1;
+        final int lastBlockSize = ThreadLocalRandom.current()
+            .nextInt(BLOCK_SIZE) + 1;
         final int nBytes = nBlocks*BLOCK_SIZE + lastBlockSize;
 
         if (op <= 4) {
@@ -316,8 +319,8 @@ public class TestAppendSnapshotTruncate {
           .append(n).append(" bytes to ").append(file.getName());
 
       final byte[] bytes = new byte[n];
-      DFSUtil.getRandom().nextBytes(bytes);
-      
+      ThreadLocalRandom.current().nextBytes(bytes);
+
       { // write to local file
         final FileOutputStream out = new FileOutputStream(localFile, true);
         out.write(bytes, 0, bytes.length);
@@ -446,7 +449,6 @@ public class TestAppendSnapshotTruncate {
         final Thread t = new Thread(null, new Runnable() {
           @Override
           public void run() {
-            final Random r = DFSUtil.getRandom();
             for(State s; !(s = checkErrorState()).isTerminated;) {
               if (s == State.RUNNING) {
                 isCalling.set(true);
@@ -458,7 +460,7 @@ public class TestAppendSnapshotTruncate {
                 }
                 isCalling.set(false);
               }
-              sleep(r.nextInt(100) + 50);
+              sleep(ThreadLocalRandom.current().nextInt(100) + 50);
             }
           }
         }, name);
@@ -476,7 +478,9 @@ public class TestAppendSnapshotTruncate {
     }
 
     void pause() {
-      Preconditions.checkState(state.compareAndSet(State.RUNNING, State.IDLE));
+      checkErrorState();
+      Preconditions.checkState(state.compareAndSet(State.RUNNING, State.IDLE),
+          "%s: state=%s != %s", name, state.get(), State.RUNNING);
     }
 
     void stop() throws InterruptedException {

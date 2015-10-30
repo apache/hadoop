@@ -1,4 +1,4 @@
-<!---
+﻿<!---
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
   You may obtain a copy of the License at
@@ -73,28 +73,36 @@ The following is a typical storage policy table.
 
 | **Policy** **ID** | **Policy** **Name** | **Block Placement** **(n  replicas)** | **Fallback storages** **for creation** | **Fallback storages** **for replication** |
 |:---- |:---- |:---- |:---- |:---- |
-| 15 | Lasy\_Persist | RAM\_DISK: 1, DISK: *n*-1 | DISK | DISK |
+| 15 | Lazy\_Persist | RAM\_DISK: 1, DISK: *n*-1 | DISK | DISK |
 | 12 | All\_SSD | SSD: *n* | DISK | DISK |
 | 10 | One\_SSD | SSD: 1, DISK: *n*-1 | SSD, DISK | SSD, DISK |
 | 7 | Hot (default) | DISK: *n* | \<none\> | ARCHIVE |
 | 5 | Warm | DISK: 1, ARCHIVE: *n*-1 | ARCHIVE, DISK | ARCHIVE, DISK |
 | 2 | Cold | ARCHIVE: *n* | \<none\> | \<none\> |
 
-Note that the Lasy\_Persist policy is useful only for single replica blocks. For blocks with more than one replicas, all the replicas will be written to DISK since writing only one of the replicas to RAM\_DISK does not improve the overall performance.
+Note that the Lazy\_Persist policy is useful only for single replica blocks. For blocks with more than one replicas, all the replicas will be written to DISK since writing only one of the replicas to RAM\_DISK does not improve the overall performance.
 
 ### Storage Policy Resolution
 
-When a file or directory is created, its storage policy is *unspecified*. The storage policy can be specified using the "[`dfsadmin -setStoragePolicy`](#Set_Storage_Policy)" command. The effective storage policy of a file or directory is resolved by the following rules.
+When a file or directory is created, its storage policy is *unspecified*. The storage policy can be specified using the "[`storagepolicies -setStoragePolicy`](#Set_Storage_Policy)" command. The effective storage policy of a file or directory is resolved by the following rules.
 
 1.  If the file or directory is specificed with a storage policy, return it.
 
 2.  For an unspecified file or directory, if it is the root directory, return the *default storage policy*. Otherwise, return its parent's effective storage policy.
 
-The effective storage policy can be retrieved by the "[`dfsadmin -getStoragePolicy`](#Get_Storage_Policy)" command.
+The effective storage policy can be retrieved by the "[`storagepolicies -getStoragePolicy`](#Get_Storage_Policy)" command.
 
 ### Configuration
 
 * **dfs.storage.policy.enabled** - for enabling/disabling the storage policy feature. The default value is `true`.
+* **dfs.datanode.data.dir** - on each data node, the comma-separated storage locations should be tagged with their storage types. This allows storage policies to place the blocks on different storage types according to policy. For example:
+
+    1.  A datanode storage location /grid/dn/disk0 on DISK should be configured with `[DISK]file:///grid/dn/disk0`
+    2.  A datanode storage location /grid/dn/ssd0 on SSD can should configured with `[SSD]file:///grid/dn/ssd0`
+    3.  A datanode storage location /grid/dn/archive0 on ARCHIVE should be configured with `[ARCHIVE]file:///grid/dn/archive0`
+    4.  A datanode storage location /grid/dn/ram0 on RAM_DISK should be configured with `[RAM_DISK]file:///grid/dn/ram0`
+
+    The default storage type of a datanode storage location will be DISK if it does not have a storage type tagged explicitly.
 
 Mover - A New Data Migration Tool
 ---------------------------------
