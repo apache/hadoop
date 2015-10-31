@@ -1887,7 +1887,7 @@ Release 2.6.3 - UNRELEASED
 
   BUG FIXES
 
-Release 2.6.2 - 2015-10-21
+Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
 

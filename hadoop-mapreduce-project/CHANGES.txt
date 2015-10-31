@@ -913,7 +913,7 @@ Release 2.6.3 - UNRELEASED
     MAPREDUCE-6528. Memory leak for HistoryFileManager.getJobSummary()
     (Junping Du via jlowe)
 
-Release 2.6.2 - 2015-10-21
+Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
 
