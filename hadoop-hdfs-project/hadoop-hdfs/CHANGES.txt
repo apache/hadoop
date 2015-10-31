@@ -2273,6 +2273,9 @@ Release 2.7.2 - UNRELEASED
     HDFS-9317. Document fsck -blockId and -storagepolicy options in branch-2.7.
     (aajisaka)
 
+    HDFS-4937. ReplicationMonitor can infinite-loop in
+    BlockPlacementPolicyDefault#chooseRandom() (kihwal)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
@@ -3295,7 +3298,19 @@ Release 2.7.0 - 2015-04-20
       HDFS-7700. Document quota support for storage types. (Xiaoyu Yao via
       Arpit Agarwal)
 
-Release 2.6.2 - 2015-10-21
+Release 2.6.3 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
 
