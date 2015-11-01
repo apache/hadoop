@@ -2201,6 +2201,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9332. Fix Precondition failures from NameNodeEditLogRoller while
     saving namespace. (wang)
 
+    HDFS-9343. Empty caller context considered invalid. (Mingliang Liu via
+    Arpit Agarwal)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
