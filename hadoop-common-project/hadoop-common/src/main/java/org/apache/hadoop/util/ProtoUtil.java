@@ -180,7 +180,7 @@ public abstract class ProtoUtil {
 
     // Add caller context if it is not null
     CallerContext callerContext = CallerContext.getCurrent();
-    if (callerContext != null && callerContext.isValid()) {
+    if (callerContext != null && callerContext.isContextValid()) {
       RPCCallerContextProto.Builder contextBuilder = RPCCallerContextProto
           .newBuilder().setContext(callerContext.getContext());
       if (callerContext.getSignature() != null) {

@@ -243,7 +243,6 @@ public class TestAuditLogger {
       CallerContext.setCurrent(context);
       LOG.info("Set current caller context as {}", CallerContext.getCurrent());
       fs.setTimes(p, time, time);
-      System.out.println("LLLLLL" + auditlog.getOutput());
       assertTrue(auditlog.getOutput().endsWith("callerContext=setTimes\n"));
       auditlog.clearOutput();
 
@@ -268,6 +267,16 @@ public class TestAuditLogger {
       fs.setTimes(p, time, time);
       assertTrue(auditlog.getOutput().endsWith(
           "callerContext=" + longContext.substring(0, 128) + ":L\n"));
+      auditlog.clearOutput();
+
+      // empty context is ignored
+      context = new CallerContext.Builder("")
+          .setSignature("L".getBytes(CallerContext.SIGNATURE_ENCODING))
+          .build();
+      CallerContext.setCurrent(context);
+      LOG.info("Set empty caller context");
+      fs.setTimes(p, time, time);
+      assertFalse(auditlog.getOutput().contains("callerContext="));
       auditlog.clearOutput();
 
       // caller context is inherited in child thread
@@ -333,14 +342,14 @@ public class TestAuditLogger {
       assertTrue(auditlog.getOutput().endsWith("callerContext=mkdirs:L\n"));
       auditlog.clearOutput();
 
-      // caller context with too long signature is abandoned
+      // too long signature is ignored
       context = new CallerContext.Builder("setTimes")
           .setSignature(new byte[41])
           .build();
       CallerContext.setCurrent(context);
       LOG.info("Set current caller context as {}", CallerContext.getCurrent());
       fs.setTimes(p, time, time);
-      assertFalse(auditlog.getOutput().contains("callerContext="));
+      assertTrue(auditlog.getOutput().endsWith("callerContext=setTimes\n"));
       auditlog.clearOutput();
 
       // null signature is ignored
