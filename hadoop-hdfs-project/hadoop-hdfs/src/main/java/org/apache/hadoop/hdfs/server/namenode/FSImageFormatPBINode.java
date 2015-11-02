@@ -875,7 +875,7 @@ public final class FSImageFormatPBINode {
         if (children.size() > 0) {
 
           FlatBufferBuilder fbb1 = new FlatBufferBuilder();
-          ByteBuffer byteBuffer = null;
+//          ByteBuffer byteBuffer = null;
           IntelDirEntry.startIntelDirEntry(fbb1);
           IntelDirEntry.addParent(fbb1, n.getId());
 
@@ -1039,48 +1039,19 @@ public final class FSImageFormatPBINode {
           continue;
         }
         String path = file.getFullPathName();
-        FileUnderConstructionEntry.Builder b = FileUnderConstructionEntry
-            .newBuilder().setInodeId(file.getId()).setFullPath(path);
-        FileUnderConstructionEntry e = b.build();
-        e.writeDelimitedTo(out);
+
+        FlatBufferBuilder fbb1 = new FlatBufferBuilder();
+        IntelFileUnderConstructionEntry.createIntelFileUnderConstructionEntry(fbb1,
+            file.getId(), fbb1.createString(path));
+        byte[] bytes = fbb1.sizedByteArray();
+        writeTo(bytes, bytes.length, out);
+
       }
       return parent.commitIntelSection(
           FSImageFormatProtobuf.SectionName.FILES_UNDERCONSTRUCTION, fbb);
     }
 
-    int serializeIntelFilesUCSectionV2(OutputStream out, FlatBufferBuilder fbb) throws IOException {
-      Collection<Long> filesWithUC = fsn.getLeaseManager()
-          .getINodeIdWithLeases();
-      for (Long id : filesWithUC) {
-        INode inode = fsn.getFSDirectory().getInode(id);
-        if (inode == null) {
-          LOG.warn("Fail to find inode " + id + " when saving the leases.");
-          continue;
-        }
-        INodeFile file = inode.asFile();
-        if (!file.isUnderConstruction()) {
-          LOG.warn("Fail to save the lease for inode id " + id
-              + " as the file is not under construction");
-          continue;
-        }
-        String path = file.getFullPathName();
-
-//        FlatBufferBuilder fbb = new FlatBufferBuilder();
-        IntelFileUnderConstructionEntry.addInodeId(fbb, file.getId());
-        IntelFileUnderConstructionEntry.addFullPath(fbb, fbb.createString(path));
-        ByteBuffer byteBuffer = fbb.dataBuffer();
-        int serializedLength = byteBuffer.capacity() - byteBuffer.position();
-        byte[] bytes = new byte[serializedLength];
-        byteBuffer.get(bytes);
-        DataOutputStream dos = new DataOutputStream(out);
-        dos.write(serializedLength);
-        dos.write(bytes);
-        dos.flush();
-      }
-      return parent.commitIntelSection(
-          FSImageFormatProtobuf.SectionName.FILES_UNDERCONSTRUCTION, fbb);
-    }
-
+    // abandon method
     void serializeFilesUCSection(OutputStream out) throws IOException {
       Collection<Long> filesWithUC = fsn.getLeaseManager()
               .getINodeIdWithLeases();

@@ -697,6 +697,7 @@ public final class FSImageFormatProtobuf {
       list.add(saver.serializeIntelFilesUCSection(sectionOutputStream, fbb));
     }
 
+    // abandon method.
     private void saveInodes(FileSummary.Builder summary) throws IOException {
       FSImageFormatPBINode.Saver saver = new FSImageFormatPBINode.Saver(this, summary, null);
 
@@ -715,6 +716,7 @@ public final class FSImageFormatProtobuf {
       list.add(snapshotSaver.serializeIntelINodeReferenceSection(sectionOutputStream));
     }
 
+    // abandon method
     private void saveSnapshots(FileSummary.Builder summary) throws IOException {
       FSImageFormatPBSnapshot.Saver snapshotSaver = new FSImageFormatPBSnapshot.Saver(
           this, summary, null,context, context.getSourceNamesystem());

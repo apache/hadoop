@@ -458,7 +458,8 @@ public class FSImageFormatPBSnapshot {
     }
 
     /**
-     * save all the snapshottable directories and snapshots to fsimage
+     * abandon method
+     *
      */
     public void serializeSnapshotSection(OutputStream out) throws IOException {
       SnapshotManager sm = fsn.getSnapshotManager();
