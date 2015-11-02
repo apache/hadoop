@@ -699,6 +699,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-9242. Duplicate surefire plugin config in hadoop-common.
     (Andrey Klochkov via suresh)
 
+    HADOOP-12533. Introduce FileNotFoundException in WASB for read and seek API.
+    (Dushyanth via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
