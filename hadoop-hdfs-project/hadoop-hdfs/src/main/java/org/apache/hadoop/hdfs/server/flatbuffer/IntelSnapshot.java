@@ -31,5 +31,6 @@ public final class IntelSnapshot extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelSnapshotBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
 };
 

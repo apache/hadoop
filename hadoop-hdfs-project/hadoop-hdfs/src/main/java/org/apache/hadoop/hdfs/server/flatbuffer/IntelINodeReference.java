@@ -39,5 +39,7 @@ public final class IntelINodeReference extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelINodeReferenceBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+
 };
 

@@ -64,5 +64,7 @@ public final class IntelDirectoryDiff extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelDirectoryDiffBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+
 };
 

@@ -34,5 +34,6 @@ public final class IntelDiffEntry extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelDiffEntryBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
 };
 

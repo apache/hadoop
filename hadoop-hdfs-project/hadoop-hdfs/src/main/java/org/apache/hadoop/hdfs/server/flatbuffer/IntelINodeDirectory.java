@@ -53,5 +53,7 @@ public final class IntelINodeDirectory extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelINodeDirectoryBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+
 };
 

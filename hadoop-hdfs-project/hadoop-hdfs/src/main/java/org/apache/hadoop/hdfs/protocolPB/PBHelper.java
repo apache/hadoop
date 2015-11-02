@@ -31,6 +31,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 
+import com.google.flatbuffers.FlatBufferBuilder;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -419,7 +420,12 @@ public class PBHelper {
     }
     return result;
   }
-  
+
+  public static int convertIntel(Block b, FlatBufferBuilder fbb) {
+    return IntelBlockProto.createIntelBlockProto(fbb,
+        b.getBlockId(), b.getGenerationStamp(), b.getNumBytes());
+  }
+
   // Block
   public static BlockProto convert(Block b) {
     return BlockProto.newBuilder().setBlockId(b.getBlockId())
@@ -1863,6 +1869,39 @@ public class PBHelper {
     }
   }
 
+  public static StorageType convertStorageType(StorageTypeProto type) {
+    switch(type) {
+      case DISK:
+        return StorageType.DISK;
+      case SSD:
+        return StorageType.SSD;
+      case ARCHIVE:
+        return StorageType.ARCHIVE;
+      case RAM_DISK:
+        return StorageType.RAM_DISK;
+      default:
+        throw new IllegalStateException(
+            "BUG: StorageTypeProto not found, type=" + type);
+    }
+  }
+
+  public static int convertIntelStorageType(StorageType type) {
+    switch (type) {
+      case DISK:
+        return IntelStorageTypeProto.DISK;
+      case SSD:
+        return IntelStorageTypeProto.SSD;
+      case ARCHIVE:
+        return IntelStorageTypeProto.ARCHIVE;
+      case RAM_DISK:
+        return IntelStorageTypeProto.RAM_DISK;
+      default:
+        throw new IllegalStateException(
+            "BUG: StorageType not found, type=" + type
+        );
+    }
+  }
+
   public static StorageTypeProto convertStorageType(StorageType type) {
     switch(type) {
     case DISK:
@@ -1895,21 +1934,7 @@ public class PBHelper {
     }
   }
 
-  public static StorageType convertStorageType(StorageTypeProto type) {
-    switch(type) {
-      case DISK:
-        return StorageType.DISK;
-      case SSD:
-        return StorageType.SSD;
-      case ARCHIVE:
-        return StorageType.ARCHIVE;
-      case RAM_DISK:
-        return StorageType.RAM_DISK;
-      default:
-        throw new IllegalStateException(
-            "BUG: StorageTypeProto not found, type=" + type);
-    }
-  }
+
 
   public static StorageType[] convertStorageTypes(
       List<StorageTypeProto> storageTypesList, int expectedSize) {

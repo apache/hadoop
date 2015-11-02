@@ -697,25 +697,22 @@ public final class FSImageFormatProtobuf {
       list.add(saver.serializeIntelFilesUCSection(sectionOutputStream, fbb));
     }
 
-    // abandon method.
-    private void saveInodes(FileSummary.Builder summary) throws IOException {
-      FSImageFormatPBINode.Saver saver = new FSImageFormatPBINode.Saver(this, summary, null);
-
-      saver.serializeINodeSection(sectionOutputStream);
-      saver.serializeINodeDirectorySection(sectionOutputStream);
-      saver.serializeFilesUCSection(sectionOutputStream);
-    }
-
     private void saveIntelSnapshots(FlatBufferBuilder fbb, ArrayList<Integer> list)
         throws IOException {
       FSImageFormatPBSnapshot.Saver snapshotSaver = new FSImageFormatPBSnapshot.Saver(
           this, null, fbb,context, context.getSourceNamesystem());
-
       list.add(snapshotSaver.serializeIntelSnapshotSection(sectionOutputStream));
       list.add(snapshotSaver.serializeIntelSnapshotDiffSection(sectionOutputStream));
       list.add(snapshotSaver.serializeIntelINodeReferenceSection(sectionOutputStream));
     }
 
+    // abandon method.
+    private void saveInodes(FileSummary.Builder summary) throws IOException {
+      FSImageFormatPBINode.Saver saver = new FSImageFormatPBINode.Saver(this, summary, null);
+      saver.serializeINodeSection(sectionOutputStream);
+      saver.serializeINodeDirectorySection(sectionOutputStream);
+      saver.serializeFilesUCSection(sectionOutputStream);
+    }
     // abandon method
     private void saveSnapshots(FileSummary.Builder summary) throws IOException {
       FSImageFormatPBSnapshot.Saver snapshotSaver = new FSImageFormatPBSnapshot.Saver(

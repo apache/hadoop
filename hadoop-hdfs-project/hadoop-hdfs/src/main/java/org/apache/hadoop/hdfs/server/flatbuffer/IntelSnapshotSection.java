@@ -38,5 +38,7 @@ public final class IntelSnapshotSection extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelSnapshotSectionBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+
 };
 

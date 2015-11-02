@@ -20,8 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Loader.loadINodeDirectory;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Loader.loadPermission;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Loader.updateBlocksMap;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Saver.buildINodeDirectory;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Saver.buildINodeFile;
+import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Saver.*;
 //import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Saver.buildIntelINodeDirectory;
 
 import java.io.DataOutputStream;
@@ -39,6 +38,7 @@ import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
 import com.google.flatbuffers.FlatBufferBuilder;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.fs.StorageType;
@@ -48,10 +48,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
-import org.apache.hadoop.hdfs.server.flatbuffer.IntelFileSummary;
-import org.apache.hadoop.hdfs.server.flatbuffer.IntelINodeDirectory;
-import org.apache.hadoop.hdfs.server.flatbuffer.IntelSnapshot;
-import org.apache.hadoop.hdfs.server.flatbuffer.IntelSnapshotSection;
+import org.apache.hadoop.hdfs.server.flatbuffer.*;
 import org.apache.hadoop.hdfs.server.namenode.AclEntryStatusFormat;
 import org.apache.hadoop.hdfs.server.namenode.AclFeature;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
@@ -422,31 +419,42 @@ public class FSImageFormatPBSnapshot {
      */
     public int serializeIntelSnapshotSection(OutputStream out) throws IOException {
       SnapshotManager sm = fsn.getSnapshotManager();
-      SnapshotSection.Builder b = SnapshotSection.newBuilder()
-          .setSnapshotCounter(sm.getSnapshotCounter())
-          .setNumSnapshots(sm.getNumSnapshots());
-
+      FlatBufferBuilder fbb = new FlatBufferBuilder();
+      IntelSnapshotSection.startIntelSnapshotSection(fbb);
+      IntelSnapshotSection.addSnapshotCounter(fbb, sm.getSnapshotCounter());
+      IntelSnapshotSection.addNumSnapshots(fbb, sm.getNumSnapshots());
+      int snapshottableDirOffset = 0;
+      ArrayList<Long> list = new ArrayList<>();
       INodeDirectory[] snapshottables = sm.getSnapshottableDirs();
       for (INodeDirectory sdir : snapshottables) {
-        b.addSnapshottableDir(sdir.getId());
+        list.add(sdir.getId());
       }
-      b.build().writeDelimitedTo(out);
+      Long[] data = list.toArray(new Long[list.size()]);
+      snapshottableDirOffset = IntelSnapshotSection.
+          createSnapshottableDirVector(fbb, ArrayUtils.toPrimitive(data));
+      IntelSnapshotSection.addSnapshottableDir(fbb, snapshottableDirOffset);
+      int inv = IntelSnapshotSection.endIntelSnapshotSection(fbb);
+      IntelSnapshotSection.finishIntelSnapshotSectionBuffer(fbb, inv);
+      byte[] bytes = fbb.sizedByteArray();
+      writeTo(bytes, bytes.length, out);
+      FlatBufferBuilder fbb1 = new FlatBufferBuilder();
       int i = 0;
       for(INodeDirectory sdir : snapshottables) {
         for (Snapshot s : sdir.getDirectorySnapshottableFeature()
             .getSnapshotList()) {
           Root sroot = s.getRoot();
-
-          SnapshotSection.Snapshot.Builder sb = SnapshotSection.Snapshot
-              .newBuilder().setSnapshotId(s.getId());
-          INodeSection.INodeDirectory.Builder db = buildINodeDirectory(sroot,
-              parent.getSaverContext());
-          INodeSection.INode r = INodeSection.INode.newBuilder()
-              .setId(sroot.getId())
-              .setType(INodeSection.INode.Type.DIRECTORY)
-              .setName(ByteString.copyFrom(sroot.getLocalNameBytes()))
-              .setDirectory(db).build();
-          sb.setRoot(r).build().writeDelimitedTo(out);
+          int intelINodeDirectory =
+              buildIntelINodeDirectory(sroot, parent.getSaverContext());
+          int r = IntelINode.createIntelINode(fbb1, IntelTypee.DIRECTORY, sroot.getId(),
+              fbb1.createString(sroot.getLocalName()), 0, intelINodeDirectory, 0);
+          int offset = 0;
+          IntelSnapshot.startIntelSnapshot(fbb1);
+          IntelSnapshot.addSnapshotId(fbb1, s.getId());
+          IntelSnapshot.addRoot(fbb1, r);
+          offset = IntelSnapshot.endIntelSnapshot(fbb1);
+          IntelSnapshot.finishIntelSnapshotBuffer(fbb1, offset);
+          byte[] bytes1 = fbb1.sizedByteArray();
+          writeTo(bytes1, bytes1.length, out);
           i++;
           if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
             context.checkCancelled();
@@ -504,11 +512,23 @@ public class FSImageFormatPBSnapshot {
      */
     public int serializeIntelINodeReferenceSection(OutputStream out)
         throws IOException {
+      FlatBufferBuilder fbb = new FlatBufferBuilder();
+      int name = 0;
+      long dstSnapshotId = 0, lastSnapshotId = 0;
       final List<INodeReference> refList = parent.getSaverContext()
           .getRefList();
       for (INodeReference ref : refList) {
-        INodeReferenceSection.INodeReference.Builder rb = buildINodeReference(ref);
-        rb.build().writeDelimitedTo(out);
+        if (ref instanceof WithName) {
+          name = fbb.createString(ref.getLocalNameBytes().toString());
+          lastSnapshotId = ((WithName) ref).getLastSnapshotId();
+        } else if (ref instanceof DstReference) {
+          dstSnapshotId = ref.getDstSnapshotId();
+        }
+        int offset = IntelINodeReference.createIntelINodeReference(fbb, ref.getId(),
+            name, dstSnapshotId, lastSnapshotId);
+        IntelINodeReference.finishIntelINodeReferenceBuffer(fbb, offset);
+        byte[] bytes = fbb.sizedByteArray();
+        writeTo(bytes, bytes.length, out);
       }
      return parent.commitIntelSection(SectionName.INODE_REFERENCE, fbb);
     }
@@ -551,10 +571,11 @@ public class FSImageFormatPBSnapshot {
       Iterator<INodeWithAdditionalFields> iter = inodesMap.getMapIterator();
       while (iter.hasNext()) {
         INodeWithAdditionalFields inode = iter.next();
+
         if (inode.isFile()) {
-          serializeFileDiffList(inode.asFile(), out);
+          serializeIntelFileDiffList(inode.asFile(), out); // Intel has already finished.
         } else if (inode.isDirectory()) {
-          serializeDirDiffList(inode.asDirectory(), refList, out);
+          serializeIntelDirDiffList(inode.asDirectory(), refList, out); // Intel has already finished.
         }
         ++i;
         if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
@@ -590,6 +611,71 @@ public class FSImageFormatPBSnapshot {
           FSImageFormatProtobuf.SectionName.SNAPSHOT_DIFF);
     }
 
+    private void saveIntelCreatedList(List<INode> created, OutputStream out)
+    throws IOException{
+      FlatBufferBuilder fbb = new FlatBufferBuilder();
+      // local names of the created list member
+      for (INode c : created) {
+        int inv =IntelCreatedListEntry.createIntelCreatedListEntry(fbb,
+            fbb.createString(c.getLocalNameBytes().toString()));
+        IntelCreatedListEntry.finishIntelCreatedListEntryBuffer(fbb, inv);
+        byte[] bytes = fbb.sizedByteArray();
+        writeTo(bytes, bytes.length, out);
+      }
+    }
+
+    private void saveCreatedList(List<INode> created, OutputStream out)
+        throws IOException {
+      // local names of the created list member
+      for (INode c : created) {
+        SnapshotDiffSection.CreatedListEntry.newBuilder()
+            .setName(ByteString.copyFrom(c.getLocalNameBytes())).build()
+            .writeDelimitedTo(out);
+      }
+    }
+
+    private void serializeIntelFileDiffList(INodeFile file, OutputStream out)
+        throws IOException {
+      FileWithSnapshotFeature sf = file.getFileWithSnapshotFeature();
+      if (sf != null) {
+        List<FileDiff> diffList = sf.getDiffs().asList();
+        FlatBufferBuilder fbb = new FlatBufferBuilder();
+
+        int inv = IntelDiffEntry.createIntelDiffEntry(fbb, IntelType.FILEDIFF, file.getId(), diffList.size());
+        IntelDiffEntry.finishIntelDiffEntryBuffer(fbb, inv);
+        byte[] bytes = fbb.sizedByteArray();
+        writeTo(bytes, bytes.length, out);
+
+        ArrayList<Integer> list = new ArrayList<>();
+        FlatBufferBuilder fbb1 = new FlatBufferBuilder();
+        for (int i = diffList.size() - 1; i >= 0; i--) {
+
+          FileDiff diff = diffList.get(i);
+
+          if(diff.getBlocks() != null) {
+            for(Block block : diff.getBlocks()) {
+              list.add(PBHelper.convertIntel(block, fbb1));
+            }
+          }
+          int[] data = ArrayUtils.toPrimitive(list.toArray(new Integer[list.size()]));
+          int blocks = IntelFileDiff.createBlocksVector(fbb1, data);
+          int name = 0;
+          int snapshotcopy = 0;
+          INodeFileAttributes copy = diff.snapshotINode;
+
+          if (copy != null) {
+            name = fbb1.createString(copy.getLocalNameBytes().toString());
+            snapshotcopy = buildIntelINodeFile(fbb1, copy, parent.getSaverContext());
+          }
+          int offset = IntelFileDiff.createIntelFileDiff(fbb1, diff.getSnapshotId(),
+              diff.getFileSize(), name, snapshotcopy, blocks);
+          IntelFileDiff.finishIntelFileDiffBuffer(fbb1, offset);
+          byte[] bytes1 = fbb1.sizedByteArray();
+          writeTo(bytes1, bytes1.length, out);
+        }
+      }
+    }
+
     private void serializeFileDiffList(INodeFile file, OutputStream out)
         throws IOException {
       FileWithSnapshotFeature sf = file.getFileWithSnapshotFeature();
@@ -619,13 +705,66 @@ public class FSImageFormatPBSnapshot {
       }
     }
 
-    private void saveCreatedList(List<INode> created, OutputStream out)
+    private void serializeIntelDirDiffList(INodeDirectory dir,
+        final List<INodeReference> refList, OutputStream out)
         throws IOException {
-      // local names of the created list member
-      for (INode c : created) {
-        SnapshotDiffSection.CreatedListEntry.newBuilder()
-            .setName(ByteString.copyFrom(c.getLocalNameBytes())).build()
-            .writeDelimitedTo(out);
+      DirectoryWithSnapshotFeature sf = dir.getDirectoryWithSnapshotFeature();
+      if (sf != null) {
+        List<DirectoryDiff> diffList = sf.getDiffs().asList();
+
+        FlatBufferBuilder fbb = new FlatBufferBuilder();
+        int offset = IntelDiffEntry.createIntelDiffEntry(fbb, IntelType.DIRECTORYDIFF,
+            dir.getId(), diffList.size());
+        IntelDiffEntry.finishIntelDiffEntryBuffer(fbb, offset);
+        byte[] bytes = fbb.sizedByteArray();
+        writeTo(bytes, bytes.length, out);
+
+        FlatBufferBuilder fbb1 = new FlatBufferBuilder();
+        int name = 0, snapshotCopy = 0;
+        for (int i = diffList.size() - 1; i >= 0; i--) { // reverse order!
+          DirectoryDiff diff = diffList.get(i);
+
+          SnapshotDiffSection.DirectoryDiff.Builder db = SnapshotDiffSection.
+              DirectoryDiff.newBuilder().setSnapshotId(diff.getSnapshotId())
+              .setChildrenSize(diff.getChildrenSize())
+              .setIsSnapshotRoot(diff.isSnapshotRoot());
+
+          INodeDirectoryAttributes copy = diff.snapshotINode;
+
+          if (!diff.isSnapshotRoot() && copy != null) {
+            name = fbb1.createString(copy.getLocalNameBytes().toString());
+            snapshotCopy = buildIntelINodeDirectory(copy, parent.getSaverContext());
+          }
+          long createdListSize = 0;
+          // process created list and deleted list
+          List<INode> created = diff.getChildrenDiff()
+              .getList(ListType.CREATED);
+          createdListSize = created.size();
+          int deletedINode = 0, deletedINodeRef = 0;
+          List<INode> deleted = diff.getChildrenDiff().getList(ListType.DELETED);
+          ArrayList<Integer> list1 = new ArrayList<>();
+          ArrayList<Long> list2 = new ArrayList<>();
+          for (INode d : deleted) {
+            if (d.isReference()) {
+              refList.add(d.asReference());
+              list1.add(refList.size() - 1);
+            } else {
+              list2.add(d.getId());
+            }
+          }
+          deletedINodeRef = IntelDirectoryDiff.createDeletedINodeRefVector(fbb1,
+              ArrayUtils.toPrimitive(list1.toArray(new Integer[list1.size()])));
+          deletedINode = IntelDirectoryDiff.createDeletedINodeVector(fbb1,
+              ArrayUtils.toPrimitive(list2.toArray(new Long[list2.size()])));
+          int inv = IntelDirectoryDiff.createIntelDirectoryDiff(fbb1, diff.getSnapshotId(),
+              diff.getChildrenSize(), diff.isSnapshotRoot(), name, snapshotCopy,
+              createdListSize, deletedINode, deletedINodeRef
+              );
+          IntelDirectoryDiff.finishIntelDirectoryDiffBuffer(fbb1, inv);
+          byte[] bytes1 = fbb1.sizedByteArray();
+          writeTo(bytes1, bytes1.length, out);
+          saveIntelCreatedList(created, out); // intel will have rewrite
+        }
       }
     }
 
@@ -670,6 +809,8 @@ public class FSImageFormatPBSnapshot {
       }
     }
   }
+
+
 
   private FSImageFormatPBSnapshot(){}
 }

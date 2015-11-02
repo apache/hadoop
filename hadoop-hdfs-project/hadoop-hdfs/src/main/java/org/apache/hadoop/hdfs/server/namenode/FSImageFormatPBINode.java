@@ -676,6 +676,27 @@ public final class FSImageFormatPBINode {
           | n.getFsPermissionShort();
     }
 
+    private static int buildIntelAclEntries(AclFeature f,
+        final SaverContext.DeduplicationMap<String> map) {
+//      AclFeatureProto.Builder b = AclFeatureProto.newBuilder();
+      FlatBufferBuilder fbb = new FlatBufferBuilder();
+      int entries = 0;
+      ArrayList<Integer> list = new ArrayList<Integer>();
+      for (int pos = 0, e; pos < f.getEntriesSize(); pos++) {
+        e = f.getEntryAt(pos);
+        int nameId = map.getId(AclEntryStatusFormat.getName(e));
+        int v = ((nameId & ACL_ENTRY_NAME_MASK) << ACL_ENTRY_NAME_OFFSET)
+            | (AclEntryStatusFormat.getType(e).ordinal() << ACL_ENTRY_TYPE_OFFSET)
+            | (AclEntryStatusFormat.getScope(e).ordinal() << ACL_ENTRY_SCOPE_OFFSET)
+            | (AclEntryStatusFormat.getPermission(e).ordinal());
+//        b.addEntries(v);
+        list.add(v);
+      }
+      entries = IntelAclFeatureProto.
+          createEntriesVector(fbb, ArrayUtils.toPrimitive(list.toArray(new Integer[list.size()])));
+     return IntelAclFeatureProto.createIntelAclFeatureProto(fbb, entries);
+    }
+
     private static AclFeatureProto.Builder buildAclEntries(AclFeature f,
         final SaverContext.DeduplicationMap<String> map) {
       AclFeatureProto.Builder b = AclFeatureProto.newBuilder();
@@ -690,9 +711,44 @@ public final class FSImageFormatPBINode {
       }
       return b;
     }
-    
+
+    private static int buildIntelXAttrs(XAttrFeature f,
+       final SaverContext.DeduplicationMap<String> stringMap) {
+
+//      XAttrFeatureProto.Builder b = XAttrFeatureProto.newBuilder();
+      FlatBufferBuilder fbb = new FlatBufferBuilder();
+      IntelXAttrCompactProto.startIntelXAttrCompactProto(fbb);
+      int value = 0;ArrayList<Integer> list = new ArrayList<>();
+      for (XAttr a : f.getXAttrs())
+      {
+//        XAttrCompactProto.Builder xAttrCompactBuilder = XAttrCompactProto.
+//            newBuilder();
+        int nsOrd = a.getNameSpace().ordinal();
+        Preconditions.checkArgument(nsOrd < 8, "Too many namespaces.");
+        int v = ((nsOrd & XATTR_NAMESPACE_MASK) << XATTR_NAMESPACE_OFFSET)
+            | ((stringMap.getId(a.getName()) & XATTR_NAME_MASK) <<
+            XATTR_NAME_OFFSET);
+        v |= (((nsOrd >> 2) & XATTR_NAMESPACE_EXT_MASK) <<
+            XATTR_NAMESPACE_EXT_OFFSET);
+//        xAttrCompactBuilder.setName(v);
+        IntelXAttrCompactProto.addName(fbb, v);
+        if (a.getValue() != null) {
+//          xAttrCompactBuilder.setValue(PBHelper.getByteString(a.getValue()));
+//          IntelXAttrCompactProto.addValue(fbb, fbb.createString(a.getValue().toString()));
+          value = fbb.createString(a.getValue().toString());
+        }
+        int inv = IntelXAttrCompactProto.createIntelXAttrCompactProto(fbb, v, value);
+        list.add(inv);
+      }
+      int xAttrs = 0;
+      xAttrs = IntelXAttrFeatureProto.
+          createXAttrsVector(fbb, ArrayUtils.toPrimitive(list.toArray(new Integer[list.size()])));
+      return IntelXAttrFeatureProto.createIntelXAttrFeatureProto(fbb, xAttrs);
+    }
+
     private static XAttrFeatureProto.Builder buildXAttrs(XAttrFeature f,
         final SaverContext.DeduplicationMap<String> stringMap) {
+
       XAttrFeatureProto.Builder b = XAttrFeatureProto.newBuilder();
       for (XAttr a : f.getXAttrs()) {
         XAttrCompactProto.Builder xAttrCompactBuilder = XAttrCompactProto.
@@ -710,46 +766,65 @@ public final class FSImageFormatPBINode {
         }
         b.addXAttrs(xAttrCompactBuilder.build());
       }
-      
       return b;
     }
-    // rewrite by minglei
-//    private static IntelQuotaByStorageTypeFeatureProto
-//      buildIntelQuotaByStorageTypeEntries(QuotaCounts q) {
-//      FlatBufferBuilder fbb = new FlatBufferBuilder();
-//
-//      for (StorageType t: StorageType.getTypesSupportingQuota())
-//      {
-//        if (q.getTypeSpace(t) >= 0) {
-//          int storageType = PBHelper.convertIntelStorageType(t);
-//          long quota = q.getTypeSpace(t);
-//          int quotasOffset = IntelQuotaByStorageTypeEntryProto.createIntelQuotaByStorageTypeEntryProto(fbb, storageType, quota);
-//          IntelQuotaByStorageTypeFeatureProto.addQuotas(fbb, quotasOffset);
-//        }
-//      }
-//      ByteBuffer byteBuffer = fbb.dataBuffer();
-//      return IntelQuotaByStorageTypeFeatureProto.getRootAsIntelQuotaByStorageTypeFeatureProto(byteBuffer);
-//    }
 
-    private static QuotaByStorageTypeFeatureProto.Builder
-      buildQuotaByStorageTypeEntries(QuotaCounts q) {
+    private static int buildIntelQuotaByStorageTypeEntries(QuotaCounts q) {
+      FlatBufferBuilder fbb = new FlatBufferBuilder();
+      ArrayList<Integer> list = null;
+      for (StorageType t : StorageType.getTypesSupportingQuota()) {
+        if (q.getTypeSpace(t) >= 0) {
+          int quotaOffset = IntelQuotaByStorageTypeEntryProto.createIntelQuotaByStorageTypeEntryProto(fbb,
+              PBHelper.convertIntelStorageType(t), q.getTypeSpace(t));
+           list = new ArrayList<>();
+          list.add(quotaOffset);
+        }
+      }
+      Integer[] data = list.toArray(new Integer[list.size()]);
+      int quotas = IntelQuotaByStorageTypeFeatureProto.createQuotasVector(fbb, ArrayUtils.toPrimitive(data));
+      return IntelQuotaByStorageTypeFeatureProto.createIntelQuotaByStorageTypeFeatureProto(fbb, quotas);
+    }
+
+    private static QuotaByStorageTypeFeatureProto.Builder buildQuotaByStorageTypeEntries(QuotaCounts q) {
 
         QuotaByStorageTypeFeatureProto.Builder b =
             QuotaByStorageTypeFeatureProto.newBuilder();
 
-        for (StorageType t: StorageType.getTypesSupportingQuota())
-        {
+        for (StorageType t: StorageType.getTypesSupportingQuota()) {
           if (q.getTypeSpace(t) >= 0) {
             QuotaByStorageTypeEntryProto.Builder eb =
-                QuotaByStorageTypeEntryProto.newBuilder().
-
-                setStorageType(PBHelper.convertStorageType(t)).
-                setQuota(q.getTypeSpace(t));
-
+                QuotaByStorageTypeEntryProto
+                    .newBuilder().setStorageType(PBHelper.convertStorageType(t)).setQuota(q.getTypeSpace(t));
             b.addQuotas(eb);
           }
-      }
+        }
       return b;
+    }
+
+    public static int buildIntelINodeFile(FlatBufferBuilder fbb,
+                                          INodeFileAttributes file, final SaverContext state) {
+      int acl = 0;
+      int xAttrs = 0;
+      INodeSection.INodeFile.Builder b = INodeSection.INodeFile.newBuilder()
+          .setAccessTime(file.getAccessTime())
+          .setModificationTime(file.getModificationTime())
+          .setPermission(buildPermissionStatus(file, state.getStringMap()))
+          .setPreferredBlockSize(file.getPreferredBlockSize())
+          .setReplication(file.getFileReplication())
+          .setStoragePolicyID(file.getLocalStoragePolicyID());
+
+      AclFeature f = file.getAclFeature();
+      if (f != null) {
+       acl = buildIntelAclEntries(f, state.getStringMap());
+      }
+      XAttrFeature xAttrFeature = file.getXAttrFeature();
+      if (xAttrFeature != null) {
+       xAttrs = buildIntelXAttrs(xAttrFeature, state.getStringMap()));
+      }
+      return IntelINodeFile.createIntelINodeFile(fbb, file.getFileReplication(),
+          file.getModificationTime(), file.getAccessTime(),
+          file.getPreferredBlockSize(), buildPermissionStatus(file, state.getStringMap()),
+          0, 0, acl, xAttrs, 0);
     }
 
     public static INodeSection.INodeFile.Builder buildINodeFile(
@@ -773,50 +848,35 @@ public final class FSImageFormatPBINode {
       return b;
     }
 
-//    public static IntelINodeDirectory buildIntelINodeDirectory(
-//        INodeDirectoryAttributes dir, final SaverContext state) {
-//      QuotaCounts quota = dir.getQuotaCounts();
-//
-//      FlatBufferBuilder fbb = new FlatBufferBuilder();
-//      ByteBuffer byteBuffer = null;
-//      IntelINodeDirectory.addModificationTime(fbb, dir.getModificationTime());
-//      IntelINodeDirectory.addNsQuota(fbb, quota.getNameSpace());
-//      IntelINodeDirectory.addDsQuota(fbb, quota.getStorageSpace());
-//      IntelINodeDirectory.addPermission(fbb, buildPermissionStatus(dir, state.getStringMap()));
-//
-//
-////      INodeSection.INodeDirectory.Builder b = INodeSection.INodeDirectory
-////          .newBuilder().setModificationTime(dir.getModificationTime())
-////          .setNsQuota(quota.getNameSpace())
-////          .setDsQuota(quota.getStorageSpace())
-////          .setPermission(buildPermissionStatus(dir, state.getStringMap()));
-//
-//      if (quota.getTypeSpaces().anyGreaterOrEqual(0)) {
-////        b.setTypeQuotas(buildQuotaByStorageTypeEntries(quota));
-//
-//
-//        IntelQuotaByStorageTypeEntryProto.createIntelQuotaByStorageTypeEntryProto()
-//
-//        int typeQuotasOffset = IntelQuotaByStorageTypeFeatureProto.
-//            createIntelQuotaByStorageTypeFeatureProto(fbb, );
-//
-//        IntelINodeDirectory.addTypeQuotas(fbb, typeQuotasOffset);
-//
-//      }
-//
-//      AclFeature f = dir.getAclFeature();
-//      if (f != null) {
-//        b.setAcl(buildAclEntries(f, state.getStringMap()));
-//
-//        int aclOffset = ;
-//        IntelINodeDirectory.addAcl(fbb, aclOffset);
-//      }
-//      XAttrFeature xAttrFeature = dir.getXAttrFeature();
-//      if (xAttrFeature != null) {
-//        b.setXAttrs(buildXAttrs(xAttrFeature, state.getStringMap()));
-//      }
-//      return b;
-//    }
+    public static int buildIntelINodeDirectory(
+        INodeDirectoryAttributes dir, final SaverContext state) {
+
+      QuotaCounts quota = dir.getQuotaCounts();
+      FlatBufferBuilder fbb = new FlatBufferBuilder();
+
+      long modifyTime = dir.getModificationTime();
+      long nsQuota = quota.getNameSpace();
+      long dsQuota = quota.getStorageSpace();
+      long permission = buildPermissionStatus(dir, state.getStringMap());
+      int aclOffset = 0;
+      int xAttrsOffset = 0;
+      int typeQuotasOffset = 0;
+
+      if (quota.getTypeSpaces().anyGreaterOrEqual(0)) {
+        typeQuotasOffset = buildIntelQuotaByStorageTypeEntries(quota);
+      }
+
+      AclFeature f = dir.getAclFeature();
+      if (f != null) {
+        aclOffset = buildIntelAclEntries(f, state.getStringMap());
+      }
+      XAttrFeature xAttrFeature = dir.getXAttrFeature();
+      if (xAttrFeature != null) {
+        xAttrsOffset = buildIntelXAttrs(xAttrFeature, state.getStringMap());
+      }
+      return IntelINodeDirectory.createIntelINodeDirectory(fbb, modifyTime,
+          nsQuota, dsQuota, permission, aclOffset, xAttrsOffset, typeQuotasOffset);
+    }
 
     public static INodeSection.INodeDirectory.Builder buildINodeDirectory(
         INodeDirectoryAttributes dir, final SaverContext state) {

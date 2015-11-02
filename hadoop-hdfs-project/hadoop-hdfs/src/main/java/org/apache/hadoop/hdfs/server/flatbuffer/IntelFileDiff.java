@@ -48,5 +48,6 @@ public final class IntelFileDiff extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelFileDiffBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
 };
 
