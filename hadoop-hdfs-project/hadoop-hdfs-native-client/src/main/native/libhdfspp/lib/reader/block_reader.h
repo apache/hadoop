@@ -63,12 +63,10 @@ public:
       : stream_(stream), state_(kOpen), options_(options),
         chunk_padding_bytes_(0) {}
 
-  template <class MutableBufferSequence>
-  void async_read_packet(const MutableBufferSequence &buffers,
+  void async_read_packet(const MutableBuffers &buffers,
                        const std::function<void(const Status &, size_t bytes_transferred)> &handler);
 
-  template <class MutableBufferSequence>
-  size_t read_packet(const MutableBufferSequence &buffers, Status *status);
+  size_t read_packet(const MutableBuffers &buffers, Status *status);
 
   Status request_block(const std::string &client_name,
                  const hadoop::common::TokenProto *token,
