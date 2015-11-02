@@ -250,6 +250,8 @@ public final class HdfsServerConstants {
     /** Temporary replica: created for replication and relocation only. */
     TEMPORARY(4);
 
+    private static final ReplicaState[] cachedValues = ReplicaState.values();
+
     private final int value;
 
     private ReplicaState(int v) {
@@ -261,12 +263,12 @@ public final class HdfsServerConstants {
     }
 
     public static ReplicaState getState(int v) {
-      return ReplicaState.values()[v];
+      return cachedValues[v];
     }
 
     /** Read from in */
     public static ReplicaState read(DataInput in) throws IOException {
-      return values()[in.readByte()];
+      return cachedValues[in.readByte()];
     }
 
     /** Write to out */
