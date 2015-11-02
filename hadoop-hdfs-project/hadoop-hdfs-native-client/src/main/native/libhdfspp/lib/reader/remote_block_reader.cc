@@ -44,6 +44,55 @@ ReadBlockProto(const std::string &client_name, bool verify_checksum,
   return p;
 }
 
+void RemoteBlockReader::async_request_block(
+    const std::string &client_name, const hadoop::common::TokenProto *token,
+    const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
+    uint64_t offset, const std::function<void(Status)> &handler) {
+  // The total number of bytes that we need to transfer from the DN is
+  // the amount that the user wants (bytesToRead), plus the padding at
+  // the beginning in order to chunk-align. Note that the DN may elect
+  // to send more than this amount if the read starts/ends mid-chunk.
+  bytes_to_read_ = length;
+
+  struct State {
+    std::string header;
+    hadoop::hdfs::OpReadBlockProto request;
+    hadoop::hdfs::BlockOpResponseProto response;
+  };
+
+  auto m = continuation::Pipeline<State>::Create();
+  State *s = &m->state();
+
+  s->header.insert(s->header.begin(),
+                   {0, kDataTransferVersion, Operation::kReadBlock});
+  s->request = std::move(ReadBlockProto(client_name, options_.verify_checksum,
+                                        token, block, length, offset));
+
+  auto read_pb_message =
+      new continuation::ReadDelimitedPBMessageContinuation<AsyncStream, 16384>(
+          stream_, &s->response);
+
+  m->Push(async_stream_continuation::Write(stream_, asio::buffer(s->header)))
+      .Push(asio_continuation::WriteDelimitedPBMessage(stream_, &s->request))
+      .Push(read_pb_message);
+
+  m->Run([this, handler, offset](const Status &status, const State &s) {    Status stat = status;
+    if (stat.ok()) {
+      const auto &resp = s.response;
+      if (resp.status() == ::hadoop::hdfs::Status::SUCCESS) {
+        if (resp.has_readopchecksuminfo()) {
+          const auto &checksum_info = resp.readopchecksuminfo();
+          chunk_padding_bytes_ = offset - checksum_info.chunkoffset();
+        }
+        state_ = kReadPacketHeader;
+      } else {
+        stat = Status::Error(s.response.message().c_str());
+      }
+    }
+    handler(stat);
+  });
+}
+
 Status RemoteBlockReader::request_block(
     const std::string &client_name, const hadoop::common::TokenProto *token,
     const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,

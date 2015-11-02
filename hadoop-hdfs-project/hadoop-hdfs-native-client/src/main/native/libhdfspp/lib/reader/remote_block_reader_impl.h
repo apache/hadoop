@@ -39,56 +39,6 @@ ReadBlockProto(const std::string &client_name, bool verify_checksum,
                const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
                uint64_t offset);
 
-template <class ConnectHandler>
-void RemoteBlockReader::async_request_block(
-    const std::string &client_name, const hadoop::common::TokenProto *token,
-    const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
-    uint64_t offset, const ConnectHandler &handler) {
-  // The total number of bytes that we need to transfer from the DN is
-  // the amount that the user wants (bytesToRead), plus the padding at
-  // the beginning in order to chunk-align. Note that the DN may elect
-  // to send more than this amount if the read starts/ends mid-chunk.
-  bytes_to_read_ = length;
-
-  struct State {
-    std::string header;
-    hadoop::hdfs::OpReadBlockProto request;
-    hadoop::hdfs::BlockOpResponseProto response;
-  };
-
-  auto m = continuation::Pipeline<State>::Create();
-  State *s = &m->state();
-
-  s->header.insert(s->header.begin(),
-                   {0, kDataTransferVersion, Operation::kReadBlock});
-  s->request = std::move(ReadBlockProto(client_name, options_.verify_checksum,
-                                        token, block, length, offset));
-
-  auto read_pb_message =
-      new continuation::ReadDelimitedPBMessageContinuation<AsyncStream, 16384>(
-          stream_, &s->response);
-
-  m->Push(async_stream_continuation::Write(stream_, asio::buffer(s->header)))
-      .Push(asio_continuation::WriteDelimitedPBMessage(stream_, &s->request))
-      .Push(read_pb_message);
-
-  m->Run([this, handler, offset](const Status &status, const State &s) {    Status stat = status;
-    if (stat.ok()) {
-      const auto &resp = s.response;
-      if (resp.status() == ::hadoop::hdfs::Status::SUCCESS) {
-        if (resp.has_readopchecksuminfo()) {
-          const auto &checksum_info = resp.readopchecksuminfo();
-          chunk_padding_bytes_ = offset - checksum_info.chunkoffset();
-        }
-        state_ = kReadPacketHeader;
-      } else {
-        stat = Status::Error(s.response.message().c_str());
-      }
-    }
-    handler(stat);
-  });
-}
-
 struct RemoteBlockReader::ReadPacketHeader
     : continuation::Continuation {
   ReadPacketHeader(RemoteBlockReader *parent) : parent_(parent) {}
@@ -283,10 +233,10 @@ private:
   RemoteBlockReader *parent_;
 };
 
-
-template <class MutableBufferSequence, class ReadHandler>
+template <class MutableBufferSequence>
 void RemoteBlockReader::async_read_packet(
-    const MutableBufferSequence &buffers, const ReadHandler &handler) {
+    const MutableBufferSequence &buffers, 
+    const std::function<void(const Status &, size_t bytes_transferred)> &handler) {
   assert(state_ != kOpen && "Not connected");
 
   struct State {

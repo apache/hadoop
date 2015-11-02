@@ -63,9 +63,9 @@ public:
       : stream_(stream), state_(kOpen), options_(options),
         chunk_padding_bytes_(0) {}
 
-  template <class MutableBufferSequence, class ReadHandler>
+  template <class MutableBufferSequence>
   void async_read_packet(const MutableBufferSequence &buffers,
-                       const ReadHandler &handler);
+                       const std::function<void(const Status &, size_t bytes_transferred)> &handler);
 
   template <class MutableBufferSequence>
   size_t read_packet(const MutableBufferSequence &buffers, Status *status);
@@ -75,12 +75,11 @@ public:
                  const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
                  uint64_t offset);
 
-  template <class ConnectHandler>
   void async_request_block(const std::string &client_name,
                      const hadoop::common::TokenProto *token,
                      const hadoop::hdfs::ExtendedBlockProto *block,
                      uint64_t length, uint64_t offset,
-                     const ConnectHandler &handler);
+                     const std::function<void(Status)> &handler);
 
 private:
   struct ReadPacketHeader;
