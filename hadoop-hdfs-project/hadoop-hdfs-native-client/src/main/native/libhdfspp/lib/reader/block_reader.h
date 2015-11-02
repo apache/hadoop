@@ -117,6 +117,4 @@ private:
 };
 }
 
-#include "remote_block_reader_impl.h"
-
 #endif

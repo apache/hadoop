@@ -17,6 +17,7 @@
  */
 
 #include "filesystem.h"
+#include "common/continuation/continuation.h"
 
 namespace hdfs {
 

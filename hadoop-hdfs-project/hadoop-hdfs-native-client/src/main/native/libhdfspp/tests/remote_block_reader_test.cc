@@ -21,6 +21,7 @@
 #include "datatransfer.pb.h"
 #include "common/util.h"
 #include "reader/block_reader.h"
+#include "reader/datatransfer.h"
 
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>

@@ -15,7 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "block_reader.h"
+#include "reader/block_reader.h"
+#include "reader/datatransfer.h"
+#include "common/continuation/continuation.h"
+#include "common/continuation/asio.h"
+
+#include <future>
 
 namespace hdfs {
 

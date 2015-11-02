@@ -179,6 +179,4 @@ private:
 
 }
 
-#include "inputstream_impl.h"
-
 #endif
