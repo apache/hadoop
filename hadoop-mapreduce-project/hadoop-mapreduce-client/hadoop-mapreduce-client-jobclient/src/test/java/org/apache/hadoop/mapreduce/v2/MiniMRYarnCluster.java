@@ -186,6 +186,27 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
     super.serviceInit(conf);
   }
 
+  @Override
+  protected void serviceStart() throws Exception {
+    super.serviceStart();
+
+    //need to do this because historyServer.init creates a new Configuration
+    getConfig().set(JHAdminConfig.MR_HISTORY_ADDRESS,
+                    historyServer.getConfig().get(JHAdminConfig.MR_HISTORY_ADDRESS));
+    MRWebAppUtil.setJHSWebappURLWithoutScheme(getConfig(),
+        MRWebAppUtil.getJHSWebappURLWithoutScheme(historyServer.getConfig()));
+
+    LOG.info("MiniMRYARN ResourceManager address: " +
+        getConfig().get(YarnConfiguration.RM_ADDRESS));
+    LOG.info("MiniMRYARN ResourceManager web address: " +
+        WebAppUtils.getRMWebAppURLWithoutScheme(getConfig()));
+    LOG.info("MiniMRYARN HistoryServer address: " +
+        getConfig().get(JHAdminConfig.MR_HISTORY_ADDRESS));
+    LOG.info("MiniMRYARN HistoryServer web address: " +
+        getResolvedMRHistoryWebAppURLWithoutScheme(getConfig(),
+            MRWebAppUtil.getJHSHttpPolicy() == HttpConfig.Policy.HTTPS_ONLY));
+  }
+
   private class JobHistoryServerWrapper extends AbstractService {
     public JobHistoryServerWrapper() {
       super(JobHistoryServerWrapper.class.getName());
@@ -228,21 +249,6 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
       } catch (Throwable t) {
         throw new YarnRuntimeException(t);
       }
-      //need to do this because historyServer.init creates a new Configuration
-      getConfig().set(JHAdminConfig.MR_HISTORY_ADDRESS,
-                      historyServer.getConfig().get(JHAdminConfig.MR_HISTORY_ADDRESS));
-      MRWebAppUtil.setJHSWebappURLWithoutScheme(getConfig(),
-          MRWebAppUtil.getJHSWebappURLWithoutScheme(historyServer.getConfig()));
-
-      LOG.info("MiniMRYARN ResourceManager address: " +
-               getConfig().get(YarnConfiguration.RM_ADDRESS));
-      LOG.info("MiniMRYARN ResourceManager web address: " +
-               WebAppUtils.getRMWebAppURLWithoutScheme(getConfig()));
-      LOG.info("MiniMRYARN HistoryServer address: " +
-               getConfig().get(JHAdminConfig.MR_HISTORY_ADDRESS));
-      LOG.info("MiniMRYARN HistoryServer web address: "
-          + getResolvedMRHistoryWebAppURLWithoutScheme(getConfig(),
-              MRWebAppUtil.getJHSHttpPolicy() == HttpConfig.Policy.HTTPS_ONLY));
     }
 
     @Override
