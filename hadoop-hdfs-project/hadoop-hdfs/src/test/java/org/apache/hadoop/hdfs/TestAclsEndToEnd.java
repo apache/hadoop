@@ -233,15 +233,15 @@ public class TestAclsEndToEnd {
         keyadminUgi.getUserName());
     conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.ROLLOVER",
         keyadminUgi.getUserName());
-    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GET", "");
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GET", " ");
     conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GET_KEYS",
         keyadminUgi.getUserName());
     conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GET_METADATA",
         hdfsUgi.getUserName());
-    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.SET_KEY_MATERIAL", "");
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.SET_KEY_MATERIAL", " ");
     conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK",
         hdfsUgi.getUserName());
-    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DECRYPT_EEK", "");
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DECRYPT_EEK", "*");
 
     return conf;
   }
@@ -473,6 +473,1042 @@ public class TestAclsEndToEnd {
     } finally {
       fs.delete(ZONE1, true);
       fs.delete(ZONE2, true);
+      teardown();
+    }
+  }
+
+  /**
+   * Test that key creation is correctly governed by ACLs.
+   * @throws Exception thrown if setup fails
+   */
+  @Test
+  public void testCreateKey() throws Exception {
+    Configuration conf = new Configuration();
+
+    // Correct config with whitelist ACL
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.CREATE",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "MANAGEMENT",
+        realUgi.getUserName());
+
+    try {
+      setup(conf);
+
+      assertTrue("Exception during key creation with correct config"
+          + " using whitelist key ACLs", createKey(realUgi, KEY1, conf));
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Correct config with default ACL
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.CREATE",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "MANAGEMENT",
+        realUgi.getUserName());
+
+    try {
+      setup(conf);
+
+      assertTrue("Exception during key creation with correct config"
+          + " using default key ACLs", createKey(realUgi, KEY2, conf));
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Denied because of blacklist
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.CREATE",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "blacklist.CREATE",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "MANAGEMENT",
+        realUgi.getUserName());
+
+    try {
+      setup(conf);
+
+      assertFalse("Allowed key creation with blacklist for CREATE",
+          createKey(realUgi, KEY3, conf));
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Missing KMS ACL
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.CREATE", " ");
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "MANAGEMENT",
+        realUgi.getUserName());
+
+    try {
+      setup(conf);
+
+      assertFalse("Allowed key creation without CREATE KMS ACL",
+          createKey(realUgi, KEY3, conf));
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Missing key ACL
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.CREATE",
+        realUgi.getUserName());
+
+    try {
+      setup(conf);
+
+      assertFalse("Allowed key creation without MANAGMENT key ACL",
+          createKey(realUgi, KEY3, conf));
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Denied because the key ACL set ignores the default ACL set for key3
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.CREATE",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "MANAGEMENT",
+        realUgi.getUserName());
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + KEY3 + ".DECRYPT_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf);
+
+      assertFalse("Allowed key creation when default key ACL should have been"
+          + " overridden by key ACL", createKey(realUgi, KEY3, conf));
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Allowed because the default setting for KMS ACLs is fully permissive
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "MANAGEMENT",
+        realUgi.getUserName());
+
+    try {
+      setup(conf);
+
+      assertTrue("Exception during key creation with default KMS ACLs",
+          createKey(realUgi, KEY3, conf));
+    } finally {
+      teardown();
+    }
+  }
+
+  /**
+   * Test that zone creation is correctly governed by ACLs.
+   * @throws Exception thrown if setup fails
+   */
+  @Test
+  public void testCreateEncryptionZone() throws Exception {
+    Configuration conf = new Configuration();
+
+    // Create a test key
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.CREATE",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "MANAGEMENT",
+        realUgi.getUserName());
+
+    try {
+      setup(conf);
+
+      assertTrue("Exception during key creation",
+          createKey(realUgi, KEY1, conf));
+    } finally {
+      teardown();
+    }
+
+    // We tear everything down and then restart it with the ACLs we want to
+    // test so that there's no contamination from the ACLs needed for setup.
+    // To make that work, we have to tell the setup() method not to create a
+    // new KMS directory.
+    conf = new Configuration();
+
+    // Correct config with whitelist ACL
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GET_METADATA",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "READ",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "GENERATE_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false);
+
+      fs.mkdirs(ZONE1);
+
+      assertTrue("Exception during zone creation with correct config using"
+          + " whitelist key ACLs", createEncryptionZone(realUgi, KEY1, ZONE1));
+    } finally {
+      fs.delete(ZONE1, true);
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Correct config with default ACL
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GET_METADATA",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "READ",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "GENERATE_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false);
+
+      fs.mkdirs(ZONE2);
+
+      assertTrue("Exception during zone creation with correct config using"
+          + " default key ACLs", createEncryptionZone(realUgi, KEY1, ZONE2));
+    } finally {
+      fs.delete(ZONE2, true);
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Denied because the key ACL set ignores the default ACL set for key1
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GET_METADATA",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "READ",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + KEY1 + ".DECRYPT_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false);
+
+      fs.mkdirs(ZONE3);
+
+      assertFalse("Allowed creation of zone when default key ACLs should have"
+          + " been overridden by key ACL",
+            createEncryptionZone(realUgi, KEY1, ZONE3));
+    } finally {
+      fs.delete(ZONE3, true);
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Correct config with blacklist
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GET_METADATA",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "blacklist.GET_METADATA",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "READ",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "GENERATE_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false);
+
+      fs.mkdirs(ZONE3);
+
+      assertFalse("Allowed zone creation of zone with blacklisted GET_METADATA",
+          createEncryptionZone(realUgi, KEY1, ZONE3));
+    } finally {
+      fs.delete(ZONE3, true);
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Correct config with blacklist
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GET_METADATA",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "blacklist.GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "READ",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "GENERATE_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false);
+
+      fs.mkdirs(ZONE3);
+
+      assertFalse("Allowed zone creation of zone with blacklisted GENERATE_EEK",
+          createEncryptionZone(realUgi, KEY1, ZONE3));
+    } finally {
+      fs.delete(ZONE3, true);
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Missing KMS ACL but works because defaults for KMS ACLs are fully
+    // permissive
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "READ",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "GENERATE_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false);
+
+      fs.mkdirs(ZONE3);
+
+      assertTrue("Exception during zone creation with default KMS ACLs",
+          createEncryptionZone(realUgi, KEY1, ZONE3));
+    } finally {
+      fs.delete(ZONE3, true);
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Missing GET_METADATA KMS ACL
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GET_METADATA", " ");
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "READ",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "GENERATE_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false);
+
+      fs.mkdirs(ZONE4);
+
+      assertFalse("Allowed zone creation without GET_METADATA KMS ACL",
+          createEncryptionZone(realUgi, KEY1, ZONE4));
+    } finally {
+      fs.delete(ZONE4, true);
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Missing GET_METADATA KMS ACL
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GET_METADATA",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK", " ");
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "READ",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "GENERATE_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false);
+
+      fs.mkdirs(ZONE4);
+
+      assertFalse("Allowed zone creation without GENERATE_EEK KMS ACL",
+          createEncryptionZone(realUgi, KEY1, ZONE4));
+    } finally {
+      fs.delete(ZONE4, true);
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Missing READ key ACL
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GET_METADATA",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "GENERATE_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false);
+
+      fs.mkdirs(ZONE4);
+
+      assertFalse("Allowed zone creation without READ ACL",
+          createEncryptionZone(realUgi, KEY1, ZONE4));
+    } finally {
+      fs.delete(ZONE4, true);
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Missing GENERATE_EEK key ACL
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GET_METADATA",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "READ",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false);
+
+      fs.mkdirs(ZONE4);
+
+      assertFalse("Allowed zone creation without GENERATE_EEK ACL",
+          createEncryptionZone(realUgi, KEY1, ZONE4));
+    } finally {
+      fs.delete(ZONE4, true);
+      teardown();
+    }
+  }
+
+  /**
+   * Test that in-zone file creation is correctly governed by ACLs.
+   * @throws Exception thrown if setup fails
+   */
+  @Test
+  public void testCreateFileInEncryptionZone() throws Exception {
+    Configuration conf = new Configuration();
+
+    // Create a test key
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.CREATE",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GET_METADATA",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "MANAGEMENT",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "READ",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "GENERATE_EEK",
+        realUgi.getUserName());
+
+    assertTrue(new File(kmsDir, "kms.keystore").length() == 0);
+
+    try {
+      setup(conf);
+
+      assertTrue("Exception during key creation",
+          createKey(realUgi, KEY1, conf));
+      fs.mkdirs(ZONE1);
+      assertTrue("Exception during zone creation",
+          createEncryptionZone(realUgi, KEY1, ZONE1));
+      fs.mkdirs(ZONE2);
+      assertTrue("Exception during zone creation",
+          createEncryptionZone(realUgi, KEY1, ZONE2));
+      fs.mkdirs(ZONE3);
+      assertTrue("Exception during zone creation",
+          createEncryptionZone(realUgi, KEY1, ZONE3));
+      fs.mkdirs(ZONE4);
+      assertTrue("Exception during zone creation",
+          createEncryptionZone(realUgi, KEY1, ZONE4));
+    } catch (Throwable ex) {
+      fs.delete(ZONE1, true);
+      fs.delete(ZONE2, true);
+      fs.delete(ZONE3, true);
+      fs.delete(ZONE4, true);
+
+      throw ex;
+    } finally {
+      teardown();
+    }
+
+    // We tear everything down and then restart it with the ACLs we want to
+    // test so that there's no contamination from the ACLs needed for setup.
+    // To make that work, we have to tell the setup() method not to create a
+    // new KMS directory or DFS dierctory.
+
+    conf = new Configuration();
+
+    // Correct config with whitelist ACLs
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DECRYPT_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "DECRYPT_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false, false);
+
+      assertTrue("Exception during file creation with correct config"
+          + " using whitelist ACL", createFile(realUgi, FILE1, TEXT));
+    } finally {
+      fs.delete(ZONE1, true);
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Correct config with default ACLs
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DECRYPT_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "DECRYPT_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false, false);
+
+      assertTrue("Exception during file creation with correct config"
+          + " using whitelist ACL", createFile(realUgi, FILE2, TEXT));
+    } finally {
+      fs.delete(ZONE2, true);
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Denied because the key ACL set ignores the default ACL set for key1
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DECRYPT_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "DECRYPT_EEK",
+        realUgi.getUserName());
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + KEY1 + ".READ",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false, false);
+
+      assertFalse("Allowed file creation when default key ACLs should have been"
+          + " overridden by key ACL", createFile(realUgi, FILE3, TEXT));
+    } catch (Exception ex) {
+      fs.delete(ZONE3, true);
+
+      throw ex;
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Denied by blacklist
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DECRYPT_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "blacklist.GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "DECRYPT_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false, false);
+
+      assertFalse("Allowed file creation with blacklist for GENERATE_EEK",
+          createFile(realUgi, FILE3, TEXT));
+    } catch (Exception ex) {
+      fs.delete(ZONE3, true);
+
+      throw ex;
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Denied by blacklist
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DECRYPT_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "blacklist.DECRYPT_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "DECRYPT_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false, false);
+
+      assertFalse("Allowed file creation with blacklist for DECRYPT_EEK",
+          createFile(realUgi, FILE3, TEXT));
+    } catch (Exception ex) {
+      fs.delete(ZONE3, true);
+
+      throw ex;
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Allowed because default KMS ACLs are fully permissive
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "DECRYPT_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false, false);
+
+      assertTrue("Exception during file creation with default KMS ACLs",
+          createFile(realUgi, FILE3, TEXT));
+    } catch (Exception ex) {
+      fs.delete(ZONE3, true);
+
+      throw ex;
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Denied because of missing GENERATE_EEK KMS ACL
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK", " ");
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DECRYPT_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "DECRYPT_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false, false);
+
+      assertFalse("Allowed file creation without GENERATE_EEK KMS ACL",
+          createFile(realUgi, FILE4, TEXT));
+    } catch (Exception ex) {
+      fs.delete(ZONE3, true);
+
+      throw ex;
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Denied because of missing DECRYPT_EEK KMS ACL
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DECRYPT_EEK", " ");
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "DECRYPT_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false, false);
+
+      assertFalse("Allowed file creation without DECRYPT_EEK KMS ACL",
+          createFile(realUgi, FILE3, TEXT));
+    } catch (Exception ex) {
+      fs.delete(ZONE3, true);
+
+      throw ex;
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Denied because of missing GENERATE_EEK key ACL
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DECRYPT_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "DECRYPT_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false, false);
+
+      assertFalse("Allowed file creation without GENERATE_EEK key ACL",
+          createFile(realUgi, FILE3, TEXT));
+    } catch (Exception ex) {
+      fs.delete(ZONE3, true);
+
+      throw ex;
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Denied because of missing DECRYPT_EEK key ACL
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DECRYPT_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "GENERATE_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false, false);
+
+      assertFalse("Allowed file creation without DECRYPT_EEK key ACL",
+          createFile(realUgi, FILE3, TEXT));
+    } catch (Exception ex) {
+      fs.delete(ZONE3, true);
+
+      throw ex;
+    } finally {
+      teardown();
+    }
+  }
+
+  /**
+   * Test that in-zone file read is correctly governed by ACLs.
+   * @throws Exception thrown if setup fails
+   */
+  @Test
+  public void testReadFileInEncryptionZone() throws Exception {
+    Configuration conf = new Configuration();
+
+    // Create a test key
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.CREATE",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GET_METADATA",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DECRYPT_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "MANAGEMENT",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "READ",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "GENERATE_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "DECRYPT_EEK",
+        realUgi.getUserName());
+
+    assertTrue(new File(kmsDir, "kms.keystore").length() == 0);
+
+    try {
+      setup(conf);
+
+      assertTrue("Exception during key creation",
+          createKey(realUgi, KEY1, conf));
+      fs.mkdirs(ZONE1);
+      assertTrue("Exception during zone creation",
+          createEncryptionZone(realUgi, KEY1, ZONE1));
+      assertTrue("Exception during file creation",
+              createFile(realUgi, FILE1, TEXT));
+    } catch (Throwable ex) {
+      fs.delete(ZONE1, true);
+
+      throw ex;
+    } finally {
+      teardown();
+    }
+
+    // We tear everything down and then restart it with the ACLs we want to
+    // test so that there's no contamination from the ACLs needed for setup.
+    // To make that work, we have to tell the setup() method not to create a
+    // new KMS directory or DFS dierctory.
+
+    conf = new Configuration();
+
+    // Correct config with whitelist ACLs
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DECRYPT_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "DECRYPT_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false, false);
+
+      assertTrue("Exception while reading file with correct config with"
+          + " whitelist ACLs", compareFile(realUgi, FILE1, TEXT));
+    } catch (Throwable ex) {
+      fs.delete(ZONE1, true);
+
+      throw ex;
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Correct config with default ACLs
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DECRYPT_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "DECRYPT_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false, false);
+
+      assertTrue("Exception while reading file with correct config"
+          + " with default ACLs", compareFile(realUgi, FILE1, TEXT));
+    } catch (Throwable ex) {
+      fs.delete(ZONE1, true);
+
+      throw ex;
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Denied because the key ACL set ignores the default ACL set for key1
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DECRYPT_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "DECRYPT_EEK",
+        realUgi.getUserName());
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + KEY1 + ".READ",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false, false);
+
+      assertFalse("Allowed file read when default key ACLs should have been"
+          + " overridden by key ACL", compareFile(realUgi, FILE1, TEXT));
+    } catch (Throwable ex) {
+      fs.delete(ZONE1, true);
+
+      throw ex;
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Denied by blacklist
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DECRYPT_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "blacklist.DECRYPT_EEK",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "DECRYPT_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false, false);
+
+      assertFalse("Allowed file read with blacklist for DECRYPT_EEK",
+          compareFile(realUgi, FILE1, TEXT));
+    } catch (Throwable ex) {
+      fs.delete(ZONE1, true);
+
+      throw ex;
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Allowed because default KMS ACLs are fully permissive
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "DECRYPT_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false, false);
+
+      assertTrue("Exception while reading file with default KMS ACLs",
+          compareFile(realUgi, FILE1, TEXT));
+    } catch (Throwable ex) {
+      fs.delete(ZONE1, true);
+
+      throw ex;
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Denied because of missing DECRYPT_EEK KMS ACL
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DECRYPT_EEK", " ");
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "DECRYPT_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false, false);
+
+      assertFalse("Allowed file read without DECRYPT_EEK KMS ACL",
+          compareFile(realUgi, FILE1, TEXT));
+    } catch (Throwable ex) {
+      fs.delete(ZONE1, true);
+
+      throw ex;
+    } finally {
+      teardown();
+    }
+
+    // Denied because of missing DECRYPT_EEK key ACL
+    conf = new Configuration();
+
+    try {
+      setup(conf, false, false);
+
+      assertFalse("Allowed file read without DECRYPT_EEK key ACL",
+          compareFile(realUgi, FILE1, TEXT));
+    } catch (Throwable ex) {
+      fs.delete(ZONE1, true);
+
+      throw ex;
+    } finally {
+      teardown();
+    }
+  }
+
+  /**
+   * Test that key deletion is correctly governed by ACLs.
+   * @throws Exception thrown if setup fails
+   */
+  @Test
+  public void testDeleteKey() throws Exception {
+    Configuration conf = new Configuration();
+
+    // Create a test key
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.CREATE",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "MANAGEMENT",
+        realUgi.getUserName());
+
+    try {
+      setup(conf);
+
+      assertTrue("Exception during key creation",
+          createKey(realUgi, KEY1, conf));
+      assertTrue("Exception during key creation",
+          createKey(realUgi, KEY2, conf));
+      assertTrue("Exception during key creation",
+          createKey(realUgi, KEY3, conf));
+    } finally {
+      teardown();
+    }
+
+    // We tear everything down and then restart it with the ACLs we want to
+    // test so that there's no contamination from the ACLs needed for setup.
+    // To make that work, we have to tell the setup() method not to create a
+    // new KMS directory.
+
+    conf = new Configuration();
+
+    // Correct config with whitelist ACL
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DELETE",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "MANAGEMENT",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false);
+
+      assertTrue("Exception during key deletion with correct config"
+          + " using whitelist key ACLs", deleteKey(realUgi, KEY1));
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Correct config with default ACL
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DELETE",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "MANAGEMENT",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false);
+
+      assertTrue("Exception during key deletion with correct config"
+          + " using default key ACLs", deleteKey(realUgi, KEY2));
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Denied because of blacklist
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DELETE",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "blacklist.DELETE",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "MANAGEMENT",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false);
+
+      assertFalse("Allowed key deletion with blacklist for DELETE",
+          deleteKey(realUgi, KEY3));
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Missing KMS ACL
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DELETE", " ");
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "MANAGEMENT",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false);
+
+      assertFalse("Allowed key deletion without DELETE KMS ACL",
+          deleteKey(realUgi, KEY3));
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+
+    // Missing key ACL
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DELETE",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false);
+
+      assertFalse("Allowed key deletion without MANAGMENT key ACL",
+          deleteKey(realUgi, KEY3));
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Denied because the key ACL set ignores the default ACL set for key3
+    conf.set(KMSConfiguration.CONFIG_PREFIX + "acl.DELETE",
+        realUgi.getUserName());
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "MANAGEMENT",
+        realUgi.getUserName());
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + KEY3 + ".DECRYPT_EEK",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false);
+
+      assertFalse("Allowed key deletion when default key ACL should have been"
+          + " overridden by key ACL", deleteKey(realUgi, KEY3));
+    } finally {
+      teardown();
+    }
+
+    conf = new Configuration();
+
+    // Allowed because the default setting for KMS ACLs is fully permissive
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "MANAGEMENT",
+        realUgi.getUserName());
+
+    try {
+      setup(conf, false);
+
+      assertTrue("Exception during key deletion with default KMS ACLs",
+          deleteKey(realUgi, KEY3));
+    } finally {
       teardown();
     }
   }
