@@ -21,9 +21,15 @@ package org.apache.hadoop.fs.azure;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
+import java.util.concurrent.CountDownLatch;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+
 import org.junit.Test;
+
+import com.microsoft.azure.storage.StorageException;
 
 /*
  * Tests the Native Azure file system (WASB) against an actual blob store if
@@ -35,6 +41,86 @@ public class TestNativeAzureFileSystemLive extends
   @Override
   protected AzureBlobStorageTestAccount createTestAccount() throws Exception {
     return AzureBlobStorageTestAccount.create();
+  }
+
+  /**
+   * Tests fs.delete() function to delete a blob when another blob is holding a
+   * lease on it. Delete if called without a lease should fail if another process
+   * is holding a lease and throw appropriate exception
+   * This is a scenario that would happen in HMaster startup when it tries to
+   * clean up the temp dirs while the HMaster process which was killed earlier
+   * held lease on the blob when doing some DDL operation
+   */
+  @Test
+  public void testDeleteThrowsExceptionWithLeaseExistsErrorMessage()
+      throws Exception {
+    LOG.info("Starting test");
+    final String FILE_KEY = "fileWithLease";
+    // Create the file
+    Path path = new Path(FILE_KEY);
+    fs.create(path);
+    assertTrue(fs.exists(path));
+    NativeAzureFileSystem nfs = (NativeAzureFileSystem)fs;
+    final String fullKey = nfs.pathToKey(nfs.makeAbsolute(path));
+    final AzureNativeFileSystemStore store = nfs.getStore();
+
+    // Acquire the lease on the file in a background thread
+    final CountDownLatch leaseAttemptComplete = new CountDownLatch(1);
+    final CountDownLatch beginningDeleteAttempt = new CountDownLatch(1);
+    Thread t = new Thread() {
+      @Override
+      public void run() {
+        // Acquire the lease and then signal the main test thread.
+        SelfRenewingLease lease = null;
+        try {
+          lease = store.acquireLease(fullKey);
+          LOG.info("Lease acquired: " + lease.getLeaseID());
+        } catch (AzureException e) {
+          LOG.warn("Lease acqusition thread unable to acquire lease", e);
+        } finally {
+          leaseAttemptComplete.countDown();
+        }
+
+        // Wait for the main test thread to signal it will attempt the delete.
+        try {
+          beginningDeleteAttempt.await();
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+
+        // Keep holding the lease past the lease acquisition retry interval, so
+        // the test covers the case of delete retrying to acquire the lease.
+        try {
+          Thread.sleep(SelfRenewingLease.LEASE_ACQUIRE_RETRY_INTERVAL * 3);
+        } catch (InterruptedException ex) {
+          Thread.currentThread().interrupt();
+        }
+
+        try {
+          if (lease != null){
+            LOG.info("Freeing lease");
+            lease.free();
+          }
+        } catch (StorageException se) {
+          LOG.warn("Unable to free lease.", se);
+        }
+      }
+    };
+
+    // Start the background thread and wait for it to signal the lease is held.
+    t.start();
+    try {
+      leaseAttemptComplete.await();
+    } catch (InterruptedException ex) {
+      Thread.currentThread().interrupt();
+    }
+
+    // Try to delete the same file
+    beginningDeleteAttempt.countDown();
+    store.delete(fullKey);
+
+    // At this point file SHOULD BE DELETED
+    assertFalse(fs.exists(path));
   }
 
   /**

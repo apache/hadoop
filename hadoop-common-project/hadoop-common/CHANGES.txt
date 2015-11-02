@@ -1307,6 +1307,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12533. Introduce FileNotFoundException in WASB for read and seek API.
     (Dushyanth via cnauroth)
 
+    HADOOP-12508. delete fails with exception when lease is held on blob.
+    (Gaurav Kanade via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
