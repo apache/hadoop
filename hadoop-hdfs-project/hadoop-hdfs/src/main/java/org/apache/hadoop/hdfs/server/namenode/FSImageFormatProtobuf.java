@@ -754,8 +754,8 @@ public final class FSImageFormatProtobuf {
       context.checkCancelled();
       Step step = new Step(StepType.INODES, filePath);
       prog.beginStep(Phase.SAVING_CHECKPOINT, step);
-      saveIntelInodes(fbb, listSection);
-      saveIntelSnapshots(fbb, listSection);
+      saveIntelInodes(fbb, listSection); // finished.
+      saveIntelSnapshots(fbb, listSection); // finished.
       prog.endStep(Phase.SAVING_CHECKPOINT, step);
       step = new Step(StepType.DELEGATION_TOKENS, filePath);
       prog.beginStep(Phase.SAVING_CHECKPOINT, step);

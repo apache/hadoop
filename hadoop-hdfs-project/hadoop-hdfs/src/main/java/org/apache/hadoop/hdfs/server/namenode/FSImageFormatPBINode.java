@@ -1101,11 +1101,11 @@ public final class FSImageFormatPBINode {
         String path = file.getFullPathName();
 
         FlatBufferBuilder fbb1 = new FlatBufferBuilder();
-        IntelFileUnderConstructionEntry.createIntelFileUnderConstructionEntry(fbb1,
+        int inv = IntelFileUnderConstructionEntry.createIntelFileUnderConstructionEntry(fbb1,
             file.getId(), fbb1.createString(path));
+        IntelFileUnderConstructionEntry.finishIntelFileUnderConstructionEntryBuffer(fbb1, inv);
         byte[] bytes = fbb1.sizedByteArray();
         writeTo(bytes, bytes.length, out);
-
       }
       return parent.commitIntelSection(
           FSImageFormatProtobuf.SectionName.FILES_UNDERCONSTRUCTION, fbb);

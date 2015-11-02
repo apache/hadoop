@@ -420,9 +420,7 @@ public class FSImageFormatPBSnapshot {
     public int serializeIntelSnapshotSection(OutputStream out) throws IOException {
       SnapshotManager sm = fsn.getSnapshotManager();
       FlatBufferBuilder fbb = new FlatBufferBuilder();
-      IntelSnapshotSection.startIntelSnapshotSection(fbb);
-      IntelSnapshotSection.addSnapshotCounter(fbb, sm.getSnapshotCounter());
-      IntelSnapshotSection.addNumSnapshots(fbb, sm.getNumSnapshots());
+
       int snapshottableDirOffset = 0;
       ArrayList<Long> list = new ArrayList<>();
       INodeDirectory[] snapshottables = sm.getSnapshottableDirs();
@@ -430,8 +428,13 @@ public class FSImageFormatPBSnapshot {
         list.add(sdir.getId());
       }
       Long[] data = list.toArray(new Long[list.size()]);
+
       snapshottableDirOffset = IntelSnapshotSection.
           createSnapshottableDirVector(fbb, ArrayUtils.toPrimitive(data));
+
+      IntelSnapshotSection.startIntelSnapshotSection(fbb);
+      IntelSnapshotSection.addSnapshotCounter(fbb, sm.getSnapshotCounter());
+      IntelSnapshotSection.addNumSnapshots(fbb, sm.getNumSnapshots());
       IntelSnapshotSection.addSnapshottableDir(fbb, snapshottableDirOffset);
       int inv = IntelSnapshotSection.endIntelSnapshotSection(fbb);
       IntelSnapshotSection.finishIntelSnapshotSectionBuffer(fbb, inv);
@@ -649,9 +652,7 @@ public class FSImageFormatPBSnapshot {
         ArrayList<Integer> list = new ArrayList<>();
         FlatBufferBuilder fbb1 = new FlatBufferBuilder();
         for (int i = diffList.size() - 1; i >= 0; i--) {
-
           FileDiff diff = diffList.get(i);
-
           if(diff.getBlocks() != null) {
             for(Block block : diff.getBlocks()) {
               list.add(PBHelper.convertIntel(block, fbb1));
@@ -723,14 +724,7 @@ public class FSImageFormatPBSnapshot {
         int name = 0, snapshotCopy = 0;
         for (int i = diffList.size() - 1; i >= 0; i--) { // reverse order!
           DirectoryDiff diff = diffList.get(i);
-
-          SnapshotDiffSection.DirectoryDiff.Builder db = SnapshotDiffSection.
-              DirectoryDiff.newBuilder().setSnapshotId(diff.getSnapshotId())
-              .setChildrenSize(diff.getChildrenSize())
-              .setIsSnapshotRoot(diff.isSnapshotRoot());
-
           INodeDirectoryAttributes copy = diff.snapshotINode;
-
           if (!diff.isSnapshotRoot() && copy != null) {
             name = fbb1.createString(copy.getLocalNameBytes().toString());
             snapshotCopy = buildIntelINodeDirectory(copy, parent.getSaverContext());
