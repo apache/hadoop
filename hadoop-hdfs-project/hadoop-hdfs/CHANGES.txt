@@ -189,6 +189,9 @@ Trunk (Unreleased)
 
     HDFS-9323. Randomize the DFSStripedOutputStreamWithFailure tests. (szetszwo)
 
+    HDFS-8777. Erasure Coding: add tests for taking snapshots on EC files. 
+    (Rakesh R via zhz)
+
   OPTIMIZATIONS
 
   BUG FIXES
