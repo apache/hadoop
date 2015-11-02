@@ -1529,9 +1529,6 @@ Release 2.8.0 - UNRELEASED
     HDFS-9110. Use Files.walkFileTree in NNUpgradeUtil#doPreUpgrade for
     better efficiency. (Charlie Helin via wang)
 
-    HDFS-9221. HdfsServerConstants#ReplicaState#getState should avoid calling
-    values() since it creates a temporary array. (Staffan Friberg via yliu)
-
     HDFS-8988. Use LightWeightHashSet instead of LightWeightLinkedSet in
     BlockManager#excessReplicateMap. (yliu)
 
@@ -2219,6 +2216,9 @@ Release 2.7.2 - UNRELEASED
 
     HDFS-8099. Change "DFSInputStream has been closed already" message to
     debug log level (Charles Lamb via Colin P. McCabe)
+
+    HDFS-9221. HdfsServerConstants#ReplicaState#getState should avoid calling
+    values() since it creates a temporary array. (Staffan Friberg via yliu)
 
   OPTIMIZATIONS
 
