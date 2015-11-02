@@ -181,7 +181,13 @@ struct RemoteBlockReader::ReadData : continuation::Continuation {
   ReadData(RemoteBlockReader *parent,
            std::shared_ptr<size_t> bytes_transferred,
            const asio::mutable_buffers_1 &buf)
-      : parent_(parent), bytes_transferred_(bytes_transferred), buf_(buf) {}
+      : parent_(parent), bytes_transferred_(bytes_transferred), buf_(buf) {
+    buf_.begin();
+  }
+  
+  ~ReadData() {
+    buf_.end();
+  }
 
   virtual void Run(const Next &next) override {
     auto handler =
@@ -208,7 +214,7 @@ struct RemoteBlockReader::ReadData : continuation::Continuation {
 private:
   RemoteBlockReader *parent_;
   std::shared_ptr<size_t> bytes_transferred_;
-  const asio::mutable_buffers_1 & buf_;
+  const asio::mutable_buffers_1 buf_;
 };
 
 struct RemoteBlockReader::ReadPadding : continuation::Continuation {

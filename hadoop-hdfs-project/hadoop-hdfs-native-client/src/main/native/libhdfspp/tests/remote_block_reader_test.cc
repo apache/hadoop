@@ -162,8 +162,8 @@ TEST(RemoteBlockReaderTest, TestReadWholeBlock) {
                 ASSERT_TRUE(stat.ok());
                 ASSERT_EQ(kChunkSize, transferred);
                 ASSERT_EQ(kChunkData, data);
-                io_service.stop();
                 done = true;
+                io_service.stop();
               });
   io_service.run();
   ASSERT_TRUE(done);
@@ -195,16 +195,20 @@ TEST(RemoteBlockReaderTest, TestReadWithinChunk) {
   block.set_blockid(0);
   block.set_generationstamp(0);
 
+  bool done = false;
+
   string data(kLength, 0);
   ReadContent(conn, nullptr, block, data.size(), kOffset,
               buffer(const_cast<char *>(data.c_str()), data.size()),
-              [&data, &io_service](const Status &stat, size_t transferred) {
+              [&data, &io_service,&done](const Status &stat, size_t transferred) {
                 ASSERT_TRUE(stat.ok());
                 ASSERT_EQ(kLength, transferred);
                 ASSERT_EQ(kChunkData.substr(kOffset, kLength), data);
+                done = true;
                 io_service.stop();
               });
   io_service.run();
+  ASSERT_TRUE(done);
 }
 
 TEST(RemoteBlockReaderTest, TestReadMultiplePacket) {
