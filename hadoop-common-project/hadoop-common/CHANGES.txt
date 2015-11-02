@@ -1304,6 +1304,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12519. hadoop-azure tests should avoid creating a metrics
     configuration file in the module root directory. (cnauroth)
 
+    HADOOP-12533. Introduce FileNotFoundException in WASB for read and seek API.
+    (Dushyanth via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
