@@ -1174,6 +1174,8 @@ public class ZKRMStateStore extends RMStateStore {
             // another RM becoming active. Even if not,
             // it is safer to assume we have been fenced
             throw new StoreFencedException();
+          } else {
+            throw nae;
           }
         } catch (KeeperException ke) {
           if (ke.code() == Code.NODEEXISTS) {
