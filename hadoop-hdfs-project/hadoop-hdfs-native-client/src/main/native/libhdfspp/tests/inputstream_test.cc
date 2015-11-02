@@ -35,7 +35,7 @@ using namespace hdfs;
 
 namespace hdfs {
 
-class MockReader {
+class MockReader : public BlockReader {
 public:
   virtual ~MockReader() {}
   MOCK_METHOD2(
@@ -44,60 +44,13 @@ public:
            const std::function<void(const Status &, size_t transferred)> &));
 
   MOCK_METHOD6(async_request_block,
-               void(const std::string &, TokenProto *, ExtendedBlockProto *,
-                    uint64_t, uint64_t,
-                    const std::function<void(const Status &)> &));
+               void(const std::string &client_name,
+                     const hadoop::common::TokenProto *token,
+                     const hadoop::hdfs::ExtendedBlockProto *block,
+                     uint64_t length, uint64_t offset,
+                     const std::function<void(Status)> &handler));
 };
 
-class MockDataNodeConnection : public DataNodeConnection, public std::enable_shared_from_this<MockDataNodeConnection> {
-public:
-  MockDataNodeConnection() {
-    int id;
-    RAND_pseudo_bytes((unsigned char *)&id, sizeof(id));
-
-    std::stringstream ss;
-    ss << "dn_" << id;
-    uuid_ = ss.str();
-  }
-
-  MOCK_METHOD1(Connect, void(std::function<void(Status status, std::shared_ptr<DataNodeConnection>)>));
-  MOCK_METHOD2(async_read, 
-               void(const asio::mutable_buffers_1 & buffers,
-                    std::function<void (const asio::error_code &,
-                                        std::size_t) >));
-  MOCK_METHOD3(async_read, 
-               void(const asio::mutable_buffers_1 & buffers,
-                    std::function<size_t(const asio::error_code &,
-                                        std::size_t) >,
-                    std::function<void (const asio::error_code &,
-                                        std::size_t) >));
-  MOCK_METHOD2(async_write, 
-               void(const asio::const_buffers_1 & buffers,
-                    std::function<void (const asio::error_code &,
-                                        std::size_t) >));
-  
-  std::string uuid_;
-};
-
-template <class Trait> struct MockBlockReaderTrait {
-  typedef MockReader Reader;
-  struct State {
-    MockReader reader_;
-    size_t transferred_;
-    Reader *reader() { return &reader_; }
-    size_t *transferred() { return &transferred_; }
-    const size_t *transferred() const { return &transferred_; }
-  };
-
-  static continuation::Pipeline<State> *
-  CreatePipeline(std::shared_ptr<DataNodeConnection> dn) {
-    (void) dn;
-    auto m = continuation::Pipeline<State>::Create();
-    *m->state().transferred() = 0;
-    Trait::InitializeMockReader(m->state().reader());
-    return m;
-  }
-};
 }
 
 TEST(InputStreamTest, TestReadSingleTrunk) {
@@ -110,20 +63,15 @@ TEST(InputStreamTest, TestReadSingleTrunk) {
 
   Status stat;
   size_t read = 0;
-  struct Trait {
-    static void InitializeMockReader(MockReader *reader) {
-      EXPECT_CALL(*reader, async_request_block(_, _, _, _, _, _))
-          .WillOnce(InvokeArgument<5>(Status::OK()));
+  MockReader reader;
+  EXPECT_CALL(reader, async_request_block(_, _, _, _, _, _))
+      .WillOnce(InvokeArgument<5>(Status::OK()));
+  EXPECT_CALL(reader, async_read_packet(_, _))
+      .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf)));
 
-      EXPECT_CALL(*reader, async_read_packet(_, _))
-          .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf)));
-    }
-  };
-
-  auto conn = std::make_shared<MockDataNodeConnection>();
-  ReadOperation::AsyncReadBlock<MockBlockReaderTrait<Trait>>(
-       conn, RpcEngine::GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
-      [&stat, &read](const Status &status, const std::string &, size_t transferred) {
+  ReadOperation::AsyncReadBlock(
+       &reader, RpcEngine::GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
+      [&stat, &read](const Status &status, size_t transferred) {
         stat = status;
         read = transferred;
       });
@@ -139,22 +87,18 @@ TEST(InputStreamTest, TestReadMultipleTrunk) {
   };
   Status stat;
   size_t read = 0;
-  struct Trait {
-    static void InitializeMockReader(MockReader *reader) {
-      EXPECT_CALL(*reader, async_request_block(_, _, _, _, _, _))
-          .WillOnce(InvokeArgument<5>(Status::OK()));
+  
+  MockReader reader;
+  EXPECT_CALL(reader, async_request_block(_, _, _, _, _, _))
+      .WillOnce(InvokeArgument<5>(Status::OK()));
 
-      EXPECT_CALL(*reader, async_read_packet(_, _))
-          .Times(4)
-          .WillRepeatedly(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4));
-    }
-  };
+  EXPECT_CALL(reader, async_read_packet(_, _))
+      .Times(4)
+      .WillRepeatedly(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4));
 
-  auto conn = std::make_shared<MockDataNodeConnection>();
-  ReadOperation::AsyncReadBlock<MockBlockReaderTrait<Trait>>(
-       conn, RpcEngine::GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
-      [&stat, &read](const Status &status, const std::string &,
-                     size_t transferred) {
+  ReadOperation::AsyncReadBlock(
+       &reader, RpcEngine::GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
+      [&stat, &read](const Status &status, size_t transferred) {
         stat = status;
         read = transferred;
       });
@@ -170,24 +114,19 @@ TEST(InputStreamTest, TestReadError) {
   };
   Status stat;
   size_t read = 0;
-  struct Trait {
-    static void InitializeMockReader(MockReader *reader) {
-      EXPECT_CALL(*reader, async_request_block(_, _, _, _, _, _))
-          .WillOnce(InvokeArgument<5>(Status::OK()));
+  MockReader reader;
+  EXPECT_CALL(reader, async_request_block(_, _, _, _, _, _))
+      .WillOnce(InvokeArgument<5>(Status::OK()));
 
-      EXPECT_CALL(*reader, async_read_packet(_, _))
-          .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
-          .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
-          .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
-          .WillOnce(InvokeArgument<1>(Status::Error("error"), 0));
-    }
-  };
+  EXPECT_CALL(reader, async_read_packet(_, _))
+      .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
+      .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
+      .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
+      .WillOnce(InvokeArgument<1>(Status::Error("error"), 0));
 
-  auto conn = std::make_shared<MockDataNodeConnection>();
-  ReadOperation::AsyncReadBlock<MockBlockReaderTrait<Trait>>(
-       conn, RpcEngine::GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
-      [&stat, &read](const Status &status, const std::string &,
-                     size_t transferred) {
+  ReadOperation::AsyncReadBlock(
+       &reader, RpcEngine::GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
+      [&stat, &read](const Status &status, size_t transferred) {
         stat = status;
         read = transferred;
       });

@@ -22,6 +22,7 @@
 #include "common/async_stream.h"
 #include "libhdfspp/hdfs.h"
 #include "rpc/rpc_engine.h"
+#include "reader/block_reader.h"
 #include "ClientNamenodeProtocol.pb.h"
 #include "ClientNamenodeProtocol.hrpc.inl"
 
@@ -150,10 +151,10 @@ public:
                const std::set<std::string> &excluded_datanodes,
                const std::function<void(const Status &, const std::string &,
                                         size_t)> &handler) override;
-  template <class MutableBufferSequence, class Handler>
-  void AsyncPreadSome(size_t offset, const MutableBufferSequence &buffers,
+
+  void AsyncPreadSome(size_t offset, const MutableBuffers &buffers,
                       const std::set<std::string> &excluded_datanodes,
-                      const Handler &handler);
+                      const std::function<void(const Status &, const std::string &, size_t)> handler);
 private:
   ::asio::io_service *io_service_;
   const std::string client_name_;
@@ -165,18 +166,17 @@ private:
 
 class ReadOperation {
 public:
-  template <class BlockReaderTrait, class MutableBufferSequence, class Handler>
   static void AsyncReadBlock(
-    std::shared_ptr<DataNodeConnection> dn,
+    BlockReader * reader,
     const std::string & client_name,
     const hadoop::hdfs::LocatedBlockProto &block, size_t offset,
-    const MutableBufferSequence &buffers,
-    const Handler &handler);
+    const MutableBuffers &buffers,
+    const std::function<void(const Status &, size_t)> handler);
 private:
-  template <class Reader> struct HandshakeContinuation;
-  template <class Reader, class MutableBufferSequence>
+  struct HandshakeContinuation;
   struct ReadBlockContinuation;
 };
+
 }
 
 #include "inputstream_impl.h"

@@ -56,15 +56,27 @@ struct BlockReaderOptions {
       : verify_checksum(true), encryption_scheme(EncryptionScheme::kNone) {}
 };
 
+class BlockReader {
+public:
+  virtual void async_read_packet(const MutableBuffers &buffers,
+                       const std::function<void(const Status &, size_t bytes_transferred)> &handler) = 0;
+  
+  virtual void async_request_block(const std::string &client_name,
+                     const hadoop::common::TokenProto *token,
+                     const hadoop::hdfs::ExtendedBlockProto *block,
+                     uint64_t length, uint64_t offset,
+                     const std::function<void(Status)> &handler) = 0;
+};
+
 class RemoteBlockReader
-    : public std::enable_shared_from_this<RemoteBlockReader> {
+    : public BlockReader, public std::enable_shared_from_this<RemoteBlockReader> {
 public:
   explicit RemoteBlockReader(const BlockReaderOptions &options, std::shared_ptr<AsyncStream> stream)
       : stream_(stream), state_(kOpen), options_(options),
         chunk_padding_bytes_(0) {}
 
   void async_read_packet(const MutableBuffers &buffers,
-                       const std::function<void(const Status &, size_t bytes_transferred)> &handler);
+                       const std::function<void(const Status &, size_t bytes_transferred)> &handler) override;
 
   size_t read_packet(const MutableBuffers &buffers, Status *status);
 
@@ -77,8 +89,7 @@ public:
                      const hadoop::common::TokenProto *token,
                      const hadoop::hdfs::ExtendedBlockProto *block,
                      uint64_t length, uint64_t offset,
-                     const std::function<void(Status)> &handler);
-
+                     const std::function<void(Status)> &handler) override;
 private:
   struct ReadPacketHeader;
   struct ReadChecksum;
