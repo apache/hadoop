@@ -36,10 +36,10 @@ std::string Base64Encode(const std::string &src) {
   size_t i = 0;
   while (i + 3 < src.length()) {
     const char *s = &src[i];
-    const int r[4] = {s[0] >> 2, ((s[0] << 4) | (s[1] >> 4)) & 0x3f,
+    const int32_t r[4] = {s[0] >> 2, ((s[0] << 4) | (s[1] >> 4)) & 0x3f,
                       ((s[1] << 2) | (s[2] >> 6)) & 0x3f, s[2] & 0x3f};
 
-    std::transform(r, r + sizeof(r) / sizeof(int), std::back_inserter(dst),
+    std::transform(r, r + sizeof(r) / sizeof(int32_t), std::back_inserter(dst),
                    [&r](unsigned char v) { return kDictionary[v]; });
     i += 3;
   }

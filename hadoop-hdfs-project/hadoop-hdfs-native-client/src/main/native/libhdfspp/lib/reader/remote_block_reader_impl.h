@@ -122,9 +122,9 @@ struct RemoteBlockReader<Stream>::ReadPacketHeader
 private:
   static const size_t kMaxHeaderSize = 512;
   static const size_t kPayloadLenOffset = 0;
-  static const size_t kPayloadLenSize = sizeof(int);
+  static const size_t kPayloadLenSize = sizeof(int32_t);
   static const size_t kHeaderLenOffset = 4;
-  static const size_t kHeaderLenSize = sizeof(short);
+  static const size_t kHeaderLenSize = sizeof(int16_t);
   static const size_t kHeaderStart = kPayloadLenSize + kHeaderLenSize;
 
   RemoteBlockReader<Stream> *parent_;

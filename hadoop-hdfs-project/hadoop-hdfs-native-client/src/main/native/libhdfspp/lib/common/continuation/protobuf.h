@@ -70,7 +70,7 @@ private:
     }
 
     size_t offset = 0, len = 0;
-    for (size_t i = 0; i + 1 < transferred && i < sizeof(int); ++i) {
+    for (size_t i = 0; i + 1 < transferred && i < sizeof(int32_t); ++i) {
       len = (len << 7) | (buf_[i] & 0x7f);
       if ((uint8_t)buf_.at(i) < 0x80) {
         offset = i + 1;

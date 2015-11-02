@@ -82,8 +82,8 @@ ProducePacket(const std::string &data, const std::string &checksum,
 
   char prefix[6];
   *reinterpret_cast<unsigned *>(prefix) =
-      htonl(data.size() + checksum.size() + sizeof(int));
-  *reinterpret_cast<short *>(prefix + sizeof(int)) = htons(proto.ByteSize());
+      htonl(data.size() + checksum.size() + sizeof(int32_t));
+  *reinterpret_cast<short *>(prefix + sizeof(int32_t)) = htons(proto.ByteSize());
   std::string payload(prefix, sizeof(prefix));
   payload.reserve(payload.size() + proto.ByteSize() + checksum.size() +
                   data.size());
