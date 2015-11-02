@@ -21,6 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.rawcoder.util.RSUtil;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 /**
  * A raw erasure encoder in RS code scheme in pure Java in case native one
@@ -54,8 +55,26 @@ public class RSRawEncoder extends AbstractRawErasureEncoder {
   protected void doEncode(ByteBuffer[] inputs, ByteBuffer[] outputs) {
     // parity units + data units
     ByteBuffer[] all = new ByteBuffer[outputs.length + inputs.length];
-    System.arraycopy(outputs, 0, all, 0, outputs.length);
-    System.arraycopy(inputs, 0, all, outputs.length, inputs.length);
+
+    if (isAllowingChangeInputs()) {
+      System.arraycopy(outputs, 0, all, 0, outputs.length);
+      System.arraycopy(inputs, 0, all, outputs.length, inputs.length);
+    } else {
+      System.arraycopy(outputs, 0, all, 0, outputs.length);
+
+      /**
+       * Note when this coder would be really (rarely) used in a production
+       * system, this can  be optimized to cache and reuse the new allocated
+       * buffers avoiding reallocating.
+       */
+      ByteBuffer tmp;
+      for (int i = 0; i < inputs.length; i++) {
+        tmp = ByteBuffer.allocate(inputs[i].remaining());
+        tmp.put(inputs[i]);
+        tmp.flip();
+        all[outputs.length + i] = tmp;
+      }
+    }
 
     // Compute the remainder
     RSUtil.GF.remainder(all, generatingPolynomial);
@@ -67,15 +86,26 @@ public class RSRawEncoder extends AbstractRawErasureEncoder {
                           int[] outputOffsets) {
     // parity units + data units
     byte[][] all = new byte[outputs.length + inputs.length][];
-    System.arraycopy(outputs, 0, all, 0, outputs.length);
-    System.arraycopy(inputs, 0, all, outputs.length, inputs.length);
+    int[] allOffsets = new int[outputOffsets.length + inputOffsets.length];
 
-    int[] offsets = new int[inputOffsets.length + outputOffsets.length];
-    System.arraycopy(outputOffsets, 0, offsets, 0, outputOffsets.length);
-    System.arraycopy(inputOffsets, 0, offsets,
-        outputOffsets.length, inputOffsets.length);
+    if (isAllowingChangeInputs()) {
+      System.arraycopy(outputs, 0, all, 0, outputs.length);
+      System.arraycopy(inputs, 0, all, outputs.length, inputs.length);
+
+      System.arraycopy(outputOffsets, 0, allOffsets, 0, outputOffsets.length);
+      System.arraycopy(inputOffsets, 0, allOffsets,
+          outputOffsets.length, inputOffsets.length);
+    } else {
+      System.arraycopy(outputs, 0, all, 0, outputs.length);
+      System.arraycopy(outputOffsets, 0, allOffsets, 0, outputOffsets.length);
+
+      for (int i = 0; i < inputs.length; i++) {
+        all[outputs.length + i] = Arrays.copyOfRange(inputs[i],
+            inputOffsets[i], inputOffsets[i] + dataLen);
+      }
+    }
 
     // Compute the remainder
-    RSUtil.GF.remainder(all, offsets, dataLen, generatingPolynomial);
+    RSUtil.GF.remainder(all, allOffsets, dataLen, generatingPolynomial);
   }
 }

@@ -608,6 +608,9 @@ Trunk (Unreleased)
       HADOOP-12327. Initialize output buffers with ZERO bytes in erasure coder.
       (Kai Zheng via waltersu4549)
 
+      HADOOP-12047. Indicate preference not to affect input buffers during
+      coding in erasure coder. (Kai Zheng via waltersu4549)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

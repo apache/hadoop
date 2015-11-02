@@ -54,24 +54,27 @@ public interface RawErasureDecoder extends RawErasureCoder {
    * Note, for both inputs and outputs, no mixing of on-heap buffers and direct
    * buffers are allowed.
    *
-   * @param inputs inputs to read data from, contents may change after the call
+   * If the coder option ALLOW_CHANGE_INPUTS is set true (false by default), the
+   * content of input buffers may change after the call, subject to concrete
+   * implementation. Anyway the positions of input buffers will move forward.
+   *
+   * @param inputs input buffers to read data from
    * @param erasedIndexes indexes of erased units in the inputs array
-   * @param outputs outputs to write into for data generated according to
-   *                erasedIndexes, ready for reading the result data from after
-   *                the call
+   * @param outputs output buffers to put decoded data into according to
+   *                erasedIndexes, ready for read after the call
    */
-  public void decode(ByteBuffer[] inputs, int[] erasedIndexes,
+  void decode(ByteBuffer[] inputs, int[] erasedIndexes,
                      ByteBuffer[] outputs);
 
   /**
    * Decode with inputs and erasedIndexes, generates outputs. More see above.
-   * @param inputs inputs to read data from, contents may change after the call
+   *
+   * @param inputs input buffers to read data from
    * @param erasedIndexes indexes of erased units in the inputs array
-   * @param outputs outputs to write into for data generated according to
-   *                erasedIndexes, ready for reading the result data from after
-   *                the call
+   * @param outputs output buffers to put decoded data into according to
+   *                erasedIndexes, ready for read after the call
    */
-  public void decode(byte[][] inputs, int[] erasedIndexes, byte[][] outputs);
+  void decode(byte[][] inputs, int[] erasedIndexes, byte[][] outputs);
 
   /**
    * Decode with inputs and erasedIndexes, generates outputs. More see above.
@@ -79,12 +82,11 @@ public interface RawErasureDecoder extends RawErasureCoder {
    * Note, for both input and output ECChunks, no mixing of on-heap buffers and
    * direct buffers are allowed.
    *
-   * @param inputs inputs to read data from, contents may change after the call
+   * @param inputs input buffers to read data from
    * @param erasedIndexes indexes of erased units in the inputs array
-   * @param outputs outputs to write into for data generated according to
-   *                erasedIndexes, ready for reading the result data from after
-   *                the call
+   * @param outputs output buffers to put decoded data into according to
+   *                erasedIndexes, ready for read after the call
    */
-  public void decode(ECChunk[] inputs, int[] erasedIndexes, ECChunk[] outputs);
+  void decode(ECChunk[] inputs, int[] erasedIndexes, ECChunk[] outputs);
 
 }
