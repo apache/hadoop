@@ -2204,6 +2204,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9343. Empty caller context considered invalid. (Mingliang Liu via
     Arpit Agarwal)
 
+    HDFS-9329. TestBootstrapStandby#testRateThrottling is flaky because fsimage
+    size is smaller than IO buffer size. (zhz)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
