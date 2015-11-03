@@ -22,11 +22,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
+import java.util.List;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
@@ -35,12 +32,15 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A JUnit test for corrupted file handling.
@@ -70,6 +70,8 @@ import org.mockito.Mockito;
  *     replica was created from the non-corrupted replica.
  */
 public class TestCrcCorruption {
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestCrcCorruption.class);
 
   private DFSClientFaultInjector faultInjector;
 
@@ -167,90 +169,26 @@ public class TestCrcCorruption {
       // file disallows this Datanode to send data to another datanode.
       // However, a client is alowed access to this block.
       //
-      File storageDir = cluster.getInstanceStorageDir(0, 1);
-      String bpid = cluster.getNamesystem().getBlockPoolId();
-      File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
-      assertTrue("data directory does not exist", data_dir.exists());
-      File[] blocks = data_dir.listFiles();
-      assertTrue("Blocks do not exist in data-dir", (blocks != null) && (blocks.length > 0));
-      int num = 0;
-      for (int idx = 0; idx < blocks.length; idx++) {
-        if (blocks[idx].getName().startsWith(Block.BLOCK_FILE_PREFIX) &&
-            blocks[idx].getName().endsWith(".meta")) {
-          num++;
-          if (num % 3 == 0) {
-            //
-            // remove .meta file
-            //
-            System.out.println("Deliberately removing file " + blocks[idx].getName());
-            assertTrue("Cannot remove file.", blocks[idx].delete());
-          } else if (num % 3 == 1) {
-            //
-            // shorten .meta file
-            //
-            RandomAccessFile file = new RandomAccessFile(blocks[idx], "rw");
-            FileChannel channel = file.getChannel();
-            int newsize = random.nextInt((int)channel.size()/2);
-            System.out.println("Deliberately truncating file " + 
-                               blocks[idx].getName() + 
-                               " to size " + newsize + " bytes.");
-            channel.truncate(newsize);
-            file.close();
-          } else {
-            //
-            // corrupt a few bytes of the metafile
-            //
-            RandomAccessFile file = new RandomAccessFile(blocks[idx], "rw");
-            FileChannel channel = file.getChannel();
-            long position = 0;
-            //
-            // The very first time, corrupt the meta header at offset 0
-            //
-            if (num != 2) {
-              position = (long)random.nextInt((int)channel.size());
-            }
-            int length = random.nextInt((int)(channel.size() - position + 1));
-            byte[] buffer = new byte[length];
-            random.nextBytes(buffer);
-            channel.write(ByteBuffer.wrap(buffer), position);
-            System.out.println("Deliberately corrupting file " + 
-                               blocks[idx].getName() + 
-                               " at offset " + position +
-                               " length " + length);
-            file.close();
-          }
-        }
-      }
-      
-      //
-      // Now deliberately corrupt all meta blocks from the second
-      // directory of the first datanode
-      //
-      storageDir = cluster.getInstanceStorageDir(0, 1);
-      data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
-      assertTrue("data directory does not exist", data_dir.exists());
-      blocks = data_dir.listFiles();
-      assertTrue("Blocks do not exist in data-dir", (blocks != null) && (blocks.length > 0));
+      final int dnIdx = 0;
+      final DataNode dn = cluster.getDataNodes().get(dnIdx);
+      final String bpid = cluster.getNamesystem().getBlockPoolId();
+      List<FinalizedReplica> replicas =
+          dn.getFSDataset().getFinalizedBlocks(bpid);
+      assertTrue("Replicas do not exist", !replicas.isEmpty());
 
-      int count = 0;
-      File previous = null;
-      for (int idx = 0; idx < blocks.length; idx++) {
-        if (blocks[idx].getName().startsWith("blk_") &&
-            blocks[idx].getName().endsWith(".meta")) {
-          //
-          // Move the previous metafile into the current one.
-          //
-          count++;
-          if (count % 2 == 0) {
-            System.out.println("Deliberately insertimg bad crc into files " +
-                                blocks[idx].getName() + " " + previous.getName());
-            assertTrue("Cannot remove file.", blocks[idx].delete());
-            assertTrue("Cannot corrupt meta file.", previous.renameTo(blocks[idx]));
-            assertTrue("Cannot recreate empty meta file.", previous.createNewFile());
-            previous = null;
-          } else {
-            previous = blocks[idx];
-          }
+      for (int idx = 0; idx < replicas.size(); idx++) {
+        FinalizedReplica replica = replicas.get(idx);
+        ExtendedBlock eb = new ExtendedBlock(bpid, replica);
+        if (idx % 3 == 0) {
+          LOG.info("Deliberately removing meta for block " + eb);
+          cluster.deleteMeta(dnIdx, eb);
+        } else if (idx % 3 == 1) {
+          final int newSize = 2;  // bytes
+          LOG.info("Deliberately truncating meta file for block " +
+              eb + " to size " +  newSize + " bytes.");
+          cluster.truncateMeta(dnIdx, eb, newSize);
+        } else {
+          cluster.corruptMeta(dnIdx, eb);
         }
       }
 
@@ -260,7 +198,7 @@ public class TestCrcCorruption {
       //
       assertTrue("Corrupted replicas not handled properly.",
                  util.checkFiles(fs, "/srcdat"));
-      System.out.println("All File still have a valid replica");
+      LOG.info("All File still have a valid replica");
 
       //
       // set replication factor back to 1. This causes only one replica of
@@ -273,7 +211,7 @@ public class TestCrcCorruption {
       //System.out.println("All Files done with removing replicas");
       //assertTrue("Excess replicas deleted. Corrupted replicas found.",
       //           util.checkFiles(fs, "/srcdat"));
-      System.out.println("The excess-corrupted-replica test is disabled " +
+      LOG.info("The excess-corrupted-replica test is disabled " +
                          " pending HADOOP-1557");
 
       util.cleanup(fs, "/srcdat");
