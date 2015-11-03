@@ -30,7 +30,7 @@ class DataNodeConnection : public AsyncStream {
 public:
     std::string uuid_;
     std::unique_ptr<hadoop::common::TokenProto> token_;
-  
+
     virtual void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) = 0;
 };
 
@@ -42,7 +42,7 @@ public:
   std::string uuid_;
 
 
-  DataNodeConnectionImpl(asio::io_service * io_service, const ::hadoop::hdfs::DatanodeInfoProto &dn_proto, 
+  DataNodeConnectionImpl(asio::io_service * io_service, const ::hadoop::hdfs::DatanodeInfoProto &dn_proto,
                           const hadoop::common::TokenProto *token) {
     using namespace ::asio::ip;
 
@@ -60,13 +60,13 @@ public:
 
   void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) override;
 
-  virtual void async_read_some(const MutableBuffers &buf, 
+  virtual void async_read_some(const MutableBuffers &buf,
         std::function<void (const asio::error_code & error,
                                std::size_t bytes_transferred) > handler) {
     conn_->async_read_some(buf, handler);
   };
 
-  virtual void async_write_some(const ConstBuffers &buf, 
+  virtual void async_write_some(const ConstBuffers &buf,
             std::function<void (const asio::error_code & error,
                                  std::size_t bytes_transferred) > handler) {
     conn_->async_write_some(buf, handler);

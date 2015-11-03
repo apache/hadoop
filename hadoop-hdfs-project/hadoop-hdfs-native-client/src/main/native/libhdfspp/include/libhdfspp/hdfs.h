@@ -76,7 +76,7 @@ public:
                const std::set<std::string> &excluded_datanodes,
                const std::function<void(const Status &, const std::string &,
                                         size_t)> &handler) = 0;
-  
+
   virtual size_t PositionRead(void *buf, size_t nbyte, off_t offset) = 0;
 
   virtual ~FileHandle();
@@ -113,7 +113,7 @@ public:
   Status Open(const std::string &path, FileHandle **handle);
 
   virtual ~FileSystem();
-  
+
 };
 }
 

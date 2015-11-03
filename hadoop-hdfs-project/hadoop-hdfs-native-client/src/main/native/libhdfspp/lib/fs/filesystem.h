@@ -88,8 +88,8 @@ public:
                     const std::function<void(const Status &, FileHandle *)>
                         &handler) override;
   Status Open(const std::string &path, FileHandle **handle);
-  
-  
+
+
   /* add a new thread to handle asio requests, return number of threads in pool
    */
   int AddWorkerThread();
@@ -97,7 +97,7 @@ public:
   /* how many worker threads are servicing asio requests */
   int WorkerThreadCount() { return worker_threads_.size(); }
 
-  
+
 private:
   std::unique_ptr<IoServiceImpl> io_service_;
   NameNodeOperations nn_;

@@ -49,7 +49,7 @@ public:
                      const hadoop::hdfs::ExtendedBlockProto *block,
                      uint64_t length, uint64_t offset,
                      const std::function<void(Status)> &handler));
-  
+
   MOCK_METHOD5(AsyncReadBlock, void(
     const std::string & client_name,
     const hadoop::hdfs::LocatedBlockProto &block, size_t offset,
@@ -89,7 +89,7 @@ TEST(FileHandleTest, TestExcludeDataNode) {
         stat = status;
         read = transferred;
       });
-      
+
   // Should fail with no resource available
   ASSERT_EQ(static_cast<int>(std::errc::resource_unavailable_try_again), stat.code());
   ASSERT_EQ(0UL, read);

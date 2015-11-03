@@ -62,11 +62,11 @@ public:
   virtual void AsyncReadPacket(
     const MutableBuffers &buffers,
     const std::function<void(const Status &, size_t bytes_transferred)> &handler) = 0;
-  
+
   virtual void AsyncRequestBlock(
     const std::string &client_name,
     const hadoop::hdfs::ExtendedBlockProto *block,
-    uint64_t length, 
+    uint64_t length,
     uint64_t offset,
     const std::function<void(Status)> &handler) = 0;
 
@@ -87,11 +87,11 @@ public:
   virtual void AsyncReadPacket(
     const MutableBuffers &buffers,
     const std::function<void(const Status &, size_t bytes_transferred)> &handler) override;
-  
+
   virtual void AsyncRequestBlock(
     const std::string &client_name,
     const hadoop::hdfs::ExtendedBlockProto *block,
-    uint64_t length, 
+    uint64_t length,
     uint64_t offset,
     const std::function<void(Status)> &handler) override;
 
@@ -105,7 +105,7 @@ public:
 
   Status RequestBlock(
     const std::string &client_name,
-    const hadoop::hdfs::ExtendedBlockProto *block, 
+    const hadoop::hdfs::ExtendedBlockProto *block,
     uint64_t length,
     uint64_t offset);
 

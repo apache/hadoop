@@ -50,7 +50,7 @@ ReadBlockProto(const std::string &client_name, bool verify_checksum,
 }
 
 void BlockReaderImpl::AsyncRequestBlock(
-    const std::string &client_name, 
+    const std::string &client_name,
     const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
     uint64_t offset, const std::function<void(Status)> &handler) {
   // The total number of bytes that we need to transfer from the DN is
@@ -99,7 +99,7 @@ void BlockReaderImpl::AsyncRequestBlock(
 }
 
 Status BlockReaderImpl::RequestBlock(
-    const std::string &client_name, 
+    const std::string &client_name,
     const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
     uint64_t offset) {
   auto stat = std::make_shared<std::promise<Status>>();
@@ -209,7 +209,7 @@ struct BlockReaderImpl::ReadData : continuation::Continuation {
       : parent_(parent), bytes_transferred_(bytes_transferred), buf_(buf) {
     buf_.begin();
   }
-  
+
   ~ReadData() {
     buf_.end();
   }
@@ -309,7 +309,7 @@ private:
 };
 
 void BlockReaderImpl::AsyncReadPacket(
-    const MutableBuffers &buffers, 
+    const MutableBuffers &buffers,
     const std::function<void(const Status &, size_t bytes_transferred)> &handler) {
   assert(state_ != kOpen && "Not connected");
 
@@ -412,7 +412,7 @@ void BlockReaderImpl::AsyncReadBlock(
     const std::string & client_name,
     const hadoop::hdfs::LocatedBlockProto &block,
     size_t offset,
-    const MutableBuffers &buffers, 
+    const MutableBuffers &buffers,
     const std::function<void(const Status &, size_t)> handler) {
 
   auto m = continuation::Pipeline<size_t>::Create();
@@ -420,10 +420,10 @@ void BlockReaderImpl::AsyncReadBlock(
 
   size_t size = asio::buffer_size(buffers);
 
-  m->Push(new RequestBlockContinuation(this, client_name, 
+  m->Push(new RequestBlockContinuation(this, client_name,
                                             &block.b(), size, offset))
     .Push(new ReadBlockContinuation(this, buffers, bytesTransferred));
-  
+
   m->Run([handler] (const Status &status,
                          const size_t totalBytesTransferred) {
     handler(status, totalBytesTransferred);

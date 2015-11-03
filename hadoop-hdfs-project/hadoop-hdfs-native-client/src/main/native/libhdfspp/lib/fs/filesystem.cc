@@ -136,7 +136,7 @@ FileSystem * FileSystem::New(
   else
     return nullptr;
 }
-  
+
   FileSystemImpl::FileSystemImpl(IoService *&io_service, const Options &options)
     :   io_service_(static_cast<IoServiceImpl *>(io_service)),
         nn_(&io_service_->io_service(), options,
@@ -146,9 +146,9 @@ FileSystem * FileSystem::New(
 {
   // Poor man's move
   io_service = nullptr;
-  
+
   /* spawn background threads for asio delegation */
-  unsigned int threads = 1 /* options.io_threads_, pending HDFS-9117 */; 
+  unsigned int threads = 1 /* options.io_threads_, pending HDFS-9117 */;
   for (unsigned int i = 0; i < threads; i++) {
     AddWorkerThread();
   }

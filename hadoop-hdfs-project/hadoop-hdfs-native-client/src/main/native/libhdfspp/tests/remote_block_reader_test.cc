@@ -60,16 +60,16 @@ public:
   MockDNConnection(::asio::io_service &io_service)
       : MockConnectionBase(&io_service) {}
   MOCK_METHOD0(Produce, ProducerResult());
-  
+
   MOCK_METHOD1(Connect, void(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)>));
-  
-    void async_read_some(const MutableBuffers &buf, 
+
+    void async_read_some(const MutableBuffers &buf,
           std::function<void (const asio::error_code & error,
                                  std::size_t bytes_transferred) > handler) override {
       this->MockConnectionBase::async_read_some(buf, handler);
   }
 
-  void async_write_some(const ConstBuffers &buf, 
+  void async_write_some(const ConstBuffers &buf,
             std::function<void (const asio::error_code & error,
                                  std::size_t bytes_transferred) > handler) override {
     // CompletionResult res = OnWrite(buf);
@@ -84,7 +84,7 @@ class PartialMockReader : public BlockReaderImpl {
 public:
   PartialMockReader() :
     BlockReaderImpl(BlockReaderOptions(), std::shared_ptr<DataNodeConnection>()) {};
-  
+
   MOCK_METHOD2(
       AsyncReadPacket,
       void(const asio::mutable_buffers_1 &,
@@ -94,7 +94,7 @@ public:
                void(const std::string &client_name,
                      const hadoop::hdfs::ExtendedBlockProto *block,
                      uint64_t length, uint64_t offset,
-                     const std::function<void(Status)> &handler));  
+                     const std::function<void(Status)> &handler));
 };
 
 
@@ -170,7 +170,7 @@ TEST(RemoteBlockReaderTest, TestReadMultipleTrunk) {
   };
   Status stat;
   size_t read = 0;
-  
+
   PartialMockReader reader;
   EXPECT_CALL(reader, AsyncRequestBlock(_, _, _, _, _))
       .WillOnce(InvokeArgument<4>(Status::OK()));

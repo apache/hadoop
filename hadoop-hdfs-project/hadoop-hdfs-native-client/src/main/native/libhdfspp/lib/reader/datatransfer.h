@@ -44,19 +44,19 @@ public:
 
   template <class Handler> void Handshake(const Handler &next);
 
-    virtual void async_read_some(const MutableBuffers &buf, 
+    virtual void async_read_some(const MutableBuffers &buf,
             std::function<void (const asio::error_code & error,
                                    std::size_t bytes_transferred) > handler) {
       stream_->async_read_some(buf, handler);
     }
 
-    virtual void async_write_some(const ConstBuffers &buf, 
+    virtual void async_write_some(const ConstBuffers &buf,
               std::function<void (const asio::error_code & error,
                                    std::size_t bytes_transferred) > handler) {
       stream_->async_write_some(buf, handler);
     }
 
-  void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) override 
+  void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) override
   {(void)handler;  /*TODO: Handshaking goes here*/};
 private:
   DataTransferSaslStream(const DataTransferSaslStream &) = delete;

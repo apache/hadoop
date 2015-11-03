@@ -25,14 +25,14 @@ namespace hdfs {
 
 typedef asio::mutable_buffers_1 MutableBuffers;
 typedef asio::const_buffers_1   ConstBuffers;
-  
+
 class AsyncStream {
 public:
-  virtual void async_read_some(const MutableBuffers &buf, 
+  virtual void async_read_some(const MutableBuffers &buf,
           std::function<void (const asio::error_code & error,
                                  std::size_t bytes_transferred) > handler) = 0;
 
-  virtual void async_write_some(const ConstBuffers &buf, 
+  virtual void async_write_some(const ConstBuffers &buf,
             std::function<void (const asio::error_code & error,
                                  std::size_t bytes_transferred) > handler) = 0;
 };
