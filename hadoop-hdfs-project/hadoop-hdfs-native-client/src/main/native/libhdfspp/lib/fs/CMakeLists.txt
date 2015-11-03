@@ -1,2 +1,2 @@
-add_library(fs filesystem.cc inputstream.cc)
+add_library(fs filesystem.cc filehandle.cc)
 add_dependencies(fs proto)
