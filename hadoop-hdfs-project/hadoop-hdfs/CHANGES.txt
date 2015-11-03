@@ -814,6 +814,8 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9312. Fix TestReplication to be FsDataset-agnostic. (lei)
 
+    HDFS-9308. Add truncateMeta() and deleteMeta() to MiniDFSCluster. (Tony Wu via lei)
+
   BUG FIXES
 
     HDFS-8091: ACLStatus and XAttributes should be presented to
