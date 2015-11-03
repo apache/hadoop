@@ -897,6 +897,9 @@ Release 2.6.3 - UNRELEASED
     YARN-4241. Fix typo of property name in yarn-default.xml.
     (Anthony Rojas via aajisaka)
 
+    YARN-4326. Fix TestDistributedShell timeout as AHS in MiniYarnCluster no longer 
+    binds to default port 8188. (Meng Ding via wangda)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
