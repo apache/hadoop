@@ -47,11 +47,11 @@ import static org.apache.hadoop.hdfs.StripedFileTestUtil.stripesPerBlock;
 
 public class TestWriteReadStripedFile {
   public static final Log LOG = LogFactory.getLog(TestWriteReadStripedFile.class);
-  private static MiniDFSCluster cluster;
-  private static DistributedFileSystem fs;
   private static int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
   private static short dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
-  private static Configuration conf = new HdfsConfiguration();
+  private MiniDFSCluster cluster;
+  private DistributedFileSystem fs;
+  private Configuration conf = new HdfsConfiguration();
 
   static {
     GenericTestUtils.setLogLevel(DFSOutputStream.LOG, Level.ALL);
@@ -64,6 +64,8 @@ public class TestWriteReadStripedFile {
   @Before
   public void setup() throws IOException {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY,
+        false);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     fs = cluster.getFileSystem();
     fs.mkdirs(new Path("/ec"));

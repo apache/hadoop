@@ -849,6 +849,9 @@ Trunk (Unreleased)
       HDFS-8438. Erasure Coding: Allow concat striped files if they have the same
       ErasureCodingPolicy. (Walter Su via jing9)
 
+      HDFS-9275. Wait previous ErasureCodingWork to finish before schedule
+      another one. (Walter Su via yliu)
+
 Release 2.8.0 - UNRELEASED
 
   NEW FEATURES

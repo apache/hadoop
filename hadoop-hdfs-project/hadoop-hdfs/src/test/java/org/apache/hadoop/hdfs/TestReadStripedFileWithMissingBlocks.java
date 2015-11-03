@@ -41,9 +41,9 @@ import static org.apache.hadoop.hdfs.StripedFileTestUtil.numDNs;
 public class TestReadStripedFileWithMissingBlocks {
   public static final Log LOG = LogFactory
       .getLog(TestReadStripedFileWithMissingBlocks.class);
-  private static MiniDFSCluster cluster;
-  private static DistributedFileSystem fs;
-  private static Configuration conf = new HdfsConfiguration();
+  private MiniDFSCluster cluster;
+  private DistributedFileSystem fs;
+  private Configuration conf = new HdfsConfiguration();
   private final short dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
   private final int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
   private final int fileLength = blockSize * dataBlocks + 123;
