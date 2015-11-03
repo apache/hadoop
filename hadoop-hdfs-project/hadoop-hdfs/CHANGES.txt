@@ -2222,6 +2222,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9354. Fix TestBalancer#testBalancerWithZeroThreadsForMove on Windows.
     (Xiaoyu Yao via cnauroth)
 
+    HDFS-9362. TestAuditLogger#testAuditLoggerWithCallContext assumes Unix line
+    endings, fails on Windows. (cnauroth)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
