@@ -92,9 +92,14 @@ public class TestDistributedShell {
       yarnCluster.init(conf);
       
       yarnCluster.start();
-      
+
+      conf.set(
+          YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+          MiniYARNCluster.getHostname() + ":"
+              + yarnCluster.getApplicationHistoryServer().getPort());
+
       waitForNMsToRegister();
-      
+
       URL url = Thread.currentThread().getContextClassLoader().getResource("yarn-site.xml");
       if (url == null) {
         throw new RuntimeException("Could not find 'yarn-site.xml' dummy file in classpath");
