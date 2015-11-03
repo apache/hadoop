@@ -93,49 +93,6 @@ private:
 };
 
 
-class DataNodeConnection : public AsyncStream {
-public:
-    std::string uuid_;
-
-    virtual void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) = 0;
-};
-
-
-class DataNodeConnectionImpl : public DataNodeConnection, public std::enable_shared_from_this<DataNodeConnectionImpl> {
-public:
-    std::unique_ptr<asio::ip::tcp::socket> conn_;
-    std::array<asio::ip::tcp::endpoint, 1> endpoints_;
-    std::string uuid_;
-
-
-    DataNodeConnectionImpl(asio::io_service * io_service, const ::hadoop::hdfs::DatanodeInfoProto &dn_proto) {
-      using namespace ::asio::ip;
-
-      conn_.reset(new tcp::socket(*io_service));
-      auto datanode_addr = dn_proto.id();
-      endpoints_[0] = tcp::endpoint(address::from_string(datanode_addr.ipaddr()),
-                                      datanode_addr.xferport());
-      uuid_ = dn_proto.id().datanodeuuid();
-    }
-
-    void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) override;
-
-    virtual void async_read(const asio::mutable_buffers_1	& buffers,
-               std::function<void (const asio::error_code & error,
-                                   std::size_t bytes_transferred) > completed_handler) 
-      { asio::async_read(*conn_, buffers, completed_handler); }
-    
-    virtual void async_read(const asio::mutable_buffers_1	& buffers,
-               std::function<size_t (const asio::error_code & error,
-                                   std::size_t bytes_transferred) > completion_handler,
-               std::function<void (const asio::error_code & error,
-                                   std::size_t bytes_transferred) > completed_handler)
-      { asio::async_read(*conn_, buffers, completion_handler, completed_handler); }
-    virtual void async_write(const asio::const_buffers_1 & buffers, 
-               std::function<void (const asio::error_code &ec, size_t)> handler)
-      { asio::async_write(*conn_, buffers, handler); }
-};
-
 /*
  * ReadOperation: given DN connection, does one-shot reads.
  *

@@ -40,27 +40,21 @@ void InputStreamImpl::PositionRead(
 
 struct ReadOperation::HandshakeContinuation : continuation::Continuation {
   HandshakeContinuation(BlockReader *reader, const std::string &client_name,
-                        const hadoop::common::TokenProto *token,
                         const hadoop::hdfs::ExtendedBlockProto *block,
                         uint64_t length, uint64_t offset)
       : reader_(reader), client_name_(client_name), length_(length),
         offset_(offset) {
-    if (token) {
-      token_.reset(new hadoop::common::TokenProto());
-      token_->CheckTypeAndMergeFrom(*token);
-    }
     block_.CheckTypeAndMergeFrom(*block);
   }
 
   virtual void Run(const Next &next) override {
-    reader_->async_request_block(client_name_, token_.get(), &block_, length_,
+    reader_->async_request_block(client_name_, &block_, length_,
                            offset_, next);
   }
 
 private:
   BlockReader *reader_;
   const std::string client_name_;
-  std::unique_ptr<hadoop::common::TokenProto> token_;
   hadoop::hdfs::ExtendedBlockProto block_;
   uint64_t length_;
   uint64_t offset_;
@@ -140,7 +134,7 @@ void InputStreamImpl::AsyncPreadSome(
       targetBlock.b().numbytes() - offset_within_block, asio::buffer_size(buffers));
 
   // This is where we will put the logic for re-using a DN connection
-  dn_ = std::make_shared<DataNodeConnectionImpl>(io_service_, *chosen_dn);
+  dn_ = std::make_shared<DataNodeConnectionImpl>(io_service_, *chosen_dn, nullptr);
   std::string dn_id = dn_->uuid_;
 
   std::shared_ptr<BlockReader> reader;
@@ -176,7 +170,7 @@ void ReadOperation::AsyncReadBlock(
 
   size_t size = asio::buffer_size(buffers);
 
-  m->Push(new HandshakeContinuation(reader, client_name, nullptr,
+  m->Push(new HandshakeContinuation(reader, client_name, 
                                             &block.b(), size, offset))
     .Push(new ReadBlockContinuation(reader, buffers, bytesTransferred));
   

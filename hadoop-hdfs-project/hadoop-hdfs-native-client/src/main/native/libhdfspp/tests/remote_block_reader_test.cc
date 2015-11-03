@@ -52,12 +52,13 @@ namespace pbio = pb::io;
 
 namespace hdfs {
 
-class MockDNConnection : public MockConnectionBase, public AsyncStream{
+class MockDNConnection : public MockConnectionBase, public DataNodeConnection{
 public:
   MockDNConnection(::asio::io_service &io_service)
       : MockConnectionBase(&io_service) {}
   MOCK_METHOD0(Produce, ProducerResult());
   
+  MOCK_METHOD1(Connect, void(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)>));
   
   // Satisfy the AsyncStream contract, delegating to MocKConnectionBase
   void async_read(const asio::mutable_buffers_1	& buf,
@@ -121,13 +122,13 @@ ProducePacket(const std::string &data, const std::string &checksum,
 
 template <class Stream = MockDNConnection, class Handler>
 static std::shared_ptr<RemoteBlockReader>
-ReadContent(std::shared_ptr<Stream> conn, TokenProto *token, const ExtendedBlockProto &block,
+ReadContent(std::shared_ptr<Stream> conn, const ExtendedBlockProto &block,
             uint64_t length, uint64_t offset, const mutable_buffers_1 &buf,
             const Handler &handler) {
   BlockReaderOptions options;
   auto reader = std::make_shared<RemoteBlockReader>(options, conn);
   Status result;
-  reader->async_request_block("libhdfs++", token, &block, length, offset,
+  reader->async_request_block("libhdfs++", &block, length, offset,
                         [buf, reader, handler](const Status &stat) {
                           if (!stat.ok()) {
                             handler(stat, 0);
@@ -157,7 +158,7 @@ TEST(RemoteBlockReaderTest, TestReadWholeBlock) {
 
   bool done = false;
   std::string data(kChunkSize, 0);
-  ReadContent(conn, nullptr, block, kChunkSize, 0,
+  ReadContent(conn, block, kChunkSize, 0,
               buffer(const_cast<char *>(data.c_str()), data.size()),
               [&data, &io_service, &done](const Status &stat, size_t transferred) {
                 ASSERT_TRUE(stat.ok());
@@ -199,7 +200,7 @@ TEST(RemoteBlockReaderTest, TestReadWithinChunk) {
   bool done = false;
 
   string data(kLength, 0);
-  ReadContent(conn, nullptr, block, data.size(), kOffset,
+  ReadContent(conn, block, data.size(), kOffset,
               buffer(const_cast<char *>(data.c_str()), data.size()),
               [&data, &io_service,&done](const Status &stat, size_t transferred) {
                 ASSERT_TRUE(stat.ok());
@@ -237,7 +238,7 @@ TEST(RemoteBlockReaderTest, TestReadMultiplePacket) {
   auto reader = std::make_shared<RemoteBlockReader>(options, conn);
   Status result;
   reader->async_request_block(
-      "libhdfs++", nullptr, &block, data.size(), 0,
+      "libhdfs++", &block, data.size(), 0,
       [buf, reader, &data, &io_service](const Status &stat) {
         ASSERT_TRUE(stat.ok());
         reader->async_read_packet(
@@ -296,7 +297,7 @@ TEST(RemoteBlockReaderTest, TestSaslConnection) {
   sasl_conn->Handshake([sasl_conn, &block, &data, &io_service](
       const Status &s) {
     ASSERT_TRUE(s.ok());
-    ReadContent(sasl_conn, nullptr, block, kChunkSize, 0,
+    ReadContent(sasl_conn, block, kChunkSize, 0,
                 buffer(const_cast<char *>(data.c_str()), data.size()),
                 [&data, &io_service](const Status &stat, size_t transferred) {
                   ASSERT_TRUE(stat.ok());

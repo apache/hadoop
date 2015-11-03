@@ -43,9 +43,8 @@ public:
       void(const asio::mutable_buffers_1 &,
            const std::function<void(const Status &, size_t transferred)> &));
 
-  MOCK_METHOD6(async_request_block,
+  MOCK_METHOD5(async_request_block,
                void(const std::string &client_name,
-                     const hadoop::common::TokenProto *token,
                      const hadoop::hdfs::ExtendedBlockProto *block,
                      uint64_t length, uint64_t offset,
                      const std::function<void(Status)> &handler));
@@ -64,8 +63,8 @@ TEST(InputStreamTest, TestReadSingleTrunk) {
   Status stat;
   size_t read = 0;
   MockReader reader;
-  EXPECT_CALL(reader, async_request_block(_, _, _, _, _, _))
-      .WillOnce(InvokeArgument<5>(Status::OK()));
+  EXPECT_CALL(reader, async_request_block(_, _, _, _, _))
+      .WillOnce(InvokeArgument<4>(Status::OK()));
   EXPECT_CALL(reader, async_read_packet(_, _))
       .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf)));
 
@@ -89,8 +88,8 @@ TEST(InputStreamTest, TestReadMultipleTrunk) {
   size_t read = 0;
   
   MockReader reader;
-  EXPECT_CALL(reader, async_request_block(_, _, _, _, _, _))
-      .WillOnce(InvokeArgument<5>(Status::OK()));
+  EXPECT_CALL(reader, async_request_block(_, _, _, _, _))
+      .WillOnce(InvokeArgument<4>(Status::OK()));
 
   EXPECT_CALL(reader, async_read_packet(_, _))
       .Times(4)
@@ -115,8 +114,8 @@ TEST(InputStreamTest, TestReadError) {
   Status stat;
   size_t read = 0;
   MockReader reader;
-  EXPECT_CALL(reader, async_request_block(_, _, _, _, _, _))
-      .WillOnce(InvokeArgument<5>(Status::OK()));
+  EXPECT_CALL(reader, async_request_block(_, _, _, _, _))
+      .WillOnce(InvokeArgument<4>(Status::OK()));
 
   EXPECT_CALL(reader, async_read_packet(_, _))
       .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))

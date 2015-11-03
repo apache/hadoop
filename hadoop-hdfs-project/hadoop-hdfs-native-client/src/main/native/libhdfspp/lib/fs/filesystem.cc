@@ -99,18 +99,6 @@ void NameNodeOperations::GetBlockLocations(const std::string & path,
 }
 
 
-void DataNodeConnectionImpl::Connect(
-             std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) {
-  // Keep the DN from being freed until we're done
-  auto shared_this = shared_from_this();
-  asio::async_connect(*conn_, endpoints_.begin(), endpoints_.end(),
-          [shared_this, handler](const asio::error_code &ec, std::array<asio::ip::tcp::endpoint, 1>::iterator it) {
-            (void)it;
-            handler(ToStatus(ec), shared_this); });
-}
-
-
-
 FileSystem::~FileSystem() {}
 
 void FileSystem::New(

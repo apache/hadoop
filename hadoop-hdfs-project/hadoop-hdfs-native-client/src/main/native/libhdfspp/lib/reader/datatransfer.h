@@ -20,6 +20,7 @@
 
 #include "common/sasl_authenticator.h"
 #include "common/async_stream.h"
+#include "connection/datanodeconnection.h"
 #include <memory>
 
 
@@ -35,7 +36,7 @@ enum Operation {
   kReadBlock = 81,
 };
 
-template <class Stream> class DataTransferSaslStream : public AsyncStream {
+template <class Stream> class DataTransferSaslStream : public DataNodeConnection {
 public:
   DataTransferSaslStream(std::shared_ptr<Stream> stream, const std::string &username,
                          const std::string &password)
@@ -58,6 +59,8 @@ public:
                std::function<void (const asio::error_code &ec, size_t)> handler)
       { stream_->async_write(buffers, handler); }
 
+  void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) override 
+  {(void)handler;  /*TODO: Handshaking goes here*/};
 private:
   DataTransferSaslStream(const DataTransferSaslStream &) = delete;
   DataTransferSaslStream &operator=(const DataTransferSaslStream &) = delete;

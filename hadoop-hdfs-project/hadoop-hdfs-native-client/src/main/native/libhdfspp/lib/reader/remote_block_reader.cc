@@ -50,7 +50,7 @@ ReadBlockProto(const std::string &client_name, bool verify_checksum,
 }
 
 void RemoteBlockReader::async_request_block(
-    const std::string &client_name, const hadoop::common::TokenProto *token,
+    const std::string &client_name, 
     const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
     uint64_t offset, const std::function<void(Status)> &handler) {
   // The total number of bytes that we need to transfer from the DN is
@@ -71,14 +71,14 @@ void RemoteBlockReader::async_request_block(
   s->header.insert(s->header.begin(),
                    {0, kDataTransferVersion, Operation::kReadBlock});
   s->request = std::move(ReadBlockProto(client_name, options_.verify_checksum,
-                                        token, block, length, offset));
+                                        dn_->token_.get(), block, length, offset));
 
   auto read_pb_message =
       new continuation::ReadDelimitedPBMessageContinuation<AsyncStream, 16384>(
-          stream_, &s->response);
+          dn_, &s->response);
 
-  m->Push(async_stream_continuation::Write(stream_, asio::buffer(s->header)))
-      .Push(asio_continuation::WriteDelimitedPBMessage(stream_, &s->request))
+  m->Push(async_stream_continuation::Write(dn_, asio::buffer(s->header)))
+      .Push(asio_continuation::WriteDelimitedPBMessage(dn_, &s->request))
       .Push(read_pb_message);
 
   m->Run([this, handler, offset](const Status &status, const State &s) {    Status stat = status;
@@ -99,12 +99,12 @@ void RemoteBlockReader::async_request_block(
 }
 
 Status RemoteBlockReader::request_block(
-    const std::string &client_name, const hadoop::common::TokenProto *token,
+    const std::string &client_name, 
     const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
     uint64_t offset) {
   auto stat = std::make_shared<std::promise<Status>>();
   std::future<Status> future(stat->get_future());
-  async_request_block(client_name, token, block, length, offset,
+  async_request_block(client_name, block, length, offset,
                 [stat](const Status &status) { stat->set_value(status); });
   return future.get();
 }
@@ -137,7 +137,7 @@ struct RemoteBlockReader::ReadPacketHeader
       next(status);
     };
 
-    parent_->stream_->async_read(asio::buffer(buf_),
+    parent_->dn_->async_read(asio::buffer(buf_),
                      std::bind(&ReadPacketHeader::CompletionHandler, this,
                                std::placeholders::_1, std::placeholders::_2),
                      handler);
@@ -195,7 +195,7 @@ struct RemoteBlockReader::ReadChecksum : continuation::Continuation {
     };
     parent->checksum_.resize(parent->packet_len_ - sizeof(int) -
                              parent->header_.datalen());
-    parent->stream_->async_read(asio::buffer(parent->checksum_),
+    parent->dn_->async_read(asio::buffer(parent->checksum_),
                      handler);
   }
 
@@ -233,7 +233,7 @@ struct RemoteBlockReader::ReadData : continuation::Continuation {
 
     auto data_len =
         parent_->header_.datalen() - parent_->packet_data_read_bytes_;
-    parent_->stream_->async_read(buf_, asio::transfer_exactly(data_len),
+    parent_->dn_->async_read(buf_, asio::transfer_exactly(data_len),
                handler);
   }
 
@@ -294,7 +294,7 @@ struct RemoteBlockReader::AckRead : continuation::Continuation {
                               : hadoop::hdfs::Status::SUCCESS);
 
     m->Push(
-        continuation::WriteDelimitedPBMessage(parent_->stream_, &m->state()));
+        continuation::WriteDelimitedPBMessage(parent_->dn_, &m->state()));
 
     m->Run([this, next](const Status &status,
                         const hadoop::hdfs::ClientReadStatusProto &) {

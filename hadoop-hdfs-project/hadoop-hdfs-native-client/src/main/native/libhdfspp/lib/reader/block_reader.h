@@ -21,6 +21,7 @@
 #include "libhdfspp/status.h"
 #include "common/async_stream.h"
 #include "datatransfer.pb.h"
+#include "connection/datanodeconnection.h"
 
 #include <memory>
 
@@ -62,7 +63,6 @@ public:
                        const std::function<void(const Status &, size_t bytes_transferred)> &handler) = 0;
   
   virtual void async_request_block(const std::string &client_name,
-                     const hadoop::common::TokenProto *token,
                      const hadoop::hdfs::ExtendedBlockProto *block,
                      uint64_t length, uint64_t offset,
                      const std::function<void(Status)> &handler) = 0;
@@ -71,8 +71,8 @@ public:
 class RemoteBlockReader
     : public BlockReader, public std::enable_shared_from_this<RemoteBlockReader> {
 public:
-  explicit RemoteBlockReader(const BlockReaderOptions &options, std::shared_ptr<AsyncStream> stream)
-      : stream_(stream), state_(kOpen), options_(options),
+  explicit RemoteBlockReader(const BlockReaderOptions &options, std::shared_ptr<DataNodeConnection> dn)
+      : dn_(dn), state_(kOpen), options_(options),
         chunk_padding_bytes_(0) {}
 
   void async_read_packet(const MutableBuffers &buffers,
@@ -81,12 +81,10 @@ public:
   size_t read_packet(const MutableBuffers &buffers, Status *status);
 
   Status request_block(const std::string &client_name,
-                 const hadoop::common::TokenProto *token,
                  const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
                  uint64_t offset);
 
   void async_request_block(const std::string &client_name,
-                     const hadoop::common::TokenProto *token,
                      const hadoop::hdfs::ExtendedBlockProto *block,
                      uint64_t length, uint64_t offset,
                      const std::function<void(Status)> &handler) override;
@@ -105,7 +103,7 @@ private:
     kFinished,
   };
 
-  std::shared_ptr<AsyncStream> stream_;
+  std::shared_ptr<DataNodeConnection> dn_;
   hadoop::hdfs::PacketHeaderProto header_;
   State state_;
   BlockReaderOptions options_;
