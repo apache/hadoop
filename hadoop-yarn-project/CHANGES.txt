@@ -118,6 +118,9 @@ Release 2.7.2 - UNRELEASED
     YARN-3136. getTransferredContainers can be a bottleneck during AM registration.
     (Sunil G via jianhe)
 
+    YARN-4127. RM fail with noAuth error if switched from failover mode to non-failover
+    mode. (Varun Saxena via jianhe)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
