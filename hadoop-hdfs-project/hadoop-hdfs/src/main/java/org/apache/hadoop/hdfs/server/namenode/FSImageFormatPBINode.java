@@ -356,6 +356,30 @@ public final class FSImageFormatPBINode {
       this.parent = parent;
     }
 
+    void loadIntelINodeDirectorySection(InputStream in) throws IOException {
+      final List<INodeReference> refList = parent.getLoaderContext()
+          .getRefList();
+      while (true) {
+
+        IntelDirEntry ie = IntelDirEntry.getRootAsIntelDirEntry(ByteBuffer.wrap(parseFrom(in)));
+        // note that in is a LimitedInputStream
+        if (ie == null) {
+          break;
+        }
+        INodeDirectory p = dir.getInode(ie.parent()).asDirectory();
+
+        for (int i = 0; i < ie.childrenLength() ;i++) {
+          INode child = dir.getInode(ie.children(i));
+          addToParent(p, child);
+        }
+
+        for (int i = 0; i < ie.refChildrenLength(); i++) {
+          INodeReference ref = refList.get((int)ie.refChildren(i));
+          addToParent(p, ref);
+        }
+      }
+    }
+
     void loadINodeDirectorySection(InputStream in) throws IOException {
       final List<INodeReference> refList = parent.getLoaderContext()
           .getRefList();
@@ -378,14 +402,18 @@ public final class FSImageFormatPBINode {
       }
     }
 
+    public static byte[] parseFrom(InputStream in) throws IOException {
+      DataInputStream inputStream = new DataInputStream(in);
+      int len = inputStream.readInt();
+      byte[] data = new byte[len];
+      inputStream.read(data);
+      return data;
+    }
+
     void loadIntelINodeSection(InputStream in, StartupProgress prog,
                           Step currentStep) throws IOException {
-      DataInputStream dos = new DataInputStream(in);
-      int len = dos.readInt();
-      byte[] bytes = new byte[len];
-      dos.read(bytes);
       IntelINodeSection intelINodeSection =
-          IntelINodeSection.getRootAsIntelINodeSection(ByteBuffer.wrap(bytes));
+          IntelINodeSection.getRootAsIntelINodeSection(ByteBuffer.wrap(parseFrom(in)));
 
       fsn.dir.resetLastInodeId(intelINodeSection.lastInodeId());
       long numInodes = intelINodeSection.numInodes();
@@ -394,11 +422,7 @@ public final class FSImageFormatPBINode {
       prog.setTotal(Phase.LOADING_FSIMAGE, currentStep, numInodes);
       Counter counter = prog.getCounter(Phase.LOADING_FSIMAGE, currentStep);
       for (int i = 0; i < numInodes; ++i) {
-        DataInputStream dos1 = new DataInputStream(in);
-        int len1 = dos1.readInt();
-        byte[] bytes1 = new byte[len1];
-        dos.read(bytes1);
-        IntelINode iNode = IntelINode.getRootAsIntelINode(ByteBuffer.wrap(bytes1));
+        IntelINode iNode = IntelINode.getRootAsIntelINode(ByteBuffer.wrap(parseFrom(in)));
         if (iNode.id() == INodeId.ROOT_INODE_ID) {
           loadRootIntelINode(iNode);
         } else {
@@ -409,25 +433,25 @@ public final class FSImageFormatPBINode {
       }
     }
 
-//    void loadINodeSection(InputStream in, StartupProgress prog,
-//        Step currentStep) throws IOException {
-//      INodeSection s = INodeSection.parseDelimitedFrom(in);
-//      fsn.dir.resetLastInodeId(s.getLastInodeId());
-//      long numInodes = s.getNumInodes();
-//      LOG.info("Loading " + numInodes + " INodes.");
-//      prog.setTotal(Phase.LOADING_FSIMAGE, currentStep, numInodes);
-//      Counter counter = prog.getCounter(Phase.LOADING_FSIMAGE, currentStep);
-//      for (int i = 0; i < numInodes; ++i) {
-//        INodeSection.INode p = INodeSection.INode.parseDelimitedFrom(in);
-//        if (p.getId() == INodeId.ROOT_INODE_ID) {
-//          loadRootINode(p);
-//        } else {
-//          INode n = loadINode(p);
-//          dir.addToInodeMap(n);
-//        }
-//        counter.increment();
-//      }
-//    }
+    /**
+     * Load the under-construction files section, and update the lease map
+     */
+    void loadIntelFilesUnderConstructionSection(InputStream in) throws IOException {
+      while (true) {
+        IntelFileUnderConstructionEntry ientry = IntelFileUnderConstructionEntry.
+            getRootAsIntelFileUnderConstructionEntry(ByteBuffer.wrap(parseFrom(in)));
+//        FileUnderConstructionEntry entry = FileUnderConstructionEntry
+//            .parseDelimitedFrom(in);
+        if (ientry == null) {
+          break;
+        }
+        // update the lease manager
+        INodeFile file = dir.getInode(ientry.inodeId()).asFile();
+        FileUnderConstructionFeature uc = file.getFileUnderConstructionFeature();
+        Preconditions.checkState(uc != null); // file must be under-construction
+        fsn.leaseManager.addLease(uc.getClientName(), ientry.inodeId());
+      }
+    }
 
     /**
      * Load the under-construction files section, and update the lease map
@@ -819,7 +843,7 @@ public final class FSImageFormatPBINode {
       }
       XAttrFeature xAttrFeature = file.getXAttrFeature();
       if (xAttrFeature != null) {
-       xAttrs = buildIntelXAttrs(xAttrFeature, state.getStringMap()));
+       xAttrs = buildIntelXAttrs(xAttrFeature, state.getStringMap());
       }
       return IntelINodeFile.createIntelINodeFile(fbb, file.getFileReplication(),
           file.getModificationTime(), file.getAccessTime(),

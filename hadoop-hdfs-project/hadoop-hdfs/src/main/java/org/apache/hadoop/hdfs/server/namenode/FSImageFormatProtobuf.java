@@ -66,6 +66,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.protobuf.CodedOutputStream;
 
+import javax.xml.crypto.Data;
+
 /**
  * Utility class to read / write fsimage in protobuf format.
  */
@@ -263,19 +265,19 @@ public final class FSImageFormatProtobuf {
           }
           break;
           case INODE_REFERENCE:
-            snapshotLoader.loadINodeReferenceSection(in);
+            snapshotLoader.loadIntelINodeReferenceSection(in); // success
             break;
           case INODE_DIR:
-            inodeLoader.loadINodeDirectorySection(in);
+            inodeLoader.loadIntelINodeDirectorySection(in); // success
             break;
           case FILES_UNDERCONSTRUCTION:
-            inodeLoader.loadFilesUnderConstructionSection(in);
+            inodeLoader.loadIntelFilesUnderConstructionSection(in); // success
             break;
           case SNAPSHOT:
-            snapshotLoader.loadSnapshotSection(in);
+            snapshotLoader.loadIntelSnapshotSection(in); // success
             break;
           case SNAPSHOT_DIFF:
-            snapshotLoader.loadSnapshotDiffSection(in);
+            snapshotLoader.loadIntelSnapshotDiffSection(in); // succcess
             break;
           case SECRET_MANAGER: {
             prog.endStep(Phase.LOADING_FSIMAGE, currentStep);
@@ -299,118 +301,16 @@ public final class FSImageFormatProtobuf {
       }
     }
 
-//    private void loadInternal(RandomAccessFile raFile, AltFileInputStream fin)
-//        throws IOException {
-//      if (!FSImageUtil.checkFileFormat(raFile)) {
-//        throw new IOException("Unrecognized file format");
-//      }
-//      FileSummary summary = FSImageUtil.loadSummary(raFile);
-//      if (requireSameLayoutVersion && summary.getLayoutVersion() !=
-//          HdfsServerConstants.NAMENODE_LAYOUT_VERSION) {
-//        throw new IOException("Image version " + summary.getLayoutVersion() +
-//            " is not equal to the software version " +
-//            HdfsServerConstants.NAMENODE_LAYOUT_VERSION);
-//      }
-//
-//      FileChannel channel = fin.getChannel();
-//
-//      FSImageFormatPBINode.Loader inodeLoader = new FSImageFormatPBINode.Loader(
-//          fsn, this);
-//      FSImageFormatPBSnapshot.Loader snapshotLoader = new FSImageFormatPBSnapshot.Loader(
-//          fsn, this);
-//
-//      ArrayList<FileSummary.Section> sections = Lists.newArrayList(summary
-//          .getSectionsList());
-//
-//      Collections.sort(sections, new Comparator<FileSummary.Section>() {
-//        @Override
-//        public int compare(FileSummary.Section s1, FileSummary.Section s2) {
-//          SectionName n1 = SectionName.fromString(s1.getName());
-//          SectionName n2 = SectionName.fromString(s2.getName());
-//          if (n1 == null) {
-//            return n2 == null ? 0 : -1;
-//          } else if (n2 == null) {
-//            return -1;
-//          } else {
-//            return n1.ordinal() - n2.ordinal();
-//          }
-//        }
-//      });
-//
-//      StartupProgress prog = NameNode.getStartupProgress();
-//      /**
-//       * beginStep() and the endStep() calls do not match the boundary of the
-//       * sections. This is because that the current implementation only allows
-//       * a particular step to be started for once.
-//       */
-//      Step currentStep = null;
-//
-//      for (FileSummary.Section s : sections) {
-//        channel.position(s.getOffset());
-//        InputStream in = new BufferedInputStream(new LimitInputStream(fin,
-//            s.getLength()));
-//
-//        in = FSImageUtil.wrapInputStreamForCompression(conf,
-//            summary.getCodec(), in);
-//
-//        String n = s.getName();
-//
-//        switch (SectionName.fromString(n)) {
-//        case NS_INFO:
-//          loadNameSystemSection(in);
-//          break;
-//        case STRING_TABLE:
-//          loadStringTableSection(in);
-//          break;
-//        case INODE: {
-//          currentStep = new Step(StepType.INODES);
-//          prog.beginStep(Phase.LOADING_FSIMAGE, currentStep);
-//          inodeLoader.loadINodeSection(in, prog, currentStep);
-//        }
-//          break;
-//        case INODE_REFERENCE:
-//          snapshotLoader.loadINodeReferenceSection(in);
-//          break;
-//        case INODE_DIR:
-//          inodeLoader.loadINodeDirectorySection(in);
-//          break;
-//        case FILES_UNDERCONSTRUCTION:
-//          inodeLoader.loadFilesUnderConstructionSection(in);
-//          break;
-//        case SNAPSHOT:
-//          snapshotLoader.loadSnapshotSection(in);
-//          break;
-//        case SNAPSHOT_DIFF:
-//          snapshotLoader.loadSnapshotDiffSection(in);
-//          break;
-//        case SECRET_MANAGER: {
-//          prog.endStep(Phase.LOADING_FSIMAGE, currentStep);
-//          Step step = new Step(StepType.DELEGATION_TOKENS);
-//          prog.beginStep(Phase.LOADING_FSIMAGE, step);
-//          loadSecretManagerSection(in, prog, step);
-//          prog.endStep(Phase.LOADING_FSIMAGE, step);
-//        }
-//          break;
-//        case CACHE_MANAGER: {
-//          Step step = new Step(StepType.CACHE_POOLS);
-//          prog.beginStep(Phase.LOADING_FSIMAGE, step);
-//          loadCacheManagerSection(in, prog, step);
-//          prog.endStep(Phase.LOADING_FSIMAGE, step);
-//        }
-//          break;
-//        default:
-//          LOG.warn("Unrecognized section " + n);
-//          break;
-//        }
-//      }
-//    }
+    public static byte[] parseFrom(InputStream in) throws IOException {
+      DataInputStream inputStream = new DataInputStream(in);
+      int len = inputStream.readInt();
+      byte[] data = new byte[len];
+      inputStream.read(data);
+      return data;
+    }
 
     private void loadIntelNameSystemSection(InputStream in) throws IOException {
-      DataInputStream inputStream=new DataInputStream(in);
-      int len = inputStream.readInt();
-      byte[] data=new byte[len];
-      inputStream.read(data);
-      ByteBuffer byteBuffer = ByteBuffer.wrap(data);
+      ByteBuffer byteBuffer = ByteBuffer.wrap(parseFrom(in));
       IntelNameSystemSection intelNameSystemSection =
           IntelNameSystemSection.getRootAsIntelNameSystemSection(byteBuffer);
       BlockIdManager blockIdManager = fsn.getBlockIdManager();
@@ -429,7 +329,6 @@ public final class FSImageFormatProtobuf {
       }
     }
 
-
     private void loadNameSystemSection(InputStream in) throws IOException {
       NameSystemSection s = NameSystemSection.parseDelimitedFrom(in);
       BlockIdManager blockIdManager = fsn.getBlockIdManager();
@@ -447,11 +346,7 @@ public final class FSImageFormatProtobuf {
     }
 
     private void loadIntelStringTableSection(InputStream in) throws IOException {
-      DataInputStream dos = new DataInputStream(in);
-      int length = dos.readInt();
-      byte[] bytes = new byte[length];
-      dos.read(bytes);
-      ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
+      ByteBuffer byteBuffer = ByteBuffer.wrap(parseFrom(in));
       IntelStringTableSection intelSts =
           IntelStringTableSection.getRootAsIntelStringTableSection(byteBuffer);
       ctx.stringTable = new String[(int)intelSts.numEntry() + 1];

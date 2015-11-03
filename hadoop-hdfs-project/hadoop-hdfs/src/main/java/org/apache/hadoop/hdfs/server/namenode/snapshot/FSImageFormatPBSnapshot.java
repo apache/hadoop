@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Loader.loadINodeDirectory;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Loader.loadPermission;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Loader.updateBlocksMap;
+import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Loader.*;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Saver.*;
 //import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Saver.buildIntelINodeDirectory;
 
@@ -109,10 +107,29 @@ public class FSImageFormatPBSnapshot {
      * The sequence of the ref node in refList must be strictly the same with
      * the sequence in fsimage
      */
-    public void loadINodeReferenceSection(InputStream in) throws IOException {
+    public void loadIntelINodeReferenceSection(InputStream in) throws IOException {
       final List<INodeReference> refList = parent.getLoaderContext()
           .getRefList();
       while (true) {
+        IntelINodeReference ie = IntelINodeReference.
+            getRootAsIntelINodeReference(ByteBuffer.wrap(parseFrom(in)));
+        if (ie == null) {
+          break;
+        }
+        INodeReference ref = loadIntelINodeReference(ie); // success
+        refList.add(ref);
+      }
+    }
+
+    /**
+     * The sequence of the ref node in refList must be strictly the same with
+     * the sequence in fsimage
+     */
+    public void loadINodeReferenceSection(InputStream in) throws IOException {
+      final List<INodeReference> refList = parent.getLoaderContext()
+          .getRefList();
+      while (true)
+      {
         INodeReferenceSection.INodeReference e = INodeReferenceSection
             .INodeReference.parseDelimitedFrom(in);
         if (e == null) {
@@ -123,8 +140,26 @@ public class FSImageFormatPBSnapshot {
       }
     }
 
-    private INodeReference loadINodeReference(
-        INodeReferenceSection.INodeReference r) throws IOException {
+    private INodeReference loadIntelINodeReference(IntelINodeReference r) throws IOException {
+      long referredId = r.referredId();
+      INode referred = fsDir.getInode(referredId);
+      WithCount withCount = (WithCount) referred.getParentReference();
+      if (withCount == null) {
+        withCount = new INodeReference.WithCount(null, referred);
+      }
+      final INodeReference ref;
+
+      if (r.dstSnapshotId() != 0) { // DstReference
+        ref = new INodeReference.DstReference(null, withCount,
+            (int)r.dstSnapshotId());
+      } else {
+        ref = new INodeReference.WithName(null, withCount,
+            r.name().getBytes(), (int)r.lastSnapshotId());
+      }
+      return ref;
+    }
+
+    private INodeReference loadINodeReference(INodeReferenceSection.INodeReference r) throws IOException {
       long referredId = r.getReferredId();
       INode referred = fsDir.getInode(referredId);
       WithCount withCount = (WithCount) referred.getParentReference();
@@ -140,6 +175,35 @@ public class FSImageFormatPBSnapshot {
             .toByteArray(), r.getLastSnapshotId());
       }
       return ref;
+    }
+
+    /**
+     * Load the snapshots section from fsimage. Also add snapshottable feature
+     * to snapshottable directories.
+     */
+    public void loadIntelSnapshotSection(InputStream in) throws IOException {
+      SnapshotManager sm = fsn.getSnapshotManager();
+
+      IntelSnapshotSection isection = IntelSnapshotSection.
+          getRootAsIntelSnapshotSection(ByteBuffer.wrap(parseFrom(in)));
+
+      int snum = (int)isection.numSnapshots();
+      sm.setNumSnapshots(snum);
+
+      sm.setSnapshotCounter((int)isection.snapshotCounter());
+
+      for (int i = 0 ;i < isection.snapshottableDirLength() ;i ++) {
+        long sdirId = isection.snapshottableDir(i);
+        INodeDirectory dir = fsDir.getInode(sdirId).asDirectory();
+        if (!dir.isSnapshottable()) {
+          dir.addSnapshottableFeature();
+        } else {
+          // dir is root, and admin set root to snapshottable before
+          dir.setSnapshotQuota(DirectorySnapshottableFeature.SNAPSHOT_LIMIT);
+        }
+        sm.addSnapshottable(dir);
+      }
+      loadIntelSnapshots(in, snum);
     }
 
     /**
@@ -165,6 +229,27 @@ public class FSImageFormatPBSnapshot {
       loadSnapshots(in, snum);
     }
 
+    // finished
+    private void loadIntelSnapshots(InputStream in, int size) throws IOException {
+      for (int i = 0; i < size; i++)
+      {
+        IntelSnapshot ipbs = IntelSnapshot.getRootAsIntelSnapshot(ByteBuffer.wrap(parseFrom(in)));
+//        SnapshotSection.Snapshot pbs = SnapshotSection.Snapshot
+//            .parseDelimitedFrom(in);
+
+        INodeDirectory root = loadIntelINodeDirectory(ipbs.root(),
+            parent.getLoaderContext());
+
+        int sid = (int)ipbs.snapshotId();
+        INodeDirectory parent = fsDir.getInode(root.getId()).asDirectory();
+        Snapshot snapshot = new Snapshot(sid, root, parent);
+        // add the snapshot to parent, since we follow the sequence of
+        // snapshotsByNames when saving, we do not need to sort when loading
+        parent.getDirectorySnapshottableFeature().addSnapshot(snapshot);
+        snapshotMap.put(sid, snapshot);
+      }
+    }
+
     private void loadSnapshots(InputStream in, int size) throws IOException {
       for (int i = 0; i < size; i++) {
         SnapshotSection.Snapshot pbs = SnapshotSection.Snapshot
@@ -178,6 +263,31 @@ public class FSImageFormatPBSnapshot {
         // snapshotsByNames when saving, we do not need to sort when loading
         parent.getDirectorySnapshottableFeature().addSnapshot(snapshot);
         snapshotMap.put(sid, snapshot);
+      }
+    }
+
+    /**
+     * Load the snapshot diff section from fsimage.
+     */
+    public void loadIntelSnapshotDiffSection(InputStream in) throws IOException {
+      final List<INodeReference> refList = parent.getLoaderContext()
+          .getRefList();
+      while (true) {
+        IntelDiffEntry ientry = IntelDiffEntry.getRootAsIntelDiffEntry(ByteBuffer.wrap(parseFrom(in)));
+        if (ientry == null) {
+          break;
+        }
+        long inodeId = ientry.inodeId();
+        INode inode = fsDir.getInode(inodeId);
+        int itype = ientry.type();
+        switch (itype) {
+          case IntelType.FILEDIFF:
+            loadIntelFileDiffList(in, inode.asFile(), (int)ientry.numOfDiff()); // finished
+            break;
+          case IntelType.DIRECTORYDIFF:
+            loadIntelDirectoryDiffList(in, inode.asDirectory(), (int)ientry.numOfDiff(), refList); // finished
+            break;
+        }
       }
     }
 
@@ -206,6 +316,66 @@ public class FSImageFormatPBSnapshot {
           break;
         }
       }
+    }
+
+    /** Load FileDiff list for a file with snapshot feature */
+    private void loadIntelFileDiffList(InputStream in, INodeFile file, int size)
+        throws IOException {
+      final FileDiffList diffs = new FileDiffList();
+      final LoaderContext state = parent.getLoaderContext();
+      for (int i = 0; i < size; i++) {
+        IntelFileDiff ipbf = IntelFileDiff.getRootAsIntelFileDiff(ByteBuffer.wrap(parseFrom(in)));
+        INodeFileAttributes copy = null;
+        if (ipbf.snapshotCopy() != null) {
+          IntelINodeFile ifileInPb = ipbf.snapshotCopy();
+          PermissionStatus permission = loadPermission(
+              ifileInPb.permission(), state.getStringTable());
+          AclFeature acl = null;
+
+          if (ifileInPb.acl() != null) {
+            int[] entries = AclEntryStatusFormat
+                .toInt(FSImageFormatPBINode.Loader.loadIntelAclEntries(
+                    ifileInPb.acl(), state.getStringTable()));
+            acl = new AclFeature(entries);
+          }
+          XAttrFeature xAttrs = null;
+
+          if (ifileInPb.xAttrs() != null) {
+            xAttrs = new XAttrFeature(FSImageFormatPBINode.Loader.loadIntelXAttrs(
+                ifileInPb.xAttrs(), state.getStringTable()));
+          }
+
+          copy = new INodeFileAttributes.SnapshotCopy(ipbf.name().getBytes()
+              , permission, acl, ifileInPb.modificationTime(),
+              ifileInPb.accessTime(), (short) ifileInPb.replication(),
+              ifileInPb.preferredBlockSize(),
+              (byte)ifileInPb.storagePolicyID(), xAttrs);
+        }
+
+        FileDiff diff = new FileDiff((int)ipbf.snapshotId(), copy, null,
+            ipbf.fileSize());
+
+        List<IntelBlockProto> ibpl = null;
+        for (int j = 0; j < ipbf.blocksLength() ; j++) {
+          ibpl.add(ipbf.blocks(j));
+        }
+//        List<BlockProto> bpl = pbf.getBlocksList();
+        BlockInfo[] blocks = new BlockInfo[ibpl.size()];
+        for(int j = 0, e = ibpl.size(); j < e; ++j) {
+          Block blk = PBHelper.convert(ibpl.get(j));
+          BlockInfo storedBlock =  fsn.getBlockManager().getStoredBlock(blk);
+          if(storedBlock == null) {
+            storedBlock = fsn.getBlockManager().addBlockCollection(
+                new BlockInfoContiguous(blk, copy.getFileReplication()), file);
+          }
+          blocks[j] = storedBlock;
+        }
+        if(blocks.length > 0) {
+          diff.setBlocks(blocks);
+        }
+        diffs.addFirst(diff);
+      } // for end
+      file.addSnapshotFeature(diffs);
     }
 
     /** Load FileDiff list for a file with snapshot feature */
@@ -266,11 +436,12 @@ public class FSImageFormatPBSnapshot {
     /** Load the created list in a DirectoryDiff */
     private List<INode> loadCreatedList(InputStream in, INodeDirectory dir,
         int size) throws IOException {
+
       List<INode> clist = new ArrayList<INode>(size);
       for (long c = 0; c < size; c++) {
-        CreatedListEntry entry = CreatedListEntry.parseDelimitedFrom(in);
-        INode created = SnapshotFSImageFormat.loadCreated(entry.getName()
-            .toByteArray(), dir);
+
+        IntelCreatedListEntry ientry = IntelCreatedListEntry.getRootAsIntelCreatedListEntry(ByteBuffer.wrap(parseFrom(in)));
+        INode created = SnapshotFSImageFormat.loadCreated(ientry.name().getBytes(), dir);
         clist.add(created);
       }
       return clist;
@@ -313,6 +484,108 @@ public class FSImageFormatPBSnapshot {
       });
       return dlist;
     }
+
+    /** Load DirectoryDiff list for a directory with snapshot feature */
+    private void loadIntelDirectoryDiffList(InputStream in, INodeDirectory dir,
+                                       int size, final List<INodeReference> refList) throws IOException
+    {
+      if (!dir.isWithSnapshot()) {
+        dir.addSnapshotFeature(null);
+      }
+      DirectoryDiffList diffs = dir.getDiffs();
+      final LoaderContext state = parent.getLoaderContext();
+
+      for (int i = 0; i < size; i++) {
+        IntelDirectoryDiff idiffInPb = IntelDirectoryDiff.getRootAsIntelDirectoryDiff(ByteBuffer.wrap(parseFrom(in)));
+
+        final int snapshotId = (int)idiffInPb.snapshotId();
+        final Snapshot snapshot = snapshotMap.get(snapshotId);
+
+        int childrenSize = (int)idiffInPb.childrenSize();
+
+        boolean useRoot = idiffInPb.isSnapshotRoot();
+
+        INodeDirectoryAttributes copy = null;
+
+        if (useRoot) {
+          copy = snapshot.getRoot();
+        } else if (idiffInPb.snapshotCopy() != null) {
+
+          IntelINodeDirectory idirCopyInPb = idiffInPb.snapshotCopy();
+
+//          INodeSection.INodeDirectory dirCopyInPb = diffInPb.getSnapshotCopy();
+          final byte[] name = idiffInPb.name().getBytes();
+
+          PermissionStatus permission = loadPermission(
+              idirCopyInPb.permission(), state.getStringTable());
+
+          AclFeature acl = null;
+          if (idirCopyInPb.acl() != null) {
+            int[] entries = AclEntryStatusFormat
+                .toInt(FSImageFormatPBINode.Loader.loadIntelAclEntries(
+                    idirCopyInPb.acl(), state.getStringTable()));
+            acl = new AclFeature(entries);
+          }
+          XAttrFeature xAttrs = null;
+          if (idirCopyInPb.xAttrs() != null) {
+            xAttrs = new XAttrFeature(FSImageFormatPBINode.Loader.loadIntelXAttrs(
+                idirCopyInPb.xAttrs(), state.getStringTable()));
+          }
+
+          long modTime = idirCopyInPb.modificationTime();
+
+          boolean noQuota = idirCopyInPb.nsQuota() == -1
+              && idirCopyInPb.dsQuota() == -1
+              && (!(idirCopyInPb.typeQuotas() != null));
+
+          if (noQuota) {
+            copy = new INodeDirectoryAttributes.SnapshotCopy(name,
+                permission, acl, modTime, xAttrs);
+          } else {
+            EnumCounters<StorageType> typeQuotas = null;
+
+            if (idirCopyInPb.typeQuotas() != null) {
+
+              ImmutableList<QuotaByStorageTypeEntry> qes =
+                  FSImageFormatPBINode.Loader.loadIntelQuotaByStorageTypeEntries(
+                      idirCopyInPb.typeQuotas());
+              typeQuotas = new EnumCounters<StorageType>(StorageType.class,
+                  HdfsConstants.QUOTA_RESET);
+              for (QuotaByStorageTypeEntry qe : qes) {
+                if (qe.getQuota() >= 0 && qe.getStorageType() != null &&
+                    qe.getStorageType().supportTypeQuota()) {
+                  typeQuotas.set(qe.getStorageType(), qe.getQuota());
+                }
+              }
+            }
+            copy = new INodeDirectoryAttributes.CopyWithQuota(name, permission,
+                acl, modTime, idirCopyInPb.nsQuota(),
+                idirCopyInPb.dsQuota(), typeQuotas, xAttrs);
+          }
+        }
+        // load created list
+        List<INode> clist = loadCreatedList(in, dir,
+            (int)idiffInPb.createdListSize());
+
+        List<Long> deletedNodes = new ArrayList<>();
+        for (int k = 0 ; k < idiffInPb.deletedINodeLength(); k++) {
+          deletedNodes.add(idiffInPb.deletedINode(k));
+        }
+        List<Integer> deletedRefNodes = new ArrayList<>();
+        for (int q = 0 ;q < idiffInPb.deletedINodeRefLength() ; q++) {
+          deletedRefNodes.add((int)idiffInPb.deletedINodeRef(q));
+        }
+        // load deleted list
+        List<INode> dlist = loadDeletedList(refList, in, dir,
+            deletedNodes, deletedRefNodes);
+
+        // create the directory diff
+        DirectoryDiff diff = new DirectoryDiff(snapshotId, copy, null,
+            childrenSize, clist, dlist, useRoot);
+        diffs.addFirst(diff);
+      } // for end
+    }
+
 
     /** Load DirectoryDiff list for a directory with snapshot feature */
     private void loadDirectoryDiffList(InputStream in, INodeDirectory dir,
