@@ -76,6 +76,9 @@ public:
                const std::set<std::string> &excluded_datanodes,
                const std::function<void(const Status &, const std::string &,
                                         size_t)> &handler) = 0;
+  
+  virtual size_t PositionRead(void *buf, size_t nbyte, off_t offset) = 0;
+
   virtual ~InputStream();
 };
 
@@ -93,6 +96,12 @@ public:
   New(IoService *io_service, const Options &options, const std::string &server,
       const std::string &service,
       const std::function<void(const Status &, FileSystem *)> &handler);
+
+  /* Synchronous call of New*/
+  static FileSystem *
+  New(IoService *io_service, const Options &options, const std::string &server,
+      const std::string &service);
+
   /**
    * Open a file on HDFS. The call issues an RPC to the NameNode to
    * gather the locations of all blocks in the file and to return a
@@ -101,7 +110,10 @@ public:
   virtual void
   Open(const std::string &path,
        const std::function<void(const Status &, InputStream *)> &handler) = 0;
+  Status Open(const std::string &path, InputStream **handle);
+
   virtual ~FileSystem();
+  
 };
 }
 

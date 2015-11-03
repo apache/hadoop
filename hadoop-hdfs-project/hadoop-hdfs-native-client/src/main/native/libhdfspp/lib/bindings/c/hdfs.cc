@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 
-#include "hdfs_cpp.h"
+#include "fs/filesystem.h"
 
+#include <hdfs/hdfs.h>
+#include <string>
 #include <cstring>
 #include <iostream>
 
@@ -25,26 +27,26 @@ using namespace hdfs;
 
 /* Seperate the handles used by the C api from the C++ API*/
 struct hdfs_internal {
-  hdfs_internal(HadoopFileSystem *p) : filesystem_(p) {}
-  hdfs_internal(std::unique_ptr<HadoopFileSystem> p)
+  hdfs_internal(FileSystem *p) : filesystem_(p) {}
+  hdfs_internal(std::unique_ptr<FileSystem> p)
       : filesystem_(std::move(p)) {}
   virtual ~hdfs_internal(){};
-  HadoopFileSystem *get_impl() { return filesystem_.get(); }
-  const HadoopFileSystem *get_impl() const { return filesystem_.get(); }
+  FileSystem *get_impl() { return filesystem_.get(); }
+  const FileSystem *get_impl() const { return filesystem_.get(); }
 
  private:
-  std::unique_ptr<HadoopFileSystem> filesystem_;
+  std::unique_ptr<FileSystem> filesystem_;
 };
 
 struct hdfsFile_internal {
-  hdfsFile_internal(FileHandle *p) : file_(p) {}
-  hdfsFile_internal(std::unique_ptr<FileHandle> p) : file_(std::move(p)) {}
+  hdfsFile_internal(InputStream *p) : file_(p) {}
+  hdfsFile_internal(std::unique_ptr<InputStream> p) : file_(std::move(p)) {}
   virtual ~hdfsFile_internal(){};
-  FileHandle *get_impl() { return file_.get(); }
-  const FileHandle *get_impl() const { return file_.get(); }
+  InputStream *get_impl() { return file_.get(); }
+  const InputStream *get_impl() const { return file_.get(); }
 
  private:
-  std::unique_ptr<FileHandle> file_;
+  std::unique_ptr<InputStream> file_;
 };
 
 /* Error handling with optional debug to stderr */
@@ -65,17 +67,17 @@ static void ReportError(int errnum, std::string msg) {
 int hdfsFileIsOpenForRead(hdfsFile file) {
   /* files can only be open for reads at the moment, do a quick check */
   if (file) {
-    return file->get_impl()->IsOpenForRead();
+    return true; // Update implementation when we get file writing
   }
   return false;
 }
 
 hdfsFS hdfsConnect(const char *nn, tPort port) {
-  HadoopFileSystem *fs = new HadoopFileSystem();
-  Status stat = fs->Connect(nn, port);
-  if (!stat.ok()) {
+  std::string port_as_string = std::to_string(port);
+  IoService * io_service = IoService::New();
+  FileSystem *fs = FileSystem::New(io_service, Options(), nn, port_as_string);
+  if (!fs) {
     ReportError(ENODEV, "Unable to connect to NameNode.");
-    delete fs;
     return nullptr;
   }
   return new hdfs_internal(fs);
@@ -101,8 +103,8 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char *path, int flags, int bufferSize,
     ReportError(ENODEV, "Cannot perform FS operations with null FS handle.");
     return nullptr;
   }
-  FileHandle *f = nullptr;
-  Status stat = fs->get_impl()->OpenFileForRead(path, &f);
+  InputStream *f = nullptr;
+  Status stat = fs->get_impl()->Open(path, &f);
   if (!stat.ok()) {
     return nullptr;
   }
@@ -133,5 +135,5 @@ tSize hdfsPread(hdfsFS fs, hdfsFile file, tOffset position, void *buffer,
     return -1;
   }
 
-  return file->get_impl()->Pread(buffer, length, position);
+  return file->get_impl()->PositionRead(buffer, length, position);
 }

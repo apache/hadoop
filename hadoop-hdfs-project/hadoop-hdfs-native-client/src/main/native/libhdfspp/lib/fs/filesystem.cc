@@ -24,6 +24,7 @@
 
 #include <functional>
 #include <limits>
+#include <future>
 
 namespace hdfs {
 
@@ -99,8 +100,6 @@ void NameNodeOperations::GetBlockLocations(const std::string & path,
 }
 
 
-FileSystem::~FileSystem() {}
-
 void FileSystem::New(
     IoService *io_service, const Options &options, const std::string &server,
     const std::string &service,
@@ -116,17 +115,80 @@ void FileSystem::New(
   });
 }
 
-FileSystemImpl::FileSystemImpl(IoService *io_service, const Options &options)
-    : io_service_(static_cast<IoServiceImpl *>(io_service)),
-      client_name_(GetRandomClientName()),
-      nn_(&io_service_->io_service(), options,
-              GetRandomClientName(), kNamenodeProtocol,
-              kNamenodeProtocolVersion) {}
+FileSystem * FileSystem::New(
+    IoService *io_service, const Options &options, const std::string &server,
+    const std::string &service) {
+  auto stat = std::make_shared<std::promise<std::pair<Status, FileSystem *>>>();
+  std::future<std::pair<Status, FileSystem *>> future = stat->get_future();
+
+  auto callback = [stat](const Status &s, FileSystem * fs) {
+    std::pair<Status, FileSystem *> value(s, fs);
+    stat->set_value(value);
+  };
+
+  New(io_service, options, server, service, callback);
+
+  /* block until promise is set */
+  auto s = future.get();
+
+  if (s.first.ok())
+    return s.second;
+  else
+    return nullptr;
+}
+  
+  FileSystemImpl::FileSystemImpl(IoService *&io_service, const Options &options)
+    :   io_service_(static_cast<IoServiceImpl *>(io_service)),
+        nn_(&io_service_->io_service(), options,
+            GetRandomClientName(), kNamenodeProtocol,
+            kNamenodeProtocolVersion),
+        client_name_(GetRandomClientName())
+{
+  // Poor man's move
+  io_service = nullptr;
+  
+  /* spawn background threads for asio delegation */
+  unsigned int threads = 1 /* options.io_threads_, pending HDFS-9117 */; 
+  for (unsigned int i = 0; i < threads; i++) {
+    AddWorkerThread();
+  }
+}
+
+FileSystemImpl::~FileSystemImpl() {
+  /**
+   * Note: IoService must be stopped before getting rid of worker threads.
+   * Once worker threads are joined and deleted the service can be deleted.
+   **/
+  io_service_->Stop();
+  worker_threads_.clear();
+  io_service_.reset(nullptr);
+}
 
 void FileSystemImpl::Connect(const std::string &server,
                              const std::string &service,
                              std::function<void(const Status &)> &&handler) {
+  /* IoService::New can return nullptr */
+  if (!io_service_) {
+    handler (Status::Error("Null IoService"));
+  }
   nn_.Connect(server, service, handler);
+}
+
+Status FileSystemImpl::Connect(const std::string &server, const std::string &service) {
+  /* synchronized */
+  auto stat = std::make_shared<std::promise<Status>>();
+  std::future<Status> future = stat->get_future();
+
+  auto callback = [stat](const Status &s) {
+    stat->set_value(s);
+  };
+
+  Connect(server, service, callback);
+
+  /* block until promise is set */
+  auto s = future.get();
+
+  return s;
 }
 
 void FileSystemImpl::Open(
@@ -138,4 +200,41 @@ void FileSystemImpl::Open(
                             : nullptr);
   });
 }
+
+int FileSystemImpl::AddWorkerThread() {
+  auto service_task = [](IoService *service) { service->Run(); };
+  worker_threads_.push_back(
+      WorkerPtr(new std::thread(service_task, io_service_.get())));
+  return worker_threads_.size();
+}
+
+Status FileSystemImpl::Open(const std::string &path,
+                                         InputStream **handle) {
+  auto stat = std::make_shared<std::promise<Status>>();
+  std::future<Status> future = stat->get_future();
+
+  /* wrap async FileSystem::Open with promise to make it a blocking call */
+  InputStream *input_stream = nullptr;
+  auto h = [stat, &input_stream](const Status &s, InputStream *is) {
+    stat->set_value(s);
+    input_stream = is;
+  };
+
+  Open(path, h);
+
+  /* block until promise is set */
+  auto s = future.get();
+
+  if (!s.ok()) {
+    delete input_stream;
+    return s;
+  }
+  if (!input_stream) {
+    return s;
+  }
+
+  *handle = input_stream;
+  return s;
+}
+
 }

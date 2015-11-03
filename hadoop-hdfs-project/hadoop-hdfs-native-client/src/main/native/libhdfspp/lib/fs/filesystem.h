@@ -29,6 +29,8 @@
 
 #include "asio.hpp"
 
+#include <thread>
+
 namespace hdfs {
 
 /**
@@ -72,16 +74,44 @@ private:
  */
 class FileSystemImpl : public FileSystem {
 public:
-  FileSystemImpl(IoService *io_service, const Options &options);
+  FileSystemImpl(IoService *&io_service, const Options &options);
+  ~FileSystemImpl();
+
+  /* attempt to connect to namenode, return bad status on failure */
   void Connect(const std::string &server, const std::string &service,
                std::function<void(const Status &)> &&handler);
+  /* attempt to connect to namenode, return bad status on failure */
+  Status Connect(const std::string &server, const std::string &service);
+
+
   virtual void Open(const std::string &path,
                     const std::function<void(const Status &, InputStream *)>
                         &handler) override;
+  Status Open(const std::string &path, InputStream **handle);
+  
+  
+  /* add a new thread to handle asio requests, return number of threads in pool
+   */
+  int AddWorkerThread();
+
+  /* how many worker threads are servicing asio requests */
+  int WorkerThreadCount() { return worker_threads_.size(); }
+
+  
 private:
-  IoServiceImpl *io_service_;
-  const std::string client_name_;
+  std::unique_ptr<IoServiceImpl> io_service_;
   NameNodeOperations nn_;
+  const std::string client_name_;
+
+  struct WorkerDeleter {
+    void operator()(std::thread *t) {
+      t->join();
+      delete t;
+    }
+  };
+  typedef std::unique_ptr<std::thread, WorkerDeleter> WorkerPtr;
+  std::vector<WorkerPtr> worker_threads_;
+
 };
 
 
@@ -100,6 +130,8 @@ public:
                const std::set<std::string> &excluded_datanodes,
                const std::function<void(const Status &, const std::string &,
                                         size_t)> &handler) override;
+
+  size_t PositionRead(void *buf, size_t nbyte, off_t offset) override;
 
   void AsyncPreadSome(size_t offset, const MutableBuffers &buffers,
                       const std::set<std::string> &excluded_datanodes,

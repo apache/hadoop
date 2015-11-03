@@ -19,6 +19,8 @@
 #include "filesystem.h"
 #include "common/continuation/continuation.h"
 
+#include <future>
+
 namespace hdfs {
 
 using ::hadoop::hdfs::LocatedBlocksProto;
@@ -36,6 +38,31 @@ void InputStreamImpl::PositionRead(
     const std::function<void(const Status &, const std::string &, size_t)>
         &handler) {
   AsyncPreadSome(offset, asio::buffer(buf, nbyte), excluded_datanodes, handler);
+}
+
+size_t InputStreamImpl::PositionRead(void *buf, size_t nbyte, off_t offset) {
+  auto stat = std::make_shared<std::promise<Status>>();
+  std::future<Status> future(stat->get_future());
+
+  /* wrap async call with promise/future to make it blocking */
+  size_t read_count = 0;
+  auto callback = [stat, &read_count](const Status &s, const std::string &dn,
+                                      size_t bytes) {
+    (void)dn;
+    stat->set_value(s);
+    read_count = bytes;
+  };
+
+  PositionRead(buf, nbyte, offset, std::set<std::string>(),
+                              callback);
+
+  /* wait for async to finish */
+  auto s = future.get();
+
+  if (!s.ok()) {
+    return -1;
+  }
+  return (ssize_t)read_count;
 }
 
 void InputStreamImpl::AsyncPreadSome(
@@ -103,5 +130,6 @@ void InputStreamImpl::AsyncPreadSome(
     }
   });
 }
+
 
 }

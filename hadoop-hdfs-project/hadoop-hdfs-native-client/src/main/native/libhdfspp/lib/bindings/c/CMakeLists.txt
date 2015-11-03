@@ -16,5 +16,5 @@
 # under the License.
 
 
-add_library(bindings_c hdfs.cc hdfs_cpp.cc)
+add_library(bindings_c hdfs.cc)
 add_dependencies(bindings_c fs rpc reader proto common fs rpc reader proto common)
