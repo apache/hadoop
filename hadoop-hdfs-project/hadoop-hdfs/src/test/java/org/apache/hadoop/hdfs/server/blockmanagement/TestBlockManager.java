@@ -821,14 +821,15 @@ public class TestBlockManager {
     DatanodeStorageInfo delHint = new DatanodeStorageInfo(
         DFSTestUtil.getLocalDatanodeDescriptor(), new DatanodeStorage("id"));
     List<DatanodeStorageInfo> moreThan1Racks = Arrays.asList(delHint);
-    List<StorageType> excessTypes = new ArrayList<StorageType>();
-
+    List<StorageType> excessTypes = new ArrayList<>();
+    BlockPlacementPolicyDefault policyDefault =
+        (BlockPlacementPolicyDefault) bm.getBlockPlacementPolicy();
     excessTypes.add(StorageType.DEFAULT);
-    Assert.assertTrue(BlockPlacementPolicyDefault.useDelHint(true, delHint,
-        null, moreThan1Racks, excessTypes));
+    Assert.assertTrue(policyDefault.useDelHint(delHint, null, moreThan1Racks,
+        null, excessTypes));
     excessTypes.remove(0);
     excessTypes.add(StorageType.SSD);
-    Assert.assertFalse(BlockPlacementPolicyDefault.useDelHint(true, delHint,
-        null, moreThan1Racks, excessTypes));
+    Assert.assertFalse(policyDefault.useDelHint(delHint, null, moreThan1Racks,
+        null, excessTypes));
   }
 }

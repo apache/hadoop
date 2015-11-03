@@ -1156,7 +1156,7 @@ public class DFSTestUtil {
       final StorageType type = (types != null && i < types.length) ? types[i]
           : StorageType.DEFAULT;
       storages[i] = createDatanodeStorageInfo(storageID, ip, rack, hostname,
-          type);
+          type, null);
     }
     return storages;
   }
@@ -1164,16 +1164,19 @@ public class DFSTestUtil {
   public static DatanodeStorageInfo createDatanodeStorageInfo(
       String storageID, String ip, String rack, String hostname) {
     return createDatanodeStorageInfo(storageID, ip, rack, hostname,
-        StorageType.DEFAULT);
+        StorageType.DEFAULT, null);
   }
 
   public static DatanodeStorageInfo createDatanodeStorageInfo(
       String storageID, String ip, String rack, String hostname,
-      StorageType type) {
+      StorageType type, String upgradeDomain) {
     final DatanodeStorage storage = new DatanodeStorage(storageID,
         DatanodeStorage.State.NORMAL, type);
     final DatanodeDescriptor dn = BlockManagerTestUtil.getDatanodeDescriptor(
         ip, rack, storage, hostname);
+    if (upgradeDomain != null) {
+      dn.setUpgradeDomain(upgradeDomain);
+    }
     return BlockManagerTestUtil.newDatanodeStorageInfo(dn, storage);
   }
 

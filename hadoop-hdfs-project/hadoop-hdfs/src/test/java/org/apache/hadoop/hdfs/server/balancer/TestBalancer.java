@@ -69,6 +69,7 @@ import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -77,7 +78,10 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.balancer.Balancer.Cli;
 import org.apache.hadoop.hdfs.server.balancer.Balancer.Result;
-import org.apache.hadoop.hdfs.server.balancer.BalancerParameters;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyWithUpgradeDomain;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementStatus;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.LazyPersistTestCase;
@@ -409,7 +413,102 @@ public class TestBalancer {
     int r = Balancer.run(namenodes, BalancerParameters.DEFAULT, conf);
     assertEquals(ExitStatus.NO_MOVE_PROGRESS.getExitCode(), r);
   }
-  
+
+  /**
+   * Verify balancer won't violate the default block placement policy.
+   * @throws Exception
+   */
+  @Test(timeout=100000)
+  public void testRackPolicyAfterBalance() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    initConf(conf);
+    long[] capacities =  new long[] { CAPACITY, CAPACITY };
+    String[] hosts = {"host0", "host1"};
+    String[] racks = { RACK0, RACK1 };
+    runBalancerAndVerifyBlockPlacmentPolicy(conf, capacities, hosts, racks,
+        null, CAPACITY, "host2", RACK1, null);
+  }
+
+  /**
+   * Verify balancer won't violate upgrade domain block placement policy.
+   * @throws Exception
+   */
+  @Test(timeout=100000)
+  public void testUpgradeDomainPolicyAfterBalance() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    initConf(conf);
+    conf.setClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
+        BlockPlacementPolicyWithUpgradeDomain.class,
+        BlockPlacementPolicy.class);
+    long[] capacities =  new long[] { CAPACITY, CAPACITY, CAPACITY };
+    String[] hosts = {"host0", "host1", "host2"};
+    String[] racks = { RACK0, RACK1, RACK1 };
+    String[] UDs = { "ud0", "ud1", "ud2" };
+    runBalancerAndVerifyBlockPlacmentPolicy(conf, capacities, hosts, racks,
+        UDs, CAPACITY, "host3", RACK2, "ud2");
+  }
+
+  private void runBalancerAndVerifyBlockPlacmentPolicy(Configuration conf,
+      long[] capacities, String[] hosts, String[] racks, String[] UDs,
+      long newCapacity, String newHost, String newRack, String newUD)
+          throws Exception {
+    int numOfDatanodes = capacities.length;
+
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(capacities.length)
+        .hosts(hosts).racks(racks).simulatedCapacities(capacities).build();
+    DatanodeManager dm = cluster.getNamesystem().getBlockManager().
+        getDatanodeManager();
+    if (UDs != null) {
+      for(int i = 0; i < UDs.length; i++) {
+        DatanodeID datanodeId = cluster.getDataNodes().get(i).getDatanodeId();
+        dm.getDatanode(datanodeId).setUpgradeDomain(UDs[i]);
+      }
+    }
+
+    try {
+      cluster.waitActive();
+      client = NameNodeProxies.createProxy(conf,
+          cluster.getFileSystem(0).getUri(), ClientProtocol.class).getProxy();
+
+      // fill up the cluster to be 80% full
+      long totalCapacity = sum(capacities);
+      long totalUsedSpace = totalCapacity * 8 / 10;
+
+      final long fileSize = totalUsedSpace / numOfDatanodes;
+      DFSTestUtil.createFile(cluster.getFileSystem(0), filePath, false, 1024,
+          fileSize, DEFAULT_BLOCK_SIZE, (short) numOfDatanodes, 0, false);
+
+      // start up an empty node with the same capacity on the same rack as the
+      // pinned host.
+      cluster.startDataNodes(conf, 1, true, null, new String[] { newRack },
+          new String[] { newHost }, new long[] { newCapacity });
+      if (newUD != null) {
+        DatanodeID newId = cluster.getDataNodes().get(
+            numOfDatanodes).getDatanodeId();
+        dm.getDatanode(newId).setUpgradeDomain(newUD);
+      }
+      totalCapacity += newCapacity;
+
+      // run balancer and validate results
+      waitForHeartBeat(totalUsedSpace, totalCapacity, client, cluster);
+
+      // start rebalancing
+      Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
+      Balancer.run(namenodes, BalancerParameters.DEFAULT, conf);
+      BlockPlacementPolicy placementPolicy =
+          cluster.getNamesystem().getBlockManager().getBlockPlacementPolicy();
+      List<LocatedBlock> locatedBlocks = client.
+          getBlockLocations(fileName, 0, fileSize).getLocatedBlocks();
+      for (LocatedBlock locatedBlock : locatedBlocks) {
+        BlockPlacementStatus status = placementPolicy.verifyBlockPlacement(
+            locatedBlock.getLocations(), numOfDatanodes);
+        assertTrue(status.isPlacementPolicySatisfied());
+      }
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   /**
    * Wait until balanced: each datanode gives utilization within 
    * BALANCE_ALLOWED_VARIANCE of average

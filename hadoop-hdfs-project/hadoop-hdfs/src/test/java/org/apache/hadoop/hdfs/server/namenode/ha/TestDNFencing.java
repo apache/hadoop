@@ -629,11 +629,13 @@ public class TestDNFencing {
     }
 
     @Override
-    public DatanodeStorageInfo chooseReplicaToDelete(short replicationFactor,
-        Collection<DatanodeStorageInfo> first, Collection<DatanodeStorageInfo> second,
+    public DatanodeStorageInfo chooseReplicaToDelete(
+        Collection<DatanodeStorageInfo> moreThanOne,
+        Collection<DatanodeStorageInfo> exactlyOne,
         List<StorageType> excessTypes) {
-      
-      Collection<DatanodeStorageInfo> chooseFrom = !first.isEmpty() ? first : second;
+
+      Collection<DatanodeStorageInfo> chooseFrom = !moreThanOne.isEmpty() ?
+          moreThanOne : exactlyOne;
 
       List<DatanodeStorageInfo> l = Lists.newArrayList(chooseFrom);
       return l.get(ThreadLocalRandom.current().nextInt(l.size()));

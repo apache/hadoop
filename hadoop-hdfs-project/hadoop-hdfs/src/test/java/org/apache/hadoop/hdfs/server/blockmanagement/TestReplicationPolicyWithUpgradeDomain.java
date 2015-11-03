@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -33,6 +34,8 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -190,41 +193,6 @@ public class TestReplicationPolicyWithUpgradeDomain
   }
 
   /**
-   * Verify the correct replica is chosen to satisfy both rack and upgrade
-   * domain policy.
-   * @throws Exception
-   */
-  @Test
-  public void testChooseReplicaToDelete() throws Exception {
-    BlockPlacementPolicyWithUpgradeDomain upgradeDomainPolicy =
-        (BlockPlacementPolicyWithUpgradeDomain)replicator;
-    List<DatanodeStorageInfo> first = new ArrayList<>();
-    List<DatanodeStorageInfo> second = new ArrayList<>();
-    List<StorageType> excessTypes = new ArrayList<>();
-    excessTypes.add(StorageType.DEFAULT);
-    first.add(storages[0]);
-    first.add(storages[1]);
-    second.add(storages[4]);
-    second.add(storages[8]);
-    DatanodeStorageInfo chosenStorage =
-        upgradeDomainPolicy.chooseReplicaToDelete(
-            (short)3, first, second, excessTypes);
-    assertEquals(chosenStorage, storages[1]);
-    first.clear();
-    second.clear();
-
-    excessTypes.add(StorageType.DEFAULT);
-    first.add(storages[0]);
-    first.add(storages[1]);
-    first.add(storages[4]);
-    first.add(storages[5]);
-    chosenStorage = upgradeDomainPolicy.chooseReplicaToDelete(
-        (short)3, first, second, excessTypes);
-    assertTrue(chosenStorage.equals(storages[1]) ||
-        chosenStorage.equals(storages[4]));
-  }
-
-  /**
    * Test the scenario where not enough replicas can't satisfy the policy.
    * @throws Exception
    */
@@ -248,7 +216,7 @@ public class TestReplicationPolicyWithUpgradeDomain
   }
 
   /**
-   * Test the scenario where not enough replicas can't satisfy the policy.
+   * Test block placement verification.
    * @throws Exception
    */
   @Test
@@ -339,6 +307,137 @@ public class TestReplicationPolicyWithUpgradeDomain
     status = replicator.verifyBlockPlacement(locatedBlock.getLocations(),
         set.size());
     assertFalse(status.isPlacementPolicySatisfied());
+  }
+
+  /**
+   * Verify the correct replica is chosen to satisfy both rack and upgrade
+   * domain policy.
+   * @throws Exception
+   */
+  @Test
+  public void testChooseReplicasToDelete() throws Exception {
+    Collection<DatanodeStorageInfo> nonExcess = new ArrayList<>();
+    nonExcess.add(storages[0]);
+    nonExcess.add(storages[1]);
+    nonExcess.add(storages[2]);
+    nonExcess.add(storages[3]);
+    List<DatanodeStorageInfo> excessReplicas;
+    BlockStoragePolicySuite POLICY_SUITE = BlockStoragePolicySuite
+        .createDefaultSuite();
+    BlockStoragePolicy storagePolicy = POLICY_SUITE.getDefaultPolicy();
+
+    // delete hint accepted.
+    DatanodeDescriptor delHintNode = storages[0].getDatanodeDescriptor();
+    List<StorageType> excessTypes = storagePolicy.chooseExcess((short) 3,
+        DatanodeStorageInfo.toStorageTypes(nonExcess));
+    excessReplicas = replicator.chooseReplicasToDelete(nonExcess, 3,
+        excessTypes, storages[3].getDatanodeDescriptor(), delHintNode);
+    assertTrue(excessReplicas.size() == 1);
+    assertTrue(excessReplicas.contains(storages[0]));
+
+    // delete hint rejected because deleting storages[1] would have
+    // cause only two upgrade domains left.
+    delHintNode = storages[1].getDatanodeDescriptor();
+    excessTypes = storagePolicy.chooseExcess((short) 3,
+        DatanodeStorageInfo.toStorageTypes(nonExcess));
+    excessReplicas = replicator.chooseReplicasToDelete(nonExcess, 3,
+        excessTypes, storages[3].getDatanodeDescriptor(), delHintNode);
+    assertTrue(excessReplicas.size() == 1);
+    assertTrue(excessReplicas.contains(storages[0]));
+
+    // no delete hint, case 1
+    nonExcess.clear();
+    nonExcess.add(storages[0]);
+    nonExcess.add(storages[1]);
+    nonExcess.add(storages[4]);
+    nonExcess.add(storages[8]);
+    excessTypes = storagePolicy.chooseExcess((short) 3,
+        DatanodeStorageInfo.toStorageTypes(nonExcess));
+    excessReplicas = replicator.chooseReplicasToDelete(nonExcess, 3,
+        excessTypes, storages[8].getDatanodeDescriptor(), null);
+    assertTrue(excessReplicas.size() == 1);
+    assertTrue(excessReplicas.contains(storages[1]));
+
+    // no delete hint, case 2
+    nonExcess.clear();
+    nonExcess.add(storages[0]);
+    nonExcess.add(storages[1]);
+    nonExcess.add(storages[4]);
+    nonExcess.add(storages[5]);
+    excessTypes = storagePolicy.chooseExcess((short) 3,
+        DatanodeStorageInfo.toStorageTypes(nonExcess));
+    excessReplicas = replicator.chooseReplicasToDelete(nonExcess, 3,
+        excessTypes, storages[8].getDatanodeDescriptor(), null);
+    assertTrue(excessReplicas.size() == 1);
+    assertTrue(excessReplicas.contains(storages[1]) ||
+        excessReplicas.contains(storages[4]));
+
+    // No delete hint, different excess type deletion
+    nonExcess.clear();
+    nonExcess.add(storages[0]);
+    nonExcess.add(storages[1]);
+    nonExcess.add(storages[2]);
+    nonExcess.add(storages[3]);
+    DatanodeStorageInfo excessStorage = DFSTestUtil.createDatanodeStorageInfo(
+        "Storage-excess-ID", "localhost", delHintNode.getNetworkLocation(),
+        "foo.com", StorageType.ARCHIVE, delHintNode.getUpgradeDomain());
+    nonExcess.add(excessStorage);
+    excessTypes = storagePolicy.chooseExcess((short) 3,
+        DatanodeStorageInfo.toStorageTypes(nonExcess));
+    excessReplicas = replicator.chooseReplicasToDelete(nonExcess, 3,
+        excessTypes, storages[3].getDatanodeDescriptor(), null);
+    assertTrue(excessReplicas.size() == 2);
+    assertTrue(excessReplicas.contains(storages[0]));
+    assertTrue(excessReplicas.contains(excessStorage));
+  }
+
+  @Test
+  public void testIsMovable() throws Exception {
+    List<DatanodeInfo> candidates = new ArrayList<>();
+
+    // after the move, the number of racks changes from 1 to 2.
+    // and number of upgrade domains remains 3.
+    candidates.add(dataNodes[0]);
+    candidates.add(dataNodes[1]);
+    candidates.add(dataNodes[2]);
+    candidates.add(dataNodes[3]);
+    assertTrue(replicator.isMovable(candidates, dataNodes[0], dataNodes[3]));
+
+    // the move would have changed the number of racks from 1 to 2.
+    // and the number of UDs from 3 to 2.
+    candidates.clear();
+    candidates.add(dataNodes[0]);
+    candidates.add(dataNodes[1]);
+    candidates.add(dataNodes[2]);
+    candidates.add(dataNodes[4]);
+    assertFalse(replicator.isMovable(candidates, dataNodes[0], dataNodes[4]));
+
+    // after the move, the number of racks remains 2.
+    // the number of UDs remains 3.
+    candidates.clear();
+    candidates.add(dataNodes[0]);
+    candidates.add(dataNodes[4]);
+    candidates.add(dataNodes[5]);
+    candidates.add(dataNodes[6]);
+    assertTrue(replicator.isMovable(candidates, dataNodes[0], dataNodes[6]));
+
+    // after the move, the number of racks remains 2.
+    // the number of UDs remains 2.
+    candidates.clear();
+    candidates.add(dataNodes[0]);
+    candidates.add(dataNodes[1]);
+    candidates.add(dataNodes[3]);
+    candidates.add(dataNodes[4]);
+    assertTrue(replicator.isMovable(candidates, dataNodes[0], dataNodes[4]));
+
+    // the move would have changed the number of racks from 2 to 3.
+    // and the number of UDs from 2 to 1.
+    candidates.clear();
+    candidates.add(dataNodes[0]);
+    candidates.add(dataNodes[3]);
+    candidates.add(dataNodes[4]);
+    candidates.add(dataNodes[6]);
+    assertFalse(replicator.isMovable(candidates, dataNodes[4], dataNodes[6]));
   }
 
   private Set<String> getUpgradeDomains(DatanodeStorageInfo[] nodes) {

@@ -39,11 +39,6 @@ import org.apache.hadoop.net.NodeBase;
  */
 public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefault {
 
-  protected BlockPlacementPolicyWithNodeGroup(Configuration conf,  FSClusterStats stats,
-      NetworkTopology clusterMap, DatanodeManager datanodeManager) {
-    initialize(conf, stats, clusterMap, host2datanodeMap);
-  }
-
   protected BlockPlacementPolicyWithNodeGroup() {
   }
 
@@ -345,22 +340,21 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
     // Split data nodes in the first set into two sets, 
     // moreThanOne contains nodes on nodegroup with more than one replica
     // exactlyOne contains the remaining nodes
-    Map<String, List<DatanodeStorageInfo>> nodeGroupMap = 
-        new HashMap<String, List<DatanodeStorageInfo>>();
+    Map<String, List<DatanodeStorageInfo>> nodeGroupMap = new HashMap<>();
     
     for(DatanodeStorageInfo storage : first) {
       final String nodeGroupName = NetworkTopology.getLastHalf(
           storage.getDatanodeDescriptor().getNetworkLocation());
       List<DatanodeStorageInfo> storageList = nodeGroupMap.get(nodeGroupName);
       if (storageList == null) {
-        storageList = new ArrayList<DatanodeStorageInfo>();
+        storageList = new ArrayList<>();
         nodeGroupMap.put(nodeGroupName, storageList);
       }
       storageList.add(storage);
     }
     
-    final List<DatanodeStorageInfo> moreThanOne = new ArrayList<DatanodeStorageInfo>();
-    final List<DatanodeStorageInfo> exactlyOne = new ArrayList<DatanodeStorageInfo>();
+    final List<DatanodeStorageInfo> moreThanOne = new ArrayList<>();
+    final List<DatanodeStorageInfo> exactlyOne = new ArrayList<>();
     // split nodes into two sets
     for(List<DatanodeStorageInfo> datanodeList : nodeGroupMap.values()) {
       if (datanodeList.size() == 1 ) {
@@ -374,5 +368,24 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
     
     return moreThanOne.isEmpty()? exactlyOne : moreThanOne;
   }
-  
+
+  /**
+   * Check if there are any replica (other than source) on the same node group
+   * with target. If true, then target is not a good candidate for placing
+   * specific replica as we don't want 2 replicas under the same nodegroup.
+   *
+   * @return true if there are any replica (other than source) on the same node
+   *         group with target
+   */
+  @Override
+  public boolean isMovable(Collection<DatanodeInfo> locs,
+      DatanodeInfo source, DatanodeInfo target) {
+    for (DatanodeInfo dn : locs) {
+      if (dn != source && dn != target &&
+          clusterMap.isOnSameNodeGroup(dn, target)) {
+        return false;
+      }
+    }
+    return true;
+  }
 }

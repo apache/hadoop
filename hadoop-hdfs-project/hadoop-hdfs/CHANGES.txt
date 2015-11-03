@@ -1618,6 +1618,8 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9339. Extend full test of KMS ACLs. (Daniel Templeton via zhz)
 
+    HDFS-9007. Fix HDFS Balancer to honor upgrade domain policy. (Ming Ma via lei)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than

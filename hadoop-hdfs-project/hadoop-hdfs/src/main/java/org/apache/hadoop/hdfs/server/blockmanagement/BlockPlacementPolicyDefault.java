@@ -881,7 +881,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     minRacks = Math.min(minRacks, numberOfReplicas);
     // 1. Check that all locations are different.
     // 2. Count locations on different racks.
-    Set<String> racks = new TreeSet<String>();
+    Set<String> racks = new TreeSet<>();
     for (DatanodeInfo dn : locs)
       racks.add(dn.getNetworkLocation());
     return new BlockPlacementStatusDefault(racks.size(), minRacks);
@@ -889,8 +889,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   /**
    * Decide whether deleting the specified replica of the block still makes
    * the block conform to the configured block placement policy.
-   * @param replicationFactor The required number of replicas for this block
-   * @param moreThanone The replica locations of this block that are present
+   * @param moreThanOne The replica locations of this block that are present
    *                    on more than one unique racks.
    * @param exactlyOne Replica locations of this block that  are present
    *                    on exactly one unique racks.
@@ -900,8 +899,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
    * @return the replica that is the best candidate for deletion
    */
   @VisibleForTesting
-  public DatanodeStorageInfo chooseReplicaToDelete(short replicationFactor,
-      Collection<DatanodeStorageInfo> moreThanone, Collection<DatanodeStorageInfo> exactlyOne,
+  public DatanodeStorageInfo chooseReplicaToDelete(
+      Collection<DatanodeStorageInfo> moreThanOne,
+      Collection<DatanodeStorageInfo> exactlyOne,
       final List<StorageType> excessTypes) {
     long oldestHeartbeat =
       monotonicNow() - heartbeatInterval * tolerateHeartbeatMultiplier;
@@ -911,7 +911,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
 
     // Pick the node with the oldest heartbeat or with the least free space,
     // if all hearbeats are within the tolerable heartbeat interval
-    for(DatanodeStorageInfo storage : pickupReplicaSet(moreThanone, exactlyOne)) {
+    for(DatanodeStorageInfo storage : pickupReplicaSet(moreThanOne,
+        exactlyOne)) {
       if (!excessTypes.contains(storage.getStorageType())) {
         continue;
       }
@@ -972,13 +973,11 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
 
     while (candidates.size() - expectedNumOfReplicas > excessReplicas.size()) {
       final DatanodeStorageInfo cur;
-      if (useDelHint(firstOne, delNodeHintStorage, addedNodeStorage,
-          moreThanOne, excessTypes)) {
+      if (firstOne && useDelHint(delNodeHintStorage, addedNodeStorage,
+          moreThanOne, exactlyOne, excessTypes)) {
         cur = delNodeHintStorage;
       } else { // regular excessive replica removal
-        cur =
-            chooseReplicaToDelete((short) expectedNumOfReplicas, moreThanOne, exactlyOne,
-                excessTypes);
+        cur = chooseReplicaToDelete(moreThanOne, exactlyOne, excessTypes);
       }
       firstOne = false;
       if (cur == null) {
@@ -997,26 +996,40 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
 
   /** Check if we can use delHint. */
   @VisibleForTesting
-  static boolean useDelHint(boolean isFirst, DatanodeStorageInfo delHint,
-      DatanodeStorageInfo added, List<DatanodeStorageInfo> moreThan1Racks,
+  boolean useDelHint(DatanodeStorageInfo delHint,
+      DatanodeStorageInfo added, List<DatanodeStorageInfo> moreThanOne,
+      Collection<DatanodeStorageInfo> exactlyOne,
       List<StorageType> excessTypes) {
-    if (!isFirst) {
-      return false; // only consider delHint for the first case
-    } else if (delHint == null) {
+    if (delHint == null) {
       return false; // no delHint
     } else if (!excessTypes.contains(delHint.getStorageType())) {
       return false; // delHint storage type is not an excess type
     } else {
       // check if removing delHint reduces the number of racks
-      if (moreThan1Racks.contains(delHint)) {
-        return true; // delHint and some other nodes are under the same rack
-      } else if (added != null && !moreThan1Racks.contains(added)) {
-        return true; // the added node adds a new rack
-      }
-      return false; // removing delHint reduces the number of racks;
+      return notReduceNumOfGroups(moreThanOne, delHint, added);
     }
   }
 
+  // Check if moving from source to target will reduce the number of
+  // groups. The groups could be based on racks or upgrade domains.
+  <T> boolean notReduceNumOfGroups(List<T> moreThanOne, T source, T target) {
+    if (moreThanOne.contains(source)) {
+      return true; // source and some other nodes are under the same group.
+    } else if (target != null && !moreThanOne.contains(target)) {
+      return true; // the added node adds a new group.
+    }
+    return false; // removing delHint reduces the number of groups.
+  }
+
+  @Override
+  public boolean isMovable(Collection<DatanodeInfo> locs,
+      DatanodeInfo source, DatanodeInfo target) {
+    final Map<String, List<DatanodeInfo>> rackMap = new HashMap<>();
+    final List<DatanodeInfo> moreThanOne = new ArrayList<>();
+    final List<DatanodeInfo> exactlyOne = new ArrayList<>();
+    splitNodesWithRack(locs, rackMap, moreThanOne, exactlyOne);
+    return notReduceNumOfGroups(moreThanOne, source, target);
+  }
   /**
    * Pick up replica node set for deleting replica as over-replicated. 
    * First set contains replica nodes on rack with more than one

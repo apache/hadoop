@@ -65,6 +65,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseP
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.balancer.Dispatcher.DDatanode.StorageGroup;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicies;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.StripedBlockWithLocations;
@@ -124,6 +125,7 @@ public class Dispatcher {
   private final int ioFileBufferSize;
 
   private final boolean connectToDnViaHostname;
+  private BlockPlacementPolicies placementPolicies;
 
   static class Allocator {
     private final int max;
@@ -949,6 +951,7 @@ public class Dispatcher {
     this.connectToDnViaHostname = conf.getBoolean(
         HdfsClientConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME,
         HdfsClientConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT);
+    placementPolicies = new BlockPlacementPolicies(conf, null, cluster, null);
   }
 
   public DistributedFileSystem getDistributedFileSystem() {
@@ -1166,66 +1169,24 @@ public class Dispatcher {
       }
     }
 
-    if (cluster.isNodeGroupAware()
-        && isOnSameNodeGroupWithReplicas(source, target, block)) {
-      return false;
-    }
-    if (reduceNumOfRacks(source, target, block)) {
+    if (!isGoodBlockCandidateForPlacementPolicy(source, target, block)) {
       return false;
     }
     return true;
   }
 
-  /**
-   * Determine whether moving the given block replica from source to target
-   * would reduce the number of racks of the block replicas.
-   */
-  private boolean reduceNumOfRacks(StorageGroup source, StorageGroup target,
-      DBlock block) {
-    final DatanodeInfo sourceDn = source.getDatanodeInfo();
-    if (cluster.isOnSameRack(sourceDn, target.getDatanodeInfo())) {
-      // source and target are on the same rack
-      return false;
-    }
-    boolean notOnSameRack = true;
+  // Check if the move will violate the block placement policy.
+  private boolean isGoodBlockCandidateForPlacementPolicy(StorageGroup source,
+     StorageGroup target, DBlock block) {
+    List<DatanodeInfo> datanodeInfos = new ArrayList<>();
     synchronized (block) {
-      for (StorageGroup loc : block.getLocations()) {
-        if (cluster.isOnSameRack(loc.getDatanodeInfo(), target.getDatanodeInfo())) {
-          notOnSameRack = false;
-          break;
-        }
+      for (StorageGroup loc : block.locations) {
+        datanodeInfos.add(loc.getDatanodeInfo());
       }
+      datanodeInfos.add(target.getDatanodeInfo());
     }
-    if (notOnSameRack) {
-      // target is not on the same rack as any replica
-      return false;
-    }
-    for (StorageGroup g : block.getLocations()) {
-      if (g != source && cluster.isOnSameRack(g.getDatanodeInfo(), sourceDn)) {
-        // source is on the same rack of another replica
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Check if there are any replica (other than source) on the same node group
-   * with target. If true, then target is not a good candidate for placing
-   * specific replica as we don't want 2 replicas under the same nodegroup.
-   *
-   * @return true if there are any replica (other than source) on the same node
-   *         group with target
-   */
-  private boolean isOnSameNodeGroupWithReplicas(StorageGroup source,
-      StorageGroup target, DBlock block) {
-    final DatanodeInfo targetDn = target.getDatanodeInfo();
-    for (StorageGroup g : block.getLocations()) {
-      if (g != source && cluster.isOnSameNodeGroup(g.getDatanodeInfo(), targetDn)) {
-        return true;
-      }
-    }
-    return false;
+    return placementPolicies.getPolicy(false).isMovable(
+        datanodeInfos, source.getDatanodeInfo(), target.getDatanodeInfo());
   }
 
   /** Reset all fields in order to prepare for the next iteration */
