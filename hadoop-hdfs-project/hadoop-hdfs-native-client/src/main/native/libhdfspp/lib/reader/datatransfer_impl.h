@@ -20,7 +20,7 @@
 
 #include "datatransfer.pb.h"
 #include "common/continuation/continuation.h"
-#include "common/continuation/async_stream.h"
+#include "common/continuation/asio.h"
 #include "common/continuation/protobuf.h"
 
 #include <asio/read.hpp>
@@ -97,7 +97,7 @@ template <class Stream>
 template <class Handler>
 void DataTransferSaslStream<Stream>::Handshake(const Handler &next) {
   using ::hadoop::hdfs::DataTransferEncryptorMessageProto;
-  using ::hdfs::async_stream_continuation::Write;
+  using ::hdfs::asio_continuation::Write;
   using ::hdfs::continuation::WriteDelimitedPBMessage;
 
   static const int kMagicNumber = htonl(kDataTransferSasl);
@@ -117,7 +117,7 @@ void DataTransferSaslStream<Stream>::Handshake(const Handler &next) {
 
   DataTransferSaslStreamUtil::PrepareInitialHandshake(&s->req0);
 
-  m->Push(Write(stream_, kMagicNumberBuffer))
+  m->Push(Write(stream_.get(), kMagicNumberBuffer))
       .Push(WriteDelimitedPBMessage(stream_, &s->req0))
       .Push(new ReadSaslMessage(stream_, &s->resp0))
       .Push(new Authenticator(&authenticator_, &s->resp0, &s->req1))

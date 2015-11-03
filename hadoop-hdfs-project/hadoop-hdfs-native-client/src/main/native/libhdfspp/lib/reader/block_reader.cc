@@ -77,7 +77,7 @@ void BlockReaderImpl::AsyncRequestBlock(
       new continuation::ReadDelimitedPBMessageContinuation<AsyncStream, 16384>(
           dn_, &s->response);
 
-  m->Push(async_stream_continuation::Write(dn_, asio::buffer(s->header)))
+  m->Push(asio_continuation::Write(dn_.get(), asio::buffer(s->header)))
       .Push(asio_continuation::WriteDelimitedPBMessage(dn_, &s->request))
       .Push(read_pb_message);
 
