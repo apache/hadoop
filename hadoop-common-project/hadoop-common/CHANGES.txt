@@ -1312,6 +1312,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12508. delete fails with exception when lease is held on blob.
     (Gaurav Kanade via cnauroth)
 
+    HADOOP-12542. TestDNS fails on Windows after HADOOP-12437. (cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
