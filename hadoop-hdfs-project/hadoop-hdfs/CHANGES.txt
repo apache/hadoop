@@ -2216,6 +2216,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9329. TestBootstrapStandby#testRateThrottling is flaky because fsimage
     size is smaller than IO buffer size. (zhz)
 
+    HDFS-9313. Possible NullPointerException in BlockManager if no excess
+    replica can be chosen. (mingma)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
