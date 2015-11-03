@@ -251,6 +251,8 @@ Trunk (Unreleased)
 
     HADOOP-12133. Add schemas to Maven Assembly XMLs (Gábor Lipták via aw)
 
+    HADOOP-12541. make re2j dependency consistent (Matthew Paduano via aw)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
