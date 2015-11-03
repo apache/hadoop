@@ -23,8 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
@@ -35,13 +33,17 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.util.ReflectionUtils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /** 
  * This interface is used for choosing the desired number of targets
  * for placing block replicas.
  */
 @InterfaceAudience.Private
 public abstract class BlockPlacementPolicy {
-  static final Log LOG = LogFactory.getLog(BlockPlacementPolicy.class);
+  static final Logger LOG = LoggerFactory.getLogger(
+      BlockPlacementPolicy.class);
 
   @InterfaceAudience.Private
   public static class NotEnoughReplicasException extends Exception {

@@ -981,6 +981,12 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                 excessTypes);
       }
       firstOne = false;
+      if (cur == null) {
+        LOG.warn("No excess replica can be found. excessTypes: {}." +
+            " moreThanOne: {}. exactlyOne: {}.", excessTypes, moreThanOne,
+            exactlyOne);
+        break;
+      }
 
       // adjust rackmap, moreThanOne, and exactlyOne
       adjustSetsWithChosenReplica(rackMap, moreThanOne, exactlyOne, cur);
