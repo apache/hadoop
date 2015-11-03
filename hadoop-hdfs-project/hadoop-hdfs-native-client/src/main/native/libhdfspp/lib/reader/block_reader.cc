@@ -137,7 +137,7 @@ struct BlockReaderImpl::ReadPacketHeader
       next(status);
     };
 
-    parent_->dn_->async_read(asio::buffer(buf_),
+    asio::async_read(*parent_->dn_, asio::buffer(buf_),
                      std::bind(&ReadPacketHeader::CompletionHandler, this,
                                std::placeholders::_1, std::placeholders::_2),
                      handler);
@@ -195,8 +195,7 @@ struct BlockReaderImpl::ReadChecksum : continuation::Continuation {
     };
     parent->checksum_.resize(parent->packet_len_ - sizeof(int) -
                              parent->header_.datalen());
-    parent->dn_->async_read(asio::buffer(parent->checksum_),
-                     handler);
+    asio::async_read(*parent->dn_, asio::buffer(parent->checksum_), handler);
   }
 
 private:
@@ -233,7 +232,7 @@ struct BlockReaderImpl::ReadData : continuation::Continuation {
 
     auto data_len =
         parent_->header_.datalen() - parent_->packet_data_read_bytes_;
-    parent_->dn_->async_read(buf_, asio::transfer_exactly(data_len),
+    asio::async_read(*parent_->dn_, buf_, asio::transfer_exactly(data_len),
                handler);
   }
 
@@ -430,7 +429,5 @@ void BlockReaderImpl::AsyncReadBlock(
     handler(status, totalBytesTransferred);
   });
 }
-
-
 
 }

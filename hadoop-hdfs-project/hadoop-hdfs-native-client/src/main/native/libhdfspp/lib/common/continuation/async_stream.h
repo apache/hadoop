@@ -55,7 +55,7 @@ public:
   virtual void Run(const Next &next) override {
     auto handler =
         [next](const asio::error_code &ec, size_t) { next(ToStatus(ec)); };
-    stream_->async_write(buffer_, handler);
+    asio::async_write(*stream_, buffer_, handler);
   }
 
 private:

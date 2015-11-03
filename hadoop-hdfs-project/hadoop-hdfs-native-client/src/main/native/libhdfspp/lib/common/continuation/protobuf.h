@@ -56,7 +56,7 @@ struct ReadDelimitedPBMessageContinuation : public Continuation {
       }
       next(status);
     };
-    stream_->async_read(
+    asio::async_read(*stream_,
         asio::buffer(buf_),
         std::bind(&ReadDelimitedPBMessageContinuation::CompletionHandler, this,
                   std::placeholders::_1, std::placeholders::_2),
@@ -101,7 +101,7 @@ struct WriteDelimitedPBMessageContinuation : Continuation {
     pbio::CodedOutputStream os(&ss);
     os.WriteVarint32(size);
     msg_->SerializeToCodedStream(&os);
-    stream_->async_write(asio::buffer(buf_), [next](const asio::error_code &ec, size_t) { next(ToStatus(ec)); } );
+    asio::async_write(*stream_, asio::buffer(buf_), [next](const asio::error_code &ec, size_t) { next(ToStatus(ec)); } );
   }
 
 private:

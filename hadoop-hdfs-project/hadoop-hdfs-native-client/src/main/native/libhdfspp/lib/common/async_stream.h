@@ -28,16 +28,13 @@ typedef asio::const_buffers_1   ConstBuffers;
   
 class AsyncStream {
 public:
-  virtual void async_read(const MutableBuffers	& buffers,
-             std::function<void (const asio::error_code & error,
-                                 std::size_t bytes_transferred) > completed_handler) = 0;
-  virtual void async_read(const MutableBuffers	& buffers,
-             std::function<size_t (const asio::error_code & error,
-                                 std::size_t bytes_transferred) > completion_handler,
-             std::function<void (const asio::error_code & error,
-                                 std::size_t bytes_transferred) > completed_handler) = 0;
-  virtual void async_write(const ConstBuffers & buffers, 
-             std::function<void (const asio::error_code &ec, size_t)> handler) = 0;
+  virtual void async_read_some(const MutableBuffers &buf, 
+          std::function<void (const asio::error_code & error,
+                                 std::size_t bytes_transferred) > handler) = 0;
+
+  virtual void async_write_some(const ConstBuffers &buf, 
+            std::function<void (const asio::error_code & error,
+                                 std::size_t bytes_transferred) > handler) = 0;
 };
 
 }

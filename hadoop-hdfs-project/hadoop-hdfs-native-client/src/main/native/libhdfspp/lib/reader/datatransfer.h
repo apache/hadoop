@@ -44,20 +44,17 @@ public:
 
   template <class Handler> void Handshake(const Handler &next);
 
-    virtual void async_read(const asio::mutable_buffers_1	& buffers,
-               std::function<void (const asio::error_code & error,
-                                   std::size_t bytes_transferred) > completed_handler) 
-      { stream_->async_read(buffers, completed_handler); }
-    
-    virtual void async_read(const asio::mutable_buffers_1	& buffers,
-               std::function<size_t (const asio::error_code & error,
-                                   std::size_t bytes_transferred) > completion_handler,
-               std::function<void (const asio::error_code & error,
-                                   std::size_t bytes_transferred) > completed_handler)
-      { stream_->async_read(buffers, completion_handler, completed_handler); }
-    virtual void async_write(const asio::const_buffers_1 & buffers, 
-               std::function<void (const asio::error_code &ec, size_t)> handler)
-      { stream_->async_write(buffers, handler); }
+    virtual void async_read_some(const MutableBuffers &buf, 
+            std::function<void (const asio::error_code & error,
+                                   std::size_t bytes_transferred) > handler) {
+      stream_->async_read_some(buf, handler);
+    }
+
+    virtual void async_write_some(const ConstBuffers &buf, 
+              std::function<void (const asio::error_code & error,
+                                   std::size_t bytes_transferred) > handler) {
+      stream_->async_write_some(buf, handler);
+    }
 
   void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) override 
   {(void)handler;  /*TODO: Handshaking goes here*/};

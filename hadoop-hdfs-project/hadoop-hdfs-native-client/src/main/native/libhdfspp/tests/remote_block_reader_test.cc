@@ -63,25 +63,19 @@ public:
   
   MOCK_METHOD1(Connect, void(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)>));
   
-  // Satisfy the AsyncStream contract, delegating to MocKConnectionBase
-  void async_read(const asio::mutable_buffers_1	& buf,
-        std::function<void (const asio::error_code & error,
-                            std::size_t bytes_transferred) > handler) {
-    asio::async_read(*this, buf, handler);
-  }
-  
-  void async_read(const asio::mutable_buffers_1	& buf,
-      std::function<size_t(const asio::error_code & error,
-                          std::size_t bytes_transferred) > completion_handler,
-      std::function<void (const asio::error_code & error,
-                          std::size_t bytes_transferred) > completed_handler) {
-    asio::async_read(*this, buf, completion_handler, completed_handler);
+    void async_read_some(const MutableBuffers &buf, 
+          std::function<void (const asio::error_code & error,
+                                 std::size_t bytes_transferred) > handler) override {
+      this->MockConnectionBase::async_read_some(buf, handler);
   }
 
-  void async_write(const asio::const_buffers_1 & buf, 
-           std::function<void (const asio::error_code &ec, size_t)> handler) {
-    asio::async_write(*this, buf, handler);
+  void async_write_some(const ConstBuffers &buf, 
+            std::function<void (const asio::error_code & error,
+                                 std::size_t bytes_transferred) > handler) override {
+    // CompletionResult res = OnWrite(buf);
+    this->MockConnectionBase::async_write_some(buf, handler);
   }
+
 };
 
 // Mocks AsyncReadPacket and AsyncRequestBlock but not AsyncReadBlock, so we
