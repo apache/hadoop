@@ -118,9 +118,9 @@ void FileSystem::New(
 
 FileSystemImpl::FileSystemImpl(IoService *io_service, const Options &options)
     : io_service_(static_cast<IoServiceImpl *>(io_service)),
-      client_name_(RpcEngine::GetRandomClientName()),
+      client_name_(GetRandomClientName()),
       nn_(&io_service_->io_service(), options,
-              RpcEngine::GetRandomClientName(), kNamenodeProtocol,
+              GetRandomClientName(), kNamenodeProtocol,
               kNamenodeProtocolVersion) {}
 
 void FileSystemImpl::Connect(const std::string &server,

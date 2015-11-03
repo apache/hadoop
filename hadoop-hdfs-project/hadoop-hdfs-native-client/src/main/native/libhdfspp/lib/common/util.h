@@ -20,7 +20,11 @@
 
 #include "libhdfspp/status.h"
 
+
+#include <sstream>
+
 #include <asio/error_code.hpp>
+#include <openssl/rand.h>
 
 #include <google/protobuf/message_lite.h>
 #include <google/protobuf/io/coded_stream.h>
@@ -52,6 +56,19 @@ static inline void ReadDelimitedPBMessage(
 }
 
 std::string Base64Encode(const std::string &src);
+
+static inline std::string GetRandomClientName() {
+  unsigned char buf[6] = {
+      0,
+  };
+  RAND_pseudo_bytes(buf, sizeof(buf));
+
+  std::stringstream ss;
+  ss << "libhdfs++_"
+     << Base64Encode(std::string(reinterpret_cast<char *>(buf), sizeof(buf)));
+  return ss.str();
+}
+
 
 }
 

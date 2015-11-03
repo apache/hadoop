@@ -23,21 +23,13 @@
 #include "libhdfspp/hdfs.h"
 #include "rpc/rpc_engine.h"
 #include "reader/block_reader.h"
+#include "reader/fileinfo.h"
 #include "ClientNamenodeProtocol.pb.h"
 #include "ClientNamenodeProtocol.hrpc.inl"
 
 #include "asio.hpp"
 
 namespace hdfs {
-
-/**
- * Information that is assumed to be unchaning about a file for the duration of
- * the operations.
- */
-struct FileInfo {
-  unsigned long long file_length_;
-  std::vector<::hadoop::hdfs::LocatedBlockProto> blocks_;
-};
 
 /**
  * NameNodeConnection: abstracts the details of communicating with a NameNode
@@ -116,22 +108,8 @@ private:
   ::asio::io_service *io_service_;
   const std::string client_name_;
   const std::shared_ptr<const struct FileInfo> file_info_;
-  struct RemoteBlockReaderTrait;
 
   std::shared_ptr<DataNodeConnectionImpl> dn_;  // The last DN connected to
-};
-
-class ReadOperation {
-public:
-  static void AsyncReadBlock(
-    BlockReader * reader,
-    const std::string & client_name,
-    const hadoop::hdfs::LocatedBlockProto &block, size_t offset,
-    const MutableBuffers &buffers,
-    const std::function<void(const Status &, size_t)> handler);
-private:
-  struct HandshakeContinuation;
-  struct ReadBlockContinuation;
 };
 
 }

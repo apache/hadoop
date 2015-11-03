@@ -66,6 +66,13 @@ public:
                      const hadoop::hdfs::ExtendedBlockProto *block,
                      uint64_t length, uint64_t offset,
                      const std::function<void(Status)> &handler) = 0;
+
+  virtual void AsyncReadBlock(
+    BlockReader * reader,
+    const std::string & client_name,
+    const hadoop::hdfs::LocatedBlockProto &block, size_t offset,
+    const MutableBuffers &buffers,
+    const std::function<void(const Status &, size_t)> handler) = 0;
 };
 
 class RemoteBlockReader
@@ -88,7 +95,17 @@ public:
                      const hadoop::hdfs::ExtendedBlockProto *block,
                      uint64_t length, uint64_t offset,
                      const std::function<void(Status)> &handler) override;
+
+  void AsyncReadBlock(
+    BlockReader * reader,
+    const std::string & client_name,
+    const hadoop::hdfs::LocatedBlockProto &block, size_t offset,
+    const MutableBuffers &buffers,
+    const std::function<void(const Status &, size_t)> handler);
 private:
+  struct RequestBlockContinuation;
+  struct ReadBlockContinuation;
+
   struct ReadPacketHeader;
   struct ReadChecksum;
   struct ReadPadding;

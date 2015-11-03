@@ -38,64 +38,6 @@ void InputStreamImpl::PositionRead(
   AsyncPreadSome(offset, asio::buffer(buf, nbyte), excluded_datanodes, handler);
 }
 
-struct ReadOperation::HandshakeContinuation : continuation::Continuation {
-  HandshakeContinuation(BlockReader *reader, const std::string &client_name,
-                        const hadoop::hdfs::ExtendedBlockProto *block,
-                        uint64_t length, uint64_t offset)
-      : reader_(reader), client_name_(client_name), length_(length),
-        offset_(offset) {
-    block_.CheckTypeAndMergeFrom(*block);
-  }
-
-  virtual void Run(const Next &next) override {
-    reader_->async_request_block(client_name_, &block_, length_,
-                           offset_, next);
-  }
-
-private:
-  BlockReader *reader_;
-  const std::string client_name_;
-  hadoop::hdfs::ExtendedBlockProto block_;
-  uint64_t length_;
-  uint64_t offset_;
-};
-
-struct ReadOperation::ReadBlockContinuation : continuation::Continuation {
-  ReadBlockContinuation(BlockReader *reader, MutableBuffers buffer,
-                        size_t *transferred)
-      : reader_(reader), buffer_(buffer),
-        buffer_size_(asio::buffer_size(buffer)), transferred_(transferred) {
-  }
-
-  virtual void Run(const Next &next) override {
-    *transferred_ = 0;
-    next_ = next;
-    OnReadData(Status::OK(), 0);
-  }
-
-private:
-  BlockReader *reader_;
-  const MutableBuffers buffer_;
-  const size_t buffer_size_;
-  size_t *transferred_;
-  std::function<void(const Status &)> next_;
-
-  void OnReadData(const Status &status, size_t transferred) {
-    using std::placeholders::_1;
-    using std::placeholders::_2;
-    *transferred_ += transferred;
-    if (!status.ok()) {
-      next_(status);
-    } else if (*transferred_ >= buffer_size_) {
-      next_(status);
-    } else {
-      reader_->async_read_packet(
-          asio::buffer(buffer_ + *transferred_, buffer_size_ - *transferred_),
-          std::bind(&ReadBlockContinuation::OnReadData, this, _1, _2));
-    }
-  }
-};
-
 void InputStreamImpl::AsyncPreadSome(
     size_t offset, const MutableBuffers &buffers,
     const std::set<std::string> &excluded_datanodes, 
@@ -148,35 +90,12 @@ void InputStreamImpl::AsyncPreadSome(
           (Status status, std::shared_ptr<DataNodeConnection> dn) {
     (void)dn;
     if (status.ok()) {
-      ReadOperation::AsyncReadBlock(
+      reader->AsyncReadBlock(
           reader.get(), client_name_, targetBlock, offset_within_block,
           asio::buffer(buffers, size_within_block), read_handler);
     } else {
       handler(status, "", 0);
     }
-  });
-}
-
-void ReadOperation::AsyncReadBlock(
-    BlockReader * reader,
-    const std::string & client_name,
-    const hadoop::hdfs::LocatedBlockProto &block,
-    size_t offset,
-    const MutableBuffers &buffers, 
-    const std::function<void(const Status &, size_t)> handler) {
-
-  auto m = continuation::Pipeline<size_t>::Create();
-  size_t * bytesTransferred = &m->state();
-
-  size_t size = asio::buffer_size(buffers);
-
-  m->Push(new HandshakeContinuation(reader, client_name, 
-                                            &block.b(), size, offset))
-    .Push(new ReadBlockContinuation(reader, buffers, bytesTransferred));
-  
-  m->Run([handler] (const Status &status,
-                         const size_t totalBytesTransferred) {
-    handler(status, totalBytesTransferred);
   });
 }
 

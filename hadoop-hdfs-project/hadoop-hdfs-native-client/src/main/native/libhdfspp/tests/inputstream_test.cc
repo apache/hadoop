@@ -17,6 +17,8 @@
  */
 
 #include "fs/filesystem.h"
+#include "common/util.h"
+
 #include <gmock/gmock.h>
 #include <openssl/rand.h>
 
@@ -37,7 +39,6 @@ namespace hdfs {
 
 class MockReader : public BlockReader {
 public:
-  virtual ~MockReader() {}
   MOCK_METHOD2(
       async_read_packet,
       void(const asio::mutable_buffers_1 &,
@@ -48,90 +49,15 @@ public:
                      const hadoop::hdfs::ExtendedBlockProto *block,
                      uint64_t length, uint64_t offset,
                      const std::function<void(Status)> &handler));
+  
+  MOCK_METHOD6(AsyncReadBlock, void(
+    BlockReader * reader,
+    const std::string & client_name,
+    const hadoop::hdfs::LocatedBlockProto &block, size_t offset,
+    const MutableBuffers &buffers,
+    const std::function<void(const Status &, size_t)> handler));
 };
 
-}
-
-TEST(InputStreamTest, TestReadSingleTrunk) {
-  auto file_info = std::make_shared<struct FileInfo>();
-  LocatedBlocksProto blocks;
-  LocatedBlockProto block;
-  char buf[4096] = {
-      0,
-  };
-
-  Status stat;
-  size_t read = 0;
-  MockReader reader;
-  EXPECT_CALL(reader, async_request_block(_, _, _, _, _))
-      .WillOnce(InvokeArgument<4>(Status::OK()));
-  EXPECT_CALL(reader, async_read_packet(_, _))
-      .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf)));
-
-  ReadOperation::AsyncReadBlock(
-       &reader, RpcEngine::GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
-      [&stat, &read](const Status &status, size_t transferred) {
-        stat = status;
-        read = transferred;
-      });
-  ASSERT_TRUE(stat.ok());
-  ASSERT_EQ(sizeof(buf), read);
-  read = 0;
-}
-
-TEST(InputStreamTest, TestReadMultipleTrunk) {
-  LocatedBlockProto block;
-  char buf[4096] = {
-      0,
-  };
-  Status stat;
-  size_t read = 0;
-  
-  MockReader reader;
-  EXPECT_CALL(reader, async_request_block(_, _, _, _, _))
-      .WillOnce(InvokeArgument<4>(Status::OK()));
-
-  EXPECT_CALL(reader, async_read_packet(_, _))
-      .Times(4)
-      .WillRepeatedly(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4));
-
-  ReadOperation::AsyncReadBlock(
-       &reader, RpcEngine::GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
-      [&stat, &read](const Status &status, size_t transferred) {
-        stat = status;
-        read = transferred;
-      });
-  ASSERT_TRUE(stat.ok());
-  ASSERT_EQ(sizeof(buf), read);
-  read = 0;
-}
-
-TEST(InputStreamTest, TestReadError) {
-  LocatedBlockProto block;
-  char buf[4096] = {
-      0,
-  };
-  Status stat;
-  size_t read = 0;
-  MockReader reader;
-  EXPECT_CALL(reader, async_request_block(_, _, _, _, _))
-      .WillOnce(InvokeArgument<4>(Status::OK()));
-
-  EXPECT_CALL(reader, async_read_packet(_, _))
-      .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
-      .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
-      .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
-      .WillOnce(InvokeArgument<1>(Status::Error("error"), 0));
-
-  ReadOperation::AsyncReadBlock(
-       &reader, RpcEngine::GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
-      [&stat, &read](const Status &status, size_t transferred) {
-        stat = status;
-        read = transferred;
-      });
-  ASSERT_FALSE(stat.ok());
-  ASSERT_EQ(sizeof(buf) / 4 * 3, read);
-  read = 0;
 }
 
 TEST(InputStreamTest, TestExcludeDataNode) {
@@ -153,7 +79,7 @@ TEST(InputStreamTest, TestExcludeDataNode) {
       0,
   };
   IoServiceImpl io_service;
-  InputStreamImpl is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  file_info);
+  InputStreamImpl is(&io_service.io_service(), GetRandomClientName(),  file_info);
   Status stat;
   size_t read = 0;
 

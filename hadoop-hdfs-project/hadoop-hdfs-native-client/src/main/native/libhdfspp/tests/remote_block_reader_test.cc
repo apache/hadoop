@@ -22,6 +22,7 @@
 #include "common/util.h"
 #include "reader/block_reader.h"
 #include "reader/datatransfer.h"
+#include "reader/fileinfo.h"
 
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
@@ -37,6 +38,8 @@ using ::hadoop::hdfs::DataTransferEncryptorMessageProto;
 using ::hadoop::hdfs::ExtendedBlockProto;
 using ::hadoop::hdfs::PacketHeaderProto;
 using ::hadoop::hdfs::ReadOpChecksumInfoProto;
+using ::hadoop::hdfs::LocatedBlockProto;
+using ::hadoop::hdfs::LocatedBlocksProto;
 
 using ::asio::buffer;
 using ::asio::error_code;
@@ -79,9 +82,28 @@ public:
            std::function<void (const asio::error_code &ec, size_t)> handler) {
     asio::async_write(*this, buf, handler);
   }
-  
-  
 };
+
+// Mocks async_read_packet and async_request_block but not AsyncReadBlock, so we
+//     can test the logic of AsyncReadBlock
+class PartialMockReader : public RemoteBlockReader {
+public:
+  PartialMockReader() :
+    RemoteBlockReader(BlockReaderOptions(), std::shared_ptr<DataNodeConnection>()) {};
+  
+  MOCK_METHOD2(
+      async_read_packet,
+      void(const asio::mutable_buffers_1 &,
+           const std::function<void(const Status &, size_t transferred)> &));
+
+  MOCK_METHOD5(async_request_block,
+               void(const std::string &client_name,
+                     const hadoop::hdfs::ExtendedBlockProto *block,
+                     uint64_t length, uint64_t offset,
+                     const std::function<void(Status)> &handler));  
+};
+
+
 }
 
 static inline string ToDelimitedString(const pb::MessageLite *msg) {
@@ -118,6 +140,88 @@ ProducePacket(const std::string &data, const std::string &checksum,
   payload += checksum;
   payload += data;
   return std::make_pair(error_code(), std::move(payload));
+}
+
+TEST(RemoteBlockReaderTest, TestReadSingleTrunk) {
+  auto file_info = std::make_shared<struct FileInfo>();
+  LocatedBlocksProto blocks;
+  LocatedBlockProto block;
+  char buf[4096] = {
+      0,
+  };
+
+  Status stat;
+  size_t read = 0;
+  PartialMockReader reader;
+  EXPECT_CALL(reader, async_request_block(_, _, _, _, _))
+      .WillOnce(InvokeArgument<4>(Status::OK()));
+  EXPECT_CALL(reader, async_read_packet(_, _))
+      .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf)));
+
+  reader.AsyncReadBlock(
+       &reader, GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
+      [&stat, &read](const Status &status, size_t transferred) {
+        stat = status;
+        read = transferred;
+      });
+  ASSERT_TRUE(stat.ok());
+  ASSERT_EQ(sizeof(buf), read);
+  read = 0;
+}
+
+TEST(RemoteBlockReaderTest, TestReadMultipleTrunk) {
+  LocatedBlockProto block;
+  char buf[4096] = {
+      0,
+  };
+  Status stat;
+  size_t read = 0;
+  
+  PartialMockReader reader;
+  EXPECT_CALL(reader, async_request_block(_, _, _, _, _))
+      .WillOnce(InvokeArgument<4>(Status::OK()));
+
+  EXPECT_CALL(reader, async_read_packet(_, _))
+      .Times(4)
+      .WillRepeatedly(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4));
+
+  reader.AsyncReadBlock(
+       &reader, GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
+      [&stat, &read](const Status &status, size_t transferred) {
+        stat = status;
+        read = transferred;
+      });
+  ASSERT_TRUE(stat.ok());
+  ASSERT_EQ(sizeof(buf), read);
+  read = 0;
+}
+
+TEST(RemoteBlockReaderTest, TestReadError) {
+  LocatedBlockProto block;
+  char buf[4096] = {
+      0,
+  };
+  Status stat;
+  size_t read = 0;
+  PartialMockReader reader;
+  EXPECT_CALL(reader, async_request_block(_, _, _, _, _))
+      .WillOnce(InvokeArgument<4>(Status::OK()));
+
+  EXPECT_CALL(reader, async_read_packet(_, _))
+      .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
+      .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
+      .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
+      .WillOnce(InvokeArgument<1>(Status::Error("error"), 0));
+
+  reader.AsyncReadBlock(
+       &reader, GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
+      [&stat, &read](const Status &status, size_t transferred) {
+        stat = status;
+        read = transferred;
+      });
+  ASSERT_FALSE(stat.ok());
+  ASSERT_EQ(sizeof(buf) / 4 * 3, read);
+  read = 0;
 }
 
 template <class Stream = MockDNConnection, class Handler>
