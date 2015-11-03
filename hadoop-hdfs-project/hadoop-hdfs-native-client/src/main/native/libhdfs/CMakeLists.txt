@@ -51,21 +51,26 @@ set(LIBHDFS_VERSION "0.0.0")
 set_target_properties(hdfs PROPERTIES
     SOVERSION ${LIBHDFS_VERSION})
 
-add_libhdfs_test(test_libhdfs_ops hdfs_static test_libhdfs_ops.c)
+build_libhdfs_test(test_libhdfs_ops hdfs_static test_libhdfs_ops.c)
 link_libhdfs_test(test_libhdfs_ops hdfs_static ${JAVA_JVM_LIBRARY})
-add_libhdfs_test(test_libhdfs_reads hdfs_static test_libhdfs_read.c)
+build_libhdfs_test(test_libhdfs_reads hdfs_static test_libhdfs_read.c)
 link_libhdfs_test(test_libhdfs_reads hdfs_static ${JAVA_JVM_LIBRARY})
-add_libhdfs_test(test_libhdfs_write hdfs_static test_libhdfs_write.c)
+build_libhdfs_test(test_libhdfs_write hdfs_static test_libhdfs_write.c)
 link_libhdfs_test(test_libhdfs_write hdfs_static ${JAVA_JVM_LIBRARY})
-add_libhdfs_test(test_libhdfs_threaded hdfs_static expect.c test_libhdfs_threaded.c ${OS_DIR}/thread.c)
+build_libhdfs_test(test_libhdfs_threaded hdfs_static expect.c test_libhdfs_threaded.c ${OS_DIR}/thread.c)
 link_libhdfs_test(test_libhdfs_threaded hdfs_static native_mini_dfs)
-add_libhdfs_test(test_libhdfs_zerocopy hdfs_static expect.c test_libhdfs_zerocopy.c)
+add_libhdfs_test(test_libhdfs_threaded hdfs_static)
+
+if (NOT WIN32)
+build_libhdfs_test(test_libhdfs_zerocopy hdfs_static expect.c test_libhdfs_zerocopy.c)
 link_libhdfs_test(test_libhdfs_zerocopy hdfs_static native_mini_dfs ${OS_LINK_LIBRARIES})
+add_libhdfs_test(test_libhdfs_zerocopy hdfs_static)
+endif()
 
 # Skip vecsum on Windows.  This could be made to work in the future by
 # introducing an abstraction layer over the sys/mman.h functions.
 if(NOT WIN32)
-    add_libhdfs_test(test_libhdfs_vecsum hdfs vecsum.c)
+    build_libhdfs_test(test_libhdfs_vecsum hdfs vecsum.c)
     if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
         link_libhdfs_test(test_libhdfs_vecsum hdfs pthread)
     else()
