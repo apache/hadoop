@@ -25,14 +25,14 @@ namespace hdfs {
 
 using ::hadoop::hdfs::LocatedBlocksProto;
 
-InputStream::~InputStream() {}
+FileHandle::~FileHandle() {}
 
-InputStreamImpl::InputStreamImpl(::asio::io_service *io_service, const std::string &client_name,
+FileHandleImpl::FileHandleImpl(::asio::io_service *io_service, const std::string &client_name,
                                  const std::shared_ptr<const struct FileInfo> file_info)
     : io_service_(io_service), client_name_(client_name), file_info_(file_info) {
 }
 
-void InputStreamImpl::PositionRead(
+void FileHandleImpl::PositionRead(
     void *buf, size_t nbyte, uint64_t offset,
     const std::set<std::string> &excluded_datanodes,
     const std::function<void(const Status &, const std::string &, size_t)>
@@ -40,7 +40,7 @@ void InputStreamImpl::PositionRead(
   AsyncPreadSome(offset, asio::buffer(buf, nbyte), excluded_datanodes, handler);
 }
 
-size_t InputStreamImpl::PositionRead(void *buf, size_t nbyte, off_t offset) {
+size_t FileHandleImpl::PositionRead(void *buf, size_t nbyte, off_t offset) {
   auto stat = std::make_shared<std::promise<Status>>();
   std::future<Status> future(stat->get_future());
 
@@ -65,7 +65,7 @@ size_t InputStreamImpl::PositionRead(void *buf, size_t nbyte, off_t offset) {
   return (ssize_t)read_count;
 }
 
-void InputStreamImpl::AsyncPreadSome(
+void FileHandleImpl::AsyncPreadSome(
     size_t offset, const MutableBuffers &buffers,
     const std::set<std::string> &excluded_datanodes, 
     const std::function<void(const Status &, const std::string &, size_t)> handler) {
@@ -103,7 +103,7 @@ void InputStreamImpl::AsyncPreadSome(
       targetBlock.b().numbytes() - offset_within_block, asio::buffer_size(buffers));
 
   // This is where we will put the logic for re-using a DN connection; we can 
-  //    steal the InputStream's dn and put it back when we're done
+  //    steal the FileHandle's dn and put it back when we're done
   std::shared_ptr<DataNodeConnection> dn = std::make_shared<DataNodeConnectionImpl>(io_service_, *chosen_dn, nullptr /*token*/);
   std::string dn_id = dn->uuid_;
   std::string client_name = client_name_;

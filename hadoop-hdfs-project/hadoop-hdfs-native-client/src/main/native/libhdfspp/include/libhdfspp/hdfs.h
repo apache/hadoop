@@ -54,9 +54,9 @@ public:
 };
 
 /**
- * Applications opens an InputStream to read files in HDFS.
+ * Applications opens a FileHandle to read files in HDFS.
  **/
-class InputStream {
+class FileHandle {
 public:
   /**
    * Read data from a specific position. The current implementation
@@ -79,7 +79,7 @@ public:
   
   virtual size_t PositionRead(void *buf, size_t nbyte, off_t offset) = 0;
 
-  virtual ~InputStream();
+  virtual ~FileHandle();
 };
 
 /**
@@ -109,8 +109,8 @@ public:
    **/
   virtual void
   Open(const std::string &path,
-       const std::function<void(const Status &, InputStream *)> &handler) = 0;
-  Status Open(const std::string &path, InputStream **handle);
+       const std::function<void(const Status &, FileHandle *)> &handler) = 0;
+  Status Open(const std::string &path, FileHandle **handle);
 
   virtual ~FileSystem();
   

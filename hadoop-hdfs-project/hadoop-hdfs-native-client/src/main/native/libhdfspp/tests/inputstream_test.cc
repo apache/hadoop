@@ -59,7 +59,7 @@ public:
 
 }
 
-TEST(InputStreamTest, TestExcludeDataNode) {
+TEST(FileHandleTest, TestExcludeDataNode) {
   auto file_info = std::make_shared<struct FileInfo>();
   file_info->blocks_.push_back(LocatedBlockProto());
   LocatedBlockProto & block = file_info->blocks_[0];
@@ -78,7 +78,7 @@ TEST(InputStreamTest, TestExcludeDataNode) {
       0,
   };
   IoServiceImpl io_service;
-  InputStreamImpl is(&io_service.io_service(), GetRandomClientName(),  file_info);
+  FileHandleImpl is(&io_service.io_service(), GetRandomClientName(),  file_info);
   Status stat;
   size_t read = 0;
 

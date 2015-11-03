@@ -39,14 +39,14 @@ struct hdfs_internal {
 };
 
 struct hdfsFile_internal {
-  hdfsFile_internal(InputStream *p) : file_(p) {}
-  hdfsFile_internal(std::unique_ptr<InputStream> p) : file_(std::move(p)) {}
+  hdfsFile_internal(FileHandle *p) : file_(p) {}
+  hdfsFile_internal(std::unique_ptr<FileHandle> p) : file_(std::move(p)) {}
   virtual ~hdfsFile_internal(){};
-  InputStream *get_impl() { return file_.get(); }
-  const InputStream *get_impl() const { return file_.get(); }
+  FileHandle *get_impl() { return file_.get(); }
+  const FileHandle *get_impl() const { return file_.get(); }
 
  private:
-  std::unique_ptr<InputStream> file_;
+  std::unique_ptr<FileHandle> file_;
 };
 
 /* Error handling with optional debug to stderr */
@@ -103,7 +103,7 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char *path, int flags, int bufferSize,
     ReportError(ENODEV, "Cannot perform FS operations with null FS handle.");
     return nullptr;
   }
-  InputStream *f = nullptr;
+  FileHandle *f = nullptr;
   Status stat = fs->get_impl()->Open(path, &f);
   if (!stat.ok()) {
     return nullptr;

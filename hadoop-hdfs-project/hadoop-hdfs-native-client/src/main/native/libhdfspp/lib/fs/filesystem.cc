@@ -193,10 +193,10 @@ Status FileSystemImpl::Connect(const std::string &server, const std::string &ser
 
 void FileSystemImpl::Open(
     const std::string &path,
-    const std::function<void(const Status &, InputStream *)> &handler) {
+    const std::function<void(const Status &, FileHandle *)> &handler) {
 
   nn_.GetBlockLocations(path, [this, handler](const Status &stat, std::shared_ptr<const struct FileInfo> file_info) {
-    handler(stat, stat.ok() ? new InputStreamImpl(&io_service_->io_service(), client_name_, file_info)
+    handler(stat, stat.ok() ? new FileHandleImpl(&io_service_->io_service(), client_name_, file_info)
                             : nullptr);
   });
 }
@@ -209,13 +209,13 @@ int FileSystemImpl::AddWorkerThread() {
 }
 
 Status FileSystemImpl::Open(const std::string &path,
-                                         InputStream **handle) {
+                                         FileHandle **handle) {
   auto stat = std::make_shared<std::promise<Status>>();
   std::future<Status> future = stat->get_future();
 
   /* wrap async FileSystem::Open with promise to make it a blocking call */
-  InputStream *input_stream = nullptr;
-  auto h = [stat, &input_stream](const Status &s, InputStream *is) {
+  FileHandle *input_stream = nullptr;
+  auto h = [stat, &input_stream](const Status &s, FileHandle *is) {
     stat->set_value(s);
     input_stream = is;
   };

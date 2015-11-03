@@ -85,9 +85,9 @@ public:
 
 
   virtual void Open(const std::string &path,
-                    const std::function<void(const Status &, InputStream *)>
+                    const std::function<void(const Status &, FileHandle *)>
                         &handler) override;
-  Status Open(const std::string &path, InputStream **handle);
+  Status Open(const std::string &path, FileHandle **handle);
   
   
   /* add a new thread to handle asio requests, return number of threads in pool
@@ -121,9 +121,9 @@ private:
  * Threading model: not thread-safe; consumers and io_service should not call
  *    concurrently
  */
-class InputStreamImpl : public InputStream {
+class FileHandleImpl : public FileHandle {
 public:
-  InputStreamImpl(::asio::io_service *io_service, const std::string &client_name,
+  FileHandleImpl(::asio::io_service *io_service, const std::string &client_name,
                   const std::shared_ptr<const struct FileInfo> file_info);
   virtual void
   PositionRead(void *buf, size_t nbyte, uint64_t offset,
