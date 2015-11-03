@@ -75,26 +75,31 @@ void InputStreamImpl::AsyncPreadSome(
   uint64_t size_within_block = std::min<uint64_t>(
       targetBlock.b().numbytes() - offset_within_block, asio::buffer_size(buffers));
 
-  // This is where we will put the logic for re-using a DN connection
-  dn_ = std::make_shared<DataNodeConnectionImpl>(io_service_, *chosen_dn, nullptr);
-  std::string dn_id = dn_->uuid_;
+  // This is where we will put the logic for re-using a DN connection; we can 
+  //    steal the InputStream's dn and put it back when we're done
+  std::shared_ptr<DataNodeConnection> dn = std::make_shared<DataNodeConnectionImpl>(io_service_, *chosen_dn, nullptr /*token*/);
+  std::string dn_id = dn->uuid_;
+  std::string client_name = client_name_;
 
+  // Wrap the DN in a block reader to handle the state and logic of the 
+  //    block request protocol
   std::shared_ptr<BlockReader> reader;
-  reader.reset(new BlockReaderImpl(BlockReaderOptions(), dn_));
+  reader.reset(new BlockReaderImpl(BlockReaderOptions(), dn));
+  
   
   auto read_handler = [dn_id, handler](const Status & status, size_t transferred) {
     handler(status, dn_id, transferred);
   };
 
-  dn_->Connect([this,handler,read_handler,targetBlock,offset_within_block,size_within_block, buffers, reader]
+  dn->Connect([handler,read_handler,targetBlock,offset_within_block,size_within_block, buffers, reader, dn_id, client_name]
           (Status status, std::shared_ptr<DataNodeConnection> dn) {
     (void)dn;
     if (status.ok()) {
       reader->AsyncReadBlock(
-          client_name_, targetBlock, offset_within_block,
+          client_name, targetBlock, offset_within_block,
           asio::buffer(buffers, size_within_block), read_handler);
     } else {
-      handler(status, "", 0);
+      handler(status, dn_id, 0);
     }
   });
 }

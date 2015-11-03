@@ -50,6 +50,7 @@ class FileHandle {
 class HadoopFileSystem {
  public:
   HadoopFileSystem() : service_(IoService::New()) {}
+  HadoopFileSystem(IoService *&ioservice)  {service_.reset(ioservice); ioservice = nullptr; }
   virtual ~HadoopFileSystem();
 
   /* attempt to connect to namenode, return false on failure */
