@@ -411,7 +411,7 @@ public abstract class BlockInfo extends Block
     }
     Preconditions.checkState(!isComplete());
     uc.commit();
-    this.set(getBlockId(), block.getNumBytes(), block.getGenerationStamp());
+    this.setNumBytes(block.getNumBytes());
     // Sort out invalid replicas.
     setGenerationStampAndVerifyReplicas(block.getGenerationStamp());
   }

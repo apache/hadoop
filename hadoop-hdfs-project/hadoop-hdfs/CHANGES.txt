@@ -2225,6 +2225,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9362. TestAuditLogger#testAuditLoggerWithCallContext assumes Unix line
     endings, fails on Windows. (cnauroth)
 
+    HDFS-9289. Make DataStreamer#block thread safe and verify genStamp in
+    commitBlock. (Chang Li via zhz)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

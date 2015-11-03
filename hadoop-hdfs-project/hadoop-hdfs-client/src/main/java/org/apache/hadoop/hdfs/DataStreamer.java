@@ -351,7 +351,7 @@ class DataStreamer extends Daemon {
   }
 
   private volatile boolean streamerClosed = false;
-  protected ExtendedBlock block; // its length is number of bytes acked
+  protected volatile ExtendedBlock block; // its length is number of bytes acked
   protected Token<BlockTokenIdentifier> accessToken;
   private DataOutputStream blockStream;
   private DataInputStream blockReplyStream;
