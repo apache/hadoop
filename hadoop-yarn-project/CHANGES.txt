@@ -115,6 +115,9 @@ Release 2.7.2 - UNRELEASED
     YARN-4321. Incessant retries if NoAuthException is thrown by Zookeeper in non
     HA mode.  (Varun Saxena via jianhe)
 
+    YARN-3136. getTransferredContainers can be a bottleneck during AM registration.
+    (Sunil G via jianhe)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
