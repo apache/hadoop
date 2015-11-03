@@ -199,4 +199,11 @@ public interface FsDatasetTestUtils {
    * @throws IOException
    */
   void checkStoredReplica(final Replica replica) throws IOException;
+
+  /**
+   * Create dummy replicas for block data and metadata.
+   * @param block the block of which replica to be created.
+   * @throws IOException on I/O error.
+   */
+  void injectCorruptReplica(ExtendedBlock block) throws IOException;
 }

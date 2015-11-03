@@ -549,6 +549,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3216. Max-AM-Resource-Percentage should respect node labels. 
     (Sunil G via wangda)
 
+    YARN-4310. FairScheduler: Log skipping reservation messages at DEBUG level (asuresh)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
@@ -687,9 +689,6 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3582. NPE in WebAppProxyServlet. (jian he via xgong)
     
-    YARN-3580. [JDK8] TestClientRMService.testGetLabelsToNodes fails. (Robert Kanter
-    via junping_du)
-
     YARN-3577. Misspelling of threshold in log4j.properties for tests.
     (Brahma Reddy Battula via aajisaka)
 
@@ -1031,6 +1030,18 @@ Release 2.8.0 - UNRELEASED
     YARN-4251. TestAMRMClientOnRMRestart#testAMRMClientOnAMRMTokenRollOverOnRMRestart
     is failing. (Brahma Reddy Battula via ozawa)
 
+    YARN-4130. Duplicate declaration of ApplicationId in RMAppManager#submitApplication method. 
+    (Kai Sasaki via rohithsharmaks)
+
+    YARN-4288. Fixed RMProxy to retry on IOException from local host.
+    (Junping Du via jianhe)
+
+    YARN-4127. RM fail with noAuth error if switched from failover to non-failover.
+    (Varun Saxena via jianhe)
+
+    YARN-4326. Fix TestDistributedShell timeout as AHS in MiniYarnCluster no longer 
+    binds to default port 8188. (Meng Ding via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1126,6 +1137,24 @@ Release 2.7.2 - UNRELEASED
 
     YARN-4041. Slow delegation token renewal can severely prolong RM recovery
     (Sunil G via jlowe)
+
+    YARN-2902. Killing a container that is localizing can orphan resources in
+    the DOWNLOADING state (Varun Saxena via jlowe)
+
+    YARN-4183. Enabling generic application history forces every job to get a
+    timeline service delegation token (Mit Desai via jeagles)
+
+    YARN-4313. Race condition in MiniMRYarnCluster when getting history server
+    address. (Jian He via xgong)
+
+    YARN-3580. [JDK8] TestClientRMService.testGetLabelsToNodes fails. (Robert Kanter
+    via junping_du)
+
+    YARN-4312. TestSubmitApplicationWithRMHA fails on branch-2.7 and branch-2.6
+    as some of the test cases time out. (Varun Saxena via ozawa)
+
+    YARN-4320. TestJobHistoryEventHandler fails as AHS in MiniYarnCluster no longer
+    binds to default port 8188. (Varun Saxena via ozawa)
 
 Release 2.7.1 - 2015-07-06
 
@@ -1849,16 +1878,28 @@ Release 2.7.0 - 2015-04-20
     YARN-3466. Fix RM nodes web page to sort by node HTTP-address, #containers 
     and node-label column (Jason Lowe via wangda)
 
-Release 2.6.2 - UNRELEASED
+Release 2.6.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
 
-    YARN-2019. Retrospect on decision of making RM crashed if any exception throw 
-    in ZKRMStateStore. (Jian He via junping_du)
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 2.6.2 - 2015-10-28
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
 
   IMPROVEMENTS
+
+    YARN-3727. For better error recovery, check if the directory exists before
+    using it for localization. (Zhihai Xu via jlowe)
 
     YARN-4092. Fixed UI redirection to print useful messages when both RMs are
     in standby mode. (Xuan Gong via jianhe)
@@ -1870,14 +1911,14 @@ Release 2.6.2 - UNRELEASED
 
   BUG FIXES
 
+    YARN-2019. Retrospect on decision of making RM crashed if any exception throw
+    in ZKRMStateStore. (Jian He via junping_du)
+
     YARN-4087. Followup fixes after YARN-2019 regarding RM behavior when
     state-store error occurs. (Jian He via xgong)
 
     YARN-3554. Default value for maximum nodemanager connect wait time is too
     high (Naganarasimha G R via jlowe)
-
-    YARN-3727. For better error recovery, check if the directory exists before
-    using it for localization. (Zhihai Xu via jlowe)
 
     YARN-4005. Completed container whose app is finished is possibly not
     removed from NMStateStore. (Jun Gong via jianhe)
@@ -1896,9 +1937,6 @@ Release 2.6.2 - UNRELEASED
 
     YARN-3798. ZKRMStateStore shouldn't create new session without occurrance of 
     SESSIONEXPIED. (ozawa and Varun Saxena)
-
-    YARN-2859. ApplicationHistoryServer binds to default port 8188 in MiniYARNCluster.
-    (Vinod Kumar Vavilapalli via xgong)
 
 Release 2.6.1 - 2015-09-23
 

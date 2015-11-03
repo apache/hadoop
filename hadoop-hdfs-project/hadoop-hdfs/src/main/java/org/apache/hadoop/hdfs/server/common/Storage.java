@@ -30,6 +30,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -309,6 +310,20 @@ public abstract class Storage extends StorageInfo {
     public StorageDirType getStorageDirType() {
       return dirType;
     }    
+
+    /**
+     * Get storage directory size.
+     */
+    public long getDirecorySize() {
+      try {
+        if (!isShared() && root != null && root.exists()) {
+          return FileUtils.sizeOfDirectory(root);
+        }
+      } catch (Exception e) {
+        LOG.warn("Failed to get directory size :" + root, e);
+      }
+      return 0;
+    }
 
     public void read(File from, Storage storage) throws IOException {
       Properties props = readPropertiesFile(from);

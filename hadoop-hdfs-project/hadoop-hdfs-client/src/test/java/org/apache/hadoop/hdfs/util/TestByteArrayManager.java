@@ -17,6 +17,19 @@
  */
 package org.apache.hadoop.hdfs.util;
 
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.util.ByteArrayManager.Counter;
+import org.apache.hadoop.hdfs.util.ByteArrayManager.CounterMap;
+import org.apache.hadoop.hdfs.util.ByteArrayManager.FixedLengthManager;
+import org.apache.hadoop.hdfs.util.ByteArrayManager.ManagerMap;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
+import org.apache.log4j.Level;
+import org.junit.Assert;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -31,29 +44,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
-import org.apache.hadoop.hdfs.util.ByteArrayManager.Counter;
-import org.apache.hadoop.hdfs.util.ByteArrayManager.CounterMap;
-import org.apache.hadoop.hdfs.util.ByteArrayManager.FixedLengthManager;
-import org.apache.hadoop.hdfs.util.ByteArrayManager.ManagerMap;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.Time;
-import org.apache.log4j.Level;
-import org.junit.Assert;
-import org.junit.Test;
-
 /**
  * Test {@link ByteArrayManager}.
  */
 public class TestByteArrayManager {
   static {
-    GenericTestUtils.setLogLevel(LogFactory.getLog(ByteArrayManager.class),
-        Level.ALL);
+    GenericTestUtils.setLogLevel(
+        LoggerFactory.getLogger(ByteArrayManager.class), Level.ALL);
   }
 
-  static final Log LOG = LogFactory.getLog(TestByteArrayManager.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestByteArrayManager.class);
 
   private static final Comparator<Future<Integer>> CMP = new Comparator<Future<Integer>>() {
     @Override
@@ -559,9 +559,8 @@ public class TestByteArrayManager {
   }
   
   public static void main(String[] args) throws Exception {
-    GenericTestUtils.setLogLevel(LogFactory.getLog(ByteArrayManager.class),
-        Level.OFF);
-
+    GenericTestUtils.setLogLevel(LoggerFactory.getLogger(ByteArrayManager.class),
+                                 Level.OFF);
     final int arrayLength = 64 * 1024; //64k
     final int nThreads = 512;
     final int nAllocations = 1 << 15;

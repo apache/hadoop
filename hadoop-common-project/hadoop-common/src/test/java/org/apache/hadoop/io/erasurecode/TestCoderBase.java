@@ -64,6 +64,8 @@ public abstract class TestCoderBase {
   private static int FIXED_DATA_GENERATOR = 0;
   protected byte[][] fixedData;
 
+  protected boolean allowChangeInputs;
+
   protected int getChunkSize() {
     return chunkSize;
   }
@@ -253,6 +255,22 @@ public abstract class TestCoderBase {
     }
   }
 
+  protected void markChunks(ECChunk[] chunks) {
+    for (int i = 0; i < chunks.length; i++) {
+      if (chunks[i] != null) {
+        chunks[i].getBuffer().mark();
+      }
+    }
+  }
+
+  protected void restoreChunksFromMark(ECChunk[] chunks) {
+    for (int i = 0; i < chunks.length; i++) {
+      if (chunks[i] != null) {
+        chunks[i].getBuffer().reset();
+      }
+    }
+  }
+
   /**
    * Clone chunks along with copying the associated data. It respects how the
    * chunk buffer is allocated, direct or non-direct. It avoids affecting the
@@ -277,6 +295,10 @@ public abstract class TestCoderBase {
    * @return a new chunk
    */
   protected ECChunk cloneChunkWithData(ECChunk chunk) {
+    if (chunk == null) {
+      return null;
+    }
+
     ByteBuffer srcBuffer = chunk.getBuffer();
 
     byte[] bytesArr = new byte[srcBuffer.remaining()];
@@ -453,14 +475,16 @@ public abstract class TestCoderBase {
     byte[][] bytesArr = new byte[chunks.length][];
 
     for (int i = 0; i < chunks.length; i++) {
-      bytesArr[i] = chunks[i].toBytesArray();
+      if (chunks[i] != null) {
+        bytesArr[i] = chunks[i].toBytesArray();
+      }
     }
 
     return bytesArr;
   }
 
   /**
-   * Dump all the settings used in the test case if allowDump is enabled.
+   * Dump all the settings used in the test case if isAllowingVerboseDump is enabled.
    */
   protected void dumpSetting() {
     if (allowDump) {
@@ -473,14 +497,16 @@ public abstract class TestCoderBase {
               append(Arrays.toString(erasedDataIndexes));
       sb.append(" erasedParityIndexes=").
               append(Arrays.toString(erasedParityIndexes));
-      sb.append(" usingDirectBuffer=").append(usingDirectBuffer).append("\n");
+      sb.append(" usingDirectBuffer=").append(usingDirectBuffer);
+      sb.append(" isAllowingChangeInputs=").append(allowChangeInputs);
+      sb.append("\n");
 
       System.out.println(sb.toString());
     }
   }
 
   /**
-   * Dump chunks prefixed with a header if allowDump is enabled.
+   * Dump chunks prefixed with a header if isAllowingVerboseDump is enabled.
    * @param header
    * @param chunks
    */

@@ -38,9 +38,9 @@ import static org.apache.hadoop.hdfs.StripedFileTestUtil.numDNs;
 public class TestWriteStripedFileWithFailure {
   public static final Log LOG = LogFactory
       .getLog(TestWriteStripedFileWithFailure.class);
-  private static MiniDFSCluster cluster;
-  private static FileSystem fs;
-  private static Configuration conf = new HdfsConfiguration();
+  private MiniDFSCluster cluster;
+  private FileSystem fs;
+  private Configuration conf = new HdfsConfiguration();
 
   static {
     GenericTestUtils.setLogLevel(DFSOutputStream.LOG, Level.ALL);

@@ -249,6 +249,10 @@ Trunk (Unreleased)
     HADOOP-12385. Include nested stack trace in SaslRpcClient.getServerToken()
     (stevel)
 
+    HADOOP-12133. Add schemas to Maven Assembly XMLs (Gábor Lipták via aw)
+
+    HADOOP-12541. make re2j dependency consistent (Matthew Paduano via aw)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
@@ -602,6 +606,12 @@ Trunk (Unreleased)
       jing9)
 
       HADOOP-11921. Enhance tests for erasure coders. (Kai Zheng)
+
+      HADOOP-12327. Initialize output buffers with ZERO bytes in erasure coder.
+      (Kai Zheng via waltersu4549)
+
+      HADOOP-12047. Indicate preference not to affect input buffers during
+      coding in erasure coder. (Kai Zheng via waltersu4549)
 
 Release 2.8.0 - UNRELEASED
 
@@ -1295,6 +1305,14 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12519. hadoop-azure tests should avoid creating a metrics
     configuration file in the module root directory. (cnauroth)
+
+    HADOOP-12533. Introduce FileNotFoundException in WASB for read and seek API.
+    (Dushyanth via cnauroth)
+
+    HADOOP-12508. delete fails with exception when lease is held on blob.
+    (Gaurav Kanade via cnauroth)
+
+    HADOOP-12542. TestDNS fails on Windows after HADOOP-12437. (cnauroth)
 
   OPTIMIZATIONS
 
@@ -2153,7 +2171,19 @@ Release 2.7.0 - 2015-04-20
     HADOOP-11837. AuthenticationFilter should destroy SignerSecretProvider in
     Tomcat deployments. (Bowen Zhang via wheat9)
 
-Release 2.6.2 - UNRELEASED
+Release 2.6.3 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
 

@@ -2079,16 +2079,17 @@ public abstract class FileSystem extends Configured implements Closeable {
     CACHE.remove(this.key, this);
   }
 
-  /** Return the total size of all files in the filesystem.*/
-  public long getUsed() throws IOException{
-    long used = 0;
-    RemoteIterator<LocatedFileStatus> files = listFiles(new Path("/"), true);
-    while (files.hasNext()) {
-      used += files.next().getLen();
-    }
-    return used;
+  /** Return the total size of all files in the filesystem. */
+  public long getUsed() throws IOException {
+    Path path = new Path("/");
+    return getUsed(path);
   }
-  
+
+  /** Return the total size of all files from a specified path. */
+  public long getUsed(Path path) throws IOException {
+    return getContentSummary(path).getLength();
+  }
+
   /**
    * Get the block size for a particular file.
    * @param f the filename

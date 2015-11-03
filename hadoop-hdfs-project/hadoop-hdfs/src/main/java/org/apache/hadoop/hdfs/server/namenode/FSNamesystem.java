@@ -3729,9 +3729,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     public void run() {
       while (fsRunning && shouldRun) {
         try {
-          FSEditLog editLog = getFSImage().getEditLog();
-          long numEdits =
-              editLog.getLastWrittenTxId() - editLog.getCurSegmentTxId();
+          long numEdits = getTransactionsSinceLastLogRoll();
           if (numEdits > rollThreshold) {
             FSNamesystem.LOG.info("NameNode rolling its own edit log because"
                 + " number of edits in open segment exceeds threshold of "
@@ -6407,6 +6405,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return VersionInfo.getVersion();
   }
 
+  @Override // NameNodeStatusMXBean
+  public String getNameDirSize() {
+    return getFSImage().getStorage().getNNDirectorySize();
+  }
+
   /**
    * Verifies that the given identifier and password are valid and match.
    * @param identifier Token identifier.
@@ -7500,9 +7503,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         sb.append(NamenodeWebHdfsMethods.isWebHdfsInvocation() ? "webhdfs" : "rpc");
         if (isCallerContextEnabled &&
             callerContext != null &&
-            callerContext.isValid() &&
-            (callerContext.getSignature() == null ||
-                callerContext.getSignature().length <= callerSignatureMaxLen)) {
+            callerContext.isContextValid()) {
           sb.append("\t").append("callerContext=");
           if (callerContext.getContext().length() > callerContextMaxLen) {
             sb.append(callerContext.getContext().substring(0,
@@ -7510,7 +7511,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           } else {
             sb.append(callerContext.getContext());
           }
-          if (callerContext.getSignature() != null) {
+          if (callerContext.getSignature() != null &&
+              callerContext.getSignature().length > 0 &&
+              callerContext.getSignature().length <= callerSignatureMaxLen) {
             sb.append(":");
             sb.append(new String(callerContext.getSignature(),
                 CallerContext.SIGNATURE_ENCODING));

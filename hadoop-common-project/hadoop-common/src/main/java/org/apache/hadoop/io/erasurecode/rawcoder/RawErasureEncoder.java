@@ -38,29 +38,32 @@ public interface RawErasureEncoder extends RawErasureCoder {
    * Note, for both inputs and outputs, no mixing of on-heap buffers and direct
    * buffers are allowed.
    *
-   * @param inputs inputs to read data from, contents may change after the call
-   * @param outputs
+   * If the coder option ALLOW_CHANGE_INPUTS is set true (false by default), the
+   * content of input buffers may change after the call, subject to concrete
+   * implementation. Anyway the positions of input buffers will move forward.
+   *
+   * @param inputs input buffers to read data from
+   * @param outputs output buffers to put the encoded data into, read to read
+   *                after the call
    */
-  public void encode(ByteBuffer[] inputs, ByteBuffer[] outputs);
+  void encode(ByteBuffer[] inputs, ByteBuffer[] outputs);
 
   /**
-   * Encode with inputs and generates outputs
-   * @param inputs inputs to read data from, contents may change after the call
-   * @param outputs outputs to write into for data generated, ready for reading
-   *                the result data from after the call
+   * Encode with inputs and generates outputs. More see above.
+   *
+   * @param inputs input buffers to read data from
+   * @param outputs output buffers to put the encoded data into, read to read
+   *                after the call
    */
-  public void encode(byte[][] inputs, byte[][] outputs);
+  void encode(byte[][] inputs, byte[][] outputs);
 
   /**
-   * Encode with inputs and generates outputs.
+   * Encode with inputs and generates outputs. More see above.
    *
-   * Note, for both input and output ECChunks, no mixing of on-heap buffers and
-   * direct buffers are allowed.
-   *
-   * @param inputs inputs to read data from, contents may change after the call
-   * @param outputs outputs to write into for data generated, ready for reading
-   *                the result data from after the call
+   * @param inputs input buffers to read data from
+   * @param outputs output buffers to put the encoded data into, read to read
+   *                after the call
    */
-  public void encode(ECChunk[] inputs, ECChunk[] outputs);
+  void encode(ECChunk[] inputs, ECChunk[] outputs);
 
 }

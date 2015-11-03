@@ -907,14 +907,9 @@ public final class ErasureCodingWorker {
 
       for (int i = 0; i < targetBuffers.length; i++) {
         if (targetBuffers[i] != null) {
-          cleanBuffer(targetBuffers[i]);
+          targetBuffers[i].clear();
         }
       }
-    }
-    
-    private ByteBuffer cleanBuffer(ByteBuffer buffer) {
-      Arrays.fill(buffer.array(), (byte) 0);
-      return (ByteBuffer)buffer.clear();
     }
 
     // send an empty packet to mark the end of the block

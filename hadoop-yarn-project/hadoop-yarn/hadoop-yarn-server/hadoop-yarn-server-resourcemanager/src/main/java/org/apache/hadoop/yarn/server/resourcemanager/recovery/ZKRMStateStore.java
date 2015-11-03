@@ -282,8 +282,9 @@ public class ZKRMStateStore extends RMStateStore {
     // ensure root dirs exist
     createRootDirRecursively(znodeWorkingPath);
     create(zkRootNodePath);
-    if (HAUtil.isHAEnabled(getConfig())){
-      fence();
+    setRootNodeAcls();
+    delete(fencingNodePath);
+    if (HAUtil.isHAEnabled(getConfig())) {
       verifyActiveStatusThread = new VerifyActiveStatusThread();
       verifyActiveStatusThread.start();
     }
@@ -309,16 +310,19 @@ public class ZKRMStateStore extends RMStateStore {
     LOG.debug(builder.toString());
   }
 
-  private synchronized void fence() throws Exception {
-    if (LOG.isTraceEnabled()) {
-      logRootNodeAcls("Before fencing\n");
+  private void setRootNodeAcls() throws Exception {
+    if (LOG.isDebugEnabled()) {
+      logRootNodeAcls("Before setting ACLs'\n");
     }
 
-    curatorFramework.setACL().withACL(zkRootNodeAcl).forPath(zkRootNodePath);
-    delete(fencingNodePath);
+    if (HAUtil.isHAEnabled(getConfig())) {
+      curatorFramework.setACL().withACL(zkRootNodeAcl).forPath(zkRootNodePath);
+    } else {
+      curatorFramework.setACL().withACL(zkAcl).forPath(zkRootNodePath);
+    }
 
-    if (LOG.isTraceEnabled()) {
-      logRootNodeAcls("After fencing\n");
+    if (LOG.isDebugEnabled()) {
+      logRootNodeAcls("After setting ACLs'\n");
     }
   }
 
@@ -933,7 +937,8 @@ public class ZKRMStateStore extends RMStateStore {
     return curatorFramework.getData().forPath(path);
   }
 
-  private List<ACL> getACL(final String path) throws Exception {
+  @VisibleForTesting
+  List<ACL> getACL(final String path) throws Exception {
     return curatorFramework.getACL().forPath(path);
   }
 

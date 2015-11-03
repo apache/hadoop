@@ -141,12 +141,12 @@ public class TestLocalResourcesTrackerImpl {
       tracker.handle(rel21Event);
 
       dispatcher.await();
-      verifyTrackedResourceCount(tracker, 2);
+      verifyTrackedResourceCount(tracker, 1);
 
       // Verify resource with non zero ref count is not removed.
       Assert.assertEquals(2, lr1.getRefCount());
       Assert.assertFalse(tracker.remove(lr1, mockDelService));
-      verifyTrackedResourceCount(tracker, 2);
+      verifyTrackedResourceCount(tracker, 1);
 
       // Localize resource1
       ResourceLocalizedEvent rle =
@@ -161,7 +161,7 @@ public class TestLocalResourcesTrackerImpl {
 
       // Verify resources in state LOCALIZED with ref-count=0 is removed.
       Assert.assertTrue(tracker.remove(lr1, mockDelService));
-      verifyTrackedResourceCount(tracker, 1);
+      verifyTrackedResourceCount(tracker, 0);
     } finally {
       if (dispatcher != null) {
         dispatcher.stop();

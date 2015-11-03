@@ -281,14 +281,14 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
     RMAppImpl application =
         createAndPopulateNewRMApp(submissionContext, submitTime, user, false);
-    ApplicationId appId = submissionContext.getApplicationId();
     Credentials credentials = null;
     try {
       credentials = parseCredentials(submissionContext);
       if (UserGroupInformation.isSecurityEnabled()) {
-        this.rmContext.getDelegationTokenRenewer().addApplicationAsync(appId,
-            credentials, submissionContext.getCancelTokensWhenComplete(),
-            application.getUser());
+        this.rmContext.getDelegationTokenRenewer()
+            .addApplicationAsync(applicationId, credentials,
+                submissionContext.getCancelTokensWhenComplete(),
+                application.getUser());
       } else {
         // Dispatcher is not yet started at this time, so these START events
         // enqueued should be guaranteed to be first processed when dispatcher

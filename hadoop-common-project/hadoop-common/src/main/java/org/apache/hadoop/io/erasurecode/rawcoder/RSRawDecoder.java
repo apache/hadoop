@@ -206,7 +206,7 @@ public class RSRawDecoder extends AbstractRawErasureDecoder {
         if (erasedIndexes[i] == erasedOrNotToReadIndexes[j]) {
           found = true;
           adjustedDirectBufferOutputsParameter[j] =
-              resetBuffer(outputs[outputIdx++]);
+              resetBuffer(outputs[outputIdx++], dataLen);
         }
       }
       if (!found) {
@@ -220,7 +220,7 @@ public class RSRawDecoder extends AbstractRawErasureDecoder {
         ByteBuffer buffer = checkGetDirectBuffer(bufferIdx, dataLen);
         buffer.position(0);
         buffer.limit(dataLen);
-        adjustedDirectBufferOutputsParameter[i] = resetBuffer(buffer);
+        adjustedDirectBufferOutputsParameter[i] = resetBuffer(buffer, dataLen);
         bufferIdx++;
       }
     }

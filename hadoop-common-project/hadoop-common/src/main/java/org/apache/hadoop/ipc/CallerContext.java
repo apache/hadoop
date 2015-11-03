@@ -44,6 +44,7 @@ public class CallerContext {
    * {@link org.apache.hadoop.fs.CommonConfigurationKeysPublic#HADOOP_CALLER_CONTEXT_MAX_SIZE_DEFAULT}
    */
   private final String context;
+
   /** The caller's signature for validation.
    *
    * The signature is optional. The null or empty signature will be abandoned.
@@ -58,10 +59,6 @@ public class CallerContext {
     this.signature = builder.signature;
   }
 
-  public boolean isValid() {
-    return context != null;
-  }
-
   public String getContext() {
     return context;
   }
@@ -69,6 +66,11 @@ public class CallerContext {
   public byte[] getSignature() {
     return signature == null ?
         null : Arrays.copyOf(signature, signature.length);
+  }
+
+  @InterfaceAudience.Private
+  public boolean isContextValid() {
+    return context != null && !context.isEmpty();
   }
 
   @Override
@@ -92,9 +94,10 @@ public class CallerContext {
           .isEquals();
     }
   }
+
   @Override
   public String toString() {
-    if (!isValid()) {
+    if (!isContextValid()) {
       return "";
     }
     String str = context;

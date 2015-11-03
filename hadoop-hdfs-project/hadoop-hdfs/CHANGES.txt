@@ -184,6 +184,14 @@ Trunk (Unreleased)
     HDFS-9070. Allow fsck display pending replica location information for
     being-written blocks. (GAO Rui via jing9)
 
+    HDFS-9261. Erasure Coding: Skip encoding the data cells if all the parity data 
+    streamers are failed for the current block group. (Rakesh R via umamahesh)
+
+    HDFS-9323. Randomize the DFSStripedOutputStreamWithFailure tests. (szetszwo)
+
+    HDFS-8777. Erasure Coding: add tests for taking snapshots on EC files. 
+    (Rakesh R via zhz)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -840,6 +848,9 @@ Trunk (Unreleased)
 
       HDFS-8438. Erasure Coding: Allow concat striped files if they have the same
       ErasureCodingPolicy. (Walter Su via jing9)
+
+      HDFS-9275. Wait previous ErasureCodingWork to finish before schedule
+      another one. (Walter Su via yliu)
 
 Release 2.8.0 - UNRELEASED
 
@@ -1524,9 +1535,6 @@ Release 2.8.0 - UNRELEASED
     HDFS-9110. Use Files.walkFileTree in NNUpgradeUtil#doPreUpgrade for
     better efficiency. (Charlie Helin via wang)
 
-    HDFS-9221. HdfsServerConstants#ReplicaState#getState should avoid calling
-    values() since it creates a temporary array. (Staffan Friberg via yliu)
-
     HDFS-8988. Use LightWeightHashSet instead of LightWeightLinkedSet in
     BlockManager#excessReplicateMap. (yliu)
 
@@ -1599,6 +1607,17 @@ Release 2.8.0 - UNRELEASED
     HDFS-9255. Consolidate block recovery related implementation into a single
     class. (Walter Su via zhz)
 
+    HDFS-9295. Add a thorough test of the full KMS code path. 
+    (Daniel Templeton via zhz)
+
+    HDFS-8545. Refactor FS#getUsed() to use ContentSummary and add an API to fetch
+    the total file length from a specific path (J.Andreina via vinayakumarb)
+
+    HDFS-9229. Expose size of NameNode directory as a metric.
+    (Surendra Singh Lilhore via zhz)
+
+    HDFS-9339. Extend full test of KMS ACLs. (Daniel Templeton via zhz)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
@@ -1637,6 +1656,12 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9297. Update TestBlockMissingException to use corruptBlockOnDataNodesByDeletingBlockFile().
     (Tony Wu via lei)
+
+    HDFS-9168. Move client side unit test to hadoop-hdfs-client. (wheat9)
+
+    HDFS-9312. Fix TestReplication to be FsDataset-agnostic. (lei)
+
+    HDFS-9308. Add truncateMeta() and deleteMeta() to MiniDFSCluster. (Tony Wu via lei)
 
   BUG FIXES
 
@@ -2179,6 +2204,27 @@ Release 2.8.0 - UNRELEASED
     HDFS-9297. Decomissioned capacity should not be considered for 
     configured/used capacity (Contributed by Kuhu Shukla)
 
+    HDFS-9044. Give Priority to FavouredNodes , before selecting
+    nodes from FavouredNode's Node Group (J.Andreina via vinayakumarb)
+
+    HDFS-9332. Fix Precondition failures from NameNodeEditLogRoller while
+    saving namespace. (wang)
+
+    HDFS-9343. Empty caller context considered invalid. (Mingliang Liu via
+    Arpit Agarwal)
+
+    HDFS-9329. TestBootstrapStandby#testRateThrottling is flaky because fsimage
+    size is smaller than IO buffer size. (zhz)
+
+    HDFS-9313. Possible NullPointerException in BlockManager if no excess
+    replica can be chosen. (mingma)
+
+    HDFS-9354. Fix TestBalancer#testBalancerWithZeroThreadsForMove on Windows.
+    (Xiaoyu Yao via cnauroth)
+
+    HDFS-9362. TestAuditLogger#testAuditLoggerWithCallContext assumes Unix line
+    endings, fails on Windows. (cnauroth)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -2194,6 +2240,9 @@ Release 2.7.2 - UNRELEASED
 
     HDFS-8099. Change "DFSInputStream has been closed already" message to
     debug log level (Charles Lamb via Colin P. McCabe)
+
+    HDFS-9221. HdfsServerConstants#ReplicaState#getState should avoid calling
+    values() since it creates a temporary array. (Staffan Friberg via yliu)
 
   OPTIMIZATIONS
 
@@ -3273,7 +3322,19 @@ Release 2.7.0 - 2015-04-20
       HDFS-7700. Document quota support for storage types. (Xiaoyu Yao via
       Arpit Agarwal)
 
-Release 2.6.2 - UNRELEASED
+Release 2.6.3 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
 

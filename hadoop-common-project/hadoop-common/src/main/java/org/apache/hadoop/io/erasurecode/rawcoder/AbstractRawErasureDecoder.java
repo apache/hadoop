@@ -48,8 +48,8 @@ public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
     if (dataLen == 0) {
       return;
     }
-    ensureLengthAndType(inputs, true, dataLen, usingDirectBuffer);
-    ensureLengthAndType(outputs, false, dataLen, usingDirectBuffer);
+    checkParameterBuffers(inputs, true, dataLen, usingDirectBuffer, false);
+    checkParameterBuffers(outputs, false, dataLen, usingDirectBuffer, true);
 
     if (usingDirectBuffer) {
       doDecode(inputs, erasedIndexes, outputs);
@@ -106,8 +106,8 @@ public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
     if (dataLen == 0) {
       return;
     }
-    ensureLength(inputs, true, dataLen);
-    ensureLength(outputs, false, dataLen);
+    checkParameterBuffers(inputs, true, dataLen, false);
+    checkParameterBuffers(outputs, false, dataLen, true);
 
     int[] inputOffsets = new int[inputs.length]; // ALL ZERO
     int[] outputOffsets = new int[outputs.length]; // ALL ZERO

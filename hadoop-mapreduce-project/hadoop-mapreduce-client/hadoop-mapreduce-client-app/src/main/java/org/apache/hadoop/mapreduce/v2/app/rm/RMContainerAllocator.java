@@ -797,6 +797,7 @@ public class RMContainerAllocator extends RMContainerRequestor
     computeIgnoreBlacklisting();
 
     handleUpdatedNodes(response);
+    handleJobPriorityChange(response);
 
     for (ContainerStatus cont : finishedContainers) {
       LOG.info("Received completed container " + cont.getContainerId());
@@ -919,6 +920,14 @@ public class RMContainerAllocator extends RMContainerRequestor
         }
       }
     }
+  }
+
+  private void handleJobPriorityChange(AllocateResponse response) {
+    Priority priorityFromResponse = Priority.newInstance(response
+        .getApplicationPriority().getPriority());
+
+    // Update the job priority to Job directly.
+    getJob().setJobPriority(priorityFromResponse);
   }
 
   @Private

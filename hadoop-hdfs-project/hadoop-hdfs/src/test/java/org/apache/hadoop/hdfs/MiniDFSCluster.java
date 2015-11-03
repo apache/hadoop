@@ -2117,6 +2117,28 @@ public class MiniDFSCluster {
     getMaterializedReplica(i, blk).corruptMeta();
   }
 
+  /**
+   * Corrupt the metadata of a block by deleting it.
+   * @param i index of the datanode
+   * @param blk name of the block.
+   */
+  public void deleteMeta(int i, ExtendedBlock blk)
+      throws IOException {
+    getMaterializedReplica(i, blk).deleteMeta();
+  }
+
+  /**
+   * Corrupt the metadata of a block by truncating it to a new size.
+   * @param i index of the datanode.
+   * @param blk name of the block.
+   * @param newSize the new size of the metadata file.
+   * @throws IOException if any I/O errors.
+   */
+  public void truncateMeta(int i, ExtendedBlock blk, int newSize)
+      throws IOException {
+    getMaterializedReplica(i, blk).truncateMeta(newSize);
+  }
+
   public boolean changeGenStampOfBlock(int dnIndex, ExtendedBlock blk,
       long newGenStamp) throws IOException {
     File blockFile = getBlockFile(dnIndex, blk);

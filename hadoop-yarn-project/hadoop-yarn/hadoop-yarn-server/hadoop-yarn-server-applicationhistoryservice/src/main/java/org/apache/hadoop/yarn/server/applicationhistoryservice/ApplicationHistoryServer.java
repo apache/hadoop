@@ -143,7 +143,7 @@ public class ApplicationHistoryServer extends CompositeService {
 
   @Private
   @VisibleForTesting
-  int getPort() {
+  public int getPort() {
     return this.webApp.httpServer().getConnectorAddress(0).getPort();
   }
 

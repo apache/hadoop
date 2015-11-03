@@ -287,6 +287,9 @@ Trunk (Unreleased)
     MAPREDUCE-5801. Uber mode's log message is missing a vcore reason
     (Steven Wong via aw)
 
+    MAPREDUCE-6525. Fix test failure of TestMiniMRClientCluster.testRestart.
+    (Masatake Iwasaki via aajisaka)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -513,10 +516,6 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-5708. Duplicate String.format in YarnOutputFiles.getSpillFileForWrite.
     (Konstantin Weitz via devaraj)
 
-    MAPREDUCE-6273. HistoryFileManager should check whether summaryFile exists to 
-    avoid FileNotFoundException causing HistoryFileInfo into MOVE_FAILED state.
-    (zhihai xu via devaraj)
-
     MAPREDUCE-6204. TestJobCounters should use new properties instead of
     JobConf.MAPRED_TASK_JAVA_OPTS. (Sam Liu via ozawa)
 
@@ -620,6 +619,9 @@ Release 2.8.0 - UNRELEASED
    MAPREDUCE-6508. TestNetworkedJob fails consistently due to delegation 
    token changes on RM. (Akira AJISAKA via junping_du)
 
+   MAPREDUCE-6515. Update Application priority in AM side from AM-RM heartbeat
+   (Sunil G via jlowe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -667,6 +669,16 @@ Release 2.7.2 - UNRELEASED
 
     MAPREDUCE-6518. Set SO_KEEPALIVE on shuffle connections (Chang Li via
     jlowe)
+
+    MAPREDUCE-6273. HistoryFileManager should check whether summaryFile exists to 
+    avoid FileNotFoundException causing HistoryFileInfo into MOVE_FAILED state.
+    (zhihai xu via devaraj)
+
+    MAPREDUCE-6528. Memory leak for HistoryFileManager.getJobSummary()
+    (Junping Du via jlowe)
+
+    MAPREDUCE-6451. DistCp has incorrect chunkFilePath for multiple jobs when
+    strategy is dynamic (Kuhu Shukla via kihwal)
 
 Release 2.7.1 - 2015-07-06 
 
@@ -885,7 +897,7 @@ Release 2.7.0 - 2015-04-20
     MAPREDUCE-6285. ClientServiceDelegate should not retry upon
     AuthenticationException. (Jonathan Eagles via ozawa)
 
-Release 2.6.2 - UNRELEASED
+Release 2.6.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -896,6 +908,32 @@ Release 2.6.2 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    MAPREDUCE-6273. HistoryFileManager should check whether summaryFile exists to 
+    avoid FileNotFoundException causing HistoryFileInfo into MOVE_FAILED state.
+    (zhihai xu via devaraj)
+
+    MAPREDUCE-6528. Memory leak for HistoryFileManager.getJobSummary()
+    (Junping Du via jlowe)
+
+Release 2.6.2 - 2015-10-28
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-6454. Fixed MapReduce to modify HADOOP_CLASSPATH to have distributed
+    cache files so that child processes running hadoop scripts can access these
+    files. (Junping Du via vinodkv)
+
+    MAPREDUCE-6334. Fetcher#copyMapOutput is leaking usedMemory upon
+    IOException during InMemoryMapOutput shuffle handler (Eric Payne via jlowe)
 
     MAPREDUCE-6497. Fix wrong value of JOB_FINISHED event in
     JobHistoryEventHandler. (Shinichi Yamashita via aajisaka)

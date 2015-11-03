@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -524,6 +525,11 @@ public class TestRuntimeEstimators {
 
     @Override
     public void setQueueName(String queueName) {
+      // do nothing
+    }
+
+    @Override
+    public void setJobPriority(Priority priority) {
       // do nothing
     }
   }

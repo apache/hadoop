@@ -30,16 +30,49 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class ReplaceDatanodeOnFailure {
+  /**
+   * DEFAULT condition:
+   *   Let r be the replication number.
+   *   Let n be the number of existing datanodes.
+   *   Add a new datanode only if r >= 3 and either
+   *   (1) floor(r/2) >= n or (2) the block is hflushed/appended.
+   */
+  private static final Condition CONDITION_DEFAULT = new Condition() {
+    @Override
+    public boolean satisfy(final short replication,
+        final DatanodeInfo[] existings, final int n, final boolean isAppend,
+        final boolean isHflushed) {
+      return replication >= 3 &&
+          (n <= (replication / 2) || isAppend || isHflushed);
+    }
+  };
+  /** Return false unconditionally. */
+  private static final Condition CONDITION_FALSE = new Condition() {
+    @Override
+    public boolean satisfy(short replication, DatanodeInfo[] existings,
+        int nExistings, boolean isAppend, boolean isHflushed) {
+      return false;
+    }
+  };
+  /** Return true unconditionally. */
+  private static final Condition CONDITION_TRUE = new Condition() {
+    @Override
+    public boolean satisfy(short replication, DatanodeInfo[] existings,
+        int nExistings, boolean isAppend, boolean isHflushed) {
+      return true;
+    }
+  };
+
   /** The replacement policies */
   public enum Policy {
     /** The feature is disabled in the entire site. */
-    DISABLE(Condition.FALSE),
+    DISABLE(CONDITION_FALSE),
     /** Never add a new datanode. */
-    NEVER(Condition.FALSE),
-    /** @see ReplaceDatanodeOnFailure.Condition#DEFAULT */
-    DEFAULT(Condition.DEFAULT),
+    NEVER(CONDITION_FALSE),
+    /** @see ReplaceDatanodeOnFailure#CONDITION_DEFAULT */
+    DEFAULT(CONDITION_DEFAULT),
     /** Always add a new datanode when an existing datanode is removed. */
-    ALWAYS(Condition.TRUE);
+    ALWAYS(CONDITION_TRUE);
 
     private final Condition condition;
 
@@ -54,41 +87,6 @@ public class ReplaceDatanodeOnFailure {
 
   /** Datanode replacement condition */
   private interface Condition {
-    /** Return true unconditionally. */
-    Condition TRUE = new Condition() {
-      @Override
-      public boolean satisfy(short replication, DatanodeInfo[] existings,
-          int nExistings, boolean isAppend, boolean isHflushed) {
-        return true;
-      }
-    };
-
-    /** Return false unconditionally. */
-    Condition FALSE = new Condition() {
-      @Override
-      public boolean satisfy(short replication, DatanodeInfo[] existings,
-          int nExistings, boolean isAppend, boolean isHflushed) {
-        return false;
-      }
-    };
-
-    /**
-     * DEFAULT condition:
-     *   Let r be the replication number.
-     *   Let n be the number of existing datanodes.
-     *   Add a new datanode only if r >= 3 and either
-     *   (1) floor(r/2) >= n; or
-     *   (2) r > n and the block is hflushed/appended.
-     */
-    Condition DEFAULT = new Condition() {
-      @Override
-      public boolean satisfy(final short replication,
-          final DatanodeInfo[] existings, final int n, final boolean isAppend,
-          final boolean isHflushed) {
-        return replication >= 3 &&
-            (n <= (replication / 2) || isAppend || isHflushed);
-      }
-    };
 
     /** Is the condition satisfied? */
     boolean satisfy(short replication, DatanodeInfo[] existings, int nExistings,
