@@ -49,7 +49,7 @@ ReadBlockProto(const std::string &client_name, bool verify_checksum,
   return p;
 }
 
-void RemoteBlockReader::async_request_block(
+void BlockReaderImpl::AsyncRequestBlock(
     const std::string &client_name, 
     const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
     uint64_t offset, const std::function<void(Status)> &handler) {
@@ -98,13 +98,13 @@ void RemoteBlockReader::async_request_block(
   });
 }
 
-Status RemoteBlockReader::request_block(
+Status BlockReaderImpl::RequestBlock(
     const std::string &client_name, 
     const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
     uint64_t offset) {
   auto stat = std::make_shared<std::promise<Status>>();
   std::future<Status> future(stat->get_future());
-  async_request_block(client_name, block, length, offset,
+  AsyncRequestBlock(client_name, block, length, offset,
                 [stat](const Status &status) { stat->set_value(status); });
   return future.get();
 }
@@ -115,9 +115,9 @@ ReadBlockProto(const std::string &client_name, bool verify_checksum,
                const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
                uint64_t offset);
 
-struct RemoteBlockReader::ReadPacketHeader
+struct BlockReaderImpl::ReadPacketHeader
     : continuation::Continuation {
-  ReadPacketHeader(RemoteBlockReader *parent) : parent_(parent) {}
+  ReadPacketHeader(BlockReaderImpl *parent) : parent_(parent) {}
 
   virtual void Run(const Next &next) override {
     parent_->packet_data_read_bytes_ = 0;
@@ -151,7 +151,7 @@ private:
   static const size_t kHeaderLenSize = sizeof(short);
   static const size_t kHeaderStart = kPayloadLenSize + kHeaderLenSize;
 
-  RemoteBlockReader *parent_;
+  BlockReaderImpl *parent_;
   std::array<char, kMaxHeaderSize> buf_;
 
   size_t packet_length() const {
@@ -173,8 +173,8 @@ private:
   }
 };
 
-struct RemoteBlockReader::ReadChecksum : continuation::Continuation {
-  ReadChecksum(RemoteBlockReader *parent) : parent_(parent) {}
+struct BlockReaderImpl::ReadChecksum : continuation::Continuation {
+  ReadChecksum(BlockReaderImpl *parent) : parent_(parent) {}
 
   virtual void Run(const Next &next) override {
     auto parent = parent_;
@@ -200,11 +200,11 @@ struct RemoteBlockReader::ReadChecksum : continuation::Continuation {
   }
 
 private:
-  RemoteBlockReader *parent_;
+  BlockReaderImpl *parent_;
 };
 
-struct RemoteBlockReader::ReadData : continuation::Continuation {
-  ReadData(RemoteBlockReader *parent,
+struct BlockReaderImpl::ReadData : continuation::Continuation {
+  ReadData(BlockReaderImpl *parent,
            std::shared_ptr<size_t> bytes_transferred,
            const asio::mutable_buffers_1 &buf)
       : parent_(parent), bytes_transferred_(bytes_transferred), buf_(buf) {
@@ -238,13 +238,13 @@ struct RemoteBlockReader::ReadData : continuation::Continuation {
   }
 
 private:
-  RemoteBlockReader *parent_;
+  BlockReaderImpl *parent_;
   std::shared_ptr<size_t> bytes_transferred_;
   const asio::mutable_buffers_1 buf_;
 };
 
-struct RemoteBlockReader::ReadPadding : continuation::Continuation {
-  ReadPadding(RemoteBlockReader *parent)
+struct BlockReaderImpl::ReadPadding : continuation::Continuation {
+  ReadPadding(BlockReaderImpl *parent)
       : parent_(parent), padding_(parent->chunk_padding_bytes_),
         bytes_transferred_(std::make_shared<size_t>(0)),
         read_data_(new ReadData(
@@ -269,7 +269,7 @@ struct RemoteBlockReader::ReadPadding : continuation::Continuation {
   }
 
 private:
-  RemoteBlockReader *parent_;
+  BlockReaderImpl *parent_;
   std::vector<char> padding_;
   std::shared_ptr<size_t> bytes_transferred_;
   std::shared_ptr<continuation::Continuation> read_data_;
@@ -278,8 +278,8 @@ private:
 };
 
 
-struct RemoteBlockReader::AckRead : continuation::Continuation {
-  AckRead(RemoteBlockReader *parent) : parent_(parent) {}
+struct BlockReaderImpl::AckRead : continuation::Continuation {
+  AckRead(BlockReaderImpl *parent) : parent_(parent) {}
 
   virtual void Run(const Next &next) override {
     if (parent_->bytes_to_read_ > 0) {
@@ -299,17 +299,17 @@ struct RemoteBlockReader::AckRead : continuation::Continuation {
     m->Run([this, next](const Status &status,
                         const hadoop::hdfs::ClientReadStatusProto &) {
       if (status.ok()) {
-        parent_->state_ = RemoteBlockReader::kFinished;
+        parent_->state_ = BlockReaderImpl::kFinished;
       }
       next(status);
     });
   }
 
 private:
-  RemoteBlockReader *parent_;
+  BlockReaderImpl *parent_;
 };
 
-void RemoteBlockReader::async_read_packet(
+void BlockReaderImpl::AsyncReadPacket(
     const MutableBuffers &buffers, 
     const std::function<void(const Status &, size_t bytes_transferred)> &handler) {
   assert(state_ != kOpen && "Not connected");
@@ -335,12 +335,12 @@ void RemoteBlockReader::async_read_packet(
 
 
 size_t
-RemoteBlockReader::read_packet(const MutableBuffers &buffers,
+BlockReaderImpl::ReadPacket(const MutableBuffers &buffers,
                                      Status *status) {
   size_t transferred = 0;
   auto done = std::make_shared<std::promise<void>>();
   auto future = done->get_future();
-  async_read_packet(buffers,
+  AsyncReadPacket(buffers,
                   [status, &transferred, done](const Status &stat, size_t t) {
                     *status = stat;
                     transferred = t;
@@ -351,7 +351,7 @@ RemoteBlockReader::read_packet(const MutableBuffers &buffers,
 }
 
 
-struct RemoteBlockReader::RequestBlockContinuation : continuation::Continuation {
+struct BlockReaderImpl::RequestBlockContinuation : continuation::Continuation {
   RequestBlockContinuation(BlockReader *reader, const std::string &client_name,
                         const hadoop::hdfs::ExtendedBlockProto *block,
                         uint64_t length, uint64_t offset)
@@ -361,7 +361,7 @@ struct RemoteBlockReader::RequestBlockContinuation : continuation::Continuation 
   }
 
   virtual void Run(const Next &next) override {
-    reader_->async_request_block(client_name_, &block_, length_,
+    reader_->AsyncRequestBlock(client_name_, &block_, length_,
                            offset_, next);
   }
 
@@ -373,7 +373,7 @@ private:
   uint64_t offset_;
 };
 
-struct RemoteBlockReader::ReadBlockContinuation : continuation::Continuation {
+struct BlockReaderImpl::ReadBlockContinuation : continuation::Continuation {
   ReadBlockContinuation(BlockReader *reader, MutableBuffers buffer,
                         size_t *transferred)
       : reader_(reader), buffer_(buffer),
@@ -402,15 +402,14 @@ private:
     } else if (*transferred_ >= buffer_size_) {
       next_(status);
     } else {
-      reader_->async_read_packet(
+      reader_->AsyncReadPacket(
           asio::buffer(buffer_ + *transferred_, buffer_size_ - *transferred_),
           std::bind(&ReadBlockContinuation::OnReadData, this, _1, _2));
     }
   }
 };
 
-void RemoteBlockReader::AsyncReadBlock(
-    BlockReader * reader,
+void BlockReaderImpl::AsyncReadBlock(
     const std::string & client_name,
     const hadoop::hdfs::LocatedBlockProto &block,
     size_t offset,
@@ -422,9 +421,9 @@ void RemoteBlockReader::AsyncReadBlock(
 
   size_t size = asio::buffer_size(buffers);
 
-  m->Push(new RequestBlockContinuation(reader, client_name, 
+  m->Push(new RequestBlockContinuation(this, client_name, 
                                             &block.b(), size, offset))
-    .Push(new ReadBlockContinuation(reader, buffers, bytesTransferred));
+    .Push(new ReadBlockContinuation(this, buffers, bytesTransferred));
   
   m->Run([handler] (const Status &status,
                          const size_t totalBytesTransferred) {

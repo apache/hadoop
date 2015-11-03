@@ -40,18 +40,17 @@ namespace hdfs {
 class MockReader : public BlockReader {
 public:
   MOCK_METHOD2(
-      async_read_packet,
+      AsyncReadPacket,
       void(const asio::mutable_buffers_1 &,
            const std::function<void(const Status &, size_t transferred)> &));
 
-  MOCK_METHOD5(async_request_block,
+  MOCK_METHOD5(AsyncRequestBlock,
                void(const std::string &client_name,
                      const hadoop::hdfs::ExtendedBlockProto *block,
                      uint64_t length, uint64_t offset,
                      const std::function<void(Status)> &handler));
   
-  MOCK_METHOD6(AsyncReadBlock, void(
-    BlockReader * reader,
+  MOCK_METHOD5(AsyncReadBlock, void(
     const std::string & client_name,
     const hadoop::hdfs::LocatedBlockProto &block, size_t offset,
     const MutableBuffers &buffers,

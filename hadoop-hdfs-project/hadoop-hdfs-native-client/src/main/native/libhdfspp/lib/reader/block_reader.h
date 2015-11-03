@@ -59,49 +59,56 @@ struct BlockReaderOptions {
 
 class BlockReader {
 public:
-  virtual void async_read_packet(const MutableBuffers &buffers,
-                       const std::function<void(const Status &, size_t bytes_transferred)> &handler) = 0;
+  virtual void AsyncReadPacket(
+    const MutableBuffers &buffers,
+    const std::function<void(const Status &, size_t bytes_transferred)> &handler) = 0;
   
-  virtual void async_request_block(const std::string &client_name,
-                     const hadoop::hdfs::ExtendedBlockProto *block,
-                     uint64_t length, uint64_t offset,
-                     const std::function<void(Status)> &handler) = 0;
+  virtual void AsyncRequestBlock(
+    const std::string &client_name,
+    const hadoop::hdfs::ExtendedBlockProto *block,
+    uint64_t length, 
+    uint64_t offset,
+    const std::function<void(Status)> &handler) = 0;
 
   virtual void AsyncReadBlock(
-    BlockReader * reader,
     const std::string & client_name,
     const hadoop::hdfs::LocatedBlockProto &block, size_t offset,
     const MutableBuffers &buffers,
     const std::function<void(const Status &, size_t)> handler) = 0;
 };
 
-class RemoteBlockReader
-    : public BlockReader, public std::enable_shared_from_this<RemoteBlockReader> {
+class BlockReaderImpl
+    : public BlockReader, public std::enable_shared_from_this<BlockReaderImpl> {
 public:
-  explicit RemoteBlockReader(const BlockReaderOptions &options, std::shared_ptr<DataNodeConnection> dn)
+  explicit BlockReaderImpl(const BlockReaderOptions &options, std::shared_ptr<DataNodeConnection> dn)
       : dn_(dn), state_(kOpen), options_(options),
         chunk_padding_bytes_(0) {}
 
-  void async_read_packet(const MutableBuffers &buffers,
-                       const std::function<void(const Status &, size_t bytes_transferred)> &handler) override;
+  virtual void AsyncReadPacket(
+    const MutableBuffers &buffers,
+    const std::function<void(const Status &, size_t bytes_transferred)> &handler) override;
+  
+  virtual void AsyncRequestBlock(
+    const std::string &client_name,
+    const hadoop::hdfs::ExtendedBlockProto *block,
+    uint64_t length, 
+    uint64_t offset,
+    const std::function<void(Status)> &handler) override;
 
-  size_t read_packet(const MutableBuffers &buffers, Status *status);
-
-  Status request_block(const std::string &client_name,
-                 const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
-                 uint64_t offset);
-
-  void async_request_block(const std::string &client_name,
-                     const hadoop::hdfs::ExtendedBlockProto *block,
-                     uint64_t length, uint64_t offset,
-                     const std::function<void(Status)> &handler) override;
-
-  void AsyncReadBlock(
-    BlockReader * reader,
+  virtual void AsyncReadBlock(
     const std::string & client_name,
     const hadoop::hdfs::LocatedBlockProto &block, size_t offset,
     const MutableBuffers &buffers,
-    const std::function<void(const Status &, size_t)> handler);
+    const std::function<void(const Status &, size_t)> handler) override;
+
+  size_t ReadPacket(const MutableBuffers &buffers, Status *status);
+
+  Status RequestBlock(
+    const std::string &client_name,
+    const hadoop::hdfs::ExtendedBlockProto *block, 
+    uint64_t length,
+    uint64_t offset);
+
 private:
   struct RequestBlockContinuation;
   struct ReadBlockContinuation;

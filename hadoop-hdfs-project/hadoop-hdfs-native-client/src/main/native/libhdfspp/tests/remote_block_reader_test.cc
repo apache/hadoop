@@ -84,19 +84,19 @@ public:
   }
 };
 
-// Mocks async_read_packet and async_request_block but not AsyncReadBlock, so we
+// Mocks AsyncReadPacket and AsyncRequestBlock but not AsyncReadBlock, so we
 //     can test the logic of AsyncReadBlock
-class PartialMockReader : public RemoteBlockReader {
+class PartialMockReader : public BlockReaderImpl {
 public:
   PartialMockReader() :
-    RemoteBlockReader(BlockReaderOptions(), std::shared_ptr<DataNodeConnection>()) {};
+    BlockReaderImpl(BlockReaderOptions(), std::shared_ptr<DataNodeConnection>()) {};
   
   MOCK_METHOD2(
-      async_read_packet,
+      AsyncReadPacket,
       void(const asio::mutable_buffers_1 &,
            const std::function<void(const Status &, size_t transferred)> &));
 
-  MOCK_METHOD5(async_request_block,
+  MOCK_METHOD5(AsyncRequestBlock,
                void(const std::string &client_name,
                      const hadoop::hdfs::ExtendedBlockProto *block,
                      uint64_t length, uint64_t offset,
@@ -153,13 +153,13 @@ TEST(RemoteBlockReaderTest, TestReadSingleTrunk) {
   Status stat;
   size_t read = 0;
   PartialMockReader reader;
-  EXPECT_CALL(reader, async_request_block(_, _, _, _, _))
+  EXPECT_CALL(reader, AsyncRequestBlock(_, _, _, _, _))
       .WillOnce(InvokeArgument<4>(Status::OK()));
-  EXPECT_CALL(reader, async_read_packet(_, _))
+  EXPECT_CALL(reader, AsyncReadPacket(_, _))
       .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf)));
 
   reader.AsyncReadBlock(
-       &reader, GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
+       GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
       [&stat, &read](const Status &status, size_t transferred) {
         stat = status;
         read = transferred;
@@ -178,15 +178,15 @@ TEST(RemoteBlockReaderTest, TestReadMultipleTrunk) {
   size_t read = 0;
   
   PartialMockReader reader;
-  EXPECT_CALL(reader, async_request_block(_, _, _, _, _))
+  EXPECT_CALL(reader, AsyncRequestBlock(_, _, _, _, _))
       .WillOnce(InvokeArgument<4>(Status::OK()));
 
-  EXPECT_CALL(reader, async_read_packet(_, _))
+  EXPECT_CALL(reader, AsyncReadPacket(_, _))
       .Times(4)
       .WillRepeatedly(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4));
 
   reader.AsyncReadBlock(
-       &reader, GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
+       GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
       [&stat, &read](const Status &status, size_t transferred) {
         stat = status;
         read = transferred;
@@ -204,17 +204,17 @@ TEST(RemoteBlockReaderTest, TestReadError) {
   Status stat;
   size_t read = 0;
   PartialMockReader reader;
-  EXPECT_CALL(reader, async_request_block(_, _, _, _, _))
+  EXPECT_CALL(reader, AsyncRequestBlock(_, _, _, _, _))
       .WillOnce(InvokeArgument<4>(Status::OK()));
 
-  EXPECT_CALL(reader, async_read_packet(_, _))
+  EXPECT_CALL(reader, AsyncReadPacket(_, _))
       .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
       .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
       .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
       .WillOnce(InvokeArgument<1>(Status::Error("error"), 0));
 
   reader.AsyncReadBlock(
-       &reader, GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
+       GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
       [&stat, &read](const Status &status, size_t transferred) {
         stat = status;
         read = transferred;
@@ -225,19 +225,19 @@ TEST(RemoteBlockReaderTest, TestReadError) {
 }
 
 template <class Stream = MockDNConnection, class Handler>
-static std::shared_ptr<RemoteBlockReader>
+static std::shared_ptr<BlockReaderImpl>
 ReadContent(std::shared_ptr<Stream> conn, const ExtendedBlockProto &block,
             uint64_t length, uint64_t offset, const mutable_buffers_1 &buf,
             const Handler &handler) {
   BlockReaderOptions options;
-  auto reader = std::make_shared<RemoteBlockReader>(options, conn);
+  auto reader = std::make_shared<BlockReaderImpl>(options, conn);
   Status result;
-  reader->async_request_block("libhdfs++", &block, length, offset,
+  reader->AsyncRequestBlock("libhdfs++", &block, length, offset,
                         [buf, reader, handler](const Status &stat) {
                           if (!stat.ok()) {
                             handler(stat, 0);
                           } else {
-                            reader->async_read_packet(buf, handler);
+                            reader->AsyncReadPacket(buf, handler);
                           }
                         });
   return reader;
@@ -339,13 +339,13 @@ TEST(RemoteBlockReaderTest, TestReadMultiplePacket) {
   string data(kChunkSize, 0);
   mutable_buffers_1 buf = buffer(const_cast<char *>(data.c_str()), data.size());
   BlockReaderOptions options;
-  auto reader = std::make_shared<RemoteBlockReader>(options, conn);
+  auto reader = std::make_shared<BlockReaderImpl>(options, conn);
   Status result;
-  reader->async_request_block(
+  reader->AsyncRequestBlock(
       "libhdfs++", &block, data.size(), 0,
       [buf, reader, &data, &io_service](const Status &stat) {
         ASSERT_TRUE(stat.ok());
-        reader->async_read_packet(
+        reader->AsyncReadPacket(
             buf, [buf, reader, &data, &io_service](const Status &stat, size_t transferred) {
               ASSERT_TRUE(stat.ok());
               ASSERT_EQ(kChunkSize, transferred);
@@ -353,7 +353,7 @@ TEST(RemoteBlockReaderTest, TestReadMultiplePacket) {
               data.clear();
               data.resize(kChunkSize);
               transferred = 0;
-              reader->async_read_packet(
+              reader->AsyncReadPacket(
                   buf, [&data,&io_service](const Status &stat, size_t transferred) {
                     ASSERT_TRUE(stat.ok());
                     ASSERT_EQ(kChunkSize, transferred);

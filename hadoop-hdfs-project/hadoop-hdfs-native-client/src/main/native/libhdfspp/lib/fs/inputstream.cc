@@ -80,7 +80,7 @@ void InputStreamImpl::AsyncPreadSome(
   std::string dn_id = dn_->uuid_;
 
   std::shared_ptr<BlockReader> reader;
-  reader.reset(new RemoteBlockReader(BlockReaderOptions(), dn_));
+  reader.reset(new BlockReaderImpl(BlockReaderOptions(), dn_));
   
   auto read_handler = [dn_id, handler](const Status & status, size_t transferred) {
     handler(status, dn_id, transferred);
@@ -91,7 +91,7 @@ void InputStreamImpl::AsyncPreadSome(
     (void)dn;
     if (status.ok()) {
       reader->AsyncReadBlock(
-          reader.get(), client_name_, targetBlock, offset_within_block,
+          client_name_, targetBlock, offset_within_block,
           asio::buffer(buffers, size_within_block), read_handler);
     } else {
       handler(status, "", 0);
