@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.io.FileExistsException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -291,5 +292,29 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
     Preconditions.checkArgument(replica instanceof ReplicaInfo);
     ReplicaInfo r = (ReplicaInfo) replica;
     FsDatasetImpl.checkReplicaFiles(r);
+  }
+
+  @Override
+  public void injectCorruptReplica(ExtendedBlock block) throws IOException {
+    Preconditions.checkState(!dataset.contains(block),
+        "Block " + block + " already exists on dataset.");
+    try (FsVolumeReferences volRef = dataset.getFsVolumeReferences()) {
+      FsVolumeImpl volume = (FsVolumeImpl) volRef.get(0);
+      FinalizedReplica finalized = new FinalizedReplica(
+          block.getLocalBlock(),
+          volume,
+          volume.getFinalizedDir(block.getBlockPoolId()));
+      File blockFile = finalized.getBlockFile();
+      if (!blockFile.createNewFile()) {
+        throw new FileExistsException(
+            "Block file " + blockFile + " already exists.");
+      }
+      File metaFile = FsDatasetUtil.getMetaFile(blockFile, 1000);
+      if (!metaFile.createNewFile()) {
+        throw new FileExistsException(
+            "Meta file " + metaFile + " already exists."
+        );
+      }
+    }
   }
 }
