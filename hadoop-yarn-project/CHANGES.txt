@@ -1039,6 +1039,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4127. RM fail with noAuth error if switched from failover to non-failover.
     (Varun Saxena via jianhe)
 
+    YARN-4326. Fix TestDistributedShell timeout as AHS in MiniYarnCluster no longer 
+    binds to default port 8188. (Meng Ding via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
