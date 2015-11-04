@@ -206,4 +206,11 @@ public interface FsDatasetTestUtils {
    * @throws IOException on I/O error.
    */
   void injectCorruptReplica(ExtendedBlock block) throws IOException;
+
+  /**
+   * Get the replica of a block. Returns null if it does not exist.
+   * @param block the block whose replica will be returned.
+   * @return Replica for the block.
+   */
+  Replica fetchReplica(ExtendedBlock block);
 }

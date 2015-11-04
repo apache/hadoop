@@ -33,7 +33,6 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.Replica;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
@@ -102,10 +101,9 @@ public class TestPipelines {
     List<LocatedBlock> lb = cluster.getNameNodeRpc().getBlockLocations(
       filePath.toString(), FILE_SIZE - 1, FILE_SIZE).getLocatedBlocks();
 
-    String bpid = cluster.getNamesystem().getBlockPoolId();
     for (DataNode dn : cluster.getDataNodes()) {
-      Replica r = DataNodeTestUtils.fetchReplicaInfo(dn, bpid, lb.get(0)
-          .getBlock().getBlockId());
+      Replica r =
+          cluster.getFsDatasetTestUtils(dn).fetchReplica(lb.get(0).getBlock());
 
       assertTrue("Replica on DN " + dn + " shouldn't be null", r != null);
       assertEquals("Should be RBW replica on " + dn
