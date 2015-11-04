@@ -390,7 +390,7 @@ public final class FSImageFormatProtobuf {
       for (int i = 0; i < numKeys; ++i) {
         DataInputStream dis1 = new DataInputStream(in);
         int size1 = dis1.readInt();
-        byte[] bytes1 = new byte[size];
+        byte[] bytes1 = new byte[size1];
         dis.read(bytes1);
         ByteBuffer byteBuffer1 = ByteBuffer.wrap(bytes1);
         IntelDelegationKey intelDelegationKey = IntelDelegationKey.getRootAsIntelDelegationKey(byteBuffer1);
@@ -596,9 +596,9 @@ public final class FSImageFormatProtobuf {
         throws IOException {
       FSImageFormatPBSnapshot.Saver snapshotSaver = new FSImageFormatPBSnapshot.Saver(
           this, null, fbb,context, context.getSourceNamesystem());
-      list.add(snapshotSaver.serializeIntelSnapshotSection(sectionOutputStream));
-      list.add(snapshotSaver.serializeIntelSnapshotDiffSection(sectionOutputStream));
-      list.add(snapshotSaver.serializeIntelINodeReferenceSection(sectionOutputStream));
+      list.add(snapshotSaver.serializeIntelSnapshotSection(sectionOutputStream, fbb));
+      list.add(snapshotSaver.serializeIntelSnapshotDiffSection(sectionOutputStream, fbb));
+      list.add(snapshotSaver.serializeIntelINodeReferenceSection(sectionOutputStream, fbb));
     }
 
     // abandon method.
@@ -649,8 +649,8 @@ public final class FSImageFormatProtobuf {
       context.checkCancelled();
       Step step = new Step(StepType.INODES, filePath);
       prog.beginStep(Phase.SAVING_CHECKPOINT, step);
-      saveIntelInodes(fbb, listSection); // finished.
-      saveIntelSnapshots(fbb, listSection); // finished.
+      saveIntelInodes(fbb, listSection); // success
+      saveIntelSnapshots(fbb, listSection); // success
       prog.endStep(Phase.SAVING_CHECKPOINT, step);
       step = new Step(StepType.DELEGATION_TOKENS, filePath);
       prog.beginStep(Phase.SAVING_CHECKPOINT, step);
@@ -684,10 +684,8 @@ public final class FSImageFormatProtobuf {
       int end = IntelFileSummary.createIntelFileSummary
                     (fbb, disk_version, layout_version, code, sections);
       IntelFileSummary.finishIntelFileSummaryBuffer(fbb, end);
-      byteBuffer = fbb.dataBuffer();
-      int serializedLength = byteBuffer.capacity() - byteBuffer.position();
       byte[] bytes = fbb.sizedByteArray();
-      saveIntelFileSummary(underlyingOutputStream, serializedLength, bytes);
+      saveIntelFileSummary(underlyingOutputStream, bytes.length, bytes);
       underlyingOutputStream.close();
       savedDigest = new MD5Hash(digester.digest());
     }

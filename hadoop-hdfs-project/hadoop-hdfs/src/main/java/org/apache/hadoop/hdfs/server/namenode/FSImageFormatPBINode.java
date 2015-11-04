@@ -829,14 +829,6 @@ public final class FSImageFormatPBINode {
                                           INodeFileAttributes file, final SaverContext state) {
       int acl = 0;
       int xAttrs = 0;
-      INodeSection.INodeFile.Builder b = INodeSection.INodeFile.newBuilder()
-          .setAccessTime(file.getAccessTime())
-          .setModificationTime(file.getModificationTime())
-          .setPermission(buildPermissionStatus(file, state.getStringMap()))
-          .setPreferredBlockSize(file.getPreferredBlockSize())
-          .setReplication(file.getFileReplication())
-          .setStoragePolicyID(file.getLocalStoragePolicyID());
-
       AclFeature f = file.getAclFeature();
       if (f != null) {
        acl = buildIntelAclEntries(f, state.getStringMap());
@@ -848,7 +840,7 @@ public final class FSImageFormatPBINode {
       return IntelINodeFile.createIntelINodeFile(fbb, file.getFileReplication(),
           file.getModificationTime(), file.getAccessTime(),
           file.getPreferredBlockSize(), buildPermissionStatus(file, state.getStringMap()),
-          0, 0, acl, xAttrs, 0);
+          0, 0, acl, xAttrs, file.getLocalStoragePolicyID());
     }
 
     public static INodeSection.INodeFile.Builder buildINodeFile(
@@ -953,18 +945,10 @@ public final class FSImageFormatPBINode {
         if (!n.isDirectory()) {
           continue;
         }
-
         ReadOnlyList<INode> children = n.asDirectory().getChildrenList(
             Snapshot.CURRENT_STATE_ID);
         if (children.size() > 0) {
-
           FlatBufferBuilder fbb1 = new FlatBufferBuilder();
-//          ByteBuffer byteBuffer = null;
-          IntelDirEntry.startIntelDirEntry(fbb1);
-          IntelDirEntry.addParent(fbb1, n.getId());
-
-//          INodeDirectorySection.DirEntry.Builder b = INodeDirectorySection.
-//              DirEntry.newBuilder().setParent(n.getId());
           ArrayList<Long> list = null;
           for (INode inode : children) {
             if (!inode.isReference()) {
@@ -972,11 +956,6 @@ public final class FSImageFormatPBINode {
               list.add(inode.getId());
             }
           }
-          Long[] data = list.toArray(new Long[list.size()]); // attention this method
-//          Long[] data = null;
-//          for (int j = 0; j < list.size();j++) {
-//            data[j] = list.get(j);
-//          }
           ArrayList<Integer> list1 = new ArrayList<>();
           for (INode inode : children) {
             if (inode.isReference()) {
@@ -985,30 +964,27 @@ public final class FSImageFormatPBINode {
               list1.add(size);
             }
           }
-
-          Integer[] refdata = list1.toArray(new Integer[list1.size()]);
-
-            for (INode inode : children) {
+          int childrenOffset = 0;
+          int refChildrenOffset = 0;
+          for (INode inode : children) {
             if (!inode.isReference()) {
-              int childrenOffset ;
-              childrenOffset = IntelDirEntry.createChildrenVector(fbb1, ArrayUtils.toPrimitive(data));
-              IntelDirEntry.addChildren(fbb1, childrenOffset);
-//              b.addChildren(inode.getId());
+              childrenOffset = IntelDirEntry.
+                  createChildrenVector(fbb1, ArrayUtils.toPrimitive(list.toArray(new Long[list.size()])));
             } else {
               refList.add(inode.asReference());
-              int refChildrenOffset;
-              refChildrenOffset = IntelDirEntry.createRefChildrenVector(fbb1, ArrayUtils.toPrimitive(refdata));
-              IntelDirEntry.addRefChildren(fbb1, refChildrenOffset);
-
-//              b.addRefChildren(refList.size() - 1);
+              refChildrenOffset = IntelDirEntry.
+                  createRefChildrenVector(fbb1, ArrayUtils.toPrimitive(list1.toArray(new Integer[list1.size()])));
             }
           }
+          IntelDirEntry.startIntelDirEntry(fbb1);
+          IntelDirEntry.addParent(fbb1, n.getId());
+          IntelDirEntry.addChildren(fbb1, childrenOffset);
+          IntelDirEntry.addRefChildren(fbb1, refChildrenOffset);
+          int end = IntelDirEntry.endIntelDirEntry(fbb1);
+          IntelDirEntry.finishIntelDirEntryBuffer(fbb1, end);
           byte[] bytes = fbb1.sizedByteArray();
           writeTo(bytes, bytes.length, out);
-//          INodeDirectorySection.DirEntry e = b.build();
-//          e.writeDelimitedTo(out);
         }
-
         ++i;
         if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
           context.checkCancelled();
@@ -1077,7 +1053,7 @@ public final class FSImageFormatPBINode {
       Iterator<INodeWithAdditionalFields> iter = inodesMap.getMapIterator();
       while (iter.hasNext()) {
         INodeWithAdditionalFields n = iter.next();
-        save(out, n);
+        save(out, n); // finish
         ++i;
         if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
           context.checkCancelled();
@@ -1163,12 +1139,26 @@ public final class FSImageFormatPBINode {
 
     private void save(OutputStream out, INode n) throws IOException {
       if (n.isDirectory()) {
-        save(out, n.asDirectory());
+        saveIntel(out, n.asDirectory()); // success
       } else if (n.isFile()) {
-        save(out, n.asFile());
+        saveIntel(out, n.asFile());  // success
       } else if (n.isSymlink()) {
-        save(out, n.asSymlink());
+        saveIntel(out, n.asSymlink()); // success
       }
+    }
+
+    private void saveIntel(OutputStream out, INodeDirectory n) throws IOException {
+      int ib = buildIntelINodeDirectory(n, parent.getSaverContext());
+      FlatBufferBuilder fbb = new FlatBufferBuilder();
+      IntelINode.startIntelINode(fbb);
+      IntelINode.addId(fbb, n.getId());
+      IntelINode.addName(fbb, fbb.createString(n.getLocalNameBytes().toString()));
+      IntelINode.addType(fbb, IntelTypee.DIRECTORY);
+      IntelINode.addDirectory(fbb, ib);
+      int inv = IntelINode.endIntelINode(fbb);
+      IntelINode.finishIntelINodeBuffer(fbb, inv);
+      byte[] bytes = fbb.sizedByteArray();
+      writeTo(bytes, bytes.length, out);
     }
 
     private void save(OutputStream out, INodeDirectory n) throws IOException {
@@ -1177,6 +1167,54 @@ public final class FSImageFormatPBINode {
       INodeSection.INode r = buildINodeCommon(n)
           .setType(INodeSection.INode.Type.DIRECTORY).setDirectory(b).build();
       r.writeDelimitedTo(out);
+    }
+
+    // should have a try
+    private void saveIntel(OutputStream out, INodeFile n) throws IOException {
+
+      FlatBufferBuilder fbb = new FlatBufferBuilder();
+      final SaverContext state = parent.getSaverContext();
+
+      int acl = 0;
+      int xAttrs = 0;
+      AclFeature f = n.getAclFeature();
+      if (f != null) {
+        acl = buildIntelAclEntries(f, state.getStringMap());
+      }
+      XAttrFeature xAttrFeature = n.getXAttrFeature();
+      if (xAttrFeature != null) {
+        xAttrs = buildIntelXAttrs(xAttrFeature, state.getStringMap());
+      }
+      int blocks = 0;
+      int fileUC = 0;
+      ArrayList<Integer> list = new ArrayList<>();
+
+      if (n.getBlocks() != null) {
+        for (Block block : n.getBlocks()) {
+          list.add(PBHelper.convertIntel(block, fbb));
+        }
+      }
+
+      FileUnderConstructionFeature uc = n.getFileUnderConstructionFeature();
+      if (uc != null) {
+        fileUC = IntelFileUnderConstructionFeature.
+            createIntelFileUnderConstructionFeature(fbb,
+                fbb.createString(uc.getClientName()), fbb.createString(uc.getClientMachine()));
+      }
+
+      blocks = IntelINodeFile.createBlocksVector(fbb, ArrayUtils.toPrimitive(list.toArray(new Integer[list.size()])));
+
+      int ib = IntelINodeFile.createIntelINodeFile(fbb, n.getFileReplication(),
+          n.getModificationTime(), n.getAccessTime(),
+          n.getPreferredBlockSize(), buildPermissionStatus(n, state.getStringMap()),
+          blocks, fileUC, acl, xAttrs, n.getLocalStoragePolicyID());
+
+
+      int end = IntelINode.createIntelINode(fbb, IntelTypee.FILE, n.getId(),
+          fbb.createString(n.getLocalNameBytes().toString()), ib, 0 ,0);
+      IntelINode.finishIntelINodeBuffer(fbb, end);
+      byte[] bytes = fbb.sizedByteArray();
+      writeTo(bytes, bytes.length, out);
     }
 
     private void save(OutputStream out, INodeFile n) throws IOException {
@@ -1201,6 +1239,32 @@ public final class FSImageFormatPBINode {
       INodeSection.INode r = buildINodeCommon(n)
           .setType(INodeSection.INode.Type.FILE).setFile(b).build();
       r.writeDelimitedTo(out);
+    }
+
+    private void saveIntel(OutputStream out, INodeSymlink n) throws IOException {
+      SaverContext state = parent.getSaverContext();
+
+      FlatBufferBuilder fbb = new FlatBufferBuilder();
+      int ib = IntelINodeSymlink.createIntelINodeSymlink(fbb, buildPermissionStatus(n, state.getStringMap()),
+              fbb.createString(n.getSymlink().toString()), n.getModificationTime(), n.getAccessTime());
+
+//      INodeSection.INodeSymlink.Builder b = INodeSection.INodeSymlink
+//          .newBuilder()
+//          .setPermission(buildPermissionStatus(n, state.getStringMap()))
+//          .setTarget(ByteString.copyFrom(n.getSymlink()))
+//          .setModificationTime(n.getModificationTime())
+//          .setAccessTime(n.getAccessTime());
+
+
+      int env = IntelINode.createIntelINode(fbb, IntelTypee.SYMLINK, n.getId(), fbb.createString(n.getLocalNameBytes().toString()),
+          0, 0, ib);
+      IntelINode.finishIntelINodeBuffer(fbb, env);
+//
+//      INodeSection.INode r = buildINodeCommon(n)
+//          .setType(INodeSection.INode.Type.SYMLINK).setSymlink(b).build();
+//      r.writeDelimitedTo(out);
+      byte[] bytes = fbb.sizedByteArray();
+      writeTo(bytes, bytes.length, out);
     }
 
     private void save(OutputStream out, INodeSymlink n) throws IOException {

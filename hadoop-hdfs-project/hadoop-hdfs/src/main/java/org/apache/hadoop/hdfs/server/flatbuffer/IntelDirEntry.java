@@ -42,5 +42,7 @@ public final class IntelDirEntry extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelDirEntryBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+
 };
 

@@ -690,7 +690,7 @@ public class FSImageFormatPBSnapshot {
     /**
      * save all the snapshottable directories and snapshots to fsimage
      */
-    public int serializeIntelSnapshotSection(OutputStream out) throws IOException {
+    public int serializeIntelSnapshotSection(OutputStream out, FlatBufferBuilder fbb2) throws IOException {
       SnapshotManager sm = fsn.getSnapshotManager();
       FlatBufferBuilder fbb = new FlatBufferBuilder();
 
@@ -724,6 +724,7 @@ public class FSImageFormatPBSnapshot {
           int r = IntelINode.createIntelINode(fbb1, IntelTypee.DIRECTORY, sroot.getId(),
               fbb1.createString(sroot.getLocalName()), 0, intelINodeDirectory, 0);
           int offset = 0;
+
           IntelSnapshot.startIntelSnapshot(fbb1);
           IntelSnapshot.addSnapshotId(fbb1, s.getId());
           IntelSnapshot.addRoot(fbb1, r);
@@ -738,7 +739,7 @@ public class FSImageFormatPBSnapshot {
         }
       }
       Preconditions.checkState(i == sm.getNumSnapshots());
-     return parent.commitIntelSection(FSImageFormatProtobuf.SectionName.SNAPSHOT, fbb);
+     return parent.commitIntelSection(FSImageFormatProtobuf.SectionName.SNAPSHOT, fbb2);
     }
 
     /**
@@ -786,7 +787,7 @@ public class FSImageFormatPBSnapshot {
     /**
      * This can only be called after serializing both INode_Dir and SnapshotDiff
      */
-    public int serializeIntelINodeReferenceSection(OutputStream out)
+    public int serializeIntelINodeReferenceSection(OutputStream out, FlatBufferBuilder fbb1)
         throws IOException {
       FlatBufferBuilder fbb = new FlatBufferBuilder();
       int name = 0;
@@ -806,7 +807,7 @@ public class FSImageFormatPBSnapshot {
         byte[] bytes = fbb.sizedByteArray();
         writeTo(bytes, bytes.length, out);
       }
-     return parent.commitIntelSection(SectionName.INODE_REFERENCE, fbb);
+     return parent.commitIntelSection(SectionName.INODE_REFERENCE, fbb1);
     }
 
 
@@ -838,7 +839,7 @@ public class FSImageFormatPBSnapshot {
       return rb;
     }
 
-    public int serializeIntelSnapshotDiffSection(OutputStream out)
+    public int serializeIntelSnapshotDiffSection(OutputStream out, FlatBufferBuilder fbb)
         throws IOException {
       INodeMap inodesMap = fsn.getFSDirectory().getINodeMap();
       final List<INodeReference> refList = parent.getSaverContext()
