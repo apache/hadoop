@@ -26,16 +26,18 @@
 
 namespace hdfs {
 
-class DataNodeConnection : public AsyncStream {
+class DataNodeConnection : public AsyncStream, public Cancelable {
 public:
     std::string uuid_;
     std::unique_ptr<hadoop::common::TokenProto> token_;
 
     virtual void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) = 0;
+    
+    virtual void cancel() = 0;
 };
 
 
-class DataNodeConnectionImpl : public DataNodeConnection, public std::enable_shared_from_this<DataNodeConnectionImpl> {
+class DataNodeConnectionImpl : public DataNodeConnection, public std::enable_shared_from_this<DataNodeConnectionImpl>{
 public:
   std::unique_ptr<asio::ip::tcp::socket> conn_;
   std::array<asio::ip::tcp::endpoint, 1> endpoints_;
@@ -60,16 +62,25 @@ public:
 
   void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) override;
 
-  virtual void async_read_some(const MutableBuffers &buf,
+  void async_read_some(const MutableBuffers &buf,
         std::function<void (const asio::error_code & error,
-                               std::size_t bytes_transferred) > handler) {
+                               std::size_t bytes_transferred) > handler) override {
     conn_->async_read_some(buf, handler);
   };
 
-  virtual void async_write_some(const ConstBuffers &buf,
+  void async_write_some(const ConstBuffers &buf,
             std::function<void (const asio::error_code & error,
-                                 std::size_t bytes_transferred) > handler) {
+                                 std::size_t bytes_transferred) > handler) override {
     conn_->async_write_some(buf, handler);
+  }
+  
+  void cancel() override {
+    // Can't portably use asio::cancel; see
+    // http://www.boost.org/doc/libs/1_59_0/doc/html/boost_asio/reference/basic_stream_socket/cancel/overload2.html
+    //
+    // When we implement connection re-use, we need to be sure to throw out 
+    //   connections on error
+    conn_->close();
   }
 };
 

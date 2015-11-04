@@ -19,6 +19,7 @@
 #ifndef LIB_COMMON_ASYNC_STREAM_H_
 #define LIB_COMMON_ASYNC_STREAM_H_
 
+#include "common/cancelable.h"
 #include <asio.hpp>
 
 namespace hdfs {

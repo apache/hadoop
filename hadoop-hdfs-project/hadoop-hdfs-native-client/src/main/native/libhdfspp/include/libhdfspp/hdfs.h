@@ -20,6 +20,7 @@
 
 #include "libhdfspp/options.h"
 #include "libhdfspp/status.h"
+#include "common/cancelable.h"
 
 #include <functional>
 #include <set>
@@ -71,7 +72,7 @@ public:
    * The handler returns the datanode that serves the block and the number of
    * bytes has read.
    **/
-  virtual void
+  virtual CancelHandle
   PositionRead(void *buf, size_t nbyte, uint64_t offset,
                const std::set<std::string> &excluded_datanodes,
                const std::function<void(const Status &, const std::string &,

@@ -125,7 +125,7 @@ class FileHandleImpl : public FileHandle {
 public:
   FileHandleImpl(::asio::io_service *io_service, const std::string &client_name,
                   const std::shared_ptr<const struct FileInfo> file_info);
-  virtual void
+  virtual CancelHandle
   PositionRead(void *buf, size_t nbyte, uint64_t offset,
                const std::set<std::string> &excluded_datanodes,
                const std::function<void(const Status &, const std::string &,
@@ -133,7 +133,7 @@ public:
 
   size_t PositionRead(void *buf, size_t nbyte, off_t offset) override;
 
-  void AsyncPreadSome(size_t offset, const MutableBuffers &buffers,
+  CancelHandle AsyncPreadSome(size_t offset, const MutableBuffers &buffers,
                       const std::set<std::string> &excluded_datanodes,
                       const std::function<void(const Status &, const std::string &, size_t)> handler);
 private:
