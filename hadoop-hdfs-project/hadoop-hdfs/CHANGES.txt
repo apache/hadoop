@@ -2231,6 +2231,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9351. checkNNStartup() need to be called when fsck calls
     FSNamesystem.getSnapshottableDirs(). (Xiao Chen via Yongjun Zhang)
 
+    HDFS-9357. NN UI renders icons of decommissioned DN incorrectly.
+    (Surendra Singh Lilhore via wheat9)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
