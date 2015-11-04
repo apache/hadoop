@@ -57,6 +57,7 @@ Java_org_apache_hadoop_security_JniBasedUnixGroupsNetgroupMapping_getUsersForNet
   int setnetgrentCalledFlag = 0;
 
   // if not NULL then THROW exception
+  char *errorType = NULL;
   char *errorMessage = NULL;
 
   cgroup = (*env)->GetStringUTFChars(env, jgroup, NULL);
@@ -94,7 +95,14 @@ Java_org_apache_hadoop_security_JniBasedUnixGroupsNetgroupMapping_getUsersForNet
       }
     }
   }
-
+#if defined(__linux__)
+  else {
+    errorType = "java/io/IOException";
+    errorMessage =
+        "no netgroup of this name is known or some other error occurred";
+    goto END;
+  }
+#endif
   //--------------------------------------------------
   // build return data (java array)
 
@@ -103,7 +111,7 @@ Java_org_apache_hadoop_security_JniBasedUnixGroupsNetgroupMapping_getUsersForNet
     (*env)->FindClass(env, "java/lang/String"),
     NULL);
   if (jusers == NULL) {
-    errorMessage = "java/lang/OutOfMemoryError";
+    errorType = "java/lang/OutOfMemoryError";
     goto END;
   }
 
@@ -114,7 +122,7 @@ Java_org_apache_hadoop_security_JniBasedUnixGroupsNetgroupMapping_getUsersForNet
   for(current = userListHead; current != NULL; current = current->next) {
     jstring juser = (*env)->NewStringUTF(env, current->string);
     if (juser == NULL) {
-      errorMessage = "java/lang/OutOfMemoryError";
+      errorType = "java/lang/OutOfMemoryError";
       goto END;
     }
     (*env)->SetObjectArrayElement(env, jusers, i++, juser);
@@ -134,8 +142,8 @@ END:
   }
 
   // return results or THROW
-  if(errorMessage) {
-    THROW(env, errorMessage, NULL);
+  if(errorType) {
+    THROW(env, errorType, errorMessage);
     return NULL;
   } else {
     return jusers;

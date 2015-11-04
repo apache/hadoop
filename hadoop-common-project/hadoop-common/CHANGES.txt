@@ -12,6 +12,9 @@ Release 2.7.3 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-12296. when setnetgrent returns 0 in linux, exception should be
+    thrown (Chang Li via jlowe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
