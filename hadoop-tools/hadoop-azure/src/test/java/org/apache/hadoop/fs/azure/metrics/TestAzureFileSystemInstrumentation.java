@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
 import org.apache.hadoop.fs.azure.AzureException;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.hamcrest.BaseMatcher;
@@ -405,22 +406,30 @@ public class TestAzureFileSystemInstrumentation {
 
   @Test
   public void testClientErrorMetrics() throws Exception {
-    String directoryName = "metricsTestDirectory_ClientError";
-    Path directoryPath = new Path("/" + directoryName);
-    assertTrue(fs.mkdirs(directoryPath));
-    String leaseID = testAccount.acquireShortLease(directoryName);
+    String fileName = "metricsTestFile_ClientError";
+    Path filePath = new Path("/"+fileName);
+    final int FILE_SIZE = 100;
+    OutputStream outputStream = null;
+    String leaseID = null;
     try {
+      // Create a file
+      outputStream = fs.create(filePath);
+      leaseID = testAccount.acquireShortLease(fileName);
       try {
-        fs.delete(directoryPath, true);
-        assertTrue("Should've thrown.", false);
+        outputStream.write(new byte[FILE_SIZE]);
+        outputStream.close();
+        assertTrue("Should've thrown", false);
       } catch (AzureException ex) {
         assertTrue("Unexpected exception: " + ex,
-            ex.getMessage().contains("lease"));
+          ex.getMessage().contains("lease"));
       }
       assertEquals(1, AzureMetricsTestUtil.getLongCounterValue(getInstrumentation(), WASB_CLIENT_ERRORS));
       assertEquals(0, AzureMetricsTestUtil.getLongCounterValue(getInstrumentation(), WASB_SERVER_ERRORS));
     } finally {
-      testAccount.releaseLease(leaseID, directoryName);
+      if(leaseID != null){
+        testAccount.releaseLease(leaseID, fileName);
+      }
+      IOUtils.closeStream(outputStream);
     }
   }
 

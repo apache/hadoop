@@ -1320,6 +1320,10 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12542. TestDNS fails on Windows after HADOOP-12437. (cnauroth)
 
+    HADOOP-12540. TestAzureFileSystemInstrumentation#testClientErrorMetrics
+    fails intermittently due to assumption that a lease error will be thrown.
+    (Gaurav Kanade via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
