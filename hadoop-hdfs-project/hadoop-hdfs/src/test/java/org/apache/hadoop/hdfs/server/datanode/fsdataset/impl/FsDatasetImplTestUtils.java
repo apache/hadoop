@@ -317,4 +317,9 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
       }
     }
   }
+
+  @Override
+  public Replica fetchReplica(ExtendedBlock block) {
+    return dataset.fetchReplicaInfo(block.getBlockPoolId(), block.getBlockId());
+  }
 }
