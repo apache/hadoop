@@ -34,5 +34,7 @@ public final class IntelBlockProto extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelBlockProtoBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+
 };
 

@@ -30,5 +30,7 @@ public final class IntelQuotaByStorageTypeFeatureProto extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelQuotaByStorageTypeFeatureProtoBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+
 };
 

@@ -30,5 +30,7 @@ public final class IntelXAttrFeatureProto extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelXAttrFeatureProtoBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+
 };
 

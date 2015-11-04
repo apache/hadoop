@@ -31,5 +31,7 @@ public final class IntelXAttrCompactProto extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelXAttrCompactProtoBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+
 };
 

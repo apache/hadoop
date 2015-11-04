@@ -69,5 +69,7 @@ public final class IntelINodeFile extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelINodeFileBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+
 };
 

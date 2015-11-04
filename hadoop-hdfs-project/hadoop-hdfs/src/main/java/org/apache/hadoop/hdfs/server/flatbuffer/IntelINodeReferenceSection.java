@@ -17,5 +17,7 @@ public final class IntelINodeReferenceSection extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelINodeReferenceSectionBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+
 };
 

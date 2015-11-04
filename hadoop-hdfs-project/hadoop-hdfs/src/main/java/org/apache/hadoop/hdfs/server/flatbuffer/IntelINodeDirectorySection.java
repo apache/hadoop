@@ -17,5 +17,7 @@ public final class IntelINodeDirectorySection extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelINodeDirectorySectionBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+
 };
 

@@ -40,5 +40,7 @@ public final class IntelINodeSymlink extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelINodeSymlinkBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+
 };
 

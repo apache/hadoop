@@ -17,5 +17,7 @@ public final class IntelSnapshotDiffSection extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelSnapshotDiffSectionBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+
 };
 

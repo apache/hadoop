@@ -35,5 +35,7 @@ public final class IntelSection extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelSectionBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+
 };
 

@@ -17,5 +17,7 @@ public final class IntelFilesUnderConstructionSection extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelFilesUnderConstructionSectionBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+
 };
 

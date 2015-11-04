@@ -31,6 +31,6 @@ public final class IntelAclFeatureProto extends Table {
     int o = builder.endObject();
     return o;
   }
-  public static void finishIntelFileSummaryBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+  public static void finishIntelAclFeatureProtoBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
 };
 
