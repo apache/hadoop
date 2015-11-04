@@ -596,6 +596,10 @@ public class BlockManager {
     assert block.getNumBytes() <= commitBlock.getNumBytes() :
       "commitBlock length is less than the stored one "
       + commitBlock.getNumBytes() + " vs. " + block.getNumBytes();
+    if(block.getGenerationStamp() != commitBlock.getGenerationStamp()) {
+      throw new IOException("Commit block with mismatching GS. NN has " +
+        block + ", client submits " + commitBlock);
+    }
     block.commitBlock(commitBlock);
     return true;
   }

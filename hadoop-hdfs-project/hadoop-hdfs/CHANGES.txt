@@ -12,6 +12,9 @@ Release 2.7.3 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-9289. Make DataStreamer#block thread safe and verify genStamp in
+    commitBlock. (Chang Li via kihwal)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
