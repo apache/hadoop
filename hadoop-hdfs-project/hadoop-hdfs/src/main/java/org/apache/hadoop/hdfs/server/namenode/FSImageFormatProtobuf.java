@@ -250,7 +250,9 @@ public final class FSImageFormatProtobuf {
             s.length()));
         in = FSImageUtil.wrapInputStreamForCompression(conf,
             summary.codec(), in);
+
         String n = s.name();
+
         switch (SectionName.fromString(n)) {
           case NS_INFO:
             loadIntelNameSystemSection(in);   // success

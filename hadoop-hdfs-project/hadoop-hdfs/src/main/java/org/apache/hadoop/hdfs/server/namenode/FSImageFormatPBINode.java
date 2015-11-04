@@ -361,11 +361,12 @@ public final class FSImageFormatPBINode {
           .getRefList();
       while (true) {
 
-        IntelDirEntry ie = IntelDirEntry.getRootAsIntelDirEntry(ByteBuffer.wrap(parseFrom(in)));
-        // note that in is a LimitedInputStream
-        if (ie == null) {
+        byte[] bytes = parseFrom(in);
+        if (bytes == null) {
           break;
         }
+        IntelDirEntry ie = IntelDirEntry.getRootAsIntelDirEntry(ByteBuffer.wrap(bytes));
+        // note that in is a LimitedInputStream
         INodeDirectory p = dir.getInode(ie.parent()).asDirectory();
 
         for (int i = 0; i < ie.childrenLength() ;i++) {
@@ -404,7 +405,12 @@ public final class FSImageFormatPBINode {
 
     public static byte[] parseFrom(InputStream in) throws IOException {
       DataInputStream inputStream = new DataInputStream(in);
-      int len = inputStream.readInt();
+      int len;
+      try {
+        len = inputStream.readInt();
+      }catch (EOFException e){
+        return null;
+      }
       byte[] data = new byte[len];
       inputStream.read(data);
       return data;
@@ -438,13 +444,12 @@ public final class FSImageFormatPBINode {
      */
     void loadIntelFilesUnderConstructionSection(InputStream in) throws IOException {
       while (true) {
-        IntelFileUnderConstructionEntry ientry = IntelFileUnderConstructionEntry.
-            getRootAsIntelFileUnderConstructionEntry(ByteBuffer.wrap(parseFrom(in)));
-//        FileUnderConstructionEntry entry = FileUnderConstructionEntry
-//            .parseDelimitedFrom(in);
-        if (ientry == null) {
+        byte[] bytes = parseFrom(in);
+        if (bytes == null) {
           break;
         }
+        IntelFileUnderConstructionEntry ientry = IntelFileUnderConstructionEntry.
+            getRootAsIntelFileUnderConstructionEntry(ByteBuffer.wrap(bytes));
         // update the lease manager
         INodeFile file = dir.getInode(ientry.inodeId()).asFile();
         FileUnderConstructionFeature uc = file.getFileUnderConstructionFeature();

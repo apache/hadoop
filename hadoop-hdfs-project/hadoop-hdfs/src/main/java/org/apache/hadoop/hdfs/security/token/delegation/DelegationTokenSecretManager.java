@@ -210,22 +210,21 @@ public class DelegationTokenSecretManager
       throws IOException {
     Preconditions.checkState(!running,
         "Can't load state from image in a running SecretManager.");
-
-    currentId = state.section.getCurrentId();
-    delegationTokenSequenceNumber = state.section.getTokenSequenceNumber();
-    for (SecretManagerSection.DelegationKey k : state.keys) {
-      addKey(new DelegationKey(k.getId(), k.getExpiryDate(), k.hasKey() ? k
-          .getKey().toByteArray() : null));
+    currentId = (int)state.intelSection.currentId();
+    delegationTokenSequenceNumber = (int)state.intelSection.tokenSequenceNumber();
+    for (IntelDelegationKey k : state.intelKeys) {
+      addKey(new DelegationKey((int)k.id(), k.expiryDate(), k.key() != null ? k
+          .key().getBytes() : null));
     }
 
-    for (SecretManagerSection.PersistToken t : state.tokens) {
+    for (IntelPersistToken t : state.intelTokens) {
       DelegationTokenIdentifier id = new DelegationTokenIdentifier(new Text(
-          t.getOwner()), new Text(t.getRenewer()), new Text(t.getRealUser()));
-      id.setIssueDate(t.getIssueDate());
-      id.setMaxDate(t.getMaxDate());
-      id.setSequenceNumber(t.getSequenceNumber());
-      id.setMasterKeyId(t.getMasterKeyId());
-      addPersistedDelegationToken(id, t.getExpiryDate());
+          t.owner()), new Text(t.renewer()), new Text(t.realUser()));
+      id.setIssueDate(t.issueDate());
+      id.setMaxDate(t.maxDate());
+      id.setSequenceNumber((int)t.sequenceNumber());
+      id.setMasterKeyId((int)t.masterKeyId());
+      addPersistedDelegationToken(id, t.expiryDate());
     }
   }
 

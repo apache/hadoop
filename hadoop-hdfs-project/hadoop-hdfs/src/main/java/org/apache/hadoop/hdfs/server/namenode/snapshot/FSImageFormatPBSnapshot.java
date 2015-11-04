@@ -82,12 +82,15 @@ public class FSImageFormatPBSnapshot {
     public void loadIntelINodeReferenceSection(InputStream in) throws IOException {
       final List<INodeReference> refList = parent.getLoaderContext()
           .getRefList();
+
       while (true) {
-        IntelINodeReference ie = IntelINodeReference.
-            getRootAsIntelINodeReference(ByteBuffer.wrap(parseFrom(in)));
-        if (ie == null) {
+        byte[] bytes = parseFrom(in);
+        if(bytes==null){
           break;
         }
+        IntelINodeReference ie = IntelINodeReference.
+            getRootAsIntelINodeReference(ByteBuffer.wrap(bytes));
+
         INodeReference ref = loadIntelINodeReference(ie); // success
         refList.add(ref);
       }
@@ -245,10 +248,11 @@ public class FSImageFormatPBSnapshot {
       final List<INodeReference> refList = parent.getLoaderContext()
           .getRefList();
       while (true) {
-        IntelDiffEntry ientry = IntelDiffEntry.getRootAsIntelDiffEntry(ByteBuffer.wrap(parseFrom(in)));
-        if (ientry == null) {
+        byte[] bytes = parseFrom(in);
+        if (bytes == null) {
           break;
         }
+        IntelDiffEntry ientry = IntelDiffEntry.getRootAsIntelDiffEntry(ByteBuffer.wrap(bytes));
         long inodeId = ientry.inodeId();
         INode inode = fsDir.getInode(inodeId);
         int itype = ientry.type();

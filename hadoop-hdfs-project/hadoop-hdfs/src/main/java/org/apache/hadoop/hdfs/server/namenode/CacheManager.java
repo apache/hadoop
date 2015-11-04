@@ -1087,7 +1087,7 @@ public final class CacheManager {
   }
 
   public void loadState(PersistState s) throws IOException {
-    nextDirectiveId = s.section.getNextDirectiveId();
+    nextDirectiveId = s.intelSection.nextDirectiveId();
     for (CachePoolInfoProto p : s.pools) {
       CachePoolInfo info = new CachePoolInfo(p.getPoolName());
       if (p.hasOwnerName())
