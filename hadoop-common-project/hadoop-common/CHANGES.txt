@@ -32,6 +32,9 @@ Trunk (Unreleased)
     HADOOP-11356. Removed deprecated o.a.h.fs.permission.AccessControlException.
     (Li Lu via wheat9)
 
+    HADOOP-10787 Rename/remove non-HADOOP_*, etc from the shell scripts.
+    (aw via vvasudev)
+
   NEW FEATURES
 
     HADOOP-6590. Add a username check for hadoop sub-commands (John Smith via

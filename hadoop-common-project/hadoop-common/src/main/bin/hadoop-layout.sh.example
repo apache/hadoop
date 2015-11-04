@@ -43,7 +43,7 @@
 ####
 
 # Default location for the common/core Hadoop project
-# export HADOOP_COMMON_HOME=$HADOOP_PREFIX
+# export HADOOP_COMMON_HOME=${HADOOP_PREFIX}
 
 # Relative locations where components under HADOOP_COMMON_HOME are located
 # export HADOOP_COMMON_DIR="share/hadoop/common"
@@ -55,7 +55,7 @@
 ####
 
 # Default location for the HDFS subproject
-# export HADOOP_HDFS_HOME=$HADOOP_PREFIX
+# export HADOOP_HDFS_HOME=${HADOOP_PREFIX}
 
 # Relative locations where components under HADOOP_HDFS_HOME are located
 # export HDFS_DIR="share/hadoop/hdfs"
@@ -66,18 +66,18 @@
 ####
 
 # Default location for the YARN subproject
-# export HADOOP_YARN_HOME=$HADOOP_PREFIX
+# export HADOOP_YARN_HOME=${HADOOP_PREFIX}
 
 # Relative locations where components under HADOOP_YARN_HOME are located
 # export YARN_DIR="share/hadoop/yarn"
 # export YARN_LIB_JARS_DIR="share/hadoop/yarn/lib"
 
-# Default location for the MapReduce subproject
-# export HADOOP_MAPRED_HOME=$HADOOP_PREFIX
-
 ####
 # MapReduce disk layout
 ####
+
+# Default location for the MapReduce subproject
+# export HADOOP_MAPRED_HOME=${HADOOP_PREFIX}
 
 # Relative locations where components under HADOOP_MAPRED_HOME are located
 # export MAPRED_DIR="share/hadoop/mapreduce"
@@ -87,7 +87,7 @@
 # Misc paths
 ####
 
-# setup a default TOOL_PATH, where things like distcp lives
+# setup a default HADOOP_TOOLS_PATH, where things like distcp lives
 # note that this path only gets added for certain commands and not
 # part of the general classpath
-# export TOOL_PATH="$HADOOP_PREFIX/share/hadoop/tools/lib/*"
+# export HADOOP_TOOLS_PATH="${HADOOP_PREFIX}/share/hadoop/tools/lib/*"

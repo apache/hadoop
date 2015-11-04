@@ -94,6 +94,8 @@
 #
 #function hadoop_connect_to_hosts_without_pdsh
 #{
+#  local tmpslvnames
+#
 #  # quoting here gets tricky. it's easier to push it into a function
 #  # so that we don't have to deal with it. However...
 #  # xargs can't use a function so instead we'll export it out
@@ -106,9 +108,9 @@
 #  # list with each hostname read from stdin/pipe. But it consider one
 #  # line as one argument while reading from stdin/pipe. So place each
 #  # hostname in different lines while passing via pipe.
-#  SLAVE_NAMES=$(echo "$SLAVE_NAMES" | tr ' ' '\n' )
-#  echo "${SLAVE_NAMES}" | \
-#  xargs -n 1 -P"${HADOOP_SSH_PARALLEL}" \
-#  -I {} bash -c --  "hadoop_actual_ssh {} ${params}"
+#  tmpslvnames=$(echo "${HADOOP_SLAVE_NAMES}" | tr ' ' '\n' )
+#    echo "${tmpslvnames}" | \
+#    xargs -n 1 -P"${HADOOP_SSH_PARALLEL}" \
+#    -I {} bash -c --  "hadoop_actual_ssh {} ${params}"
 #  wait
 #}

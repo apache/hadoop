@@ -233,6 +233,10 @@ function hadoop_bootstrap
   # the root of the Hadoop installation
   # See HADOOP-6255 for the expected directory structure layout
 
+  if [[ -n "${DEFAULT_LIBEXEC_DIR}" ]]; then
+    hadoop_error "WARNING: DEFAULT_LIBEXEC_DIR ignored. It has been replaced by HADOOP_DEFAULT_LIBEXEC_DIR."
+  fi
+
   # By now, HADOOP_LIBEXEC_DIR should have been defined upstream
   # We can piggyback off of that to figure out where the default
   # HADOOP_FREFIX should be.  This allows us to run without
@@ -260,8 +264,10 @@ function hadoop_bootstrap
   YARN_LIB_JARS_DIR=${YARN_LIB_JARS_DIR:-"share/hadoop/yarn/lib"}
   MAPRED_DIR=${MAPRED_DIR:-"share/hadoop/mapreduce"}
   MAPRED_LIB_JARS_DIR=${MAPRED_LIB_JARS_DIR:-"share/hadoop/mapreduce/lib"}
-  # setup a default TOOL_PATH
-  TOOL_PATH=${TOOL_PATH:-${HADOOP_PREFIX}/share/hadoop/tools/lib/*}
+
+  # setup a default HADOOP_TOOLS_PATH
+  hadoop_deprecate_envvar TOOL_PATH HADOOP_TOOLS_PATH
+  HADOOP_TOOLS_PATH=${HADOOP_TOOLS_PATH:-${HADOOP_PREFIX}/share/hadoop/tools/lib/*}
 
   # usage output set to zero
   hadoop_reset_usage
@@ -616,6 +622,8 @@ function hadoop_connect_to_hosts
 {
   # shellcheck disable=SC2124
   local params="$@"
+  local slave_file
+  local tmpslvnames
 
   #
   # ssh (or whatever) to a host
@@ -624,12 +632,8 @@ function hadoop_connect_to_hosts
   if [[ -n "${HADOOP_SLAVES}" && -n "${HADOOP_SLAVE_NAMES}" ]] ; then
     hadoop_error "ERROR: Both HADOOP_SLAVES and HADOOP_SLAVE_NAME were defined. Aborting."
     exit 1
-  fi
-
-  if [[ -n "${HADOOP_SLAVE_NAMES}" ]] ; then
-    SLAVE_NAMES=${HADOOP_SLAVE_NAMES}
-  else
-    SLAVE_FILE=${HADOOP_SLAVES:-${HADOOP_CONF_DIR}/slaves}
+  elif [[ -z "${HADOOP_SLAVE_NAMES}" ]]; then
+    slave_file=${HADOOP_SLAVES:-${HADOOP_CONF_DIR}/slaves}
   fi
 
   # if pdsh is available, let's use it.  otherwise default
@@ -639,17 +643,18 @@ function hadoop_connect_to_hosts
       # if we were given a file, just let pdsh deal with it.
       # shellcheck disable=SC2086
       PDSH_SSH_ARGS_APPEND="${HADOOP_SSH_OPTS}" pdsh \
-      -f "${HADOOP_SSH_PARALLEL}" -w ^"${SLAVE_FILE}" $"${@// /\\ }" 2>&1
+      -f "${HADOOP_SSH_PARALLEL}" -w ^"${slave_file}" $"${@// /\\ }" 2>&1
     else
       # no spaces allowed in the pdsh arg host list
       # shellcheck disable=SC2086
-      SLAVE_NAMES=$(echo ${SLAVE_NAMES} | tr -s ' ' ,)
+      tmpslvnames=$(echo ${SLAVE_NAMES} | tr -s ' ' ,)
       PDSH_SSH_ARGS_APPEND="${HADOOP_SSH_OPTS}" pdsh \
-      -f "${HADOOP_SSH_PARALLEL}" -w "${SLAVE_NAMES}" $"${@// /\\ }" 2>&1
+        -f "${HADOOP_SSH_PARALLEL}" \
+        -w "${tmpslvnames}" $"${@// /\\ }" 2>&1
     fi
   else
-    if [[ -z "${SLAVE_NAMES}" ]]; then
-      SLAVE_NAMES=$(sed 's/#.*$//;/^$/d' "${SLAVE_FILE}")
+    if [[ -z "${HADOOP_SLAVE_NAMES}" ]]; then
+      HADOOP_SLAVE_NAMES=$(sed 's/#.*$//;/^$/d' "${slave_file}")
     fi
     hadoop_connect_to_hosts_without_pdsh "${params}"
   fi
@@ -666,7 +671,7 @@ function hadoop_connect_to_hosts_without_pdsh
 {
   # shellcheck disable=SC2124
   local params="$@"
-  local slaves=(${SLAVE_NAMES})
+  local slaves=(${HADOOP_SLAVE_NAMES})
   for (( i = 0; i < ${#slaves[@]}; i++ ))
   do
     if (( i != 0 && i % HADOOP_SSH_PARALLEL == 0 )); then
@@ -938,6 +943,37 @@ function hadoop_add_common_to_classpath
 
   hadoop_add_classpath "${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"'/*'
   hadoop_add_classpath "${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR}"'/*'
+}
+
+## @description  Add the HADOOP_TOOLS_PATH to the classpath
+## @description  environment
+## @audience     private
+## @stability    evolving
+## @replaceable  yes
+function hadoop_add_to_classpath_toolspath
+{
+  declare -a array
+  declare -i c=0
+  declare -i j
+  declare -i i
+  declare idx
+
+  if [[ -n "${HADOOP_TOOLS_PATH}" ]]; then
+    hadoop_debug "Adding HADOOP_TOOLS_PATH to CLASSPATH"
+    oldifs=${IFS}
+    IFS=:
+    for idx in ${HADOOP_TOOLS_PATH}; do
+      array[${c}]=${idx}
+      ((c=c+1))
+    done
+    IFS=${oldifs}
+    ((j=c-1)) || ${QATESTMODE}
+
+    for ((i=0; i<=j; i++)); do
+      hadoop_add_classpath "${array[$i]}" after
+    done
+
+  fi
 }
 
 ## @description  Add the user's custom classpath settings to the
@@ -1868,7 +1904,7 @@ function hadoop_verify_user
   local uservar="HADOOP_${command}_USER"
 
   if [[ -n ${!uservar} ]]; then
-    if [[ ${!uservar} !=  ${USER} ]]; then
+    if [[ ${!uservar} !=  "${USER}" ]]; then
       hadoop_error "ERROR: ${command} can only be executed by ${!uservar}."
       exit 1
     fi

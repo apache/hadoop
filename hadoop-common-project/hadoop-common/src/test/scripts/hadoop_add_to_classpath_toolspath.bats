@@ -18,12 +18,8 @@ load hadoop-functions_test_helper
 freetheclasses () {
   local j
 
-  for j in HADOOP_CLASSPATH  \
-        HADOOP_ENABLE_BUILD_PATHS \
-        CLASSPATH HADOOP_COMMON_DIR \
-        HADOOP_COMMON_HOME \
-        HADOOP_COMMON_LIB_JARS_DIR \
-        HADOOP_ENABLE_BUILD_PATHS ; do
+  for j in HADOOP_TOOLS_PATH  \
+      CLASSPATH; do
       unset ${j}
   done
 }
@@ -31,41 +27,48 @@ freetheclasses () {
 createdirs () {
   local j
 
-  for j in hadoop-common/target/classes \
-           commondir/webapps commonlibjars ; do
+  for j in new old foo bar baz; do
     mkdir -p "${TMP}/${j}"
-    touch "${TMP}/${j}/fake.jar"
   done
-  HADOOP_COMMON_HOME=${TMP}
-  HADOOP_COMMON_DIR=commondir
-  HADOOP_COMMON_LIB_JARS_DIR=commonlibjars
 }
 
-@test "hadoop_add_common_to_classpath (negative)" {
+@test "hadoop_add_to_classpath_toolspath (nothing)" {
    freetheclasses
-   createdirs
-   unset HADOOP_COMMON_HOME
-   run hadoop_add_common_to_classpath
-   [ "${status}" -eq 1 ]
+   hadoop_add_to_classpath_toolspath
+   [ -z "${CLASSPATH}" ]
 }
 
-@test "hadoop_add_common_to_classpath (positive)" {
+@test "hadoop_add_to_classpath_toolspath (none)" {
+   freetheclasses
+   CLASSPATH=test
+   hadoop_add_to_classpath_toolspath
+   [ "${CLASSPATH}" = "test" ]
+}
+
+@test "hadoop_add_to_classpath_toolspath (only)" {
    freetheclasses
    createdirs
-   set +e
-   hadoop_add_common_to_classpath
-   set -e
+   HADOOP_TOOLS_PATH="${TMP}/new"
+   hadoop_add_to_classpath_toolspath
+   [ "${CLASSPATH}" = "${TMP}/new" ]
+}
+
+@test "hadoop_add_to_classpath_toolspath (1+1)" {
+   freetheclasses
+   createdirs
+   CLASSPATH=${TMP}/foo
+   HADOOP_TOOLS_PATH=${TMP}/foo
+   hadoop_add_to_classpath_toolspath
    echo ">${CLASSPATH}<"
-   [ "${CLASSPATH}" = "${TMP}/commonlibjars/*:${TMP}/commondir/*" ]
+   [ ${CLASSPATH} = "${TMP}/foo" ]
 }
 
-@test "hadoop_add_common_to_classpath (build paths)" {
+@test "hadoop_add_to_classpath_toolspath (3+2)" {
    freetheclasses
    createdirs
-   HADOOP_ENABLE_BUILD_PATHS=true
-   set +e
-   hadoop_add_common_to_classpath
-   set -e
+   CLASSPATH=${TMP}/foo:${TMP}/bar:${TMP}/baz
+   HADOOP_TOOLS_PATH=${TMP}/new:${TMP}/old
+   hadoop_add_to_classpath_toolspath
    echo ">${CLASSPATH}<"
-   [ "${CLASSPATH}" = "${TMP}/hadoop-common/target/classes:${TMP}/commonlibjars/*:${TMP}/commondir/*" ]
- }
+   [ ${CLASSPATH} = "${TMP}/foo:${TMP}/bar:${TMP}/baz:${TMP}/new:${TMP}/old" ]
+}

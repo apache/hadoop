@@ -21,8 +21,8 @@ bin=$(cd -P -- "$(dirname -- "$this")" >/dev/null && pwd -P)
 script="$(basename -- "$this")"
 this="$bin/$script"
 
-DEFAULT_LIBEXEC_DIR="$bin"/../libexec
-HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
+HADOOP_DEFAULT_LIBEXEC_DIR="$bin"/../libexec
+HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$HADOOP_DEFAULT_LIBEXEC_DIR}
 # shellcheck disable=SC2034
 HADOOP_NEW_CONFIG=true
 . "$HADOOP_LIBEXEC_DIR/hadoop-config.sh"
