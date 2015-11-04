@@ -27,7 +27,15 @@ namespace hdfs {
 typedef asio::mutable_buffers_1 MutableBuffers;
 typedef asio::const_buffers_1   ConstBuffers;
 
-class AsyncStream {
+/*
+ * asio-compatible stream implementation.  
+ * 
+ * Lifecycle: should be managed using std::shared_ptr so the object can be
+ *    handed from consumer to consumer
+ * Threading model: async_read_some and async_write_some are not thread-safe.
+ *       Cancel() can be called from any context
+ */
+class AsyncStream : public Cancelable {
 public:
   virtual void async_read_some(const MutableBuffers &buf,
           std::function<void (const asio::error_code & error,

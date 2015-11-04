@@ -36,10 +36,16 @@ FileHandleImpl::FileHandleImpl(::asio::io_service *io_service, const std::string
     : io_service_(io_service), client_name_(client_name), file_info_(file_info) {
 }
 
+
+
+
 CancelHandle FileHandleImpl::PositionRead(
     void *buf, size_t nbyte, uint64_t offset,
     const std::function<void(const Status &, size_t)>
         &handler) {
+
+  // This is where retry and dead DN node elision will occur 
+  
   return AsyncPreadSome(offset, asio::buffer(buf, nbyte), std::set<std::string>(), 
                         [handler](const Status &status, const std::string &dn_id, size_t bytes_read){
                           (void)dn_id;
@@ -69,6 +75,10 @@ size_t FileHandleImpl::PositionRead(void *buf, size_t nbyte, off_t offset) {
   return (ssize_t)read_count;
 }
 
+/*
+ * Note that this method must be thread-safe w.r.t. the unsafe operations occurring
+ * on the FileHandle
+ */
 CancelHandle FileHandleImpl::AsyncPreadSome(
     size_t offset, const MutableBuffers &buffers,
     const std::set<std::string> &excluded_datanodes,

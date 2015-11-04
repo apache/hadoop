@@ -68,7 +68,7 @@ public:
                       const std::set<std::string> &excluded_datanodes,
                       const std::function<void(const Status &status, const std::string &dn_id, size_t bytes_read)> handler);
 private:
-  ::asio::io_service *io_service_;
+  ::asio::io_service * const io_service_;
   const std::string client_name_;
   const std::shared_ptr<const struct FileInfo> file_info_;
   // Shared pointer to the FileSystem's dead nodes object goes here

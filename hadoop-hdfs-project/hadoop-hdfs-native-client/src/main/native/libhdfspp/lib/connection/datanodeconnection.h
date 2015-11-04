@@ -26,14 +26,12 @@
 
 namespace hdfs {
 
-class DataNodeConnection : public AsyncStream, public Cancelable {
+class DataNodeConnection : public AsyncStream {
 public:
     std::string uuid_;
     std::unique_ptr<hadoop::common::TokenProto> token_;
 
     virtual void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) = 0;
-    
-    virtual void cancel() = 0;
 };
 
 

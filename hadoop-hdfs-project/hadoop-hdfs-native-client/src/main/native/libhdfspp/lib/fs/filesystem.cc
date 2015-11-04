@@ -34,6 +34,10 @@ static const int kNamenodeProtocolVersion = 1;
 
 using ::asio::ip::tcp;
 
+/*****************************************************************************
+ *                    NAMENODE OPERATIONS
+ ****************************************************************************/
+
 void NameNodeOperations::Connect(const std::string &server,
                              const std::string &service,
                              std::function<void(const Status &)> &handler) {
@@ -100,6 +104,10 @@ void NameNodeOperations::GetBlockLocations(const std::string & path,
 }
 
 
+/*****************************************************************************
+ *                    FILESYSTEM BASE CLASS
+ ****************************************************************************/
+
 void FileSystem::New(
     IoService *io_service, const Options &options, const std::string &server,
     const std::string &service,
@@ -137,12 +145,16 @@ FileSystem * FileSystem::New(
     return nullptr;
 }
 
-  FileSystemImpl::FileSystemImpl(IoService *&io_service, const Options &options)
-    :   io_service_(static_cast<IoServiceImpl *>(io_service)),
-        nn_(&io_service_->io_service(), options,
-            GetRandomClientName(), kNamenodeProtocol,
-            kNamenodeProtocolVersion),
-        client_name_(GetRandomClientName())
+/*****************************************************************************
+ *                    FILESYSTEM IMPLEMENTATION
+ ****************************************************************************/
+
+FileSystemImpl::FileSystemImpl(IoService *&io_service, const Options &options)
+  :   io_service_(static_cast<IoServiceImpl *>(io_service)),
+      nn_(&io_service_->io_service(), options,
+          GetRandomClientName(), kNamenodeProtocol,
+          kNamenodeProtocolVersion),
+      client_name_(GetRandomClientName())
 {
   // Poor man's move
   io_service = nullptr;
@@ -191,6 +203,14 @@ Status FileSystemImpl::Connect(const std::string &server, const std::string &ser
   return s;
 }
 
+
+int FileSystemImpl::AddWorkerThread() {
+  auto service_task = [](IoService *service) { service->Run(); };
+  worker_threads_.push_back(
+      WorkerPtr(new std::thread(service_task, io_service_.get())));
+  return worker_threads_.size();
+}
+
 void FileSystemImpl::Open(
     const std::string &path,
     const std::function<void(const Status &, FileHandle *)> &handler) {
@@ -199,13 +219,6 @@ void FileSystemImpl::Open(
     handler(stat, stat.ok() ? new FileHandleImpl(&io_service_->io_service(), client_name_, file_info)
                             : nullptr);
   });
-}
-
-int FileSystemImpl::AddWorkerThread() {
-  auto service_task = [](IoService *service) { service->Run(); };
-  worker_threads_.push_back(
-      WorkerPtr(new std::thread(service_task, io_service_.get())));
-  return worker_threads_.size();
 }
 
 Status FileSystemImpl::Open(const std::string &path,

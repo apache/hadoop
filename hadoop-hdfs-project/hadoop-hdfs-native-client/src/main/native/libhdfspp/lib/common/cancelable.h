@@ -27,18 +27,11 @@ public:
   virtual void cancel() = 0;
 };
 
-class NullCancelable : public Cancelable {
-public:
-  NullCancelable() {};
-  virtual void cancel() {};
-  
-};
-
 class CancelHandle : public Cancelable {
 public:
   CancelHandle(std::shared_ptr<Cancelable> target) : target_(target) {}
   
-  void cancel() override { target_->cancel(); }
+  void cancel() override { if (target_) target_->cancel(); }
 private:
   std::shared_ptr<Cancelable> target_;
 };
