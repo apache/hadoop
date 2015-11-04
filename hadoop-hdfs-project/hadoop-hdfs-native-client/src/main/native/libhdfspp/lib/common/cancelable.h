@@ -30,7 +30,7 @@ public:
 class CancelHandle : public Cancelable {
 public:
   CancelHandle(std::shared_ptr<Cancelable> target) : target_(target) {}
-  
+
   void cancel() override { if (target_) target_->cancel(); }
 private:
   std::shared_ptr<Cancelable> target_;

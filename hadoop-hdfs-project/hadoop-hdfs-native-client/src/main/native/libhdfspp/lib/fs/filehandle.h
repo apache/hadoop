@@ -32,24 +32,24 @@ namespace hdfs {
  * FileHandle: coordinates operations on a particular file in HDFS
  *
  * Threading model: not thread-safe; consumers and io_service should not call
- *    concurrently.  PositionRead and cancel() are the exceptions; they can be 
+ *    concurrently.  PositionRead and cancel() are the exceptions; they can be
  *    called concurrently and repeatedly.
- * Lifetime: pointer returned to consumer by FileSystem::Open.  Consumer is 
+ * Lifetime: pointer returned to consumer by FileSystem::Open.  Consumer is
  *    resonsible for freeing the object.
  */
 class FileHandleImpl : public FileHandle {
 public:
   FileHandleImpl(::asio::io_service *io_service, const std::string &client_name,
                   const std::shared_ptr<const struct FileInfo> file_info);
-  
+
   /*
-   * [Some day reliably] Reads a particular offset into the data file. 
+   * [Some day reliably] Reads a particular offset into the data file.
    * On error, bytes_read returns the number of bytes successfully read; on
    * success, bytes_read will equal nbyte
    */
   CancelHandle PositionRead(
-		void *buf, 
-		size_t nbyte, 
+		void *buf,
+		size_t nbyte,
 		uint64_t offset,
         const std::function<void(const Status &status, size_t bytes_read)> &handler
     ) override;
@@ -57,12 +57,12 @@ public:
 
   /*
    * Reads some amount of data into the buffer.  Will attempt to find the best
-   * datanode and read data from it.  
-   * 
-   * If an error occurs during connection or transfer, the callback will be 
+   * datanode and read data from it.
+   *
+   * If an error occurs during connection or transfer, the callback will be
    * called with bytes_read equal to the number of bytes successfully transferred.
    * If no data nodes can be found, status will be Status::ResourceUnavailable.
-   * 
+   *
    */
   CancelHandle AsyncPreadSome(size_t offset, const MutableBuffers &buffers,
                       const std::set<std::string> &excluded_datanodes,

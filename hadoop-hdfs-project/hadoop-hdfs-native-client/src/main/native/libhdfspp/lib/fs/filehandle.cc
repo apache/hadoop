@@ -44,9 +44,9 @@ CancelHandle FileHandleImpl::PositionRead(
     const std::function<void(const Status &, size_t)>
         &handler) {
 
-  // This is where retry and dead DN node elision will occur 
-  
-  return AsyncPreadSome(offset, asio::buffer(buf, nbyte), std::set<std::string>(), 
+  // This is where retry and dead DN node elision will occur
+
+  return AsyncPreadSome(offset, asio::buffer(buf, nbyte), std::set<std::string>(),
                         [handler](const Status &status, const std::string &dn_id, size_t bytes_read){
                           (void)dn_id;
                           handler(status, bytes_read); }
@@ -143,7 +143,7 @@ CancelHandle FileHandleImpl::AsyncPreadSome(
       handler(status, dn_id, 0);
     }
   });
-  
+
   return CancelHandle(dn);
 }
 

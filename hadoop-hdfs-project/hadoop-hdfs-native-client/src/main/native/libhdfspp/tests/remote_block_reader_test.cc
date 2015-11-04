@@ -74,7 +74,7 @@ public:
                                  std::size_t bytes_transferred) > handler) override {
     this->MockConnectionBase::async_write_some(buf, handler);
   }
-  
+
   void cancel() override {};
 };
 

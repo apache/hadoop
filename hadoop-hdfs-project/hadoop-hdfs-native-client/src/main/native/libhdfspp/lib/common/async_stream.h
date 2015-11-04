@@ -28,8 +28,8 @@ typedef asio::mutable_buffers_1 MutableBuffers;
 typedef asio::const_buffers_1   ConstBuffers;
 
 /*
- * asio-compatible stream implementation.  
- * 
+ * asio-compatible stream implementation.
+ *
  * Lifecycle: should be managed using std::shared_ptr so the object can be
  *    handed from consumer to consumer
  * Threading model: async_read_some and async_write_some are not thread-safe.

@@ -71,12 +71,12 @@ public:
                                  std::size_t bytes_transferred) > handler) override {
     conn_->async_write_some(buf, handler);
   }
-  
+
   void cancel() override {
     // Can't portably use asio::cancel; see
     // http://www.boost.org/doc/libs/1_59_0/doc/html/boost_asio/reference/basic_stream_socket/cancel/overload2.html
     //
-    // When we implement connection re-use, we need to be sure to throw out 
+    // When we implement connection re-use, we need to be sure to throw out
     //   connections on error
     conn_->close();
   }

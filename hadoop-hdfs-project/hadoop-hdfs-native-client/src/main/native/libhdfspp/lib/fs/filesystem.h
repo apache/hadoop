@@ -56,9 +56,9 @@ public:
                const std::string &service,
                std::function<void(const Status &)> &handler);
 
-  void GetBlockLocations(const std::string & path, 
+  void GetBlockLocations(const std::string & path,
     std::function<void(const Status &, std::shared_ptr<const struct FileInfo>)> handler);
-  
+
 private:
   ::asio::io_service * io_service_;
   RpcEngine engine_;
