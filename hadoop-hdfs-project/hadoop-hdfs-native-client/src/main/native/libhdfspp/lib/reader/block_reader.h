@@ -57,8 +57,21 @@ struct BlockReaderOptions {
       : verify_checksum(true), encryption_scheme(EncryptionScheme::kNone) {}
 };
 
+/**
+ * Handles the operational state of request and reading a block (or portion of
+ * a block) from a DataNode.
+ *
+ * Threading model: not thread-safe.
+ * Lifecycle: should be created, used for a single read, then freed.
+ */
 class BlockReader {
 public:
+  virtual void AsyncReadBlock(
+    const std::string & client_name,
+    const hadoop::hdfs::LocatedBlockProto &block, size_t offset,
+    const MutableBuffers &buffers,
+    const std::function<void(const Status &, size_t)> handler) = 0;
+
   virtual void AsyncReadPacket(
     const MutableBuffers &buffers,
     const std::function<void(const Status &, size_t bytes_transferred)> &handler) = 0;
@@ -69,12 +82,6 @@ public:
     uint64_t length,
     uint64_t offset,
     const std::function<void(Status)> &handler) = 0;
-
-  virtual void AsyncReadBlock(
-    const std::string & client_name,
-    const hadoop::hdfs::LocatedBlockProto &block, size_t offset,
-    const MutableBuffers &buffers,
-    const std::function<void(const Status &, size_t)> handler) = 0;
 };
 
 class BlockReaderImpl
