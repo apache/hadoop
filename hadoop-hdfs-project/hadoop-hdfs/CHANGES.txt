@@ -2228,6 +2228,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9289. Make DataStreamer#block thread safe and verify genStamp in
     commitBlock. (Chang Li via zhz)
 
+    HDFS-9351. checkNNStartup() need to be called when fsck calls
+    FSNamesystem.getSnapshottableDirs(). (Xiao Chen via Yongjun Zhang)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -60,6 +60,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataEncryptionKeyFactory;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
@@ -345,7 +346,13 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       namenode.getNamesystem().logFsckEvent(path, remoteAddress);
 
       if (snapshottableDirs != null) {
-        snapshottableDirs = namenode.getNamesystem().getSnapshottableDirs();
+        SnapshottableDirectoryStatus[] snapshotDirs =
+            namenode.getRpcServer().getSnapshottableDirListing();
+        if (snapshotDirs != null) {
+          for (SnapshottableDirectoryStatus dir : snapshotDirs) {
+            snapshottableDirs.add(dir.getFullPath().toString());
+          }
+        }
       }
 
       final HdfsFileStatus file = namenode.getRpcServer().getFileInfo(path);
