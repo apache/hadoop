@@ -90,6 +90,7 @@ import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.net.HostAndPort;
 
 /**
  * This module is responsible for talking to the
@@ -161,10 +162,12 @@ public class HistoryClientService extends AbstractService {
         .withHttpSpnegoPrincipalKey(
             JHAdminConfig.MR_WEBAPP_SPNEGO_USER_NAME_KEY)
         .at(NetUtils.getHostPortString(bindAddress)).start(webApp);
-    
-    String connectHost = MRWebAppUtil.getJHSWebappURLWithoutScheme(conf).split(":")[0];
-    MRWebAppUtil.setJHSWebappURLWithoutScheme(conf,
-        connectHost + ":" + webApp.getListenerAddress().getPort());
+
+    String connectHost = MRWebAppUtil.getJHSWebappURLWithoutScheme(conf);
+
+    MRWebAppUtil.setJHSWebappURLWithoutScheme(conf, HostAndPort.fromParts(
+        HostAndPort.fromString(connectHost).getHostText(),
+        webApp.getListenerAddress().getPort()).toString());
   }
 
   @Override

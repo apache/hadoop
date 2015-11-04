@@ -797,20 +797,4 @@ public class UtilsForTests {
     file.close();
     return file;
   }
-
-  /**
-   * This formats the long tasktracker name to just the FQDN
-   * @param taskTrackerLong String The long format of the tasktracker string
-   * @return String The FQDN of the tasktracker
-   * @throws Exception
-   */
-  public static String getFQDNofTT (String taskTrackerLong) throws Exception {
-    //Getting the exact FQDN of the tasktracker from the tasktracker string.
-    String[] firstSplit = taskTrackerLong.split("_");
-    String tmpOutput = firstSplit[1];
-    String[] secondSplit = tmpOutput.split(":");
-    String tmpTaskTracker = secondSplit[0];
-    return tmpTaskTracker;
-  }
-
 }

@@ -47,6 +47,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.mortbay.util.ajax.JSON;
 
+import com.google.common.net.HostAndPort;
+
 /**
  * This class drives the creation of a mini-cluster on the local machine. By
  * default, a MiniDFSCluster and MiniMRCluster are spawned on the first
@@ -188,8 +190,8 @@ public class MiniHadoopClusterManager {
         map.put("namenode_port", dfs.getNameNodePort());
       }
       if (mr != null) {
-        map.put("resourcemanager_port", mr.getConfig().get(
-            YarnConfiguration.RM_ADDRESS).split(":")[1]);
+        map.put("resourcemanager_port", HostAndPort.fromString(
+              mr.getConfig().get(YarnConfiguration.RM_ADDRESS)).getPort());
       }
       FileWriter fw = new FileWriter(new File(writeDetails));
       fw.write(new JSON().toJSON(map));

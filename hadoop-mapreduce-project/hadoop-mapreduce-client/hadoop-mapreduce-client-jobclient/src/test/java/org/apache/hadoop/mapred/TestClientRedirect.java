@@ -133,6 +133,8 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.google.common.net.HostAndPort;
+
 public class TestClientRedirect {
 
   static {
@@ -306,9 +308,9 @@ public class TestClientRedirect {
         application.setYarnApplicationState(YarnApplicationState.FINISHED);
         application.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
       }
-      String[] split = AMHOSTADDRESS.split(":");
-      application.setHost(split[0]);
-      application.setRpcPort(Integer.parseInt(split[1]));
+      HostAndPort hp = HostAndPort.fromString(AMHOSTADDRESS);
+      application.setHost(hp.getHostText());
+      application.setRpcPort(hp.getPort());
       application.setUser("TestClientRedirect-user");
       application.setName("N/A");
       application.setQueue("N/A");
