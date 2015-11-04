@@ -2225,9 +2225,6 @@ Release 2.8.0 - UNRELEASED
     HDFS-9362. TestAuditLogger#testAuditLoggerWithCallContext assumes Unix line
     endings, fails on Windows. (cnauroth)
 
-    HDFS-9289. Make DataStreamer#block thread safe and verify genStamp in
-    commitBlock. (Chang Li via zhz)
-
     HDFS-9351. checkNNStartup() need to be called when fsck calls
     FSNamesystem.getSnapshottableDirs(). (Xiao Chen via Yongjun Zhang)
 
@@ -2245,6 +2242,9 @@ Release 2.7.3 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HDFS-9289. Make DataStreamer#block thread safe and verify genStamp in
+    commitBlock. (Chang Li via zhz)
 
 Release 2.7.2 - UNRELEASED
 
