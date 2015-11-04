@@ -2231,6 +2231,18 @@ Release 2.8.0 - UNRELEASED
     HDFS-9351. checkNNStartup() need to be called when fsck calls
     FSNamesystem.getSnapshottableDirs(). (Xiao Chen via Yongjun Zhang)
 
+Release 2.7.3 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
