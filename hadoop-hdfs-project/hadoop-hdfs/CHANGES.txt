@@ -1153,6 +1153,9 @@ Release 2.6.3 - UNRELEASED
     HDFS-9470. Encryption zone on root not loaded from fsimage after NN
     restart. (Xiao Chen via wang)
 
+    HDFS-9289. Make DataStreamer#block thread safe and verify genStamp in
+    commitBlock. (Chang Li via kihwal)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES

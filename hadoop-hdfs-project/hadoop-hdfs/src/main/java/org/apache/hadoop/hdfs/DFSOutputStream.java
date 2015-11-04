@@ -226,7 +226,7 @@ public class DFSOutputStream extends FSOutputSummer
   //
   class DataStreamer extends Daemon {
     private volatile boolean streamerClosed = false;
-    private ExtendedBlock block; // its length is number of bytes acked
+    private volatile ExtendedBlock block; // its length is number of bytes acked
     private Token<BlockTokenIdentifier> accessToken;
     private DataOutputStream blockStream;
     private DataInputStream blockReplyStream;
