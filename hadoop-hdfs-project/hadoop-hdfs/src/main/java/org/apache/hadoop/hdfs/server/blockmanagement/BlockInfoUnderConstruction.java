@@ -262,7 +262,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
       throw new IOException("Trying to commit inconsistent block: id = "
           + block.getBlockId() + ", expected id = " + getBlockId());
     blockUCState = BlockUCState.COMMITTED;
-    this.set(getBlockId(), block.getNumBytes(), block.getGenerationStamp());
+    this.setNumBytes(block.getNumBytes());
     // Sort out invalid replicas.
     setGenerationStampAndVerifyReplicas(block.getGenerationStamp());
   }
