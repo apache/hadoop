@@ -30,8 +30,8 @@ import java.lang.reflect.Constructor;
 public abstract class TestRawCoderBase extends TestCoderBase {
   protected Class<? extends RawErasureEncoder> encoderClass;
   protected Class<? extends RawErasureDecoder> decoderClass;
-  private RawErasureEncoder encoder;
-  private RawErasureDecoder decoder;
+  protected RawErasureEncoder encoder;
+  protected RawErasureDecoder decoder;
 
   /**
    * Doing twice to test if the coders can be repeatedly reused. This matters
@@ -187,13 +187,13 @@ public abstract class TestRawCoderBase extends TestCoderBase {
     compareAndVerify(backupChunks, recoveredChunks);
   }
 
-  private void setAllowChangeInputs(boolean allowChangeInputs) {
+  protected void setAllowChangeInputs(boolean allowChangeInputs) {
     this.allowChangeInputs = allowChangeInputs;
     encoder.setCoderOption(CoderOption.ALLOW_CHANGE_INPUTS, allowChangeInputs);
     decoder.setCoderOption(CoderOption.ALLOW_CHANGE_INPUTS, allowChangeInputs);
   }
 
-  private void prepareCoders() {
+  protected void prepareCoders() {
     if (encoder == null) {
       encoder = createEncoder();
     }
@@ -203,7 +203,7 @@ public abstract class TestRawCoderBase extends TestCoderBase {
     }
   }
 
-  private void ensureOnlyLeastRequiredChunks(ECChunk[] inputChunks) {
+  protected void ensureOnlyLeastRequiredChunks(ECChunk[] inputChunks) {
     int leastRequiredNum = numDataUnits;
     int erasedNum = erasedDataIndexes.length + erasedParityIndexes.length;
     int goodNum = inputChunks.length - erasedNum;

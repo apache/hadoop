@@ -75,6 +75,10 @@ public abstract class TestCoderBase {
     this.zeroChunkBytes = new byte[chunkSize]; // With ZERO by default
   }
 
+  protected byte[] getZeroChunkBytes() {
+    return zeroChunkBytes;
+  }
+
   protected void prepareBufferAllocator(boolean usingSlicedBuffer) {
     if (usingSlicedBuffer) {
       int roughEstimationSpace =
