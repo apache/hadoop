@@ -632,8 +632,6 @@ public final class FSImageFormatProtobuf {
       fileChannel = fout.getChannel();
 
       FlatBufferBuilder fbb = new FlatBufferBuilder();
-      ByteBuffer byteBuffer = null;
-
       long disk_version = FSImageUtil.FILE_VERSION;
       long layout_version = context.getSourceNamesystem().getEffectiveLayoutVersion();
       int code = 0;

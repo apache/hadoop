@@ -865,11 +865,9 @@ public final class FSImageFormatPBINode {
     }
 
     public static int buildIntelINodeDirectory(
-        INodeDirectoryAttributes dir, final SaverContext state) {
+        INodeDirectoryAttributes dir, final SaverContext state, FlatBufferBuilder fbb) {
 
       QuotaCounts quota = dir.getQuotaCounts();
-      FlatBufferBuilder fbb = new FlatBufferBuilder();
-
       long modifyTime = dir.getModificationTime();
       long nsQuota = quota.getNameSpace();
       long dsQuota = quota.getStorageSpace();
@@ -1148,14 +1146,11 @@ public final class FSImageFormatPBINode {
     }
 
     private void saveIntel(OutputStream out, INodeDirectory n) throws IOException {
-      int ib = buildIntelINodeDirectory(n, parent.getSaverContext());
       FlatBufferBuilder fbb = new FlatBufferBuilder();
-      IntelINode.startIntelINode(fbb);
-      IntelINode.addId(fbb, n.getId());
-      IntelINode.addName(fbb, fbb.createString(n.getLocalNameBytes().toString()));
-      IntelINode.addType(fbb, IntelTypee.DIRECTORY);
-      IntelINode.addDirectory(fbb, ib);
-      int inv = IntelINode.endIntelINode(fbb);
+      int ib = buildIntelINodeDirectory(n, parent.getSaverContext(), fbb);
+      int inv = IntelINode.createIntelINode(fbb, IntelTypee.DIRECTORY, n.getId(),
+          fbb.createString(n.getLocalNameBytes().toString()), 0, ib, 0);
+
       IntelINode.finishIntelINodeBuffer(fbb, inv);
       byte[] bytes = fbb.sizedByteArray();
       writeTo(bytes, bytes.length, out);

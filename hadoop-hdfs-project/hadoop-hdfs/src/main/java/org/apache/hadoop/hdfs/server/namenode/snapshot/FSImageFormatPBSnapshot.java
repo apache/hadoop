@@ -17,29 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Loader.*;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Saver.*;
-//import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Saver.buildIntelINodeDirectory;
-
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.flatbuffers.FlatBufferBuilder;
+import com.google.protobuf.ByteString;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
@@ -47,43 +32,30 @@ import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.flatbuffer.*;
-import org.apache.hadoop.hdfs.server.namenode.AclEntryStatusFormat;
-import org.apache.hadoop.hdfs.server.namenode.AclFeature;
-import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
-import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
-import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf;
+import org.apache.hadoop.hdfs.server.namenode.*;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SectionName;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
-import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeReferenceSection;
-import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
-import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotDiffSection;
-import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotDiffSection.CreatedListEntry;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.*;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotDiffSection.DiffEntry.Type;
-import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotSection;
-import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
-import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryAttributes;
-import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
-import org.apache.hadoop.hdfs.server.namenode.INodeMap;
-import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
-import org.apache.hadoop.hdfs.server.namenode.INodeWithAdditionalFields;
-import org.apache.hadoop.hdfs.server.namenode.QuotaByStorageTypeEntry;
-import org.apache.hadoop.hdfs.server.namenode.SaveNamespaceContext;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.Root;
-import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 
-import com.google.common.base.Preconditions;
-import com.google.protobuf.ByteString;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.util.*;
+
+import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Loader.*;
+import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Saver.*;
+
+//import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Saver.buildIntelINodeDirectory;
 
 @InterfaceAudience.Private
 public class FSImageFormatPBSnapshot {
@@ -720,7 +692,7 @@ public class FSImageFormatPBSnapshot {
             .getSnapshotList()) {
           Root sroot = s.getRoot();
           int intelINodeDirectory =
-              buildIntelINodeDirectory(sroot, parent.getSaverContext());
+              buildIntelINodeDirectory(sroot, parent.getSaverContext(), fbb1);
           int r = IntelINode.createIntelINode(fbb1, IntelTypee.DIRECTORY, sroot.getId(),
               fbb1.createString(sroot.getLocalName()), 0, intelINodeDirectory, 0);
           int offset = 0;
@@ -1001,7 +973,7 @@ public class FSImageFormatPBSnapshot {
           INodeDirectoryAttributes copy = diff.snapshotINode;
           if (!diff.isSnapshotRoot() && copy != null) {
             name = fbb1.createString(copy.getLocalNameBytes().toString());
-            snapshotCopy = buildIntelINodeDirectory(copy, parent.getSaverContext());
+            snapshotCopy = buildIntelINodeDirectory(copy, parent.getSaverContext(), fbb1);
           }
           long createdListSize = 0;
           // process created list and deleted list

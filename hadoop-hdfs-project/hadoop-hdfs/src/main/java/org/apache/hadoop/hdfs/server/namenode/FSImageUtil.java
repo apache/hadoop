@@ -68,6 +68,7 @@ public final class FSImageUtil {
     file.readFully(bytes);
     IntelFileSummary intelFileSummary =
         IntelFileSummary.getRootAsIntelFileSummary(ByteBuffer.wrap(bytes));
+//    int temp = (int) intelFileSummary.layoutVersion();
     if (intelFileSummary.ondiskVersion() != FILE_VERSION) {
       throw new IOException("Unsopported file version " + intelFileSummary.ondiskVersion());
     }
