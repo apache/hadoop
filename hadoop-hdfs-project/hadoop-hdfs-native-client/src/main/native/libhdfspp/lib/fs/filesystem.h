@@ -18,6 +18,7 @@
 #ifndef LIBHDFSPP_LIB_FS_FILESYSTEM_H_
 #define LIBHDFSPP_LIB_FS_FILESYSTEM_H_
 
+#include "filehandle.h"
 #include "common/hdfs_public_api.h"
 #include "common/async_stream.h"
 #include "libhdfspp/hdfs.h"
@@ -40,6 +41,7 @@ namespace hdfs {
  * Will eventually handle retry and failover.
  *
  * Threading model: thread-safe; all operations can be called concurrently
+ * Lifetime: owned by a FileSystemImpl
  */
 class NameNodeOperations {
 public:
@@ -71,6 +73,7 @@ private:
  * All open files must be closed before the FileSystem is destroyed.
  *
  * Threading model: thread-safe for all operations
+ * Lifetime: pointer created for consumer who is responsible for deleting it
  */
 class FileSystemImpl : public FileSystem {
 public:
@@ -114,35 +117,6 @@ private:
 
 };
 
-
-/*
- * ReadOperation: given DN connection, does one-shot reads.
- *
- * Threading model: not thread-safe; consumers and io_service should not call
- *    concurrently
- */
-class FileHandleImpl : public FileHandle {
-public:
-  FileHandleImpl(::asio::io_service *io_service, const std::string &client_name,
-                  const std::shared_ptr<const struct FileInfo> file_info);
-  virtual CancelHandle
-  PositionRead(void *buf, size_t nbyte, uint64_t offset,
-               const std::set<std::string> &excluded_datanodes,
-               const std::function<void(const Status &, const std::string &,
-                                        size_t)> &handler) override;
-
-  size_t PositionRead(void *buf, size_t nbyte, off_t offset) override;
-
-  CancelHandle AsyncPreadSome(size_t offset, const MutableBuffers &buffers,
-                      const std::set<std::string> &excluded_datanodes,
-                      const std::function<void(const Status &, const std::string &, size_t)> handler);
-private:
-  ::asio::io_service *io_service_;
-  const std::string client_name_;
-  const std::shared_ptr<const struct FileInfo> file_info_;
-
-  std::shared_ptr<DataNodeConnectionImpl> dn_;  // The last DN connected to
-};
 
 }
 

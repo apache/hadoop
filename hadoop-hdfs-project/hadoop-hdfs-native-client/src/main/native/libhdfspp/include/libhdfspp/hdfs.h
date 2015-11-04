@@ -74,9 +74,7 @@ public:
    **/
   virtual CancelHandle
   PositionRead(void *buf, size_t nbyte, uint64_t offset,
-               const std::set<std::string> &excluded_datanodes,
-               const std::function<void(const Status &, const std::string &,
-                                        size_t)> &handler) = 0;
+               const std::function<void(const Status &, size_t)> &handler) = 0;
 
   virtual size_t PositionRead(void *buf, size_t nbyte, off_t offset) = 0;
 
