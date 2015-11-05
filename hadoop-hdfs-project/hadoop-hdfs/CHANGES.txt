@@ -2239,6 +2239,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-9360. Storage type usage isn't updated properly after file deletion.
     (Ming Ma via xyao)
 
+    HDFS-9378. hadoop-hdfs-client tests do not write logs. (cnauroth)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
