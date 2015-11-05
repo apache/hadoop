@@ -659,6 +659,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
 
     int numOfAvailableNodes = clusterMap.countNumOfAvailableNodes(
         scope, excludedNodes);
+    int refreshCounter = numOfAvailableNodes;
     StringBuilder builder = null;
     if (LOG.isDebugEnabled()) {
       builder = debugLoggingBuilder.get();
@@ -707,6 +708,14 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
 
         // If no candidate storage was found on this DN then set badTarget.
         badTarget = (storage == null);
+      }
+      // Refresh the node count. If the live node count became smaller,
+      // but it is not reflected in this loop, it may loop forever in case
+      // the replicas/rack cannot be satisfied.
+      if (--refreshCounter == 0) {
+        numOfAvailableNodes = clusterMap.countNumOfAvailableNodes(scope,
+            excludedNodes);
+        refreshCounter = numOfAvailableNodes;
       }
     }
       
