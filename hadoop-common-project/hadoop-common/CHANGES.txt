@@ -256,6 +256,9 @@ Trunk (Unreleased)
 
     HADOOP-12541. make re2j dependency consistent (Matthew Paduano via aw)
 
+    HADOOP-11887. Introduce Intel ISA-L erasure coding library for native
+    erasure encoding support (Kai Zheng via Colin P. McCabe)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
@@ -947,9 +950,6 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12040. Adjust inputs order for the decode API in raw erasure coder.
     (Kai Zheng via yliu)
-
-    HADOOP-11887. Introduce Intel ISA-L erasure coding library for native
-    erasure encoding support (Kai Zheng via Colin P. McCabe)
 
   OPTIMIZATIONS
 
