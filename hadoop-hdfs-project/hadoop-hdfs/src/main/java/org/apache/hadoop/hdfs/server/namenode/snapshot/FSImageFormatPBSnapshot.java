@@ -696,7 +696,7 @@ public class FSImageFormatPBSnapshot {
             .getSnapshotList()) {
           Root sroot = s.getRoot();
           int intelINodeDirectory =
-              buildIntelINodeDirectory(sroot, parent.getSaverContext(), fbb1);
+              buildIntelINodeDirectory(sroot, parent.getSaverContext(),fbb1);
           int r = IntelINode.createIntelINode(fbb1, IntelTypee.DIRECTORY, sroot.getId(),
               fbb1.createString(sroot.getLocalName()), 0, intelINodeDirectory, 0);
           int offset = 0;
@@ -977,7 +977,7 @@ public class FSImageFormatPBSnapshot {
           INodeDirectoryAttributes copy = diff.snapshotINode;
           if (!diff.isSnapshotRoot() && copy != null) {
             name = fbb1.createString(copy.getLocalNameBytes().toString());
-            snapshotCopy = buildIntelINodeDirectory(copy, parent.getSaverContext(), fbb1);
+            snapshotCopy = buildIntelINodeDirectory(copy, parent.getSaverContext(),fbb1);
           }
           long createdListSize = 0;
           // process created list and deleted list

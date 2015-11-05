@@ -418,15 +418,17 @@ public final class FSImageFormatPBINode {
 
     void loadIntelINodeSection(InputStream in, StartupProgress prog,
                           Step currentStep) throws IOException {
-      IntelINodeSection intelINodeSection =
+      IntelINodeSection is =
           IntelINodeSection.getRootAsIntelINodeSection(ByteBuffer.wrap(parseFrom(in)));
 
-      fsn.dir.resetLastInodeId(intelINodeSection.lastInodeId());
-      long numInodes = intelINodeSection.numInodes();
+      fsn.dir.resetLastInodeId(is.lastInodeId());
+
+      long numInodes = is.numInodes();
 
       LOG.info("Loading " + numInodes + " INodes.");
       prog.setTotal(Phase.LOADING_FSIMAGE, currentStep, numInodes);
       Counter counter = prog.getCounter(Phase.LOADING_FSIMAGE, currentStep);
+
       for (int i = 0; i < numInodes; ++i) {
         IntelINode iNode = IntelINode.getRootAsIntelINode(ByteBuffer.wrap(parseFrom(in)));
         if (iNode.id() == INodeId.ROOT_INODE_ID) {
@@ -706,9 +708,8 @@ public final class FSImageFormatPBINode {
     }
 
     private static int buildIntelAclEntries(AclFeature f,
-        final SaverContext.DeduplicationMap<String> map) {
-//      AclFeatureProto.Builder b = AclFeatureProto.newBuilder();
-      FlatBufferBuilder fbb = new FlatBufferBuilder();
+        final SaverContext.DeduplicationMap<String> map, FlatBufferBuilder fbb) {
+//      FlatBufferBuilder fbb = new FlatBufferBuilder();
       int entries = 0;
       ArrayList<Integer> list = new ArrayList<Integer>();
       for (int pos = 0, e; pos < f.getEntriesSize(); pos++) {
@@ -718,7 +719,6 @@ public final class FSImageFormatPBINode {
             | (AclEntryStatusFormat.getType(e).ordinal() << ACL_ENTRY_TYPE_OFFSET)
             | (AclEntryStatusFormat.getScope(e).ordinal() << ACL_ENTRY_SCOPE_OFFSET)
             | (AclEntryStatusFormat.getPermission(e).ordinal());
-//        b.addEntries(v);
         list.add(v);
       }
       entries = IntelAclFeatureProto.
@@ -742,16 +742,12 @@ public final class FSImageFormatPBINode {
     }
 
     private static int buildIntelXAttrs(XAttrFeature f,
-       final SaverContext.DeduplicationMap<String> stringMap) {
-
-//      XAttrFeatureProto.Builder b = XAttrFeatureProto.newBuilder();
-      FlatBufferBuilder fbb = new FlatBufferBuilder();
+       final SaverContext.DeduplicationMap<String> stringMap, FlatBufferBuilder fbb) {
+//      FlatBufferBuilder fbb = new FlatBufferBuilder();
       IntelXAttrCompactProto.startIntelXAttrCompactProto(fbb);
       int value = 0;ArrayList<Integer> list = new ArrayList<>();
       for (XAttr a : f.getXAttrs())
       {
-//        XAttrCompactProto.Builder xAttrCompactBuilder = XAttrCompactProto.
-//            newBuilder();
         int nsOrd = a.getNameSpace().ordinal();
         Preconditions.checkArgument(nsOrd < 8, "Too many namespaces.");
         int v = ((nsOrd & XATTR_NAMESPACE_MASK) << XATTR_NAMESPACE_OFFSET)
@@ -759,11 +755,8 @@ public final class FSImageFormatPBINode {
             XATTR_NAME_OFFSET);
         v |= (((nsOrd >> 2) & XATTR_NAMESPACE_EXT_MASK) <<
             XATTR_NAMESPACE_EXT_OFFSET);
-//        xAttrCompactBuilder.setName(v);
         IntelXAttrCompactProto.addName(fbb, v);
         if (a.getValue() != null) {
-//          xAttrCompactBuilder.setValue(PBHelper.getByteString(a.getValue()));
-//          IntelXAttrCompactProto.addValue(fbb, fbb.createString(a.getValue().toString()));
           value = fbb.createString(a.getValue().toString());
         }
         int inv = IntelXAttrCompactProto.createIntelXAttrCompactProto(fbb, v, value);
@@ -798,8 +791,8 @@ public final class FSImageFormatPBINode {
       return b;
     }
 
-    private static int buildIntelQuotaByStorageTypeEntries(QuotaCounts q) {
-      FlatBufferBuilder fbb = new FlatBufferBuilder();
+    private static int buildIntelQuotaByStorageTypeEntries(QuotaCounts q, FlatBufferBuilder fbb) {
+//      FlatBufferBuilder fbb = new FlatBufferBuilder();
       ArrayList<Integer> list = null;
       for (StorageType t : StorageType.getTypesSupportingQuota()) {
         if (q.getTypeSpace(t) >= 0) {
@@ -836,11 +829,11 @@ public final class FSImageFormatPBINode {
       int xAttrs = 0;
       AclFeature f = file.getAclFeature();
       if (f != null) {
-       acl = buildIntelAclEntries(f, state.getStringMap());
+       acl = buildIntelAclEntries(f, state.getStringMap(), fbb);
       }
       XAttrFeature xAttrFeature = file.getXAttrFeature();
       if (xAttrFeature != null) {
-       xAttrs = buildIntelXAttrs(xAttrFeature, state.getStringMap());
+       xAttrs = buildIntelXAttrs(xAttrFeature, state.getStringMap(), fbb);
       }
       return IntelINodeFile.createIntelINodeFile(fbb, file.getFileReplication(),
           file.getModificationTime(), file.getAccessTime(),
@@ -871,7 +864,6 @@ public final class FSImageFormatPBINode {
 
     public static int buildIntelINodeDirectory(
         INodeDirectoryAttributes dir, final SaverContext state, FlatBufferBuilder fbb) {
-
       QuotaCounts quota = dir.getQuotaCounts();
       long modifyTime = dir.getModificationTime();
       long nsQuota = quota.getNameSpace();
@@ -882,16 +874,16 @@ public final class FSImageFormatPBINode {
       int typeQuotasOffset = 0;
 
       if (quota.getTypeSpaces().anyGreaterOrEqual(0)) {
-        typeQuotasOffset = buildIntelQuotaByStorageTypeEntries(quota);
+        typeQuotasOffset = buildIntelQuotaByStorageTypeEntries(quota, fbb); // attention
       }
 
       AclFeature f = dir.getAclFeature();
       if (f != null) {
-        aclOffset = buildIntelAclEntries(f, state.getStringMap());
+        aclOffset = buildIntelAclEntries(f, state.getStringMap(), fbb); // attention
       }
       XAttrFeature xAttrFeature = dir.getXAttrFeature();
       if (xAttrFeature != null) {
-        xAttrsOffset = buildIntelXAttrs(xAttrFeature, state.getStringMap());
+        xAttrsOffset = buildIntelXAttrs(xAttrFeature, state.getStringMap(), fbb); // attention
       }
       return IntelINodeDirectory.createIntelINodeDirectory(fbb, modifyTime,
           nsQuota, dsQuota, permission, aclOffset, xAttrsOffset, typeQuotasOffset);
@@ -1046,12 +1038,12 @@ public final class FSImageFormatPBINode {
       INodeMap inodesMap = fsn.dir.getINodeMap();
 
       FlatBufferBuilder fbb1 = new FlatBufferBuilder();
-      int inv = IntelINodeSection.createIntelINodeSection(fbb1,
-          fsn.dir.getLastInodeId(),
+      int inv = IntelINodeSection.createIntelINodeSection(fbb1, fsn.dir.getLastInodeId(),
           inodesMap.size());
       IntelINodeSection.finishIntelINodeSectionBuffer(fbb1, inv);
       byte[] bytes = fbb1.sizedByteArray();
       writeTo(bytes, bytes.length, out);
+
       int i = 0;
       Iterator<INodeWithAdditionalFields> iter = inodesMap.getMapIterator();
       while (iter.hasNext()) {
@@ -1155,7 +1147,6 @@ public final class FSImageFormatPBINode {
       int ib = buildIntelINodeDirectory(n, parent.getSaverContext(), fbb);
       int inv = IntelINode.createIntelINode(fbb, IntelTypee.DIRECTORY, n.getId(),
           fbb.createString(n.getLocalNameBytes().toString()), 0, ib, 0);
-
       IntelINode.finishIntelINodeBuffer(fbb, inv);
       byte[] bytes = fbb.sizedByteArray();
       writeTo(bytes, bytes.length, out);
@@ -1179,11 +1170,11 @@ public final class FSImageFormatPBINode {
       int xAttrs = 0;
       AclFeature f = n.getAclFeature();
       if (f != null) {
-        acl = buildIntelAclEntries(f, state.getStringMap());
+        acl = buildIntelAclEntries(f, state.getStringMap(),fbb);
       }
       XAttrFeature xAttrFeature = n.getXAttrFeature();
       if (xAttrFeature != null) {
-        xAttrs = buildIntelXAttrs(xAttrFeature, state.getStringMap());
+        xAttrs = buildIntelXAttrs(xAttrFeature, state.getStringMap(), fbb);
       }
       int blocks = 0;
       int fileUC = 0;
