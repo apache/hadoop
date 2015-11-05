@@ -1674,6 +1674,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9372. Remove dead code in DataStorage.recoverTransitionRead.
     (Duo Zhang via wheat9)
 
+    HDFS-9282. Make data directory count and storage raw capacity related tests
+    FsDataset-agnostic. (Tony Wu via lei)
+
   BUG FIXES
 
     HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.
