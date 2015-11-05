@@ -74,6 +74,8 @@ Optional packages:
 
 * Snappy compression
   $ sudo apt-get install snappy libsnappy-dev
+* Intel ISA-L library for erasure coding
+  Please refer to https://01.org/intel%C2%AE-storage-acceleration-library-open-source-version
 * Bzip2
   $ sudo apt-get install bzip2 libbz2-dev
 * Jansson (C Library for JSON)
@@ -178,6 +180,29 @@ Maven build goals:
   * -Dtest=<TESTCLASSNAME>,<TESTCLASSNAME#METHODNAME>,....
   * -Dtest.exclude=<TESTCLASSNAME>
   * -Dtest.exclude.pattern=**/<TESTCLASSNAME1>.java,**/<TESTCLASSNAME2>.java
+
+ Intel ISA-L build options:
+
+   Intel ISA-L is a erasure coding library that can be utilized by the native code.
+   It is currently an optional component, meaning that Hadoop can be built with
+   or without this dependency. Note the library is used via dynamic module. Please
+   reference the official site for the library details.
+   https://01.org/intel%C2%AE-storage-acceleration-library-open-source-version
+
+  * Use -Drequire.isal to fail the build if libisal.so is not found.
+    If this option is not specified and the isal library is missing,
+    we silently build a version of libhadoop.so that cannot make use of ISA-L and
+    the native raw erasure coders.
+    This option is recommended if you plan on making use of native raw erasure
+    coders and want to get more repeatable builds.
+  * Use -Disal.prefix to specify a nonstandard location for the libisal
+    library files. You do not need this option if you have installed ISA-L to the
+    system library path.
+  * Use -Disal.lib to specify a nonstandard location for the libisal library
+    files.
+  * Use -Dbundle.isal to copy the contents of the isal.lib directory into
+    the final tar file. This option requires that -Disal.lib is also given,
+    and it ignores the -Disal.prefix option.
 
 ----------------------------------------------------------------------------------
 Building components separately
