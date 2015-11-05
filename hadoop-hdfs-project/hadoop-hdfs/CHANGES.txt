@@ -2236,6 +2236,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9357. NN UI renders icons of decommissioned DN incorrectly.
     (Surendra Singh Lilhore via wheat9)
 
+    HDFS-9360. Storage type usage isn't updated properly after file deletion.
+    (Ming Ma via xyao)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

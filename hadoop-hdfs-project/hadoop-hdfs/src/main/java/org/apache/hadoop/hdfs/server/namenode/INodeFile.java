@@ -625,7 +625,9 @@ public class INodeFile extends INodeWithAdditionalFields
       byte blockStoragePolicyId, boolean useCache, int lastSnapshotId) {
     final QuotaCounts counts = new QuotaCounts.Builder().nameSpace(1).build();
 
-    final BlockStoragePolicy bsp = bsps.getPolicy(blockStoragePolicyId);
+    final BlockStoragePolicy bsp = (blockStoragePolicyId ==
+        BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) ? null :
+        bsps.getPolicy(blockStoragePolicyId);
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if (sf == null) {
       counts.add(storagespaceConsumed(bsp));
