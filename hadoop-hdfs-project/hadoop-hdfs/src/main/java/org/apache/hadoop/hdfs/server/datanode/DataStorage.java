@@ -44,7 +44,6 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
-import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DiskChecker;
 
@@ -106,9 +105,6 @@ public class DataStorage extends Storage {
    *  versions of Datanodes we cannot make this field a UUID.
    */
   private String datanodeUuid = null;
-
-  // Flag to ensure we only initialize storage once
-  private boolean initialized = false;
   
   // Maps block pool IDs to block pool storage
   private final Map<String, BlockPoolSliceStorage> bpStorageMap
@@ -462,14 +458,6 @@ public class DataStorage extends Storage {
    */
   void recoverTransitionRead(DataNode datanode, NamespaceInfo nsInfo,
       Collection<StorageLocation> dataDirs, StartupOption startOpt) throws IOException {
-    if (this.initialized) {
-      LOG.info("DataNode version: " + HdfsServerConstants.DATANODE_LAYOUT_VERSION
-          + " and NameNode layout version: " + nsInfo.getLayoutVersion());
-      this.storageDirs = new ArrayList<StorageDirectory>(dataDirs.size());
-      // mark DN storage is initialized
-      this.initialized = true;
-    }
-
     if (addStorageLocations(datanode, nsInfo, dataDirs, startOpt).isEmpty()) {
       throw new IOException("All specified directories are failed to load.");
     }
