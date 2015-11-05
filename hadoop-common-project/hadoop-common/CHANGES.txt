@@ -329,9 +329,6 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11685. StorageException complaining " no lease ID" during HBase
     distributed log splitting (Duo Xu via cnauroth)
 
-    HADOOP-11887. Introduce Intel ISA-L erasure coding library for native
-    erasure encoding support (Kai Zheng via Colin P. McCabe)
-
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp

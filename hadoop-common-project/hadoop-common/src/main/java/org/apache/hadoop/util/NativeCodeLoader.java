@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public final class NativeCodeLoader {
+public class NativeCodeLoader {
 
   private static final Log LOG =
     LogFactory.getLog(NativeCodeLoader.class);
@@ -64,8 +64,6 @@ public final class NativeCodeLoader {
     }
   }
 
-  private NativeCodeLoader() {}
-
   /**
    * Check if native-hadoop code is loaded for this platform.
    * 
@@ -80,12 +78,7 @@ public final class NativeCodeLoader {
    * Returns true only if this build was compiled with support for snappy.
    */
   public static native boolean buildSupportsSnappy();
-
-  /**
-   * Returns true only if this build was compiled with support for ISA-L.
-   */
-  public static native boolean buildSupportsIsal();
-
+  
   /**
    * Returns true only if this build was compiled with support for openssl.
    */
