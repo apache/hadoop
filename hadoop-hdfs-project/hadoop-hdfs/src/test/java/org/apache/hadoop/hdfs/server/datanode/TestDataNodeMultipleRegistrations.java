@@ -97,7 +97,9 @@ public class TestDataNodeMultipleRegistrations {
         LOG.info("vol " + i++ + ") " + e.getKey() + ": " + e.getValue());
       }
       // number of volumes should be 2 - [data1, data2]
-      assertEquals("number of volumes is wrong", 2, volInfos.size());
+      assertEquals("number of volumes is wrong",
+          cluster.getFsDatasetTestUtils(0).getDefaultNumOfDataDirs(),
+          volInfos.size());
 
       for (BPOfferService bpos : dn.getAllBpOs()) {
         LOG.info("BP: " + bpos);
@@ -164,7 +166,9 @@ public class TestDataNodeMultipleRegistrations {
         LOG.info("vol " + i++ + ") " + e.getKey() + ": " + e.getValue());
       }
       // number of volumes should be 2 - [data1, data2]
-      assertEquals("number of volumes is wrong", 2, volInfos.size());
+      assertEquals("number of volumes is wrong",
+          cluster.getFsDatasetTestUtils(0).getDefaultNumOfDataDirs(),
+          volInfos.size());
 
       for (BPOfferService bpos : dn.getAllBpOs()) {
         LOG.info("reg: bpid=" + "; name=" + bpos.bpRegistration + "; sid="
