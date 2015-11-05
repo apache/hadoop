@@ -2256,6 +2256,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9289. Make DataStreamer#block thread safe and verify genStamp in
     commitBlock. (Chang Li via zhz)
 
+    HDFS-4937. ReplicationMonitor can infinite-loop in 
+    BlockPlacementPolicyDefault#chooseRandom(). (kihwal)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
