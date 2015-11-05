@@ -772,7 +772,7 @@ public class FSImageFormatPBSnapshot {
           .getRefList();
       for (INodeReference ref : refList) {
         if (ref instanceof WithName) {
-          name = fbb.createString(ref.getLocalNameBytes().toString());
+          name = fbb.createString(bytesToString(ref.getLocalNameBytes()));
           lastSnapshotId = ((WithName) ref).getLastSnapshotId();
         } else if (ref instanceof DstReference) {
           dstSnapshotId = ref.getDstSnapshotId();
@@ -870,7 +870,7 @@ public class FSImageFormatPBSnapshot {
       // local names of the created list member
       for (INode c : created) {
         int inv =IntelCreatedListEntry.createIntelCreatedListEntry(fbb,
-            fbb.createString(c.getLocalNameBytes().toString()));
+            fbb.createString(bytesToString(c.getLocalNameBytes())));
         IntelCreatedListEntry.finishIntelCreatedListEntryBuffer(fbb, inv);
         byte[] bytes = fbb.sizedByteArray();
         writeTo(bytes, bytes.length, out);
@@ -915,7 +915,7 @@ public class FSImageFormatPBSnapshot {
           INodeFileAttributes copy = diff.snapshotINode;
 
           if (copy != null) {
-            name = fbb1.createString(copy.getLocalNameBytes().toString());
+            name = fbb1.createString(bytesToString(copy.getLocalNameBytes()));
             snapshotcopy = buildIntelINodeFile(fbb1, copy, parent.getSaverContext());
           }
           int offset = IntelFileDiff.createIntelFileDiff(fbb1, diff.getSnapshotId(),
@@ -976,7 +976,7 @@ public class FSImageFormatPBSnapshot {
           DirectoryDiff diff = diffList.get(i);
           INodeDirectoryAttributes copy = diff.snapshotINode;
           if (!diff.isSnapshotRoot() && copy != null) {
-            name = fbb1.createString(copy.getLocalNameBytes().toString());
+            name = fbb1.createString(bytesToString(copy.getLocalNameBytes()));
             snapshotCopy = buildIntelINodeDirectory(copy, parent.getSaverContext(),fbb1);
           }
           long createdListSize = 0;

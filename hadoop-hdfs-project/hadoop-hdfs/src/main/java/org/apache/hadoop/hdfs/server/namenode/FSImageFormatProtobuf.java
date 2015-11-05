@@ -831,7 +831,6 @@ public final class FSImageFormatProtobuf {
 
     private int saveIntelNameSystemSection(FlatBufferBuilder fbb) throws IOException{
       final FSNamesystem fsn = context.getSourceNamesystem();
-      OutputStream out = sectionOutputStream;
       BlockIdManager blockIdManager = fsn.getBlockIdManager();
 
       FlatBufferBuilder nsFbb = new FlatBufferBuilder();
@@ -852,7 +851,7 @@ public final class FSImageFormatProtobuf {
       byteBuffer = nsFbb.dataBuffer();
       int serialLength = byteBuffer.capacity() - byteBuffer.position();
       byte[] bytes = nsFbb.sizedByteArray();
-      writeTo(bytes, serialLength, underlyingOutputStream);
+      writeTo(bytes, serialLength, sectionOutputStream);
       return commitIntelSection(SectionName.NS_INFO ,fbb);
     }
 
