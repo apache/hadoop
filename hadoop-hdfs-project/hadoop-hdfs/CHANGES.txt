@@ -1626,6 +1626,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9363. Add fetchReplica() to FsDatasetTestUtils to return FsDataset-agnostic
     replica. (Tony Wu via lei)
 
+    HDFS-9377. Fix findbugs warnings in FSDirSnapshotOp.
+    (Mingliang Liu via Yongjun Zhang)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
