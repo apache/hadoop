@@ -128,7 +128,7 @@ CancelHandle FileHandleImpl::AsyncPreadSome(
   reader.reset(new BlockReaderImpl(BlockReaderOptions(), dn));
 
 
-  auto read_handler = [dn_id, handler](const Status & status, size_t transferred) {
+  auto read_handler = [reader, dn_id, handler](const Status & status, size_t transferred) {
     handler(status, dn_id, transferred);
   };
 
