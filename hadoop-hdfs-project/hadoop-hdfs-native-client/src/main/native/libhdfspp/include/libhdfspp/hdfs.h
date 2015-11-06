@@ -109,9 +109,9 @@ public:
   virtual void
   Open(const std::string &path,
        const std::function<void(const Status &, FileHandle *)> &handler) = 0;
-  Status Open(const std::string &path, FileHandle **handle);
+  virtual Status Open(const std::string &path, FileHandle **handle);
 
-  virtual ~FileSystem();
+  virtual ~FileSystem() {};
 
 };
 }

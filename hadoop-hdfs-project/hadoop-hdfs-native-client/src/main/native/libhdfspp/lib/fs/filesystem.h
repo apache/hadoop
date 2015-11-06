@@ -80,7 +80,7 @@ private:
 class FileSystemImpl : public FileSystem {
 public:
   FileSystemImpl(IoService *&io_service, const Options &options);
-  ~FileSystemImpl();
+  ~FileSystemImpl() override;
 
   /* attempt to connect to namenode, return bad status on failure */
   void Connect(const std::string &server, const std::string &service,
@@ -92,7 +92,7 @@ public:
   virtual void Open(const std::string &path,
                     const std::function<void(const Status &, FileHandle *)>
                         &handler) override;
-  Status Open(const std::string &path, FileHandle **handle);
+  Status Open(const std::string &path, FileHandle **handle) override;
 
 
   /* add a new thread to handle asio requests, return number of threads in pool
