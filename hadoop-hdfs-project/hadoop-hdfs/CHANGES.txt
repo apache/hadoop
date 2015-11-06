@@ -2250,6 +2250,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9378. hadoop-hdfs-client tests do not write logs. (cnauroth)
 
+    HDFS-9384. TestWebHdfsContentLength intermittently hangs and fails due to
+    TCP conversation mismatch between client and server. (cnauroth)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

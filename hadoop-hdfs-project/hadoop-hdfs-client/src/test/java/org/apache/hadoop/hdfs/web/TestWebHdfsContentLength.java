@@ -38,8 +38,9 @@ import org.apache.hadoop.net.NetUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
-
+import org.junit.rules.Timeout;
 
 public class TestWebHdfsContentLength {
   private static ServerSocket listenSocket;
@@ -57,6 +58,9 @@ public class TestWebHdfsContentLength {
   private static String redirectResponse;
 
   private static ExecutorService executor;
+
+  @Rule
+  public Timeout timeout = new Timeout(30000);
 
   @BeforeClass
   public static void setup() throws IOException {
@@ -186,8 +190,21 @@ public class TestWebHdfsContentLength {
           client.getOutputStream().write(response.getBytes());
           client.shutdownOutput();
           byte[] buf = new byte[4*1024]; // much bigger than request
-          int n = client.getInputStream().read(buf);
-          return new String(buf, 0, n);
+
+          // The second request can be sent with Transfer-Encoding: chunked.
+          // The Java HTTP client tends to split the headers and the chunked
+          // body into separate writes, so the first read likely only gets the
+          // headers.  We must fully consume the input to prevent a hang on the
+          // client side.
+          StringBuilder sb = new StringBuilder();
+          for (;;) {
+            int n = client.getInputStream().read(buf);
+            if (n <= 0) {
+              break;
+            }
+            sb.append(new String(buf, 0, n, "UTF-8"));
+          }
+          return sb.toString();
         } finally {
           client.close();
         }
