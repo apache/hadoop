@@ -2346,6 +2346,9 @@ Release 2.7.2 - UNRELEASED
     HDFS-9317. Document fsck -blockId and -storagepolicy options in branch-2.7.
     (aajisaka)
 
+    HDFS-6481. DatanodeManager#getDatanodeStorageInfos() should check the
+    length of storageIDs. (szetszwo via Arpit Agarwal)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
