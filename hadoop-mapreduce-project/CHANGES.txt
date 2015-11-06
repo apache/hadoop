@@ -120,7 +120,6 @@ Trunk (Unreleased)
 
   BUG FIXES
 
-
     MAPREDUCE-6191. Improve clearing stale state of Java serialization
                     testcase.  (Sam Liu via Eric Yang)
 
@@ -171,6 +170,9 @@ Trunk (Unreleased)
 
     MAPREDUCE-3914. Mismatched free() / delete / delete [] in HadoopPipes
     (Joe Mudd via aw)
+
+    MAPREDUCE-1125. SerialUtils.cc: deserializeFloat is out of sync with
+    SerialUtils.hh (Simone Leo via aw)
 
     MAPREDUCE-4574. Fix TotalOrderParitioner to work with
     non-WritableComparable key types. (harsh)
