@@ -58,6 +58,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       };
 
   protected boolean considerLoad; 
+  protected double considerLoadFactor;
   private boolean preferLocalNode = true;
   protected NetworkTopology clusterMap;
   protected Host2NodesMap host2datanodeMap;
@@ -79,6 +80,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                          Host2NodesMap host2datanodeMap) {
     this.considerLoad = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY, true);
+    this.considerLoadFactor = conf.getDouble(
+        DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_FACTOR,
+        DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_FACTOR_DEFAULT);
     this.stats = stats;
     this.clusterMap = clusterMap;
     this.host2datanodeMap = host2datanodeMap;
@@ -809,7 +813,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
 
     // check the communication traffic of the target machine
     if (considerLoad) {
-      final double maxLoad = 2.0 * stats.getInServiceXceiverAverage();
+      final double maxLoad = considerLoadFactor *
+          stats.getInServiceXceiverAverage();
       final int nodeLoad = node.getXceiverCount();
       if (nodeLoad > maxLoad) {
         logNodeIsNotChosen(node, "the node is too busy (load: " + nodeLoad

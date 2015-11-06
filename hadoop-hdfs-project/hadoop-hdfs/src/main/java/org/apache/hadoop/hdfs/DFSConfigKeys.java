@@ -184,6 +184,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY;
   public static final boolean DFS_NAMENODE_REPLICATION_CONSIDERLOAD_DEFAULT = true;
+  public static final String  DFS_NAMENODE_REPLICATION_CONSIDERLOAD_FACTOR =
+      "dfs.namenode.replication.considerLoad.factor";
+  public static final double
+      DFS_NAMENODE_REPLICATION_CONSIDERLOAD_FACTOR_DEFAULT = 2.0;
   public static final String  DFS_NAMENODE_REPLICATION_INTERVAL_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY;
   public static final int     DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT = 3;
