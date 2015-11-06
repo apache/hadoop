@@ -61,20 +61,15 @@ public class Constants {
 
   // the maximum number of threads to allow in the pool used by TransferManager
   public static final String MAX_THREADS = "fs.s3a.threads.max";
-  public static final int DEFAULT_MAX_THREADS = 256;
+  public static final int DEFAULT_MAX_THREADS = 10;
 
-  // the number of threads to keep in the pool used by TransferManager
-  public static final String CORE_THREADS = "fs.s3a.threads.core";
-  public static final int DEFAULT_CORE_THREADS = DEFAULT_MAXIMUM_CONNECTIONS;
-
-  // when the number of threads is greater than the core, this is the maximum time
-  // that excess idle threads will wait for new tasks before terminating.
+  // the time an idle thread waits before terminating
   public static final String KEEPALIVE_TIME = "fs.s3a.threads.keepalivetime";
   public static final int DEFAULT_KEEPALIVE_TIME = 60;
 
-  // the maximum number of tasks that the LinkedBlockingQueue can hold
+  // the maximum number of tasks cached if all threads are already uploading
   public static final String MAX_TOTAL_TASKS = "fs.s3a.max.total.tasks";
-  public static final int DEFAULT_MAX_TOTAL_TASKS = 1000;
+  public static final int DEFAULT_MAX_TOTAL_TASKS = 5;
 
   // size of each of or multipart pieces in bytes
   public static final String MULTIPART_SIZE = "fs.s3a.multipart.size";
