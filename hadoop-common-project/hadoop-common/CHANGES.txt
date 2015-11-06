@@ -8,6 +8,9 @@ Release 2.6.3 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-12413. AccessControlList should avoid calling getGroupNames in
+    isUserInList with empty groups. (Zhihai Xu via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
