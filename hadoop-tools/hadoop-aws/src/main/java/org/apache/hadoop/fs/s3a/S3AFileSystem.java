@@ -26,11 +26,8 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
@@ -86,7 +83,7 @@ public class S3AFileSystem extends FileSystem {
   private int maxKeys;
   private long partSize;
   private TransferManager transfers;
-  private ThreadPoolExecutor threadPoolExecutor;
+  private ExecutorService threadPoolExecutor;
   private long multiPartThreshold;
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
   private CannedAccessControlList cannedACL;
@@ -94,55 +91,6 @@ public class S3AFileSystem extends FileSystem {
 
   // The maximum number of entries that can be deleted in any call to s3
   private static final int MAX_ENTRIES_TO_DELETE = 1000;
-
-  private static final AtomicInteger poolNumber = new AtomicInteger(1);
-  /**
-   * Returns a {@link java.util.concurrent.ThreadFactory} that names each created thread uniquely,
-   * with a common prefix.
-   * @param prefix The prefix of every created Thread's name
-   * @return a {@link java.util.concurrent.ThreadFactory} that names threads
-   */
-  public static ThreadFactory getNamedThreadFactory(final String prefix) {
-    SecurityManager s = System.getSecurityManager();
-    final ThreadGroup threadGroup = (s != null) ? s.getThreadGroup() : Thread.currentThread()
-        .getThreadGroup();
-
-    return new ThreadFactory() {
-      final AtomicInteger threadNumber = new AtomicInteger(1);
-      private final int poolNum = poolNumber.getAndIncrement();
-      final ThreadGroup group = threadGroup;
-
-      @Override
-      public Thread newThread(Runnable r) {
-        final String name = prefix + "-pool" + poolNum + "-t" + threadNumber.getAndIncrement();
-        return new Thread(group, r, name);
-      }
-    };
-  }
-
-  /**
-   * Get a named {@link ThreadFactory} that just builds daemon threads.
-   * @param prefix name prefix for all threads created from the factory
-   * @return a thread factory that creates named, daemon threads with
-   *         the supplied exception handler and normal priority
-   */
-  private static ThreadFactory newDaemonThreadFactory(final String prefix) {
-    final ThreadFactory namedFactory = getNamedThreadFactory(prefix);
-    return new ThreadFactory() {
-      @Override
-      public Thread newThread(Runnable r) {
-        Thread t = namedFactory.newThread(r);
-        if (!t.isDaemon()) {
-          t.setDaemon(true);
-        }
-        if (t.getPriority() != Thread.NORM_PRIORITY) {
-          t.setPriority(Thread.NORM_PRIORITY);
-        }
-        return t;
-      }
-
-    };
-  }
 
   /** Called after a new FileSystem instance is constructed.
    * @param name a uri whose authority section names the host, port, etc.
@@ -264,25 +212,19 @@ public class S3AFileSystem extends FileSystem {
     }
 
     int maxThreads = conf.getInt(MAX_THREADS, DEFAULT_MAX_THREADS);
-    int coreThreads = conf.getInt(CORE_THREADS, DEFAULT_CORE_THREADS);
-    if (maxThreads == 0) {
-      maxThreads = Runtime.getRuntime().availableProcessors() * 8;
+    if (maxThreads < 2) {
+      LOG.warn(MAX_THREADS + " must be at least 2: forcing to 2.");
+      maxThreads = 2;
     }
-    if (coreThreads == 0) {
-      coreThreads = Runtime.getRuntime().availableProcessors() * 8;
+    int totalTasks = conf.getInt(MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS);
+    if (totalTasks < 1) {
+      LOG.warn(MAX_TOTAL_TASKS + "must be at least 1: forcing to 1.");
+      totalTasks = 1;
     }
     long keepAliveTime = conf.getLong(KEEPALIVE_TIME, DEFAULT_KEEPALIVE_TIME);
-    LinkedBlockingQueue<Runnable> workQueue =
-      new LinkedBlockingQueue<>(maxThreads *
-        conf.getInt(MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS));
-    threadPoolExecutor = new ThreadPoolExecutor(
-        coreThreads,
-        maxThreads,
-        keepAliveTime,
-        TimeUnit.SECONDS,
-        workQueue,
-        newDaemonThreadFactory("s3a-transfer-shared-"));
-    threadPoolExecutor.allowCoreThreadTimeOut(true);
+    threadPoolExecutor = new BlockingThreadPoolExecutorService(maxThreads,
+        maxThreads + totalTasks, keepAliveTime, TimeUnit.SECONDS,
+        "s3a-transfer-shared");
 
     TransferManagerConfiguration transferConfiguration = new TransferManagerConfiguration();
     transferConfiguration.setMinimumUploadPartSize(partSize);
