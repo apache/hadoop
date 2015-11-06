@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
@@ -678,6 +679,42 @@ public class TestBlockRecovery {
         cluster.shutdown();
         cluster = null;
       }
+    }
+  }
+
+  /**
+   * DNs report RUR instead of RBW, RWR or FINALIZED. Primary DN expected to
+   * throw an exception.
+   * @throws Exception
+   */
+  @Test
+  public void testRURReplicas() throws Exception {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
+
+    doReturn(new ReplicaRecoveryInfo(block.getBlockId(), block.getNumBytes(),
+        block.getGenerationStamp(), ReplicaState.RUR)).when(spyDN).
+        initReplicaRecovery(any(RecoveringBlock.class));
+
+    boolean exceptionThrown = false;
+    try {
+      for (RecoveringBlock rBlock : initRecoveringBlocks()) {
+        BlockRecoveryWorker.RecoveryTaskContiguous RecoveryTaskContiguous =
+            recoveryWorker.new RecoveryTaskContiguous(rBlock);
+        BlockRecoveryWorker.RecoveryTaskContiguous spyTask =
+            spy(RecoveryTaskContiguous);
+        spyTask.recover();
+      }
+    } catch (IOException e) {
+      // expect IOException to be thrown here
+      e.printStackTrace();
+      assertTrue("Wrong exception was thrown: " + e.getMessage(),
+          e.getMessage().contains("Found 1 replica(s) for block " + block +
+          " but none is in RWR or better state"));
+      exceptionThrown = true;
+    } finally {
+      assertTrue(exceptionThrown);
     }
   }
 }
