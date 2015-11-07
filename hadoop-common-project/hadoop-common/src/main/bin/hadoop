@@ -33,6 +33,7 @@ function hadoop_usage
   hadoop_add_subcommand "daemonlog" "get/set the log level for each daemon"
   hadoop_add_subcommand "distch" "distributed metadata changer"
   hadoop_add_subcommand "distcp" "copy file or directories recursively"
+  hadoop_add_subcommand "envvars" "display computed Hadoop environment variables"
   hadoop_add_subcommand "fs" "run a generic filesystem user client"
   hadoop_add_subcommand "jar <jar>" "run a jar file. NOTE: please use \"yarn jar\" to launch YARN applications, not this command."
   hadoop_add_subcommand "jnipath" "prints the java.library.path"
@@ -137,6 +138,16 @@ case ${COMMAND} in
   distcp)
     CLASS=org.apache.hadoop.tools.DistCp
     hadoop_add_to_classpath_toolspath
+  ;;
+  envvars)
+    echo "JAVA_HOME='${JAVA_HOME}'"
+    echo "HADOOP_COMMON_HOME='${HADOOP_COMMON_HOME}'"
+    echo "HADOOP_COMMON_DIR='${HADOOP_COMMON_DIR}'"
+    echo "HADOOP_COMMON_LIB_JARS_DIR='${HADOOP_COMMON_LIB_JARS_DIR}'"
+    echo "HADOOP_COMMON_LIB_NATIVE_DIR='${HADOOP_COMMON_LIB_NATIVE_DIR}'"
+    echo "HADOOP_CONF_DIR='${HADOOP_CONF_DIR}'"
+    echo "HADOOP_TOOLS_PATH='${HADOOP_TOOLS_PATH}'"
+    exit 0
   ;;
   fs)
     CLASS=org.apache.hadoop.fs.FsShell
