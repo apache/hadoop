@@ -1145,14 +1145,10 @@ public class NNThroughputBenchmark implements Tool {
       int nrFiles = (int)Math.ceil((double)nrBlocks / blocksPerFile);
       datanodes = new TinyDatanode[nrDatanodes];
       // create data-nodes
-      String prevDNName = "";
       for(int idx=0; idx < nrDatanodes; idx++) {
         datanodes[idx] = new TinyDatanode(idx, blocksPerReport);
         datanodes[idx].register();
-        assert datanodes[idx].getXferAddr().compareTo(prevDNName) > 0
-          : "Data-nodes must be sorted lexicographically.";
         datanodes[idx].sendHeartbeat();
-        prevDNName = datanodes[idx].getXferAddr();
       }
 
       // create files 
@@ -1184,7 +1180,7 @@ public class NNThroughputBenchmark implements Tool {
             prevBlock, null, HdfsConstants.GRANDFATHER_INODE_ID, null);
         prevBlock = loc.getBlock();
         for(DatanodeInfo dnInfo : loc.getLocations()) {
-          int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getXferAddr());
+          int dnIdx = dnInfo.getXferPort() - 1;
           datanodes[dnIdx].addBlock(loc.getBlock().getLocalBlock());
           ReceivedDeletedBlockInfo[] rdBlocks = { new ReceivedDeletedBlockInfo(
               loc.getBlock().getLocalBlock(),

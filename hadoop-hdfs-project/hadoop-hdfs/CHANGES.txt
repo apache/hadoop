@@ -1632,6 +1632,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9236. Missing sanity check for block size during block recovery.
     (Tony Wu via Yongjun Zhang)
 
+    HDFS-9379. Make NNThroughputBenchmark$BlockReportStats support more than 10
+    datanodes. (Mingliang Liu via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
