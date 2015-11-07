@@ -2264,6 +2264,10 @@ Release 2.8.0 - UNRELEASED
     HDFS-9384. TestWebHdfsContentLength intermittently hangs and fails due to
     TCP conversation mismatch between client and server. (cnauroth)
 
+    HDFS-9394. branch-2 hadoop-hdfs-client fails during FileSystem ServiceLoader
+    initialization, because HftpFileSystem is missing.
+    (Mingliang Liu via cnauroth)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
