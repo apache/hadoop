@@ -36,6 +36,18 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public abstract class ByteArrayManager {
   static final Logger LOG = LoggerFactory.getLogger(ByteArrayManager.class);
+  private static final ThreadLocal<StringBuilder> DEBUG_MESSAGE =
+      new ThreadLocal<StringBuilder>() {
+    protected StringBuilder initialValue() {
+      return new StringBuilder();
+    }
+  };
+
+  private static void logDebugMessage() {
+    final StringBuilder b = DEBUG_MESSAGE.get();
+    LOG.debug(b.toString());
+    b.setLength(0);
+  }
 
   static final int MIN_ARRAY_LENGTH = 32;
   static final byte[] EMPTY_BYTE_ARRAY = {};
@@ -148,18 +160,27 @@ public abstract class ByteArrayManager {
      * via the {@link FixedLengthManager#recycle(byte[])} method.
      */
     synchronized byte[] allocate() throws InterruptedException {
-      LOG.debug(", {}", this);
+      if (LOG.isDebugEnabled()) {
+        DEBUG_MESSAGE.get().append(", ").append(this);
+      }
       for(; numAllocated >= maxAllocated;) {
-        LOG.debug(": wait ...");
+        if (LOG.isDebugEnabled()) {
+          DEBUG_MESSAGE.get().append(": wait ...");
+          logDebugMessage();
+        }
 
         wait();
 
-        LOG.debug("wake up: {}", this);
+        if (LOG.isDebugEnabled()) {
+          DEBUG_MESSAGE.get().append("wake up: ").append(this);
+        }
       }
       numAllocated++;
 
       final byte[] array = freeQueue.poll();
-      LOG.debug(", recycled? {}", array != null);
+      if (LOG.isDebugEnabled()) {
+        DEBUG_MESSAGE.get().append(", recycled? ").append(array != null);
+      }
       return array != null? array : new byte[byteArrayLength];
     }
 
@@ -173,7 +194,9 @@ public abstract class ByteArrayManager {
     synchronized int recycle(byte[] array) {
       Preconditions.checkNotNull(array);
       Preconditions.checkArgument(array.length == byteArrayLength);
-      LOG.debug(", {}", this);
+      if (LOG.isDebugEnabled()) {
+        DEBUG_MESSAGE.get().append(", ").append(this);
+      }
 
       notify();
       numAllocated--;
@@ -184,7 +207,9 @@ public abstract class ByteArrayManager {
       }
 
       if (freeQueue.size() < maxAllocated - numAllocated) {
-        LOG.debug(", freeQueue.offer");
+        if (LOG.isDebugEnabled()) {
+          DEBUG_MESSAGE.get().append(", freeQueue.offer");
+        }
         freeQueue.offer(array);
       }
       return freeQueue.size();
@@ -324,7 +349,9 @@ public abstract class ByteArrayManager {
     public byte[] newByteArray(final int arrayLength)
         throws InterruptedException {
       Preconditions.checkArgument(arrayLength >= 0);
-      LOG.debug("allocate({})", arrayLength);
+      if (LOG.isDebugEnabled()) {
+        DEBUG_MESSAGE.get().append("allocate(").append(arrayLength).append(")");
+      }
 
       final byte[] array;
       if (arrayLength == 0) {
@@ -338,12 +365,18 @@ public abstract class ByteArrayManager {
         final FixedLengthManager manager =
             managers.get(powerOfTwo, aboveThreshold);
 
-        LOG.debug(": count={}, {}Threshold", count,
-            aboveThreshold ? "above" : "below");
+        if (LOG.isDebugEnabled()) {
+          DEBUG_MESSAGE.get().append(": count=").append(count)
+              .append(aboveThreshold? ", aboveThreshold": ", belowThreshold");
+        }
         array = manager != null? manager.allocate(): new byte[powerOfTwo];
       }
 
-      LOG.debug(", return byte[{}]", array.length);
+      if (LOG.isDebugEnabled()) {
+        DEBUG_MESSAGE.get().append(", return byte[")
+            .append(array.length).append("]");
+        logDebugMessage();
+      }
       return array;
     }
 
@@ -358,7 +391,10 @@ public abstract class ByteArrayManager {
     @Override
     public int release(final byte[] array) {
       Preconditions.checkNotNull(array);
-      LOG.debug("recycle: array.length={}", array.length);
+      if (LOG.isDebugEnabled()) {
+        DEBUG_MESSAGE.get()
+            .append("recycle: array.length=").append(array.length);
+      }
 
       final int freeQueueSize;
       if (array.length == 0) {
@@ -368,7 +404,10 @@ public abstract class ByteArrayManager {
         freeQueueSize = manager == null? -1: manager.recycle(array);
       }
 
-      LOG.debug(", freeQueueSize={}", freeQueueSize);
+      if (LOG.isDebugEnabled()) {
+        DEBUG_MESSAGE.get().append(", freeQueueSize=").append(freeQueueSize);
+        logDebugMessage();
+      }
       return freeQueueSize;
     }
 
