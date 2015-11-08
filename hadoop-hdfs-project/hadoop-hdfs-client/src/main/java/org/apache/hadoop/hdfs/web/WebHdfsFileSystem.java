@@ -1227,6 +1227,12 @@ public class WebHdfsFileSystem extends FileSystem
     new FsPathRunner(op, p, new AclPermissionParam(aclSpec)).run();
   }
 
+  public void allowSnapshot(final Path p) throws IOException {
+    statistics.incrementWriteOps(1);
+    final HttpOpParam.Op op = PutOpParam.Op.ALLOWSNAPSHOT;
+    new FsPathRunner(op, p).run();
+  }
+
   @Override
   public Path createSnapshot(final Path path, final String snapshotName)
       throws IOException {
@@ -1240,6 +1246,12 @@ public class WebHdfsFileSystem extends FileSystem
         return new Path((String) json.get(Path.class.getSimpleName()));
       }
     }.run();
+  }
+
+  public void disallowSnapshot(final Path p) throws IOException {
+    statistics.incrementWriteOps(1);
+    final HttpOpParam.Op op = PutOpParam.Op.DISALLOWSNAPSHOT;
+    new FsPathRunner(op, p).run();
   }
 
   @Override
