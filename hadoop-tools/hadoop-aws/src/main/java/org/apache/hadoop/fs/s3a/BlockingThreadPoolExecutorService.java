@@ -47,10 +47,8 @@ import com.google.common.util.concurrent.MoreExecutors;
  * already full by using a semaphore. Task submissions require permits, task
  * completions release permits.
  * <p>
- * This is inspired by <a href = "https://github
- * .com/apache/incubator-s4/blob/master/subprojects
- * /s4-comm/src/main/java/org/apache/s4/comm/staging
- * /BlockingThreadPoolExecutorService.java"> this s4 threadpool</a>
+ * This is inspired by <a href="https://github.com/apache/incubator-s4/blob/master/subprojects/s4-comm/src/main/java/org/apache/s4/comm/staging/BlockingThreadPoolExecutorService.java">
+ * this s4 threadpool</a>
  */
 public class BlockingThreadPoolExecutorService
     extends ForwardingListeningExecutorService {
