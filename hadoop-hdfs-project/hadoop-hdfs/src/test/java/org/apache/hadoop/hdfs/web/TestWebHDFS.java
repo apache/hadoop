@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.web;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import java.io.EOFException;
@@ -50,6 +51,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSClientRetries;
 import org.apache.hadoop.hdfs.TestFileCreation;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
@@ -331,6 +333,60 @@ public class TestWebHDFS {
       Assert.fail("No exception was thrown");
     } catch (IOException ex) {
       GenericTestUtils.assertExceptionContains("Failed to find datanode", ex);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Test allow and disallow snapshot through WebHdfs. Verifying webhdfs with
+   * Distributed filesystem methods.
+   */
+  @Test
+  public void testWebHdfsAllowandDisallowSnapshots() throws Exception {
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final WebHdfsFileSystem webHdfs = WebHdfsTestUtil
+          .getWebHdfsFileSystem(conf, WebHdfsConstants.WEBHDFS_SCHEME);
+
+      final Path bar = new Path("/bar");
+      dfs.mkdirs(bar);
+
+      // allow snapshots on /bar using webhdfs
+      webHdfs.allowSnapshot(bar);
+      webHdfs.createSnapshot(bar, "s1");
+      final Path s1path = SnapshotTestHelper.getSnapshotRoot(bar, "s1");
+      Assert.assertTrue(webHdfs.exists(s1path));
+      SnapshottableDirectoryStatus[] snapshottableDirs =
+          dfs.getSnapshottableDirListing();
+      assertEquals(1, snapshottableDirs.length);
+      assertEquals(bar, snapshottableDirs[0].getFullPath());
+      dfs.deleteSnapshot(bar, "s1");
+      dfs.disallowSnapshot(bar);
+      snapshottableDirs = dfs.getSnapshottableDirListing();
+      assertNull(snapshottableDirs);
+
+      // disallow snapshots on /bar using webhdfs
+      dfs.allowSnapshot(bar);
+      snapshottableDirs = dfs.getSnapshottableDirListing();
+      assertEquals(1, snapshottableDirs.length);
+      assertEquals(bar, snapshottableDirs[0].getFullPath());
+      webHdfs.disallowSnapshot(bar);
+      snapshottableDirs = dfs.getSnapshottableDirListing();
+      assertNull(snapshottableDirs);
+      try {
+        webHdfs.createSnapshot(bar);
+        fail("Cannot create snapshot on a non-snapshottable directory");
+      } catch (Exception e) {
+        GenericTestUtils.assertExceptionContains(
+            "Directory is not a snapshottable directory", e);
+      }
     } finally {
       if (cluster != null) {
         cluster.shutdown();
