@@ -645,6 +645,10 @@ public class NamenodeWebHdfsMethods {
       np.removeXAttr(fullpath, XAttrHelper.buildXAttr(xattrName.getXAttrName()));
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
+    case ALLOWSNAPSHOT: {
+      np.allowSnapshot(fullpath);
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+    }
     case CREATESNAPSHOT: {
       String snapshotPath = np.createSnapshot(fullpath, snapshotName.getValue());
       final String js = JsonUtil.toJsonString(
@@ -654,6 +658,10 @@ public class NamenodeWebHdfsMethods {
     case RENAMESNAPSHOT: {
       np.renameSnapshot(fullpath, oldSnapshotName.getValue(),
           snapshotName.getValue());
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+    }
+    case DISALLOWSNAPSHOT: {
+      np.disallowSnapshot(fullpath);
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     default:
