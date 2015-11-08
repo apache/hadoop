@@ -1901,7 +1901,6 @@ public class PBHelper {
         );
     }
   }
-
   public static StorageTypeProto convertStorageType(StorageType type) {
     switch(type) {
     case DISK:

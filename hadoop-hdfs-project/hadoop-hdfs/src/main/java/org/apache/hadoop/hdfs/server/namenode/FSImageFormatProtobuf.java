@@ -321,9 +321,9 @@ public final class FSImageFormatProtobuf {
       blockIdManager.setGenerationStampV1Limit(intelNameSystemSection.genstampV1Limit());
       blockIdManager.setLastAllocatedBlockId(intelNameSystemSection.lastAllocatedBlockId());
       imgTxId = intelNameSystemSection.transactionId();
-      long roll = intelNameSystemSection.rollingUpgradeStartTime();
-      boolean hasRoll = roll != 0;
-      if (hasRoll
+//      long roll = intelNameSystemSection.rollingUpgradeStartTime();
+//      boolean hasRoll = roll != 0;
+      if (intelNameSystemSection.rollingUpgradeStartTime() != 0
           && fsn.getFSImage().hasRollbackFSImage()) {
         // we set the rollingUpgradeInfo only when we make sure we have the
         // rollback image
@@ -353,10 +353,7 @@ public final class FSImageFormatProtobuf {
           IntelStringTableSection.getRootAsIntelStringTableSection(byteBuffer);
       ctx.stringTable = new String[(int)intelSts.numEntry() + 1];
       for (int i = 0; i < intelSts.numEntry(); ++i) {
-        DataInputStream dos1 = new DataInputStream(in);
-        int length1 = dos1.readInt();
-        byte[] bytes1 = new byte[length1];
-        dos1.read(bytes1);
+        byte[] bytes1 = parseFrom(in);
         ByteBuffer byteBuffer1 = ByteBuffer.wrap(bytes1);
         IntelEntry intelEntry = IntelEntry.getRootAsIntelEntry(byteBuffer1);
         ctx.stringTable[(int)intelEntry.id()] = intelEntry.str();
@@ -375,10 +372,7 @@ public final class FSImageFormatProtobuf {
 
     private void loadIntelSecretManagerSection(InputStream in, StartupProgress prog,
                                           Step currentStep) throws IOException {
-      DataInputStream dis = new DataInputStream(in);
-      int size = dis.readInt();
-      byte[] bytes = new byte[size];
-      dis.read(bytes);
+      byte[] bytes = parseFrom(in);
       ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
       IntelSecretManagerSection is = IntelSecretManagerSection.
           getRootAsIntelSecretManagerSection(byteBuffer);
@@ -390,10 +384,7 @@ public final class FSImageFormatProtobuf {
           .newArrayListWithCapacity((int)numTokens);
 
       for (int i = 0; i < numKeys; ++i) {
-        DataInputStream dis1 = new DataInputStream(in);
-        int size1 = dis1.readInt();
-        byte[] bytes1 = new byte[size1];
-        dis.read(bytes1);
+        byte[] bytes1 = parseFrom(in);
         ByteBuffer byteBuffer1 = ByteBuffer.wrap(bytes1);
         IntelDelegationKey intelDelegationKey = IntelDelegationKey.getRootAsIntelDelegationKey(byteBuffer1);
         intelkeys.add(intelDelegationKey);
@@ -402,10 +393,7 @@ public final class FSImageFormatProtobuf {
       prog.setTotal(Phase.LOADING_FSIMAGE, currentStep, numTokens);
       Counter counter = prog.getCounter(Phase.LOADING_FSIMAGE, currentStep);
       for (int i = 0; i < numTokens; ++i) {
-        DataInputStream dis2 = new DataInputStream(in);
-        int size2 = dis2.readInt();
-        byte[] bytes2 = new byte[size2];
-        dis.read(bytes2);
+        byte[] bytes2 = parseFrom(in);
         ByteBuffer byteBuffer2 = ByteBuffer.wrap(bytes2);
         IntelPersistToken intelPersistToken = IntelPersistToken.getRootAsIntelPersistToken(byteBuffer2);
         inteltokens.add(intelPersistToken);
@@ -440,11 +428,7 @@ public final class FSImageFormatProtobuf {
 
     private void loadIntelCacheManagerSection(InputStream in, StartupProgress prog,
                                          Step currentStep) throws IOException {
-
-      DataInputStream dis = new DataInputStream(in);
-      int len = dis.readInt();
-      byte[] bytes = new byte[len];
-      dis.read(bytes);
+      byte[] bytes = parseFrom(in);
       ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
       IntelCacheManagerSection cs =
           IntelCacheManagerSection.getRootAsIntelCacheManagerSection(byteBuffer);
@@ -520,7 +504,7 @@ public final class FSImageFormatProtobuf {
       return saverContext;
     }
 
-    public int commitIntelSection(SectionName name, FlatBufferBuilder fbb) throws IOException{
+    public int commitIntelSection(SectionName name, FlatBufferBuilder fbb) throws IOException {
       long oldOffset = currentOffset;
       flushSectionOutputStream();
       if (codec != null) {
@@ -832,10 +816,7 @@ public final class FSImageFormatProtobuf {
     private int saveIntelNameSystemSection(FlatBufferBuilder fbb) throws IOException{
       final FSNamesystem fsn = context.getSourceNamesystem();
       BlockIdManager blockIdManager = fsn.getBlockIdManager();
-
       FlatBufferBuilder nsFbb = new FlatBufferBuilder();
-      ByteBuffer byteBuffer = null;
-
       IntelNameSystemSection.startIntelNameSystemSection(nsFbb);
       IntelNameSystemSection.addGenstampV1(nsFbb, blockIdManager.getGenerationStampV1());
       IntelNameSystemSection.addGenstampV1Limit(nsFbb, blockIdManager.getGenerationStampV1Limit());
@@ -848,10 +829,8 @@ public final class FSImageFormatProtobuf {
       }
       int offset = IntelNameSystemSection.endIntelNameSystemSection(nsFbb);
       IntelNameSystemSection.finishIntelNameSystemSectionBuffer(nsFbb, offset);
-      byteBuffer = nsFbb.dataBuffer();
-      int serialLength = byteBuffer.capacity() - byteBuffer.position();
       byte[] bytes = nsFbb.sizedByteArray();
-      writeTo(bytes, serialLength, sectionOutputStream);
+      writeTo(bytes, bytes.length, sectionOutputStream);
       return commitIntelSection(SectionName.NS_INFO ,fbb);
     }
 
@@ -860,31 +839,6 @@ public final class FSImageFormatProtobuf {
       dos.writeInt(serialLength);
       dos.write(b);
       dos.flush();
-    }
-
-    private int saveIntelNameSystemSectionV2(FlatBufferBuilder fbb) throws IOException{
-      final FSNamesystem fsn = context.getSourceNamesystem();
-      OutputStream out = sectionOutputStream;
-      BlockIdManager blockIdManager = fsn.getBlockIdManager();
-      long rollUpgrade = 0;
-      if (fsn.isRollingUpgrade()) {
-        rollUpgrade = fsn.getRollingUpgradeInfo().getStartTime();
-      }
-      IntelNameSystemSection.
-          createIntelNameSystemSection(fbb, fsn.unprotectedGetNamespaceInfo().getNamespaceID(),
-              blockIdManager.getGenerationStampV1(), blockIdManager.getGenerationStampV2(),
-              blockIdManager.getGenerationStampV1Limit(), blockIdManager.getLastAllocatedBlockId(),
-              context.getTxId(), rollUpgrade);
-      ByteBuffer byteBuffer = fbb.dataBuffer();
-      byteBuffer = fbb.dataBuffer();
-      int serializedLength = byteBuffer.capacity() - byteBuffer.position();
-      byte[] bytes = new byte[serializedLength];
-      byteBuffer.get(bytes);
-      DataOutputStream dos = new DataOutputStream(out);
-      dos.write(serializedLength);
-      dos.write(bytes);
-      dos.flush();
-      return commitIntelSection(SectionName.NS_INFO ,fbb);
     }
 
     private void saveNameSystemSection(FileSummary.Builder summary)

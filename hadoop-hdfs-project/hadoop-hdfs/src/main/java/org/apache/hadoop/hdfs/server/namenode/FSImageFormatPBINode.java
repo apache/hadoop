@@ -708,9 +708,8 @@ public final class FSImageFormatPBINode {
 
     private static int buildIntelAclEntries(AclFeature f,
         final SaverContext.DeduplicationMap<String> map, FlatBufferBuilder fbb) {
-//      FlatBufferBuilder fbb = new FlatBufferBuilder();
       int entries = 0;
-      ArrayList<Integer> list = new ArrayList<Integer>();
+      ArrayList<Integer> list = new ArrayList<>();
       for (int pos = 0, e; pos < f.getEntriesSize(); pos++) {
         e = f.getEntryAt(pos);
         int nameId = map.getId(AclEntryStatusFormat.getName(e));
@@ -791,7 +790,6 @@ public final class FSImageFormatPBINode {
     }
 
     private static int buildIntelQuotaByStorageTypeEntries(QuotaCounts q, FlatBufferBuilder fbb) {
-//      FlatBufferBuilder fbb = new FlatBufferBuilder();
       ArrayList<Integer> list = null;
       for (StorageType t : StorageType.getTypesSupportingQuota()) {
         if (q.getTypeSpace(t) >= 0) {
@@ -970,11 +968,7 @@ public final class FSImageFormatPBINode {
                   createRefChildrenVector(fbb1, ArrayUtils.toPrimitive(list1.toArray(new Integer[list1.size()])));
             }
           }
-          IntelDirEntry.startIntelDirEntry(fbb1);
-          IntelDirEntry.addParent(fbb1, n.getId());
-          IntelDirEntry.addChildren(fbb1, childrenOffset);
-          IntelDirEntry.addRefChildren(fbb1, refChildrenOffset);
-          int end = IntelDirEntry.endIntelDirEntry(fbb1);
+          int end = IntelDirEntry.createIntelDirEntry(fbb1, n.getId(), childrenOffset, refChildrenOffset);
           IntelDirEntry.finishIntelDirEntryBuffer(fbb1, end);
           byte[] bytes = fbb1.sizedByteArray();
           writeTo(bytes, bytes.length, out);
@@ -1053,6 +1047,7 @@ public final class FSImageFormatPBINode {
           context.checkCancelled();
         }
       }
+
       return parent.commitIntelSection(FSImageFormatProtobuf.SectionName.INODE, fbb);
     }
 
@@ -1251,22 +1246,10 @@ public final class FSImageFormatPBINode {
       int ib = IntelINodeSymlink.createIntelINodeSymlink(fbb, buildPermissionStatus(n, state.getStringMap()),
               fbb.createString(bytesToString(n.getSymlink())), n.getModificationTime(), n.getAccessTime());
 
-//      INodeSection.INodeSymlink.Builder b = INodeSection.INodeSymlink
-//          .newBuilder()
-//          .setPermission(buildPermissionStatus(n, state.getStringMap()))
-//          .setTarget(ByteString.copyFrom(n.getSymlink()))
-//          .setModificationTime(n.getModificationTime())
-//          .setAccessTime(n.getAccessTime());
-
-
       int env = IntelINode.createIntelINode(fbb, IntelTypee.SYMLINK, n.getId(),
           fbb.createString(bytesToString(n.getLocalNameBytes())),
           0, 0, ib);
       IntelINode.finishIntelINodeBuffer(fbb, env);
-//
-//      INodeSection.INode r = buildINodeCommon(n)
-//          .setType(INodeSection.INode.Type.SYMLINK).setSymlink(b).build();
-//      r.writeDelimitedTo(out);
       byte[] bytes = fbb.sizedByteArray();
       writeTo(bytes, bytes.length, out);
     }
