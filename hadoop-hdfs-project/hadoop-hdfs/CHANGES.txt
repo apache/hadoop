@@ -195,6 +195,9 @@ Trunk (Unreleased)
     HDFS-8777. Erasure Coding: add tests for taking snapshots on EC files. 
     (Rakesh R via zhz)
 
+    HADOOP-11684. S3a to use thread pool that blocks clients.
+    (Thomas Demoor and Aaron Fabbri via lei)
+
   OPTIMIZATIONS
 
   BUG FIXES
