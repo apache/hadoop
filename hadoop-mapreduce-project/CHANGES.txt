@@ -423,6 +423,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6489. Fail fast rogue tasks that write too much to local disk
     (Maysam Yabandeh via jlowe)
 
+    MAPREDUCE-5763. Warn message about httpshuffle in NM logs.
+    (Akira AJISAKA via ozawa)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6376. Add avro binary support for jhist files (Ray Chiang via
