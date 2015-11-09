@@ -708,6 +708,8 @@ Release 2.8.0 - UNRELEASED
     fails intermittently due to assumption that a lease error will be thrown.
     (Gaurav Kanade via cnauroth)
 
+    HADOOP-12526. there are duplicate dependency definitions in pom's (sjlee)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
