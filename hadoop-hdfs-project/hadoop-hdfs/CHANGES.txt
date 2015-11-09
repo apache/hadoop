@@ -198,6 +198,9 @@ Trunk (Unreleased)
     HADOOP-11684. S3a to use thread pool that blocks clients.
     (Thomas Demoor and Aaron Fabbri via lei)
 
+    HDFS-9234. WebHdfs: getContentSummary() should give quota for storage types.
+    (Surendra Singh Lilhore via xyao)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -253,6 +253,21 @@ public class JsonUtil {
     m.put("quota", contentsummary.getQuota());
     m.put("spaceConsumed", contentsummary.getSpaceConsumed());
     m.put("spaceQuota", contentsummary.getSpaceQuota());
+    final Map<String, Map<String, Long>> typeQuota =
+        new TreeMap<String, Map<String, Long>>();
+    for (StorageType t : StorageType.getTypesSupportingQuota()) {
+      long tQuota = contentsummary.getTypeQuota(t);
+      if (tQuota != HdfsConstants.QUOTA_RESET) {
+        Map<String, Long> type = typeQuota.get(t.toString());
+        if (type == null) {
+          type = new TreeMap<String, Long>();
+          typeQuota.put(t.toString(), type);
+        }
+        type.put("quota", contentsummary.getTypeQuota(t));
+        type.put("consumed", contentsummary.getTypeConsumed(t));
+      }
+    }
+    m.put("typeQuota", typeQuota);
     return toJsonString(ContentSummary.class, m);
   }
 
