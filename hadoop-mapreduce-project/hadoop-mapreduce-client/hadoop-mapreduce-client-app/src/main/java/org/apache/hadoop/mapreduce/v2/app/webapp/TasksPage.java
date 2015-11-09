@@ -43,7 +43,7 @@ public class TasksPage extends AppView {
       .append(", bProcessing: true")
 
       .append("\n, aoColumnDefs: [\n")
-      .append("{'sType':'string', 'aTargets': [0]")
+      .append("{'sType':'natural', 'aTargets': [0]")
       .append(", 'mRender': parseHadoopID }")
 
       .append("\n, {'sType':'numeric', bSearchable:false, 'aTargets': [1]")
