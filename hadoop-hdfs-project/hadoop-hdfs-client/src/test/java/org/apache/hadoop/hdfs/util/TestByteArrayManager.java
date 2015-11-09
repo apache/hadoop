@@ -308,7 +308,7 @@ public class TestByteArrayManager {
   public void testByteArrayManager() throws Exception {
     final int countThreshold = 32;
     final int countLimit = 64;
-    final long countResetTimePeriodMs = 1000L;
+    final long countResetTimePeriodMs = 10000L;
     final ByteArrayManager.Impl bam = new ByteArrayManager.Impl(
         new ByteArrayManager.Conf(
             countThreshold, countLimit, countResetTimePeriodMs));
