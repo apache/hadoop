@@ -1084,7 +1084,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <inherited>false</inherited>
         <configuration>
           <rules>
             <requireMavenVersion>
@@ -1102,6 +1101,7 @@
               <goal>enforce</goal>
             </goals>
             <phase>pre-clean</phase>
+            <inherited>false</inherited>
           </execution>
           <execution>
             <id>default</id>
@@ -1109,6 +1109,7 @@
               <goal>enforce</goal>
             </goals>
             <phase>validate</phase>
+            <inherited>false</inherited>
           </execution>
           <execution>
             <id>site</id>
@@ -1116,6 +1117,21 @@
               <goal>enforce</goal>
             </goals>
             <phase>pre-site</phase>
+            <inherited>false</inherited>
+          </execution>
+          <execution>
+            <id>depcheck</id>
+            <configuration>
+              <rules>
+                <DependencyConvergence>
+                  <uniqueVersions>true</uniqueVersions>
+                </DependencyConvergence>
+              </rules>
+            </configuration>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <phase>verify</phase>
           </execution>
         </executions>
       </plugin>
@@ -1166,26 +1182,6 @@
           <outputDirectory>${project.reporting.outputDirectory}</outputDirectory>
           <includeReports>false</includeReports>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>depcheck</id>
-            <configuration>
-              <rules>
-                <DependencyConvergence>
-                  <uniqueVersions>true</uniqueVersions> 
-                </DependencyConvergence>
-              </rules>
-            </configuration>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <phase>verify</phase>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
   </build>
