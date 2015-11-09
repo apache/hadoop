@@ -65,14 +65,14 @@ public class JQueryUI extends HtmlBlock {
 
   @Override
   protected void render(Block html) {
-    html.
-      link(root_url("static/jquery/themes-1.9.1/base/jquery-ui.css")).
-      link(root_url("static/dt-1.9.4/css/jui-dt.css")).
-      script(root_url("static/jquery/jquery-1.8.2.min.js")).
-      script(root_url("static/jquery/jquery-ui-1.9.1.custom.min.js")).
-      script(root_url("static/dt-1.9.4/js/jquery.dataTables.min.js")).
-      script(root_url("static/yarn.dt.plugins.js")).
-      style("#jsnotice { padding: 0.2em; text-align: center; }",
+    html.link(root_url("static/jquery/themes-1.9.1/base/jquery-ui.css"))
+        .link(root_url("static/dt-1.9.4/css/jui-dt.css"))
+        .script(root_url("static/jquery/jquery-1.8.2.min.js"))
+        .script(root_url("static/jquery/jquery-ui-1.9.1.custom.min.js"))
+        .script(root_url("static/dt-1.9.4/js/jquery.dataTables.min.js"))
+        .script(root_url("static/yarn.dt.plugins.js"))
+        .script(root_url("static/dt-plugin-1.10.7/sorting/natural.js"))
+        .style("#jsnotice { padding: 0.2em; text-align: center; }",
             ".ui-progressbar { height: 1em; min-width: 5em }"); // required
 
     List<String> list = Lists.newArrayList();
@@ -82,9 +82,8 @@ public class JQueryUI extends HtmlBlock {
     initProgressBars(list);
 
     if (!list.isEmpty()) {
-      html.
-        script().$type("text/javascript").
-          _("$(function() {")._(list.toArray())._("});")._();
+      html.script().$type("text/javascript")._("$(function() {")
+          ._(list.toArray())._("});")._();
     }
   }
 

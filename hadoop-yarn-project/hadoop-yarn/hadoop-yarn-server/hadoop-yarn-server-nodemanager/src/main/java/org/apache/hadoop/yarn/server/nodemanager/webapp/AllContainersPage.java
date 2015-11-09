@@ -52,9 +52,15 @@ public class AllContainersPage extends NMView {
   private String containersTableInit() {
     return tableInit().
         // containerid, containerid, log-url
-        append(", aoColumns:[null, null, {bSearchable:false}]} ").toString();
+        append(", aoColumns:[").append(getContainersIdColumnDefs())
+        .append(", null, {bSearchable:false}]} ").toString();
   }
 
+  private String getContainersIdColumnDefs() {
+    StringBuilder sb = new StringBuilder();
+    return sb.append("{'sType':'natural', 'aTargets': [0]")
+        .append(", 'mRender': parseHadoopID }").toString();
+  }
   @Override
   protected Class<? extends SubView> content() {
     return AllContainersBlock.class;
