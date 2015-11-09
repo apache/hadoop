@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,7 +31,9 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.directory.api.ldap.aci.UserClass;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -46,6 +49,8 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.Before;
@@ -126,6 +131,72 @@ public class TestBackupNode {
     // Check that the checkpoint got uploaded to NN successfully
     FSImageTestUtil.assertNNHasCheckpoints(cluster,
         Collections.singletonList((int)thisCheckpointTxId));
+  }
+
+
+  /**
+   *  Regression test for HDFS-9249.
+   *  This test configures the primary name node with SIMPLE authentication,
+   *  and configures the backup node with Kerberose authentication with
+   *  invalid keytab settings.
+   *
+   *  This configuration causes the backup node to throw a NPE trying to abort
+   *  the edit log.
+   *  */
+  @Test
+    public void startBackupNodeWithIncorrectAuthentication() throws IOException {
+    Configuration c = new HdfsConfiguration();
+    StartupOption startupOpt = StartupOption.CHECKPOINT;
+    String dirs = getBackupNodeDir(startupOpt, 1);
+    c.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "hdfs://127.0.0.1:1234");
+    c.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, "localhost:0");
+    c.set(DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY, "0");
+    c.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY,
+        -1); // disable block scanner
+    c.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 1);
+    c.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, dirs);
+    c.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
+        "${" + DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY + "}");
+    c.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY,
+        "127.0.0.1:0");
+    c.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY,
+        "127.0.0.1:0");
+
+    NameNode nn;
+    try {
+      Configuration nnconf = new HdfsConfiguration(c);
+      DFSTestUtil.formatNameNode(nnconf);
+      nn = NameNode.createNameNode(new String[] {}, nnconf);
+    } catch (IOException e) {
+      LOG.info("IOException is thrown creating name node");
+      throw e;
+    }
+
+    c.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "kerberos");
+    c.set(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, "");
+
+    BackupNode bn = null;
+    try {
+      bn = (BackupNode)NameNode.createNameNode(
+          new String[] {startupOpt.getName()}, c);
+      assertTrue("Namesystem in BackupNode should be null",
+          bn.getNamesystem() == null);
+      fail("Incorrect authentication setting should throw IOException");
+    } catch (IOException e) {
+      LOG.info("IOException thrown as expected", e);
+    } finally {
+      if (nn != null) {
+        nn.stop();
+      }
+      if (bn != null) {
+        bn.stop();
+      }
+      SecurityUtil.setAuthenticationMethod(
+          UserGroupInformation.AuthenticationMethod.SIMPLE, c);
+      // reset security authentication
+      UserGroupInformation.setConfiguration(c);
+    }
   }
 
   @Test

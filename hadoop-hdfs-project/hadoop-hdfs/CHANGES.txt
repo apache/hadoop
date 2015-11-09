@@ -2277,6 +2277,9 @@ Release 2.8.0 - UNRELEASED
     initialization, because HftpFileSystem is missing.
     (Mingliang Liu via cnauroth)
 
+    HDFS-9249. NPE is thrown if an IOException is thrown in NameNode constructor.
+    (Wei-Chiu Chuang via Yongjun Zhang)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

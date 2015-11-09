@@ -889,13 +889,22 @@ public class NameNode implements NameNodeStatusMXBean {
         haContext.writeUnlock();
       }
     } catch (IOException e) {
-      this.stop();
+      this.stopAtException(e);
       throw e;
     } catch (HadoopIllegalArgumentException e) {
-      this.stop();
+      this.stopAtException(e);
       throw e;
     }
     this.started.set(true);
+  }
+
+  private void stopAtException(Exception e){
+    try {
+      this.stop();
+    } catch (Exception ex) {
+      LOG.warn("Encountered exception when handling exception ("
+          + e.getMessage() + "):", ex);
+    }
   }
 
   protected HAState createHAState(StartupOption startOpt) {
