@@ -18,6 +18,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-4937. ReplicationMonitor can infinite-loop in 
     BlockPlacementPolicyDefault#chooseRandom(). (kihwal)
 
+    HDFS-9383. TestByteArrayManager#testByteArrayManager fails.
+    (szetszwo via kihwal)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
