@@ -30,6 +30,8 @@ Release 2.6.3 - UNRELEASED
     HADOOP-10134 [JDK8] Fix Javadoc errors caused by incorrect or illegal tags in doc
     comments. (apurtell via stevel)
 
+    HADOOP-12526. there are duplicate dependency definitions in pom's (sjlee)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
