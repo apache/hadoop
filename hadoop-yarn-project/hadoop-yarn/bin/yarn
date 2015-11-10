@@ -312,12 +312,15 @@ YARN_OPTS="$YARN_OPTS -Dyarn.log.dir=$YARN_LOG_DIR"
 YARN_OPTS="$YARN_OPTS -Dhadoop.log.file=$YARN_LOGFILE"
 YARN_OPTS="$YARN_OPTS -Dyarn.log.file=$YARN_LOGFILE"
 YARN_OPTS="$YARN_OPTS -Dyarn.home.dir=$HADOOP_YARN_HOME"
-HADOOP_HOME=$HADOOP_PREFIX
+
 if $cygwin; then
-  HADOOP_HOME=$(cygpath -w "$HADOOP_HOME" 2>/dev/null)
+  HADOOP_HOME=$(cygpath -w "$HADOOP_PREFIX" 2>/dev/null)
+  YARN_OPTS="$YARN_OPTS -Dhadoop.home.dir=$HADOOP_HOME"
+  export HADOOP_HOME
+else
+  YARN_OPTS="$YARN_OPTS -Dhadoop.home.dir=$HADOOP_PREFIX"
 fi
-export HADOOP_HOME
-YARN_OPTS="$YARN_OPTS -Dhadoop.home.dir=$HADOOP_HOME"
+
 YARN_OPTS="$YARN_OPTS -Dhadoop.root.logger=${YARN_ROOT_LOGGER:-${HADOOP_LOGLEVEL},console}"
 YARN_OPTS="$YARN_OPTS -Dyarn.root.logger=${YARN_ROOT_LOGGER:-${HADOOP_LOGLEVEL},console}"
 if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
