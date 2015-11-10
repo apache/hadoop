@@ -1,1 +1,1 @@
-mvn clean package -Pdist -DskipTests -Dtar
+mvn clean package -Pdist -DskipTests -Dtar -o

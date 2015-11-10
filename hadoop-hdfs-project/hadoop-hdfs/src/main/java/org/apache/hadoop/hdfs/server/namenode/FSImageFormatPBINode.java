@@ -427,9 +427,12 @@ public final class FSImageFormatPBINode {
       LOG.info("Loading " + numInodes + " INodes.");
       prog.setTotal(Phase.LOADING_FSIMAGE, currentStep, numInodes);
       Counter counter = prog.getCounter(Phase.LOADING_FSIMAGE, currentStep);
-
+      // hack here
       for (int i = 0; i < numInodes; ++i) {
-        IntelINode iNode = IntelINode.getRootAsIntelINode(ByteBuffer.wrap(parseFrom(in)));
+        byte[] b = parseFrom(in);
+        if (b == null || b.length <= 0) continue;
+        IntelINode iNode = IntelINode.getRootAsIntelINode(ByteBuffer.wrap(b));
+
         if (iNode.id() == INodeId.ROOT_INODE_ID) {
           loadRootIntelINode(iNode);
         } else {
