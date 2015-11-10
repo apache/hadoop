@@ -341,37 +341,37 @@ JNIEnv *env, jclass clazz, jobject jstr, jint skipComponents)
     mode = st.st_mode & 0777;
     if (mode & 0002) {
       jthr = newIOException(env, "The path component: '%s' in '%s' has "
-         "permissions 0%03o uid %ld and gid %ld. "
+         "permissions 0%03o uid %"PRId64" and gid %"PRId64". "
          "It is not protected because it "
          "is world-writable. This might help: 'chmod o-w %s'. "
          "For more information: "
          "https://wiki.apache.org/hadoop/SocketPathSecurity",
-         check, path, mode, (long long)st.st_uid, (long long)st.st_gid, check);
+         check, path, mode, (int64_t)st.st_uid, (int64_t)st.st_gid, check);
       goto done;
     }
     if ((mode & 0020) && (st.st_gid != 0)) {
       jthr = newIOException(env, "The path component: '%s' in '%s' has "
-         "permissions 0%03o uid %ld and gid %ld. "
+         "permissions 0%03o uid %"PRId64" and gid %"PRId64". "
          "It is not protected because it "
          "is group-writable and not owned by root. "
          "This might help: 'chmod g-w %s' or 'chown root %s'. "
          "For more information: "
          "https://wiki.apache.org/hadoop/SocketPathSecurity",
-         check, path, mode, (long long)st.st_uid, (long long)st.st_gid,
+         check, path, mode, (int64_t)st.st_uid, (int64_t)st.st_gid,
          check, check);
       goto done;
     }
     if ((mode & 0200) && (st.st_uid != 0) && (st.st_uid != uid)) {
       jthr = newIOException(env, "The path component: '%s' in '%s' has "
-         "permissions 0%03o uid %ld and gid %ld. "
+         "permissions 0%03o uid %"PRId64" and gid %"PRId64". "
          "It is not protected because it "
          "is owned by a user who is not root "
-         "and not the effective user: '%ld'. "
-         "This might help: 'chown root %s' or 'chown %ld %s'. "
+         "and not the effective user: '%"PRId64"'. "
+         "This might help: 'chown root %s' or 'chown %"PRId64" %s'. "
          "For more information: "
          "https://wiki.apache.org/hadoop/SocketPathSecurity",
-         check, path, mode, (long long)st.st_uid, (long long)st.st_gid,
-         (long long)uid, check, (long long)uid, check);
+         check, path, mode, (int64_t)st.st_uid, (int64_t)st.st_gid,
+         (int64_t)uid, check, (int64_t)uid, check);
       goto done;
     }
   }
