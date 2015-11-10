@@ -2282,6 +2282,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9249. NPE is thrown if an IOException is thrown in NameNode constructor.
     (Wei-Chiu Chuang via Yongjun Zhang)
 
+    HDFS-9401. Fix findbugs warnings in BlockRecoveryWorker.
+    (Brahma Reddy Battula via waltersu4549)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

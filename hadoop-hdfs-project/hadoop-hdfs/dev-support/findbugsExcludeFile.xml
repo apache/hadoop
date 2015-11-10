@@ -124,13 +124,6 @@
        <Bug pattern="DM_EXIT" />
      </Match>
 
-     <!-- Don't complain about recoverBlock equality check -->
-     <Match>
-       <Class name="org.apache.hadoop.hdfs.server.datanode.DataNode" />
-       <Method name="recoverBlock" />
-       <Bug pattern="EC_UNRELATED_TYPES" />
-     </Match>
-
      <!-- More complex cleanup logic confuses findbugs -->
      <Match>
        <Class name="org.apache.hadoop.hdfs.qjournal.server.Journal" />
