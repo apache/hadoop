@@ -60,6 +60,8 @@ Release 2.6.5 - UNRELEASED
     HADOOP-12348. MetricsSystemImpl creates MetricsSourceAdapter with wrong
     time unit parameter. (zxu via rkanter)
 
+    HADOOP-12482. Race condition in JMX cache update. (Tony Wu via lei)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
