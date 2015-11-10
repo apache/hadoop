@@ -82,16 +82,46 @@ public class NMClientAsyncImpl extends NMClientAsync {
   protected ConcurrentMap<ContainerId, StatefulContainer> containers =
       new ConcurrentHashMap<ContainerId, StatefulContainer>();
 
+  public NMClientAsyncImpl(AbstractCallbackHandler callbackHandler) {
+    this(NMClientAsync.class.getName(), callbackHandler);
+  }
+
+  public NMClientAsyncImpl(
+      String name, AbstractCallbackHandler callbackHandler) {
+    this(name, new NMClientImpl(), callbackHandler);
+  }
+
+  @Private
+  @VisibleForTesting
+  protected NMClientAsyncImpl(String name, NMClient client,
+      AbstractCallbackHandler callbackHandler) {
+    super(name, client, callbackHandler);
+    this.client = client;
+    this.callbackHandler = callbackHandler;
+  }
+
+  /**
+   * @deprecated Use {@link
+   *             #NMClientAsyncImpl(NMClientAsync.AbstractCallbackHandler)}
+   *             instead.
+   */
+  @Deprecated
   public NMClientAsyncImpl(CallbackHandler callbackHandler) {
     this(NMClientAsync.class.getName(), callbackHandler);
   }
 
+  /**
+   * @deprecated Use {@link #NMClientAsyncImpl(String,
+   *             NMClientAsync.AbstractCallbackHandler)} instead.
+   */
+  @Deprecated
   public NMClientAsyncImpl(String name, CallbackHandler callbackHandler) {
     this(name, new NMClientImpl(), callbackHandler);
   }
 
   @Private
   @VisibleForTesting
+  @Deprecated
   protected NMClientAsyncImpl(String name, NMClient client,
       CallbackHandler callbackHandler) {
     super(name, client, callbackHandler);
@@ -229,6 +259,29 @@ public class NMClientAsyncImpl extends NMClientAsync {
     }
   }
 
+  public void increaseContainerResourceAsync(Container container) {
+    if (!(callbackHandler instanceof AbstractCallbackHandler)) {
+      LOG.error("Callback handler does not implement container resource "
+              + "increase callback methods");
+      return;
+    }
+    AbstractCallbackHandler handler = (AbstractCallbackHandler) callbackHandler;
+    if (containers.get(container.getId()) == null) {
+      handler.onIncreaseContainerResourceError(
+          container.getId(),
+          RPCUtil.getRemoteException(
+              "Container " + container.getId() +
+                  " is neither started nor scheduled to start"));
+    }
+    try {
+      events.put(new IncreaseContainerResourceEvent(container));
+    } catch (InterruptedException e) {
+      LOG.warn("Exception when scheduling the event of increasing resource of "
+          + "Container " + container.getId());
+      handler.onIncreaseContainerResourceError(container.getId(), e);
+    }
+  }
+
   public void stopContainerAsync(ContainerId containerId, NodeId nodeId) {
     if (containers.get(containerId) == null) {
       callbackHandler.onStopContainerError(containerId,
@@ -276,7 +329,8 @@ public class NMClientAsyncImpl extends NMClientAsync {
   protected static enum ContainerEventType {
     START_CONTAINER,
     STOP_CONTAINER,
-    QUERY_CONTAINER
+    QUERY_CONTAINER,
+    INCREASE_CONTAINER_RESOURCE
   }
 
   protected static class ContainerEvent
@@ -327,6 +381,21 @@ public class NMClientAsyncImpl extends NMClientAsync {
     }
   }
 
+  protected static class IncreaseContainerResourceEvent extends ContainerEvent {
+    private Container container;
+
+    public IncreaseContainerResourceEvent(Container container) {
+      super(container.getId(), container.getNodeId(),
+          container.getContainerToken(),
+              ContainerEventType.INCREASE_CONTAINER_RESOURCE);
+      this.container = container;
+    }
+
+    public Container getContainer() {
+      return container;
+    }
+  }
+
   protected static class StatefulContainer implements
       EventHandler<ContainerEvent> {
 
@@ -344,7 +413,9 @@ public class NMClientAsyncImpl extends NMClientAsync {
                 ContainerEventType.STOP_CONTAINER, new OutOfOrderTransition())
 
             // Transitions from RUNNING state
-            // RUNNING -> RUNNING should be the invalid transition
+            .addTransition(ContainerState.RUNNING, ContainerState.RUNNING,
+                ContainerEventType.INCREASE_CONTAINER_RESOURCE,
+                new IncreaseContainerResourceTransition())
             .addTransition(ContainerState.RUNNING,
                 EnumSet.of(ContainerState.DONE, ContainerState.FAILED),
                 ContainerEventType.STOP_CONTAINER,
@@ -353,12 +424,14 @@ public class NMClientAsyncImpl extends NMClientAsync {
             // Transition from DONE state
             .addTransition(ContainerState.DONE, ContainerState.DONE,
                 EnumSet.of(ContainerEventType.START_CONTAINER,
-                    ContainerEventType.STOP_CONTAINER))
+                    ContainerEventType.STOP_CONTAINER,
+                    ContainerEventType.INCREASE_CONTAINER_RESOURCE))
 
             // Transition from FAILED state
             .addTransition(ContainerState.FAILED, ContainerState.FAILED,
                 EnumSet.of(ContainerEventType.START_CONTAINER,
-                    ContainerEventType.STOP_CONTAINER));
+                    ContainerEventType.STOP_CONTAINER,
+                    ContainerEventType.INCREASE_CONTAINER_RESOURCE));
 
     protected static class StartContainerTransition implements
         MultipleArcTransition<StatefulContainer, ContainerEvent,
@@ -407,6 +480,52 @@ public class NMClientAsyncImpl extends NMClientAsync {
                   "Container " + event.getContainerId(), thr);
         }
         return ContainerState.FAILED;
+      }
+    }
+
+    protected static class IncreaseContainerResourceTransition implements
+        SingleArcTransition<StatefulContainer, ContainerEvent> {
+      @Override
+      public void transition(
+          StatefulContainer container, ContainerEvent event) {
+        if (!(container.nmClientAsync.getCallbackHandler()
+            instanceof AbstractCallbackHandler)) {
+          LOG.error("Callback handler does not implement container resource "
+              + "increase callback methods");
+          return;
+        }
+        AbstractCallbackHandler handler =
+            (AbstractCallbackHandler) container.nmClientAsync
+                .getCallbackHandler();
+        try {
+          if (!(event instanceof IncreaseContainerResourceEvent)) {
+            throw new AssertionError("Unexpected event type. Expecting:"
+                + "IncreaseContainerResourceEvent. Got:" + event);
+          }
+          IncreaseContainerResourceEvent increaseEvent =
+              (IncreaseContainerResourceEvent) event;
+          container.nmClientAsync.getClient().increaseContainerResource(
+              increaseEvent.getContainer());
+          try {
+            handler.onContainerResourceIncreased(
+                increaseEvent.getContainerId(), increaseEvent.getContainer()
+                    .getResource());
+          } catch (Throwable thr) {
+            // Don't process user created unchecked exception
+            LOG.info("Unchecked exception is thrown from "
+                + "onContainerResourceIncreased for Container "
+                + event.getContainerId(), thr);
+          }
+        } catch (Exception e) {
+          try {
+            handler.onIncreaseContainerResourceError(event.getContainerId(), e);
+          } catch (Throwable thr) {
+            // Don't process user created unchecked exception
+            LOG.info("Unchecked exception is thrown from "
+                + "onIncreaseContainerResourceError for Container "
+                + event.getContainerId(), thr);
+          }
+        }
       }
     }
 
