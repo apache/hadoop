@@ -320,7 +320,7 @@ public class NameNodeProxiesClient {
           DFSUtilClient.getNNAddress(nameNodeUri));
     }
     return new ProxyAndInfo<>(proxy, dtService,
-        DFSUtilClient.getNNAddress(nameNodeUri));
+        DFSUtilClient.getNNAddressCheckLogical(conf, nameNodeUri));
   }
 
   public static ClientProtocol createNonHAProxyWithClientProtocol(

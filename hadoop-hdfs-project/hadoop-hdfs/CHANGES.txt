@@ -2285,6 +2285,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9401. Fix findbugs warnings in BlockRecoveryWorker.
     (Brahma Reddy Battula via waltersu4549)
 
+    HDFS-9364. Unnecessary DNS resolution attempts when creating NameNodeProxies.
+    (Xiao Chen via zhz)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

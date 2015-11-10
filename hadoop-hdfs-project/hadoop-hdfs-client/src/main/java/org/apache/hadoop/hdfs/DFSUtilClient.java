@@ -615,7 +615,7 @@ public class DFSUtilClient {
 
   public static InetSocketAddress getNNAddress(Configuration conf) {
     URI filesystemURI = FileSystem.getDefaultUri(conf);
-    return getNNAddress(filesystemURI);
+    return getNNAddressCheckLogical(conf, filesystemURI);
   }
 
   /**
@@ -636,6 +636,26 @@ public class DFSUtilClient {
           filesystemURI.toString(), HdfsConstants.HDFS_URI_SCHEME));
     }
     return getNNAddress(authority);
+  }
+
+  /**
+   * Get the NN address from the URI. If the uri is logical, default address is
+   * returned. Otherwise return the DNS-resolved address of the URI.
+   *
+   * @param conf configuration
+   * @param filesystemURI URI of the file system
+   * @return address of file system
+   */
+  public static InetSocketAddress getNNAddressCheckLogical(Configuration conf,
+      URI filesystemURI) {
+    InetSocketAddress retAddr;
+    if (HAUtilClient.isLogicalUri(conf, filesystemURI)) {
+      retAddr = InetSocketAddress.createUnresolved(filesystemURI.getAuthority(),
+          HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
+    } else {
+      retAddr = getNNAddress(filesystemURI);
+    }
+    return retAddr;
   }
 
   public static URI getNNUri(InetSocketAddress namenode) {
