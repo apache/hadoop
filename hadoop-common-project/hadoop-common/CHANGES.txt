@@ -710,6 +710,8 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12526. there are duplicate dependency definitions in pom's (sjlee)
 
+    HADOOP-12482. Race condition in JMX cache update. (Tony Wu via lei)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
