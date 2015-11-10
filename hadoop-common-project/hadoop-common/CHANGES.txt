@@ -1329,6 +1329,8 @@ Release 2.8.0 - UNRELEASED
     fails intermittently due to assumption that a lease error will be thrown.
     (Gaurav Kanade via cnauroth)
 
+    HADOOP-12482. Race condition in JMX cache update. (Tony Wu via lei)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
