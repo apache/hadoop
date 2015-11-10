@@ -858,8 +858,7 @@ public class ApplicationMaster {
   }
 
   @VisibleForTesting
-  static class NMCallbackHandler
-    implements NMClientAsync.CallbackHandler {
+  static class NMCallbackHandler extends NMClientAsync.AbstractCallbackHandler {
 
     private ConcurrentMap<ContainerId, Container> containers =
         new ConcurrentHashMap<ContainerId, Container>();
@@ -908,6 +907,10 @@ public class ApplicationMaster {
     }
 
     @Override
+    public void onContainerResourceIncreased(
+        ContainerId containerId, Resource resource) {}
+
+    @Override
     public void onStartContainerError(ContainerId containerId, Throwable t) {
       LOG.error("Failed to start Container " + containerId);
       containers.remove(containerId);
@@ -926,6 +929,11 @@ public class ApplicationMaster {
       LOG.error("Failed to stop Container " + containerId);
       containers.remove(containerId);
     }
+
+    @Override
+    public void onIncreaseContainerResourceError(
+        ContainerId containerId, Throwable t) {}
+
   }
 
   /**

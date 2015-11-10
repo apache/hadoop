@@ -35,6 +35,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
@@ -147,8 +149,7 @@ public class NMClientImpl extends NMClient {
     private ContainerState state;
     
     
-    public StartedContainer(ContainerId containerId, NodeId nodeId,
-        Token containerToken) {
+    public StartedContainer(ContainerId containerId, NodeId nodeId) {
       this.containerId = containerId;
       this.nodeId = nodeId;
       state = ContainerState.NEW;
@@ -232,6 +233,34 @@ public class NMClientImpl extends NMClient {
   }
 
   @Override
+  public void increaseContainerResource(Container container)
+      throws YarnException, IOException {
+    ContainerManagementProtocolProxyData proxy = null;
+    try {
+      proxy = cmProxy.getProxy(
+          container.getNodeId().toString(), container.getId());
+      List<Token> increaseTokens = new ArrayList<>();
+      increaseTokens.add(container.getContainerToken());
+      IncreaseContainersResourceRequest increaseRequest =
+          IncreaseContainersResourceRequest
+              .newInstance(increaseTokens);
+      IncreaseContainersResourceResponse response =
+          proxy.getContainerManagementProtocol()
+              .increaseContainersResource(increaseRequest);
+      if (response.getFailedRequests() != null
+          && response.getFailedRequests().containsKey(container.getId())) {
+        Throwable t = response.getFailedRequests().get(container.getId())
+            .deSerialize();
+        parseAndThrowException(t);
+      }
+    } finally {
+      if (proxy != null) {
+        cmProxy.mayBeCloseProxy(proxy);
+      }
+    }
+  }
+
+  @Override
   public void stopContainer(ContainerId containerId, NodeId nodeId)
       throws YarnException, IOException {
     StartedContainer startedContainer = getStartedContainer(containerId);
@@ -308,7 +337,7 @@ public class NMClientImpl extends NMClient {
   protected synchronized StartedContainer createStartedContainer(
       Container container) throws YarnException, IOException {
     StartedContainer startedContainer = new StartedContainer(container.getId(),
-        container.getNodeId(), container.getContainerToken());
+        container.getNodeId());
     return startedContainer;
   }
 
