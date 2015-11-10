@@ -112,7 +112,8 @@ public class BlockRecoveryWorker {
       // - Original state is RWR or better
       for(DatanodeID id : locs) {
         try {
-          DatanodeID bpReg =datanode.getBPOfferService(bpid).bpRegistration;
+          DatanodeID bpReg = new DatanodeID(
+              datanode.getBPOfferService(bpid).bpRegistration);
           InterDatanodeProtocol proxyDN = bpReg.equals(id)?
               datanode: DataNode.createInterDataNodeProtocolProxy(id, conf,
               dnConf.socketTimeout, dnConf.connectToDnViaHostname);
