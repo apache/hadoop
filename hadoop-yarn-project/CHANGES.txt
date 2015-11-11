@@ -1159,9 +1159,6 @@ Release 2.7.2 - UNRELEASED
     YARN-2902. Killing a container that is localizing can orphan resources in
     the DOWNLOADING state (Varun Saxena via jlowe)
 
-    YARN-4183. Enabling generic application history forces every job to get a
-    timeline service delegation token (Mit Desai via jeagles)
-
     YARN-4313. Race condition in MiniMRYarnCluster when getting history server
     address. (Jian He via xgong)
 
