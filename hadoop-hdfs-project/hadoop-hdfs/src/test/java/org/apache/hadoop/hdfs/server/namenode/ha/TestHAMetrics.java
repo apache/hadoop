@@ -24,8 +24,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Test;
@@ -118,5 +120,59 @@ public class TestHAMetrics {
       IOUtils.cleanup(LOG, fs);
       cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testHAInodeCount() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY, Integer.MAX_VALUE);
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(MiniDFSNNTopology.simpleHATopology()).numDataNodes(1)
+        .build();
+    FileSystem fs = null;
+    try {
+      cluster.waitActive();
+
+      FSNamesystem nn0 = cluster.getNamesystem(0);
+      FSNamesystem nn1 = cluster.getNamesystem(1);
+
+      cluster.transitionToActive(0);
+      fs = HATestUtil.configureFailoverFs(cluster, conf);
+      DFSTestUtil.createFile(fs, new Path("/testHAInodeCount1"),
+          10, (short)1, 1L);
+      DFSTestUtil.createFile(fs, new Path("/testHAInodeCount2"),
+          10, (short)1, 1L);
+      DFSTestUtil.createFile(fs, new Path("/testHAInodeCount3"),
+          10, (short)1, 1L);
+      DFSTestUtil.createFile(fs, new Path("/testHAInodeCount4"),
+          10, (short)1, 1L);
+
+      // 1 dir and 4 files
+      assertEquals(5, nn0.getFilesTotal());
+      // The SBN still has one dir, which is "/".
+      assertEquals(1, nn1.getFilesTotal());
+
+      // Save fsimage so that nn does not build up namesystem by replaying
+      // edits, but load from the image.
+      ((DistributedFileSystem)fs).setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      ((DistributedFileSystem)fs).saveNamespace();
+
+      // Flip the two namenodes and restart the standby, which will load
+      // the fsimage.
+      cluster.transitionToStandby(0);
+      cluster.transitionToActive(1);
+      cluster.restartNameNode(0);
+      assertEquals(nn0.getHAState(), "standby");
+
+      // The restarted standby should report the correct count
+      nn0 = cluster.getNamesystem(0);
+      assertEquals(5, nn0.getFilesTotal());
+    } finally {
+      IOUtils.cleanup(LOG, fs);
+      cluster.shutdown();
+    }
+
   }
 }

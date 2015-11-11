@@ -2293,6 +2293,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9245. Fix findbugs warnings in hdfs-nfs/WriteCtx.
     (Mingliang Liu via xyao)
 
+    HDFS-9396. Total files and directories on jmx and web UI on standby is
+    uninitialized. (kihwal)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
