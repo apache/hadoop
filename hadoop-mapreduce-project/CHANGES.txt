@@ -226,6 +226,8 @@ Trunk (Unreleased)
     MAPREDUCE-6435. MapReduce client assumes the world is x86
     (Alan Burlison via aw)
 
+    MAPREDUCE-6540. TestMRTimelineEventHandling fails (sjlee)
+
   BREAKDOWN OF MAPREDUCE-2841 (NATIVE TASK) SUBTASKS
 
     MAPREDUCE-5985. native-task: Fix build on macosx. Contributed by
