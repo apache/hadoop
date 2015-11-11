@@ -1315,7 +1315,7 @@
   <property>
     <description>The minimum fraction of number of disks to be healthy for the
     nodemanager to launch new containers. This correspond to both
-    yarn-nodemanager.local-dirs and yarn.nodemanager.log-dirs. i.e. If there
+    yarn.nodemanager.local-dirs and yarn.nodemanager.log-dirs. i.e. If there
     are less number of healthy local-dirs (or log-dirs) available, then
     new containers will not be launched on this node.</description>
     <name>yarn.nodemanager.disk-health-checker.min-healthy-disks</name>
@@ -1326,7 +1326,7 @@
     <description>The maximum percentage of disk space utilization allowed after 
     which a disk is marked as bad. Values can range from 0.0 to 100.0. 
     If the value is greater than or equal to 100, the nodemanager will check 
-    for full disk. This applies to yarn-nodemanager.local-dirs and 
+    for full disk. This applies to yarn.nodemanager.local-dirs and
     yarn.nodemanager.log-dirs.</description>
     <name>yarn.nodemanager.disk-health-checker.max-disk-utilization-per-disk-percentage</name>
     <value>90.0</value>
@@ -1335,7 +1335,7 @@
   <property>
     <description>The low threshold percentage of disk space used when a bad disk is
     marked as good. Values can range from 0.0 to 100.0. This applies to
-    yarn-nodemanager.local-dirs and yarn.nodemanager.log-dirs.
+    yarn.nodemanager.local-dirs and yarn.nodemanager.log-dirs.
     Note that if its value is more than yarn.nodemanager.disk-health-checker.
     max-disk-utilization-per-disk-percentage or not set, it will be set to the same value as
     yarn.nodemanager.disk-health-checker.max-disk-utilization-per-disk-percentage.</description>
@@ -1345,7 +1345,7 @@
 
   <property>
     <description>The minimum space that must be available on a disk for
-    it to be used. This applies to yarn-nodemanager.local-dirs and 
+    it to be used. This applies to yarn.nodemanager.local-dirs and
     yarn.nodemanager.log-dirs.</description>
     <name>yarn.nodemanager.disk-health-checker.min-free-space-per-disk-mb</name>
     <value>0</value>
