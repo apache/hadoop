@@ -894,6 +894,9 @@ Release 2.6.3 - UNRELEASED
     YARN-2859. ApplicationHistoryServer binds to default port 8188 in MiniYARNCluster.
     (Vinod Kumar Vavilapalli via xgong)
 
+    YARN-4241. Fix typo of property name in yarn-default.xml.
+    (Anthony Rojas via aajisaka)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
