@@ -2224,6 +2224,8 @@ Release 2.6.3 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-12526. there are duplicate dependency definitions in pom's (sjlee)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
