@@ -2290,6 +2290,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9364. Unnecessary DNS resolution attempts when creating NameNodeProxies.
     (Xiao Chen via zhz)
 
+    HDFS-9245. Fix findbugs warnings in hdfs-nfs/WriteCtx.
+    (Mingliang Liu via xyao)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
