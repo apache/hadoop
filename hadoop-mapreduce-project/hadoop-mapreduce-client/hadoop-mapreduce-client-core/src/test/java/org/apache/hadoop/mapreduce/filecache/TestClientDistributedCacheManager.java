@@ -44,13 +44,17 @@ public class TestClientDistributedCacheManager {
   private static final Log LOG = LogFactory.getLog(
       TestClientDistributedCacheManager.class);
   
-  private static final String TEST_ROOT_DIR = 
-      new File(System.getProperty("test.build.data", "/tmp")).toURI()
-      .toString().replace(' ', '+');
-  
-  private static final String TEST_VISIBILITY_DIR =
-      new File(TEST_ROOT_DIR, "TestCacheVisibility").toURI()
-      .toString().replace(' ', '+');
+  private static final Path TEST_ROOT_DIR = new Path(
+      System.getProperty("test.build.data",
+          System.getProperty("java.io.tmpdir")),
+      TestClientDistributedCacheManager.class.getSimpleName());
+
+  private static final Path TEST_VISIBILITY_PARENT_DIR =
+      new Path(TEST_ROOT_DIR, "TestCacheVisibility_Parent");
+
+  private static final Path TEST_VISIBILITY_CHILD_DIR =
+      new Path(TEST_VISIBILITY_PARENT_DIR, "TestCacheVisibility_Child");
+
   private FileSystem fs;
   private Path firstCacheFile;
   private Path secondCacheFile;
@@ -63,7 +67,7 @@ public class TestClientDistributedCacheManager {
     fs = FileSystem.get(conf);
     firstCacheFile = new Path(TEST_ROOT_DIR, "firstcachefile");
     secondCacheFile = new Path(TEST_ROOT_DIR, "secondcachefile");
-    thirdCacheFile = new Path(TEST_VISIBILITY_DIR,"thirdCachefile");
+    thirdCacheFile = new Path(TEST_VISIBILITY_CHILD_DIR,"thirdCachefile");
     createTempFile(firstCacheFile, conf);
     createTempFile(secondCacheFile, conf);
     createTempFile(thirdCacheFile, conf);
@@ -71,14 +75,9 @@ public class TestClientDistributedCacheManager {
   
   @After
   public void tearDown() throws IOException {
-    if (!fs.delete(firstCacheFile, false)) {
-      LOG.warn("Failed to delete firstcachefile");
-    }
-    if (!fs.delete(secondCacheFile, false)) {
-      LOG.warn("Failed to delete secondcachefile");
-    }
-    if (!fs.delete(thirdCacheFile, false)) {
-      LOG.warn("Failed to delete thirdCachefile");
+    if (fs.delete(TEST_ROOT_DIR, true)) {
+      LOG.warn("Failed to delete test root dir and its content under "
+          + TEST_ROOT_DIR);
     }
   }
   
@@ -105,10 +104,11 @@ public class TestClientDistributedCacheManager {
   
   @Test
   public void testDetermineCacheVisibilities() throws IOException {
-    Path workingdir = new Path(TEST_VISIBILITY_DIR);
-    fs.setWorkingDirectory(workingdir);
-    fs.setPermission(workingdir, new FsPermission((short)00777));
-    fs.setPermission(new Path(TEST_ROOT_DIR), new FsPermission((short)00700));
+    fs.setWorkingDirectory(TEST_VISIBILITY_CHILD_DIR);
+    fs.setPermission(TEST_VISIBILITY_CHILD_DIR,
+        new FsPermission((short)00777));
+    fs.setPermission(TEST_VISIBILITY_PARENT_DIR,
+        new FsPermission((short)00700));
     Job job = Job.getInstance(conf);
     Path relativePath = new Path("thirdCachefile");
     job.addCacheFile(relativePath.toUri());
