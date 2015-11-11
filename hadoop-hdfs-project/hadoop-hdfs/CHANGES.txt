@@ -1441,6 +1441,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9234. WebHdfs: getContentSummary() should give quota for storage types.
     (Surendra Singh Lilhore via xyao)
 
+    HDFS-9245. Fix findbugs warnings in hdfs-nfs/WriteCtx.
+    (Mingliang Liu via xyao)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
