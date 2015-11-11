@@ -708,8 +708,6 @@ Release 2.8.0 - UNRELEASED
     fails intermittently due to assumption that a lease error will be thrown.
     (Gaurav Kanade via cnauroth)
 
-    HADOOP-12526. there are duplicate dependency definitions in pom's (sjlee)
-
     HADOOP-12482. Race condition in JMX cache update. (Tony Wu via lei)
 
     HADOOP-12560: Fix sprintf warnings in {{DomainSocket.c}} introduced by
@@ -1631,6 +1629,8 @@ Release 2.6.3 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-12526. there are duplicate dependency definitions in pom's (sjlee)
 
 Release 2.6.2 - 2015-10-28
 
