@@ -12,6 +12,8 @@ Release 2.7.3 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-6540. TestMRTimelineEventHandling fails (sjlee)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
