@@ -265,7 +265,7 @@ public class ReservationSystemTestUtil {
         new RMContextImpl(null, null, null, null, null, null,
             new RMContainerTokenSecretManager(conf),
             new NMTokenSecretManagerInRM(conf),
-            new ClientToAMTokenSecretManagerInRM(), null));
+            new ClientToAMTokenSecretManagerInRM()));
 
     RMNodeLabelsManager nlm = mock(RMNodeLabelsManager.class);
     when(nlm.getQueueResource(any(String.class), anySetOf(String.class),

@@ -87,42 +87,6 @@ public class RMRegistryOperationsService extends RegistryAdminService {
     this.purgeOnCompletionPolicy = purgeOnCompletionPolicy;
   }
 
-  public void onApplicationAttemptRegistered(ApplicationAttemptId attemptId,
-      String host, int rpcport, String trackingurl) throws IOException {
-
-  }
-
-  public void onApplicationLaunched(ApplicationId id) throws IOException {
-
-  }
-
-  /**
-   * Actions to take as an AM registers itself with the RM.
-   * @param attemptId attempt ID
-   * @throws IOException problems
-   */
-  public void onApplicationMasterRegistered(ApplicationAttemptId attemptId) throws
-      IOException {
-  }
-
-  /**
-   * Actions to take when the AM container is completed
-   * @param containerId  container ID
-   * @throws IOException problems
-   */
-  public void onAMContainerFinished(ContainerId containerId) throws
-      IOException {
-    LOG.info("AM Container {} finished, purging application attempt records",
-        containerId);
-
-    // remove all application attempt entries
-    purgeAppAttemptRecords(containerId.getApplicationAttemptId());
-
-    // also treat as a container finish to remove container
-    // level records for the AM container
-    onContainerFinished(containerId);
-  }
-
   /**
    * remove all application attempt entries
    * @param attemptId attempt ID
@@ -157,9 +121,6 @@ public class RMRegistryOperationsService extends RegistryAdminService {
     purgeRecordsAsync("/",
         id.toString(),
         PersistencePolicies.APPLICATION);
-  }
-
-  public void onApplicationAttemptAdded(ApplicationAttemptId appAttemptId) {
   }
 
   /**

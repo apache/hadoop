@@ -651,7 +651,7 @@ public class TestRMWebServices extends JerseyTestBase {
         anyBoolean())).thenReturn(mockAppsResponse);
     ResourceManager mockRM = mock(ResourceManager.class);
     RMContextImpl rmContext = new RMContextImpl(null, null, null, null, null,
-        null, null, null, null, null);
+        null, null, null, null);
     when(mockRM.getRMContext()).thenReturn(rmContext);
     when(mockRM.getClientRMService()).thenReturn(mockClientSvc);
     rmContext.setNodeLabelManager(mock(RMNodeLabelsManager.class));

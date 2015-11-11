@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.registry.RMRegistryService;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
@@ -97,6 +98,7 @@ public class RMActiveServiceContext {
   private RMTimelineCollectorManager timelineCollectorManager;
 
   private RMNodeLabelsManager nodeLabelManager;
+  private RMRegistryService registry;
   private RMDelegatedNodeLabelsUpdater rmDelegatedNodeLabelsUpdater;
   private long epoch;
   private Clock systemClock = SystemClock.getInstance();
@@ -123,7 +125,8 @@ public class RMActiveServiceContext {
       RMContainerTokenSecretManager containerTokenSecretManager,
       NMTokenSecretManagerInRM nmTokenSecretManager,
       ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager,
-      ResourceScheduler scheduler) {
+      ResourceScheduler scheduler,
+      RMRegistryService registry) {
     this();
     this.setContainerAllocationExpirer(containerAllocationExpirer);
     this.setAMLivelinessMonitor(amLivelinessMonitor);
@@ -482,5 +485,17 @@ public class RMActiveServiceContext {
   @Unstable
   public RMAppLifetimeMonitor getRMAppLifetimeMonitor() {
     return this.rmAppLifetimeMonitor;
+  }
+
+  @Private
+  @Unstable
+  public RMRegistryService getRegistry() {
+    return registry;
+  }
+
+  @Private
+  @Unstable
+  public void setRegistry(RMRegistryService registry) {
+    this.registry = registry;
   }
 }
