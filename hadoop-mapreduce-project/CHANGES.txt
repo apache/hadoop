@@ -344,6 +344,8 @@ Release 2.8.0 - UNRELEASED
    MAPREDUCE-6533. testDetermineCacheVisibilities of
    TestClientDistributedCacheManager is broken (Chang Li via jlowe)
 
+    MAPREDUCE-6540. TestMRTimelineEventHandling fails (sjlee)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
