@@ -75,8 +75,8 @@ public class SystemMetricsPublisher extends CompositeService {
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     publishSystemMetrics =
-        conf.getBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
-            YarnConfiguration.DEFAULT_APPLICATION_HISTORY_ENABLED) &&
+        conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
+            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED) &&
         conf.getBoolean(YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_ENABLED,
             YarnConfiguration.DEFAULT_RM_SYSTEM_METRICS_PUBLISHER_ENABLED);
 
