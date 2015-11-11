@@ -631,6 +631,9 @@ Release 2.8.0 - UNRELEASED
    MAPREDUCE-6515. Update Application priority in AM side from AM-RM heartbeat
    (Sunil G via jlowe)
 
+   MAPREDUCE-6533. testDetermineCacheVisibilities of
+   TestClientDistributedCacheManager is broken (Chang Li via jlowe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
