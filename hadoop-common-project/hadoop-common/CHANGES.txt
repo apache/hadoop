@@ -18,8 +18,6 @@ Release 2.7.3 - UNRELEASED
     HADOOP-12296. when setnetgrent returns 0 in linux, exception should be
     thrown (Chang Li via jlowe)
 
-    HADOOP-12526. there are duplicate dependency definitions in pom's (sjlee)
-
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -831,6 +829,8 @@ Release 2.6.3 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-12526. there are duplicate dependency definitions in pom's (sjlee)
 
 Release 2.6.2 - 2015-10-28
 
