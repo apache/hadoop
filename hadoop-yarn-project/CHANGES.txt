@@ -1048,6 +1048,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3840. Resource Manager web ui issue when sorting application by id (with
     application having id > 9999) (Mohammad Shahid Khan via jianhe)
 
+    YARN-4345. yarn rmadmin -updateNodeResource doesn't work (Junping Du via
+    jlowe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
