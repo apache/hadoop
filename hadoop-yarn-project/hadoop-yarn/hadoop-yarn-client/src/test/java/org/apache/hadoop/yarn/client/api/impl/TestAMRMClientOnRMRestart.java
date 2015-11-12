@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -90,15 +91,17 @@ public class TestAMRMClientOnRMRestart {
   }
 
   // Test does major 6 steps verification.
-  // Step-1 : AMRMClient send allocate request for 2 container requests
-  // Step-2 : 2 containers are allocated by RM.
-  // Step-3 : AM Send 1 containerRequest(cRequest3) and 1 releaseRequests to
+  // Step-1 : AMRMClient send allocate request for 3 container requests
+  // Step-2 : 3 containers are allocated by RM.
+  // Step-3 : AM Send 1 containerRequest(cRequest4) and 1 releaseRequests to
   // RM
+  // Step-3.5 : AM Send 1 container resource increase request to RM
   // Step-4 : On RM restart, AM(does not know RM is restarted) sends additional
-  // containerRequest(cRequest4) and blacklisted nodes.
+  // containerRequest(cRequest5) and blacklisted nodes.
   // Intern RM send resync command
-  // Step-5 : Allocater after resync command & new containerRequest(cRequest5)
-  // Step-6 : RM allocates containers i.e cRequest3,cRequest4 and cRequest5
+  // Verify AM can recover increase request after resync
+  // Step-5 : Allocater after resync command & new containerRequest(cRequest6)
+  // Step-6 : RM allocates containers i.e cRequest4,cRequest5 and cRequest6
   @Test(timeout = 60000)
   public void testAMRMClientResendsRequestsOnRMRestart() throws Exception {
 
@@ -132,8 +135,8 @@ public class TestAMRMClientOnRMRestart {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     ugi.addTokenIdentifier(token.decodeIdentifier());
 
-    // Step-1 : AMRMClient send allocate request for 2 ContainerRequest
-    // cRequest1 = h1 and cRequest2 = h1,h2
+    // Step-1 : AMRMClient send allocate request for 3 ContainerRequest
+    // cRequest1 = h1, cRequest2 = h1,h2 and cRequest3 = h1
     // blacklisted nodes = h2
     AMRMClient<ContainerRequest> amClient = new MyAMRMClientImpl(rm1);
     amClient.init(conf);
@@ -147,6 +150,9 @@ public class TestAMRMClientOnRMRestart {
     ContainerRequest cRequest2 =
         createReq(1, 1024, new String[] { "h1", "h2" });
     amClient.addContainerRequest(cRequest2);
+
+    ContainerRequest cRequest3 = createReq(1, 1024, new String[] { "h1" });
+    amClient.addContainerRequest(cRequest3);
 
     List<String> blacklistAdditions = new ArrayList<String>();
     List<String> blacklistRemoval = new ArrayList<String>();
@@ -167,14 +173,14 @@ public class TestAMRMClientOnRMRestart {
     assertBlacklistAdditionsAndRemovals(1, 1, rm1);
 
     // Step-2 : NM heart beat is sent.
-    // On 2nd AM allocate request, RM allocates 2 containers to AM
+    // On 2nd AM allocate request, RM allocates 3 containers to AM
     nm1.nodeHeartbeat(true); // Node heartbeat
     dispatcher.await();
 
     allocateResponse = amClient.allocate(0.2f);
     dispatcher.await();
-    // 2 containers are allocated i.e for cRequest1 and cRequest2.
-    Assert.assertEquals("No of assignments must be 0", 2, allocateResponse
+    // 3 containers are allocated i.e for cRequest1, cRequest2 and cRequest3.
+    Assert.assertEquals("No of assignments must be 0", 3, allocateResponse
         .getAllocatedContainers().size());
     assertAsksAndReleases(0, 0, rm1);
     assertBlacklistAdditionsAndRemovals(0, 0, rm1);
@@ -184,6 +190,7 @@ public class TestAMRMClientOnRMRestart {
     // removed allocated container requests
     amClient.removeContainerRequest(cRequest1);
     amClient.removeContainerRequest(cRequest2);
+    amClient.removeContainerRequest(cRequest3);
 
     allocateResponse = amClient.allocate(0.2f);
     dispatcher.await();
@@ -193,8 +200,8 @@ public class TestAMRMClientOnRMRestart {
     assertBlacklistAdditionsAndRemovals(0, 0, rm1);
 
     // Step-3 : Send 1 containerRequest and 1 releaseRequests to RM
-    ContainerRequest cRequest3 = createReq(1, 1024, new String[] { "h1" });
-    amClient.addContainerRequest(cRequest3);
+    ContainerRequest cRequest4 = createReq(1, 1024, new String[] { "h1" });
+    amClient.addContainerRequest(cRequest4);
 
     int pendingRelease = 0;
     Iterator<Container> it = allocatedContainers.iterator();
@@ -205,11 +212,24 @@ public class TestAMRMClientOnRMRestart {
       break;// remove one container
     }
 
+    // Step-3.5 : Send 1 container resource increase request to RM
+    Container container = it.next();
+    ContainerId containerId = container.getId();
+    // Make sure that container is in RUNNING state before sending increase
+    // request
+    nm1.nodeHeartbeat(containerId.getApplicationAttemptId(),
+        containerId.getContainerId(), ContainerState.RUNNING);
+    amClient.requestContainerResourceChange(
+        container, Resource.newInstance(2048, 1));
+    it.remove();
+
     allocateResponse = amClient.allocate(0.3f);
     dispatcher.await();
     Assert.assertEquals("No of assignments must be 0", 0, allocateResponse
         .getAllocatedContainers().size());
     assertAsksAndReleases(3, pendingRelease, rm1);
+    // Verify there is one increase and zero decrease
+    assertChanges(1, 0, rm1);
     assertBlacklistAdditionsAndRemovals(0, 0, rm1);
     int completedContainer =
         allocateResponse.getCompletedContainersStatuses().size();
@@ -228,7 +248,13 @@ public class TestAMRMClientOnRMRestart {
 
     // new NM to represent NM re-register
     nm1 = new MockNM("h1:1234", 10240, rm2.getResourceTrackerService());
-    nm1.registerNode();
+    NMContainerStatus containerReport =
+        NMContainerStatus.newInstance(containerId, ContainerState.RUNNING,
+            Resource.newInstance(1024, 1), "recover container", 0,
+            Priority.newInstance(0), 0);
+    nm1.registerNode(Collections.singletonList(containerReport),
+        Collections.singletonList(
+            containerId.getApplicationAttemptId().getApplicationId()));
     nm1.nodeHeartbeat(true);
     dispatcher.await();
 
@@ -243,9 +269,9 @@ public class TestAMRMClientOnRMRestart {
       it.remove();
     }
 
-    ContainerRequest cRequest4 =
+    ContainerRequest cRequest5 =
         createReq(1, 1024, new String[] { "h1", "h2" });
-    amClient.addContainerRequest(cRequest4);
+    amClient.addContainerRequest(cRequest5);
 
     // Step-4 : On RM restart, AM(does not know RM is restarted) sends
     // additional
@@ -259,11 +285,13 @@ public class TestAMRMClientOnRMRestart {
     pendingRelease -= completedContainer;
 
     assertAsksAndReleases(4, pendingRelease, rm2);
+    // Verify there is one increase and zero decrease
+    assertChanges(1, 0, rm2);
     assertBlacklistAdditionsAndRemovals(2, 0, rm2);
 
-    ContainerRequest cRequest5 =
+    ContainerRequest cRequest6 =
         createReq(1, 1024, new String[] { "h1", "h2", "h3" });
-    amClient.addContainerRequest(cRequest5);
+    amClient.addContainerRequest(cRequest6);
 
     // Step-5 : Allocater after resync command
     allocateResponse = amClient.allocate(0.5f);
@@ -272,6 +300,8 @@ public class TestAMRMClientOnRMRestart {
         .getAllocatedContainers().size());
 
     assertAsksAndReleases(5, 0, rm2);
+    // Verify there is no increase or decrease requests any more
+    assertChanges(0, 0, rm2);
     assertBlacklistAdditionsAndRemovals(0, 0, rm2);
 
     int noAssignedContainer = 0;
@@ -289,7 +319,7 @@ public class TestAMRMClientOnRMRestart {
       Thread.sleep(1000);
     }
 
-    // Step-6 : RM allocates containers i.e cRequest3,cRequest4 and cRequest5
+    // Step-6 : RM allocates containers i.e cRequest4,cRequest5 and cRequest6
     Assert.assertEquals("Number of container should be 3", 3,
         noAssignedContainer);
 
@@ -519,6 +549,8 @@ public class TestAMRMClientOnRMRestart {
 
     List<ResourceRequest> lastAsk = null;
     List<ContainerId> lastRelease = null;
+    List<ContainerResourceChangeRequest> lastIncrease = null;
+    List<ContainerResourceChangeRequest> lastDecrease = null;
     List<String> lastBlacklistAdditions;
     List<String> lastBlacklistRemovals;
 
@@ -541,6 +573,8 @@ public class TestAMRMClientOnRMRestart {
       }
       lastAsk = ask;
       lastRelease = release;
+      lastIncrease = increaseRequests;
+      lastDecrease = decreaseRequests;
       lastBlacklistAdditions = blacklistAdditions;
       lastBlacklistRemovals = blacklistRemovals;
       return super.allocate(applicationAttemptId, askCopy, release,
@@ -645,6 +679,14 @@ public class TestAMRMClientOnRMRestart {
     Assert.assertEquals(expectedAsk, rm.getMyFifoScheduler().lastAsk.size());
     Assert.assertEquals(expectedRelease,
         rm.getMyFifoScheduler().lastRelease.size());
+  }
+
+  private static void assertChanges(
+      int expectedIncrease, int expectedDecrease, MyResourceManager rm) {
+    Assert.assertEquals(
+        expectedIncrease, rm.getMyFifoScheduler().lastIncrease.size());
+    Assert.assertEquals(
+        expectedDecrease, rm.getMyFifoScheduler().lastDecrease.size());
   }
 
   private ContainerRequest createReq(int priority, int memory, String[] hosts) {

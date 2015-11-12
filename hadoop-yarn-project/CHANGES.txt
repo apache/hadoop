@@ -247,6 +247,9 @@ Release 2.8.0 - UNRELEASED
     YARN-1510. Make NMClient support change container resources. 
     (Meng Ding via wangda)
 
+    YARN-1509. Make AMRMClient support send increase container request and 
+    get increased/decreased containers. (Meng Ding via wangda)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
