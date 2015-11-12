@@ -1065,6 +1065,8 @@ Release 2.7.3 - UNRELEASED
 
   BUG FIXES
 
+    YARN-4347. Resource manager fails with Null pointer exception. (Jian He via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
