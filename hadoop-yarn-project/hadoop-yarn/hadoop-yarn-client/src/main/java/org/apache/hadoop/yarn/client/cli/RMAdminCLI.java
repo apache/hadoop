@@ -415,7 +415,7 @@ public class RMAdminCLI extends HAAdmin {
     adminProtocol.refreshClusterMaxPriority(request);
     return 0;
   }
-  
+
   private int updateNodeResource(String nodeIdStr, int memSize,
       int cores, int overCommitTimeout) throws IOException, YarnException {
     // Refresh the nodes
@@ -428,6 +428,7 @@ public class RMAdminCLI extends HAAdmin {
         new HashMap<NodeId, ResourceOption>();
     resourceMap.put(
         nodeId, ResourceOption.newInstance(resource, overCommitTimeout));
+    request.setNodeResourceMap(resourceMap);
     adminProtocol.updateNodeResource(request);
     return 0;
   }
