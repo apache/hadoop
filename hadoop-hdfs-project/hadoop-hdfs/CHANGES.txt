@@ -201,6 +201,9 @@ Trunk (Unreleased)
     HDFS-9234. WebHdfs: getContentSummary() should give quota for storage types.
     (Surendra Singh Lilhore via xyao)
 
+    HDFS-8968. Erasure coding: a comprehensive I/O throughput benchmark tool.
+    (Rui Li via zhz)
+
   OPTIMIZATIONS
 
   BUG FIXES
