@@ -554,6 +554,8 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4310. FairScheduler: Log skipping reservation messages at DEBUG level (asuresh)
 
+    YARN-4287. Capacity Scheduler: Rack Locality improvement (Nathan Roberts via wangda)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

@@ -246,8 +246,11 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       float localityWaitFactor =
           getLocalityWaitFactor(priority, rmContext.getScheduler()
               .getNumClusterNodes());
-
-      return ((requiredContainers * localityWaitFactor) < missedOpportunities);
+      // Cap the delay by the number of nodes in the cluster. Under most conditions
+      // this means we will consider each node in the cluster before
+      // accepting an off-switch assignment.
+      return (Math.min(rmContext.getScheduler().getNumClusterNodes(),
+          (requiredContainers * localityWaitFactor)) < missedOpportunities);
     }
 
     // Check if we need containers on this rack
@@ -643,9 +646,15 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Resetting scheduling opportunities");
         }
-        application.resetSchedulingOpportunities(priority);
+        // Only reset scheduling opportunities for RACK_LOCAL if configured
+        // to do so. Not resetting means we will continue to schedule
+        // RACK_LOCAL without delay.
+        if (allocationResult.containerNodeType == NodeType.NODE_LOCAL
+            || application.getCSLeafQueue().getRackLocalityFullReset()) {
+          application.resetSchedulingOpportunities(priority);
+        }
       }
-      
+
       // Non-exclusive scheduling opportunity is different: we need reset
       // it every time to make sure non-labeled resource request will be
       // most likely allocated on non-labeled nodes first.

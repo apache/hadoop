@@ -86,6 +86,7 @@ public class LeafQueue extends AbstractCSQueue {
   private float maxAMResourcePerQueuePercent;
 
   private volatile int nodeLocalityDelay;
+  private volatile boolean rackLocalityFullReset;
 
   Map<ApplicationAttemptId, FiCaSchedulerApp> applicationAttemptMap =
       new HashMap<ApplicationAttemptId, FiCaSchedulerApp>();
@@ -190,6 +191,7 @@ public class LeafQueue extends AbstractCSQueue {
     }
     
     nodeLocalityDelay = conf.getNodeLocalityDelay();
+    rackLocalityFullReset = conf.getRackLocalityFullReset();
 
     // re-init this since max allocation could have changed
     this.minimumAllocationFactor =
@@ -1000,6 +1002,11 @@ public class LeafQueue extends AbstractCSQueue {
   @Lock(NoLock.class)
   public int getNodeLocalityDelay() {
     return nodeLocalityDelay;
+  }
+
+  @Lock(NoLock.class)
+  public boolean getRackLocalityFullReset() {
+    return rackLocalityFullReset;
   }
 
   @Lock(NoLock.class)
