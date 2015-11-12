@@ -31,6 +31,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
+
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -285,7 +287,7 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
    * @param req Resource request
    */
   public abstract void addContainerRequest(T req);
-  
+
   /**
    * Remove previous container request. The previous container request may have 
    * already been sent to the ResourceManager. So even after the remove request 
@@ -294,7 +296,26 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
    * @param req Resource request
    */
   public abstract void removeContainerRequest(T req);
-  
+
+  /**
+   * Request container resource change before calling <code>allocate</code>.
+   * Any previous pending resource change request of the same container will be
+   * removed.
+   *
+   * Application that calls this method is expected to maintain the
+   * <code>Container</code>s that are returned from previous successful
+   * allocations or resource changes. By passing in the existing container and a
+   * target resource capability to this method, the application requests the
+   * ResourceManager to change the existing resource allocation to the target
+   * resource allocation.
+   *
+   * @param container The container returned from the last successful resource
+   *                  allocation or resource change
+   * @param capability  The target resource capability of the container
+   */
+  public abstract void requestContainerResourceChange(
+      Container container, Resource capability);
+
   /**
    * Release containers assigned by the Resource Manager. If the app cannot use
    * the container or wants to give up the container then it can release them.
