@@ -67,7 +67,6 @@ class Stat extends FsCommand {
   protected final SimpleDateFormat timeFmt;
   {
     timeFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    timeFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
   }
 
   // default format string
