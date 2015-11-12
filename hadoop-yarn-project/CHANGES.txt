@@ -18,6 +18,8 @@ Release 2.7.3 - UNRELEASED
     YARN-3840. Resource Manager web ui issue when sorting application by id (with
     application having id > 9999) (Mohammad Shahid Khan via jianhe)
 
+    YARN-4347. Resource manager fails with Null pointer exception. (Jian He via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

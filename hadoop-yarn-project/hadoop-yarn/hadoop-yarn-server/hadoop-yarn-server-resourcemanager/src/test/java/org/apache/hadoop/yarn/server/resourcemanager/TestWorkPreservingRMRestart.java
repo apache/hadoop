@@ -60,6 +60,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.TestRMRestart.TestSecurityMockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -1159,5 +1160,46 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     rm2 = new MockRM(conf, memStore);
     nm1.setResourceTrackerService(rm2.getResourceTrackerService());
     rm2.start();
+  }
+
+  // Test that if application state was saved, but attempt state was not saved.
+  // RM should start correctly.
+  @Test (timeout = 20000)
+  public void testAppStateSavedButAttemptStateNotSaved() throws Exception {
+    MemoryRMStateStore memStore = new MemoryRMStateStore() {
+      @Override public synchronized void updateApplicationAttemptStateInternal(
+          ApplicationAttemptId appAttemptId,
+          ApplicationAttemptStateData attemptState) {
+        // do nothing;
+        // simulate the failure that attempt final state is not saved.
+      }
+    };
+    memStore.init(conf);
+    rm1 = new MockRM(conf, memStore);
+    rm1.start();
+
+    MockNM nm1 = new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    RMApp app1 = rm1.submitApp(200);
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+    MockRM.finishAMAndVerifyAppState(app1, rm1, nm1, am1);
+
+    ApplicationStateData appSavedState =
+        memStore.getState().getApplicationState().get(app1.getApplicationId());
+
+    // check that app state is  saved.
+    assertEquals(RMAppState.FINISHED, appSavedState.getState());
+    // check that attempt state is not saved.
+    assertNull(appSavedState.getAttempt(am1.getApplicationAttemptId()).getState());
+
+    rm2 = new MockRM(conf, memStore);
+    rm2.start();
+    RMApp recoveredApp1 =
+        rm2.getRMContext().getRMApps().get(app1.getApplicationId());
+
+    assertEquals(RMAppState.FINISHED, recoveredApp1.getState());
+    // check that attempt state is recovered correctly.
+    assertEquals(RMAppAttemptState.FINISHED, recoveredApp1.getCurrentAppAttempt().getState());
   }
 }
