@@ -1044,25 +1044,32 @@ public class TestSnapshotDeletion {
   public void testDeleteSnapshotCommandWithIllegalArguments() throws Exception {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     PrintStream psOut = new PrintStream(out);
-    System.setOut(psOut);
-    System.setErr(psOut);
-    FsShell shell = new FsShell();
-    shell.setConf(conf);
-    
-    String[] argv1 = {"-deleteSnapshot", "/tmp"};
-    int val = shell.run(argv1);
-    assertTrue(val == -1);
-    assertTrue(out.toString().contains(
-        argv1[0] + ": Incorrect number of arguments."));
-    out.reset();
-    
-    String[] argv2 = {"-deleteSnapshot", "/tmp", "s1", "s2"};
-    val = shell.run(argv2);
-    assertTrue(val == -1);
-    assertTrue(out.toString().contains(
-        argv2[0] + ": Incorrect number of arguments."));
-    psOut.close();
-    out.close();
+    PrintStream oldOut = System.out;
+    PrintStream oldErr = System.err;
+    try {
+      System.setOut(psOut);
+      System.setErr(psOut);
+      FsShell shell = new FsShell();
+      shell.setConf(conf);
+
+      String[] argv1 = { "-deleteSnapshot", "/tmp" };
+      int val = shell.run(argv1);
+      assertTrue(val == -1);
+      assertTrue(out.toString()
+          .contains(argv1[0] + ": Incorrect number of arguments."));
+      out.reset();
+
+      String[] argv2 = { "-deleteSnapshot", "/tmp", "s1", "s2" };
+      val = shell.run(argv2);
+      assertTrue(val == -1);
+      assertTrue(out.toString()
+          .contains(argv2[0] + ": Incorrect number of arguments."));
+      psOut.close();
+      out.close();
+    } finally {
+      System.setOut(oldOut);
+      System.setErr(oldErr);
+    }
   }
 
   /*

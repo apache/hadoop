@@ -902,9 +902,9 @@ public class TestDFSShell {
       assertEquals(dirs, in.nextLong());
       assertEquals(files, in.nextLong());
     } finally {
+      System.setOut(oldOut);
       if (in!=null) in.close();
       IOUtils.closeStream(out);
-      System.setOut(oldOut);
       System.out.println("results:\n" + results);
     }
   }
@@ -1667,9 +1667,9 @@ public class TestDFSShell {
       assertEquals(returnvalue, shell.run(new String[]{"-lsr", root}));
       results = bytes.toString();
     } finally {
-      IOUtils.closeStream(out);
       System.setOut(oldOut);
       System.setErr(oldErr);
+      IOUtils.closeStream(out);
     }
     System.out.println("results:\n" + results);
     return results;
@@ -3057,15 +3057,16 @@ public class TestDFSShell {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintStream ps = new PrintStream(baos);
     System.setErr(ps);
+    try {
+      runCmd(shell, "-ls", "/.reserved");
+      assertEquals(0, baos.toString().length());
 
-    runCmd(shell, "-ls", "/.reserved");
-    assertEquals(0, baos.toString().length());
-
-    runCmd(shell, "-ls", "/.reserved/raw/.reserved");
-    assertTrue(baos.toString().contains("No such file or directory"));
-
-    System.setErr(syserr);
-    cluster.shutdown();
+      runCmd(shell, "-ls", "/.reserved/raw/.reserved");
+      assertTrue(baos.toString().contains("No such file or directory"));
+    } finally {
+      System.setErr(syserr);
+      cluster.shutdown();
+    }
   }
 
   @Test (timeout = 30000)
@@ -3131,13 +3132,15 @@ public class TestDFSShell {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintStream ps = new PrintStream(baos);
     System.setErr(ps);
-
-    FsShell shell = new FsShell();
-    shell.setConf(conf);
-    runCmd(shell, "-cp", src.toString(), "/.reserved");
-    assertTrue(baos.toString().contains("Invalid path name /.reserved"));
-    System.setErr(syserr);
-    cluster.shutdown();
+    try {
+      FsShell shell = new FsShell();
+      shell.setConf(conf);
+      runCmd(shell, "-cp", src.toString(), "/.reserved");
+      assertTrue(baos.toString().contains("Invalid path name /.reserved"));
+    } finally {
+      System.setErr(syserr);
+      cluster.shutdown();
+    }
   }
 
   @Test (timeout = 30000)
@@ -3152,13 +3155,15 @@ public class TestDFSShell {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintStream ps = new PrintStream(baos);
     System.setErr(ps);
-
-    FsShell shell = new FsShell();
-    shell.setConf(conf);
-    runCmd(shell, "-chmod", "777", "/.reserved");
-    assertTrue(baos.toString().contains("Invalid path name /.reserved"));
-    System.setErr(syserr);
-    cluster.shutdown();
+    try {
+      FsShell shell = new FsShell();
+      shell.setConf(conf);
+      runCmd(shell, "-chmod", "777", "/.reserved");
+      assertTrue(baos.toString().contains("Invalid path name /.reserved"));
+    } finally {
+      System.setErr(syserr);
+      cluster.shutdown();
+    }
   }
 
   @Test (timeout = 30000)
@@ -3173,13 +3178,15 @@ public class TestDFSShell {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintStream ps = new PrintStream(baos);
     System.setErr(ps);
-
-    FsShell shell = new FsShell();
-    shell.setConf(conf);
-    runCmd(shell, "-chown", "user1", "/.reserved");
-    assertTrue(baos.toString().contains("Invalid path name /.reserved"));
-    System.setErr(syserr);
-    cluster.shutdown();
+    try {
+      FsShell shell = new FsShell();
+      shell.setConf(conf);
+      runCmd(shell, "-chown", "user1", "/.reserved");
+      assertTrue(baos.toString().contains("Invalid path name /.reserved"));
+    } finally {
+      System.setErr(syserr);
+      cluster.shutdown();
+    }
   }
 
   @Test (timeout = 30000)
