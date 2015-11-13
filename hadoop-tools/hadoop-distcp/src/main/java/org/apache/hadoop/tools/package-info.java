@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,4 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+
+/**
+ * DistCp is a tool for replicating data using MapReduce jobs for concurrent
+ * copy operations.
+ *
+ * @version 2
+ */
+@InterfaceAudience.Public
 package org.apache.hadoop.tools;
+import org.apache.hadoop.classification.InterfaceAudience;
