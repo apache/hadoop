@@ -1439,6 +1439,10 @@ Release 2.7.3 - UNRELEASED
     HADOOP-12296. when setnetgrent returns 0 in linux, exception should be
     thrown (Chang Li via jlowe)
 
+    HADOOP-12545. Hadoop javadoc has broken links for AccessControlList,
+    ImpersonationProvider, DefaultImpersonationProvider, and DistCp.
+    (Arshad Mohammad via aajisaka)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
