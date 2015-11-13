@@ -232,12 +232,14 @@ public class TestClusterId {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintStream stdErr = new PrintStream(baos);
     System.setErr(stdErr);
+    try {
+      NameNode.createNameNode(argv, config);
 
-    NameNode.createNameNode(argv, config);
-
-    // Check if usage is printed
-    assertTrue(baos.toString("UTF-8").contains("Usage: hdfs namenode"));
-    System.setErr(origErr);
+      // Check if usage is printed
+      assertTrue(baos.toString("UTF-8").contains("Usage: hdfs namenode"));
+    } finally {
+      System.setErr(origErr);
+    }
 
     // check if the version file does not exists.
     File version = new File(hdfsDir, "current/VERSION");
@@ -258,12 +260,14 @@ public class TestClusterId {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintStream stdErr = new PrintStream(baos);
     System.setErr(stdErr);
+    try {
+      NameNode.createNameNode(argv, config);
 
-    NameNode.createNameNode(argv, config);
-
-    // Check if usage is printed
-    assertTrue(baos.toString("UTF-8").contains("Usage: hdfs namenode"));
-    System.setErr(origErr);
+      // Check if usage is printed
+      assertTrue(baos.toString("UTF-8").contains("Usage: hdfs namenode"));
+    } finally {
+      System.setErr(origErr);
+    }
 
     // check if the version file does not exists.
     File version = new File(hdfsDir, "current/VERSION");
@@ -285,12 +289,14 @@ public class TestClusterId {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintStream stdErr = new PrintStream(baos);
     System.setErr(stdErr);
+    try {
+      NameNode.createNameNode(argv, config);
 
-    NameNode.createNameNode(argv, config);
-
-    // Check if usage is printed
-    assertTrue(baos.toString("UTF-8").contains("Usage: hdfs namenode"));
-    System.setErr(origErr);
+      // Check if usage is printed
+      assertTrue(baos.toString("UTF-8").contains("Usage: hdfs namenode"));
+    } finally {
+      System.setErr(origErr);
+    }
 
     // check if the version file does not exists.
     File version = new File(hdfsDir, "current/VERSION");

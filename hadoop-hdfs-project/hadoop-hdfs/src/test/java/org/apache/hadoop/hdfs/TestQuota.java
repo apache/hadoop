@@ -1054,13 +1054,18 @@ public class TestQuota {
     conf.set(FS_DEFAULT_NAME_KEY, "hdfs://127.0.0.1:8020");
     DFSAdmin admin = new DFSAdmin(conf);
     ByteArrayOutputStream err = new ByteArrayOutputStream();
-    System.setErr(new PrintStream(err));
-    String[] args = { "-setSpaceQuota", "100", "-storageType", "COLD",
-        "/testDir" };
-    admin.run(args);
-    String errOutput = new String(err.toByteArray(), Charsets.UTF_8);
-    assertTrue(errOutput.contains(StorageType.getTypesSupportingQuota()
-        .toString()));
+    PrintStream oldErr = System.err;
+    try {
+      System.setErr(new PrintStream(err));
+      String[] args =
+          { "-setSpaceQuota", "100", "-storageType", "COLD", "/testDir" };
+      admin.run(args);
+      String errOutput = new String(err.toByteArray(), Charsets.UTF_8);
+      assertTrue(
+          errOutput.contains(StorageType.getTypesSupportingQuota().toString()));
+    } finally {
+      System.setErr(oldErr);
+    }
   }
 
    /**

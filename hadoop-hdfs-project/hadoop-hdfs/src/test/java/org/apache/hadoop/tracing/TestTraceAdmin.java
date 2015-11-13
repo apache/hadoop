@@ -44,9 +44,12 @@ public class TestTraceAdmin {
     try {
       ret = trace.run(cmd);
     } finally {
-      System.out.flush();
-      System.setOut(oldStdout);
-      System.setErr(oldStderr);
+      try {
+        System.out.flush();
+      } finally {
+        System.setOut(oldStdout);
+        System.setErr(oldStderr);
+      }
     }
     return "ret:" + ret + ", " + baos.toString();
   }

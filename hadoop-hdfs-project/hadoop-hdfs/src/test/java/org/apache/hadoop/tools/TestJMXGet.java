@@ -125,14 +125,19 @@ public class TestJMXGet {
     String pattern = "List of all the available keys:";
     PipedOutputStream pipeOut = new PipedOutputStream();
     PipedInputStream pipeIn = new PipedInputStream(pipeOut);
+    PrintStream oldErr = System.err;
     System.setErr(new PrintStream(pipeOut));
-    jmx.printAllValues();
-    if ((size = pipeIn.available()) != 0) {
-      bytes = new byte[size];
-      pipeIn.read(bytes, 0, bytes.length);            
+    try {
+      jmx.printAllValues();
+      if ((size = pipeIn.available()) != 0) {
+        bytes = new byte[size];
+        pipeIn.read(bytes, 0, bytes.length);
+      }
+      pipeOut.close();
+      pipeIn.close();
+    } finally {
+      System.setErr(oldErr);
     }
-    pipeOut.close();
-    pipeIn.close();
     return bytes != null ? new String(bytes).contains(pattern) : false;
   }
   

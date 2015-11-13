@@ -2299,6 +2299,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9396. Total files and directories on jmx and web UI on standby is
     uninitialized. (kihwal)
 
+    HDFS-9410. Some tests should always reset sysout and syserr.
+    (Xiao Chen via waltersu4549)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
