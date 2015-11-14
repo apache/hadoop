@@ -1101,9 +1101,6 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11962. Sasl message with MD5 challenge text shouldn't be LOG out
     even in debug level. (Junping Du via wheat9)
 
-    HADOOP-11361. Fix a race condition in MetricsSourceAdapter.updateJmxCache.
-    (Brahma Reddy Battula via ozawa)
-
     HADOOP-8174. Remove confusing comment in Path#isAbsolute()
     (Suresh Srinivas via vinayakumarb)
 
@@ -1243,9 +1240,6 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11797. releasedocmaker.py needs to put ASF headers on output (aw)
 
-    HADOOP-12348. MetricsSystemImpl creates MetricsSourceAdapter with wrong
-    time unit parameter. (zxu via rkanter)
-
     HADOOP-12087. [JDK8] Fix javadoc errors caused by incorrect or illegal
     tags. (Akira AJISAKA via stevel).
 
@@ -1328,8 +1322,6 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12540. TestAzureFileSystemInstrumentation#testClientErrorMetrics
     fails intermittently due to assumption that a lease error will be thrown.
     (Gaurav Kanade via cnauroth)
-
-    HADOOP-12482. Race condition in JMX cache update. (Tony Wu via lei)
 
     HADOOP-12560: Fix sprintf warnings in {{DomainSocket.c}} introduced by
     HADOOP-12344 (Mingliang Liu via Colin P. McCabe)
@@ -1442,6 +1434,14 @@ Release 2.7.3 - UNRELEASED
 
     HADOOP-12374. Updated expunge command description.
     (WeiWei Yang via eyang)
+
+    HADOOP-11361. Fix a race condition in MetricsSourceAdapter.updateJmxCache.
+    (Brahma Reddy Battula via ozawa)
+
+    HADOOP-12348. MetricsSystemImpl creates MetricsSourceAdapter with wrong
+    time unit parameter. (zxu via rkanter)
+
+    HADOOP-12482. Race condition in JMX cache update. (Tony Wu via lei)
 
 Release 2.7.2 - UNRELEASED
 
