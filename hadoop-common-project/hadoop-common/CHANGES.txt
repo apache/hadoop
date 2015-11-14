@@ -999,9 +999,6 @@ Release 2.8.0 - UNRELEASED
 
   BUG FIXES
 
-    HADOOP-12374. Updated expunge command description.
-    (WeiWei Yang via eyang)
-
     HADOOP-12352. Delay in checkpointing Trash can leave trash for 2 intervals
     before deleting (Casey Brotherton via harsh)
 
@@ -1442,6 +1439,9 @@ Release 2.7.3 - UNRELEASED
     HADOOP-12545. Hadoop javadoc has broken links for AccessControlList,
     ImpersonationProvider, DefaultImpersonationProvider, and DistCp.
     (Arshad Mohammad via aajisaka)
+
+    HADOOP-12374. Updated expunge command description.
+    (WeiWei Yang via eyang)
 
 Release 2.7.2 - UNRELEASED
 
