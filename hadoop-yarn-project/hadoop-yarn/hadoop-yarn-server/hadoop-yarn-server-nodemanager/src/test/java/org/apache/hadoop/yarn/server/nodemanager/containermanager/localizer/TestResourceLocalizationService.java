@@ -487,8 +487,8 @@ public class TestResourceLocalizationService {
         Assert.assertEquals("Incorrect reference count", 0, lr.getRefCount());
         pubRsrcs.remove(lr.getRequest());
       }
-      Assert.assertEquals(2, pubRsrcs.size());
-      Assert.assertEquals(0, pubRsrcCount);
+      Assert.assertEquals(0, pubRsrcs.size());
+      Assert.assertEquals(2, pubRsrcCount);
 
       appRsrcCount = 0;
       for (LocalizedResource lr : appTracker) {
