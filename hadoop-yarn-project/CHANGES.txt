@@ -138,6 +138,9 @@ Release 2.7.2 - UNRELEASED
     YARN-4127. RM fail with noAuth error if switched from failover mode to non-failover
     mode. (Varun Saxena via jianhe)
 
+    YARN-4354. Public resource localization fails with NPE. (Jason Lowe via 
+    junping_du)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
