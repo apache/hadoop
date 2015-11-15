@@ -1181,6 +1181,9 @@ Release 2.7.2 - UNRELEASED
     YARN-4320. TestJobHistoryEventHandler fails as AHS in MiniYarnCluster no longer
     binds to default port 8188. (Varun Saxena via ozawa)
 
+    YARN-4354. Public resource localization fails with NPE. (Jason Lowe via 
+    junping_du)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
