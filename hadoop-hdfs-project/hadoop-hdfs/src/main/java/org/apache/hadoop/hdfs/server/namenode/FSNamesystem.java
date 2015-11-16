@@ -2914,9 +2914,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    *         or null if file not found
    */
   ContentSummary getContentSummary(final String src) throws IOException {
+    checkOperation(OperationCategory.READ);
     readLock();
     boolean success = true;
     try {
+      checkOperation(OperationCategory.READ);
       return FSDirStatAndListingOp.getContentSummary(dir, src);
     } catch (AccessControlException ace) {
       success = false;
