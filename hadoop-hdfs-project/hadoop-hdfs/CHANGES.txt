@@ -2302,6 +2302,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9410. Some tests should always reset sysout and syserr.
     (Xiao Chen via waltersu4549)
 
+    HDFS-9413. getContentSummary() on standby should throw StandbyException.
+    (Brahma Reddy Battula via mingma)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
