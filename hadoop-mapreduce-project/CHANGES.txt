@@ -133,6 +133,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-5763. Warn message about httpshuffle in NM logs.
     (Akira AJISAKA via ozawa)
 
+    MAPREDUCE-5485. Allow repeating job commit by extending OutputCommitter
+    API. Contributed by Junping Du
+
   OPTIMIZATIONS
 
     MAPREDUCE-6376. Add avro binary support for jhist files (Ray Chiang via
