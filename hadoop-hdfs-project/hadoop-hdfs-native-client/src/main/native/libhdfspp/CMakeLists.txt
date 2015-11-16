@@ -61,3 +61,26 @@ set(PROTO_HADOOP_TEST_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../../../hadoop-com
 add_subdirectory(third_party/gmock-1.7.0)
 add_subdirectory(lib)
 add_subdirectory(tests)
+
+# create an empty file; hadoop_add_dual_library wraps add_library which
+# requires at least one file as an argument
+set(EMPTY_FILE_CC ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/empty.cc)
+file(WRITE ${EMPTY_FILE_CC} "")
+
+hadoop_add_dual_library(hdfspp ${EMPTY_FILE_CC})
+if(NEED_LINK_DL)
+   set(LIB_DL dl)
+endif()
+
+SET(LIBHDFSPP_SUBLIBS bindings_c fs rpc reader proto common)
+IF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+  # linking a shared library from static ones requires --whole-archive
+  SET(LIBHDFSPP_SUBLIBS -Wl,--whole-archive ${LIBHDFSPP_SUBLIBS} -Wl,--no-whole-archive)
+ENDIF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+
+hadoop_target_link_dual_libraries(hdfspp
+    ${LIBHDFSPP_SUBLIBS}
+    ${LIB_DL}
+    ${PROTOBUF_LIBRARY}
+    ${OPENSSL_LIBRARIES}
+)
