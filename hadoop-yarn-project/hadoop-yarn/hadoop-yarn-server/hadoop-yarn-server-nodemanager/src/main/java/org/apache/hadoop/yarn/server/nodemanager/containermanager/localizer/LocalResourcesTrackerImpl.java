@@ -171,22 +171,14 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
       break;
     }
 
-    if (rsrc == null) {
-      LOG.warn("Received " + event.getType() + " event for request " + req
-          + " but localized resource is missing");
-      return;
-    }
     rsrc.handle(event);
 
     // Remove the resource if its downloading and its reference count has
     // become 0 after RELEASE. This maybe because a container was killed while
     // localizing and no other container is referring to the resource.
-    // NOTE: This should NOT be done for public resources since the
-    //       download is not associated with a container-specific localizer.
     if (event.getType() == ResourceEventType.RELEASE) {
       if (rsrc.getState() == ResourceState.DOWNLOADING &&
-          rsrc.getRefCount() <= 0 &&
-          rsrc.getRequest().getVisibility() != LocalResourceVisibility.PUBLIC) {
+          rsrc.getRefCount() <= 0) {
         removeResource(req);
       }
     }
