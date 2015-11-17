@@ -59,6 +59,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.datanode.FsDatasetTestUtils;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -699,11 +700,11 @@ public class TestFileTruncate {
     // Wait replicas come to 3
     DFSTestUtil.waitReplication(fs, p, REPLICATION);
     // Old replica is disregarded and replaced with the truncated one
-    assertEquals(cluster.getBlockFile(dn, newBlock.getBlock()).length(), 
+    FsDatasetTestUtils utils = cluster.getFsDatasetTestUtils(dn);
+    assertEquals(utils.getStoredDataLength(newBlock.getBlock()),
         newBlock.getBlockSize());
-    assertTrue(cluster.getBlockMetadataFile(dn, 
-        newBlock.getBlock()).getName().endsWith(
-            newBlock.getBlock().getGenerationStamp() + ".meta"));
+    assertEquals(utils.getStoredGenerationStamp(newBlock.getBlock()),
+        newBlock.getBlock().getGenerationStamp());
 
     // Validate the file
     FileStatus fileStatus = fs.getFileStatus(p);
@@ -753,15 +754,15 @@ public class TestFileTruncate {
 
     // Wait replicas come to 3
     DFSTestUtil.waitReplication(fs, p, REPLICATION);
+    FsDatasetTestUtils utils = cluster.getFsDatasetTestUtils(dn);
     // New block is replicated to dn1
-    assertEquals(cluster.getBlockFile(dn, newBlock.getBlock()).length(), 
+    assertEquals(utils.getStoredDataLength(newBlock.getBlock()),
         newBlock.getBlockSize());
     // Old replica exists too since there is snapshot
-    assertEquals(cluster.getBlockFile(dn, oldBlock.getBlock()).length(), 
+    assertEquals(utils.getStoredDataLength(oldBlock.getBlock()),
         oldBlock.getBlockSize());
-    assertTrue(cluster.getBlockMetadataFile(dn, 
-        oldBlock.getBlock()).getName().endsWith(
-            oldBlock.getBlock().getGenerationStamp() + ".meta"));
+    assertEquals(utils.getStoredGenerationStamp(oldBlock.getBlock()),
+        oldBlock.getBlock().getGenerationStamp());
 
     // Validate the file
     FileStatus fileStatus = fs.getFileStatus(p);
@@ -813,18 +814,18 @@ public class TestFileTruncate {
     // Wait replicas come to 3
     DFSTestUtil.waitReplication(fs, p, REPLICATION);
     // Old replica is disregarded and replaced with the truncated one on dn0
-    assertEquals(cluster.getBlockFile(dn0, newBlock.getBlock()).length(), 
+    FsDatasetTestUtils utils = cluster.getFsDatasetTestUtils(dn0);
+    assertEquals(utils.getStoredDataLength(newBlock.getBlock()),
         newBlock.getBlockSize());
-    assertTrue(cluster.getBlockMetadataFile(dn0, 
-        newBlock.getBlock()).getName().endsWith(
-            newBlock.getBlock().getGenerationStamp() + ".meta"));
+    assertEquals(utils.getStoredGenerationStamp(newBlock.getBlock()),
+        newBlock.getBlock().getGenerationStamp());
 
     // Old replica is disregarded and replaced with the truncated one on dn1
-    assertEquals(cluster.getBlockFile(dn1, newBlock.getBlock()).length(), 
+    utils = cluster.getFsDatasetTestUtils(dn1);
+    assertEquals(utils.getStoredDataLength(newBlock.getBlock()),
         newBlock.getBlockSize());
-    assertTrue(cluster.getBlockMetadataFile(dn1, 
-        newBlock.getBlock()).getName().endsWith(
-            newBlock.getBlock().getGenerationStamp() + ".meta"));
+    assertEquals(utils.getStoredGenerationStamp(newBlock.getBlock()),
+        newBlock.getBlock().getGenerationStamp());
 
     // Validate the file
     FileStatus fileStatus = fs.getFileStatus(p);
