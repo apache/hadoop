@@ -59,14 +59,6 @@ class Status {
     return (state_ == NULL) ? kOk : static_cast<int>(state_[4]);
   }
 
- private:
-  // OK status has a NULL state_.  Otherwise, state_ is a new[] array
-  // of the following form:
-  //    state_[0..3] == length of message
-  //    state_[4]    == code
-  //    state_[5..]  == message
-  const char* state_;
-
   enum Code {
     kOk = 0,
     kInvalidArgument = static_cast<unsigned>(std::errc::invalid_argument),
@@ -74,6 +66,14 @@ class Status {
     kUnimplemented = static_cast<unsigned>(std::errc::function_not_supported),
     kException = 255,
   };
+
+ private:
+  // OK status has a NULL state_.  Otherwise, state_ is a new[] array
+  // of the following form:
+  //    state_[0..3] == length of message
+  //    state_[4]    == code
+  //    state_[5..]  == message
+  const char* state_;
 
   explicit Status(int code, const char *msg1, const char *msg2);
   static const char *CopyState(const char* s);

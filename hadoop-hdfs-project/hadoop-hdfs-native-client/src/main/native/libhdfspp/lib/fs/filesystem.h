@@ -20,41 +20,52 @@
 
 #include "common/hdfs_public_api.h"
 #include "libhdfspp/hdfs.h"
+#include "fs/bad_datanode_tracker.h"
 #include "rpc/rpc_engine.h"
 #include "ClientNamenodeProtocol.pb.h"
 #include "ClientNamenodeProtocol.hrpc.inl"
 
 namespace hdfs {
 
+class FileHandle;
+class HadoopFileSystem;
+
 class FileSystemImpl : public FileSystem {
-public:
+ public:
   FileSystemImpl(IoService *io_service, const Options &options);
   void Connect(const std::string &server, const std::string &service,
                std::function<void(const Status &)> &&handler);
   virtual void Open(const std::string &path,
-                    const std::function<void(const Status &, InputStream *)>
-                        &handler) override;
+                    const std::function<void(const Status &, InputStream *)> &
+                        handler) override;
   RpcEngine &rpc_engine() { return engine_; }
 
-private:
+ private:
   IoServiceImpl *io_service_;
   RpcEngine engine_;
   ClientNamenodeProtocol namenode_;
+  std::shared_ptr<BadDataNodeTracker> bad_node_tracker_;
 };
 
 class InputStreamImpl : public InputStream {
-public:
+ public:
   InputStreamImpl(FileSystemImpl *fs,
-                  const ::hadoop::hdfs::LocatedBlocksProto *blocks);
-  virtual void
-  PositionRead(void *buf, size_t nbyte, uint64_t offset,
-               const std::set<std::string> &excluded_datanodes,
-               const std::function<void(const Status &, const std::string &,
-                                        size_t)> &handler) override;
+                  const ::hadoop::hdfs::LocatedBlocksProto *blocks,
+                  std::shared_ptr<BadDataNodeTracker> tracker);
+  virtual void PositionRead(
+      void *buf, size_t nbyte, uint64_t offset,
+      const std::function<void(const Status &, const std::string &, size_t)> &
+          handler) override;
+  /**
+   * If optional_rule_override is null then use the bad_datanode_tracker.  If
+   * non-null use the provided NodeExclusionRule to determine eligible
+   * datanodes.
+   **/
   template <class MutableBufferSequence, class Handler>
   void AsyncPreadSome(size_t offset, const MutableBufferSequence &buffers,
-                      const std::set<std::string> &excluded_datanodes,
+                      std::shared_ptr<NodeExclusionRule> excluded_nodes,
                       const Handler &handler);
+
   template <class BlockReaderTrait, class MutableBufferSequence, class Handler>
   void AsyncReadBlock(const std::string &client_name,
                       const hadoop::hdfs::LocatedBlockProto &block,
@@ -62,14 +73,17 @@ public:
                       const MutableBufferSequence &buffers,
                       const Handler &handler);
 
-private:
+ private:
   FileSystemImpl *fs_;
   unsigned long long file_length_;
   std::vector<::hadoop::hdfs::LocatedBlockProto> blocks_;
-  template <class Reader> struct HandshakeContinuation;
+  template <class Reader>
+  struct HandshakeContinuation;
   template <class Reader, class MutableBufferSequence>
   struct ReadBlockContinuation;
   struct RemoteBlockReaderTrait;
+  friend class FileHandle;
+  std::shared_ptr<BadDataNodeTracker> bad_node_tracker_;
 };
 }
 

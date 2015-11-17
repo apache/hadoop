@@ -18,6 +18,7 @@
 
 #include "fs/filesystem.h"
 #include "fs/bad_datanode_tracker.h"
+
 #include <gmock/gmock.h>
 
 using hadoop::common::TokenProto;
@@ -32,8 +33,6 @@ using ::testing::InvokeArgument;
 using ::testing::Return;
 
 using namespace hdfs;
-
-namespace hdfs {
 
 class MockReader {
  public:
@@ -68,9 +67,8 @@ struct MockBlockReaderTrait {
     return m;
   }
 };
-}
 
-TEST(InputStreamTest, TestReadSingleTrunk) {
+TEST(BadDataNodeTest, RecoverableError) {
   LocatedBlocksProto blocks;
   LocatedBlockProto block;
   DatanodeInfoProto dn;
@@ -78,9 +76,10 @@ TEST(InputStreamTest, TestReadSingleTrunk) {
       0,
   };
   IoServiceImpl io_service;
-  Options options;
-  FileSystemImpl fs(&io_service, options);
-  InputStreamImpl is(&fs, &blocks, std::make_shared<BadDataNodeTracker>());
+  Options default_options;
+  FileSystemImpl fs(&io_service, default_options);
+  auto tracker = std::make_shared<BadDataNodeTracker>();
+  InputStreamImpl is(&fs, &blocks, tracker);
   Status stat;
   size_t read = 0;
   struct Trait {
@@ -89,7 +88,11 @@ TEST(InputStreamTest, TestReadSingleTrunk) {
           .WillOnce(InvokeArgument<5>(Status::OK()));
 
       EXPECT_CALL(*reader, async_read_some(_, _))
-          .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf)));
+          // resource unavailable error
+          .WillOnce(InvokeArgument<1>(
+              Status::ResourceUnavailable(
+                  "Unable to get some resource, try again later"),
+              sizeof(buf)));
     }
   };
 
@@ -100,105 +103,31 @@ TEST(InputStreamTest, TestReadSingleTrunk) {
         stat = status;
         read = transferred;
       });
-  ASSERT_TRUE(stat.ok());
-  ASSERT_EQ(sizeof(buf), read);
-  read = 0;
-}
 
-TEST(InputStreamTest, TestReadMultipleTrunk) {
-  LocatedBlocksProto blocks;
-  LocatedBlockProto block;
-  DatanodeInfoProto dn;
-  char buf[4096] = {
-      0,
-  };
-  IoServiceImpl io_service;
-  Options options;
-  FileSystemImpl fs(&io_service, options);
-  InputStreamImpl is(&fs, &blocks, std::make_shared<BadDataNodeTracker>());
-  Status stat;
-  size_t read = 0;
-  struct Trait {
-    static void InitializeMockReader(MockReader *reader) {
-      EXPECT_CALL(*reader, async_connect(_, _, _, _, _, _))
-          .WillOnce(InvokeArgument<5>(Status::OK()));
-
-      EXPECT_CALL(*reader, async_read_some(_, _))
-          .Times(4)
-          .WillRepeatedly(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4));
-    }
-  };
-
-  is.AsyncReadBlock<MockBlockReaderTrait<Trait>>(
-      "client", block, dn, 0, asio::buffer(buf, sizeof(buf)),
-      [&stat, &read](const Status &status, const std::string &,
-                     size_t transferred) {
-        stat = status;
-        read = transferred;
-      });
-  ASSERT_TRUE(stat.ok());
-  ASSERT_EQ(sizeof(buf), read);
-  read = 0;
-}
-
-TEST(InputStreamTest, TestReadError) {
-  LocatedBlocksProto blocks;
-  LocatedBlockProto block;
-  DatanodeInfoProto dn;
-  char buf[4096] = {
-      0,
-  };
-  IoServiceImpl io_service;
-  Options options;
-  FileSystemImpl fs(&io_service, options);
-  InputStreamImpl is(&fs, &blocks, std::make_shared<BadDataNodeTracker>());
-  Status stat;
-  size_t read = 0;
-  struct Trait {
-    static void InitializeMockReader(MockReader *reader) {
-      EXPECT_CALL(*reader, async_connect(_, _, _, _, _, _))
-          .WillOnce(InvokeArgument<5>(Status::OK()));
-
-      EXPECT_CALL(*reader, async_read_some(_, _))
-          .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
-          .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
-          .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
-          .WillOnce(InvokeArgument<1>(Status::Error("error"), 0));
-    }
-  };
-
-  is.AsyncReadBlock<MockBlockReaderTrait<Trait>>(
-      "client", block, dn, 0, asio::buffer(buf, sizeof(buf)),
-      [&stat, &read](const Status &status, const std::string &,
-                     size_t transferred) {
-        stat = status;
-        read = transferred;
-      });
   ASSERT_FALSE(stat.ok());
-  ASSERT_EQ(sizeof(buf) / 4 * 3, read);
-  read = 0;
+
+  std::string failing_dn = "id_of_bad_datanode";
+  if (!stat.ok()) {
+    if (InputStream::ShouldExclude(stat)) {
+      tracker->AddBadNode(failing_dn);
+    }
+  }
+
+  ASSERT_FALSE(tracker->IsBadNode(failing_dn));
 }
 
-TEST(InputStreamTest, TestExcludeDataNode) {
+TEST(BadDataNodeTest, InternalError) {
   LocatedBlocksProto blocks;
-  LocatedBlockProto *block = blocks.add_blocks();
-  ExtendedBlockProto *b = block->mutable_b();
-  b->set_poolid("");
-  b->set_blockid(1);
-  b->set_generationstamp(1);
-  b->set_numbytes(4096);
-
-  DatanodeInfoProto *di = block->add_locs();
-  DatanodeIDProto *dnid = di->mutable_id();
-  dnid->set_datanodeuuid("foo");
-
+  LocatedBlockProto block;
+  DatanodeInfoProto dn;
   char buf[4096] = {
       0,
   };
   IoServiceImpl io_service;
-  Options options;
-  FileSystemImpl fs(&io_service, options);
-  InputStreamImpl is(&fs, &blocks, std::make_shared<BadDataNodeTracker>());
+  Options default_options;
+  auto tracker = std::make_shared<BadDataNodeTracker>();
+  FileSystemImpl fs(&io_service, default_options);
+  InputStreamImpl is(&fs, &blocks, tracker);
   Status stat;
   size_t read = 0;
   struct Trait {
@@ -207,21 +136,32 @@ TEST(InputStreamTest, TestExcludeDataNode) {
           .WillOnce(InvokeArgument<5>(Status::OK()));
 
       EXPECT_CALL(*reader, async_read_some(_, _))
-          .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf)));
+          // something bad happened on the DN, calling again isn't going to help
+          .WillOnce(
+              InvokeArgument<1>(Status::Exception("server_explosion_exception",
+                                                  "the server exploded"),
+                                sizeof(buf)));
     }
   };
 
-  std::shared_ptr<NodeExclusionRule> exclude_set =
-      std::make_shared<ExclusionSet>(std::set<std::string>({"foo"}));
-  is.AsyncPreadSome(0, asio::buffer(buf, sizeof(buf)), exclude_set,
-                    [&stat, &read](const Status &status, const std::string &,
-                                   size_t transferred) {
-                      stat = status;
-                      read = transferred;
-                    });
-  ASSERT_EQ(static_cast<int>(std::errc::resource_unavailable_try_again),
-            stat.code());
-  ASSERT_EQ(0UL, read);
+  is.AsyncReadBlock<MockBlockReaderTrait<Trait>>(
+      "client", block, dn, 0, asio::buffer(buf, sizeof(buf)),
+      [&stat, &read](const Status &status, const std::string &,
+                     size_t transferred) {
+        stat = status;
+        read = transferred;
+      });
+
+  ASSERT_FALSE(stat.ok());
+
+  std::string failing_dn = "id_of_bad_datanode";
+  if (!stat.ok()) {
+    if (InputStream::ShouldExclude(stat)) {
+      tracker->AddBadNode(failing_dn);
+    }
+  }
+
+  ASSERT_TRUE(tracker->IsBadNode(failing_dn));
 }
 
 int main(int argc, char *argv[]) {

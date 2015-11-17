@@ -54,7 +54,8 @@ FileSystemImpl::FileSystemImpl(IoService *io_service, const Options &options)
       engine_(&io_service_->io_service(), options,
               RpcEngine::GetRandomClientName(), kNamenodeProtocol,
               kNamenodeProtocolVersion),
-      namenode_(&engine_) {}
+      namenode_(&engine_),
+      bad_node_tracker_(std::make_shared<BadDataNodeTracker>()) {}
 
 void FileSystemImpl::Connect(const std::string &server,
                              const std::string &service,
@@ -99,7 +100,8 @@ void FileSystemImpl::Open(
         namenode_.GetBlockLocations(&s->req, s->resp, next);
       }));
   m->Run([this, handler](const Status &stat, const State &s) {
-    handler(stat, stat.ok() ? new InputStreamImpl(this, &s.resp->locations())
+    handler(stat, stat.ok() ? new InputStreamImpl(this, &s.resp->locations(),
+                                                  bad_node_tracker_)
                             : nullptr);
   });
 }

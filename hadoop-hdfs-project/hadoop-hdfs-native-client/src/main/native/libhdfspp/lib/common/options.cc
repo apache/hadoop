@@ -20,8 +20,5 @@
 
 namespace hdfs {
 
-Options::Options()
-    : rpc_timeout(30000)
-{}
-
+Options::Options() : rpc_timeout(30000), host_exclusion_duration(600000) {}
 }

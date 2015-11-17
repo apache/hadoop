@@ -50,7 +50,7 @@ namespace pbio = pb::io;
 namespace hdfs {
 
 class MockDNConnection : public MockConnectionBase {
-public:
+ public:
   MockDNConnection(::asio::io_service &io_service)
       : MockConnectionBase(&io_service) {}
   MOCK_METHOD0(Produce, ProducerResult());
@@ -71,9 +71,9 @@ static inline std::pair<error_code, string> Produce(const std::string &s) {
   return make_pair(error_code(), s);
 }
 
-static inline std::pair<error_code, string>
-ProducePacket(const std::string &data, const std::string &checksum,
-              int offset_in_block, int seqno, bool last_packet) {
+static inline std::pair<error_code, string> ProducePacket(
+    const std::string &data, const std::string &checksum, int offset_in_block,
+    int seqno, bool last_packet) {
   PacketHeaderProto proto;
   proto.set_datalen(data.size());
   proto.set_offsetinblock(offset_in_block);
@@ -83,7 +83,8 @@ ProducePacket(const std::string &data, const std::string &checksum,
   char prefix[6];
   *reinterpret_cast<unsigned *>(prefix) =
       htonl(data.size() + checksum.size() + sizeof(int32_t));
-  *reinterpret_cast<short *>(prefix + sizeof(int32_t)) = htons(proto.ByteSize());
+  *reinterpret_cast<short *>(prefix + sizeof(int32_t)) =
+      htons(proto.ByteSize());
   std::string payload(prefix, sizeof(prefix));
   payload.reserve(payload.size() + proto.ByteSize() + checksum.size() +
                   data.size());
@@ -94,10 +95,10 @@ ProducePacket(const std::string &data, const std::string &checksum,
 }
 
 template <class Stream = MockDNConnection, class Handler>
-static std::shared_ptr<RemoteBlockReader<Stream>>
-ReadContent(Stream *conn, TokenProto *token, const ExtendedBlockProto &block,
-            uint64_t length, uint64_t offset, const mutable_buffers_1 &buf,
-            const Handler &handler) {
+static std::shared_ptr<RemoteBlockReader<Stream>> ReadContent(
+    Stream *conn, TokenProto *token, const ExtendedBlockProto &block,
+    uint64_t length, uint64_t offset, const mutable_buffers_1 &buf,
+    const Handler &handler) {
   BlockReaderOptions options;
   auto reader = std::make_shared<RemoteBlockReader<Stream>>(options, conn);
   Status result;
@@ -128,7 +129,7 @@ TEST(RemoteBlockReaderTest, TestReadWholeBlock) {
   block.set_poolid("foo");
   block.set_blockid(0);
   block.set_generationstamp(0);
-  
+
   std::string data(kChunkSize, 0);
   ReadContent(&conn, nullptr, block, kChunkSize, 0,
               buffer(const_cast<char *>(data.c_str()), data.size()),
@@ -201,14 +202,16 @@ TEST(RemoteBlockReaderTest, TestReadMultiplePacket) {
   string data(kChunkSize, 0);
   mutable_buffers_1 buf = buffer(const_cast<char *>(data.c_str()), data.size());
   BlockReaderOptions options;
-  auto reader = std::make_shared<RemoteBlockReader<MockDNConnection> >(options, &conn);
+  auto reader =
+      std::make_shared<RemoteBlockReader<MockDNConnection>>(options, &conn);
   Status result;
   reader->async_connect(
       "libhdfs++", nullptr, &block, data.size(), 0,
       [buf, reader, &data, &io_service](const Status &stat) {
         ASSERT_TRUE(stat.ok());
         reader->async_read_some(
-            buf, [buf, reader, &data, &io_service](const Status &stat, size_t transferred) {
+            buf, [buf, reader, &data, &io_service](const Status &stat,
+                                                   size_t transferred) {
               ASSERT_TRUE(stat.ok());
               ASSERT_EQ(kChunkSize, transferred);
               ASSERT_EQ(kChunkData, data);
@@ -216,7 +219,8 @@ TEST(RemoteBlockReaderTest, TestReadMultiplePacket) {
               data.resize(kChunkSize);
               transferred = 0;
               reader->async_read_some(
-                  buf, [&data,&io_service](const Status &stat, size_t transferred) {
+                  buf,
+                  [&data, &io_service](const Status &stat, size_t transferred) {
                     ASSERT_TRUE(stat.ok());
                     ASSERT_EQ(kChunkSize, transferred);
                     ASSERT_EQ(kChunkData, data);
@@ -230,9 +234,10 @@ TEST(RemoteBlockReaderTest, TestReadMultiplePacket) {
 TEST(RemoteBlockReaderTest, TestSaslConnection) {
   static const size_t kChunkSize = 512;
   static const string kChunkData(kChunkSize, 'a');
-  static const string kAuthPayload = "realm=\"0\",nonce=\"+GAWc+O6yEAWpew/"
-                                     "qKah8qh4QZLoOLCDcTtEKhlS\",qop=\"auth\","
-                                     "charset=utf-8,algorithm=md5-sess";
+  static const string kAuthPayload =
+      "realm=\"0\",nonce=\"+GAWc+O6yEAWpew/"
+      "qKah8qh4QZLoOLCDcTtEKhlS\",qop=\"auth\","
+      "charset=utf-8,algorithm=md5-sess";
   ::asio::io_service io_service;
   MockDNConnection conn(io_service);
   BlockOpResponseProto block_op_resp;

@@ -22,6 +22,7 @@
 #include "libhdfspp/status.h"
 
 #include <functional>
+#include <memory>
 #include <set>
 
 namespace hdfs {
@@ -40,7 +41,7 @@ namespace hdfs {
  * for more details.
  **/
 class IoService {
-public:
+ public:
   static IoService *New();
   /**
    * Run the asynchronous tasks associated with this IoService.
@@ -54,10 +55,23 @@ public:
 };
 
 /**
+ * A node exclusion rule provides a simple way of testing if the
+ * client should attempt to connect to a node based on the node's
+ * UUID.  The FileSystem and FileHandle use the BadDataNodeTracker
+ * by default.  AsyncPreadSome takes an optional NodeExclusionRule
+ * that will override the BadDataNodeTracker.
+ **/
+class NodeExclusionRule {
+ public:
+  virtual ~NodeExclusionRule(){};
+  virtual bool IsBadNode(const std::string &node_uuid) = 0;
+};
+
+/**
  * Applications opens an InputStream to read files in HDFS.
  **/
 class InputStream {
-public:
+ public:
   /**
    * Read data from a specific position. The current implementation
    * stops at the block boundary.
@@ -65,17 +79,24 @@ public:
    * @param buf the pointer to the buffer
    * @param nbyte the size of the buffer
    * @param offset the offset the file
-   * @param excluded_datanodes the UUID of the datanodes that should
-   * not be used in this read
    *
    * The handler returns the datanode that serves the block and the number of
    * bytes has read.
    **/
-  virtual void
-  PositionRead(void *buf, size_t nbyte, uint64_t offset,
-               const std::set<std::string> &excluded_datanodes,
-               const std::function<void(const Status &, const std::string &,
-                                        size_t)> &handler) = 0;
+  virtual void PositionRead(
+      void *buf, size_t nbyte, uint64_t offset,
+      const std::function<void(const Status &, const std::string &, size_t)> &
+          handler) = 0;
+  /**
+   * Determine if a datanode should be excluded from future operations
+   * based on the return Status.
+   *
+   * @param status the Status object returned by InputStream::PositionRead
+   * @return true if the status indicates a failure that is not recoverable
+   * by the client and false otherwise.
+   **/
+  static bool ShouldExclude(const Status &status);
+
   virtual ~InputStream();
 };
 
@@ -83,14 +104,14 @@ public:
  * FileSystem implements APIs to interact with HDFS.
  **/
 class FileSystem {
-public:
+ public:
   /**
    * Create a new instance of the FileSystem object. The call
    * initializes the RPC connections to the NameNode and returns an
    * FileSystem object.
    **/
-  static void
-  New(IoService *io_service, const Options &options, const std::string &server,
+  static void New(
+      IoService *io_service, const Options &options, const std::string &server,
       const std::string &service,
       const std::function<void(const Status &, FileSystem *)> &handler);
   /**
@@ -98,9 +119,9 @@ public:
    * gather the locations of all blocks in the file and to return a
    * new instance of the @ref InputStream object.
    **/
-  virtual void
-  Open(const std::string &path,
-       const std::function<void(const Status &, InputStream *)> &handler) = 0;
+  virtual void Open(
+      const std::string &path,
+      const std::function<void(const Status &, InputStream *)> &handler) = 0;
   virtual ~FileSystem();
 };
 }

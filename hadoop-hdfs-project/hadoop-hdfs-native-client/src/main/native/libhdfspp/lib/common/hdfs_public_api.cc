@@ -22,8 +22,22 @@ namespace hdfs {
 
 IoService::~IoService() {}
 
-IoService *IoService::New() {
-  return new IoServiceImpl();
-}
+IoService *IoService::New() { return new IoServiceImpl(); }
 
+bool InputStream::ShouldExclude(const Status &s) {
+  if (s.ok()) {
+    return false;
+  }
+
+  switch (s.code()) {
+    /* client side resource exhaustion */
+    case Status::kResourceUnavailable:
+      return false;
+    case Status::kInvalidArgument:
+    case Status::kUnimplemented:
+    case Status::kException:
+    default:
+      return true;
+  }
+}
 }
