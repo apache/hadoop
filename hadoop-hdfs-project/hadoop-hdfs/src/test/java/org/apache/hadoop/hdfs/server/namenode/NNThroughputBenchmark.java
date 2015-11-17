@@ -382,10 +382,12 @@ public class NNThroughputBenchmark implements Tool {
         args.remove(ugrcIndex);
       }
 
-      try {
-        namenodeUri = StringUtils.popOptionWithArgument("-namenode", args);
-      } catch (IllegalArgumentException iae) {
-        printUsage();
+      if (args.indexOf("-namenode") >= 0) {
+        try {
+          namenodeUri = StringUtils.popOptionWithArgument("-namenode", args);
+        } catch (IllegalArgumentException iae) {
+          printUsage();
+        }
       }
 
       String type = args.get(1);

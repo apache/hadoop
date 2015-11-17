@@ -2305,6 +2305,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9413. getContentSummary() on standby should throw StandbyException.
     (Brahma Reddy Battula via mingma)
 
+    HDFS-9387. Fix namenodeUri parameter parsing in NNThroughputBenchmark.
+    (Mingliang Liu via xyao)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
