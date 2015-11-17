@@ -644,7 +644,7 @@ class BlockSender implements java.io.Closeable {
     try {
       checksumIn.readFully(buf, checksumOffset, checksumLen);
     } catch (IOException e) {
-      LOG.warn(" Could not read or failed to veirfy checksum for data"
+      LOG.warn(" Could not read or failed to verify checksum for data"
           + " at offset " + offset + " for block " + block, e);
       IOUtils.closeStream(checksumIn);
       checksumIn = null;
