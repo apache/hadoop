@@ -2308,6 +2308,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9387. Fix namenodeUri parameter parsing in NNThroughputBenchmark.
     (Mingliang Liu via xyao)
 
+    HDFS-9421. NNThroughputBenchmark replication test NPE with -namenode option.
+    (Mingliang Liu via xyao)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
