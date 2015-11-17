@@ -1326,6 +1326,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12560: Fix sprintf warnings in {{DomainSocket.c}} introduced by
     HADOOP-12344 (Mingliang Liu via Colin P. McCabe)
 
+    HADOOP-12567: NPE in SaslRpcServer (Sergey Shelukhin via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
