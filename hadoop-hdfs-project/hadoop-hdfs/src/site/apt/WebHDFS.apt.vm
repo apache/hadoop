@@ -895,7 +895,7 @@ Content-Length: 0
   * Submit a HTTP GET request.
 
 +---------------------------------
-curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETACLSTATUS"
+curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETACLSTATUS"
 +---------------------------------
 
   The client receives a response with a {{{ACL Status JSON Schema}<<<AclStatus>>> JSON object}}:
@@ -929,7 +929,7 @@ Transfer-Encoding: chunked
   * Submit a HTTP GET request.
   
 +---------------------------------
-curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=CHECKACCESS
+curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=CHECKACCESS
                               &fsaction=<FSACTION>
 +---------------------------------
 
@@ -998,7 +998,7 @@ Content-Length: 0
   * Submit a HTTP GET request.
 
 +---------------------------------
-curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
+curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
                               &xattr.name=<XATTRNAME>&encoding=<ENCODING>"
 +---------------------------------
 
@@ -1030,7 +1030,7 @@ Transfer-Encoding: chunked
   * Submit a HTTP GET request.
 
 +---------------------------------
-curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
+curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
                               &xattr.name=<XATTRNAME1>&xattr.name=<XATTRNAME2>
                               &encoding=<ENCODING>"
 +---------------------------------
@@ -1067,7 +1067,7 @@ Transfer-Encoding: chunked
   * Submit a HTTP GET request.
 
 +---------------------------------
-curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
+curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
                               &encoding=<ENCODING>"
 +---------------------------------
 
@@ -1107,7 +1107,7 @@ Transfer-Encoding: chunked
   * Submit a HTTP GET request.
 
 +---------------------------------
-curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=LISTXATTRS"
+curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=LISTXATTRS"
 +---------------------------------
 
   The client receives a response with a {{{XAttrNames JSON Schema}<<<XAttrNames>>> JSON object}}:
