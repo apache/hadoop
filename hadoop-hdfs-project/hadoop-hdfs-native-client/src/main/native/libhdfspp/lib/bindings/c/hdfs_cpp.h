@@ -22,8 +22,11 @@
 #include <cstdint>
 #include <thread>
 #include <vector>
+#include <mutex>
+#include <chrono>
 
 #include "libhdfspp/hdfs.h"
+#include "fs/bad_datanode_tracker.h"
 #include <hdfs/hdfs.h>
 
 namespace hdfs {
@@ -33,6 +36,8 @@ namespace hdfs {
  * that provides posix-like file operations + extra stuff for hadoop.
  * Then provide very thin C wrappers over each method.
  */
+
+class HadoopFileSystem;
 
 class FileHandle {
  public:

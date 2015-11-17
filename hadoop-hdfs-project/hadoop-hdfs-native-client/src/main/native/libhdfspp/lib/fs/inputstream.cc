@@ -25,8 +25,9 @@ using ::hadoop::hdfs::LocatedBlocksProto;
 InputStream::~InputStream() {}
 
 InputStreamImpl::InputStreamImpl(FileSystemImpl *fs,
-                                 const LocatedBlocksProto *blocks)
-    : fs_(fs), file_length_(blocks->filelength()) {
+                                 const LocatedBlocksProto *blocks,
+                                 std::shared_ptr<BadDataNodeTracker> tracker)
+    : fs_(fs), file_length_(blocks->filelength()), bad_node_tracker_(tracker) {
   for (const auto &block : blocks->blocks()) {
     blocks_.push_back(block);
   }
@@ -38,9 +39,8 @@ InputStreamImpl::InputStreamImpl(FileSystemImpl *fs,
 
 void InputStreamImpl::PositionRead(
     void *buf, size_t nbyte, uint64_t offset,
-    const std::set<std::string> &excluded_datanodes,
-    const std::function<void(const Status &, const std::string &, size_t)>
-        &handler) {
-  AsyncPreadSome(offset, asio::buffer(buf, nbyte), excluded_datanodes, handler);
+    const std::function<void(const Status &, const std::string &, size_t)> &
+        handler) {
+  AsyncPreadSome(offset, asio::buffer(buf, nbyte), bad_node_tracker_, handler);
 }
 }

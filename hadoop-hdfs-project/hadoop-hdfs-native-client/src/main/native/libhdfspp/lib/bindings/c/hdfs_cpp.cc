@@ -41,20 +41,27 @@ ssize_t FileHandle::Pread(void *buf, size_t nbyte, off_t offset) {
 
   /* wrap async call with promise/future to make it blocking */
   size_t read_count = 0;
-  auto callback = [stat, &read_count](const Status &s, const std::string &dn,
-                                      size_t bytes) {
-    (void)dn;
+  std::string contacted_datanode;
+  auto callback = [stat, &read_count, &contacted_datanode](
+      const Status &s, const std::string &dn, size_t bytes) {
     stat->set_value(s);
     read_count = bytes;
+    contacted_datanode = dn;
   };
 
-  input_stream_->PositionRead(buf, nbyte, offset, std::set<std::string>(),
-                              callback);
+  input_stream_->PositionRead(buf, nbyte, offset, callback);
 
   /* wait for async to finish */
   auto s = future.get();
 
   if (!s.ok()) {
+    /* determine if DN gets marked bad */
+    if (InputStream::ShouldExclude(s)) {
+      InputStreamImpl *impl =
+          static_cast<InputStreamImpl *>(input_stream_.get());
+      impl->bad_node_tracker_->AddBadNode(contacted_datanode);
+    }
+
     return -1;
   }
   return (ssize_t)read_count;

@@ -29,6 +29,13 @@ struct Options {
    * Default: 30000
    **/
   int rpc_timeout;
+
+  /**
+   * Exclusion time for failed datanodes in milliseconds.
+   * Default: 60000
+   **/
+  unsigned int host_exclusion_duration;
+
   Options();
 };
 }

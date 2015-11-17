@@ -26,6 +26,7 @@
 #include <functional>
 #include <future>
 #include <type_traits>
+#include <algorithm>
 
 namespace hdfs {
 
@@ -40,9 +41,9 @@ struct InputStreamImpl::RemoteBlockReaderTrait {
     size_t *transferred() { return &transferred_; }
     const size_t *transferred() const { return &transferred_; }
   };
-  static continuation::Pipeline<State> *
-  CreatePipeline(::asio::io_service *io_service,
-                 const ::hadoop::hdfs::DatanodeInfoProto &dn) {
+  static continuation::Pipeline<State> *CreatePipeline(
+      ::asio::io_service *io_service,
+      const ::hadoop::hdfs::DatanodeInfoProto &dn) {
     using namespace ::asio::ip;
     auto m = continuation::Pipeline<State>::Create();
     auto &s = m->state();
@@ -64,7 +65,9 @@ struct InputStreamImpl::HandshakeContinuation : continuation::Continuation {
                         const hadoop::common::TokenProto *token,
                         const hadoop::hdfs::ExtendedBlockProto *block,
                         uint64_t length, uint64_t offset)
-      : reader_(reader), client_name_(client_name), length_(length),
+      : reader_(reader),
+        client_name_(client_name),
+        length_(length),
         offset_(offset) {
     if (token) {
       token_.reset(new hadoop::common::TokenProto());
@@ -78,7 +81,7 @@ struct InputStreamImpl::HandshakeContinuation : continuation::Continuation {
                            offset_, next);
   }
 
-private:
+ private:
   Reader *reader_;
   const std::string client_name_;
   std::unique_ptr<hadoop::common::TokenProto> token_;
@@ -91,8 +94,10 @@ template <class Reader, class MutableBufferSequence>
 struct InputStreamImpl::ReadBlockContinuation : continuation::Continuation {
   ReadBlockContinuation(Reader *reader, MutableBufferSequence buffer,
                         size_t *transferred)
-      : reader_(reader), buffer_(buffer),
-        buffer_size_(asio::buffer_size(buffer)), transferred_(transferred) {
+      : reader_(reader),
+        buffer_(buffer),
+        buffer_size_(asio::buffer_size(buffer)),
+        transferred_(transferred) {
     static_assert(!std::is_reference<MutableBufferSequence>::value,
                   "Buffer must not be a reference type");
   }
@@ -103,7 +108,7 @@ struct InputStreamImpl::ReadBlockContinuation : continuation::Continuation {
     OnReadData(Status::OK(), 0);
   }
 
-private:
+ private:
   Reader *reader_;
   const MutableBufferSequence buffer_;
   const size_t buffer_size_;
@@ -129,40 +134,50 @@ private:
 template <class MutableBufferSequence, class Handler>
 void InputStreamImpl::AsyncPreadSome(
     size_t offset, const MutableBufferSequence &buffers,
-    const std::set<std::string> &excluded_datanodes, const Handler &handler) {
+    std::shared_ptr<NodeExclusionRule> excluded_nodes, const Handler &handler) {
   using ::hadoop::hdfs::DatanodeInfoProto;
   using ::hadoop::hdfs::LocatedBlockProto;
 
-  auto it = std::find_if(
+  /**
+   *  Note: block and chosen_dn will end up pointing to things inside
+   *  the blocks_ vector.  They shouldn't be directly deleted.
+   **/
+  auto block = std::find_if(
       blocks_.begin(), blocks_.end(), [offset](const LocatedBlockProto &p) {
         return p.offset() <= offset && offset < p.offset() + p.b().numbytes();
       });
 
-  if (it == blocks_.end()) {
+  if (block == blocks_.end()) {
     handler(Status::InvalidArgument("Cannot find corresponding blocks"), "", 0);
     return;
   }
 
-  const DatanodeInfoProto *chosen_dn = nullptr;
-  for (int i = 0; i < it->locs_size(); ++i) {
-    const auto &di = it->locs(i);
-    if (!excluded_datanodes.count(di.id().datanodeuuid())) {
-      chosen_dn = &di;
-      break;
-    }
-  }
+  /**
+   * If user supplies a rule use it, otherwise use the tracker.
+   * User is responsible for making sure one of them isn't null.
+   **/
+  std::shared_ptr<NodeExclusionRule> rule =
+      excluded_nodes != nullptr ? excluded_nodes : bad_node_tracker_;
 
-  if (!chosen_dn) {
+  auto datanodes = block->locs();
+  auto it = std::find_if(datanodes.begin(), datanodes.end(),
+                         [rule](const DatanodeInfoProto &dn) {
+                           return !rule->IsBadNode(dn.id().datanodeuuid());
+                         });
+
+  if (it == datanodes.end()) {
     handler(Status::ResourceUnavailable("No datanodes available"), "", 0);
     return;
   }
 
-  uint64_t offset_within_block = offset - it->offset();
+  DatanodeInfoProto *chosen_dn = &*it;
+
+  uint64_t offset_within_block = offset - block->offset();
   uint64_t size_within_block = std::min<uint64_t>(
-      it->b().numbytes() - offset_within_block, asio::buffer_size(buffers));
+      block->b().numbytes() - offset_within_block, asio::buffer_size(buffers));
 
   AsyncReadBlock<RemoteBlockReaderTrait>(
-      fs_->rpc_engine().client_name(), *it, *chosen_dn, offset_within_block,
+      fs_->rpc_engine().client_name(), *block, *chosen_dn, offset_within_block,
       asio::buffer(buffers, size_within_block), handler);
 }
 
@@ -172,7 +187,6 @@ void InputStreamImpl::AsyncReadBlock(
     const hadoop::hdfs::LocatedBlockProto &block,
     const hadoop::hdfs::DatanodeInfoProto &dn, size_t offset,
     const MutableBufferSequence &buffers, const Handler &handler) {
-
   typedef typename BlockReaderTrait::Reader Reader;
   auto m =
       BlockReaderTrait::CreatePipeline(&fs_->rpc_engine().io_service(), dn);
