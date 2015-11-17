@@ -1958,9 +1958,6 @@ Release 2.8.0 - UNRELEASED
     HDFS-8551. Fix hdfs datanode CLI usage message.
     (Brahma Reddy Battula via xyao)
 
-    HDFS-8615. Correct HTTP method in WebHDFS document.
-    (Brahma Reddy Battula via aajisaka)
-
     HDFS-8337. Accessing httpfs via webhdfs doesn't work from a jar with
     kerberos. (Yongjun Zhang)
 
@@ -3449,6 +3446,9 @@ Release 2.6.3 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HDFS-8615. Correct HTTP method in WebHDFS document.
+    (Brahma Reddy Battula via aajisaka)
 
 Release 2.6.2 - 2015-10-28
 
