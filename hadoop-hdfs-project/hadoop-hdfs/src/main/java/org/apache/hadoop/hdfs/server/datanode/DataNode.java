@@ -1628,21 +1628,16 @@ public class DataNode extends ReconfigurableBase
     checkBlockLocalPathAccess();
     checkBlockToken(block, token, BlockTokenIdentifier.AccessMode.READ);
     Preconditions.checkNotNull(data, "Storage not yet initialized");
-    BlockLocalPathInfo info = data.getBlockLocalPathInfo(block);
-    if (LOG.isDebugEnabled()) {
-      if (info != null) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("getBlockLocalPathInfo successful block=" + block
-              + " blockfile " + info.getBlockPath() + " metafile "
-              + info.getMetaPath());
-        }
-      } else {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("getBlockLocalPathInfo for block=" + block
-              + " returning null");
+    final BlockLocalPathInfo info = data.getBlockLocalPathInfo(block);
+    if (LOG.isTraceEnabled()) {
+        if (info != null) {
+            LOG.trace("getBlockLocalPathInfo successful block=" + block
+                + " blockfile " + info.getBlockPath() + " metafile "
+                + info.getMetaPath());
+        } else {
+            LOG.trace("getBlockLocalPathInfo for block=null returning null");
         }
       }
-    }
     metrics.incrBlocksGetLocalPathInfo();
     return info;
   }
