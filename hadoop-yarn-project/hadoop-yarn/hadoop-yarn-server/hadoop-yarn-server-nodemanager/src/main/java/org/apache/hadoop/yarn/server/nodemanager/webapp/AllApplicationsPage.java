@@ -54,14 +54,7 @@ public class AllApplicationsPage extends NMView {
         // Sort by id upon page load
         append(", aaSorting: [[0, 'asc']]").
         // applicationid, applicationstate
-        append(", aoColumns:[").append(getApplicationsIdColumnDefs())
-        .append(", null]} ").toString();
-  }
-
-  private String getApplicationsIdColumnDefs() {
-    StringBuilder sb = new StringBuilder();
-    return sb.append("{'sType':'natural', 'aTargets': [0]")
-        .append(", 'mRender': parseHadoopID }").toString();
+        append(", aoColumns:[null, null]} ").toString();
   }
 
   @Override
