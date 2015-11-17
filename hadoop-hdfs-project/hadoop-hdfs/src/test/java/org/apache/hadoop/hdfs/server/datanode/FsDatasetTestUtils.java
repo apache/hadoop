@@ -232,4 +232,14 @@ public interface FsDatasetTestUtils {
    * Obtain the raw capacity of underlying storage per DataNode.
    */
   long getRawCapacity() throws IOException;
+
+  /**
+   * Get the persistently stored length of the block.
+   */
+  long getStoredDataLength(ExtendedBlock block) throws IOException;
+
+  /**
+   * Get the persistently stored generation stamp.
+   */
+  long getStoredGenerationStamp(ExtendedBlock block) throws IOException;
 }

@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
@@ -175,6 +176,10 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
     dataset = (FsDatasetImpl) datanode.getFSDataset();
   }
 
+  private File getBlockFile(ExtendedBlock eb) throws IOException {
+    return dataset.getBlockFile(eb.getBlockPoolId(), eb.getBlockId());
+  }
+
   /**
    * Return a materialized replica from the FsDatasetImpl.
    */
@@ -234,7 +239,6 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
     dataset.volumeMap.add(block.getBlockPoolId(), rip);
     return rip;
   }
-
 
   @Override
   public Replica createRBW(ExtendedBlock eb) throws IOException {
@@ -342,5 +346,21 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
           dataset.datanode.getConf());
       return df.getCapacity();
     }
+  }
+
+  @Override
+  public long getStoredDataLength(ExtendedBlock block) throws IOException {
+    File f = getBlockFile(block);
+    try (RandomAccessFile raf = new RandomAccessFile(f, "r")) {
+      return raf.length();
+    }
+  }
+
+  @Override
+  public long getStoredGenerationStamp(ExtendedBlock block) throws IOException {
+    File f = getBlockFile(block);
+    File dir = f.getParentFile();
+    File[] files = FileUtil.listFiles(dir);
+    return FsDatasetUtil.getGenerationStampFromFile(files, f);
   }
 }
