@@ -866,18 +866,6 @@ public class FileSystemRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected void updateReservationState(
-      ReservationAllocationStateProto reservationAllocation, String planName,
-      String reservationIdName) throws Exception {
-    Path planCreatePath = getNodePath(reservationRoot, planName);
-    Path reservationPath = getNodePath(planCreatePath, reservationIdName);
-    LOG.info("Updating state for reservation " + reservationIdName + " from " +
-        "plan " + planName + " at path " + reservationPath);
-    byte[] reservationData = reservationAllocation.toByteArray();
-    updateFile(reservationPath, reservationData, true);
-  }
-
-  @Override
   protected void removeReservationState(
       String planName, String reservationIdName) throws Exception {
     Path planCreatePath = getNodePath(reservationRoot, planName);

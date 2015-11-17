@@ -760,9 +760,8 @@ public class RMStateStoreTestBase {
         minAlloc, hasGang);
     allocationStateProto =
         ReservationSystemUtil.buildStateProto(allocation);
-    rmContext.getStateStore().updateReservation(
-        allocationStateProto,
-        planName, reservationIdName);
+    rmContext.getStateStore().removeReservation(planName, reservationIdName);
+    rmContext.getStateStore().storeNewReservation(allocationStateProto, planName, reservationIdName);
 
     // load state and verify updated reservation
     validateStoredReservation(
