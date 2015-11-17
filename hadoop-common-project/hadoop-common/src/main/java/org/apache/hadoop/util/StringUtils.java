@@ -287,6 +287,41 @@ public class StringUtils {
     buf.append("sec");
     return buf.toString(); 
   }
+
+  /**
+   *
+   * Given the time in long milliseconds, returns a String in the sortable
+   * format Xhrs, Ymins, Zsec. X, Y, and Z are always two-digit. If the time is
+   * more than 100 hours ,it is displayed as 99hrs, 59mins, 59sec.
+   *
+   * @param timeDiff The time difference to format
+   */
+  public static String formatTimeSortable(long timeDiff) {
+    StringBuilder buf = new StringBuilder();
+    long hours = timeDiff / (60 * 60 * 1000);
+    long rem = (timeDiff % (60 * 60 * 1000));
+    long minutes = rem / (60 * 1000);
+    rem = rem % (60 * 1000);
+    long seconds = rem / 1000;
+
+    // if hours is more than 99 hours, it will be set a max value format
+    if (hours > 99) {
+      hours = 99;
+      minutes = 59;
+      seconds = 59;
+    }
+
+    buf.append(String.format("%02d", hours));
+    buf.append("hrs, ");
+
+    buf.append(String.format("%02d", minutes));
+    buf.append("mins, ");
+
+    buf.append(String.format("%02d", seconds));
+    buf.append("sec");
+    return buf.toString();
+  }
+
   /**
    * Formats time in ms and appends difference (finishTime - startTime) 
    * as returned by formatTimeDiff().
