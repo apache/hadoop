@@ -25,6 +25,8 @@ import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobInfo;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
@@ -66,7 +68,8 @@ public class HsJobsBlock extends HtmlBlock {
             th("Maps Total").
             th("Maps Completed").
             th("Reduces Total").
-            th("Reduces Completed")._()._().
+            th("Reduces Completed").
+            th("Elapsed Time")._()._().
         tbody();
     LOG.info("Getting list of all Jobs.");
     // Write all the data into a JavaScript array of arrays for JQuery
@@ -90,7 +93,10 @@ public class HsJobsBlock extends HtmlBlock {
       .append(String.valueOf(job.getMapsTotal())).append("\",\"")
       .append(String.valueOf(job.getMapsCompleted())).append("\",\"")
       .append(String.valueOf(job.getReducesTotal())).append("\",\"")
-      .append(String.valueOf(job.getReducesCompleted())).append("\"],\n");
+      .append(String.valueOf(job.getReducesCompleted())).append("\",\"")
+          .append(
+              StringUtils.formatTimeSortable(Times.elapsed(job.getStartTime(),
+                  job.getFinishTime(), false))).append("\"],\n");
     }
 
     //Remove the last comma and close off the array of arrays
@@ -103,18 +109,32 @@ public class HsJobsBlock extends HtmlBlock {
     tbody._().
     tfoot().
       tr().
-        th().input("search_init").$type(InputType.text).$name("submit_time").$value("Submit Time")._()._().
-        th().input("search_init").$type(InputType.text).$name("start_time").$value("Start Time")._()._().
-        th().input("search_init").$type(InputType.text).$name("finish_time").$value("Finish Time")._()._().
-        th().input("search_init").$type(InputType.text).$name("start_time").$value("Job ID")._()._().
-        th().input("search_init").$type(InputType.text).$name("start_time").$value("Name")._()._().
-        th().input("search_init").$type(InputType.text).$name("start_time").$value("User")._()._().
-        th().input("search_init").$type(InputType.text).$name("start_time").$value("Queue")._()._().
-        th().input("search_init").$type(InputType.text).$name("start_time").$value("State")._()._().
-        th().input("search_init").$type(InputType.text).$name("start_time").$value("Maps Total")._()._().
-        th().input("search_init").$type(InputType.text).$name("start_time").$value("Maps Completed")._()._().
-        th().input("search_init").$type(InputType.text).$name("start_time").$value("Reduces Total")._()._().
-        th().input("search_init").$type(InputType.text).$name("start_time").$value("Reduces Completed")._()._().
+        th().input("search_init").$type(InputType.text)
+          .$name("submit_time").$value("Submit Time")._()._().
+        th().input("search_init").$type(InputType.text)
+          .$name("start_time").$value("Start Time")._()._().
+        th().input("search_init").$type(InputType.text)
+          .$name("finish_time").$value("Finish Time")._()._().
+        th().input("search_init").$type(InputType.text)
+          .$name("job_id").$value("Job ID")._()._().
+        th().input("search_init").$type(InputType.text)
+          .$name("name").$value("Name")._()._().
+        th().input("search_init").$type(InputType.text)
+          .$name("user").$value("User")._()._().
+        th().input("search_init").$type(InputType.text)
+          .$name("queue").$value("Queue")._()._().
+        th().input("search_init").$type(InputType.text)
+          .$name("state").$value("State")._()._().
+        th().input("search_init").$type(InputType.text)
+          .$name("maps_total").$value("Maps Total")._()._().
+        th().input("search_init").$type(InputType.text).
+          $name("maps_completed").$value("Maps Completed")._()._().
+        th().input("search_init").$type(InputType.text).
+          $name("reduces_total").$value("Reduces Total")._()._().
+        th().input("search_init").$type(InputType.text).
+          $name("reduces_completed").$value("Reduces Completed")._()._().
+        th().input("search_init").$type(InputType.text).
+          $name("elapsed_time").$value("Elapsed Time")._()._().
         _().
       _().
     _();
