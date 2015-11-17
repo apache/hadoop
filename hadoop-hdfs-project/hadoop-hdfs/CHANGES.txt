@@ -2311,6 +2311,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9421. NNThroughputBenchmark replication test NPE with -namenode option.
     (Mingliang Liu via xyao)
 
+    HDFS-9358. TestNodeCount#testNodeCount timed out.
+    (Masatake Iwasaki via waltersu4549)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
