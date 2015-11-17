@@ -2314,6 +2314,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9358. TestNodeCount#testNodeCount timed out.
     (Masatake Iwasaki via waltersu4549)
 
+    HDFS-9397. Fix typo for readChecksum() LOG.warn in BlockSender.java.
+    (Enrique Flores via Arpit Agarwal)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
