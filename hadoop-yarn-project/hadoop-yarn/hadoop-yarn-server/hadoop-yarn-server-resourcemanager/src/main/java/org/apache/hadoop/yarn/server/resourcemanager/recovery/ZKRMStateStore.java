@@ -845,17 +845,6 @@ public class ZKRMStateStore extends RMStateStore {
     trx.commit();
   }
 
-  @Override
-  protected synchronized void updateReservationState(
-      ReservationAllocationStateProto reservationAllocation, String planName,
-      String reservationIdName)
-      throws Exception {
-    SafeTransaction trx = new SafeTransaction();
-    addOrUpdateReservationState(
-        reservationAllocation, planName, reservationIdName, trx, true);
-    trx.commit();
-  }
-
   private void addOrUpdateReservationState(
       ReservationAllocationStateProto reservationAllocation, String planName,
       String reservationIdName, SafeTransaction trx, boolean isUpdate)

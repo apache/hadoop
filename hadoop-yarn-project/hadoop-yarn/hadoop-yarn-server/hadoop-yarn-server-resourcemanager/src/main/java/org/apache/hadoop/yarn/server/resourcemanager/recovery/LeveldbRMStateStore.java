@@ -624,14 +624,6 @@ public class LeveldbRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected void updateReservationState(
-      ReservationAllocationStateProto reservationAllocation, String planName,
-      String reservationIdName) throws Exception {
-    storeReservationState(reservationAllocation, planName,
-        reservationIdName);
-  }
-
-  @Override
   protected void removeReservationState(String planName,
       String reservationIdName) throws Exception {
     try {
