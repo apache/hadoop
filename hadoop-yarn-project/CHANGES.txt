@@ -8,6 +8,8 @@ Release 2.7.3 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-4287. Capacity Scheduler: Rack Locality improvement. (Nathan Roberts via wangda)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -172,6 +172,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final int DEFAULT_NODE_LOCALITY_DELAY = -1;
 
   @Private
+  public static final String RACK_LOCALITY_FULL_RESET =
+      PREFIX + "rack-locality-full-reset";
+
+  @Private
+  public static final boolean DEFAULT_RACK_LOCALITY_FULL_RESET = true;
+
+  @Private
   public static final String SCHEDULE_ASYNCHRONOUSLY_PREFIX =
       PREFIX + "schedule-asynchronously";
 
@@ -621,7 +628,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     int delay = getInt(NODE_LOCALITY_DELAY, DEFAULT_NODE_LOCALITY_DELAY);
     return (delay == DEFAULT_NODE_LOCALITY_DELAY) ? 0 : delay;
   }
-  
+
+  public boolean getRackLocalityFullReset() {
+    return getBoolean(RACK_LOCALITY_FULL_RESET,
+        DEFAULT_RACK_LOCALITY_FULL_RESET);
+  }
+
   public ResourceCalculator getResourceCalculator() {
     return ReflectionUtils.newInstance(
         getClass(
