@@ -254,9 +254,6 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-5232. Add a configuration to be able to log classpath and other
     system properties on mapreduce JVMs startup.  (Sangjin Lee via vinodkv)
 
-    MAPREDUCE-6377. JHS sorting on state column not working in webUi.
-    (zhihai xu via devaraj)
-
     MAPREDUCE-6388. Remove deprecation warnings from JobHistoryServer classes
     (Ray Chiang via ozawa).
 
@@ -363,6 +360,9 @@ Release 2.7.3 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    MAPREDUCE-6377. JHS sorting on state column not working in webUi.
+    (zhihai xu via devaraj)
 
 Release 2.7.2 - UNRELEASED
 
@@ -654,6 +654,9 @@ Release 2.6.3 - UNRELEASED
 
     MAPREDUCE-6528. Memory leak for HistoryFileManager.getJobSummary()
     (Junping Du via jlowe)
+
+    MAPREDUCE-6377. JHS sorting on state column not working in webUi.
+    (zhihai xu via devaraj)
 
 Release 2.6.2 - 2015-10-28
 
