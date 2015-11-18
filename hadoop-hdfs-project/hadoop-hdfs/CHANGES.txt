@@ -2317,6 +2317,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9397. Fix typo for readChecksum() LOG.warn in BlockSender.java.
     (Enrique Flores via Arpit Agarwal)
 
+    HDFS-9400. TestRollingUpgradeRollback fails on branch-2.
+    (Brahma Reddy Battula via cnauroth)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
