@@ -17,6 +17,9 @@ Release 2.7.3 - UNRELEASED
     MAPREDUCE-5485. Allow repeating job commit by extending OutputCommitter API. 
     (Junping Du via jianhe)
 
+    MAPREDUCE-6377. JHS sorting on state column not working in webUi.
+    (zhihai xu via devaraj)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
