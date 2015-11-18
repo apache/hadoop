@@ -21,16 +21,18 @@ package org.apache.hadoop.io.file.tfile;
 import java.io.IOException;
 import java.util.Random;
 
+import org.junit.After;
 import org.junit.Assert;
-import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.junit.Before;
+import org.junit.Test;
 
-public class TestVLong extends TestCase {
+public class TestVLong {
   private static String ROOT =
       System.getProperty("test.build.data", "/tmp/tfile-test");
   private Configuration conf;
@@ -38,7 +40,7 @@ public class TestVLong extends TestCase {
   private Path path;
   private String outputFile = "TestVLong";
 
-  @Override
+  @Before
   public void setUp() throws IOException {
     conf = new Configuration();
     path = new Path(ROOT, outputFile);
@@ -48,13 +50,14 @@ public class TestVLong extends TestCase {
     }
   }
 
-  @Override
+  @After
   public void tearDown() throws IOException {
     if (fs.exists(path)) {
       fs.delete(path, false);
     }
   }
 
+  @Test
   public void testVLongByte() throws IOException {
     FSDataOutputStream out = fs.create(path);
     for (int i = Byte.MIN_VALUE; i <= Byte.MAX_VALUE; ++i) {
@@ -90,7 +93,8 @@ public class TestVLong extends TestCase {
     fs.delete(path, false);
     return ret;
   }
-  
+
+  @Test
   public void testVLongShort() throws IOException {
     long size = writeAndVerify(0);
     Assert.assertEquals("Incorrect encoded size", (1 << Short.SIZE) * 2
@@ -98,18 +102,21 @@ public class TestVLong extends TestCase {
         * (1 << Byte.SIZE) - 128 - 32, size);
   }
 
+  @Test
   public void testVLong3Bytes() throws IOException {
     long size = writeAndVerify(Byte.SIZE);
     Assert.assertEquals("Incorrect encoded size", (1 << Short.SIZE) * 3
         + ((1 << Byte.SIZE) - 32) * (1 << Byte.SIZE) - 40 - 1, size);
   }
 
+  @Test
   public void testVLong4Bytes() throws IOException {
     long size = writeAndVerify(Byte.SIZE * 2);
     Assert.assertEquals("Incorrect encoded size", (1 << Short.SIZE) * 4
         + ((1 << Byte.SIZE) - 16) * (1 << Byte.SIZE) - 32 - 2, size);
   }
 
+  @Test
   public void testVLong5Bytes() throws IOException {
     long size = writeAndVerify(Byte.SIZE * 3);
      Assert.assertEquals("Incorrect encoded size", (1 << Short.SIZE) * 6 - 256
@@ -121,18 +128,23 @@ public class TestVLong extends TestCase {
     Assert.assertEquals("Incorrect encoded size", (1 << Short.SIZE)
         * (bytes + 1) - 256 - bytes + 1, size);
   }
+
+  @Test
   public void testVLong6Bytes() throws IOException {
     verifySixOrMoreBytes(6);
   }
-  
+
+  @Test
   public void testVLong7Bytes() throws IOException {
     verifySixOrMoreBytes(7);
   }
 
+  @Test
   public void testVLong8Bytes() throws IOException {
     verifySixOrMoreBytes(8);
   }
 
+  @Test
   public void testVLongRandom() throws IOException {
     int count = 1024 * 1024;
     long data[] = new long[count];

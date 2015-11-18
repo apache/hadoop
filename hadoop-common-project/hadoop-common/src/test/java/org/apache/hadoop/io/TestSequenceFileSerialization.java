@@ -18,32 +18,37 @@
 
 package org.apache.hadoop.io;
 
-import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile.Reader;
 import org.apache.hadoop.io.SequenceFile.Writer;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
-public class TestSequenceFileSerialization extends TestCase {
-  
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertEquals;
+
+public class TestSequenceFileSerialization {
   private Configuration conf;
   private FileSystem fs;
   
-  @Override
-  protected void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     conf = new Configuration();
     conf.set("io.serializations",
         "org.apache.hadoop.io.serializer.JavaSerialization");
     fs = FileSystem.getLocal(conf);  
   }
   
-  @Override
-  protected void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     fs.close();
   }
-  
+
+  @Test
   public void testJavaSerialization() throws Exception {
     Path file = new Path(System.getProperty("test.build.data",".") +
         "/testseqser.seq");

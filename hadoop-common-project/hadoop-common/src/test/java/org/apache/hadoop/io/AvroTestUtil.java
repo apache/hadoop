@@ -28,7 +28,7 @@ import org.apache.avro.reflect.ReflectDatumWriter;
 import org.apache.avro.reflect.ReflectDatumReader;
 import org.apache.avro.io.DecoderFactory;
 
-import static junit.framework.TestCase.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 public class AvroTestUtil {
 

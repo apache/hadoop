@@ -22,13 +22,15 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.junit.Test;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
-public class TestWritableUtils extends TestCase {
+public class TestWritableUtils {
   private static final Log LOG = LogFactory.getLog(TestWritableUtils.class);
 
-  public static void testValue(int val, int vintlen) throws IOException {
+  private void testValue(int val, int vintlen) throws IOException {
     DataOutputBuffer buf = new DataOutputBuffer();
     DataInputBuffer inbuf = new DataInputBuffer();
     WritableUtils.writeVInt(buf, val);
@@ -44,8 +46,7 @@ public class TestWritableUtils extends TestCase {
     assertEquals(vintlen, WritableUtils.getVIntSize(val));
     assertEquals(vintlen, WritableUtils.decodeVIntSize(buf.getData()[0]));
   }
-  
-  public static void testReadInRange(long val, int lower,
+  private void testReadInRange(long val, int lower,
       int upper, boolean expectSuccess) throws IOException {
     DataOutputBuffer buf = new DataOutputBuffer();
     DataInputBuffer inbuf = new DataInputBuffer();
@@ -65,7 +66,8 @@ public class TestWritableUtils extends TestCase {
     }
   }
 
-  public static void testVInt() throws Exception {
+  @Test
+  public void testVInt() throws Exception {
     testValue(12, 1);
     testValue(127, 1);
     testValue(-112, 1);

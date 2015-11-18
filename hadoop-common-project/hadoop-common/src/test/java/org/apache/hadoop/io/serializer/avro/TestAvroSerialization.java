@@ -18,16 +18,19 @@
 
 package org.apache.hadoop.io.serializer.avro;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.io.serializer.SerializationTestUtil;
+import org.junit.Test;
 
-public class TestAvroSerialization extends TestCase {
+public class TestAvroSerialization {
 
   private static final Configuration conf = new Configuration();
 
+  @Test
   public void testSpecific() throws Exception {
     AvroRecord before = new AvroRecord();
     before.intField = 5;
@@ -35,6 +38,7 @@ public class TestAvroSerialization extends TestCase {
     assertEquals(before, after);
   }
 
+  @Test
   public void testReflectPkg() throws Exception {
     Record before = new Record();
     before.x = 10;
@@ -44,12 +48,14 @@ public class TestAvroSerialization extends TestCase {
     assertEquals(before, after);
   }
 
+  @Test
   public void testAcceptHandlingPrimitivesAndArrays() throws Exception {
     SerializationFactory factory = new SerializationFactory(conf);
     assertNull(factory.getSerializer(byte[].class));
     assertNull(factory.getSerializer(byte.class));
   }
 
+  @Test
   public void testReflectInnerClass() throws Exception {
     InnerRecord before = new InnerRecord();
     before.x = 10;
@@ -59,6 +65,7 @@ public class TestAvroSerialization extends TestCase {
     assertEquals(before, after);
   }
 
+  @Test
   public void testReflect() throws Exception {
     RefSerializable before = new RefSerializable();
     before.x = 10;

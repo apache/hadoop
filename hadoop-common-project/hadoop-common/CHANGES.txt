@@ -959,6 +959,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12568. Update core-default.xml to describe posixGroups support.
     (Wei-Chiu Chuang via aajisaka)
 
+    HADOOP-12564. Upgrade JUnit3 TestCase to JUnit 4 in
+    org.apache.hadoop.io package. (Dustin Cote via ozawa)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp

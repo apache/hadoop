@@ -20,27 +20,26 @@ package org.apache.hadoop.io;
 
 import java.io.*;
 
-import org.junit.Assert;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.Assert.assertArrayEquals;
+import org.junit.Test;
 
-import junit.framework.TestCase;
 
 /** Unit tests for ArrayWritable */
-public class TestArrayWritable extends TestCase {
-	
+public class TestArrayWritable {
   static class TextArrayWritable extends ArrayWritable {
     public TextArrayWritable() {
       super(Text.class);
     }
   }
 	
-  public TestArrayWritable(String name) { 
-    super(name); 
-  }
-	
   /**
    * If valueClass is undefined, readFields should throw an exception indicating
    * that the field is null. Otherwise, readFields should succeed.	
    */
+  @Test
   public void testThrowUndefinedValueException() throws IOException {
     // Get a buffer containing a simple text array
     Text[] elements = {new Text("zero"), new Text("one"), new Text("two")};
@@ -67,6 +66,7 @@ public class TestArrayWritable extends TestCase {
  /**
   * test {@link ArrayWritable} toArray() method 
   */
+ @Test
   public void testArrayWritableToArray() {
     Text[] elements = {new Text("zero"), new Text("one"), new Text("two")};
     TextArrayWritable arrayWritable = new TextArrayWritable();
@@ -84,6 +84,7 @@ public class TestArrayWritable extends TestCase {
   /**
    * test {@link ArrayWritable} constructor with null
    */
+  @Test
   public void testNullArgument() {
     try {
       Class<? extends Writable> valueClass = null;
@@ -100,12 +101,13 @@ public class TestArrayWritable extends TestCase {
    * test {@link ArrayWritable} constructor with {@code String[]} as a parameter
    */
   @SuppressWarnings("deprecation")
+  @Test
   public void testArrayWritableStringConstructor() {
     String[] original = { "test1", "test2", "test3" };
     ArrayWritable arrayWritable = new ArrayWritable(original);
     assertEquals("testArrayWritableStringConstructor class error!!!", 
         UTF8.class, arrayWritable.getValueClass());
-    Assert.assertArrayEquals("testArrayWritableStringConstructor toString error!!!",
+    assertArrayEquals("testArrayWritableStringConstructor toString error!!!",
       original, arrayWritable.toStrings());
   }
   
