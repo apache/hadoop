@@ -93,7 +93,8 @@ public class TimelineClientImpl extends TimelineClient {
   public final static int DEFAULT_SOCKET_TIMEOUT = 1 * 60 * 1000; // 1 minute
   public static final String ERROR_NO_ATS_RESPONSE
       = "Failed to get the response from the timeline server";
-  public static final String ERROR_RETRIES_EXCEEDED = "Failed to connect to timeline server";
+  public static final String ERROR_RETRIES_EXCEEDED =
+    "Failed to connect to timeline server";
 
   private static Options opts;
   private static final String ENTITY_DATA_TYPE = "entity";
@@ -214,8 +215,8 @@ public class TimelineClientImpl extends TimelineClient {
       // reached only if the retry count has been exceeded.
       // therefore, lastException no-null
       String message = ERROR_RETRIES_EXCEEDED
-          + "Connection retries limit (" + maxRetries + ") exceeded. "
-          + "The posted timeline event may be missing : " + lastException;
+          + " Connection retries limit (" + maxRetries + ") exceeded."
+          + " The posted timeline event may be missing : " + lastException;
       LOG.warn(message, lastException);
 
       throw new RuntimeException(message, lastException);
