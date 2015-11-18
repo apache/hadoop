@@ -27,16 +27,19 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /** Unit tests for Writable. */
-public class TestWritable extends TestCase {
+public class TestWritable {
 private static final String TEST_CONFIG_PARAM = "frob.test";
 private static final String TEST_CONFIG_VALUE = "test";
 private static final String TEST_WRITABLE_CONFIG_PARAM = "test.writable";
 private static final String TEST_WRITABLE_CONFIG_VALUE = TEST_CONFIG_VALUE;
-
-  public TestWritable(String name) { super(name); }
 
   /** Example class used in test cases below. */
   public static class SimpleWritable implements Writable {
@@ -90,18 +93,19 @@ private static final String TEST_WRITABLE_CONFIG_VALUE = TEST_CONFIG_VALUE;
   }
 
   /** Test 1: Check that SimpleWritable. */
+  @Test
   public void testSimpleWritable() throws Exception {
     testWritable(new SimpleWritable());
   }
-  
+  @Test
   public void testByteWritable() throws Exception {
     testWritable(new ByteWritable((byte)128));
   }
-  
+  @Test
   public void testShortWritable() throws Exception {
     testWritable(new ShortWritable((byte)256));
   }
-
+  @Test
   public void testDoubleWritable() throws Exception {
     testWritable(new DoubleWritable(1.0));
   }
@@ -180,6 +184,7 @@ private static final String TEST_WRITABLE_CONFIG_VALUE = TEST_CONFIG_VALUE;
    * Test a user comparator that relies on deserializing both arguments for each
    * compare.
    */
+  @Test
   public void testShortWritableComparator() throws Exception {
     ShortWritable writable1 = new ShortWritable((short)256);
     ShortWritable writable2 = new ShortWritable((short) 128);
@@ -206,6 +211,7 @@ private static final String TEST_WRITABLE_CONFIG_VALUE = TEST_CONFIG_VALUE;
   /**
    * Test that Writable's are configured by Comparator.
    */
+  @Test
   public void testConfigurableWritableComparator() throws Exception {
     Configuration conf = new Configuration();
     conf.set(TEST_WRITABLE_CONFIG_PARAM, TEST_WRITABLE_CONFIG_VALUE);

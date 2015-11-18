@@ -20,7 +20,6 @@ package org.apache.hadoop.io;
 
 import java.io.*;
 import java.util.*;
-import junit.framework.TestCase;
 
 import org.apache.commons.logging.*;
 
@@ -32,20 +31,23 @@ import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.io.serializer.avro.AvroReflectSerialization;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.conf.*;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
+import static org.junit.Assert.assertNotNull;
 import org.mockito.Mockito;
 
 
 /** Support for flat files of binary key/value pairs. */
-public class TestSequenceFile extends TestCase {
+public class TestSequenceFile {
   private static final Log LOG = LogFactory.getLog(TestSequenceFile.class);
 
   private Configuration conf = new Configuration();
-  
-  public TestSequenceFile() { }
-
-  public TestSequenceFile(String name) { super(name); }
 
   /** Unit tests for SequenceFile. */
+  @Test
   public void testZlibSequenceFile() throws Exception {
     LOG.info("Testing SequenceFile with DefaultCodec");
     compressedSeqFileTest(new DefaultCodec());
@@ -309,6 +311,7 @@ public class TestSequenceFile extends TestCase {
   }
 
   /** Unit tests for SequenceFile metadata. */
+  @Test
   public void testSequenceFileMetadata() throws Exception {
     LOG.info("Testing SequenceFile with metadata");
     int count = 1024 * 10;
@@ -410,6 +413,7 @@ public class TestSequenceFile extends TestCase {
     sorter.sort(new Path[] { unsortedFile }, sortedFile, false);
   }
 
+  @Test
   public void testClose() throws IOException {
     Configuration conf = new Configuration();
     LocalFileSystem fs = FileSystem.getLocal(conf);
@@ -466,6 +470,7 @@ public class TestSequenceFile extends TestCase {
    * Test that makes sure the FileSystem passed to createWriter
    * @throws Exception
    */
+  @Test
   public void testCreateUsesFsArg() throws Exception {
     FileSystem fs = FileSystem.getLocal(conf);
     FileSystem spyFs = Mockito.spy(fs);
@@ -494,6 +499,7 @@ public class TestSequenceFile extends TestCase {
     }
   }
 
+  @Test
   public void testCloseForErroneousSequenceFile()
     throws IOException {
     Configuration conf = new Configuration();
@@ -526,6 +532,7 @@ public class TestSequenceFile extends TestCase {
    * Test to makes sure zero length sequence file is handled properly while
    * initializing.
    */
+  @Test
   public void testInitZeroLengthSequenceFile() throws IOException {
     Configuration conf = new Configuration();
     LocalFileSystem fs = FileSystem.getLocal(conf);
@@ -548,6 +555,7 @@ public class TestSequenceFile extends TestCase {
    * already created
    * @throws IOException
    */
+  @Test
   public void testCreateWriterOnExistingFile() throws IOException {
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getLocal(conf);
@@ -560,6 +568,7 @@ public class TestSequenceFile extends TestCase {
         CompressionType.NONE, null, new Metadata());
   }
 
+  @Test
   public void testRecursiveSeqFileCreate() throws IOException {
     FileSystem fs = FileSystem.getLocal(conf);
     Path name = new Path(new Path(System.getProperty("test.build.data","."),
@@ -582,6 +591,7 @@ public class TestSequenceFile extends TestCase {
     // should succeed, fails if exception thrown
   }
 
+  @Test
   public void testSerializationAvailability() throws IOException {
     Configuration conf = new Configuration();
     Path path = new Path(System.getProperty("test.build.data", "."),

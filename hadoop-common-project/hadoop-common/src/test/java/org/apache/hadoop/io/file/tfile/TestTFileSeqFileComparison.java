@@ -23,7 +23,10 @@ import java.text.SimpleDateFormat;
 import java.util.Random;
 import java.util.StringTokenizer;
 
-import junit.framework.TestCase;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -44,7 +47,7 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.file.tfile.TFile.Reader.Scanner.Entry;
 import org.apache.hadoop.util.Time;
 
-public class TestTFileSeqFileComparison extends TestCase {
+public class TestTFileSeqFileComparison {
   MyOptions options;
 
   private FileSystem fs;
@@ -54,7 +57,7 @@ public class TestTFileSeqFileComparison extends TestCase {
   private DateFormat formatter;
   byte[][] dictionary;
 
-  @Override
+  @Before
   public void setUp() throws IOException {
     if (options == null) {
       options = new MyOptions(new String[0]);
@@ -81,7 +84,7 @@ public class TestTFileSeqFileComparison extends TestCase {
     }
   }
 
-  @Override
+  @After
   public void tearDown() throws IOException {
     // do nothing
   }
@@ -479,6 +482,7 @@ public class TestTFileSeqFileComparison extends TestCase {
     readSeqFile(parameters, true);
   }
 
+  @Test
   public void testRunComparisons() throws IOException {
     String[] compresses = new String[] { "none", "lzo", "gz" };
     for (String compress : compresses) {

@@ -22,7 +22,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 
-import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -32,12 +31,18 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.file.tfile.TFile.Reader;
 import org.apache.hadoop.io.file.tfile.TFile.Writer;
 import org.apache.hadoop.io.file.tfile.TFile.Reader.Scanner;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 /**
  * test tfile features.
  * 
  */
-public class TestTFile extends TestCase {
+public class TestTFile {
   private static String ROOT =
       System.getProperty("test.build.data", "/tmp/tfile-test");
   private FileSystem fs;
@@ -46,13 +51,13 @@ public class TestTFile extends TestCase {
   private static final int largeVal = 3 * 1024 * 1024;
   private static final String localFormatter = "%010d";
 
-  @Override
+  @Before
   public void setUp() throws IOException {
     conf = new Configuration();
     fs = FileSystem.get(conf);
   }
 
-  @Override
+  @After
   public void tearDown() throws IOException {
     // do nothing
   }
@@ -348,12 +353,14 @@ public class TestTFile extends TestCase {
     fs.delete(uTfile, true);
   }
 
+  @Test
   public void testTFileFeatures() throws IOException {
     basicWithSomeCodec("none");
     basicWithSomeCodec("gz");
   }
 
   // test unsorted t files.
+  @Test
   public void testUnsortedTFileFeatures() throws IOException {
     unsortedWithSomeCodec("none");
     unsortedWithSomeCodec("gz");
@@ -414,6 +421,7 @@ public class TestTFile extends TestCase {
   }
 
   // test meta blocks for tfiles
+  @Test
   public void testMetaBlocks() throws IOException {
     Path mFile = new Path(ROOT, "meta.tfile");
     FSDataOutputStream fout = createFSOutput(mFile);

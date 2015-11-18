@@ -18,17 +18,15 @@
 
 package org.apache.hadoop.io;
 
+import org.junit.Test;
+
 import java.io.*;
 import java.util.Random;
-import junit.framework.TestCase;
 
 /** Unit tests for VersionedWritable. */
 
-public class TestVersionedWritable extends TestCase {
+public class TestVersionedWritable {
 
-  public TestVersionedWritable(String name) { super(name); }
-	
-	
   /** Example class used in test cases below. */
   public static class SimpleVersionedWritable extends VersionedWritable {
 		
@@ -149,16 +147,19 @@ public class TestVersionedWritable extends TestCase {
 
 
   /** Test 1: Check that SimpleVersionedWritable. */
+  @Test
   public void testSimpleVersionedWritable() throws Exception {
     TestWritable.testWritable(new SimpleVersionedWritable());
   }
 
   /** Test 2: Check that AdvancedVersionedWritable Works (well, why wouldn't it!). */
+  @Test
   public void testAdvancedVersionedWritable() throws Exception {
     TestWritable.testWritable(new AdvancedVersionedWritable());
   }
 
   /** Test 3: Check that SimpleVersionedWritable throws an Exception. */
+  @Test
   public void testSimpleVersionedWritableMismatch() throws Exception {
     TestVersionedWritable.testVersionedWritable(new SimpleVersionedWritable(), new SimpleVersionedWritableV2());
   }

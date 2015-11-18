@@ -35,9 +35,10 @@ import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.assertTrue;
 
-public class TestCompressionStreamReuse extends TestCase {
+public class TestCompressionStreamReuse {
   private static final Log LOG = LogFactory
       .getLog(TestCompressionStreamReuse.class);
 
@@ -45,16 +46,19 @@ public class TestCompressionStreamReuse extends TestCase {
   private int count = 10000;
   private int seed = new Random().nextInt();
 
+  @Test
   public void testBZip2Codec() throws IOException {
     resetStateTest(conf, seed, count,
         "org.apache.hadoop.io.compress.BZip2Codec");
   }
 
+  @Test
   public void testGzipCompressStreamReuse() throws IOException {
     resetStateTest(conf, seed, count,
         "org.apache.hadoop.io.compress.GzipCodec");
   }
 
+  @Test
   public void testGzipCompressStreamReuseWithParam() throws IOException {
     Configuration conf = new Configuration(this.conf);
     ZlibFactory
@@ -65,7 +69,7 @@ public class TestCompressionStreamReuse extends TestCase {
         "org.apache.hadoop.io.compress.GzipCodec");
   }
 
-  private static void resetStateTest(Configuration conf, int seed, int count,
+  private void resetStateTest(Configuration conf, int seed, int count,
       String codecClass) throws IOException {
     // Create the codec
     CompressionCodec codec = null;

@@ -18,22 +18,25 @@
 
 package org.apache.hadoop.io;
 
+import org.junit.Test;
+
 import java.io.IOException;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertTrue;
 import java.util.Arrays;
 import java.util.Random;
 
 
 /** Unit tests for BoundedByteArrayOutputStream */
-public class TestBoundedByteArrayOutputStream extends TestCase {
+public class TestBoundedByteArrayOutputStream {
 
   private static final int SIZE = 1024;
   private static final byte[] INPUT = new byte[SIZE];
   static {
       new Random().nextBytes(INPUT);
   }
-  
+
+  @Test
   public void testBoundedStream() throws IOException {
     
     BoundedByteArrayOutputStream stream = 
@@ -102,7 +105,8 @@ public class TestBoundedByteArrayOutputStream extends TestCase {
     }
     
   }
-  
+
+  @Test
   public void testResetBuffer() throws IOException {
     
     ResettableBoundedByteArrayOutputStream stream = 

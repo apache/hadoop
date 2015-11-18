@@ -22,13 +22,15 @@ import java.io.*;
 import java.util.Arrays;
 
 import org.apache.hadoop.util.StringUtils;
-import org.junit.*;
+import org.junit.Test;
+import org.junit.Before;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
-import junit.framework.TestCase;
 
 /** Unit tests for {@link ArrayPrimitiveWritable} */
-public class TestArrayPrimitiveWritable extends TestCase {
-  
+public class TestArrayPrimitiveWritable {
   static final boolean[] b = {true, true, false};
   static final char[] c = {'a', 'b', 'c'};
   static final byte[] by = {1, 2, 3};
