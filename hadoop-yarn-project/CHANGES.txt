@@ -88,6 +88,8 @@ Release 2.7.4 - UNRELEASED
     YARN-4302. SLS not able start due to NPE in SchedulerApplicationAttempt
     (Bibin A Chundatt via vvasudev)
 
+    YARN-4367. SLS webapp doesn't load. (kasha)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES

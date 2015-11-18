@@ -77,7 +77,8 @@ calculateClasspath() {
   DEFAULT_LIBEXEC_DIR=${HADOOP_BASE}/../libexec
   HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
   . $HADOOP_LIBEXEC_DIR/hadoop-config.sh
-  export HADOOP_CLASSPATH="${HADOOP_CLASSPATH}:${TOOL_PATH}:html"
+  SLS_HTML="${HADOOP_PREFIX}/share/hadoop/tools/sls/html"
+  export HADOOP_CLASSPATH="${HADOOP_CLASSPATH}:${TOOL_PATH}:${SLS_HTML}"
 }
 ###############################################################################
 runSimulation() {
