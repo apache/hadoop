@@ -546,9 +546,6 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6382. Don't escape HTML links in Diagnostics in JHS job overview.
     (Siqi Li via gera)
 
-    MAPREDUCE-6377. JHS sorting on state column not working in webUi.
-    (zhihai xu via devaraj)
-
     MAPREDUCE-6388. Remove deprecation warnings from JobHistoryServer classes
     (Ray Chiang via ozawa).
 
@@ -653,6 +650,9 @@ Release 2.7.3 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    MAPREDUCE-6377. JHS sorting on state column not working in webUi.
+    (zhihai xu via devaraj)
 
 Release 2.7.2 - UNRELEASED
 
@@ -947,6 +947,9 @@ Release 2.6.3 - UNRELEASED
 
     MAPREDUCE-6528. Memory leak for HistoryFileManager.getJobSummary()
     (Junping Du via jlowe)
+
+    MAPREDUCE-6377. JHS sorting on state column not working in webUi.
+    (zhihai xu via devaraj)
 
 Release 2.6.2 - 2015-10-28
 
