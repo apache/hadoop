@@ -297,6 +297,9 @@ Release 2.6.3 - UNRELEASED
     MAPREDUCE-5883. "Total megabyte-seconds" in job counters is slightly
     misleading (Nathan Roberts via jlowe)
 
+    MAPREDUCE-6377. JHS sorting on state column not working in webUi.
+    (zhihai xu via devaraj)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
