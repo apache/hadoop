@@ -621,7 +621,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#getPreferredBlockSize(String)
    */
   public long getBlockSize(String f) throws IOException {
-    checkOpen();
     try (TraceScope ignored = newPathTraceScope("getBlockSize", f)) {
       return namenode.getPreferredBlockSize(f);
     } catch (IOException ie) {
@@ -864,7 +863,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   public BlockLocation[] getBlockLocations(String src, long start,
       long length) throws IOException {
-    checkOpen();
     try (TraceScope ignored = newPathTraceScope("getBlockLocations", src)) {
       LocatedBlocks blocks = getLocatedBlocks(src, start, length);
       BlockLocation[] locations = DFSUtilClient.locatedBlocks2Locations(blocks);
@@ -1325,7 +1323,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   public void createSymlink(String target, String link, boolean createParent)
       throws IOException {
-    checkOpen();
     try (TraceScope ignored = newPathTraceScope("createSymlink", target)) {
       final FsPermission dirPerm = applyUMask(null);
       namenode.createSymlink(target, link, dirPerm, createParent);
@@ -1446,7 +1443,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   public boolean setReplication(String src, short replication)
       throws IOException {
-    checkOpen();
     try (TraceScope ignored = newPathTraceScope("setReplication", src)) {
       return namenode.setReplication(src, replication);
     } catch (RemoteException re) {
@@ -1467,7 +1463,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   public void setStoragePolicy(String src, String policyName)
       throws IOException {
-    checkOpen();
     try (TraceScope ignored = newPathTraceScope("setStoragePolicy", src)) {
       namenode.setStoragePolicy(src, policyName);
     } catch (RemoteException e) {
@@ -1500,7 +1495,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @return All the existing storage policies
    */
   public BlockStoragePolicy[] getStoragePolicies() throws IOException {
-    checkOpen();
     try (TraceScope ignored = tracer.newScope("getStoragePolicies")) {
       return namenode.getStoragePolicies();
     }
@@ -2325,7 +2319,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    *
    */
   void saveNamespace() throws IOException {
-    checkOpen();
     try (TraceScope ignored = tracer.newScope("saveNamespace")) {
       namenode.saveNamespace();
     } catch (RemoteException re) {
@@ -2340,7 +2333,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#rollEdits()
    */
   long rollEdits() throws IOException {
-    checkOpen();
     try (TraceScope ignored = tracer.newScope("rollEdits")) {
       return namenode.rollEdits();
     } catch (RemoteException re) {
@@ -2359,7 +2351,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#restoreFailedStorage(String arg)
    */
   boolean restoreFailedStorage(String arg) throws IOException{
-    checkOpen();
     try (TraceScope ignored = tracer.newScope("restoreFailedStorage")) {
       return namenode.restoreFailedStorage(arg);
     }
@@ -2373,7 +2364,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#refreshNodes()
    */
   public void refreshNodes() throws IOException {
-    checkOpen();
     try (TraceScope ignored = tracer.newScope("refreshNodes")) {
       namenode.refreshNodes();
     }
@@ -2385,7 +2375,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#metaSave(String)
    */
   public void metaSave(String pathname) throws IOException {
-    checkOpen();
     try (TraceScope ignored = tracer.newScope("metaSave")) {
       namenode.metaSave(pathname);
     }
@@ -2400,7 +2389,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#setBalancerBandwidth(long)
    */
   public void setBalancerBandwidth(long bandwidth) throws IOException {
-    checkOpen();
     try (TraceScope ignored = tracer.newScope("setBalancerBandwidth")) {
       namenode.setBalancerBandwidth(bandwidth);
     }
@@ -2410,7 +2398,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#finalizeUpgrade()
    */
   public void finalizeUpgrade() throws IOException {
-    checkOpen();
     try (TraceScope ignored = tracer.newScope("finalizeUpgrade")) {
       namenode.finalizeUpgrade();
     }
@@ -2418,7 +2405,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   RollingUpgradeInfo rollingUpgrade(RollingUpgradeAction action)
       throws IOException {
-    checkOpen();
     try (TraceScope ignored = tracer.newScope("rollingUpgrade")) {
       return namenode.rollingUpgrade(action);
     }
@@ -2495,7 +2481,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#getContentSummary(String)
    */
   ContentSummary getContentSummary(String src) throws IOException {
-    checkOpen();
     try (TraceScope ignored = newPathTraceScope("getContentSummary", src)) {
       return namenode.getContentSummary(src);
     } catch (RemoteException re) {
