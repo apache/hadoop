@@ -43,7 +43,7 @@ public abstract class ApplicationId implements Comparable<ApplicationId> {
   @Unstable
   public static final String appIdStrPrefix = "application_";
 
-  @Private
+  @Public
   @Unstable
   public static ApplicationId newInstance(long clusterTimestamp, int id) {
     ApplicationId appId = Records.newRecord(ApplicationId.class);
