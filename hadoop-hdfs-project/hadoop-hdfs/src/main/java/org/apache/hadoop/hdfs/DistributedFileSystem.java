@@ -586,7 +586,7 @@ public class DistributedFileSystem extends FileSystem {
       for (int i=0; i<psrcs.length; i++) {
         srcsStr[i] = getPathName(srcs[i]);
       }
-      dfs.concat(getPathName(trg), srcsStr);
+      dfs.concat(getPathName(absF), srcsStr);
     } catch (UnresolvedLinkException e) {
       // Exception could be from trg or any src.
       // Fully resolve trg and srcs. Fail if any of them are a symlink.
