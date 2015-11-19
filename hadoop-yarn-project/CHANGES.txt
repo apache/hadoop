@@ -1924,6 +1924,9 @@ Release 2.6.3 - UNRELEASED
     YARN-4241. Fix typo of property name in yarn-default.xml.
     (Anthony Rojas via aajisaka)
 
+    YARN-2859. ApplicationHistoryServer binds to default port 8188 in MiniYARNCluster.
+    (Vinod Kumar Vavilapalli via xgong)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
@@ -1971,9 +1974,6 @@ Release 2.6.2 - 2015-10-28
 
     YARN-3798. ZKRMStateStore shouldn't create new session without occurrance of 
     SESSIONEXPIED. (ozawa and Varun Saxena)
-
-    YARN-2859. ApplicationHistoryServer binds to default port 8188 in MiniYARNCluster.
-    (Vinod Kumar Vavilapalli via xgong)
 
 Release 2.6.1 - 2015-09-23
 
