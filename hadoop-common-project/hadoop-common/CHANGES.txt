@@ -965,6 +965,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12582. Using BytesWritable's getLength() and getBytes() instead
     of get() and getSize(). (Akira AJISAKA via ozawa)
 
+    HADOOP-12575. Add build instruction for docker toolbox instead of
+    boot2docker(Kai Sasaki via ozawa)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
