@@ -210,7 +210,19 @@ public class AuthToken implements Principal {
     map.remove("s");
 
     if (!map.keySet().equals(ATTRIBUTES)) {
-      throw new AuthenticationException("Invalid token string, missing attributes");
+      StringBuilder missing = new StringBuilder();
+      StringBuilder present = new StringBuilder();
+      for (String attribute : ATTRIBUTES) {
+        String val = map.get(attribute);
+        if (val != null) {
+          present.append(attribute + "= " + val + "; ");
+        } else {
+          missing.append(attribute).append(" ");
+        }
+      }
+      throw new AuthenticationException("Incomplete token string"
+        + " -present: " + present
+        + " Missing attributes: [ " + missing + "]");
     }
     long maxInactives = Long.parseLong(map.get(MAX_INACTIVES));
     long expires = Long.parseLong(map.get(EXPIRES));
