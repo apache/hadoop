@@ -1,5 +1,8 @@
 Hadoop HDFS Change Log
 
+    HDFS-9434. Recommission a datanode with 500k blocks may pause NN for 30
+    seconds for printing info log messags.  (szetszwo)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
