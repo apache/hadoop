@@ -1429,6 +1429,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11901. BytesWritable fails to support 2G chunks due to integer
     overflow. (Reynold Xin via wheat9)
 
+    HADOOP-12584. Disable browsing the static directory in HttpServer2.
+    (Robert Kanter via wheat9)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
