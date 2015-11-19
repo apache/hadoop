@@ -58,17 +58,16 @@ class KVGenerator {
     while (n < len) {
       byte[] word = dict[random.nextInt(dict.length)];
       int l = Math.min(word.length, len - n);
-      System.arraycopy(word, 0, o.get(), n, l);
+      System.arraycopy(word, 0, o.getBytes(), n, l);
       n += l;
     }
-    if (sorted
-        && WritableComparator.compareBytes(lastKey.get(), MIN_KEY_LEN, lastKey
-            .getSize()
-            - MIN_KEY_LEN, o.get(), MIN_KEY_LEN, o.getSize() - MIN_KEY_LEN) > 0) {
+    if (sorted && WritableComparator.compareBytes(
+            lastKey.getBytes(), MIN_KEY_LEN, lastKey.getLength() - MIN_KEY_LEN,
+            o.getBytes(), MIN_KEY_LEN, o.getLength() - MIN_KEY_LEN) > 0) {
       incrementPrefix();
     }
 
-    System.arraycopy(prefix, 0, o.get(), 0, MIN_KEY_LEN);
+    System.arraycopy(prefix, 0, o.getBytes(), 0, MIN_KEY_LEN);
     lastKey.set(o);
   }
 
@@ -79,7 +78,7 @@ class KVGenerator {
     while (n < len) {
       byte[] word = dict[random.nextInt(dict.length)];
       int l = Math.min(word.length, len - n);
-      System.arraycopy(word, 0, o.get(), n, l);
+      System.arraycopy(word, 0, o.getBytes(), n, l);
       n += l;
     }
   }

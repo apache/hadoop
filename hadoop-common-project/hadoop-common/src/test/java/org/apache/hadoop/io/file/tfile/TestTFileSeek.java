@@ -119,10 +119,10 @@ public class TestTFileSeek {
             }
           }
           kvGen.next(key, val, false);
-          writer.append(key.get(), 0, key.getSize(), val.get(), 0, val
-              .getSize());
-          totalBytes += key.getSize();
-          totalBytes += val.getSize();
+          writer.append(key.getBytes(), 0, key.getLength(), val.getBytes(), 0,
+              val.getLength());
+          totalBytes += key.getLength();
+          totalBytes += val.getLength();
         }
         timer.stop();
       }
@@ -160,11 +160,11 @@ public class TestTFileSeek {
     timer.start();
     for (int i = 0; i < options.seekCount; ++i) {
       kSampler.next(key);
-      scanner.lowerBound(key.get(), 0, key.getSize());
+      scanner.lowerBound(key.getBytes(), 0, key.getLength());
       if (!scanner.atEnd()) {
         scanner.entry().get(key, val);
-        totalBytes += key.getSize();
-        totalBytes += val.getSize();
+        totalBytes += key.getLength();
+        totalBytes += val.getLength();
       }
       else {
         ++miss;

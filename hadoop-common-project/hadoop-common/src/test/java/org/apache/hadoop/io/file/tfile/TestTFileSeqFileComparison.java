@@ -153,8 +153,8 @@ public class TestTFileSeqFileComparison {
     @Override
     public void append(BytesWritable key, BytesWritable value)
         throws IOException {
-      writer.append(key.get(), 0, key.getSize(), value.get(), 0, value
-          .getSize());
+      writer.append(key.getBytes(), 0, key.getLength(), value.getBytes(), 0,
+          value.getLength());
     }
 
     @Override
@@ -304,22 +304,22 @@ public class TestTFileSeqFileComparison {
 
     @Override
     public byte[] getKey() {
-      return key.get();
+      return key.getBytes();
     }
 
     @Override
     public int getKeyLength() {
-      return key.getSize();
+      return key.getLength();
     }
 
     @Override
     public byte[] getValue() {
-      return value.get();
+      return value.getBytes();
     }
 
     @Override
     public int getValueLength() {
-      return value.getSize();
+      return value.getLength();
     }
 
     @Override
