@@ -131,10 +131,14 @@ public class ApplicationHistoryServer extends CompositeService {
     return this.ahsClientService;
   }
 
+  private InetSocketAddress getListenerAddress() {
+    return this.webApp.httpServer().getConnectorAddress(0);
+  }
+
   @Private
   @VisibleForTesting
   public int getPort() {
-    return this.webApp.httpServer().getConnectorAddress(0).getPort();
+    return this.getListenerAddress().getPort();
   }
 
   /**
@@ -321,6 +325,10 @@ public class ApplicationHistoryServer extends CompositeService {
          httpServer.addContext(uiWebAppContext, true);
        }
        httpServer.start();
+       conf.updateConnectAddr(YarnConfiguration.TIMELINE_SERVICE_BIND_HOST,
+         YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS,
+         this.getListenerAddress());
        LOG.info("Instantiating AHSWebApp at " + getPort());
     } catch (Exception e) {
       String msg = "AHSWebApp failed to start.";
