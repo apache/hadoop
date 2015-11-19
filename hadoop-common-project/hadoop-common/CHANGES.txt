@@ -1426,6 +1426,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12484. Single File Rename Throws Incorrectly In Potential Race
     Condition Scenarios. (Gaurav Kanade via cnauroth)
 
+    HADOOP-11901. BytesWritable fails to support 2G chunks due to integer
+    overflow. (Reynold Xin via wheat9)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -120,7 +120,9 @@ public class BytesWritable extends BinaryComparable
    */
   public void setSize(int size) {
     if (size > getCapacity()) {
-      setCapacity(size * 3 / 2);
+      // Avoid overflowing the int too early by casting to a long.
+      long newSize = Math.min(Integer.MAX_VALUE, (3L * size) / 2L);
+      setCapacity((int) newSize);
     }
     this.size = size;
   }
