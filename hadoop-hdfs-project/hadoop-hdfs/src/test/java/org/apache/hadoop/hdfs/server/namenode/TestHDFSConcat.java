@@ -490,4 +490,17 @@ public class TestHDFSConcat {
     Assert.assertEquals(blockSize * repl * (srcNum + 1),
         summary.getSpaceConsumed());
   }
+
+  @Test
+  public void testConcatRelativeTargetPath() throws IOException {
+    Path dir = new Path("/dir");
+    Path trg = new Path("trg");
+    Path src = new Path(dir, "src");
+    dfs.setWorkingDirectory(dir);
+    DFSTestUtil.createFile(dfs, trg, blockSize, REPL_FACTOR, 1);
+    DFSTestUtil.createFile(dfs, src, blockSize, REPL_FACTOR, 1);
+    dfs.concat(trg, new Path[]{src});
+    assertEquals(blockSize * 2, dfs.getFileStatus(trg).getLen());
+    assertFalse(dfs.exists(src));
+  }
 }

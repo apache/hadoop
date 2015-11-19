@@ -1163,6 +1163,9 @@ Release 2.6.3 - UNRELEASED
     HDFS-8615. Correct HTTP method in WebHDFS document.
     (Brahma Reddy Battula via aajisaka)
 
+    HDFS-9431. DistributedFileSystem#concat fails if the target path is
+    relative. (Kazuho Fujii via aajisaka)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
