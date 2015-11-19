@@ -962,6 +962,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12564. Upgrade JUnit3 TestCase to JUnit 4 in
     org.apache.hadoop.io package. (Dustin Cote via ozawa)
 
+    HADOOP-12582. Using BytesWritable's getLength() and getBytes() instead
+    of get() and getSize(). (Akira AJISAKA via ozawa)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
