@@ -137,7 +137,7 @@ class FlowRunEntityReader extends TimelineEntityReader {
     }
 
     // read the start time
-    Number startTime = (Number)FlowRunColumn.MIN_START_TIME.readResult(result);
+    Long startTime = (Long)FlowRunColumn.MIN_START_TIME.readResult(result);
     if (startTime != null) {
       flowRun.setStartTime(startTime.longValue());
     }
@@ -147,7 +147,7 @@ class FlowRunEntityReader extends TimelineEntityReader {
     }
 
     // read the end time if available
-    Number endTime = (Number)FlowRunColumn.MAX_END_TIME.readResult(result);
+    Long endTime = (Long)FlowRunColumn.MAX_END_TIME.readResult(result);
     if (endTime != null) {
       flowRun.setMaxEndTime(endTime.longValue());
     }

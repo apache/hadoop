@@ -24,9 +24,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Column;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnFamily;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.GenericConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TypedBufferedMutator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.ValueConverter;
 
 /**
  * Identifies fully qualified columns for the {@link FlowRunTable}.
@@ -38,14 +41,14 @@ public enum FlowRunColumn implements Column<FlowRunTable> {
    * application start times.
    */
   MIN_START_TIME(FlowRunColumnFamily.INFO, "min_start_time",
-      AggregationOperation.MIN),
+      AggregationOperation.MIN, LongConverter.getInstance()),
 
   /**
    * When the flow ended. This is the maximum of currently known application end
    * times.
    */
   MAX_END_TIME(FlowRunColumnFamily.INFO, "max_end_time",
-      AggregationOperation.MAX),
+      AggregationOperation.MAX, LongConverter.getInstance()),
 
   /**
    * The version of the flow that this flow belongs to.
@@ -60,13 +63,20 @@ public enum FlowRunColumn implements Column<FlowRunTable> {
 
   private FlowRunColumn(ColumnFamily<FlowRunTable> columnFamily,
       String columnQualifier, AggregationOperation aggOp) {
+    this(columnFamily, columnQualifier, aggOp,
+        GenericConverter.getInstance());
+  }
+
+  private FlowRunColumn(ColumnFamily<FlowRunTable> columnFamily,
+      String columnQualifier, AggregationOperation aggOp,
+      ValueConverter converter) {
     this.columnFamily = columnFamily;
     this.columnQualifier = columnQualifier;
     this.aggOp = aggOp;
     // Future-proof by ensuring the right column prefix hygiene.
     this.columnQualifierBytes = Bytes.toBytes(Separator.SPACE
         .encode(columnQualifier));
-    this.column = new ColumnHelper<FlowRunTable>(columnFamily);
+    this.column = new ColumnHelper<FlowRunTable>(columnFamily, converter);
   }
 
   /**
@@ -78,6 +88,10 @@ public enum FlowRunColumn implements Column<FlowRunTable> {
 
   public byte[] getColumnQualifierBytes() {
     return columnQualifierBytes.clone();
+  }
+
+  public byte[] getColumnFamilyBytes() {
+    return columnFamily.getBytes();
   }
 
   public AggregationOperation getAggregationOperation() {
@@ -128,6 +142,10 @@ public enum FlowRunColumn implements Column<FlowRunTable> {
 
     // Default to null
     return null;
+  }
+
+  public ValueConverter getValueConverter() {
+    return column.getValueConverter();
   }
 
   /**

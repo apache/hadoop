@@ -472,4 +472,15 @@ public class TimelineStorageUtils {
     }
     return true;
   }
+
+  /**
+   * Checks if passed object is of integral type(Short/Integer/Long).
+   * @param obj
+   * @return true if object passed is of type Short or Integer or Long, false
+   * otherwise.
+   */
+  public static boolean isIntegralValue(Object obj) {
+    return (obj instanceof Short) || (obj instanceof Integer) ||
+        (obj instanceof Long);
+  }
 }

@@ -140,6 +140,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
 
     YARN-4221. Store user in app to flow table (Varun Saxena via sjlee)
 
+    YARN-4053. Change the way metric values are stored in HBase Storage (Varun
+    Saxena via sjlee)
+
   OPTIMIZATIONS
 
   BUG FIXES

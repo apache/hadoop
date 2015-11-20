@@ -29,6 +29,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TypedBufferedMutator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.ValueConverter;
 
 /**
  * Identifies partially qualified columns for the {@link FlowRunTable}.
@@ -38,7 +40,8 @@ public enum FlowRunColumnPrefix implements ColumnPrefix<FlowRunTable> {
   /**
    * To store flow run info values.
    */
-  METRIC(FlowRunColumnFamily.INFO, "m", AggregationOperation.SUM);
+  METRIC(FlowRunColumnFamily.INFO, "m", AggregationOperation.SUM,
+      LongConverter.getInstance());
 
   private final ColumnHelper<FlowRunTable> column;
   private final ColumnFamily<FlowRunTable> columnFamily;
@@ -61,8 +64,8 @@ public enum FlowRunColumnPrefix implements ColumnPrefix<FlowRunTable> {
    *          for this column.
    */
   private FlowRunColumnPrefix(ColumnFamily<FlowRunTable> columnFamily,
-      String columnPrefix, AggregationOperation fra) {
-    column = new ColumnHelper<FlowRunTable>(columnFamily);
+      String columnPrefix, AggregationOperation fra, ValueConverter converter) {
+    column = new ColumnHelper<FlowRunTable>(columnFamily, converter);
     this.columnFamily = columnFamily;
     this.columnPrefix = columnPrefix;
     if (columnPrefix == null) {
@@ -84,6 +87,14 @@ public enum FlowRunColumnPrefix implements ColumnPrefix<FlowRunTable> {
 
   public byte[] getColumnPrefixBytes() {
     return columnPrefixBytes.clone();
+  }
+
+  public byte[] getColumnPrefixBytes(String qualifier) {
+    return ColumnHelper.getColumnQualifier(this.columnPrefixBytes, qualifier);
+  }
+
+  public byte[] getColumnFamilyBytes() {
+    return columnFamily.getBytes();
   }
 
   public AggregationOperation getAttribute() {
@@ -203,6 +214,10 @@ public enum FlowRunColumnPrefix implements ColumnPrefix<FlowRunTable> {
 
     // Default to null
     return null;
+  }
+
+  public ValueConverter getValueConverter() {
+    return column.getValueConverter();
   }
 
   /**
