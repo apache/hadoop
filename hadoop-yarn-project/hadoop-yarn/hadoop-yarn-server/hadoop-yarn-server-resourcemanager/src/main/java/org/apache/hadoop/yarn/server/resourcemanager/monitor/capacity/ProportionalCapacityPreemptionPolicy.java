@@ -872,7 +872,8 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       if (curQueue instanceof LeafQueue) {
         LeafQueue l = (LeafQueue) curQueue;
         Resource pending =
-            l.getQueueResourceUsage().getPending(partitionToLookAt);
+              l.getTotalPendingResourcesConsideringUserLimit(
+                  partitionResource, partitionToLookAt);
         ret = new TempQueuePerPartition(queueName, current, pending, guaranteed,
             maxCapacity, preemptionDisabled, partitionToLookAt);
         if (preemptionDisabled) {
