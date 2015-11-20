@@ -742,12 +742,11 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
     TempQueue ret;
     synchronized (root) {
       String queueName = root.getQueueName();
-      float absUsed = root.getAbsoluteUsedCapacity();
       float absCap = root.getAbsoluteCapacity();
       float absMaxCap = root.getAbsoluteMaximumCapacity();
       boolean preemptionDisabled = root.getPreemptionDisabled();
 
-      Resource current = Resources.multiply(clusterResources, absUsed);
+      Resource current = root.getQueueResourceUsage().getUsed();
       Resource guaranteed = Resources.multiply(clusterResources, absCap);
       Resource maxCapacity = Resources.multiply(clusterResources, absMaxCap);
 
