@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
@@ -164,10 +165,10 @@ public class TestHBaseStorageFlowRun {
         .getBytes());
 
     assertEquals(2, r1.size());
-    long starttime = (Long) GenericObjectMapper.read(values
-        .get(FlowRunColumn.MIN_START_TIME.getColumnQualifierBytes()));
+    long starttime = Bytes.toLong(values.get(
+        FlowRunColumn.MIN_START_TIME.getColumnQualifierBytes()));
     assertEquals(minStartTs, starttime);
-    assertEquals(endTs, GenericObjectMapper.read(values
+    assertEquals(endTs, Bytes.toLong(values
         .get(FlowRunColumn.MAX_END_TIME.getColumnQualifierBytes())));
 
     // use the timeline reader to verify data
@@ -253,10 +254,10 @@ public class TestHBaseStorageFlowRun {
         }
         switch (id) {
         case metric1:
-          assertEquals(141, value);
+          assertEquals(141L, value);
           break;
         case metric2:
-          assertEquals(57, value);
+          assertEquals(57L, value);
           break;
         default:
           fail("unrecognized metric: " + id);
@@ -292,14 +293,14 @@ public class TestHBaseStorageFlowRun {
       byte[] q = ColumnHelper.getColumnQualifier(
           FlowRunColumnPrefix.METRIC.getColumnPrefixBytes(), metric1);
       assertTrue(values.containsKey(q));
-      assertEquals(141, GenericObjectMapper.read(values.get(q)));
+      assertEquals(141L, Bytes.toLong(values.get(q)));
 
       // check metric2
       assertEquals(2, values.size());
       q = ColumnHelper.getColumnQualifier(
           FlowRunColumnPrefix.METRIC.getColumnPrefixBytes(), metric2);
       assertTrue(values.containsKey(q));
-      assertEquals(57, GenericObjectMapper.read(values.get(q)));
+      assertEquals(57L, Bytes.toLong(values.get(q)));
     }
     assertEquals(1, rowCount);
   }

@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.AggregationCompactionDimension;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
 /**
@@ -50,9 +49,20 @@ public class ColumnHelper<T> {
    */
   private final byte[] columnFamilyBytes;
 
+  private final ValueConverter converter;
+
   public ColumnHelper(ColumnFamily<T> columnFamily) {
+    this(columnFamily, GenericConverter.getInstance());
+  }
+
+  public ColumnHelper(ColumnFamily<T> columnFamily, ValueConverter converter) {
     this.columnFamily = columnFamily;
     columnFamilyBytes = columnFamily.getBytes();
+    if (converter == null) {
+      this.converter = GenericConverter.getInstance();
+    } else {
+      this.converter = converter;
+    }
   }
 
   /**
@@ -83,7 +93,7 @@ public class ColumnHelper<T> {
     Put p = new Put(rowKey);
     timestamp = getPutTimestamp(timestamp, attributes);
     p.addColumn(columnFamilyBytes, columnQualifier, timestamp,
-        GenericObjectMapper.write(inputValue));
+        converter.encodeValue(inputValue));
     if ((attributes != null) && (attributes.length > 0)) {
       for (Attribute attribute : attributes) {
         p.setAttribute(attribute.getName(), attribute.getValue());
@@ -148,7 +158,7 @@ public class ColumnHelper<T> {
     // ByteBuffer to avoid copy, but GenericObjectMapper doesn't seem to like
     // that.
     byte[] value = result.getValue(columnFamilyBytes, columnQualifierBytes);
-    return GenericObjectMapper.read(value);
+    return converter.decodeValue(value);
   }
 
   /**
@@ -206,7 +216,7 @@ public class ColumnHelper<T> {
             if (cells != null) {
               for (Entry<Long, byte[]> cell : cells.entrySet()) {
                 V value =
-                    (V) GenericObjectMapper.read(cell.getValue());
+                    (V) converter.decodeValue(cell.getValue());
                 cellResults.put(
                     TimestampGenerator.getTruncatedTimestamp(cell.getKey()),
                     value);
@@ -266,7 +276,7 @@ public class ColumnHelper<T> {
 
           // If this column has the prefix we want
           if (columnName != null) {
-            Object value = GenericObjectMapper.read(entry.getValue());
+            Object value = converter.decodeValue(entry.getValue());
             results.put(columnName, value);
           }
         }
@@ -313,7 +323,7 @@ public class ColumnHelper<T> {
               // This is the prefix that we want
               byte[][] columnQualifierParts =
                   Separator.VALUES.split(columnNameParts[1]);
-              Object value = GenericObjectMapper.read(entry.getValue());
+              Object value = converter.decodeValue(entry.getValue());
               // we return the columnQualifier in parts since we don't know
               // which part is of which data type
               results.put(columnQualifierParts, value);
@@ -371,6 +381,11 @@ public class ColumnHelper<T> {
         Separator.QUALIFIERS.join(columnPrefixBytes, Bytes.toBytes(qualifier));
     return columnQualifier;
   }
+
+  public ValueConverter getValueConverter() {
+    return converter;
+  }
+
   /**
    * @param columnPrefixBytes The byte representation for the column prefix.
    *          Should not contain {@link Separator#QUALIFIERS}.
