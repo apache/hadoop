@@ -19,6 +19,9 @@ Release 2.7.3 - UNRELEASED
 
     YARN-4347. Resource manager fails with Null pointer exception. (Jian He via wangda)
 
+    YARN-4374. RM capacity scheduler UI rounds user limit factor (Chang Li via
+    jlowe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
