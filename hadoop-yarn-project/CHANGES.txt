@@ -844,9 +844,6 @@ Release 2.8.0 - UNRELEASED
     YARN-3888. ApplicationMaster link is broken in RM WebUI when appstate is NEW.
     (Bibin A Chundatt via xgong)
 
-    YARN-3849. Too much of preemption activity causing continuos killing of
-    containers across queues. (Sunil G via wangda)
-
     YARN-3917. getResourceCalculatorPlugin for the default should intercept all
     exceptions. (gera)
 
@@ -1051,9 +1048,6 @@ Release 2.8.0 - UNRELEASED
     YARN-4127. RM fail with noAuth error if switched from failover to non-failover.
     (Varun Saxena via jianhe)
 
-    YARN-4326. Fix TestDistributedShell timeout as AHS in MiniYarnCluster no longer 
-    binds to default port 8188. (Meng Ding via wangda)
-
     YARN-4345. yarn rmadmin -updateNodeResource doesn't work (Junping Du via
     jlowe)
 
@@ -1071,10 +1065,16 @@ Release 2.7.3 - UNRELEASED
 
   BUG FIXES
 
+    YARN-4326. Fix TestDistributedShell timeout as AHS in MiniYarnCluster no longer 
+    binds to default port 8188. (Meng Ding via wangda)
+
     YARN-4347. Resource manager fails with Null pointer exception. (Jian He via wangda)
 
     YARN-4374. RM capacity scheduler UI rounds user limit factor (Chang Li via
     jlowe)
+
+    YARN-3849. Too much of preemption activity causing continuos killing of
+    containers across queues. (Sunil G via wangda)
 
     YARN-3769. Consider user limit when calculating total pending resource for 
     preemption policy in Capacity Scheduler. (Eric Payne via wangda)
