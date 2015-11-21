@@ -95,8 +95,7 @@ public class IterativePlanner extends PlanningAlgorithm {
 
     // Create the allocations data structure
     RLESparseResourceAllocation allocations =
-        new RLESparseResourceAllocation(plan.getResourceCalculator(),
-            plan.getMinimumAllocation());
+        new RLESparseResourceAllocation(plan.getResourceCalculator());
 
     // Get a reverse iterator for the set of stages
     ListIterator<ReservationRequest> li =
@@ -219,8 +218,7 @@ public class IterativePlanner extends PlanningAlgorithm {
 
     // Initialize the plan modifications
     planModifications =
-        new RLESparseResourceAllocation(plan.getResourceCalculator(),
-            plan.getMinimumAllocation());
+        new RLESparseResourceAllocation(plan.getResourceCalculator());
 
   }
 

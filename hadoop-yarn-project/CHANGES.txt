@@ -563,6 +563,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4279. Mark ApplicationId and ApplicationAttemptId static methods as @Public,
     @Unstable. (stevel)
 
+    YARN-3454. Add efficient merge operation to RLESparseResourceAllocation
+    (Carlo Curino via asuresh)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
