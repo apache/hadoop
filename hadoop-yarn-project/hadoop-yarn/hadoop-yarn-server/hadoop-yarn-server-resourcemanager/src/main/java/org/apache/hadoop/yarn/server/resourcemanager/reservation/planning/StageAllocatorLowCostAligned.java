@@ -69,8 +69,7 @@ public class StageAllocatorLowCostAligned implements StageAllocator {
 
     // Create allocationRequestsearlies
     RLESparseResourceAllocation allocationRequests =
-        new RLESparseResourceAllocation(plan.getResourceCalculator(),
-            plan.getMinimumAllocation());
+        new RLESparseResourceAllocation(plan.getResourceCalculator());
 
     // Initialize parameters
     long duration = stepRoundUp(rr.getDuration(), step);

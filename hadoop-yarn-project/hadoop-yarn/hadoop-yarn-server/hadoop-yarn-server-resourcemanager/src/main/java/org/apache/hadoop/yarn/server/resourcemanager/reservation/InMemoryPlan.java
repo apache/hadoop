@@ -108,7 +108,7 @@ public class InMemoryPlan implements Plan {
     this.resCalc = resCalc;
     this.minAlloc = minAlloc;
     this.maxAlloc = maxAlloc;
-    this.rleSparseVector = new RLESparseResourceAllocation(resCalc, minAlloc);
+    this.rleSparseVector = new RLESparseResourceAllocation(resCalc);
     this.queueName = queueName;
     this.replanner = replanner;
     this.getMoveOnExpiry = getMoveOnExpiry;
@@ -129,7 +129,7 @@ public class InMemoryPlan implements Plan {
     String user = reservation.getUser();
     RLESparseResourceAllocation resAlloc = userResourceAlloc.get(user);
     if (resAlloc == null) {
-      resAlloc = new RLESparseResourceAllocation(resCalc, minAlloc);
+      resAlloc = new RLESparseResourceAllocation(resCalc);
       userResourceAlloc.put(user, resAlloc);
     }
     for (Map.Entry<ReservationInterval, Resource> r : allocationRequests
@@ -492,7 +492,7 @@ public class InMemoryPlan implements Plan {
   public long getLastEndTime() {
     readLock.lock();
     try {
-      return rleSparseVector.getLatestEndTime();
+      return rleSparseVector.getLatestNonNullTime();
     } finally {
       readLock.unlock();
     }
