@@ -25,6 +25,9 @@ Release 2.7.3 - UNRELEASED
     YARN-3849. Too much of preemption activity causing continuos killing of containers 
     across queues. (Sunil G via wangda)
 
+    YARN-3769. Consider user limit when calculating total pending resource for 
+    preemption policy in Capacity Scheduler. (Eric Payne via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

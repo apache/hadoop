@@ -1845,12 +1845,34 @@ public class LeafQueue extends AbstractCSQueue {
   }
 
   // return a single Resource capturing the overal amount of pending resources
-  public synchronized Resource getTotalResourcePending() {
-    Resource ret = BuilderUtils.newResource(0, 0);
-    for (FiCaSchedulerApp f : activeApplications) {
-      Resources.addTo(ret, f.getTotalPendingRequests());
+  // Consider the headroom for each user in the queue.
+  // Total pending for the queue =
+  //   sum for each user(min( (user's headroom), sum(user's pending requests) ))
+  //  NOTE: Used for calculating pedning resources in the preemption monitor.
+  public synchronized Resource getTotalPendingResourcesConsideringUserLimit(
+      Resource resources) {
+    Map<String, Resource> userNameToHeadroom = new HashMap<String, Resource>();
+    Resource pendingConsideringUserLimit = Resource.newInstance(0, 0);
+
+    for (FiCaSchedulerApp app : activeApplications) {
+      String userName = app.getUser();
+      if (!userNameToHeadroom.containsKey(userName)) {
+        User user = getUser(userName);
+        Resource headroom = Resources.subtract(
+            computeUserLimit(app, resources, minimumAllocation, user, null),
+            user.getUsed());
+        // Make sure none of the the components of headroom is negative.
+        headroom = Resources.componentwiseMax(headroom, Resources.none());
+        userNameToHeadroom.put(userName, headroom);
+      }
+      Resource minpendingConsideringUserLimit =
+          Resources.componentwiseMin(userNameToHeadroom.get(userName),
+                                     app.getTotalPendingRequests());
+      Resources.addTo(pendingConsideringUserLimit, minpendingConsideringUserLimit);
+      Resources.subtractFrom(userNameToHeadroom.get(userName),
+                             minpendingConsideringUserLimit);
     }
-    return ret;
+    return pendingConsideringUserLimit;
   }
 
   @Override
