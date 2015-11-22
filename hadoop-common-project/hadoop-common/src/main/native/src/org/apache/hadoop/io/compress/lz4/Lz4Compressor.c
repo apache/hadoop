@@ -73,7 +73,7 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Compressor_comp
     return (jint)0;
   }
 
-  compressed_direct_buf_len = LZ4_compress(uncompressed_bytes, compressed_bytes, uncompressed_direct_buf_len);
+  compressed_direct_buf_len = LZ4_compress_default(uncompressed_bytes, compressed_bytes, uncompressed_direct_buf_len, LZ4_compressBound(uncompressed_direct_buf_len));
   if (compressed_direct_buf_len < 0){
     THROW(env, "java/lang/InternalError", "LZ4_compress failed");
   }
@@ -115,7 +115,7 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Compressor_comp
     return (jint)0;
   }
 
-  compressed_direct_buf_len = LZ4_compressHC(uncompressed_bytes, compressed_bytes, uncompressed_direct_buf_len);
+  compressed_direct_buf_len = LZ4_compress_HC(uncompressed_bytes, compressed_bytes, uncompressed_direct_buf_len, LZ4_compressBound(uncompressed_direct_buf_len), 0);
   if (compressed_direct_buf_len < 0){
     THROW(env, "java/lang/InternalError", "LZ4_compressHC failed");
   }
