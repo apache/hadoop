@@ -864,6 +864,9 @@ Trunk (Unreleased)
       HDFS-9275. Wait previous ErasureCodingWork to finish before schedule
       another one. (Walter Su via yliu)
 
+      HDFS-9348. Erasure Coding: DFS GetErasureCodingPolicy API on a non-existent 
+      file should be handled properly. (Rakesh R via umamahesh)
+
 Release 2.8.0 - UNRELEASED
 
   NEW FEATURES
