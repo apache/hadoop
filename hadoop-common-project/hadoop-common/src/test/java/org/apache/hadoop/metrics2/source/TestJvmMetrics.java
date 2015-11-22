@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.metrics2.source;
 
+import org.apache.hadoop.service.ServiceOperations;
 import org.junit.Test;
 
 import static org.mockito.Mockito.*;
@@ -34,24 +35,30 @@ import static org.apache.hadoop.metrics2.impl.MsInfo.*;
 public class TestJvmMetrics {
 
   @Test public void testPresence() {
-    JvmPauseMonitor pauseMonitor = new JvmPauseMonitor(new Configuration());
-    JvmMetrics jvmMetrics = new JvmMetrics("test", "test");
-    jvmMetrics.setPauseMonitor(pauseMonitor);
-    MetricsRecordBuilder rb = getMetrics(jvmMetrics);
-    MetricsCollector mc = rb.parent();
+    JvmPauseMonitor pauseMonitor = new JvmPauseMonitor();
+    try {
+      pauseMonitor.init(new Configuration());
+      pauseMonitor.start();
+      JvmMetrics jvmMetrics = new JvmMetrics("test", "test");
+      jvmMetrics.setPauseMonitor(pauseMonitor);
+      MetricsRecordBuilder rb = getMetrics(jvmMetrics);
+      MetricsCollector mc = rb.parent();
 
-    verify(mc).addRecord(JvmMetrics);
-    verify(rb).tag(ProcessName, "test");
-    verify(rb).tag(SessionId, "test");
-    for (JvmMetricsInfo info : JvmMetricsInfo.values()) {
-      if (info.name().startsWith("Mem"))
-        verify(rb).addGauge(eq(info), anyFloat());
-      else if (info.name().startsWith("Gc"))
-        verify(rb).addCounter(eq(info), anyLong());
-      else if (info.name().startsWith("Threads"))
-        verify(rb).addGauge(eq(info), anyInt());
-      else if (info.name().startsWith("Log"))
-        verify(rb).addCounter(eq(info), anyLong());
+      verify(mc).addRecord(JvmMetrics);
+      verify(rb).tag(ProcessName, "test");
+      verify(rb).tag(SessionId, "test");
+      for (JvmMetricsInfo info : JvmMetricsInfo.values()) {
+        if (info.name().startsWith("Mem"))
+          verify(rb).addGauge(eq(info), anyFloat());
+        else if (info.name().startsWith("Gc"))
+          verify(rb).addCounter(eq(info), anyLong());
+        else if (info.name().startsWith("Threads"))
+          verify(rb).addGauge(eq(info), anyInt());
+        else if (info.name().startsWith("Log"))
+          verify(rb).addCounter(eq(info), anyLong());
+      }
+    } finally {
+      ServiceOperations.stop(pauseMonitor);
     }
   }
 }
