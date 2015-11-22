@@ -34,7 +34,8 @@ import static org.apache.hadoop.metrics2.impl.MsInfo.*;
 
 public class TestJvmMetrics {
 
-  @Test public void testPresence() {
+  @Test(timeout = 30000)
+  public void testPresence() {
     JvmPauseMonitor pauseMonitor = new JvmPauseMonitor();
     try {
       pauseMonitor.init(new Configuration());
@@ -60,5 +61,14 @@ public class TestJvmMetrics {
     } finally {
       ServiceOperations.stop(pauseMonitor);
     }
+  }
+
+  @Test(timeout = 30000)
+  public void testDoubleStop() throws Throwable {
+    JvmPauseMonitor pauseMonitor = new JvmPauseMonitor();
+    pauseMonitor.init(new Configuration());
+    pauseMonitor.start();
+    pauseMonitor.stop();
+    pauseMonitor.stop();
   }
 }
