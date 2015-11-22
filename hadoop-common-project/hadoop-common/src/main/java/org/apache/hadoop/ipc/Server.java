@@ -1451,8 +1451,8 @@ public abstract class Server {
           // attempting user could be null
           IOException tce = (IOException) getTrueCause(e);
           AUDITLOG.warn(AUTH_FAILED_FOR + this.toString() + ":"
-              + attemptingUser + " (" + e.getLocalizedMessage()
-              + ") with true cause: (" + tce.getLocalizedMessage() + ")");
+              + attemptingUser + " (" + e
+              + ") with true cause: (" + tce + ")");
           throw tce;
         }
         
@@ -1608,7 +1608,7 @@ public abstract class Server {
     private void doSaslReply(Exception ioe) throws IOException {
       setupResponse(authFailedResponse, authFailedCall,
           RpcStatusProto.FATAL, RpcErrorCodeProto.FATAL_UNAUTHORIZED,
-          null, ioe.getClass().getName(), ioe.getLocalizedMessage());
+          null, ioe.getClass().getName(), ioe.toString());
       authFailedCall.sendResponse();
     }
 
