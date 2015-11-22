@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import com.google.common.base.Joiner;
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -32,6 +31,7 @@ import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.Daemon;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -44,7 +44,7 @@ import java.util.List;
  */
 @InterfaceAudience.Private
 public class BlockRecoveryWorker {
-  public static final Log LOG = DataNode.LOG;
+  public static final Logger LOG = DataNode.LOG;
 
   private final DataNode datanode;
   private final Configuration conf;

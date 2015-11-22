@@ -55,6 +55,7 @@ import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_SEQUENTIAL
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
 
 /**
  * Reads a block from the disk and sends it to a recipient.
@@ -97,7 +98,7 @@ import com.google.common.base.Preconditions;
  *  no checksum error, it replies to DataNode with OP_STATUS_CHECKSUM_OK.
  */
 class BlockSender implements java.io.Closeable {
-  static final Log LOG = DataNode.LOG;
+  static final Logger LOG = DataNode.LOG;
   static final Log ClientTraceLog = DataNode.ClientTraceLog;
   private static final boolean is32Bit = 
       System.getProperty("sun.arch.data.model").equals("32");
