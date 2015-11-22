@@ -968,6 +968,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12575. Add build instruction for docker toolbox instead of
     boot2docker(Kai Sasaki via ozawa)
 
+    HADOOP-12572. Update Hadoop's lz4 to r131. (Kevin Bowling via wheat9)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
