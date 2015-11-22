@@ -133,9 +133,11 @@ public class MiniZKFCCluster {
    * @throws Exception if either of the services had encountered a fatal error
    */
   public void stop() throws Exception {
-    for (DummyZKFCThread thr : thrs) {
-      if (thr != null) {
-        thr.interrupt();
+    if (thrs != null) {
+      for (DummyZKFCThread thr : thrs) {
+        if (thr != null) {
+          thr.interrupt();
+        }
       }
     }
     if (ctx != null) {

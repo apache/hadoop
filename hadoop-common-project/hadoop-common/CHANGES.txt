@@ -1355,6 +1355,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-8419. Fixed GzipCode NPE reset for IBM JDK. (Yu Li via eyang)
 
+    HADOOP-11149. TestZKFailoverController times out. (Steve Loughran
+    via ozawa)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
