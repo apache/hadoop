@@ -32,7 +32,6 @@ import java.util.Iterator;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.security.Credentials;
@@ -52,190 +51,118 @@ public class TestFilterFileSystem {
     conf.setBoolean("fs.flfs.impl.disable.cache", true);
     conf.setBoolean("fs.file.impl.disable.cache", true);
   }
-  
-  public static class DontCheck {
-    public BlockLocation[] getFileBlockLocations(Path p, 
-        long start, long len) { return null; }
-    public FsServerDefaults getServerDefaults() { return null; }
-    public long getLength(Path f) { return 0; }
-    public FSDataOutputStream append(Path f) { return null; }
-    public FSDataOutputStream append(Path f, int bufferSize) { return null; }
-    public void rename(final Path src, final Path dst, final Rename... options) { }
-    public boolean exists(Path f) { return false; }
-    public boolean isDirectory(Path f) { return false; }
-    public boolean isFile(Path f) { return false; }
-    public boolean createNewFile(Path f) { return false; }
+
+  /**
+   * FileSystem methods that must not be overwritten by
+   * {@link FilterFileSystem}. Either because there is a default implementation
+   * already available or because it is not relevant.
+   */
+  public static interface MustNotImplement {
+    public BlockLocation[] getFileBlockLocations(Path p,  long start,
+        long len);
+    public FSDataOutputStream append(Path f) throws IOException;
+    public FSDataOutputStream append(Path f, int bufferSize) throws
+        IOException;
+    public long getLength(Path f);
+    public void rename(Path src, Path dst, Rename... options);
+    public boolean exists(Path f);
+    public boolean isDirectory(Path f);
+    public boolean isFile(Path f);
+    public boolean createNewFile(Path f);
+
     public FSDataOutputStream createNonRecursive(Path f,
-        boolean overwrite,
-        int bufferSize, short replication, long blockSize,
-        Progressable progress) throws IOException {
-      return null;
-    }
+        boolean overwrite, int bufferSize, short replication, long blockSize,
+        Progressable progress) throws IOException;
+
     public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
         boolean overwrite, int bufferSize, short replication, long blockSize,
-        Progressable progress) throws IOException {
-      return null;
-    }
-    public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
-            EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
-            Progressable progress) throws IOException {
-      return null;
-    }
-    public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
-            EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
-            Progressable progress, ChecksumOpt checksumOpt) throws IOException {
-      return null;
-    }
-    public boolean mkdirs(Path f) { return false; }
-    public FSDataInputStream open(Path f) { return null; }
-    public FSDataOutputStream create(Path f) { return null; }
-    public FSDataOutputStream create(Path f, boolean overwrite) { return null; }
-    public FSDataOutputStream create(Path f, Progressable progress) {
-      return null;
-    }
-    public FSDataOutputStream create(Path f, short replication) {
-      return null;
-    }
-    public FSDataOutputStream create(Path f, short replication, 
-        Progressable progress) {
-      return null;
-    }
-    public FSDataOutputStream create(Path f, 
-        boolean overwrite,
-        int bufferSize) {
-      return null;
-    }
-    public FSDataOutputStream create(Path f, 
-        boolean overwrite,
-        int bufferSize,
-        Progressable progress) {
-      return null;
-    }
-    public FSDataOutputStream create(Path f, 
-        boolean overwrite,
-        int bufferSize,
-        short replication,
-        long blockSize) {
-      return null;
-    }
-    public FSDataOutputStream create(Path f,
-        boolean overwrite,
-        int bufferSize,
-        short replication,
-        long blockSize,
-        Progressable progress) {
-      return null;
-    }
-    public FSDataOutputStream create(Path f,
-        FsPermission permission,
-        boolean overwrite,
-        int bufferSize,
-        short replication,
-        long blockSize,
-        Progressable progress) {
-      return null;
-    }
-    public FSDataOutputStream create(Path f,
-        FsPermission permission,
-        EnumSet<CreateFlag> flags,
-        int bufferSize,
-        short replication,
-        long blockSize,
-        Progressable progress) throws IOException {
-      return null;
-    }
-    public FSDataOutputStream create(Path f,
-        FsPermission permission,
-        EnumSet<CreateFlag> flags,
-        int bufferSize,
-        short replication,
-        long blockSize,
-        Progressable progress,
-        ChecksumOpt checksumOpt) throws IOException {
-      return null;
-    }
-    public String getName() { return null; }
-    public boolean delete(Path f) { return false; }
-    public short getReplication(Path src) { return 0 ; }
-    public void processDeleteOnExit() { }
-    public ContentSummary getContentSummary(Path f) { return null; }
-    public FsStatus getStatus() { return null; }
-    public FileStatus[] listStatus(Path f, PathFilter filter) { return null; }
-    public FileStatus[] listStatus(Path[] files) { return null; }
-    public FileStatus[] listStatus(Path[] files, PathFilter filter) { return null; }
-    public FileStatus[] globStatus(Path pathPattern) { return null; }
-    public FileStatus[] globStatus(Path pathPattern, PathFilter filter) {
-      return null;
-    }
-    public Iterator<LocatedFileStatus> listFiles(
-        final Path path, final boolean isRecursive) {
-      return null;
-    }
-    public Iterator<LocatedFileStatus> listLocatedStatus(Path f) {
-      return null;
-    }
-    public Iterator<LocatedFileStatus> listLocatedStatus(Path f,
-        final PathFilter filter) {
-      return null;
-    }
-    public void copyFromLocalFile(Path src, Path dst) { }
-    public void moveFromLocalFile(Path[] srcs, Path dst) { }
-    public void moveFromLocalFile(Path src, Path dst) { }
-    public void copyToLocalFile(Path src, Path dst) { }
+        Progressable progress) throws IOException;
+
+    public boolean mkdirs(Path f);
+    public FSDataInputStream open(Path f);
+    public FSDataOutputStream create(Path f);
+    public FSDataOutputStream create(Path f, boolean overwrite);
+    public FSDataOutputStream create(Path f, Progressable progress);
+    public FSDataOutputStream create(Path f, short replication);
+    public FSDataOutputStream create(Path f, short replication,
+        Progressable progress);
+    public FSDataOutputStream create(Path f,  boolean overwrite,
+        int bufferSize);
+    public FSDataOutputStream create(Path f,  boolean overwrite,
+        int bufferSize, Progressable progress);
+    public FSDataOutputStream create(Path f,  boolean overwrite,
+        int bufferSize, short replication, long blockSize);
+    public FSDataOutputStream create(Path f, boolean overwrite, int bufferSize,
+        short replication, long blockSize, Progressable progress);
+    public FSDataOutputStream create(Path f, FsPermission permission,
+        EnumSet<CreateFlag> flags, int bufferSize, short replication,
+        long blockSize, Progressable progress);
+    public String getName();
+    public boolean delete(Path f);
+    public short getReplication(Path src);
+    public void processDeleteOnExit();
+    public FsStatus getStatus();
+    public FileStatus[] listStatus(Path f, PathFilter filter);
+    public FileStatus[] listStatus(Path[] files);
+    public FileStatus[] listStatus(Path[] files, PathFilter filter);
+    public FileStatus[] globStatus(Path pathPattern);
+    public FileStatus[] globStatus(Path pathPattern, PathFilter filter);
+    public Iterator<LocatedFileStatus> listFiles(Path path,
+        boolean isRecursive);
+    public void copyFromLocalFile(Path src, Path dst);
+    public void moveFromLocalFile(Path[] srcs, Path dst);
+    public void moveFromLocalFile(Path src, Path dst);
+    public void copyToLocalFile(Path src, Path dst);
     public void copyToLocalFile(boolean delSrc, Path src, Path dst, 
-            boolean useRawLocalFileSystem) { }
-    public void moveToLocalFile(Path src, Path dst) { }
-    public long getBlockSize(Path f) { return 0; }
-    public FSDataOutputStream primitiveCreate(final Path f,
-        final EnumSet<CreateFlag> createFlag,
-        CreateOpts... opts) { return null; }
-    public void primitiveMkdir(Path f, FsPermission absolutePermission, 
-                      boolean createParent) { }
-    public int getDefaultPort() { return 0; }
-    public String getCanonicalServiceName() { return null; }
-    public Token<?> getDelegationToken(String renewer) throws IOException {
-      return null;
-    }
-    public boolean deleteOnExit(Path f) throws IOException {
-      return false;
-    }
-    public boolean cancelDeleteOnExit(Path f) throws IOException {
-      return false;
-    }
+            boolean useRawLocalFileSystem);
+    public void moveToLocalFile(Path src, Path dst);
+    public long getBlockSize(Path f);
+    public FSDataOutputStream primitiveCreate(Path f,
+        EnumSet<CreateFlag> createFlag, CreateOpts... opts);
+    public void primitiveMkdir(Path f, FsPermission absolutePermission,
+        boolean createParent);
+    public int getDefaultPort();
+    public String getCanonicalServiceName();
+    public Token<?> getDelegationToken(String renewer) throws IOException;
+    public boolean deleteOnExit(Path f) throws IOException;
+    public boolean cancelDeleteOnExit(Path f) throws IOException;
     public Token<?>[] addDelegationTokens(String renewer, Credentials creds)
-        throws IOException {
-      return null;
-    }
-    public String getScheme() {
-      return "dontcheck";
-    }
-    public Path fixRelativePart(Path p) { return null; }
+        throws IOException;
+    public String getScheme();
+    public Path fixRelativePart(Path p);
+    public ContentSummary getContentSummary(Path f);
   }
   
   @Test
   public void testFilterFileSystem() throws Exception {
+    int errors = 0;
     for (Method m : FileSystem.class.getDeclaredMethods()) {
-      if (Modifier.isStatic(m.getModifiers()))
+      if (Modifier.isStatic(m.getModifiers()) ||
+          Modifier.isPrivate(m.getModifiers()) ||
+          Modifier.isFinal(m.getModifiers())) {
         continue;
-      if (Modifier.isPrivate(m.getModifiers()))
-        continue;
-      if (Modifier.isFinal(m.getModifiers()))
-        continue;
-      
+      }
       try {
-        DontCheck.class.getMethod(m.getName(), m.getParameterTypes());
-        LOG.info("Skipping " + m);
+        MustNotImplement.class.getMethod(m.getName(), m.getParameterTypes());
+        try {
+          FilterFileSystem.class.getDeclaredMethod(m.getName(),
+              m.getParameterTypes());
+          LOG.error("FilterFileSystem MUST NOT implement " + m);
+          errors++;
+        } catch (NoSuchMethodException ex) {
+          // Expected
+        }
       } catch (NoSuchMethodException exc) {
-        LOG.info("Testing " + m);
         try{
           FilterFileSystem.class.getDeclaredMethod(m.getName(), m.getParameterTypes());
-        }
-        catch(NoSuchMethodException exc2){
-          LOG.error("FilterFileSystem doesn't implement " + m);
-          throw exc2;
+        } catch(NoSuchMethodException exc2){
+          LOG.error("FilterFileSystem MUST implement " + m);
+          errors++;
         }
       }
     }
+    assertTrue((errors + " methods were not overridden correctly - see" +
+        " log"), errors <= 0);
   }
   
   @Test
