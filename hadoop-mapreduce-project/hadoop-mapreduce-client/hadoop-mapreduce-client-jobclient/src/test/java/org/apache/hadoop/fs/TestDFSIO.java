@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.text.DecimalFormat;
 import java.util.Date;
 import java.util.Random;
 import java.util.StringTokenizer;
@@ -901,19 +902,21 @@ public class TestDFSIO implements Tool {
       if(in != null) in.close();
       if(lines != null) lines.close();
     }
-    
+
     double med = rate / 1000 / tasks;
     double stdDev = Math.sqrt(Math.abs(sqrate / 1000 / tasks - med*med));
+    DecimalFormat df = new DecimalFormat("#.##");
     String resultLines[] = {
-      "----- TestDFSIO ----- : " + testType,
-      "           Date & time: " + new Date(System.currentTimeMillis()),
-      "       Number of files: " + tasks,
-      "Total MBytes processed: " + toMB(size),
-      "     Throughput mb/sec: " + size * 1000.0 / (time * MEGA),
-      "Average IO rate mb/sec: " + med,
-      " IO rate std deviation: " + stdDev,
-      "    Test exec time sec: " + (float)execTime / 1000,
-      "" };
+        "----- TestDFSIO ----- : " + testType,
+        "            Date & time: " + new Date(System.currentTimeMillis()),
+        "        Number of files: " + tasks,
+        " Total MBytes processed: " + df.format(toMB(size)),
+        "      Throughput mb/sec: " + df.format(size * 1000.0 / (time * MEGA)),
+        "Total Throughput mb/sec: " + df.format(toMB(size) / ((float)execTime)),
+        " Average IO rate mb/sec: " + df.format(med),
+        "  IO rate std deviation: " + df.format(stdDev),
+        "     Test exec time sec: " + df.format((float)execTime / 1000),
+        "" };
 
     PrintStream res = null;
     try {
