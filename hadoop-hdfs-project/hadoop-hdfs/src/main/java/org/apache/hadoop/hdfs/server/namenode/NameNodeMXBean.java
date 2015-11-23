@@ -140,9 +140,12 @@ public interface NameNodeMXBean {
   
   /**
    * Gets the total number of files on the cluster
-   * 
+   *
    * @return the total number of files on the cluster
+   * @deprecated Use
+   * {@link org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean#getFilesTotal()} instead.
    */
+  @Deprecated
   public long getTotalFiles();
   
   /**

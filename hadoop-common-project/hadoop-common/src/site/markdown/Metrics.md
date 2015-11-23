@@ -231,7 +231,7 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `MillisSinceLastLoadedEdits` | (HA-only) Time in milliseconds since the last time standby NameNode load edit log. In active NameNode, set to 0 |
 | `BlockCapacity` | Current number of block capacity |
 | `StaleDataNodes` | Current number of DataNodes marked stale due to delayed heartbeat |
-| `TotalFiles` | Current number of files and directories (same as FilesTotal) |
+| `TotalFiles` | Deprecated: Use FilesTotal instead |
 | `MissingReplOneBlocks` | Current number of missing blocks with replication factor 1 |
 | `NumFilesUnderConstruction` | Current number of files under construction |
 | `NumActiveClients` | Current number of active clients holding lease |
