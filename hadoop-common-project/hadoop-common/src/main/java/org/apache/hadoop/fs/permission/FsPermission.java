@@ -258,22 +258,8 @@ public class FsPermission implements Writable {
         String error = "Unable to parse configuration " + UMASK_LABEL
             + " with value " + confUmask + " as " + type + " umask.";
         LOG.warn(error);
-        
-        // If oldUmask is not set, then throw the exception
-        if (oldUmask == Integer.MIN_VALUE) {
-          throw new IllegalArgumentException(error);
-        }
-      }
-        
-      if(oldUmask != Integer.MIN_VALUE) { // Property was set with old key
-        if (umask != oldUmask) {
-          LOG.warn(DEPRECATED_UMASK_LABEL
-              + " configuration key is deprecated. " + "Convert to "
-              + UMASK_LABEL + ", using octal or symbolic umask "
-              + "specifications.");
-          // Old and new umask values do not match - Use old umask
-          umask = oldUmask;
-        }
+
+        throw new IllegalArgumentException(error);
       }
     }
     

@@ -35,6 +35,9 @@ Trunk (Unreleased)
     HADOOP-10787 Rename/remove non-HADOOP_*, etc from the shell scripts.
     (aw via vvasudev)
 
+    HADOOP-12294. Remove the support of the deprecated dfs.umask.
+    (Chang Li vha wheat9)
+
   NEW FEATURES
 
     HADOOP-6590. Add a username check for hadoop sub-commands (John Smith via
