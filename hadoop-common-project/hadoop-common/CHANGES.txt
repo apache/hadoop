@@ -1440,6 +1440,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12467. Respect user-defined JAVA_LIBRARY_PATH in Windows Hadoop
     scripts. (Radhey Shah via wheat9)
 
+    HADOOP-12181. Fix intermittent test failure of TestZKSignerSecretProvider.
+    (Masatake Iwasaki via wheat9)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
