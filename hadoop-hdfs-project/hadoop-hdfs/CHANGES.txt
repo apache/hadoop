@@ -2342,6 +2342,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8914. Document HA support in the HDFS HdfsDesign.md.
     (Lars Francke via wheat9)
 
+    HDFS-6885. Fix wrong use of BytesWritable in FSEditLogOp#RenameOp.
+    (Yi Liu via wheat9)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
