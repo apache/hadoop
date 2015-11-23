@@ -2359,6 +2359,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9435. TestBlockRecovery#testRBWReplicas is failing intermittently.
     (Rakesh R via waltersu4549)
 
+    HDFS-9423. Fix intermittent failure of TestEditLogTailer.
+    (Masatake Iwasaki via waltersu4549)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
