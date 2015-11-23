@@ -1454,6 +1454,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12098. Remove redundant test dependencies in Hadoop Archives.
     (Varun Saxena via wheat9)
 
+    HADOOP-10068. Improve log4j regex in testFindContainingJar.
+    (Robert Rati via wheat9)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
