@@ -12,6 +12,9 @@ Release 2.7.6 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-12181. Fix intermittent test failure of TestZKSignerSecretProvider.
+    (Masatake Iwasaki via wheat9)
+
 Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES

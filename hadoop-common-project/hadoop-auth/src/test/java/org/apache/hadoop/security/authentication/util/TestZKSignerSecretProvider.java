@@ -22,11 +22,20 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class TestZKSignerSecretProvider {
 
   private TestingServer zkServer;
+
+  // rollover every 2 sec
+  private final int timeout = 4000;
+  private final long rolloverFrequency = Long.valueOf(timeout / 2);
 
   @Before
   public void setup() throws Exception {
@@ -45,14 +54,14 @@ public class TestZKSignerSecretProvider {
   // Test just one ZKSignerSecretProvider to verify that it works in the
   // simplest case
   public void testOne() throws Exception {
-    long rolloverFrequency = 15 * 1000; // rollover every 15 sec
     // use the same seed so we can predict the RNG
     long seed = System.currentTimeMillis();
     Random rand = new Random(seed);
     byte[] secret2 = Long.toString(rand.nextLong()).getBytes();
     byte[] secret1 = Long.toString(rand.nextLong()).getBytes();
     byte[] secret3 = Long.toString(rand.nextLong()).getBytes();
-    ZKSignerSecretProvider secretProvider = new ZKSignerSecretProvider(seed);
+    ZKSignerSecretProvider secretProvider =
+        spy(new ZKSignerSecretProvider(seed));
     Properties config = new Properties();
     config.setProperty(
         ZKSignerSecretProvider.ZOOKEEPER_CONNECTION_STRING,
@@ -68,7 +77,7 @@ public class TestZKSignerSecretProvider {
       Assert.assertEquals(2, allSecrets.length);
       Assert.assertArrayEquals(secret1, allSecrets[0]);
       Assert.assertNull(allSecrets[1]);
-      Thread.sleep((rolloverFrequency + 2000));
+      verify(secretProvider, timeout(timeout).times(1)).rollSecret();
 
       currentSecret = secretProvider.getCurrentSecret();
       allSecrets = secretProvider.getAllSecrets();
@@ -76,7 +85,7 @@ public class TestZKSignerSecretProvider {
       Assert.assertEquals(2, allSecrets.length);
       Assert.assertArrayEquals(secret2, allSecrets[0]);
       Assert.assertArrayEquals(secret1, allSecrets[1]);
-      Thread.sleep((rolloverFrequency + 2000));
+      verify(secretProvider, timeout(timeout).times(2)).rollSecret();
 
       currentSecret = secretProvider.getCurrentSecret();
       allSecrets = secretProvider.getAllSecrets();
@@ -84,7 +93,7 @@ public class TestZKSignerSecretProvider {
       Assert.assertEquals(2, allSecrets.length);
       Assert.assertArrayEquals(secret3, allSecrets[0]);
       Assert.assertArrayEquals(secret2, allSecrets[1]);
-      Thread.sleep((rolloverFrequency + 2000));
+      verify(secretProvider, timeout(timeout).times(3)).rollSecret();
     } finally {
       secretProvider.destroy();
     }
@@ -92,7 +101,6 @@ public class TestZKSignerSecretProvider {
 
   @Test
   public void testMultipleInit() throws Exception {
-    long rolloverFrequency = 15 * 1000; // rollover every 15 sec
     // use the same seed so we can predict the RNG
     long seedA = System.currentTimeMillis();
     Random rand = new Random(seedA);
@@ -108,9 +116,12 @@ public class TestZKSignerSecretProvider {
     rand = new Random(seedC);
     byte[] secretC2 = Long.toString(rand.nextLong()).getBytes();
     byte[] secretC1 = Long.toString(rand.nextLong()).getBytes();
-    ZKSignerSecretProvider secretProviderA = new ZKSignerSecretProvider(seedA);
-    ZKSignerSecretProvider secretProviderB = new ZKSignerSecretProvider(seedB);
-    ZKSignerSecretProvider secretProviderC = new ZKSignerSecretProvider(seedC);
+    ZKSignerSecretProvider secretProviderA =
+        spy(new ZKSignerSecretProvider(seedA));
+    ZKSignerSecretProvider secretProviderB =
+        spy(new ZKSignerSecretProvider(seedB));
+    ZKSignerSecretProvider secretProviderC =
+        spy(new ZKSignerSecretProvider(seedC));
     Properties config = new Properties();
     config.setProperty(
         ZKSignerSecretProvider.ZOOKEEPER_CONNECTION_STRING,
@@ -152,7 +163,9 @@ public class TestZKSignerSecretProvider {
         Assert.fail("It appears that they all agreed on the same secret, but "
                 + "not one of the secrets they were supposed to");
       }
-      Thread.sleep((rolloverFrequency + 2000));
+      verify(secretProviderA, timeout(timeout).times(1)).rollSecret();
+      verify(secretProviderB, timeout(timeout).times(1)).rollSecret();
+      verify(secretProviderC, timeout(timeout).times(1)).rollSecret();
 
       currentSecretA = secretProviderA.getCurrentSecret();
       allSecretsA = secretProviderA.getAllSecrets();
@@ -187,8 +200,6 @@ public class TestZKSignerSecretProvider {
 
   @Test
   public void testMultipleUnsychnronized() throws Exception {
-    long rolloverFrequency = 15 * 1000; // rollover every 15 sec
-    // use the same seed so we can predict the RNG
     long seedA = System.currentTimeMillis();
     Random rand = new Random(seedA);
     byte[] secretA2 = Long.toString(rand.nextLong()).getBytes();
@@ -200,8 +211,10 @@ public class TestZKSignerSecretProvider {
     byte[] secretB2 = Long.toString(rand.nextLong()).getBytes();
     byte[] secretB1 = Long.toString(rand.nextLong()).getBytes();
     byte[] secretB3 = Long.toString(rand.nextLong()).getBytes();
-    ZKSignerSecretProvider secretProviderA = new ZKSignerSecretProvider(seedA);
-    ZKSignerSecretProvider secretProviderB = new ZKSignerSecretProvider(seedB);
+    ZKSignerSecretProvider secretProviderA =
+        spy(new ZKSignerSecretProvider(seedA));
+    ZKSignerSecretProvider secretProviderB =
+        spy(new ZKSignerSecretProvider(seedB));
     Properties config = new Properties();
     config.setProperty(
         ZKSignerSecretProvider.ZOOKEEPER_CONNECTION_STRING,
@@ -217,7 +230,7 @@ public class TestZKSignerSecretProvider {
       Assert.assertEquals(2, allSecretsA.length);
       Assert.assertArrayEquals(secretA1, allSecretsA[0]);
       Assert.assertNull(allSecretsA[1]);
-      Thread.sleep((rolloverFrequency + 2000));
+      verify(secretProviderA, timeout(timeout).times(1)).rollSecret();
 
       currentSecretA = secretProviderA.getCurrentSecret();
       allSecretsA = secretProviderA.getAllSecrets();
@@ -235,7 +248,8 @@ public class TestZKSignerSecretProvider {
       Assert.assertEquals(2, allSecretsA.length);
       Assert.assertArrayEquals(secretA2, allSecretsB[0]);
       Assert.assertArrayEquals(secretA1, allSecretsB[1]);
-      Thread.sleep((rolloverFrequency));
+      verify(secretProviderA, timeout(timeout).times(2)).rollSecret();
+      verify(secretProviderB, timeout(timeout).times(1)).rollSecret();
 
       currentSecretA = secretProviderA.getCurrentSecret();
       allSecretsA = secretProviderA.getAllSecrets();
@@ -261,10 +275,10 @@ public class TestZKSignerSecretProvider {
   }
 
   private ServletContext getDummyServletContext() {
-    ServletContext servletContext = Mockito.mock(ServletContext.class);
-    Mockito.when(servletContext.getAttribute(ZKSignerSecretProvider
-            .ZOOKEEPER_SIGNER_SECRET_PROVIDER_CURATOR_CLIENT_ATTRIBUTE))
-            .thenReturn(null);
+    ServletContext servletContext = mock(ServletContext.class);
+    when(servletContext.getAttribute(ZKSignerSecretProvider
+        .ZOOKEEPER_SIGNER_SECRET_PROVIDER_CURATOR_CLIENT_ATTRIBUTE))
+        .thenReturn(null);
     return servletContext;
   }
 }
