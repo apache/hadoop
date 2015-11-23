@@ -901,7 +901,7 @@ public class FifoScheduler extends
     this.nodes.remove(nodeInfo.getNodeID());
     
     // Update cluster metrics
-    Resources.subtractFrom(clusterResource, node.getRMNode().getTotalCapability());
+    Resources.subtractFrom(clusterResource, node.getTotalResource());
   }
 
   @Override
@@ -916,9 +916,10 @@ public class FifoScheduler extends
   }
 
   private synchronized void addNode(RMNode nodeManager) {
-    this.nodes.put(nodeManager.getNodeID(), new FiCaSchedulerNode(nodeManager,
-        usePortForNodeName));
-    Resources.addTo(clusterResource, nodeManager.getTotalCapability());
+    FiCaSchedulerNode schedulerNode = new FiCaSchedulerNode(nodeManager,
+        usePortForNodeName);
+    this.nodes.put(nodeManager.getNodeID(), schedulerNode);
+    Resources.addTo(clusterResource, schedulerNode.getTotalResource());
   }
 
   @Override
