@@ -28,6 +28,9 @@ Release 2.7.3 - UNRELEASED
     YARN-3769. Consider user limit when calculating total pending resource for 
     preemption policy in Capacity Scheduler. (Eric Payne via wangda)
 
+    YARN-4344. NMs reconnecting with changed capabilities can lead to wrong
+    cluster resource calculations (Varun Vasudev via jlowe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -907,6 +910,9 @@ Release 2.6.3 - UNRELEASED
 
     YARN-2859. ApplicationHistoryServer binds to default port 8188 in MiniYARNCluster.
     (Vinod Kumar Vavilapalli via xgong)
+
+    YARN-4344. NMs reconnecting with changed capabilities can lead to wrong
+    cluster resource calculations (Varun Vasudev via jlowe)
 
 Release 2.6.2 - 2015-10-28
 
