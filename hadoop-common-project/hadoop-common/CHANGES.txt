@@ -1463,6 +1463,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11677. Add cookie flags for logs and static contexts.
     (nijel via wheat9)
 
+    HADOOP-12313. NPE in JvmPauseMonitor when calling stop() before start().
+    (Gabor Liptak via wheat9)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
