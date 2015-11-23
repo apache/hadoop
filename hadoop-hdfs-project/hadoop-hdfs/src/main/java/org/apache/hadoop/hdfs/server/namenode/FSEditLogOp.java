@@ -2707,9 +2707,10 @@ public abstract class FSEditLogOp {
       writable.readFields(in);
 
       byte[] bytes = writable.getBytes();
-      Rename[] options = new Rename[bytes.length];
+      int len = writable.getLength();
+      Rename[] options = new Rename[len];
 
-      for (int i = 0; i < bytes.length; i++) {
+      for (int i = 0; i < len; i++) {
         options[i] = Rename.valueOf(bytes[i]);
       }
       return options;
