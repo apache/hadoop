@@ -2345,6 +2345,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-6885. Fix wrong use of BytesWritable in FSEditLogOp#RenameOp.
     (Yi Liu via wheat9)
 
+    HDFS-7897. Shutdown metrics when stopping JournalNode.
+    (zhouyingchao via wheat9)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
