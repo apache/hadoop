@@ -1434,6 +1434,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11218. Add TLSv1.1,TLSv1.2 to KMS, HttpFS, SSLFactory.
     (Vijay Singh via wheat9)
 
+    HADOOP-12467. Respect user-defined JAVA_LIBRARY_PATH in Windows Hadoop
+    scripts. (Radhey Shah via wheat9)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
