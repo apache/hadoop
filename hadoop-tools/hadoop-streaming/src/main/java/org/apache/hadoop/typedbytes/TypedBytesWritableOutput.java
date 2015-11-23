@@ -131,7 +131,7 @@ public class TypedBytesWritableOutput {
     } else if (w instanceof MapWritable) {
       writeMap((MapWritable) w);
     } else if (w instanceof SortedMapWritable) {
-      writeSortedMap((SortedMapWritable) w);
+      writeSortedMap((SortedMapWritable<?>) w);
     } else if (w instanceof Record) {
       writeRecord((Record) w);
     } else {
@@ -200,9 +200,9 @@ public class TypedBytesWritableOutput {
     }
   }
 
-  public void writeSortedMap(SortedMapWritable smw) throws IOException {
+  public void writeSortedMap(SortedMapWritable<?> smw) throws IOException {
     out.writeMapHeader(smw.size());
-    for (Map.Entry<WritableComparable, Writable> entry : smw.entrySet()) {
+    for (Map.Entry<? extends WritableComparable<?>, Writable> entry : smw.entrySet()) {
       write(entry.getKey());
       write(entry.getValue());
     }
