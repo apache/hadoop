@@ -19,6 +19,12 @@
 package org.apache.hadoop.metrics2.source;
 
 import org.apache.hadoop.service.ServiceOperations;
+import org.apache.hadoop.service.ServiceStateException;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
 import org.junit.Test;
 
 import static org.mockito.Mockito.*;
@@ -34,41 +40,84 @@ import static org.apache.hadoop.metrics2.impl.MsInfo.*;
 
 public class TestJvmMetrics {
 
-  @Test(timeout = 30000)
-  public void testPresence() {
-    JvmPauseMonitor pauseMonitor = new JvmPauseMonitor();
-    try {
-      pauseMonitor.init(new Configuration());
-      pauseMonitor.start();
-      JvmMetrics jvmMetrics = new JvmMetrics("test", "test");
-      jvmMetrics.setPauseMonitor(pauseMonitor);
-      MetricsRecordBuilder rb = getMetrics(jvmMetrics);
-      MetricsCollector mc = rb.parent();
+  @Rule
+  public Timeout timeout = new Timeout(30000);
+  private JvmPauseMonitor pauseMonitor;
 
-      verify(mc).addRecord(JvmMetrics);
-      verify(rb).tag(ProcessName, "test");
-      verify(rb).tag(SessionId, "test");
-      for (JvmMetricsInfo info : JvmMetricsInfo.values()) {
-        if (info.name().startsWith("Mem"))
-          verify(rb).addGauge(eq(info), anyFloat());
-        else if (info.name().startsWith("Gc"))
-          verify(rb).addCounter(eq(info), anyLong());
-        else if (info.name().startsWith("Threads"))
-          verify(rb).addGauge(eq(info), anyInt());
-        else if (info.name().startsWith("Log"))
-          verify(rb).addCounter(eq(info), anyLong());
-      }
-    } finally {
-      ServiceOperations.stop(pauseMonitor);
+  /**
+   * Robust shutdown of the pause monitor if it hasn't been stopped already.
+   */
+  @After
+  public void teardown() {
+    ServiceOperations.stop(pauseMonitor);
+  }
+
+  @Test
+  public void testPresence() {
+    pauseMonitor = new JvmPauseMonitor();
+    pauseMonitor.init(new Configuration());
+    pauseMonitor.start();
+    JvmMetrics jvmMetrics = new JvmMetrics("test", "test");
+    jvmMetrics.setPauseMonitor(pauseMonitor);
+    MetricsRecordBuilder rb = getMetrics(jvmMetrics);
+    MetricsCollector mc = rb.parent();
+
+    verify(mc).addRecord(JvmMetrics);
+    verify(rb).tag(ProcessName, "test");
+    verify(rb).tag(SessionId, "test");
+    for (JvmMetricsInfo info : JvmMetricsInfo.values()) {
+      if (info.name().startsWith("Mem"))
+        verify(rb).addGauge(eq(info), anyFloat());
+      else if (info.name().startsWith("Gc"))
+        verify(rb).addCounter(eq(info), anyLong());
+      else if (info.name().startsWith("Threads"))
+        verify(rb).addGauge(eq(info), anyInt());
+      else if (info.name().startsWith("Log"))
+        verify(rb).addCounter(eq(info), anyLong());
     }
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testDoubleStop() throws Throwable {
-    JvmPauseMonitor pauseMonitor = new JvmPauseMonitor();
+    pauseMonitor = new JvmPauseMonitor();
     pauseMonitor.init(new Configuration());
     pauseMonitor.start();
     pauseMonitor.stop();
     pauseMonitor.stop();
   }
+
+  @Test
+  public void testDoubleStart() throws Throwable {
+    pauseMonitor = new JvmPauseMonitor();
+    pauseMonitor.init(new Configuration());
+    pauseMonitor.start();
+    pauseMonitor.start();
+    pauseMonitor.stop();
+  }
+
+  @Test
+  public void testStopBeforeStart() throws Throwable {
+    pauseMonitor = new JvmPauseMonitor();
+    try {
+      pauseMonitor.init(new Configuration());
+      pauseMonitor.stop();
+      pauseMonitor.start();
+      Assert.fail("Expected an exception, got " + pauseMonitor);
+    } catch (ServiceStateException e) {
+      GenericTestUtils.assertExceptionContains("cannot enter state", e);
+    }
+  }
+
+  @Test
+  public void testStopBeforeInit() throws Throwable {
+    pauseMonitor = new JvmPauseMonitor();
+    try {
+      pauseMonitor.stop();
+      pauseMonitor.init(new Configuration());
+      Assert.fail("Expected an exception, got " + pauseMonitor);
+    } catch (ServiceStateException e) {
+      GenericTestUtils.assertExceptionContains("cannot enter state", e);
+    }
+  }
+
 }
