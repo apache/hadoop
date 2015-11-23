@@ -16,28 +16,34 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone;
+package org.apache.hadoop.ozone.web;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.ozone.web.handlers.BucketHandler;
+import org.apache.hadoop.ozone.web.handlers.VolumeHandler;
+
+import javax.ws.rs.core.Application;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
- * This class contains constants for configuration keys used in Ozone.
+ * Ozone Application.
  */
-@InterfaceAudience.Private
-public final class OzoneConfigKeys {
-  public static final String DFS_STORAGE_LOCAL_ROOT =
-      "dfs.ozone.localstorage.root";
-  public static final String DFS_STORAGE_LOCAL_ROOT_DEFAULT = "/tmp/ozone";
-  public static final String DFS_OBJECTSTORE_ENABLED_KEY =
-      "dfs.objectstore.enabled";
-  public static final boolean DFS_OBJECTSTORE_ENABLED_DEFAULT = false;
-  public static final String DFS_STORAGE_HANDLER_TYPE_KEY =
-      "dfs.storage.handler.type";
-  public static final String DFS_STORAGE_HANDLER_TYPE_DEFAULT = "distributed";
+public class ObjectStoreApplication extends Application {
+  public ObjectStoreApplication() {
+    super();
+  }
 
-  /**
-   * There is no need to instantiate this class.
-   */
-  private OzoneConfigKeys() {
+  @Override
+  public Set<Class<?>> getClasses() {
+    HashSet<Class<?>> set = new HashSet<>();
+    set.add(BucketHandler.class);
+    set.add(VolumeHandler.class);
+    return set;
+  }
+
+  @Override
+  public Set<Object> getSingletons() {
+    HashSet<Object> set = new HashSet<>();
+    return set;
   }
 }

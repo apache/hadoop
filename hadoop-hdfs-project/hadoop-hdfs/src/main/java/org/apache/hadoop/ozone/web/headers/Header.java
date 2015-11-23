@@ -35,6 +35,7 @@ public final class Header {
   public static final String OZONE_USER = "x-ozone-user";
   public static final String OZONE_SIMPLE_AUTHENTICATION_SCHEME = "OZONE";
   public static final String OZONE_VERSION_HEADER = "x-ozone-version";
+  public static final String OZONE_V1_VERSION_HEADER ="v1";
 
   public static final String OZONE_LIST_QUERY_SERVICE = "service";
   public static final String OZONE_LIST_QUERY_VOLUME = "volume";

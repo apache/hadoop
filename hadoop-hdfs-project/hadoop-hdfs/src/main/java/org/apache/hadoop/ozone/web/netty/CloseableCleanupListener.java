@@ -15,29 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.ozone.web.netty;
 
-package org.apache.hadoop.ozone;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import org.apache.hadoop.io.IOUtils;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import java.io.Closeable;
 
 /**
- * This class contains constants for configuration keys used in Ozone.
+ * A {@link ChannelFutureListener} that closes {@link Closeable} resources.
  */
-@InterfaceAudience.Private
-public final class OzoneConfigKeys {
-  public static final String DFS_STORAGE_LOCAL_ROOT =
-      "dfs.ozone.localstorage.root";
-  public static final String DFS_STORAGE_LOCAL_ROOT_DEFAULT = "/tmp/ozone";
-  public static final String DFS_OBJECTSTORE_ENABLED_KEY =
-      "dfs.objectstore.enabled";
-  public static final boolean DFS_OBJECTSTORE_ENABLED_DEFAULT = false;
-  public static final String DFS_STORAGE_HANDLER_TYPE_KEY =
-      "dfs.storage.handler.type";
-  public static final String DFS_STORAGE_HANDLER_TYPE_DEFAULT = "distributed";
+final class CloseableCleanupListener implements ChannelFutureListener {
+
+  private final Closeable[] closeables;
 
   /**
-   * There is no need to instantiate this class.
+   * Creates a new CloseableCleanupListener.
+   *
+   * @param closeables any number of closeable resources
    */
-  private OzoneConfigKeys() {
+  public CloseableCleanupListener(Closeable... closeables) {
+    this.closeables = closeables;
+  }
+
+  @Override
+  public void operationComplete(ChannelFuture future) {
+    IOUtils.cleanup(null, closeables);
   }
 }
