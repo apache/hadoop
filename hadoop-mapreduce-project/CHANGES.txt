@@ -311,6 +311,17 @@ Release 2.6.3 - UNRELEASED
     MAPREDUCE-6528. Memory leak for HistoryFileManager.getJobSummary()
     (Junping Du via jlowe)
 
+    MAPREDUCE-6377. JHS sorting on state column not working in webUi.
+    (zhihai xu via devaraj)
+
+    MAPREDUCE-5948. org.apache.hadoop.mapred.LineRecordReader does not handle
+    multibyte record delimiters well (Vinayakumar B, Rushabh Shah, and Akira
+    AJISAKA via jlowe)
+
+    MAPREDUCE-6481. LineRecordReader may give incomplete record and wrong
+    position/key information for uncompressed input sometimes. (Zhihai Xu via
+    jlowe)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
