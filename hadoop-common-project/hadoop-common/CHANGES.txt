@@ -812,6 +812,9 @@ Release 2.6.3 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-12577. Bumped up commons-collections version to 3.2.2 to address a
+    security flaw. (Wei-Chiu Chuang via vinodkv)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
