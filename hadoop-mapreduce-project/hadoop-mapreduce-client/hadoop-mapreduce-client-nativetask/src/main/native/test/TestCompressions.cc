@@ -185,7 +185,7 @@ void MeasureSingleFileLz4(const string & path, CompressResult & total, size_t bl
     size_t currentblocksize = std::min(data.length() - start, blockSize);
     uint64_t startTime = t.now();
     for (int i = 0; i < times; i++) {
-      int osize = LZ4_compress_default((char*)data.data() + start, outputBuffer, currentblocksize, LZ4_compressBound(currentblocksize));
+      int osize = LZ4_compress((char*)data.data() + start, outputBuffer, currentblocksize);
       result.compressedSize += osize;
       result.uncompressedSize += currentblocksize;
     }

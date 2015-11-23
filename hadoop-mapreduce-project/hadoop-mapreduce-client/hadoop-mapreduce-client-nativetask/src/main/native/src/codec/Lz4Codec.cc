@@ -35,7 +35,7 @@ Lz4CompressStream::Lz4CompressStream(OutputStream * stream, uint32_t bufferSizeH
 
 void Lz4CompressStream::compressOneBlock(const void * buff, uint32_t length) {
   size_t compressedLength = _tempBufferSize - 8;
-  int ret = LZ4_compress_default((char*)buff, _tempBuffer + 8, length, LZ4_compressBound(length));
+  int ret = LZ4_compress((char*)buff, _tempBuffer + 8, length);
   if (ret > 0) {
     compressedLength = ret;
     ((uint32_t*)_tempBuffer)[0] = bswap(length);

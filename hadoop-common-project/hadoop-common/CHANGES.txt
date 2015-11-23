@@ -971,8 +971,6 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12575. Add build instruction for docker toolbox instead of
     boot2docker(Kai Sasaki via ozawa)
 
-    HADOOP-12572. Update Hadoop's lz4 to r131. (Kevin Bowling via wheat9)
-
     HADOOP-10035. Cleanup TestFilterFileSystem. (Suresh Srinivas via wheat9)
 
     HADOOP-10555. Add offset support to MurmurHash.
