@@ -2348,6 +2348,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7897. Shutdown metrics when stopping JournalNode.
     (zhouyingchao via wheat9)
 
+    HDFS-9356. Decommissioning node does not have Last Contact value in the UI.
+    (Surendra Singh Lilhore via wheat9)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
