@@ -255,6 +255,40 @@ Currently, the trash feature is disabled by default (deleting files without stor
 
 When the replication factor of a file is reduced, the NameNode selects excess replicas that can be deleted. The next Heartbeat transfers this information to the DataNode. The DataNode then removes the corresponding blocks and the corresponding free space appears in the cluster. Once again, there might be a time delay between the completion of the setReplication API call and the appearance of free space in the cluster.
 
+### HDFS Trash Management
+
+Following is an example which will show how the files are deleted from HDFS.
+We created 2 files (test1 & test2) under the directory delete
+
+$ hadoop fs -mkdir -p delete/test1
+$ hadoop fs -mkdir -p delete/test2
+$ hadoop fs -ls delete/
+Found 2 items
+drwxr-xr-x   - hadoop hadoop          0 2015-05-08 12:39 delete/test1
+drwxr-xr-x   - hadoop hadoop          0 2015-05-08 12:40 delete/test2
+
+We are going to remove the file test1.The comment below shows that the file has been moved to Trash directory and it will be deleted after a period of 1440 mins which is the time set up in core-site.xml  file.
+
+$ hadoop fs -rm -r delete/test1
+
+15/05/08 12:40:43 INFO fs.TrashPolicyDefault: Namenode trash configuration: Deletion interval = 1440 minutes, Emptier interval = 0 minutes.
+Moved: 'hdfs://localhost:8020/user/hadoop/delete/test1' to trash at: hdfs://localhost:8020/user/hadoop/.Trash/Current
+
+now we are going to remove the file with skipTrash option , which will not send the file to Trash.It will be completely removed from HDFS.
+
+$ hadoop fs -rm -r -skipTrash delete/test2
+Deleted delete/test2
+
+ We can see now that the Trash directory contains only file test1
+$ hadoop fs -ls .Trash/Current/user/hadoop/delete/
+Found 1 items\
+drwxr-xr-x   - hadoop hadoop          0 2015-05-08 12:39 .Trash/Current/user/hadoop/delete/test1
+
+so file test1 goes to Trash  and file test2 is deleted permanently
+
+ The below command will empty the Trash folder and all the files in .Trash folder will be deleted.
+$ hadoop fs -expunge
+
 References
 ----------
 
