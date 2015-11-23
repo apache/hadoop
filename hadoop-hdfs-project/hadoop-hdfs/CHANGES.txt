@@ -8,6 +8,8 @@ Release 2.7.5 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-9153. Pretty-format the output for DFSIO. (Kai Zheng via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
