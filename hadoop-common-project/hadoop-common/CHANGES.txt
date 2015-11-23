@@ -975,6 +975,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-10035. Cleanup TestFilterFileSystem. (Suresh Srinivas via wheat9)
 
+    HADOOP-10555. Add offset support to MurmurHash.
+    (Sergey Shelukhin via wheat9)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
