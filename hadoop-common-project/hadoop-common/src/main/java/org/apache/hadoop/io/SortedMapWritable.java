@@ -36,15 +36,15 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class SortedMapWritable extends AbstractMapWritable
-  implements SortedMap<WritableComparable, Writable> {
+public class SortedMapWritable<K extends WritableComparable<? super K>> extends AbstractMapWritable
+  implements SortedMap<K, Writable> {
   
-  private SortedMap<WritableComparable, Writable> instance;
+  private SortedMap<K, Writable> instance;
   
   /** default constructor. */
   public SortedMapWritable() {
     super();
-    this.instance = new TreeMap<WritableComparable, Writable>();
+    this.instance = new TreeMap<K, Writable>();
   }
   
   /**
@@ -52,45 +52,39 @@ public class SortedMapWritable extends AbstractMapWritable
    * 
    * @param other the map to copy from
    */
-  public SortedMapWritable(SortedMapWritable other) {
+  public SortedMapWritable(SortedMapWritable<K> other) {
     this();
     copy(other);
   }
 
   @Override
-  public Comparator<? super WritableComparable> comparator() {
+  public Comparator<? super K> comparator() {
     // Returning null means we use the natural ordering of the keys
     return null;
   }
 
   @Override
-  public WritableComparable firstKey() {
+  public K firstKey() {
     return instance.firstKey();
   }
 
   @Override
-  public SortedMap<WritableComparable, Writable>
-  headMap(WritableComparable toKey) {
-    
+  public SortedMap<K, Writable> headMap(K toKey) {
     return instance.headMap(toKey);
   }
 
   @Override
-  public WritableComparable lastKey() {
+  public K lastKey() {
     return instance.lastKey();
   }
 
   @Override
-  public SortedMap<WritableComparable, Writable>
-  subMap(WritableComparable fromKey, WritableComparable toKey) {
-    
+  public SortedMap<K, Writable> subMap(K fromKey, K toKey) {
     return instance.subMap(fromKey, toKey);
   }
 
   @Override
-  public SortedMap<WritableComparable, Writable>
-  tailMap(WritableComparable fromKey) {
-    
+  public SortedMap<K, Writable> tailMap(K fromKey) {
     return instance.tailMap(fromKey);
   }
 
@@ -110,7 +104,7 @@ public class SortedMapWritable extends AbstractMapWritable
   }
 
   @Override
-  public Set<java.util.Map.Entry<WritableComparable, Writable>> entrySet() {
+  public Set<Map.Entry<K, Writable>> entrySet() {
     return instance.entrySet();
   }
 
@@ -125,22 +119,21 @@ public class SortedMapWritable extends AbstractMapWritable
   }
 
   @Override
-  public Set<WritableComparable> keySet() {
+  public Set<K> keySet() {
     return instance.keySet();
   }
 
   @Override
-  public Writable put(WritableComparable key, Writable value) {
+  public Writable put(K key, Writable value) {
     addToMap(key.getClass());
     addToMap(value.getClass());
     return instance.put(key, value);
   }
 
   @Override
-  public void putAll(Map<? extends WritableComparable, ? extends Writable> t) {
-    for (Map.Entry<? extends WritableComparable, ? extends Writable> e:
+  public void putAll(Map<? extends K, ? extends Writable> t) {
+    for (Map.Entry<? extends K, ? extends Writable> e:
       t.entrySet()) {
-      
       put(e.getKey(), e.getValue());
     }
   }
@@ -172,8 +165,8 @@ public class SortedMapWritable extends AbstractMapWritable
     // Then read each key/value pair
     
     for (int i = 0; i < entries; i++) {
-      WritableComparable key =
-        (WritableComparable) ReflectionUtils.newInstance(getClass(
+      K key =
+        (K) ReflectionUtils.newInstance(getClass(
             in.readByte()), getConf());
       
       key.readFields(in);
@@ -196,7 +189,7 @@ public class SortedMapWritable extends AbstractMapWritable
     
     // Then write out each key/value pair
     
-    for (Map.Entry<WritableComparable, Writable> e: instance.entrySet()) {
+    for (Map.Entry<K, Writable> e: instance.entrySet()) {
       out.writeByte(getId(e.getKey().getClass()));
       e.getKey().write(out);
       out.writeByte(getId(e.getValue().getClass()));
@@ -211,7 +204,7 @@ public class SortedMapWritable extends AbstractMapWritable
     }
 
     if (obj instanceof SortedMapWritable) {
-      Map map = (Map) obj;
+      Map<?,?> map = (Map<?,?>) obj;
       if (size() != map.size()) {
         return false;
       }
