@@ -5927,6 +5927,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return getBlocksTotal();
   }
 
+  /** @deprecated Use {@link #getFilesTotal()} instead. */
+  @Deprecated
   @Override // NameNodeMXBean
   @Metric
   public long getTotalFiles() {

@@ -145,7 +145,7 @@ public class FSImage implements Closeable {
   }
  
   void format(FSNamesystem fsn, String clusterId) throws IOException {
-    long fileCount = fsn.getTotalFiles();
+    long fileCount = fsn.getFilesTotal();
     // Expect 1 file, which is the root inode
     Preconditions.checkState(fileCount == 1,
         "FSImage.format should be called with an uninitialized namesystem, has " +
