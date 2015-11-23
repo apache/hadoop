@@ -2353,6 +2353,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9024. Deprecate the TotalFiles metric. (Akira Ajisaka via wheat9)
 
+    HDFS-9428. Fix intermittent failure of
+    TestDNFencing.testQueueingWithAppend. (Masatake Iwasaki via waltersu4549)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
