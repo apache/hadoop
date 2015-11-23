@@ -42,6 +42,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9505. HDFS Architecture documentation needs to be refreshed.
     (Masatake Iwasaki via aajisaka)
 
+    HDFS-8914. Document HA support in the HDFS HdfsDesign.md.
+    (Lars Francke via wheat9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
