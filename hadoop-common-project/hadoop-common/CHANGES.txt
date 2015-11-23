@@ -1460,6 +1460,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-10068. Improve log4j regex in testFindContainingJar.
     (Robert Rati via wheat9)
 
+    HADOOP-11677. Add cookie flags for logs and static contexts.
+    (nijel via wheat9)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

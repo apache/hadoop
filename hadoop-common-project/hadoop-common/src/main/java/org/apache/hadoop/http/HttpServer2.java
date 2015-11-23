@@ -86,6 +86,7 @@ import org.mortbay.jetty.servlet.AbstractSessionManager;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;
 import org.mortbay.jetty.servlet.FilterHolder;
+import org.mortbay.jetty.servlet.SessionHandler;
 import org.mortbay.jetty.servlet.FilterMapping;
 import org.mortbay.jetty.servlet.ServletHandler;
 import org.mortbay.jetty.servlet.ServletHolder;
@@ -521,6 +522,14 @@ public final class HttpServer2 implements FilterContainer {
             "org.mortbay.jetty.servlet.Default.aliases", "true");
       }
       logContext.setDisplayName("logs");
+      SessionHandler handler = new SessionHandler();
+      SessionManager sm = handler.getSessionManager();
+      if (sm instanceof AbstractSessionManager) {
+        AbstractSessionManager asm = (AbstractSessionManager) sm;
+        asm.setHttpOnly(true);
+        asm.setSecureCookies(true);
+      }
+      logContext.setSessionHandler(handler);
       setContextAttributes(logContext, conf);
       addNoCacheFilter(webAppContext);
       defaultContexts.put(logContext, true);
@@ -530,6 +539,14 @@ public final class HttpServer2 implements FilterContainer {
     staticContext.setResourceBase(appDir + "/static");
     staticContext.addServlet(DefaultServlet.class, "/*");
     staticContext.setDisplayName("static");
+    SessionHandler handler = new SessionHandler();
+    SessionManager sm = handler.getSessionManager();
+    if (sm instanceof AbstractSessionManager) {
+      AbstractSessionManager asm = (AbstractSessionManager) sm;
+      asm.setHttpOnly(true);
+      asm.setSecureCookies(true);
+    }
+    staticContext.setSessionHandler(handler);
     setContextAttributes(staticContext, conf);
     defaultContexts.put(staticContext, true);
   }
