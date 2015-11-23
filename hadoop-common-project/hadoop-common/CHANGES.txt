@@ -1358,6 +1358,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11149. TestZKFailoverController times out. (Steve Loughran
     via ozawa)
 
+    HADOOP-9822. Create constant MAX_CAPACITY in RetryCache rather than
+    hard-coding 16 in RetryCache constructor. (Tsuyoshi Ozawa via wheat9)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
