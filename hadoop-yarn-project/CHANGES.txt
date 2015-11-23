@@ -33,6 +33,9 @@ Release 2.6.3 - UNRELEASED
     YARN-3925. ContainerLogsUtils#getContainerLogFile fails to read container
     log files from full disks. (zhihai xu via jlowe)
 
+    YARN-3878. AsyncDispatcher can hang while stopping if it is configured for 
+    draining events on stop. (Varun Saxena via kasha)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
