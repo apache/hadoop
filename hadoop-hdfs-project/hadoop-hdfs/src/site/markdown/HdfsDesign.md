@@ -186,7 +186,7 @@ It is possible that a block of data fetched from a DataNode arrives corrupted. T
 
 The FsImage and the EditLog are central data structures of HDFS. A corruption of these files can cause the HDFS instance to be non-functional. For this reason, the NameNode can be configured to support maintaining multiple copies of the FsImage and EditLog. Any update to either the FsImage or EditLog causes each of the FsImages and EditLogs to get updated synchronously. This synchronous updating of multiple copies of the FsImage and EditLog may degrade the rate of namespace transactions per second that a NameNode can support. However, this degradation is acceptable because even though HDFS applications are very data intensive in nature, they are not metadata intensive. When a NameNode restarts, it selects the latest consistent FsImage and EditLog to use.
 
-The NameNode machine is a single point of failure for an HDFS cluster. If the NameNode machine fails, manual intervention is necessary. Currently, automatic restart and failover of the NameNode software to another machine is not supported.
+Another option to increase resilience against failures is to enable High Availability using multiple NameNodes either with a [shared storage on NFS](./HDFSHighAvailabilityWithNFS.html) or using a [distributed edit log](./HDFSHighAvailabilityWithQJM.html) (called Journal). The latter is the recommended approach.
 
 ### Snapshots
 
