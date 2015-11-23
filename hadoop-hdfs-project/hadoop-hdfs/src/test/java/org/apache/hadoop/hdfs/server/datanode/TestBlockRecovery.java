@@ -41,6 +41,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -89,6 +90,8 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import com.google.common.base.Supplier;
 
 /**
  * This tests if sync all replicas in block recovery works correctly
@@ -179,8 +182,33 @@ public class TestBlockRecovery {
     };
     // Trigger a heartbeat so that it acknowledges the NN as active.
     dn.getAllBpOs().get(0).triggerHeartbeatForTests();
+    waitForActiveNN();
+
     spyDN = spy(dn);
     recoveryWorker = new BlockRecoveryWorker(spyDN);
+  }
+
+  /**
+   * Wait for active NN up to 15 seconds.
+   */
+  private void waitForActiveNN() {
+    try {
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return dn.getAllBpOs().get(0).getActiveNN() != null;
+        }
+      }, 1000, 15 * 1000);
+    } catch (TimeoutException e) {
+      // Here its not failing, will again do the assertions for activeNN after
+      // this waiting period and fails there if BPOS has not acknowledged
+      // any NN as active.
+      LOG.warn("Failed to get active NN", e);
+    } catch (InterruptedException e) {
+      LOG.warn("InterruptedException while waiting to see active NN", e);
+    }
+    Assert.assertNotNull("Failed to get ActiveNN",
+        dn.getAllBpOs().get(0).getActiveNN());
   }
 
   /**
