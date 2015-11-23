@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.web;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
 
@@ -32,6 +33,7 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.stream.ChunkedWriteHandler;
+import org.apache.hadoop.ozone.web.netty.ObjectStoreJerseyContainer;
 
 /**
  * A port unification handler to support HTTP/1.1 and HTTP/2 on the same port.
@@ -54,23 +56,28 @@ public class PortUnificationServerHandler extends ByteToMessageDecoder {
 
   private final RestCsrfPreventionFilter restCsrfPreventionFilter;
 
+  private final ObjectStoreJerseyContainer objectStoreJerseyContainer;
+
   public PortUnificationServerHandler(InetSocketAddress proxyHost,
       Configuration conf, Configuration confForCreate,
-      RestCsrfPreventionFilter restCsrfPreventionFilter) {
+      RestCsrfPreventionFilter restCsrfPreventionFilter,
+      ObjectStoreJerseyContainer container) {
     this.proxyHost = proxyHost;
     this.conf = conf;
     this.confForCreate = confForCreate;
     this.restCsrfPreventionFilter = restCsrfPreventionFilter;
+    this.objectStoreJerseyContainer = container;
   }
 
-  private void configureHttp1(ChannelHandlerContext ctx) {
+  private void configureHttp1(ChannelHandlerContext ctx) throws IOException {
     ctx.pipeline().addLast(new HttpServerCodec());
     if (this.restCsrfPreventionFilter != null) {
       ctx.pipeline().addLast(new RestCsrfPreventionFilterHandler(
           this.restCsrfPreventionFilter));
     }
     ctx.pipeline().addLast(new ChunkedWriteHandler(),
-        new URLDispatcher(proxyHost, conf, confForCreate));
+        new URLDispatcher(proxyHost, conf, confForCreate,
+            objectStoreJerseyContainer));
   }
 
   private void configureHttp2(ChannelHandlerContext ctx) {
