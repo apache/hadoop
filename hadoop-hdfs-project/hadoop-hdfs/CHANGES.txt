@@ -2356,6 +2356,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9428. Fix intermittent failure of
     TestDNFencing.testQueueingWithAppend. (Masatake Iwasaki via waltersu4549)
 
+    HDFS-9435. TestBlockRecovery#testRBWReplicas is failing intermittently.
+    (Rakesh R via waltersu4549)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
