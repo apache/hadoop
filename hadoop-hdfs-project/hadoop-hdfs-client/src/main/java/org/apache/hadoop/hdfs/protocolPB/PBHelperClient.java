@@ -158,12 +158,12 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.ShmId;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.SlotId;
-import org.apache.hadoop.hdfs.util.ExactSizeInputStream;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.LimitInputStream;
 
 /**
  * Utilities for converting protobuf classes to and from hdfs-client side
@@ -396,7 +396,7 @@ public class PBHelperClient {
 
     int size = CodedInputStream.readRawVarint32(firstByte, input);
     assert size >= 0;
-    return new ExactSizeInputStream(input, size);
+    return new LimitInputStream(input, size);
   }
 
   public static CipherOption convert(HdfsProtos.CipherOptionProto proto) {
