@@ -369,4 +369,12 @@ public class LineReader implements Closeable {
   public int readLine(Text str) throws IOException {
     return readLine(str, Integer.MAX_VALUE, Integer.MAX_VALUE);
   }
+
+  protected int getBufferPosn() {
+    return bufferPosn;
+  }
+
+  protected int getBufferSize() {
+    return bufferSize;
+  }
 }
