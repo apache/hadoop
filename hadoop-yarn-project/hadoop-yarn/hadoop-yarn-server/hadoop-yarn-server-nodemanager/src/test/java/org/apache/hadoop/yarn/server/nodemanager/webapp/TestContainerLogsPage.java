@@ -39,6 +39,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -62,6 +63,7 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.ContainerLogsPage.ContainersLogsBlock;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
@@ -136,7 +138,53 @@ public class TestContainerLogsPage {
     File containerLogDir = new File(absLogDir, appId + "/" + container1);
     Assert.assertTrue(dirs.contains(containerLogDir));
   }
-  
+
+  @Test(timeout=30000)
+  public void testContainerLogFile() throws IOException, YarnException {
+    File absLogDir = new File("target",
+        TestNMWebServer.class.getSimpleName() + "LogDir").getAbsoluteFile();
+    String logdirwithFile = absLogDir.toURI().toString();
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.NM_LOG_DIRS, logdirwithFile);
+    conf.setFloat(YarnConfiguration.NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE,
+        0.0f);
+    LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
+    dirsHandler.init(conf);
+    NMContext nmContext = new NodeManager.NMContext(null, null, dirsHandler,
+        new ApplicationACLsManager(conf), new NMNullStateStoreService());
+    // Add an application and the corresponding containers
+    String user = "nobody";
+    long clusterTimeStamp = 1234;
+    ApplicationId appId = BuilderUtils.newApplicationId(
+        clusterTimeStamp, 1);
+    Application app = mock(Application.class);
+    when(app.getUser()).thenReturn(user);
+    when(app.getAppId()).thenReturn(appId);
+    ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
+        appId, 1);
+    ContainerId containerId = BuilderUtils.newContainerId(
+        appAttemptId, 1);
+    nmContext.getApplications().put(appId, app);
+
+    MockContainer container =
+        new MockContainer(appAttemptId, new AsyncDispatcher(), conf, user,
+            appId, 1);
+    container.setState(ContainerState.RUNNING);
+    nmContext.getContainers().put(containerId, container);
+    File containerLogDir = new File(absLogDir,
+        ContainerLaunch.getRelativeContainerLogDir(appId.toString(),
+            containerId.toString()));
+    containerLogDir.mkdirs();
+    String fileName = "fileName";
+    File containerLogFile = new File(containerLogDir, fileName);
+    containerLogFile.createNewFile();
+    File file = ContainerLogsUtils.getContainerLogFile(containerId,
+        fileName, user, nmContext);
+    Assert.assertEquals(containerLogFile.toURI().toString(),
+        file.toURI().toString());
+    FileUtil.fullyDelete(absLogDir);
+  }
+
   @Test(timeout = 10000)
   public void testContainerLogPageAccess() throws IOException {
     // SecureIOUtils require Native IO to be enabled. This test will run
