@@ -294,6 +294,9 @@ Release 2.6.3 - UNRELEASED
     MAPREDUCE-6549. multibyte delimiters with LineRecordReader cause
     duplicate records (wilfreds via rkanter)
 
+    MAPREDUCE-5883. "Total megabyte-seconds" in job counters is slightly
+    misleading (Nathan Roberts via jlowe)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
