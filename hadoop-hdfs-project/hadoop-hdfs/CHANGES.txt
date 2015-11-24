@@ -2344,9 +2344,6 @@ Release 2.8.0 - UNRELEASED
     HDFS-9400. TestRollingUpgradeRollback fails on branch-2.
     (Brahma Reddy Battula via cnauroth)
 
-    HDFS-9434. Recommission a datanode with 500k blocks may pause NN for 30
-    seconds for printing info log messags.  (szetszwo)
-
     HDFS-9443. Disabling HDFS client socket cache causes logging message
     printed to console for CLI commands. (Chris Nauroth via wheat9)
 
@@ -3514,6 +3511,9 @@ Release 2.6.3 - UNRELEASED
 
     HDFS-9431. DistributedFileSystem#concat fails if the target path is
     relative. (Kazuho Fujii via aajisaka)
+
+    HDFS-9434. Recommission a datanode with 500k blocks may pause NN for 30
+    seconds for printing info log messags.  (szetszwo)
 
 Release 2.6.2 - 2015-10-28
 
