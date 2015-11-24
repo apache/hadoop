@@ -24,6 +24,8 @@ import java.util.Arrays;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.junit.After;
@@ -32,6 +34,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
+import org.mockito.Mockito;
 
 public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
   MockNodeLabelManager mgr = null;
@@ -272,5 +275,31 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
     Assert.assertTrue(mgr.getClusterNodeLabels().containsAll(
         Arrays.asList("p2", "p4", "p6", "p7", "p8", "p9")));
     mgr.stop();
+  }
+
+  @Test
+  public void testRootMkdirOnInitStore() throws Exception {
+    final FileSystem mockFs = Mockito.mock(FileSystem.class);
+    FileSystemNodeLabelsStore mockStore = new FileSystemNodeLabelsStore(mgr) {
+      void setFileSystem(Configuration conf) throws IOException {
+        fs = mockFs;
+      }
+    };
+    mockStore.fs = mockFs;
+    verifyMkdirsCount(mockStore, true, 0);
+    verifyMkdirsCount(mockStore, false, 1);
+    verifyMkdirsCount(mockStore, true, 1);
+    verifyMkdirsCount(mockStore, false, 2);
+  }
+
+  private void verifyMkdirsCount(FileSystemNodeLabelsStore store,
+                                 boolean existsRetVal, int expectedNumOfCalls)
+      throws Exception {
+    Mockito.when(store.fs.exists(Mockito.any(
+        Path.class))).thenReturn(existsRetVal);
+    store.init(conf);
+    Mockito.verify(store.fs,Mockito.times(
+        expectedNumOfCalls)).mkdirs(Mockito.any(Path
+        .class));
   }
 }

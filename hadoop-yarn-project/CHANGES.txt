@@ -31,6 +31,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4344. NMs reconnecting with changed capabilities can lead to wrong
     cluster resource calculations (Varun Vasudev via jlowe)
 
+    YARN-4365. FileSystemNodeLabelStore should check for root dir existence on
+    startup (Kuhu Shukla via jlowe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -916,6 +919,9 @@ Release 2.6.3 - UNRELEASED
 
     YARN-3925. ContainerLogsUtils#getContainerLogFile fails to read container
     log files from full disks. (zhihai xu via jlowe)
+
+    YARN-4365. FileSystemNodeLabelStore should check for root dir existence on
+    startup (Kuhu Shukla via jlowe)
 
 Release 2.6.2 - 2015-10-28
 
