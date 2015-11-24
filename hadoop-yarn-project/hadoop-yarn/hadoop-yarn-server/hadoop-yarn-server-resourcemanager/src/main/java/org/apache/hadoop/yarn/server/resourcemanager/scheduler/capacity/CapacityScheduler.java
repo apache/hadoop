@@ -1063,6 +1063,11 @@ public class CapacityScheduler extends
       releaseResources);
     schedulerHealth.updateSchedulerReleaseCounts(releasedContainers);
 
+    // Updating node resource utilization
+    node.setAggregatedContainersUtilization(
+        nm.getAggregatedContainersUtilization());
+    node.setNodeUtilization(nm.getNodeUtilization());
+
     // Now node data structures are upto date and ready for scheduling.
     if(LOG.isDebugEnabled()) {
       LOG.debug("Node being looked for scheduling " + nm

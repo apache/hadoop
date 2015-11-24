@@ -1069,6 +1069,11 @@ public class FairScheduler extends
       attemptScheduling(node);
     }
 
+    // Updating node resource utilization
+    node.setAggregatedContainersUtilization(
+        nm.getAggregatedContainersUtilization());
+    node.setNodeUtilization(nm.getNodeUtilization());
+
     long duration = getClock().getTime() - start;
     fsOpDurations.addNodeUpdateDuration(duration);
   }
