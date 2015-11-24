@@ -568,6 +568,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3454. Add efficient merge operation to RLESparseResourceAllocation
     (Carlo Curino via asuresh)
 
+    YARN-3980. Plumb resource-utilization info in node heartbeat through to the 
+    scheduler. (Inigo Goiri via kasha)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

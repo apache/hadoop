@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
@@ -163,9 +164,11 @@ public class TestRMAppLogAggregationStatus {
         LogAggregationReport.newInstance(appId, LogAggregationStatus.RUNNING,
           messageForNode1_1);
     node1ReportForApp.add(report1);
-    node1.handle(new RMNodeStatusEvent(node1.getNodeID(), NodeHealthStatus
-      .newInstance(true, null, 0), new ArrayList<ContainerStatus>(), null,
-      null, node1ReportForApp, null));
+    NodeStatus nodeStatus1 = NodeStatus.newInstance(node1.getNodeID(), 0,
+        new ArrayList<ContainerStatus>(), null,
+        NodeHealthStatus.newInstance(true, null, 0), null, null, null);
+    node1.handle(new RMNodeStatusEvent(node1.getNodeID(), nodeStatus1, null,
+        node1ReportForApp));
 
     List<LogAggregationReport> node2ReportForApp =
         new ArrayList<LogAggregationReport>();
@@ -175,9 +178,11 @@ public class TestRMAppLogAggregationStatus {
         LogAggregationReport.newInstance(appId,
           LogAggregationStatus.RUNNING, messageForNode2_1);
     node2ReportForApp.add(report2);
-    node2.handle(new RMNodeStatusEvent(node2.getNodeID(), NodeHealthStatus
-      .newInstance(true, null, 0), new ArrayList<ContainerStatus>(), null,
-      null, node2ReportForApp, null));
+    NodeStatus nodeStatus2 = NodeStatus.newInstance(node2.getNodeID(), 0,
+        new ArrayList<ContainerStatus>(), null,
+        NodeHealthStatus.newInstance(true, null, 0), null, null, null);
+    node2.handle(new RMNodeStatusEvent(node2.getNodeID(), nodeStatus2, null,
+        node2ReportForApp));
     // node1 and node2 has updated its log aggregation status
     // verify that the log aggregation status for node1, node2
     // has been changed
@@ -213,9 +218,8 @@ public class TestRMAppLogAggregationStatus {
         LogAggregationReport.newInstance(appId,
           LogAggregationStatus.RUNNING, messageForNode1_2);
     node1ReportForApp2.add(report1_2);
-    node1.handle(new RMNodeStatusEvent(node1.getNodeID(), NodeHealthStatus
-      .newInstance(true, null, 0), new ArrayList<ContainerStatus>(), null,
-      null, node1ReportForApp2, null));
+    node1.handle(new RMNodeStatusEvent(node1.getNodeID(), nodeStatus1, null,
+        node1ReportForApp2));
 
     // verify that the log aggregation status for node1
     // has been changed
@@ -282,9 +286,8 @@ public class TestRMAppLogAggregationStatus {
       LogAggregationStatus.SUCCEEDED, ""));
     // For every logAggregationReport cached in memory, we can only save at most
     // 10 diagnostic messages/failure messages
-    node1.handle(new RMNodeStatusEvent(node1.getNodeID(), NodeHealthStatus
-      .newInstance(true, null, 0), new ArrayList<ContainerStatus>(), null,
-      null, node1ReportForApp3, null));
+    node1.handle(new RMNodeStatusEvent(node1.getNodeID(), nodeStatus1, null,
+        node1ReportForApp3));
 
     logAggregationStatus = rmApp.getLogAggregationReportsForApp();
     Assert.assertEquals(2, logAggregationStatus.size());
@@ -327,9 +330,8 @@ public class TestRMAppLogAggregationStatus {
           LogAggregationStatus.FAILED, "");
     node2ReportForApp2.add(report2_2);
     node2ReportForApp2.add(report2_3);
-    node2.handle(new RMNodeStatusEvent(node2.getNodeID(), NodeHealthStatus
-      .newInstance(true, null, 0), new ArrayList<ContainerStatus>(), null,
-      null, node2ReportForApp2, null));
+    node2.handle(new RMNodeStatusEvent(node2.getNodeID(), nodeStatus2, null,
+        node2ReportForApp2));
     Assert.assertEquals(LogAggregationStatus.FAILED,
       rmApp.getLogAggregationStatusForAppReport());
     logAggregationStatus = rmApp.getLogAggregationReportsForApp();

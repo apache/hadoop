@@ -75,7 +75,7 @@ public class ResourceUtilizationPBImpl extends ResourceUtilization {
   @Override
   public void setVirtualMemory(int vmem) {
     maybeInitBuilder();
-    builder.setPmem(vmem);
+    builder.setVmem(vmem);
   }
 
   @Override

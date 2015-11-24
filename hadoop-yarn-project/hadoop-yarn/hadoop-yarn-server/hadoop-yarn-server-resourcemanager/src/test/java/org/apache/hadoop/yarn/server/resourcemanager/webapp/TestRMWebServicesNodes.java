@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -142,8 +143,9 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
         .get(nm3.getNodeId());
     NodeHealthStatus nodeHealth = NodeHealthStatus.newInstance(false,
         "test health report", System.currentTimeMillis());
-    node.handle(new RMNodeStatusEvent(nm3.getNodeId(), nodeHealth,
-        new ArrayList<ContainerStatus>(), null, null));
+    NodeStatus nodeStatus = NodeStatus.newInstance(nm3.getNodeId(), 1,
+      new ArrayList<ContainerStatus>(), null, nodeHealth, null, null, null);
+    node.handle(new RMNodeStatusEvent(nm3.getNodeId(), nodeStatus, null));
     rm.NMwaitForState(nm3.getNodeId(), NodeState.UNHEALTHY);
 
     ClientResponse response =

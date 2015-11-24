@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerResponse;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryStore;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.MemoryApplicationHistoryStore;
@@ -594,10 +595,48 @@ public class MiniYARNCluster extends CompositeService {
     }
   }
 
-  private class CustomNodeManager extends NodeManager {
+  public class CustomNodeManager extends NodeManager {
+    protected NodeStatus nodeStatus;
+
+    public void setNodeStatus(NodeStatus status) {
+      this.nodeStatus = status;
+    }
+
+    /**
+     * Hook to allow modification/replacement of NodeStatus
+     * @param currentStatus Current status.
+     * @return New node status.
+     */
+    protected NodeStatus getSimulatedNodeStatus(NodeStatus currentStatus) {
+      if(nodeStatus == null) {
+        return currentStatus;
+      } else {
+        // Increment response ID, the RMNodeStatusEvent will not get recorded
+        // for a duplicate heartbeat
+        nodeStatus.setResponseId(nodeStatus.getResponseId() + 1);
+        return nodeStatus;
+      }
+    }
+
     @Override
     protected void doSecureLogin() throws IOException {
       // Don't try to login using keytab in the testcase.
+    }
+
+    @Override
+    protected NodeStatusUpdater createNodeStatusUpdater(Context context,
+        Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
+      return new NodeStatusUpdaterImpl(context,
+          dispatcher,
+          healthChecker,
+          metrics) {
+
+        // Allow simulation of nodestatus
+        @Override
+        protected NodeStatus getNodeStatus(int responseId) throws IOException {
+          return getSimulatedNodeStatus(super.getNodeStatus(responseId));
+        }
+      };
     }
   }
 
@@ -605,8 +644,17 @@ public class MiniYARNCluster extends CompositeService {
     @Override
     protected NodeStatusUpdater createNodeStatusUpdater(Context context,
         Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
-      return new NodeStatusUpdaterImpl(context, dispatcher,
-          healthChecker, metrics) {
+      return new NodeStatusUpdaterImpl(context,
+          dispatcher,
+          healthChecker,
+          metrics) {
+
+        // Allow simulation of nodestatus
+        @Override
+        protected NodeStatus getNodeStatus(int responseId) throws IOException {
+          return getSimulatedNodeStatus(super.getNodeStatus(responseId));
+        }
+
         @Override
         protected ResourceTracker getRMClient() {
           final ResourceTrackerService rt =
