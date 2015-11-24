@@ -1059,6 +1059,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4345. yarn rmadmin -updateNodeResource doesn't work (Junping Du via
     jlowe)
 
+    YARN-4367. SLS webapp doesn't load. (kasha).
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
