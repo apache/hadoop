@@ -95,9 +95,6 @@ Release 2.7.2 - 2015-11-11
     HDFS-9413. getContentSummary() on standby should throw StandbyException.
     (Brahma Reddy Battula via mingma)
 
-    HDFS-9434. Recommission a datanode with 500k blocks may pause NN for 30
-    seconds for printing info log messags.  (szetszwo)
-
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
@@ -1137,6 +1134,9 @@ Release 2.6.3 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HDFS-9434. Recommission a datanode with 500k blocks may pause NN for 30
+    seconds for printing info log messags.  (szetszwo)
 
 Release 2.6.2 - 2015-10-28
 
