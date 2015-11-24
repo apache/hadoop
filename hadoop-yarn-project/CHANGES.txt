@@ -1061,6 +1061,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4367. SLS webapp doesn't load. (kasha).
 
+    YARN-4298. Fix findbugs warnings in hadoop-yarn-common.
+    (Sunil G via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

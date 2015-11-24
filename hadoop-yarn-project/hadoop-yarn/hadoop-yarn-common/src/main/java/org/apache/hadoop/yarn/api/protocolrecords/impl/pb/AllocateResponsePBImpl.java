@@ -386,7 +386,7 @@ public class AllocateResponsePBImpl extends AllocateResponse {
   }
 
   @Override
-  public Priority getApplicationPriority() {
+  public synchronized Priority getApplicationPriority() {
     AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
     if (this.appPriority != null) {
       return this.appPriority;
@@ -399,7 +399,7 @@ public class AllocateResponsePBImpl extends AllocateResponse {
   }
 
   @Override
-  public void setApplicationPriority(Priority priority) {
+  public synchronized void setApplicationPriority(Priority priority) {
     maybeInitBuilder();
     if (priority == null)
       builder.clearApplicationPriority();
