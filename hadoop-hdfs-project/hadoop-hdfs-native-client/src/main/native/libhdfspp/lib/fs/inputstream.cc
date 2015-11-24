@@ -43,4 +43,6 @@ void InputStreamImpl::PositionRead(
         handler) {
   AsyncPreadSome(offset, asio::buffer(buf, nbyte), bad_node_tracker_, handler);
 }
+
+uint64_t InputStreamImpl::get_file_length() const { return file_length_; }
 }

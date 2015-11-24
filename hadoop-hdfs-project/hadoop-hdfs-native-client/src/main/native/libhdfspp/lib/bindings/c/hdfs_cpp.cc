@@ -35,7 +35,9 @@
 
 namespace hdfs {
 
-ssize_t FileHandle::Pread(void *buf, size_t nbyte, off_t offset) {
+FileHandle::FileHandle(InputStream *is) : input_stream_(is), offset_(0){};
+
+Status FileHandle::Pread(void *buf, size_t *nbyte, off_t offset) {
   auto stat = std::make_shared<std::promise<Status>>();
   std::future<Status> future(stat->get_future());
 
@@ -49,7 +51,7 @@ ssize_t FileHandle::Pread(void *buf, size_t nbyte, off_t offset) {
     contacted_datanode = dn;
   };
 
-  input_stream_->PositionRead(buf, nbyte, offset, callback);
+  input_stream_->PositionRead(buf, *nbyte, offset, callback);
 
   /* wait for async to finish */
   auto s = future.get();
@@ -62,9 +64,61 @@ ssize_t FileHandle::Pread(void *buf, size_t nbyte, off_t offset) {
       impl->bad_node_tracker_->AddBadNode(contacted_datanode);
     }
 
-    return -1;
+    return s;
   }
-  return (ssize_t)read_count;
+  *nbyte = (size_t)read_count;
+  return Status::OK();
+}
+
+Status FileHandle::Read(void *buf, size_t *nbyte) {
+  Status stat = Pread(buf, nbyte, offset_);
+  if (!stat.ok()) {
+    return stat;
+  }
+
+  offset_ += *nbyte;
+  return Status::OK();
+}
+
+Status FileHandle::Seek(off_t *offset, std::ios_base::seekdir whence) {
+  off_t new_offset = -1;
+
+  switch (whence) {
+    case std::ios_base::beg:
+      new_offset = *offset;
+      break;
+    case std::ios_base::cur:
+      new_offset = offset_ + *offset;
+      break;
+    case std::ios_base::end:
+      new_offset = static_cast<InputStreamImpl *>(input_stream_.get())
+                       ->get_file_length() +
+                   *offset;
+      break;
+    default:
+      /* unsupported */
+      return Status::InvalidArgument("Invalid Seek whence argument");
+  }
+
+  if (!CheckSeekBounds(new_offset)) {
+    return Status::InvalidArgument("Seek offset out of bounds");
+  }
+  offset_ = new_offset;
+
+  *offset = offset_;
+  return Status::OK();
+}
+
+/* return false if seek will be out of bounds */
+bool FileHandle::CheckSeekBounds(ssize_t desired_position) {
+  ssize_t file_length =
+      static_cast<InputStreamImpl *>(input_stream_.get())->get_file_length();
+
+  if (desired_position < 0 || desired_position >= file_length) {
+    return false;
+  }
+
+  return true;
 }
 
 bool FileHandle::IsOpenForRead() {

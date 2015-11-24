@@ -24,6 +24,7 @@
 #include <vector>
 #include <mutex>
 #include <chrono>
+#include <iostream>
 
 #include "libhdfspp/hdfs.h"
 #include "fs/bad_datanode_tracker.h"
@@ -42,14 +43,31 @@ class HadoopFileSystem;
 class FileHandle {
  public:
   virtual ~FileHandle(){};
-  ssize_t Pread(void *buf, size_t nbyte, off_t offset);
+  /**
+   * Note:  The nbyte argument for Read and Pread as well as the
+   * offset argument for Seek are in/out parameters.
+   *
+   * For Read and Pread the value referenced by nbyte should
+   * be set to the number of bytes to read. Before returning
+   * the value referenced will be set by the callee to the number
+   * of bytes that was successfully read.
+   *
+   * For Seek the value referenced by offset should be the number
+   * of bytes to shift from the specified whence position.  The
+   * referenced value will be set to the new offset before returning.
+   **/
+  Status Pread(void *buf, size_t *nbyte, off_t offset);
+  Status Read(void *buf, size_t *nbyte);
+  Status Seek(off_t *offset, std::ios_base::seekdir whence);
   bool IsOpenForRead();
 
  private:
   /* handle should only be created by fs */
   friend class HadoopFileSystem;
-  FileHandle(InputStream *is) : input_stream_(is){};
+  FileHandle(InputStream *is);
+  bool CheckSeekBounds(ssize_t desired_position);
   std::unique_ptr<InputStream> input_stream_;
+  off_t offset_;
 };
 
 class HadoopFileSystem {
