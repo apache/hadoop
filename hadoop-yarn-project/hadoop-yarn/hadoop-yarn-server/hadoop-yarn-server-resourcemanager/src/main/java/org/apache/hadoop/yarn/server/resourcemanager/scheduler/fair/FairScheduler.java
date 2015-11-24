@@ -500,7 +500,7 @@ public class FairScheduler extends
         // containers on the RMNode (see SchedulerNode.releaseContainer()).
         completedContainer(container, status, RMContainerEventType.KILL);
         LOG.info("Killing container" + container +
-            " (after waiting for premption for " +
+            " (after waiting for preemption for " +
             (getClock().getTime() - time) + "ms)");
       }
     } else {
