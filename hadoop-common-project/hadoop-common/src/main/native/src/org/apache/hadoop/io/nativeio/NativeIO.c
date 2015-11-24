@@ -1255,9 +1255,7 @@ JNIEXPORT jlong JNICALL
 Java_org_apache_hadoop_io_nativeio_NativeIO_getMemlockLimit0(
 JNIEnv *env, jclass clazz)
 {
-#ifdef WINDOWS
-  return 0;
-#else
+#ifdef RLIMIT_MEMLOCK
   struct rlimit rlim;
   int rc = getrlimit(RLIMIT_MEMLOCK, &rlim);
   if (rc != 0) {
@@ -1266,6 +1264,8 @@ JNIEnv *env, jclass clazz)
   }
   return (rlim.rlim_cur == RLIM_INFINITY) ?
     INT64_MAX : rlim.rlim_cur;
+#else
+  return 0;
 #endif
 }
 
