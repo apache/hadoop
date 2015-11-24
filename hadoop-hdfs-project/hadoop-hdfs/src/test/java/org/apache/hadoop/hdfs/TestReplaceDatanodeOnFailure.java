@@ -17,10 +17,14 @@
  */
 package org.apache.hadoop.hdfs;
 
+import com.google.common.base.Supplier;
+
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -41,7 +45,7 @@ import org.junit.Test;
  * This class tests that data nodes are correctly replaced on failure.
  */
 public class TestReplaceDatanodeOnFailure {
-  static final Log LOG = AppendTestUtil.LOG;
+  static final Log LOG = LogFactory.getLog(TestReplaceDatanodeOnFailure.class);
 
   static final String DIR = "/" + TestReplaceDatanodeOnFailure.class.getSimpleName() + "/";
   static final short REPLICATION = 3;
@@ -113,7 +117,8 @@ public class TestReplaceDatanodeOnFailure {
   @Test
   public void testReplaceDatanodeOnFailure() throws Exception {
     final Configuration conf = new HdfsConfiguration();
-    
+    // do not consider load factor when selecting a data node
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY, false);
     //always replace a datanode
     ReplaceDatanodeOnFailure.write(Policy.ALWAYS, true, conf);
 
@@ -123,31 +128,40 @@ public class TestReplaceDatanodeOnFailure {
         ).racks(racks).numDataNodes(REPLICATION).build();
 
     try {
+      cluster.waitActive();
       final DistributedFileSystem fs = cluster.getFileSystem();
       final Path dir = new Path(DIR);
-      
-      final SlowWriter[] slowwriters = new SlowWriter[10];
+      final int NUM_WRITERS = 10;
+      final int FIRST_BATCH = 5;
+      final SlowWriter[] slowwriters = new SlowWriter[NUM_WRITERS];
       for(int i = 1; i <= slowwriters.length; i++) {
         //create slow writers in different speed
         slowwriters[i - 1] = new SlowWriter(fs, new Path(dir, "file" + i), i*200L);
       }
 
-      for(SlowWriter s : slowwriters) {
-        s.start();
+      for(int i = 0; i < FIRST_BATCH; i++) {
+        slowwriters[i].start();
       }
 
       // Let slow writers write something.
-      // Some of them are too slow and will be not yet started. 
-      sleepSeconds(1);
+      // Some of them are too slow and will be not yet started.
+      sleepSeconds(3);
 
       //start new datanodes
       cluster.startDataNodes(conf, 2, true, null, new String[]{RACK1, RACK1});
+      cluster.waitActive();
+      // wait for first block reports for up to 10 seconds
+      cluster.waitFirstBRCompleted(0, 10000);
+
       //stop an old datanode
-      cluster.stopDataNode(AppendTestUtil.nextInt(REPLICATION));
-      
-      //Let the slow writer writes a few more seconds
-      //Everyone should have written something.
-      sleepSeconds(5);
+      MiniDFSCluster.DataNodeProperties dnprop = cluster.stopDataNode(
+          AppendTestUtil.nextInt(REPLICATION));
+
+      for(int i = FIRST_BATCH; i < slowwriters.length; i++) {
+        slowwriters[i].start();
+      }
+
+      waitForBlockReplication(slowwriters);
 
       //check replication and interrupt.
       for(SlowWriter s : slowwriters) {
@@ -181,6 +195,26 @@ public class TestReplaceDatanodeOnFailure {
     }
   }
 
+  void waitForBlockReplication(final SlowWriter[] slowwriters) throws
+      TimeoutException, InterruptedException {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override public Boolean get() {
+        try {
+          for (SlowWriter s : slowwriters) {
+            if (s.out.getCurrentBlockReplication() < REPLICATION) {
+              return false;
+            }
+          }
+        } catch (IOException e) {
+          LOG.warn("IOException is thrown while getting the file block " +
+              "replication factor", e);
+          return false;
+        }
+        return true;
+      }
+    }, 1000, 10000);
+  }
+
   static void sleepSeconds(final int waittime) throws InterruptedException {
     LOG.info("Wait " + waittime + " seconds");
     Thread.sleep(waittime * 1000L);
@@ -191,7 +225,7 @@ public class TestReplaceDatanodeOnFailure {
     final HdfsDataOutputStream out;
     final long sleepms;
     private volatile boolean running = true;
-    
+
     SlowWriter(DistributedFileSystem fs, Path filepath, final long sleepms
         ) throws IOException {
       super(SlowWriter.class.getSimpleName() + ":" + filepath);
@@ -203,12 +237,14 @@ public class TestReplaceDatanodeOnFailure {
     @Override
     public void run() {
       int i = 0;
+
       try {
         sleep(sleepms);
         for(; running; i++) {
           LOG.info(getName() + " writes " + i);
           out.write(i);
           out.hflush();
+
           sleep(sleepms);
         }
       } catch(InterruptedException e) {
