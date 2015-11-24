@@ -1,8 +1,5 @@
 Hadoop HDFS Change Log
 
-    HDFS-9434. Recommission a datanode with 500k blocks may pause NN for 30
-    seconds for printing info log messags.  (szetszwo)
-
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1168,6 +1165,9 @@ Release 2.6.3 - UNRELEASED
 
     HDFS-9431. DistributedFileSystem#concat fails if the target path is
     relative. (Kazuho Fujii via aajisaka)
+
+    HDFS-9434. Recommission a datanode with 500k blocks may pause NN for 30
+    seconds for printing info log messags.  (szetszwo)
 
 Release 2.6.2 - 2015-10-28
 
