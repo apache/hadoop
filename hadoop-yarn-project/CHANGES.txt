@@ -36,6 +36,9 @@ Release 2.6.3 - UNRELEASED
     YARN-3878. AsyncDispatcher can hang while stopping if it is configured for 
     draining events on stop. (Varun Saxena via kasha)
 
+    YARN-4365. FileSystemNodeLabelStore should check for root dir existence on
+    startup (Kuhu Shukla via jlowe)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
