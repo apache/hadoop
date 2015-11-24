@@ -916,7 +916,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   public DatanodeStorageInfo chooseReplicaToDelete(
       Collection<DatanodeStorageInfo> moreThanOne,
       Collection<DatanodeStorageInfo> exactlyOne,
-      final List<StorageType> excessTypes) {
+      final List<StorageType> excessTypes,
+      Map<String, List<DatanodeStorageInfo>> rackMap) {
     long oldestHeartbeat =
       monotonicNow() - heartbeatInterval * tolerateHeartbeatMultiplier;
     DatanodeStorageInfo oldestHeartbeatStorage = null;
@@ -926,7 +927,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     // Pick the node with the oldest heartbeat or with the least free space,
     // if all hearbeats are within the tolerable heartbeat interval
     for(DatanodeStorageInfo storage : pickupReplicaSet(moreThanOne,
-        exactlyOne)) {
+        exactlyOne, rackMap)) {
       if (!excessTypes.contains(storage.getStorageType())) {
         continue;
       }
@@ -991,7 +992,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
           moreThanOne, exactlyOne, excessTypes)) {
         cur = delNodeHintStorage;
       } else { // regular excessive replica removal
-        cur = chooseReplicaToDelete(moreThanOne, exactlyOne, excessTypes);
+        cur = chooseReplicaToDelete(moreThanOne, exactlyOne, excessTypes,
+            rackMap);
       }
       firstOne = false;
       if (cur == null) {
@@ -1044,16 +1046,34 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     splitNodesWithRack(locs, rackMap, moreThanOne, exactlyOne);
     return notReduceNumOfGroups(moreThanOne, source, target);
   }
+
   /**
    * Pick up replica node set for deleting replica as over-replicated. 
    * First set contains replica nodes on rack with more than one
    * replica while second set contains remaining replica nodes.
-   * So pick up first set if not empty. If first is empty, then pick second.
+   * If only 1 rack, pick all. If 2 racks, pick all that have more than
+   * 1 replicas on the same rack; if no such replicas, pick all.
+   * If 3 or more racks, pick all.
    */
   protected Collection<DatanodeStorageInfo> pickupReplicaSet(
       Collection<DatanodeStorageInfo> moreThanOne,
-      Collection<DatanodeStorageInfo> exactlyOne) {
-    return moreThanOne.isEmpty() ? exactlyOne : moreThanOne;
+      Collection<DatanodeStorageInfo> exactlyOne,
+      Map<String, List<DatanodeStorageInfo>> rackMap) {
+    Collection<DatanodeStorageInfo> ret = new ArrayList<>();
+    if (rackMap.size() == 2) {
+      for (List<DatanodeStorageInfo> dsi : rackMap.values()) {
+        if (dsi.size() >= 2) {
+          ret.addAll(dsi);
+        }
+      }
+    }
+    if (ret.isEmpty()) {
+      // Return all replicas if rackMap.size() != 2
+      // or rackMap.size() == 2 but no shared replicas on any rack
+      ret.addAll(moreThanOne);
+      ret.addAll(exactlyOne);
+    }
+    return ret;
   }
 
   @VisibleForTesting

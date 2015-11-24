@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -633,7 +634,8 @@ public class TestDNFencing {
     public DatanodeStorageInfo chooseReplicaToDelete(
         Collection<DatanodeStorageInfo> moreThanOne,
         Collection<DatanodeStorageInfo> exactlyOne,
-        List<StorageType> excessTypes) {
+        List<StorageType> excessTypes,
+        Map<String, List<DatanodeStorageInfo>> rackMap) {
 
       Collection<DatanodeStorageInfo> chooseFrom = !moreThanOne.isEmpty() ?
           moreThanOne : exactlyOne;
