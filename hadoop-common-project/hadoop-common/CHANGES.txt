@@ -35,8 +35,8 @@ Trunk (Unreleased)
     HADOOP-10787 Rename/remove non-HADOOP_*, etc from the shell scripts.
     (aw via vvasudev)
 
-    HADOOP-12294. Remove the support of the deprecated dfs.umask.
-    (Chang Li vha wheat9)
+    HADOOP-12294. Throw an Exception when fs.permissions.umask-mode is
+    misconfigured (Chang Li vha wheat9)
 
   NEW FEATURES
 
