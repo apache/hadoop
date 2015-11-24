@@ -16,6 +16,24 @@
 # limitations under the License.
 #
 
+# Delegate some functionality to libhdfs, until libhdfspp is complete.
+set (LIBHDFS_SRC_DIR ../../libhdfs)
+set (LIBHDFS_TESTS_DIR ../../libhdfs-tests)
+set (LIBHDFSPP_SRC_DIR ..)
+set (LIBHDFSPP_LIB_DIR ${LIBHDFSPP_SRC_DIR}/lib)
+set (LIBHDFSPP_BINDING_C ${LIBHDFSPP_LIB_DIR}/bindings/c)
+include_directories(
+    ${GENERATED_JAVAH}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_BINARY_DIR}
+    ${JNI_INCLUDE_DIRS}
+    ${LIBHDFS_SRC_DIR}/include
+    ${LIBHDFS_SRC_DIR}/..
+    ${LIBHDFS_SRC_DIR}
+    ${OS_DIR}
+)
+add_library(hdfspp_test_shim_static STATIC hdfs_shim.c libhdfs_wrapper.c libhdfspp_wrapper.cc ${LIBHDFSPP_BINDING_C}/hdfs_cpp.cc)
+
 add_library(test_common OBJECT mock_connection.cc)
 
 set(PROTOBUF_IMPORT_DIRS ${PROTO_HADOOP_TEST_DIR})
@@ -49,3 +67,7 @@ add_test(bad_datanode bad_datanode_test)
 add_executable(node_exclusion_test node_exclusion_test.cc)
 target_link_libraries(node_exclusion_test fs gmock_main common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 add_test(node_exclusion node_exclusion_test)
+
+build_libhdfs_test(libhdfs_threaded hdfspp_test_shim_static expect.c test_libhdfs_threaded.c ${OS_DIR}/thread.c)
+link_libhdfs_test(libhdfs_threaded hdfspp_test_shim_static fs reader rpc proto common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} native_mini_dfs ${JAVA_JVM_LIBRARY})
+add_libhdfs_test(libhdfs_threaded hdfspp_test_shim_static)
