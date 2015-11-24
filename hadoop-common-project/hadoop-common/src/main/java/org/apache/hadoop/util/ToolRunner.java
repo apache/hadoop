@@ -23,6 +23,7 @@ import java.io.PrintStream;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.CallerContext;
 
 /**
  * A utility to help run {@link Tool}s.
@@ -58,6 +59,11 @@ public class ToolRunner {
    */
   public static int run(Configuration conf, Tool tool, String[] args) 
     throws Exception{
+    if (CallerContext.getCurrent() == null) {
+      CallerContext ctx = new CallerContext.Builder("CLI").build();
+      CallerContext.setCurrent(ctx);
+    }
+    
     if(conf == null) {
       conf = new Configuration();
     }

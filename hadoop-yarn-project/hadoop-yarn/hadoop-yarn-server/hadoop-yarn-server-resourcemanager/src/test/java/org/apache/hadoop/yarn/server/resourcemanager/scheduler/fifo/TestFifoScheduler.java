@@ -177,6 +177,7 @@ public class TestFifoScheduler {
         mock(SystemMetricsPublisher.class));
 
     Configuration conf = new Configuration();
+    ((RMContextImpl) rmContext).setScheduler(scheduler);
     scheduler.setRMContext(rmContext);
     scheduler.init(conf);
     scheduler.start();
@@ -309,6 +310,7 @@ public class TestFifoScheduler {
     rmContext.setNodeLabelManager(nlm);
 
     scheduler.setRMContext(rmContext);
+    ((RMContextImpl) rmContext).setScheduler(scheduler);
     scheduler.init(conf);
     scheduler.start();
     scheduler.reinitialize(new Configuration(), rmContext);

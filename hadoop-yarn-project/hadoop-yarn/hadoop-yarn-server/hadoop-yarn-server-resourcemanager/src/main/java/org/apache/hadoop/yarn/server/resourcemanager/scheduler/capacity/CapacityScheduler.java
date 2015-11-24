@@ -1981,9 +1981,10 @@ public class CapacityScheduler extends
     rmApp.getApplicationSubmissionContext().setPriority(appPriority);
 
     // Update to state store
-    ApplicationStateData appState = ApplicationStateData.newInstance(
-        rmApp.getSubmitTime(), rmApp.getStartTime(),
-        rmApp.getApplicationSubmissionContext(), rmApp.getUser());
+    ApplicationStateData appState =
+        ApplicationStateData.newInstance(rmApp.getSubmitTime(),
+            rmApp.getStartTime(), rmApp.getApplicationSubmissionContext(),
+            rmApp.getUser(), rmApp.getCallerContext());
     rmContext.getStateStore().updateApplicationStateSynchronously(appState,
         false);
 

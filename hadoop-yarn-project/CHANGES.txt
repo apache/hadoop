@@ -253,6 +253,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4184. Remove update reservation state api from state store as its not used by
     ReservationSystem (Sean Po via asuresh)
 
+    YARN-4349. Support CallerContext in YARN. (wtan via jianhe)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before

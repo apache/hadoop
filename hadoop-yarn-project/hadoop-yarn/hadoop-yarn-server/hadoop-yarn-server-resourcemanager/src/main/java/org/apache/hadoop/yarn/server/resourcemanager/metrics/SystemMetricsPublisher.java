@@ -46,7 +46,6 @@ import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -114,7 +113,8 @@ public class SystemMetricsPublisher extends CompositeService {
               appSubmissionContext.getUnmanagedAM(),
               appSubmissionContext.getPriority(),
               app.getAppNodeLabelExpression(),
-              app.getAmNodeLabelExpression()));
+              app.getAmNodeLabelExpression(),
+              app.getCallerContext()));
     }
   }
 
@@ -122,10 +122,9 @@ public class SystemMetricsPublisher extends CompositeService {
   public void appUpdated(RMApp app, long updatedTime) {
     if (publishSystemMetrics) {
       dispatcher.getEventHandler()
-          .handle(
-              new ApplicationUpdatedEvent(app.getApplicationId(), app
-                  .getQueue(), updatedTime, app
-                  .getApplicationSubmissionContext().getPriority()));
+          .handle(new ApplicationUpdatedEvent(app.getApplicationId(),
+              app.getQueue(), updatedTime,
+              app.getApplicationSubmissionContext().getPriority()));
     }
   }
 
@@ -284,6 +283,16 @@ public class SystemMetricsPublisher extends CompositeService {
         event.getAppNodeLabelsExpression());
     entityInfo.put(ApplicationMetricsConstants.AM_NODE_LABEL_EXPRESSION,
         event.getAmNodeLabelsExpression());
+    if (event.getCallerContext() != null) {
+      if (event.getCallerContext().getContext() != null) {
+        entityInfo.put(ApplicationMetricsConstants.YARN_APP_CALLER_CONTEXT,
+            event.getCallerContext().getContext());
+      }
+      if (event.getCallerContext().getSignature() != null) {
+        entityInfo.put(ApplicationMetricsConstants.YARN_APP_CALLER_SIGNATURE,
+            event.getCallerContext().getSignature());
+      }
+    }
     entity.setOtherInfo(entityInfo);
     TimelineEvent tEvent = new TimelineEvent();
     tEvent.setEventType(
