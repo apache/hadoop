@@ -914,7 +914,7 @@ public class TestJobImpl {
     assertJobState(job, JobStateInternal.RUNNING);
 
     // Update priority of job to 8, and see whether its updated
-    Priority updatedPriority = Priority.newInstance(5);
+    Priority updatedPriority = Priority.newInstance(8);
     job.setJobPriority(updatedPriority);
     assertJobState(job, JobStateInternal.RUNNING);
     Priority jobPriority = job.getReport().getJobPriority();

@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
@@ -146,6 +147,11 @@ public class LocalContainerAllocator extends RMCommunicator
       if (token != null) {
         updateAMRMToken(token);
       }
+      Priority priorityFromResponse = Priority.newInstance(allocateResponse
+          .getApplicationPriority().getPriority());
+
+      // Update the job priority to Job directly.
+      getJob().setJobPriority(priorityFromResponse);
     }
   }
 

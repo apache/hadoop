@@ -97,6 +97,7 @@ public class CLI extends Configured implements Tool {
     String taskState = null;
     int fromEvent = 0;
     int nEvents = 0;
+    int jpvalue = 0;
     boolean getStatus = false;
     boolean getCounter = false;
     boolean killJob = false;
@@ -149,11 +150,15 @@ public class CLI extends Configured implements Tool {
       }
       jobid = argv[1];
       try {
-        jp = JobPriority.valueOf(argv[2]); 
+        jp = JobPriority.valueOf(argv[2]);
       } catch (IllegalArgumentException iae) {
-        LOG.info(iae);
-        displayUsage(cmd);
-        return exitCode;
+        try {
+          jpvalue = Integer.parseInt(argv[2]);
+        } catch (NumberFormatException ne) {
+          LOG.info(ne);
+          displayUsage(cmd);
+          return exitCode;
+        }
       }
       setJobPriority = true; 
     } else if ("-events".equals(cmd)) {
@@ -322,7 +327,11 @@ public class CLI extends Configured implements Tool {
         if (job == null) {
           System.out.println("Could not find job " + jobid);
         } else {
-          job.setPriority(jp);
+          if (jp != null) {
+            job.setPriority(jp);
+          } else {
+            job.setPriorityAsInteger(jpvalue);
+          }
           System.out.println("Changed job priority.");
           exitCode = 0;
         } 
@@ -408,6 +417,10 @@ public class CLI extends Configured implements Tool {
   private String getJobPriorityNames() {
     StringBuffer sb = new StringBuffer();
     for (JobPriority p : JobPriority.values()) {
+      // UNDEFINED_PRIORITY need not to be displayed in usage
+      if (JobPriority.UNDEFINED_PRIORITY == p) {
+        continue;
+      }
       sb.append(p.name()).append(" ");
     }
     return sb.substring(0, sb.length()-1);
@@ -444,7 +457,8 @@ public class CLI extends Configured implements Tool {
     } else if ("-set-priority".equals(cmd)) {
       System.err.println(prefix + "[" + cmd + " <job-id> <priority>]. " +
           "Valid values for priorities are: " 
-          + jobPriorityValues); 
+          + jobPriorityValues
+          + ". In addition to this, integers also can be used.");
     } else if ("-list-active-trackers".equals(cmd)) {
       System.err.println(prefix + "[" + cmd + "]");
     } else if ("-list-blacklisted-trackers".equals(cmd)) {
@@ -465,7 +479,8 @@ public class CLI extends Configured implements Tool {
       System.err.printf("\t[-counter <job-id> <group-name> <counter-name>]%n");
       System.err.printf("\t[-kill <job-id>]%n");
       System.err.printf("\t[-set-priority <job-id> <priority>]. " +
-        "Valid values for priorities are: " + jobPriorityValues + "%n");
+          "Valid values for priorities are: " + jobPriorityValues +
+          ". In addition to this, integers also can be used." + "%n");
       System.err.printf("\t[-events <job-id> <from-event-#> <#-of-events>]%n");
       System.err.printf("\t[-history <jobHistoryFile>]%n");
       System.err.printf("\t[-list [all]]%n");

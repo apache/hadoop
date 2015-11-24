@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -245,7 +246,7 @@ public class TestLocalContainerAllocator {
             amToken.getIdentifier(), amToken.getKind().toString(),
             amToken.getPassword(), amToken.getService().toString());
       }
-      return AllocateResponse.newInstance(responseId,
+      AllocateResponse response = AllocateResponse.newInstance(responseId,
           Collections.<ContainerStatus>emptyList(),
           Collections.<Container>emptyList(),
           Collections.<NodeReport>emptyList(),
@@ -254,6 +255,8 @@ public class TestLocalContainerAllocator {
           yarnToken,
           Collections.<Container>emptyList(),
           Collections.<Container>emptyList());
+      response.setApplicationPriority(Priority.newInstance(0));
+      return response;
     }
   }
 }

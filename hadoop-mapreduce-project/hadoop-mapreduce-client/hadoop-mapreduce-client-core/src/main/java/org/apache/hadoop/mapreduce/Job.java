@@ -407,7 +407,7 @@ public class Job extends JobContextImpl implements JobContext {
   /**
    * Get scheduling info of the job.
    * 
-   * @return the scheduling info of the job
+   * @return the priority info of the job
    */
   public JobPriority getPriority() throws IOException, InterruptedException {
     ensureState(JobState.RUNNING);
@@ -635,25 +635,76 @@ public class Job extends JobContextImpl implements JobContext {
 
   /**
    * Set the priority of a running job.
-   * @param priority the new priority for the job.
+   * @param jobPriority the new priority for the job.
    * @throws IOException
    */
-  public void setPriority(JobPriority priority) 
-      throws IOException, InterruptedException {
+  public void setPriority(JobPriority jobPriority) throws IOException,
+      InterruptedException {
     if (state == JobState.DEFINE) {
-      conf.setJobPriority(
-        org.apache.hadoop.mapred.JobPriority.valueOf(priority.name()));
+      if (jobPriority == JobPriority.UNDEFINED_PRIORITY) {
+        conf.setJobPriorityAsInteger(convertPriorityToInteger(jobPriority));
+      } else {
+        conf.setJobPriority(org.apache.hadoop.mapred.JobPriority
+            .valueOf(jobPriority.name()));
+      }
     } else {
       ensureState(JobState.RUNNING);
-      final JobPriority tmpPriority = priority;
+      final int tmpPriority = convertPriorityToInteger(jobPriority);
       ugi.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
         public Object run() throws IOException, InterruptedException {
-          cluster.getClient().setJobPriority(getJobID(), tmpPriority.toString());
+          cluster.getClient()
+              .setJobPriority(getJobID(), Integer.toString(tmpPriority));
           return null;
         }
       });
     }
+  }
+
+  /**
+   * Set the priority of a running job.
+   *
+   * @param jobPriority
+   *          the new priority for the job.
+   * @throws IOException
+   */
+  public void setPriorityAsInteger(int jobPriority) throws IOException,
+      InterruptedException {
+    if (state == JobState.DEFINE) {
+      conf.setJobPriorityAsInteger(jobPriority);
+    } else {
+      ensureState(JobState.RUNNING);
+      final int tmpPriority = jobPriority;
+      ugi.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws IOException, InterruptedException {
+          cluster.getClient()
+              .setJobPriority(getJobID(), Integer.toString(tmpPriority));
+          return null;
+        }
+      });
+    }
+  }
+
+  private int convertPriorityToInteger(JobPriority jobPriority) {
+    switch (jobPriority) {
+    case VERY_HIGH :
+      return 5;
+    case HIGH :
+      return 4;
+    case NORMAL :
+      return 3;
+    case LOW :
+      return 2;
+    case VERY_LOW :
+      return 1;
+    case DEFAULT :
+      return 0;
+    default:
+      break;
+    }
+    // For UNDEFINED_PRIORITY, we can set it to default for better handling
+    return 0;
   }
 
   /**

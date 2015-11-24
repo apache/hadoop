@@ -562,13 +562,30 @@ public class YARNRunner implements ClientProtocol {
       appContext.setApplicationTags(new HashSet<String>(tagsFromConf));
     }
 
+    String jobPriority = jobConf.get(MRJobConfig.PRIORITY);
+    if (jobPriority != null) {
+      int iPriority;
+      try {
+        iPriority = TypeConverter.toYarnApplicationPriority(jobPriority);
+      } catch (IllegalArgumentException e) {
+        iPriority = Integer.parseInt(jobPriority);
+      }
+      appContext.setPriority(Priority.newInstance(iPriority));
+    }
+
     return appContext;
   }
 
   @Override
   public void setJobPriority(JobID arg0, String arg1) throws IOException,
       InterruptedException {
-    resMgrDelegate.setJobPriority(arg0, arg1);
+    ApplicationId appId = TypeConverter.toYarn(arg0).getAppId();
+    try {
+      resMgrDelegate.updateApplicationPriority(appId,
+          Priority.newInstance(Integer.parseInt(arg1)));
+    } catch (YarnException e) {
+      throw new IOException(e);
+    }
   }
 
   @Override
