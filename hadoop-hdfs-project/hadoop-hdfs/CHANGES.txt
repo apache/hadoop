@@ -1734,6 +1734,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9318. considerLoad factor can be improved. (Kuhu Shukla via kihwal)
 
+    HDFS-8335. FSNamesystem should construct FSPermissionChecker only if
+    permission is enabled. (Gabor Liptak via wheat9)
+
   BUG FIXES
 
     HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.
@@ -2375,6 +2378,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8855. Webhdfs client leaks active NameNode connections.
     (Xiaobing Zhou via xyao)
+
+    HDFS-8335. FSNamesystem should construct FSPermissionChecker only if
+    permission is enabled. (Gabor Liptak via wheat9)
 
 Release 2.7.3 - UNRELEASED
 
