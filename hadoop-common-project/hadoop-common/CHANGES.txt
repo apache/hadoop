@@ -1359,6 +1359,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-9822. Create constant MAX_CAPACITY in RetryCache rather than
     hard-coding 16 in RetryCache constructor. (Tsuyoshi Ozawa via wheat9)
 
+    HADOOP-11954. Solaris does not support RLIMIT_MEMLOCK as in Linux
+    (Alan Burlison via aw)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
