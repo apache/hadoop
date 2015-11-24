@@ -40,6 +40,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -551,6 +552,7 @@ public class ClientRMService extends AbstractService implements
     ApplicationSubmissionContext submissionContext = request
         .getApplicationSubmissionContext();
     ApplicationId applicationId = submissionContext.getApplicationId();
+    CallerContext callerContext = CallerContext.getCurrent();
 
     // ApplicationSubmissionContext needs to be validated for safety - only
     // those fields that are independent of the RM's configuration will be
@@ -565,7 +567,7 @@ public class ClientRMService extends AbstractService implements
       LOG.warn("Unable to get the current user.", ie);
       RMAuditLogger.logFailure(user, AuditConstants.SUBMIT_APP_REQUEST,
           ie.getMessage(), "ClientRMService",
-          "Exception in submitting application", applicationId);
+          "Exception in submitting application", applicationId, callerContext);
       throw RPCUtil.getRemoteException(ie);
     }
 
@@ -602,13 +604,13 @@ public class ClientRMService extends AbstractService implements
       LOG.info("Application with id " + applicationId.getId() + 
           " submitted by user " + user);
       RMAuditLogger.logSuccess(user, AuditConstants.SUBMIT_APP_REQUEST,
-          "ClientRMService", applicationId);
+          "ClientRMService", applicationId, callerContext);
     } catch (YarnException e) {
       LOG.info("Exception in submitting application with id " +
           applicationId.getId(), e);
       RMAuditLogger.logFailure(user, AuditConstants.SUBMIT_APP_REQUEST,
           e.getMessage(), "ClientRMService",
-          "Exception in submitting application", applicationId);
+          "Exception in submitting application", applicationId, callerContext);
       throw e;
     }
 
@@ -693,6 +695,7 @@ public class ClientRMService extends AbstractService implements
       KillApplicationRequest request) throws YarnException {
 
     ApplicationId applicationId = request.getApplicationId();
+    CallerContext callerContext = CallerContext.getCurrent();
 
     UserGroupInformation callerUGI;
     try {
@@ -701,7 +704,7 @@ public class ClientRMService extends AbstractService implements
       LOG.info("Error getting UGI ", ie);
       RMAuditLogger.logFailure("UNKNOWN", AuditConstants.KILL_APP_REQUEST,
           "UNKNOWN", "ClientRMService" , "Error getting UGI",
-          applicationId);
+          applicationId, callerContext);
       throw RPCUtil.getRemoteException(ie);
     }
 
@@ -709,7 +712,7 @@ public class ClientRMService extends AbstractService implements
     if (application == null) {
       RMAuditLogger.logFailure(callerUGI.getUserName(),
           AuditConstants.KILL_APP_REQUEST, "UNKNOWN", "ClientRMService",
-          "Trying to kill an absent application", applicationId);
+          "Trying to kill an absent application", applicationId, callerContext);
       throw new ApplicationNotFoundException("Trying to kill an absent"
           + " application " + applicationId);
     }
@@ -720,7 +723,7 @@ public class ClientRMService extends AbstractService implements
           AuditConstants.KILL_APP_REQUEST,
           "User doesn't have permissions to "
               + ApplicationAccessType.MODIFY_APP.toString(), "ClientRMService",
-          AuditConstants.UNAUTHORIZED_USER, applicationId);
+          AuditConstants.UNAUTHORIZED_USER, applicationId, callerContext);
       throw RPCUtil.getRemoteException(new AccessControlException("User "
           + callerUGI.getShortUserName() + " cannot perform operation "
           + ApplicationAccessType.MODIFY_APP.name() + " on " + applicationId));
@@ -728,7 +731,8 @@ public class ClientRMService extends AbstractService implements
 
     if (application.isAppFinalStateStored()) {
       RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
-          AuditConstants.KILL_APP_REQUEST, "ClientRMService", applicationId);
+          AuditConstants.KILL_APP_REQUEST, "ClientRMService", applicationId,
+          callerContext);
       return KillApplicationResponse.newInstance(true);
     }
 

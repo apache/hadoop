@@ -37,6 +37,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.service.AbstractService;
@@ -741,8 +742,8 @@ public abstract class RMStateStore extends AbstractService {
                                             .getApplicationSubmissionContext();
     assert context instanceof ApplicationSubmissionContextPBImpl;
     ApplicationStateData appState =
-        ApplicationStateData.newInstance(
-            app.getSubmitTime(), app.getStartTime(), context, app.getUser());
+        ApplicationStateData.newInstance(app.getSubmitTime(),
+            app.getStartTime(), context, app.getUser(), app.getCallerContext());
     dispatcher.getEventHandler().handle(new RMStateStoreAppEvent(appState));
   }
 
@@ -964,9 +965,9 @@ public abstract class RMStateStore extends AbstractService {
   @SuppressWarnings("unchecked")
   public synchronized void removeApplication(RMApp app) {
     ApplicationStateData appState =
-        ApplicationStateData.newInstance(
-            app.getSubmitTime(), app.getStartTime(),
-            app.getApplicationSubmissionContext(), app.getUser());
+        ApplicationStateData.newInstance(app.getSubmitTime(),
+            app.getStartTime(), app.getApplicationSubmissionContext(),
+            app.getUser(), app.getCallerContext());
     for(RMAppAttempt appAttempt : app.getAppAttempts().values()) {
       appState.attempts.put(appAttempt.getAppAttemptId(), null);
     }

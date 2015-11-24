@@ -20,10 +20,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.recovery.records;
 
 import java.util.HashMap;
 import java.util.Map;
+
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -43,8 +45,8 @@ public abstract class ApplicationStateData {
   
   public static ApplicationStateData newInstance(long submitTime,
       long startTime, String user,
-      ApplicationSubmissionContext submissionContext,
-      RMAppState state, String diagnostics, long finishTime) {
+      ApplicationSubmissionContext submissionContext, RMAppState state,
+      String diagnostics, long finishTime, CallerContext callerContext) {
     ApplicationStateData appState = Records.newRecord(ApplicationStateData.class);
     appState.setSubmitTime(submitTime);
     appState.setStartTime(startTime);
@@ -53,12 +55,20 @@ public abstract class ApplicationStateData {
     appState.setState(state);
     appState.setDiagnostics(diagnostics);
     appState.setFinishTime(finishTime);
+    appState.setCallerContext(callerContext);
     return appState;
   }
 
   public static ApplicationStateData newInstance(long submitTime,
+      long startTime, ApplicationSubmissionContext context, String user,
+      CallerContext callerContext) {
+    return newInstance(submitTime, startTime, user, context, null, "", 0,
+        callerContext);
+  }
+  
+  public static ApplicationStateData newInstance(long submitTime,
       long startTime, ApplicationSubmissionContext context, String user) {
-    return newInstance(submitTime, startTime, user, context, null, "", 0);
+    return newInstance(submitTime, startTime, context, user, null);
   }
   
   public int getAttemptCount() {
@@ -144,4 +154,8 @@ public abstract class ApplicationStateData {
   public abstract long getFinishTime();
 
   public abstract void setFinishTime(long finishTime);
+  
+  public abstract CallerContext getCallerContext();
+  
+  public abstract void setCallerContext(CallerContext callerContext);
 }

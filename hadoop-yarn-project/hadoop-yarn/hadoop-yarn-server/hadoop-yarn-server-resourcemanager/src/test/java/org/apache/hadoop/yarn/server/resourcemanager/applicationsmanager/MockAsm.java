@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -210,6 +211,10 @@ public abstract class MockAsm extends MockApps {
 
     @Override
     public String getAppNodeLabelExpression() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public CallerContext getCallerContext() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
   }
