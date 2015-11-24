@@ -1507,6 +1507,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9435. TestBlockRecovery#testRBWReplicas is failing intermittently.
     (Rakesh R via waltersu4549)
 
+    HDFS-9433. DFS getEZForPath API on a non-existent file should throw FileNotFoundException
+    (Rakesh R via umamahesh)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

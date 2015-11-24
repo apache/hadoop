@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
@@ -475,8 +476,13 @@ public class TestEncryptionZones {
           assertExceptionContains("Permission denied:", e);
         }
 
-        assertNull("expected null for nonexistent path",
-            userAdmin.getEncryptionZoneForPath(nonexistent));
+        try {
+          userAdmin.getEncryptionZoneForPath(nonexistent);
+          fail("FileNotFoundException should be thrown for a non-existent"
+              + " file path");
+        } catch (FileNotFoundException e) {
+          assertExceptionContains("Path not found: " + nonexistent, e);
+        }
 
         // Check operation with non-ez paths
         assertNull("expected null for non-ez path",
@@ -504,10 +510,20 @@ public class TestEncryptionZones {
         assertEquals("expected ez path", allPath.toString(),
             userAdmin.getEncryptionZoneForPath(
                 new Path(snapshottedAllPath)).getPath().toString());
-        assertNull("expected null for deleted file path",
-            userAdmin.getEncryptionZoneForPath(allPathFile));
-        assertNull("expected null for deleted directory path",
-            userAdmin.getEncryptionZoneForPath(allPath));
+        try {
+          userAdmin.getEncryptionZoneForPath(allPathFile);
+          fail("FileNotFoundException should be thrown for a non-existent"
+              + " file path");
+        } catch (FileNotFoundException e) {
+          assertExceptionContains("Path not found: " + allPathFile, e);
+        }
+        try {
+          userAdmin.getEncryptionZoneForPath(allPath);
+          fail("FileNotFoundException should be thrown for a non-existent"
+              + " file path");
+        } catch (FileNotFoundException e) {
+          assertExceptionContains("Path not found: " + allPath, e);
+        }
         return null;
       }
     });
@@ -1330,5 +1346,27 @@ public class TestEncryptionZones {
 
     assertEquals("Got unexpected ez path", "/somewhere/base/zone", dfsAdmin
         .getEncryptionZoneForPath(zoneDir).getPath().toString());
+  }
+
+  @Test(timeout = 60000)
+  public void testGetEncryptionZoneOnANonExistentZoneFile() throws Exception {
+    final Path ez = new Path("/ez");
+    fs.mkdirs(ez);
+    dfsAdmin.createEncryptionZone(ez, TEST_KEY);
+    Path zoneFile = new Path(ez, "file");
+    try {
+      fs.getEZForPath(zoneFile);
+      fail("FileNotFoundException should be thrown for a non-existent"
+          + " file path");
+    } catch (FileNotFoundException e) {
+      assertExceptionContains("Path not found: " + zoneFile, e);
+    }
+    try {
+      dfsAdmin.getEncryptionZoneForPath(zoneFile);
+      fail("FileNotFoundException should be thrown for a non-existent"
+          + " file path");
+    } catch (FileNotFoundException e) {
+      assertExceptionContains("Path not found: " + zoneFile, e);
+    }
   }
 }
