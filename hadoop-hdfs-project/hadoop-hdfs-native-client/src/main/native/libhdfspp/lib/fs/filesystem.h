@@ -72,7 +72,7 @@ class InputStreamImpl : public InputStream {
                       const hadoop::hdfs::DatanodeInfoProto &dn, size_t offset,
                       const MutableBufferSequence &buffers,
                       const Handler &handler);
-
+  uint64_t get_file_length() const;
  private:
   FileSystemImpl *fs_;
   unsigned long long file_length_;

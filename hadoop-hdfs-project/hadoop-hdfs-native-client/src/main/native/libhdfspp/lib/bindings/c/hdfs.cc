@@ -58,6 +58,43 @@ static void ReportError(int errnum, std::string msg) {
 #endif
 }
 
+/* Convert Status wrapped error into appropriate errno and return code */
+static int Error(const Status &stat) {
+  int code = stat.code();
+  switch (code) {
+    case Status::Code::kOk:
+      return 0;
+    case Status::Code::kInvalidArgument:
+      ReportError(EINVAL, "Invalid argument");
+      break;
+    case Status::Code::kResourceUnavailable:
+      ReportError(EAGAIN, "Resource temporarily unavailable");
+      break;
+    case Status::Code::kUnimplemented:
+      ReportError(ENOSYS, "Function not implemented");
+      break;
+    case Status::Code::kException:
+      ReportError(EINTR, "Exception raised");
+      break;
+    default:
+      ReportError(ENOSYS, "Error: unrecognised code");
+  }
+  return -1;
+}
+
+/* return false on failure */
+bool CheckSystemAndHandle(hdfsFS fs, hdfsFile file) {
+  if (!fs) {
+    ReportError(ENODEV, "Cannot perform FS operations with null FS handle.");
+    return false;
+  }
+  if (!file) {
+    ReportError(EBADF, "Cannot perform FS operations with null File handle.");
+    return false;
+  }
+  return true;
+}
+
 /**
  * C API implementations
  **/
@@ -110,28 +147,66 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char *path, int flags, int bufferSize,
 }
 
 int hdfsCloseFile(hdfsFS fs, hdfsFile file) {
-  if (!fs) {
-    ReportError(ENODEV, "Cannot perform FS operations with null FS handle.");
+  if (!CheckSystemAndHandle(fs, file)) {
     return -1;
   }
-  if (!file) {
-    ReportError(EBADF, "Cannot perform FS operations with null File handle.");
-    return -1;
-  }
+
   delete file;
   return 0;
 }
 
 tSize hdfsPread(hdfsFS fs, hdfsFile file, tOffset position, void *buffer,
                 tSize length) {
-  if (!fs) {
-    ReportError(ENODEV, "Cannot perform FS operations with null FS handle.");
-    return -1;
-  }
-  if (!file) {
-    ReportError(EBADF, "Cannot perform FS operations with null File handle.");
+  if (!CheckSystemAndHandle(fs, file)) {
     return -1;
   }
 
-  return file->get_impl()->Pread(buffer, length, position);
+  size_t len = length;
+  Status stat = file->get_impl()->Pread(buffer, &len, position);
+  if (!stat.ok()) {
+    return Error(stat);
+  }
+  return (tSize)len;
+}
+
+tSize hdfsRead(hdfsFS fs, hdfsFile file, void *buffer, tSize length) {
+  if (!CheckSystemAndHandle(fs, file)) {
+    return -1;
+  }
+
+  size_t len = length;
+  Status stat = file->get_impl()->Read(buffer, &len);
+  if (!stat.ok()) {
+    return Error(stat);
+  }
+
+  return (tSize)len;
+}
+
+int hdfsSeek(hdfsFS fs, hdfsFile file, tOffset desiredPos) {
+  if (!CheckSystemAndHandle(fs, file)) {
+    return -1;
+  }
+
+  off_t desired = desiredPos;
+  Status stat = file->get_impl()->Seek(&desired, std::ios_base::beg);
+  if (!stat.ok()) {
+    return Error(stat);
+  }
+
+  return (int)desired;
+}
+
+tOffset hdfsTell(hdfsFS fs, hdfsFile file) {
+  if (!CheckSystemAndHandle(fs, file)) {
+    return -1;
+  }
+
+  ssize_t offset = 0;
+  Status stat = file->get_impl()->Seek(&offset, std::ios_base::cur);
+  if (!stat.ok()) {
+    return Error(stat);
+  }
+
+  return offset;
 }
