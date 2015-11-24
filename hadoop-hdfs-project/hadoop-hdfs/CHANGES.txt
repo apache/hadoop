@@ -391,6 +391,9 @@ Trunk (Unreleased)
     HDFS-9217. Fix broken findbugsExcludeFile.xml for hadoop-hdfs-client module.
     (Mingliang Liu via aajisaka)
 
+    HDFS-9423. Fix intermittent failure of TestEditLogTailer.
+    (Masatake Iwasaki via waltersu4549)
+
     BREAKDOWN OF HDFS-7285 SUBTASKS AND RELATED JIRAS
 
       HDFS-7347. Configurable erasure coding policy for individual files and
@@ -2361,9 +2364,6 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9435. TestBlockRecovery#testRBWReplicas is failing intermittently.
     (Rakesh R via waltersu4549)
-
-    HDFS-9423. Fix intermittent failure of TestEditLogTailer.
-    (Masatake Iwasaki via waltersu4549)
 
     HDFS-9433. DFS getEZForPath API on a non-existent file should throw FileNotFoundException
     (Rakesh R via umamahesh)
