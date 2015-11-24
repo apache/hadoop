@@ -70,6 +70,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_WEBHDFS_NETTY_HIGH_WATERMARK =
       "dfs.webhdfs.netty.high.watermark";
   public static final int  DFS_WEBHDFS_NETTY_HIGH_WATERMARK_DEFAULT = 65535;
+  public static final String  DFS_WEBHDFS_UGI_EXPIRE_AFTER_ACCESS_KEY =
+      "dfs.webhdfs.ugi.expire.after.access";
+  public static final int     DFS_WEBHDFS_UGI_EXPIRE_AFTER_ACCESS_DEFAULT =
+      10*60*1000; //10 minutes
 
   // HA related configuration
   public static final String  DFS_DATANODE_RESTART_REPLICA_EXPIRY_KEY = "dfs.datanode.restart.replica.expiration";
