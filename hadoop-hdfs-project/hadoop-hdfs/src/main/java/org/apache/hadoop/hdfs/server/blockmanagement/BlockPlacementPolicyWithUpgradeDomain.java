@@ -206,18 +206,18 @@ public class BlockPlacementPolicyWithUpgradeDomain extends
    *       shareRackNotUDSet} >= 3. Removing a node from shareUDNotRackSet
    *       will reduce the # of racks by 1 and won't change # of upgrade
    *       domains.
-   *         Note that this is different from BlockPlacementPolicyDefault which
-   *       will keep the # of racks after deletion. With upgrade domain policy,
-   *       given # of racks is still >= 2 after deletion, the data availability
-   *       model remains the same as BlockPlacementPolicyDefault (only supports
-   *       one rack failure).
+   *         Note that this is similar to BlockPlacementPolicyDefault which
+   *       will at most reduce the # of racks by 1, and never reduce it to < 2.
+   *       With upgrade domain policy, given # of racks is still >= 2 after
+   *       deletion, the data availability model remains the same as
+   *       BlockPlacementPolicyDefault (only supports one rack failure).
    *         For example, assume we have 4 replicas: d1(rack1, ud1),
    *       d2(rack2, ud1), d3(rack3, ud3), d4(rack3, ud4). Thus we have
    *       shareUDNotRackSet: {d1, d2} and shareRackNotUDSet: {d3, d4}.
    *       With upgrade domain policy, the remaining replicas after deletion
    *       are {d1(or d2), d3, d4} which has 2 racks.
-   *       With BlockPlacementPolicyDefault policy, the remaining replicas
-   *       after deletion are {d1, d2, d3(or d4)} which has 3 racks.
+   *       With BlockPlacementPolicyDefault policy, any of the 4 with the worst
+   *       condition will be deleted, which in worst case has 2 racks remain.
    *    3. shareUDNotRackSet isn't empty and shareRackNotUDSet is empty. This
    *       implies all replicas are on unique racks. Removing a node from
    *       shareUDNotRackSet will reduce # of racks (no different from
@@ -244,7 +244,8 @@ public class BlockPlacementPolicyWithUpgradeDomain extends
   @Override
   protected Collection<DatanodeStorageInfo> pickupReplicaSet(
       Collection<DatanodeStorageInfo> moreThanOne,
-      Collection<DatanodeStorageInfo> exactlyOne) {
+      Collection<DatanodeStorageInfo> exactlyOne,
+      Map<String, List<DatanodeStorageInfo>> rackMap) {
     // shareUDSet includes DatanodeStorageInfo that share same upgrade
     // domain with another DatanodeStorageInfo.
     Collection<DatanodeStorageInfo> all = combine(moreThanOne, exactlyOne);
@@ -255,7 +256,7 @@ public class BlockPlacementPolicyWithUpgradeDomain extends
     List<DatanodeStorageInfo> shareRackAndUDSet = new ArrayList<>();
     if (shareUDSet.size() == 0) {
       // All upgrade domains are unique, use the parent set.
-      return super.pickupReplicaSet(moreThanOne, exactlyOne);
+      return super.pickupReplicaSet(moreThanOne, exactlyOne, rackMap);
     } else if (moreThanOne != null) {
       for (DatanodeStorageInfo storage : shareUDSet) {
         if (moreThanOne.contains(storage)) {

@@ -169,4 +169,12 @@ public class BlockPlacementPolicyRackFaultTolerant extends BlockPlacementPolicyD
       racks.add(dn.getNetworkLocation());
     return new BlockPlacementStatusDefault(racks.size(), numberOfReplicas);
   }
+
+  @Override
+  protected Collection<DatanodeStorageInfo> pickupReplicaSet(
+      Collection<DatanodeStorageInfo> moreThanOne,
+      Collection<DatanodeStorageInfo> exactlyOne,
+      Map<String, List<DatanodeStorageInfo>> rackMap) {
+    return moreThanOne.isEmpty() ? exactlyOne : moreThanOne;
+  }
 }
