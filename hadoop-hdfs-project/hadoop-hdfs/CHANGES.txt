@@ -2365,6 +2365,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9423. Fix intermittent failure of TestEditLogTailer.
     (Masatake Iwasaki via waltersu4549)
 
+    HDFS-9433. DFS getEZForPath API on a non-existent file should throw FileNotFoundException
+    (Rakesh R via umamahesh)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
