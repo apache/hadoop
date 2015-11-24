@@ -32,6 +32,9 @@ Release 2.6.3 - UNRELEASED
     position/key information for uncompressed input sometimes. (Zhihai Xu via
     jlowe)
 
+    MAPREDUCE-5883. "Total megabyte-seconds" in job counters is slightly
+    misleading (Nathan Roberts via jlowe)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
