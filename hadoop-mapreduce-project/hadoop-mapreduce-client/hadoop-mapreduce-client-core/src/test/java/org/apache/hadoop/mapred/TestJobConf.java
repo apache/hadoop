@@ -99,7 +99,7 @@ public class TestJobConf {
     assertEquals(70, conf.getMaxReduceTaskFailuresPercent());
 
     // by default
-    assertEquals(JobPriority.NORMAL.name(), conf.getJobPriority().name());
+    assertEquals(JobPriority.DEFAULT.name(), conf.getJobPriority().name());
     conf.setJobPriority(JobPriority.HIGH);
     assertEquals(JobPriority.HIGH.name(), conf.getJobPriority().name());
 
@@ -376,5 +376,50 @@ public class TestJobConf {
     // sad cases
     Assert.assertEquals(-1, JobConf.parseMaximumHeapSizeMB("-Xmx4?"));
     Assert.assertEquals(-1, JobConf.parseMaximumHeapSizeMB(""));
+  }
+
+  /**
+   * Test various Job Priority
+   */
+  @Test
+  public void testJobPriorityConf() {
+    JobConf conf = new JobConf();
+
+    // by default
+    assertEquals(JobPriority.DEFAULT.name(), conf.getJobPriority().name());
+    assertEquals(0, conf.getJobPriorityAsInteger());
+    // Set JobPriority.LOW using old API, and verify output from both getter
+    conf.setJobPriority(JobPriority.LOW);
+    assertEquals(JobPriority.LOW.name(), conf.getJobPriority().name());
+    assertEquals(2, conf.getJobPriorityAsInteger());
+
+    // Set JobPriority.VERY_HIGH using old API, and verify output
+    conf.setJobPriority(JobPriority.VERY_HIGH);
+    assertEquals(JobPriority.VERY_HIGH.name(), conf.getJobPriority().name());
+    assertEquals(5, conf.getJobPriorityAsInteger());
+
+    // Set 3 as priority using new API, and verify output from both getter
+    conf.setJobPriorityAsInteger(3);
+    assertEquals(JobPriority.NORMAL.name(), conf.getJobPriority().name());
+    assertEquals(3, conf.getJobPriorityAsInteger());
+
+    // Set 4 as priority using new API, and verify output
+    conf.setJobPriorityAsInteger(4);
+    assertEquals(JobPriority.HIGH.name(), conf.getJobPriority().name());
+    assertEquals(4, conf.getJobPriorityAsInteger());
+    // Now set some high integer values and verify output from old api
+    conf.setJobPriorityAsInteger(57);
+    assertEquals(JobPriority.UNDEFINED_PRIORITY.name(), conf.getJobPriority()
+        .name());
+    assertEquals(57, conf.getJobPriorityAsInteger());
+
+    // Error case where UNDEFINED_PRIORITY is set explicitly
+    conf.setJobPriority(JobPriority.UNDEFINED_PRIORITY);
+    assertEquals(JobPriority.UNDEFINED_PRIORITY.name(), conf.getJobPriority()
+        .name());
+
+    // As UNDEFINED_PRIORITY cannot be mapped to any integer value, resetting
+    // to default as 0.
+    assertEquals(0, conf.getJobPriorityAsInteger());
   }
 }

@@ -148,7 +148,7 @@ public class JobStatus extends org.apache.hadoop.mapreduce.JobStatus {
                    String user, String jobName, 
                    String jobFile, String trackingUrl) {
     this(jobid, mapProgress, reduceProgress, cleanupProgress, runState,
-        JobPriority.NORMAL, user, jobName, jobFile, trackingUrl);
+        JobPriority.DEFAULT, user, jobName, jobFile, trackingUrl);
   }
 
   /**

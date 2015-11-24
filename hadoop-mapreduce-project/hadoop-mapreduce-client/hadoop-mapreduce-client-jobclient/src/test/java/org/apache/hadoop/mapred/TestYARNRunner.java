@@ -87,6 +87,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
@@ -602,6 +603,30 @@ public class TestYARNRunner extends TestCase {
     String shell = env.get(Environment.SHELL.name());
     assertNotNull("SHELL not set", shell);
     assertEquals("Bad SHELL setting", USER_SHELL, shell);
+  }
+
+  @Test
+  public void testJobPriority() throws Exception {
+    JobConf jobConf = new JobConf();
+
+    jobConf.set(MRJobConfig.PRIORITY, "LOW");
+
+    YARNRunner yarnRunner = new YARNRunner(jobConf);
+    ApplicationSubmissionContext appSubCtx = buildSubmitContext(yarnRunner,
+        jobConf);
+
+    // 2 corresponds to LOW
+    assertEquals(appSubCtx.getPriority(), Priority.newInstance(2));
+
+    // Set an integer explicitly
+    jobConf.set(MRJobConfig.PRIORITY, "12");
+
+    yarnRunner = new YARNRunner(jobConf);
+    appSubCtx = buildSubmitContext(yarnRunner,
+        jobConf);
+
+    // Verify whether 12 is set to submission context
+    assertEquals(appSubCtx.getPriority(), Priority.newInstance(12));
   }
 
   private ApplicationSubmissionContext buildSubmitContext(
