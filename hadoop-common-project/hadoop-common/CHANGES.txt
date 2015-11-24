@@ -1492,9 +1492,6 @@ Release 2.7.3 - UNRELEASED
     HADOOP-12374. Updated expunge command description.
     (WeiWei Yang via eyang)
 
-    HADOOP-11361. Fix a race condition in MetricsSourceAdapter.updateJmxCache.
-    (Brahma Reddy Battula via ozawa)
-
     HADOOP-12348. MetricsSystemImpl creates MetricsSourceAdapter with wrong
     time unit parameter. (zxu via rkanter)
 
