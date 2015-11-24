@@ -50,12 +50,17 @@ import static org.apache.hadoop.util.Time.now;
 class FSDirStatAndListingOp {
   static DirectoryListing getListingInt(FSDirectory fsd, final String srcArg,
       byte[] startAfter, boolean needLocation) throws IOException {
-    FSPermissionChecker pc = fsd.getPermissionChecker();
     byte[][] pathComponents = FSDirectory
         .getPathComponentsForReservedPath(srcArg);
     final String startAfterString = new String(startAfter, Charsets.UTF_8);
-    final String src = fsd.resolvePath(pc, srcArg, pathComponents);
-    final INodesInPath iip = fsd.getINodesInPath(src, true);
+    String src = null;
+
+    if (fsd.isPermissionEnabled()) {
+      FSPermissionChecker pc = fsd.getPermissionChecker();
+      src = fsd.resolvePath(pc, srcArg, pathComponents);
+    } else {
+      src = FSDirectory.resolvePath(srcArg, pathComponents, fsd);
+    }
 
     // Get file name when startAfter is an INodePath
     if (FSDirectory.isReservedName(startAfterString)) {
@@ -72,8 +77,10 @@ class FSDirStatAndListingOp {
       }
     }
 
+    final INodesInPath iip = fsd.getINodesInPath(src, true);
     boolean isSuperUser = true;
     if (fsd.isPermissionEnabled()) {
+      FSPermissionChecker pc = fsd.getPermissionChecker();
       if (iip.getLastINode() != null && iip.getLastINode().isDirectory()) {
         fsd.checkPathAccess(pc, iip, FsAction.READ_EXECUTE);
       } else {
@@ -101,15 +108,17 @@ class FSDirStatAndListingOp {
     if (!DFSUtil.isValidName(src)) {
       throw new InvalidPathException("Invalid file name: " + src);
     }
-    FSPermissionChecker pc = fsd.getPermissionChecker();
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsd.resolvePath(pc, src, pathComponents);
-    final INodesInPath iip = fsd.getINodesInPath(src, resolveLink);
     if (fsd.isPermissionEnabled()) {
+      FSPermissionChecker pc = fsd.getPermissionChecker();
+      src = fsd.resolvePath(pc, src, pathComponents);
+      final INodesInPath iip = fsd.getINodesInPath(src, resolveLink);
       fsd.checkPermission(pc, iip, false, null, null, null, null, false);
+    } else {
+      src = FSDirectory.resolvePath(src, pathComponents, fsd);
     }
-    return getFileInfo(fsd, src, resolveLink,
-        FSDirectory.isReservedRawName(srcArg));
+    return getFileInfo(fsd, src, FSDirectory.isReservedRawName(srcArg),
+                       resolveLink);
   }
 
   /**

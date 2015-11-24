@@ -867,6 +867,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9318. considerLoad factor can be improved. (Kuhu Shukla via kihwal)
 
+    HDFS-8335. FSNamesystem should construct FSPermissionChecker only if
+    permission is enabled. (Gabor Liptak via wheat9)
+
   BUG FIXES
 
     HDFS-8091: ACLStatus and XAttributes should be presented to
@@ -1512,6 +1515,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-6101. TestReplaceDatanodeOnFailure fails occasionally.
     (Wei-Chiu Chuang via cnauroth)
+
+    HDFS-8335. FSNamesystem should construct FSPermissionChecker only if
+    permission is enabled. (Gabor Liptak via wheat9)
 
 Release 2.7.3 - UNRELEASED
 
