@@ -1551,6 +1551,26 @@
 
   <property>
     <description>
+      Max time to wait for NM to connect to RM.
+      When not set, proxy will fall back to use value of
+      yarn.resourcemanager.connect.max-wait.ms.
+    </description>
+    <name>yarn.nodemanager.resourcemanager.connect.max-wait.ms</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Time interval between each NM attempt to connect to RM.
+      When not set, proxy will fall back to use value of
+      yarn.resourcemanager.connect.retry-interval.ms.
+    </description>
+    <name>yarn.nodemanager.resourcemanager.connect.retry-interval.ms</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
       Maximum number of proxy connections to cache for node managers. If set
       to a value greater than zero then the cache is enabled and the NMClient
       and MRAppMaster will cache the specified number of node manager proxies.
