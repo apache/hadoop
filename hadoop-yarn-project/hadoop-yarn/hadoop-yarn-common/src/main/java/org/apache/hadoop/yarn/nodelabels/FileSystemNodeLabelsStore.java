@@ -88,7 +88,9 @@ public class FileSystemNodeLabelsStore extends NodeLabelsStore {
     setFileSystem(conf);
 
     // mkdir of root dir path
-    fs.mkdirs(fsWorkingPath);
+    if (!fs.exists(fsWorkingPath)) {
+      fs.mkdirs(fsWorkingPath);
+    }
   }
 
   @Override
@@ -96,7 +98,7 @@ public class FileSystemNodeLabelsStore extends NodeLabelsStore {
     IOUtils.cleanup(LOG, fs, editlogOs);
   }
 
-  private void setFileSystem(Configuration conf) throws IOException {
+  void setFileSystem(Configuration conf) throws IOException {
     Configuration confCopy = new Configuration(conf);
     confCopy.setBoolean("dfs.client.retry.policy.enabled", true);
     String retryPolicy =
