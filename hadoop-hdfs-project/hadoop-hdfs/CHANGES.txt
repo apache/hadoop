@@ -23,9 +23,6 @@ Release 2.6.3 - UNRELEASED
     HDFS-9289. Make DataStreamer#block thread safe and verify genStamp in
     commitBlock. (Chang Li via zhz)
 
-    HDFS-9434. Recommission a datanode with 500k blocks may pause NN for 30
-    seconds for printing info log messags.  (szetszwo)
-
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES

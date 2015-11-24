@@ -2853,9 +2853,11 @@ public class BlockManager {
     for(DatanodeStorageInfo storage : blocksMap.getStorages(block, State.NORMAL)) {
       final DatanodeDescriptor cur = storage.getDatanodeDescriptor();
       if (storage.areBlockContentsStale()) {
-        LOG.trace("BLOCK* processOverReplicatedBlock: Postponing {}"
-            + " since storage {} does not yet have up-to-date information.",
-            block, storage);
+        LOG.info("BLOCK* processOverReplicatedBlock: " +
+            "Postponing processing of over-replicated " +
+            block + " since storage + " + storage
+            + "datanode " + cur + " does not yet have up-to-date " +
+            "block information.");
         postponeBlock(block);
         return;
       }
