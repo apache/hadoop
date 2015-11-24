@@ -1064,6 +1064,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4298. Fix findbugs warnings in hadoop-yarn-common.
     (Sunil G via aajisaka)
 
+    YARN-4387. Fix typo in FairScheduler log message. (Xin Wang via ozawa)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
