@@ -2378,8 +2378,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-9435. TestBlockRecovery#testRBWReplicas is failing intermittently.
     (Rakesh R via waltersu4549)
 
-    HDFS-9433. DFS getEZForPath API on a non-existent file should throw FileNotFoundException
-    (Rakesh R via umamahesh)
+    HDFS-9433. DFS getEZForPath API on a non-existent file should throw
+    FileNotFoundException (Rakesh R via umamahesh)
 
     HDFS-6101. TestReplaceDatanodeOnFailure fails occasionally.
     (Wei-Chiu Chuang via cnauroth)
@@ -2396,6 +2396,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9459. hadoop-hdfs-native-client fails test build on Windows after
     transition to ctest. (Chris Nauroth via wheat9)
+
+    HDFS-9407. TestFileTruncate should not use fixed NN port.
+    (Brahma Reddy Battula via shv)
 
 Release 2.7.3 - UNRELEASED
 
