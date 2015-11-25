@@ -1503,14 +1503,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public void writeUnlock() {
     final boolean needReport = fsLock.getWriteHoldCount() == 1 &&
         fsLock.isWriteLockedByCurrentThread();
+    final long writeLockInterval = monotonicNow() - writeLockHeldTimeStamp;
+
     this.fsLock.writeLock().unlock();
 
-    if (needReport) {
-      long writeLockInterval = monotonicNow() - writeLockHeldTimeStamp;
-      if (writeLockInterval >= WRITELOCK_REPORTING_THRESHOLD) {
-        LOG.info("FSNamesystem write lock held for " + writeLockInterval +
-            " ms via\n" + StringUtils.getStackTrace(Thread.currentThread()));
-      }
+    if (needReport && writeLockInterval >= WRITELOCK_REPORTING_THRESHOLD) {
+      LOG.info("FSNamesystem write lock held for " + writeLockInterval +
+          " ms via\n" + StringUtils.getStackTrace(Thread.currentThread()));
     }
   }
   @Override
