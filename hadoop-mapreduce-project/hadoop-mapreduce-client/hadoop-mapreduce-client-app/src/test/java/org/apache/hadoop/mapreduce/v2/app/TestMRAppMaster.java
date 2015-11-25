@@ -87,6 +87,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -95,11 +96,13 @@ import org.mockito.Mockito;
 
 public class TestMRAppMaster {
   private static final Log LOG = LogFactory.getLog(TestMRAppMaster.class);
-  static String stagingDir = "staging/";
+  private static final Path TEST_ROOT_DIR =
+      new Path(System.getProperty("test.build.data", "target/test-dir"));
+  private static final Path testDir = new Path(TEST_ROOT_DIR,
+      TestMRAppMaster.class.getName() + "-tmpDir");
+  static String stagingDir = new Path(testDir, "staging").toString();
   private static FileContext localFS = null;
-  private static final File testDir = new File("target",
-    TestMRAppMaster.class.getName() + "-tmpDir").getAbsoluteFile();
-  
+
   @BeforeClass
   public static void setup() throws AccessControlException,
       FileNotFoundException, IllegalArgumentException, IOException {
@@ -108,17 +111,22 @@ public class TestMRAppMaster {
     File dir = new File(stagingDir);
     stagingDir = dir.getAbsolutePath();
     localFS = FileContext.getLocalFSFileContext();
-    localFS.delete(new Path(testDir.getAbsolutePath()), true);
-    testDir.mkdir();
+    localFS.delete(testDir, true);
+    new File(testDir.toString()).mkdir();
   }
   
   @Before
-  public void cleanup() throws IOException {
+  public void prepare() throws IOException {
     File dir = new File(stagingDir);
     if(dir.exists()) {
       FileUtils.deleteDirectory(dir);
     }
     dir.mkdirs();
+  }
+
+  @AfterClass
+  public static void cleanup() throws IOException {
+    localFS.delete(testDir, true);
   }
 
   @Test
@@ -427,7 +435,7 @@ public class TestMRAppMaster {
 
     JobConf conf = new JobConf();
 
-    Path tokenFilePath = new Path(testDir.getAbsolutePath(), "tokens-file");
+    Path tokenFilePath = new Path(testDir, "tokens-file");
     Map<String, String> newEnv = new HashMap<String, String>();
     newEnv.put(UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION, tokenFilePath
       .toUri().getPath());

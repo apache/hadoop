@@ -647,6 +647,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6553. Replace '\u2b05' with '<-' in rendering job configuration.
     (Gabor Liptak via aajisaka)
 
+    MAPREDUCE-6557. Tests in mapreduce-client-app are writing outside of
+    target. (Akira AJISAKA via junping_du)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
