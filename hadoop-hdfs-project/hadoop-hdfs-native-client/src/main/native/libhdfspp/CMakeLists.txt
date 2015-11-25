@@ -49,7 +49,9 @@ include_directories(
   lib
   ${PROJECT_BINARY_DIR}/lib/proto
   third_party/asio-1.10.2/include
+  third_party/rapidxml-1.13
   third_party/gmock-1.7.0
+  third_party/tr2
   ${OPENSSL_INCLUDE_DIR}
   ../libhdfs/include
 )
