@@ -1522,6 +1522,10 @@ Release 2.8.0 - UNRELEASED
     HDFS-8335. FSNamesystem should construct FSPermissionChecker only if
     permission is enabled. (Gabor Liptak via wheat9)
 
+    HDFS-6694. TestPipelinesFailover.testPipelineRecoveryStress tests fail
+    intermittently with various symptoms - debugging patch. (Yongjun Zhang via
+    Arpit Agarwal)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
