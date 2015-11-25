@@ -352,6 +352,9 @@ Release 2.8.0 - UNRELEASED
 
     MAPREDUCE-6540. TestMRTimelineEventHandling fails (sjlee)
 
+    MAPREDUCE-6553. Replace '\u2b05' with '<-' in rendering job configuration.
+    (Gabor Liptak via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

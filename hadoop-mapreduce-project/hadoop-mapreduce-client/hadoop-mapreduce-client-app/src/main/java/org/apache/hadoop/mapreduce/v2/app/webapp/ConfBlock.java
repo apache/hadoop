@@ -90,8 +90,7 @@ public class ConfBlock extends HtmlBlock {
         boolean first = true;
         for(int i = (sources.length  - 2); i >= 0; i--) {
           if(!first) {
-            // \u2B05 is an arrow <--
-            buffer.append(" \u2B05 ");
+            buffer.append(" <- ");
           }
           first = false;
           buffer.append(sources[i]);
