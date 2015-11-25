@@ -307,17 +307,17 @@ Release 2.8.0 - UNRELEASED
 
   NEW FEATURES
 
-   MAPREDUCE-6284. Add Task Attempt State API to MapReduce Application
-   Master REST API. (Ryu Kobayashi via ozawa)
+    MAPREDUCE-6284. Add Task Attempt State API to MapReduce Application
+    Master REST API. (Ryu Kobayashi via ozawa)
 
-   MAPREDUCE-6364. Add a "Kill" link to Task Attempts page. (Ryu Kobayashi
-   via ozawa)
+    MAPREDUCE-6364. Add a "Kill" link to Task Attempts page. (Ryu Kobayashi
+    via ozawa)
 
-   MAPREDUCE-6304. Specifying node labels when submitting MR jobs.
-   (Naganarasimha G R via wangda)
+    MAPREDUCE-6304. Specifying node labels when submitting MR jobs.
+    (Naganarasimha G R via wangda)
 
-   MAPREDUCE-6415. Create a tool to combine aggregated logs into HAR files. 
-   (Robert Kanter via kasha)
+    MAPREDUCE-6415. Create a tool to combine aggregated logs into HAR files.
+    (Robert Kanter via kasha)
 
   IMPROVEMENTS
 
@@ -617,33 +617,33 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6484. Yarn Client uses local address instead of RM address as
     token renewer in a secure cluster when RM HA is enabled. (Zhihai Xu)
 
-   MAPREDUCE-6480. archive-logs tool may miss applications (rkanter)
+    MAPREDUCE-6480. archive-logs tool may miss applications (rkanter)
 
-   MAPREDUCE-6494. Permission issue when running archive-logs tool as
-   different users (rkanter)
+    MAPREDUCE-6494. Permission issue when running archive-logs tool as
+    different users (rkanter)
 
-   MAPREDUCE-6485. Create a new task attempt with failed map task priority
-   if in-progress attempts are unassigned. (Xianyin Xin via rohithsharmaks)
+    MAPREDUCE-6485. Create a new task attempt with failed map task priority
+    if in-progress attempts are unassigned. (Xianyin Xin via rohithsharmaks)
 
-   MAPREDUCE-6503. archive-logs tool should use HADOOP_PREFIX instead
-   of HADOOP_HOME (rkanter)
+    MAPREDUCE-6503. archive-logs tool should use HADOOP_PREFIX instead
+    of HADOOP_HOME (rkanter)
 
-   MAPREDUCE-6302. Preempt reducers after a configurable timeout irrespective 
-   of headroom. (kasha)
+    MAPREDUCE-6302. Preempt reducers after a configurable timeout irrespective
+    of headroom. (kasha)
 
-   MAPREDUCE-6495. Docs for archive-logs tool (rkanter)
+    MAPREDUCE-6495. Docs for archive-logs tool (rkanter)
 
-   MAPREDUCE-6508. TestNetworkedJob fails consistently due to delegation 
-   token changes on RM. (Akira AJISAKA via junping_du)
+    MAPREDUCE-6508. TestNetworkedJob fails consistently due to delegation
+    token changes on RM. (Akira AJISAKA via junping_du)
 
-   MAPREDUCE-6515. Update Application priority in AM side from AM-RM heartbeat
-   (Sunil G via jlowe)
+    MAPREDUCE-6515. Update Application priority in AM side from AM-RM heartbeat
+    (Sunil G via jlowe)
 
-   MAPREDUCE-6533. testDetermineCacheVisibilities of
-   TestClientDistributedCacheManager is broken (Chang Li via jlowe)
+    MAPREDUCE-6533. testDetermineCacheVisibilities of
+    TestClientDistributedCacheManager is broken (Chang Li via jlowe)
 
-   MAPREDUCE-6553. Replace '\u2b05' with '<-' in rendering job configuration.
-   (Gabor Liptak via aajisaka)
+    MAPREDUCE-6553. Replace '\u2b05' with '<-' in rendering job configuration.
+    (Gabor Liptak via aajisaka)
 
 Release 2.7.3 - UNRELEASED
 
