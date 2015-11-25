@@ -87,7 +87,7 @@ public class StorageLocation {
 
     if (matcher.matches()) {
       String classString = matcher.group(1);
-      location = matcher.group(2);
+      location = matcher.group(2).trim();
       if (!classString.isEmpty()) {
         storageType =
             StorageType.valueOf(StringUtils.toUpperCase(classString));
