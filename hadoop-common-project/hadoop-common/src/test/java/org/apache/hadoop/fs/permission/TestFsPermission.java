@@ -695,14 +695,4 @@ public class TestFsPermission extends TestCase {
            msg.contains(umask) &&
            msg.contains("octal or symbolic");
   }
-  
-  // Ensure that when the deprecated decimal umask key is used, it is correctly
-  // parsed as such and converted correctly to an FsPermission value
-  public void testDeprecatedUmask() {
-    Configuration conf = new Configuration();
-    conf.set(FsPermission.DEPRECATED_UMASK_LABEL, "302"); // 302 = 0456
-    FsPermission umask = FsPermission.getUMask(conf);
-
-    assertEquals(0456, umask.toShort());
-  }
 }
