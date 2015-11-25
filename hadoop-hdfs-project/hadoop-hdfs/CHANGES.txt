@@ -2400,6 +2400,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9407. TestFileTruncate should not use fixed NN port.
     (Brahma Reddy Battula via shv)
 
+    HDFS-9467. Fix data race accessing writeLockHeldTimeStamp in FSNamesystem.
+    (Mingliang Liu via jing9)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
