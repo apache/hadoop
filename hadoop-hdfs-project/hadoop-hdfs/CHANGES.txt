@@ -319,10 +319,6 @@ Trunk (Unreleased)
     HDFS-5794. Fix the inconsistency of layout version number of 
     ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
 
-    HDFS-6694. TestPipelinesFailover.testPipelineRecoveryStress tests fail
-    intermittently with various symptoms - debugging patch. (Yongjun Zhang via
-    Arpit Agarwal)
-
     HDFS-6893. crypto subcommand is not sorted properly in hdfs's hadoop_usage
     (David Luo via aw)
 
@@ -2387,6 +2383,10 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8335. FSNamesystem should construct FSPermissionChecker only if
     permission is enabled. (Gabor Liptak via wheat9)
+
+    HDFS-6694. TestPipelinesFailover.testPipelineRecoveryStress tests fail
+    intermittently with various symptoms - debugging patch. (Yongjun Zhang via
+    Arpit Agarwal)
 
 Release 2.7.3 - UNRELEASED
 
