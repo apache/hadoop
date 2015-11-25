@@ -34,6 +34,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4365. FileSystemNodeLabelStore should check for root dir existence on
     startup (Kuhu Shukla via jlowe)
 
+    YARN-4380. TestResourceLocalizationService.testDownloadingResourcesOnContainerKill
+    fails intermittently. (Varun Saxena via ozawa)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
