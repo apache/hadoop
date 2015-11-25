@@ -642,6 +642,9 @@ Release 2.8.0 - UNRELEASED
    MAPREDUCE-6533. testDetermineCacheVisibilities of
    TestClientDistributedCacheManager is broken (Chang Li via jlowe)
 
+   MAPREDUCE-6553. Replace '\u2b05' with '<-' in rendering job configuration.
+   (Gabor Liptak via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
