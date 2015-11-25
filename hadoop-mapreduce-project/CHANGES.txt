@@ -231,6 +231,8 @@ Trunk (Unreleased)
 
     MAPREDUCE-6540. TestMRTimelineEventHandling fails (sjlee)
 
+    MAPREDUCE-6555. TestMRAppMaster fails on trunk. (Junping Du via ozawa)
+
   BREAKDOWN OF MAPREDUCE-2841 (NATIVE TASK) SUBTASKS
 
     MAPREDUCE-5985. native-task: Fix build on macosx. Contributed by
