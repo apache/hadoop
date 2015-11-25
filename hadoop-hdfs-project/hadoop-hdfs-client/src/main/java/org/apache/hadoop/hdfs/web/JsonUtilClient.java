@@ -268,6 +268,23 @@ class JsonUtilClient {
     }
   }
 
+  /** Convert an Object[] to a StorageType[]. */
+  static StorageType[] toStorageTypeArray(final List<?> objects)
+      throws IOException {
+    if (objects == null) {
+      return null;
+    } else if (objects.isEmpty()) {
+      return StorageType.EMPTY_ARRAY;
+    } else {
+      final StorageType[] array = new StorageType[objects.size()];
+      int i = 0;
+      for (Object object : objects) {
+        array[i++] = StorageType.parseStorageType(object.toString());
+      }
+      return array;
+    }
+  }
+
   /** Convert a Json map to LocatedBlock. */
   static LocatedBlock toLocatedBlock(final Map<?, ?> m) throws IOException {
     if (m == null) {
@@ -282,8 +299,10 @@ class JsonUtilClient {
     final DatanodeInfo[] cachedLocations = toDatanodeInfoArray(
         getList(m, "cachedLocations"));
 
+    final StorageType[] storageTypes = toStorageTypeArray(
+        getList(m, "storageTypes"));
     final LocatedBlock locatedblock = new LocatedBlock(b, locations,
-        null, null, startOffset, isCorrupt, cachedLocations);
+        null, storageTypes, startOffset, isCorrupt, cachedLocations);
     locatedblock.setBlockToken(toBlockToken((Map<?, ?>)m.get("blockToken")));
     return locatedblock;
   }
