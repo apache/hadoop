@@ -1362,6 +1362,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11954. Solaris does not support RLIMIT_MEMLOCK as in Linux
     (Alan Burlison via aw)
 
+    HADOOP-12598. Add XML namespace declarations for some hadoop/tools modules.
+    (Xin Wang via aajisaka)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
