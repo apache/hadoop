@@ -104,8 +104,6 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
     String bindAddress = conf.get(YarnConfiguration.TIMELINE_SERVICE_BIND_HOST,
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_BIND_HOST) + ":0";
     try {
-      Configuration confForInfoServer = new Configuration(conf);
-      confForInfoServer.setInt(HttpServer2.HTTP_MAX_THREADS, 10);
       HttpServer2.Builder builder = new HttpServer2.Builder()
           .setName("timeline")
           .setConf(conf)
