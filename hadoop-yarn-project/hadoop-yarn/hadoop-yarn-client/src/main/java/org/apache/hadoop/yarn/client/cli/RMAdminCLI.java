@@ -418,11 +418,17 @@ public class RMAdminCLI extends HAAdmin {
 
   private int updateNodeResource(String nodeIdStr, int memSize,
       int cores, int overCommitTimeout) throws IOException, YarnException {
+    // check resource value first
+    if (invalidResourceValue(memSize, cores)) {
+      throw new IllegalArgumentException("Invalid resource value: " + "(" +
+          memSize + "," + cores + ") for updateNodeResource.");
+    }
     // Refresh the nodes
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     UpdateNodeResourceRequest request =
       recordFactory.newRecordInstance(UpdateNodeResourceRequest.class);
     NodeId nodeId = ConverterUtils.toNodeId(nodeIdStr);
+    
     Resource resource = Resources.createResource(memSize, cores);
     Map<NodeId, ResourceOption> resourceMap =
         new HashMap<NodeId, ResourceOption>();
@@ -431,6 +437,11 @@ public class RMAdminCLI extends HAAdmin {
     request.setNodeResourceMap(resourceMap);
     adminProtocol.updateNodeResource(request);
     return 0;
+  }
+
+  // complain negative value for cpu or memory.
+  private boolean invalidResourceValue(int memValue, int coreValue) {
+    return (memValue < 0) || (coreValue < 0);
   }
 
   private int getGroups(String[] usernames) throws IOException {

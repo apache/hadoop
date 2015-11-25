@@ -1069,6 +1069,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4387. Fix typo in FairScheduler log message. (Xin Wang via ozawa)
 
+    YARN-4384. updateNodeResource CLI should not accept negative values for resource.
+    (Junping Du via wangda)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
