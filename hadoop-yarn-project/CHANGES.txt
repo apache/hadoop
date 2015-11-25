@@ -37,6 +37,9 @@ Release 2.6.4 - UNRELEASED
     YARN-4354. Public resource localization fails with NPE. (Jason Lowe via
     junping_du)
 
+    YARN-4380. TestResourceLocalizationService.testDownloadingResourcesOnContainerKill
+    fails intermittently. (Varun Saxena via ozawa)
+
 Release 2.6.3 - 2015-12-17
 
   INCOMPATIBLE CHANGES
