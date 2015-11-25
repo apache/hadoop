@@ -2388,6 +2388,9 @@ Release 2.8.0 - UNRELEASED
     intermittently with various symptoms - debugging patch. (Yongjun Zhang via
     Arpit Agarwal)
 
+    HDFS-9459. hadoop-hdfs-native-client fails test build on Windows after
+    transition to ctest. (Chris Nauroth via wheat9)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
