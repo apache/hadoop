@@ -871,6 +871,18 @@ Trunk (Unreleased)
       HDFS-9451. Clean up depreated umasks and related unit tests.
       (Wei-Chiu Chuang via wheat9)
 
+Release 2.9.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 2.8.0 - UNRELEASED
 
   NEW FEATURES
