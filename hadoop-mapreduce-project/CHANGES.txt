@@ -650,6 +650,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6557. Tests in mapreduce-client-app are writing outside of
     target. (Akira AJISAKA via junping_du)
 
+    MAPREDUCE-6549. multibyte delimiters with LineRecordReader cause
+    duplicate records (wilfreds via rkanter)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
