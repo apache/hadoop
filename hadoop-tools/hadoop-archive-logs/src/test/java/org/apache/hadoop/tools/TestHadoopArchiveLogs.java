@@ -163,7 +163,7 @@ public class TestHadoopArchiveLogs {
     Assert.assertTrue(hal.eligibleApplications.contains(app3));
   }
 
-  @Test(timeout = 10000)
+  @Test(timeout = 30000)
   public void testFilterAppsByAggregatedStatus() throws Exception {
     MiniYARNCluster yarnCluster = null;
     try {
@@ -246,6 +246,11 @@ public class TestHadoopArchiveLogs {
 
   @Test(timeout = 10000)
   public void testGenerateScript() throws Exception {
+    _testGenerateScript(false);
+    _testGenerateScript(true);
+  }
+
+  private void _testGenerateScript(boolean proxy) throws Exception {
     Configuration conf = new Configuration();
     HadoopArchiveLogs hal = new HadoopArchiveLogs(conf);
     ApplicationId app1 = ApplicationId.newInstance(CLUSTER_TIMESTAMP, 1);
@@ -254,6 +259,7 @@ public class TestHadoopArchiveLogs {
         USER));
     hal.eligibleApplications.add(new HadoopArchiveLogs.AppInfo(app2.toString(),
         USER));
+    hal.proxy = proxy;
 
     File localScript = new File("target", "script.sh");
     Path workingDir = new Path("/tmp", "working");
@@ -286,10 +292,21 @@ public class TestHadoopArchiveLogs {
     Assert.assertEquals("fi", lines[12]);
     Assert.assertEquals("export HADOOP_CLIENT_OPTS=\"-Xmx1024m\"", lines[13]);
     Assert.assertTrue(lines[14].startsWith("export HADOOP_CLASSPATH="));
-    Assert.assertEquals("\"$HADOOP_PREFIX\"/bin/hadoop org.apache.hadoop.tools." +
-        "HadoopArchiveLogsRunner -appId \"$appId\" -user \"$user\" -workingDir "
-        + workingDir.toString() + " -remoteRootLogDir " +
-        remoteRootLogDir.toString() + " -suffix " + suffix, lines[15]);
+    if (proxy) {
+      Assert.assertEquals(
+          "\"$HADOOP_PREFIX\"/bin/hadoop org.apache.hadoop.tools." +
+              "HadoopArchiveLogsRunner -appId \"$appId\" -user \"$user\" " +
+              "-workingDir " + workingDir.toString() + " -remoteRootLogDir " +
+              remoteRootLogDir.toString() + " -suffix " + suffix,
+          lines[15]);
+    } else {
+      Assert.assertEquals(
+          "\"$HADOOP_PREFIX\"/bin/hadoop org.apache.hadoop.tools." +
+              "HadoopArchiveLogsRunner -appId \"$appId\" -user \"$user\" " +
+              "-workingDir " + workingDir.toString() + " -remoteRootLogDir " +
+              remoteRootLogDir.toString() + " -suffix " + suffix + " -noProxy",
+          lines[15]);
+    }
   }
 
   /**
@@ -325,7 +342,7 @@ public class TestHadoopArchiveLogs {
     Assert.assertTrue(dirPrepared);
     Assert.assertTrue(fs.exists(workingDir));
     Assert.assertEquals(
-        new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.NONE),
+        new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL, true),
         fs.getFileStatus(workingDir).getPermission());
     // Throw a file in the dir
     Path dummyFile = new Path(workingDir, "dummy.txt");
@@ -337,6 +354,9 @@ public class TestHadoopArchiveLogs {
     Assert.assertFalse(dirPrepared);
     Assert.assertTrue(fs.exists(workingDir));
     Assert.assertTrue(fs.exists(dummyFile));
+    Assert.assertEquals(
+        new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL, true),
+        fs.getFileStatus(workingDir).getPermission());
     // -force is true and the dir exists, so it will recreate it and the dummy
     // won't exist anymore
     hal.force = true;
@@ -344,7 +364,7 @@ public class TestHadoopArchiveLogs {
     Assert.assertTrue(dirPrepared);
     Assert.assertTrue(fs.exists(workingDir));
     Assert.assertEquals(
-        new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.NONE),
+        new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL, true),
         fs.getFileStatus(workingDir).getPermission());
     Assert.assertFalse(fs.exists(dummyFile));
   }

@@ -31,32 +31,44 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import java.io.File;
+import java.security.PrivilegedExceptionAction;
 
 /**
  * This is a child program designed to be used by the {@link HadoopArchiveLogs}
  * tool via the Distributed Shell.  It's not meant to be run directly.
  */
 public class HadoopArchiveLogsRunner implements Tool {
-  private static final Log LOG = LogFactory.getLog(HadoopArchiveLogsRunner.class);
+  private static final Log LOG =
+      LogFactory.getLog(HadoopArchiveLogsRunner.class);
 
   private static final String APP_ID_OPTION = "appId";
   private static final String USER_OPTION = "user";
   private static final String WORKING_DIR_OPTION = "workingDir";
-  private static final String REMOTE_ROOT_LOG_DIR = "remoteRootLogDir";
+  private static final String REMOTE_ROOT_LOG_DIR_OPTION = "remoteRootLogDir";
   private static final String SUFFIX_OPTION = "suffix";
+  private static final String NO_PROXY_OPTION = "noProxy";
 
   private String appId;
   private String user;
   private String workingDir;
   private String remoteLogDir;
   private String suffix;
+  private boolean proxy;
 
   private JobConf conf;
+
+  private static final FsPermission HAR_DIR_PERM =
+      new FsPermission(FsAction.ALL, FsAction.READ_EXECUTE, FsAction.NONE);
+  private static final FsPermission HAR_INNER_FILES_PERM =
+      new FsPermission(FsAction.READ_WRITE, FsAction.READ, FsAction.NONE);
 
   public HadoopArchiveLogsRunner(Configuration conf) {
     setConf(conf);
@@ -87,13 +99,40 @@ public class HadoopArchiveLogsRunner implements Tool {
   @Override
   public int run(String[] args) throws Exception {
     handleOpts(args);
+
+    Integer exitCode = 1;
+    UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
+    // If we're running as the user, then no need to impersonate
+    // (which might fail if user is not a proxyuser for themselves)
+    // Also if !proxy is set
+    if (!proxy || loginUser.getShortUserName().equals(user)) {
+      LOG.info("Running as " + user);
+      exitCode = runInternal();
+    } else {
+      // Otherwise impersonate user.  If we're not allowed to, then this will
+      // fail with an Exception
+      LOG.info("Running as " + loginUser.getShortUserName() + " but will " +
+          "impersonate " + user);
+      UserGroupInformation proxyUser =
+          UserGroupInformation.createProxyUser(user, loginUser);
+      exitCode = proxyUser.doAs(new PrivilegedExceptionAction<Integer>() {
+        @Override
+        public Integer run() throws Exception {
+          return runInternal();
+        }
+      });
+    }
+    return exitCode;
+  }
+
+  private int runInternal() throws Exception {
     String remoteAppLogDir = remoteLogDir + File.separator + user
         + File.separator + suffix + File.separator + appId;
-
     // Run 'hadoop archives' command in local mode
-    Configuration haConf = new Configuration(getConf());
-    haConf.set("mapreduce.framework.name", "local");
-    HadoopArchives ha = new HadoopArchives(haConf);
+    conf.set("mapreduce.framework.name", "local");
+    // Set the umask so we get 640 files and 750 dirs
+    conf.set("fs.permissions.umask-mode", "027");
+    HadoopArchives ha = new HadoopArchives(conf);
     String[] haArgs = {
         "-archiveName",
         appId + ".har",
@@ -113,9 +152,9 @@ public class HadoopArchiveLogsRunner implements Tool {
     // Move har file to correct location and delete original logs
     try {
       fs = FileSystem.get(conf);
+      Path harDest = new Path(remoteAppLogDir, appId + ".har");
       LOG.info("Moving har to original location");
-      fs.rename(new Path(workingDir, appId + ".har"),
-          new Path(remoteAppLogDir, appId + ".har"));
+      fs.rename(new Path(workingDir, appId + ".har"), harDest);
       LOG.info("Deleting original logs");
       for (FileStatus original : fs.listStatus(new Path(remoteAppLogDir),
           new PathFilter() {
@@ -131,7 +170,6 @@ public class HadoopArchiveLogsRunner implements Tool {
         fs.close();
       }
     }
-
     return 0;
   }
 
@@ -144,24 +182,30 @@ public class HadoopArchiveLogsRunner implements Tool {
     Option workingDirOpt = new Option(WORKING_DIR_OPTION, true,
         "Working Directory");
     workingDirOpt.setRequired(true);
-    Option remoteLogDirOpt = new Option(REMOTE_ROOT_LOG_DIR, true,
+    Option remoteLogDirOpt = new Option(REMOTE_ROOT_LOG_DIR_OPTION, true,
         "Remote Root Log Directory");
     remoteLogDirOpt.setRequired(true);
     Option suffixOpt = new Option(SUFFIX_OPTION, true, "Suffix");
     suffixOpt.setRequired(true);
+    Option useProxyOpt = new Option(NO_PROXY_OPTION, false, "Use Proxy");
     opts.addOption(appIdOpt);
     opts.addOption(userOpt);
     opts.addOption(workingDirOpt);
     opts.addOption(remoteLogDirOpt);
     opts.addOption(suffixOpt);
+    opts.addOption(useProxyOpt);
 
     CommandLineParser parser = new GnuParser();
     CommandLine commandLine = parser.parse(opts, args);
     appId = commandLine.getOptionValue(APP_ID_OPTION);
     user = commandLine.getOptionValue(USER_OPTION);
     workingDir = commandLine.getOptionValue(WORKING_DIR_OPTION);
-    remoteLogDir = commandLine.getOptionValue(REMOTE_ROOT_LOG_DIR);
+    remoteLogDir = commandLine.getOptionValue(REMOTE_ROOT_LOG_DIR_OPTION);
     suffix = commandLine.getOptionValue(SUFFIX_OPTION);
+    proxy = true;
+    if (commandLine.hasOption(NO_PROXY_OPTION)) {
+      proxy = false;
+    }
   }
 
   @Override
