@@ -120,6 +120,9 @@ Release 2.7.2 - UNRELEASED
     HDFS-9413. getContentSummary() on standby should throw StandbyException.
     (Brahma Reddy Battula via mingma)
 
+    HDFS-9426. Rollingupgrade finalization is not backward compatible
+    (Kihwal Lee via vinayakumarb)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
