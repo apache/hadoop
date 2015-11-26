@@ -518,7 +518,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
       DefaultMetricsSystem.initialize("ResourceManager");
       JvmMetrics jm = JvmMetrics.initSingleton("ResourceManager", null);
-      pauseMonitor = new JvmPauseMonitor(conf);
+      pauseMonitor = new JvmPauseMonitor();
+      addService(pauseMonitor);
       jm.setPauseMonitor(pauseMonitor);
 
       // Initialize the Reservation system
@@ -574,8 +575,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
       // need events to move to further states.
       rmStore.start();
 
-      pauseMonitor.start();
-
       if(recoveryEnabled) {
         try {
           LOG.info("Recovery started");
@@ -601,10 +600,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     protected void serviceStop() throws Exception {
 
       super.serviceStop();
-
-      if (pauseMonitor != null) {
-        pauseMonitor.stop();
-      }
 
       DefaultMetricsSystem.shutdown();
       if (rmContext != null) {

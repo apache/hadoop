@@ -243,7 +243,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   @Override
   public void startDaemons() {
     if (pauseMonitor == null) {
-      pauseMonitor = new JvmPauseMonitor(config);
+      pauseMonitor = new JvmPauseMonitor();
+      pauseMonitor.init(config);
       pauseMonitor.start();
       metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
     }

@@ -344,7 +344,8 @@ public class NodeManager extends CompositeService
     dispatcher.register(NodeManagerEventType.class, this);
     addService(dispatcher);
 
-    pauseMonitor = new JvmPauseMonitor(conf);
+    pauseMonitor = new JvmPauseMonitor();
+    addService(pauseMonitor);
     metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
 
     DefaultMetricsSystem.initialize("NodeManager");
@@ -364,7 +365,6 @@ public class NodeManager extends CompositeService
     } catch (IOException e) {
       throw new YarnRuntimeException("Failed NodeManager login", e);
     }
-    pauseMonitor.start();
     super.serviceStart();
   }
 
@@ -376,9 +376,6 @@ public class NodeManager extends CompositeService
     try {
       super.serviceStop();
       DefaultMetricsSystem.shutdown();
-      if (pauseMonitor != null) {
-        pauseMonitor.stop();
-      }
     } finally {
       // YARN-3641: NM's services stop get failed shouldn't block the
       // release of NMLevelDBStore.

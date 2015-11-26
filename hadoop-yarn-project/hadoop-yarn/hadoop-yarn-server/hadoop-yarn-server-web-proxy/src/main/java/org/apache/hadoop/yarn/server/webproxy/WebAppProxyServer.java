@@ -67,7 +67,8 @@ public class WebAppProxyServer extends CompositeService {
 
     DefaultMetricsSystem.initialize("WebAppProxyServer");
     JvmMetrics jm = JvmMetrics.initSingleton("WebAppProxyServer", null);
-    pauseMonitor = new JvmPauseMonitor(conf);
+    pauseMonitor = new JvmPauseMonitor();
+    addService(pauseMonitor);
     jm.setPauseMonitor(pauseMonitor);
 
     super.serviceInit(config);
@@ -75,9 +76,6 @@ public class WebAppProxyServer extends CompositeService {
 
   @Override
   protected void serviceStart() throws Exception {
-    if (pauseMonitor != null) {
-      pauseMonitor.start();
-    }
     super.serviceStart();
   }
 
@@ -85,9 +83,6 @@ public class WebAppProxyServer extends CompositeService {
   protected void serviceStop() throws Exception {
     super.serviceStop();
     DefaultMetricsSystem.shutdown();
-    if (pauseMonitor != null) {
-      pauseMonitor.stop();
-    }
   }
 
   /**
