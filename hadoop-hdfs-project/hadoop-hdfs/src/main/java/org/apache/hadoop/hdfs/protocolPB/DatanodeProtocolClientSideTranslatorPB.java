@@ -163,7 +163,10 @@ public class DatanodeProtocolClientSideTranslatorPB implements
       index++;
     }
     RollingUpgradeStatus rollingUpdateStatus = null;
-    if (resp.hasRollingUpgradeStatus()) {
+    // Use v2 semantics if available.
+    if (resp.hasRollingUpgradeStatusV2()) {
+      rollingUpdateStatus = PBHelperClient.convert(resp.getRollingUpgradeStatusV2());
+    } else if (resp.hasRollingUpgradeStatus()) {
       rollingUpdateStatus = PBHelperClient.convert(resp.getRollingUpgradeStatus());
     }
     return new HeartbeatResponse(cmds, PBHelper.convert(resp.getHaStatus()),

@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageBlock
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReceivedDeletedBlocksProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RollingUpgradeStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.VersionRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.VersionResponseProto;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -132,9 +133,17 @@ public class DatanodeProtocolServerSideTranslatorPB implements
     RollingUpgradeStatus rollingUpdateStatus = response
         .getRollingUpdateStatus();
     if (rollingUpdateStatus != null) {
-      builder.setRollingUpgradeStatus(PBHelperClient
-          .convertRollingUpgradeStatus(rollingUpdateStatus));
+      // V2 is always set for newer datanodes.
+      // To be compatible with older datanodes, V1 is set to null
+      //  if the RU was finalized.
+      RollingUpgradeStatusProto rus = PBHelperClient.
+          convertRollingUpgradeStatus(rollingUpdateStatus);
+      builder.setRollingUpgradeStatusV2(rus);
+      if (!rollingUpdateStatus.isFinalized()) {
+        builder.setRollingUpgradeStatus(rus);
+      }
     }
+
     builder.setFullBlockReportLeaseId(response.getFullBlockReportLeaseId());
     return builder.build();
   }

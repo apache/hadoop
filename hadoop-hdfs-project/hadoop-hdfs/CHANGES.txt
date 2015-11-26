@@ -2514,6 +2514,9 @@ Release 2.7.2 - UNRELEASED
     HDFS-6481. DatanodeManager#getDatanodeStorageInfos() should check the
     length of storageIDs. (szetszwo via Arpit Agarwal)
 
+    HDFS-9426. Rollingupgrade finalization is not backward compatible
+    (Kihwal Lee via vinayakumarb)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
