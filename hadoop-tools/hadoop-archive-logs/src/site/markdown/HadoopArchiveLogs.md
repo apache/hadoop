@@ -48,6 +48,14 @@ How to Archive Logs
                                    each container (default: 1024)
     -minNumberLogFiles <n>         The minimum number of log files required
                                    to be eligible (default: 20)
+    -noProxy                       When specified, all processing will be
+                                   done as the user running this command (or
+                                   the Yarn user if DefaultContainerExecutor
+                                   is in use). When not specified, all
+                                   processing will be done as the user who
+                                   owns that application; if the user
+                                   running this command is not allowed to
+                                   impersonate that user, it will fail
     -verbose                       Print more details.
 
 The tool only supports running one instance on a cluster at a time in order
@@ -76,6 +84,15 @@ The tool works by performing the following procedure:
     application, and with ``-memory`` megabytes of memory. Each container runs
     the ``hadoop archives`` command for a single application and replaces
     its aggregated log files with the resulting archive.
+
+The ``-noProxy`` option makes the tool process everything as the user who is
+currently running it, or the Yarn user if DefaultContainerExecutor is in use.
+When not specified, all processing will be done by the user who owns that
+application; if the user running this command is not allowed to impersonate that
+user, it will fail.  This is useful if you want an admin user to handle all
+aggregation without enabling impersonation.  With ``-noProxy`` the resulting
+HAR files will be owned by whoever ran the tool, instead of whoever originally
+owned the logs.
 
 The ``-verbose`` option makes the tool print more details about what it's
 doing.

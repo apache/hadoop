@@ -77,6 +77,7 @@ public class HadoopArchiveLogs implements Tool {
   private static final String MEMORY_OPTION = "memory";
   private static final String VERBOSE_OPTION = "verbose";
   private static final String FORCE_OPTION = "force";
+  private static final String NO_PROXY_OPTION = "noProxy";
 
   private static final int DEFAULT_MAX_ELIGIBLE = -1;
   private static final int DEFAULT_MIN_NUM_LOG_FILES = 20;
@@ -94,6 +95,8 @@ public class HadoopArchiveLogs implements Tool {
   private boolean verbose = false;
   @VisibleForTesting
   boolean force = false;
+  @VisibleForTesting
+  boolean proxy = true;
 
   @VisibleForTesting
   Set<AppInfo> eligibleApplications;
@@ -208,6 +211,12 @@ public class HadoopArchiveLogs implements Tool {
         "Force recreating the working directory if an existing one is found. " +
             "This should only be used if you know that another instance is " +
             "not currently running");
+    Option noProxyOpt = new Option(NO_PROXY_OPTION, false,
+        "When specified, all processing will be done as the user running this" +
+            " command (or the Yarn user if DefaultContainerExecutor is in " +
+            "use). When not specified, all processing will be done as the " +
+            "user who owns that application; if the user running this command" +
+            " is not allowed to impersonate that user, it will fail");
     opts.addOption(helpOpt);
     opts.addOption(maxEligibleOpt);
     opts.addOption(minNumLogFilesOpt);
@@ -215,6 +224,7 @@ public class HadoopArchiveLogs implements Tool {
     opts.addOption(memoryOpt);
     opts.addOption(verboseOpt);
     opts.addOption(forceOpt);
+    opts.addOption(noProxyOpt);
 
     try {
       CommandLineParser parser = new GnuParser();
@@ -252,6 +262,9 @@ public class HadoopArchiveLogs implements Tool {
       if (commandLine.hasOption(FORCE_OPTION)) {
         force = true;
       }
+      if (commandLine.hasOption(NO_PROXY_OPTION)) {
+        proxy = false;
+      }
     } catch (ParseException pe) {
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp("mapred archive-logs", opts);
@@ -274,7 +287,7 @@ public class HadoopArchiveLogs implements Tool {
     }
     fs.mkdirs(workingDir);
     fs.setPermission(workingDir,
-        new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.NONE));
+        new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL, true));
     return true;
   }
 
@@ -479,6 +492,9 @@ public class HadoopArchiveLogs implements Tool {
       fw.write(remoteRootLogDir.toString());
       fw.write(" -suffix ");
       fw.write(suffix);
+      if (!proxy) {
+        fw.write(" -noProxy\n");
+      }
       fw.write("\n");
     } finally {
       if (fw != null) {

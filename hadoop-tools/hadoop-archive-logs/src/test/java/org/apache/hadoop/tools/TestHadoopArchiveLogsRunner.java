@@ -24,7 +24,10 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.HarFs;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -47,7 +50,7 @@ public class TestHadoopArchiveLogsRunner {
     new Random().nextBytes(DUMMY_DATA);
   }
 
-  @Test(timeout = 30000)
+  @Test(timeout = 50000)
   public void testHadoopArchiveLogs() throws Exception {
     MiniYARNCluster yarnCluster = null;
     MiniDFSCluster dfsCluster = null;
@@ -63,6 +66,7 @@ public class TestHadoopArchiveLogsRunner {
       yarnCluster.start();
       conf = yarnCluster.getConfig();
       dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      conf = new JobConf(conf);
 
       ApplicationId app1 =
           ApplicationId.newInstance(System.currentTimeMillis(), 1);
@@ -108,10 +112,25 @@ public class TestHadoopArchiveLogsRunner {
       });
       Assert.assertEquals("log1", harLogs[0].getPath().getName());
       Assert.assertEquals(3 * FILE_SIZE_INCREMENT, harLogs[0].getLen());
+      Assert.assertEquals(
+          new FsPermission(FsAction.READ_WRITE, FsAction.READ, FsAction.NONE),
+          harLogs[0].getPermission());
+      Assert.assertEquals(System.getProperty("user.name"),
+          harLogs[0].getOwner());
       Assert.assertEquals("log2", harLogs[1].getPath().getName());
       Assert.assertEquals(4 * FILE_SIZE_INCREMENT, harLogs[1].getLen());
+      Assert.assertEquals(
+          new FsPermission(FsAction.READ_WRITE, FsAction.READ, FsAction.NONE),
+          harLogs[1].getPermission());
+      Assert.assertEquals(System.getProperty("user.name"),
+          harLogs[1].getOwner());
       Assert.assertEquals("log3", harLogs[2].getPath().getName());
       Assert.assertEquals(2 * FILE_SIZE_INCREMENT, harLogs[2].getLen());
+      Assert.assertEquals(
+          new FsPermission(FsAction.READ_WRITE, FsAction.READ, FsAction.NONE),
+          harLogs[2].getPermission());
+      Assert.assertEquals(System.getProperty("user.name"),
+          harLogs[2].getOwner());
       Assert.assertEquals(0, fs.listStatus(workingDir).length);
     } finally {
       if (yarnCluster != null) {

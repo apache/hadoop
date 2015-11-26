@@ -653,6 +653,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6549. multibyte delimiters with LineRecordReader cause
     duplicate records (wilfreds via rkanter)
 
+    MAPREDUCE-6550. archive-logs tool changes log ownership to the Yarn
+    user when using DefaultContainerExecutor (rkanter)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
