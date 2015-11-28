@@ -165,7 +165,7 @@ import org.apache.htrace.core.Tracer;
  */
 
 @InterfaceAudience.Public
-@InterfaceStability.Evolving /*Evolving for a release,to be changed to Stable */
+@InterfaceStability.Stable
 public class FileContext {
   
   public static final Log LOG = LogFactory.getLog(FileContext.class);

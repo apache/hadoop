@@ -994,6 +994,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-10465. Fix use of generics within SortedMapWritable.
     (Bertrand Dechoux via wheat9)
 
+    HADOOP-12600. FileContext and AbstractFileSystem should be annotated as a
+    Stable interface. (cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
