@@ -38,8 +38,8 @@ void Lz4CompressStream::compressOneBlock(const void * buff, uint32_t length) {
   int ret = LZ4_compress((char*)buff, _tempBuffer + 8, length);
   if (ret > 0) {
     compressedLength = ret;
-    ((uint32_t*)_tempBuffer)[0] = bswap(length);
-    ((uint32_t*)_tempBuffer)[1] = bswap((uint32_t)compressedLength);
+    ((uint32_t*)_tempBuffer)[0] = hadoop_be32toh(length);
+    ((uint32_t*)_tempBuffer)[1] = hadoop_be32toh((uint32_t)compressedLength);
     _stream->write(_tempBuffer, compressedLength + 8);
     _compressedBytesWritten += (compressedLength + 8);
   } else {

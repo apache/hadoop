@@ -58,10 +58,10 @@ void SingleSpillInfo::writeSpillInfo(const std::string & filepath) {
     appendBuffer.flush();
     uint32_t chsum = dest.getChecksum();
 #ifdef SPILLRECORD_CHECKSUM_UINT
-    chsum = bswap(chsum);
+    chsum = hadoop_be32toh(chsum);
     fout->write(&chsum, sizeof(uint32_t));
 #else
-    uint64_t wtchsum = bswap64((uint64_t)chsum);
+    uint64_t wtchsum = hadoop_be64toh((uint64_t)chsum);
     fout->write(&wtchsum, sizeof(uint64_t));
 #endif
   }

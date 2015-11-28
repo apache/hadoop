@@ -35,8 +35,6 @@ private:
   // state info for large KV pairs
   char * _dest;
 
-  Endium _endium;
-
 public:
   MCollectorOutputHandler();
   virtual ~MCollectorOutputHandler();

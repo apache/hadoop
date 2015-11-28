@@ -120,29 +120,29 @@ void WritableUtils::WriteVLongInner(int64_t v, char * pos, uint32_t & len) {
     len = 4;
   } else if (value < (1ULL << 32)) {
     *(pos++) = base - 3;
-    *(uint32_t*)(pos) = bswap((uint32_t)value);
+    *(uint32_t*)(pos) = hadoop_be32toh((uint32_t)value);
     len = 5;
   } else if (value < (1ULL << 40)) {
     *(pos++) = base - 4;
-    *(uint32_t*)(pos) = bswap((uint32_t)(value >> 8));
+    *(uint32_t*)(pos) = hadoop_be32toh((uint32_t)(value >> 8));
     *(uint8_t*)(pos + 4) = value;
     len = 6;
   } else if (value < (1ULL << 48)) {
     *(pos++) = base - 5;
-    *(uint32_t*)(pos) = bswap((uint32_t)(value >> 16));
+    *(uint32_t*)(pos) = hadoop_be32toh((uint32_t)(value >> 16));
     *(uint8_t*)(pos + 4) = value >> 8;
     *(uint8_t*)(pos + 5) = value;
     len = 7;
   } else if (value < (1ULL << 56)) {
     *(pos++) = base - 6;
-    *(uint32_t*)(pos) = bswap((uint32_t)(value >> 24));
+    *(uint32_t*)(pos) = hadoop_be32toh((uint32_t)(value >> 24));
     *(uint8_t*)(pos + 4) = value >> 16;
     *(uint8_t*)(pos + 5) = value >> 8;
     *(uint8_t*)(pos + 6) = value;
     len = 8;
   } else {
     *(pos++) = base - 7;
-    *(uint64_t*)pos = bswap64(value);
+    *(uint64_t*)pos = hadoop_be64toh(value);
     len = 9;
   }
 }
@@ -168,7 +168,7 @@ int64_t WritableUtils::ReadLong(InputStream * stream) {
   if (stream->readFully(&ret, 8) != 8) {
     THROW_EXCEPTION(IOException, "ReadLong reach EOF");
   }
-  return (int64_t)bswap64(ret);
+  return (int64_t)hadoop_be64toh(ret);
 }
 
 int32_t WritableUtils::ReadInt(InputStream * stream) {
@@ -176,7 +176,7 @@ int32_t WritableUtils::ReadInt(InputStream * stream) {
   if (stream->readFully(&ret, 4) != 4) {
     THROW_EXCEPTION(IOException, "ReadInt reach EOF");
   }
-  return (int32_t)bswap(ret);
+  return (int32_t)hadoop_be32toh(ret);
 }
 
 int16_t WritableUtils::ReadShort(InputStream * stream) {
@@ -192,7 +192,7 @@ float WritableUtils::ReadFloat(InputStream * stream) {
   if (stream->readFully(&ret, 4) != 4) {
     THROW_EXCEPTION(IOException, "ReadFloat reach EOF");
   }
-  ret = bswap(ret);
+  ret = hadoop_be32toh(ret);
   return *(float*)&ret;
 }
 
@@ -232,12 +232,12 @@ void WritableUtils::WriteVLong(OutputStream * stream, int64_t v) {
 }
 
 void WritableUtils::WriteLong(OutputStream * stream, int64_t v) {
-  uint64_t be = bswap64((uint64_t)v);
+  uint64_t be = hadoop_be64toh((uint64_t)v);
   stream->write(&be, 8);
 }
 
 void WritableUtils::WriteInt(OutputStream * stream, int32_t v) {
-  uint32_t be = bswap((uint32_t)v);
+  uint32_t be = hadoop_be32toh((uint32_t)v);
   stream->write(&be, 4);
 }
 
@@ -249,7 +249,7 @@ void WritableUtils::WriteShort(OutputStream * stream, int16_t v) {
 
 void WritableUtils::WriteFloat(OutputStream * stream, float v) {
   uint32_t intv = *(uint32_t*)&v;
-  intv = bswap(intv);
+  intv = hadoop_be32toh(intv);
   stream->write(&intv, 4);
 }
 
@@ -286,10 +286,10 @@ void WritableUtils::toString(string & dest, KeyValueType type, const void * data
     dest.append(*(uint8_t*)data ? "true" : "false");
     break;
   case IntType:
-    dest.append(StringUtil::ToString((int32_t)bswap(*(uint32_t*)data)));
+    dest.append(StringUtil::ToString((int32_t)hadoop_be32toh(*(uint32_t*)data)));
     break;
   case LongType:
-    dest.append(StringUtil::ToString((int64_t)bswap64(*(uint64_t*)data)));
+    dest.append(StringUtil::ToString((int64_t)hadoop_be64toh(*(uint64_t*)data)));
     break;
   case FloatType:
     dest.append(StringUtil::ToString(*(float*)data));

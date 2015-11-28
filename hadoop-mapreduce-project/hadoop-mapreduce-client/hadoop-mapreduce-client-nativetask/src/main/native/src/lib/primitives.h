@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <string>
+#include "hadoop_endian.h"
 
 #ifdef __GNUC__
 #define likely(x)       __builtin_expect((x),1)
@@ -94,39 +95,6 @@ inline void simple_memcpy(void * dest, const void * src, size_t len) {
 #endif
 
 /**
- * little-endian to big-endian or vice versa
- */
-inline uint32_t bswap(uint32_t val) {
-#ifdef __aarch64__
-  __asm__("rev %w[dst], %w[src]" : [dst]"=r"(val) : [src]"r"(val));
-#else
-  __asm__("bswap %0" : "=r" (val) : "0" (val));
-#endif
-  return val;
-}
-
-inline uint64_t bswap64(uint64_t val) {
-#ifdef __aarch64__
-  __asm__("rev %[dst], %[src]" : [dst]"=r"(val) : [src]"r"(val));
-#else
-#ifdef __X64
-  __asm__("bswapq %0" : "=r" (val) : "0" (val));
-#else
-
-  uint64_t lower = val & 0xffffffffU;
-  uint32_t higher = (val >> 32) & 0xffffffffU;
-
-  lower = bswap(lower);
-  higher = bswap(higher);
-
-  return (lower << 32) + higher;
-
-#endif
-#endif
-  return val;
-}
-
-/**
  * Fast memcmp
  */
 inline int64_t fmemcmp(const char * src, const char * dest, uint32_t len) {
@@ -158,16 +126,16 @@ inline int64_t fmemcmp(const char * src, const char * dest, uint32_t len) {
     return ((int64_t)src8[2] - (int64_t)dest8[2]);
   }
   case 4: {
-    return (int64_t)bswap(*(uint32_t*)src) - (int64_t)bswap(*(uint32_t*)dest);
+    return (int64_t)hadoop_be32toh(*(uint32_t*)src) - (int64_t)hadoop_be32toh(*(uint32_t*)dest);
   }
   }
   if (len < 8) {
-    int64_t ret = ((int64_t)bswap(*(uint32_t*)src) - (int64_t)bswap(*(uint32_t*)dest));
+    int64_t ret = ((int64_t)hadoop_be32toh(*(uint32_t*)src) - (int64_t)hadoop_be32toh(*(uint32_t*)dest));
     if (ret) {
       return ret;
     }
-    return ((int64_t)bswap(*(uint32_t*)(src + len - 4))
-        - (int64_t)bswap(*(uint32_t*)(dest + len - 4)));
+    return ((int64_t)hadoop_be32toh(*(uint32_t*)(src + len - 4))
+        - (int64_t)hadoop_be32toh(*(uint32_t*)(dest + len - 4)));
   }
   uint32_t cur = 0;
   uint32_t end = len & (0xffffffffU << 3);
@@ -175,8 +143,8 @@ inline int64_t fmemcmp(const char * src, const char * dest, uint32_t len) {
     uint64_t l = *(uint64_t*)(src8 + cur);
     uint64_t r = *(uint64_t*)(dest8 + cur);
     if (l != r) {
-      l = bswap64(l);
-      r = bswap64(r);
+      l = hadoop_be64toh(l);
+      r = hadoop_be64toh(r);
       return l > r ? 1 : -1;
     }
     cur += 8;
@@ -184,8 +152,8 @@ inline int64_t fmemcmp(const char * src, const char * dest, uint32_t len) {
   uint64_t l = *(uint64_t*)(src8 + len - 8);
   uint64_t r = *(uint64_t*)(dest8 + len - 8);
   if (l != r) {
-    l = bswap64(l);
-    r = bswap64(r);
+    l = hadoop_be64toh(l);
+    r = hadoop_be64toh(r);
     return l > r ? 1 : -1;
   }
   return 0;

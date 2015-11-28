@@ -317,8 +317,8 @@ int NativeObjectFactory::IntComparator(const char * src, uint32_t srcLength, con
     uint32_t destLength) {
   int result = (*src) - (*dest);
   if (result == 0) {
-    uint32_t from = bswap(*(uint32_t*)src);
-    uint32_t to = bswap(*(uint32_t*)dest);
+    uint32_t from = hadoop_be32toh(*(uint32_t*)src);
+    uint32_t to = hadoop_be32toh(*(uint32_t*)dest);
     if (from > to) {
       return 1;
     } else if (from == to) {
@@ -335,8 +335,8 @@ int NativeObjectFactory::LongComparator(const char * src, uint32_t srcLength, co
   int result = (int)(*src) - (int)(*dest);
   if (result == 0) {
 
-    uint64_t from = bswap64(*(uint64_t*)src);
-    uint64_t to = bswap64(*(uint64_t*)dest);
+    uint64_t from = hadoop_be64toh(*(uint64_t*)src);
+    uint64_t to = hadoop_be64toh(*(uint64_t*)dest);
     if (from > to) {
       return 1;
     } else if (from == to) {
@@ -380,8 +380,8 @@ int NativeObjectFactory::FloatComparator(const char * src, uint32_t srcLength, c
     THROW_EXCEPTION_EX(IOException, "float comparator, while src/dest lengt is not 4");
   }
 
-  uint32_t from = bswap(*(uint32_t*)src);
-  uint32_t to = bswap(*(uint32_t*)dest);
+  uint32_t from = hadoop_be32toh(*(uint32_t*)src);
+  uint32_t to = hadoop_be32toh(*(uint32_t*)dest);
 
   float * srcValue = (float *)(&from);
   float * destValue = (float *)(&to);
@@ -401,8 +401,8 @@ int NativeObjectFactory::DoubleComparator(const char * src, uint32_t srcLength, 
     THROW_EXCEPTION_EX(IOException, "double comparator, while src/dest lengt is not 4");
   }
 
-  uint64_t from = bswap64(*(uint64_t*)src);
-  uint64_t to = bswap64(*(uint64_t*)dest);
+  uint64_t from = hadoop_be64toh(*(uint64_t*)src);
+  uint64_t to = hadoop_be64toh(*(uint64_t*)dest);
 
   double * srcValue = (double *)(&from);
   double * destValue = (double *)(&to);

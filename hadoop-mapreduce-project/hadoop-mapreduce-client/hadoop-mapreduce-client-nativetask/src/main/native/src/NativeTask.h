@@ -40,15 +40,6 @@ enum NativeObjectType {
   BatchHandlerType = 1,
 };
 
-/**
- * Enduim setting
- *
- */
-enum Endium {
-  LITTLE_ENDIUM = 0,
-  LARGE_ENDIUM = 1
-};
-
 #define NATIVE_COMBINER "native.combiner.class"
 #define NATIVE_PARTITIONER "native.partitioner.class"
 #define NATIVE_MAPPER "native.mapper.class"

@@ -85,17 +85,17 @@ TEST(MemoryBlock, sort) {
   medium->keyLength = 4;
   medium->valueLength = 4;
   uint32_t * mediumKey = (uint32_t *)medium->getKey();
-  *mediumKey = bswap(MEDIUM);
+  *mediumKey = hadoop_be32toh(MEDIUM);
 
   small->keyLength = 4;
   small->valueLength = 4;
   uint32_t * smallKey = (uint32_t *)small->getKey();
-  *smallKey = bswap(SMALL);
+  *smallKey = hadoop_be32toh(SMALL);
 
   big->keyLength = 4;
   big->valueLength = 4;
   uint32_t * bigKey = (uint32_t *)big->getKey();
-  *bigKey = bswap(BIG);
+  *bigKey = hadoop_be32toh(BIG);
 
   ComparatorPtr bytesComparator = NativeTask::get_comparator(BytesType, NULL);
   block.sort(CPPSORT, bytesComparator);

@@ -41,6 +41,7 @@
 #include <map>
 #include <algorithm>
 
+#include "hadoop_endian.h"
 #include "lib/primitives.h"
 #include "lib/Log.h"
 #include "NativeTask.h"

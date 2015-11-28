@@ -190,7 +190,7 @@ TEST(IFile, TestGlibCBug) {
   reader->nextPartition();
   uint32_t index = 0;
   while (NULL != (key = reader->nextKey(length))) {
-    int32_t realKey = (int32_t)bswap(*(uint32_t *)(key));
+    int32_t realKey = (int32_t)hadoop_be32toh(*(uint32_t *)(key));
     ASSERT_LT(index, 5);
     ASSERT_EQ(expect[index], realKey);
     index++;

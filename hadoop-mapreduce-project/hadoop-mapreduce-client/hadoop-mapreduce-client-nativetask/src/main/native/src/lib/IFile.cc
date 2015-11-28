@@ -60,7 +60,7 @@ bool IFileReader::nextPartition() {
     if (4 != _stream->readFully(&chsum, 4)) {
       THROW_EXCEPTION(IOException, "read ifile checksum failed");
     }
-    uint32_t actual = bswap(chsum);
+    uint32_t actual = hadoop_be32toh(chsum);
     uint32_t expect = _source->getChecksum();
     if (actual != expect) {
       THROW_EXCEPTION_EX(IOException, "read ifile checksum not match, actual %x expect %x", actual,
@@ -130,7 +130,7 @@ void IFileWriter::endPartition() {
   }
 
   uint32_t chsum = _dest->getChecksum();
-  chsum = bswap(chsum);
+  chsum = hadoop_be32toh(chsum);
   _stream->write(&chsum, sizeof(chsum));
   _stream->flush();
   IFileSegment * info = &(_spillFileSegments[_spillFileSegments.size() - 1]);

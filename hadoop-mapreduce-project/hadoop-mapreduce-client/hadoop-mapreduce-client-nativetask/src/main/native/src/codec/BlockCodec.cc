@@ -104,8 +104,8 @@ int32_t BlockDecompressStream::read(void * buff, uint32_t length) {
       THROW_EXCEPTION(IOException, "readFully get incomplete data");
     }
     _compressedBytesRead += rd;
-    sizes[0] = bswap(sizes[0]);
-    sizes[1] = bswap(sizes[1]);
+    sizes[0] = hadoop_be32toh(sizes[0]);
+    sizes[1] = hadoop_be32toh(sizes[1]);
     if (sizes[0] <= length) {
       uint32_t len = decompressOneBlock(sizes[1], buff, sizes[0]);
       if (len != sizes[0]) {

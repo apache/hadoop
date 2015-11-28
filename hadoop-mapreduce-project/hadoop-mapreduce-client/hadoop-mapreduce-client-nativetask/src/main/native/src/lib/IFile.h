@@ -74,7 +74,7 @@ public:
       keyLen = WritableUtils::ReadVInt(kvbuff, len);
       break;
     case BytesType:
-      keyLen = bswap(*(uint32_t*)kvbuff);
+      keyLen = hadoop_be32toh(*(uint32_t*)kvbuff);
       len = 4;
       break;
     default:
@@ -89,7 +89,7 @@ public:
       _valuePos = vbuff + len;
       break;
     case BytesType:
-      _valueLen = bswap(*(uint32_t*)vbuff);
+      _valueLen = hadoop_be32toh(*(uint32_t*)vbuff);
       _valuePos = vbuff + 4;
       break;
     default:
