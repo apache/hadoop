@@ -38,8 +38,8 @@ inline int fmemcmporig(const char * src, const char * dest, uint32_t len) {
     uint64_t l = *src8;
     uint64_t r = *dest8;
     if (l != r) {
-      l = hadoop_be64toh(l);
-      r = hadoop_be64toh(r);
+      l = bswap64(l);
+      r = bswap64(r);
       return l > r ? 1 : -1;
     }
     ++src8;
@@ -59,8 +59,8 @@ inline int fmemcmporig(const char * src, const char * dest, uint32_t len) {
   if (l == r) {
     return 0;
   }
-  l = hadoop_be64toh(l);
-  r = hadoop_be64toh(r);
+  l = bswap64(l);
+  r = bswap64(r);
   return l > r ? 1 : -1;
 }
 

@@ -30,7 +30,7 @@ using std::vector;
 namespace NativeTask {
 
 MCollectorOutputHandler::MCollectorOutputHandler()
-    : _collector(NULL), _dest(NULL) {
+    : _collector(NULL), _dest(NULL), _endium(LARGE_ENDIUM) {
 }
 
 MCollectorOutputHandler::~MCollectorOutputHandler() {
@@ -73,9 +73,11 @@ void MCollectorOutputHandler::handleInput(ByteBuffer & in) {
       THROW_EXCEPTION(IOException, "k/v meta information incomplete");
     }
 
-    kvBuffer->partitionId = hadoop_be32toh(kvBuffer->partitionId);
-    kvBuffer->buffer.keyLength = hadoop_be32toh(kvBuffer->buffer.keyLength);
-    kvBuffer->buffer.valueLength = hadoop_be32toh(kvBuffer->buffer.valueLength);
+    if (_endium == LARGE_ENDIUM) {
+      kvBuffer->partitionId = bswap(kvBuffer->partitionId);
+      kvBuffer->buffer.keyLength = bswap(kvBuffer->buffer.keyLength);
+      kvBuffer->buffer.valueLength = bswap(kvBuffer->buffer.valueLength);
+    }
 
     uint32_t kvLength = kvBuffer->buffer.length();
 

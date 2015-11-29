@@ -43,8 +43,8 @@ TEST(KVBuffer, test) {
   ASSERT_EQ(8, kv1->getKey() - buff);
   ASSERT_EQ(strlen(KEY) + 8, kv1->getValue() - buff);
 
-  kv1->keyLength = hadoop_be32toh(kv1->keyLength);
-  kv1->valueLength = hadoop_be32toh(kv1->valueLength);
+  kv1->keyLength = bswap(kv1->keyLength);
+  kv1->valueLength = bswap(kv1->valueLength);
 
   ASSERT_EQ(8, kv1->headerLength());
   ASSERT_EQ(strlen(KEY) + strlen(VALUE) + 8, kv1->lengthConvertEndium());

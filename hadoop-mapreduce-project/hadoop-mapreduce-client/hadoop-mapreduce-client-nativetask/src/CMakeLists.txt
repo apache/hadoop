@@ -90,7 +90,6 @@ include_directories(
     ${SRC}/src/util
     ${SRC}/src/lib
     ${SRC}/test
-    ../../../../hadoop-common-project/hadoop-common/target/native
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}
     ${JNI_INCLUDE_DIRS}

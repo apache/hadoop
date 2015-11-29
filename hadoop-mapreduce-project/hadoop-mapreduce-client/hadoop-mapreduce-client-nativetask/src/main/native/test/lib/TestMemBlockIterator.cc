@@ -59,7 +59,7 @@ class MemoryBlockFactory {
       kv->keyLength = 4;
       kv->valueLength = 4;
       uint32_t * key = (uint32_t *)kv->getKey();
-      *key = hadoop_be32toh(index);
+      *key = bswap(index);
     }
     return block1;
   }

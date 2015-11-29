@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "CombineHandler.h"
 
 namespace NativeTask {
@@ -49,8 +48,8 @@ uint32_t CombineHandler::feedDataToJavaInWritableSerialization() {
 
   if (_kvCached) {
     uint32_t kvLength = _key.outerLength + _value.outerLength + KVBuffer::headerLength();
-    outputInt(hadoop_be32toh(_key.outerLength));
-    outputInt(hadoop_be32toh(_value.outerLength));
+    outputInt(bswap(_key.outerLength));
+    outputInt(bswap(_value.outerLength));
     outputKeyOrValue(_key, _kType);
     outputKeyOrValue(_value, _vType);
 
@@ -74,8 +73,8 @@ uint32_t CombineHandler::feedDataToJavaInWritableSerialization() {
     } else {
       firstKV = false;
       //write final key length and final value length
-      outputInt(hadoop_be32toh(_key.outerLength));
-      outputInt(hadoop_be32toh(_value.outerLength));
+      outputInt(bswap(_key.outerLength));
+      outputInt(bswap(_value.outerLength));
       outputKeyOrValue(_key, _kType);
       outputKeyOrValue(_value, _vType);
 
@@ -102,7 +101,7 @@ void CombineHandler::outputKeyOrValue(SerializeInfo & KV, KeyValueType type) {
     output(KV.buffer.data(), KV.buffer.length());
     break;
   case BytesType:
-    outputInt(hadoop_be32toh(KV.buffer.length()));
+    outputInt(bswap(KV.buffer.length()));
     output(KV.buffer.data(), KV.buffer.length());
     break;
   default:
@@ -203,8 +202,8 @@ void CombineHandler::write(char * buf, uint32_t length) {
   uint32_t outputRecordCount = 0;
   while (remain > 0) {
     kv = (KVBuffer *)pos;
-    kv->keyLength = hadoop_be32toh(kv->keyLength);
-    kv->valueLength = hadoop_be32toh(kv->valueLength);
+    kv->keyLength = bswap(kv->keyLength);
+    kv->valueLength = bswap(kv->valueLength);
     _writer->write(kv->getKey(), kv->keyLength, kv->getValue(), kv->valueLength);
     outputRecordCount++;
     remain -= kv->length();

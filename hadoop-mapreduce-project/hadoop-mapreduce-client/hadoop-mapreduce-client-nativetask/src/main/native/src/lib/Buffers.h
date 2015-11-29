@@ -115,7 +115,7 @@ public:
    * read uint32_t big endian
    */
   inline uint32_t read_uint32_be() {
-    return hadoop_be32toh(read_uint32_le());
+    return bswap(read_uint32_le());
   }
 };
 
@@ -198,7 +198,7 @@ public:
   }
 
   inline void write_uint32_be(uint32_t v) {
-    write_uint32_le(hadoop_be32toh(v));
+    write_uint32_le(bswap(v));
   }
 
   inline void write_uint64_le(uint64_t v) {
@@ -211,7 +211,7 @@ public:
   }
 
   inline void write_uint64_be(uint64_t v) {
-    write_uint64_le(hadoop_be64toh(v));
+    write_uint64_le(bswap64(v));
   }
 
   inline void write_vlong(int64_t v) {
@@ -278,11 +278,12 @@ struct KVBuffer {
   }
 
   uint32_t length() {
-    return keyLength + valueLength + SIZE_OF_KV_LENGTH;
+    return keyLength + valueLength + SIZE_OF_KEY_LENGTH + SIZE_OF_VALUE_LENGTH;
   }
 
   uint32_t lengthConvertEndium() {
-    return hadoop_be32toh(keyLength) + hadoop_be32toh(valueLength) + SIZE_OF_KV_LENGTH;
+    long value = bswap64(*((long *)this));
+    return (value >> 32) + value + SIZE_OF_KEY_LENGTH + SIZE_OF_VALUE_LENGTH;
   }
 
   void fill(const void * key, uint32_t keylen, const void * value, uint32_t vallen) {
@@ -298,7 +299,7 @@ struct KVBuffer {
   }
 
   static uint32_t headerLength() {
-    return SIZE_OF_KV_LENGTH;
+    return SIZE_OF_KEY_LENGTH + SIZE_OF_VALUE_LENGTH;
   }
 };
 

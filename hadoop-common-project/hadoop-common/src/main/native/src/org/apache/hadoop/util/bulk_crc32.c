@@ -37,7 +37,6 @@
 #include "crc32c_tables.h"
 #include "bulk_crc32.h"
 #include "gcc_optimizations.h"
-#include "hadoop_endian.h"
 
 #define CRC_INITIAL_VAL 0xffffffff
 
@@ -164,7 +163,7 @@ static uint32_t crc32c_sb8(uint32_t crc, const uint8_t *buf, size_t length) {
   for (li=0; li < running_length/8; li++) {
 	uint32_t term1;
 	uint32_t term2;
-    crc ^= hadoop_htole32(*(uint32_t *)buf);
+    crc ^= *(uint32_t *)buf;
     buf += 4;
     term1 = CRC32C_T8_7[crc & 0x000000FF] ^
         CRC32C_T8_6[(crc >> 8) & 0x000000FF];
@@ -172,10 +171,10 @@ static uint32_t crc32c_sb8(uint32_t crc, const uint8_t *buf, size_t length) {
     crc = term1 ^
         CRC32C_T8_5[term2 & 0x000000FF] ^ 
         CRC32C_T8_4[(term2 >> 8) & 0x000000FF];
-    term1 = CRC32C_T8_3[hadoop_htole32(*(uint32_t *)buf) & 0x000000FF] ^
-        CRC32C_T8_2[(hadoop_htole32(*(uint32_t *)buf) >> 8) & 0x000000FF];
+    term1 = CRC32C_T8_3[(*(uint32_t *)buf) & 0x000000FF] ^
+        CRC32C_T8_2[((*(uint32_t *)buf) >> 8) & 0x000000FF];
     
-    term2 = hadoop_htole32((*(uint32_t *)buf)) >> 16;
+    term2 = (*(uint32_t *)buf) >> 16;
     crc =  crc ^ 
         term1 ^    
         CRC32C_T8_1[term2  & 0x000000FF] ^  
@@ -210,7 +209,7 @@ static uint32_t crc32_zlib_sb8(
   for (li=0; li < running_length/8; li++) {
 	uint32_t term1;
 	uint32_t term2;
-    crc ^= hadoop_htole32(*(uint32_t *)buf);
+    crc ^= *(uint32_t *)buf;
     buf += 4;
     term1 = CRC32_T8_7[crc & 0x000000FF] ^
         CRC32_T8_6[(crc >> 8) & 0x000000FF];
@@ -218,10 +217,10 @@ static uint32_t crc32_zlib_sb8(
     crc = term1 ^
         CRC32_T8_5[term2 & 0x000000FF] ^ 
         CRC32_T8_4[(term2 >> 8) & 0x000000FF];
-    term1 = CRC32_T8_3[hadoop_htole32(*(uint32_t *)buf) & 0x000000FF] ^
-        CRC32_T8_2[(hadoop_htole32(*(uint32_t *)buf) >> 8) & 0x000000FF];
+    term1 = CRC32_T8_3[(*(uint32_t *)buf) & 0x000000FF] ^
+        CRC32_T8_2[((*(uint32_t *)buf) >> 8) & 0x000000FF];
     
-    term2 = hadoop_htole32(*(uint32_t *)buf) >> 16;
+    term2 = (*(uint32_t *)buf) >> 16;
     crc =  crc ^ 
         term1 ^    
         CRC32_T8_1[term2  & 0x000000FF] ^  

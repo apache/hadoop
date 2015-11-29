@@ -42,8 +42,8 @@ import org.apache.hadoop.classification.InterfaceStability;
  * <code>
  *   int HivePlatform::HiveKeyComparator(const char * src, uint32_t srcLength,
  *   const char * dest, uint32_t destLength) {
- *     uint32_t sl = hadoop_be32toh(*(uint32_t*)src);
- *     uint32_t dl = hadoop_be32toh(*(uint32_t*)dest);
+ *     uint32_t sl = bswap(*(uint32_t*)src);
+ *     uint32_t dl = bswap(*(uint32_t*)dest);
  *     return NativeObjectFactory::BytesComparator(src + 4, sl, dest + 4, dl);
  *   }
  * </code>
