@@ -3560,6 +3560,9 @@ Release 2.6.3 - UNRELEASED
     HDFS-9434. Recommission a datanode with 500k blocks may pause NN for 30
     seconds for printing info log messags.  (szetszwo)
 
+    HDFS-9470. Encryption zone on root not loaded from fsimage after NN
+    restart. (Xiao Chen via wang)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
