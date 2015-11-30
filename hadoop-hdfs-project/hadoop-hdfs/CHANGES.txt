@@ -1150,6 +1150,9 @@ Release 2.6.3 - UNRELEASED
     HDFS-9273. ACLs on root directory may be lost after NN restart.
     (Xiao Chen via cnauroth)
 
+    HDFS-9470. Encryption zone on root not loaded from fsimage after NN
+    restart. (Xiao Chen via wang)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES

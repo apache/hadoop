@@ -374,6 +374,44 @@ public class TestEncryptionZones {
     assertZonePresent(null, nonpersistZone.toString());
   }
 
+  @Test(timeout = 60000)
+  public void testBasicOperationsRootDir() throws Exception {
+    int numZones = 0;
+    final Path rootDir = new Path("/");
+    final Path zone1 = new Path(rootDir, "zone1");
+
+    /* Normal creation of an EZ on rootDir */
+    dfsAdmin.createEncryptionZone(rootDir, TEST_KEY);
+    assertNumZones(++numZones);
+    assertZonePresent(null, rootDir.toString());
+
+    /* create EZ on child of rootDir which is already an EZ should fail */
+    fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
+    try {
+      dfsAdmin.createEncryptionZone(zone1, TEST_KEY);
+      fail("EZ over an EZ");
+    } catch (IOException e) {
+      assertExceptionContains("already in an encryption zone", e);
+    }
+
+    // Verify rootDir ez is present after restarting the NameNode
+    // and saving/loading from fsimage.
+    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.saveNamespace();
+    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    cluster.restartNameNode(true);
+    assertNumZones(numZones);
+    assertZonePresent(null, rootDir.toString());
+
+    /* create EZ on child of rootDir which is already an EZ should fail */
+    try {
+      dfsAdmin.createEncryptionZone(zone1, TEST_KEY);
+      fail("EZ over an EZ");
+    } catch (IOException e) {
+      assertExceptionContains("already in an encryption zone", e);
+    }
+  }
+
   /**
    * Test listing encryption zones as a non super user.
    */
