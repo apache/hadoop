@@ -343,6 +343,7 @@ public final class FSImageFormatPBINode {
       if (f != null) {
         dir.rootDir.addXAttrFeature(f);
       }
+      dir.addRootDirToEncryptionZone(f);
     }
   }
 

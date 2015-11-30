@@ -2201,30 +2201,44 @@ public class FSDirectory implements Closeable {
       inodeMap.put(inode);
       if (!inode.isSymlink()) {
         final XAttrFeature xaf = inode.getXAttrFeature();
-        if (xaf != null) {
-          final List<XAttr> xattrs = xaf.getXAttrs();
-          for (XAttr xattr : xattrs) {
-            final String xaName = XAttrHelper.getPrefixName(xattr);
-            if (CRYPTO_XATTR_ENCRYPTION_ZONE.equals(xaName)) {
-              try {
-                final HdfsProtos.ZoneEncryptionInfoProto ezProto =
-                    HdfsProtos.ZoneEncryptionInfoProto.parseFrom(
-                        xattr.getValue());
-                ezManager.unprotectedAddEncryptionZone(inode.getId(),
-                    PBHelper.convert(ezProto.getSuite()),
-                    PBHelper.convert(ezProto.getCryptoProtocolVersion()),
-                    ezProto.getKeyName());
-              } catch (InvalidProtocolBufferException e) {
-                NameNode.LOG.warn("Error parsing protocol buffer of " +
-                    "EZ XAttr " + xattr.getName());
-              }
-            }
-          }
+        addEncryptionZone((INodeWithAdditionalFields) inode, xaf);
+      }
+    }
+  }
+
+  private void addEncryptionZone(INodeWithAdditionalFields inode,
+      XAttrFeature xaf) {
+    if (xaf == null) {
+      return;
+    }
+    final List<XAttr> xattrs = xaf.getXAttrs();
+    for (XAttr xattr : xattrs) {
+      final String xaName = XAttrHelper.getPrefixName(xattr);
+      if (CRYPTO_XATTR_ENCRYPTION_ZONE.equals(xaName)) {
+        try {
+          final HdfsProtos.ZoneEncryptionInfoProto ezProto =
+              HdfsProtos.ZoneEncryptionInfoProto.parseFrom(
+                  xattr.getValue());
+          ezManager.unprotectedAddEncryptionZone(inode.getId(),
+              PBHelper.convert(ezProto.getSuite()),
+              PBHelper.convert(ezProto.getCryptoProtocolVersion()),
+              ezProto.getKeyName());
+        } catch (InvalidProtocolBufferException e) {
+          NameNode.LOG.warn("Error parsing protocol buffer of " +
+              "EZ XAttr " + xattr.getName() + " dir:" + inode.getFullPathName());
         }
       }
     }
   }
   
+  /**
+   * This is to handle encryption zone for rootDir when loading from
+   * fsimage, and should only be called during NN restart.
+   */
+  public final void addRootDirToEncryptionZone(XAttrFeature xaf) {
+    addEncryptionZone(rootDir, xaf);
+  }
+
   /**
    * This method is always called with writeLock of FSDirectory held.
    */
