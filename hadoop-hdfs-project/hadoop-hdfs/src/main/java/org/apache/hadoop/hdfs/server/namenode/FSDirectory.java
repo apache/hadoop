@@ -1163,27 +1163,42 @@ public class FSDirectory implements Closeable {
       inodeMap.put(inode);
       if (!inode.isSymlink()) {
         final XAttrFeature xaf = inode.getXAttrFeature();
-        if (xaf != null) {
-          XAttr xattr = xaf.getXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE);
-          if (xattr != null) {
-            try {
-              final HdfsProtos.ZoneEncryptionInfoProto ezProto =
-                  HdfsProtos.ZoneEncryptionInfoProto.parseFrom(
-                      xattr.getValue());
-              ezManager.unprotectedAddEncryptionZone(inode.getId(),
-                  PBHelperClient.convert(ezProto.getSuite()),
-                  PBHelperClient.convert(ezProto.getCryptoProtocolVersion()),
-                  ezProto.getKeyName());
-            } catch (InvalidProtocolBufferException e) {
-              NameNode.LOG.warn("Error parsing protocol buffer of " +
-                  "EZ XAttr " + xattr.getName());
-            }
-          }
-        }
+        addEncryptionZone((INodeWithAdditionalFields) inode, xaf);
       }
     }
   }
+
+  private void addEncryptionZone(INodeWithAdditionalFields inode,
+      XAttrFeature xaf) {
+    if (xaf == null) {
+      return;
+    }
+    XAttr xattr = xaf.getXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE);
+    if (xattr == null) {
+      return;
+    }
+    try {
+      final HdfsProtos.ZoneEncryptionInfoProto ezProto =
+          HdfsProtos.ZoneEncryptionInfoProto.parseFrom(
+              xattr.getValue());
+      ezManager.unprotectedAddEncryptionZone(inode.getId(),
+          PBHelperClient.convert(ezProto.getSuite()),
+          PBHelperClient.convert(ezProto.getCryptoProtocolVersion()),
+          ezProto.getKeyName());
+    } catch (InvalidProtocolBufferException e) {
+      NameNode.LOG.warn("Error parsing protocol buffer of " +
+          "EZ XAttr " + xattr.getName() + " dir:" + inode.getFullPathName());
+    }
+  }
   
+  /**
+   * This is to handle encryption zone for rootDir when loading from
+   * fsimage, and should only be called during NN restart.
+   */
+  public final void addRootDirToEncryptionZone(XAttrFeature xaf) {
+    addEncryptionZone(rootDir, xaf);
+  }
+
   /**
    * This method is always called with writeLock of FSDirectory held.
    */
