@@ -23,6 +23,9 @@ Release 2.7.3 - UNRELEASED
     MAPREDUCE-5883. "Total megabyte-seconds" in job counters is slightly
     misleading (Nathan Roberts via jlowe)
 
+    MAPREDUCE-6549. multibyte delimiters with LineRecordReader cause
+    duplicate records (wilfreds via rkanter)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
