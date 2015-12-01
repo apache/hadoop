@@ -3,3 +3,5 @@ HDFS-1312 Change Log
   NEW FEATURES
 
     HDFS-9420. Add DataModels for DiskBalancer. (Anu Engineer via szetszwo)
+
+    HDFS-9449. DiskBalancer: Add connectors. (Anu Engineer via szetszwo)

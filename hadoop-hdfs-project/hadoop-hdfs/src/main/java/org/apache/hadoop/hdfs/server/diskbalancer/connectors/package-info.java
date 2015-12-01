@@ -21,7 +21,15 @@ package org.apache.hadoop.hdfs.server.diskbalancer.connectors;
  * Connectors package is a set of logical connectors that connect
  * to various data sources to read the hadoop cluster information.
  *
- * We currently have 1 connector in this package. it is
+ * We currently have 3 connectors in this package. They are
+ *
+ * DBNameNodeConnector - This uses the connector from the original
+ * balancer package to connect to a real hadoop cluster.
+ *
+ * JsonNodeConnector - This connects to a file and reads the data about a
+ * cluster. We can generate a cluster json from a real cluster using
+ * the diskBalancer tool or hand-craft it. There are some sample Json files
+ * checked in under test/resources/diskBalancer directory.
  *
  * NullConnector - This is an in-memory connector that is useful in testing.
  * we can crate dataNodes on the fly and attach to this connector and
