@@ -151,7 +151,7 @@ public class DecayRpcScheduler implements RpcScheduler, DecayRpcSchedulerMXBean 
     // Setup delay timer
     Timer timer = new Timer();
     DecayTask task = new DecayTask(this, timer);
-    timer.scheduleAtFixedRate(task, 0, this.decayPeriodMillis);
+    timer.scheduleAtFixedRate(task, decayPeriodMillis, decayPeriodMillis);
 
     MetricsProxy prox = MetricsProxy.getInstance(ns);
     prox.setDelegate(this);
