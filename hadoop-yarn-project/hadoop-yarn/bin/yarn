@@ -89,6 +89,7 @@ function print_usage(){
   echo "  cluster                               prints cluster information"
   echo "  daemonlog                             get/set the log level for each"
   echo "                                        daemon"
+  echo "  envvars                               display computed Hadoop environment variables"
   echo "  top                                   run cluster usage tool"
   echo ""
   echo "Most commands print help when invoked w/o parameters."
@@ -217,6 +218,14 @@ if [ "$COMMAND" = "classpath" ] ; then
     echo $CLASSPATH
     exit 0
   fi
+elif [ "$COMMAND" = "envvars" ] ; then
+  echo "JAVA_HOME='${JAVA_HOME}'"
+  echo "HADOOP_YARN_HOME='${HADOOP_YARN_HOME}'"
+  echo "YARN_DIR='${YARN_DIR}'"
+  echo "YARN_LIB_JARS_DIR='${YARN_LIB_JARS_DIR}'"
+  echo "HADOOP_CONF_DIR='${HADOOP_CONF_DIR}'"
+  echo "HADOOP_TOOLS_PATH='${TOOL_PATH}'"
+  exit 0
 elif [ "$COMMAND" = "rmadmin" ] ; then
   CLASS='org.apache.hadoop.yarn.client.cli.RMAdminCLI'
   YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"

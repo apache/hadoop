@@ -38,6 +38,7 @@ function print_usage(){
   echo "                             YARN applications, not this command."
   echo "  checknative [-a|-h]  check native hadoop and compression libraries availability"
   echo "  distcp <srcurl> <desturl> copy file or directories recursively"
+  echo "  envvars              display computed Hadoop environment variables"
   echo "  archive -archiveName NAME -p <parent path> <src>* <dest> create a hadoop archive"
   echo "  classpath            prints the class path needed to get the"
   echo "                       Hadoop jar and the required libraries"
@@ -116,6 +117,15 @@ case $COMMAND in
       CLASSPATH=${CLASSPATH}:${TOOL_PATH}
     elif [ "$COMMAND" = "daemonlog" ] ; then
       CLASS=org.apache.hadoop.log.LogLevel
+    elif [ "$COMMAND" = "envvars" ] ; then
+      echo "JAVA_HOME='${JAVA_HOME}'"
+      echo "HADOOP_COMMON_HOME='${HADOOP_COMMON_HOME}'"
+      echo "HADOOP_COMMON_DIR='${HADOOP_COMMON_DIR}'"
+      echo "HADOOP_COMMON_LIB_JARS_DIR='${HADOOP_COMMON_LIB_JARS_DIR}'"
+      echo "HADOOP_COMMON_LIB_NATIVE_DIR='${HADOOP_COMMON_LIB_NATIVE_DIR}'"
+      echo "HADOOP_CONF_DIR='${HADOOP_CONF_DIR}'"
+      echo "HADOOP_TOOLS_PATH='${TOOL_PATH}'"
+      exit 0
     elif [ "$COMMAND" = "archive" ] ; then
       CLASS=org.apache.hadoop.tools.HadoopArchives
       CLASSPATH=${CLASSPATH}:${TOOL_PATH}
