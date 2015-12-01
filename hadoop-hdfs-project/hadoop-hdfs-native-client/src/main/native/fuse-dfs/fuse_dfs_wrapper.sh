@@ -16,7 +16,12 @@
 # limitations under the License.
 #
 
-export HADOOP_PREFIX=${HADOOP_PREFIX:-/usr/local/share/hadoop}
+if [ "$HADOOP_PREFIX" = "" ]; then
+  echo "HADOOP_PREFIX is empty. Set it to the root directory of Hadoop source code"
+  exit 1
+fi
+export FUSEDFS_PATH="$HADOOP_PREFIX/hadoop-hdfs-project/hadoop-hdfs-native-client/target/main/native/fuse-dfs"
+export LIBHDFS_PATH="$HADOOP_PREFIX/hadoop-hdfs-project/hadoop-hdfs-native-client/target/usr/local/lib"
 
 if [ "$OS_ARCH" = "" ]; then
 export OS_ARCH=amd64
@@ -30,17 +35,18 @@ if [ "$LD_LIBRARY_PATH" = "" ]; then
 export LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/$OS_ARCH/server:/usr/local/lib
 fi
 
-# If dev build set paths accordingly
-if [ -d $HADOOP_PREFIX/build ]; then
-  export HADOOP_PREFIX=$HADOOP_PREFIX
-  for f in ${HADOOP_PREFIX}/build/*.jar ; do
-    export CLASSPATH=$CLASSPATH:$f
-  done
-  for f in $HADOOP_PREFIX/build/ivy/lib/hadoop-hdfs/common/*.jar ; do
-    export CLASSPATH=$CLASSPATH:$f
-  done
-  export PATH=$HADOOP_PREFIX/build/contrib/fuse-dfs:$PATH
-  export LD_LIBRARY_PATH=$HADOOP_PREFIX/build/c++/lib:$JAVA_HOME/jre/lib/$OS_ARCH/server
-fi
+while IFS= read -r -d '' file
+do
+  export CLASSPATH=$CLASSPATH:$file
+done < <(find "$HADOOP_PREFIX/hadoop-client" -name "*.jar" -print0)
 
-fuse_dfs $@
+while IFS= read -r -d '' file
+do
+  export CLASSPATH=$CLASSPATH:$file
+done < <(find "$HADOOP_PREFIX/hhadoop-hdfs-project" -name "*.jar" -print0)
+
+export CLASSPATH=$HADOOP_CONF_DIR:$CLASSPATH
+export PATH=$FUSEDFS_PATH:$PATH
+export LD_LIBRARY_PATH=$LIBHDFS_PATH:$JAVA_HOME/jre/lib/$OS_ARCH/server
+
+fuse_dfs "$@"
