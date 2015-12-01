@@ -127,6 +127,10 @@ class BPServiceActor implements Runnable {
     scheduler = new Scheduler(dnConf.heartBeatInterval, dnConf.blockReportInterval);
   }
 
+  public DatanodeRegistration getBpRegistration() {
+    return bpRegistration;
+  }
+
   boolean isAlive() {
     if (!shouldServiceRun || !bpThread.isAlive()) {
       return false;

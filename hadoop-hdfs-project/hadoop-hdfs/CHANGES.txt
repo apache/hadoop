@@ -2424,6 +2424,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9336. deleteSnapshot throws NPE when snapshotname is null.
     (Brahma Reddy Battula via aajisaka)
 
+    HDFS-6533. TestBPOfferService#testBasicFunctionalitytest fails
+    intermittently. (Wei-Chiu Chuang via Arpit Agarwal)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
