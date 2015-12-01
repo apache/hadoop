@@ -38,6 +38,7 @@ function print_usage(){
   echo "                       mapreduce subcommands"
   echo "  historyserver        run job history servers as a standalone daemon"
   echo "  distcp <srcurl> <desturl> copy file or directories recursively"
+  echo "  envvars              display computed Hadoop environment variables"
   echo "  archive -archiveName NAME -p <parent path> <src>* <dest> create a hadoop archive"
   echo "  archive-logs         combine aggregated logs into hadoop archives"
   echo "  hsadmin              job history server admin interface"
@@ -75,6 +76,14 @@ elif [ "$COMMAND" = "sampler" ] ; then
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "classpath" ] ; then
   echo -n 
+elif [ "$COMMAND" = "envvars" ] ; then
+  echo "JAVA_HOME='${JAVA_HOME}'"
+  echo "HADOOP_MAPRED_HOME='${HADOOP_MAPRED_HOME}'"
+  echo "MAPRED_DIR='${MAPRED_DIR}'"
+  echo "MAPRED_LIB_JARS_DIR='${MAPRED_LIB_JARS_DIR}'"
+  echo "HADOOP_CONF_DIR=${HADOOP_CONF_DIR}'"
+  echo "HADOOP_TOOLS_PATH='${TOOL_PATH}'"
+  exit 0
 elif [ "$COMMAND" = "historyserver" ] ; then
   CLASS=org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer
   HADOOP_OPTS="$HADOOP_OPTS -Dmapred.jobsummary.logger=${HADOOP_JHS_LOGGER:-INFO,console} $HADOOP_JOB_HISTORYSERVER_OPTS"
