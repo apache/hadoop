@@ -16,45 +16,43 @@
 #
 Fuse-DFS
 
-Supports reads, writes, and directory operations (e.g., cp, ls, more, cat, find, less, rm, mkdir, mv, rmdir).  Things like touch, chmod, chown, and permissions are in the works. Fuse-dfs currently shows all files as owned by nobody.
+Fuse-DFS allows HDFS to be mounted as a local file system.
+It currently supports reads, writes, and directory operations (e.g., cp, ls, more, cat, find, less, rm, mkdir, mv, rmdir, touch, chmod, chown and permissions). Random access writing is not supported.
 
 Contributing
 
-It's pretty straightforward to add functionality to fuse-dfs as fuse makes things relatively simple. Some other tasks require also augmenting libhdfs to expose more hdfs functionality to C. See [http://issues.apache.org/jira/secure/IssueNavigator.jspa?reset=true&mode=hide&pid=12310240&sorter/order=DESC&sorter/field=priority&resolution=-1&component=12312376  contrib/fuse-dfs JIRAs]
+It's pretty straightforward to add functionality to fuse-dfs as fuse makes things relatively simple. Some other tasks require also augmenting libhdfs to expose more hdfs functionality to C. See [https://issues.apache.org/jira/issues/?jql=text%20~%20%22fuse-dfs%22  fuse-dfs JIRAs]
 
 Requirements
 
  * Hadoop with compiled libhdfs.so
  * Linux kernel > 2.6.9 with fuse, which is the default or Fuse 2.7.x, 2.8.x installed. See: [http://fuse.sourceforge.net/]
  * modprobe fuse to load it
- * fuse-dfs executable (see below)
+ * fuse_dfs executable (see below)
  * fuse_dfs_wrapper.sh installed in /bin or other appropriate location (see below)
 
 
 BUILDING
 
-   1. in HADOOP_PREFIX: `ant compile-libhdfs -Dlibhdfs=1
-   2. in HADOOP_PREFIX: `ant package` to deploy libhdfs
-   3. in HADOOP_PREFIX: `ant compile-contrib -Dlibhdfs=1 -Dfusedfs=1`
+   fuse-dfs executable can be built by setting `require.fuse` option to true using Maven. For example:
+   in HADOOP_PREFIX: `mvn package -Pnative -Drequire.fuse=true -DskipTests -Dmaven.javadoc.skip=true`
 
-NOTE: for amd64 architecture, libhdfs will not compile unless you edit
-the Makefile in src/c++/libhdfs/Makefile and set OS_ARCH=amd64
-(probably the same for others too). See [https://issues.apache.org/jira/browse/HADOOP-3344 HADOOP-3344]
+   The executable `fuse_dfs` will be located at HADOOP_PREFIX/hadoop-hdfs-project/hadoop-hdfs-native-client/target/main/native/fuse-dfs/
 
 Common build problems include not finding the libjvm.so in JAVA_HOME/jre/lib/OS_ARCH/server or not finding fuse in FUSE_HOME or /usr/local.
 
 
 CONFIGURING
 
-Look at all the paths in fuse_dfs_wrapper.sh and either correct them or set them in your environment before running. (note for automount and mount as root, you probably cannot control the environment, so best to set them in the wrapper)
+fuse_dfs_wrapper.sh may not work out of box. To use it, look at all the paths in fuse_dfs_wrapper.sh and either correct them or set them in your environment before running. (note for automount and mount as root, you probably cannot control the environment, so best to set them in the wrapper)
 
 INSTALLING
 
 1. `mkdir /export/hdfs` (or wherever you want to mount it)
 
-2. `fuse_dfs_wrapper.sh dfs://hadoop_server1.foo.com:9000 /export/hdfs -d` and from another terminal, try `ls /export/hdfs`
+2. `fuse_dfs_wrapper.sh dfs://hadoop_server1.foo.com:9000 /export/hdfs -odebug` and from another terminal, try `ls /export/hdfs`
 
-If 2 works, try again dropping the debug mode, i.e., -d
+If 2 works, try again dropping the debug mode, i.e., -debug
 
 (note - common problems are that you don't have libhdfs.so or libjvm.so or libfuse.so on your LD_LIBRARY_PATH, and your CLASSPATH does not contain hadoop and other required jars.)
 
@@ -111,7 +109,7 @@ NOTE - you cannot export this with a FUSE module built into the kernel
 
 RECOMMENDATIONS
 
-1. From /bin, `ln -s $HADOOP_PREFIX/contrib/fuse-dfs/fuse_dfs* .`
+1. From /bin, `ln -s HADOOP_PREFIX/hadoop-hdfs-project/hadoop-hdfs-native-client/target/main/native/fuse-dfs/fuse_dfs* .`
 
 2. Always start with debug on so you can see if you are missing a classpath or something like that.
 
@@ -127,5 +125,3 @@ this is very slow. see [https://issues.apache.org/jira/browse/HADOOP-3797 HADOOP
 2. Writes are approximately 33% slower than the DFSClient. TBD how to optimize this. see: [https://issues.apache.org/jira/browse/HADOOP-3805 HADOOP-3805] - try using -obig_writes if on a >2.6.26 kernel, should perform much better since bigger writes implies less context switching.
 
 3. Reads are ~20-30% slower even with the read buffering. 
-
-4. fuse-dfs and underlying libhdfs have no support for permissions. See [https://issues.apache.org/jira/browse/HADOOP-3536 HADOOP-3536] 
