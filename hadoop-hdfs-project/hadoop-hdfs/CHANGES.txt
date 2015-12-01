@@ -2415,6 +2415,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9467. Fix data race accessing writeLockHeldTimeStamp in FSNamesystem.
     (Mingliang Liu via jing9)
 
+    HDFS-9336. deleteSnapshot throws NPE when snapshotname is null.
+    (Brahma Reddy Battula via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

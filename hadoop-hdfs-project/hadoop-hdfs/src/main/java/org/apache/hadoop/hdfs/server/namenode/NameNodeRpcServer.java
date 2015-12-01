@@ -1646,6 +1646,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public void deleteSnapshot(String snapshotRoot, String snapshotName)
       throws IOException {
     checkNNStartup();
+    if (snapshotName == null || snapshotName.isEmpty()) {
+      throw new IOException("The snapshot name is null or empty.");
+    }
     namesystem.checkOperation(OperationCategory.WRITE);
     metrics.incrDeleteSnapshotOps();
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
