@@ -19,17 +19,13 @@
 project (libhdfspp)
 
 enable_testing()
-include (CTest)
 
 find_package(Doxygen)
 find_package(OpenSSL REQUIRED)
 find_package(Protobuf REQUIRED)
 find_package(Threads)
-find_program(MEMORYCHECK_COMMAND valgrind)
-set(MEMORYCHECK_COMMAND_OPTIONS "--trace-children=yes --leak-check=full")
 
 add_definitions(-DASIO_STANDALONE -DASIO_CPP11_DATE_TIME)
-
 
 if(UNIX)
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -std=c++11 -g -fPIC -fno-strict-aliasing")
