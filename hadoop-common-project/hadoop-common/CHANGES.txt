@@ -1491,6 +1491,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12313. NPE in JvmPauseMonitor when calling stop() before start().
     (Gabor Liptak via wheat9)
 
+    HADOOP-12609. Fix intermittent failure of TestDecayRpcScheduler.
+    (Masatake Iwasaki via Arpit Agarwal)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
