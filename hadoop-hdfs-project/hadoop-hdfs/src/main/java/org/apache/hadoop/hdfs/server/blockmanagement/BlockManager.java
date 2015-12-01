@@ -3930,7 +3930,7 @@ public class BlockManager implements BlockStatsMXBean {
     return corruptReplicas.numCorruptReplicas(block);
   }
 
-  public void removeBlockFromMap(Block block) {
+  public void removeBlockFromMap(BlockInfo block) {
     removeFromExcessReplicateMap(block);
     blocksMap.removeBlock(block);
     // If block is removed from blocksMap remove it from corruptReplicasMap
@@ -3940,7 +3940,7 @@ public class BlockManager implements BlockStatsMXBean {
   /**
    * If a block is removed from blocksMap, remove it from excessReplicateMap.
    */
-  private void removeFromExcessReplicateMap(Block block) {
+  private void removeFromExcessReplicateMap(BlockInfo block) {
     for (DatanodeStorageInfo info : blocksMap.getStorages(block)) {
       String uuid = info.getDatanodeDescriptor().getDatanodeUuid();
       LightWeightHashSet<BlockInfo> excessReplicas =

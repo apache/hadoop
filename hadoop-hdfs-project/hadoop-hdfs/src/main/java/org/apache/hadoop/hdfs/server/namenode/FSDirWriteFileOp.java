@@ -82,7 +82,7 @@ class FSDirWriteFileOp {
     if (uc == null) {
       return false;
     }
-    fsd.getBlockManager().removeBlockFromMap(block);
+    fsd.getBlockManager().removeBlockFromMap(uc);
 
     if(NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.removeBlock: "
