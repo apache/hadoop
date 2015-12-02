@@ -77,7 +77,7 @@ public class TimelineReaderManager extends AbstractService {
     return reader.getEntities(userId, cluster, flowId, flowRunId, appId,
         entityType, limit, createdTimeBegin, createdTimeEnd, modifiedTimeBegin,
         modifiedTimeEnd, relatesTo, isRelatedTo, infoFilters, configFilters,
-        metricFilters, eventFilters, fieldsToRetrieve);
+        metricFilters, eventFilters, null, null, fieldsToRetrieve);
   }
 
   /**
@@ -91,6 +91,6 @@ public class TimelineReaderManager extends AbstractService {
       String entityId, EnumSet<Field> fields) throws IOException {
     String cluster = getClusterID(clusterId, getConfig());
     return reader.getEntity(userId, cluster, flowId, flowRunId, appId,
-        entityType, entityId, fields);
+        entityType, entityId, null, null, fields);
   }
 }

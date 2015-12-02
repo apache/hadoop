@@ -182,7 +182,7 @@ public class TestHBaseStorageFlowActivity {
       Set<TimelineEntity> entities =
           hbr.getEntities(null, cluster, null, null, null,
               TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), 10L, null, null,
-              null, null, null, null, null, null, null, null, null);
+              null, null, null, null, null, null, null, null, null, null, null);
       assertEquals(1, entities.size());
       for (TimelineEntity e : entities) {
         FlowActivityEntity flowActivity = (FlowActivityEntity)e;
@@ -238,7 +238,7 @@ public class TestHBaseStorageFlowActivity {
       Set<TimelineEntity> entities =
           hbr.getEntities(user, cluster, flow, null, null,
               TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), 10L, null, null,
-              null, null, null, null, null, null, null, null, null);
+              null, null, null, null, null, null, null, null, null, null, null);
       assertEquals(1, entities.size());
       for (TimelineEntity e : entities) {
         FlowActivityEntity entity = (FlowActivityEntity)e;
@@ -353,7 +353,7 @@ public class TestHBaseStorageFlowActivity {
       Set<TimelineEntity> entities =
           hbr.getEntities(null, cluster, null, null, null,
               TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), 10L, null, null,
-              null, null, null, null, null, null, null, null, null);
+              null, null, null, null, null, null, null, null, null, null, null);
       assertEquals(1, entities.size());
       for (TimelineEntity e : entities) {
         FlowActivityEntity flowActivity = (FlowActivityEntity)e;

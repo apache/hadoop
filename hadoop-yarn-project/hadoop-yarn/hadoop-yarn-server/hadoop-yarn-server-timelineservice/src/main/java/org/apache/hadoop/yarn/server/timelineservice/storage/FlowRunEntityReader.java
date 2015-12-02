@@ -28,12 +28,22 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
+import org.apache.hadoop.hbase.filter.BinaryPrefixComparator;
+import org.apache.hadoop.hbase.filter.FamilyFilter;
+import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PageFilter;
+import org.apache.hadoop.hbase.filter.QualifierFilter;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunColumn;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunColumnFamily;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTable;
@@ -54,18 +64,20 @@ class FlowRunEntityReader extends TimelineEntityReader {
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
       Map<String, Object> infoFilters, Map<String, String> configFilters,
       Set<String> metricFilters, Set<String> eventFilters,
+      TimelineFilterList confsToRetrieve, TimelineFilterList metricsToRetrieve,
       EnumSet<Field> fieldsToRetrieve) {
     super(userId, clusterId, flowId, flowRunId, appId, entityType, limit,
         createdTimeBegin, createdTimeEnd, modifiedTimeBegin, modifiedTimeEnd,
         relatesTo, isRelatedTo, infoFilters, configFilters, metricFilters,
-        eventFilters, fieldsToRetrieve, true);
+        eventFilters, null, metricsToRetrieve, fieldsToRetrieve, true);
   }
 
   public FlowRunEntityReader(String userId, String clusterId,
       String flowId, Long flowRunId, String appId, String entityType,
-      String entityId, EnumSet<Field> fieldsToRetrieve) {
+      String entityId, TimelineFilterList confsToRetrieve,
+      TimelineFilterList metricsToRetrieve, EnumSet<Field> fieldsToRetrieve) {
     super(userId, clusterId, flowId, flowRunId, appId, entityType, entityId,
-        fieldsToRetrieve);
+        null, metricsToRetrieve, fieldsToRetrieve);
   }
 
   /**
@@ -101,26 +113,69 @@ class FlowRunEntityReader extends TimelineEntityReader {
       if (createdTimeEnd == null) {
         createdTimeEnd = DEFAULT_END_TIME;
       }
+      if (!fieldsToRetrieve.contains(Field.METRICS) &&
+          metricsToRetrieve != null &&
+          !metricsToRetrieve.getFilterList().isEmpty()) {
+        fieldsToRetrieve.add(Field.METRICS);
+      }
     }
   }
 
   @Override
-  protected Result getResult(Configuration hbaseConf, Connection conn)
-      throws IOException {
+  protected FilterList constructFilterListBasedOnFields() {
+    FilterList list = new FilterList(Operator.MUST_PASS_ONE);
+
+    // By default fetch everything in INFO column family.
+    FamilyFilter infoColumnFamily =
+        new FamilyFilter(CompareOp.EQUAL,
+           new BinaryComparator(FlowRunColumnFamily.INFO.getBytes()));
+    // Metrics not required.
+    if (!singleEntityRead && !fieldsToRetrieve.contains(Field.METRICS) &&
+        !fieldsToRetrieve.contains(Field.ALL)) {
+      FilterList infoColFamilyList = new FilterList(Operator.MUST_PASS_ONE);
+      infoColFamilyList.addFilter(infoColumnFamily);
+      infoColFamilyList.addFilter(
+          new QualifierFilter(CompareOp.NOT_EQUAL,
+          new BinaryPrefixComparator(
+          FlowRunColumnPrefix.METRIC.getColumnPrefixBytes(""))));
+      list.addFilter(infoColFamilyList);
+    }
+    if (metricsToRetrieve != null &&
+        !metricsToRetrieve.getFilterList().isEmpty()) {
+      FilterList infoColFamilyList = new FilterList();
+      infoColFamilyList.addFilter(infoColumnFamily);
+      infoColFamilyList.addFilter(TimelineFilterUtils.createHBaseFilterList(
+          FlowRunColumnPrefix.METRIC, metricsToRetrieve));
+      list.addFilter(infoColFamilyList);
+    }
+    return list;
+  }
+
+  @Override
+  protected Result getResult(Configuration hbaseConf, Connection conn,
+      FilterList filterList) throws IOException {
     byte[] rowKey =
         FlowRunRowKey.getRowKey(clusterId, userId, flowId, flowRunId);
     Get get = new Get(rowKey);
     get.setMaxVersions(Integer.MAX_VALUE);
+    if (filterList != null && !filterList.getFilters().isEmpty()) {
+      get.setFilter(filterList);
+    }
     return table.getResult(hbaseConf, conn, get);
   }
 
   @Override
   protected ResultScanner getResults(Configuration hbaseConf,
-      Connection conn) throws IOException {
+      Connection conn, FilterList filterList) throws IOException {
     Scan scan = new Scan();
     scan.setRowPrefixFilter(
         FlowRunRowKey.getRowKeyPrefix(clusterId, userId, flowId));
-    scan.setFilter(new PageFilter(limit));
+    FilterList newList = new FilterList();
+    newList.addFilter(new PageFilter(limit));
+    if (filterList != null && !filterList.getFilters().isEmpty()) {
+      newList.addFilter(filterList);
+    }
+    scan.setFilter(newList);
     return table.getResultScanner(hbaseConf, conn, scan);
   }
 

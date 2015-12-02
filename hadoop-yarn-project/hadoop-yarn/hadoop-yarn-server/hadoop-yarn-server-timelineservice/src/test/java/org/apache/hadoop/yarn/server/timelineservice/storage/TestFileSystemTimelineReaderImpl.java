@@ -266,7 +266,7 @@ public class TestFileSystemTimelineReaderImpl {
     // only the id, created and modified time
     TimelineEntity result =
         reader.getEntity("user1", "cluster1", "flow1", 1L, "app1",
-            "app", "id_1", null);
+            "app", "id_1", null, null, null);
     Assert.assertEquals(
         (new TimelineEntity.Identifier("app", "id_1")).toString(),
         result.getIdentifier().toString());
@@ -281,7 +281,7 @@ public class TestFileSystemTimelineReaderImpl {
     // Cluster and AppId should be enough to get an entity.
     TimelineEntity result =
         reader.getEntity(null, "cluster1", null, null, "app1",
-            "app", "id_1", null);
+            "app", "id_1", null, null, null);
     Assert.assertEquals(
         (new TimelineEntity.Identifier("app", "id_1")).toString(),
         result.getIdentifier().toString());
@@ -298,7 +298,7 @@ public class TestFileSystemTimelineReaderImpl {
     // in app flow mapping csv has commas.
     TimelineEntity result =
         reader.getEntity(null, "cluster1", null, null, "app2",
-            "app", "id_5", null);
+            "app", "id_5", null, null, null);
     Assert.assertEquals(
         (new TimelineEntity.Identifier("app", "id_5")).toString(),
         result.getIdentifier().toString());
@@ -311,7 +311,7 @@ public class TestFileSystemTimelineReaderImpl {
     // Specified fields in addition to default view will be returned.
     TimelineEntity result =
         reader.getEntity("user1", "cluster1", "flow1", 1L,
-            "app1", "app", "id_1",
+            "app1", "app", "id_1", null, null,
             EnumSet.of(Field.INFO, Field.CONFIGS, Field.METRICS));
     Assert.assertEquals(
         (new TimelineEntity.Identifier("app", "id_1")).toString(),
@@ -329,8 +329,8 @@ public class TestFileSystemTimelineReaderImpl {
   public void testGetEntityAllFields() throws Exception {
     // All fields of TimelineEntity will be returned.
     TimelineEntity result =
-        reader.getEntity("user1", "cluster1", "flow1", 1L,
-            "app1", "app", "id_1", EnumSet.of(Field.ALL));
+        reader.getEntity("user1", "cluster1", "flow1", 1L, "app1", "app",
+        "id_1", null, null, EnumSet.of(Field.ALL));
     Assert.assertEquals(
         (new TimelineEntity.Identifier("app", "id_1")).toString(),
         result.getIdentifier().toString());
@@ -347,7 +347,7 @@ public class TestFileSystemTimelineReaderImpl {
     Set<TimelineEntity> result =
         reader.getEntities("user1", "cluster1", "flow1", 1L, "app1", "app",
             null, null, null, null, null, null, null, null, null, null,
-            null, null);
+            null, null, null, null);
     // All 3 entities will be returned
     Assert.assertEquals(4, result.size());
   }
@@ -357,7 +357,7 @@ public class TestFileSystemTimelineReaderImpl {
     Set<TimelineEntity> result =
         reader.getEntities("user1", "cluster1", "flow1", 1L, "app1", "app",
             2L, null, null, null, null, null, null, null, null, null,
-            null, null);
+            null, null, null, null);
     Assert.assertEquals(2, result.size());
     // Needs to be rewritten once hashcode and equals for
     // TimelineEntity is implemented
@@ -371,7 +371,7 @@ public class TestFileSystemTimelineReaderImpl {
     result =
         reader.getEntities("user1", "cluster1", "flow1", 1L, "app1", "app",
             3L, null, null, null, null, null, null, null, null, null,
-                null, null);
+                null, null, null, null);
      // Even though 2 entities out of 4 have same created time, one entity
      // is left out due to limit
      Assert.assertEquals(3, result.size());
@@ -383,7 +383,7 @@ public class TestFileSystemTimelineReaderImpl {
     Set<TimelineEntity> result =
         reader.getEntities("user1", "cluster1", "flow1", 1L, "app1", "app",
             null, 1425016502030L, 1425016502060L, null, null, null, null, null,
-            null, null, null, null);
+            null, null, null, null, null, null);
     Assert.assertEquals(1, result.size());
     // Only one entity with ID id_4 should be returned.
     for (TimelineEntity entity : result) {
@@ -396,7 +396,7 @@ public class TestFileSystemTimelineReaderImpl {
     result =
         reader.getEntities("user1", "cluster1", "flow1", 1L, "app1", "app",
             null, null, 1425016502010L, null, null, null, null, null, null,
-            null, null, null);
+            null, null, null, null, null);
     Assert.assertEquals(3, result.size());
     for (TimelineEntity entity : result) {
       if (entity.getId().equals("id_4")) {
@@ -408,7 +408,7 @@ public class TestFileSystemTimelineReaderImpl {
     result =
         reader.getEntities("user1", "cluster1", "flow1", 1L, "app1", "app",
             null, 1425016502010L, null, null, null, null, null, null, null,
-            null, null, null);
+            null, null, null, null, null);
     Assert.assertEquals(1, result.size());
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_4")) {
@@ -420,7 +420,7 @@ public class TestFileSystemTimelineReaderImpl {
     result =
         reader.getEntities("user1", "cluster1", "flow1", 1L, "app1", "app",
             null, null, null, 1425016502090L, 1425016503020L, null, null, null,
-            null, null, null, null);
+            null, null, null, null, null, null);
     Assert.assertEquals(2, result.size());
     // Two entities with IDs' id_1 and id_4 should be returned.
     for (TimelineEntity entity : result) {
@@ -433,7 +433,7 @@ public class TestFileSystemTimelineReaderImpl {
     result =
         reader.getEntities("user1", "cluster1", "flow1", 1L, "app1", "app",
             null, null, null, null, 1425016502090L, null, null, null, null,
-            null, null, null);
+            null, null, null, null, null);
     Assert.assertEquals(2, result.size());
     for (TimelineEntity entity : result) {
       if (entity.getId().equals("id_1") || entity.getId().equals("id_4")) {
@@ -445,7 +445,7 @@ public class TestFileSystemTimelineReaderImpl {
     result =
         reader.getEntities("user1", "cluster1", "flow1", 1L, "app1", "app",
             null, null, null, 1425016503005L, null, null, null, null, null,
-            null, null, null);
+            null, null, null, null, null);
     Assert.assertEquals(1, result.size());
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_4")) {
@@ -462,7 +462,7 @@ public class TestFileSystemTimelineReaderImpl {
     Set<TimelineEntity> result =
         reader.getEntities("user1", "cluster1", "flow1", 1L, "app1", "app",
             null, null, null, null, null, null, null, infoFilters, null, null,
-            null, null);
+            null, null, null, null);
     Assert.assertEquals(1, result.size());
     // Only one entity with ID id_3 should be returned.
     for (TimelineEntity entity : result) {
@@ -478,7 +478,7 @@ public class TestFileSystemTimelineReaderImpl {
     result =
         reader.getEntities("user1", "cluster1", "flow1", 1L, "app1", "app",
             null, null, null, null, null, null, null, null, configFilters, null,
-            null, null);
+            null, null, null, null);
     Assert.assertEquals(2, result.size());
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_1") && !entity.getId().equals("id_3")) {
@@ -493,7 +493,7 @@ public class TestFileSystemTimelineReaderImpl {
     result =
         reader.getEntities("user1", "cluster1", "flow1", 1L, "app1", "app",
             null, null, null, null, null, null, null, null, null, null,
-            eventFilters, null);
+            eventFilters, null, null, null);
     Assert.assertEquals(1, result.size());
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_3")) {
@@ -507,7 +507,7 @@ public class TestFileSystemTimelineReaderImpl {
     result =
         reader.getEntities("user1", "cluster1", "flow1", 1L, "app1", "app",
             null, null, null, null, null, null, null, null, null, metricFilters,
-            null, null);
+            null, null, null, null);
     Assert.assertEquals(2, result.size());
     // Two entities with IDs' id_1 and id_2 should be returned.
     for (TimelineEntity entity : result) {
@@ -527,7 +527,7 @@ public class TestFileSystemTimelineReaderImpl {
     Set<TimelineEntity> result =
         reader.getEntities("user1", "cluster1", "flow1", 1L, "app1", "app",
             null, null, null, null, null, relatesTo, null, null, null, null,
-            null, null);
+            null, null, null, null);
     Assert.assertEquals(1, result.size());
     // Only one entity with ID id_1 should be returned.
     for (TimelineEntity entity : result) {
@@ -544,7 +544,7 @@ public class TestFileSystemTimelineReaderImpl {
     result =
         reader.getEntities("user1", "cluster1", "flow1", 1L, "app1", "app",
             null, null, null, null, null, null, isRelatedTo, null, null, null,
-            null, null);
+            null, null, null, null);
     Assert.assertEquals(2, result.size());
     // Two entities with IDs' id_1 and id_3 should be returned.
     for (TimelineEntity entity : result) {

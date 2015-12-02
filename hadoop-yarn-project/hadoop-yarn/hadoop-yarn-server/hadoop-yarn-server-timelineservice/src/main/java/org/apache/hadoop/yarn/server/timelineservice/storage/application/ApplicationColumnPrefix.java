@@ -119,6 +119,18 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
     return columnPrefix;
   }
 
+  @Override
+  public byte[] getColumnPrefixBytes(byte[] qualifierPrefix) {
+    return ColumnHelper.getColumnQualifier(
+        this.columnPrefixBytes, qualifierPrefix);
+  }
+
+  @Override
+  public byte[] getColumnPrefixBytes(String qualifierPrefix) {
+    return ColumnHelper.getColumnQualifier(
+        this.columnPrefixBytes, qualifierPrefix);
+  }
+
   /*
    * (non-Javadoc)
    *
@@ -139,8 +151,7 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
           + tableMutator.getName().getNameAsString());
     }
 
-    byte[] columnQualifier =
-        ColumnHelper.getColumnQualifier(this.columnPrefixBytes, qualifier);
+    byte[] columnQualifier = getColumnPrefixBytes(qualifier);
 
     column.store(rowKey, tableMutator, columnQualifier, timestamp, inputValue,
         attributes);
@@ -166,8 +177,7 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
           + tableMutator.getName().getNameAsString());
     }
 
-    byte[] columnQualifier =
-        ColumnHelper.getColumnQualifier(this.columnPrefixBytes, qualifier);
+    byte[] columnQualifier = getColumnPrefixBytes(qualifier);
 
     column.store(rowKey, tableMutator, columnQualifier, timestamp, inputValue,
         attributes);

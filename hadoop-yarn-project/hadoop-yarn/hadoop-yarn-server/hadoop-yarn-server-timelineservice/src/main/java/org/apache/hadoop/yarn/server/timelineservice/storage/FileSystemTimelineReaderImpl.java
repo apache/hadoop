@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.codehaus.jackson.JsonGenerationException;
@@ -272,6 +273,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
       Map<String, Object> infoFilters, Map<String, String> configFilters,
       Set<String> metricFilters, Set<String> eventFilters,
+      TimelineFilterList confsToRetrieve, TimelineFilterList metricsToRetrieve,
       EnumSet<Field> fieldsToRetrieve) throws IOException {
     if (limit == null || limit <= 0) {
       limit = DEFAULT_LIMIT;
@@ -386,7 +388,9 @@ public class FileSystemTimelineReaderImpl extends AbstractService
   @Override
   public TimelineEntity getEntity(String userId, String clusterId,
       String flowId, Long flowRunId, String appId, String entityType,
-      String entityId, EnumSet<Field> fieldsToRetrieve) throws IOException {
+      String entityId, TimelineFilterList confsToRetrieve,
+      TimelineFilterList metricsToRetrieve, EnumSet<Field> fieldsToRetrieve)
+      throws IOException {
     String flowRunPath = getFlowRunPath(userId, clusterId, flowId,
         flowRunId, appId);
     File dir = new File(new File(rootPath, ENTITIES_DIR),
@@ -413,6 +417,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
       Map<String, Object> infoFilters, Map<String, String> configFilters,
       Set<String> metricFilters, Set<String> eventFilters,
+      TimelineFilterList confsToRetrieve, TimelineFilterList metricsToRetrieve,
       EnumSet<Field> fieldsToRetrieve) throws IOException {
     String flowRunPath =
         getFlowRunPath(userId, clusterId, flowId, flowRunId, appId);
@@ -422,6 +427,6 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     return getEntities(dir, entityType, limit,
         createdTimeBegin, createdTimeEnd, modifiedTimeBegin, modifiedTimeEnd,
         relatesTo, isRelatedTo, infoFilters, configFilters, metricFilters,
-        eventFilters, fieldsToRetrieve);
+        eventFilters, confsToRetrieve, metricsToRetrieve, fieldsToRetrieve);
   }
 }

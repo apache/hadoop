@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 
 /**
@@ -34,22 +35,23 @@ class TimelineEntityReaderFactory {
    */
   public static TimelineEntityReader createSingleEntityReader(String userId,
       String clusterId, String flowId, Long flowRunId, String appId,
-      String entityType, String entityId, EnumSet<Field> fieldsToRetrieve) {
+      String entityType, String entityId, TimelineFilterList confs,
+      TimelineFilterList metrics, EnumSet<Field> fieldsToRetrieve) {
     // currently the types that are handled separate from the generic entity
     // table are application, flow run, and flow activity entities
     if (TimelineEntityType.YARN_APPLICATION.matches(entityType)) {
       return new ApplicationEntityReader(userId, clusterId, flowId, flowRunId,
-          appId, entityType, entityId, fieldsToRetrieve);
+          appId, entityType, entityId, confs, metrics, fieldsToRetrieve);
     } else if (TimelineEntityType.YARN_FLOW_RUN.matches(entityType)) {
       return new FlowRunEntityReader(userId, clusterId, flowId, flowRunId,
-          appId, entityType, entityId, fieldsToRetrieve);
+          appId, entityType, entityId, confs, metrics, fieldsToRetrieve);
     } else if (TimelineEntityType.YARN_FLOW_ACTIVITY.matches(entityType)) {
       return new FlowActivityEntityReader(userId, clusterId, flowId, flowRunId,
           appId, entityType, entityId, fieldsToRetrieve);
     } else {
       // assume we're dealing with a generic entity read
       return new GenericEntityReader(userId, clusterId, flowId, flowRunId,
-        appId, entityType, entityId, fieldsToRetrieve);
+        appId, entityType, entityId, confs, metrics, fieldsToRetrieve);
     }
   }
 
@@ -64,6 +66,7 @@ class TimelineEntityReaderFactory {
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
       Map<String, Object> infoFilters, Map<String, String> configFilters,
       Set<String> metricFilters, Set<String> eventFilters,
+      TimelineFilterList confs, TimelineFilterList metrics,
       EnumSet<Field> fieldsToRetrieve) {
     // currently the types that are handled separate from the generic entity
     // table are application, flow run, and flow activity entities
@@ -71,8 +74,8 @@ class TimelineEntityReaderFactory {
       return new ApplicationEntityReader(userId, clusterId, flowId, flowRunId,
           appId, entityType, limit, createdTimeBegin, createdTimeEnd,
           modifiedTimeBegin, modifiedTimeEnd, relatesTo, isRelatedTo,
-          infoFilters, configFilters, metricFilters, eventFilters,
-          fieldsToRetrieve);
+          infoFilters, configFilters, metricFilters, eventFilters, confs,
+          metrics, fieldsToRetrieve);
     } else if (TimelineEntityType.YARN_FLOW_ACTIVITY.matches(entityType)) {
       return new FlowActivityEntityReader(userId, clusterId, flowId, flowRunId,
           appId, entityType, limit, createdTimeBegin, createdTimeEnd,
@@ -83,15 +86,15 @@ class TimelineEntityReaderFactory {
       return new FlowRunEntityReader(userId, clusterId, flowId, flowRunId,
           appId, entityType, limit, createdTimeBegin, createdTimeEnd,
           modifiedTimeBegin, modifiedTimeEnd, relatesTo, isRelatedTo,
-          infoFilters, configFilters, metricFilters, eventFilters,
-          fieldsToRetrieve);
+          infoFilters, configFilters, metricFilters, eventFilters, confs,
+          metrics, fieldsToRetrieve);
     } else {
       // assume we're dealing with a generic entity read
       return new GenericEntityReader(userId, clusterId, flowId, flowRunId,
           appId, entityType, limit, createdTimeBegin, createdTimeEnd,
           modifiedTimeBegin, modifiedTimeEnd, relatesTo, isRelatedTo,
-          infoFilters, configFilters, metricFilters, eventFilters,
-          fieldsToRetrieve, false);
+          infoFilters, configFilters, metricFilters, eventFilters, confs,
+          metrics, fieldsToRetrieve, false);
     }
   }
 }
