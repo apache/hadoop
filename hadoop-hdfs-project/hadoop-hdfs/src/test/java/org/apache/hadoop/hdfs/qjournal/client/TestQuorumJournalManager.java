@@ -94,6 +94,7 @@ public class TestQuorumJournalManager {
     
     cluster = new MiniJournalCluster.Builder(conf)
       .build();
+    cluster.waitActive();
     
     qjm = createSpyingQJM();
     spies = qjm.getLoggerSetForTests().getLoggersForTests();
