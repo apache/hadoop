@@ -98,6 +98,7 @@ public class TestQJMWithFaults {
   private static long determineMaxIpcNumber() throws Exception {
     Configuration conf = new Configuration();
     MiniJournalCluster cluster = new MiniJournalCluster.Builder(conf).build();
+    cluster.waitActive();
     QuorumJournalManager qjm = null;
     long ret;
     try {
@@ -146,6 +147,7 @@ public class TestQJMWithFaults {
         
         MiniJournalCluster cluster = new MiniJournalCluster.Builder(conf)
           .build();
+        cluster.waitActive();
         QuorumJournalManager qjm = null;
         try {
           qjm = createInjectableQJM(cluster);
@@ -218,6 +220,7 @@ public class TestQJMWithFaults {
     
     MiniJournalCluster cluster = new MiniJournalCluster.Builder(conf)
       .build();
+    cluster.waitActive();
     
     // Format the cluster using a non-faulty QJM.
     QuorumJournalManager qjmForInitialFormat =

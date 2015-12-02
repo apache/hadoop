@@ -92,6 +92,7 @@ public class MiniQJMHACluster {
         // start 3 journal nodes
         journalCluster = new MiniJournalCluster.Builder(conf).format(true)
             .build();
+        journalCluster.waitActive();
         URI journalURI = journalCluster.getQuorumJournalURI(NAMESERVICE);
 
         // start cluster with 2 NameNodes
