@@ -1099,6 +1099,8 @@ Release 2.7.3 - UNRELEASED
     YARN-4452. NPE when submit Unmanaged application. (Naganarasimha G R
     via junping_du)
 
+    YARN-4398. Remove unnecessary synchronization in RMStateStore. (Ning Ding via jianhe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
