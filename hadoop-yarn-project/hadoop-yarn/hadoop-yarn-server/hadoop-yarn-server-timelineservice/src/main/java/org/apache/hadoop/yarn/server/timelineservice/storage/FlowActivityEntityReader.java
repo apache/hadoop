@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PageFilter;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
@@ -58,14 +59,14 @@ class FlowActivityEntityReader extends TimelineEntityReader {
     super(userId, clusterId, flowId, flowRunId, appId, entityType, limit,
         createdTimeBegin, createdTimeEnd, modifiedTimeBegin, modifiedTimeEnd,
         relatesTo, isRelatedTo, infoFilters, configFilters, metricFilters,
-        eventFilters, fieldsToRetrieve, true);
+        eventFilters, null, null, fieldsToRetrieve, true);
   }
 
   public FlowActivityEntityReader(String userId, String clusterId,
       String flowId, Long flowRunId, String appId, String entityType,
       String entityId, EnumSet<Field> fieldsToRetrieve) {
     super(userId, clusterId, flowId, flowRunId, appId, entityType, entityId,
-        fieldsToRetrieve);
+        null, null, fieldsToRetrieve);
   }
 
   /**
@@ -96,15 +97,20 @@ class FlowActivityEntityReader extends TimelineEntityReader {
   }
 
   @Override
-  protected Result getResult(Configuration hbaseConf, Connection conn)
-      throws IOException {
+  protected FilterList constructFilterListBasedOnFields() {
+    return null;
+  }
+
+  @Override
+  protected Result getResult(Configuration hbaseConf, Connection conn,
+      FilterList filterList) throws IOException {
     throw new UnsupportedOperationException(
         "we don't support a single entity query");
   }
 
   @Override
   protected ResultScanner getResults(Configuration hbaseConf,
-      Connection conn) throws IOException {
+      Connection conn, FilterList filterList) throws IOException {
     Scan scan = new Scan();
     if (createdTimeBegin == DEFAULT_BEGIN_TIME &&
         createdTimeEnd == DEFAULT_END_TIME) {

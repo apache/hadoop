@@ -31,8 +31,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix;
@@ -70,6 +72,8 @@ abstract class TimelineEntityReader {
   protected Map<String, String> configFilters;
   protected Set<String> metricFilters;
   protected Set<String> eventFilters;
+  protected TimelineFilterList confsToRetrieve;
+  protected TimelineFilterList metricsToRetrieve;
 
   /**
    * Main table the entity reader uses.
@@ -94,6 +98,7 @@ abstract class TimelineEntityReader {
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
       Map<String, Object> infoFilters, Map<String, String> configFilters,
       Set<String> metricFilters, Set<String> eventFilters,
+      TimelineFilterList confsToRetrieve, TimelineFilterList metricsToRetrieve,
       EnumSet<Field> fieldsToRetrieve, boolean sortedKeys) {
     this.singleEntityRead = false;
     this.sortedKeys = sortedKeys;
@@ -115,6 +120,8 @@ abstract class TimelineEntityReader {
     this.configFilters = configFilters;
     this.metricFilters = metricFilters;
     this.eventFilters = eventFilters;
+    this.confsToRetrieve = confsToRetrieve;
+    this.metricsToRetrieve = metricsToRetrieve;
 
     this.table = getTable();
   }
@@ -124,7 +131,8 @@ abstract class TimelineEntityReader {
    */
   protected TimelineEntityReader(String userId, String clusterId,
       String flowId, Long flowRunId, String appId, String entityType,
-      String entityId, EnumSet<Field> fieldsToRetrieve) {
+      String entityId, TimelineFilterList confsToRetrieve,
+      TimelineFilterList metricsToRetrieve, EnumSet<Field> fieldsToRetrieve) {
     this.singleEntityRead = true;
     this.userId = userId;
     this.clusterId = clusterId;
@@ -134,9 +142,19 @@ abstract class TimelineEntityReader {
     this.entityType = entityType;
     this.fieldsToRetrieve = fieldsToRetrieve;
     this.entityId = entityId;
+    this.confsToRetrieve = confsToRetrieve;
+    this.metricsToRetrieve = metricsToRetrieve;
 
     this.table = getTable();
   }
+
+  /**
+   * Creates a {@link FilterList} based on fields, confs and metrics to
+   * retrieve. This filter list will be set in Scan/Get objects to trim down
+   * results fetched from HBase back-end storage.
+   * @return a {@link FilterList} object.
+   */
+  protected abstract FilterList constructFilterListBasedOnFields();
 
   /**
    * Reads and deserializes a single timeline entity from the HBase storage.
@@ -146,7 +164,8 @@ abstract class TimelineEntityReader {
     validateParams();
     augmentParams(hbaseConf, conn);
 
-    Result result = getResult(hbaseConf, conn);
+    FilterList filterList = constructFilterListBasedOnFields();
+    Result result = getResult(hbaseConf, conn, filterList);
     if (result == null || result.isEmpty()) {
       // Could not find a matching row.
       LOG.info("Cannot find matching entity of type " + entityType);
@@ -166,7 +185,8 @@ abstract class TimelineEntityReader {
     augmentParams(hbaseConf, conn);
 
     NavigableSet<TimelineEntity> entities = new TreeSet<>();
-    ResultScanner results = getResults(hbaseConf, conn);
+    FilterList filterList = constructFilterListBasedOnFields();
+    ResultScanner results = getResults(hbaseConf, conn, filterList);
     try {
       for (Result result : results) {
         TimelineEntity entity = parseEntity(result);
@@ -211,14 +231,14 @@ abstract class TimelineEntityReader {
    *
    * @return the {@link Result} instance or null if no such record is found.
    */
-  protected abstract Result getResult(Configuration hbaseConf, Connection conn)
-      throws IOException;
+  protected abstract Result getResult(Configuration hbaseConf, Connection conn,
+      FilterList filterList) throws IOException;
 
   /**
    * Fetches a {@link ResultScanner} for a multi-entity read.
    */
   protected abstract ResultScanner getResults(Configuration hbaseConf,
-      Connection conn) throws IOException;
+      Connection conn, FilterList filterList) throws IOException;
 
   /**
    * Given a {@link Result} instance, deserializes and creates a

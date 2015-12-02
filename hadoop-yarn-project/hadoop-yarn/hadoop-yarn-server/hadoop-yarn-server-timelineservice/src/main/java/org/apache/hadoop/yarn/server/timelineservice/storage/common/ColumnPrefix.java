@@ -44,13 +44,13 @@ public interface ColumnPrefix<T> {
    * @param qualifier column qualifier. Nothing gets written when null.
    * @param timestamp version timestamp. When null the server timestamp will be
    *          used.
-   *@param attributes attributes for the mutation that are used by the coprocessor
-   *          to set/read the cell tags
+   * @param attributes attributes for the mutation that are used by the
+   *          coprocessor to set/read the cell tags.
    * @param inputValue the value to write to the rowKey and column qualifier.
    *          Nothing gets written when null.
    * @throws IOException
    */
-  public void store(byte[] rowKey, TypedBufferedMutator<T> tableMutator,
+  void store(byte[] rowKey, TypedBufferedMutator<T> tableMutator,
       byte[] qualifier, Long timestamp, Object inputValue,
       Attribute... attributes) throws IOException;
 
@@ -65,13 +65,13 @@ public interface ColumnPrefix<T> {
    * @param qualifier column qualifier. Nothing gets written when null.
    * @param timestamp version timestamp. When null the server timestamp will be
    *          used.
-   *@param attributes attributes for the mutation that are used by the coprocessor
-   *          to set/read the cell tags
+   * @param attributes attributes for the mutation that are used by the
+   *          coprocessor to set/read the cell tags.
    * @param inputValue the value to write to the rowKey and column qualifier.
    *          Nothing gets written when null.
    * @throws IOException
    */
-  public void store(byte[] rowKey, TypedBufferedMutator<T> tableMutator,
+  void store(byte[] rowKey, TypedBufferedMutator<T> tableMutator,
       String qualifier, Long timestamp, Object inputValue,
       Attribute... attributes) throws IOException;
 
@@ -86,7 +86,7 @@ public interface ColumnPrefix<T> {
    *         in the result.
    * @throws IOException
    */
-  public Object readResult(Result result, String qualifier) throws IOException;
+  Object readResult(Result result, String qualifier) throws IOException;
 
   /**
    * @param result from which to read columns
@@ -94,7 +94,7 @@ public interface ColumnPrefix<T> {
    *         (or all of them if the prefix value is null).
    * @throws IOException
    */
-  public Map<String, Object> readResults(Result result) throws IOException;
+  Map<String, Object> readResults(Result result) throws IOException;
 
   /**
    * @param result from which to reads data with timestamps
@@ -104,7 +104,18 @@ public interface ColumnPrefix<T> {
    *         idB={timestamp3->value3}, idC={timestamp1->value4}}
    * @throws IOException
    */
-  public <V> NavigableMap<String, NavigableMap<Long, V>>
+  <V> NavigableMap<String, NavigableMap<Long, V>>
       readResultsWithTimestamps(Result result) throws IOException;
 
+  /**
+   * @param qualifierPrefix Column qualifier or prefix of qualifier.
+   * @return a byte array encoding column prefix and qualifier/prefix passed.
+   */
+  byte[] getColumnPrefixBytes(String qualifierPrefix);
+
+  /**
+   * @param qualifierPrefix Column qualifier or prefix of qualifier.
+   * @return a byte array encoding column prefix and qualifier/prefix passed.
+   */
+  byte[] getColumnPrefixBytes(byte[] qualifierPrefix);
 }

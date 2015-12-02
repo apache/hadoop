@@ -27,6 +27,8 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelinePrefixFilter;
 
 /** ATSv2 reader interface. */
 @Private
@@ -70,6 +72,18 @@ public interface TimelineReader extends Service {
    *    Entity type (mandatory)
    * @param entityId
    *    Entity Id (mandatory)
+   * @param confsToRetrieve
+   *    Used for deciding which configs to return in response. This is
+   *    represented as a {@link TimelineFilterList} object containing
+   *    {@link TimelinePrefixFilter} objects. These can either be exact config
+   *    keys' or prefixes which are then compared against config keys' to decide
+   *    configs to return in response.
+   * @param metricsToRetrieve
+   *    Used for deciding which metrics to return in response. This is
+   *    represented as a {@link TimelineFilterList} object containing
+   *    {@link TimelinePrefixFilter} objects. These can either be exact metric
+   *    ids' or prefixes which are then compared against metric ids' to decide
+   *    metrics to return in response.
    * @param fieldsToRetrieve
    *    Specifies which fields of the entity object to retrieve(optional), see
    *    {@link Field}. If null, retrieves 4 fields namely entity id,
@@ -81,6 +95,7 @@ public interface TimelineReader extends Service {
    */
   TimelineEntity getEntity(String userId, String clusterId, String flowId,
       Long flowRunId, String appId, String entityType, String entityId,
+      TimelineFilterList confsToRetrieve, TimelineFilterList metricsToRetrieve,
       EnumSet<Field> fieldsToRetrieve) throws IOException;
 
   /**
@@ -139,6 +154,22 @@ public interface TimelineReader extends Service {
    * @param eventFilters
    *    Matched entities should contain the given events (optional). If null
    *    or empty, the filter is not applied.
+   * @param confsToRetrieve
+   *    Used for deciding which configs to return in response. This is
+   *    represented as a {@link TimelineFilterList} object containing
+   *    {@link TimelinePrefixFilter} objects. These can either be exact config
+   *    keys' or prefixes which are then compared against config keys' to decide
+   *    configs(inside entities) to return in response. This should not be
+   *    confused with configFilters which is used to decide which entities to
+   *    return instead.
+   * @param metricsToRetrieve
+   *    Used for deciding which metrics to return in response. This is
+   *    represented as a {@link TimelineFilterList} object containing
+   *    {@link TimelinePrefixFilter} objects. These can either be exact metric
+   *    ids' or prefixes which are then compared against metric ids' to decide
+   *    metrics(inside entities) to return in response. This should not be
+   *    confused with metricFilters which is used to decide which entities to
+   *    return instead.
    * @param fieldsToRetrieve
    *    Specifies which fields of the entity object to retrieve(optional), see
    *    {@link Field}. If null, retrieves 4 fields namely entity id,
@@ -158,5 +189,6 @@ public interface TimelineReader extends Service {
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
       Map<String, Object> infoFilters, Map<String, String> configFilters,
       Set<String>  metricFilters, Set<String> eventFilters,
+      TimelineFilterList confsToRetrieve, TimelineFilterList metricsToRetrieve,
       EnumSet<Field> fieldsToRetrieve) throws IOException;
 }
