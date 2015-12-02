@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
 
 public class HBaseTimelineReaderImpl
     extends AbstractService implements TimelineReader {
@@ -64,11 +65,13 @@ public class HBaseTimelineReaderImpl
   @Override
   public TimelineEntity getEntity(String userId, String clusterId,
       String flowId, Long flowRunId, String appId, String entityType,
-      String entityId, EnumSet<Field> fieldsToRetrieve)
+      String entityId, TimelineFilterList confsToRetrieve,
+      TimelineFilterList metricsToRetrieve, EnumSet<Field> fieldsToRetrieve)
       throws IOException {
     TimelineEntityReader reader =
         TimelineEntityReaderFactory.createSingleEntityReader(userId, clusterId,
-            flowId, flowRunId, appId, entityType, entityId, fieldsToRetrieve);
+            flowId, flowRunId, appId, entityType, entityId, confsToRetrieve,
+            metricsToRetrieve, fieldsToRetrieve);
     return reader.readEntity(hbaseConf, conn);
   }
 
@@ -80,13 +83,15 @@ public class HBaseTimelineReaderImpl
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
       Map<String, Object> infoFilters, Map<String, String> configFilters,
       Set<String> metricFilters, Set<String> eventFilters,
+      TimelineFilterList confsToRetrieve, TimelineFilterList metricsToRetrieve,
       EnumSet<Field> fieldsToRetrieve) throws IOException {
     TimelineEntityReader reader =
         TimelineEntityReaderFactory.createMultipleEntitiesReader(userId,
             clusterId, flowId, flowRunId, appId, entityType, limit,
             createdTimeBegin, createdTimeEnd, modifiedTimeBegin,
             modifiedTimeEnd, relatesTo, isRelatedTo, infoFilters, configFilters,
-            metricFilters, eventFilters, fieldsToRetrieve);
+            metricFilters, eventFilters, confsToRetrieve, metricsToRetrieve,
+            fieldsToRetrieve);
     return reader.readEntities(hbaseConf, conn);
   }
 }
