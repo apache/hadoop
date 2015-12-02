@@ -168,6 +168,7 @@ public class TestRollingUpgrade {
 
     final Configuration conf = new HdfsConfiguration();
     final MiniJournalCluster mjc = new MiniJournalCluster.Builder(conf).build();
+    mjc.waitActive();
     setConf(conf, nn1Dir, mjc);
 
     {

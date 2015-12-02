@@ -2430,6 +2430,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-6533. TestBPOfferService#testBasicFunctionalitytest fails
     intermittently. (Wei-Chiu Chuang via Arpit Agarwal)
 
+    HDFS-9429. Tests in TestDFSAdminWithHA intermittently fail with
+    EOFException (Xiao Chen via Colin P. McCabe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
