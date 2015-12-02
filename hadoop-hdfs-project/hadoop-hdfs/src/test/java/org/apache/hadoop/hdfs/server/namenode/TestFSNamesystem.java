@@ -35,7 +35,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.SafeModeInfo;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
@@ -332,7 +331,11 @@ public class TestFSNamesystem {
     Mockito.when(fsImage.getEditLog()).thenReturn(fsEditLog);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, 2);
     FSNamesystem fsn = new FSNamesystem(conf, fsImage);
-    SafeModeInfo safemodeInfo = fsn.getSafeModeInfoForTests();
-    assertTrue(safemodeInfo.toString().contains("Minimal replication = 2"));
+
+    Object bmSafeMode = Whitebox.getInternalState(fsn.getBlockManager(),
+        "bmSafeMode");
+    int safeReplication = (int)Whitebox.getInternalState(bmSafeMode,
+        "safeReplication");
+    assertEquals(2, safeReplication);
   }
 }

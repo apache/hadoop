@@ -48,9 +48,9 @@ public interface Namesystem extends RwLock, SafeMode {
 
   BlockCollection getBlockCollection(long id);
 
-  void adjustSafeModeBlockTotals(int deltaSafe, int deltaTotal);
-
   void checkOperation(OperationCategory read) throws StandbyException;
+
+  void startSecretManagerIfNecessary();
 
   /**
    * Gets the erasure coding policy for the path
@@ -67,4 +67,15 @@ public interface Namesystem extends RwLock, SafeMode {
   CacheManager getCacheManager();
 
   HAContext getHAContext();
+
+  /**
+   * @return true if the HA is enabled else false
+   */
+  boolean isHaEnabled();
+
+  /**
+   * @return Whether the namenode is transitioning to active state and is in the
+   *         middle of the starting active services.
+   */
+  boolean inTransitionToActive();
 }

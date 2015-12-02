@@ -747,7 +747,8 @@ public class FSEditLogLoader {
           deleteSnapshotOp.snapshotName,
           new INode.ReclaimContext(fsNamesys.dir.getBlockStoragePolicySuite(),
               collectedBlocks, removedINodes, null));
-      fsNamesys.removeBlocksAndUpdateSafemodeTotal(collectedBlocks);
+      fsNamesys.getBlockManager().removeBlocksAndUpdateSafemodeTotal(
+          collectedBlocks);
       collectedBlocks.clear();
       fsNamesys.dir.removeFromInodeMap(removedINodes);
       removedINodes.clear();

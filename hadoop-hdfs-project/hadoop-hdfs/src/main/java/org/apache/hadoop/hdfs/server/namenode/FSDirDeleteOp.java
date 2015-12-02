@@ -150,7 +150,7 @@ class FSDirDeleteOp {
 
     if (filesRemoved) {
       fsn.removeLeasesAndINodes(removedUCFiles, removedINodes, false);
-      fsn.removeBlocksAndUpdateSafemodeTotal(collectedBlocks);
+      fsn.getBlockManager().removeBlocksAndUpdateSafemodeTotal(collectedBlocks);
     }
   }
 

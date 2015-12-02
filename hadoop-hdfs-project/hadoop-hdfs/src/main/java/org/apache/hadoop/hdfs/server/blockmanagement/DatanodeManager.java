@@ -88,7 +88,7 @@ public class DatanodeManager {
   private final Map<String, DatanodeDescriptor> datanodeMap
       = new HashMap<>();
 
-  /** Cluster network topology */
+  /** Cluster network topology. */
   private final NetworkTopology networktopology;
 
   /** Host names to datanode descriptors mapping. */
@@ -105,7 +105,7 @@ public class DatanodeManager {
 
   private final int defaultIpcPort;
 
-  /** Read include/exclude files*/
+  /** Read include/exclude files. */
   private final HostFileManager hostFileManager = new HostFileManager();
 
   /** The period to wait for datanode heartbeat.*/
@@ -560,7 +560,7 @@ public class DatanodeManager {
     if (LOG.isDebugEnabled()) {
       LOG.debug("remove datanode " + nodeInfo);
     }
-    namesystem.checkSafeMode();
+    blockManager.checkSafeMode();
   }
 
   /**

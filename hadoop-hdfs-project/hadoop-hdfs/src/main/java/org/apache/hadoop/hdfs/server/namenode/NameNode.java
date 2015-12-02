@@ -383,7 +383,7 @@ public class NameNode implements NameNodeStatusMXBean {
     return rpcServer;
   }
   
-  static void initMetrics(Configuration conf, NamenodeRole role) {
+  public static void initMetrics(Configuration conf, NamenodeRole role) {
     metrics = NameNodeMetrics.create(conf, role);
   }
 
@@ -1682,11 +1682,9 @@ public class NameNode implements NameNodeStatusMXBean {
     HAServiceState retState = state.getServiceState();
     HAServiceStatus ret = new HAServiceStatus(retState);
     if (retState == HAServiceState.STANDBY) {
-      String safemodeTip = namesystem.getSafeModeTip();
-      if (!safemodeTip.isEmpty()) {
-        ret.setNotReadyToBecomeActive(
-            "The NameNode is in safemode. " +
-            safemodeTip);
+      if (namesystem.isInSafeMode()) {
+        ret.setNotReadyToBecomeActive("The NameNode is in safemode. " +
+            namesystem.getSafeModeTip());
       } else {
         ret.setReadyToBecomeActive();
       }
