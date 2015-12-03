@@ -1084,6 +1084,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4384. updateNodeResource CLI should not accept negative values for resource.
     (Junping Du via wangda)
 
+    YARN-4408. Fix issue that NodeManager reports negative running containers. 
+    (Robert Kanter via junping_du)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
