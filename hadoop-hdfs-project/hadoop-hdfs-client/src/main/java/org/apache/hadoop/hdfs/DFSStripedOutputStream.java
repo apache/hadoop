@@ -757,16 +757,19 @@ public class DFSStripedOutputStream extends DFSOutputStream {
   }
 
   @Override
-  synchronized void abort() throws IOException {
-    if (isClosed()) {
-      return;
+  void abort() throws IOException {
+    synchronized (this) {
+      if (isClosed()) {
+        return;
+      }
+      for (StripedDataStreamer streamer : streamers) {
+        streamer.getLastException().set(
+            new IOException("Lease timeout of "
+                + (dfsClient.getConf().getHdfsTimeout() / 1000)
+                + " seconds expired."));
+      }
+      closeThreads(true);
     }
-    for (StripedDataStreamer streamer : streamers) {
-      streamer.getLastException().set(new IOException("Lease timeout of "
-          + (dfsClient.getConf().getHdfsTimeout()/1000) +
-          " seconds expired."));
-    }
-    closeThreads(true);
     dfsClient.endFileLease(fileId);
   }
 
@@ -954,7 +957,6 @@ public class DFSStripedOutputStream extends DFSOutputStream {
                dfsClient.getTracer().newScope("completeFile")) {
         completeFile(currentBlockGroup);
       }
-      dfsClient.endFileLease(fileId);
     } catch (ClosedChannelException ignored) {
     } finally {
       setClosed();

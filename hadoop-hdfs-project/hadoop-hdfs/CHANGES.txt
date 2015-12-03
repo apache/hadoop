@@ -2535,6 +2535,9 @@ Release 2.7.2 - UNRELEASED
     HDFS-9426. Rollingupgrade finalization is not backward compatible
     (Kihwal Lee via vinayakumarb)
 
+    HDFS-9294. DFSClient deadlock when close file and failed to renew lease.
+    (Brahma Reddy Battula via szetszwo)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
