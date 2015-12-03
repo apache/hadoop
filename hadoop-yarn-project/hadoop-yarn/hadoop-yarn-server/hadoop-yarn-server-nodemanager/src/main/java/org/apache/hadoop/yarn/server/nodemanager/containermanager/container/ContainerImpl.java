@@ -1041,7 +1041,12 @@ public class ContainerImpl implements Container {
       ContainerDoneTransition {
     @Override
     public void transition(ContainerImpl container, ContainerEvent event) {
-      container.metrics.endRunningContainer();
+      if (container.wasLaunched) {
+        container.metrics.endRunningContainer();
+      } else {
+        LOG.warn("Container exited with success despite being killed and not" +
+            "actually running");
+      }
       container.metrics.completedContainer();
       NMAuditLogger.logSuccess(container.user,
           AuditConstants.FINISH_SUCCESS_CONTAINER, "ContainerImpl",

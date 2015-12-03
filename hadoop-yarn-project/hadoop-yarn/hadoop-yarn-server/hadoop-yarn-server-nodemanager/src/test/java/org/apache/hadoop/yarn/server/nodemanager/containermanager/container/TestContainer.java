@@ -397,7 +397,8 @@ public class TestContainer {
   }
 
   @Test
-  public void testKillOnLocalizedWhenContainerNotLaunched() throws Exception {
+  public void testKillOnLocalizedWhenContainerNotLaunchedContainerKilled()
+      throws Exception {
     WrappedContainer wc = null;
     try {
       wc = new WrappedContainer(17, 314159265358979L, 4344, "yak");
@@ -418,6 +419,62 @@ public class TestContainer {
           ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP));
       assertEquals(ContainerState.DONE, wc.c.getContainerState());
       assertEquals(killed + 1, metrics.getKilledContainers());
+      assertEquals(0, metrics.getRunningContainers());
+    } finally {
+      if (wc != null) {
+        wc.finished();
+      }
+    }
+  }
+
+  @Test
+  public void testKillOnLocalizedWhenContainerNotLaunchedContainerSuccess()
+      throws Exception {
+    WrappedContainer wc = null;
+    try {
+      wc = new WrappedContainer(17, 314159265358979L, 4344, "yak");
+      wc.initContainer();
+      wc.localizeResources();
+      assertEquals(ContainerState.LOCALIZED, wc.c.getContainerState());
+      wc.killContainer();
+      assertEquals(ContainerState.KILLING, wc.c.getContainerState());
+      wc.containerSuccessful();
+      wc.drainDispatcherEvents();
+      assertEquals(ContainerState.EXITED_WITH_SUCCESS,
+          wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
+      verifyCleanupCall(wc);
+      wc.c.handle(new ContainerEvent(wc.c.getContainerId(),
+          ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP));
+      assertEquals(ContainerState.DONE, wc.c.getContainerState());
+      assertEquals(0, metrics.getRunningContainers());
+    } finally {
+      if (wc != null) {
+        wc.finished();
+      }
+    }
+  }
+
+  @Test
+  public void testKillOnLocalizedWhenContainerNotLaunchedContainerFailure()
+      throws Exception {
+    WrappedContainer wc = null;
+    try {
+      wc = new WrappedContainer(17, 314159265358979L, 4344, "yak");
+      wc.initContainer();
+      wc.localizeResources();
+      assertEquals(ContainerState.LOCALIZED, wc.c.getContainerState());
+      wc.killContainer();
+      assertEquals(ContainerState.KILLING, wc.c.getContainerState());
+      wc.containerFailed(ExitCode.FORCE_KILLED.getExitCode());
+      wc.drainDispatcherEvents();
+      assertEquals(ContainerState.EXITED_WITH_FAILURE,
+          wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
+      verifyCleanupCall(wc);
+      wc.c.handle(new ContainerEvent(wc.c.getContainerId(),
+          ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP));
+      assertEquals(ContainerState.DONE, wc.c.getContainerState());
       assertEquals(0, metrics.getRunningContainers());
     } finally {
       if (wc != null) {
