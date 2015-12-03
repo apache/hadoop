@@ -1126,6 +1126,10 @@ Release 2.7.3 - UNRELEASED
 
     YARN-4398. Remove unnecessary synchronization in RMStateStore. (Ning Ding via jianhe)
 
+    YARN-3840. Resource Manager web ui issue when sorting application by id
+    (with application having id > 9999) （Mohammad Shahid Khan & Varun Saxena
+    via jianhe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
