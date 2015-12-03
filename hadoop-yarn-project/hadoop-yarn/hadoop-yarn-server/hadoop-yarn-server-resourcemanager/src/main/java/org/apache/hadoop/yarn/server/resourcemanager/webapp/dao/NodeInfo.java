@@ -50,6 +50,7 @@ public class NodeInfo {
   protected long usedVirtualCores;
   protected long availableVirtualCores;
   protected ArrayList<String> nodeLabels = new ArrayList<String>();
+  protected ResourceUtilizationInfo resourceUtilization;
 
   public NodeInfo() {
   } // JAXB needs this
@@ -82,6 +83,9 @@ public class NodeInfo {
       nodeLabels.addAll(labelSet);
       Collections.sort(nodeLabels);
     }
+
+    // update node and containers resource utilization
+    this.resourceUtilization = new ResourceUtilizationInfo(ni);
   }
 
   public String getRack() {
@@ -138,5 +142,9 @@ public class NodeInfo {
 
   public ArrayList<String> getNodeLabels() {
     return this.nodeLabels;
+  }
+
+  public ResourceUtilizationInfo getResourceUtilization() {
+    return this.resourceUtilization;
   }
 }
