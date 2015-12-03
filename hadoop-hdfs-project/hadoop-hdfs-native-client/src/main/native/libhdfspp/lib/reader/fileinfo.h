@@ -15,13 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef LIB_READER_FILEINFO_H_
+#define LIB_READER_FILEINFO_H_
 
-#include "hdfs_public_api.h"
+#include "ClientNamenodeProtocol.pb.h"
 
 namespace hdfs {
 
-IoService::~IoService() {}
-
-IoService *IoService::New() { return new IoServiceImpl(); }
+/**
+ * Information that is assumed to be unchanging about a file for the duration of
+ * the operations.
+ */
+struct FileInfo {
+  unsigned long long file_length_;
+  std::vector<::hadoop::hdfs::LocatedBlockProto> blocks_;
+};
 
 }
+
+#endif

@@ -31,6 +31,17 @@ struct Options {
   int rpc_timeout;
 
   /**
+   * Maximum number of retries for RPC operations
+   **/
+  const static int NO_RPC_RETRY = -1;
+  int max_rpc_retries;
+
+  /**
+   * Number of ms to wait between retry of RPC operations
+   **/
+  int rpc_retry_delay_ms;
+
+  /**
    * Exclusion time for failed datanodes in milliseconds.
    * Default: 60000
    **/

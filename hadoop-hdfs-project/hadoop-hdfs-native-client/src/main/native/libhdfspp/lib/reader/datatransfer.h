@@ -19,6 +19,10 @@
 #define LIB_READER_DATA_TRANSFER_H_
 
 #include "common/sasl_authenticator.h"
+#include "common/async_stream.h"
+#include "connection/datanodeconnection.h"
+#include <memory>
+
 
 namespace hdfs {
 
@@ -32,26 +36,32 @@ enum Operation {
   kReadBlock = 81,
 };
 
-template <class Stream> class DataTransferSaslStream {
+template <class Stream> class DataTransferSaslStream : public DataNodeConnection {
 public:
-  DataTransferSaslStream(Stream *stream, const std::string &username,
+  DataTransferSaslStream(std::shared_ptr<Stream> stream, const std::string &username,
                          const std::string &password)
       : stream_(stream), authenticator_(username, password) {}
 
   template <class Handler> void Handshake(const Handler &next);
 
-  template <class MutableBufferSequence, class ReadHandler>
-  void async_read_some(const MutableBufferSequence &buffers,
-                       ReadHandler &&handler);
+  void async_read_some(const MutableBuffers &buf,
+          std::function<void (const asio::error_code & error,
+                                 std::size_t bytes_transferred) > handler) override {
+    stream_->async_read_some(buf, handler);
+  }
 
-  template <class ConstBufferSequence, class WriteHandler>
-  void async_write_some(const ConstBufferSequence &buffers,
-                        WriteHandler &&handler);
+  void async_write_some(const ConstBuffers &buf,
+            std::function<void (const asio::error_code & error,
+                                 std::size_t bytes_transferred) > handler) override {
+    stream_->async_write_some(buf, handler);
+  }
 
+  void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) override
+  {(void)handler;  /*TODO: Handshaking goes here*/};
 private:
   DataTransferSaslStream(const DataTransferSaslStream &) = delete;
   DataTransferSaslStream &operator=(const DataTransferSaslStream &) = delete;
-  Stream *stream_;
+  std::shared_ptr<Stream> stream_;
   DigestMD5Authenticator authenticator_;
   struct ReadSaslMessage;
   struct Authenticator;

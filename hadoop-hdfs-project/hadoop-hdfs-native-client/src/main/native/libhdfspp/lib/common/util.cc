@@ -16,12 +16,20 @@
  * limitations under the License.
  */
 
-#include "hdfs_public_api.h"
+#include "common/util.h"
 
 namespace hdfs {
 
-IoService::~IoService() {}
+std::string GetRandomClientName() {
+  unsigned char buf[6] = {
+      0,
+  };
+  RAND_pseudo_bytes(buf, sizeof(buf));
 
-IoService *IoService::New() { return new IoServiceImpl(); }
+  std::stringstream ss;
+  ss << "libhdfs++_"
+     << Base64Encode(std::string(reinterpret_cast<char *>(buf), sizeof(buf)));
+  return ss.str();
+}
 
 }
