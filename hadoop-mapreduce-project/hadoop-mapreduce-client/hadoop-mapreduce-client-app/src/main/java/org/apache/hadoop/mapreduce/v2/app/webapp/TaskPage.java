@@ -221,7 +221,7 @@ public class TaskPage extends AppView {
     .append("\n{'aTargets': [ 5 ]")
     .append(", 'bSearchable': false }")
 
-    .append("\n, {'sType':'string', 'aTargets': [ 0 ]")
+    .append("\n, {'sType':'natural', 'aTargets': [ 0 ]")
     .append(", 'mRender': parseHadoopID }")
 
     .append("\n, {'sType':'numeric', 'aTargets': [ 6, 7")
