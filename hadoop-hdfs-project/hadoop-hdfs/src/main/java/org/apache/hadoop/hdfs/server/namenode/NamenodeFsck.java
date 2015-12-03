@@ -416,7 +416,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       }
       // verify block placement policy
       BlockPlacementStatus blockPlacementStatus = bpPolicy
-          .verifyBlockPlacement(path, lBlk, targetFileReplication);
+          .verifyBlockPlacement(lBlk.getLocations(), targetFileReplication);
       if (!blockPlacementStatus.isPlacementPolicySatisfied()) {
         res.numMisReplicatedBlocks++;
         misReplicatedPerFile++;

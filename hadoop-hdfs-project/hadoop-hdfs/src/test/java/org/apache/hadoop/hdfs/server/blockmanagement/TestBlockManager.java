@@ -820,16 +820,16 @@ public class TestBlockManager {
     List<StorageType> excessTypes = new ArrayList<StorageType>();
 
     excessTypes.add(StorageType.DEFAULT);
-    Assert.assertTrue(BlockManager.useDelHint(true, delHint, null,
-        moreThan1Racks, excessTypes));
+    Assert.assertTrue(BlockPlacementPolicyDefault.useDelHint(true, delHint,
+        null, moreThan1Racks, excessTypes));
     excessTypes.remove(0);
     excessTypes.add(StorageType.SSD);
-    Assert.assertFalse(BlockManager.useDelHint(true, delHint, null,
-        moreThan1Racks, excessTypes));
+    Assert.assertFalse(BlockPlacementPolicyDefault.useDelHint(true, delHint,
+        null, moreThan1Racks, excessTypes));
   }
 
   /**
-   * {@link BlockManager#blockHasEnoughRacks(BlockInfo)} should return false
+   * {@link BlockManager#isPlacementPolicySatisfied(Block)} should return false
    * if all the replicas are on the same rack and shouldn't be dependent on
    * CommonConfigurationKeysPublic.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY
    * @throws Exception
@@ -849,6 +849,6 @@ public class TestBlockManager {
     // Since the network toppolgy is multi-rack, the blockHasEnoughRacks
     // should return false.
     assertFalse("Replicas for block is not stored on enough racks",
-        bm.blockHasEnoughRacks(blockInfo));
+        bm.isPlacementPolicySatisfied(blockInfo));
   }
 }

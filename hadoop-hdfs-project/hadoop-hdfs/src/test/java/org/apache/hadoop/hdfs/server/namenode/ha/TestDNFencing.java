@@ -39,10 +39,8 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.StorageType;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
@@ -621,10 +619,8 @@ public class TestDNFencing {
     }
 
     @Override
-    public DatanodeStorageInfo chooseReplicaToDelete(BlockCollection inode,
-        Block block, short replicationFactor,
-        Collection<DatanodeStorageInfo> first,
-        Collection<DatanodeStorageInfo> second,
+    public DatanodeStorageInfo chooseReplicaToDelete(short replicationFactor,
+        Collection<DatanodeStorageInfo> first, Collection<DatanodeStorageInfo> second,
         List<StorageType> excessTypes) {
       
       Collection<DatanodeStorageInfo> chooseFrom = !first.isEmpty() ? first : second;

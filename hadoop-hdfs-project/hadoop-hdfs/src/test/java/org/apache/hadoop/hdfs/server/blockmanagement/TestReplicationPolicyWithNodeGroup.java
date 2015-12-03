@@ -615,8 +615,8 @@ public class TestReplicationPolicyWithNodeGroup {
     assertEquals(1, second.size());
     List<StorageType> excessTypes = new ArrayList<StorageType>();
     excessTypes.add(StorageType.DEFAULT);
-    DatanodeStorageInfo chosen = replicator.chooseReplicaToDelete(
-        null, null, (short)3, first, second, excessTypes);
+    DatanodeStorageInfo chosen = ((BlockPlacementPolicyDefault) replicator)
+        .chooseReplicaToDelete((short) 3, first, second, excessTypes);
     // Within first set {dataNodes[0], dataNodes[1], dataNodes[2]}, 
     // dataNodes[0] and dataNodes[1] are in the same nodegroup, 
     // but dataNodes[1] is chosen as less free space
@@ -628,8 +628,8 @@ public class TestReplicationPolicyWithNodeGroup {
     // Within first set {dataNodes[0], dataNodes[2]}, dataNodes[2] is chosen
     // as less free space
     excessTypes.add(StorageType.DEFAULT);
-    chosen = replicator.chooseReplicaToDelete(
-        null, null, (short)2, first, second, excessTypes);
+    chosen = ((BlockPlacementPolicyDefault) replicator).chooseReplicaToDelete(
+        (short) 2, first, second, excessTypes);
     assertEquals(chosen, storages[2]);
 
     replicator.adjustSetsWithChosenReplica(rackMap, first, second, chosen);
@@ -637,8 +637,8 @@ public class TestReplicationPolicyWithNodeGroup {
     assertEquals(2, second.size());
     // Within second set, dataNodes[5] with less free space
     excessTypes.add(StorageType.DEFAULT);
-    chosen = replicator.chooseReplicaToDelete(
-        null, null, (short)1, first, second, excessTypes);
+    chosen = ((BlockPlacementPolicyDefault) replicator).chooseReplicaToDelete(
+        (short) 1, first, second, excessTypes);
     assertEquals(chosen, storages[5]);
   }
   
