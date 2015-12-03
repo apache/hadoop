@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -50,6 +51,7 @@ import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager.StatefulBlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
@@ -1040,12 +1042,12 @@ public class TestReplicationPolicy {
     {
       // test returning null
       excessTypes.add(StorageType.SSD);
-      assertNull(replicator.chooseReplicaToDelete(
-          null, null, (short)3, first, second, excessTypes));
+      assertNull(((BlockPlacementPolicyDefault) replicator)
+          .chooseReplicaToDelete((short) 3, first, second, excessTypes));
     }
     excessTypes.add(StorageType.DEFAULT);
-    DatanodeStorageInfo chosen = replicator.chooseReplicaToDelete(
-        null, null, (short)3, first, second, excessTypes);
+    DatanodeStorageInfo chosen = ((BlockPlacementPolicyDefault) replicator)
+        .chooseReplicaToDelete((short) 3, first, second, excessTypes);
     // Within first set, storages[1] with less free space
     assertEquals(chosen, storages[1]);
 
@@ -1054,9 +1056,74 @@ public class TestReplicationPolicy {
     assertEquals(3, second.size());
     // Within second set, storages[5] with less free space
     excessTypes.add(StorageType.DEFAULT);
-    chosen = replicator.chooseReplicaToDelete(
-        null, null, (short)2, first, second, excessTypes);
+    chosen = ((BlockPlacementPolicyDefault) replicator).chooseReplicaToDelete(
+        (short)2, first, second, excessTypes);
     assertEquals(chosen, storages[5]);
+  }
+
+  @Test
+  public void testChooseReplicasToDelete() throws Exception {
+    Collection<DatanodeStorageInfo> nonExcess = new ArrayList<DatanodeStorageInfo>();
+    nonExcess.add(storages[0]);
+    nonExcess.add(storages[1]);
+    nonExcess.add(storages[2]);
+    nonExcess.add(storages[3]);
+    List<DatanodeStorageInfo> excessReplicas = new ArrayList<>();
+    BlockStoragePolicySuite POLICY_SUITE = BlockStoragePolicySuite
+        .createDefaultSuite();
+    BlockStoragePolicy storagePolicy = POLICY_SUITE.getDefaultPolicy();
+
+    // use delete hint case.
+
+    DatanodeDescriptor delHintNode = storages[0].getDatanodeDescriptor();
+    List<StorageType> excessTypes = storagePolicy.chooseExcess((short) 3,
+        DatanodeStorageInfo.toStorageTypes(nonExcess));
+    excessReplicas = replicator.chooseReplicasToDelete(nonExcess, 3,
+        excessTypes, storages[3].getDatanodeDescriptor(), delHintNode);
+    assertTrue(excessReplicas.size() > 0);
+    assertTrue(excessReplicas.contains(storages[0]));
+
+    // Excess type deletion
+
+    DatanodeStorageInfo excessStorage = DFSTestUtil.createDatanodeStorageInfo(
+        "Storage-excess-ID", "localhost", delHintNode.getNetworkLocation(),
+        "foo.com", StorageType.ARCHIVE);
+    nonExcess.add(excessStorage);
+    excessTypes = storagePolicy.chooseExcess((short) 3,
+        DatanodeStorageInfo.toStorageTypes(nonExcess));
+    excessReplicas = replicator.chooseReplicasToDelete(nonExcess, 3,
+        excessTypes, storages[3].getDatanodeDescriptor(), null);
+    assertTrue(excessReplicas.contains(excessStorage));
+  }
+
+ @Test
+  public void testUseDelHint() throws Exception {
+    List<StorageType> excessTypes = new ArrayList<StorageType>();
+    excessTypes.add(StorageType.ARCHIVE);
+    // only consider delHint for the first case
+    assertFalse(BlockPlacementPolicyDefault.useDelHint(false, null, null, null,
+        null));
+    // no delHint
+    assertFalse(BlockPlacementPolicyDefault.useDelHint(true, null, null, null,
+        null));
+    // delHint storage type is not an excess type
+    assertFalse(BlockPlacementPolicyDefault.useDelHint(true, storages[0], null,
+        null, excessTypes));
+    // check if removing delHint reduces the number of racks
+    List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
+    chosenNodes.add(storages[0]);
+    chosenNodes.add(storages[2]);
+    excessTypes.add(StorageType.DEFAULT);
+    assertTrue(BlockPlacementPolicyDefault.useDelHint(true, storages[0], null,
+        chosenNodes, excessTypes));
+    // the added node adds a new rack
+    assertTrue(BlockPlacementPolicyDefault.useDelHint(true, storages[3],
+        storages[5], chosenNodes, excessTypes));
+    // removing delHint reduces the number of racks;
+    assertFalse(BlockPlacementPolicyDefault.useDelHint(true, storages[3],
+        storages[0], chosenNodes, excessTypes));
+    assertFalse(BlockPlacementPolicyDefault.useDelHint(true, storages[3], null,
+        chosenNodes, excessTypes));
   }
 
   /**

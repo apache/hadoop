@@ -53,9 +53,9 @@ import com.google.common.collect.Lists;
 public class NetworkTopology {
   public final static String DEFAULT_RACK = "/default-rack";
   public final static int DEFAULT_HOST_LEVEL = 2;
-  public static final Log LOG = 
+  public static final Log LOG =
     LogFactory.getLog(NetworkTopology.class);
-    
+
   public static class InvalidTopologyException extends RuntimeException {
     private static final long serialVersionUID = 1L;
     public InvalidTopologyException(String msg) {
@@ -379,6 +379,13 @@ public class NetworkTopology {
   private int depthOfAllLeaves = -1;
   /** rack counter */
   protected int numOfRacks = 0;
+
+  /**
+   * Whether or not this cluster has ever consisted of more than 1 rack,
+   * according to the NetworkTopology.
+   */
+  private boolean clusterEverBeenMultiRack = false;
+
   /** the lock used to manage access */
   protected ReadWriteLock netlock = new ReentrantReadWriteLock();
 
@@ -418,7 +425,7 @@ public class NetworkTopology {
       if (clusterMap.add(node)) {
         LOG.info("Adding a new node: "+NodeBase.getPath(node));
         if (rack == null) {
-          numOfRacks++;
+          incrementRacks();
         }
         if (!(node instanceof InnerNode)) {
           if (depthOfAllLeaves == -1) {
@@ -433,7 +440,14 @@ public class NetworkTopology {
       netlock.writeLock().unlock();
     }
   }
-  
+
+  protected void incrementRacks() {
+    numOfRacks++;
+    if (!clusterEverBeenMultiRack && numOfRacks > 1) {
+      clusterEverBeenMultiRack = true;
+    }
+  }
+
   /**
    * Return a reference to the node given its string representation.
    * Default implementation delegates to {@link #getNode(String)}.
@@ -541,10 +555,18 @@ public class NetworkTopology {
       netlock.readLock().unlock();
     }
   }
-  
+
+  /**
+   * @return true if this cluster has ever consisted of multiple racks, even if
+   *         it is not now a multi-rack cluster.
+   */
+  public boolean hasClusterEverBeenMultiRack() {
+    return clusterEverBeenMultiRack;
+  }
+
   /** Given a string representation of a rack for a specific network
    *  location
-   * 
+   *
    * To be overridden in subclasses for specific NetworkTopology 
    * implementations, as alternative to overriding the full 
    * {@link #getRack(String)} method.
