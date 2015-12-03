@@ -1766,6 +1766,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8335. FSNamesystem should construct FSPermissionChecker only if
     permission is enabled. (Gabor Liptak via wheat9)
 
+    HDFS-9436. Make NNThroughputBenchmark$BlockReportStats run with 10
+    datanodes by default. (Mingliang Liu via shv)
+
   BUG FIXES
 
     HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.
