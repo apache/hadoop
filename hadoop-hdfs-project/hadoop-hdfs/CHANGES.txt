@@ -1616,6 +1616,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9347. Invariant assumption in TestQuorumJournalManager.shutdown()
     is wrong. (Wei-Chiu Chuang via zhz)
 
+    HDFS-9484. NNThroughputBenchmark$BlockReportStats should not send empty
+    block reports. (Mingliang Liu via shv)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
