@@ -137,8 +137,8 @@ Now check that you can ssh to the localhost without a passphrase:
 
 If you cannot ssh to localhost without a passphrase, execute the following commands:
 
-      $ ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa
-      $ cat ~/.ssh/id_dsa.pub >> ~/.ssh/authorized_keys
+      $ ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa
+      $ cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
       $ chmod 0600 ~/.ssh/authorized_keys
 
 $H3 Execution
