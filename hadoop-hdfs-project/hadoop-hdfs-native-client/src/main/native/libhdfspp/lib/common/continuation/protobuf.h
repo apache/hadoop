@@ -33,7 +33,7 @@ namespace continuation {
 
 template <class Stream, size_t MaxMessageSize = 512>
 struct ReadDelimitedPBMessageContinuation : public Continuation {
-  ReadDelimitedPBMessageContinuation(Stream *stream,
+  ReadDelimitedPBMessageContinuation(std::shared_ptr<Stream> stream,
                                      ::google::protobuf::MessageLite *msg)
       : stream_(stream), msg_(msg) {}
 
@@ -56,8 +56,8 @@ struct ReadDelimitedPBMessageContinuation : public Continuation {
       }
       next(status);
     };
-    asio::async_read(
-        *stream_, asio::buffer(buf_),
+    asio::async_read(*stream_,
+        asio::buffer(buf_),
         std::bind(&ReadDelimitedPBMessageContinuation::CompletionHandler, this,
                   std::placeholders::_1, std::placeholders::_2),
         handler);
@@ -82,14 +82,14 @@ private:
     return offset ? len + offset - transferred : 1;
   }
 
-  Stream *stream_;
+  std::shared_ptr<Stream> stream_;
   ::google::protobuf::MessageLite *msg_;
   std::array<char, MaxMessageSize> buf_;
 };
 
 template <class Stream>
 struct WriteDelimitedPBMessageContinuation : Continuation {
-  WriteDelimitedPBMessageContinuation(Stream *stream,
+  WriteDelimitedPBMessageContinuation(std::shared_ptr<Stream> stream,
                                       const google::protobuf::MessageLite *msg)
       : stream_(stream), msg_(msg) {}
 
@@ -101,28 +101,25 @@ struct WriteDelimitedPBMessageContinuation : Continuation {
     pbio::CodedOutputStream os(&ss);
     os.WriteVarint32(size);
     msg_->SerializeToCodedStream(&os);
-    write_coroutine_ =
-        std::shared_ptr<Continuation>(Write(stream_, asio::buffer(buf_)));
-    write_coroutine_->Run([next](const Status &stat) { next(stat); });
+    asio::async_write(*stream_, asio::buffer(buf_), [next](const asio::error_code &ec, size_t) { next(ToStatus(ec)); } );
   }
 
 private:
-  Stream *stream_;
+  std::shared_ptr<Stream> stream_;
   const google::protobuf::MessageLite *msg_;
   std::string buf_;
-  std::shared_ptr<Continuation> write_coroutine_;
 };
 
 template <class Stream, size_t MaxMessageSize = 512>
 static inline Continuation *
-ReadDelimitedPBMessage(Stream *stream, ::google::protobuf::MessageLite *msg) {
+ReadDelimitedPBMessage(std::shared_ptr<Stream> stream, ::google::protobuf::MessageLite *msg) {
   return new ReadDelimitedPBMessageContinuation<Stream, MaxMessageSize>(stream,
                                                                         msg);
 }
 
 template <class Stream>
 static inline Continuation *
-WriteDelimitedPBMessage(Stream *stream, ::google::protobuf::MessageLite *msg) {
+WriteDelimitedPBMessage(std::shared_ptr<Stream> stream, ::google::protobuf::MessageLite *msg) {
   return new WriteDelimitedPBMessageContinuation<Stream>(stream, msg);
 }
 }

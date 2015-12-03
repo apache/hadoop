@@ -24,6 +24,7 @@
 #include <functional>
 #include <memory>
 #include <set>
+#include <iostream>
 
 namespace hdfs {
 
@@ -68,10 +69,10 @@ class NodeExclusionRule {
 };
 
 /**
- * Applications opens an InputStream to read files in HDFS.
+ * Applications opens a FileHandle to read files in HDFS.
  **/
-class InputStream {
- public:
+class FileHandle {
+public:
   /**
    * Read data from a specific position. The current implementation
    * stops at the block boundary.
@@ -83,10 +84,14 @@ class InputStream {
    * The handler returns the datanode that serves the block and the number of
    * bytes has read.
    **/
-  virtual void PositionRead(
-      void *buf, size_t nbyte, uint64_t offset,
-      const std::function<void(const Status &, const std::string &, size_t)> &
-          handler) = 0;
+  virtual void
+  PositionRead(void *buf, size_t nbyte, uint64_t offset,
+               const std::function<void(const Status &, size_t)> &handler) = 0;
+
+  virtual Status PositionRead(void *buf, size_t *nbyte, off_t offset) = 0;
+  virtual Status Read(void *buf, size_t *nbyte) = 0;
+  virtual Status Seek(off_t *offset, std::ios_base::seekdir whence) = 0;
+
   /**
    * Determine if a datanode should be excluded from future operations
    * based on the return Status.
@@ -97,7 +102,7 @@ class InputStream {
    **/
   static bool ShouldExclude(const Status &status);
 
-  virtual ~InputStream();
+  virtual ~FileHandle();
 };
 
 /**
@@ -114,15 +119,24 @@ class FileSystem {
       IoService *io_service, const Options &options, const std::string &server,
       const std::string &service,
       const std::function<void(const Status &, FileSystem *)> &handler);
+
+  /* Synchronous call of New*/
+  static FileSystem *
+  New(IoService *io_service, const Options &options, const std::string &server,
+      const std::string &service);
+
   /**
    * Open a file on HDFS. The call issues an RPC to the NameNode to
    * gather the locations of all blocks in the file and to return a
    * new instance of the @ref InputStream object.
    **/
-  virtual void Open(
-      const std::string &path,
-      const std::function<void(const Status &, InputStream *)> &handler) = 0;
-  virtual ~FileSystem();
+  virtual void
+  Open(const std::string &path,
+       const std::function<void(const Status &, FileHandle *)> &handler) = 0;
+  virtual Status Open(const std::string &path, FileHandle **handle) = 0;
+
+  virtual ~FileSystem() {};
+
 };
 }
 

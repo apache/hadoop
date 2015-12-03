@@ -19,6 +19,8 @@
 #include "fs/filesystem.h"
 #include "fs/bad_datanode_tracker.h"
 
+#include "common/util.h"
+
 #include <gmock/gmock.h>
 
 using hadoop::common::TokenProto;
@@ -34,70 +36,140 @@ using ::testing::Return;
 
 using namespace hdfs;
 
-class MockReader {
- public:
-  virtual ~MockReader() {}
+class MockReader : public BlockReader {
+public:
   MOCK_METHOD2(
-      async_read_some,
+      AsyncReadPacket,
       void(const asio::mutable_buffers_1 &,
            const std::function<void(const Status &, size_t transferred)> &));
 
-  MOCK_METHOD6(async_connect,
-               void(const std::string &, TokenProto *, ExtendedBlockProto *,
-                    uint64_t, uint64_t,
-                    const std::function<void(const Status &)> &));
+  MOCK_METHOD5(AsyncRequestBlock,
+               void(const std::string &client_name,
+                     const hadoop::hdfs::ExtendedBlockProto *block,
+                     uint64_t length, uint64_t offset,
+                     const std::function<void(Status)> &handler));
+
+  MOCK_METHOD5(AsyncReadBlock, void(
+    const std::string & client_name,
+    const hadoop::hdfs::LocatedBlockProto &block,
+    size_t offset,
+    const MutableBuffers &buffers,
+    const std::function<void(const Status &, size_t)> handler));
 };
 
-template <class Trait>
-struct MockBlockReaderTrait {
-  typedef MockReader Reader;
-  struct State {
-    MockReader reader_;
-    size_t transferred_;
-    Reader *reader() { return &reader_; }
-    size_t *transferred() { return &transferred_; }
-    const size_t *transferred() const { return &transferred_; }
-  };
+class MockDNConnection : public DataNodeConnection, public std::enable_shared_from_this<MockDNConnection> {
+    void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) override {
+      handler(Status::OK(), shared_from_this());
+    }
 
-  static continuation::Pipeline<State> *CreatePipeline(
-      ::asio::io_service *, const DatanodeInfoProto &) {
-    auto m = continuation::Pipeline<State>::Create();
-    *m->state().transferred() = 0;
-    Trait::InitializeMockReader(m->state().reader());
-    return m;
+  void async_read_some(const MutableBuffers &buf,
+        std::function<void (const asio::error_code & error,
+                               std::size_t bytes_transferred) > handler) override {
+      (void)buf;
+      handler(asio::error::fault, 0);
+  }
+
+  void async_write_some(const ConstBuffers &buf,
+            std::function<void (const asio::error_code & error,
+                                 std::size_t bytes_transferred) > handler) override {
+      (void)buf;
+      handler(asio::error::fault, 0);
   }
 };
 
-TEST(BadDataNodeTest, RecoverableError) {
-  LocatedBlocksProto blocks;
-  LocatedBlockProto block;
-  DatanodeInfoProto dn;
+
+class PartialMockFileHandle : public FileHandleImpl {
+  using FileHandleImpl::FileHandleImpl;
+public:
+  std::shared_ptr<MockReader> mock_reader_ = std::make_shared<MockReader>();
+protected:
+  std::shared_ptr<BlockReader> CreateBlockReader(const BlockReaderOptions &options,
+                                                 std::shared_ptr<DataNodeConnection> dn) override
+  {
+    (void) options; (void) dn;
+    assert(mock_reader_);
+    return mock_reader_;
+  }
+  std::shared_ptr<DataNodeConnection> CreateDataNodeConnection(
+      ::asio::io_service *io_service,
+      const ::hadoop::hdfs::DatanodeInfoProto & dn,
+      const hadoop::common::TokenProto * token) override {
+    (void) io_service; (void) dn; (void) token;
+    return std::make_shared<MockDNConnection>();
+  }
+
+
+};
+
+TEST(BadDataNodeTest, TestNoNodes) {
+  auto file_info = std::make_shared<struct FileInfo>();
+  file_info->blocks_.push_back(LocatedBlockProto());
+  LocatedBlockProto & block = file_info->blocks_[0];
+  ExtendedBlockProto *b = block.mutable_b();
+  b->set_poolid("");
+  b->set_blockid(1);
+  b->set_generationstamp(1);
+  b->set_numbytes(4096);
+
+  // Set up the one block to have one datanode holding it
+  DatanodeInfoProto *di = block.add_locs();
+  DatanodeIDProto *dnid = di->mutable_id();
+  dnid->set_datanodeuuid("foo");
+
   char buf[4096] = {
       0,
   };
   IoServiceImpl io_service;
-  Options default_options;
-  FileSystemImpl fs(&io_service, default_options);
-  auto tracker = std::make_shared<BadDataNodeTracker>();
-  InputStreamImpl is(&fs, &blocks, tracker);
+  auto bad_node_tracker = std::make_shared<BadDataNodeTracker>();
+  bad_node_tracker->AddBadNode("foo");
+
+  PartialMockFileHandle is(&io_service.io_service(), GetRandomClientName(), file_info, bad_node_tracker);
   Status stat;
   size_t read = 0;
-  struct Trait {
-    static void InitializeMockReader(MockReader *reader) {
-      EXPECT_CALL(*reader, async_connect(_, _, _, _, _, _))
-          .WillOnce(InvokeArgument<5>(Status::OK()));
 
-      EXPECT_CALL(*reader, async_read_some(_, _))
-          // resource unavailable error
-          .WillOnce(InvokeArgument<1>(
-              Status::ResourceUnavailable(
-                  "Unable to get some resource, try again later"),
-              sizeof(buf)));
-    }
+  // Exclude the one datanode with the data
+  is.AsyncPreadSome(0, asio::buffer(buf, sizeof(buf)), nullptr,
+      [&stat, &read](const Status &status, const std::string &, size_t transferred) {
+        stat = status;
+        read = transferred;
+      });
+
+  // Should fail with no resource available
+  ASSERT_EQ(static_cast<int>(std::errc::resource_unavailable_try_again), stat.code());
+  ASSERT_EQ(0UL, read);
+}
+
+TEST(BadDataNodeTest, RecoverableError) {
+  auto file_info = std::make_shared<struct FileInfo>();
+  file_info->blocks_.push_back(LocatedBlockProto());
+  LocatedBlockProto & block = file_info->blocks_[0];
+  ExtendedBlockProto *b = block.mutable_b();
+  b->set_poolid("");
+  b->set_blockid(1);
+  b->set_generationstamp(1);
+  b->set_numbytes(4096);
+
+  // Set up the one block to have one datanode holding it
+  DatanodeInfoProto *di = block.add_locs();
+  DatanodeIDProto *dnid = di->mutable_id();
+  dnid->set_datanodeuuid("foo");
+
+  char buf[4096] = {
+      0,
   };
+  IoServiceImpl io_service;
+  auto tracker = std::make_shared<BadDataNodeTracker>();
+  PartialMockFileHandle is(&io_service.io_service(), GetRandomClientName(),  file_info, tracker);
+  Status stat;
+  size_t read = 0;
+  EXPECT_CALL(*is.mock_reader_, AsyncReadBlock(_,_,_,_,_))
+      // resource unavailable error
+      .WillOnce(InvokeArgument<4>(
+          Status::ResourceUnavailable("Unable to get some resource, try again later"), 0));
 
-  is.AsyncReadBlock<MockBlockReaderTrait<Trait>>(
-      "client", block, dn, 0, asio::buffer(buf, sizeof(buf)),
+
+  is.AsyncPreadSome(
+      0, asio::buffer(buf, sizeof(buf)), nullptr,
       [&stat, &read](const Status &status, const std::string &,
                      size_t transferred) {
         stat = status;
@@ -108,7 +180,7 @@ TEST(BadDataNodeTest, RecoverableError) {
 
   std::string failing_dn = "id_of_bad_datanode";
   if (!stat.ok()) {
-    if (InputStream::ShouldExclude(stat)) {
+    if (FileHandle::ShouldExclude(stat)) {
       tracker->AddBadNode(failing_dn);
     }
   }
@@ -117,35 +189,37 @@ TEST(BadDataNodeTest, RecoverableError) {
 }
 
 TEST(BadDataNodeTest, InternalError) {
-  LocatedBlocksProto blocks;
-  LocatedBlockProto block;
-  DatanodeInfoProto dn;
+  auto file_info = std::make_shared<struct FileInfo>();
+  file_info->blocks_.push_back(LocatedBlockProto());
+  LocatedBlockProto & block = file_info->blocks_[0];
+  ExtendedBlockProto *b = block.mutable_b();
+  b->set_poolid("");
+  b->set_blockid(1);
+  b->set_generationstamp(1);
+  b->set_numbytes(4096);
+
+  // Set up the one block to have one datanode holding it
+  DatanodeInfoProto *di = block.add_locs();
+  DatanodeIDProto *dnid = di->mutable_id();
+  dnid->set_datanodeuuid("foo");
+
   char buf[4096] = {
       0,
   };
   IoServiceImpl io_service;
-  Options default_options;
   auto tracker = std::make_shared<BadDataNodeTracker>();
-  FileSystemImpl fs(&io_service, default_options);
-  InputStreamImpl is(&fs, &blocks, tracker);
+  PartialMockFileHandle is(&io_service.io_service(), GetRandomClientName(),  file_info, tracker);
   Status stat;
   size_t read = 0;
-  struct Trait {
-    static void InitializeMockReader(MockReader *reader) {
-      EXPECT_CALL(*reader, async_connect(_, _, _, _, _, _))
-          .WillOnce(InvokeArgument<5>(Status::OK()));
-
-      EXPECT_CALL(*reader, async_read_some(_, _))
-          // something bad happened on the DN, calling again isn't going to help
-          .WillOnce(
-              InvokeArgument<1>(Status::Exception("server_explosion_exception",
-                                                  "the server exploded"),
+  EXPECT_CALL(*is.mock_reader_, AsyncReadBlock(_,_,_,_,_))
+      // resource unavailable error
+      .WillOnce(InvokeArgument<4>(
+              Status::Exception("server_explosion_exception",
+                                "the server exploded"),
                                 sizeof(buf)));
-    }
-  };
 
-  is.AsyncReadBlock<MockBlockReaderTrait<Trait>>(
-      "client", block, dn, 0, asio::buffer(buf, sizeof(buf)),
+  is.AsyncPreadSome(
+      0, asio::buffer(buf, sizeof(buf)), nullptr,
       [&stat, &read](const Status &status, const std::string &,
                      size_t transferred) {
         stat = status;
@@ -156,7 +230,7 @@ TEST(BadDataNodeTest, InternalError) {
 
   std::string failing_dn = "id_of_bad_datanode";
   if (!stat.ok()) {
-    if (InputStream::ShouldExclude(stat)) {
+    if (FileHandle::ShouldExclude(stat)) {
       tracker->AddBadNode(failing_dn);
     }
   }

@@ -29,7 +29,9 @@
 #include <asio/ip/tcp.hpp>
 
 namespace hdfs {
-namespace continuation {
+namespace asio_continuation {
+
+using namespace continuation;
 
 template <class Stream, class MutableBufferSequence>
 class ReadContinuation : public Continuation {

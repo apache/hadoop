@@ -18,75 +18,110 @@
 #ifndef LIBHDFSPP_LIB_FS_FILESYSTEM_H_
 #define LIBHDFSPP_LIB_FS_FILESYSTEM_H_
 
+#include "filehandle.h"
 #include "common/hdfs_public_api.h"
+#include "common/async_stream.h"
 #include "libhdfspp/hdfs.h"
 #include "fs/bad_datanode_tracker.h"
 #include "rpc/rpc_engine.h"
+#include "reader/block_reader.h"
+#include "reader/fileinfo.h"
 #include "ClientNamenodeProtocol.pb.h"
 #include "ClientNamenodeProtocol.hrpc.inl"
 
+#include "asio.hpp"
+
+#include <thread>
+
 namespace hdfs {
 
-class FileHandle;
-class HadoopFileSystem;
+/**
+ * NameNodeConnection: abstracts the details of communicating with a NameNode
+ * and the implementation of the communications protocol.
+ *
+ * Will eventually handle retry and failover.
+ *
+ * Threading model: thread-safe; all operations can be called concurrently
+ * Lifetime: owned by a FileSystemImpl
+ */
+class NameNodeOperations {
+public:
+  NameNodeOperations(::asio::io_service *io_service, const Options &options,
+            const std::string &client_name, const char *protocol_name,
+            int protocol_version) :
+  io_service_(io_service),
+  engine_(io_service, options, client_name, protocol_name, protocol_version),
+  namenode_(& engine_) {}
 
-class FileSystemImpl : public FileSystem {
- public:
-  FileSystemImpl(IoService *io_service, const Options &options);
-  void Connect(const std::string &server, const std::string &service,
-               std::function<void(const Status &)> &&handler);
-  virtual void Open(const std::string &path,
-                    const std::function<void(const Status &, InputStream *)> &
-                        handler) override;
-  RpcEngine &rpc_engine() { return engine_; }
+  void Connect(const std::string &server,
+               const std::string &service,
+               std::function<void(const Status &)> &handler);
 
- private:
-  IoServiceImpl *io_service_;
+  void GetBlockLocations(const std::string & path,
+    std::function<void(const Status &, std::shared_ptr<const struct FileInfo>)> handler);
+
+private:
+  ::asio::io_service * io_service_;
   RpcEngine engine_;
   ClientNamenodeProtocol namenode_;
-  std::shared_ptr<BadDataNodeTracker> bad_node_tracker_;
 };
 
-class InputStreamImpl : public InputStream {
- public:
-  InputStreamImpl(FileSystemImpl *fs,
-                  const ::hadoop::hdfs::LocatedBlocksProto *blocks,
-                  std::shared_ptr<BadDataNodeTracker> tracker);
-  virtual void PositionRead(
-      void *buf, size_t nbyte, uint64_t offset,
-      const std::function<void(const Status &, const std::string &, size_t)> &
-          handler) override;
-  /**
-   * If optional_rule_override is null then use the bad_datanode_tracker.  If
-   * non-null use the provided NodeExclusionRule to determine eligible
-   * datanodes.
-   **/
-  template <class MutableBufferSequence, class Handler>
-  void AsyncPreadSome(size_t offset, const MutableBufferSequence &buffers,
-                      std::shared_ptr<NodeExclusionRule> excluded_nodes,
-                      const Handler &handler);
+/*
+ * FileSystem: The consumer's main point of interaction with the cluster as
+ * a whole.
+ *
+ * Initially constructed in a disconnected state; call Connect before operating
+ * on the FileSystem.
+ *
+ * All open files must be closed before the FileSystem is destroyed.
+ *
+ * Threading model: thread-safe for all operations
+ * Lifetime: pointer created for consumer who is responsible for deleting it
+ */
+class FileSystemImpl : public FileSystem {
+public:
+  FileSystemImpl(IoService *&io_service, const Options &options);
+  ~FileSystemImpl() override;
 
-  template <class BlockReaderTrait, class MutableBufferSequence, class Handler>
-  void AsyncReadBlock(const std::string &client_name,
-                      const hadoop::hdfs::LocatedBlockProto &block,
-                      const hadoop::hdfs::DatanodeInfoProto &dn, size_t offset,
-                      const MutableBufferSequence &buffers,
-                      const Handler &handler);
-  uint64_t get_file_length() const;
- private:
-  FileSystemImpl *fs_;
-  unsigned long long file_length_;
-  std::vector<::hadoop::hdfs::LocatedBlockProto> blocks_;
-  template <class Reader>
-  struct HandshakeContinuation;
-  template <class Reader, class MutableBufferSequence>
-  struct ReadBlockContinuation;
-  struct RemoteBlockReaderTrait;
-  friend class FileHandle;
+  /* attempt to connect to namenode, return bad status on failure */
+  void Connect(const std::string &server, const std::string &service,
+               std::function<void(const Status &)> &&handler);
+  /* attempt to connect to namenode, return bad status on failure */
+  Status Connect(const std::string &server, const std::string &service);
+
+
+  virtual void Open(const std::string &path,
+                    const std::function<void(const Status &, FileHandle *)>
+                        &handler) override;
+  Status Open(const std::string &path, FileHandle **handle) override;
+
+
+  /* add a new thread to handle asio requests, return number of threads in pool
+   */
+  int AddWorkerThread();
+
+  /* how many worker threads are servicing asio requests */
+  int WorkerThreadCount() { return worker_threads_.size(); }
+
+
+private:
+  std::unique_ptr<IoServiceImpl> io_service_;
+  NameNodeOperations nn_;
+  const std::string client_name_;
   std::shared_ptr<BadDataNodeTracker> bad_node_tracker_;
+
+  struct WorkerDeleter {
+    void operator()(std::thread *t) {
+      t->join();
+      delete t;
+    }
+  };
+  typedef std::unique_ptr<std::thread, WorkerDeleter> WorkerPtr;
+  std::vector<WorkerPtr> worker_threads_;
+
 };
+
+
 }
-
-#include "inputstream_impl.h"
 
 #endif

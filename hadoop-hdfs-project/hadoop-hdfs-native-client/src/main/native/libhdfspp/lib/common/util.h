@@ -20,7 +20,10 @@
 
 #include "libhdfspp/status.h"
 
+#include <sstream>
+
 #include <asio/error_code.hpp>
+#include <openssl/rand.h>
 
 #include <google/protobuf/message_lite.h>
 #include <google/protobuf/io/coded_stream.h>
@@ -53,6 +56,10 @@ static inline void ReadDelimitedPBMessage(
 
 std::string Base64Encode(const std::string &src);
 
+/*
+ * Returns a new high-entropy client name
+ */
+std::string GetRandomClientName();
 }
 
 #endif

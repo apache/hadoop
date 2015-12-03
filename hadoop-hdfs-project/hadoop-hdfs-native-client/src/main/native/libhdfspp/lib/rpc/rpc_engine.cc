@@ -19,9 +19,6 @@
 #include "rpc_connection.h"
 #include "common/util.h"
 
-#include <openssl/rand.h>
-
-#include <sstream>
 #include <future>
 
 namespace hdfs {
@@ -83,15 +80,4 @@ Status RpcEngine::RawRpc(const std::string &method_name, const std::string &req,
   return future.get();
 }
 
-std::string RpcEngine::GetRandomClientName() {
-  unsigned char buf[6] = {
-      0,
-  };
-  RAND_pseudo_bytes(buf, sizeof(buf));
-
-  std::stringstream ss;
-  ss << "libhdfs++_"
-     << Base64Encode(std::string(reinterpret_cast<char *>(buf), sizeof(buf)));
-  return ss.str();
-}
 }

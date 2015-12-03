@@ -19,7 +19,9 @@
 #define BLOCK_READER_H_
 
 #include "libhdfspp/status.h"
+#include "common/async_stream.h"
 #include "datatransfer.pb.h"
+#include "connection/datanodeconnection.h"
 
 #include <memory>
 
@@ -55,38 +57,73 @@ struct BlockReaderOptions {
       : verify_checksum(true), encryption_scheme(EncryptionScheme::kNone) {}
 };
 
-template <class Stream>
-class RemoteBlockReader
-    : public std::enable_shared_from_this<RemoteBlockReader<Stream>> {
+/**
+ * Handles the operational state of request and reading a block (or portion of
+ * a block) from a DataNode.
+ *
+ * Threading model: not thread-safe.
+ * Lifecycle: should be created, used for a single read, then freed.
+ */
+class BlockReader {
 public:
-  explicit RemoteBlockReader(const BlockReaderOptions &options, Stream *stream)
-      : stream_(stream), state_(kOpen), options_(options),
+  virtual void AsyncReadBlock(
+    const std::string & client_name,
+    const hadoop::hdfs::LocatedBlockProto &block, size_t offset,
+    const MutableBuffers &buffers,
+    const std::function<void(const Status &, size_t)> handler) = 0;
+
+  virtual void AsyncReadPacket(
+    const MutableBuffers &buffers,
+    const std::function<void(const Status &, size_t bytes_transferred)> &handler) = 0;
+
+  virtual void AsyncRequestBlock(
+    const std::string &client_name,
+    const hadoop::hdfs::ExtendedBlockProto *block,
+    uint64_t length,
+    uint64_t offset,
+    const std::function<void(Status)> &handler) = 0;
+};
+
+class BlockReaderImpl
+    : public BlockReader, public std::enable_shared_from_this<BlockReaderImpl> {
+public:
+  explicit BlockReaderImpl(const BlockReaderOptions &options, std::shared_ptr<DataNodeConnection> dn)
+      : dn_(dn), state_(kOpen), options_(options),
         chunk_padding_bytes_(0) {}
 
-  template <class MutableBufferSequence, class ReadHandler>
-  void async_read_some(const MutableBufferSequence &buffers,
-                       const ReadHandler &handler);
+  virtual void AsyncReadPacket(
+    const MutableBuffers &buffers,
+    const std::function<void(const Status &, size_t bytes_transferred)> &handler) override;
 
-  template <class MutableBufferSequence>
-  size_t read_some(const MutableBufferSequence &buffers, Status *status);
+  virtual void AsyncRequestBlock(
+    const std::string &client_name,
+    const hadoop::hdfs::ExtendedBlockProto *block,
+    uint64_t length,
+    uint64_t offset,
+    const std::function<void(Status)> &handler) override;
 
-  Status connect(const std::string &client_name,
-                 const hadoop::common::TokenProto *token,
-                 const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
-                 uint64_t offset);
+  virtual void AsyncReadBlock(
+    const std::string & client_name,
+    const hadoop::hdfs::LocatedBlockProto &block, size_t offset,
+    const MutableBuffers &buffers,
+    const std::function<void(const Status &, size_t)> handler) override;
 
-  template <class ConnectHandler>
-  void async_connect(const std::string &client_name,
-                     const hadoop::common::TokenProto *token,
-                     const hadoop::hdfs::ExtendedBlockProto *block,
-                     uint64_t length, uint64_t offset,
-                     const ConnectHandler &handler);
+  size_t ReadPacket(const MutableBuffers &buffers, Status *status);
+
+  Status RequestBlock(
+    const std::string &client_name,
+    const hadoop::hdfs::ExtendedBlockProto *block,
+    uint64_t length,
+    uint64_t offset);
 
 private:
+  struct RequestBlockContinuation;
+  struct ReadBlockContinuation;
+
   struct ReadPacketHeader;
   struct ReadChecksum;
   struct ReadPadding;
-  template <class MutableBufferSequence> struct ReadData;
+  struct ReadData;
   struct AckRead;
   enum State {
     kOpen,
@@ -97,7 +134,7 @@ private:
     kFinished,
   };
 
-  Stream *stream_;
+  std::shared_ptr<DataNodeConnection> dn_;
   hadoop::hdfs::PacketHeaderProto header_;
   State state_;
   BlockReaderOptions options_;
@@ -108,7 +145,5 @@ private:
   std::vector<char> checksum_;
 };
 }
-
-#include "remote_block_reader_impl.h"
 
 #endif

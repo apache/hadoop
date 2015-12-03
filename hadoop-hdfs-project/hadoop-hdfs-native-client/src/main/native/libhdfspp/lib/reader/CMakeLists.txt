@@ -16,5 +16,5 @@
 # limitations under the License.
 #
 
-add_library(reader remote_block_reader.cc datatransfer.cc)
+add_library(reader block_reader.cc datatransfer.cc)
 add_dependencies(reader proto)
