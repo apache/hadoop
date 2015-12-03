@@ -1524,6 +1524,9 @@ Release 2.7.3 - UNRELEASED
 
     HADOOP-12482. Race condition in JMX cache update. (Tony Wu via lei)
 
+    HADOOP-12565. Replace DSA with RSA for SSH key type in SingleCluster.md.
+    (Mingliang Liu via aajisaka)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
