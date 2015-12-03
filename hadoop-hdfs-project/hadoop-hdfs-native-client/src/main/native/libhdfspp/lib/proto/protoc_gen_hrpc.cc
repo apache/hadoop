@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "cpp_helpers.h"
+#include "protobuf/cpp_helpers.h"
 
 #include <google/protobuf/compiler/code_generator.h>
 #include <google/protobuf/compiler/plugin.h>

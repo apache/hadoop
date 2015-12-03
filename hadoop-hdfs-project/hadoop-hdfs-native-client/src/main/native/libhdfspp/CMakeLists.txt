@@ -52,6 +52,7 @@ include_directories(
   third_party/rapidxml-1.13
   third_party/gmock-1.7.0
   third_party/tr2
+  third_party/protobuf
   ${OPENSSL_INCLUDE_DIR}
   ../libhdfs/include
 )
