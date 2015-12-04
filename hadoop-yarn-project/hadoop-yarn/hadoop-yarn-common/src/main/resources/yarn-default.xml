@@ -2451,4 +2451,12 @@
     <name>yarn.am.blacklisting.disable-failure-threshold</name>
     <value>0.8f</value>
   </property>
+
+  <property>
+    <description>
+    Choose different implementation of node label's storage
+    </description>
+    <name>yarn.node-labels.fs-store.impl.class</name>
+    <value>org.apache.hadoop.yarn.nodelabels.FileSystemNodeLabelsStore</value>
+  </property>
 </configuration>

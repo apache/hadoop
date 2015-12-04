@@ -49,6 +49,8 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
 
     // Specific properties to skip
     configurationPropsToSkipCompare
+        .add(YarnConfiguration.DEFAULT_FS_NODE_LABELS_STORE_IMPL_CLASS);
+    configurationPropsToSkipCompare
         .add(YarnConfiguration.DEFAULT_RM_CONFIGURATION_PROVIDER_CLASS);
     configurationPropsToSkipCompare
         .add(YarnConfiguration.DEFAULT_CLIENT_FAILOVER_PROXY_PROVIDER);
