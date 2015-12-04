@@ -589,6 +589,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4292. ResourceUtilization should be a part of NodeInfo REST API.
     (Sunil G via wangda)
 
+    YARN-4405. Support node label store in non-appendable file system. (Wangda
+    Tan via jianhe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

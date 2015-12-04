@@ -37,10 +37,10 @@ public class NullRMNodeLabelsManager extends RMNodeLabelsManager {
 
   @Override
   public void initNodeLabelStore(Configuration conf) {
-    this.store = new NodeLabelsStore(this) {
+    this.store = new NodeLabelsStore() {
 
       @Override
-      public void recover(boolean ignoreNodeToLabelsMappings)
+      public void recover()
           throws IOException {
         // do nothing
       }

@@ -31,11 +31,7 @@ import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
 public abstract class NodeLabelsStore implements Closeable {
-  protected final CommonNodeLabelsManager mgr;
-
-  public NodeLabelsStore(CommonNodeLabelsManager mgr) {
-    this.mgr = mgr;
-  }
+  protected CommonNodeLabelsManager mgr;
   
   /**
    * Store node {@literal ->} label
@@ -62,16 +58,14 @@ public abstract class NodeLabelsStore implements Closeable {
    * ignoreNodeToLabelsMappings will be set to true and recover will be invoked
    * as RM will collect the node labels from NM through registration/HB
    *
-   * @param ignoreNodeToLabelsMappings
    * @throws IOException
    * @throws YarnException
    */
-  public abstract void recover(boolean ignoreNodeToLabelsMappings)
-      throws IOException, YarnException;
+  public abstract void recover() throws IOException, YarnException;
   
   public void init(Configuration conf) throws Exception {}
-  
-  public CommonNodeLabelsManager getNodeLabelsManager() {
-    return mgr;
+
+  public void setNodeLabelsManager(CommonNodeLabelsManager mgr) {
+    this.mgr = mgr;
   }
 }

@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.nodelabels;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -33,13 +34,17 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import com.google.common.collect.ImmutableMap;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
 
+import com.google.common.collect.ImmutableMap;
+
+@RunWith(Parameterized.class)
 public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
   MockNodeLabelManager mgr = null;
   Configuration conf = null;
+  String storeClassName = null;
 
   private static class MockNodeLabelManager extends
       CommonNodeLabelsManager {
@@ -59,8 +64,15 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
     }
   }
   
-  private FileSystemNodeLabelsStore getStore() {
-    return (FileSystemNodeLabelsStore) mgr.store;
+  public TestFileSystemNodeLabelsStore(String className) {
+    this.storeClassName = className;
+  }
+  
+  @Parameterized.Parameters
+  public static Collection<String[]> getParameters() {
+    return Arrays.asList(
+        new String[][] { { FileSystemNodeLabelsStore.class.getCanonicalName() },
+            { NonAppendableFSNodeLabelStore.class.getCanonicalName() } });
   }
 
   @Before
@@ -68,6 +80,7 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
     mgr = new MockNodeLabelManager();
     conf = new Configuration();
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
+    conf.set(YarnConfiguration.FS_NODE_LABELS_STORE_IMPL_CLASS, storeClassName);
     File tempDir = File.createTempFile("nlb", ".tmp");
     tempDir.delete();
     tempDir.mkdirs();
@@ -80,7 +93,11 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
 
   @After
   public void after() throws IOException {
-    getStore().fs.delete(getStore().fsWorkingPath, true);
+    if (mgr.store instanceof FileSystemNodeLabelsStore) {
+      FileSystemNodeLabelsStore fsStore =
+          ((FileSystemNodeLabelsStore) mgr.store);
+      fsStore.fs.delete(fsStore.fsWorkingPath, true);
+    }
     mgr.stop();
   }
 
@@ -324,11 +341,12 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
   @Test
   public void testRootMkdirOnInitStore() throws Exception {
     final FileSystem mockFs = Mockito.mock(FileSystem.class);
-    FileSystemNodeLabelsStore mockStore = new FileSystemNodeLabelsStore(mgr) {
+    FileSystemNodeLabelsStore mockStore = new FileSystemNodeLabelsStore() {
       void setFileSystem(Configuration conf) throws IOException {
         fs = mockFs;
       }
     };
+    mockStore.setNodeLabelsManager(mgr);
     mockStore.fs = mockFs;
     verifyMkdirsCount(mockStore, true, 0);
     verifyMkdirsCount(mockStore, false, 1);
