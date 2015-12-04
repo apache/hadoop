@@ -105,6 +105,8 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public static final int SHUTDOWN_HOOK_PRIORITY = 10;
 
+  public static final String TRASH_PREFIX = ".Trash";
+
   /** FileSystem cache */
   static final Cache CACHE = new Cache();
 
@@ -2649,6 +2651,53 @@ public abstract class FileSystem extends Configured implements Closeable {
         + " doesn't support getAllStoragePolicies");
   }
 
+  /**
+   * Get the root directory of Trash for current user when the path specified
+   * is deleted.
+   *
+   * @param path the trash root of the path to be determined.
+   * @return the default implementation returns "/user/$USER/.Trash".
+   * @throws IOException
+   */
+  public Path getTrashRoot(Path path) throws IOException {
+    return this.makeQualified(new Path(getHomeDirectory().toUri().getPath(),
+        TRASH_PREFIX));
+  }
+
+  /**
+   * Get all the trash roots for current user or all users.
+   *
+   * @param allUsers return trash roots for all users if true.
+   * @return all the trash root directories.
+   *         Default FileSystem returns .Trash under users' home directories if
+   *         /user/$USER/.Trash exists.
+   * @throws IOException
+   */
+  public Collection<FileStatus> getTrashRoots(boolean allUsers)
+      throws IOException {
+    Path userHome = new Path(getHomeDirectory().toUri().getPath());
+    List<FileStatus> ret = new ArrayList<FileStatus>();
+    if (!allUsers) {
+      Path userTrash = new Path(userHome, TRASH_PREFIX);
+      if (exists(userTrash)) {
+        ret.add(getFileStatus(userTrash));
+      }
+    } else {
+      Path homeParent = userHome.getParent();
+      if (exists(homeParent)) {
+        FileStatus[] candidates = listStatus(homeParent);
+        for (FileStatus candidate : candidates) {
+          Path userTrash = new Path(candidate.getPath(), TRASH_PREFIX);
+          if (exists(userTrash)) {
+            candidate.setPath(userTrash);
+            ret.add(candidate);
+          }
+        }
+      }
+    }
+    return ret;
+  }
+
   // making it volatile to be able to do a double checked locking
   private volatile static boolean FILE_SYSTEMS_LOADED = false;
 
@@ -3169,7 +3218,7 @@ public abstract class FileSystem extends Configured implements Closeable {
      * For each StatisticsData object, we will call accept on the visitor.
      * Finally, at the end, we will call aggregate to get the final total. 
      *
-     * @param         The visitor to use.
+     * @param         visitor to use.
      * @return        The total.
      */
     private synchronized <T> T visitAll(StatisticsAggregator<T> visitor) {

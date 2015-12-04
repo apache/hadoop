@@ -121,11 +121,21 @@ public class FsShell extends Configured implements Tool {
     return getTrash().getCurrentTrashDir();
   }
 
+  /**
+   * Returns the current trash location for the path specified
+   * @param path to be deleted
+   * @return path to the trash
+   * @throws IOException
+   */
+  public Path getCurrentTrashDir(Path path) throws IOException {
+    return getTrash().getCurrentTrashDir(path);
+  }
+
   // NOTE: Usage/Help are inner classes to allow access to outer methods
   // that access commandFactory
   
   /**
-   *  Display help for commands with their short usage and long description
+   *  Display help for commands with their short usage and long description.
    */
    protected class Usage extends FsCommand {
     public static final String NAME = "usage";

@@ -2301,4 +2301,65 @@ public class DistributedFileSystem extends FileSystem {
       throws IOException {
     return dfs.getInotifyEventStream(lastReadTxid);
   }
+
+  /**
+   * Get the root directory of Trash for a path in HDFS.
+   * 1. File in encryption zone returns /ez1/.Trash/username
+   * 2. File not in encryption zone returns /users/username/.Trash
+   * Caller appends either Current or checkpoint timestamp for trash destination
+   * @param path the trash root of the path to be determined.
+   * @return trash root
+   * @throws IOException
+   */
+  @Override
+  public Path getTrashRoot(Path path) throws IOException {
+    if ((path == null) || !dfs.isHDFSEncryptionEnabled()) {
+      return super.getTrashRoot(path);
+    }
+
+    String absSrc = path.toUri().getPath();
+    EncryptionZone ez = dfs.getEZForPath(absSrc);
+    if ((ez != null) && !ez.getPath().equals(absSrc)) {
+      return this.makeQualified(
+          new Path(ez.getPath() + "/" + FileSystem.TRASH_PREFIX +
+              dfs.ugi.getShortUserName()));
+    } else {
+      return super.getTrashRoot(path);
+    }
+  }
+
+  /**
+   * Get all the trash roots of HDFS for current user or for all the users.
+   * 1. File deleted from non-encryption zone /user/username/.Trash
+   * 2. File deleted from encryption zones
+   *    e.g., ez1 rooted at /ez1 has its trash root at /ez1/.Trash/$USER
+   * @allUsers return trashRoots of all users if true, used by emptier
+   * @return trash roots of HDFS
+   * @throws IOException
+   */
+  @Override
+  public Collection<FileStatus> getTrashRoots(boolean allUsers) throws IOException {
+    List<FileStatus> ret = new ArrayList<FileStatus>();
+    // Get normal trash roots
+    ret.addAll(super.getTrashRoots(allUsers));
+
+    // Get EZ Trash roots
+    final RemoteIterator<EncryptionZone> it = dfs.listEncryptionZones();
+    while (it.hasNext()) {
+      Path ezTrashRoot = new Path(it.next().getPath(), FileSystem.TRASH_PREFIX);
+      if (allUsers) {
+        for (FileStatus candidate : listStatus(ezTrashRoot)) {
+          if (exists(candidate.getPath())) {
+            ret.add(candidate);
+          }
+        }
+      } else {
+        Path userTrash = new Path(ezTrashRoot, System.getProperty("user.name"));
+        if (exists(userTrash)) {
+          ret.add(getFileStatus(userTrash));
+        }
+      }
+    }
+    return ret;
+  }
 }
