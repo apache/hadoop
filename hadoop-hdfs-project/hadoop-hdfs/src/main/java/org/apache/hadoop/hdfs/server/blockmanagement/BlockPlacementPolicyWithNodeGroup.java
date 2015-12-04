@@ -304,7 +304,8 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
   @Override
   public Collection<DatanodeStorageInfo> pickupReplicaSet(
       Collection<DatanodeStorageInfo> first,
-      Collection<DatanodeStorageInfo> second) {
+      Collection<DatanodeStorageInfo> second,
+      Map<String, List<DatanodeStorageInfo>> rackMap) {
     // If no replica within same rack, return directly.
     if (first.isEmpty()) {
       return second;

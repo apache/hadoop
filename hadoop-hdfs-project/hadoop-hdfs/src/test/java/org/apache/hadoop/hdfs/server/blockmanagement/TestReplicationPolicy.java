@@ -1029,22 +1029,22 @@ public class TestReplicationPolicy {
       // test returning null
       excessTypes.add(StorageType.SSD);
       assertNull(((BlockPlacementPolicyDefault) replicator)
-          .chooseReplicaToDelete((short) 3, first, second, excessTypes));
+          .chooseReplicaToDelete(first, second, excessTypes, rackMap));
     }
     excessTypes.add(StorageType.DEFAULT);
     DatanodeStorageInfo chosen = ((BlockPlacementPolicyDefault) replicator)
-        .chooseReplicaToDelete((short) 3, first, second, excessTypes);
-    // Within first set, storages[1] with less free space
-    assertEquals(chosen, storages[1]);
+        .chooseReplicaToDelete(first, second, excessTypes, rackMap);
+    // Within all storages, storages[5] with least free space
+    assertEquals(chosen, storages[5]);
 
     replicator.adjustSetsWithChosenReplica(rackMap, first, second, chosen);
-    assertEquals(0, first.size());
-    assertEquals(3, second.size());
-    // Within second set, storages[5] with less free space
+    assertEquals(2, first.size());
+    assertEquals(1, second.size());
+    // Within first set, storages[1] with less free space
     excessTypes.add(StorageType.DEFAULT);
     chosen = ((BlockPlacementPolicyDefault) replicator).chooseReplicaToDelete(
-        (short)2, first, second, excessTypes);
-    assertEquals(chosen, storages[5]);
+        first, second, excessTypes, rackMap);
+    assertEquals(chosen, storages[1]);
   }
 
   @Test
@@ -1089,17 +1089,15 @@ public class TestReplicationPolicy {
         excessTypes, storages[3].getDatanodeDescriptor(), null);
     assertTrue(excessReplicas.contains(excessStorage));
 
-
     // The block was initially created on excessSSD(rack r1),
     // storages[4](rack r3) and storages[5](rack r3) with
-    // ONESSD_STORAGE_POLICY_NAME storage policy.
+    // ONESSD_STORAGE_POLICY_NAME storage policy. Replication factor = 3.
     // Right after balancer moves the block from storages[5] to
     // storages[3](rack r2), the application changes the storage policy from
     // ONESSD_STORAGE_POLICY_NAME to HOT_STORAGE_POLICY_ID. In this case,
-    // no replica can be chosen as the excessive replica as
-    // chooseReplicasToDelete only considers storages[4] and storages[5] that
-    // are the same rack. But neither's storage type is SSD.
-    // TODO BlockPlacementPolicyDefault should be able to delete excessSSD.
+    // we should be able to delete excessSSD since the remaining
+    // storages ({storages[3]}, {storages[4], storages[5]})
+    // are on different racks (r2, r3).
     nonExcess.clear();
     nonExcess.add(excessSSD);
     nonExcess.add(storages[3]);
@@ -1110,7 +1108,59 @@ public class TestReplicationPolicy {
     excessReplicas = replicator.chooseReplicasToDelete(nonExcess, 3,
         excessTypes, storages[3].getDatanodeDescriptor(),
         storages[5].getDatanodeDescriptor());
-    assertTrue(excessReplicas.size() == 0);
+    assertEquals(1, excessReplicas.size());
+    assertTrue(excessReplicas.contains(excessSSD));
+
+    // Similar to above, but after policy change and before deletion,
+    // the replicas are located on excessSSD(rack r1), storages[1](rack r1),
+    // storages[2](rack r2) and storages[3](rack r2). Replication factor = 3.
+    // In this case, we should be able to delete excessSSD since the remaining
+    // storages ({storages[1]} , {storages[2], storages[3]})
+    // are on different racks (r1, r2).
+    nonExcess.clear();
+    nonExcess.add(excessSSD);
+    nonExcess.add(storages[1]);
+    nonExcess.add(storages[2]);
+    nonExcess.add(storages[3]);
+    excessTypes = storagePolicy.chooseExcess((short) 3,
+        DatanodeStorageInfo.toStorageTypes(nonExcess));
+    excessReplicas = replicator.chooseReplicasToDelete(nonExcess, 3,
+        excessTypes, storages[1].getDatanodeDescriptor(),
+        storages[3].getDatanodeDescriptor());
+    assertEquals(1, excessReplicas.size());
+    assertTrue(excessReplicas.contains(excessSSD));
+
+    // Similar to above, but after policy change and before deletion,
+    // the replicas are located on excessSSD(rack r1), storages[2](rack r2)
+    // Replication factor = 1. We should be able to delete excessSSD.
+    nonExcess.clear();
+    nonExcess.add(excessSSD);
+    nonExcess.add(storages[2]);
+    excessTypes = storagePolicy.chooseExcess((short) 1,
+        DatanodeStorageInfo.toStorageTypes(nonExcess));
+    excessReplicas = replicator.chooseReplicasToDelete(nonExcess, 1,
+        excessTypes, storages[2].getDatanodeDescriptor(), null);
+    assertEquals(1, excessReplicas.size());
+    assertTrue(excessReplicas.contains(excessSSD));
+
+    // The block was initially created on excessSSD(rack r1),
+    // storages[4](rack r3) and storages[5](rack r3) with
+    // ONESSD_STORAGE_POLICY_NAME storage policy. Replication factor = 2.
+    // In this case, no replica can be chosen as the excessive replica by
+    // chooseReplicasToDelete because if the SSD storage is deleted,
+    // the remaining storages[4] and storages[5] are the same rack (r3),
+    // violating block placement policy (i.e. the number of racks >= 2).
+    // TODO BlockPlacementPolicyDefault should be able to rebalance the replicas
+    // and then delete excessSSD.
+    nonExcess.clear();
+    nonExcess.add(excessSSD);
+    nonExcess.add(storages[4]);
+    nonExcess.add(storages[5]);
+    excessTypes = storagePolicy.chooseExcess((short) 2,
+        DatanodeStorageInfo.toStorageTypes(nonExcess));
+    excessReplicas = replicator.chooseReplicasToDelete(nonExcess, 2,
+        excessTypes, null, null);
+    assertEquals(0, excessReplicas.size());
   }
 
  @Test
