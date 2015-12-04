@@ -829,6 +829,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9269. Update the documentation and wrapper for fuse-dfs.
     (Wei-Chiu Chuang via zhz)
 
+    HDFS-9474. TestPipelinesFailover should not fail when printing debug
+    message. (John Zhuge via Yongjun Zhang)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
