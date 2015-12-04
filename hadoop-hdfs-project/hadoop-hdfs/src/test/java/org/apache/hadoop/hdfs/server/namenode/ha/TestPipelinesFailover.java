@@ -55,7 +55,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
-import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.log4j.Level;
 import org.junit.Test;
@@ -420,28 +420,26 @@ public class TestPipelinesFailover {
     // The following section of code is to help debug HDFS-6694 about
     // this test that fails from time to time due to "too many open files".
     //
+    LOG.info("HDFS-6694 Debug Data BEGIN");
 
-    // Only collect debug data on these OSes.
-    if (Shell.LINUX || Shell.SOLARIS || Shell.MAC) {
-      System.out.println("HDFS-6694 Debug Data BEGIN===");
-      
-      String[] scmd = new String[] {"/bin/sh", "-c", "ulimit -a"};
-      ShellCommandExecutor sce = new ShellCommandExecutor(scmd);
-      sce.execute();
-      System.out.println("'ulimit -a' output:\n" + sce.getOutput());
+    String[][] scmds = new String[][] {
+      {"/bin/sh", "-c", "ulimit -a"},
+      {"hostname"},
+      {"ifconfig", "-a"}
+    };
 
-      scmd = new String[] {"hostname"};
-      sce = new ShellCommandExecutor(scmd);
-      sce.execute();
-      System.out.println("'hostname' output:\n" + sce.getOutput());
-
-      scmd = new String[] {"ifconfig", "-a"};
-      sce = new ShellCommandExecutor(scmd);
-      sce.execute();
-      System.out.println("'ifconfig' output:\n" + sce.getOutput());
-
-      System.out.println("===HDFS-6694 Debug Data END");
+    for (String[] scmd: scmds) {
+      String scmd_str = StringUtils.join(" ", scmd);
+      try {
+        ShellCommandExecutor sce = new ShellCommandExecutor(scmd);
+        sce.execute();
+        LOG.info("'" + scmd_str + "' output:\n" + sce.getOutput());
+      } catch (IOException e) {
+        LOG.warn("Error when running '" + scmd_str + "'", e);
+      }
     }
+
+    LOG.info("HDFS-6694 Debug Data END");
 
     HAStressTestHarness harness = new HAStressTestHarness();
     // Disable permissions so that another user can recover the lease.
