@@ -2141,12 +2141,10 @@ public class MiniDFSCluster {
     getMaterializedReplica(i, blk).truncateMeta(newSize);
   }
 
-  public boolean changeGenStampOfBlock(int dnIndex, ExtendedBlock blk,
+  public void changeGenStampOfBlock(int dnIndex, ExtendedBlock blk,
       long newGenStamp) throws IOException {
-    File blockFile = getBlockFile(dnIndex, blk);
-    File metaFile = FsDatasetUtil.findMetaFile(blockFile);
-    return metaFile.renameTo(new File(DatanodeUtil.getMetaName(
-        blockFile.getAbsolutePath(), newGenStamp)));
+    getFsDatasetTestUtils(dnIndex)
+        .changeStoredGenerationStamp(blk, newGenStamp);
   }
 
   /*

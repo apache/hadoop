@@ -1710,6 +1710,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9485. Make BlockManager#removeFromExcessReplicateMap accept BlockInfo
     instead of Block. (Mingliang Liu via jing9)
 
+    HDFS-9490. MiniDFSCluster should change block generation stamp via
+    FsDatasetTestUtils. (Tony Wu via lei)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than

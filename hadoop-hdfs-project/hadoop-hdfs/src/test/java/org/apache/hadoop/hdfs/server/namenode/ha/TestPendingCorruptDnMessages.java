@@ -68,7 +68,7 @@ public class TestPendingCorruptDnMessages {
       // Change the gen stamp of the block on datanode to go back in time (gen
       // stamps start at 1000)
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath);
-      assertTrue(cluster.changeGenStampOfBlock(0, block, 900));
+      cluster.changeGenStampOfBlock(0, block, 900);
       
       // Run directory dsscanner to update Datanode's volumeMap
       DataNodeTestUtils.runDirectoryScanner(cluster.getDataNodes().get(0));
