@@ -2439,6 +2439,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9484. NNThroughputBenchmark$BlockReportStats should not send empty
     block reports. (Mingliang Liu via shv)
 
+    HDFS-9430. Remove waitForLoadingFSImage since checkNNStartup has ensured
+    image loaded and namenode started. (Brahma Reddy Battula via mingma)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
