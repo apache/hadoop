@@ -1019,7 +1019,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       Collection<DatanodeStorageInfo> moreThanOne,
       Collection<DatanodeStorageInfo> exactlyOne,
       Map<String, List<DatanodeStorageInfo>> rackMap) {
-    Collection<DatanodeStorageInfo> ret = new ArrayList<>();
+    Collection<DatanodeStorageInfo> ret = new ArrayList<DatanodeStorageInfo>();
     if (rackMap.size() == 2) {
       for (List<DatanodeStorageInfo> dsi : rackMap.values()) {
         if (dsi.size() >= 2) {
