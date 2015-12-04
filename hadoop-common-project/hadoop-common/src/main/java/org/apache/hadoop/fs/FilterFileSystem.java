@@ -643,4 +643,15 @@ public class FilterFileSystem extends FileSystem {
       throws IOException {
     return fs.getAllStoragePolicies();
   }
+
+  @Override
+  public Path getTrashRoot(Path path) throws IOException {
+    return fs.getTrashRoot(path);
+  }
+
+  @Override
+  public Collection<FileStatus> getTrashRoots(boolean allUsers)
+      throws IOException {
+    return fs.getTrashRoots(allUsers);
+  }
 }
