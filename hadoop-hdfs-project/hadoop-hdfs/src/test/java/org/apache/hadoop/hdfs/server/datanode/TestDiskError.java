@@ -140,7 +140,8 @@ public class TestDiskError {
     cluster.waitActive();
     final int sndNode = 1;
     DataNode datanode = cluster.getDataNodes().get(sndNode);
-    
+    FsDatasetTestUtils utils = cluster.getFsDatasetTestUtils(datanode);
+
     // replicate the block to the second datanode
     InetSocketAddress target = datanode.getXferAddress();
     Socket s = new Socket(target.getAddress(), target.getPort());
@@ -161,11 +162,7 @@ public class TestDiskError {
 
     // the temporary block & meta files should be deleted
     String bpid = cluster.getNamesystem().getBlockPoolId();
-    File storageDir = cluster.getInstanceStorageDir(sndNode, 0);
-    File dir1 = MiniDFSCluster.getRbwDir(storageDir, bpid);
-    storageDir = cluster.getInstanceStorageDir(sndNode, 1);
-    File dir2 = MiniDFSCluster.getRbwDir(storageDir, bpid);
-    while (dir1.listFiles().length != 0 || dir2.listFiles().length != 0) {
+    while (utils.getStoredReplicas(bpid).hasNext()) {
       Thread.sleep(100);
     }
 

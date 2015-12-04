@@ -29,6 +29,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Iterator;
 
 /**
  * Provide block access for FsDataset white box tests.
@@ -251,4 +252,7 @@ public interface FsDatasetTestUtils {
    */
   void changeStoredGenerationStamp(ExtendedBlock block, long newGenStamp)
       throws IOException;
+
+  /** Get all stored replicas in the specified block pool. */
+  Iterator<Replica> getStoredReplicas(String bpid) throws IOException;
 }
