@@ -835,7 +835,6 @@ Release 2.8.0 - UNRELEASED
     HDFS-9214. Support reconfiguring dfs.datanode.balance.max.concurrent.moves
     without DN restart. (Xiaobing Zhou via Arpit Agarwal)
 
-
     HDFS-9527. The return type of FSNamesystem.getBlockCollection should be
     changed to INodeFile. (szetszwo)
 
@@ -867,6 +866,8 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9490. MiniDFSCluster should change block generation stamp via
     FsDatasetTestUtils. (Tony Wu via lei)
+
+    HDFS-8831. Trash Support for deletion in HDFS encryption zone. (xyao)
 
   OPTIMIZATIONS
 
