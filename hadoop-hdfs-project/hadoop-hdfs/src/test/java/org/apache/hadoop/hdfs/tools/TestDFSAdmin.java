@@ -207,7 +207,7 @@ public class TestDFSAdmin {
     final String address = "localhost:" + port;
     List<String> outputs =
         getReconfigurationAllowedProperties("datanode", address);
-    assertEquals(2, outputs.size());
+    assertEquals(3, outputs.size());
     assertEquals(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
         outputs.get(1));
   }
