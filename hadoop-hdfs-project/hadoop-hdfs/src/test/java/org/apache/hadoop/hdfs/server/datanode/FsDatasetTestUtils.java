@@ -242,4 +242,13 @@ public interface FsDatasetTestUtils {
    * Get the persistently stored generation stamp.
    */
   long getStoredGenerationStamp(ExtendedBlock block) throws IOException;
+
+  /**
+   * Change the persistently stored generation stamp.
+   * @param block the block whose generation stamp will be changed
+   * @param newGenStamp the new generation stamp
+   * @throws IOException
+   */
+  void changeStoredGenerationStamp(ExtendedBlock block, long newGenStamp)
+      throws IOException;
 }

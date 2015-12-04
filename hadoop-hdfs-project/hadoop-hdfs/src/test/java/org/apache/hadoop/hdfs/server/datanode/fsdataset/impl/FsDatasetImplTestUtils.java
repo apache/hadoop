@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.FsDatasetTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.Replica;
@@ -47,6 +48,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.Random;
 
 /**
@@ -362,5 +364,17 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
     File dir = f.getParentFile();
     File[] files = FileUtil.listFiles(dir);
     return FsDatasetUtil.getGenerationStampFromFile(files, f);
+  }
+
+  @Override
+  public void changeStoredGenerationStamp(
+      ExtendedBlock block, long newGenStamp) throws IOException {
+    File blockFile =
+        dataset.getBlockFile(block.getBlockPoolId(), block.getBlockId());
+    File metaFile = FsDatasetUtil.findMetaFile(blockFile);
+    File newMetaFile = new File(
+        DatanodeUtil.getMetaName(blockFile.getAbsolutePath(), newGenStamp));
+    Files.move(metaFile.toPath(), newMetaFile.toPath(),
+        StandardCopyOption.ATOMIC_MOVE);
   }
 }
