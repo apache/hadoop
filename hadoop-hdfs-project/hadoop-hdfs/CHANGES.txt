@@ -883,6 +883,8 @@ Release 2.9.0 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+      HDFS-9267. TestDiskError should get stored replicas through
+      FsDatasetTestUtils. (Lei (Eddy) Xu via Colin P. McCabe)
 
   OPTIMIZATIONS
 

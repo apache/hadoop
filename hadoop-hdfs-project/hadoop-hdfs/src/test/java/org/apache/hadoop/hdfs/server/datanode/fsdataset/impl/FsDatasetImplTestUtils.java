@@ -47,6 +47,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.Random;
@@ -376,5 +379,25 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
         DatanodeUtil.getMetaName(blockFile.getAbsolutePath(), newGenStamp));
     Files.move(metaFile.toPath(), newMetaFile.toPath(),
         StandardCopyOption.ATOMIC_MOVE);
+  }
+
+  @Override
+  public Iterator<Replica> getStoredReplicas(String bpid) throws IOException {
+    // Reload replicas from the disk.
+    ReplicaMap replicaMap = new ReplicaMap(dataset);
+    try (FsVolumeReferences refs = dataset.getFsVolumeReferences()) {
+      for (FsVolumeSpi vol : refs) {
+        FsVolumeImpl volume = (FsVolumeImpl) vol;
+        volume.getVolumeMap(bpid, replicaMap, dataset.ramDiskReplicaTracker);
+      }
+    }
+
+    // Cast ReplicaInfo to Replica, because ReplicaInfo assumes a file-based
+    // FsVolumeSpi implementation.
+    List<Replica> ret = new ArrayList<>();
+    if (replicaMap.replicas(bpid) != null) {
+      ret.addAll(replicaMap.replicas(bpid));
+    }
+    return ret.iterator();
   }
 }
