@@ -42,6 +42,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -224,10 +225,20 @@ public class CommonNodeLabelsManager extends AbstractService {
     labelCollections.put(NO_LABEL, new RMNodeLabel(NO_LABEL));
   }
 
+  boolean isCentralizedConfiguration() {
+    return isCentralizedNodeLabelConfiguration;
+  }
+
   protected void initNodeLabelStore(Configuration conf) throws Exception {
-    this.store = new FileSystemNodeLabelsStore(this);
+    this.store =
+        ReflectionUtils
+            .newInstance(
+                conf.getClass(YarnConfiguration.FS_NODE_LABELS_STORE_IMPL_CLASS,
+                    FileSystemNodeLabelsStore.class, NodeLabelsStore.class),
+                conf);
+    this.store.setNodeLabelsManager(this);
     this.store.init(conf);
-    this.store.recover(!isCentralizedNodeLabelConfiguration);
+    this.store.recover();
   }
 
   // for UT purpose

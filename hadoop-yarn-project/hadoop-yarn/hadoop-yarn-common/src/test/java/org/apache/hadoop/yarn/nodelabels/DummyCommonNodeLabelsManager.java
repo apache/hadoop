@@ -36,10 +36,10 @@ public class DummyCommonNodeLabelsManager extends CommonNodeLabelsManager {
 
   @Override
   public void initNodeLabelStore(Configuration conf) {
-    this.store = new NodeLabelsStore(this) {
+    this.store = new NodeLabelsStore() {
 
       @Override
-      public void recover(boolean ignoreNodeToLabelsMappings)
+      public void recover()
           throws IOException {
       }
 
@@ -65,6 +65,8 @@ public class DummyCommonNodeLabelsManager extends CommonNodeLabelsManager {
         // do nothing 
       }
     };
+
+    this.store.setNodeLabelsManager(this);
   }
 
   @Override

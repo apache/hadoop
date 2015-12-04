@@ -2075,6 +2075,12 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String NODE_LABELS_PREFIX = YARN_PREFIX + "node-labels.";
   
+  /** Node label store implementation class */
+  public static final String FS_NODE_LABELS_STORE_IMPL_CLASS = NODE_LABELS_PREFIX
+      + "fs-store.impl.class";
+  public static final String DEFAULT_FS_NODE_LABELS_STORE_IMPL_CLASS =
+      "org.apache.hadoop.yarn.nodelabels.FileSystemNodeLabelsStore";
+  
   /** URI for NodeLabelManager */
   public static final String FS_NODE_LABELS_STORE_ROOT_DIR = NODE_LABELS_PREFIX
       + "fs-store.root-dir";
