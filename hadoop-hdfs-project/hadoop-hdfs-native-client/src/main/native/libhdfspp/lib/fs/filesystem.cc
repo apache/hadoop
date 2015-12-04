@@ -153,9 +153,9 @@ FileSystem * FileSystem::New(
 FileSystemImpl::FileSystemImpl(IoService *&io_service, const Options &options)
   :   io_service_(static_cast<IoServiceImpl *>(io_service)),
       nn_(&io_service_->io_service(), options,
-          GetRandomClientName(), kNamenodeProtocol,
-          kNamenodeProtocolVersion),
-      client_name_(GetRandomClientName())
+      GetRandomClientName(), kNamenodeProtocol,
+      kNamenodeProtocolVersion), client_name_(GetRandomClientName()),
+      bad_node_tracker_(std::make_shared<BadDataNodeTracker>())
 {
   // Poor man's move
   io_service = nullptr;
