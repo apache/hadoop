@@ -27,6 +27,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-6481. DatanodeManager#getDatanodeStorageInfos() should check the
     length of storageIDs. (szetszwo via Arpit Agarwal)
 
+    HDFS-9313. Possible NullPointerException in BlockManager if no excess
+    replica can be chosen. (mingma)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
