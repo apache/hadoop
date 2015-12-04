@@ -1058,6 +1058,14 @@ public class TestReplicationPolicy {
     BlockStoragePolicySuite POLICY_SUITE = BlockStoragePolicySuite
         .createDefaultSuite();
     BlockStoragePolicy storagePolicy = POLICY_SUITE.getDefaultPolicy();
+    DatanodeStorageInfo excessSSD = DFSTestUtil.createDatanodeStorageInfo(
+        "Storage-excess-SSD-ID", "localhost",
+        storages[0].getDatanodeDescriptor().getNetworkLocation(),
+        "foo.com", StorageType.SSD);
+    updateHeartbeatWithUsage(excessSSD.getDatanodeDescriptor(),
+        2* HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
+        2* HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0,
+        0);
 
     // use delete hint case.
 
@@ -1080,6 +1088,29 @@ public class TestReplicationPolicy {
     excessReplicas = replicator.chooseReplicasToDelete(nonExcess, 3,
         excessTypes, storages[3].getDatanodeDescriptor(), null);
     assertTrue(excessReplicas.contains(excessStorage));
+
+
+    // The block was initially created on excessSSD(rack r1),
+    // storages[4](rack r3) and storages[5](rack r3) with
+    // ONESSD_STORAGE_POLICY_NAME storage policy.
+    // Right after balancer moves the block from storages[5] to
+    // storages[3](rack r2), the application changes the storage policy from
+    // ONESSD_STORAGE_POLICY_NAME to HOT_STORAGE_POLICY_ID. In this case,
+    // no replica can be chosen as the excessive replica as
+    // chooseReplicasToDelete only considers storages[4] and storages[5] that
+    // are the same rack. But neither's storage type is SSD.
+    // TODO BlockPlacementPolicyDefault should be able to delete excessSSD.
+    nonExcess.clear();
+    nonExcess.add(excessSSD);
+    nonExcess.add(storages[3]);
+    nonExcess.add(storages[4]);
+    nonExcess.add(storages[5]);
+    excessTypes = storagePolicy.chooseExcess((short) 3,
+        DatanodeStorageInfo.toStorageTypes(nonExcess));
+    excessReplicas = replicator.chooseReplicasToDelete(nonExcess, 3,
+        excessTypes, storages[3].getDatanodeDescriptor(),
+        storages[5].getDatanodeDescriptor());
+    assertTrue(excessReplicas.size() == 0);
   }
 
  @Test

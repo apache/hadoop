@@ -11,6 +11,8 @@ Release 2.6.4 - UNRELEASED
     HDFS-8647. Abstract BlockManager's rack policy into BlockPlacementPolicy.
     (Brahma Reddy Battula via mingma)
 
+    HDFS-9313. Possible NullPointerException in BlockManager if no excess
+    replica can be chosen. (mingma)
   OPTIMIZATIONS
 
   BUG FIXES
