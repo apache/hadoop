@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
 import com.google.common.base.Supplier;
@@ -629,12 +630,13 @@ public class TestDNFencing {
     }
 
     @Override
-    public DatanodeStorageInfo chooseReplicaToDelete(short replicationFactor,
-        Collection<DatanodeStorageInfo> first, Collection<DatanodeStorageInfo> second,
-        List<StorageType> excessTypes) {
-      
-      Collection<DatanodeStorageInfo> chooseFrom = !first.isEmpty() ? first : second;
-
+    public DatanodeStorageInfo chooseReplicaToDelete(
+        Collection<DatanodeStorageInfo> moreThanOne,
+        Collection<DatanodeStorageInfo> exactlyOne,
+        List<StorageType> excessTypes,
+        Map<String, List<DatanodeStorageInfo>> rackMap) {
+      Collection<DatanodeStorageInfo> chooseFrom = !moreThanOne.isEmpty() ?
+          moreThanOne : exactlyOne;
       List<DatanodeStorageInfo> l = Lists.newArrayList(chooseFrom);
       return l.get(DFSUtil.getRandom().nextInt(l.size()));
     }

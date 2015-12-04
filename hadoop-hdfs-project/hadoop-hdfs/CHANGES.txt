@@ -30,6 +30,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9313. Possible NullPointerException in BlockManager if no excess
     replica can be chosen. (mingma)
 
+    HDFS-9314. Improve BlockPlacementPolicyDefault's picking of excess
+    replicas. (Xiao Chen via zhz)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
