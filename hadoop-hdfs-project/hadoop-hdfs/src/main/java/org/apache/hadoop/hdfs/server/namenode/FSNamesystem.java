@@ -553,25 +553,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Block until the object is imageLoaded to be used.
-   */
-  void waitForLoadingFSImage() {
-    if (!imageLoaded) {
-      writeLock();
-      try {
-        while (!imageLoaded) {
-          try {
-            cond.await(5000, TimeUnit.MILLISECONDS);
-          } catch (InterruptedException ignored) {
-          }
-        }
-      } finally {
-        writeUnlock();
-      }
-    }
-  }
-
-  /**
    * Clear all loaded data
    */
   void clear() {
@@ -1800,7 +1781,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void concat(String target, String [] srcs, boolean logRetryCache)
       throws IOException {
-    waitForLoadingFSImage();
     HdfsFileStatus stat = null;
     boolean success = false;
     writeLock();
@@ -1885,7 +1865,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   boolean setReplication(final String src, final short replication)
       throws IOException {
     boolean success = false;
-    waitForLoadingFSImage();
     checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
@@ -1960,7 +1939,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void setStoragePolicy(String src, String policyName) throws IOException {
     HdfsFileStatus auditStat;
-    waitForLoadingFSImage();
     checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
@@ -1987,7 +1965,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   BlockStoragePolicy getStoragePolicy(String src) throws IOException {
     checkOperation(OperationCategory.READ);
-    waitForLoadingFSImage();
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -2002,7 +1979,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   BlockStoragePolicy[] getStoragePolicies() throws IOException {
     checkOperation(OperationCategory.READ);
-    waitForLoadingFSImage();
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -2119,7 +2095,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
 
     FSPermissionChecker pc = getPermissionChecker();
-    waitForLoadingFSImage();
 
     /**
      * If the file is in an encryption zone, we optimistically create an
@@ -2407,7 +2382,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     NameNode.stateChangeLog.debug("BLOCK* getAdditionalBlock: {} inodeId {}" +
         " for {}", src, fileId, clientName);
 
-    waitForLoadingFSImage();
     LocatedBlock[] onRetryBlock = new LocatedBlock[1];
     FSDirWriteFileOp.ValidateAddBlockResult r;
     FSPermissionChecker pc = getPermissionChecker();
@@ -2516,7 +2490,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throws IOException {
     NameNode.stateChangeLog.debug(
         "BLOCK* NameSystem.abandonBlock: {} of file {}", b, src);
-    waitForLoadingFSImage();
     checkOperation(OperationCategory.WRITE);
     FSPermissionChecker pc = getPermissionChecker();
     writeLock();
@@ -2583,7 +2556,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     throws IOException {
     boolean success = false;
     checkOperation(OperationCategory.WRITE);
-    waitForLoadingFSImage();
     FSPermissionChecker pc = getPermissionChecker();
     writeLock();
     try {
@@ -2636,7 +2608,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Deprecated
   boolean renameTo(String src, String dst, boolean logRetryCache)
       throws IOException {
-    waitForLoadingFSImage();
     FSDirRenameOp.RenameOldResult ret = null;
     writeLock();
     try {
@@ -2661,7 +2632,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void renameTo(final String src, final String dst,
                 boolean logRetryCache, Options.Rename... options)
       throws IOException {
-    waitForLoadingFSImage();
     Map.Entry<BlocksMapUpdateInfo, HdfsFileStatus> res = null;
     writeLock();
     try {
@@ -2697,7 +2667,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   boolean delete(String src, boolean recursive, boolean logRetryCache)
       throws IOException {
-    waitForLoadingFSImage();
     BlocksMapUpdateInfo toRemovedBlocks = null;
     writeLock();
     boolean ret = false;
@@ -2973,7 +2942,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
 
     FSPermissionChecker pc = getPermissionChecker();
-    waitForLoadingFSImage();
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -3205,7 +3173,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     // since we just remove the uc feature from pendingFile
     pendingFile.toCompleteFile(now());
 
-    waitForLoadingFSImage();
     // close file and persist block allocations for this file
     closeFile(src, pendingFile);
 
@@ -3268,7 +3235,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
              + ")");
     checkOperation(OperationCategory.WRITE);
     final String src;
-    waitForLoadingFSImage();
     writeLock();
     boolean copyTruncate = false;
     BlockInfo truncatedBlock = null;
@@ -3615,7 +3581,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   private void closeFile(String path, INodeFile file) {
     assert hasWriteLock();
-    waitForLoadingFSImage();
     // file is closed
     getEditLog().logCloseFile(path, file);
     NameNode.stateChangeLog.debug("closeFile: {} with {} bloks is persisted" +
@@ -5382,7 +5347,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
              + ", newNodes=" + Arrays.asList(newNodes)
              + ", client=" + clientName
              + ")");
-    waitForLoadingFSImage();
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
