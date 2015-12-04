@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.nio.channels.AsynchronousCloseException;
 import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -31,6 +32,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import org.slf4j.Logger;
 
 /**
@@ -64,36 +66,45 @@ class DataXceiverServer implements Runnable {
    */
   static class BlockBalanceThrottler extends DataTransferThrottler {
    private int numThreads;
-   private int maxThreads;
-   
+   private final AtomicInteger maxThreads = new AtomicInteger(0);
+
    /**Constructor
     * 
     * @param bandwidth Total amount of bandwidth can be used for balancing 
     */
-   private BlockBalanceThrottler(long bandwidth, int maxThreads) {
-     super(bandwidth);
-     this.maxThreads = maxThreads;
-     LOG.info("Balancing bandwith is "+ bandwidth + " bytes/s");
-     LOG.info("Number threads for balancing is "+ maxThreads);
-   }
-   
+    private BlockBalanceThrottler(long bandwidth, int maxThreads) {
+      super(bandwidth);
+      this.maxThreads.set(maxThreads);
+      LOG.info("Balancing bandwith is " + bandwidth + " bytes/s");
+      LOG.info("Number threads for balancing is " + maxThreads);
+    }
+
+    private void setMaxConcurrentMovers(int movers) {
+      this.maxThreads.set(movers);
+    }
+
+    @VisibleForTesting
+    int getMaxConcurrentMovers() {
+      return this.maxThreads.get();
+    }
+
    /** Check if the block move can start. 
     * 
     * Return true if the thread quota is not exceeded and 
     * the counter is incremented; False otherwise.
     */
-   synchronized boolean acquire() {
-     if (numThreads >= maxThreads) {
-       return false;
-     }
-     numThreads++;
-     return true;
-   }
-   
-   /** Mark that the move is completed. The thread counter is decremented. */
-   synchronized void release() {
-     numThreads--;
-   }
+    synchronized boolean acquire() {
+      if (numThreads >= maxThreads.get()) {
+        return false;
+      }
+      numThreads++;
+      return true;
+    }
+
+    /** Mark that the move is completed. The thread counter is decremented. */
+    synchronized void release() {
+      numThreads--;
+    }
   }
 
   final BlockBalanceThrottler balanceThrottler;
@@ -108,7 +119,6 @@ class DataXceiverServer implements Runnable {
   
   DataXceiverServer(PeerServer peerServer, Configuration conf,
       DataNode datanode) {
-    
     this.peerServer = peerServer;
     this.datanode = datanode;
     
@@ -287,5 +297,9 @@ class DataXceiverServer implements Runnable {
   synchronized void releasePeer(Peer peer) {
     peers.remove(peer);
     peersXceiver.remove(peer);
+  }
+
+  public void updateBalancerMaxConcurrentMovers(int movers) {
+    balanceThrottler.setMaxConcurrentMovers(movers);
   }
 }

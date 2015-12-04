@@ -1720,6 +1720,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9474. TestPipelinesFailover should not fail when printing debug
     message. (John Zhuge via Yongjun Zhang)
 
+    HDFS-9214. Support reconfiguring dfs.datanode.balance.max.concurrent.moves
+    without DN restart. (Xiaobing Zhou via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
