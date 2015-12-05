@@ -400,4 +400,9 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
     }
     return ret.iterator();
   }
+
+  @Override
+  public long getPendingAsyncDeletions() {
+    return dataset.asyncDiskService.countPendingDeletions();
+  }
 }

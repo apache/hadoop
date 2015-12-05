@@ -59,10 +59,6 @@ public class FsDatasetTestUtil {
       final String bpid, final long blockId) {
     return ((FsDatasetImpl)fsd).fetchReplicaInfo(bpid, blockId);
   }
-
-  public static long getPendingAsyncDeletions(FsDatasetSpi<?> fsd) {
-    return ((FsDatasetImpl)fsd).asyncDiskService.countPendingDeletions();
-  }
   
   public static Collection<ReplicaInfo> getReplicas(FsDatasetSpi<?> fsd,
       String bpid) {
