@@ -33,6 +33,7 @@ package hadoop.hdfs;
 
 import "Security.proto";
 import "hdfs.proto";
+import "ReconfigurationProtocol.proto";
 
 /**
  * block - block for which visible length is requested
@@ -123,43 +124,12 @@ message GetDatanodeInfoResponseProto {
   required DatanodeLocalInfoProto localInfo = 1;
 }
 
-/** Asks DataNode to reload configuration file. */
-message StartReconfigurationRequestProto {
-}
-
-message StartReconfigurationResponseProto {
-}
 
 message TriggerBlockReportRequestProto {
   required bool incremental = 1;
 }
 
 message TriggerBlockReportResponseProto {
-}
-
-/** Query the running status of reconfiguration process */
-message GetReconfigurationStatusRequestProto {
-}
-
-message GetReconfigurationStatusConfigChangeProto {
-  required string name = 1;
-  required string oldValue = 2;
-  optional string newValue = 3;
-  optional string errorMessage = 4;  // It is empty if success.
-}
-
-message GetReconfigurationStatusResponseProto {
-  required int64 startTime = 1;
-  optional int64 endTime = 2;
-  repeated GetReconfigurationStatusConfigChangeProto changes = 3;
-}
-
-message ListReconfigurablePropertiesRequestProto {
-}
-
-/** Query the reconfigurable properties on DataNode. */
-message ListReconfigurablePropertiesResponseProto {
-  repeated string name = 1;
 }
 
 message GetBalancerBandwidthRequestProto {

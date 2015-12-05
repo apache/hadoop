@@ -883,11 +883,15 @@ Release 2.9.0 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
-      HDFS-9267. TestDiskError should get stored replicas through
-      FsDatasetTestUtils. (Lei (Eddy) Xu via Colin P. McCabe)
 
-      HDFS-9491. Tests should get the number of pending async delets via
-      FsDatasetTestUtils. (Tony Wu via lei)
+    HDFS-9267. TestDiskError should get stored replicas through
+    FsDatasetTestUtils. (Lei (Eddy) Xu via Colin P. McCabe)
+
+    HDFS-9491. Tests should get the number of pending async delets via
+    FsDatasetTestUtils. (Tony Wu via lei)
+
+    HDFS-9414. Refactor reconfiguration of ClientDatanodeProtocol for
+    reusability. (Xiaobing Zhou via Arpit Agarwal)
 
   OPTIMIZATIONS
 

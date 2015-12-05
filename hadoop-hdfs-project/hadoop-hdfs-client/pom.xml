@@ -118,6 +118,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <include>encryption.proto</include>
                   <include>inotify.proto</include>
                   <include>erasurecoding.proto</include>
+                  <include>ReconfigurationProtocol.proto</include>
                 </includes>
               </source>
               <output>${project.build.directory}/generated-sources/java</output>
