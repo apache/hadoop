@@ -255,4 +255,9 @@ public interface FsDatasetTestUtils {
 
   /** Get all stored replicas in the specified block pool. */
   Iterator<Replica> getStoredReplicas(String bpid) throws IOException;
+
+  /**
+   * Get the number of pending async deletions.
+   */
+  long getPendingAsyncDeletions();
 }

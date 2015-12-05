@@ -886,6 +886,9 @@ Release 2.9.0 - UNRELEASED
       HDFS-9267. TestDiskError should get stored replicas through
       FsDatasetTestUtils. (Lei (Eddy) Xu via Colin P. McCabe)
 
+      HDFS-9491. Tests should get the number of pending async delets via
+      FsDatasetTestUtils. (Tony Wu via lei)
+
   OPTIMIZATIONS
 
   BUG FIXES

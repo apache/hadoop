@@ -101,7 +101,7 @@ public abstract class HATestUtil {
       @Override
       public Boolean get() {
         for (DataNode dn : cluster.getDataNodes()) {
-          if (DataNodeTestUtils.getPendingAsyncDeletions(dn) > 0) {
+          if (cluster.getFsDatasetTestUtils(dn).getPendingAsyncDeletions() > 0) {
             return false;
           }
         }
