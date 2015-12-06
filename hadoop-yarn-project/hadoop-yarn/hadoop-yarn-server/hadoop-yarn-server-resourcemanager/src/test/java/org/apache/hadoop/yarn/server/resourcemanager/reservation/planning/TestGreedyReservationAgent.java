@@ -18,9 +18,12 @@
 package org.apache.hadoop.yarn.server.resourcemanager.reservation.planning;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -86,6 +89,7 @@ public class TestGreedyReservationAgent {
             instConstraint, avgConstraint);
     CapacityOverTimePolicy policy = new CapacityOverTimePolicy();
     policy.init(reservationQ, conf);
+
     agent = new GreedyReservationAgent();
 
     QueueMetrics queueMetrics = mock(QueueMetrics.class);
@@ -133,6 +137,94 @@ public class TestGreedyReservationAgent {
               Resource.newInstance(2048 * 10, 2 * 10)));
     }
 
+  }
+
+  @SuppressWarnings("javadoc")
+  @Test
+  public void testSharingPolicyFeedback() throws PlanningException {
+
+    prepareBasicPlan();
+
+    // let's constraint the instantaneous allocation and see the
+    // policy kicking in during planning
+    float instConstraint = 40;
+    float avgConstraint = 40;
+
+    ReservationSchedulerConfiguration conf =
+        ReservationSystemTestUtil.createConf(plan.getQueueName(), 100000,
+            instConstraint, avgConstraint);
+
+    plan.getSharingPolicy().init(plan.getQueueName(), conf);
+
+    // create a request with a single atomic ask
+    ReservationDefinition rr = new ReservationDefinitionPBImpl();
+    rr.setArrival(5 * step);
+    rr.setDeadline(100 * step);
+    ReservationRequest r =
+        ReservationRequest.newInstance(Resource.newInstance(2048, 2), 20, 20,
+            10 * step);
+    ReservationRequests reqs = new ReservationRequestsPBImpl();
+    reqs.setReservationResources(Collections.singletonList(r));
+    rr.setReservationRequests(reqs);
+
+    ReservationId reservationID =
+        ReservationSystemTestUtil.getNewReservationId();
+    agent.createReservation(reservationID, "u3", plan, rr);
+
+    ReservationId reservationID2 =
+        ReservationSystemTestUtil.getNewReservationId();
+    agent.createReservation(reservationID2, "u3", plan, rr);
+
+    ReservationDefinition rr3 = new ReservationDefinitionPBImpl();
+    rr3.setArrival(5 * step);
+    rr3.setDeadline(100 * step);
+    ReservationRequest r3 =
+        ReservationRequest.newInstance(Resource.newInstance(2048, 2), 45, 45,
+            10 * step);
+    ReservationRequests reqs3 = new ReservationRequestsPBImpl();
+    reqs3.setReservationResources(Collections.singletonList(r3));
+    rr3.setReservationRequests(reqs3);
+
+    ReservationId reservationID3 =
+        ReservationSystemTestUtil.getNewReservationId();
+    try {
+      // RR3 is simply too big to fit
+      agent.createReservation(reservationID3, "u3", plan, rr3);
+      fail();
+    } catch (PlanningException pe) {
+      // expected
+    }
+
+    assertTrue("Agent-based allocation failed", reservationID != null);
+    assertTrue("Agent-based allocation failed", plan.getAllReservations()
+        .size() == 4);
+
+    ReservationAllocation cs = plan.getReservationById(reservationID);
+    ReservationAllocation cs2 = plan.getReservationById(reservationID2);
+    ReservationAllocation cs3 = plan.getReservationById(reservationID3);
+
+    assertNotNull(cs);
+    assertNotNull(cs2);
+    assertNull(cs3);
+
+    System.out.println("--------AFTER SIMPLE ALLOCATION (queue: "
+        + reservationID + ")----------");
+    System.out.println(plan.toString());
+    System.out.println(plan.toCumulativeString());
+
+    for (long i = 90 * step; i < 100 * step; i++) {
+      assertTrue(
+          "Agent-based allocation unexpected",
+          Resources.equals(cs.getResourcesAtTime(i),
+              Resource.newInstance(2048 * 20, 2 * 20)));
+    }
+    // RR2 is pushed out by the presence of RR
+    for (long i = 80 * step; i < 90 * step; i++) {
+      assertTrue(
+          "Agent-based allocation unexpected",
+          Resources.equals(cs2.getResourcesAtTime(i),
+              Resource.newInstance(2048 * 20, 2 * 20)));
+    }
   }
 
   @Test
@@ -186,7 +278,6 @@ public class TestGreedyReservationAgent {
     assertTrue(cs.toString(), check(cs, 10 * step, 30 * step, 10, 1024, 1));
     assertTrue(cs.toString(), check(cs, 40 * step, 50 * step, 20, 1024, 1));
     assertTrue(cs.toString(), check(cs, 50 * step, 70 * step, 10, 1024, 1));
-
     System.out.println("--------AFTER ORDER ALLOCATION (queue: "
         + reservationID + ")----------");
     System.out.println(plan.toString());
@@ -376,7 +467,6 @@ public class TestGreedyReservationAgent {
     ReservationAllocation cs = plan.getReservationById(reservationID);
 
     assertTrue(cs.toString(), check(cs, 110 * step, 120 * step, 20, 1024, 1));
-
     System.out.println("--------AFTER ANY ALLOCATION (queue: " + reservationID
         + ")----------");
     System.out.println(plan.toString());
