@@ -592,6 +592,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4405. Support node label store in non-appendable file system. (Wangda
     Tan via jianhe)
 
+    YARN-4358. Reservation System: Improve relationship between SharingPolicy
+    and ReservationAgent. (Carlo Curino via asuresh)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

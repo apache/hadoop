@@ -50,14 +50,14 @@ public interface ReservationAllocation extends
   public ReservationDefinition getReservationDefinition();
 
   /**
-   * Returns the time at which the reservation is activated
+   * Returns the time at which the reservation is activated.
    * 
    * @return the time at which the reservation is activated
    */
   public long getStartTime();
 
   /**
-   * Returns the time at which the reservation terminates
+   * Returns the time at which the reservation terminates.
    * 
    * @return the time at which the reservation terminates
    */
@@ -65,7 +65,7 @@ public interface ReservationAllocation extends
 
   /**
    * Returns the map of resources requested against the time interval for which
-   * they were
+   * they were.
    * 
    * @return the allocationRequests the map of resources requested against the
    *         time interval for which they were
@@ -117,5 +117,11 @@ public interface ReservationAllocation extends
    * @return the resources reserved at the specified time
    */
   public Resource getResourcesAtTime(long tick);
+
+  /**
+   * Return a RLE representation of used resources.
+   * @return a RLE encoding of resources allocated over time.
+   */
+  public RLESparseResourceAllocation getResourcesOverTime();
 
 }

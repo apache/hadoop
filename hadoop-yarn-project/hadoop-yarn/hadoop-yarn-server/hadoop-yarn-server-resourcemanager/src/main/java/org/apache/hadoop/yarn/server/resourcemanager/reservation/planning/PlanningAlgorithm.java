@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.reservation.planning;
 
 import java.util.Map;
-import java.util.Set;
+import java.util.Map.Entry;
 
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -62,7 +62,7 @@ public abstract class PlanningAlgorithm implements ReservationAgent {
 
     // Compute the job allocation
     RLESparseResourceAllocation allocation =
-        computeJobAllocation(plan, reservationId, adjustedContract);
+        computeJobAllocation(plan, reservationId, adjustedContract, user);
 
     // If no job allocation was found, fail
     if (allocation == null) {
@@ -84,8 +84,8 @@ public abstract class PlanningAlgorithm implements ReservationAgent {
             adjustedContract, // Contract
             user, // User name
             plan.getQueueName(), // Queue name
-            findEarliestTime(mapAllocations.keySet()), // Earliest start time
-            findLatestTime(mapAllocations.keySet()), // Latest end time
+            findEarliestTime(mapAllocations), // Earliest start time
+            findLatestTime(mapAllocations), // Latest end time
             mapAllocations, // Allocations
             plan.getResourceCalculator(), // Resource calculator
             plan.getMinimumAllocation()); // Minimum allocation
@@ -111,14 +111,14 @@ public abstract class PlanningAlgorithm implements ReservationAgent {
     Resource zeroResource = Resource.newInstance(0, 0);
 
     // Pad at the beginning
-    long earliestStart = findEarliestTime(mapAllocations.keySet());
+    long earliestStart = findEarliestTime(mapAllocations);
     if (jobArrival < earliestStart) {
       mapAllocations.put(new ReservationInterval(jobArrival, earliestStart),
           zeroResource);
     }
 
     // Pad at the beginning
-    long latestEnd = findLatestTime(mapAllocations.keySet());
+    long latestEnd = findLatestTime(mapAllocations);
     if (latestEnd < jobDeadline) {
       mapAllocations.put(new ReservationInterval(latestEnd, jobDeadline),
           zeroResource);
@@ -129,8 +129,8 @@ public abstract class PlanningAlgorithm implements ReservationAgent {
   }
 
   public abstract RLESparseResourceAllocation computeJobAllocation(Plan plan,
-      ReservationId reservationId, ReservationDefinition reservation)
-      throws PlanningException, ContractValidationException;
+      ReservationId reservationId, ReservationDefinition reservation,
+      String user) throws PlanningException, ContractValidationException;
 
   @Override
   public boolean createReservation(ReservationId reservationId, String user,
@@ -162,24 +162,26 @@ public abstract class PlanningAlgorithm implements ReservationAgent {
 
   }
 
-  protected static long findEarliestTime(Set<ReservationInterval> sesInt) {
+  protected static long findEarliestTime(
+      Map<ReservationInterval, Resource> sesInt) {
 
     long ret = Long.MAX_VALUE;
-    for (ReservationInterval s : sesInt) {
-      if (s.getStartTime() < ret) {
-        ret = s.getStartTime();
+    for (Entry<ReservationInterval, Resource> s : sesInt.entrySet()) {
+      if (s.getKey().getStartTime() < ret && s.getValue() != null) {
+        ret = s.getKey().getStartTime();
       }
     }
     return ret;
 
   }
 
-  protected static long findLatestTime(Set<ReservationInterval> sesInt) {
+  protected static long findLatestTime(Map<ReservationInterval,
+      Resource> sesInt) {
 
     long ret = Long.MIN_VALUE;
-    for (ReservationInterval s : sesInt) {
-      if (s.getEndTime() > ret) {
-        ret = s.getEndTime();
+    for (Entry<ReservationInterval, Resource> s : sesInt.entrySet()) {
+      if (s.getKey().getEndTime() > ret && s.getValue() != null) {
+        ret = s.getKey().getEndTime();
       }
     }
     return ret;

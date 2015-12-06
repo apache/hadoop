@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.MismatchedUserException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
@@ -87,6 +88,13 @@ public class NoOverCommitPolicy implements SharingPolicy {
   public void init(String planQueuePath,
       ReservationSchedulerConfiguration conf) {
     // nothing to do for this policy
+  }
+
+  @Override
+  public RLESparseResourceAllocation availableResources(
+      RLESparseResourceAllocation available, Plan plan, String user,
+      ReservationId oldId, long start, long end) throws PlanningException {
+    return available;
   }
 
 }
