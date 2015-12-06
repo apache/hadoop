@@ -145,7 +145,8 @@ public class JobHistoryServer extends CompositeService {
 
     DefaultMetricsSystem.initialize("JobHistoryServer");
     JvmMetrics jm = JvmMetrics.initSingleton("JobHistoryServer", null);
-    pauseMonitor = new JvmPauseMonitor(getConfig());
+    pauseMonitor = new JvmPauseMonitor();
+    addService(pauseMonitor);
     jm.setPauseMonitor(pauseMonitor);
 
     super.serviceInit(config);
@@ -198,16 +199,12 @@ public class JobHistoryServer extends CompositeService {
 
   @Override
   protected void serviceStart() throws Exception {
-    pauseMonitor.start();
     super.serviceStart();
   }
   
   @Override
   protected void serviceStop() throws Exception {
     DefaultMetricsSystem.shutdown();
-    if (pauseMonitor != null) {
-      pauseMonitor.stop();
-    }
     super.serviceStop();
   }
 
