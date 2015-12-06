@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 
 import java.util.Set;
 
@@ -39,6 +40,17 @@ public interface PlanView extends PlanContext {
    * @return {@link ReservationAllocation} identified by the specified id
    */
   public ReservationAllocation getReservationById(ReservationId reservationID);
+
+  /**
+   * Return a set of {@link ReservationAllocation} that belongs to a certain
+   * user and overlaps time t.
+   *
+   * @param user the user being considered
+   * @param t the instant in time being considered
+   * @return {@link Set<ReservationAllocation>} for this user at this time
+   */
+  public Set<ReservationAllocation> getReservationByUserAtTime(String user,
+      long t);
 
   /**
    * Gets all the active reservations at the specified point of time
@@ -68,18 +80,6 @@ public interface PlanView extends PlanContext {
   Resource getTotalCommittedResources(long tick);
 
   /**
-   * Returns the total {@link Resource} reserved for a given user at the
-   * specified time
-   * 
-   * @param user the user who made the reservation(s)
-   * @param tick the time (UTC in ms) for which the reserved resources are
-   *          requested
-   * @return the total {@link Resource} reserved for a given user at the
-   *         specified time
-   */
-  public Resource getConsumptionForUser(String user, long tick);
-
-  /**
    * Returns the overall capacity in terms of {@link Resource} assigned to this
    * plan (typically will correspond to the absolute capacity of the
    * corresponding queue).
@@ -98,9 +98,48 @@ public interface PlanView extends PlanContext {
 
   /**
    * Returns the time (UTC in ms) at which the last reservation terminates
-   * 
+   *
    * @return the time (UTC in ms) at which the last reservation terminates
    */
   public long getLastEndTime();
+
+  /**
+   * This method returns the amount of resources available to a given user
+   * (optionally if removing a certain reservation) over the start-end time
+   * range.
+   *
+   * @param user
+   * @param oldId
+   * @param start
+   * @param end
+   * @return a view of the plan as it is available to this user
+   * @throws PlanningException
+   */
+  public RLESparseResourceAllocation getAvailableResourceOverTime(String user,
+      ReservationId oldId, long start, long end) throws PlanningException;
+
+  /**
+   * This method returns a RLE encoded view of the user reservation count
+   * utilization between start and end time.
+   *
+   * @param user
+   * @param start
+   * @param end
+   * @return RLE encoded view of reservation used over time
+   */
+  public RLESparseResourceAllocation getReservationCountForUserOverTime(
+      String user, long start, long end);
+
+  /**
+   * This method returns a RLE encoded view of the user reservation utilization
+   * between start and end time.
+   *
+   * @param user
+   * @param start
+   * @param end
+   * @return RLE encoded view of resources used over time
+   */
+  public RLESparseResourceAllocation getConsumptionForUserOverTime(String user,
+      long start, long end);
 
 }

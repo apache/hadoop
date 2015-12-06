@@ -522,6 +522,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4132. Separate configs for nodemanager to resourcemanager connection
     timeout and retries (Chang Li via jlowe)
 
+    YARN-4358. Reservation System: Improve relationship between SharingPolicy
+    and ReservationAgent. (Carlo Curino via asuresh)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
