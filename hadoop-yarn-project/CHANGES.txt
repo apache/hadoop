@@ -63,6 +63,10 @@ Release 2.9.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-4072. ApplicationHistoryServer, WebAppProxyServer, NodeManager and
+    ResourceManager to support JvmPauseMonitor as a service.
+    (Sunil G via Stevel)
+
   OPTIMIZATIONS
 
   BUG FIXES

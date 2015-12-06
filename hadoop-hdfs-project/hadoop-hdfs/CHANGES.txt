@@ -893,6 +893,9 @@ Release 2.9.0 - UNRELEASED
     HDFS-9414. Refactor reconfiguration of ClientDatanodeProtocol for
     reusability. (Xiaobing Zhou via Arpit Agarwal)
 
+    HDFS-8947. NameNode, DataNode and NFS gateway to support JvmPauseMonitor as
+    a service. (Sunil G via Stevel)
+
   OPTIMIZATIONS
 
   BUG FIXES

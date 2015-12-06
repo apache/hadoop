@@ -635,6 +635,9 @@ Release 2.9.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-12321. Make JvmPauseMonitor an AbstractService.
+    (Sunil G via Stevel)
+
   OPTIMIZATIONS
 
   BUG FIXES
