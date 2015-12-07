@@ -105,6 +105,11 @@ public:
 
 
 private:
+  /**
+   *  The IoService must be the first member variable to ensure that it gets
+   *  destroyed last.  This allows other members to dequeue things from the
+   *  service in their own destructors.
+   **/
   std::unique_ptr<IoServiceImpl> io_service_;
   NameNodeOperations nn_;
   const std::string client_name_;
@@ -120,8 +125,6 @@ private:
   std::vector<WorkerPtr> worker_threads_;
 
 };
-
-
 }
 
 #endif

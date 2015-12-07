@@ -171,7 +171,6 @@ FileSystemImpl::~FileSystemImpl() {
    **/
   io_service_->Stop();
   worker_threads_.clear();
-  io_service_.reset(nullptr);
 }
 
 void FileSystemImpl::Connect(const std::string &server,
