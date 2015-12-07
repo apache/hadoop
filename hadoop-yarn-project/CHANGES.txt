@@ -1471,6 +1471,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4565. Fix a bug that leads to AM resource limit not hornored when
     sizeBasedWeight enabled for FairOrderingPolicy. (wtan via jianhe)
 
+    YARN-4392. ApplicationCreatedEvent event time resets after RM restart/failover.
+    (Naganarasimha G R and Xuan Gong via xgong)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
