@@ -1149,6 +1149,9 @@ Release 2.7.3 - UNRELEASED
     (with application having id > 9999) （Mohammad Shahid Khan & Varun Saxena
     via jianhe)
 
+    YARN-4422. Generic AHS sometimes doesn't show started, node, or logs on App page
+    (Eric Payne via jeagles)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

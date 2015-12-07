@@ -488,6 +488,13 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
                     AppAttemptMetricsConstants.STATE_EVENT_INFO)
                     .toString());
           }
+          if (eventInfo
+              .containsKey(AppAttemptMetricsConstants.MASTER_CONTAINER_EVENT_INFO)) {
+            amContainerId =
+                ConverterUtils.toContainerId(eventInfo.get(
+                    AppAttemptMetricsConstants.MASTER_CONTAINER_EVENT_INFO)
+                    .toString());
+          }
         }
       }
     }
