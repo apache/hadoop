@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
+import org.apache.hadoop.yarn.webapp.BadRequestException;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -338,7 +339,10 @@ public class TimelineDataManager extends AbstractService {
           entity.getDomainId().length() == 0) {
         entity.setDomainId(DEFAULT_DOMAIN_ID);
       }
-
+      if (entity.getEntityId() == null || entity.getEntityType() == null) {
+        throw new BadRequestException("Incomplete entity without entity"
+            + " id/type");
+      }
       // check if there is existing entity
       TimelineEntity existingEntity = null;
       try {
