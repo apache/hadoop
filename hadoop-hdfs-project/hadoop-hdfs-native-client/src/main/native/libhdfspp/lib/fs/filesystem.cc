@@ -51,9 +51,6 @@ void NameNodeOperations::Connect(const std::string &server,
         engine_.Connect(m->state().front(), next);
       }));
   m->Run([this, handler](const Status &status, const State &) {
-    if (status.ok()) {
-      engine_.Start();
-    }
     handler(status);
   });
 }

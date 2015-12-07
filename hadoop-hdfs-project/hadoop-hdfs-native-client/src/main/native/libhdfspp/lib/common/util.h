@@ -60,6 +60,20 @@ std::string Base64Encode(const std::string &src);
  * Returns a new high-entropy client name
  */
 std::string GetRandomClientName();
+
+/* Returns true if _someone_ is holding the lock (not necessarily this thread,
+ * but a std::mutex doesn't track which thread is holding the lock)
+ */
+template<class T>
+bool lock_held(T & mutex) {
+  bool result = !mutex.try_lock();
+  if (!result)
+    mutex.unlock();
+  return result;
+}
+
+
+
 }
 
 #endif

@@ -20,6 +20,6 @@
 
 namespace hdfs {
 
-Options::Options() : rpc_timeout(30000), max_rpc_retries(0),
+Options::Options() : rpc_timeout(30000), max_rpc_retries(kNoRetry),
                      rpc_retry_delay_ms(10000), host_exclusion_duration(600000) {}
 }

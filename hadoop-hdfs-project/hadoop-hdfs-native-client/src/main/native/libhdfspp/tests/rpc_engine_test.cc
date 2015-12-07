@@ -44,21 +44,33 @@ namespace pbio = ::google::protobuf::io;
 namespace hdfs {
 
 class MockRPCConnection : public MockConnectionBase {
-public:
+ public:
   MockRPCConnection(::asio::io_service &io_service)
       : MockConnectionBase(&io_service) {}
   MOCK_METHOD0(Produce, ProducerResult());
-  template <class Endpoint, class Callback>
-  void async_connect(const Endpoint &, Callback &&handler) {
-    handler(::asio::error_code());
-  }
-  void cancel() {}
-  void close() {}
 };
 
-static inline std::pair<error_code, string>
-RpcResponse(const RpcResponseHeaderProto &h, const std::string &data,
-            const ::asio::error_code &ec = error_code()) {
+class SharedMockRPCConnection : public SharedMockConnection {
+ public:
+  SharedMockRPCConnection(::asio::io_service &io_service)
+      : SharedMockConnection(&io_service) {}
+};
+
+class SharedConnectionEngine : public RpcEngine {
+  using RpcEngine::RpcEngine;
+
+protected:
+  std::shared_ptr<RpcConnection> NewConnection() override {
+    return std::make_shared<RpcConnectionImpl<SharedMockRPCConnection>>(this);
+  }
+
+};
+
+}
+
+static inline std::pair<error_code, string> RpcResponse(
+    const RpcResponseHeaderProto &h, const std::string &data,
+    const ::asio::error_code &ec = error_code()) {
   uint32_t payload_length =
       pbio::CodedOutputStream::VarintSize32(h.ByteSize()) +
       pbio::CodedOutputStream::VarintSize32(data.size()) + h.ByteSize() +
@@ -77,7 +89,7 @@ RpcResponse(const RpcResponseHeaderProto &h, const std::string &data,
 
   return std::make_pair(ec, std::move(res));
 }
-}
+
 
 using namespace hdfs;
 
@@ -87,6 +99,9 @@ TEST(RpcEngineTest, TestRoundTrip) {
   RpcEngine engine(&io_service, options, "foo", "protocol", 1);
   RpcConnectionImpl<MockRPCConnection> *conn =
       new RpcConnectionImpl<MockRPCConnection>(&engine);
+  conn->TEST_set_connected(true);
+  conn->StartReading();
+
   EchoResponseProto server_resp;
   server_resp.set_message("foo");
 
@@ -96,27 +111,34 @@ TEST(RpcEngineTest, TestRoundTrip) {
   EXPECT_CALL(conn->next_layer(), Produce())
       .WillOnce(Return(RpcResponse(h, server_resp.SerializeAsString())));
 
-  std::unique_ptr<RpcConnection> conn_ptr(conn);
-  engine.TEST_SetRpcConnection(&conn_ptr);
+  std::shared_ptr<RpcConnection> conn_ptr(conn);
+  engine.TEST_SetRpcConnection(conn_ptr);
+
+  bool complete = false;
 
   EchoRequestProto req;
   req.set_message("foo");
   std::shared_ptr<EchoResponseProto> resp(new EchoResponseProto());
-  engine.AsyncRpc("test", &req, resp, [resp, &io_service](const Status &stat) {
+  engine.AsyncRpc("test", &req, resp, [resp, &complete,&io_service](const Status &stat) {
     ASSERT_TRUE(stat.ok());
     ASSERT_EQ("foo", resp->message());
+    complete = true;
     io_service.stop();
   });
-  conn->Start();
   io_service.run();
+  ASSERT_TRUE(complete);
 }
 
-TEST(RpcEngineTest, TestConnectionReset) {
+TEST(RpcEngineTest, TestConnectionResetAndFail) {
   ::asio::io_service io_service;
   Options options;
   RpcEngine engine(&io_service, options, "foo", "protocol", 1);
   RpcConnectionImpl<MockRPCConnection> *conn =
       new RpcConnectionImpl<MockRPCConnection>(&engine);
+  conn->TEST_set_connected(true);
+  conn->StartReading();
+
+  bool complete = false;
 
   RpcResponseHeaderProto h;
   h.set_callid(1);
@@ -125,23 +147,213 @@ TEST(RpcEngineTest, TestConnectionReset) {
       .WillOnce(Return(RpcResponse(
           h, "", make_error_code(::asio::error::connection_reset))));
 
-  std::unique_ptr<RpcConnection> conn_ptr(conn);
-  engine.TEST_SetRpcConnection(&conn_ptr);
+  std::shared_ptr<RpcConnection> conn_ptr(conn);
+  engine.TEST_SetRpcConnection(conn_ptr);
 
   EchoRequestProto req;
   req.set_message("foo");
   std::shared_ptr<EchoResponseProto> resp(new EchoResponseProto());
 
-  engine.AsyncRpc("test", &req, resp, [&io_service](const Status &stat) {
-    ASSERT_FALSE(stat.ok());
-  });
-
-  engine.AsyncRpc("test", &req, resp, [&io_service](const Status &stat) {
+  engine.AsyncRpc("test", &req, resp, [&complete, &io_service](const Status &stat) {
+    complete = true;
     io_service.stop();
     ASSERT_FALSE(stat.ok());
   });
-  conn->Start();
   io_service.run();
+  ASSERT_TRUE(complete);
+}
+
+
+TEST(RpcEngineTest, TestConnectionResetAndRecover) {
+  ::asio::io_service io_service;
+  Options options;
+  options.max_rpc_retries = 1;
+  options.rpc_retry_delay_ms = 0;
+  SharedConnectionEngine engine(&io_service, options, "foo", "protocol", 1);
+
+  EchoResponseProto server_resp;
+  server_resp.set_message("foo");
+
+  bool complete = false;
+
+  auto producer = std::make_shared<SharedConnectionData>();
+  RpcResponseHeaderProto h;
+  h.set_callid(1);
+  h.set_status(RpcResponseHeaderProto::SUCCESS);
+  EXPECT_CALL(*producer, Produce())
+      .WillOnce(Return(RpcResponse(
+          h, "", make_error_code(::asio::error::connection_reset))))
+      .WillOnce(Return(RpcResponse(h, server_resp.SerializeAsString())));
+  SharedMockConnection::SetSharedConnectionData(producer);
+
+  EchoRequestProto req;
+  req.set_message("foo");
+  std::shared_ptr<EchoResponseProto> resp(new EchoResponseProto());
+
+  engine.AsyncRpc("test", &req, resp, [&complete, &io_service](const Status &stat) {
+    complete = true;
+    io_service.stop();
+    ASSERT_TRUE(stat.ok());
+  });
+  io_service.run();
+  ASSERT_TRUE(complete);
+}
+
+TEST(RpcEngineTest, TestConnectionResetAndRecoverWithDelay) {
+  ::asio::io_service io_service;
+  Options options;
+  options.max_rpc_retries = 1;
+  options.rpc_retry_delay_ms = 1;
+  SharedConnectionEngine engine(&io_service, options, "foo", "protocol", 1);
+
+  EchoResponseProto server_resp;
+  server_resp.set_message("foo");
+
+  bool complete = false;
+
+  auto producer = std::make_shared<SharedConnectionData>();
+  RpcResponseHeaderProto h;
+  h.set_callid(1);
+  h.set_status(RpcResponseHeaderProto::SUCCESS);
+  EXPECT_CALL(*producer, Produce())
+      .WillOnce(Return(RpcResponse(
+          h, "", make_error_code(::asio::error::connection_reset))))
+      .WillOnce(Return(RpcResponse(h, server_resp.SerializeAsString())));
+  SharedMockConnection::SetSharedConnectionData(producer);
+
+  EchoRequestProto req;
+  req.set_message("foo");
+  std::shared_ptr<EchoResponseProto> resp(new EchoResponseProto());
+
+  engine.AsyncRpc("test", &req, resp, [&complete, &io_service](const Status &stat) {
+    complete = true;
+    io_service.stop();
+    ASSERT_TRUE(stat.ok());
+  });
+
+  ::asio::deadline_timer timer(io_service);
+  timer.expires_from_now(std::chrono::hours(100));
+  timer.async_wait([](const asio::error_code & err){(void)err; ASSERT_FALSE("Timed out"); });
+
+  io_service.run();
+  ASSERT_TRUE(complete);
+}
+
+TEST(RpcEngineTest, TestConnectionFailure)
+{
+  auto producer = std::make_shared<SharedConnectionData>();
+  producer->checkProducerForConnect = true;
+  SharedMockConnection::SetSharedConnectionData(producer);
+
+  // Error and no retry
+  ::asio::io_service io_service;
+
+  bool complete = false;
+
+  Options options;
+  options.max_rpc_retries = 0;
+  options.rpc_retry_delay_ms = 0;
+  SharedConnectionEngine engine(&io_service, options, "foo", "protocol", 1);
+  EXPECT_CALL(*producer, Produce())
+      .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")));
+
+  engine.Connect(asio::ip::basic_endpoint<asio::ip::tcp>(), [&complete, &io_service](const Status &stat) {
+    complete = true;
+    io_service.stop();
+    ASSERT_FALSE(stat.ok());
+  });
+  io_service.run();
+  ASSERT_TRUE(complete);
+}
+
+TEST(RpcEngineTest, TestConnectionFailureRetryAndFailure)
+{
+  auto producer = std::make_shared<SharedConnectionData>();
+  producer->checkProducerForConnect = true;
+  SharedMockConnection::SetSharedConnectionData(producer);
+
+  ::asio::io_service io_service;
+
+  bool complete = false;
+
+  Options options;
+  options.max_rpc_retries = 2;
+  options.rpc_retry_delay_ms = 0;
+  SharedConnectionEngine engine(&io_service, options, "foo", "protocol", 1);
+  EXPECT_CALL(*producer, Produce())
+      .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")))
+      .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")))
+      .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")));
+
+  engine.Connect(asio::ip::basic_endpoint<asio::ip::tcp>(), [&complete, &io_service](const Status &stat) {
+    complete = true;
+    io_service.stop();
+    ASSERT_FALSE(stat.ok());
+  });
+  io_service.run();
+  ASSERT_TRUE(complete);
+}
+
+TEST(RpcEngineTest, TestConnectionFailureAndRecover)
+{
+  auto producer = std::make_shared<SharedConnectionData>();
+  producer->checkProducerForConnect = true;
+  SharedMockConnection::SetSharedConnectionData(producer);
+
+  ::asio::io_service io_service;
+
+  bool complete = false;
+
+  Options options;
+  options.max_rpc_retries = 1;
+  options.rpc_retry_delay_ms = 0;
+  SharedConnectionEngine engine(&io_service, options, "foo", "protocol", 1);
+  EXPECT_CALL(*producer, Produce())
+      .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")))
+      .WillOnce(Return(std::make_pair(::asio::error_code(), "")))
+      .WillOnce(Return(std::make_pair(::asio::error::would_block, "")));
+
+  engine.Connect(asio::ip::basic_endpoint<asio::ip::tcp>(), [&complete, &io_service](const Status &stat) {
+    complete = true;
+    io_service.stop();
+    ASSERT_TRUE(stat.ok());
+  });
+  io_service.run();
+  ASSERT_TRUE(complete);
+}
+
+TEST(RpcEngineTest, TestConnectionFailureAndAsyncRecover)
+{
+  // Error and async recover
+  auto producer = std::make_shared<SharedConnectionData>();
+  producer->checkProducerForConnect = true;
+  SharedMockConnection::SetSharedConnectionData(producer);
+
+  ::asio::io_service io_service;
+
+  bool complete = false;
+
+  Options options;
+  options.max_rpc_retries = 1;
+  options.rpc_retry_delay_ms = 1;
+  SharedConnectionEngine engine(&io_service, options, "foo", "protocol", 1);
+  EXPECT_CALL(*producer, Produce())
+      .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")))
+      .WillOnce(Return(std::make_pair(::asio::error_code(), "")))
+      .WillOnce(Return(std::make_pair(::asio::error::would_block, "")));
+
+  engine.Connect(asio::ip::basic_endpoint<asio::ip::tcp>(), [&complete, &io_service](const Status &stat) {
+    complete = true;
+    io_service.stop();
+    ASSERT_TRUE(stat.ok());
+  });
+
+  ::asio::deadline_timer timer(io_service);
+  timer.expires_from_now(std::chrono::hours(100));
+  timer.async_wait([](const asio::error_code & err){(void)err; ASSERT_FALSE("Timed out"); });
+
+  io_service.run();
+  ASSERT_TRUE(complete);
 }
 
 TEST(RpcEngineTest, TestTimeout) {
@@ -151,24 +363,32 @@ TEST(RpcEngineTest, TestTimeout) {
   RpcEngine engine(&io_service, options, "foo", "protocol", 1);
   RpcConnectionImpl<MockRPCConnection> *conn =
       new RpcConnectionImpl<MockRPCConnection>(&engine);
+  conn->TEST_set_connected(true);
+  conn->StartReading();
 
-  EXPECT_CALL(conn->next_layer(), Produce()).Times(0);
+    EXPECT_CALL(conn->next_layer(), Produce())
+        .WillOnce(Return(std::make_pair(::asio::error::would_block, "")));
 
-  std::unique_ptr<RpcConnection> conn_ptr(conn);
-  engine.TEST_SetRpcConnection(&conn_ptr);
+  std::shared_ptr<RpcConnection> conn_ptr(conn);
+  engine.TEST_SetRpcConnection(conn_ptr);
+
+  bool complete = false;
 
   EchoRequestProto req;
   req.set_message("foo");
   std::shared_ptr<EchoResponseProto> resp(new EchoResponseProto());
-  engine.AsyncRpc("test", &req, resp, [resp, &io_service](const Status &stat) {
+  engine.AsyncRpc("test", &req, resp, [resp, &complete,&io_service](const Status &stat) {
+    complete = true;
     io_service.stop();
     ASSERT_FALSE(stat.ok());
   });
 
   ::asio::deadline_timer timer(io_service);
-  timer.expires_from_now(std::chrono::milliseconds(options.rpc_timeout * 2));
-  timer.async_wait(std::bind(&RpcConnection::Start, conn));
+  timer.expires_from_now(std::chrono::hours(100));
+  timer.async_wait([](const asio::error_code & err){(void)err; ASSERT_FALSE("Timed out"); });
+
   io_service.run();
+  ASSERT_TRUE(complete);
 }
 
 int main(int argc, char *argv[]) {
