@@ -1063,6 +1063,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4452. NPE when submit Unmanaged application. (Naganarasimha G R
     via junping_du)
 
+    YARN-4392. ApplicationCreatedEvent event time resets after RM restart/failover.
+    (Naganarasimha G R and Xuan Gong via xgong)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
