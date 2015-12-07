@@ -168,7 +168,8 @@ public class SystemMetricsPublisher extends CompositeService {
               // based on app state if it doesn't exist
               app.getFinalApplicationStatus(),
               RMServerUtils.createApplicationAttemptState(appAttemtpState),
-              finishedTime));
+              finishedTime,
+              appAttempt.getMasterContainer().getId()));
     }
   }
 
@@ -359,6 +360,9 @@ public class SystemMetricsPublisher extends CompositeService {
         event.getFinalApplicationStatus().toString());
     eventInfo.put(AppAttemptMetricsConstants.STATE_EVENT_INFO,
         event.getYarnApplicationAttemptState().toString());
+    eventInfo.put(
+        AppAttemptMetricsConstants.MASTER_CONTAINER_EVENT_INFO,
+        event.getMasterContainerId().toString());
     tEvent.setEventInfo(eventInfo);
     entity.addEvent(tEvent);
     putEntity(entity);
