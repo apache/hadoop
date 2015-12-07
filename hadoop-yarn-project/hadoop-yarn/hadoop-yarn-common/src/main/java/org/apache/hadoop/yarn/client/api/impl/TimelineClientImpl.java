@@ -335,7 +335,8 @@ public class TimelineClientImpl extends TimelineClient {
   @Override
   protected void serviceStart() throws Exception {
     timelineWriter = createTimelineWriter(
-        configuration, authUgi, client, resURI);
+        configuration, authUgi, client, constructResURI(getConfig(),
+            getTimelineServiceAddress(), false));
   }
 
   protected TimelineWriter createTimelineWriter(Configuration conf,
@@ -613,7 +614,8 @@ public class TimelineClientImpl extends TimelineClient {
 
   @Override
   public String toString() {
-    return super.toString() + " with timeline server " + resURI
+    return super.toString() + " with timeline server "
+        + constructResURI(getConfig(), getTimelineServiceAddress(), false)
         + " and writer " + timelineWriter;
   }
 

@@ -880,6 +880,8 @@ public class RMAppImpl implements RMApp, Recoverable {
     //TODO recover collector address.
     //this.collectorAddr = appState.getCollectorAddr();
 
+    // send the ATS create Event
+    sendATSCreateEvent(this, this.startTime);
     RMAppAttemptImpl preAttempt = null;
     for (ApplicationAttemptId attemptId :
         new TreeSet<>(appState.attempts.keySet())) {
@@ -1861,7 +1863,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     }
     return amNodeLabelExpression;
   }
-  
+
   @Override
   public CallerContext getCallerContext() {
     return callerContext;
