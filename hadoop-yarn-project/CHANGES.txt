@@ -1103,6 +1103,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4408. Fix issue that NodeManager reports negative running containers. 
     (Robert Kanter via junping_du)
 
+    YARN-4392. ApplicationCreatedEvent event time resets after RM restart/failover.
+    (Naganarasimha G R and Xuan Gong via xgong)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
