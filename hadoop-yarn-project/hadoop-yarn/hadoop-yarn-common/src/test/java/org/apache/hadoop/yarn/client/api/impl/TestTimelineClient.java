@@ -96,6 +96,15 @@ public class TestTimelineClient {
   }
 
   @Test
+  public void testPostIncompleteEntities() throws Exception {
+    try {
+      client.putEntities(new TimelineEntity());
+      Assert.fail("Exception should have been thrown");
+    } catch (YarnException e) {
+    }
+  }
+
+  @Test
   public void testPostEntitiesNoResponse() throws Exception {
     mockEntityClientResponse(
         client, ClientResponse.Status.INTERNAL_SERVER_ERROR, false, false);

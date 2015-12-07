@@ -29,7 +29,6 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.security.GeneralSecurityException;
 import java.security.PrivilegedExceptionAction;
-import java.util.Arrays;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -301,7 +300,12 @@ public class TimelineClientImpl extends TimelineClient {
   public TimelinePutResponse putEntities(
       TimelineEntity... entities) throws IOException, YarnException {
     TimelineEntities entitiesContainer = new TimelineEntities();
-    entitiesContainer.addEntities(Arrays.asList(entities));
+    for (TimelineEntity entity : entities) {
+      if (entity.getEntityId() == null || entity.getEntityType() == null) {
+        throw new YarnException("Incomplete entity without entity id/type");
+      }
+      entitiesContainer.addEntity(entity);
+    }
     ClientResponse resp = doPosting(entitiesContainer, null);
     return resp.getEntity(TimelinePutResponse.class);
   }
