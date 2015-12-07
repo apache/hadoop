@@ -184,7 +184,7 @@ final class FSDirTruncateOp {
     }
     assert onBlockBoundary == (truncateBlock == null) :
       "truncateBlock is null iff on block boundary: " + truncateBlock;
-    fsn.removeBlocksAndUpdateSafemodeTotal(collectedBlocks);
+    fsn.getBlockManager().removeBlocksAndUpdateSafemodeTotal(collectedBlocks);
   }
 
   /**

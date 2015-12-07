@@ -103,8 +103,6 @@ public class TestNameNodeMetadataConsistency {
 
     // we also need to tell block manager that we are in the startup path
     FSNamesystem spyNameSystem = spy(cluster.getNameNode().getNamesystem());
-    spyNameSystem.enableSafeModeForTesting(conf);
-
     Whitebox.setInternalState(cluster.getNameNode()
             .getNamesystem().getBlockManager(),
         "namesystem", spyNameSystem);

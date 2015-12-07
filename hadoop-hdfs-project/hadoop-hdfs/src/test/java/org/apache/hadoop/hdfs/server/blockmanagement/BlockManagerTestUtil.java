@@ -27,6 +27,7 @@ import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerSafeMode.BMSafeModeStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -35,6 +36,7 @@ import org.apache.hadoop.util.Daemon;
 import org.junit.Assert;
 
 import com.google.common.base.Preconditions;
+import org.mockito.internal.util.reflection.Whitebox;
 
 public class BlockManagerTestUtil {
   public static void setNodeReplicationLimit(final BlockManager blockManager,
@@ -305,5 +307,12 @@ public class BlockManagerTestUtil {
   public static void recheckDecommissionState(DatanodeManager dm)
       throws ExecutionException, InterruptedException {
     dm.getDecomManager().runMonitor();
+  }
+
+  public static void setStartupSafeModeForTest(BlockManager bm) {
+    BlockManagerSafeMode bmSafeMode = (BlockManagerSafeMode)Whitebox
+        .getInternalState(bm, "bmSafeMode");
+    Whitebox.setInternalState(bmSafeMode, "extension", Integer.MAX_VALUE);
+    Whitebox.setInternalState(bmSafeMode, "status", BMSafeModeStatus.EXTENSION);
   }
 }

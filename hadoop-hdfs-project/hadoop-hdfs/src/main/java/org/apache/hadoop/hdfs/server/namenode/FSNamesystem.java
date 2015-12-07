@@ -69,18 +69,12 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_INODE_ATTRIBUTES
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPL_QUEUE_THRESHOLD_PCT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RETRY_CACHE_EXPIRYTIME_MILLIS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RETRY_CACHE_EXPIRYTIME_MILLIS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RETRY_CACHE_HEAP_PERCENT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RETRY_CACHE_HEAP_PERCENT_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY;
@@ -237,8 +231,6 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
-import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Counter;
-import org.apache.hadoop.hdfs.server.namenode.startupprogress.Status;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType;
 import org.apache.hadoop.hdfs.server.namenode.top.TopAuditLogger;
@@ -268,7 +260,6 @@ import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
-import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -424,8 +415,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   final LeaseManager leaseManager = new LeaseManager(this); 
 
-  volatile Daemon smmthread = null;  // SafeModeMonitor thread
-  
   Daemon nnrmthread = null; // NamenodeResourceMonitor thread
 
   Daemon nnEditLogRoller = null; // NameNodeEditLogRoller thread
@@ -463,8 +452,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final FsServerDefaults serverDefaults;
   private final boolean supportAppends;
   private final ReplaceDatanodeOnFailure dtpReplaceDatanodeOnFailure;
-
-  private volatile SafeModeInfo safeMode;  // safe mode information
 
   private final long maxFsObjects;          // maximum number of fs objects
 
@@ -521,6 +508,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private INodeAttributeProvider inodeAttributeProvider;
 
   /**
+   * If the NN is in safemode, and not due to manual / low resources, we
+   * assume it must be because of startup. If the NN had low resources during
+   * startup, we assume it came out of startup safemode and it is now in low
+   * resources safemode.
+   */
+  private boolean manualSafeMode = false;
+  private boolean resourceLowSafeMode = false;
+
+  /**
    * Notify that loading of this FSDirectory is complete, and
    * it is imageLoaded for use
    */
@@ -571,7 +567,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return leaseManager;
   }
   
-  boolean isHaEnabled() {
+  @Override
+  public boolean isHaEnabled() {
     return haEnabled;
   }
 
@@ -707,10 +704,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_KEY,
           DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_DEFAULT);
 
-      this.blockManager = new BlockManager(this, conf);
-      this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
-      this.blockIdManager = new BlockIdManager(blockManager);
-
       this.fsOwner = UserGroupInformation.getCurrentUser();
       this.supergroup = conf.get(DFS_PERMISSIONS_SUPERUSERGROUP_KEY, 
                                  DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
@@ -736,8 +729,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             "must not be specified if HA is not enabled.");
       }
 
+      // block manager needs the haEnabled initialized
+      this.blockManager = new BlockManager(this, conf);
+      this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
+      this.blockIdManager = new BlockIdManager(blockManager);
+
       // Get the checksum type from config
-      String checksumTypeStr = conf.get(DFS_CHECKSUM_TYPE_KEY, DFS_CHECKSUM_TYPE_DEFAULT);
+      String checksumTypeStr = conf.get(DFS_CHECKSUM_TYPE_KEY,
+          DFS_CHECKSUM_TYPE_DEFAULT);
       DataChecksum.Type checksumType;
       try {
          checksumType = DataChecksum.Type.valueOf(checksumTypeStr);
@@ -802,7 +801,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.dir = new FSDirectory(this, conf);
       this.snapshotManager = new SnapshotManager(dir);
       this.cacheManager = new CacheManager(this, conf, blockManager);
-      this.safeMode = new SafeModeInfo(conf);
       this.topConf = new TopConf(conf);
       this.auditLoggers = initAuditLoggers(conf);
       this.isDefaultAuditLogger = auditLoggers.size() == 1 &&
@@ -990,7 +988,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
   
-  private void startSecretManagerIfNecessary() {
+  @Override
+  public void startSecretManagerIfNecessary() {
     boolean shouldRun = shouldUseDelegationTokens() &&
       !isInSafeMode() && getEditLog().isOpenForWrite();
     boolean running = dtSecretManager.isRunning();
@@ -1015,14 +1014,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       nnResourceChecker = new NameNodeResourceChecker(conf);
       checkAvailableResources();
-      assert safeMode != null && !blockManager.isPopulatingReplQueues();
+      assert !blockManager.isPopulatingReplQueues();
       StartupProgress prog = NameNode.getStartupProgress();
       prog.beginPhase(Phase.SAFEMODE);
       long completeBlocksTotal = getCompleteBlocksTotal();
       prog.setTotal(Phase.SAFEMODE, STEP_AWAITING_REPORTED_BLOCKS,
           completeBlocksTotal);
-      setBlockTotal(completeBlocksTotal);
-      blockManager.activate(conf);
+      blockManager.activate(conf, completeBlocksTotal);
     } finally {
       writeUnlock();
     }
@@ -1090,7 +1088,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
               "replication and invalidation queues during failover:\n" +
               metaSaveAsString());
         }
-        
+
         long nextTxId = getFSImage().getLastAppliedTxId() + 1;
         LOG.info("Will take over writing edit logs at txnid " + 
             nextTxId);
@@ -1134,7 +1132,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       blockManager.getDatanodeManager().setShouldSendCachingCommands(true);
     } finally {
       startingActiveService = false;
-      checkSafeMode();
       writeUnlock();
     }
   }
@@ -1144,10 +1141,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         haContext.getState().getServiceState() == HAServiceState.ACTIVE;
   }
 
-  /**
-   * @return Whether the namenode is transitioning to active state and is in the
-   *         middle of the {@link #startActiveServices()}
-   */
+  @Override
   public boolean inTransitionToActive() {
     return haEnabled && inActiveState() && startingActiveService;
   }
@@ -1284,7 +1278,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       SafeModeException se = newSafemodeException(errorMsg);
       if (haEnabled && haContext != null
           && haContext.getState().getServiceState() == HAServiceState.ACTIVE
-          && shouldRetrySafeMode(this.safeMode)) {
+          && isInStartupSafeMode()) {
         throw new RetriableException(se);
       } else {
         throw se;
@@ -1294,25 +1288,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private SafeModeException newSafemodeException(String errorMsg) {
     return new SafeModeException(errorMsg + ". Name node is in safe " +
-        "mode.\n" + safeMode.getTurnOffTip());
+        "mode.\n" + getSafeModeTip());
   }
 
   boolean isPermissionEnabled() {
     return isPermissionEnabled;
   }
 
-  /**
-   * We already know that the safemode is on. We will throw a RetriableException
-   * if the safemode is not manual or caused by low resource.
-   */
-  private boolean shouldRetrySafeMode(SafeModeInfo safeMode) {
-    if (safeMode == null) {
-      return false;
-    } else {
-      return !safeMode.isManual() && !safeMode.areResourcesLow();
-    }
-  }
-  
   public static Collection<URI> getNamespaceDirs(Configuration conf) {
     return getStorageDirs(conf, DFS_NAMENODE_NAME_DIR_KEY);
   }
@@ -1546,7 +1528,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     fsRunning = false;
     try {
       stopCommonServices();
-      if (smmthread != null) smmthread.interrupt();
     } finally {
       // using finally to ensure we also wait for lease daemon
       try {
@@ -2748,54 +2729,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Removes the blocks from blocksmap and updates the safemode blocks total
-   * 
-   * @param blocks
-   *          An instance of {@link BlocksMapUpdateInfo} which contains a list
-   *          of blocks that need to be removed from blocksMap
-   */
-  void removeBlocksAndUpdateSafemodeTotal(BlocksMapUpdateInfo blocks) {
-    assert hasWriteLock();
-    // In the case that we are a Standby tailing edits from the
-    // active while in safe-mode, we need to track the total number
-    // of blocks and safe blocks in the system.
-    boolean trackBlockCounts = isSafeModeTrackingBlocks();
-    int numRemovedComplete = 0, numRemovedSafe = 0;
-
-    for (BlockInfo b : blocks.getToDeleteList()) {
-      if (trackBlockCounts) {
-        if (b.isComplete()) {
-          numRemovedComplete++;
-          if (blockManager.checkMinReplication(b)) {
-            numRemovedSafe++;
-          }
-        }
-      }
-      blockManager.removeBlock(b);
-    }
-    if (trackBlockCounts) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Adjusting safe-mode totals for deletion."
-            + "decreasing safeBlocks by " + numRemovedSafe
-            + ", totalBlocks by " + numRemovedComplete);
-      }
-      adjustSafeModeBlockTotals(-numRemovedSafe, -numRemovedComplete);
-    }
-  }
-
-  /**
-   * @see SafeModeInfo#shouldIncrementallyTrackBlocks
-   */
-  private boolean isSafeModeTrackingBlocks() {
-    if (!haEnabled) {
-      // Never track blocks incrementally in non-HA code.
-      return false;
-    }
-    SafeModeInfo sm = this.safeMode;
-    return sm != null && sm.shouldIncrementallyTrackBlocks();
-  }
-
-  /**
    * Get the file info for a specific file.
    *
    * @param src The string representation of the path to the file
@@ -3498,8 +3431,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void registerDatanode(DatanodeRegistration nodeReg) throws IOException {
     writeLock();
     try {
-      getBlockManager().getDatanodeManager().registerDatanode(nodeReg);
-      checkSafeMode();
+      blockManager.registerDatanode(nodeReg);
     } finally {
       writeUnlock();
     }
@@ -4050,569 +3982,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     getBlockManager().getDatanodeManager().setBalancerBandwidth(bandwidth);
   }
 
-  /**
-   * SafeModeInfo contains information related to the safe mode.
-   * <p>
-   * An instance of {@link SafeModeInfo} is created when the name node
-   * enters safe mode.
-   * <p>
-   * During name node startup {@link SafeModeInfo} counts the number of
-   * <em>safe blocks</em>, those that have at least the minimal number of
-   * replicas, and calculates the ratio of safe blocks to the total number
-   * of blocks in the system, which is the size of blocks in
-   * {@link FSNamesystem#blockManager}. When the ratio reaches the
-   * {@link #threshold} it starts the SafeModeMonitor daemon in order
-   * to monitor whether the safe mode {@link #extension} is passed.
-   * Then it leaves safe mode and destroys itself.
-   * <p>
-   * If safe mode is turned on manually then the number of safe blocks is
-   * not tracked because the name node is not intended to leave safe mode
-   * automatically in the case.
-   *
-   * @see ClientProtocol#setSafeMode(HdfsConstants.SafeModeAction, boolean)
-   */
-  public class SafeModeInfo {
-    // configuration fields
-    /** Safe mode threshold condition %.*/
-    private final double threshold;
-    /** Safe mode minimum number of datanodes alive */
-    private final int datanodeThreshold;
-    /**
-     * Safe mode extension after the threshold.
-     * Make it volatile so that getSafeModeTip can read the latest value
-     * without taking a lock.
-     */
-    private volatile int extension;
-    /** Min replication required by safe mode. */
-    private final int safeReplication;
-    /** threshold for populating needed replication queues */
-    private final double replQueueThreshold;
-    // internal fields
-    /** Time when threshold was reached.
-     * <br> -1 safe mode is off
-     * <br> 0 safe mode is on, and threshold is not reached yet
-     * <br> >0 safe mode is on, but we are in extension period 
-     */
-    private long reached = -1;  
-    private long reachedTimestamp = -1;
-    /** Total number of blocks. */
-    int blockTotal; 
-    /** Number of safe blocks. */
-    int blockSafe;
-    /** Number of blocks needed to satisfy safe mode threshold condition */
-    private int blockThreshold;
-    /** Number of blocks needed before populating replication queues */
-    private int blockReplQueueThreshold;
-    /** time of the last status printout */
-    private long lastStatusReport = 0;
-    /**
-     * Was safemode entered automatically because available resources were low.
-     * Make it volatile so that getSafeModeTip can read the latest value
-     * without taking a lock.
-     */
-    private volatile boolean resourcesLow = false;
-    /** Should safemode adjust its block totals as blocks come in */
-    private boolean shouldIncrementallyTrackBlocks = false;
-    /** counter for tracking startup progress of reported blocks */
-    private Counter awaitingReportedBlocksCounter;
-    
-    /**
-     * Creates SafeModeInfo when the name node enters
-     * automatic safe mode at startup.
-     *  
-     * @param conf configuration
-     */
-    private SafeModeInfo(Configuration conf) {
-      this.threshold = conf.getFloat(DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY,
-          DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_DEFAULT);
-      if(threshold > 1.0) {
-        LOG.warn("The threshold value should't be greater than 1, threshold: " + threshold);
-      }
-      this.datanodeThreshold = conf.getInt(
-        DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY,
-        DFS_NAMENODE_SAFEMODE_MIN_DATANODES_DEFAULT);
-      this.extension = conf.getInt(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
-      int minReplication =
-          conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY,
-              DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_DEFAULT);
-      // DFS_NAMENODE_SAFEMODE_REPLICATION_MIN_KEY is an expert level setting,
-      // setting this lower than the min replication is not recommended
-      // and/or dangerous for production setups.
-      // When it's unset, safeReplication will use dfs.namenode.replication.min
-      this.safeReplication =
-          conf.getInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_REPLICATION_MIN_KEY,
-              minReplication);
-
-      LOG.info(DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY + " = " + threshold);
-      LOG.info(DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY + " = " + datanodeThreshold);
-      LOG.info(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY + "     = " + extension);
-
-      // default to safe mode threshold (i.e., don't populate queues before leaving safe mode)
-      this.replQueueThreshold = 
-        conf.getFloat(DFS_NAMENODE_REPL_QUEUE_THRESHOLD_PCT_KEY,
-                      (float) threshold);
-      this.blockTotal = 0; 
-      this.blockSafe = 0;
-    }
-
-    /**
-     * In the HA case, the StandbyNode can be in safemode while the namespace
-     * is modified by the edit log tailer. In this case, the number of total
-     * blocks changes as edits are processed (eg blocks are added and deleted).
-     * However, we don't want to do the incremental tracking during the
-     * startup-time loading process -- only once the initial total has been
-     * set after the image has been loaded.
-     */
-    private boolean shouldIncrementallyTrackBlocks() {
-      return shouldIncrementallyTrackBlocks;
-    }
-
-    /**
-     * Creates SafeModeInfo when safe mode is entered manually, or because
-     * available resources are low.
-     *
-     * The {@link #threshold} is set to 1.5 so that it could never be reached.
-     * {@link #blockTotal} is set to -1 to indicate that safe mode is manual.
-     * 
-     * @see SafeModeInfo
-     */
-    private SafeModeInfo(boolean resourcesLow) {
-      this.threshold = 1.5f;  // this threshold can never be reached
-      this.datanodeThreshold = Integer.MAX_VALUE;
-      this.extension = Integer.MAX_VALUE;
-      this.safeReplication = Short.MAX_VALUE + 1; // more than maxReplication
-      this.replQueueThreshold = 1.5f; // can never be reached
-      this.blockTotal = -1;
-      this.blockSafe = -1;
-      this.resourcesLow = resourcesLow;
-      enter();
-      reportStatus("STATE* Safe mode is ON.", true);
-    }
-      
-    /**
-     * Check if safe mode is on.
-     * @return true if in safe mode
-     */
-    private synchronized boolean isOn() {
-      doConsistencyCheck();
-      return this.reached >= 0;
-    }
-      
-    /**
-     * Enter safe mode.
-     */
-    private void enter() {
-      this.reached = 0;
-      this.reachedTimestamp = 0;
-    }
-      
-    /**
-     * Leave safe mode.
-     * <p>
-     * Check for invalid, under- & over-replicated blocks in the end of startup.
-     * @param force - true to force exit
-     */
-    private synchronized void leave(boolean force) {
-      // if not done yet, initialize replication queues.
-      // In the standby, do not populate repl queues
-      if (!blockManager.isPopulatingReplQueues() && blockManager.shouldPopulateReplQueues()) {
-        blockManager.initializeReplQueues();
-      }
-
-
-      if (!force && (blockManager.getBytesInFuture() > 0)) {
-        LOG.error("Refusing to leave safe mode without a force flag. " +
-            "Exiting safe mode will cause a deletion of " + blockManager
-            .getBytesInFuture() + " byte(s). Please use " +
-            "-forceExit flag to exit safe mode forcefully if data loss is " +
-            "acceptable.");
-        return;
-      }
-
-      long timeInSafemode = now() - startTime;
-      NameNode.stateChangeLog.info("STATE* Leaving safe mode after " 
-                                    + timeInSafemode/1000 + " secs");
-      NameNode.getNameNodeMetrics().setSafeModeTime((int) timeInSafemode);
-
-      //Log the following only once (when transitioning from ON -> OFF)
-      if (reached >= 0) {
-        NameNode.stateChangeLog.info("STATE* Safe mode is OFF"); 
-      }
-      reached = -1;
-      reachedTimestamp = -1;
-      safeMode = null;
-      final NetworkTopology nt = blockManager.getDatanodeManager().getNetworkTopology();
-      NameNode.stateChangeLog.info("STATE* Network topology has "
-          + nt.getNumOfRacks() + " racks and "
-          + nt.getNumOfLeaves() + " datanodes");
-      NameNode.stateChangeLog.info("STATE* UnderReplicatedBlocks has "
-          + blockManager.numOfUnderReplicatedBlocks() + " blocks");
-
-      startSecretManagerIfNecessary();
-
-      // If startup has not yet completed, end safemode phase.
-      StartupProgress prog = NameNode.getStartupProgress();
-      if (prog.getStatus(Phase.SAFEMODE) != Status.COMPLETE) {
-        prog.endStep(Phase.SAFEMODE, STEP_AWAITING_REPORTED_BLOCKS);
-        prog.endPhase(Phase.SAFEMODE);
-      }
-    }
-
-    /**
-     * Check whether we have reached the threshold for 
-     * initializing replication queues.
-     */
-    private synchronized boolean canInitializeReplQueues() {
-      return blockManager.shouldPopulateReplQueues()
-          && blockSafe >= blockReplQueueThreshold;
-    }
-      
-    /** 
-     * Safe mode can be turned off iff 
-     * the threshold is reached and 
-     * the extension time have passed.
-     * @return true if can leave or false otherwise.
-     */
-    private synchronized boolean canLeave() {
-      if (reached == 0) {
-        return false;
-      }
-
-      if (monotonicNow() - reached < extension) {
-        reportStatus("STATE* Safe mode ON, in safe mode extension.", false);
-        return false;
-      }
-
-      if (needEnter()) {
-        reportStatus("STATE* Safe mode ON, thresholds not met.", false);
-        return false;
-      }
-
-      return true;
-    }
-      
-    /** 
-     * There is no need to enter safe mode 
-     * if DFS is empty or {@link #threshold} == 0
-     */
-    private boolean needEnter() {
-      return (threshold != 0 && blockSafe < blockThreshold) ||
-        (datanodeThreshold != 0 && getNumLiveDataNodes() < datanodeThreshold) ||
-        (!nameNodeHasResourcesAvailable());
-    }
-      
-    /**
-     * Check and trigger safe mode if needed. 
-     */
-    private void checkMode() {
-      // Have to have write-lock since leaving safemode initializes
-      // repl queues, which requires write lock
-      assert hasWriteLock();
-      if (inTransitionToActive()) {
-        return;
-      }
-      // if smmthread is already running, the block threshold must have been 
-      // reached before, there is no need to enter the safe mode again
-      if (smmthread == null && needEnter()) {
-        enter();
-        // check if we are ready to initialize replication queues
-        if (canInitializeReplQueues() && !blockManager.isPopulatingReplQueues()
-            && !haEnabled) {
-          blockManager.initializeReplQueues();
-        }
-        reportStatus("STATE* Safe mode ON.", false);
-        return;
-      }
-      // the threshold is reached or was reached before
-      if (!isOn() ||                           // safe mode is off
-          extension <= 0 || threshold <= 0) {  // don't need to wait
-        this.leave(false); // leave safe mode
-        return;
-      }
-      if (reached > 0) {  // threshold has already been reached before
-        reportStatus("STATE* Safe mode ON.", false);
-        return;
-      }
-      // start monitor
-      reached = monotonicNow();
-      reachedTimestamp = now();
-      if (smmthread == null) {
-        smmthread = new Daemon(new SafeModeMonitor());
-        smmthread.start();
-        reportStatus("STATE* Safe mode extension entered.", true);
-      }
-
-      // check if we are ready to initialize replication queues
-      if (canInitializeReplQueues() && !blockManager.isPopulatingReplQueues() && !haEnabled) {
-        blockManager.initializeReplQueues();
-      }
-    }
-      
-    /**
-     * Set total number of blocks.
-     */
-    private synchronized void setBlockTotal(int total) {
-      this.blockTotal = total;
-      this.blockThreshold = (int) (blockTotal * threshold);
-      this.blockReplQueueThreshold = 
-        (int) (blockTotal * replQueueThreshold);
-      if (haEnabled) {
-        // After we initialize the block count, any further namespace
-        // modifications done while in safe mode need to keep track
-        // of the number of total blocks in the system.
-        this.shouldIncrementallyTrackBlocks = true;
-      }
-      if(blockSafe < 0)
-        this.blockSafe = 0;
-      checkMode();
-    }
-      
-    /**
-     * Increment number of safe blocks if current block has 
-     * reached minimal replication.
-     * @param replication current replication 
-     */
-    private synchronized void incrementSafeBlockCount(short replication) {
-      if (replication == safeReplication) {
-        this.blockSafe++;
-
-        // Report startup progress only if we haven't completed startup yet.
-        StartupProgress prog = NameNode.getStartupProgress();
-        if (prog.getStatus(Phase.SAFEMODE) != Status.COMPLETE) {
-          if (this.awaitingReportedBlocksCounter == null) {
-            this.awaitingReportedBlocksCounter = prog.getCounter(Phase.SAFEMODE,
-              STEP_AWAITING_REPORTED_BLOCKS);
-          }
-          this.awaitingReportedBlocksCounter.increment();
-        }
-
-        checkMode();
-      }
-    }
-      
-    /**
-     * Decrement number of safe blocks if current block has 
-     * fallen below minimal replication.
-     * @param replication current replication 
-     */
-    private synchronized void decrementSafeBlockCount(short replication) {
-      if (replication == safeReplication-1) {
-        this.blockSafe--;
-        //blockSafe is set to -1 in manual / low resources safemode
-        assert blockSafe >= 0 || isManual() || areResourcesLow();
-        checkMode();
-      }
-    }
-
-    /**
-     * Check if safe mode was entered manually
-     */
-    private boolean isManual() {
-      return extension == Integer.MAX_VALUE;
-    }
-
-    /**
-     * Set manual safe mode.
-     */
-    private synchronized void setManual() {
-      extension = Integer.MAX_VALUE;
-    }
-
-    /**
-     * Check if safe mode was entered due to resources being low.
-     */
-    private boolean areResourcesLow() {
-      return resourcesLow;
-    }
-
-    /**
-     * Set that resources are low for this instance of safe mode.
-     */
-    private void setResourcesLow() {
-      resourcesLow = true;
-    }
-
-    /**
-     * A tip on how safe mode is to be turned off: manually or automatically.
-     */
-    String getTurnOffTip() {
-      if(!isOn()) {
-        return "Safe mode is OFF.";
-      }
-
-      //Manual OR low-resource safemode. (Admin intervention required)
-      String adminMsg = "It was turned on manually. ";
-      if (areResourcesLow()) {
-        adminMsg = "Resources are low on NN. Please add or free up more "
-          + "resources then turn off safe mode manually. NOTE:  If you turn off"
-          + " safe mode before adding resources, "
-          + "the NN will immediately return to safe mode. ";
-      }
-      if (isManual() || areResourcesLow()) {
-        return adminMsg
-          + "Use \"hdfs dfsadmin -safemode leave\" to turn safe mode off.";
-      }
-
-      boolean thresholdsMet = true;
-      int numLive = getNumLiveDataNodes();
-      String msg = "";
-      if (blockSafe < blockThreshold) {
-        msg += String.format(
-          "The reported blocks %d needs additional %d"
-          + " blocks to reach the threshold %.4f of total blocks %d.%n",
-                blockSafe, (blockThreshold - blockSafe), threshold, blockTotal);
-        thresholdsMet = false;
-      } else {
-        msg += String.format("The reported blocks %d has reached the threshold"
-            + " %.4f of total blocks %d. ", blockSafe, threshold, blockTotal);
-      }
-      if (numLive < datanodeThreshold) {
-        msg += String.format(
-          "The number of live datanodes %d needs an additional %d live "
-          + "datanodes to reach the minimum number %d.%n",
-          numLive, (datanodeThreshold - numLive), datanodeThreshold);
-        thresholdsMet = false;
-      } else {
-        msg += String.format("The number of live datanodes %d has reached "
-            + "the minimum number %d. ",
-            numLive, datanodeThreshold);
-      }
-
-      if(blockManager.getBytesInFuture() > 0) {
-        msg += "Name node detected blocks with generation stamps " +
-            "in future. This means that Name node metadata is inconsistent." +
-            "This can happen if Name node metadata files have been manually " +
-            "replaced. Exiting safe mode will cause loss of " + blockManager
-            .getBytesInFuture() + " byte(s). Please restart name node with " +
-            "right metadata or use \"hdfs dfsadmin -safemode forceExit" +
-            "if you are certain that the NameNode was started with the" +
-            "correct FsImage and edit logs. If you encountered this during" +
-            "a rollback, it is safe to exit with -safemode forceExit.";
-        return msg;
-      }
-
-
-      msg += (reached > 0) ? "In safe mode extension. " : "";
-      msg += "Safe mode will be turned off automatically ";
-
-      if (!thresholdsMet) {
-        msg += "once the thresholds have been reached.";
-      } else if (reached + extension - monotonicNow() > 0) {
-        msg += ("in " + (reached + extension - monotonicNow()) / 1000 + " seconds.");
-      } else {
-        msg += "soon.";
-      }
-
-      return msg;
-    }
-
-    /**
-     * Print status every 20 seconds.
-     */
-    private void reportStatus(String msg, boolean rightNow) {
-      long curTime = now();
-      if(!rightNow && (curTime - lastStatusReport < 20 * 1000))
-        return;
-      NameNode.stateChangeLog.info(msg + " \n" + getTurnOffTip());
-      lastStatusReport = curTime;
-    }
-
-    @Override
-    public String toString() {
-      String resText = "Current safe blocks = " 
-        + blockSafe 
-        + ". Target blocks = " + blockThreshold + " for threshold = %" + threshold
-        + ". Minimal replication = " + safeReplication + ".";
-      if (reached > 0) 
-        resText += " Threshold was reached " + new Date(reachedTimestamp) + ".";
-      return resText;
-    }
-      
-    /**
-     * Checks consistency of the class state.
-     * This is costly so only runs if asserts are enabled.
-     */
-    private void doConsistencyCheck() {
-      boolean assertsOn = false;
-      assert assertsOn = true; // set to true if asserts are on
-      if (!assertsOn) return;
-      
-      if (blockTotal == -1 && blockSafe == -1) {
-        return; // manual safe mode
-      }
-      int activeBlocks = blockManager.getActiveBlockCount();
-      if ((blockTotal != activeBlocks) &&
-          !(blockSafe >= 0 && blockSafe <= blockTotal)) {
-        throw new AssertionError(
-            " SafeMode: Inconsistent filesystem state: "
-        + "SafeMode data: blockTotal=" + blockTotal
-        + " blockSafe=" + blockSafe + "; "
-        + "BlockManager data: active="  + activeBlocks);
-      }
-    }
-
-    private synchronized void adjustBlockTotals(int deltaSafe, int deltaTotal) {
-      if (!shouldIncrementallyTrackBlocks) {
-        return;
-      }
-      assert haEnabled;
-      
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Adjusting block totals from " +
-            blockSafe + "/" + blockTotal + " to " +
-            (blockSafe + deltaSafe) + "/" + (blockTotal + deltaTotal));
-      }
-      assert blockSafe + deltaSafe >= 0 : "Can't reduce blockSafe " +
-        blockSafe + " by " + deltaSafe + ": would be negative";
-      assert blockTotal + deltaTotal >= 0 : "Can't reduce blockTotal " +
-        blockTotal + " by " + deltaTotal + ": would be negative";
-      
-      blockSafe += deltaSafe;
-      setBlockTotal(blockTotal + deltaTotal);
-    }
-  }
-    
-  /**
-   * Periodically check whether it is time to leave safe mode.
-   * This thread starts when the threshold level is reached.
-   *
-   */
-  class SafeModeMonitor implements Runnable {
-    /** interval in msec for checking safe mode: {@value} */
-    private static final long recheckInterval = 1000;
-      
-    /**
-     */
-    @Override
-    public void run() {
-      while (fsRunning) {
-        writeLock();
-        try {
-          if (safeMode == null) { // Not in safe mode.
-            break;
-          }
-          if (safeMode.canLeave()) {
-            // Leave safe mode.
-            safeMode.leave(false);
-            smmthread = null;
-            break;
-          }
-        } finally {
-          writeUnlock();
-        }
-
-        try {
-          Thread.sleep(recheckInterval);
-        } catch (InterruptedException ie) {
-          // Ignored
-        }
-      }
-      if (!fsRunning) {
-        LOG.info("NameNode is being shutdown, exit SafeModeMonitor thread");
-      }
-    }
-  }
-    
   boolean setSafeMode(SafeModeAction action) throws IOException {
     if (action != SafeModeAction.SAFEMODE_GET) {
       checkSuperuserPrivilege();
@@ -4624,9 +3993,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
               .getBytesInFuture() + " byte(s). Please use " +
               "-forceExit flag to exit safe mode forcefully and data loss is " +
               "acceptable.");
-          return isInSafeMode();
+        } else {
+          leaveSafeMode();
         }
-        leaveSafeMode();
         break;
       case SAFEMODE_ENTER: // enter safe mode
         enterSafeMode(false);
@@ -4635,7 +4004,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         if (blockManager.getBytesInFuture() > 0) {
           LOG.warn("Leaving safe mode due to forceExit. This will cause a data "
               + "loss of " + blockManager.getBytesInFuture() + " byte(s).");
-          safeMode.leave(true);
           blockManager.clearBytesInFuture();
         } else {
           LOG.warn("forceExit used when normal exist would suffice. Treating " +
@@ -4648,85 +4016,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
     }
     return isInSafeMode();
-  }
-
-  @Override
-  public void checkSafeMode() {
-    // safeMode is volatile, and may be set to null at any time
-    SafeModeInfo safeMode = this.safeMode;
-    if (safeMode != null) {
-      safeMode.checkMode();
-    }
-  }
-
-  @Override
-  public boolean isInSafeMode() {
-    // safeMode is volatile, and may be set to null at any time
-    SafeModeInfo safeMode = this.safeMode;
-    if (safeMode == null)
-      return false;
-    return safeMode.isOn();
-  }
-
-  @Override
-  public boolean isInStartupSafeMode() {
-    // safeMode is volatile, and may be set to null at any time
-    SafeModeInfo safeMode = this.safeMode;
-    if (safeMode == null)
-      return false;
-    // If the NN is in safemode, and not due to manual / low resources, we
-    // assume it must be because of startup. If the NN had low resources during
-    // startup, we assume it came out of startup safemode and it is now in low
-    // resources safemode
-    return !safeMode.isManual() && !safeMode.areResourcesLow()
-      && safeMode.isOn();
-  }
-
-  @Override
-  public void incrementSafeBlockCount(int replication) {
-    // safeMode is volatile, and may be set to null at any time
-    SafeModeInfo safeMode = this.safeMode;
-    if (safeMode == null)
-      return;
-    safeMode.incrementSafeBlockCount((short)replication);
-  }
-
-  @Override
-  public void decrementSafeBlockCount(BlockInfo b) {
-    // safeMode is volatile, and may be set to null at any time
-    SafeModeInfo safeMode = this.safeMode;
-    if (safeMode == null) // mostly true
-      return;
-    BlockInfo storedBlock = getStoredBlock(b);
-    if (storedBlock.isComplete()) {
-      safeMode.decrementSafeBlockCount((short)blockManager.countNodes(b).liveReplicas());
-    }
-  }
-  
-  /**
-   * Adjust the total number of blocks safe and expected during safe mode.
-   * If safe mode is not currently on, this is a no-op.
-   * @param deltaSafe the change in number of safe blocks
-   * @param deltaTotal the change i nnumber of total blocks expected
-   */
-  @Override
-  public void adjustSafeModeBlockTotals(int deltaSafe, int deltaTotal) {
-    // safeMode is volatile, and may be set to null at any time
-    SafeModeInfo safeMode = this.safeMode;
-    if (safeMode == null)
-      return;
-    safeMode.adjustBlockTotals(deltaSafe, deltaTotal);
-  }
-
-  /**
-   * Set the total number of blocks in the system. 
-   */
-  public void setBlockTotal(long completeBlocksTotal) {
-    // safeMode is volatile, and may be set to null at any time
-    SafeModeInfo safeMode = this.safeMode;
-    if (safeMode == null)
-      return;
-    safeMode.setBlockTotal((int) completeBlocksTotal);
   }
 
   /**
@@ -4772,6 +4061,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 
+
+  @Override
+  public boolean isInSafeMode() {
+    return isInManualOrResourceLowSafeMode() || blockManager.isInSafeMode();
+  }
+
+  @Override
+  public boolean isInStartupSafeMode() {
+    return !isInManualOrResourceLowSafeMode() && blockManager.isInSafeMode();
+  }
+
   /**
    * Enter safe mode. If resourcesLow is false, then we assume it is manual
    * @throws IOException
@@ -4792,20 +4092,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (isEditlogOpenForWrite) {
         getEditLog().logSyncAll();
       }
-      if (!isInSafeMode()) {
-        safeMode = new SafeModeInfo(resourcesLow);
-        return;
-      }
-      if (resourcesLow) {
-        safeMode.setResourcesLow();
-      } else {
-        safeMode.setManual();
-      }
+      setManualAndResourceLowSafeMode(!resourcesLow, resourcesLow);
+      NameNode.stateChangeLog.info("STATE* Safe mode is ON.\n" +
+          getSafeModeTip());
       if (isEditlogOpenForWrite) {
         getEditLog().logSyncAll();
       }
-      NameNode.stateChangeLog.info("STATE* Safe mode is ON"
-          + safeMode.getTurnOffTip());
+      NameNode.stateChangeLog.info("STATE* Safe mode is ON" + getSafeModeTip());
     } finally {
       writeUnlock();
     }
@@ -4821,29 +4114,40 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         NameNode.stateChangeLog.info("STATE* Safe mode is already OFF"); 
         return;
       }
-      safeMode.leave(false);
+      setManualAndResourceLowSafeMode(false, false);
+      blockManager.leaveSafeMode(true);
     } finally {
       writeUnlock();
     }
   }
-    
+
   String getSafeModeTip() {
-    // There is no need to take readLock.
-    // Don't use isInSafeMode as this.safeMode might be set to null.
-    // after isInSafeMode returns.
-    boolean inSafeMode;
-    SafeModeInfo safeMode = this.safeMode;
-    if (safeMode == null) {
-      inSafeMode = false;
-    } else {
-      inSafeMode = safeMode.isOn();
+    String cmd = "Use \"hdfs dfsadmin -safemode leave\" to turn safe mode off.";
+    synchronized (this) {
+      if (resourceLowSafeMode) {
+        return "Resources are low on NN. Please add or free up more resources"
+            + "then turn off safe mode manually. NOTE:  If you turn off safe "
+            + "mode before adding resources, the NN will immediately return to "
+            + "safe mode. " + cmd;
+      } else if (manualSafeMode) {
+        return "It was turned on manually. " + cmd;
+      }
     }
 
-    if (!inSafeMode) {
-      return "";
-    } else {
-      return safeMode.getTurnOffTip();
-    }
+    return blockManager.getSafeModeTip();
+  }
+
+  /**
+   * @return true iff it is in manual safe mode or resource low safe mode.
+   */
+  private synchronized boolean isInManualOrResourceLowSafeMode() {
+    return manualSafeMode || resourceLowSafeMode;
+  }
+
+  private synchronized void setManualAndResourceLowSafeMode(boolean manual,
+      boolean resourceLow) {
+    this.manualSafeMode = manual;
+    this.resourceLowSafeMode = resourceLow;
   }
 
   CheckpointSignature rollEditLog() throws IOException {
@@ -6326,11 +5630,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public ReentrantLock getCpLockForTests() {
     return cpLock;
   }
-
-  @VisibleForTesting
-  public SafeModeInfo getSafeModeInfoForTests() {
-    return safeMode;
-  }
   
   @VisibleForTesting
   public void setNNResourceChecker(NameNodeResourceChecker nnResourceChecker) {
@@ -7391,11 +6690,5 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return blockManager.getBytesInFuture();
   }
 
-  @VisibleForTesting
-  synchronized void enableSafeModeForTesting(Configuration conf) {
-    SafeModeInfo newSafemode = new SafeModeInfo(conf);
-    newSafemode.enter();
-    this.safeMode = newSafemode;
-  }
 }
 

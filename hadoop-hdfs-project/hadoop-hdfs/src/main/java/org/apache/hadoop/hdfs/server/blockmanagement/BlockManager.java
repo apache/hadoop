@@ -69,6 +69,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
+import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
@@ -115,6 +116,8 @@ public class BlockManager implements BlockStatsMXBean {
     "generation stamp is in the future";
 
   private final Namesystem namesystem;
+
+  private final BlockManagerSafeMode bmSafeMode;
 
   private final DatanodeManager datanodeManager;
   private final HeartbeatManager heartbeatManager;
@@ -364,6 +367,8 @@ public class BlockManager implements BlockStatsMXBean {
     this.numberOfBytesInFutureBlocks = new AtomicLong();
     this.inRollBack = isInRollBackMode(NameNode.getStartupOption(conf));
 
+    bmSafeMode = new BlockManagerSafeMode(this, namesystem, conf);
+
     LOG.info("defaultReplication         = " + defaultReplication);
     LOG.info("maxReplication             = " + maxReplication);
     LOG.info("minReplication             = " + minReplication);
@@ -465,15 +470,17 @@ public class BlockManager implements BlockStatsMXBean {
         : false;
   }
 
-  public void activate(Configuration conf) {
+  public void activate(Configuration conf, long blockTotal) {
     pendingReplications.start();
     datanodeManager.activate(conf);
     this.replicationThread.setName("ReplicationMonitor");
     this.replicationThread.start();
     mxBeanName = MBeans.register("NameNode", "BlockStats", this);
+    bmSafeMode.activate(blockTotal);
   }
 
   public void close() {
+    bmSafeMode.close();
     try {
       replicationThread.interrupt();
       replicationThread.join(3000);
@@ -709,9 +716,8 @@ public class BlockManager implements BlockStatsMXBean {
     // count. (We may not have the minimum replica count yet if this is
     // a "forced" completion when a file is getting closed by an
     // OP_CLOSE edit on the standby).
-    namesystem.adjustSafeModeBlockTotals(0, 1);
-    namesystem.incrementSafeBlockCount(
-        Math.min(numNodes, minReplication));
+    bmSafeMode.adjustBlockTotals(0, 1);
+    bmSafeMode.incrementSafeBlockCount(Math.min(numNodes, minReplication));
   }
 
   /**
@@ -768,7 +774,7 @@ public class BlockManager implements BlockStatsMXBean {
     
     // Adjust safe-mode totals, since under-construction blocks don't
     // count in safe-mode.
-    namesystem.adjustSafeModeBlockTotals(
+    bmSafeMode.adjustBlockTotals(
         // decrement safe if we had enough
         targets.length >= minReplication ? -1 : 0,
         // always decrement total blocks
@@ -1111,7 +1117,7 @@ public class BlockManager implements BlockStatsMXBean {
       removeStoredBlock(block, node);
       invalidateBlocks.remove(node, block);
     }
-    namesystem.checkSafeMode();
+    checkSafeMode();
   }
 
   /**
@@ -1777,6 +1783,76 @@ public class BlockManager implements BlockStatsMXBean {
     return leaseId;
   }
 
+  public void registerDatanode(DatanodeRegistration nodeReg)
+      throws IOException {
+    assert namesystem.hasWriteLock();
+    datanodeManager.registerDatanode(nodeReg);
+    bmSafeMode.checkSafeMode();
+  }
+
+  /**
+   * Set the total number of blocks in the system.
+   * If safe mode is not currently on, this is a no-op.
+   */
+  public void setBlockTotal(long total) {
+    if (bmSafeMode.isInSafeMode()) {
+      bmSafeMode.setBlockTotal(total);
+      bmSafeMode.checkSafeMode();
+    }
+  }
+
+  public boolean isInSafeMode() {
+    return bmSafeMode.isInSafeMode();
+  }
+
+  public String getSafeModeTip() {
+    return bmSafeMode.getSafeModeTip();
+  }
+
+  public void leaveSafeMode(boolean force) {
+    bmSafeMode.leaveSafeMode(force);
+  }
+
+  void checkSafeMode() {
+    bmSafeMode.checkSafeMode();
+  }
+
+  /**
+   * Removes the blocks from blocksmap and updates the safemode blocks total
+   *
+   * @param blocks
+   *          An instance of {@link BlocksMapUpdateInfo} which contains a list
+   *          of blocks that need to be removed from blocksMap
+   */
+  public void removeBlocksAndUpdateSafemodeTotal(BlocksMapUpdateInfo blocks) {
+    assert namesystem.hasWriteLock();
+    // In the case that we are a Standby tailing edits from the
+    // active while in safe-mode, we need to track the total number
+    // of blocks and safe blocks in the system.
+    boolean trackBlockCounts = bmSafeMode.isSafeModeTrackingBlocks();
+    int numRemovedComplete = 0, numRemovedSafe = 0;
+
+    for (BlockInfo b : blocks.getToDeleteList()) {
+      if (trackBlockCounts) {
+        if (b.isComplete()) {
+          numRemovedComplete++;
+          if (checkMinReplication(b)) {
+            numRemovedSafe++;
+          }
+        }
+      }
+      removeBlock(b);
+    }
+    if (trackBlockCounts) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Adjusting safe-mode totals for deletion."
+            + "decreasing safeBlocks by " + numRemovedSafe
+            + ", totalBlocks by " + numRemovedComplete);
+      }
+      bmSafeMode.adjustBlockTotals(-numRemovedSafe, -numRemovedComplete);
+    }
+  }
+
   /**
    * StatefulBlockInfo is used to build the "toUC" list, which is a list of
    * updates to the information about under-construction blocks.
@@ -2162,7 +2238,7 @@ public class BlockManager implements BlockStatsMXBean {
         if (namesystem.isInSnapshot(storedBlock)) {
           int numOfReplicas = storedBlock.getUnderConstructionFeature()
               .getNumExpectedLocations();
-          namesystem.incrementSafeBlockCount(numOfReplicas);
+          bmSafeMode.incrementSafeBlockCount(numOfReplicas);
         }
         //and fall through to next clause
       }      
@@ -2543,7 +2619,7 @@ public class BlockManager implements BlockStatsMXBean {
       // only complete blocks are counted towards that.
       // In the case that the block just became complete above, completeBlock()
       // handles the safe block count maintenance.
-      namesystem.incrementSafeBlockCount(numCurrentReplica);
+      bmSafeMode.incrementSafeBlockCount(numCurrentReplica);
     }
   }
 
@@ -2618,7 +2694,7 @@ public class BlockManager implements BlockStatsMXBean {
       // Is no-op if not in safe mode.
       // In the case that the block just became complete above, completeBlock()
       // handles the safe block count maintenance.
-      namesystem.incrementSafeBlockCount(numCurrentReplica);
+      bmSafeMode.incrementSafeBlockCount(numCurrentReplica);
     }
     
     // if file is under construction, then done for now
@@ -3048,7 +3124,7 @@ public class BlockManager implements BlockStatsMXBean {
       //
       BlockCollection bc = getBlockCollection(storedBlock);
       if (bc != null) {
-        namesystem.decrementSafeBlockCount(storedBlock);
+        bmSafeMode.decrementSafeBlockCount(storedBlock);
         updateNeededReplications(storedBlock, -1, 0);
       }
 
