@@ -33,7 +33,7 @@ struct Options {
   /**
    * Maximum number of retries for RPC operations
    **/
-  const static int NO_RPC_RETRY = -1;
+  const static int kNoRetry = -1;
   int max_rpc_retries;
 
   /**

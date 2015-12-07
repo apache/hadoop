@@ -16,25 +16,32 @@
  * limitations under the License.
  */
 
-#include "mock_connection.h"
+#include "common/retry_policy.h"
 
 namespace hdfs {
 
-MockConnectionBase::MockConnectionBase(::asio::io_service *io_service)
-    : io_service_(io_service)
-{}
-
-MockConnectionBase::~MockConnectionBase() {}
-
-ProducerResult SharedMockConnection::Produce() {
-  if (auto shared_prducer = shared_connection_data_.lock()) {
-    return shared_prducer->Produce();
+RetryAction FixedDelayRetryPolicy::ShouldRetry(
+    const Status &s, uint64_t retries, uint64_t failovers,
+    bool isIdempotentOrAtMostOnce) const {
+  (void)s;
+  (void)isIdempotentOrAtMostOnce;
+  if (retries + failovers >= max_retries_) {
+    return RetryAction::fail(
+        "Failovers (" + std::to_string(retries + failovers) +
+        ") exceeded maximum retries (" + std::to_string(max_retries_) + ")");
   } else {
-    assert(false && "No producer registered");
-    return std::make_pair(asio::error_code(), "");
+    return RetryAction::retry(delay_);
   }
 }
 
-std::weak_ptr<SharedConnectionData> SharedMockConnection::shared_connection_data_;
+RetryAction NoRetryPolicy::ShouldRetry(
+    const Status &s, uint64_t retries, uint64_t failovers,
+    bool isIdempotentOrAtMostOnce) const {
+  (void)s;
+  (void)retries;
+  (void)failovers;
+  (void)isIdempotentOrAtMostOnce;
+  return RetryAction::fail("No retry");
+}
 
 }

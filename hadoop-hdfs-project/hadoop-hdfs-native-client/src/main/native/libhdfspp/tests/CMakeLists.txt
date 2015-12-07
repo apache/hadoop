@@ -51,6 +51,10 @@ add_executable(sasl_digest_md5_test sasl_digest_md5_test.cc)
 target_link_libraries(sasl_digest_md5_test common ${OPENSSL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
 add_test(sasl_digest_md5 sasl_digest_md5_test)
 
+add_executable(retry_policy_test retry_policy_test.cc)
+target_link_libraries(retry_policy_test common gmock_main ${CMAKE_THREAD_LIBS_INIT})
+add_test(retry_policy retry_policy_test)
+
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_executable(rpc_engine_test rpc_engine_test.cc ${PROTO_TEST_SRCS} ${PROTO_TEST_HDRS} $<TARGET_OBJECTS:test_common>)
 target_link_libraries(rpc_engine_test rpc proto common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})

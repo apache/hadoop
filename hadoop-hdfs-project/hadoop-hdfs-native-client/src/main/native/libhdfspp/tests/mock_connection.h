@@ -29,7 +29,21 @@
 
 namespace hdfs {
 
-class MockConnectionBase : public AsyncStream{
+typedef std::pair<asio::error_code, std::string> ProducerResult;
+class AsioProducer {
+public:
+  /*
+   *  Return either:
+   *     (::asio::error_code(), <some data>) for a good result
+   *     (<an ::asio::error instance>, <anything>) to pass an error to the caller
+   *     (::asio::error::would_block, <anything>) to block the next call forever
+   */
+
+  virtual ProducerResult Produce() = 0;
+};
+
+
+class MockConnectionBase : public AsioProducer, public AsyncStream {
 public:
   MockConnectionBase(::asio::io_service *io_service);
   virtual ~MockConnectionBase();
@@ -40,6 +54,9 @@ public:
                                  std::size_t bytes_transferred) > handler) override {
     if (produced_.size() == 0) {
       ProducerResult r = Produce();
+      if (r.first == asio::error::would_block) {
+        return; // No more reads to do
+      }
       if (r.first) {
         io_service_->post(std::bind(handler, r.first, 0));
         return;
@@ -62,6 +79,13 @@ public:
     io_service_->post(std::bind(handler, asio::error_code(), asio::buffer_size(buf)));
   }
 
+  template <class Endpoint, class Callback>
+  void async_connect(const Endpoint &, Callback &&handler) {
+    io_service_->post([handler]() { handler(::asio::error_code()); });
+  }
+
+  virtual void cancel() {}
+  virtual void close() {}
 protected:
   virtual ProducerResult Produce() = 0;
   ::asio::io_service *io_service_;
@@ -69,6 +93,48 @@ protected:
 private:
   asio::streambuf produced_;
 };
+
+
+
+
+class SharedConnectionData : public AsioProducer {
+ public:
+  bool checkProducerForConnect = false;
+
+  MOCK_METHOD0(Produce, ProducerResult());
+};
+
+class SharedMockConnection : public MockConnectionBase {
+public:
+  using MockConnectionBase::MockConnectionBase;
+
+  template <class Endpoint, class Callback>
+  void async_connect(const Endpoint &, Callback &&handler) {
+    auto data = shared_connection_data_.lock();
+    assert(data);
+
+    if (!data->checkProducerForConnect) {
+      io_service_->post([handler]() { handler(::asio::error_code()); });
+    } else {
+      ProducerResult result = Produce();
+      if (result.first == asio::error::would_block) {
+        return; // Connect will hang
+      } else {
+        io_service_->post([handler, result]() { handler( result.first); });
+      }
+    }
+  }
+
+  static void SetSharedConnectionData(std::shared_ptr<SharedConnectionData> new_producer) {
+    shared_connection_data_ = new_producer; // get a weak reference to it
+  }
+
+protected:
+  ProducerResult Produce() override;
+
+  static std::weak_ptr<SharedConnectionData> shared_connection_data_;
+};
+
 }
 
 #endif
