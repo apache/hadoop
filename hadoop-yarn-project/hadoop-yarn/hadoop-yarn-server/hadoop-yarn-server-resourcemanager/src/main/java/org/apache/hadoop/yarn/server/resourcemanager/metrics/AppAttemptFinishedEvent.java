@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.metrics;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 
@@ -31,6 +32,7 @@ public class AppAttemptFinishedEvent extends
   private String diagnosticsInfo;
   private FinalApplicationStatus appStatus;
   private YarnApplicationAttemptState state;
+  private ContainerId masterContainerId;
 
   public AppAttemptFinishedEvent(
       ApplicationAttemptId appAttemptId,
@@ -39,7 +41,8 @@ public class AppAttemptFinishedEvent extends
       String diagnosticsInfo,
       FinalApplicationStatus appStatus,
       YarnApplicationAttemptState state,
-      long finishedTime) {
+      long finishedTime,
+      ContainerId masterContainerId) {
     super(SystemMetricsEventType.APP_ATTEMPT_FINISHED, finishedTime);
     this.appAttemptId = appAttemptId;
     // This is the tracking URL after the application attempt is finished
@@ -48,6 +51,7 @@ public class AppAttemptFinishedEvent extends
     this.diagnosticsInfo = diagnosticsInfo;
     this.appStatus = appStatus;
     this.state = state;
+    this.masterContainerId = masterContainerId;
   }
 
   @Override
@@ -77,6 +81,10 @@ public class AppAttemptFinishedEvent extends
 
   public YarnApplicationAttemptState getYarnApplicationAttemptState() {
     return state;
+  }
+
+  public ContainerId getMasterContainerId() {
+    return masterContainerId;
   }
 
 }
