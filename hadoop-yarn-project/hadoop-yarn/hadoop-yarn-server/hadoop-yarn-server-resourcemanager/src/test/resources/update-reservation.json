@@ -1,0 +1,31 @@
+{
+  "reservation-id" : "reservation_12341234_1",
+  "reservation-definition" : {
+     "arrival" : 1765541532000,
+     "deadline" : 1765542252000,
+     "reservation-name" : "res_1",
+     "reservation-requests" : {
+        "reservation-request-interpreter" : 0,
+        "reservation-request" : [
+           {
+             "duration" : 60,
+             "num-containers" : 100,
+             "min-concurrency" : 1,
+             "capability" : {
+               "memory" : 1024,
+               "vCores" : 1
+             }
+           },
+           {
+             "duration" : 120,
+             "num-containers" : 40,
+             "min-concurrency" : 1,
+             "capability" : {
+               "memory" : 1024,
+               "vCores" : 1
+             }
+           }
+          ]
+     }
+   }
+}
