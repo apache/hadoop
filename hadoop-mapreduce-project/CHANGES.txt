@@ -380,6 +380,7 @@ Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+
   NEW FEATURES
 
   IMPROVEMENTS
@@ -454,6 +455,8 @@ Release 2.7.2 - UNRELEASED
 
     MAPREDUCE-6451. DistCp has incorrect chunkFilePath for multiple jobs when
     strategy is dynamic (Kuhu Shukla via kihwal)
+
+    MAPREDUCE-6566. Add retry support to mapreduce CLI tool. (Varun Vasudev via xgong)
 
 Release 2.7.1 - 2015-07-06 
 
