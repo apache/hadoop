@@ -206,9 +206,6 @@ Trunk (Unreleased)
     HDFS-8968. Erasure coding: a comprehensive I/O throughput benchmark tool.
     (Rui Li via zhz)
 
-    HDFS-9129. Move the safemode block count into BlockManager. (Mingliang Liu
-    via jing9)
-
     HDFS-8831. Trash Support for deletion in HDFS encryption zone. (xyao)
 
   OPTIMIZATIONS
@@ -895,6 +892,9 @@ Release 2.9.0 - UNRELEASED
 
     HDFS-8947. NameNode, DataNode and NFS gateway to support JvmPauseMonitor as
     a service. (Sunil G via Stevel)
+
+    HDFS-9129. Move the safemode block count into BlockManager. (Mingliang Liu
+    via jing9)
 
   OPTIMIZATIONS
 
