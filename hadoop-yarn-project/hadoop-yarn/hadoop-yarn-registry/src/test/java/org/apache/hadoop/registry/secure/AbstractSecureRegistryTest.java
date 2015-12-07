@@ -281,7 +281,7 @@ public class AbstractSecureRegistryTest extends RegistryTestHelper {
     System.setProperty(
         ZookeeperConfigOptions.PROP_ZK_SERVER_MAINTAIN_CONNECTION_DESPITE_SASL_FAILURE,
         "false");
-    RegistrySecurity.validateContext(context);
+    RegistrySecurity.validateContext(context, true);
     conf.set(MicroZookeeperServiceKeys.KEY_REGISTRY_ZKSERVICE_JAAS_CONTEXT,
         context);
     MicroZookeeperService secureZK = new MicroZookeeperService(name);

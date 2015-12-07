@@ -142,21 +142,21 @@ public class RegistrySecurity extends AbstractService {
   public static final List<ACL> WorldReadWriteACL;
 
   static {
-    List<ACL> acls = new ArrayList<ACL>();
+    List<ACL> acls = new ArrayList<>();
     acls.add(ALL_READWRITE_ACCESS);
-    WorldReadWriteACL = new CopyOnWriteArrayList<ACL>(acls);
+    WorldReadWriteACL = new CopyOnWriteArrayList<>(acls);
   }
 
   /**
    * the list of system ACLs
    */
-  private final List<ACL> systemACLs = new ArrayList<ACL>();
+  private final List<ACL> systemACLs = new ArrayList<>();
 
   /**
    * A list of digest ACLs which can be added to permissions
    * —and cleared later.
    */
-  private final List<ACL> digestACLs = new ArrayList<ACL>();
+  private final List<ACL> digestACLs = new ArrayList<>();
 
   /**
    * the default kerberos realm
@@ -366,7 +366,7 @@ public class RegistrySecurity extends AbstractService {
    * @return the client ACLs
    */
   public List<ACL> getClientACLs() {
-    List<ACL> clientACLs = new ArrayList<ACL>(systemACLs);
+    List<ACL> clientACLs = new ArrayList<>(systemACLs);
     clientACLs.addAll(digestACLs);
     return clientACLs;
   }
@@ -552,7 +552,7 @@ public class RegistrySecurity extends AbstractService {
   public List<ACL> buildACLs(String principalList, String realm, int perms)
       throws IOException {
     List<String> aclPairs = splitAclPairs(principalList, realm);
-    List<ACL> ids = new ArrayList<ACL>(aclPairs.size());
+    List<ACL> ids = new ArrayList<>(aclPairs.size());
     for (String aclPair : aclPairs) {
       ACL newAcl = new ACL();
       newAcl.setId(parse(aclPair, realm));
@@ -674,10 +674,14 @@ public class RegistrySecurity extends AbstractService {
    * Resolve the context of an entry. This is an effective test of
    * JAAS setup, because it will relay detected problems up
    * @param context context name
+   * @param raiseExceptionOnFailure should an error be raised
+   * if the context could not be found
    * @return the entry
-   * @throws RuntimeException if there is no context entry found
+   * @throws RuntimeException if there is no context entry found and
+   * {@code raiseExceptionOnFailure == true}
    */
-  public static AppConfigurationEntry[] validateContext(String context)  {
+  public static AppConfigurationEntry[] validateContext(String context,
+    boolean raiseExceptionOnFailure)  {
     if (context == null) {
       throw new RuntimeException("Null context argument");
     }
@@ -689,11 +693,16 @@ public class RegistrySecurity extends AbstractService {
     AppConfigurationEntry[] entries =
         configuration.getAppConfigurationEntry(context);
     if (entries == null) {
-      throw new RuntimeException(
-          String.format("Entry \"%s\" not found; " +
-                        "JAAS config = %s",
-              context,
-              describeProperty(Environment.JAAS_CONF_KEY) ));
+      String message = String.format("Entry \"%s\" not found; " +
+          "JAAS config = %s",
+        context,
+        describeProperty(Environment.JAAS_CONF_KEY));
+      if (raiseExceptionOnFailure) {
+        throw new RuntimeException(message);
+      } else {
+        LOG.error(message);
+        entries = new AppConfigurationEntry[0];
+      }
     }
     return entries;
   }
@@ -735,7 +744,7 @@ public class RegistrySecurity extends AbstractService {
    */
   public static void setZKSaslClientProperties(String username,
       String context)  {
-    RegistrySecurity.validateContext(context);
+    validateContext(context, false);
     enableZookeeperClientSASL();
     System.setProperty(PROP_ZK_SASL_CLIENT_USERNAME, username);
     System.setProperty(PROP_ZK_SASL_CLIENT_CONTEXT, context);
@@ -774,21 +783,6 @@ public class RegistrySecurity extends AbstractService {
   public static boolean isClientSASLEnabled() {
     return Boolean.valueOf(System.getProperty(
         ZookeeperConfigOptions.PROP_ZK_ENABLE_SASL_CLIENT, "true"));
-  }
-
-  /**
-   * Log details about the current Hadoop user at INFO.
-   * Robust against IOEs when trying to get the current user
-   */
-  public void logCurrentHadoopUser() {
-    try {
-      UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
-      LOG.info("Current user = {}",currentUser);
-      UserGroupInformation realUser = currentUser.getRealUser();
-      LOG.info("Real User = {}" , realUser);
-    } catch (IOException e) {
-      LOG.warn("Failed to get current user {}, {}", e);
-    }
   }
 
   /**
@@ -901,14 +895,8 @@ public class RegistrySecurity extends AbstractService {
   public static String getDefaultRealmInJVM() {
     try {
       return KerberosUtil.getDefaultRealm();
-      // JDK7
-    } catch (ClassNotFoundException ignored) {
-      // ignored
-    } catch (NoSuchMethodException ignored) {
-      // ignored
-    } catch (IllegalAccessException ignored) {
-      // ignored
-    } catch (InvocationTargetException ignored) {
+    } catch (ClassNotFoundException | NoSuchMethodException
+      | InvocationTargetException | IllegalAccessException ignored) {
       // ignored
     }
     return "";
@@ -922,7 +910,7 @@ public class RegistrySecurity extends AbstractService {
    */
   public ACL createACLForUser(UserGroupInformation ugi, int perms) {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Creating ACL For ", new UgiInfo(ugi));
+      LOG.debug("Creating ACL For {}", new UgiInfo(ugi));
     }
     if (!secureRegistry) {
       return ALL_READWRITE_ACCESS;
@@ -979,7 +967,8 @@ public class RegistrySecurity extends AbstractService {
       builder.append(" hasKerberosCredentials=").append(
           ugi.hasKerberosCredentials());
       builder.append(" isFromKeytab=").append(ugi.isFromKeytab());
-      builder.append(" kerberos is enabled in Hadoop =").append(UserGroupInformation.isSecurityEnabled());
+      builder.append(" kerberos is enabled in Hadoop =")
+        .append(UserGroupInformation.isSecurityEnabled());
       return builder.toString();
     }
 

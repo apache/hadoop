@@ -198,7 +198,7 @@ public class MicroZookeeperService
     String jaasContext = conf.getTrimmed(KEY_REGISTRY_ZKSERVICE_JAAS_CONTEXT);
     secureServer = StringUtils.isNotEmpty(jaasContext);
     if (secureServer) {
-      RegistrySecurity.validateContext(jaasContext);
+      RegistrySecurity.validateContext(jaasContext, true);
       RegistrySecurity.bindZKToServerJAASContext(jaasContext);
       // policy on failed auth
       System.setProperty(PROP_ZK_ALLOW_FAILED_SASL_CLIENTS,
