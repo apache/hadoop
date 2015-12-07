@@ -602,6 +602,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3456. Improve handling of incomplete TimelineEntities. (Varun Saxena 
     via rohithsharmaks)
 
+    YARN-4248. REST API for submit/update/delete Reservations. (curino)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
