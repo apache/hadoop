@@ -935,6 +935,9 @@ Release 2.6.3 - UNRELEASED
     YARN-4365. FileSystemNodeLabelStore should check for root dir existence on
     startup (Kuhu Shukla via jlowe)
 
+    YARN-4348. ZKRMStateStore.syncInternal shouldn't wait for sync completion for
+    avoiding blocking ZK's event thread. (ozawa)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
