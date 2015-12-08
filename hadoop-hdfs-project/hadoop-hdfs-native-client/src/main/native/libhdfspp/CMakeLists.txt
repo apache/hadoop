@@ -47,6 +47,10 @@ endif(DOXYGEN_FOUND)
 include_directories(
   include
   lib
+  ../libhdfs/include
+)
+
+include_directories( SYSTEM
   ${PROJECT_BINARY_DIR}/lib/proto
   third_party/asio-1.10.2/include
   third_party/rapidxml-1.13
@@ -54,7 +58,6 @@ include_directories(
   third_party/tr2
   third_party/protobuf
   ${OPENSSL_INCLUDE_DIR}
-  ../libhdfs/include
 )
 
 set(PROTO_HDFS_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../../hadoop-hdfs-client/src/main/proto)
