@@ -920,7 +920,7 @@ public class DataNode extends ReconfigurableBase
         .setSecretManager(blockPoolTokenSecretManager).build();
 
     ReconfigurationProtocolServerSideTranslatorPB reconfigurationProtocolXlator
-      = new ReconfigurationProtocolServerSideTranslatorPB(this);
+        = new ReconfigurationProtocolServerSideTranslatorPB(this);
     service = ReconfigurationProtocolService
         .newReflectiveBlockingService(reconfigurationProtocolXlator);
     DFSUtil.addPBProtocol(conf, ReconfigurationProtocolPB.class, service,

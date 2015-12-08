@@ -32,7 +32,7 @@ import com.google.common.collect.Maps;
  * This is a client side utility class that handles
  * common logic to to parameter reconfiguration.
  */
-public class ReconfigurationProtocolUtils {
+public final class ReconfigurationProtocolUtils {
   private ReconfigurationProtocolUtils() {
   }
 
