@@ -938,6 +938,8 @@ Release 2.6.3 - UNRELEASED
     YARN-4348. ZKRMStateStore.syncInternal shouldn't wait for sync completion for
     avoiding blocking ZK's event thread. (ozawa)
 
+    YARN-4424. Fix deadlock in RMAppImpl. (Jian he via wangda)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES

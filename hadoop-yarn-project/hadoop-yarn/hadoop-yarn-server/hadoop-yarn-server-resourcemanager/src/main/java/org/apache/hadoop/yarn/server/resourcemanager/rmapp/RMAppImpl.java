@@ -427,21 +427,15 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   @Override
   public FinalApplicationStatus getFinalApplicationStatus() {
-    this.readLock.lock();
-    try {
-      // finish state is obtained based on the state machine's current state 
-      // as a fall-back in case the application has not been unregistered 
-      // ( or if the app never unregistered itself )
-      // when the report is requested
-      if (currentAttempt != null 
-          && currentAttempt.getFinalApplicationStatus() != null) {
-        return currentAttempt.getFinalApplicationStatus();   
-      }
-      return 
-          createFinalApplicationStatus(this.stateMachine.getCurrentState());
-    } finally {
-      this.readLock.unlock();
+    // finish state is obtained based on the state machine's current state
+    // as a fall-back in case the application has not been unregistered
+    // ( or if the app never unregistered itself )
+    // when the report is requested
+    if (currentAttempt != null
+        && currentAttempt.getFinalApplicationStatus() != null) {
+      return currentAttempt.getFinalApplicationStatus();
     }
+    return createFinalApplicationStatus(this.stateMachine.getCurrentState());
   }
 
   @Override
