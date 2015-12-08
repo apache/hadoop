@@ -86,6 +86,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/main/native/config/*</exclude>
             <exclude>src/main/native/m4/*</exclude>
             <exclude>src/main/native/fuse-dfs/util/tree.h</exclude>
+            <exclude>src/main/native/libhdfspp/third_party/**</exclude>
             <exclude>src/contrib/**</exclude>
           </excludes>
         </configuration>
