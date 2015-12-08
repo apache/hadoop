@@ -1497,6 +1497,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12609. Fix intermittent failure of TestDecayRpcScheduler.
     (Masatake Iwasaki via Arpit Agarwal)
 
+    HADOOP-10729. Add tests for PB RPC in case version mismatch of client and
+    server. (Junping Du via wheat9)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

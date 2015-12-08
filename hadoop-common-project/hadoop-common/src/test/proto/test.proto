@@ -35,6 +35,14 @@ message EchoResponseProto {
   required string message = 1;
 }
 
+message OptRequestProto {
+  optional string message = 1;
+}
+
+message OptResponseProto {
+  optional string message = 1;
+}
+
 message SleepRequestProto{
   required int32 milliSeconds = 1;
 }
