@@ -39,3 +39,18 @@ service TestProtobufRpc2Proto {
   rpc echo2(EchoRequestProto) returns (EchoResponseProto);
   rpc sleep(SleepRequestProto) returns (SleepResponseProto);
 }
+
+service OldProtobufRpcProto {
+  rpc ping(EmptyRequestProto) returns (EmptyResponseProto);
+  rpc echo(EmptyRequestProto) returns (EmptyResponseProto);
+}
+
+service NewProtobufRpcProto {
+  rpc ping(EmptyRequestProto) returns (EmptyResponseProto);
+  rpc echo(OptRequestProto) returns (OptResponseProto);
+}
+
+service NewerProtobufRpcProto {
+  rpc ping(EmptyRequestProto) returns (EmptyResponseProto);
+  rpc echo(EmptyRequestProto) returns (EmptyResponseProto);
+}
