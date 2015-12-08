@@ -34,7 +34,7 @@ import org.apache.hadoop.conf.ReconfigurationTaskStatus;
 @InterfaceStability.Evolving
 public interface ReconfigurationProtocol {
 
-  long versionID = 1L;
+  long VERSIONID = 1L;
 
   /**
    * Asynchronously reload configuration on disk and apply changes.

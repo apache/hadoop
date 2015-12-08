@@ -32,7 +32,7 @@ import com.google.common.base.Optional;
  * This is a server side utility class that handles
  * common logic to to parameter reconfiguration.
  */
-public class ReconfigurationProtocolServerSideUtils {
+public final class ReconfigurationProtocolServerSideUtils {
   private ReconfigurationProtocolServerSideUtils() {
   }
 
