@@ -895,10 +895,6 @@ public class NamenodeWebHdfsMethods {
     }
     case GETDELEGATIONTOKEN:
     {
-      if (delegation.getValue() != null) {
-        throw new IllegalArgumentException(delegation.getName()
-            + " parameter is not null.");
-      }
       final Token<? extends TokenIdentifier> token = generateDelegationToken(
           namenode, ugi, renewer.getValue());
 

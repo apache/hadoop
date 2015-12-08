@@ -55,6 +55,9 @@ Trunk (Unreleased)
     HDFS-9057. allow/disallow snapshots via webhdfs
     (Bramma Reddy Battula via vinayakumarb)
 
+    HDFS-9525. hadoop utilities need to support provided delegation tokens
+    (HeeSoo Kim via aw)
+
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
