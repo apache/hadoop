@@ -110,7 +110,7 @@ hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld) {
       libhdfspp_hdfsDisconnect(ret->libhdfsppRep);
       free(ret);
       ret = NULL;
-	}
+    }
   }
   return ret;
 }
@@ -218,7 +218,11 @@ tOffset hdfsTell(hdfsFS fs, hdfsFile file) {
 }
 
 tSize hdfsRead(hdfsFS fs, hdfsFile file, void* buffer, tSize length) {
-  return libhdfs_hdfsRead(fs->libhdfsRep, file->libhdfsRep, buffer, length);
+  // Read to update stats.
+  tSize nRead = libhdfs_hdfsRead(fs->libhdfsRep, file->libhdfsRep, buffer, length);
+  // Clear to avoid false positives.
+  if (nRead > 0) memset(buffer, 0, nRead);
+  return libhdfspp_hdfsRead(fs->libhdfsppRep, file->libhdfsppRep, buffer, length);
 }
 
 tSize hdfsPread(hdfsFS fs, hdfsFile file, tOffset position,
