@@ -57,6 +57,8 @@ Release 2.6.3 - 2015-12-16
     YARN-4434. NodeManager Disk Checker parameter documentation is not correct.
     (Weiwei Yang via aajisaka)
 
+    YARN-4424. Fix deadlock in RMAppImpl. (jianhe via wtan)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
