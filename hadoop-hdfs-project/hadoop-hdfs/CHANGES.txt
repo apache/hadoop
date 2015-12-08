@@ -2304,9 +2304,6 @@ Release 2.8.0 - UNRELEASED
     HDFS-9274. Default value of dfs.datanode.directoryscan.throttle.limit.ms.per.sec
     should be consistent. (Yi Liu via zhz)
 
-    HDFS-9273. ACLs on root directory may be lost after NN restart.
-    (Xiao Chen via cnauroth)
-
     HDFS-9286. HttpFs does not parse ACL syntax correctly for operation
     REMOVEACLENTRIES. (Wei-Chiu Chuang via cnauroth)
 
@@ -3627,6 +3624,9 @@ Release 2.6.3 - UNRELEASED
 
     HDFS-9470. Encryption zone on root not loaded from fsimage after NN
     restart. (Xiao Chen via wang)
+
+    HDFS-9273. ACLs on root directory may be lost after NN restart.
+    (Xiao Chen via cnauroth)
 
 Release 2.6.2 - 2015-10-28
 
