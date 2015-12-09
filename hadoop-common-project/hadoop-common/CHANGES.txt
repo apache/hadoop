@@ -412,6 +412,9 @@ Release 2.8.0 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-12617. SPNEGO authentication request to non-default realm gets
+    default realm name inserted in target server principal. (mattf)
+
     HADOOP-12352. Delay in checkpointing Trash can leave trash for 2 intervals
     before deleting (Casey Brotherton via harsh)
 
