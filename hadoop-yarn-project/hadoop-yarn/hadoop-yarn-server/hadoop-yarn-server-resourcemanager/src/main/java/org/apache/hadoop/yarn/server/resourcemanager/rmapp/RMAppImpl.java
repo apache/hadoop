@@ -983,16 +983,6 @@ public class RMAppImpl implements RMApp, Recoverable {
       // recover attempts
       app.recoverAppAttempts();
 
-      // Last attempt is in final state, return ACCEPTED waiting for last
-      // RMAppAttempt to send finished or failed event back.
-      if (app.currentAttempt != null
-          && (app.currentAttempt.getState() == RMAppAttemptState.KILLED
-              || app.currentAttempt.getState() == RMAppAttemptState.FINISHED
-              || (app.currentAttempt.getState() == RMAppAttemptState.FAILED
-                  && app.getNumFailedAppAttempts() == app.maxAppAttempts))) {
-        return RMAppState.ACCEPTED;
-      }
-
       // YARN-1507 is saving the application state after the application is
       // accepted. So after YARN-1507, an app is saved meaning it is accepted.
       // Thus we return ACCECPTED state on recovery.
