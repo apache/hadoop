@@ -27,6 +27,7 @@ import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 
@@ -37,8 +38,8 @@ import org.junit.Before;
  */
 public class TestJHLA extends TestCase {
   private static final Log LOG = LogFactory.getLog(JHLogAnalyzer.class);
-  private String historyLog = System.getProperty("test.build.data", 
-                                  "build/test/data") + "/history/test.log";
+  private String historyLog =
+      GenericTestUtils.getRandomizedTestDir().getAbsolutePath();
 
   @Before
   public void setUp() throws Exception {

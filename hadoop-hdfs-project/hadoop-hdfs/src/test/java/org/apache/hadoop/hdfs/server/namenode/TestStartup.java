@@ -573,7 +573,8 @@ public class TestStartup {
     // Set up the hosts/exclude files.
     localFileSys = FileSystem.getLocal(config);
     Path workingDir = localFileSys.getWorkingDirectory();
-    Path dir = new Path(workingDir, "build/test/data/work-dir/restartnn");
+    Path dir = new Path(workingDir,
+        GenericTestUtils.DEFAULT_TEST_DATA_PATH + "work-dir/restartnn");
     hostsFile = new Path(dir, "hosts");
     excludeFile = new Path(dir, "exclude");
 

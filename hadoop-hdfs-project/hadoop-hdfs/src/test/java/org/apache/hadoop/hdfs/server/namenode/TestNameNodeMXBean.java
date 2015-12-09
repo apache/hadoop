@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.server.namenode.top.TopConf;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.NoMlockCacheManipulator;
 import org.apache.hadoop.net.ServerSocketUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.Test;
@@ -252,7 +253,8 @@ public class TestNameNodeMXBean {
       // Define include file to generate deadNodes metrics
       localFileSys = FileSystem.getLocal(conf);
       Path workingDir = localFileSys.getWorkingDirectory();
-      dir = new Path(workingDir,"build/test/data/temp/TestNameNodeMXBean");
+      dir = new Path(workingDir, GenericTestUtils.DEFAULT_TEST_DATA_PATH
+          + "temp/TestNameNodeMXBean");
       Path includeFile = new Path(dir, "include");
       assertTrue(localFileSys.mkdirs(dir));
       StringBuilder includeHosts = new StringBuilder();
