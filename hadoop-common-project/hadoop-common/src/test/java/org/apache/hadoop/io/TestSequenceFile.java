@@ -130,6 +130,7 @@ public class TestSequenceFile {
     }
   }
 
+  @SuppressWarnings("deprecation")
   private void writeTest(FileSystem fs, int count, int seed, Path file, 
                                 CompressionType compressionType, CompressionCodec codec)
     throws IOException {
@@ -150,6 +151,7 @@ public class TestSequenceFile {
     writer.close();
   }
 
+  @SuppressWarnings("deprecation")
   private void readTest(FileSystem fs, int count, int seed, Path file)
     throws IOException {
     LOG.debug("reading " + count + " records");
@@ -216,6 +218,7 @@ public class TestSequenceFile {
     LOG.info("done sorting " + count + " debug");
   }
 
+  @SuppressWarnings("deprecation")
   private void checkSort(FileSystem fs, int count, int seed, Path file)
     throws IOException {
     LOG.info("sorting " + count + " records in memory for debug");
@@ -253,6 +256,7 @@ public class TestSequenceFile {
     LOG.debug("sucessfully checked " + count + " records");
   }
 
+  @SuppressWarnings("deprecation")
   private void mergeTest(FileSystem fs, int count, int seed, Path file, 
                                 CompressionType compressionType,
                                 boolean fast, int factor, int megabytes)
@@ -375,6 +379,7 @@ public class TestSequenceFile {
   }
   
   
+  @SuppressWarnings("deprecation")
   private SequenceFile.Metadata readMetadata(FileSystem fs, Path file)
     throws IOException {
     LOG.info("reading file: " + file.toString());
@@ -384,6 +389,7 @@ public class TestSequenceFile {
     return meta;
   }
 
+  @SuppressWarnings("deprecation")
   private void writeMetadataTest(FileSystem fs, int count, int seed, Path file, 
                                         CompressionType compressionType, CompressionCodec codec, SequenceFile.Metadata metadata)
     throws IOException {
@@ -413,6 +419,7 @@ public class TestSequenceFile {
     sorter.sort(new Path[] { unsortedFile }, sortedFile, false);
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testClose() throws IOException {
     Configuration conf = new Configuration();
@@ -470,6 +477,7 @@ public class TestSequenceFile {
    * Test that makes sure the FileSystem passed to createWriter
    * @throws Exception
    */
+  @SuppressWarnings("deprecation")
   @Test
   public void testCreateUsesFsArg() throws Exception {
     FileSystem fs = FileSystem.getLocal(conf);
@@ -499,6 +507,7 @@ public class TestSequenceFile {
     }
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testCloseForErroneousSequenceFile()
     throws IOException {
@@ -555,6 +564,7 @@ public class TestSequenceFile {
    * already created
    * @throws IOException
    */
+  @SuppressWarnings("deprecation")
   @Test
   public void testCreateWriterOnExistingFile() throws IOException {
     Configuration conf = new Configuration();
@@ -568,6 +578,7 @@ public class TestSequenceFile {
         CompressionType.NONE, null, new Metadata());
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testRecursiveSeqFileCreate() throws IOException {
     FileSystem fs = FileSystem.getLocal(conf);
@@ -661,7 +672,7 @@ public class TestSequenceFile {
     Path file = null;
     int seed = new Random().nextInt();
 
-    String usage = "Usage: SequenceFile " +
+    String usage = "Usage: testsequencefile " +
       "[-count N] " + 
       "[-seed #] [-check] [-compressType <NONE|RECORD|BLOCK>] " + 
       "-codec <compressionCodec> " + 
@@ -751,7 +762,9 @@ public class TestSequenceFile {
         test.checkSort(fs, count, seed, file);
       }
     } finally {
-      fs.close();
+      if (fs != null) {
+        fs.close();
+      }
     }
   }
 }
