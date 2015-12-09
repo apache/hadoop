@@ -18,6 +18,7 @@ package org.apache.hadoop.security.authentication.util;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -52,32 +53,48 @@ public class TestKerberosUtil {
   }
 
   @Test
-  public void testGetServerPrincipal() throws IOException {
+  public void testGetServerPrincipal()
+      throws IOException, UnknownHostException {
     String service = "TestKerberosUtil";
     String localHostname = KerberosUtil.getLocalHostName();
     String testHost = "FooBar";
+    String defaultRealm = KerberosUtil.getDefaultRealmProtected();
+
+    String atDefaultRealm;
+    if (defaultRealm == null || defaultRealm.equals("")) {
+      atDefaultRealm = "";
+    } else {
+      atDefaultRealm = "@" + defaultRealm;
+    }
+    // check that the test environment is as expected
+    Assert.assertEquals("testGetServerPrincipal assumes localhost realm is default",
+        KerberosUtil.getDomainRealm(service + "/" + localHostname.toLowerCase(Locale.US)),
+        defaultRealm);
+    Assert.assertEquals("testGetServerPrincipal assumes realm of testHost 'FooBar' is default",
+        KerberosUtil.getDomainRealm(service + "/" + testHost.toLowerCase(Locale.US)),
+        defaultRealm);
 
     // send null hostname
     Assert.assertEquals("When no hostname is sent",
-        service + "/" + localHostname.toLowerCase(Locale.ENGLISH),
+        service + "/" + localHostname.toLowerCase(Locale.US) + atDefaultRealm,
         KerberosUtil.getServicePrincipal(service, null));
     // send empty hostname
     Assert.assertEquals("When empty hostname is sent",
-        service + "/" + localHostname.toLowerCase(Locale.ENGLISH),
+        service + "/" + localHostname.toLowerCase(Locale.US) + atDefaultRealm,
         KerberosUtil.getServicePrincipal(service, ""));
     // send 0.0.0.0 hostname
     Assert.assertEquals("When 0.0.0.0 hostname is sent",
-        service + "/" + localHostname.toLowerCase(Locale.ENGLISH),
+        service + "/" + localHostname.toLowerCase(Locale.US) + atDefaultRealm,
         KerberosUtil.getServicePrincipal(service, "0.0.0.0"));
     // send uppercase hostname
     Assert.assertEquals("When uppercase hostname is sent",
-        service + "/" + testHost.toLowerCase(Locale.ENGLISH),
+        service + "/" + testHost.toLowerCase(Locale.US) + atDefaultRealm,
         KerberosUtil.getServicePrincipal(service, testHost));
     // send lowercase hostname
     Assert.assertEquals("When lowercase hostname is sent",
-        service + "/" + testHost.toLowerCase(Locale.ENGLISH),
+        service + "/" + testHost.toLowerCase(Locale.US) + atDefaultRealm,
         KerberosUtil.getServicePrincipal(
-            service, testHost.toLowerCase(Locale.ENGLISH)));
+            service, testHost.toLowerCase(Locale.US)));
   }
   
   @Test

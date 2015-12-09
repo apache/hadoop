@@ -264,6 +264,9 @@ Trunk (Unreleased)
 
   BUG FIXES
 
+    HADOOP-12617. SPNEGO authentication request to non-default realm gets
+    default realm name inserted in target server principal. (mattf)
+
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
     (Jason Lowe via raviprak)
 
