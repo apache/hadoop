@@ -1111,6 +1111,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4431. Not necessary to do unRegisterNM() if NM get stop due to failed to connect
     to RM. (Junping Du via rohithsharmaks)
 
+    YARN-4421. Remove dead code in RmAppImpl.RMAppRecoveredTransition.
+    (Daniel Templeton via rohithsharmaks)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
