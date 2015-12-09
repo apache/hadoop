@@ -1,0 +1,141 @@
+/*
+ Over all style
+ */
+text {
+  font: 12px sans-serif;
+}
+
+text.small {
+  font: 8px sans-serif;
+}
+
+html, body
+{
+    margin: 0px;
+    padding: 0px;
+    height: 100%;
+    width: 100%;
+}
+
+/*
+ queue's style (left banner of queues)
+ */
+
+text.queue {
+  font-family : sans-serif;
+  font-size : 15px;
+  fill : gray;
+}
+
+path.queue {
+  stroke: gray;
+  fill: none;
+}
+
+circle.queue {
+  r: 10;
+  fill: Steelblue;
+}
+
+/*
+ background style
+ */
+line.grid {
+  stroke: WhiteSmoke;
+}
+
+line.chart {
+  stroke: Gray;
+}
+
+/*
+ charts styles
+ */
+text.chart-title {
+  font-size: 30px;
+  font-family: sans-serif;
+  text-anchor: middle;
+  fill: Gray;
+}
+
+text.donut-highlight-text {
+  font-size: 20px;
+  font-family: sans-serif;
+  text-anchor: middle;
+  fill: Gray;
+  vertical-align: middle;
+}
+
+rect.chart-frame {
+  fill: none;
+  stroke: gray;
+  stroke-dasharray: 10,10;
+}
+
+line.chart-leftbanner {
+  stroke-width: 2;
+  stroke: gray;
+  stroke-dasharray: 10,10;
+}
+
+text.bar-chart-text {
+  font-size: 8px;
+  font-family: sans-serif;
+  vertical-align: middle;
+  fill: Gray;;
+}
+
+div.tooltip {   
+  position: absolute;           
+  text-align: center;
+  /*height: 28px;*/
+  padding: 2px;             
+  font: 12px sans-serif;        
+  background: lightsteelblue;   
+  border: 0px;      
+  border-radius: 8px;
+  pointer-events: none;         
+}
+
+/*
+ * Data table
+ */
+
+table.dataTable thead .sorting {
+  background-image: url("/assets/images/datatables/sort_both.png");
+}
+table.dataTable thead .sorting_asc {
+  background-image: url("/assets/images/datatables/sort_asc.png");
+}
+table.dataTable thead .sorting_desc {
+  background-image: url("/assets/images/datatables/sort_desc.png");
+}
+table.dataTable thead .sorting_asc_disabled {
+  background-image: url("/assets/images/datatables/sort_asc_disabled.png");
+}
+table.dataTable thead .sorting_desc_disabled {
+  background-image: url("/assets/images/datatables/sort_desc_disabled.png");
+}
+
+/*
+ * Queue selector
+ */
+.node {
+  cursor: pointer;
+}
+
+.node circle {
+  fill: #fff;
+  stroke: steelblue;
+  stroke-width: 3px;
+}
+
+.node text {
+  font: 12px sans-serif;
+}
+
+.link {
+  fill: none;
+  stroke: #ccc;  
+  stroke-width: 2px;
+}

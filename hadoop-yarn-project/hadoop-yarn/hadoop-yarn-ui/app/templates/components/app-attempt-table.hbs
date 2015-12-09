@@ -1,0 +1,28 @@
+<table id="app-attempt-table" class="table table-striped table-bordered" cellspacing="0" width="100%" height="100%">
+  <tbody>
+    <tr>
+      <td>Application Attempt Id</td>
+      <td>{{attempt.id}}</td>
+    </tr>
+    <tr>
+      <td>Start Time</td>
+      <td>{{attempt.startTime}}</td>
+    </tr>
+    <tr>
+      <td>AM Container Id</td>
+      <td>{{attempt.containerId}}</td>
+    </tr>
+    <tr>
+      <td>AM Node Web UI</td>
+      <td><a href={{attempt.nodeHttpAddress}}>{{attempt.nodeHttpAddress}}</a></td>
+    </tr>
+    <tr>
+      <td>AM Node Id</td>
+      <td>{{attempt.nodeId}}</td>
+    </tr>
+    <tr>
+      <td>Log</td>
+      <td><a href={{attempt.logsLink}}>link</a></td>
+    </tr>
+  </tbody>
+</table>

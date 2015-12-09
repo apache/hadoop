@@ -1,0 +1,48 @@
+<div class="container-fluid">
+  {{queue-navigator model=model.queues selected=model.selected}}
+</div>
+
+<div class="row">
+  <div class="col-lg-3 container-fluid">
+    {{queue-configuration-table queue=model.selectedQueue}}
+  </div>
+
+  <div class="col-lg-3 container-fluid" id="capacity-bar-chart">
+    {{bar-chart data=model.selectedQueue.capacitiesBarChartData 
+        title="Queue Capacities" 
+        parentId="capacity-bar-chart"
+        textWidth=150
+        ratio=0.5
+        maxHeight=350}}
+  </div>
+
+{{#if model.selectedQueue.hasUserUsages}}
+  <div class="col-lg-3 container-fluid" id="userusage-donut-chart">
+    {{donut-chart data=model.selectedQueue.userUsagesDonutChartData 
+        title="User Usages" 
+        showLabels=true
+        parentId="userusage-donut-chart"
+        maxHeight=350}}
+  </div>
+{{/if}}
+
+  <div class="col-lg-3 container-fluid" id="numapplications-donut-chart">
+    {{donut-chart data=model.selectedQueue.numOfApplicationsDonutChartData 
+        title="Running Apps" 
+        showLabels=true
+        parentId="numapplications-donut-chart"
+        ratio=0.5
+        maxHeight=350}}
+  </div>
+</div>
+
+<hr>
+
+<div class="row">
+  <div class="col-md-12 container-fluid">
+    {{app-table table-id="apps-table" arr=model.apps}}
+    {{simple-table table-id="apps-table" bFilter=true colTypes="elapsed-time" colTargets="7"}}
+  </div>
+</div>
+
+{{outlet}}
