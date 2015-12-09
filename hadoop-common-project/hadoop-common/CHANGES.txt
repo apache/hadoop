@@ -641,6 +641,8 @@ Release 2.9.0 - UNRELEASED
     HADOOP-12321. Make JvmPauseMonitor an AbstractService.
     (Sunil G via Stevel)
 
+    HADOOP-12625. Add a config to disable the /logs endpoints (rkanter)
+
   OPTIMIZATIONS
 
   BUG FIXES

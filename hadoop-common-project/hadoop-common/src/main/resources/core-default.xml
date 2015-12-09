@@ -2056,4 +2056,14 @@ for ldap providers in the same way as above does.
     <description>The class names of the Span Receivers to use for Hadoop.
     </description>
   </property>
+
+  <property>
+    <description>
+      Enable the "/logs" endpoint on all Hadoop daemons, which serves local
+      logs, but may be considered a security risk due to it listing the contents
+      of a directory.
+    </description>
+    <name>hadoop.http.logs.enabled</name>
+    <value>true</value>
+  </property>
 </configuration>

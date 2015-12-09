@@ -407,5 +407,11 @@ public class CommonConfigurationKeysPublic {
       "hadoop.shell.safely.delete.limit.num.files";
   public static final long HADOOP_SHELL_SAFELY_DELETE_LIMIT_NUM_FILES_DEFAULT =
       100;
+
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_HTTP_LOGS_ENABLED =
+      "hadoop.http.logs.enabled";
+  /** Defalt value for HADOOP_HTTP_LOGS_ENABLED */
+  public static final boolean HADOOP_HTTP_LOGS_ENABLED_DEFAULT = true;
 }
 
