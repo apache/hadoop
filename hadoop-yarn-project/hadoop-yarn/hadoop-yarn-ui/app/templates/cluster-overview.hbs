@@ -1,0 +1,56 @@
+<div class="row">
+  <div class="col-lg-3 container-fluid" id="finishedapps-donut-chart">
+    {{donut-chart data=model.firstObject.getFinishedAppsDataForDonutChart
+        title="Finished Apps"
+        showLabels=true
+        parentId="finishedapps-donut-chart"
+        ratio=0.55
+        maxHeight=350}}
+  </div>
+
+  <div class="col-lg-3 container-fluid" id="runningapps-donut-chart">
+    {{donut-chart data=model.firstObject.getRunningAppsDataForDonutChart
+        title="Running Apps"
+        showLabels=true
+        parentId="runningapps-donut-chart"
+        ratio=0.55
+        maxHeight=350}}
+  </div>
+</div>
+
+<hr>
+
+<div class="row">
+  <div class="col-lg-3 container-fluid" id="nodes-donut-chart">
+    {{donut-chart data=model.firstObject.getNodesDataForDonutChart
+        title="Node Managers"
+        showLabels=true
+        parentId="nodes-donut-chart"
+        ratio=0.55
+        maxHeight=350}}
+  </div>
+</div>
+
+<hr>
+
+<div class="row">
+  <div class="col-lg-3 container-fluid" id="mem-donut-chart">
+    {{donut-chart data=model.firstObject.getMemoryDataForDonutChart
+        title="Resource - Memory"
+        showLabels=true
+        parentId="mem-donut-chart"
+        ratio=0.55
+        maxHeight=350}}
+  </div>
+
+  <div class="col-lg-3 container-fluid" id="vcore-donut-chart">
+    {{donut-chart data=model.firstObject.getVCoreDataForDonutChart
+        title="Resource - VCores"
+        showLabels=true
+        parentId="vcore-donut-chart"
+        ratio=0.6
+        maxHeight=350}}
+  </div>
+</div>
+
+{{outlet}}

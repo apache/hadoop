@@ -1,0 +1,40 @@
+<table id="queue-configuration-table" class="table table-striped table-bordered" cellspacing="0" width="100%" height="100%">
+  <thead>
+    <tr>
+      <td><b>Configurations</b></td>
+      <td>Value</td>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Queue Name</td>
+      <td>{{queue.id}}</td>
+    </tr>
+    <tr>
+      <td>Configured Capacity</td>
+      <td>{{queue.capacity}}</td>
+    </tr>
+    <tr>
+      <td>Configured Max Capacity</td>
+      <td>{{queue.maxCapacity}}</td>
+    </tr>
+    <tr>
+      <td>State</td>
+      <td>{{queue.state}}</td>
+    </tr>
+  {{#if queue.isLeafQueue}}
+    <tr>
+      <td>User Limit Percent</td>
+      <td>{{queue.userLimit}}</td>
+    </tr>
+    <tr>
+      <td>User Limit Factor</td>
+      <td>{{queue.userLimitFactor}}</td>
+    </tr>
+    <tr>
+      <td>Preemption Disabled</td>
+      <td>{{queue.preemptionDisabled}}</td>
+    </tr>
+  {{/if}}
+  </tbody>
+</table>

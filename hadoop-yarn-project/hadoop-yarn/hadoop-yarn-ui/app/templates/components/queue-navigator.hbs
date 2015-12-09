@@ -1,0 +1,18 @@
+<div class="row">
+  <div class="col-lg-4">
+      <select class="js-example-basic-single" width="100%" id="queue-name-selector">
+        {{item-selector element-id="queue-name-selector" prefix="Queue : " model=model}}
+      </select>
+  </div>
+</div><!-- /.row -->
+
+<!-- queue selector -->
+<div class="row">
+  <div class="col-md-12 container-fluid" id="tree-selector-container">
+     {{tree-selector model=model parentId="tree-selector-container" selected=selected}}
+  </div>
+</div>
+
+<hr>
+
+{{outlet}}
