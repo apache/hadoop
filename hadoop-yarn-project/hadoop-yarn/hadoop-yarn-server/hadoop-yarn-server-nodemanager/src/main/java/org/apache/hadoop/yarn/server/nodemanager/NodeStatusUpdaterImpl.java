@@ -134,6 +134,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
   private Runnable statusUpdaterRunnable;
   private Thread  statusUpdater;
+  private boolean failedToConnect = false;
   private long rmIdentifier = ResourceManagerConstants.RM_INVALID_IDENTIFIER;
   private boolean registeredWithRM = false;
   Set<ContainerId> pendingContainersToRemove = new HashSet<ContainerId>();
@@ -241,7 +242,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     // the isStopped check is for avoiding multiple unregistrations.
     if (this.registeredWithRM && !this.isStopped
         && !isNMUnderSupervisionWithRecoveryEnabled()
-        && !context.getDecommissioned()) {
+        && !context.getDecommissioned() && !failedToConnect) {
       unRegisterNM();
     }
     // Interrupt the updater.
@@ -823,6 +824,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             //catch and throw the exception if tried MAX wait time to connect RM
             dispatcher.getEventHandler().handle(
                 new NodeManagerEvent(NodeManagerEventType.SHUTDOWN));
+            // failed to connect to RM.
+            failedToConnect = true;
             throw new YarnRuntimeException(e);
           } catch (Throwable e) {
 

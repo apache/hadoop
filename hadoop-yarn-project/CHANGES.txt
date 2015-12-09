@@ -1108,6 +1108,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4392. ApplicationCreatedEvent event time resets after RM restart/failover.
     (Naganarasimha G R and Xuan Gong via xgong)
 
+    YARN-4431. Not necessary to do unRegisterNM() if NM get stop due to failed to connect
+    to RM. (Junping Du via rohithsharmaks)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
