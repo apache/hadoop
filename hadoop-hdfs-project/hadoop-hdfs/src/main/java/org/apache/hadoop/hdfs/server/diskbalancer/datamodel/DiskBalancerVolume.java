@@ -18,8 +18,9 @@
 package org.apache.hadoop.hdfs.server.diskbalancer.datamodel;
 
 import com.google.common.base.Preconditions;
-import org.apache.htrace.fasterxml.jackson.annotation.JsonIgnore;
-import org.apache.htrace.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import org.codehaus.jackson.annotate.JsonIgnore;
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import java.io.IOException;

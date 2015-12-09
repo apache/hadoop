@@ -5,3 +5,5 @@ HDFS-1312 Change Log
     HDFS-9420. Add DataModels for DiskBalancer. (Anu Engineer via szetszwo)
 
     HDFS-9449. DiskBalancer: Add connectors. (Anu Engineer via szetszwo)
+
+    HDFS-9526. Fix jackson annotation imports. (Xiaobing Zhou via szetszwo)
