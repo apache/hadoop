@@ -826,7 +826,7 @@ public class TestFsck {
       try {
         fsn.writeLock();
         BlockInfo bi = bm.getStoredBlock(eb.getLocalBlock());
-        bc = bm.getBlockCollection(bi);
+        bc = fsn.getBlockCollection(bi);
       } finally {
         fsn.writeUnlock();
       }
@@ -1394,7 +1394,7 @@ public class TestFsck {
       try {
         fsn.writeLock();
         BlockInfo bi = bm.getStoredBlock(eb.getLocalBlock());
-        bc = bm.getBlockCollection(bi);
+        bc = fsn.getBlockCollection(bi);
       } finally {
         fsn.writeUnlock();
       }
@@ -1609,7 +1609,7 @@ public class TestFsck {
       try {
         fsn.writeLock();
         BlockInfo bi = bm.getStoredBlock(eb.getLocalBlock());
-        bc = bm.getBlockCollection(bi);
+        bc = fsn.getBlockCollection(bi);
       } finally {
         fsn.writeUnlock();
       }

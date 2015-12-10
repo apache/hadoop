@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
@@ -62,7 +63,8 @@ public class TestClientProtocolForPipelineRecovery {
         namenode.updateBlockForPipeline(firstBlock, "");
         Assert.fail("Can not get a new GS from a finalized block");
       } catch (IOException e) {
-        Assert.assertTrue(e.getMessage().contains("is not under Construction"));
+        Assert.assertTrue(e.getMessage().contains(
+            "not " + BlockUCState.UNDER_CONSTRUCTION));
       }
       
       // test getNewStampAndToken on a non-existent block

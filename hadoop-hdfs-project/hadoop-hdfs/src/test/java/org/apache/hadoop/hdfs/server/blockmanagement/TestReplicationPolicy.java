@@ -56,7 +56,10 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.hdfs.server.namenode.TestINodeFile;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.net.Node;
 import org.apache.log4j.Level;
@@ -1309,7 +1312,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
   @Test(timeout = 60000)
   public void testAddStoredBlockDoesNotCauseSkippedReplication()
       throws IOException {
-    Namesystem mockNS = mock(Namesystem.class);
+    FSNamesystem mockNS = mock(FSNamesystem.class);
     when(mockNS.hasWriteLock()).thenReturn(true);
     when(mockNS.hasReadLock()).thenReturn(true);
     BlockManager bm = new BlockManager(mockNS, new HdfsConfiguration());
@@ -1337,10 +1340,11 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     // queue.
     BlockInfoContiguous info = new BlockInfoContiguous(block1, (short) 1);
     info.convertToBlockUnderConstruction(BlockUCState.UNDER_CONSTRUCTION, null);
-    BlockCollection bc = mock(BlockCollection.class);
-    when(bc.getId()).thenReturn(1000L);
-    when(mockNS.getBlockCollection(1000L)).thenReturn(bc);
-    bm.addBlockCollection(info, bc);
+    info.setBlockCollectionId(1000L);
+
+    final INodeFile file = TestINodeFile.createINodeFile(1000L);
+    when(mockNS.getBlockCollection(1000L)).thenReturn(file);
+    bm.addBlockCollection(info, file);
 
     // Adding this block will increase its current replication, and that will
     // remove it from the queue.
