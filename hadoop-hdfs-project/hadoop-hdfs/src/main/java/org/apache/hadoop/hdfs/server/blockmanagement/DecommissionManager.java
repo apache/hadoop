@@ -533,7 +533,7 @@ public class DecommissionManager {
           continue;
         }
 
-        BlockCollection bc = namesystem.getBlockCollection(bcId);
+        final BlockCollection bc = blockManager.getBlockCollection(block);
         final NumberReplicas num = blockManager.countNodes(block);
         final int liveReplicas = num.liveReplicas();
 

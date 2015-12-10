@@ -2405,7 +2405,7 @@ public class BlockManager implements BlockStatsMXBean {
         // OpenFileBlocks only inside snapshots also will be added to safemode
         // threshold. So we need to update such blocks to safemode
         // refer HDFS-5283
-        if (namesystem.isInSnapshot(storedBlock)) {
+        if (namesystem.isInSnapshot(storedBlock.getBlockCollectionId())) {
           int numOfReplicas = storedBlock.getUnderConstructionFeature()
               .getNumExpectedLocations();
           bmSafeMode.incrementSafeBlockCount(numOfReplicas, storedBlock);
@@ -3997,7 +3997,7 @@ public class BlockManager implements BlockStatsMXBean {
     return addBlockCollection(block, bc);
   }
 
-  public BlockCollection getBlockCollection(BlockInfo b) {
+  BlockCollection getBlockCollection(BlockInfo b) {
     return namesystem.getBlockCollection(b.getBlockCollectionId());
   }
 

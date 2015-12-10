@@ -3172,11 +3172,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
   
   @Override
-  public boolean isInSnapshot(BlockInfo blockUC) {
+  public boolean isInSnapshot(long blockCollectionID) {
     assert hasReadLock();
-    final BlockCollection bc = blockManager.getBlockCollection(blockUC);
-    if (bc == null || !(bc instanceof INodeFile)
-        || !bc.isUnderConstruction()) {
+    final INodeFile bc = getBlockCollection(blockCollectionID);
+    if (bc == null || !bc.isUnderConstruction()) {
       return false;
     }
 
@@ -3203,8 +3202,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return true;
   }
 
+  INodeFile getBlockCollection(BlockInfo b) {
+    return getBlockCollection(b.getBlockCollectionId());
+  }
+
   @Override
-  public BlockCollection getBlockCollection(long id) {
+  public INodeFile getBlockCollection(long id) {
     INode inode = getFSDirectory().getInode(id);
     return inode == null ? null : inode.asFile();
   }
@@ -3265,8 +3268,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             + " is null, likely because the file owning this block was"
             + " deleted and the block removal is delayed");
       }
-      long bcId = storedBlock.getBlockCollectionId();
-      INodeFile iFile = ((INode)getBlockCollection(bcId)).asFile();
+      final INodeFile iFile = getBlockCollection(storedBlock);
       src = iFile.getFullPathName();
       if (isFileDeleted(iFile)) {
         throw new FileNotFoundException("File not found: "
@@ -3682,8 +3684,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         while (it.hasNext()) {
           Block b = it.next();
           BlockInfo blockInfo = blockManager.getStoredBlock(b);
-          BlockCollection bc = getBlockCollection(
-              blockInfo.getBlockCollectionId());
+          BlockCollection bc = getBlockCollection(blockInfo);
           if (bc.getStoragePolicyID() == lpPolicy.getId()) {
             filesToDelete.add(bc);
           }
@@ -4606,15 +4607,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     
     // check stored block state
     BlockInfo storedBlock = getStoredBlock(ExtendedBlock.getLocalBlock(block));
-    if (storedBlock == null || 
-        storedBlock.getBlockUCState() != BlockUCState.UNDER_CONSTRUCTION) {
-        throw new IOException(block + 
-            " does not exist or is not under Construction" + storedBlock);
+    if (storedBlock == null) {
+      throw new IOException(block + " does not exist.");
+    }
+    if (storedBlock.getBlockUCState() != BlockUCState.UNDER_CONSTRUCTION) {
+      throw new IOException("Unexpected BlockUCState: " + block
+          + " is " + storedBlock.getBlockUCState()
+          + " but not " + BlockUCState.UNDER_CONSTRUCTION);
     }
     
     // check file inode
-    long bcId = storedBlock.getBlockCollectionId();
-    final INodeFile file = ((INode)getBlockCollection(bcId)).asFile();
+    final INodeFile file = getBlockCollection(storedBlock);
     if (file == null || !file.isUnderConstruction() || isFileDeleted(file)) {
       throw new IOException("The file " + storedBlock + 
           " belonged to does not exist or it is not under construction.");
@@ -4887,8 +4890,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
       while (blkIterator.hasNext()) {
         BlockInfo blk = blkIterator.next();
-        BlockCollection bc = getBlockCollection(blk.getBlockCollectionId());
-        final INode inode = (INode)bc;
+        final INodeFile inode = getBlockCollection(blk);
         skip++;
         if (inode != null && blockManager.countNodes(blk).liveReplicas() == 0) {
           String src = FSDirectory.getFullPathName(inode);
