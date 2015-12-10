@@ -1887,7 +1887,7 @@
     <description>Indicate what is the current version of the running
     timeline service. For example, if "yarn.timeline-service.version" is 1.5,
     and "yarn.timeline-service.enabled" is true, it means the cluster will and
-    should bring up the timeline service v.1.5.
+    should bring up the timeline service v.1.5 (and nothing else).
     On the client side, if the client uses the same version of timeline service,
     it should succeed. If the client chooses to use a smaller version in spite of this,
     then depending on how robust the compatibility story is between versions,
