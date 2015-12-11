@@ -39,6 +39,7 @@ import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
@@ -66,6 +67,10 @@ public class TimelineReaderServer extends CompositeService {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
+    if (!YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      throw new YarnException("timeline service v.2 is not enabled");
+    }
+
     TimelineReader timelineReaderStore = createTimelineReaderStore(conf);
     addService(timelineReaderStore);
     timelineReaderManager = createTimelineReaderManager(timelineReaderStore);
@@ -143,7 +148,8 @@ public class TimelineReaderServer extends CompositeService {
     return readerWebServer.getConnectorAddress(0).getPort();
   }
 
-  static TimelineReaderServer startTimelineReaderServer(String[] args) {
+  static TimelineReaderServer startTimelineReaderServer(String[] args,
+      Configuration conf) {
     Thread.setDefaultUncaughtExceptionHandler(
         new YarnUncaughtExceptionHandler());
     StringUtils.startupShutdownMessage(TimelineReaderServer.class,
@@ -154,7 +160,6 @@ public class TimelineReaderServer extends CompositeService {
       ShutdownHookManager.get().addShutdownHook(
           new CompositeServiceShutdownHook(timelineReaderServer),
           SHUTDOWN_HOOK_PRIORITY);
-      YarnConfiguration conf = new YarnConfiguration();
       timelineReaderServer.init(conf);
       timelineReaderServer.start();
     } catch (Throwable t) {
@@ -165,6 +170,9 @@ public class TimelineReaderServer extends CompositeService {
   }
 
   public static void main(String[] args) {
-    startTimelineReaderServer(args);
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
+    startTimelineReaderServer(args, conf);
   }
 }

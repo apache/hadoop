@@ -474,11 +474,6 @@ public interface MRJobConfig {
     "mapreduce.job.emit-timeline-data";
   public static final boolean DEFAULT_MAPREDUCE_JOB_EMIT_TIMELINE_DATA =
       false;
-  
-  public static final String MAPREDUCE_JOB_NEW_TIMELINE_SERVICE_ENABLED =
-      "mapreduce.job.new-timeline-service.enabled";
-  public static final boolean DEFAULT_MAPREDUCE_JOB_NEW_TIMELINE_SERVICE_ENABLED =
-      false;
 
   public static final String MR_PREFIX = "yarn.app.mapreduce.";
 

@@ -138,9 +138,10 @@ public class TestDistributedShell {
     conf.set("yarn.log.dir", "target");
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     // mark if we need to launch the v1 timeline server
-    boolean enableATSServer = true;
     // disable aux-service based timeline aggregators
     conf.set(YarnConfiguration.NM_AUX_SERVICES, "");
+    conf.setBoolean(YarnConfiguration.SYSTEM_METRICS_PUBLISHER_ENABLED, true);
+
     conf.set(YarnConfiguration.NM_VMEM_PMEM_RATIO, "8");
     conf.set(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class.getName());
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
@@ -157,7 +158,6 @@ public class TestDistributedShell {
         true);
     conf.setBoolean(YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_ENABLED,
           true);
-    conf.setBoolean(YarnConfiguration.SYSTEM_METRICS_PUBLISHER_ENABLED, false);
 
     // ATS version specific settings
     if (timelineVersion == 1.0f) {
@@ -177,7 +177,6 @@ public class TestDistributedShell {
           DistributedShellTimelinePlugin.class.getName());
     } else if (timelineVersion == 2.0f) {
       // disable v1 timeline server since we no longer have a server here
-      enableATSServer = false;
       // enable aux-service based timeline aggregators
       conf.set(YarnConfiguration.NM_AUX_SERVICES, TIMELINE_AUX_SERVICE_NAME);
       conf.set(YarnConfiguration.NM_AUX_SERVICES + "." + TIMELINE_AUX_SERVICE_NAME
@@ -331,12 +330,7 @@ public class TestDistributedShell {
     }
     boolean isTestingTimelineV2 = false;
     if (timelineVersionWatcher.getTimelineVersion() == 2.0f) {
-      String[] timelineArgs = {
-          "--timeline_service_version",
-          "v2"
-      };
       isTestingTimelineV2 = true;
-      args = mergeArgs(args, timelineArgs);
       if (!defaultFlow) {
         String[] flowArgs = {
             "--flow_name",

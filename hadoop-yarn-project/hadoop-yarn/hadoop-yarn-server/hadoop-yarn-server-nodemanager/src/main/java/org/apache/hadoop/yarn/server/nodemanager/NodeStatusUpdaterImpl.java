@@ -909,7 +909,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                     newResource.toString());
               }
             }
-            if (YarnConfiguration.systemMetricsPublisherEnabled(context.getConf())) {
+            if (YarnConfiguration.timelineServiceV2Enabled(context.getConf())) {
               updateTimelineClientsAddress(response);
             }
 
@@ -943,7 +943,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       /**
        * Caller should take care of sending non null nodelabels for both
        * arguments
-       * 
+       *
        * @param nodeLabelsNew
        * @param nodeLabelsOld
        * @return if the New node labels are diff from the older one.
@@ -959,27 +959,37 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
       private void updateTimelineClientsAddress(
           NodeHeartbeatResponse response) {
-        Set<Map.Entry<ApplicationId, String>> rmKnownCollectors = 
-            response.getAppCollectorsMap().entrySet();
-        for (Map.Entry<ApplicationId, String> entry : rmKnownCollectors) {
-          ApplicationId appId = entry.getKey();
-          String collectorAddr = entry.getValue();
+        Map<ApplicationId, String> knownCollectorsMap =
+            response.getAppCollectorsMap();
+        if (knownCollectorsMap == null) {
+          LOG.warn("the collectors map is null");
+        } else {
+          Set<Map.Entry<ApplicationId, String>> rmKnownCollectors =
+              knownCollectorsMap.entrySet();
+          for (Map.Entry<ApplicationId, String> entry : rmKnownCollectors) {
+            ApplicationId appId = entry.getKey();
+            String collectorAddr = entry.getValue();
 
-          // Only handle applications running on local node.
-          // Not include apps with timeline collectors running in local
-          Application application = context.getApplications().get(appId);
-          if (application != null &&
-              !context.getRegisteredCollectors().containsKey(appId)) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Sync a new collector address: " + collectorAddr + 
-                  " for application: " + appId + " from RM.");
+            // Only handle applications running on local node.
+            // Not include apps with timeline collectors running in local
+            Application application = context.getApplications().get(appId);
+            // TODO this logic could be problematic if the collector address
+            // gets updated due to NM restart or collector service failure
+            if (application != null &&
+                !context.getRegisteredCollectors().containsKey(appId)) {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Sync a new collector address: " + collectorAddr +
+                    " for application: " + appId + " from RM.");
+              }
+              TimelineClient client = application.getTimelineClient();
+              if (client != null) {
+                client.setTimelineServiceAddress(collectorAddr);
+              }
             }
-            TimelineClient client = application.getTimelineClient();
-            client.setTimelineServiceAddress(collectorAddr);
           }
         }
       }
-      
+
       private void updateMasterKeys(NodeHeartbeatResponse response) {
         // See if the master-key has rolled over
         MasterKey updatedMasterKey = response.getContainerTokenMasterKey();

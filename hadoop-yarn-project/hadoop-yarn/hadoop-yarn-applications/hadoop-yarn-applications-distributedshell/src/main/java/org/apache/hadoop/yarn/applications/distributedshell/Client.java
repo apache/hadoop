@@ -196,8 +196,6 @@ public class Client {
   // Command line options
   private Options opts;
 
-  private String timelineServiceVersion;
-
   private static final String shellCommandPath = "shellCommands";
   private static final String shellArgsPath = "shellArgs";
   private static final String appMasterJarPath = "AppMaster.jar";
@@ -273,7 +271,6 @@ public class Client {
     opts.addOption("container_vcores", true, "Amount of virtual cores to be requested to run the shell command");
     opts.addOption("num_containers", true, "No. of containers on which the shell command needs to be executed");
     opts.addOption("log_properties", true, "log4j.properties file");
-    opts.addOption("timeline_service_version", true, "Version for timeline service");
     opts.addOption("keep_containers_across_application_attempts", false,
       "Flag to indicate whether to keep containers across application attempts." +
       " If the flag is true, running containers will not be killed when" +
@@ -385,16 +382,6 @@ public class Client {
     if (amVCores < 0) {
       throw new IllegalArgumentException("Invalid virtual cores specified for application master, exiting."
           + " Specified virtual cores=" + amVCores);
-    }
-
-    if (cliParser.hasOption("timeline_service_version")) {
-      timelineServiceVersion =
-        cliParser.getOptionValue("timeline_service_version", "v1");
-      if (! (timelineServiceVersion.trim().equalsIgnoreCase("v1") ||
-          timelineServiceVersion.trim().equalsIgnoreCase("v2"))) {
-        throw new IllegalArgumentException(
-              "timeline_service_version is not set properly, should be 'v1' or 'v2'");
-      }
     }
 
     if (!cliParser.hasOption("jar")) {
@@ -726,9 +713,6 @@ public class Client {
 
     vargs.addAll(containerRetryOptions);
 
-    if (timelineServiceVersion != null) {
-      vargs.add("--timeline_service_version " + timelineServiceVersion);
-    }
     vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stdout");
     vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stderr");
 

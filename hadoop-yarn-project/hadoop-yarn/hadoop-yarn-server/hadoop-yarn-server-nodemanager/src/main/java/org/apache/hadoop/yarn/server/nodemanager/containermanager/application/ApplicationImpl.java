@@ -74,9 +74,8 @@ public class ApplicationImpl implements Application {
 
   final Dispatcher dispatcher;
   final String user;
-  final String flowName;
-  final String flowVersion;
-  final long flowRunId;
+  // flow context is set only if the timeline service v.2 is enabled
+  private FlowContext flowContext;
   final ApplicationId appId;
   final Credentials credentials;
   Map<ApplicationAccessType, String> applicationACLs;
@@ -102,15 +101,24 @@ public class ApplicationImpl implements Application {
   private long applicationLogInitedTimestamp = -1;
   private final NMStateStoreService appStateStore;
 
-  public ApplicationImpl(Dispatcher dispatcher, String user, String flowName,
-      String flowVersion, long flowRunId, ApplicationId appId,
-      Credentials credentials, Context context,
+  public ApplicationImpl(Dispatcher dispatcher, String user,
+      ApplicationId appId, Credentials credentials, Context context) {
+    this(dispatcher, user, null, appId, credentials, context, -1L);
+  }
+
+  public ApplicationImpl(Dispatcher dispatcher, String user,
+      ApplicationId appId, Credentials credentials, Context context,
       long recoveredLogInitedTime) {
+    this(dispatcher, user, null, appId, credentials, context,
+      recoveredLogInitedTime);
+  }
+
+  public ApplicationImpl(Dispatcher dispatcher, String user,
+      FlowContext flowContext, ApplicationId appId, Credentials credentials,
+      Context context, long recoveredLogInitedTime) {
     this.dispatcher = dispatcher;
     this.user = user;
-    this.flowName = flowName;
-    this.flowVersion = flowVersion;
-    this.flowRunId = flowRunId;
+    this.flowContext = flowContext;
     this.appId = appId;
     this.credentials = credentials;
     this.aclsManager = context.getApplicationACLsManager();
@@ -123,17 +131,50 @@ public class ApplicationImpl implements Application {
     setAppLogInitedTimestamp(recoveredLogInitedTime);
   }
 
-  public ApplicationImpl(Dispatcher dispatcher, String user, String flowId,
-      String flowVersion, long flowRunId, ApplicationId appId,
+  public ApplicationImpl(Dispatcher dispatcher, String user,
+      FlowContext flowContext, ApplicationId appId,
       Credentials credentials, Context context) {
-    this(dispatcher, user, flowId, flowVersion, flowRunId, appId, credentials,
+    this(dispatcher, user, flowContext, appId, credentials,
       context, -1);
     Configuration conf = context.getConf();
-    if (YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
-      createAndStartTimelineClient(conf);
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      if (flowContext == null) {
+        throw new IllegalArgumentException("flow context cannot be null");
+      }
+      this.flowContext = flowContext;
+      if (YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
+        createAndStartTimelineClient(conf);
+      }
     }
   }
-  
+
+  /**
+   * Data object that encapsulates the flow context for the application purpose.
+   */
+  public static class FlowContext {
+    private final String flowName;
+    private final String flowVersion;
+    private final long flowRunId;
+
+    public FlowContext(String flowName, String flowVersion, long flowRunId) {
+      this.flowName = flowName;
+      this.flowVersion = flowVersion;
+      this.flowRunId = flowRunId;
+    }
+
+    public String getFlowName() {
+      return flowName;
+    }
+
+    public String getFlowVersion() {
+      return flowVersion;
+    }
+
+    public long getFlowRunId() {
+      return flowRunId;
+    }
+  }
+
   private void createAndStartTimelineClient(Configuration conf) {
     // create and start timeline client
     this.timelineClient = TimelineClient.createTimelineClient(appId);
@@ -528,7 +569,11 @@ public class ApplicationImpl implements Application {
       // Remove collectors info for finished apps.
       // TODO check we remove related collectors info in failure cases
       // (YARN-3038)
-      app.context.getRegisteredCollectors().remove(app.getAppId());
+      Map<ApplicationId, String> registeredCollectors =
+          app.context.getRegisteredCollectors();
+      if (registeredCollectors != null) {
+        registeredCollectors.remove(app.getAppId());
+      }
       // stop timelineClient when application get finished.
       TimelineClient timelineClient = app.getTimelineClient();
       if (timelineClient != null) {
@@ -595,16 +640,16 @@ public class ApplicationImpl implements Application {
 
   @Override
   public String getFlowName() {
-    return flowName;
+    return flowContext == null ? null : flowContext.getFlowName();
   }
 
   @Override
   public String getFlowVersion() {
-    return flowVersion;
+    return flowContext == null ? null : flowContext.getFlowVersion();
   }
 
   @Override
   public long getFlowRunId() {
-    return flowRunId;
+    return flowContext == null ? 0L : flowContext.getFlowRunId();
   }
 }

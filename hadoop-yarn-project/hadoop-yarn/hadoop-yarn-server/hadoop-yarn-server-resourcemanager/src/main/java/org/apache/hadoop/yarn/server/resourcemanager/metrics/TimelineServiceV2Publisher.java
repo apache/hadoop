@@ -59,7 +59,7 @@ import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import com.google.common.annotations.VisibleForTesting;
 
 /**
- * This class is responsible for posting application, appattempt & Container
+ * This class is responsible for posting application, appattempt &amp; Container
  * lifecycle related events to timeline service V2
  */
 @Private

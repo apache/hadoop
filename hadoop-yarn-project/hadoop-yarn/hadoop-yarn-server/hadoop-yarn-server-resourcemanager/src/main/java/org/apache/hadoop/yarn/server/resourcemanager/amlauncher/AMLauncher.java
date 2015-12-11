@@ -229,12 +229,14 @@ public class AMLauncher implements Runnable {
             .get(applicationId)
             .getSubmitTime()));
 
-    // Set flow context info
-    for (String tag :
-        rmContext.getRMApps().get(applicationId).getApplicationTags()) {
-      setFlowTags(environment, TimelineUtils.FLOW_NAME_TAG_PREFIX, tag);
-      setFlowTags(environment, TimelineUtils.FLOW_VERSION_TAG_PREFIX, tag);
-      setFlowTags(environment, TimelineUtils.FLOW_RUN_ID_TAG_PREFIX, tag);
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      // Set flow context info
+      for (String tag :
+          rmContext.getRMApps().get(applicationId).getApplicationTags()) {
+        setFlowTags(environment, TimelineUtils.FLOW_NAME_TAG_PREFIX, tag);
+        setFlowTags(environment, TimelineUtils.FLOW_VERSION_TAG_PREFIX, tag);
+        setFlowTags(environment, TimelineUtils.FLOW_RUN_ID_TAG_PREFIX, tag);
+      }
     }
     Credentials credentials = new Credentials();
     DataInputByteBuffer dibb = new DataInputByteBuffer();
