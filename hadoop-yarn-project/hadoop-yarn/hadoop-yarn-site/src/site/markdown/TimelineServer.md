@@ -26,6 +26,10 @@ The YARN Timeline Server
 * [Publishing of application specific data](#Publishing_of_application_specific_data)
 * [Timeline Server REST API](#Timeline_Server_REST_API_v1)
 * [Generic Data REST APIs](#GENERIC_DATA_REST_APIS)
+* [Timelnine Server Performance Test Tool](#TIMELINE_SERVER_PERFORMANCE_TEST_TOOL)
+    * [Highlights](#HIGHLIGHTS)
+    * [Usage](#USAGE)
+    * [Sample Runs](#SAMPLE_RUNS)
 
 <a name="Overview"></a>Overview
 ---------
@@ -2033,3 +2037,77 @@ This hides details of other domains from an unauthorized caller.
 this failure *will not* result in an HTTP error code being retured.
 A status code of 200 will be returned —however, there will be an error code
 in the list of failed entities for each entity which could not be added.
+
+<a name="TIMELINE_SERVER_PERFORMANCE_TEST_TOOL"></a> Timelnine Server Performance Test Tool
+----------
+###<a name="HIGHLIGHTS"></a>Highlights
+
+The timeline server performance test tool helps measure timeline server's write performance. The test
+launches SimpleEntityWriter mappers or JobHistoryFileReplay mappers to write timeline
+entities to the timeline server. At the end, the transaction rate(ops/s) per mapper and the total transaction rate
+will be measured and printed out. Running the test with SimpleEntityWriter mappers
+will also measure and show the IO rate(KB/s) per mapper and the total IO rate.
+
+###<a name="USAGE"></a>Usage
+
+Mapper Types Description:
+
+     1. SimpleEntityWriter mapper
+        Each mapper writes a user-specified number of timeline entities
+        with a user-specified size to the timeline server.
+
+     2. JobHistoryFileReplay mapper
+        Each mapper replays jobhistory files under a specified directory
+        (both the jhist file and its corresponding conf.xml are required to
+         be present in order to be replayed. The number of mappers should be no more
+         than the number of jobhistory files).
+        Each mapper will get assigned some jobhistory files to replay. For each
+        job history file, a mapper will parse it to get jobinfo and then create
+        timeline entities. Each mapper also has the choice to write all the
+        timeline entities created at once or one at a time.
+
+Options:
+
+    [-m <maps>] number of mappers (default: 1)
+    [-v] timeline service version
+    [-mtype <mapper type in integer>]
+          1. simple entity write mapper
+          2. jobhistory files replay mapper
+    [-s <(KBs)test>] number of KB per put (mtype=1, default: 1 KB)
+    [-t] package sending iterations per mapper (mtype=1, default: 100)
+    [-d <path>] root path of job history files (mtype=2)
+    [-r <replay mode>] (mtype=2)
+          1. write all entities for a job in one put (default)
+          2. write one entity at a time
+
+###<a name="SAMPLE_RUNS"></a>Sample Runs
+
+Run SimpleEntityWriter test:
+
+    bin/hadoop jar performanceTest.jar timelineperformance -m 4 -mtype 1 -s 3 -t 200
+
+Example output of SimpleEntityWriter test :
+
+    TRANSACTION RATE (per mapper): 20000.0 ops/s
+    IO RATE (per mapper): 60000.0 KB/s
+    TRANSACTION RATE (total): 80000.0 ops/s
+    IO RATE (total): 240000.0 KB/s
+
+Run JobHistoryFileReplay mapper test
+
+    $ bin/hadoop jar performanceTest.jar timelineperformance -m 2 -mtype 2 -d /testInput -r 2
+
+Example input of JobHistoryFileReplay mapper test:
+
+    $ bin/hadoop fs -ls /testInput
+    /testInput/job_1.jhist
+    /testInput/job_1_conf.xml
+    /testInput/job_2.jhist
+    /testInput/job_2_conf.xml
+
+Eample output of JobHistoryFileReplay test:
+
+    TRANSACTION RATE (per mapper): 4000.0 ops/s
+    IO RATE (per mapper): 0.0 KB/s
+    TRANSACTION RATE (total): 8000.0 ops/s
+    IO RATE (total): 0.0 KB/s

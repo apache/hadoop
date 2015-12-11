@@ -607,6 +607,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4248. REST API for submit/update/delete Reservations. (curino)
 
+    YARN-4341. add doc about timeline performance tool usage (Chang Li via
+    sjlee)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
