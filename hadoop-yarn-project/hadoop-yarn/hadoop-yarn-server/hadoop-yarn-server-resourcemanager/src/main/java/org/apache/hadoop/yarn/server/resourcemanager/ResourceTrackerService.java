@@ -516,10 +516,15 @@ public class ResourceTrackerService extends AbstractService implements
           message);
     }
 
-    // Check & update collectors info from request.
-    // TODO make sure it won't have race condition issue for AM failed over case
-    // that the older registration could possible override the newer one.
-    updateAppCollectorsMap(request);
+    boolean timelineV2Enabled =
+        YarnConfiguration.timelineServiceV2Enabled(getConfig());
+    if (timelineV2Enabled) {
+      // Check & update collectors info from request.
+      // TODO make sure it won't have race condition issue for AM failed over
+      // case that the older registration could possible override the newer
+      // one.
+      updateAppCollectorsMap(request);
+    }
 
     // Heartbeat response
     NodeHeartbeatResponse nodeHeartBeatResponse = YarnServerBuilderUtils
@@ -538,12 +543,12 @@ public class ResourceTrackerService extends AbstractService implements
       nodeHeartBeatResponse.setSystemCredentialsForApps(systemCredentials);
     }
 
-    // Return collectors' map that NM needs to know
-    // TODO we should optimize this to only include collector info that NM
-    // doesn't know yet.
     List<ApplicationId> keepAliveApps =
         remoteNodeStatus.getKeepAliveApplications();
-    if (keepAliveApps != null) {
+    if (timelineV2Enabled && keepAliveApps != null) {
+      // Return collectors' map that NM needs to know
+      // TODO we should optimize this to only include collector info that NM
+      // doesn't know yet.
       setAppCollectorsMapToResponse(keepAliveApps, nodeHeartBeatResponse);
     }
 

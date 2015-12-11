@@ -30,8 +30,11 @@ public class TestTimelineReaderServer {
 
   @Test(timeout = 60000)
   public void testStartStopServer() throws Exception {
+    @SuppressWarnings("resource")
     TimelineReaderServer server = new TimelineReaderServer();
     Configuration config = new YarnConfiguration();
+    config.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    config.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
     config.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
         "localhost:0");
     try {

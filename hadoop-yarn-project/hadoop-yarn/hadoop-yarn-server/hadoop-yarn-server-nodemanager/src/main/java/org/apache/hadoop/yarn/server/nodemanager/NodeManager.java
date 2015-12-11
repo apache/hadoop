@@ -100,6 +100,7 @@ public class NodeManager extends CompositeService
   private Context context;
   private AsyncDispatcher dispatcher;
   private ContainerManagerImpl containerManager;
+  // the NM collector service is set only if the timeline service v.2 is enabled
   private NMCollectorService nmCollectorService;
   private NodeStatusUpdater nodeStatusUpdater;
   private NodeResourceMonitor nodeResourceMonitor;
@@ -375,8 +376,10 @@ public class NodeManager extends CompositeService
 
     DefaultMetricsSystem.initialize("NodeManager");
 
-    this.nmCollectorService = createNMCollectorService(context);
-    addService(nmCollectorService);
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      this.nmCollectorService = createNMCollectorService(context);
+      addService(nmCollectorService);
+    }
 
     // StatusUpdater should be added last so that it get started last 
     // so that we make sure everything is up before registering with RM. 
@@ -473,8 +476,7 @@ public class NodeManager extends CompositeService
     protected final ConcurrentMap<ContainerId, Container> containers =
         new ConcurrentSkipListMap<ContainerId, Container>();
 
-    protected Map<ApplicationId, String> registeredCollectors =
-        new ConcurrentHashMap<ApplicationId, String>();
+    protected Map<ApplicationId, String> registeredCollectors;
 
     protected final ConcurrentMap<ContainerId,
         org.apache.hadoop.yarn.api.records.Container> increasedContainers =
@@ -507,6 +509,9 @@ public class NodeManager extends CompositeService
         LocalDirsHandlerService dirsHandler, ApplicationACLsManager aclsManager,
         NMStateStoreService stateStore, boolean isDistSchedulingEnabled,
         Configuration conf) {
+      if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+        this.registeredCollectors = new ConcurrentHashMap<>();
+      }
       this.containerTokenSecretManager = containerTokenSecretManager;
       this.nmTokenSecretManager = nmTokenSecretManager;
       this.dirsHandler = dirsHandler;
@@ -783,7 +788,14 @@ public class NodeManager extends CompositeService
     return this.context;
   }
 
-  // For testing
+  /**
+   * Returns the NM collector service. It should be used only for testing
+   * purposes.
+   *
+   * @return the NM collector service, or null if the timeline service v.2 is
+   * not enabled
+   */
+  @VisibleForTesting
   NMCollectorService getNMCollectorService() {
     return this.nmCollectorService;
   }
@@ -791,6 +803,7 @@ public class NodeManager extends CompositeService
   public static void main(String[] args) throws IOException {
     Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     StringUtils.startupShutdownMessage(NodeManager.class, args, LOG);
+    @SuppressWarnings("resource")
     NodeManager nodeManager = new NodeManager();
     Configuration conf = new YarnConfiguration();
     new GenericOptionsParser(conf, args);

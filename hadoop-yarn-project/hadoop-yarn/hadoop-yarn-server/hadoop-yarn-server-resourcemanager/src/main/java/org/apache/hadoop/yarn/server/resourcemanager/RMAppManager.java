@@ -399,8 +399,11 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       LOG.warn(message);
       throw new YarnException(message);
     }
-    // Start timeline collector for the submitted app
-    application.startTimelineCollector();
+
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      // Start timeline collector for the submitted app
+      application.startTimelineCollector();
+    }
     // Inform the ACLs Manager
     this.applicationACLsManager.addApplication(applicationId,
         submissionContext.getAMContainerSpec().getApplicationACLs());
