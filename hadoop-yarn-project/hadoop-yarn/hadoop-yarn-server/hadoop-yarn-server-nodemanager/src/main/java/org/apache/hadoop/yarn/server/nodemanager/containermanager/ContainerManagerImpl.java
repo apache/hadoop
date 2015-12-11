@@ -115,6 +115,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationFinishEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl.FlowContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationInitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
@@ -190,7 +191,8 @@ public class ContainerManagerImpl extends CompositeService implements
 
   private long waitForContainersOnShutdownMillis;
 
-  private final NMTimelinePublisher nmMetricsPublisher;
+  // NM metrics publisher is set only if the timeline service v.2 is enabled
+  private NMTimelinePublisher nmMetricsPublisher;
 
   public ContainerManagerImpl(Context context, ContainerExecutor exec,
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
@@ -218,8 +220,15 @@ public class ContainerManagerImpl extends CompositeService implements
     auxiliaryServices.registerServiceListener(this);
     addService(auxiliaryServices);
 
-    nmMetricsPublisher = createNMTimelinePublisher(context);
-    context.setNMTimelinePublisher(nmMetricsPublisher);
+    // initialize the metrics publisher if the timeline service v.2 is enabled
+    // and the system publisher is enabled
+    Configuration conf = context.getConf();
+    if (YarnConfiguration.timelineServiceV2Enabled(conf) &&
+        YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
+      LOG.info("YARN system metrics publishing service is enabled");
+      nmMetricsPublisher = createNMTimelinePublisher(context);
+      context.setNMTimelinePublisher(nmMetricsPublisher);
+    }
     this.containersMonitor =
         new ContainersMonitorImpl(exec, dispatcher, this.context);
     addService(this.containersMonitor);
@@ -236,7 +245,6 @@ public class ContainerManagerImpl extends CompositeService implements
     dispatcher.register(ContainersLauncherEventType.class, containersLauncher);
     
     addService(dispatcher);
-
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
@@ -335,7 +343,7 @@ public class ContainerManagerImpl extends CompositeService implements
     LOG.info("Recovering application " + appId);
     //TODO: Recover flow and flow run ID
     ApplicationImpl app = new ApplicationImpl(
-        dispatcher, p.getUser(), null, null, 0, appId, creds, context);
+        dispatcher, p.getUser(), appId, creds, context);
     context.getApplications().put(appId, app);
     app.handle(new ApplicationInitEvent(appId, acls, logAggregationContext));
   }
@@ -941,20 +949,27 @@ public class ContainerManagerImpl extends CompositeService implements
     try {
       if (!serviceStopped) {
         // Create the application
-        String flowName = launchContext.getEnvironment().get(
-            TimelineUtils.FLOW_NAME_TAG_PREFIX);
-        String flowVersion = launchContext.getEnvironment().get(
-            TimelineUtils.FLOW_VERSION_TAG_PREFIX);
-        String flowRunIdStr = launchContext.getEnvironment().get(
-            TimelineUtils.FLOW_RUN_ID_TAG_PREFIX);
-        long flowRunId = 0L;
-        if (flowRunIdStr != null && !flowRunIdStr.isEmpty()) {
-          flowRunId = Long.parseLong(flowRunIdStr);
+        // populate the flow context from the launch context if the timeline
+        // service v.2 is enabled
+        FlowContext flowContext = null;
+        if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
+          String flowName = launchContext.getEnvironment().get(
+              TimelineUtils.FLOW_NAME_TAG_PREFIX);
+          String flowVersion = launchContext.getEnvironment().get(
+              TimelineUtils.FLOW_VERSION_TAG_PREFIX);
+          String flowRunIdStr = launchContext.getEnvironment().get(
+              TimelineUtils.FLOW_RUN_ID_TAG_PREFIX);
+          long flowRunId = 0L;
+          if (flowRunIdStr != null && !flowRunIdStr.isEmpty()) {
+            flowRunId = Long.parseLong(flowRunIdStr);
+          }
+          flowContext =
+              new FlowContext(flowName, flowVersion, flowRunId);
         }
         if (!context.getApplications().containsKey(applicationID)) {
           Application application =
-              new ApplicationImpl(dispatcher, user, flowName, flowVersion,
-                  flowRunId, applicationID, credentials, context);
+              new ApplicationImpl(dispatcher, user, flowContext,
+                  applicationID, credentials, context);
           if (context.getApplications().putIfAbsent(applicationID,
               application) == null) {
             LOG.info("Creating a new application reference for app "
@@ -1310,7 +1325,9 @@ public class ContainerManagerImpl extends CompositeService implements
       Container c = containers.get(event.getContainerID());
       if (c != null) {
         c.handle(event);
-        nmMetricsPublisher.publishContainerEvent(event);
+        if (nmMetricsPublisher != null) {
+          nmMetricsPublisher.publishContainerEvent(event);
+        }
       } else {
         LOG.warn("Event " + event + " sent to absent container " +
             event.getContainerID());
@@ -1326,7 +1343,9 @@ public class ContainerManagerImpl extends CompositeService implements
               event.getApplicationID());
       if (app != null) {
         app.handle(event);
-        nmMetricsPublisher.publishApplicationEvent(event);
+        if (nmMetricsPublisher != null) {
+          nmMetricsPublisher.publishApplicationEvent(event);
+        }
       } else {
         LOG.warn("Event " + event + " sent to absent application "
             + event.getApplicationID());
@@ -1349,7 +1368,9 @@ public class ContainerManagerImpl extends CompositeService implements
     @Override
     public void handle(LocalizationEvent event) {
       origLocalizationEventHandler.handle(event);
-      timelinePublisher.publishLocalizationEvent(event);
+      if (timelinePublisher != null) {
+        timelinePublisher.publishLocalizationEvent(event);
+      }
     }
   }
 

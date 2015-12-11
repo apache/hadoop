@@ -955,15 +955,17 @@ public class RMAppImpl implements RMApp, Recoverable {
       extends RMAppTransition {
 
     public void transition(RMAppImpl app, RMAppEvent event) {
-      LOG.info("Updating collector info for app: " + app.getApplicationId());
+      if (YarnConfiguration.timelineServiceV2Enabled(app.conf)) {
+        LOG.info("Updating collector info for app: " + app.getApplicationId());
 
-      RMAppCollectorUpdateEvent appCollectorUpdateEvent =
-          (RMAppCollectorUpdateEvent) event;
-      // Update collector address
-      app.setCollectorAddr(appCollectorUpdateEvent.getAppCollectorAddr());
+        RMAppCollectorUpdateEvent appCollectorUpdateEvent =
+            (RMAppCollectorUpdateEvent) event;
+        // Update collector address
+        app.setCollectorAddr(appCollectorUpdateEvent.getAppCollectorAddr());
 
-      // TODO persistent to RMStateStore for recover
-      // Save to RMStateStore
+        // TODO persistent to RMStateStore for recover
+        // Save to RMStateStore
+      }
     };
   }
 

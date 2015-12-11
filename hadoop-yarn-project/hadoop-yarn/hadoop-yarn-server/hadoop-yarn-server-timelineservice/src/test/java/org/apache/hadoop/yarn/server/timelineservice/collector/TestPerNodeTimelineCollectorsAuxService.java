@@ -50,11 +50,16 @@ import java.io.IOException;
 public class TestPerNodeTimelineCollectorsAuxService {
   private ApplicationAttemptId appAttemptId;
   private PerNodeTimelineCollectorsAuxService auxService;
+  private Configuration conf;
 
   public TestPerNodeTimelineCollectorsAuxService() {
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
     appAttemptId = ApplicationAttemptId.newInstance(appId, 1);
+    conf = new YarnConfiguration();
+    // enable timeline service v.2
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
   }
 
   @After
@@ -134,7 +139,7 @@ public class TestPerNodeTimelineCollectorsAuxService {
     try {
       auxService =
           PerNodeTimelineCollectorsAuxService.launchServer(new String[0],
-              createCollectorManager());
+              createCollectorManager(), conf);
     } catch (ExitUtil.ExitException e) {
       assertEquals(0, e.status);
       ExitUtil.resetFirstExitException();
@@ -160,7 +165,7 @@ public class TestPerNodeTimelineCollectorsAuxService {
     NodeTimelineCollectorManager collectorManager = createCollectorManager();
     PerNodeTimelineCollectorsAuxService auxService =
         spy(new PerNodeTimelineCollectorsAuxService(collectorManager));
-    auxService.init(new YarnConfiguration());
+    auxService.init(conf);
     auxService.start();
     return auxService;
   }

@@ -38,7 +38,6 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -56,12 +55,16 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.Contai
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
+/**
+ * Metrics publisher service that publishes data to the timeline service v.2. It
+ * is used only if the timeline service v.2 is enabled and the system publishing
+ * of events and metrics is enabled.
+ */
 public class NMTimelinePublisher extends CompositeService {
 
   private static final Log LOG = LogFactory.getLog(NMTimelinePublisher.class);
 
   private Dispatcher dispatcher;
-  private boolean publishSystemMetrics;
 
   private Context context;
 
@@ -76,24 +79,16 @@ public class NMTimelinePublisher extends CompositeService {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    publishSystemMetrics =
-        YarnConfiguration.systemMetricsPublisherEnabled(conf);
-
-    if (publishSystemMetrics) {
-      dispatcher = new AsyncDispatcher();
-      dispatcher.register(NMTimelineEventType.class,
-          new ForwardingEventHandler());
-      dispatcher
-          .register(ContainerEventType.class, new ContainerEventHandler());
-      dispatcher.register(ApplicationEventType.class,
-          new ApplicationEventHandler());
-      dispatcher.register(LocalizationEventType.class,
-          new LocalizationEventDispatcher());
-      addIfService(dispatcher);
-      LOG.info("YARN system metrics publishing service is enabled");
-    } else {
-      LOG.info("YARN system metrics publishing service is not enabled");
-    }
+    dispatcher = new AsyncDispatcher();
+    dispatcher.register(NMTimelineEventType.class,
+        new ForwardingEventHandler());
+    dispatcher
+        .register(ContainerEventType.class, new ContainerEventHandler());
+    dispatcher.register(ApplicationEventType.class,
+        new ApplicationEventHandler());
+    dispatcher.register(LocalizationEventType.class,
+        new LocalizationEventDispatcher());
+    addIfService(dispatcher);
     super.serviceInit(conf);
   }
 
@@ -121,8 +116,9 @@ public class NMTimelinePublisher extends CompositeService {
   public void reportContainerResourceUsage(Container container,
       long createdTime, String pId, Long pmemUsage,
       Float cpuUsageTotalCoresPercentage) {
-    if (publishSystemMetrics
-        && (pmemUsage != ResourceCalculatorProcessTree.UNAVAILABLE || cpuUsageTotalCoresPercentage != ResourceCalculatorProcessTree.UNAVAILABLE)) {
+    if (pmemUsage != ResourceCalculatorProcessTree.UNAVAILABLE ||
+        cpuUsageTotalCoresPercentage !=
+            ResourceCalculatorProcessTree.UNAVAILABLE) {
       ContainerEntity entity =
           createContainerEntity(container.getContainerId());
       long currentTimeMillis = System.currentTimeMillis();
@@ -219,9 +215,6 @@ public class NMTimelinePublisher extends CompositeService {
   }
 
   public void publishApplicationEvent(ApplicationEvent event) {
-    if (!publishSystemMetrics) {
-      return;
-    }
     // publish only when the desired event is received
     switch (event.getType()) {
     case INIT_APPLICATION:
@@ -242,9 +235,6 @@ public class NMTimelinePublisher extends CompositeService {
   }
 
   public void publishContainerEvent(ContainerEvent event) {
-    if (!publishSystemMetrics) {
-      return;
-    }
     // publish only when the desired event is received
     switch (event.getType()) {
     case INIT_CONTAINER:
@@ -262,9 +252,6 @@ public class NMTimelinePublisher extends CompositeService {
   }
 
   public void publishLocalizationEvent(LocalizationEvent event) {
-    if (!publishSystemMetrics) {
-      return;
-    }
     // publish only when the desired event is received
     switch (event.getType()) {
     case CONTAINER_RESOURCES_LOCALIZED:

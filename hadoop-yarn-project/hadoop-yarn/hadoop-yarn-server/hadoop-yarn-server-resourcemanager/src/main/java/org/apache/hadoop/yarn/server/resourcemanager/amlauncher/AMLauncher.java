@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.client.NMProxy;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -215,12 +216,14 @@ public class AMLauncher implements Runnable {
             .get(applicationId)
             .getSubmitTime()));
 
-    // Set flow context info
-    for (String tag :
-        rmContext.getRMApps().get(applicationId).getApplicationTags()) {
-      setFlowTags(environment, TimelineUtils.FLOW_NAME_TAG_PREFIX, tag);
-      setFlowTags(environment, TimelineUtils.FLOW_VERSION_TAG_PREFIX, tag);
-      setFlowTags(environment, TimelineUtils.FLOW_RUN_ID_TAG_PREFIX, tag);
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      // Set flow context info
+      for (String tag :
+          rmContext.getRMApps().get(applicationId).getApplicationTags()) {
+        setFlowTags(environment, TimelineUtils.FLOW_NAME_TAG_PREFIX, tag);
+        setFlowTags(environment, TimelineUtils.FLOW_VERSION_TAG_PREFIX, tag);
+        setFlowTags(environment, TimelineUtils.FLOW_RUN_ID_TAG_PREFIX, tag);
+      }
     }
     Credentials credentials = new Credentials();
     DataInputByteBuffer dibb = new DataInputByteBuffer();

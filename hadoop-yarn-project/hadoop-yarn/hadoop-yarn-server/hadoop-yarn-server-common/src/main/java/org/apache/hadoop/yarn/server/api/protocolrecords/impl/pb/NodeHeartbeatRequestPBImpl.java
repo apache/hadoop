@@ -261,10 +261,12 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
   private void initRegisteredCollectors() {
     NodeHeartbeatRequestProtoOrBuilder p = viaProto ? proto : builder;
     List<AppCollectorsMapProto> list = p.getRegisteredCollectorsList();
-    this.registeredCollectors = new HashMap<ApplicationId, String> ();
-    for (AppCollectorsMapProto c : list) {
-      ApplicationId appId = convertFromProtoFormat(c.getAppId());
-      this.registeredCollectors.put(appId, c.getAppCollectorAddr());
+    if (!list.isEmpty()) {
+      this.registeredCollectors = new HashMap<>();
+      for (AppCollectorsMapProto c : list) {
+        ApplicationId appId = convertFromProtoFormat(c.getAppId());
+        this.registeredCollectors.put(appId, c.getAppCollectorAddr());
+      }
     }
   }
 

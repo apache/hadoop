@@ -99,22 +99,19 @@ public class TestDistributedShell {
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 128);
     conf.set("yarn.log.dir", "target");
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.SYSTEM_METRICS_PUBLISHER_ENABLED, true);
 
     if (!testName.getMethodName().toLowerCase().contains("v2")) {
       // disable aux-service based timeline collectors
       conf.set(YarnConfiguration.NM_AUX_SERVICES, "");
-      conf.setBoolean(YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_ENABLED,
-          true);
-      conf.setBoolean(YarnConfiguration.SYSTEM_METRICS_PUBLISHER_ENABLED, false);
     } else {
+      // set version to 2
+      conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
       // enable aux-service based timeline collectors
       conf.set(YarnConfiguration.NM_AUX_SERVICES, TIMELINE_AUX_SERVICE_NAME);
       conf.set(YarnConfiguration.NM_AUX_SERVICES + "."
           + TIMELINE_AUX_SERVICE_NAME + ".class",
           PerNodeTimelineCollectorsAuxService.class.getName());
-      conf.setBoolean(YarnConfiguration.SYSTEM_METRICS_PUBLISHER_ENABLED, true);
-      conf.setBoolean(YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_ENABLED,
-          false);
     }
     conf.set(YarnConfiguration.NM_VMEM_PMEM_RATIO, "8");
     conf.set(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class.getName());
@@ -245,12 +242,7 @@ public class TestDistributedShell {
     }
     boolean isTestingTimelineV2 = false;
     if (timelineVersion.equalsIgnoreCase("v2")) {
-      String[] timelineArgs = {
-          "--timeline_service_version",
-          "v2"
-      };
       isTestingTimelineV2 = true;
-      args = mergeArgs(args, timelineArgs);
       if (!defaultFlow) {
         String[] flowArgs = {
             "--flow_name",

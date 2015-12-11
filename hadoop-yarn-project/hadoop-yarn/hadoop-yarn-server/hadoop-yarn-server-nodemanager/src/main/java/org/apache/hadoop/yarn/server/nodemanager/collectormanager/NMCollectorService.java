@@ -43,6 +43,10 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 
+/**
+ * Service that handles collector information. It is used only if the timeline
+ * service v.2 is enabled.
+ */
 public class NMCollectorService extends CompositeService implements
     CollectorNodemanagerProtocol {
 
@@ -113,9 +117,9 @@ public class NMCollectorService extends CompositeService implements
         String collectorAddr = collector.getCollectorAddr();
         newCollectorsMap.put(appId, collectorAddr);
         // set registered collector address to TimelineClient.
-        if (YarnConfiguration.systemMetricsPublisherEnabled(context.getConf())) {
-          TimelineClient client = 
-              context.getApplications().get(appId).getTimelineClient();
+        TimelineClient client =
+            context.getApplications().get(appId).getTimelineClient();
+        if (client != null) {
           client.setTimelineServiceAddress(collectorAddr);
         }
       }
