@@ -2574,6 +2574,9 @@ Release 2.7.2 - UNRELEASED
     HDFS-9294. DFSClient deadlock when close file and failed to renew lease.
     (Brahma Reddy Battula via szetszwo)
 
+    HDFS-9445. Datanode may deadlock while handling a bad volume.
+    (Wlater Su via Kihwal)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
