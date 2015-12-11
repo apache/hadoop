@@ -296,59 +296,7 @@ public class TestWebHdfsTokens {
       }
     }
   }
-
-  @Test
-  public void testReuseToken() throws Exception {
-    MiniDFSCluster cluster = null;
-
-    UserGroupInformation loginUgi = UserGroupInformation.createUserForTesting(
-        "LoginUser", new String[]{"supergroup"});
-
-    try {
-      final Configuration clusterConf = new HdfsConfiguration(conf);
-      SecurityUtil.setAuthenticationMethod(SIMPLE, clusterConf);
-      clusterConf.setBoolean(DFSConfigKeys
-          .DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
-      UserGroupInformation.setConfiguration(clusterConf);
-      UserGroupInformation.setLoginUser(loginUgi);
-
-      cluster = new MiniDFSCluster.Builder(clusterConf).numDataNodes(0).build();
-      cluster.waitActive();
-
-      /* create SIMPLE client connection */
-      SecurityUtil.setAuthenticationMethod(SIMPLE, clusterConf);
-      UserGroupInformation.setConfiguration(clusterConf);
-      UserGroupInformation simpleUgi = UserGroupInformation.createUserForTesting(
-          "testUser", new String[]{"supergroup"});
-      final WebHdfsFileSystem simpleFs = WebHdfsTestUtil.getWebHdfsFileSystemAs
-          (simpleUgi, clusterConf, "webhdfs");
-
-      /* create KERBEROS client connection */
-      SecurityUtil.setAuthenticationMethod(KERBEROS, clusterConf);
-      UserGroupInformation.setConfiguration(clusterConf);
-      UserGroupInformation krbUgi = UserGroupInformation.createUserForTesting(
-          "testUser", new String[]{"supergroup"});
-      final WebHdfsFileSystem krbFs = WebHdfsTestUtil.getWebHdfsFileSystemAs
-              (krbUgi, clusterConf, "webhdfs");
-
-      // 1. Get initial token through kerberos client connection
-      Token<DelegationTokenIdentifier> krbToken
-        = krbFs.getDelegationToken(null);
-      Assert.assertNotNull(krbToken);
-
-      // 2. Get token with previous token which gets from kerberos connection
-      //    through SIMPLE client connection.
-      simpleFs.setDelegationToken(krbToken);
-      Token<?> simpleToken =  simpleFs.getDelegationToken();
-      Assert.assertNotNull(simpleToken);
-      Assert.assertEquals(krbToken.getService(), simpleToken.getService());
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
-    }
-  }
-
+  
   @SuppressWarnings("unchecked")
   private void validateLazyTokenFetch(final Configuration clusterConf) throws Exception{
     final String testUser = "DummyUser";
@@ -360,6 +308,16 @@ public class TestWebHdfsTokens {
         return spy((WebHdfsFileSystem) FileSystem.newInstance(uri, clusterConf));
 	  }
     });
+    // verify token ops don't get a token
+    Assert.assertNull(fs.getRenewToken());
+    Token<?> token = fs.getDelegationToken(null);
+    fs.renewDelegationToken(token);
+    fs.cancelDelegationToken(token);
+    verify(fs, never()).getDelegationToken();
+    verify(fs, never()).replaceExpiredDelegationToken();
+    verify(fs, never()).setDelegationToken(any(Token.class));
+    Assert.assertNull(fs.getRenewToken());
+    reset(fs);
 
     // verify first non-token op gets a token
     final Path p = new Path("/f");
@@ -368,8 +326,8 @@ public class TestWebHdfsTokens {
     verify(fs, never()).replaceExpiredDelegationToken();
     verify(fs, times(1)).getDelegationToken(anyString());
     verify(fs, times(1)).setDelegationToken(any(Token.class));
-    Token<?> token = fs.getRenewToken();
-    Assert.assertNotNull(token);
+    token = fs.getRenewToken();
+    Assert.assertNotNull(token);      
     Assert.assertEquals(testUser, getTokenOwner(token));
     Assert.assertEquals(fs.getTokenKind(), token.getKind());
     reset(fs);
@@ -463,7 +421,6 @@ public class TestWebHdfsTokens {
     verify(fs, times(1)).cancelDelegationToken(eq(token2));
 
     // add a token to ugi for a new fs, verify it uses that token
-    fs.setDelegationToken(null);
     token = fs.getDelegationToken(null);
     ugi.addToken(token);
     fs = ugi.doAs(new PrivilegedExceptionAction<WebHdfsFileSystem>() {

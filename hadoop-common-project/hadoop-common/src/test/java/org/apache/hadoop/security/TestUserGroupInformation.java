@@ -18,7 +18,6 @@ package org.apache.hadoop.security;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
@@ -36,7 +35,6 @@ import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.LoginContext;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
@@ -863,7 +861,7 @@ public class TestUserGroupInformation {
 
     // Ensure only non-private tokens are returned
     Collection<Token<? extends TokenIdentifier>> tokens = ugi.getCredentials().getAllTokens();
-    assertEquals(3, tokens.size());
+    assertEquals(1, tokens.size());
   }
 
   /**
@@ -929,47 +927,5 @@ public class TestUserGroupInformation {
         }
       }
     }
-  }
-
-  @Test (timeout = 30000)
-  public void testExternalTokenFiles() throws Exception {
-    StringBuilder tokenFullPathnames = new StringBuilder();
-    String tokenFilenames = "token1,token2";
-    String tokenFiles[] = tokenFilenames.split("\\s*,\\s*+");
-    final File testDir = new File("target",
-        TestUserGroupInformation.class.getName() + "-tmpDir").getAbsoluteFile();
-    String testDirPath = testDir.getAbsolutePath();
-
-    // create path for token files
-    for (String tokenFile: tokenFiles) {
-      if (tokenFullPathnames.length() > 0) {
-        tokenFullPathnames.append(",");
-      }
-      tokenFullPathnames.append(testDirPath).append("/").append(tokenFile);
-    }
-
-    // create new token and store it
-    TestTokenIdentifier tokenId = new TestTokenIdentifier();
-    Credentials cred1 = new Credentials();
-    Token<TestTokenIdentifier> token1 = new Token<TestTokenIdentifier>(
-            tokenId.getBytes(), "password".getBytes(),
-            tokenId.getKind(), new Text("token-service1"));
-    cred1.addToken(token1.getService(), token1);
-    cred1.writeTokenStorageFile(new Path(testDirPath, tokenFiles[0]), conf);
-
-    Credentials cred2 = new Credentials();
-    Token<TestTokenIdentifier> token2 = new Token<TestTokenIdentifier>(
-            tokenId.getBytes(), "password".getBytes(),
-            tokenId.getKind(), new Text("token-service2"));
-    cred2.addToken(token2.getService(), token2);
-    cred2.writeTokenStorageFile(new Path(testDirPath, tokenFiles[1]), conf);
-
-    // set property for token external token files
-    System.setProperty("hadoop.token.files", tokenFullPathnames.toString());
-    UserGroupInformation.setLoginUser(null);
-    UserGroupInformation tokenUgi = UserGroupInformation.getLoginUser();
-    Collection<Token<?>> credsugiTokens = tokenUgi.getTokens();
-    assertTrue(credsugiTokens.contains(token1));
-    assertTrue(credsugiTokens.contains(token2));
   }
 }

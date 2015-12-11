@@ -195,33 +195,9 @@ public class TestWebHdfsUrl {
     checkQueryParams(
         new String[]{
             GetOpParam.Op.GETFILESTATUS.toQueryString(),
-            new DelegationParam(tokenString).toString()
+            new UserParam(ugi.getShortUserName()).toString()
         },
-        fileStatusUrl);
-
-    // send user with delegationToken
-    getTokenUrl = webhdfs.toUrl(GetOpParam.Op.GETDELEGATIONTOKEN,
-        fsPath, new DelegationParam(tokenString));
-    checkQueryParams(
-        new String[]{
-            GetOpParam.Op.GETDELEGATIONTOKEN.toQueryString(),
-            new UserParam(ugi.getShortUserName()).toString(),
-            new DelegationParam(tokenString).toString()
-        },
-        getTokenUrl);
-
-    // send user with delegationToken
-    renewTokenUrl = webhdfs.toUrl(PutOpParam.Op.RENEWDELEGATIONTOKEN,
-        fsPath, new TokenArgumentParam(tokenString),
-        new DelegationParam(tokenString));
-    checkQueryParams(
-        new String[]{
-            PutOpParam.Op.RENEWDELEGATIONTOKEN.toQueryString(),
-            new UserParam(ugi.getShortUserName()).toString(),
-            new TokenArgumentParam(tokenString).toString(),
-            new DelegationParam(tokenString).toString()
-        },
-        renewTokenUrl);
+        fileStatusUrl);    
   }
 
   @Test(timeout=60000)
@@ -298,13 +274,14 @@ public class TestWebHdfsUrl {
             new TokenArgumentParam(tokenString).toString()
         },
         cancelTokenUrl);
-
+    
     // send real+effective
     fileStatusUrl = webhdfs.toUrl(GetOpParam.Op.GETFILESTATUS, fsPath);
     checkQueryParams(
         new String[]{
             GetOpParam.Op.GETFILESTATUS.toQueryString(),
-            new DelegationParam(tokenString).toString()
+            new UserParam(ugi.getRealUser().getShortUserName()).toString(),
+            new DoAsParam(ugi.getShortUserName()).toString()
         },
         fileStatusUrl);    
   }
