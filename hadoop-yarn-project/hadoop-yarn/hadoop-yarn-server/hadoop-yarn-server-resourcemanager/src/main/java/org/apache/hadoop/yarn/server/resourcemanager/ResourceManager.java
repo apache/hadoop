@@ -469,18 +469,19 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected SystemMetricsPublisher createSystemMetricsPublisher() {
-    boolean timelineServiceEnabled =
-        conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
-            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED);
-    SystemMetricsPublisher publisher = null;
-    if (timelineServiceEnabled) {
-      if (conf.getBoolean(YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_ENABLED,
-          YarnConfiguration.DEFAULT_RM_SYSTEM_METRICS_PUBLISHER_ENABLED)) {
-        LOG.info("TimelineService V1 is configured");
-        publisher = new TimelineServiceV1Publisher();
-      } else {
-        LOG.info("TimelineService V2 is configured");
+    SystemMetricsPublisher publisher;
+    if (YarnConfiguration.timelineServiceEnabled(conf) &&
+        YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
+      if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+        // we're dealing with the v.2.x publisher
+        LOG.info("system metrics publisher with the timeline service V2 is " +
+            "configured");
         publisher = new TimelineServiceV2Publisher(rmContext);
+      } else {
+        // we're dealing with the v.1.x publisher
+        LOG.info("system metrics publisher with the timeline service V1 is " +
+            "configured");
+        publisher = new TimelineServiceV1Publisher();
       }
     } else {
       LOG.info("TimelineServicePublisher is not configured");
@@ -606,10 +607,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
       addService(rmApplicationHistoryWriter);
       rmContext.setRMApplicationHistoryWriter(rmApplicationHistoryWriter);
 
-      RMTimelineCollectorManager timelineCollectorManager =
-          createRMTimelineCollectorManager();
-      addService(timelineCollectorManager);
-      rmContext.setRMTimelineCollectorManager(timelineCollectorManager);
+      if (YarnConfiguration.timelineServiceV2Enabled(configuration)) {
+        RMTimelineCollectorManager timelineCollectorManager =
+            createRMTimelineCollectorManager();
+        addService(timelineCollectorManager);
+        rmContext.setRMTimelineCollectorManager(timelineCollectorManager);
+      }
 
       // Register event handler for NodesListManager
       nodesListManager = new NodesListManager(rmContext);

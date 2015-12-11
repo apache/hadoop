@@ -54,17 +54,21 @@ public abstract class TimelineClient extends AbstractService implements
    * current user may use {@link UserGroupInformation#doAs} another user to
    * construct and initialize a timeline client if the following operations are
    * supposed to be conducted by that user.
-   *
-   * @return a timeline client
    */
   protected ApplicationId contextAppId;
 
+  /**
+   * Creates an instance of the timeline v.1.x client.
+   */
   @Public
   public static TimelineClient createTimelineClient() {
     TimelineClient client = new TimelineClientImpl();
     return client;
   }
 
+  /**
+   * Creates an instance of the timeline v.2 client.
+   */
   @Public
   public static TimelineClient createTimelineClient(ApplicationId appId) {
     TimelineClient client = new TimelineClientImpl(appId);
@@ -203,8 +207,9 @@ public abstract class TimelineClient extends AbstractService implements
   /**
    * <p>
    * Send the information of a number of conceptual entities to the timeline
-   * aggregator. It is a blocking API. The method will not return until all the
-   * put entities have been persisted.
+   * service v.2 collector. It is a blocking API. The method will not return
+   * until all the put entities have been persisted. If this method is invoked
+   * for a non-v.2 timeline client instance, a YarnException is thrown.
    * </p>
    *
    * @param entities
@@ -220,8 +225,9 @@ public abstract class TimelineClient extends AbstractService implements
   /**
    * <p>
    * Send the information of a number of conceptual entities to the timeline
-   * aggregator. It is an asynchronous API. The method will return once all the
-   * entities are received.
+   * service v.2 collector. It is an asynchronous API. The method will return
+   * once all the entities are received. If this method is invoked for a
+   * non-v.2 timeline client instance, a YarnException is thrown.
    * </p>
    *
    * @param entities

@@ -173,7 +173,7 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
     boolean enableTimelineAuxService = false;
     if (nmAuxServices != null) {
       for (String nmAuxService: nmAuxServices) {
-        if (nmAuxService == TIMELINE_AUX_SERVICE_NAME) {
+        if (nmAuxService.equals(TIMELINE_AUX_SERVICE_NAME)) {
           enableTimelineAuxService = true;
           break;
         }

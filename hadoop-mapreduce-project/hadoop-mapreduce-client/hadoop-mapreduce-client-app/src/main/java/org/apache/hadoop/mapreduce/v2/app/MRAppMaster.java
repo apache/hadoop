@@ -1078,14 +1078,9 @@ public class MRAppMaster extends CompositeService {
       this.taskAttemptFinishingMonitor = taskAttemptFinishingMonitor;
       if (conf.getBoolean(MRJobConfig.MAPREDUCE_JOB_EMIT_TIMELINE_DATA,
               MRJobConfig.DEFAULT_MAPREDUCE_JOB_EMIT_TIMELINE_DATA)
-            && conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
-                YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED)) {
+            && YarnConfiguration.timelineServiceEnabled(conf)) {
 
-        boolean newTimelineServiceEnabled = conf.getBoolean(
-            MRJobConfig.MAPREDUCE_JOB_NEW_TIMELINE_SERVICE_ENABLED,
-            MRJobConfig.DEFAULT_MAPREDUCE_JOB_NEW_TIMELINE_SERVICE_ENABLED);
-            
-        if (newTimelineServiceEnabled) {
+        if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
           // create new version TimelineClient
           timelineClient = TimelineClient.createTimelineClient(
               appAttemptID.getApplicationId());

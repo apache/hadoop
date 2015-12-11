@@ -75,7 +75,8 @@ public interface Context {
 
   /**
    * Get the registered collectors that located on this NM.
-   * @return registered
+   * @return registered collectors, or null if the timeline service v.2 is not
+   * enabled
    */
   Map<ApplicationId, String> getRegisteredCollectors();
 

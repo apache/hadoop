@@ -785,14 +785,15 @@
   <property>
     <description>The setting that controls whether yarn system metrics is
     published to the Timeline server (version one) or not, by RM. 
-    This configuration is deprecated.</description>
+    This configuration is now deprecated in favor of
+    yarn.system-metrics-publisher.enabled.</description>
     <name>yarn.resourcemanager.system-metrics-publisher.enabled</name>
     <value>false</value>
   </property>
 
   <property>
     <description>The setting that controls whether yarn system metrics is
-    published on the Timeline server (version two) or not by RM And NM.</description>
+    published on the Timeline service or not by RM And NM.</description>
     <name>yarn.system-metrics-publisher.enabled</name>
     <value>false</value>
   </property>

@@ -30,12 +30,11 @@ import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
 import org.apache.hadoop.yarn.server.api.AuxiliaryService;
-import org.apache.hadoop.yarn.server.api.ContainerContext;
 import org.apache.hadoop.yarn.server.api.ContainerInitializationContext;
 import org.apache.hadoop.yarn.server.api.ContainerTerminationContext;
 import org.apache.hadoop.yarn.server.api.ContainerType;
@@ -68,6 +67,9 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
+    if (!YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      throw new YarnException("Timeline service v2 is not enabled");
+    }
     collectorManager.init(conf);
     super.serviceInit(conf);
   }
@@ -175,7 +177,8 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
 
   @VisibleForTesting
   public static PerNodeTimelineCollectorsAuxService
-      launchServer(String[] args, NodeTimelineCollectorManager collectorManager) {
+      launchServer(String[] args, NodeTimelineCollectorManager collectorManager,
+      Configuration conf) {
     Thread
       .setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     StringUtils.startupShutdownMessage(
@@ -187,7 +190,6 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
           new PerNodeTimelineCollectorsAuxService(collectorManager);
       ShutdownHookManager.get().addShutdownHook(new ShutdownHook(auxService),
           SHUTDOWN_HOOK_PRIORITY);
-      YarnConfiguration conf = new YarnConfiguration();
       auxService.init(conf);
       auxService.start();
     } catch (Throwable t) {
@@ -210,6 +212,9 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
   }
 
   public static void main(String[] args) {
-    launchServer(args, null);
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
+    launchServer(args, null, conf);
   }
 }
