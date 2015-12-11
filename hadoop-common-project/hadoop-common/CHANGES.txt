@@ -1540,6 +1540,9 @@ Release 2.7.3 - UNRELEASED
     HADOOP-12565. Replace DSA with RSA for SSH key type in SingleCluster.md.
     (Mingliang Liu via aajisaka)
 
+    HADOOP-12602. TestMetricsSystemImpl#testQSize occasionally fails.
+    (Masatake Iwasaki via aajisaka)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

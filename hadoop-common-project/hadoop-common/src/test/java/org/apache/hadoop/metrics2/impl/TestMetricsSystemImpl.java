@@ -441,6 +441,7 @@ public class TestMetricsSystemImpl {
   @Test
   public void testQSize() throws Exception {
     new ConfigBuilder().add("*.period", 8)
+        .add("*.queue.capacity", 2)
         .add("test.sink.test.class", TestSink.class.getName())
         .save(TestMetricsConfig.getTestFilename("hadoop-metrics2-test"));
     MetricsSystemImpl ms = new MetricsSystemImpl("Test");
