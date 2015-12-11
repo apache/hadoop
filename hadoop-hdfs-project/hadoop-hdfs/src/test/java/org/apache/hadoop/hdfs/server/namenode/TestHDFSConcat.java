@@ -503,4 +503,23 @@ public class TestHDFSConcat {
     assertEquals(blockSize * 2, dfs.getFileStatus(trg).getLen());
     assertFalse(dfs.exists(src));
   }
+
+  @Test(timeout = 30000)
+  public void testConcatReservedRelativePaths() throws IOException {
+    String testPathDir = "/.reserved/raw/ezone";
+    Path dir = new Path(testPathDir);
+    dfs.mkdirs(dir);
+    Path trg = new Path(testPathDir, "trg");
+    Path src = new Path(testPathDir, "src");
+    DFSTestUtil.createFile(dfs, trg, blockSize, REPL_FACTOR, 1);
+    DFSTestUtil.createFile(dfs, src, blockSize, REPL_FACTOR, 1);
+    try {
+      dfs.concat(trg, new Path[] { src });
+      Assert.fail("Must throw Exception!");
+    } catch (IOException e) {
+      String errMsg = "Concat operation doesn't support "
+          + FSDirectory.DOT_RESERVED_STRING + " relative path : " + trg;
+      GenericTestUtils.assertExceptionContains(errMsg, e);
+    }
+  }
 }
