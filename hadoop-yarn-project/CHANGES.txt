@@ -67,6 +67,9 @@ Release 2.9.0 - UNRELEASED
     ResourceManager to support JvmPauseMonitor as a service.
     (Sunil G via Stevel)
 
+    YARN-4341. add doc about timeline performance tool usage (Chang Li via
+    sjlee)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -606,9 +609,6 @@ Release 2.8.0 - UNRELEASED
     via rohithsharmaks)
 
     YARN-4248. REST API for submit/update/delete Reservations. (curino)
-
-    YARN-4341. add doc about timeline performance tool usage (Chang Li via
-    sjlee)
 
   OPTIMIZATIONS
 
