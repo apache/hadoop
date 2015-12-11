@@ -12,9 +12,21 @@ These release notes include new developer and user-facing incompatibilities, fea
 <a name="changes"/>
 <h2>Changes since Hadoop 2.6.2</h2>
 <ul>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-4434">YARN-4434</a>.
+     Minor bug reported by Takashi Ohnishi and fixed by Weiwei Yang (documentation , nodemanager)<br>
+     <b>NodeManager Disk Checker parameter documentation is not correct</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-4424">YARN-4424</a>.
+     Blocker bug reported by Yesha Vora and fixed by Jian He <br>
+     <b>Fix deadlock in RMAppImpl</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-4365">YARN-4365</a>.
      Major bug reported by Jason Lowe and fixed by Kuhu Shukla (resourcemanager)<br>
      <b>FileSystemNodeLabelStore should check for root dir existence on startup</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-4348">YARN-4348</a>.
+     Blocker bug reported by Tsuyoshi Ozawa and fixed by Tsuyoshi Ozawa <br>
+     <b>ZKRMStateStore.syncInternal shouldn't wait for sync completion for avoiding blocking ZK's event thread</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-4344">YARN-4344</a>.
      Critical bug reported by Varun Vasudev and fixed by Varun Vasudev (resourcemanager)<br>
@@ -95,6 +107,10 @@ These release notes include new developer and user-facing incompatibilities, fea
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-9289">HDFS-9289</a>.
      Critical bug reported by Chang Li and fixed by Chang Li <br>
      <b>Make DataStreamer#block thread safe and verify genStamp in commitBlock</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-9273">HDFS-9273</a>.
+     Critical bug reported by Xiao Chen and fixed by Xiao Chen (namenode)<br>
+     <b>ACLs on root directory may be lost after NN restart</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-9083">HDFS-9083</a>.
      Blocker bug reported by Rushabh S Shah and fixed by Rushabh S Shah (namenode)<br>
