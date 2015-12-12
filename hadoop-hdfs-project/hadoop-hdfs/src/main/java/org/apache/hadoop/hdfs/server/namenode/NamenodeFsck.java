@@ -320,7 +320,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         sb.append("FSCK started by " +
             UserGroupInformation.getCurrentUser() + " from " +
             remoteAddress + " at " + new Date());
-        out.println(sb.toString());
+        out.println(sb);
         sb.append(" for blockIds: \n");
         for (String blk: blocks) {
           if(blk == null || !blk.contains(Block.BLOCK_FILE_PREFIX)) {
@@ -331,7 +331,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
           blockIdCK(blk);
           sb.append(blk + "\n");
         }
-        LOG.info(sb.toString());
+        LOG.info(sb);
         namenode.getNamesystem().logFsckEvent("/", remoteAddress);
         out.flush();
         return;
@@ -383,7 +383,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         out.println(ecRes);
 
         if (this.showStoragePolcies) {
-          out.print(storageTypeSummary.toString());
+          out.print(storageTypeSummary);
         }
 
         out.println("FSCK ended at " + new Date() + " in "
@@ -725,7 +725,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         // might still be accessible as the block might be incorrectly marked as
         // corrupted by client machines.
         report.append(" MISSING!");
-        res.addMissing(block.toString(), block.getNumBytes());
+        res.addMissing(blkName, block.getNumBytes());
         missing++;
         missize += block.getNumBytes();
       } else {
@@ -793,7 +793,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         out.print(" OK\n");
       }
       if (showBlocks) {
-        out.print(report.toString() + "\n");
+        out.print(report + "\n");
       }
     }
   }

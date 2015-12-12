@@ -317,19 +317,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   NameNodeMXBean {
   public static final Log LOG = LogFactory.getLog(FSNamesystem.class);
 
-  private static final ThreadLocal<StringBuilder> auditBuffer =
-    new ThreadLocal<StringBuilder>() {
-      @Override
-      protected StringBuilder initialValue() {
-        return new StringBuilder();
-      }
-  };
-
   private final BlockIdManager blockIdManager;
 
-  @VisibleForTesting
-  public boolean isAuditEnabled() {
-    return !isDefaultAuditLogger || auditLog.isInfoEnabled();
+  boolean isAuditEnabled() {
+    return (!isDefaultAuditLogger || auditLog.isInfoEnabled())
+        && !auditLoggers.isEmpty();
   }
 
   private void logAuditEvent(boolean succeeded, String cmd, String src)
@@ -358,14 +350,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           stat.getAccessTime(), stat.getPermission(), stat.getOwner(),
           stat.getGroup(), symlink, path);
     }
+    final String ugiStr = ugi.toString();
     for (AuditLogger logger : auditLoggers) {
       if (logger instanceof HdfsAuditLogger) {
         HdfsAuditLogger hdfsLogger = (HdfsAuditLogger) logger;
-        hdfsLogger.logAuditEvent(succeeded, ugi.toString(), addr, cmd, src, dst,
+        hdfsLogger.logAuditEvent(succeeded, ugiStr, addr, cmd, src, dst,
             status, CallerContext.getCurrent(), ugi, dtSecretManager);
       } else {
-        logger.logAuditEvent(succeeded, ugi.toString(), addr,
-            cmd, src, dst, status);
+        logger.logAuditEvent(succeeded, ugiStr, addr, cmd, src, dst, status);
       }
     }
   }
@@ -616,15 +608,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // sharedEditsDirs.
       if (!editsDirs.contains(u) &&
           !sharedEditsDirs.contains(u)) {
-        throw new IllegalArgumentException(
-            "Required edits directory " + u.toString() + " not present in " +
-            DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY + ". " +
-            DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY + "=" +
-            editsDirs.toString() + "; " +
-            DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY + "=" +
-            requiredEditsDirs.toString() + ". " +
-            DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY + "=" +
-            sharedEditsDirs.toString() + ".");
+        throw new IllegalArgumentException("Required edits directory " + u
+            + " not found: "
+            + DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY + "=" + editsDirs + "; "
+            + DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY
+            + "=" + requiredEditsDirs + "; "
+            + DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY
+            + "=" + sharedEditsDirs);
       }
     }
 
@@ -698,11 +688,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   FSNamesystem(Configuration conf, FSImage fsImage, boolean ignoreRetryCache)
       throws IOException {
     provider = DFSUtil.createKeyProviderCryptoExtension(conf);
-    if (provider == null) {
-      LOG.info("No KeyProvider found.");
-    } else {
-      LOG.info("Found KeyProvider: " + provider.toString());
-    }
+    LOG.info("KeyProvider: " + provider);
     if (conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY,
                         DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT)) {
       LOG.info("Enabling async auditlog");
@@ -2077,11 +2063,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .append(", clientMachine=").append(clientMachine)
           .append(", createParent=").append(createParent)
           .append(", replication=").append(replication)
-          .append(", createFlag=").append(flag.toString())
+          .append(", createFlag=").append(flag)
           .append(", blockSize=").append(blockSize)
           .append(", supportedVersions=")
-          .append(supportedVersions == null ? null : Arrays.toString
-              (supportedVersions));
+          .append(Arrays.toString(supportedVersions));
       NameNode.stateChangeLog.debug(builder.toString());
     }
     if (!DFSUtil.isValidName(src)) {
@@ -2513,43 +2498,40 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     getEditLog().logSync();
   }
 
-  INodeFile checkLease(
-      String src, String holder, INode inode, long fileId)
+  private String leaseExceptionString(String src, long fileId, String holder) {
+    final Lease lease = leaseManager.getLease(holder);
+    return src + " (inode " + fileId + ") " + (lease != null? lease.toString()
+        : "Holder " + holder + " does not have any open files.");
+  }
+
+  INodeFile checkLease(String src, String holder, INode inode, long fileId)
       throws LeaseExpiredException, FileNotFoundException {
     assert hasReadLock();
-    final String ident = src + " (inode " + fileId + ")";
     if (inode == null) {
-      Lease lease = leaseManager.getLease(holder);
-      throw new FileNotFoundException(
-          "No lease on " + ident + ": File does not exist. "
-          + (lease != null ? lease.toString()
-              : "Holder " + holder + " does not have any open files."));
+      throw new FileNotFoundException("File does not exist: "
+          + leaseExceptionString(src, fileId, holder));
     }
     if (!inode.isFile()) {
-      Lease lease = leaseManager.getLease(holder);
-      throw new LeaseExpiredException(
-          "No lease on " + ident + ": INode is not a regular file. "
-              + (lease != null ? lease.toString()
-              : "Holder " + holder + " does not have any open files."));
+      throw new LeaseExpiredException("INode is not a regular file: "
+          + leaseExceptionString(src, fileId, holder));
     }
     final INodeFile file = inode.asFile();
     if (!file.isUnderConstruction()) {
-      Lease lease = leaseManager.getLease(holder);
-      throw new LeaseExpiredException(
-          "No lease on " + ident + ": File is not open for writing. "
-          + (lease != null ? lease.toString()
-              : "Holder " + holder + " does not have any open files."));
+      throw new LeaseExpiredException("File is not open for writing: "
+          + leaseExceptionString(src, fileId, holder));
     }
     // No further modification is allowed on a deleted file.
     // A file is considered deleted, if it is not in the inodeMap or is marked
     // as deleted in the snapshot feature.
     if (isFileDeleted(file)) {
-      throw new FileNotFoundException(src);
+      throw new FileNotFoundException("File is deleted: "
+          + leaseExceptionString(src, fileId, holder));
     }
-    String clientName = file.getFileUnderConstructionFeature().getClientName();
-    if (holder != null && !clientName.equals(holder)) {
-      throw new LeaseExpiredException("Lease mismatch on " + ident +
-          " owned by " + clientName + " but is accessed by " + holder);
+    final String owner = file.getFileUnderConstructionFeature().getClientName();
+    if (holder != null && !owner.equals(holder)) {
+      throw new LeaseExpiredException("Client (=" + holder
+          + ") is not the lease owner (=" + owner + ": "
+          + leaseExceptionString(src, fileId, holder));
     }
     return file;
   }
@@ -6188,7 +6170,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (success) {
         getEditLog().logSync();
       }
-      String idStr = "{id: " + directive.getId().toString() + "}";
+      final String idStr = "{id: " + directive.getId() + "}";
       logAuditEvent(success, "modifyCacheDirective", idStr,
           directive.toString(), null);
     }
@@ -6662,6 +6644,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   @VisibleForTesting
   static class DefaultAuditLogger extends HdfsAuditLogger {
+    private static final ThreadLocal<StringBuilder> STRING_BUILDER =
+        new ThreadLocal<StringBuilder>() {
+          @Override
+          protected StringBuilder initialValue() {
+            return new StringBuilder();
+          }
+        };
+
     private boolean isCallerContextEnabled;
     private int callerContextMaxLen;
     private int callerSignatureMaxLen;
@@ -6696,7 +6686,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
       if (auditLog.isDebugEnabled() ||
           (auditLog.isInfoEnabled() && !debugCmdSet.contains(cmd))) {
-        final StringBuilder sb = auditBuffer.get();
+        final StringBuilder sb = STRING_BUILDER.get();
         sb.setLength(0);
         sb.append("allowed=").append(succeeded).append("\t");
         sb.append("ugi=").append(userName).append("\t");
