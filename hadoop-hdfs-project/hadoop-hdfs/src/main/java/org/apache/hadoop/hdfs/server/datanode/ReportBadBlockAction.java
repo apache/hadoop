@@ -65,7 +65,7 @@ public class ReportBadBlockAction implements BPServiceActorAction {
           + "block:  " + block , re);
     } catch (IOException e) {
       throw new BPServiceActorActionException("Failed to report bad block "
-          + block + " to namenode: ");
+          + block + " to namenode.", e);
     }
   }
 
