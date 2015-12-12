@@ -679,18 +679,16 @@ public class SecondaryNameNode implements Runnable,
       SecondaryNameNode secondary = null;
       secondary = new SecondaryNameNode(tconf, opts);
 
+      // SecondaryNameNode can be started in 2 modes:
+      // 1. run a command (i.e. checkpoint or geteditsize) then terminate
+      // 2. run as a daemon when {@link #parseArgs} yields no commands
       if (opts != null && opts.getCommand() != null) {
+        // mode 1
         int ret = secondary.processStartupCommand(opts);
         terminate(ret);
-      }
-
-      if (secondary != null) {
-        // The web server is only needed when starting SNN as a daemon,
-        // and not needed if called from shell command. Starting the web server
-        // from shell may fail when getting credentials, if the environment
-        // is not set up for it, which is most of the case.
+      } else {
+        // mode 2
         secondary.startInfoServer();
-
         secondary.startCheckpointThread();
         secondary.join();
       }
