@@ -871,6 +871,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-9472. concat() API does not give proper exception messages on ./reserved 
     relative path (Rakesh R via umamahesh)
 
+    HDFS-9528. Cleanup namenode audit/log/exception messages. (szetszwo via umamahesh)
+
     HDFS-9532. Detailed exception info is lost in reportTo methods of
     ErrorReportAction and ReportBadBlockAction. (Yongjun Zhang)
 
