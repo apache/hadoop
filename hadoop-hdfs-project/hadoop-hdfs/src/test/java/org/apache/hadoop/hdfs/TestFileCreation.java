@@ -165,7 +165,7 @@ public class TestFileCreation {
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
     try {
-      FsServerDefaults serverDefaults = fs.getServerDefaults();
+      FsServerDefaults serverDefaults = fs.getServerDefaults(new Path("/"));
       assertEquals(DFS_BLOCK_SIZE_DEFAULT, serverDefaults.getBlockSize());
       assertEquals(DFS_BYTES_PER_CHECKSUM_DEFAULT, serverDefaults.getBytesPerChecksum());
       assertEquals(DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT, serverDefaults.getWritePacketSize());
@@ -413,8 +413,7 @@ public class TestFileCreation {
         stm1.close();
         fail("Should have exception closing stm1 since it was deleted");
       } catch (IOException ioe) {
-        GenericTestUtils.assertExceptionContains("No lease on /testfile", ioe);
-        GenericTestUtils.assertExceptionContains("File does not exist.", ioe);
+        GenericTestUtils.assertExceptionContains("File does not exist", ioe);
       }
       
     } finally {
@@ -805,7 +804,6 @@ public class TestFileCreation {
   public static void testFileCreationNonRecursive(FileSystem fs) throws IOException {
     final Path path = new Path("/" + Time.now()
         + "-testFileCreationNonRecursive");
-    FSDataOutputStream out = null;
     IOException expectedException = null;
     final String nonExistDir = "/non-exist-" + Time.now();
 

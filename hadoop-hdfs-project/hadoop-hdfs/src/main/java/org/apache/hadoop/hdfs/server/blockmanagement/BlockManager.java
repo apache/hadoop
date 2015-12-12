@@ -991,27 +991,17 @@ public class BlockManager implements BlockStatsMXBean {
    public void verifyReplication(String src,
                           short replication,
                           String clientName) throws IOException {
+    String err = null;
+    if (replication > maxReplication) {
+      err = " exceeds maximum of " + maxReplication;
+    } else if (replication < minReplication) {
+      err = " is less than the required minimum of " + minReplication;
+    }
 
-    if (replication < minReplication || replication > maxReplication) {
-      StringBuilder msg = new StringBuilder("Requested replication factor of ");
-
-      msg.append(replication);
-
-      if (replication > maxReplication) {
-        msg.append(" exceeds maximum of ");
-        msg.append(maxReplication);
-      } else {
-        msg.append(" is less than the required minimum of ");
-        msg.append(minReplication);
-      }
-
-      msg.append(" for ").append(src);
-
-      if (clientName != null) {
-        msg.append(" from ").append(clientName);
-      }
-
-      throw new IOException(msg.toString());
+    if (err != null) {
+      throw new IOException("Requested replication factor of " + replication
+          + err + " for " + src
+          + (clientName == null? "": ", clientName=" + clientName));
     }
   }
 
@@ -1140,8 +1130,7 @@ public class BlockManager implements BlockStatsMXBean {
       datanodes.append(node).append(" ");
     }
     if (datanodes.length() != 0) {
-      blockLog.debug("BLOCK* addToInvalidates: {} {}", b,
-          datanodes.toString());
+      blockLog.debug("BLOCK* addToInvalidates: {} {}", b, datanodes);
     }
   }
 
@@ -2585,7 +2574,8 @@ public class BlockManager implements BlockStatsMXBean {
     if (result == AddBlockResult.ADDED) {
       curReplicaDelta = 1;
       if (logEveryBlock) {
-        logAddStoredBlock(storedBlock, node);
+        blockLog.debug("BLOCK* addStoredBlock: {} is added to {} (size={})",
+            node, storedBlock, storedBlock.getNumBytes());
       }
     } else if (result == AddBlockResult.REPLACED) {
       curReplicaDelta = 0;
@@ -2657,21 +2647,6 @@ public class BlockManager implements BlockStatsMXBean {
     return storedBlock;
   }
 
-  private void logAddStoredBlock(BlockInfo storedBlock,
-      DatanodeDescriptor node) {
-    if (!blockLog.isDebugEnabled()) {
-      return;
-    }
-
-    StringBuilder sb = new StringBuilder(500);
-    sb.append("BLOCK* addStoredBlock: blockMap updated: ")
-      .append(node)
-      .append(" is added to ");
-    storedBlock.appendStringTo(sb);
-    sb.append(" size " )
-      .append(storedBlock.getNumBytes());
-    blockLog.debug(sb.toString());
-  }
   /**
    * Invalidate corrupt replicas.
    * <p>

@@ -304,6 +304,6 @@ public class BlockManagerTestUtil {
    */
   public static void recheckDecommissionState(DatanodeManager dm)
       throws ExecutionException, InterruptedException {
-    dm.getDecomManager().runMonitor();
+    dm.getDecomManager().runMonitorForTest();
   }
 }
