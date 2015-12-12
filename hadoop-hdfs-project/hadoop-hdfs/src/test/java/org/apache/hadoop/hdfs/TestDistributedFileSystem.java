@@ -990,10 +990,14 @@ public class TestDistributedFileSystem {
         Assert.fail("read should timeout");
       } catch (SocketTimeoutException ste) {
         long delta = Time.now() - start;
-        Assert.assertTrue("read timedout too soon", delta >= timeout*0.9);
-        Assert.assertTrue("read timedout too late", delta <= timeout*1.1);
-      } catch (Throwable t) {
-        Assert.fail("wrong exception:"+t);
+        if (delta < timeout*0.9) {
+          throw new IOException("read timedout too soon in " + delta + " ms.",
+              ste);
+        }
+        if (delta > timeout*1.1) {
+          throw new IOException("read timedout too late in " + delta + " ms.",
+              ste);
+        }
       }
     } finally {
       cluster.shutdown();
@@ -1037,12 +1041,15 @@ public class TestDistributedFileSystem {
         Assert.fail("write finish in " + delta + " ms" + "but should timedout");
       } catch (SocketTimeoutException ste) {
         long delta = Time.now() - start;
-        Assert.assertTrue("write timedout too soon in " + delta + " ms",
-            delta >= timeout * 0.9);
-        Assert.assertTrue("write timedout too late in " + delta + " ms",
-            delta <= timeout * 1.2);
-      } catch (Throwable t) {
-        Assert.fail("wrong exception:" + t);
+
+        if (delta < timeout * 0.9) {
+          throw new IOException("write timedout too soon in " + delta + " ms.",
+              ste);
+        }
+        if (delta > timeout * 1.2) {
+          throw new IOException("write timedout too late in " + delta + " ms.",
+              ste);
+        }
       }
     } finally {
       cluster.shutdown();
