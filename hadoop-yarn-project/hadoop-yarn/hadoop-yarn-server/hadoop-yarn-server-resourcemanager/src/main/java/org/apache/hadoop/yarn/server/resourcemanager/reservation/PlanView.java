@@ -47,7 +47,8 @@ public interface PlanView extends PlanContext {
    *
    * @param user the user being considered
    * @param t the instant in time being considered
-   * @return {@link Set<ReservationAllocation>} for this user at this time
+   * @return set of active {@link ReservationAllocation}s for this
+   *         user at this time
    */
   public Set<ReservationAllocation> getReservationByUserAtTime(String user,
       long t);
