@@ -1181,6 +1181,8 @@ Release 2.7.3 - UNRELEASED
     YARN-4422. Generic AHS sometimes doesn't show started, node, or logs on App page
     (Eric Payne via jeagles)
 
+    YARN-4439. Clarify NMContainerStatus#toString method. (Jian He via xgong)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
