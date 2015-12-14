@@ -2677,6 +2677,7 @@ public class BlockManager implements BlockStatsMXBean {
 
     if(storedBlock.getBlockUCState() == BlockUCState.COMMITTED &&
         numLiveReplicas >= minReplication) {
+      addExpectedReplicasToPending(storedBlock);
       completeBlock(storedBlock, false);
     } else if (storedBlock.isComplete() && result == AddBlockResult.ADDED) {
       // check whether safe replication is reached for the block
