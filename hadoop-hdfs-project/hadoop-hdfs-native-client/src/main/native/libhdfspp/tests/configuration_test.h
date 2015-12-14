@@ -19,6 +19,7 @@
 #define TESTS_CONFIGURATION_H_
 
 #include "common/configuration.h"
+#include "common/configuration_loader.h"
 #include <cstdio>
 #include <fstream>
 #include <istream>
@@ -50,10 +51,9 @@ void simpleConfigStream(std::stringstream& out, Args... args) {
 
 template <typename... Args>
 optional<Configuration> simpleConfig(Args... args) {
-  Configuration result;
   std::stringstream stream;
   simpleConfigStream(stream, args...);
-  optional<Configuration> parse = result.Load(stream.str());
+  optional<Configuration> parse = ConfigurationLoader().Load<Configuration>(stream.str());
   EXPECT_TRUE((bool)parse);
 
   return parse;

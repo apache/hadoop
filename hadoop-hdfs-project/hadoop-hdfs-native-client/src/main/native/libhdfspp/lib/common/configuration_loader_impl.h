@@ -16,18 +16,41 @@
  * limitations under the License.
  */
 
-#include "libhdfspp/options.h"
+#ifndef COMMON_CONFIGURATION_BUILDER_IMPL_H_
+#define COMMON_CONFIGURATION_BUILDER_IMPL_H_
 
 namespace hdfs {
 
-// The linker needs a place to put all of those constants
-const int Options::kDefaultRpcTimeout;
-const int Options::kNoRetry;
-const int Options::kDefaultMaxRpcRetries;
-const int Options::kDefaultRpcRetryDelayMs;
-const unsigned int Options::kDefaultHostExclusionDuration;
 
-Options::Options() : rpc_timeout(kDefaultRpcTimeout), max_rpc_retries(kDefaultMaxRpcRetries),
-                     rpc_retry_delay_ms(kDefaultRpcRetryDelayMs),
-                     host_exclusion_duration(kDefaultHostExclusionDuration) {}
+template<class T>
+T ConfigurationLoader::New() {
+  return T();
 }
+
+template<class T>
+optional<T> ConfigurationLoader::Load(const std::string &xml_data) {
+  return OverlayResourceString<T>(T(), xml_data);
+}
+
+template<class T>
+optional<T> ConfigurationLoader::OverlayResourceString(const T& src, const std::string &xml_data) const {
+  if (xml_data.size() == 0) {
+    return optional<T>();
+  }
+
+  std::vector<char> raw_bytes(xml_data.begin(), xml_data.end());
+  raw_bytes.push_back('\0');
+
+  ConfigMap map(src.raw_values_);
+  bool success = UpdateMapWithBytes(map, raw_bytes);
+
+  if (success) {
+    return std::experimental::make_optional<T>(map);
+  } else {
+    return optional<T>();
+  }
+}
+
+}
+
+#endif

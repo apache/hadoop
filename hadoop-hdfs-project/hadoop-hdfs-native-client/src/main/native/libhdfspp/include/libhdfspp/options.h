@@ -29,23 +29,27 @@ struct Options {
    * Default: 30000
    **/
   int rpc_timeout;
+  static const int kDefaultRpcTimeout = 30000;
 
   /**
    * Maximum number of retries for RPC operations
    **/
-  const static int kNoRetry = -1;
   int max_rpc_retries;
+  static const int kNoRetry = -1;
+  static const int kDefaultMaxRpcRetries = kNoRetry;
 
   /**
    * Number of ms to wait between retry of RPC operations
    **/
   int rpc_retry_delay_ms;
+  static const int kDefaultRpcRetryDelayMs = 10000;
 
   /**
    * Exclusion time for failed datanodes in milliseconds.
    * Default: 60000
    **/
   unsigned int host_exclusion_duration;
+  static const unsigned int kDefaultHostExclusionDuration = 600000;
 
   Options();
 };

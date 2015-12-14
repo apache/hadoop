@@ -18,6 +18,7 @@
 
 #include "configuration_test.h"
 #include "common/configuration.h"
+#include "common/configuration_loader.h"
 #include <gmock/gmock.h>
 #include <cstdio>
 #include <fstream>
@@ -32,21 +33,21 @@ TEST(ConfigurationTest, TestDegenerateInputs) {
   /* Completely empty stream */
   {
     std::stringstream stream;
-    optional<Configuration> config = Configuration::Load("");
+    optional<Configuration> config = ConfigurationLoader().Load<Configuration>("");
     EXPECT_FALSE(config && "Empty stream");
   }
 
   /* No values */
   {
     std::string data = "<configuration></configuration>";
-    optional<Configuration> config = Configuration::Load(data);
+    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(data);
     EXPECT_TRUE(config && "Blank config");
   }
 
   /* Extraneous values */
   {
     std::string data = "<configuration><spam></spam></configuration>";
-    optional<Configuration> config = Configuration::Load(data);
+    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(data);
     EXPECT_TRUE(config && "Extraneous values");
   }
 }
@@ -56,7 +57,7 @@ TEST(ConfigurationTest, TestBasicOperations) {
   {
     std::stringstream stream;
     simpleConfigStream(stream, "key1", "value1");
-    optional<Configuration> config = Configuration::Load(stream.str());
+    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse single value");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
   }
@@ -73,7 +74,7 @@ TEST(ConfigurationTest, TestBasicOperations) {
   {
     std::stringstream stream;
     simpleConfigStream(stream, "key1", "value1");
-    optional<Configuration> config = Configuration::Load(stream.str());
+    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse single value");
     optional<std::string> value = config->Get("key1");
     EXPECT_TRUE((bool)value);
@@ -87,7 +88,7 @@ TEST(ConfigurationTest, TestCompactValues) {
     std::stringstream stream;
     stream << "<configuration><property name=\"key1\" "
               "value=\"value1\"/></configuration>";
-    optional<Configuration> config = Configuration::Load(stream.str());
+    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Compact value parse");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
   }
@@ -98,14 +99,14 @@ TEST(ConfigurationTest, TestMultipleResources) {
   {
     std::stringstream stream;
     simpleConfigStream(stream, "key1", "value1");
-    optional<Configuration> config = Configuration::Load(stream.str());
+    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse first stream");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
 
     std::stringstream stream2;
     simpleConfigStream(stream2, "key2", "value2");
     optional<Configuration> config2 =
-        config->OverlayResourceString(stream2.str());
+        ConfigurationLoader().OverlayResourceString(config.value(), stream2.str());
     EXPECT_TRUE(config2 && "Parse second stream");
     EXPECT_EQ("value1", config2->GetWithDefault("key1", ""));
     EXPECT_EQ("value2", config2->GetWithDefault("key2", ""));
@@ -119,7 +120,7 @@ TEST(ConfigurationTest, TestStringResource) {
     simpleConfigStream(stream, "key1", "value1");
     std::string str = stream.str();
 
-    optional<Configuration> config = Configuration::Load(stream.str());
+    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse single value");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
   }
@@ -131,14 +132,14 @@ TEST(ConfigurationTest, TestFinal) {
     std::stringstream stream;
     stream << "<configuration><property><name>key1</name><value>value1</"
               "value><final>false</final></property></configuration>";
-    optional<Configuration> config = Configuration::Load(stream.str());
+    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse first stream");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
 
     std::stringstream stream2;
     simpleConfigStream(stream2, "key1", "value2");
     optional<Configuration> config2 =
-        config->OverlayResourceString(stream2.str());
+        ConfigurationLoader().OverlayResourceString(config.value(), stream2.str());
     EXPECT_TRUE(config2 && "Parse second stream");
     EXPECT_EQ("value2", config2->GetWithDefault("key1", ""));
   }
@@ -147,14 +148,14 @@ TEST(ConfigurationTest, TestFinal) {
     std::stringstream stream;
     stream << "<configuration><property><name>key1</name><value>value1</"
               "value><final>true</final></property></configuration>";
-    optional<Configuration> config = Configuration::Load(stream.str());
+    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse first stream");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
 
     std::stringstream stream2;
     simpleConfigStream(stream2, "key1", "value2");
     optional<Configuration> config2 =
-        config->OverlayResourceString(stream2.str());
+        ConfigurationLoader().OverlayResourceString(config.value(), stream2.str());
     EXPECT_TRUE(config2 && "Parse second stream");
     EXPECT_EQ("value1", config2->GetWithDefault("key1", ""));
   }
@@ -163,14 +164,14 @@ TEST(ConfigurationTest, TestFinal) {
     std::stringstream stream;
     stream << "<configuration><property name=\"key1\" value=\"value1\" "
               "final=\"false\"/></configuration>";
-    optional<Configuration> config = Configuration::Load(stream.str());
+    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse first stream");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
 
     std::stringstream stream2;
     simpleConfigStream(stream2, "key1", "value2");
     optional<Configuration> config2 =
-        config->OverlayResourceString(stream2.str());
+        ConfigurationLoader().OverlayResourceString(config.value(), stream2.str());
     EXPECT_TRUE(config2 && "Parse second stream");
     EXPECT_EQ("value2", config2->GetWithDefault("key1", ""));
   }
@@ -179,14 +180,14 @@ TEST(ConfigurationTest, TestFinal) {
     std::stringstream stream;
     stream << "<configuration><property name=\"key1\" value=\"value1\" "
               "final=\"true\"/></configuration>";
-    optional<Configuration> config = Configuration::Load(stream.str());
+    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse first stream");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
 
     std::stringstream stream2;
     simpleConfigStream(stream2, "key1", "value2");
     optional<Configuration> config2 =
-        config->OverlayResourceString(stream2.str());
+        ConfigurationLoader().OverlayResourceString(config.value(), stream2.str());
     EXPECT_TRUE(config2 && "Parse second stream");
     EXPECT_EQ("value1", config2->GetWithDefault("key1", ""));
   }
@@ -195,14 +196,14 @@ TEST(ConfigurationTest, TestFinal) {
     std::stringstream stream;
     stream << "<configuration><property><name>key1</name><value>value1</"
               "value><final>spam</final></property></configuration>";
-    optional<Configuration> config = Configuration::Load(stream.str());
+    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse first stream");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
 
     std::stringstream stream2;
     simpleConfigStream(stream2, "key1", "value2");
     optional<Configuration> config2 =
-        config->OverlayResourceString(stream2.str());
+        ConfigurationLoader().OverlayResourceString(config.value(), stream2.str());
     EXPECT_TRUE(config2 && "Parse second stream");
     EXPECT_EQ("value2", config2->GetWithDefault("key1", ""));
   }
@@ -211,14 +212,14 @@ TEST(ConfigurationTest, TestFinal) {
     std::stringstream stream;
     stream << "<configuration><property><name>key1</name><value>value1</"
               "value><final></final></property></configuration>";
-    optional<Configuration> config = Configuration::Load(stream.str());
+    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse first stream");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
 
     std::stringstream stream2;
     simpleConfigStream(stream2, "key1", "value2");
     optional<Configuration> config2 =
-        config->OverlayResourceString(stream2.str());
+        ConfigurationLoader().OverlayResourceString(config.value(), stream2.str());
     EXPECT_TRUE(config2 && "Parse second stream");
     EXPECT_EQ("value2", config2->GetWithDefault("key1", ""));
   }
@@ -228,7 +229,7 @@ TEST(ConfigurationTest, TestIntConversions) {
   {
     std::stringstream stream;
     simpleConfigStream(stream, "key1", "1");
-    optional<Configuration> config = Configuration::Load(stream.str());
+    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse single value");
     optional<int64_t> value = config->GetInt("key1");
     EXPECT_TRUE((bool)value);
@@ -267,7 +268,7 @@ TEST(ConfigurationTest, TestDoubleConversions) {
   {
     std::stringstream stream;
     simpleConfigStream(stream, "key1", "1");
-    optional<Configuration> config = Configuration::Load(stream.str());
+    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse single value");
     optional<double> value = config->GetDouble("key1");
     EXPECT_TRUE((bool)value);
@@ -310,7 +311,7 @@ TEST(ConfigurationTest, TestBoolConversions) {
   {
     std::stringstream stream;
     simpleConfigStream(stream, "key1", "true");
-    optional<Configuration> config = Configuration::Load(stream.str());
+    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse single value");
     optional<bool> value = config->GetBool("key1");
     EXPECT_TRUE((bool)value);
