@@ -1083,6 +1083,8 @@ Release 2.7.3 - UNRELEASED
     YARN-4380. TestResourceLocalizationService.testDownloadingResourcesOnContainerKill
     fails intermittently. (Varun Saxena via ozawa)
 
+    YARN-4439. Clarify NMContainerStatus#toString method. (Jian He via xgong)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
