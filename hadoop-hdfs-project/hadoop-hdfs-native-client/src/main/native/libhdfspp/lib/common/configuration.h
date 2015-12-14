@@ -43,33 +43,30 @@ using optional = std::experimental::optional<T>;
  *  </property>
  * <configuration>
  *
- * This class is not thread-safe.
+ * Configuration objects should be created via the ConfigurationLoader class.
+ * Configuration objects are immutable and can be shared between threads.
+ *
+ * This class is thread-safe.
  */
 class Configuration {
  public:
-  /* Creates a new Configuration from input xml */
-  static optional<Configuration> Load(const std::string &xml_data);
-
-  /* Constructs a configuration with no resources loaded */
-  Configuration();
-
-  /* Loads resources from a file or a stream */
-  optional<Configuration> OverlayResourceString(
-      const std::string &xml_data) const;
-
   // Gets values
-  std::string GetWithDefault(const std::string &key,
-                             const std::string &default_value) const;
+  std::string           GetWithDefault(const std::string &key,
+                                       const std::string &default_value) const;
   optional<std::string> Get(const std::string &key) const;
-  int64_t GetIntWithDefault(const std::string &key, int64_t default_value) const;
-  optional<int64_t> GetInt(const std::string &key) const;
-  double GetDoubleWithDefault(const std::string &key,
-                              double default_value) const;
-  optional<double> GetDouble(const std::string &key) const;
-  bool GetBoolWithDefault(const std::string &key, bool default_value) const;
-  optional<bool> GetBool(const std::string &key) const;
+  int64_t               GetIntWithDefault(const std::string &key,
+                                          int64_t default_value) const;
+  optional<int64_t>     GetInt(const std::string &key) const;
+  double                GetDoubleWithDefault(const std::string &key,
+                                             double default_value) const;
+  optional<double>      GetDouble(const std::string &key) const;
+  bool                  GetBoolWithDefault(const std::string &key,
+                                           bool default_value) const;
+  optional<bool>        GetBool(const std::string &key) const;
 
- private:
+protected:
+   friend class ConfigurationLoader;
+
   /* Transparent data holder for property values */
   struct ConfigData {
     std::string value;
@@ -83,12 +80,12 @@ class Configuration {
   };
   typedef std::map<std::string, ConfigData> ConfigMap;
 
+  Configuration() {};
   Configuration(ConfigMap &src_map) : raw_values_(src_map){};
-  static bool UpdateMapWithResource(ConfigMap &map,
-                                    std::vector<char> &raw_bytes);
 
   const ConfigMap raw_values_;
 };
+
 }
 
 #endif
