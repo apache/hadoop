@@ -34,8 +34,6 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NMContainerSta
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NMContainerStatusProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 
-import com.google.protobuf.TextFormat;
-
 public class NMContainerStatusPBImpl extends NMContainerStatus {
 
   NMContainerStatusProto proto = NMContainerStatusProto
@@ -81,7 +79,17 @@ public class NMContainerStatusPBImpl extends NMContainerStatus {
 
   @Override
   public String toString() {
-    return TextFormat.shortDebugString(getProto());
+    StringBuilder sb = new StringBuilder();
+    sb.append("[").append(getContainerId()).append(", ")
+        .append("CreateTime: ").append(getCreationTime()).append(", ")
+        .append("State: ").append(getContainerState()).append(", ")
+        .append("Capability: ").append(getAllocatedResource()).append(", ")
+        .append("Diagnostics: ").append(getDiagnostics()).append(", ")
+        .append("ExitStatus: ").append(getContainerExitStatus()).append(", ")
+        .append("NodeLabelExpression: ").append(getNodeLabelExpression())
+        .append("Priority: ").append(getPriority())
+        .append("]");
+    return sb.toString();
   }
 
   @Override
