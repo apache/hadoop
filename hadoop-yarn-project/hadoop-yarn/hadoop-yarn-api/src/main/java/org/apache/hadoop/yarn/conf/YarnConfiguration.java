@@ -92,6 +92,11 @@ public class YarnConfiguration extends Configuration {
   /** Delay before deleting resource to ease debugging of NM issues */
   public static final String DEBUG_NM_DELETE_DELAY_SEC =
     YarnConfiguration.NM_PREFIX + "delete.debug-delay-sec";
+
+  public static final String NM_LOG_CONTAINER_DEBUG_INFO =
+      YarnConfiguration.NM_PREFIX + "log-container-debug-info.enabled";
+
+  public static final boolean DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO = false;
   
   ////////////////////////////////
   // IPC Configs
