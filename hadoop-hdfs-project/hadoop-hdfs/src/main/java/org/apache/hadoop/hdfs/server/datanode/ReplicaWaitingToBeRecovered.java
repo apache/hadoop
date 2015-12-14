@@ -33,7 +33,6 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
  * lease recovery.
  */
 public class ReplicaWaitingToBeRecovered extends ReplicaInfo {
-  private boolean unlinked;      // copy-on-write done for block
 
   /**
    * Constructor
@@ -64,22 +63,11 @@ public class ReplicaWaitingToBeRecovered extends ReplicaInfo {
    */
   public ReplicaWaitingToBeRecovered(ReplicaWaitingToBeRecovered from) {
     super(from);
-    this.unlinked = from.isUnlinked();
   }
 
   @Override //ReplicaInfo
   public ReplicaState getState() {
     return ReplicaState.RWR;
-  }
-  
-  @Override //ReplicaInfo
-  public boolean isUnlinked() {
-    return unlinked;
-  }
-
-  @Override //ReplicaInfo
-  public void setUnlinked() {
-    unlinked = true;
   }
   
   @Override //ReplicaInfo
@@ -104,7 +92,6 @@ public class ReplicaWaitingToBeRecovered extends ReplicaInfo {
 
   @Override
   public String toString() {
-    return super.toString()
-        + "\n  unlinked=" + unlinked;
+    return super.toString();
   }
 }

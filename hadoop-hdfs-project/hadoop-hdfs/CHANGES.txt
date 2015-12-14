@@ -1448,6 +1448,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-9019. Adding informative message to sticky bit permission denied
     exception. (xyao)
 
+    HDFS-8860. Remove unused Replica copyOnWrite code (Lei (Eddy) Xu via Colin P. McCabe)
+
     HDFS-8716. Introduce a new config specifically for safe mode block count
     (Chang Li via kihwal)
 

@@ -1128,8 +1128,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       throws IOException {
     // If the block is cached, start uncaching it.
     cacheManager.uncacheBlock(bpid, replicaInfo.getBlockId());
-    // unlink the finalized replica
-    replicaInfo.unlinkBlock(1);
     
     // construct a RBW replica with the new GS
     File blkfile = replicaInfo.getBlockFile();
@@ -2495,7 +2493,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           + ", rur=" + rur);
     }
     if (rur.getNumBytes() > newlength) {
-      rur.unlinkBlock(1);
       truncateBlock(blockFile, metaFile, rur.getNumBytes(), newlength);
       if(!copyOnTruncate) {
         // update RUR with the new length
