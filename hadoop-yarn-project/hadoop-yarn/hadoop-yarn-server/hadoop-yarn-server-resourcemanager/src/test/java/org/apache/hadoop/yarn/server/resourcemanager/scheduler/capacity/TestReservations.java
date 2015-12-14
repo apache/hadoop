@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -53,6 +54,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt.AMState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
@@ -65,6 +67,7 @@ import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class TestReservations {
 
@@ -188,6 +191,9 @@ public class TestReservations {
         .getMockApplicationAttemptId(0, 0);
     FiCaSchedulerApp app_0 = new FiCaSchedulerApp(appAttemptId_0, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
+    app_0 = spy(app_0);
+    Mockito.doNothing().when(app_0).updateAMContainerDiagnostics(any(AMState.class),
+        any(String.class));
     rmContext.getRMApps().put(app_0.getApplicationId(), mock(RMApp.class));
 
     a.submitApplicationAttempt(app_0, user_0); 
@@ -196,6 +202,9 @@ public class TestReservations {
         .getMockApplicationAttemptId(1, 0);
     FiCaSchedulerApp app_1 = new FiCaSchedulerApp(appAttemptId_1, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
+    app_1 = spy(app_1);
+    Mockito.doNothing().when(app_1).updateAMContainerDiagnostics(any(AMState.class),
+        any(String.class));
     a.submitApplicationAttempt(app_1, user_0); 
 
     // Setup some nodes
@@ -348,6 +357,9 @@ public class TestReservations {
         .getMockApplicationAttemptId(0, 0);
     FiCaSchedulerApp app_0 = new FiCaSchedulerApp(appAttemptId_0, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
+    app_0 = spy(app_0);
+    Mockito.doNothing().when(app_0).updateAMContainerDiagnostics(any(AMState.class),
+        any(String.class));
     rmContext.getRMApps().put(app_0.getApplicationId(), mock(RMApp.class));
 
     a.submitApplicationAttempt(app_0, user_0); 
@@ -356,6 +368,9 @@ public class TestReservations {
         .getMockApplicationAttemptId(1, 0);
     FiCaSchedulerApp app_1 = new FiCaSchedulerApp(appAttemptId_1, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
+    app_1 = spy(app_1);
+    Mockito.doNothing().when(app_1).updateAMContainerDiagnostics(any(AMState.class),
+        any(String.class));
     a.submitApplicationAttempt(app_1, user_0); 
 
     // Setup some nodes
@@ -502,6 +517,9 @@ public class TestReservations {
         .getMockApplicationAttemptId(0, 0);
     FiCaSchedulerApp app_0 = new FiCaSchedulerApp(appAttemptId_0, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
+    app_0 = spy(app_0);
+    Mockito.doNothing().when(app_0).updateAMContainerDiagnostics(any(AMState.class),
+        any(String.class));
     rmContext.getRMApps().put(app_0.getApplicationId(), mock(RMApp.class));
 
     a.submitApplicationAttempt(app_0, user_0); 
@@ -510,6 +528,9 @@ public class TestReservations {
         .getMockApplicationAttemptId(1, 0);
     FiCaSchedulerApp app_1 = new FiCaSchedulerApp(appAttemptId_1, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
+    app_1 = spy(app_1);
+    Mockito.doNothing().when(app_1).updateAMContainerDiagnostics(any(AMState.class),
+        any(String.class));
     a.submitApplicationAttempt(app_1, user_0); 
 
     // Setup some nodes
@@ -758,6 +779,9 @@ public class TestReservations {
         .getMockApplicationAttemptId(0, 0);
     FiCaSchedulerApp app_0 = new FiCaSchedulerApp(appAttemptId_0, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
+    app_0 = spy(app_0);
+    Mockito.doNothing().when(app_0).updateAMContainerDiagnostics(any(AMState.class),
+        any(String.class));
     rmContext.getRMApps().put(app_0.getApplicationId(), mock(RMApp.class));
 
     a.submitApplicationAttempt(app_0, user_0); 
@@ -766,6 +790,9 @@ public class TestReservations {
         .getMockApplicationAttemptId(1, 0);
     FiCaSchedulerApp app_1 = new FiCaSchedulerApp(appAttemptId_1, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
+    app_1 = spy(app_1);
+    Mockito.doNothing().when(app_1).updateAMContainerDiagnostics(any(AMState.class),
+        any(String.class));
     a.submitApplicationAttempt(app_1, user_0); 
 
     // Setup some nodes
@@ -927,6 +954,9 @@ public class TestReservations {
         .getMockApplicationAttemptId(0, 0);
     FiCaSchedulerApp app_0 = new FiCaSchedulerApp(appAttemptId_0, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
+    app_0 = spy(app_0);
+    Mockito.doNothing().when(app_0).updateAMContainerDiagnostics(any(AMState.class),
+        any(String.class));
     rmContext.getRMApps().put(app_0.getApplicationId(), mock(RMApp.class));
     a.submitApplicationAttempt(app_0, user_0); 
 
@@ -934,6 +964,9 @@ public class TestReservations {
         .getMockApplicationAttemptId(1, 0);
     FiCaSchedulerApp app_1 = new FiCaSchedulerApp(appAttemptId_1, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
+    app_1 = spy(app_1);
+    Mockito.doNothing().when(app_1).updateAMContainerDiagnostics(any(AMState.class),
+        any(String.class));
     a.submitApplicationAttempt(app_1, user_0); 
 
     // Setup some nodes
@@ -1068,6 +1101,9 @@ public class TestReservations {
         .getMockApplicationAttemptId(0, 0);
     FiCaSchedulerApp app_0 = new FiCaSchedulerApp(appAttemptId_0, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
+    app_0 = spy(app_0);
+    Mockito.doNothing().when(app_0).updateAMContainerDiagnostics(any(AMState.class),
+        any(String.class));
     rmContext.getRMApps().put(app_0.getApplicationId(), mock(RMApp.class));
 
     a.submitApplicationAttempt(app_0, user_0); 
@@ -1076,6 +1112,9 @@ public class TestReservations {
         .getMockApplicationAttemptId(1, 0);
     FiCaSchedulerApp app_1 = new FiCaSchedulerApp(appAttemptId_1, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
+    app_1 = spy(app_1);
+    Mockito.doNothing().when(app_1).updateAMContainerDiagnostics(any(AMState.class),
+        any(String.class));
     a.submitApplicationAttempt(app_1, user_0); 
 
     // Setup some nodes

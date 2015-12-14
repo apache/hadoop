@@ -1387,8 +1387,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals("progress doesn't match", 0, progress, 0.0);
     WebServicesTestUtils.checkStringMatch("trackingUI", "UNASSIGNED",
         trackingUI);
-    WebServicesTestUtils.checkStringMatch("diagnostics", app.getDiagnostics()
-        .toString(), diagnostics);
+    WebServicesTestUtils.checkStringEqual("diagnostics",
+        app.getDiagnostics().toString(), diagnostics);
     assertEquals("clusterId doesn't match",
         ResourceManager.getClusterTimeStamp(), clusterId);
     assertEquals("startedTime doesn't match", app.getStartTime(), startedTime);
