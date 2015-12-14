@@ -272,6 +272,9 @@ public class TestNodeManagerShutdown {
     conf.set(YarnConfiguration.NM_ADDRESS, "127.0.0.1:" + port);
     conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, "127.0.0.1:"
         + ServerSocketUtil.getPort(49158, 10));
+    conf.set(YarnConfiguration.NM_WEBAPP_ADDRESS,
+        "127.0.0.1:" + ServerSocketUtil
+            .getPort(YarnConfiguration.DEFAULT_NM_WEBAPP_PORT, 10));
     conf.set(YarnConfiguration.NM_LOG_DIRS, logsDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogsDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, nmLocalDir.getAbsolutePath());

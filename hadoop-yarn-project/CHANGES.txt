@@ -1132,6 +1132,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4403. (AM/NM/Container)LivelinessMonitor should use monotonic time
     when calculating period. (Junping Du via jianhe)
 
+    YARN-4402. TestNodeManagerShutdown And TestNodeManagerResync fails with
+    bind exception. (Brahma Reddy Battula via jianhe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
