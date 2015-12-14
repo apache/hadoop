@@ -35,7 +35,6 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
@@ -157,20 +156,6 @@ public class DataNodeTestUtils {
    */
   public static FsDatasetSpi<?> getFSDataset(DataNode dn) {
     return dn.getFSDataset();
-  }
-
-  public static File getFile(DataNode dn, String bpid, long bid) {
-    return FsDatasetTestUtil.getFile(dn.getFSDataset(), bpid, bid);
-  }
-
-  public static File getBlockFile(DataNode dn, String bpid, Block b
-      ) throws IOException {
-    return FsDatasetTestUtil.getBlockFile(dn.getFSDataset(), bpid, b);
-  }
-  
-  public static boolean unlinkBlock(DataNode dn, ExtendedBlock bk, int numLinks
-      ) throws IOException {
-    return FsDatasetTestUtil.unlinkBlock(dn.getFSDataset(), bk, numLinks);
   }
 
   /**
