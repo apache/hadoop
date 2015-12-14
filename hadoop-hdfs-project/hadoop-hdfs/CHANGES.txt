@@ -847,6 +847,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9532. Detailed exception info is lost in reportTo methods of
     ErrorReportAction and ReportBadBlockAction. (Yongjun Zhang)
 
+    HDFS-9535. Newly completed blocks in IBR should not be considered
+    under-replicated too quickly. (Mingliang Liu via jing9)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
