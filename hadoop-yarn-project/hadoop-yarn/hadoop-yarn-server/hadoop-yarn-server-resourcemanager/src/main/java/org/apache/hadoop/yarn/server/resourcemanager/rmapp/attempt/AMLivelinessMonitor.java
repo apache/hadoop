@@ -25,14 +25,13 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.AbstractLivelinessMonitor;
 import org.apache.hadoop.yarn.util.Clock;
-import org.apache.hadoop.yarn.util.SystemClock;
 
 public class AMLivelinessMonitor extends AbstractLivelinessMonitor<ApplicationAttemptId> {
 
   private EventHandler dispatcher;
   
   public AMLivelinessMonitor(Dispatcher d) {
-    super("AMLivelinessMonitor", new SystemClock());
+    super("AMLivelinessMonitor");
     this.dispatcher = d.getEventHandler();
   }
 

@@ -25,7 +25,6 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerExpiredSchedulerEvent;
 import org.apache.hadoop.yarn.util.AbstractLivelinessMonitor;
-import org.apache.hadoop.yarn.util.SystemClock;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class ContainerAllocationExpirer extends
@@ -34,7 +33,7 @@ public class ContainerAllocationExpirer extends
   private EventHandler dispatcher;
 
   public ContainerAllocationExpirer(Dispatcher d) {
-    super(ContainerAllocationExpirer.class.getName(), new SystemClock());
+    super(ContainerAllocationExpirer.class.getName());
     this.dispatcher = d.getEventHandler();
   }
 
