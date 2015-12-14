@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.FsDatasetTestUtils;
@@ -404,5 +405,43 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
   @Override
   public long getPendingAsyncDeletions() {
     return dataset.asyncDiskService.countPendingDeletions();
+  }
+
+  @Override
+  public void verifyBlockPoolExists(String bpid) throws IOException {
+    FsVolumeImpl volume;
+    try (FsVolumeReferences references = dataset.getFsVolumeReferences()) {
+      volume = (FsVolumeImpl) references.get(0);
+    }
+    File bpDir = new File(volume.getCurrentDir(), bpid);
+    File bpCurrentDir = new File(bpDir, DataStorage.STORAGE_DIR_CURRENT);
+    File finalizedDir = new File(bpCurrentDir,
+        DataStorage.STORAGE_DIR_FINALIZED);
+    File rbwDir = new File(bpCurrentDir, DataStorage.STORAGE_DIR_RBW);
+    File versionFile = new File(bpCurrentDir, "VERSION");
+
+    if (!finalizedDir.isDirectory()) {
+      throw new IOException(finalizedDir.getPath() + " is not a directory.");
+    }
+    if (!rbwDir.isDirectory()) {
+      throw new IOException(finalizedDir.getPath() + " is not a directory.");
+    }
+    if (!versionFile.exists()) {
+      throw new IOException(
+          "Version file: " + versionFile.getPath() + " does not exist.");
+    }
+  }
+
+  @Override
+  public void verifyBlockPoolMissing(String bpid) throws IOException {
+    FsVolumeImpl volume;
+    try (FsVolumeReferences references = dataset.getFsVolumeReferences()) {
+      volume = (FsVolumeImpl) references.get(0);
+    }
+    File bpDir = new File(volume.getCurrentDir(), bpid);
+    if (bpDir.exists()) {
+      throw new IOException(
+          String.format("Block pool directory %s exists", bpDir));
+    }
   }
 }

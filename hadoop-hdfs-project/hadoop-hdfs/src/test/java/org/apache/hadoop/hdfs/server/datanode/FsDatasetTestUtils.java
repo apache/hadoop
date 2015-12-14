@@ -260,4 +260,20 @@ public interface FsDatasetTestUtils {
    * Get the number of pending async deletions.
    */
   long getPendingAsyncDeletions();
+
+  /**
+   * Verify the existence of the block pool.
+   *
+   * @param bpid block pool ID
+   * @throws IOException if the block pool does not exist.
+   */
+  void verifyBlockPoolExists(String bpid) throws IOException;
+
+  /**
+   * Verify that the block pool does not exist.
+   *
+   * @param bpid block pool ID
+   * @throws IOException if the block pool does exist.
+   */
+  void verifyBlockPoolMissing(String bpid) throws IOException;
 }

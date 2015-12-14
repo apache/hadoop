@@ -896,6 +896,9 @@ Release 2.9.0 - UNRELEASED
     HDFS-9129. Move the safemode block count into BlockManager. (Mingliang Liu
     via jing9)
 
+    HDFS-9281. Change TestDeleteBlockPool to not explicitly use File to check
+    block pool existence. (lei)
+
   OPTIMIZATIONS
 
   BUG FIXES
