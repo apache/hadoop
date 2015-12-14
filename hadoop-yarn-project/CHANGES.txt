@@ -613,6 +613,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3946. Update exact reason as to why a submitted app is in ACCEPTED state to 
     app's diagnostic message. (Naganarasimha G R via wangda)
 
+    YARN-4309. Add container launch related debug information to container logs
+    when a container fails. (Varun Vasudev via wangda)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

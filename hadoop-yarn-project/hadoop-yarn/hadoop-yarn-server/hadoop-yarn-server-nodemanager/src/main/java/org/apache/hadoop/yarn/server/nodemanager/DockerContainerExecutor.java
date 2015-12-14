@@ -329,7 +329,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
    * the docker image and write them out to an OutputStream.
    */
   public void writeLaunchEnv(OutputStream out, Map<String, String> environment,
-    Map<Path, List<String>> resources, List<String> command)
+    Map<Path, List<String>> resources, List<String> command, Path logDir)
     throws IOException {
     ContainerLaunch.ShellScriptBuilder sb =
       ContainerLaunch.ShellScriptBuilder.create();
@@ -356,6 +356,15 @@ public class DockerContainerExecutor extends ContainerExecutor {
           sb.symlink(entry.getKey(), new Path(linkName));
         }
       }
+    }
+
+    // dump debugging information if configured
+    if (getConf() != null && getConf().getBoolean(
+        YarnConfiguration.NM_LOG_CONTAINER_DEBUG_INFO,
+        YarnConfiguration.DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO)) {
+      sb.copyDebugInformation(new Path(ContainerLaunch.CONTAINER_SCRIPT),
+          new Path(logDir, ContainerLaunch.CONTAINER_SCRIPT));
+      sb.listDebugInformation(new Path(logDir, DIRECTORY_CONTENTS));
     }
 
     sb.command(command);

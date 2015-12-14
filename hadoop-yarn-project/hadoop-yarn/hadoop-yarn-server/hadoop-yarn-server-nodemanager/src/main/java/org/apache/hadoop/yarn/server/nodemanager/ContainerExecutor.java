@@ -34,6 +34,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -64,6 +65,8 @@ public abstract class ContainerExecutor implements Configurable {
   private static final Log LOG = LogFactory.getLog(ContainerExecutor.class);
   final public static FsPermission TASK_LAUNCH_SCRIPT_PERMISSION =
     FsPermission.createImmutable((short) 0700);
+
+  public static final String DIRECTORY_CONTENTS = "directory.info";
 
   private Configuration conf;
 
@@ -241,11 +244,22 @@ public abstract class ContainerExecutor implements Configurable {
    * @param resources The resources which have been localized for this container
    * Symlinks will be created to these localized resources
    * @param command The command that will be run.
+   * @param logDir The log dir to copy debugging information to
    * @throws IOException if any errors happened writing to the OutputStream,
    * while creating symlinks
    */
   public void writeLaunchEnv(OutputStream out, Map<String, String> environment,
-    Map<Path, List<String>> resources, List<String> command) throws IOException{
+      Map<Path, List<String>> resources, List<String> command, Path logDir)
+      throws IOException {
+    this.writeLaunchEnv(out, environment, resources, command, logDir,
+        ContainerLaunch.CONTAINER_SCRIPT);
+  }
+
+  @VisibleForTesting
+  public void writeLaunchEnv(OutputStream out,
+      Map<String, String> environment, Map<Path, List<String>> resources,
+      List<String> command, Path logDir, String outFilename)
+      throws IOException {
     ContainerLaunch.ShellScriptBuilder sb =
       ContainerLaunch.ShellScriptBuilder.create();
     Set<String> whitelist = new HashSet<String>();
@@ -270,6 +284,14 @@ public abstract class ContainerExecutor implements Configurable {
           sb.symlink(entry.getKey(), new Path(linkName));
         }
       }
+    }
+
+    // dump debugging information if configured
+    if (getConf() != null && getConf().getBoolean(
+        YarnConfiguration.NM_LOG_CONTAINER_DEBUG_INFO,
+        YarnConfiguration.DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO)) {
+      sb.copyDebugInformation(new Path(outFilename), new Path(logDir, outFilename));
+      sb.listDebugInformation(new Path(logDir, DIRECTORY_CONTENTS));
     }
 
     sb.command(command);

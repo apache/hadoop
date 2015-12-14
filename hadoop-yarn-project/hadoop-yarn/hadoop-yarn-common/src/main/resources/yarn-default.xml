@@ -1128,6 +1128,18 @@
   </property>
 
   <property>
+    <description>Generate additional logs about container launches.
+    Currently, this creates a copy of the launch script and lists the
+    directory contents of the container work dir. When listing directory
+    contents, we follow symlinks to a max-depth of 5(including symlinks
+    which point to outside the container work dir) which may lead to a
+    slowness in launching containers.
+    </description>
+    <name>yarn.nodemanager.log-container-debug-info.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>Amount of physical memory, in MB, that can be allocated 
     for containers. If set to -1 and
     yarn.nodemanager.resource.detect-hardware-capabilities is true, it is
