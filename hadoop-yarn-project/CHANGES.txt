@@ -616,6 +616,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4309. Add container launch related debug information to container logs
     when a container fails. (Varun Vasudev via wangda)
 
+    YARN-4418. AM Resource Limit per partition can be updated to ResourceUsage as well.
+    (Sunil G via wangda)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

@@ -217,12 +217,21 @@ public class QueueCapacities {
   }
 
   /* Absolute Maximum AM resource percentage Getter and Setter */
+
+  public float getMaxAMResourcePercentage() {
+    return _get(NL, CapacityType.MAX_AM_PERC);
+  }
+
   public float getMaxAMResourcePercentage(String label) {
     return _get(label, CapacityType.MAX_AM_PERC);
   }
 
   public void setMaxAMResourcePercentage(String label, float value) {
     _set(label, CapacityType.MAX_AM_PERC, value);
+  }
+
+  public void setMaxAMResourcePercentage(float value) {
+    _set(NL, CapacityType.MAX_AM_PERC, value);
   }
 
   /**

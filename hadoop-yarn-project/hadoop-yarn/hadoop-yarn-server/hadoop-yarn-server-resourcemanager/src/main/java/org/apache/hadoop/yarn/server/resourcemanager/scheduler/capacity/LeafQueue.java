@@ -606,6 +606,7 @@ public class LeafQueue extends AbstractCSQueue {
         minimumAllocation);
 
     metrics.setAMResouceLimit(amResouceLimit);
+    queueUsage.setAMLimit(nodePartition, amResouceLimit);
     return amResouceLimit;
   }
 

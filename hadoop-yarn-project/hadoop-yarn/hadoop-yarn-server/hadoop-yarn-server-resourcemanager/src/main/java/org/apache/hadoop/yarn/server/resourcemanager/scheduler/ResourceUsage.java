@@ -61,7 +61,7 @@ public class ResourceUsage {
     //CACHED_USED and CACHED_PENDING may be read by anyone, but must only
     //be written by ordering policies
     USED(0), PENDING(1), AMUSED(2), RESERVED(3), CACHED_USED(4),
-      CACHED_PENDING(5);
+      CACHED_PENDING(5), AMLIMIT(6);
 
     private int idx;
 
@@ -92,6 +92,7 @@ public class ResourceUsage {
       sb.append("pending=" + resArr[1] + "%, ");
       sb.append("am_used=" + resArr[2] + "%, ");
       sb.append("reserved=" + resArr[3] + "%}");
+      sb.append("am_limit=" + resArr[6] + "%, ");
       return sb.toString();
     }
   }
@@ -106,11 +107,19 @@ public class ResourceUsage {
   public Resource getUsed(String label) {
     return _get(label, ResourceType.USED);
   }
-  
+
+  public Resource getCachedUsed() {
+    return _get(NL, ResourceType.CACHED_USED);
+  }
+
   public Resource getCachedUsed(String label) {
     return _get(label, ResourceType.CACHED_USED);
   }
-  
+
+  public Resource getCachedPending() {
+    return _get(NL, ResourceType.CACHED_PENDING);
+  }
+
   public Resource getCachedPending(String label) {
     return _get(label, ResourceType.CACHED_PENDING);
   }
@@ -149,13 +158,21 @@ public class ResourceUsage {
   public void setUsed(String label, Resource res) {
     _set(label, ResourceType.USED, res);
   }
-  
+
   public void setCachedUsed(String label, Resource res) {
     _set(label, ResourceType.CACHED_USED, res);
   }
-  
+
+  public void setCachedUsed(Resource res) {
+    _set(NL, ResourceType.CACHED_USED, res);
+  }
+
   public void setCachedPending(String label, Resource res) {
     _set(label, ResourceType.CACHED_PENDING, res);
+  }
+
+  public void setCachedPending(Resource res) {
+    _set(NL, ResourceType.CACHED_PENDING, res);
   }
 
   /*
@@ -261,6 +278,41 @@ public class ResourceUsage {
 
   public void setAMUsed(String label, Resource res) {
     _set(label, ResourceType.AMUSED, res);
+  }
+
+  /*
+   * AM-Resource Limit
+   */
+  public Resource getAMLimit() {
+    return getAMLimit(NL);
+  }
+
+  public Resource getAMLimit(String label) {
+    return _get(label, ResourceType.AMLIMIT);
+  }
+
+  public void incAMLimit(String label, Resource res) {
+    _inc(label, ResourceType.AMLIMIT, res);
+  }
+
+  public void incAMLimit(Resource res) {
+    incAMLimit(NL, res);
+  }
+
+  public void decAMLimit(Resource res) {
+    decAMLimit(NL, res);
+  }
+
+  public void decAMLimit(String label, Resource res) {
+    _dec(label, ResourceType.AMLIMIT, res);
+  }
+
+  public void setAMLimit(Resource res) {
+    setAMLimit(NL, res);
+  }
+
+  public void setAMLimit(String label, Resource res) {
+    _set(label, ResourceType.AMLIMIT, res);
   }
 
   private static Resource normalize(Resource res) {
