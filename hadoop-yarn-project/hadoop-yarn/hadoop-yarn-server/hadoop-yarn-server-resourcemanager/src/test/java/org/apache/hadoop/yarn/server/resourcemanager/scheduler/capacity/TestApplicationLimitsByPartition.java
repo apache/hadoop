@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabels
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt.AMState;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -120,15 +121,13 @@ public class TestApplicationLimitsByPartition {
 
     // Submit app1 with 1Gb AM resource to Queue A1 for label X
     RMApp app1 = rm1.submitApp(GB, "app", "user", null, "a1", "x");
-    MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     // Submit app2 with 1Gb AM resource to Queue A1 for label X
     RMApp app2 = rm1.submitApp(GB, "app", "user", null, "a1", "x");
-    MockRM.launchAndRegisterAM(app2, rm1, nm1);
 
     // Submit 3rd app to Queue A1 for label X, and this will be pending as
     // AM limit is already crossed for label X. (2GB)
-    rm1.submitApp(GB, "app", "user", null, "a1", "x");
+    RMApp pendingApp = rm1.submitApp(GB, "app", "user", null, "a1", "x");
 
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("a1");
@@ -138,6 +137,16 @@ public class TestApplicationLimitsByPartition {
     // pending.
     Assert.assertEquals(2, leafQueue.getNumActiveApplications());
     Assert.assertEquals(1, leafQueue.getNumPendingApplications());
+    Assert.assertTrue("AM diagnostics not set properly", app1.getDiagnostics()
+        .toString().contains(AMState.ACTIVATED.getDiagnosticMessage()));
+    Assert.assertTrue("AM diagnostics not set properly", app2.getDiagnostics()
+        .toString().contains(AMState.ACTIVATED.getDiagnosticMessage()));
+    Assert.assertTrue("AM diagnostics not set properly",
+        pendingApp.getDiagnostics().toString()
+            .contains(AMState.INACTIVATED.getDiagnosticMessage()));
+    Assert.assertTrue("AM diagnostics not set properly",
+        pendingApp.getDiagnostics().toString().contains(
+            CSAMContainerLaunchDiagnosticsConstants.QUEUE_AM_RESOURCE_LIMIT_EXCEED));
 
     // Now verify the same test case in Queue C1 where label is not configured.
     // Submit an app to Queue C1 with empty label
@@ -150,7 +159,7 @@ public class TestApplicationLimitsByPartition {
 
     // Submit 3rd app to Queue C1. This will be pending as Queue's am-limit
     // is reached.
-    rm1.submitApp(GB, "app", "user", null, "c1");
+    pendingApp = rm1.submitApp(GB, "app", "user", null, "c1");
 
     leafQueue = (LeafQueue) cs.getQueue("c1");
     Assert.assertNotNull(leafQueue);
@@ -159,6 +168,12 @@ public class TestApplicationLimitsByPartition {
     // is reached.
     Assert.assertEquals(2, leafQueue.getNumActiveApplications());
     Assert.assertEquals(1, leafQueue.getNumPendingApplications());
+    Assert.assertTrue("AM diagnostics not set properly",
+        pendingApp.getDiagnostics().toString()
+            .contains(AMState.INACTIVATED.getDiagnosticMessage()));
+    Assert.assertTrue("AM diagnostics not set properly",
+        pendingApp.getDiagnostics().toString().contains(
+            CSAMContainerLaunchDiagnosticsConstants.QUEUE_AM_RESOURCE_LIMIT_EXCEED));
 
     rm1.killApp(app3.getApplicationId());
     Thread.sleep(1000);
@@ -288,11 +303,10 @@ public class TestApplicationLimitsByPartition {
 
     // Submit app1 (2 GB) to Queue A1 and label X
     RMApp app1 = rm1.submitApp(2 * GB, "app", "user", null, "a1", "x");
-    MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     // Submit 2nd app to label "X" with one GB. Since queue am-limit is 2GB,
     // 2nd app will be pending and first one will get activated.
-    rm1.submitApp(GB, "app", "user", null, "a1", "x");
+    RMApp pendingApp = rm1.submitApp(GB, "app", "user", null, "a1", "x");
 
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("a1");
@@ -302,6 +316,14 @@ public class TestApplicationLimitsByPartition {
     // used for partition "x" also.
     Assert.assertEquals(1, leafQueue.getNumActiveApplications());
     Assert.assertEquals(1, leafQueue.getNumPendingApplications());
+    Assert.assertTrue("AM diagnostics not set properly", app1.getDiagnostics()
+        .toString().contains(AMState.ACTIVATED.getDiagnosticMessage()));
+    Assert.assertTrue("AM diagnostics not set properly",
+        pendingApp.getDiagnostics().toString()
+            .contains(AMState.INACTIVATED.getDiagnosticMessage()));
+    Assert.assertTrue("AM diagnostics not set properly",
+        pendingApp.getDiagnostics().toString()
+            .contains(CSAMContainerLaunchDiagnosticsConstants.QUEUE_AM_RESOURCE_LIMIT_EXCEED));
     rm1.close();
   }
 
@@ -381,7 +403,7 @@ public class TestApplicationLimitsByPartition {
     // 4Gb -> 40% of label "X" in queue A1
     // Since we have 2 users, 50% of 4Gb will be max for each user. Here user1
     // has already crossed this 2GB limit, hence this app will be pending.
-    rm1.submitApp(GB, "app", user_1, null, "a1", "x");
+    RMApp pendingApp = rm1.submitApp(GB, "app", user_1, null, "a1", "x");
 
     // Verify active applications count per user and also in queue level.
     Assert.assertEquals(3, leafQueue.getNumActiveApplications());
@@ -389,6 +411,14 @@ public class TestApplicationLimitsByPartition {
     Assert.assertEquals(2, leafQueue.getNumActiveApplications(user_1));
     Assert.assertEquals(1, leafQueue.getNumPendingApplications(user_1));
     Assert.assertEquals(1, leafQueue.getNumPendingApplications());
+
+    //verify Diagnostic messages
+    Assert.assertTrue("AM diagnostics not set properly",
+        pendingApp.getDiagnostics().toString()
+            .contains(AMState.INACTIVATED.getDiagnosticMessage()));
+    Assert.assertTrue("AM diagnostics not set properly",
+        pendingApp.getDiagnostics().toString().contains(
+            CSAMContainerLaunchDiagnosticsConstants.USER_AM_RESOURCE_LIMIT_EXCEED));
     rm1.close();
   }
 

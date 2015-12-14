@@ -73,11 +73,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventT
 import org.apache.hadoop.yarn.server.resourcemanager.blacklist.BlacklistManager;
 import org.apache.hadoop.yarn.server.resourcemanager.blacklist.BlacklistUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.blacklist.DisabledBlacklistManager;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -91,6 +91,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeFinishedContainersPulledByAMEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt.AMState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
@@ -186,6 +187,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private RMAppAttemptMetrics attemptMetrics = null;
   private ResourceRequest amReq = null;
   private BlacklistManager blacklistedNodesForAM = null;
+
+  private String amLaunchDiagnostics;
 
   private static final StateMachineFactory<RMAppAttemptImpl,
                                            RMAppAttemptState,
@@ -703,8 +706,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   @Override
   public String getDiagnostics() {
     this.readLock.lock();
-
     try {
+      if (diagnostics.length() == 0 && amLaunchDiagnostics != null) {
+        return amLaunchDiagnostics;
+      }
       return this.diagnostics.toString();
     } finally {
       this.readLock.unlock();
@@ -1409,6 +1414,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
             appAttempt.launchAMStartTime;
         ClusterMetrics.getMetrics().addAMLaunchDelay(delay);
       }
+
+      appAttempt
+          .updateAMLaunchDiagnostics(AMState.LAUNCHED.getDiagnosticMessage());
       // Register with AMLivelinessMonitor
       appAttempt.attemptLaunched();
 
@@ -1506,6 +1514,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       appAttempt.rpcPort = registrationEvent.getRpcport();
       appAttempt.originalTrackingUrl =
           sanitizeTrackingUrl(registrationEvent.getTrackingurl());
+
+      // reset AMLaunchDiagnostics once AM Registers with RM
+      appAttempt.updateAMLaunchDiagnostics(null);
 
       // Let the app know
       appAttempt.eventHandler.handle(new RMAppEvent(appAttempt
@@ -2096,5 +2107,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     } finally {
       this.writeLock.unlock();
     }
+  }
+
+  @Override
+  public void updateAMLaunchDiagnostics(String amLaunchDiagnostics) {
+    this.amLaunchDiagnostics = amLaunchDiagnostics;
   }
 }

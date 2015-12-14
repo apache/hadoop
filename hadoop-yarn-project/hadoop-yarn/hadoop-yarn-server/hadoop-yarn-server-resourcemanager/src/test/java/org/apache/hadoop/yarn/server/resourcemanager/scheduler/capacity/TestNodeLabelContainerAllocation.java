@@ -1028,10 +1028,11 @@ public class TestNodeLabelContainerAllocation {
 
     rm1.getRMContext().setNodeLabelManager(mgr);
     rm1.start();
-    MockNM nm1 = rm1.registerNode("h1:1234", 8 * GB); // label = x
+    String nodeIdStr = "h1:1234";
+    MockNM nm1 = rm1.registerNode(nodeIdStr, 8 * GB); // label = x
 
     // launch an app to queue b1 (label = y), AM container should be launched in nm3
-    rm1.submitApp(1 * GB, "app", "user", null, "b1");
+    RMApp app = rm1.submitApp(1 * GB, "app", "user", null, "b1");
    
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
@@ -1040,7 +1041,17 @@ public class TestNodeLabelContainerAllocation {
     for (int i = 0; i < 50; i++) {
       cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
     }
-    
+
+    Assert.assertTrue(
+        "Scheduler diagnostics should have reason for not assigning the node",
+        app.getDiagnostics().toString().contains(
+            CSAMContainerLaunchDiagnosticsConstants.SKIP_AM_ALLOCATION_IN_IGNORE_EXCLUSIVE_MODE));
+
+    Assert.assertTrue(
+        "Scheduler diagnostics should have last processed node information",
+        app.getDiagnostics().toString().contains(
+            CSAMContainerLaunchDiagnosticsConstants.LAST_NODE_PROCESSED_MSG
+                + nodeIdStr + " ( Partition : [x]"));
     Assert.assertEquals(0, cs.getSchedulerNode(nm1.getNodeId())
         .getNumContainers());
     
