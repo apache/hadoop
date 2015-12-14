@@ -20,10 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -68,11 +66,6 @@ public class TestDeleteBlockPool {
       String bpid1 = cluster.getNamesystem(0).getBlockPoolId();
       String bpid2 = cluster.getNamesystem(1).getBlockPoolId();
 
-      File dn1StorageDir1 = cluster.getInstanceStorageDir(0, 0);
-      File dn1StorageDir2 = cluster.getInstanceStorageDir(0, 1);
-      File dn2StorageDir1 = cluster.getInstanceStorageDir(1, 0);
-      File dn2StorageDir2 = cluster.getInstanceStorageDir(1, 1);
-
       // Although namenode is shutdown, the bp offerservice is still running
       try {
         dn1.deleteBlockPool(bpid1, true);
@@ -92,21 +85,17 @@ public class TestDeleteBlockPool {
       } catch (IOException expected) {
       }
 
-      verifyBlockPoolDirectories(true, dn1StorageDir1, bpid1);
-      verifyBlockPoolDirectories(true, dn1StorageDir2, bpid1);
+      cluster.getFsDatasetTestUtils(0).verifyBlockPoolExists(bpid1);
 
       dn1.deleteBlockPool(bpid1, true);
 
-      verifyBlockPoolDirectories(false, dn1StorageDir1, bpid1);
-      verifyBlockPoolDirectories(false, dn1StorageDir2, bpid1);
+      cluster.getFsDatasetTestUtils(0).verifyBlockPoolMissing(bpid1);
      
       fs1.delete(new Path("/alpha"), true);
       
       // Wait till all blocks are deleted from the dn2 for bpid1.
-      File finalDir1 = MiniDFSCluster.getFinalizedDir(dn2StorageDir1, bpid1);
-      File finalDir2 = MiniDFSCluster.getFinalizedDir(dn2StorageDir1, bpid2);
-      while ((!DatanodeUtil.dirNoFilesRecursive(finalDir1)) ||
-          (!DatanodeUtil.dirNoFilesRecursive(finalDir2))) {
+      while (cluster.getFsDatasetTestUtils(1).getStoredReplicas(bpid1)
+          .hasNext()) {
         try {
           Thread.sleep(3000);
         } catch (Exception ignored) {
@@ -124,22 +113,18 @@ public class TestDeleteBlockPool {
       
       dn2.refreshNamenodes(nn1Conf);
       assertEquals(1, dn2.getAllBpOs().size());
-      
-      verifyBlockPoolDirectories(true, dn2StorageDir1, bpid1);
-      verifyBlockPoolDirectories(true, dn2StorageDir2, bpid1);
+
+      cluster.getFsDatasetTestUtils(1).verifyBlockPoolExists(bpid1);
       
       // Now deleteBlockPool must succeed with force as false, because no 
       // blocks exist for bpid1 and bpOfferService is also stopped for bpid1.
       dn2.deleteBlockPool(bpid1, false);
-      
-      verifyBlockPoolDirectories(false, dn2StorageDir1, bpid1);
-      verifyBlockPoolDirectories(false, dn2StorageDir2, bpid1);
+
+      cluster.getFsDatasetTestUtils(1).verifyBlockPoolMissing(bpid1);
       
       //bpid2 must not be impacted
-      verifyBlockPoolDirectories(true, dn1StorageDir1, bpid2);
-      verifyBlockPoolDirectories(true, dn1StorageDir2, bpid2);
-      verifyBlockPoolDirectories(true, dn2StorageDir1, bpid2);
-      verifyBlockPoolDirectories(true, dn2StorageDir2, bpid2);
+      cluster.getFsDatasetTestUtils(0).verifyBlockPoolExists(bpid2);
+      cluster.getFsDatasetTestUtils(1).verifyBlockPoolExists(bpid2);
       //make sure second block pool is running all fine
       Path gammaFile = new Path("/gamma");
       DFSTestUtil.createFile(fs2, gammaFile, 1024, (short) 1, 55);
@@ -178,9 +163,6 @@ public class TestDeleteBlockPool {
       String bpid1 = cluster.getNamesystem(0).getBlockPoolId();
       String bpid2 = cluster.getNamesystem(1).getBlockPoolId();
       
-      File dn1StorageDir1 = cluster.getInstanceStorageDir(0, 0);
-      File dn1StorageDir2 = cluster.getInstanceStorageDir(0, 1);
-      
       Configuration nn1Conf = cluster.getConfiguration(0);
       nn1Conf.set(DFSConfigKeys.DFS_NAMESERVICES, "namesServerId1");
       dn1.refreshNamenodes(nn1Conf);
@@ -193,44 +175,21 @@ public class TestDeleteBlockPool {
       int ret = admin.run(args);
       assertFalse(0 == ret);
 
-      verifyBlockPoolDirectories(true, dn1StorageDir1, bpid2);
-      verifyBlockPoolDirectories(true, dn1StorageDir2, bpid2);
+      cluster.getFsDatasetTestUtils(0).verifyBlockPoolExists(bpid2);
       
       String[] forceArgs = { "-deleteBlockPool", dn1Address, bpid2, "force" };
       ret = admin.run(forceArgs);
       assertEquals(0, ret);
-      
-      verifyBlockPoolDirectories(false, dn1StorageDir1, bpid2);
-      verifyBlockPoolDirectories(false, dn1StorageDir2, bpid2);
+
+      cluster.getFsDatasetTestUtils(0).verifyBlockPoolMissing(bpid2);
       
       //bpid1 remains good
-      verifyBlockPoolDirectories(true, dn1StorageDir1, bpid1);
-      verifyBlockPoolDirectories(true, dn1StorageDir2, bpid1);
+      cluster.getFsDatasetTestUtils(0).verifyBlockPoolExists(bpid1);
       
     } finally {
       if (cluster != null) {
         cluster.shutdown();
       }
-    }
-  }
-  
-  private void verifyBlockPoolDirectories(boolean shouldExist,
-      File storageDir, String bpid) throws IOException {
-    File bpDir = new File(storageDir, DataStorage.STORAGE_DIR_CURRENT + "/"
-        + bpid);
-
-    if (shouldExist == false) {
-      assertFalse(bpDir.exists());
-    } else {
-      File bpCurrentDir = new File(bpDir, DataStorage.STORAGE_DIR_CURRENT);
-      File finalizedDir = new File(bpCurrentDir,
-          DataStorage.STORAGE_DIR_FINALIZED);
-      File rbwDir = new File(bpCurrentDir, DataStorage.STORAGE_DIR_RBW);
-      File versionFile = new File(bpCurrentDir, "VERSION");
-
-      assertTrue(finalizedDir.isDirectory());
-      assertTrue(rbwDir.isDirectory());
-      assertTrue(versionFile.exists());
     }
   }
 }
