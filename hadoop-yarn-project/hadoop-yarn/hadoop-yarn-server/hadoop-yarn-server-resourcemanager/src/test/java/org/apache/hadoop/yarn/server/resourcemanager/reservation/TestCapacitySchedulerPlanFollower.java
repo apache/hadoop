@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.ReservationAgent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -80,9 +81,12 @@ public class TestCapacitySchedulerPlanFollower extends
     ConcurrentMap<ApplicationId, RMApp> spyApps =
         spy(new ConcurrentHashMap<ApplicationId, RMApp>());
     RMApp rmApp = mock(RMApp.class);
+    RMAppAttempt rmAppAttempt = mock(RMAppAttempt.class);
     when(rmApp.getRMAppAttempt((ApplicationAttemptId) Matchers.any()))
-        .thenReturn(null);
+        .thenReturn(rmAppAttempt);
+    when(rmApp.getCurrentAppAttempt()).thenReturn(rmAppAttempt);
     Mockito.doReturn(rmApp).when(spyApps).get((ApplicationId) Matchers.any());
+    Mockito.doReturn(true).when(spyApps).containsKey((ApplicationId) Matchers.any());
     when(spyRMContext.getRMApps()).thenReturn(spyApps);
     when(spyRMContext.getScheduler()).thenReturn(scheduler);
 

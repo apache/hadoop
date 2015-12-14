@@ -246,4 +246,10 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    * @return the finish time of the application attempt.
    */
   long getFinishTime();
+
+  /**
+   * To capture Launch diagnostics of the app.
+   * @param amLaunchDiagnostics
+   */
+  void updateAMLaunchDiagnostics(String amLaunchDiagnostics);
 }

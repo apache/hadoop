@@ -359,7 +359,7 @@ public class FifoScheduler extends
             " #ask=" + ask.size());
       }
 
-      if (application.isWaitingForAMContainer(application.getApplicationId())) {
+      if (application.isWaitingForAMContainer()) {
         // Allocate is for AM and update AM blacklist for this
         application.updateAMBlacklist(
             blacklistAdditions, blacklistRemovals);
