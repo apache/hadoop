@@ -540,6 +540,9 @@ Trunk (Unreleased)
 
     HADOOP-12553. [JDK8] Fix javadoc error caused by illegal tag. (aajisaka)
 
+    HADOOP-12638. UnsatisfiedLinkError while checking ISA-L in checknative
+    command. (Kai Sasaki via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

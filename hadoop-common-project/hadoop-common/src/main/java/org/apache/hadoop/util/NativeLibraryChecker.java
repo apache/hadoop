@@ -95,12 +95,12 @@ public class NativeLibraryChecker {
         snappyLibraryName = SnappyCodec.getLibraryName();
       }
 
-      isalDetail = ErasureCodeNative.getLoadingFailureReason();
-      if (isalDetail != null) {
-        isalLoaded = false;
-      } else {
+      try {
+        isalDetail = ErasureCodeNative.getLoadingFailureReason();
         isalDetail = ErasureCodeNative.getLibraryName();
         isalLoaded = true;
+      } catch (UnsatisfiedLinkError e) {
+        isalLoaded = false;
       }
 
       openSslDetail = OpensslCipher.getLoadingFailureReason();
@@ -146,7 +146,7 @@ public class NativeLibraryChecker {
     }
 
     if ((!nativeHadoopLoaded) || (Shell.WINDOWS && (!winutilsExists)) ||
-        (checkAll && !(zlibLoaded && snappyLoaded && lz4Loaded && bzip2Loaded))) {
+        (checkAll && !(zlibLoaded && snappyLoaded && lz4Loaded && bzip2Loaded && isalLoaded))) {
       // return 1 to indicated check failed
       ExitUtil.terminate(1);
     }
