@@ -1129,6 +1129,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4421. Remove dead code in RmAppImpl.RMAppRecoveredTransition.
     (Daniel Templeton via rohithsharmaks)
 
+    YARN-4403. (AM/NM/Container)LivelinessMonitor should use monotonic time
+    when calculating period. (Junping Du via jianhe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

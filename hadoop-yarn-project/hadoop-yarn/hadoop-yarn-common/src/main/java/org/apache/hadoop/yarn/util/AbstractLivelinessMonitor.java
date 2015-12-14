@@ -56,6 +56,10 @@ public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
     this.clock = clock;
   }
 
+  public AbstractLivelinessMonitor(String name) {
+    this(name, new MonotonicClock());
+  }
+
   @Override
   protected void serviceStart() throws Exception {
     assert !stopped : "starting when already stopped";

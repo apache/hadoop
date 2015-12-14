@@ -23,6 +23,10 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 /**
  * Implementation of {@link Clock} that gives the current time from the system
  * clock in milliseconds.
+ * 
+ * NOTE: Do not use this to calculate a duration of expire or interval to sleep,
+ * because it will be broken by settimeofday. Please use {@link MonotonicClock}
+ * instead.
  */
 @Public
 @Stable
