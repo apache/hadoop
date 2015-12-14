@@ -111,7 +111,6 @@ public class TimelineClientImpl extends TimelineClient {
   private ConnectionConfigurator connConfigurator;
   private DelegationTokenAuthenticator authenticator;
   private DelegationTokenAuthenticatedURL.Token token;
-  private URI resURI;
   private UserGroupInformation authUgi;
   private String doAsUser;
   private Configuration configuration;
@@ -552,8 +551,8 @@ public class TimelineClientImpl extends TimelineClient {
           @Override
           public Long run() throws Exception {
             // If the timeline DT to renew is different than cached, replace it.
-            // Token to set every time for retry, because when exception happens,
-            // DelegationTokenAuthenticatedURL will reset it to null;
+            // Token to set every time for retry, because when exception
+            // happens, DelegationTokenAuthenticatedURL will reset it to null;
             if (!timelineDT.equals(token.getDelegationToken())) {
               token.setDelegationToken((Token) timelineDT);
             }
@@ -562,7 +561,8 @@ public class TimelineClientImpl extends TimelineClient {
                     connConfigurator);
             // If the token service address is not available, fall back to use
             // the configured service address.
-            final URI serviceURI = isTokenServiceAddrEmpty ? resURI
+            final URI serviceURI = isTokenServiceAddrEmpty ?
+                constructResURI(getConfig(), getTimelineServiceAddress(), false)
                 : new URI(scheme, null, address.getHostName(),
                 address.getPort(), RESOURCE_URI_STR_V1, null, null);
             return authUrl
@@ -588,9 +588,10 @@ public class TimelineClientImpl extends TimelineClient {
 
           @Override
           public Void run() throws Exception {
-            // If the timeline DT to cancel is different than cached, replace it.
-            // Token to set every time for retry, because when exception happens,
-            // DelegationTokenAuthenticatedURL will reset it to null;
+            // If the timeline DT to cancel is different than cached, replace
+            // it.
+            // Token to set every time for retry, because when exception
+            // happens, DelegationTokenAuthenticatedURL will reset it to null;
             if (!timelineDT.equals(token.getDelegationToken())) {
               token.setDelegationToken((Token) timelineDT);
             }
@@ -599,7 +600,8 @@ public class TimelineClientImpl extends TimelineClient {
                     connConfigurator);
             // If the token service address is not available, fall back to use
             // the configured service address.
-            final URI serviceURI = isTokenServiceAddrEmpty ? resURI
+            final URI serviceURI = isTokenServiceAddrEmpty ?
+                constructResURI(getConfig(), getTimelineServiceAddress(), false)
                 : new URI(scheme, null, address.getHostName(),
                 address.getPort(), RESOURCE_URI_STR_V1, null, null);
             authUrl.cancelDelegationToken(serviceURI.toURL(), token, doAsUser);
