@@ -903,6 +903,9 @@ Release 2.9.0 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-9516. Truncate file fails with data dirs on multiple disks.
+    (Plamen Jeliazkov via shv)
+
 Release 2.8.0 - UNRELEASED
 
   NEW FEATURES
