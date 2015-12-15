@@ -2442,8 +2442,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       } else {
         // Copying block to a new block with new blockId.
         // Not truncating original block.
+        FsVolumeSpi volume = rur.getVolume();
+        String blockPath = blockFile.getAbsolutePath();
+        String volumePath = volume.getBasePath();
+        assert blockPath.startsWith(volumePath) :
+            "New block file: " + blockPath + " must be on " +
+                "same volume as recovery replica: " + volumePath;
         ReplicaBeingWritten newReplicaInfo = new ReplicaBeingWritten(
-            newBlockId, recoveryId, rur.getVolume(), blockFile.getParentFile(),
+            newBlockId, recoveryId, volume, blockFile.getParentFile(),
             newlength);
         newReplicaInfo.setNumBytes(newlength);
         volumeMap.add(bpid, newReplicaInfo);
@@ -2459,10 +2465,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       ReplicaUnderRecovery replicaInfo, String bpid, long newBlkId, long newGS)
       throws IOException {
     String blockFileName = Block.BLOCK_FILE_PREFIX + newBlkId;
-    FsVolumeReference v = volumes.getNextVolume(
-        replicaInfo.getVolume().getStorageType(), replicaInfo.getNumBytes());
-    final File tmpDir = ((FsVolumeImpl) v.getVolume())
-        .getBlockPoolSlice(bpid).getTmpDir();
+    FsVolumeImpl v = (FsVolumeImpl) replicaInfo.getVolume();
+    final File tmpDir = v.getBlockPoolSlice(bpid).getTmpDir();
     final File destDir = DatanodeUtil.idToBlockDir(tmpDir, newBlkId);
     final File dstBlockFile = new File(destDir, blockFileName);
     final File dstMetaFile = FsDatasetUtil.getMetaFile(dstBlockFile, newGS);
