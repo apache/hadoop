@@ -63,6 +63,7 @@ RUN apt-get -q update && apt-get -q install -y \
     pkg-config \
     python \
     python2.7 \
+    pylint \
     python-pip \
     python-pkg-resources \
     python-setuptools \
@@ -71,7 +72,8 @@ RUN apt-get -q update && apt-get -q install -y \
     software-properties-common \
     snappy \
     sudo \
-    zlib1g-dev
+    zlib1g-dev \
+    valgrind
 
 #######
 # OpenJDK 8

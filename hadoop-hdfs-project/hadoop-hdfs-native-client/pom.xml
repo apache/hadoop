@@ -33,6 +33,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <require.fuse>false</require.fuse>
     <hadoop.component>hdfs</hadoop.component>
     <require.libwebhdfs>false</require.libwebhdfs>
+    <require.valgrind>false</require.valgrind>
+    <native_ctest_args></native_ctest_args>
+    <native_cmake_args></native_cmake_args>
+    <native_make_args></native_make_args>
   </properties>
 
   <dependencies>
@@ -143,11 +147,13 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                     <mkdir dir="${project.build.directory}/native"/>
                     <exec executable="cmake" dir="${project.build.directory}/native"
                           failonerror="true">
-                      <arg line="${basedir}/src/ -DGENERATED_JAVAH=${project.build.directory}/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model} -DREQUIRE_FUSE=${require.fuse} -A '${env.PLATFORM}'"/>
+                      <arg line="${basedir}/src/ -DGENERATED_JAVAH=${project.build.directory}/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model} -DREQUIRE_FUSE=${require.fuse} -DREQUIRE_VALGRIND=${require.valgrind} -A '${env.PLATFORM}'"/>
+                      <arg line="${native_cmake_args}"/>
                     </exec>
                     <exec executable="msbuild" dir="${project.build.directory}/native"
                           failonerror="true">
                       <arg line="ALL_BUILD.vcxproj /nologo /p:Configuration=RelWithDebInfo /p:LinkIncremental=false"/>
+                      <arg line="${native_make_args}"/>
                     </exec>
                     <!-- Copy for inclusion in distribution. -->
                     <copy todir="${project.build.directory}/bin">
@@ -202,13 +208,16 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                 <phase>compile</phase>
                 <goals><goal>cmake-compile</goal></goals>
                 <configuration>
-                  <source>${basedir}/src</source>
-                  <vars>
-                    <GENERATED_JAVAH>${project.build.directory}/native/javah</GENERATED_JAVAH>
-                    <JVM_ARCH_DATA_MODEL>${sun.arch.data.model}</JVM_ARCH_DATA_MODEL>
-                    <REQUIRE_FUSE>${require.fuse}</REQUIRE_FUSE>
-                  </vars>
-                  <output>${project.build.directory}</output>
+                  <target>
+                    <mkdir dir="${project.build.directory}"/>
+                    <exec executable="cmake" dir="${project.build.directory}" failonerror="true">
+                      <arg line="${basedir}/src/ -DGENERATED_JAVAH=${project.build.directory}/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model} -DREQUIRE_LIBWEBHDFS=${require.libwebhdfs} -DREQUIRE_FUSE=${require.fuse} -DREQUIRE_VALGRIND=${require.valgrind} "/>
+                      <arg line="${native_cmake_args}"/>
+                    </exec>
+                    <exec executable="make" dir="${project.build.directory}" failonerror="true">
+                      <arg line="${native_make_args}"/>
+                    </exec>
+                  </target>
                 </configuration>
               </execution>
             </executions>
@@ -227,6 +236,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                     <property name="compile_classpath" refid="maven.compile.classpath"/>
                     <property name="test_classpath" refid="maven.test.classpath"/>
                     <exec executable="ctest" failonerror="true" dir="${project.build.directory}/">
+                      <arg line="${native_ctest_args}"/>
                       <env key="CLASSPATH" value="${test_classpath}:${compile_classpath}"/>
                       <!-- Make sure libhadoop.so is on LD_LIBRARY_PATH. -->
                       <env key="LD_LIBRARY_PATH" value="${env.LD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib:${hadoop.common.build.dir}/native/target/usr/local/lib"/>

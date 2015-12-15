@@ -19,13 +19,25 @@
 project (libhdfspp)
 
 enable_testing()
+include (CTest)
 
 find_package(Doxygen)
 find_package(OpenSSL REQUIRED)
 find_package(Protobuf REQUIRED)
 find_package(Threads)
 
+find_program(MEMORYCHECK_COMMAND valgrind HINTS ${VALGRIND_DIR} )
+set(MEMORYCHECK_COMMAND_OPTIONS "--trace-children=yes --leak-check=full --error-exitcode=1")
+message(STATUS "valgrind location: ${MEMORYCHECK_COMMAND}")
+
+if (REQUIRE_VALGRIND AND MEMORYCHECK_COMMAND MATCHES "MEMORYCHECK_COMMAND-NOTFOUND" )
+  message(FATAL_ERROR "valgrind was required but not found.  "
+                      "The path can be included via a -DVALGRIND_DIR=... flag passed to CMake.")
+endif (REQUIRE_VALGRIND AND MEMORYCHECK_COMMAND MATCHES "MEMORYCHECK_COMMAND-NOTFOUND" )
+
+
 add_definitions(-DASIO_STANDALONE -DASIO_CPP11_DATE_TIME)
+
 
 if(UNIX)
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -std=c++11 -g -fPIC -fno-strict-aliasing")
