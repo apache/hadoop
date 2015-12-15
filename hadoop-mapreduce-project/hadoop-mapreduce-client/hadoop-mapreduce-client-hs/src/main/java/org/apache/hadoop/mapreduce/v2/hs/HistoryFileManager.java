@@ -219,13 +219,21 @@ public class HistoryFileManager extends AbstractService {
         // keeping the cache size exactly at the maximum.
         Iterator<JobId> keys = cache.navigableKeySet().iterator();
         long cutoff = System.currentTimeMillis() - maxAge;
+
+        // MAPREDUCE-6436: In order to reduce the number of logs written
+        // in case of a lot of move pending histories.
+        JobId firstInIntermediateKey = null;
+        int inIntermediateCount = 0;
+        JobId firstMoveFailedKey = null;
+        int moveFailedCount = 0;
+
         while(cache.size() > maxSize && keys.hasNext()) {
           JobId key = keys.next();
           HistoryFileInfo firstValue = cache.get(key);
           if(firstValue != null) {
             synchronized(firstValue) {
               if (firstValue.isMovePending()) {
-                if(firstValue.didMoveFail() && 
+                if(firstValue.didMoveFail() &&
                     firstValue.jobIndexInfo.getFinishTime() <= cutoff) {
                   cache.remove(key);
                   //Now lets try to delete it
@@ -236,14 +244,37 @@ public class HistoryFileManager extends AbstractService {
                     		" that could not be moved to done.", e);
                   }
                 } else {
-                  LOG.warn("Waiting to remove " + key
-                      + " from JobListCache because it is not in done yet.");
+                  if (firstValue.didMoveFail()) {
+                    if (moveFailedCount == 0) {
+                      firstMoveFailedKey = key;
+                    }
+                    moveFailedCount += 1;
+                  } else {
+                    if (inIntermediateCount == 0) {
+                      firstInIntermediateKey = key;
+                    }
+                    inIntermediateCount += 1;
+                  }
                 }
               } else {
                 cache.remove(key);
               }
             }
           }
+        }
+        // Log output only for first jobhisotry in pendings to restrict
+        // the total number of logs.
+        if (inIntermediateCount > 0) {
+          LOG.warn("Waiting to remove IN_INTERMEDIATE state histories " +
+                  "(e.g. " + firstInIntermediateKey + ") from JobListCache " +
+                  "because it is not in done yet. Total count is " +
+                  inIntermediateCount + ".");
+        }
+        if (moveFailedCount > 0) {
+          LOG.warn("Waiting to remove MOVE_FAILED state histories " +
+                  "(e.g. " + firstMoveFailedKey + ") from JobListCache " +
+                  "because it is not in done yet. Total count is " +
+                  moveFailedCount + ".");
         }
       }
       return old;
