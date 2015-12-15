@@ -43,34 +43,47 @@ protobuf_generate_cpp(PROTO_TEST_SRCS PROTO_TEST_HDRS
   ${PROTO_HADOOP_TEST_DIR}/test_rpc_service.proto
 )
 
+# Shamelessly stolen from
+#    http://stackoverflow.com/questions/9303711/how-do-i-make-ctest-run-a-program-with-valgrind-without-dart
+function(add_memcheck_test name binary)
+  add_test(${name} ${binary} ${ARGN})
+
+  if(NOT MEMORYCHECK_COMMAND MATCHES "MEMORYCHECK_COMMAND-NOTFOUND" AND NOT SKIP_VALGRIND)
+    set(memcheck_command "${MEMORYCHECK_COMMAND} ${MEMORYCHECK_COMMAND_OPTIONS}")
+    separate_arguments(memcheck_command)
+    add_test(memcheck_${name} ${memcheck_command} ./${binary} ${ARGN})
+  endif()
+endfunction(add_memcheck_test)
+
+
 add_executable(remote_block_reader_test remote_block_reader_test.cc $<TARGET_OBJECTS:test_common>)
 target_link_libraries(remote_block_reader_test reader proto common connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
-add_test(remote_block_reader remote_block_reader_test)
+add_memcheck_test(remote_block_reader remote_block_reader_test)
 
 add_executable(sasl_digest_md5_test sasl_digest_md5_test.cc)
 target_link_libraries(sasl_digest_md5_test common ${OPENSSL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
-add_test(sasl_digest_md5 sasl_digest_md5_test)
+add_memcheck_test(sasl_digest_md5 sasl_digest_md5_test)
 
 add_executable(retry_policy_test retry_policy_test.cc)
 target_link_libraries(retry_policy_test common gmock_main ${CMAKE_THREAD_LIBS_INIT})
-add_test(retry_policy retry_policy_test)
+add_memcheck_test(retry_policy retry_policy_test)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_executable(rpc_engine_test rpc_engine_test.cc ${PROTO_TEST_SRCS} ${PROTO_TEST_HDRS} $<TARGET_OBJECTS:test_common>)
 target_link_libraries(rpc_engine_test rpc proto common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
-add_test(rpc_engine rpc_engine_test)
+add_memcheck_test(rpc_engine rpc_engine_test)
 
 add_executable(bad_datanode_test bad_datanode_test.cc)
 target_link_libraries(bad_datanode_test rpc reader proto fs bindings_c rpc proto common reader connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
-add_test(bad_datanode bad_datanode_test)
+add_memcheck_test(bad_datanode bad_datanode_test)
 
 add_executable(node_exclusion_test node_exclusion_test.cc)
 target_link_libraries(node_exclusion_test fs gmock_main common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
-add_test(node_exclusion node_exclusion_test)
+add_memcheck_test(node_exclusion node_exclusion_test)
 
 add_executable(configuration_test configuration_test.cc)
 target_link_libraries(configuration_test common gmock_main ${CMAKE_THREAD_LIBS_INIT})
-add_test(configuration configuration_test)
+add_memcheck_test(configuration configuration_test)
 
 add_executable(hdfs_configuration_test hdfs_configuration_test.cc)
 target_link_libraries(hdfs_configuration_test common gmock_main ${CMAKE_THREAD_LIBS_INIT})
