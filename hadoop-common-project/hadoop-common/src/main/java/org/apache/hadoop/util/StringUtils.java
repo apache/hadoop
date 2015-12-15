@@ -399,10 +399,12 @@ public class StringUtils {
   }
 
   /**
-   * Splits a comma separated value <code>String</code>, trimming leading and trailing whitespace on each value.
-   * Duplicate and empty values are removed.
-   * @param str a comma separated <String> with values
-   * @return a <code>Collection</code> of <code>String</code> values
+   * Splits a comma separated value <code>String</code>, trimming leading and
+   * trailing whitespace on each value. Duplicate and empty values are removed.
+   *
+   * @param str a comma separated <String> with values, may be null
+   * @return a <code>Collection</code> of <code>String</code> values, empty
+   *         Collection if null String input
    */
   public static Collection<String> getTrimmedStringCollection(String str){
     Set<String> set = new LinkedHashSet<String>(
@@ -412,9 +414,12 @@ public class StringUtils {
   }
   
   /**
-   * Splits a comma separated value <code>String</code>, trimming leading and trailing whitespace on each value.
-   * @param str a comma separated <String> with values
-   * @return an array of <code>String</code> values
+   * Splits a comma separated value <code>String</code>, trimming leading and
+   * trailing whitespace on each value.
+   *
+   * @param str a comma separated <code>String</code> with values, may be null
+   * @return an array of <code>String</code> values, empty array if null String
+   *         input
    */
   public static String[] getTrimmedStrings(String str){
     if (null == str || str.trim().isEmpty()) {
