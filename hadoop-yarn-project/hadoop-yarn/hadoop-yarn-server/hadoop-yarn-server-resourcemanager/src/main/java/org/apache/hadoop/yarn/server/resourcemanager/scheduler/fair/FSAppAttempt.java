@@ -286,6 +286,13 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
     // default level is NODE_LOCAL
     if (! allowedLocalityLevel.containsKey(priority)) {
+      // add the initial time of priority to prevent comparing with FsApp
+      // startTime and allowedLocalityLevel degrade
+      lastScheduledContainer.put(priority, currentTimeMs);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Init the lastScheduledContainer time, priority: " + priority
+            + ", time: " + currentTimeMs);
+      }
       allowedLocalityLevel.put(priority, NodeType.NODE_LOCAL);
       return NodeType.NODE_LOCAL;
     }
