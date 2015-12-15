@@ -1075,6 +1075,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4392. ApplicationCreatedEvent event time resets after RM restart/failover.
     (Naganarasimha G R and Xuan Gong via xgong)
 
+    YARN-4440. FSAppAttempt#getAllowedLocalityLevelByTime should init the
+    lastScheduler time. (Lin Yiqun via zxu)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
