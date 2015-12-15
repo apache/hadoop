@@ -710,6 +710,7 @@ class DataXceiver extends Receiver implements Runnable {
               (HdfsConstants.WRITE_TIMEOUT_EXTENSION * targets.length);
           NetUtils.connect(mirrorSock, mirrorTarget, timeoutValue);
           mirrorSock.setSoTimeout(timeoutValue);
+          mirrorSock.setKeepAlive(true);
           if (dnConf.getTransferSocketSendBufferSize() > 0) {
             mirrorSock.setSendBufferSize(
                 dnConf.getTransferSocketSendBufferSize());
@@ -1127,7 +1128,8 @@ class DataXceiver extends Receiver implements Runnable {
         proxySock = datanode.newSocket();
         NetUtils.connect(proxySock, proxyAddr, dnConf.socketTimeout);
         proxySock.setSoTimeout(dnConf.socketTimeout);
-        
+        proxySock.setKeepAlive(true);
+
         OutputStream unbufProxyOut = NetUtils.getOutputStream(proxySock,
             dnConf.socketWriteTimeout);
         InputStream unbufProxyIn = NetUtils.getInputStream(proxySock);
