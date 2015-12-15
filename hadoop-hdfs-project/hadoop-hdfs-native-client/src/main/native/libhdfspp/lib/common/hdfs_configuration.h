@@ -48,6 +48,8 @@ private:
 
     // Constructs a configuration with some static data
     HdfsConfiguration(ConfigMap &src_map);
+
+    static std::vector<std::string> GetDefaultFilenames();
 };
 
 }

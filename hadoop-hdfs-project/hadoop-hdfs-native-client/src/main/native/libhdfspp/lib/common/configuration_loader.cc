@@ -18,17 +18,27 @@
 
 #include "configuration_loader.h"
 
+#include <fstream>
 #include <strings.h>
 #include <sstream>
 #include <map>
+#include <sys/stat.h>
 #include <rapidxml/rapidxml.hpp>
 #include <rapidxml/rapidxml_utils.hpp>
 
 namespace hdfs {
 
 /*
- * ConfigurationBuilder class
+ * ConfigurationLoader class
  */
+
+#if defined(WIN32) || defined(_WIN32)
+static const char kFileSeparator = '\\';
+#else
+static const char kFileSeparator = '/';
+#endif
+
+static const char kSearchPathSeparator = ':';
 
 bool is_valid_bool(const std::string& raw) {
   if (!strcasecmp(raw.c_str(), "true")) {
@@ -48,6 +58,108 @@ bool str_to_bool(const std::string& raw) {
   return false;
 }
 
+void ConfigurationLoader::SetDefaultSearchPath() {
+  //TODO: Use HADOOP_CONF_DIR when we get environment subs with HDFS-9385
+  AddToSearchPath("./");
+  AddToSearchPath("/etc/hadoop/");
+}
+
+void ConfigurationLoader::ClearSearchPath()
+{
+  search_path_.clear();
+}
+
+void ConfigurationLoader::SetSearchPath(const std::string & searchPath)
+{
+  search_path_.clear();
+
+  std::vector<std::string> paths;
+  std::string::size_type start = 0;
+  std::string::size_type end = searchPath.find(kSearchPathSeparator);
+
+  while (end != std::string::npos) {
+     paths.push_back(searchPath.substr(start, end-start));
+     start = ++end;
+     end = searchPath.find(kSearchPathSeparator, start);
+  }
+  paths.push_back(searchPath.substr(start, searchPath.length()));
+
+  for (auto path: paths) {
+    AddToSearchPath(path);
+  }
+
+}
+
+void ConfigurationLoader::AddToSearchPath(const std::string & searchPath)
+{
+  if (searchPath.empty())
+    return;
+
+  if (searchPath.back() != kFileSeparator) {
+    std::string pathWithSlash(searchPath);
+    pathWithSlash += kFileSeparator;
+    search_path_.push_back(pathWithSlash);
+  } else {
+    search_path_.push_back(searchPath);
+  }
+}
+
+std::string ConfigurationLoader::GetSearchPath()
+{
+  std::stringstream result;
+  bool first = true;
+  for(std::string item: search_path_) {
+    if (!first) {
+      result << kSearchPathSeparator;
+    }
+
+    result << item;
+    first = false;
+  }
+
+  return result.str();
+}
+
+bool ConfigurationLoader::UpdateMapWithFile(ConfigMap & map, const std::string & path) const
+{
+  if (path.front() == kFileSeparator) { // Absolute path
+    std::ifstream stream(path, std::ifstream::in);
+    if ( stream.is_open() ) {
+      return UpdateMapWithStream(map, stream);
+    } else {
+      return false;
+    }
+  } else { // Use search path
+    for(auto dir: search_path_) {
+      std::ifstream stream(dir + path);
+      if ( stream.is_open() ) {
+        if (UpdateMapWithStream(map, stream))
+          return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+bool ConfigurationLoader::UpdateMapWithStream(ConfigMap & map,
+                                              std::istream & stream) {
+  std::streampos start = stream.tellg();
+  stream.seekg(0, std::ios::end);
+  std::streampos end = stream.tellg();
+  stream.seekg(start, std::ios::beg);
+
+  int length = end - start;
+
+  if (length <= 0 || start == -1 || end == -1)
+    return false;
+
+  std::vector<char> raw_bytes((int64_t)length + 1);
+  stream.read(&raw_bytes[0], length);
+  raw_bytes[length] = 0;
+
+  return UpdateMapWithBytes(map, raw_bytes);
+}
 
 bool ConfigurationLoader::UpdateMapWithString(ConfigMap & map,
                                                    const std::string &xml_data) {

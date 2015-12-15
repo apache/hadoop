@@ -26,6 +26,11 @@ HdfsConfiguration::HdfsConfiguration() : Configuration() {}
 // Constructs a configuration with a copy of the input data
 HdfsConfiguration::HdfsConfiguration(ConfigMap &src_map) : Configuration(src_map) {}
 
+std::vector<std::string> HdfsConfiguration::GetDefaultFilenames() {
+  auto result = Configuration::GetDefaultFilenames();
+  result.push_back("hdfs-site.xml");
+  return result;
+}
 
 // Sets a value iff the optional<T> has a value
 template <class T, class U>

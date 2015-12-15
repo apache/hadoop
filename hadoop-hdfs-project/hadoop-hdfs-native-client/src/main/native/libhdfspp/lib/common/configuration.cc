@@ -44,6 +44,12 @@ namespace hdfs {
 /*
  * Configuration class
  */
+std::vector<std::string> Configuration::GetDefaultFilenames() {
+  auto result = std::vector<std::string>();
+  result.push_back("core-site.xml");
+  return result;
+}
+
 
 optional<std::string> Configuration::Get(const std::string& key) const {
   auto found = raw_values_.find(key);

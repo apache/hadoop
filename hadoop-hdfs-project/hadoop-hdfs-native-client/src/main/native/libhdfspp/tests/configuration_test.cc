@@ -224,6 +224,97 @@ TEST(ConfigurationTest, TestFinal) {
     EXPECT_EQ("value2", config2->GetWithDefault("key1", ""));
   }
 }
+
+TEST(ConfigurationTest, TestFileReads)
+{
+  // Single stream
+  {
+    TempFile tempFile;
+    writeSimpleConfig(tempFile.filename, "key1", "value1");
+
+    optional<Configuration> config = ConfigurationLoader().LoadFromFile<Configuration>(tempFile.filename);
+    EXPECT_TRUE(config && "Parse first stream");
+    EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
+  }
+
+  // Multiple files
+  {
+    TempFile tempFile;
+    writeSimpleConfig(tempFile.filename, "key1", "value1");
+
+    ConfigurationLoader loader;
+    optional<Configuration> config = loader.LoadFromFile<Configuration>(tempFile.filename);
+    ASSERT_TRUE(config && "Parse first stream");
+    EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
+
+    TempFile tempFile2;
+    writeSimpleConfig(tempFile2.filename, "key2", "value2");
+    optional<Configuration> config2 = loader.OverlayResourceFile(*config, tempFile2.filename);
+    ASSERT_TRUE(config2 && "Parse second stream");
+    EXPECT_EQ("value1", config2->GetWithDefault("key1", ""));
+    EXPECT_EQ("value2", config2->GetWithDefault("key2", ""));
+  }
+
+  // Try to add a directory
+  {
+    TempDir tempDir;
+
+    optional<Configuration> config = ConfigurationLoader().LoadFromFile<Configuration>(tempDir.path);
+    EXPECT_FALSE(config && "Add directory as file resource");
+  }
+
+
+  // Search path splitting
+  {
+    ConfigurationLoader loader;
+    loader.SetSearchPath("foo:/bar:baz/:/fioux/:/bar/bar/bong");
+
+    // Paths will have / appended to them if not already present
+    EXPECT_EQ("foo/:/bar/:baz/:/fioux/:/bar/bar/bong/", loader.GetSearchPath());
+  }
+
+  // Search path
+  {
+    TempDir tempDir1;
+    TempFile tempFile1(tempDir1.path + "/file1.xml");
+    writeSimpleConfig(tempFile1.filename, "key1", "value1");
+    TempDir tempDir2;
+    TempFile tempFile2(tempDir2.path + "/file2.xml");
+    writeSimpleConfig(tempFile2.filename, "key2", "value2");
+    TempDir tempDir3;
+    TempFile tempFile3(tempDir3.path + "/file3.xml");
+    writeSimpleConfig(tempFile3.filename, "key3", "value3");
+
+    ConfigurationLoader loader;
+    loader.SetSearchPath(tempDir1.path + ":" + tempDir2.path + ":" + tempDir3.path);
+    optional<Configuration> config1 = loader.LoadFromFile<Configuration>("file1.xml");
+    EXPECT_TRUE(config1 && "Parse first stream");
+    optional<Configuration> config2 = loader.OverlayResourceFile(*config1, "file2.xml");
+    EXPECT_TRUE(config2 && "Parse second stream");
+    optional<Configuration> config3 = loader.OverlayResourceFile(*config2, "file3.xml");
+    EXPECT_TRUE(config3 && "Parse third stream");
+    EXPECT_EQ("value1", config3->GetWithDefault("key1", ""));
+    EXPECT_EQ("value2", config3->GetWithDefault("key2", ""));
+    EXPECT_EQ("value3", config3->GetWithDefault("key3", ""));
+  }
+}
+
+TEST(ConfigurationTest, TestDefaultConfigs) {
+  // Search path
+  {
+    TempDir tempDir;
+    TempFile coreSite(tempDir.path + "/core-site.xml");
+    writeSimpleConfig(coreSite.filename, "key1", "value1");
+
+    ConfigurationLoader loader;
+    loader.SetSearchPath(tempDir.path);
+
+    optional<Configuration> config = loader.LoadDefaultResources<Configuration>();
+    EXPECT_TRUE(config && "Parse streams");
+    EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
+  }
+}
+
 TEST(ConfigurationTest, TestIntConversions) {
   /* No defaults */
   {
