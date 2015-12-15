@@ -132,6 +132,9 @@ public class BlockManager implements BlockStatsMXBean {
   private final HeartbeatManager heartbeatManager;
   private final BlockTokenSecretManager blockTokenSecretManager;
 
+  // Block pool ID used by this namenode
+  private String blockPoolId;
+
   private final PendingDataNodeMessages pendingDNMessages =
     new PendingDataNodeMessages();
 
@@ -462,9 +465,14 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   public void setBlockPoolId(String blockPoolId) {
+    this.blockPoolId = blockPoolId;
     if (isBlockTokenEnabled()) {
       blockTokenSecretManager.setBlockPoolId(blockPoolId);
     }
+  }
+
+  public String getBlockPoolId() {
+    return blockPoolId;
   }
 
   public BlockStoragePolicySuite getStoragePolicySuite() {
@@ -1226,18 +1234,6 @@ public class BlockManager implements BlockStatsMXBean {
       DatanodeStorageInfo storage) {
     return storedBlock.isStriped() ?
         ((BlockInfoStriped) storedBlock).getBlockOnStorage(storage) : storedBlock;
-  }
-
-  /**
-   * Remove all block invalidation tasks under this datanode UUID;
-   * used when a datanode registers with a new UUID and the old one
-   * is wiped.
-   */
-  void removeFromInvalidates(final DatanodeInfo datanode) {
-    if (!isPopulatingReplQueues()) {
-      return;
-    }
-    invalidateBlocks.remove(datanode);
   }
 
   /**

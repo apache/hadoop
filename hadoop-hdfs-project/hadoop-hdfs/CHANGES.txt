@@ -899,6 +899,8 @@ Release 2.9.0 - UNRELEASED
     HDFS-9281. Change TestDeleteBlockPool to not explicitly use File to check
     block pool existence. (lei)
 
+    HDFS-9371. Code cleanup for DatanodeManager. (jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES

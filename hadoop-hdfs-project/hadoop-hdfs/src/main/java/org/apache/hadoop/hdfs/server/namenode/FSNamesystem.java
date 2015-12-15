@@ -418,9 +418,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   private volatile boolean needRollbackFsImage;
 
-  // Block pool ID used by this namenode
-  private String blockPoolId;
-
   final LeaseManager leaseManager = new LeaseManager(this); 
 
   Daemon nnrmthread = null; // NamenodeResourceMonitor thread
@@ -2348,12 +2345,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   ExtendedBlock getExtendedBlock(Block blk) {
-    return new ExtendedBlock(blockPoolId, blk);
+    return new ExtendedBlock(getBlockPoolId(), blk);
   }
   
   void setBlockPoolId(String bpid) {
-    blockPoolId = bpid;
-    blockManager.setBlockPoolId(blockPoolId);
+    blockManager.setBlockPoolId(bpid);
   }
 
   /**
@@ -3489,11 +3485,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * The given node has reported in.  This method should:
    * 1) Record the heartbeat, so the datanode isn't timed out
    * 2) Adjust usage stats for future block allocation
-   * 
-   * If a substantial amount of time passed since the last datanode 
-   * heartbeat then request an immediate block report.  
-   * 
-   * @return an array of datanode commands 
+   *
+   * If a substantial amount of time passed since the last datanode
+   * heartbeat then request an immediate block report.
+   *
+   * @return an array of datanode commands
    * @throws IOException
    */
   HeartbeatResponse handleHeartbeat(DatanodeRegistration nodeReg,
@@ -3507,7 +3503,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       final int maxTransfer = blockManager.getMaxReplicationStreams()
           - xmitsInProgress;
       DatanodeCommand[] cmds = blockManager.getDatanodeManager().handleHeartbeat(
-          nodeReg, reports, blockPoolId, cacheCapacity, cacheUsed,
+          nodeReg, reports, getBlockPoolId(), cacheCapacity, cacheUsed,
           xceiverCount, maxTransfer, failedVolumes, volumeFailureSummary);
       long blockReportLeaseId = 0;
       if (requestFullBlockReportLease) {
@@ -5371,7 +5367,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   
   @Override  // NameNodeMXBean
   public String getBlockPoolId() {
-    return blockPoolId;
+    return getBlockManager().getBlockPoolId();
   }
   
   @Override  // NameNodeMXBean
@@ -5960,7 +5956,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   void setRollingUpgradeInfo(boolean createdRollbackImages, long startTime) {
-    rollingUpgradeInfo = new RollingUpgradeInfo(blockPoolId,
+    rollingUpgradeInfo = new RollingUpgradeInfo(getBlockPoolId(),
         createdRollbackImages, startTime, 0L);
   }
 
