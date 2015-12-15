@@ -1611,6 +1611,9 @@ Release 2.7.3 - UNRELEASED
 
     HDFS-8785. TestDistributedFileSystem is failing in trunk. (Xiaoyu Yao)
 
+    HDFS-9516. Truncate file fails with data dirs on multiple disks.
+    (Plamen Jeliazkov via shv)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
