@@ -1135,6 +1135,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4402. TestNodeManagerShutdown And TestNodeManagerResync fails with
     bind exception. (Brahma Reddy Battula via jianhe)
 
+    YARN-4440. FSAppAttempt#getAllowedLocalityLevelByTime should init the
+    lastScheduler time. (Lin Yiqun via zxu)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
