@@ -83,6 +83,8 @@ protected:
   Configuration() {};
   Configuration(ConfigMap &src_map) : raw_values_(src_map){};
 
+  static std::vector<std::string> GetDefaultFilenames();
+
   const ConfigMap raw_values_;
 };
 

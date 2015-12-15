@@ -31,11 +31,22 @@ public:
   template<class T>
   T           New();
 
-  // Loads Configuration XML contained in a string and returns a parsed
-  //    Configuration object
+  /****************************************************************************
+   *                    LOADING CONFIG FILES
+   ***************************************************************************/
+
+  // Loads Configuration XML contained in a string/stream/file and returns a parsed
+  //    Configuration object.
   //    T must be Configuration or a subclass
   template<class T>
   optional<T> Load(const std::string &xml_data);
+  // Streams must be seekable
+  template<class T>
+  optional<T> LoadFromStream(std::istream & stream);
+  // The ConfigurationBuilder's search path will be searched for the filename
+  //    unless it is an absolute path
+  template<class T>
+  optional<T> LoadFromFile(const std::string &filename);
 
   // Loads Configuration XML contained in a string and produces a new copy that
   //    is the union of the src and xml_data
@@ -44,16 +55,56 @@ public:
   //    T must be Configuration or a subclass
   template<class T>
   optional<T> OverlayResourceString(const T &src, const std::string &xml_data) const;
+  // Streams must be seekable
+  template<class T>
+  optional<T> OverlayResourceStream(const T &src, std::istream &stream) const;
+  //    The ConfigurationBuilder's search path will be searched for the filename
+  //       unless it is an absolute path
+  template<class T>
+  optional<T> OverlayResourceFile(const T &src, const std::string &path) const;
+
+  // Returns an instance of the Configuration with all of the default resource
+  //    files loaded.
+  //    T must be Configuration or a subclass
+  template<class T>
+  optional<T> LoadDefaultResources();
+
+
+  /****************************************************************************
+   *                    SEARCH PATH METHODS
+   ***************************************************************************/
+
+  // Sets the search path to the default search path (namely, ".:/etc/hadoop")
+  void SetDefaultSearchPath();
+
+  // Clears out the search path
+  void ClearSearchPath();
+  // Sets the search path to ":"-delimited paths
+  void SetSearchPath(const std::string & searchPath);
+  // Adds an element to the search path
+  void AddToSearchPath(const std::string & searchPath);
+  // Returns the search path in ":"-delmited form
+  std::string GetSearchPath();
 
 protected:
   using ConfigMap = Configuration::ConfigMap;
 
+  // Updates the src map with data from the XML in the path
+  //   The search path will be searched for the filename
+  bool UpdateMapWithFile(ConfigMap & map, const std::string & path) const;
+
+  // Updates the src map with data from the XML in the stream
+  //   The stream must be seekable
+  static bool UpdateMapWithStream(ConfigMap & map,
+                                  std::istream & stream);
   // Updates the src map with data from the XML
-  static bool UpdateMapWithString( Configuration::ConfigMap & src,
-                                   const std::string &xml_data);
+  static bool UpdateMapWithString(Configuration::ConfigMap & src,
+                                  const std::string &xml_data);
   // Updates the src map with data from the XML
   static bool UpdateMapWithBytes(Configuration::ConfigMap &map,
                                  std::vector<char> &raw_bytes);
+
+  std::vector<std::string> search_path_;
 };
 
 }

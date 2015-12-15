@@ -31,6 +31,39 @@ template<class T>
 optional<T> ConfigurationLoader::Load(const std::string &xml_data) {
   return OverlayResourceString<T>(T(), xml_data);
 }
+template<class T>
+optional<T> ConfigurationLoader::LoadFromStream(std::istream &stream) {
+  return OverlayResourceStream<T>(T(), stream);
+}
+template<class T>
+optional<T> ConfigurationLoader::LoadFromFile(const std::string &path) {
+  return OverlayResourceFile<T>(T(), path);
+}
+
+
+template<class T>
+optional<T> ConfigurationLoader::OverlayResourceFile(const T& src, const std::string &path) const {
+  ConfigMap map(src.raw_values_);
+  bool success = UpdateMapWithFile(map, path);
+
+  if (success) {
+    return std::experimental::make_optional<T>(map);
+  } else {
+    return optional<T>();
+  }
+}
+
+template<class T>
+optional<T> ConfigurationLoader::OverlayResourceStream(const T& src, std::istream & stream) const {
+  ConfigMap map(src.raw_values_);
+  bool success = UpdateMapWithStream(map, stream);
+
+  if (success) {
+    return std::experimental::make_optional<T>(map);
+  } else {
+    return optional<T>();
+  }
+}
 
 template<class T>
 optional<T> ConfigurationLoader::OverlayResourceString(const T& src, const std::string &xml_data) const {
@@ -50,6 +83,27 @@ optional<T> ConfigurationLoader::OverlayResourceString(const T& src, const std::
     return optional<T>();
   }
 }
+
+template <class T>
+optional<T> ConfigurationLoader::LoadDefaultResources() {
+  std::vector<std::string> default_filenames = T::GetDefaultFilenames();
+
+  ConfigMap result;
+  bool success = true;
+
+  for (auto fn: default_filenames) {
+    success &= UpdateMapWithFile(result, fn);
+    if (!success)
+      break;
+  }
+
+  if (success) {
+    return std::experimental::make_optional<T>(result);
+  } else {
+    return optional<T>();
+  }
+}
+
 
 }
 

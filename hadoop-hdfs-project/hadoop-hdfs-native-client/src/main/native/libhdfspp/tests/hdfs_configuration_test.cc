@@ -56,6 +56,25 @@ TEST(HdfsConfigurationTest, TestSetOptions)
   }
 }
 
+TEST(HdfsConfigurationTest, TestDefaultConfigs) {
+  // Search path
+  {
+    TempDir tempDir;
+    TempFile coreSite(tempDir.path + "/core-site.xml");
+    writeSimpleConfig(coreSite.filename, "key1", "value1");
+    TempFile hdfsSite(tempDir.path + "/hdfs-site.xml");
+    writeSimpleConfig(hdfsSite.filename, "key2", "value2");
+
+    ConfigurationLoader loader;
+    loader.SetSearchPath(tempDir.path);
+
+    optional<HdfsConfiguration> config = loader.LoadDefaultResources<HdfsConfiguration>();
+    EXPECT_TRUE(config && "Parse streams");
+    EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
+    EXPECT_EQ("value2", config->GetWithDefault("key2", ""));
+  }
+}
+
 int main(int argc, char *argv[])
 {
   // The following line must be executed to initialize Google Mock
