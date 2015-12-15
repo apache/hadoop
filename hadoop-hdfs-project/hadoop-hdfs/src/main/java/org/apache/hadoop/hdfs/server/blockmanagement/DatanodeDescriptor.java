@@ -286,11 +286,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.isAlive = isAlive;
   }
 
-  public boolean needKeyUpdate() {
+  public synchronized boolean needKeyUpdate() {
     return needKeyUpdate;
   }
 
-  public void setNeedKeyUpdate(boolean needKeyUpdate) {
+  public synchronized void setNeedKeyUpdate(boolean needKeyUpdate) {
     this.needKeyUpdate = needKeyUpdate;
   }
 
@@ -829,14 +829,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * @return balancer bandwidth in bytes per second for this datanode
    */
-  public long getBalancerBandwidth() {
+  public synchronized long getBalancerBandwidth() {
     return this.bandwidth;
   }
 
   /**
    * @param bandwidth balancer bandwidth in bytes per second for this datanode
    */
-  public void setBalancerBandwidth(long bandwidth) {
+  public synchronized void setBalancerBandwidth(long bandwidth) {
     this.bandwidth = bandwidth;
   }
 
