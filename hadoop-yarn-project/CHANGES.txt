@@ -1151,6 +1151,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4416. Deadlock due to synchronised get Methods in AbstractCSQueue.
     (Naganarasimha G R via wangda)
 
+    YARN-4461. Redundant nodeLocalityDelay log in LeafQueue (Eric Payne via
+    jlowe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
