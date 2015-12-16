@@ -152,5 +152,11 @@ public class QueueCLI extends YarnCLI {
       labelList.append(nodeLabel);
     }
     writer.println(labelList.toString());
+
+    Boolean preemptStatus = queueInfo.getPreemptionDisabled();
+    if (preemptStatus != null) {
+      writer.print("\tPreemption : ");
+      writer.println(preemptStatus ? "disabled" : "enabled");
+    }
   }
 }

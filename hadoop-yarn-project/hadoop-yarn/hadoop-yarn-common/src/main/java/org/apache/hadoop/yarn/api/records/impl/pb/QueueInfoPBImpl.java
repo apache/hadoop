@@ -395,4 +395,17 @@ public class QueueInfoPBImpl extends QueueInfo {
     }
     builder.setQueueStatistics(convertToProtoFormat(queueStatistics));
   }
+
+  @Override
+  public Boolean getPreemptionDisabled() {
+    QueueInfoProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasPreemptionDisabled()) ? p
+        .getPreemptionDisabled() : null;
+  }
+
+  @Override
+  public void setPreemptionDisabled(boolean preemptionDisabled) {
+    maybeInitBuilder();
+    builder.setPreemptionDisabled(preemptionDisabled);
+  }
 }
