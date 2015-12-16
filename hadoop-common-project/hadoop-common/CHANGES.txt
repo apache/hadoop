@@ -1591,6 +1591,9 @@ Release 2.7.2 - UNRELEASED
 
     HADOOP-12464. Interrupted client may try to fail-over and retry (kihwal)
 
+    HADOOP-12415. Fixed pom files to correctly include compile-time dependency on
+    netty. (Tom Zeng via cos)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
