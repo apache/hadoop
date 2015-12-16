@@ -156,7 +156,7 @@ public class TestSystemMetricsPublisherForV2 {
     try {
       Configuration conf = getTimelineV2Conf();
       conf.setBoolean(YarnConfiguration.RM_PUBLISH_CONTAINER_METRICS_ENABLED,
-          false);
+          YarnConfiguration.DEFAULT_RM_PUBLISH_CONTAINER_METRICS_ENABLED);
       metricsPublisher.init(conf);
       assertFalse(
           "Default configuration should not publish container Metrics from RM",
@@ -167,6 +167,9 @@ public class TestSystemMetricsPublisherForV2 {
       metricsPublisher = new TimelineServiceV2Publisher(mock(RMContext.class));
       conf = getTimelineV2Conf();
       metricsPublisher.init(conf);
+      assertTrue("Expected to have registered event handlers and set ready to "
+          + "publish events after init",
+          metricsPublisher.isPublishContainerMetrics());
       metricsPublisher.start();
       assertTrue("Expected to publish container Metrics from RM",
           metricsPublisher.isPublishContainerMetrics());

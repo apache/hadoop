@@ -188,6 +188,8 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-4297. TestJobHistoryEventHandler and TestRMContainerAllocator failing
     on YARN-2928 branch (Varun Saxena via sjlee)
 
+    YARN-4460. [Bug fix] RM fails to start when SMP is enabled. (Li Lu via Varun Saxena)
+
 Trunk - Unreleased
 
   INCOMPATIBLE CHANGES
