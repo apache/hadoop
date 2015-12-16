@@ -48,6 +48,9 @@ Release 2.7.3 - UNRELEASED
 
     YARN-4439. Clarify NMContainerStatus#toString method. (Jian He via xgong)
 
+    YARN-4452. NPE when submit Unmanaged application. (Naganarasimha G R
+    via junping_du)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
