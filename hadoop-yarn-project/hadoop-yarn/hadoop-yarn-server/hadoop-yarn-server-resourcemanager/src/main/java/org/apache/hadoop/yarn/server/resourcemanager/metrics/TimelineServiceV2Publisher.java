@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -76,13 +77,13 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
   }
 
   @Override
-  protected void serviceStart() throws Exception {
-    super.serviceStart();
+  protected void serviceInit(Configuration conf) throws Exception {
+    super.serviceInit(conf);
+    getDispatcher().register(SystemMetricsEventType.class,
+        new TimelineV2EventHandler());
     publishContainerMetrics = getConfig().getBoolean(
         YarnConfiguration.RM_PUBLISH_CONTAINER_METRICS_ENABLED,
         YarnConfiguration.DEFAULT_RM_PUBLISH_CONTAINER_METRICS_ENABLED);
-    getDispatcher().register(SystemMetricsEventType.class,
-        new TimelineV2EventHandler());
   }
 
   @VisibleForTesting
