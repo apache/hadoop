@@ -142,6 +142,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
 import org.apache.hadoop.yarn.api.records.Token;
@@ -496,6 +497,7 @@ public class TestPBImplRecords {
     generateByNewInstance(ReservationRequest.class);
     generateByNewInstance(ReservationRequests.class);
     generateByNewInstance(ReservationDefinition.class);
+    generateByNewInstance(ResourceUtilization.class);
   }
 
   private class GetSetPair {

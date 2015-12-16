@@ -57,8 +57,3 @@ message VersionProto {
   optional int32 minor_version = 2;
 }
 
-message ResourceUtilizationProto {
-  optional int32 pmem = 1;
-  optional int32 vmem = 2;
-  optional float cpu = 3;
-}

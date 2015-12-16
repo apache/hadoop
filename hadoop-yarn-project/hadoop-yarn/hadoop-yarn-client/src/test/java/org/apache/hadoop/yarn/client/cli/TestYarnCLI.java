@@ -64,6 +64,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -1178,6 +1179,8 @@ public class TestYarnCLI {
     pw.println("\tCPU-Used : 0 vcores");
     pw.println("\tCPU-Capacity : 0 vcores");
     pw.println("\tNode-Labels : a,b,c,x,y,z");
+    pw.println("\tResource Utilization by Node : PMem:2048 MB, VMem:4096 MB, VCores:8.0");
+    pw.println("\tResource Utilization by Containers : PMem:1024 MB, VMem:2048 MB, VCores:4.0");
     pw.close();
     String nodeStatusStr = baos.toString("UTF-8");
     verify(sysOut, times(1)).println(isA(String.class));
@@ -1212,6 +1215,44 @@ public class TestYarnCLI {
     pw.println("\tCPU-Used : 0 vcores");
     pw.println("\tCPU-Capacity : 0 vcores");
     pw.println("\tNode-Labels : ");
+    pw.println("\tResource Utilization by Node : PMem:2048 MB, VMem:4096 MB, VCores:8.0");
+    pw.println("\tResource Utilization by Containers : PMem:1024 MB, VMem:2048 MB, VCores:4.0");
+    pw.close();
+    String nodeStatusStr = baos.toString("UTF-8");
+    verify(sysOut, times(1)).println(isA(String.class));
+    verify(sysOut).println(nodeStatusStr);
+  }
+
+  @Test
+  public void testNodeStatusWithEmptyResourceUtilization() throws Exception {
+    NodeId nodeId = NodeId.newInstance("host0", 0);
+    NodeCLI cli = new NodeCLI();
+    when(client.getNodeReports()).thenReturn(
+                    getNodeReports(3, NodeState.RUNNING, false, true));
+    cli.setClient(client);
+    cli.setSysOutPrintStream(sysOut);
+    cli.setSysErrPrintStream(sysErr);
+    int result = cli.run(new String[] { "-status", nodeId.toString() });
+    assertEquals(0, result);
+    verify(client).getNodeReports();
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("Node Report : ");
+    pw.println("\tNode-Id : host0:0");
+    pw.println("\tRack : rack1");
+    pw.println("\tNode-State : RUNNING");
+    pw.println("\tNode-Http-Address : host1:8888");
+    pw.println("\tLast-Health-Update : "
+      + DateFormatUtils.format(new Date(0), "E dd/MMM/yy hh:mm:ss:SSzz"));
+    pw.println("\tHealth-Report : ");
+    pw.println("\tContainers : 0");
+    pw.println("\tMemory-Used : 0MB");
+    pw.println("\tMemory-Capacity : 0MB");
+    pw.println("\tCPU-Used : 0 vcores");
+    pw.println("\tCPU-Capacity : 0 vcores");
+    pw.println("\tNode-Labels : a,b,c,x,y,z");
+    pw.println("\tResource Utilization by Node : ");
+    pw.println("\tResource Utilization by Containers : ");
     pw.close();
     String nodeStatusStr = baos.toString("UTF-8");
     verify(sysOut, times(1)).println(isA(String.class));
@@ -1463,11 +1504,16 @@ public class TestYarnCLI {
   }
   
   private List<NodeReport> getNodeReports(int noOfNodes, NodeState state) {
-    return getNodeReports(noOfNodes, state, true);
+    return getNodeReports(noOfNodes, state, true, false);
   }
 
   private List<NodeReport> getNodeReports(int noOfNodes, NodeState state,
       boolean emptyNodeLabel) {
+    return getNodeReports(noOfNodes, state, emptyNodeLabel, false);
+  }
+
+  private List<NodeReport> getNodeReports(int noOfNodes, NodeState state,
+      boolean emptyNodeLabel, boolean emptyResourceUtilization) {
     List<NodeReport> nodeReports = new ArrayList<NodeReport>();
 
     for (int i = 0; i < noOfNodes; i++) {
@@ -1481,6 +1527,14 @@ public class TestYarnCLI {
         .newInstance("host" + i, 0), state, "host" + 1 + ":8888",
           "rack1", Records.newRecord(Resource.class), Records
               .newRecord(Resource.class), 0, "", 0, nodeLabels);
+      if (!emptyResourceUtilization) {
+        ResourceUtilization containersUtilization = ResourceUtilization
+            .newInstance(1024, 2048, 4);
+        ResourceUtilization nodeUtilization = ResourceUtilization.newInstance(
+            2048, 4096, 8);
+        nodeReport.setAggregatedContainersUtilization(containersUtilization);
+        nodeReport.setNodeUtilization(nodeUtilization);
+      }
       nodeReports.add(nodeReport);
     }
     return nodeReports;
