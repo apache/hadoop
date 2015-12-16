@@ -2030,8 +2030,6 @@ Release 2.6.4 - UNRELEASED
 
   IMPROVEMENTS
 
-  MAPREDUCE-6436. JobHistory cache issue. (Kai Sasaki via zxu)
-
   OPTIMIZATIONS
 
   BUG FIXES
