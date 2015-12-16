@@ -303,6 +303,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     queueInfo.setDefaultNodeLabelExpression(defaultLabelExpression);
     queueInfo.setCurrentCapacity(getUsedCapacity());
     queueInfo.setQueueStatistics(getQueueStatistics());
+    queueInfo.setPreemptionDisabled(preemptionDisabled);
     return queueInfo;
   }
 

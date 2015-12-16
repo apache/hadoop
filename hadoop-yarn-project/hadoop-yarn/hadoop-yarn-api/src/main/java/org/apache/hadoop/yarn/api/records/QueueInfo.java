@@ -55,7 +55,8 @@ public abstract class QueueInfo {
       float maximumCapacity, float currentCapacity,
       List<QueueInfo> childQueues, List<ApplicationReport> applications,
       QueueState queueState, Set<String> accessibleNodeLabels,
-      String defaultNodeLabelExpression, QueueStatistics queueStatistics) {
+      String defaultNodeLabelExpression, QueueStatistics queueStatistics,
+      boolean preemptionDisabled) {
     QueueInfo queueInfo = Records.newRecord(QueueInfo.class);
     queueInfo.setQueueName(queueName);
     queueInfo.setCapacity(capacity);
@@ -67,6 +68,7 @@ public abstract class QueueInfo {
     queueInfo.setAccessibleNodeLabels(accessibleNodeLabels);
     queueInfo.setDefaultNodeLabelExpression(defaultNodeLabelExpression);
     queueInfo.setQueueStatistics(queueStatistics);
+    queueInfo.setPreemptionDisabled(preemptionDisabled);
     return queueInfo;
   }
 
@@ -205,4 +207,16 @@ public abstract class QueueInfo {
   @Unstable
   public abstract void setQueueStatistics(QueueStatistics queueStatistics);
 
+  /**
+   * Get the <em>preemption status</em> of the queue.
+   * @return if property is not in proto, return null;
+   *        otherwise, return <em>preemption status</em> of the queue
+   */
+  @Public
+  @Stable
+  public abstract Boolean getPreemptionDisabled();
+
+  @Private
+  @Unstable
+  public abstract void setPreemptionDisabled(boolean preemptionDisabled);
 }
