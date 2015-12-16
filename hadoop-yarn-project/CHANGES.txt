@@ -1148,6 +1148,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4225. Add preemption status to yarn queue -status for capacity scheduler.
     (Eric Payne via wangda)
 
+    YARN-4416. Deadlock due to synchronised get Methods in AbstractCSQueue.
+    (Naganarasimha G R via wangda)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
