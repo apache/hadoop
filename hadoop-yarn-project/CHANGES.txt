@@ -1138,6 +1138,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4440. FSAppAttempt#getAllowedLocalityLevelByTime should init the
     lastScheduler time. (Lin Yiqun via zxu)
 
+    YARN-4452. NPE when submit Unmanaged application. (Naganarasimha G R
+    via junping_du)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1185,6 +1188,9 @@ Release 2.7.3 - UNRELEASED
     (Eric Payne via jeagles)
 
     YARN-4439. Clarify NMContainerStatus#toString method. (Jian He via xgong)
+
+    YARN-4452. NPE when submit Unmanaged application. (Naganarasimha G R via
+    junping_du)
 
 Release 2.7.2 - UNRELEASED
 
@@ -2039,6 +2045,9 @@ Release 2.6.4 - UNRELEASED
 
   YARN-3535. Scheduler must re-request container resources when RMContainer transitions
   from ALLOCATED to KILLED (rohithsharma and peng.zhang via asuresh)
+
+  YARN-4452. NPE when submit Unmanaged application. (Naganarasimha G R
+  via junping_du)
 
 Release 2.6.3 - UNRELEASED
 
