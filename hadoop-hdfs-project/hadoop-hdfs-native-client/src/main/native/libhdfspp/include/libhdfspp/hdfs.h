@@ -115,15 +115,16 @@ class FileSystem {
    * initializes the RPC connections to the NameNode and returns an
    * FileSystem object.
    **/
-  static void New(
-      IoService *io_service, const Options &options, const std::string &server,
-      const std::string &service,
-      const std::function<void(const Status &, FileSystem *)> &handler);
+  static FileSystem * New(
+      IoService *&io_service, const Options &options);
 
-  /* Synchronous call of New*/
-  static FileSystem *
-  New(IoService *io_service, const Options &options, const std::string &server,
-      const std::string &service);
+  virtual void Connect(const std::string &server,
+      const std::string &service,
+      const std::function<void(const Status &, FileSystem *)> &&handler) = 0;
+
+  /* Synchronous call of Connect */
+  virtual Status Connect(const std::string &server,
+      const std::string &service) = 0;
 
   /**
    * Open a file on HDFS. The call issues an RPC to the NameNode to
@@ -135,6 +136,10 @@ class FileSystem {
        const std::function<void(const Status &, FileHandle *)> &handler) = 0;
   virtual Status Open(const std::string &path, FileHandle **handle) = 0;
 
+  /**
+   * Note that it is an error to destroy the filesystem from within a filesystem
+   * callback.  It will lead to a deadlock and the termination of the process.
+   */
   virtual ~FileSystem() {};
 
 };

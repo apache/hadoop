@@ -55,7 +55,7 @@ public:
 
   void Connect(const std::string &server,
                const std::string &service,
-               std::function<void(const Status &)> &handler);
+               std::function<void(const Status &)> &&handler);
 
   void GetBlockLocations(const std::string & path,
     std::function<void(const Status &, std::shared_ptr<const struct FileInfo>)> handler);
@@ -85,9 +85,9 @@ public:
 
   /* attempt to connect to namenode, return bad status on failure */
   void Connect(const std::string &server, const std::string &service,
-               std::function<void(const Status &)> &&handler);
+               const std::function<void(const Status &, FileSystem *)> &&handler) override;
   /* attempt to connect to namenode, return bad status on failure */
-  Status Connect(const std::string &server, const std::string &service);
+  Status Connect(const std::string &server, const std::string &service) override;
 
 
   virtual void Open(const std::string &path,
@@ -116,10 +116,7 @@ private:
   std::shared_ptr<BadDataNodeTracker> bad_node_tracker_;
 
   struct WorkerDeleter {
-    void operator()(std::thread *t) {
-      t->join();
-      delete t;
-    }
+    void operator()(std::thread *t);
   };
   typedef std::unique_ptr<std::thread, WorkerDeleter> WorkerPtr;
   std::vector<WorkerPtr> worker_threads_;

@@ -285,6 +285,8 @@ static int testHdfsOperationsImpl(struct tlhThreadInfo *ti)
     fprintf(stderr, "testHdfsOperations(threadIdx=%d): starting\n",
         ti->threadIdx);
     EXPECT_ZERO(hdfsSingleNameNodeConnect(tlhCluster, &fs, NULL));
+    if (!fs)
+        return 1;
     EXPECT_ZERO(setupPaths(ti, &paths));
     // test some operations
     EXPECT_ZERO(doTestHdfsOperations(ti, fs, &paths));
@@ -295,6 +297,8 @@ static int testHdfsOperationsImpl(struct tlhThreadInfo *ti)
     EXPECT_ZERO(hdfsDisconnect(fs));
     // reconnect to do the final delete.
     EXPECT_ZERO(hdfsSingleNameNodeConnect(tlhCluster, &fs, NULL));
+    if (!fs)
+        return 1;
     EXPECT_ZERO(hdfsDelete(fs, paths.prefix, 1));
     EXPECT_ZERO(hdfsDisconnect(fs));
     return 0;
