@@ -43,6 +43,12 @@ namespace pbio = ::google::protobuf::io;
 
 namespace hdfs {
 
+std::vector<asio::ip::basic_endpoint<asio::ip::tcp>> make_endpoint() {
+  std::vector<asio::ip::basic_endpoint<asio::ip::tcp>> result;
+  result.push_back(asio::ip::basic_endpoint<asio::ip::tcp>());
+  return result;
+}
+
 class MockRPCConnection : public MockConnectionBase {
  public:
   MockRPCConnection(::asio::io_service &io_service)
@@ -61,6 +67,9 @@ class SharedConnectionEngine : public RpcEngine {
 
 protected:
   std::shared_ptr<RpcConnection> NewConnection() override {
+    // Stuff in some dummy endpoints so we don't error out
+    last_endpoints_ = make_endpoint();
+
     return std::make_shared<RpcConnectionImpl<SharedMockRPCConnection>>(this);
   }
 
@@ -257,7 +266,7 @@ TEST(RpcEngineTest, TestConnectionFailure)
   EXPECT_CALL(*producer, Produce())
       .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")));
 
-  engine.Connect(asio::ip::basic_endpoint<asio::ip::tcp>(), [&complete, &io_service](const Status &stat) {
+  engine.Connect(make_endpoint(), [&complete, &io_service](const Status &stat) {
     complete = true;
     io_service.stop();
     ASSERT_FALSE(stat.ok());
@@ -285,7 +294,7 @@ TEST(RpcEngineTest, TestConnectionFailureRetryAndFailure)
       .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")))
       .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")));
 
-  engine.Connect(asio::ip::basic_endpoint<asio::ip::tcp>(), [&complete, &io_service](const Status &stat) {
+  engine.Connect(make_endpoint(), [&complete, &io_service](const Status &stat) {
     complete = true;
     io_service.stop();
     ASSERT_FALSE(stat.ok());
@@ -313,7 +322,7 @@ TEST(RpcEngineTest, TestConnectionFailureAndRecover)
       .WillOnce(Return(std::make_pair(::asio::error_code(), "")))
       .WillOnce(Return(std::make_pair(::asio::error::would_block, "")));
 
-  engine.Connect(asio::ip::basic_endpoint<asio::ip::tcp>(), [&complete, &io_service](const Status &stat) {
+  engine.Connect(make_endpoint(), [&complete, &io_service](const Status &stat) {
     complete = true;
     io_service.stop();
     ASSERT_TRUE(stat.ok());
@@ -342,7 +351,7 @@ TEST(RpcEngineTest, TestConnectionFailureAndAsyncRecover)
       .WillOnce(Return(std::make_pair(::asio::error_code(), "")))
       .WillOnce(Return(std::make_pair(::asio::error::would_block, "")));
 
-  engine.Connect(asio::ip::basic_endpoint<asio::ip::tcp>(), [&complete, &io_service](const Status &stat) {
+  engine.Connect(make_endpoint(), [&complete, &io_service](const Status &stat) {
     complete = true;
     io_service.stop();
     ASSERT_TRUE(stat.ok());

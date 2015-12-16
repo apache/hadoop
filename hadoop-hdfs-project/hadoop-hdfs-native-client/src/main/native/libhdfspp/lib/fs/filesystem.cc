@@ -49,7 +49,7 @@ void NameNodeOperations::Connect(const std::string &server,
   m->Push(Resolve(io_service_, server, service,
                   std::back_inserter(m->state())))
       .Push(Bind([this, m](const Continuation::Next &next) {
-        engine_.Connect(m->state().front(), next);
+        engine_.Connect(m->state(), next);
       }));
   m->Run([this, handler](const Status &status, const State &) {
     handler(status);
