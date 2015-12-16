@@ -1048,6 +1048,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4402. TestNodeManagerShutdown And TestNodeManagerResync fails with
     bind exception. (Brahma Reddy Battula via jianhe)
 
+    YARN-4461. Redundant nodeLocalityDelay log in LeafQueue (Eric Payne via
+    jlowe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
