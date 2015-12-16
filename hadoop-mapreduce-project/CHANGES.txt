@@ -1,5 +1,308 @@
 Hadoop MapReduce Change Log
 
+Trunk (Unreleased)
+
+  INCOMPATIBLE CHANGES
+
+    MAPREDUCE-5785. Derive heap size or mapreduce.*.memory.mb automatically.
+    (Gera Shegalov and Karthik Kambatla via gera)
+
+    MAPREDUCE-5653. DistCp does not honour config-overrides for
+    mapreduce.[map,reduce].memory.mb (Ratandeep Ratti via aw)
+
+    MAPREDUCE-4424. 'mapred job -list' command should show the job name
+    as well. (Avinash Kujur via aajisaka)
+
+    MAPREDUCE-6336. Enable v2 FileOutputCommitter by default.
+    (Siqi Li via gera)
+
+  NEW FEATURES
+
+    MAPREDUCE-778. Rumen Anonymizer. (Amar Kamat and Chris Douglas via amarrk)
+
+    MAPREDUCE-2669. Add new examples for Mean, Median, and Standard Deviation.
+    (Plamen Jeliazkov via shv)
+
+    MAPREDUCE-4887. Add RehashPartitioner, to smooth distributions
+    with poor implementations of Object#hashCode().  (Radim Kolar via cutting)
+
+    MAPREDUCE-5232. Add a configuration to be able to log classpath and other
+    system properties on mapreduce JVMs startup.  (Sangjin Lee via vinodkv)
+
+    MAPREDUCE-5910. Make MR AM resync with RM in case of work-preserving
+    RM-restart. (Rohith via jianhe)
+
+    MAPREDUCE-2841. Add a native implementation of MapOutputCollector.
+    (see section below for detailed breakdown)
+
+  IMPROVEMENTS
+
+    MAPREDUCE-3481. [Gridmix] Improve Gridmix STRESS mode. (amarrk)
+
+    MAPREDUCE-3597. [Rumen] Rumen should provide APIs to access all the
+                    job-history related information.
+
+    MAPREDUCE-3375. [Gridmix] Memory Emulation system tests.
+                    (Vinay Thota via amarrk)
+
+    MAPREDUCE-2733. [Gridmix] Gridmix3 cpu emulation system tests.
+                    (Vinay Thota via amarrk)
+
+    MAPREDUCE-2836. Provide option to fail jobs when submitted to non-existent
+    fair scheduler pools. (Ahmed Radwan via todd)
+
+    MAPREDUCE-3171. normalize nodemanager native code compilation with common/hdfs
+    native. (tucu)
+
+    MAPREDUCE-3149. Add a test to verify that TokenCache handles file system
+    uri with no authority. (John George via jitendra)
+
+    MAPREDUCE-3169. Create a new MiniMRCluster equivalent which only provides
+    client APIs cross MR1 and MR2 (Ahmed via tucu)
+
+    MAPREDUCE-2944. Improve checking of input for JobClient.displayTasks()
+    (XieXianshan via harsh)
+
+    MAPREDUCE-3956. Remove the use of the deprecated Syncable.sync() method from
+    TeraOutputFormat in the terasort example.  (szetszwo)
+
+    MAPREDUCE-3935. Annotate Counters.Counter and Counters.Group as @Public.
+    (tomwhite)
+
+    HADOOP-8285 MR changes for Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
+
+    MAPREDUCE-3302. Remove the last dependency call from
+    org.apache.hadoop.record package in MR. (harsh)
+
+    MAPREDUCE-2384. The job submitter should make sure to validate
+    jobs before creation of necessary files. (harsh)
+
+    MAPREDUCE-4371. Check for cyclic dependencies in Jobcontrol job DAG
+    (madhukara phatak via bobby)
+
+    MAPREDUCE-4686. hadoop-mapreduce-client-core fails compilation in Eclipse 
+    due to missing Avro-generated classes (Chris Nauroth via harsh)
+
+    MAPREDUCE-4735. Make arguments in TestDFSIO case insensitive.
+    (Brandon Li via suresh)
+
+    MAPREDUCE-5197. Add a service for checkpointing task state.
+    (Carlo Curino via cdouglas)
+
+    MAPREDUCE-5189. Add policies and wiring to respond to preemption requests
+    from YARN. (Carlo Curino via cdouglas)
+
+    MAPREDUCE-5196. Add bookkeeping for managing checkpoints of task state.
+    (Carlo Curino via cdouglas)
+
+    MAPREDUCE-5912. Task.calculateOutputSize does not handle Windows files after
+    MAPREDUCE-5196. (Remus Rusanu via cnauroth)
+
+    MAPREDUCE-6019. MapReduce changes for exposing YARN/MR endpoints on multiple
+    interfaces. (Craig Welch, Milan Potocnik, Arpit Agarwal via xgong)
+
+    MAPREDUCE-6013. [post-HADOOP-9902] mapred version is missing (Akira AJISAKA
+    via aw)
+
+    MAPREDUCE-6250. deprecate sbin/mr-jobhistory-daemon.sh (aw)
+
+    MAPREDUCE-6260. Convert site documentation to markdown (Masatake Iwasaki
+    via aw)
+
+    MAPREDUCE-6057. Remove obsolete entries from mapred-default.xml
+    (Ray Chiang via aw)
+
+    MAPREDUCE-2632. Avoid calling the partitioner when the numReduceTasks is 1.
+    (Ravi Teja Ch N V and Sunil G via kasha)
+
+    MAPREDUCE-6407. Migrate MAPREDUCE nativetask build to new CMake framework
+    (Alan Burlison via Colin P. McCabe)
+
+    MAPREDUCE-5485. Allow repeating job commit by extending OutputCommitter API
+    (Junping Du via jianhe)
+
+  BUG FIXES
+
+    MAPREDUCE-6191. Improve clearing stale state of Java serialization
+                    testcase.  (Sam Liu via Eric Yang)
+
+    MAPREDUCE-5714. Removed forceful JVM exit in shutDownJob.  
+                     (Jinghui Wang via Eric Yang)
+
+    MAPREDUCE-3194. "mapred mradmin" command is broken in mrv2
+                     (Jason Lowe via bobby)
+
+    MAPREDUCE-3462. Fix Gridmix JUnit testcase failures.
+                    (Ravi Prakash and Ravi Gummadi via amarrk)
+
+    MAPREDUCE-3349. Log rack-name in JobHistory for unsuccessful tasks.
+                    (Devaraj K and Amar Kamat via amarrk)
+
+    MAPREDUCE-3412. Fix 'ant docs'. (amarrk)
+
+    MAPREDUCE-3346. [Rumen] LoggedTaskAttempt#getHostName() returns null.
+                    (amarrk)
+
+    MAPREDUCE-2950. [Gridmix] TestUserResolve fails in trunk.
+                    (Ravi Gummadi via amarrk)
+
+    MAPREDUCE-2784. [Gridmix] Bug fixes in ExecutionSummarizer and
+    ResourceUsageMatcher. (amarrk)
+
+    MAPREDUCE-2978. Fixed test-patch to make Jenkins report correct number of
+    findBugs, correct links to findBugs artifacts and no links to the
+    artifacts when there are no warnings. (Tom White via vinodkv).
+
+    MAPREDUCE-3664. Federation Documentation has incorrect configuration example.
+    (Brandon Li via jitendra)
+
+    MAPREDUCE-1740. NPE in getMatchingLevelForNodes when node locations are 
+    variable depth (ahmed via tucu) [IMPORTANT: this is dead code in trunk]
+
+    MAPREDUCE-3990. MRBench allows Long-sized input-lines value
+    but parses CLI argument as an Integer. (harsh)
+
+    MAPREDUCE-3868. Make Raid Compile. (Weiyan Wang via schen)
+
+    MAPREDUCE-4685. DBCount should not use ACCESS. (Viji via harsh)
+
+    MAPREDUCE-3223. Remove MR1 configs from mapred-default.xml (tlipcon via harsh)
+
+    MAPREDUCE-4695. Fix LocalRunner on trunk after MAPREDUCE-3223 broke it
+    (harsh)
+
+    MAPREDUCE-3914. Mismatched free() / delete / delete [] in HadoopPipes
+    (Joe Mudd via aw)
+
+    MAPREDUCE-1125. SerialUtils.cc: deserializeFloat is out of sync with
+    SerialUtils.hh (Simone Leo via aw)
+
+    MAPREDUCE-4574. Fix TotalOrderParitioner to work with
+    non-WritableComparable key types. (harsh)
+
+    MAPREDUCE-5012. Typo in javadoc for IdentityMapper class. (Adam Monsen
+    via suresh)
+
+    MAPREDUCE-4987. TestMRJobs#testDistributedCache fails on Windows due to
+    classpath problems and unexpected behavior of symlinks (Chris Nauroth via
+    bikas)
+
+    MAPREDUCE-5191. TestQueue#testQueue fails with timeout on Windows. (Ivan
+    Mitic via hitesh)
+
+    MAPREDUCE-5717. Task pings are interpreted as task progress (jlowe)
+
+    MAPREDUCE-5867. Fix NPE in KillAMPreemptionPolicy related to 
+    ProportionalCapacityPreemptionPolicy (Sunil G via devaraj)
+
+    MAPREDUCE-5972. Fix typo 'programatically' in job.xml (and a few other
+    places) (Akira AJISAKA via aw)
+
+    MAPREDUCE-6161. mapred hsadmin command missing from trunk (Allen Wittenauer
+    via jlowe)
+
+    MAPREDUCE-4413. MR lib dir contains jdiff (which is gpl) (Nemon Lou via aw)
+
+    MAPREDUCE-6234. TestHighRamJob fails due to the change in MAPREDUCE-5785. 
+    (Masatake Iwasaki via kasha)
+
+    MAPREDUCE-6343. JobConf.parseMaximumHeapSizeMB() fails to parse value 
+    greater than 2GB expressed in bytes. (Hao Xia via kasha)
+
+    MAPREDUCE-6396. TestPipeApplication fails by NullPointerException.
+    (Brahma Reddy Battula via aajisaka)
+
+    MAPREDUCE-6406. Update FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_DEFAULT
+    to match mapred-default.xml. (Ray Chiang via devaraj)
+
+    MAPREDUCE-6257. Document encrypted spills (Bibin A Chundatt via aw)
+
+    MAPREDUCE-6391. util/Timer.cc completely misunderstands _POSIX_CPUTIME
+    (Alan Burlison via aw)
+
+    MAPREDUCE-6412. Make hadoop-mapreduce-client Native code -Wall-clean
+    (Alan Burlison via aw)
+
+    MAPREDUCE-6416. Not all platforms have d_type in struct dirent
+    (Alan Burlison via aw)
+
+    MAPREDUCE-6435. MapReduce client assumes the world is x86
+    (Alan Burlison via aw)
+
+    MAPREDUCE-6540. TestMRTimelineEventHandling fails (sjlee)
+
+    MAPREDUCE-6555. TestMRAppMaster fails on trunk. (Junping Du via ozawa)
+
+  BREAKDOWN OF MAPREDUCE-2841 (NATIVE TASK) SUBTASKS
+
+    MAPREDUCE-5985. native-task: Fix build on macosx. Contributed by
+    Binglin Chang
+
+    MAPREDUCE-5994. Simplify ByteUtils and fix failing test. (todd)
+
+    MAPREDUCE-5996. native-task: Rename system tests into standard directory
+    layout (todd)
+
+    MAPREDUCE-5997. native-task: Use DirectBufferPool from Hadoop Common (todd)
+
+    MAPREDUCE-6000. native-task: Simplify ByteBufferDataReader/Writer (todd)
+
+    MAPREDUCE-5991. native-task should not run unit tests if native profile is
+    not enabled. (Binglin Chang)
+
+    MAPREDUCE-5995. native-task: Revert changes to Text internals (todd)
+
+    MAPREDUCE-6005. native-task: Fix some valgrind errors (Binglin Chang)
+
+    MAPREDUCE-5984. native-task: Reuse lz4 sources in hadoop-common (Binglin
+    Chang)
+
+    MAPREDUCE-5976. native-task: should not fail to build if snappy is missing
+    (Manu Zhang)
+
+    MAPREDUCE-5978. native-task: remove test case for not supported codec
+    Bzip2Codec and DefaultCodec (Manu Zhang)
+
+    MAPREDUCE-6006. native-task: add native tests to maven and fix bug in
+    pom.xml (Binglin Chang via todd)
+
+    MAPREDUCE-6026. native-task: fix logging (Manu Zhang via todd)
+
+    MAPREDUCE-6035. native-task: sources/test-sources jar distribution (Manu
+    Zhang via todd)
+
+    MAPREDUCE-5977. Fix or suppress native-task gcc warnings (Manu Zhang via
+    todd)
+
+    MAPREDUCE-6054. native-task: Speed up tests (todd)
+
+    MAPREDUCE-6058. native-task: KVTest and LargeKVTest should check mr job is
+    sucessful (Binglin Chang)
+
+    MAPREDUCE-6056. native-task: move system test working dir to target dir and
+    cleanup test config xml files (Manu Zhang via bchang)
+
+    MAPREDUCE-6055. native-task: findbugs, interface annotations, and other misc
+    cleanup (todd)
+
+    MAPREDUCE-6067. native-task: fix some counter issues (Binglin Chang)
+
+    MAPREDUCE-6069. native-task: Lint/style fixes and removal of unused code
+    (todd)
+
+    MAPREDUCE-6074. native-task: fix release audit, javadoc, javac warnings
+    (todd)
+
+    MAPREDUCE-6077. native-task: Remove CustomModule examples in nativetask (seanzhong)
+
+    MAPREDUCE-6078. native-task: fix gtest build on macosx (Binglin Chang)
+
+    MAPREDUCE-5801. Uber mode's log message is missing a vcore reason
+    (Steven Wong via aw)
+
+    MAPREDUCE-6525. Fix test failure of TestMiniMRClientCluster.testRestart.
+    (Masatake Iwasaki via aajisaka)
+
 Release 2.9.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -121,9 +424,6 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6384. Add the last reporting reducer info for too many fetch
     failure diagnostics (Chang Li via jlowe)
 
-    MAPREDUCE-5762. Port MAPREDUCE-3223 and MAPREDUCE-4695 (Remove MRv1 config
-    from mapred-default.xml) to branch-2. (aajisaka)
-
     MAPREDUCE-6443. Add JvmPauseMonitor to JobHistoryServer. (Robert Kanter
     via junping_du)
 
@@ -144,9 +444,6 @@ Release 2.8.0 - UNRELEASED
 
     MAPREDUCE-5763. Warn message about httpshuffle in NM logs.
     (Akira AJISAKA via ozawa)
-
-    MAPREDUCE-5485. Allow repeating job commit by extending OutputCommitter
-    API. Contributed by Junping Du
 
     MAPREDUCE-6499. Add elapsed time for retired job in JobHistoryServer WebUI.
     (Lin Yiqun via aajisaka)
@@ -266,9 +563,6 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6382. Don't escape HTML links in Diagnostics in JHS job overview.
     (Siqi Li via gera)
 
-    MAPREDUCE-5232. Add a configuration to be able to log classpath and other
-    system properties on mapreduce JVMs startup.  (Sangjin Lee via vinodkv)
-
     MAPREDUCE-6388. Remove deprecation warnings from JobHistoryServer classes
     (Ray Chiang via ozawa).
 
@@ -362,8 +656,6 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6533. testDetermineCacheVisibilities of
     TestClientDistributedCacheManager is broken (Chang Li via jlowe)
 
-    MAPREDUCE-6540. TestMRTimelineEventHandling fails (sjlee)
-
     MAPREDUCE-6553. Replace '\u2b05' with '<-' in rendering job configuration.
     (Gabor Liptak via aajisaka)
 
@@ -379,7 +671,6 @@ Release 2.8.0 - UNRELEASED
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
-
 
   NEW FEATURES
 
@@ -455,8 +746,6 @@ Release 2.7.2 - UNRELEASED
 
     MAPREDUCE-6451. DistCp has incorrect chunkFilePath for multiple jobs when
     strategy is dynamic (Kuhu Shukla via kihwal)
-
-    MAPREDUCE-6566. Add retry support to mapreduce CLI tool. (Varun Vasudev via xgong)
 
 Release 2.7.1 - 2015-07-06 
 
@@ -652,14 +941,17 @@ Release 2.7.0 - 2015-04-20
     MAPREDUCE-2815. JavaDoc does not generate correctly for
     MultithreadedMapRunner. (Chris Palmer via aajisaka)
 
+    MAPREDUCE-6223. TestJobConf#testNegativeValueForTaskVmem failures. 
+    (Varun Saxena via kasha)
+
     MAPREDUCE-6268. Fix typo in Task Attempt API's URL. (Ryu Kobayashi
     via ozawa)
 
     MAPREDUCE-6136. MRAppMaster doesn't shutdown file systems. (Brahma 
     Reddy Battula via ozawa)
 
-    MAPREDUCE-5657. [JDK8] Fix Javadoc errors caused by incorrect or illegal
-    tags in doc comments. (Akira AJISAKA and Andrew Purtell via ozawa)
+    MAPREDUCE-5657. Fix Javadoc errors caused by incorrect or illegal tags in doc
+    comments. (Akira AJISAKA and Andrew Purtell via ozawa)
 
     MAPREDUCE-4742. Fix typo in nnbench#displayUsage. (Liang Xie via ozawa)
 
@@ -791,8 +1083,6 @@ Release 2.6.0 - 2014-11-18
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
-    MAPREDUCE-5910. Make MR AM resync with RM in case of work-preserving
-    RM-restart. Contributed by Rohith
 
     MAPREDUCE-5933. Enabled MR AM to post history events to the timeline server.
     (Robert Kanter via zjshen)
@@ -805,16 +1095,13 @@ Release 2.6.0 - 2014-11-18
     MAPREDUCE-5963. ShuffleHandler DB schema should be versioned with
     compatible/incompatible changes (Junping Du via jlowe)
 
-    MAPREDUCE-6019. MapReduce changes for exposing YARN/MR endpoints on multiple
-    interfaces. (Craig Welch, Milan Potocnik, Arpit Agarwal via xgong)
-
     MAPREDUCE-883. harchive: Document how to unarchive (Akira AJISAKA and
       Koji Noguchi via aw)
 
-    MAPREDUCE-4791. Javadoc for KeyValueTextInputFormat should include default 
+    MAPREDUCE-4791. Javadoc for KeyValueTextInputFormat should include default
       separator and how to change it (Akira AJISAKA via aw)
 
-    MAPREDUCE-5906. Inconsistent configuration in property 
+    MAPREDUCE-5906. Inconsistent configuration in property
       "mapreduce.reduce.shuffle.input.buffer.percent" (Akira AJISAKA via aw)
 
     MAPREDUCE-5974. Allow specifying multiple MapOutputCollectors with 
@@ -863,33 +1150,33 @@ Release 2.6.0 - 2014-11-18
     MAPREDUCE-6021. MR AM should have working directory in LD_LIBRARY_PATH
     (jlowe)
 
+    MAPREDUCE-6010. HistoryServerFileSystemStateStore fails to update tokens
+    (jlowe)
+
+    MAPREDUCE-5878. some standard JDK APIs are not part of system classes
+    defaults (Sangjin Lee via jlowe)
+
     MAPREDUCE-5944. Remove MRv1 commands from CommandsManual.apt.vm
       (Akira AJISAKA via aw)
 
     MAPREDUCE-5943. Separate mapred commands from CommandManual.apt.vm
       (Akira AJISAKA via aw)
 
-    MAPREDUCE-5363. Fix doc and spelling for TaskCompletionEvent#getTaskStatus 
+    MAPREDUCE-5363. Fix doc and spelling for TaskCompletionEvent#getTaskStatus
       and getStatus (Akira AJISAKA via aw)
-
-    MAPREDUCE-6010. HistoryServerFileSystemStateStore fails to update tokens
-    (jlowe)
 
     MAPREDUCE-5595. Typo in MergeManagerImpl.java (Akira AJISAKA via aw)
 
-    MAPREDUCE-5597. Missing alternatives in javadocs for deprecated constructors 
-      in mapreduce.Job (Akira AJISAKA via aw)
+    MAPREDUCE-5597. Missing alternatives in javadocs for deprecated constructors
+     in mapreduce.Job (Akira AJISAKA via aw)
 
-    MAPREDUCE-5950. incorrect description in distcp2 document (Akira AJISAKA 
+    MAPREDUCE-5950. incorrect description in distcp2 document (Akira AJISAKA
       via aw)
 
     MAPREDUCE-5998. CompositeInputFormat javadoc is broken (Akira AJISAKA via
       aw)
 
     MAPREDUCE-5999. Fix dead link in InputFormat javadoc (Akira AJISAKA via aw)
-
-    MAPREDUCE-5878. some standard JDK APIs are not part of system classes
-    defaults (Sangjin Lee via jlowe)
 
     MAPREDUCE-6032. Made MR jobs write job history files on the default FS when
     the current context's FS is different. (Benjamin Zhitomirsky via zjshen)
@@ -953,7 +1240,7 @@ Release 2.6.0 - 2014-11-18
     MAPREDUCE-6104. TestJobHistoryParsing.testPartialJob fails in branch-2
     (Mit Desai via jlowe)
 
-    MAPREDUCE-6109. Fix minor typo in distcp -p usage text (Charles Lamb
+    MAPREDUCE-6109. Fix minor typo in distcp -p usage text (Charles Lamb 
     via aw)
 
     MAPREDUCE-6093. minor distcp doc edits (Charles Lamb via aw)
@@ -961,7 +1248,7 @@ Release 2.6.0 - 2014-11-18
     MAPREDUCE-5831. Make MR client ignore unknown counters received from AM.
     (Junping Du via zjshen)
 
-    MAPREDUCE-6073. Description of mapreduce.job.speculative.slowtaskthreshold
+    MAPREDUCE-6073. Description of mapreduce.job.speculative.slowtaskthreshold 
     in mapred-default should be moved into description tags (Tsuyoshi OZAWA 
     via aw)
 
@@ -1131,7 +1418,7 @@ Release 2.5.0 - 2014-08-11
 
     MAPREDUCE-5759. Remove unnecessary conf load in Limits (Sandy Ryza)
 
-    MAPREDUCE-5014. Extend Distcp to accept a custom CopyListing. 
+    MAPREDUCE-5014. Extend Distcp to accept a custom CopyListing.
     (Srikanth Sundarrajan via amareshwari)
 
     MAPREDUCE-5775. Remove unnecessary job.setNumReduceTasks in SleepJob.createJob 
@@ -1214,9 +1501,6 @@ Release 2.4.1 - 2014-06-23
 
   BUG FIXES
 
-    MAPREDUCE-5714. Removed forceful JVM exit in shutDownJob.  
-                     (Jinghui Wang via Eric Yang)
-
     MAPREDUCE-5818. Added "hsadmin" command into mapred.cmd. (Jian He via zjshen)
 
     MAPREDUCE-5824. Fixed test-failure of TestPipesNonJavaInputFormat in
@@ -1277,6 +1561,9 @@ Release 2.4.0 - 2014-04-07
 
     MAPREDUCE-5754. Preserve Job diagnostics in history (Gera Shegalov via
     jlowe)
+
+    MAPREDUCE-5766. Moved ping messages from TaskAttempts to be at DEBUG level
+    inside the ApplicationMaster log. (Jian He via vinodkv)
 
     MAPREDUCE-5773. Provide dedicated MRAppMaster syslog length limit (Gera
     Shegalov via jlowe)
@@ -2392,6 +2679,9 @@ Release 2.0.3-alpha - 2013-02-06
 
     MAPREDUCE-4654. TestDistCp is ignored. (Sandy Ryza via tomwhite)
 
+    MAPREDUCE-4736. Remove obsolete option [-rootDir] from TestDFSIO.
+    (Brandon Li via suresh)
+
     MAPREDUCE-4637. Handle TaskAttempt diagnostic updates while in the NEW and 
     UNASSIGNED states. (Mayank Bansal via sseth)
 
@@ -2408,9 +2698,6 @@ Release 2.0.3-alpha - 2013-02-06
 
     MAPREDUCE-4856. TestJobOutputCommitter uses same directory as
     TestJobCleanup. (Sandy Ryza via tomwhite)
-
-    MAPREDUCE-4895. Fix compilation failure of org.apache.hadoop.mapred.
-    gridmix.TestResourceUsageEmulators (Dennis Y via tgraves)
 
     MAPREDUCE-4278. Cannot run two local jobs in parallel from the same
     gateway. (Sandy Ryza via tomwhite)
@@ -2483,10 +2770,22 @@ Release 2.0.2-alpha - 2012-09-07
     MAPREDUCE-3921. MR AM should act on node health status changes. 
     (Bikas Saha via sseth)
 
-    MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
+    MAPREDUCE-2220. Fix new API FileOutputFormat-related typos in
+    mapred-default.xml (Rui Kubo via harsh)
+
+    MAPREDUCE-3907. Document entries mapred-default.xml for the
+    jobhistory server. (Eugene Koontz via harsh)
+
+    MAPREDUCE-3906. Fix inconsistency in documentation regarding
+    mapreduce.jobhistory.principal. (Eugene Koontz via harsh)
+
+    MAPREDUCE-4432. Confusing warning message when GenericOptionsParser
+    is not used. (Gabriel Reid via harsh)
 
     MAPREDUCE-4427. Added an 'unmanaged' mode for AMs so as to ease
     development of new applications. (Bikas Saha via acmurthy) 
+
+    MAPREDUCE-4447. Remove aop from cruft from the ant build. (eli)
 
     MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler.
     (Todd Lipcon and Siddharth Seth via sseth)
@@ -2533,7 +2832,7 @@ Release 2.0.2-alpha - 2012-09-07
     classpath (rkanter via tucu)
 
     MAPREDUCE-4577. HDFS-3672 broke
-    TestCombineFileInputFormat.testMissingBlocks() test (atm)
+    TestCombineFileInputFormat.testMissingBlocks() test. (atm)
 
     MAPREDUCE-4470. Fix TestCombineFileInputFormat.testForEmptyFile (ikatsov via tucu)
 
@@ -2649,9 +2948,6 @@ Release 2.0.0-alpha - 05-23-2012
     MAPREDUCE-3885. Avoid an unnecessary copy for all requests/responses in 
     MRs ProtoOverHadoopRpcEngine. (Devaraj Das via sseth)
 
-	  MAPREDUCE-3935. Annotate Counters.Counter and Counters.Group as @Public.
-    (tomwhite)
-
     MAPREDUCE-3991. Streaming FAQ has some wrong instructions about input files 
     splitting. (harsh)
 
@@ -2683,20 +2979,6 @@ Release 2.0.0-alpha - 05-23-2012
 
     MAPREDUCE-4205. retrofit all JVM shutdown hooks to use ShutdownHookManager 
     (tucu)
-
-    HADOOP-8285 MR changes for Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
-
-    MAPREDUCE-2220. Fix new API FileOutputFormat-related typos in
-    mapred-default.xml (Rui Kubo via harsh)
-
-    MAPREDUCE-3907. Document entries mapred-default.xml for the
-    jobhistory server. (Eugene Koontz via harsh)
-
-    MAPREDUCE-3906. Fix inconsistency in documentation regarding
-    mapreduce.jobhistory.principal. (Eugene Koontz via harsh)
-
-    MAPREDUCE-4432. Confusing warning message when GenericOptionsParser
-    is not used. (Gabriel Reid via harsh)
 
   OPTIMIZATIONS
 
@@ -2753,6 +3035,9 @@ Release 2.0.0-alpha - 05-23-2012
     MAPREDUCE-3916. various issues with running yarn proxyserver (devaraj via tucu)
 
     MAPREDUCE-4091. tools testcases failing because of MAPREDUCE-4082 (tucu)
+
+    MAPREDUCE-4095. TestJobInProgress#testLocality uses a bogus topology.
+    (Colin Patrick McCabe via eli)
 
     MAPREDUCE-4098. TestMRApps testSetClasspath fails (tucu)
 
@@ -2948,7 +3233,7 @@ Release 0.23.7 - 2013-04-18
 
     MAPREDUCE-5027. Shuffle does not limit number of outstanding connections
     (Robert Parker via jeagles)
-
+    
     MAPREDUCE-4972. Coverage fixing for org.apache.hadoop.mapreduce.jobhistory
     (Aleksey Gorshkov via bobby)
 
@@ -2995,7 +3280,7 @@ Release 0.23.7 - 2013-04-18
 
     MAPREDUCE-4991. coverage for gridmix (Aleksey Gorshkov via tgraves)
 
-    MAPREDUCE-5007. fix coverage org.apache.hadoop.mapreduce.v2.hs (Aleksey
+    MAPREDUCE-5007. fix coverage org.apache.hadoop.mapreduce.v2.hs (Aleksey 
     Gorshkov via tgraves)
 
     MAPREDUCE-5137. AM web UI: clicking on Map Task results in 500 error
@@ -3568,9 +3853,6 @@ Release 0.23.3
     MAPREDUCE-4641. Exception in commitJob marks job as successful in job
     history (Jason Lowe via bobby)
 
-    MAPREDUCE-4549. Distributed cache conflicts breaks backwards compatability 
-    (Robert Evans via tucu)
-
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -3582,7 +3864,7 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3849. Change TokenCache's reading of the binary token file
     (Daryn Sharp via bobby)
 
-    MAPREDUCE-3854. Fixed and reenabled tests related to MR child JVM's           
+    MAPREDUCE-3854. Fixed and reenabled tests related to MR child JVM's
     environmental variables in TestMiniMRChildTask. (Tom White via vinodkv)
 
     MAPREDUCE-3877 Add a test to formalise the current state transitions
@@ -3630,18 +3912,20 @@ Release 0.23.2 - UNRELEASED
     sseth)
 
   BUG FIXES
-
     MAPREDUCE-3918  proc_historyserver no longer in command line arguments for
     HistoryServer (Jon Eagles via bobby)
 
     MAPREDUCE-3862.  Nodemanager can appear to hang on shutdown due to lingering
     DeletionService threads (Jason Lowe via bobby)
 
-    MAPREDUCE-3680. FifoScheduler web service rest API can print out invalid 
+    MAPREDUCE-3680. FifoScheduler web service rest API can print out invalid
     JSON. (B Anil Kumar via tgraves)
 
-    MAPREDUCE-3852. Test TestLinuxResourceCalculatorPlugin failing. (Thomas 
+    MAPREDUCE-3852. Test TestLinuxResourceCalculatorPlugin failing. (Thomas
     Graves via mahadev)
+
+    MAPREDUCE-3736. Variable substitution depth too large for fs.default.name
+    causes jobs to fail (ahmed via tucu).
 
     MAPREDUCE-3864. Fix cluster setup docs for correct SecondaryNameNode
     HTTPS parameters. (todd)
@@ -3664,7 +3948,7 @@ Release 0.23.2 - UNRELEASED
     dies unexpectedly (Jason Lowe via sseth)
 
     MAPREDUCE-3904 Job history produced with mapreduce.cluster.acls.enabled
-    false can not be viewed with mapreduce.cluster.acls.enabled true 
+    false can not be viewed with mapreduce.cluster.acls.enabled true
     (Jonathon Eagles via tgraves)
 
     MAPREDUCE-3910. Fixed a bug in CapacityScheduler LeafQueue which was causing
@@ -3674,9 +3958,9 @@ Release 0.23.2 - UNRELEASED
     zero counter values for framework counters. (Bhallamudi Venkata Siva Kamesh
     via vinodkv)
 
-    MAPREDUCE-3913. RM application webpage is unresponsive after 2000 jobs 
+    MAPREDUCE-3913. RM application webpage is unresponsive after 2000 jobs
     (Jason Lowe via tgraves)
- 
+
     MAPREDUCE-3922. Fixed build to not compile 32bit container-executor binary
     by default on all platforms. (Hitesh Shah via vinodkv)
 
@@ -3756,38 +4040,19 @@ Release 0.23.2 - UNRELEASED
 
 Release 0.23.1 - 2012-02-17
 
+  INCOMPATIBLE CHANGES
+
   NEW FEATURES
 
-    MAPREDUCE-778. Rumen Anonymizer. (Amar Kamat and Chris Douglas via amarrk)
+   MAPREDUCE-3121. NodeManager should handle disk-failures (Ravi Gummadi via mahadev)
 
-    MAPREDUCE-3121. NodeManager should handle disk-failures (Ravi Gummadi via mahadev)
+   MAPREDUCE-2863. Support web services for YARN and MR components. (Thomas
+   Graves via vinodkv)
 
-    MAPREDUCE-2863. Support web services for YARN and MR components. (Thomas
-    Graves via vinodkv)
-
-    MAPREDUCE-3251. Network ACLs can prevent some clients to talk to MR ApplicationMaster.
-    (Anupam Seth via mahadev)
-
-    MAPREDUCE-778. Rumen Anonymizer. (Amar Kamat and Chris Douglas via amarrk)
+   MAPREDUCE-3251. Network ACLs can prevent some clients to talk to MR ApplicationMaster
+   (Anupam Seth via mahadev)
 
   IMPROVEMENTS
-
-    MAPREDUCE-3481. [Gridmix] Improve Gridmix STRESS mode. (amarrk)
-
-    MAPREDUCE-3597. [Rumen] Rumen should provide APIs to access all the 
-                    job-history related information.
-
-    MAPREDUCE-3375. [Gridmix] Memory Emulation system tests. 
-                    (Vinay Thota via amarrk)
-
-    MAPREDUCE-3840.  JobEndNotifier doesn't use the proxyToUse during connecting
-    (Ravi Prakash via bobby)
-
-    MAPREDUCE-3736. Variable substitution depth too large for fs.default.name 
-    causes jobs to fail (ahmed via tucu).
- 
-    MAPREDUCE-2733. [Gridmix] Gridmix3 cpu emulation system tests. 
-                    (Vinay Thota via amarrk)
 
     MAPREDUCE-3297. Moved log related components into yarn-common so that
     HistoryServer and clients can use them without depending on the
@@ -3802,26 +4067,23 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3370. Fixed MiniMRYarnCluster and related tests to not use
     a hard-coded path for the mr-app jar. (Ahmed Radwan via vinodkv)
 
-    MAPREDUCE-3325. Improvements to CapacityScheduler doc. (Thomas Graves 
+    MAPREDUCE-3325. Improvements to CapacityScheduler doc. (Thomas Graves
     via mahadev)
 
     MAPREDUCE-3341. Enhance logging of initalized queue limit values.
     (Anupam Seth via mahadev)
 
-    MAPREDUCE-3243. Invalid tracking URL for streaming jobs (Jonathan Eagles 
+    MAPREDUCE-3243. Invalid tracking URL for streaming jobs (Jonathan Eagles
     via mahadev)
 
-    MAPREDUCE-3331. Improvement to single node cluster setup documentation for 
+    MAPREDUCE-3331. Improvement to single node cluster setup documentation for
     0.23 (Anupam Seth via mahadev)
 
     MAPREDUCE-3102. Changed NodeManager to fail fast when LinuxContainerExecutor
     has wrong configuration or permissions. (Hitesh Shah via vinodkv)
 
-    MAPREDUCE-3415. improve MiniMRYarnCluster & DistributedShell JAR
-    resolution. (tucu)
-
-    MAPREDUCE-3169. Create a new MiniMRCluster equivalent which only provides 
-    client APIs cross MR1 and MR2. (Ahmed via tucu)
+    MAPREDUCE-3415. improve MiniMRYarnCluster & DistributedShell JAR resolution.
+    (tucu)
 
     MAPREDUCE-3373. Hadoop scripts unconditionally source
     "$bin"/../libexec/hadoop-config.sh. (Bruno Mahé via tomwhite)
@@ -3829,7 +4091,7 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3372. HADOOP_PREFIX cannot be overridden.
     (Bruno Mahé via tomwhite)
 
-    MAPREDUCE-3411. Performance Upgrade for jQuery (Jonathan Eagles via 
+    MAPREDUCE-3411. Performance Upgrade for jQuery (Jonathan Eagles via
     mahadev)
 
     MAPREDUCE-3371. Review and improve the yarn-api javadocs. (Ravi Prakash
@@ -3852,7 +4114,7 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3369. Migrate MR1 tests to run on MR2 using the new interfaces
     introduced in MAPREDUCE-3169. (Ahmed Radwan via tomwhite)
 
-    MAPREDUCE-3518. mapred queue -info <queue> -showJobs throws NPE. 
+    MAPREDUCE-3518. mapred queue -info <queue> -showJobs throws NPE.
     (Jonathan Eagles via mahadev)
 
     MAPREDUCE-3391. Making a trivial change to correct a log message in
@@ -3883,10 +4145,10 @@ Release 0.23.1 - 2012-02-17
     Improved the earlier patch to not to JobHistoryServer repeatedly.
     (Anupam Seth via vinodkv)
 
-    MAPREDUCE-3553. Add support for data returned when exceptions thrown from web 
+    MAPREDUCE-3553. Add support for data returned when exceptions thrown from web
     service apis to be in either xml or in JSON. (Thomas Graves via mahadev)
 
-    MAPREDUCE-3641. Making CapacityScheduler more conservative so as to 
+    MAPREDUCE-3641. Making CapacityScheduler more conservative so as to
     assign only one off-switch container in a single scheduling
     iteration. (Arun C Murthy via vinodkv)
 
@@ -3904,12 +4166,12 @@ Release 0.23.1 - 2012-02-17
     values for working at scale. (Hitesh Shah via vinodkv)
 
     MAPREDUCE-3693. Added mapreduce.admin.user.env to mapred-default.xml.
-    (Roman Shapshonik via acmurthy) 
+    (Roman Shapshonik via acmurthy)
 
     MAPREDUCE-3732. Modified CapacityScheduler to use only users with pending
     requests for computing user-limits. (Arun C Murthy via vinodkv)
 
-    MAPREDUCE-3679. AM logs and others should not automatically refresh after every 1 
+    MAPREDUCE-3679. AM logs and others should not automatically refresh after every 1
     second. (Vinod KV  via mahadev)
 
     MAPREDUCE-3754. Modified RM UI to filter applications based on state of the
@@ -3955,28 +4217,12 @@ Release 0.23.1 - 2012-02-17
     on the webapps. (Bhallamudi Venkata Siva Kamesh and Jason Lowe via vinodkv)
 
     MAPREDUCE-3756. Made single shuffle limit configurable. (Hitesh Shah via
-    acmurthy) 
+    acmurthy)
 
     MAPREDUCE-3811. Made jobclient-to-AM retries configurable. (sseth via
-    acmurthy) 
+    acmurthy)
 
   BUG FIXES
-
-    MAPREDUCE-2784. [Gridmix] Bug fixes in ExecutionSummarizer and 
-                    ResourceUsageMatcher. (amarrk)
-
-    MAPREDUCE-3194. "mapred mradmin" command is broken in mrv2
-                     (Jason Lowe via bobby)
-
-    MAPREDUCE-3462. Fix Gridmix JUnit testcase failures. 
-                    (Ravi Prakash and Ravi Gummadi via amarrk)
-
-    MAPREDUCE-2950. [Rumen] Fixed TestUserResolve. (Ravi Gummadi via amarrk)
-
-    MAPREDUCE-3412. Fix 'ant docs'. (amarrk)
-
-    MAPREDUCE-3346 [Rumen] LoggedTaskAttempt#getHostName() returns null.
-                   (amarrk)
 
     MAPREDUCE-3221. Reenabled the previously ignored test in TestSubmitJob
     and fixed bugs in it. (Devaraj K via vinodkv)
@@ -3990,7 +4236,7 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3217. Reenabled and fixed bugs in the failing ant test
     TestAuditLogger. (Devaraj K via vinodkv)
 
-    MAPREDUCE-3291. App fail to launch due to delegation token not 
+    MAPREDUCE-3291. App fail to launch due to delegation token not
     found in cache (Robert Evans via mahadev)
 
     MAPREDUCE-3344. o.a.h.mapreduce.Reducer since 0.21 blindly casts to
@@ -4002,8 +4248,6 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3345. Fixed a race condition in ResourceManager that was causing
     TestContainerManagerSecurity to fail sometimes. (Hitesh Shah via vinodkv)
 
-    MAPREDUCE-3368. Fixed test compilation. (Hitesh Shah via vinodkv)
-
     MAPREDUCE-3333. Fixed bugs in ContainerLauncher of MR AppMaster due to
     which per-container connections to NodeManager were lingering long enough
     to hit the ulimits on number of processes. (vinodkv)
@@ -4014,7 +4258,7 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3379. Fixed LocalResourceTracker in NodeManager to remove deleted
     cache entries correctly. (Siddharth Seth via vinodkv)
 
-    MAPREDUCE-3324. Not All HttpServer tools links (stacks,logs,config,metrics) are 
+    MAPREDUCE-3324. Not All HttpServer tools links (stacks,logs,config,metrics) are
     accessible through all UI servers (Jonathan Eagles via mahadev)
 
     MAPREDUCE-3355. Fixed MR AM's ContainerLauncher to handle node-command
@@ -4022,9 +4266,6 @@ Release 0.23.1 - 2012-02-17
 
     MAPREDUCE-3407. Fixed pom files to refer to the correct MR app-jar needed
     by the integration tests. (Hitesh Shah via vinodkv)
-
-    MAPREDUCE-3437. Fix examples pom to refer to the correct 0.23 snapshot
-    version. (Jonathan Eagles via todd)
 
     MAPREDUCE-3434. Nightly build broken (Hitesh Shah via mahadev)
 
@@ -4035,7 +4276,7 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3454. [Gridmix] TestDistCacheEmulation is broken (Hitesh Shah
     via mahadev)
 
-    MAPREDUCE-3408. yarn-daemon.sh unconditionnaly sets yarn.root.logger 
+    MAPREDUCE-3408. yarn-daemon.sh unconditionnaly sets yarn.root.logger
     (Bruno Mahe via mahadev)
 
     MAPREDUCE-3329. Fixed CapacityScheduler to ensure maximum-capacity cannot
@@ -4044,10 +4285,7 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3464. mapreduce jsp pages missing DOCTYPE. (Dave Vronay via mattf)
 
     MAPREDUCE-3265. Removed debug logs during job submission to LOG.debug to
-    cut down noise. (acmurthy) 
-
-    MAPREDUCE-3468. Changed ant based infrastructure to use 0.23.1 version.
-    (sseth via acmurthy) 
+    cut down noise. (acmurthy)
 
     MAPREDUCE-3433. Finding counters by legacy group name returns empty
     counters. (tomwhite)
@@ -4055,12 +4293,9 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3450. NM port info no longer available in JobHistory.
     (Siddharth Seth via mahadev)
 
-    MAPREDUCE-3477. Hadoop site documentation cannot be built anymore. 
-    (jeagles via tucu)
-
     MAPREDUCE-3488. Streaming jobs are failing because the main class
     isnt set in the pom files. (mahadev)
- 
+
     MAPREDUCE-3463. Second AM fails to recover properly when first AM is killed with
     java.lang.IllegalArgumentException causing lost job. (Siddharth Seth via mahadev)
 
@@ -4078,27 +4313,22 @@ Release 0.23.1 - 2012-02-17
 
     MAPREDUCE-3479. JobClient#getJob cannot find local jobs. (tomwhite)
 
-    MAPREDUCE-3500. MRJobConfig creates an LD_LIBRARY_PATH using the platform ARCH. (tucu)
-
-    MAPREDUCE-3456. $HADOOP_PREFIX/bin/yarn should set defaults for 
+    MAPREDUCE-3456. $HADOOP_PREFIX/bin/yarn should set defaults for
     $HADOOP_*_HOME (Eric Payne via mahadev)
 
     MAPREDUCE-3458. Fix findbugs warnings in hadoop-examples. (Devaraj K
     via mahadev)
 
-    MAPREDUCE-3485. DISKS_FAILED -101 error code should be defined in same location as 
+    MAPREDUCE-3485. DISKS_FAILED -101 error code should be defined in same location as
     ABORTED_CONTAINER_EXIT_STATUS. (Ravi Gummadi via mahadev)
 
-    MAPREDUCE-3389. MRApps loads the 'mrapp-generated-classpath' file with 
-    classpath from the build machine. (tucu)
-
     MAPREDUCE-3496. Fixed client to print queue acls in consistent order.
-    (Jonathan Eagles via acmurthy) 
+    (Jonathan Eagles via acmurthy)
 
-    MAPREDUCE-3147. Handle leaf queues with the same name properly.
-    (Ravi Prakash via mahadev)
+    MAPREDUCE-3147. Handle leaf queues with the same name properly. (Ravi Prakash via
+    mahadev)
 
-    MAPREDUCE-3327. RM web ui scheduler link doesn't show correct max value 
+    MAPREDUCE-3327. RM web ui scheduler link doesn't show correct max value
     for queues (Anupam Seth via mahadev)
 
     MAPREDUCE-3513. Capacity Scheduler web UI has a spelling mistake for Memory.
@@ -4110,10 +4340,10 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3527. Fix minor API incompatibilities between 1.0 and 0.23.
     (tomwhite)
 
-    MAPREDUCE-3328. mapred queue -list output inconsistent and missing child 
+    MAPREDUCE-3328. mapred queue -list output inconsistent and missing child
     queues. (Ravi Prakash via mahadev)
 
-    MAPREDUCE-3510. Capacity Scheduler inherited ACLs not displayed by mapred queue 
+    MAPREDUCE-3510. Capacity Scheduler inherited ACLs not displayed by mapred queue
     -showacls (Jonathan Eagles via mahadev)
 
     MAPREDUCE-3537. Fix race condition in DefaultContainerExecutor which led
@@ -4126,13 +4356,7 @@ Release 0.23.1 - 2012-02-17
     in the correct directory to work properly in secure mode. (Hitesh Shah via
     vinodkv)
 
-    MAPREDUCE-3544. gridmix build is broken, requires hadoop-archives to be 
-    added as ivy dependency. (tucu)
-
-    MAPREDUCE-3557. MR1 test fail to compile because of missing hadoop-archives 
-    dependency. (tucu)
-
-    MAPREDUCE-3541. Fix broken TestJobQueueClient test. (Ravi Prakash via 
+    MAPREDUCE-3541. Fix broken TestJobQueueClient test. (Ravi Prakash via
     mahadev)
 
     MAPREDUCE-3398. Fixed log aggregation to work correctly in secure mode.
@@ -4147,7 +4371,7 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3531. Fixed a race in ContainerTokenSecretManager. (Robert Joseph
     Evans via sseth)
 
-    MAPREDUCE-3560. TestRMNodeTransitions is failing on trunk. 
+    MAPREDUCE-3560. TestRMNodeTransitions is failing on trunk.
     (Siddharth Seth via mahadev)
 
     MAPREDUCE-3487. Fixed JobHistory web-UI to display links to single task's
@@ -4159,14 +4383,14 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3422. Counter display names are not being picked up. (Jonathan
     Eagles via sseth)
 
-    MAPREDUCE-3366. Mapreduce component should use consistent directory structure 
+    MAPREDUCE-3366. Mapreduce component should use consistent directory structure
     layout as HDFS/common (Eric Yang via mahadev)
 
     MAPREDUCE-3387. Fixed AM's tracking URL to always go through the proxy, even
     before the job started, so that it works properly with oozie throughout
     the job execution. (Robert Joseph Evans via vinodkv)
 
-    MAPREDUCE-3579. ConverterUtils shouldn't include a port in a path from a url 
+    MAPREDUCE-3579. ConverterUtils shouldn't include a port in a path from a url
     without a port. (atm via harsh)
 
     MAPREDUCE-3563. Fixed LocalJobRunner to work correctly with new mapreduce
@@ -4181,26 +4405,26 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3588. Fixed bin/yarn which was broken by MAPREDUCE-3366 so that
     yarn daemons can start. (Arun C Murthy via vinodkv)
 
-    MAPREDUCE-3349. Log rack-name in JobHistory for unsuccessful tasks. (Amar
-    Kamat and Devaraj K via sseth)
-
     MAPREDUCE-3586. Modified CompositeService to avoid duplicate stop operations
     thereby solving race conditions in MR AM shutdown. (vinodkv)
 
     MAPREDUCE-3604. Fixed streaming to use new mapreduce.framework.name to
-    check for local mode. (acmurthy) 
+    check for local mode. (acmurthy)
 
     MAPREDUCE-3521. Fixed streaming to ensure it doesn't silently ignore
-    unknown arguments. (Robert Evans via acmurthy) 
+    unknown arguments. (Robert Evans via acmurthy)
 
     MAPREDUCE-3522. Ensure queues inherit ACLs from parent if they aren't
-    explicitly specified. (Jonathan Eagles via acmurthy) 
+    explicitly specified. (Jonathan Eagles via acmurthy)
 
     MAPREDUCE-3608. Fixed compile issue with MAPREDUCE-3522. (mahadev via
-    acmurthy) 
+    acmurthy)
 
     MAPREDUCE-3490. Fixed MapReduce AM to count failed maps also towards Reduce
     ramp up. (Sharad Agarwal and Arun C Murthy via vinodkv)
+
+    MAPREDUCE-1744. DistributedCache creates its own FileSytem instance when
+    adding a file/archive to the path. (Dick King via tucu)
 
     MAPREDUCE-3529. TokenCache does not cache viewfs credentials correctly
     (sseth)
@@ -4209,25 +4433,45 @@ Release 0.23.1 - 2012-02-17
     1 to 0.23 (Tom White via sseth)
 
     MAPREDUCE-3566. Fixed MR AM to construct CLC only once across all tasks.
-    (vinodkv via acmurthy) 
+    (vinodkv via acmurthy)
 
     MAPREDUCE-3572. Moved AM event dispatcher to a separate thread for
-    performance reasons. (vinodkv via acmurthy) 
+    performance reasons. (vinodkv via acmurthy)
 
     MAPREDUCE-3615. Fix some ant test failures. (Thomas Graves via sseth)
 
-    MAPREDUCE-1744. DistributedCache creates its own FileSytem instance when 
-    adding a file/archive to the path. (Dick King via tucu)
-
     MAPREDUCE-3326. Added detailed information about queue's to the
-    CapacityScheduler web-ui. (Jason Lowe via acmurthy) 
+    CapacityScheduler web-ui. (Jason Lowe via acmurthy)
 
     MAPREDUCE-3548. Added more unit tests for MR AM & JHS web-services.
-    (Thomas Graves via acmurthy) 
+    (Thomas Graves via acmurthy)
 
     MAPREDUCE-3617. Removed wrong default value for
     yarn.resourcemanager.principal and yarn.nodemanager.principal. (Jonathan
-    Eagles via acmurthy) 
+    Eagles via acmurthy)
+
+    MAPREDUCE-3183. hadoop-assemblies/src/main/resources/assemblies/hadoop-mapreduce-dist.xml
+    missing license header. (Hitesh Shah via tucu).
+
+    MAPREDUCE-3003. Publish MR JARs to Maven snapshot repository. (tucu)
+
+    MAPREDUCE-3204. mvn site:site fails on MapReduce. (tucu)
+
+    MAPREDUCE-3014. Rename and invert logic of '-cbuild' profile to 'native' and off
+    by default. (tucu)
+
+    MAPREDUCE-3477. Hadoop site documentation cannot be built anymore. (jeagles via tucu)
+
+    MAPREDUCE-3500. MRJobConfig creates an LD_LIBRARY_PATH using the platform ARCH. (tucu)
+
+    MAPREDUCE-3389. MRApps loads the 'mrapp-generated-classpath' file with
+    classpath from the build machine. (tucu)
+
+    MAPREDUCE-3544. gridmix build is broken, requires hadoop-archives to be added as
+    ivy dependency. (tucu)
+
+    MAPREDUCE-3557. MR1 test fail to compile because of missing hadoop-archives dependency.
+    (tucu)
 
     MAPREDUCE-3624. Remove unnecessary dependency on JDK's tools.jar. (mahadev
     via acmurthy)
@@ -4238,7 +4482,7 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3639. Fixed TokenCache to work with absent FileSystem canonical
     service-names. (Siddharth Seth via vinodkv)
 
-    MAPREDUCE-3380. Token infrastructure for running clients which are not kerberos 
+    MAPREDUCE-3380. Token infrastructure for running clients which are not kerberos
     authenticated. (mahadev)
 
     MAPREDUCE-3648. TestJobConf failing. (Thomas Graves via mahadev)
@@ -4246,8 +4490,8 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3651. TestQueueManagerRefresh fails. (Thomas Graves via mahadev)
 
     MAPREDUCE-3645. TestJobHistory fails. (Thomas Graves via mahadev)
-  
-    MAPREDUCE-3652. org.apache.hadoop.mapred.TestWebUIAuthorization.testWebUIAuthorization 
+
+    MAPREDUCE-3652. org.apache.hadoop.mapred.TestWebUIAuthorization.testWebUIAuthorization
     fails. (Thomas Graves via mahadev)
 
     MAPREDUCE-3625. CapacityScheduler web-ui display of queue's used capacity is broken.
@@ -4265,13 +4509,10 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3404. Corrected MR AM to honor speculative configuration and enable
     speculating either maps or reduces. (Eric Payne via vinodkv)
 
-    MAPREDUCE-3664. Federation Documentation has incorrect configuration example.
-    (Brandon Li via jitendra)
-
     MAPREDUCE-3649. Job End notification gives an error on calling back.
     (Ravi Prakash via mahadev)
 
-    MAPREDUCE-3657. State machine visualize build fails. (Jason Lowe 
+    MAPREDUCE-3657. State machine visualize build fails. (Jason Lowe
     via mahadev)
 
     MAPREDUCE-2450. Fixed a corner case with interrupted communication threads
@@ -4292,27 +4533,24 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3689. RM web UI doesn't handle newline in job name.
     (Thomas Graves via mahadev)
 
-    MAPREDUCE-3701. Delete HadoopYarnRPC from 0.23 branch.
-    (mahadev)
-
-    MAPREDUCE-3549. write api documentation for web service apis for RM, NM, 
+    MAPREDUCE-3549. write api documentation for web service apis for RM, NM,
     mapreduce app master, and job history server (Thomas Graves via mahadev)
 
     MAPREDUCE-3705. ant build fails on 0.23 branch. (Thomas Graves via
     mahadev)
- 
+
     MAPREDUCE-3691. webservices add support to compress response.
     (Thomas Graves via mahadev)
 
-    MAPREDUCE-3702. internal server error trying access application master 
+    MAPREDUCE-3702. internal server error trying access application master
     via proxy with filter enabled (Thomas Graves via mahadev)
 
     MAPREDUCE-3646. Remove redundant URL info from "mapred job" output.
     (Jonathan Eagles via mahadev)
 
-    MAPREDUCE-3681. Fixed computation of queue's usedCapacity. (acmurthy) 
+    MAPREDUCE-3681. Fixed computation of queue's usedCapacity. (acmurthy)
 
-    MAPREDUCE-3505. yarn APPLICATION_CLASSPATH needs to be overridable. 
+    MAPREDUCE-3505. yarn APPLICATION_CLASSPATH needs to be overridable.
     (ahmed via tucu)
 
     MAPREDUCE-3714. Fixed EventFetcher and Fetcher threads to shut-down properly
@@ -4335,7 +4573,7 @@ Release 0.23.1 - 2012-02-17
     per-application. (Arun C Murthy via vinodkv)
 
     MAPREDUCE-3721. Fixed a race in shuffle which caused reduces to hang.
-    (sseth via acmurthy) 
+    (sseth via acmurthy)
 
     MAPREDUCE-3733. Add Apache License Header to hadoop-distcp/pom.xml.
     (mahadev)
@@ -4344,7 +4582,7 @@ Release 0.23.1 - 2012-02-17
     (mahadev)
 
     MAPREDUCE-3720. Changed bin/mapred job -list to not print job-specific
-    information not available at RM. (vinodkv via acmurthy) 
+    information not available at RM. (vinodkv via acmurthy)
 
     MAPREDUCE-3742. "yarn logs" command fails with ClassNotFoundException.
     (Jason Lowe via mahadev)
@@ -4357,7 +4595,7 @@ Release 0.23.1 - 2012-02-17
     tasks. (Jonathan Eagles via vinodkv)
 
     MAPREDUCE-3748. Changed a log in CapacityScheduler.nodeUpdate to debug.
-    (ramya via acmurthy) 
+    (ramya via acmurthy)
 
     MAPREDUCE-3764. Fixed resource usage metrics for queues and users.
     (acmurthy)
@@ -4366,16 +4604,16 @@ Release 0.23.1 - 2012-02-17
     (tomwhite)
 
     MAPREDUCE-3762. Fixed default CapacityScheduler configs. (mahadev via
-    acmurthy) 
+    acmurthy)
 
-    MAPREDUCE-3499. New MiniMR does not setup proxyuser configuration 
+    MAPREDUCE-3499. New MiniMR does not setup proxyuser configuration
     correctly, thus tests using doAs do not work. (johnvijoe via tucu)
 
     MAPREDUCE-3696. MR job via oozie does not work on hadoop 23.
     (John George via mahadev)
 
     MAPREDUCE-3427. Fix streaming unit tests broken after mavenization.
-    (Hitesh Shah via acmurthy) 
+    (Hitesh Shah via acmurthy)
 
     MAPREDUCE-3640. Allow AMRecovery to work with partial JobHistory files.
     (Arun C Murthy via sseth)
@@ -4389,10 +4627,10 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3780. Fixed a bug where applications killed before getting
     activated were not getting cleaned up properly. (Hitesh Shah via acmurthy)
 
-    MAPREDUCE-3708. Metrics: Incorrect Apps Submitted Count (Bhallamudi via 
+    MAPREDUCE-3708. Metrics: Incorrect Apps Submitted Count (Bhallamudi via
     mahadev)
 
-    MAPREDUCE-3727. jobtoken location property in jobconf refers to wrong 
+    MAPREDUCE-3727. jobtoken location property in jobconf refers to wrong
     jobtoken file (tucu)
 
     MAPREDUCE-3711. Fixed MR AM recovery so that only single selected task
@@ -4411,14 +4649,14 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3791. can't build site in hadoop-yarn-server-common.
     (mahadev)
 
-    MAPREDUCE-3723. TestAMWebServicesJobs & TestHSWebServicesJobs 
+    MAPREDUCE-3723. TestAMWebServicesJobs & TestHSWebServicesJobs
     incorrectly asserting tests (Bhallamudi Venkata Siva Kamesh
     via mahadev)
 
     MAPREDUCE-3795. "job -status" command line output is malformed.
     (vinodkv via mahadev)
 
-    MAPREDUCE-3759. ClassCastException thrown in -list-active-trackers when 
+    MAPREDUCE-3759. ClassCastException thrown in -list-active-trackers when
     there are a few unhealthy nodes (vinodkv via mahadev)
 
     MAPREDUCE-3775. Change MiniYarnCluster to escape special chars in testname.
@@ -4428,14 +4666,14 @@ Release 0.23.1 - 2012-02-17
     allocation-mb setting (Hitesh Shah via mahadev)
 
     MAPREDUCE-3747. Initialize queue metrics upfront and added start/finish
-    time to RM Web-UI. (acmurthy) 
+    time to RM Web-UI. (acmurthy)
 
     MAPREDUCE-3814. Fixed MRV1 compilation. (Arun C Murthy via vinodkv)
 
     MAPREDUCE-3810. Performance tweaks - reduced logging in AM and defined
-    hascode/equals for ResourceRequest & Priority. (vinodkv via acmurthy) 
+    hascode/equals for ResourceRequest & Priority. (vinodkv via acmurthy)
 
-    MAPREDUCE-3813. Added a cache for resolved racks. (vinodkv via acmurthy)   
+    MAPREDUCE-3813. Added a cache for resolved racks. (vinodkv via acmurthy)
 
     MAPREDUCE-3808. Fixed an NPE in FileOutputCommitter for jobs with maps
     but no reduces. (Robert Joseph Evans via vinodkv)
@@ -4444,21 +4682,24 @@ Release 0.23.1 - 2012-02-17
     (Dave Thompson via bobby)
 
     MAPREDUCE-3354. Changed scripts so that jobhistory server is started by
-    bin/mapred instead of bin/yarn. (Jonathan Eagles via acmurthy) 
+    bin/mapred instead of bin/yarn. (Jonathan Eagles via acmurthy)
 
     MAPREDUCE-3809. Ensure that there is no needless sleep in Task at the end
     of the task. (sseth via acmurthy)
 
-    MAPREDUCE-3794. Support mapred.Task.Counter and mapred.JobInProgress.Counter 
+    MAPREDUCE-3794. Support mapred.Task.Counter and mapred.JobInProgress.Counter
     enums for compatibility (Tom White via mahadev)
 
     MAPREDUCE-3697. Support binary compatibility for Counters after
-    MAPREDUCE-901. (mahadev via acmurthy) 
+    MAPREDUCE-901. (mahadev via acmurthy)
+
+    MAPREDUCE-3709. TestDistributedShell is failing. (Hitesh Shah via
+    mahadev)
 
     MAPREDUCE-3817. Fixed bin/mapred to allow running of distcp and archive
-    jobs. (Arpit Gupta via acmurthy) 
+    jobs. (Arpit Gupta via acmurthy)
 
-    MAPREDUCE-3709. TestDistributedShell is failing. (Hitesh Shah via 
+    MAPREDUCE-3709. TestDistributedShell is failing. (Hitesh Shah via
     mahadev)
 
     MAPREDUCE-3436. JobHistory webapp address should use the host configured
@@ -4467,9 +4708,9 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3815. Fixed MR AM to always use hostnames and never IPs when
     requesting containers so that scheduler can give off data local containers
     correctly. (Siddarth Seth via vinodkv)
- 
+
     MAPREDUCE-3833. Fixed a bug in reinitiaziling of queues. (Jason Lowe via
-    acmurthy) 
+    acmurthy)
 
     MAPREDUCE-3826. Fixed a bug in RM web-ui which broke sorting. (Jonathan
     Eagles via acmurthy)
@@ -4478,7 +4719,7 @@ Release 0.23.1 - 2012-02-17
     finishes. (Vinod Kumar Vavilapalli via sseth)
 
     MAPREDUCE-3827. Changed Counters to use ConcurrentSkipListMap for
-    performance. (vinodkv via acmurthy)  
+    performance. (vinodkv via acmurthy)
 
     MAPREDUCE-3822. Changed FS counter computation to use all occurences of
     the same FS scheme, instead of randomly using one. (Mahadev Konar via
@@ -4489,11 +4730,14 @@ Release 0.23.1 - 2012-02-17
     be on the same rack. (Siddarth Seth via vinodkv)
 
     MAPREDUCE-3828. Ensure that urls in single-node mode are correct. (sseth
-    via acmurthy) 
+    via acmurthy)
 
     MAPREDUCE-3770. Zombie.getJobConf() results into NPE. (amarrk)
 
-    MAPREDUCE-3843. Job summary log file found missing on the RM host 
+    MAPREDUCE-3840.  JobEndNotifier doesn't use the proxyToUse during connecting
+    (Ravi Prakash via bobby)
+
+    MAPREDUCE-3843. Job summary log file found missing on the RM host
     (Anupam Seth via tgraves)
 
     MAPREDUCE-3846. Addressed MR AM hanging issues during AM restart and then
@@ -4511,7 +4755,7 @@ Release 0.23.1 - 2012-02-17
 
     MAPREDUCE-3880. Changed LCE binary to be 32-bit. (acmurthy)
 
-Release 0.23.0 - 2011-11-01 
+Release 0.23.0 - 2011-11-01
 
   INCOMPATIBLE CHANGES
 
@@ -4525,12 +4769,12 @@ Release 0.23.0 - 2011-11-01
   NEW FEATURES
 
     MAPREDUCE-2682. Add "mapred classpath" command to print classpath
-    for MR applications. (vinodkv via acmurthy) 
+    for MR applications. (vinodkv via acmurthy)
 
     MAPREDUCE-2107. [Gridmix] Total heap usage emulation in Gridmix.
     (Amar Kamat and Ravi Gummadi via amarrk)
 
-    MAPREDUCE-2106. [Gridmix] Cumulative CPU usage emulation in Gridmix. 
+    MAPREDUCE-2106. [Gridmix] Cumulative CPU usage emulation in Gridmix.
     (amarrk)
 
     MAPREDUCE-2543. [Gridmix] High-Ram feature emulation in Gridmix. (amarrk)
@@ -4543,14 +4787,14 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-461. Enable ServicePlugins for the JobTracker.
     (Fredrik Hedberg via tomwhite)
 
-    MAPREDUCE-2521. Create RPM and Debian packages for MapReduce. Changes 
+    MAPREDUCE-2521. Create RPM and Debian packages for MapReduce. Changes
     deployment layout to be consistent across the binary tgz, rpm, and deb.
     (Eric Yang via omalley)
 
     MAPREDUCE-2323. Add metrics to the fair scheduler. (todd)
 
     MAPREDUCE-2037. Capture intermediate progress, CPU and memory usage for
-    tasks. (Dick King via acmurthy) 
+    tasks. (Dick King via acmurthy)
 
     MAPREDUCE-279. MapReduce 2.0. Merging MR-279 branch into trunk. Contributed by
     Arun C Murthy, Christopher Douglas, Devaraj Das, Greg Roelofs, Jeffrey
@@ -4570,55 +4814,55 @@ Release 0.23.0 - 2011-11-01
     make MR AMs resume their progress after restart. (Sharad Agarwal via vinodkv)
 
     MAPREDUCE-2858. Added a WebApp Proxy for applications. (Robert Evans via
-    acmurthy) 
+    acmurthy)
 
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via
-    acmurthy) 
+    acmurthy)
 
-    MAPREDUCE-2365. Add counters to track bytes (read,written) via 
+    MAPREDUCE-2365. Add counters to track bytes (read,written) via
     File(Input,Output)Format. (Siddharth Seth via acmurthy)
- 
-    MAPREDUCE-2680. Display queue name in job client CLI. (acmurthy) 
- 
-    MAPREDUCE-2679. Minor changes to sync trunk with MR-279 branch. (acmurthy) 
- 
-    MAPREDUCE-2400. Remove Cluster's dependency on JobTracker via a 
-    ServiceProvider for the actual implementation. (tomwhite via acmurthy) 
- 
+
+    MAPREDUCE-2680. Display queue name in job client CLI. (acmurthy)
+
+    MAPREDUCE-2679. Minor changes to sync trunk with MR-279 branch. (acmurthy)
+
+    MAPREDUCE-2400. Remove Cluster's dependency on JobTracker via a
+    ServiceProvider for the actual implementation. (tomwhite via acmurthy)
+
     MAPREDUCE-2596. [Gridmix] Summarize Gridmix runs. (amarrk)
 
-    MAPREDUCE-2563. [Gridmix] Add High-Ram emulation system tests to 
+    MAPREDUCE-2563. [Gridmix] Add High-Ram emulation system tests to
     Gridmix. (Vinay Kumar Thota via amarrk)
 
-    MAPREDUCE-2104. [Rumen] Add Cpu, Memory and Heap usages to 
+    MAPREDUCE-2104. [Rumen] Add Cpu, Memory and Heap usages to
     TraceBuilder's output. (amarrk)
 
-    MAPREDUCE-2554. [Gridmix]  Add distributed cache emulation system tests 
+    MAPREDUCE-2554. [Gridmix]  Add distributed cache emulation system tests
     to Gridmix. (Vinay Kumar Thota via amarrk)
- 
+
     MAPREDUCE-2543. [Gridmix] High-Ram feature emulation testcase. (amarrk)
 
-    MAPREDUCE-2469. Task counters should also report the total heap usage of 
+    MAPREDUCE-2469. Task counters should also report the total heap usage of
     the task. (Ravi Gummadi and Amar Ramesh Kamat via amarrk)
 
-    MAPREDUCE-2544. [Gridmix] Add compression emulation system tests to 
+    MAPREDUCE-2544. [Gridmix] Add compression emulation system tests to
     Gridmix. (Vinay Kumar Thota via amarrk)
 
-    MAPREDUCE-2517. [Gridmix] Add system tests to Gridmix. 
+    MAPREDUCE-2517. [Gridmix] Add system tests to Gridmix.
     (Vinay Kumar Thota via amarrk)
 
     MAPREDUCE-2492. The new MapReduce API should make available task's
     progress to the task. (amarrk)
 
-    MAPREDUCE-2153. Bring in more job configuration properties in to the trace 
+    MAPREDUCE-2153. Bring in more job configuration properties in to the trace
     file. (Rajesh Balamohan via amarrk)
 
-    MAPREDUCE-1461. Feature to instruct rumen-folder utility to skip jobs worth 
+    MAPREDUCE-1461. Feature to instruct rumen-folder utility to skip jobs worth
     of specific duration. (Rajesh Balamohan via amarrk)
 
-    MAPREDUCE-2172. Added test-patch.properties required by test-patch.sh 
+    MAPREDUCE-2172. Added test-patch.properties required by test-patch.sh
     (nigel)
 
     MAPREDUCE-2156. Raid-aware FSCK. (Patrick Kling via dhruba)
@@ -4677,12 +4921,12 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-2202. Generalize CLITest structure and interfaces to faciliate
     upstream adoption (e.g. for web or system testing). (cos)
 
-    MAPREDUCE-2420. JobTracker should be able to renew delegation token over 
+    MAPREDUCE-2420. JobTracker should be able to renew delegation token over
     HTTP (Boris Shkolnik via jitendra)
 
     MAPREDUCE-2474. Add docs to the new API Partitioner on how to access the
     Job Configuration. (Harsh J Chouraria via todd)
-    
+
     MAPREDUCE-2475. Disable IPV6 for junit tests. (suresh srinivas via mahadev)
 
     MAPREDUCE-2422. Removed unused internal methods from DistributedCache.
@@ -4728,7 +4972,7 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-2494. Order distributed cache deletions by LRU. (Robert Joseph
     Evans via cdouglas)
 
-    MAPREDUCE-2452. Makes the cancellation of delegation tokens happen in a 
+    MAPREDUCE-2452. Makes the cancellation of delegation tokens happen in a
     separate thread. (ddas)
 
     HADOOP-7106. Reorganize project SVN layout to "unsplit" the projects.
@@ -4743,10 +4987,10 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-2602. Allow setting of end-of-record delimiter for
     TextInputFormat for the old API. (Ahmed Radwan via todd)
 
-    MAPREDUCE-2705. Permits parallel multiple task launches. 
+    MAPREDUCE-2705. Permits parallel multiple task launches.
     (Thomas Graves via ddas)
 
-    MAPREDUCE-2489. Jobsplits with random hostnames can make the queue 
+    MAPREDUCE-2489. Jobsplits with random hostnames can make the queue
     unusable (jeffrey naisbit via mahadev)
 
     MAPREDUCE-2854. update INSTALL with config necessary run mapred on yarn.
@@ -4760,29 +5004,29 @@ Release 0.23.0 - 2011-11-01
     vinodkv)
 
     MAPREDUCE-2735. Add an applications summary log to ResourceManager.
-    (Thomas Graves via acmurthy) 
+    (Thomas Graves via acmurthy)
 
     MAPREDUCE-2697. Enhance CapacityScheduler to cap concurrently running
-    applications per-queue & per-user. (acmurthy) 
+    applications per-queue & per-user. (acmurthy)
     Configuration changes:
       add yarn.capacity-scheduler.maximum-am-resource-percent
 
     MAPREDUCE-2774. Add startup message to ResourceManager & NodeManager on
-    startup. (Venu Gopala Rao via acmurthy) 
+    startup. (Venu Gopala Rao via acmurthy)
 
     MAPREDUCE-2655. Add audit logs to ResourceManager and NodeManager. (Thomas
     Graves via acmurthy)
 
     MAPREDUCE-2864. Normalize configuration variable names for YARN. (Robert
-    Evans via acmurthy) 
+    Evans via acmurthy)
 
-    MAPREDUCE-2690. Web-page for FifoScheduler. (Eric Payne via acmurthy) 
+    MAPREDUCE-2690. Web-page for FifoScheduler. (Eric Payne via acmurthy)
 
     MAPREDUCE-2711. Update TestBlockPlacementPolicyRaid for the new namesystem
     and block management APIs.  (szetszwo)
 
     MAPREDUCE-2933. Change allocate call to return ContainerStatus for
-    completed containers rather than Container. (acmurthy) 
+    completed containers rather than Container. (acmurthy)
 
     MAPREDUCE-2675. Reformat JobHistory Server main page to be more
     useful. (Robert Joseph Evans via vinodkv).
@@ -4791,16 +5035,16 @@ Release 0.23.0 - 2011-11-01
     org.apache.hadoop.yarn.api.records.* to be get/set only. Added javadocs to
     all public records. (acmurthy)
 
-    MAPREDUCE-2676. MR-279: JobHistory Job page needs reformatted. (Robert Evans via 
+    MAPREDUCE-2676. MR-279: JobHistory Job page needs reformatted. (Robert Evans via
     mahadev)
 
-    MAPREDUCE-2899. Replace major parts of ApplicationSubmissionContext with a 
+    MAPREDUCE-2899. Replace major parts of ApplicationSubmissionContext with a
     ContainerLaunchContext (Arun Murthy via mahadev)
 
     MAPREDUCE-2966. Added ShutDown hooks for MRV2 processes so that they can
     gracefully exit. (Abhijit Suresh Shingate via vinodkv)
 
-    MAPREDUCE-2672. MR-279: JobHistory Server needs Analysis this job. 
+    MAPREDUCE-2672. MR-279: JobHistory Server needs Analysis this job.
     (Robert Evans via mahadev)
 
     MAPREDUCE-2965. Streamlined the methods hashCode(), equals(), compareTo()
@@ -4828,9 +5072,9 @@ Release 0.23.0 - 2011-11-01
     application's FinalStatus separately. (Hitesh Shah via vinodkv)
 
     MAPREDUCE-2889. Added documentation for writing new YARN applications.
-    (Hitesh Shah via acmurthy) 
+    (Hitesh Shah via acmurthy)
 
-    MAPREDUCE-3134. Added documentation the CapacityScheduler. (acmurthy) 
+    MAPREDUCE-3134. Added documentation the CapacityScheduler. (acmurthy)
 
     MAPREDUCE-3013. Removed YarnConfiguration.YARN_SECURITY_INFO and its usage
     as it doesn't affect security any more. (vinodkv)
@@ -4846,21 +5090,21 @@ Release 0.23.0 - 2011-11-01
     UI. (Robert Joseph Evans via vinodkv)
 
     MAPREDUCE-2988. Reenabled TestLinuxContainerExecutor reflecting the
-    current NodeManager code. (Robert Joseph Evans via vinodkv) 
+    current NodeManager code. (Robert Joseph Evans via vinodkv)
 
     MAPREDUCE-3161. Improved some javadocs and fixed some typos in
     YARN. (Todd Lipcon via vinodkv)
 
     MAPREDUCE-3148. Ported MAPREDUCE-2702 to old mapred api for aiding task
-    recovery. (acmurthy) 
+    recovery. (acmurthy)
 
     MAPREDUCE-3133. Running a set of methods in a Single Test Class.
     (Jonathan Eagles via mahadev)
 
-    MAPREDUCE-3059. QueueMetrics do not have metrics for aggregate 
+    MAPREDUCE-3059. QueueMetrics do not have metrics for aggregate
     containers-allocated and aggregate containers-released.
     (Devaraj K via mahadev)
-   
+
     MAPREDUCE-3187. Add names for various unnamed threads in MR2.
     (Todd Lipcon and Siddharth Seth via mahadev)
 
@@ -4873,11 +5117,11 @@ Release 0.23.0 - 2011-11-01
 
     MAPREDUCE-3144. Augmented JobHistory with the information needed for
     serving aggregated logs. (Siddharth Seth via vinodkv)
-  
+
     MAPREDUCE-3163. JobClient spews errors when killing MR2 job.
     (mahadev)
 
-    MAPREDUCE-3239. Use new createSocketAddr API in MRv2 to give better 
+    MAPREDUCE-3239. Use new createSocketAddr API in MRv2 to give better
     error messages on misconfig (Todd Lipcon via mahadev)
 
     MAPREDUCE-2747. Cleaned up LinuxContainerExecutor binary sources and changed
@@ -4885,7 +5129,7 @@ Release 0.23.0 - 2011-11-01
 
     MAPREDUCE-3205. Fix memory specifications to be physical rather than
     virtual, allowing for a ratio between the two to be configurable. (todd
-    via acmurthy) 
+    via acmurthy)
 
     MAPREDUCE-2986. Fixed MiniYARNCluster to support multiple NodeManagers.
     (Anupam Seth via vinodkv)
@@ -4895,12 +5139,6 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-2989. Modified JobHistory to link to task and AM logs from the
     JobHistoryServer. (Siddharth Seth via vinodkv)
 
-    MAPREDUCE-3014. Rename and invert logic of '-cbuild' profile to 'native' and off 
-    by default. (tucu)
-
-    MAPREDUCE-3171. normalize nodemanager native code compilation with common/hdfs
-    native. (tucu)
-
     MAPREDUCE-3146. Added a MR specific command line to dump logs for a
     given TaskAttemptID. (Siddharth Seth via vinodkv)
 
@@ -4908,7 +5146,7 @@ Release 0.23.0 - 2011-11-01
     acmurthy)
 
     MAPREDUCE-3322. Added a better index.html and an brief overview of YARN
-    architecture. (acmurthy) 
+    architecture. (acmurthy)
 
   OPTIMIZATIONS
 
@@ -4926,11 +5164,11 @@ Release 0.23.0 - 2011-11-01
 
   BUG FIXES
 
-    MAPREDUCE-2603. Disable High-Ram emulation in system tests. 
+    MAPREDUCE-2603. Disable High-Ram emulation in system tests.
     (Vinay Kumar Thota via amarrk)
 
     MAPREDUCE-2539. Fixed NPE in getMapTaskReports in JobClient. (Robert Evans via
-    acmurthy) 
+    acmurthy)
 
     MAPREDUCE-1978. Rumen TraceBuilder should provide recursive
     input folder scanning.
@@ -4949,7 +5187,7 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-1752. Implement getFileBlockLocations in HarFilesystem.
     (Patrick Kling via dhruba)
 
-    MAPREDUCE-2155. RaidNode should optionally use the mapreduce jobs to 
+    MAPREDUCE-2155. RaidNode should optionally use the mapreduce jobs to
     fix missing blocks.  (Patrick Kling via dhruba)
 
     MAPREDUCE-1334. Fix TestIndexUpdater by ignoring _SUCCESS file in HDFS.
@@ -4985,7 +5223,7 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-1242. Chain APIs error misleading.
     (Harsh J Chouraria via tomwhite)
 
-    MAPREDUCE-2379. Adds missing DistributedCache configurations in 
+    MAPREDUCE-2379. Adds missing DistributedCache configurations in
     mapred-default.xml (Todd Lipcon via amareshwari)
 
     MAPREDUCE-2348. Disable mumak tests on trunk since they currently time out
@@ -5005,7 +5243,7 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-2451. Log the details from health check script at the
     JobTracker. (Thomas Graves via cdouglas)
 
-    MAPREDUCE-2467. HDFS-1052 changes break the raid contrib module in 
+    MAPREDUCE-2467. HDFS-1052 changes break the raid contrib module in
     MapReduce. (suresh srinivas via mahadev)
 
     MAPREDUCE-2258. IFile reader closes stream and compressor in wrong order.
@@ -5059,7 +5297,7 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-2409. DistributedCache maps files and archives to the same path,
     despite semantic incompatibility. (Siddharth Seth via cdouglas)
 
-    MAPREDUCE-2575. TestMiniMRDFSCaching fails if test.build.dir is set 
+    MAPREDUCE-2575. TestMiniMRDFSCaching fails if test.build.dir is set
     to something other than build/test (Thomas Graves via mahadev)
 
     MAPREDUCE-2622. Remove the last remaining reference to the deprecated
@@ -5084,12 +5322,12 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-2797. Update mapreduce tests and RAID for HDFS-2239.  (szetszwo)
 
     MAPREDUCE-2805. Update RAID for HDFS-2241.  (szetszwo)
-    
+
     MAPREDUCE-2837. Ported bug fixes from y-merge to prepare for MAPREDUCE-279
-    merge. (acmurthy) 
+    merge. (acmurthy)
 
     MAPREDUCE-2541. Fixed a race condition in IndexCache.removeMap. (Binglin
-    Chang via acmurthy) 
+    Chang via acmurthy)
 
     MAPREDUCE-2458. Rename sanitized pom.xml in build directory to work around IDE
     bug (Luke Lu via mahadev)
@@ -5146,10 +5384,10 @@ Release 0.23.0 - 2011-11-01
     ApplicationMaster information. (acmurthy)
 
     MAPREDUCE-279. Fix in MR-279 branch. Fixed computation of user-limits at
-    runtime. (acmurthy) 
+    runtime. (acmurthy)
 
     MAPREDUCE-279. Fix in MR-279 branch. Added functionality to refresh queues at
-    runtime via the 'bin/yarn rmadmin' command. (acmurthy) 
+    runtime via the 'bin/yarn rmadmin' command. (acmurthy)
 
     MAPREDUCE-279. Fix in MR-279 branch. Added functionality to stop/start queues.
     (acmurthy)
@@ -5170,7 +5408,7 @@ Release 0.23.0 - 2011-11-01
     failures. (sharad)
 
     MAPREDUCE-279. Fix in MR-279 branch. Added support High-RAM applications in
-    CapacityScheduler. (acmurthy) 
+    CapacityScheduler. (acmurthy)
 
     MAPREDUCE-279. Fix in MR-279 branch. Completing the ZooKeeper Store for
     ResourceManager state. (mahadev)
@@ -5227,7 +5465,7 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-279. Fix in MR-279 branch. Fix refreshProxy in ClientServiceDelegate.
     (sharad)
 
-    MAPREDUCE-279. Fix in MR-279 branch. Fix Null Pointer in TestUberAM. (sharad) 
+    MAPREDUCE-279. Fix in MR-279 branch. Fix Null Pointer in TestUberAM. (sharad)
 
     MAPREDUCE-2478. Improve history server. (Siddharth Seth via sharad)
 
@@ -5306,7 +5544,7 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-279. Fix in MR-279 branch. Makes uber-task disabled by default (ddas)
 
     MAPREDUCE-279. Fix in MR-279 branch. Make logging and memory for AM configurable
-    for the user via command line (mahadev) 
+    for the user via command line (mahadev)
 
     MAPREDUCE-279. Fix in MR-279 branch. Fixing a bug in previous patch (r1103657).
     Now bin/yarn truly shouldn't be launched multiple times in a single AM.
@@ -5321,26 +5559,26 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-279. Fix in MR-279 branch. Fix the tests to use jvm fork mode to avoid
     errors in shutting down services (sidharth seth)
 
-    MAPREDUCE-2500. PB factories are not thread safe (Siddharth Seth via mahadev) 
+    MAPREDUCE-2500. PB factories are not thread safe (Siddharth Seth via mahadev)
 
     MAPREDUCE-2504. race in JobHistoryEventHandler stop (Siddharth Seth via mahadev)
 
     MAPREDUCE-279. Fix in MR-279 branch. Fix job hang if the AM launch fails.
-    (mahadev) 
+    (mahadev)
 
-    MAPREDUCE-2509. Fix NPE in UI for pending attempts. (Luke Lu via mahadev) 
+    MAPREDUCE-2509. Fix NPE in UI for pending attempts. (Luke Lu via mahadev)
 
     MAPREDUCE-279. Fix in MR-279 branch. Add junit jar to lib in assembly (mahadev
     and luke)
 
     MAPREDUCE-279. Fix in MR-279 branch. Distributed cache bug fix to pass Terasort.
     (vinodkv)
-     
+
     MAPREDUCE-279. Fix in MR-279 branch. Fix null pointer exception in kill task
     attempt (mahadev)
 
     MAPREDUCE-279. Fix in MR-279 branch. Refactored RMContainerAllocator to release
-    unused containers. (sharad) 
+    unused containers. (sharad)
 
     MAPREDUCE-279. Fix in MR-279 branch. Changed Scheduler to return available limit
     to AM in the allocate api. (acmurthy)
@@ -5379,7 +5617,7 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-279. Fix in MR-279 branch. Add public cache. (cdouglas)
 
     MAPREDUCE-279. Fix in MR-279 branch. Made number of RPC server threads
-    configurable. (acmurthy) 
+    configurable. (acmurthy)
 
     MAPREDUCE-279. Fix in MR-279 branch. Added acl check for RMAdmin. (acmurthy)
 
@@ -5438,7 +5676,7 @@ Release 0.23.0 - 2011-11-01
     to get log-locations from an environmental variable. (vinodkv)
 
     MAPREDUCE-279. Fix in MR-279 branch. Ensure 'lost' NodeManagers are dealt
-    appropriately, the containers are released correctly. (acmurthy) 
+    appropriately, the containers are released correctly. (acmurthy)
 
     MAPREDUCE-279. Fix in MR-279 branch. Adding some more logging for AM expiry logs
     (mahadev)
@@ -5450,7 +5688,7 @@ Release 0.23.0 - 2011-11-01
     tasks. (vinodkv)
 
     MAPREDUCE-279. Fix in MR-279 branch. Added ability to decommission nodes and
-    completed RM administration tools to achieve parity with JobTracker. (acmurthy) 
+    completed RM administration tools to achieve parity with JobTracker. (acmurthy)
 
     MAPREDUCE-2551. Added JobSummaryLog. (Siddharth Seth via acmurthy)
 
@@ -5486,14 +5724,14 @@ Release 0.23.0 - 2011-11-01
     user-logs to a separate hdfs file. (vinodkv)
 
     MAPREDUCE-279. Fix in MR-279 branch. Fix calculation of max-capacity for a
-    queue, also fixed a bug in registration of NodeManagers. (acmurthy) 
+    queue, also fixed a bug in registration of NodeManagers. (acmurthy)
 
     MAPREDUCE-279. Fix in MR-279 branch. More cleaning up constants, removing stale
     code, and making conspicuous the envs that apps depend on to be provided by
     YARN. (vinodkv)
 
     MAPREDUCE-279. Fix in MR-279 branch. Fix container size rounding in AM and
-    headroom in RM. (acmurthy and sharad) 
+    headroom in RM. (acmurthy and sharad)
 
     MAPREDUCE-279. Fix in MR-279 branch. Disable Job acls until fixed (mahadev)
 
@@ -5502,7 +5740,7 @@ Release 0.23.0 - 2011-11-01
 
     MAPREDUCE-279. Fix in MR-279 branch. Fix a corner case in headroom computation -
     now reservations are taken into account and headroom is computed much later to
-    account for allocations/reservations. (acmurthy) 
+    account for allocations/reservations. (acmurthy)
 
     MAPREDUCE-2537. The RM writes its log to
     yarn-mapred-resourcemanager-<RM_Host>.out (Robert Evans via mahadev)
@@ -5516,10 +5754,10 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-279. Fix in MR-279 branch. Support for min and max container capacity.
     (acmurthy and sharad)
 
-    MAPREDUCE-2531. Fixed jobcontrol to downgrade JobID. (Robert Evans via acmurthy) 
+    MAPREDUCE-2531. Fixed jobcontrol to downgrade JobID. (Robert Evans via acmurthy)
 
     MAPREDUCE-2539. Fixed NPE in getMapTaskReports in JobClient. (Robert Evans via
-    acmurthy) 
+    acmurthy)
 
     MAPREDUCE-279. Fix in MR-279 branch. Fixing the wrong config key used in
     JobHistory that prevented configuring move-thread interval. (vinodkv)
@@ -5586,7 +5824,7 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-279. Fix in MR-279 branch. Add ability to includes src files in
     assembly target for maven (Luke Lu via mahadev)
 
-    MAPREDUCE-2582. Cleanup JobHistory event generation.(Siddharth Seth via sharad)  
+    MAPREDUCE-2582. Cleanup JobHistory event generation.(Siddharth Seth via sharad)
 
     MAPREDUCE-279. Fix in MR-279 branch. Fix rounding off problem in reduce ramp up.
     (sharad)
@@ -5715,7 +5953,7 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-2628. Add compiled on date to NM and RM info/about page.
 
     MAPREDUCE-2400. Remove Cluster's dependency on JobTracker via a ServiceProvider
-    for the actual implementation. (tomwhite via acmurthy) 
+    for the actual implementation. (tomwhite via acmurthy)
 
     MAPREDUCE-2663. Refactoring StateMachineFactory inner classes. (ahmed radwan via
     mahadev)
@@ -5730,7 +5968,7 @@ Release 0.23.0 - 2011-11-01
     explicitly set in the Configuration. (Josh Wills via vinodkv)
 
     MAPREDUCE-2661. Fix TaskImpl to not access MapTaskImpl. (Ahmed Radwan via
-    sharad) 
+    sharad)
 
     HADOOP-6929. Backport changes to MR-279 (mahadev and owen)
 
@@ -5759,7 +5997,7 @@ Release 0.23.0 - 2011-11-01
     mahadev)
 
     MAPREDUCE-279. Fix in MR-279 branch. Fix findbugs warnings in mr-client modules,
-    part 1 (mahadev) 
+    part 1 (mahadev)
 
     MAPREDUCE-279. Fix in MR-279 branch. Fix findbugs warnings in mr-client modules
     part 2 (mahadev)
@@ -5779,9 +6017,9 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-279. Fix in MR-279 branch. Fix for running ant targets to use the
     right set of common/test jars (gkesavan via mahadev)
 
-    MAPREDUCE-2782. Unit tests for CapacityScheduler. (acmurthy) 
+    MAPREDUCE-2782. Unit tests for CapacityScheduler. (acmurthy)
 
-    MAPREDUCE-2706. Log job submission failures. (Jeffrey Naisbitt via acmurthy) 
+    MAPREDUCE-2706. Log job submission failures. (Jeffrey Naisbitt via acmurthy)
 
     MAPREDUCE-2781. mr279 RM application finishtime not set (Thomas Graves via
     mahadev)
@@ -5804,7 +6042,7 @@ Release 0.23.0 - 2011-11-01
 
     MAPREDUCE-2727. Fix divide-by-zero error in SleepJob for sleepCount equals
     0. (Jeffrey Naisbitt via acmurthy)
- 
+
     MAPREDUCE-2860. Fix log4j logging in the maven test cases. (mahadev)
 
     MAPREDUCE-2867. Remove Unused TestApplicaitonCleanup in resourcemanager/applicationsmanager.
@@ -5813,41 +6051,41 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-2868. ant build broken in hadoop-mapreduce dir (mahadev, giri and arun via mahadev)
 
     MAPREDUCE-2649. Handling of finished applications in RM. (Thomas Graves
-    via acmurthy) 
+    via acmurthy)
 
     MAPREDUCE-2838. Fix MapReduce builds to use new hadoop-common test jars.
-    (gkesavan via acmurthy) 
-   
-    MAPREDUCE-2859. Fix eclipse plugin contrib module compilation (gkesavan) 
+    (gkesavan via acmurthy)
+
+    MAPREDUCE-2859. Fix eclipse plugin contrib module compilation (gkesavan)
 
     MAPREDUCE-2846. Fix missing synchronization in the task log management.
     (omalley)
 
     MAPREDUCE-2807. Fix AM restart and client redirection. (sharad)
 
-    MAPREDUCE-2877. Add missing Apache license header in some files in MR 
+    MAPREDUCE-2877. Add missing Apache license header in some files in MR
     and also add the rat plugin to the poms. (mahadev)
 
     MAPREDUCE-2796. Set start times for MR applications for clients to see.
-    (Devaraj K via acmurthy) 
+    (Devaraj K via acmurthy)
 
-    MAPREDUCE-2879. Fix version for MR-279 to 0.23.0. (acmurthy) 
-   
+    MAPREDUCE-2879. Fix version for MR-279 to 0.23.0. (acmurthy)
+
     MAPREDUCE-2881. Fix to include log4j 1.2.16 depenency (gkesavan)
 
     MAPREDUCE-2885. Fix mapred-config.sh to look for hadoop-config.sh in
-    HADOOP_COMMON_HOME/libexec. (acmurthy) 
+    HADOOP_COMMON_HOME/libexec. (acmurthy)
 
     MAPREDUCE-2893. Remove duplicate entry of YarnClientProtocolProvider in
-    ClientProtocolProvider services file. (Liang-Chi Hsieh via acmurthy) 
+    ClientProtocolProvider services file. (Liang-Chi Hsieh via acmurthy)
 
     MAPREDUCE-2891. Javadoc for AMRMProtocol and related records. (acmurthy)
 
-    MAPREDUCE-2898. Javadoc for ContainerManager protocol and related records. 
+    MAPREDUCE-2898. Javadoc for ContainerManager protocol and related records.
     (acmurthy)
 
     MAPREDUCE-2904. Fixed bin/yarn to correctly include HDFS jars and
-    clean up of stale refs to pre-mavenized Hadoop Common and HDFS. 
+    clean up of stale refs to pre-mavenized Hadoop Common and HDFS.
     (Sharad Agarwal and Arun C. Murthy via acmurthy)
 
     MAPREDUCE-2737. Update the progress of jobs on client side. (Siddharth Seth
@@ -5855,17 +6093,17 @@ Release 0.23.0 - 2011-11-01
 
     MAPREDUCE-2886. Fix Javadoc warnings in MapReduce. (mahadev)
 
-    MAPREDUCE-2897. Javadoc for ClientRMProtocol protocol and related records. 
+    MAPREDUCE-2897. Javadoc for ClientRMProtocol protocol and related records.
     (acmurthy)
 
-    MAPREDUCE-2916. Ivy build for MRv1 fails with bad organization for 
+    MAPREDUCE-2916. Ivy build for MRv1 fails with bad organization for
     common daemon. (mahadev)
 
     MAPREDUCE-2917. Fixed corner case in container reservation which led to
-    starvation and hung jobs. (acmurthy) 
+    starvation and hung jobs. (acmurthy)
 
     MAPREDUCE-2756. Better error handling in JobControl for failed jobs.
-    (Robert Evans via acmurthy) 
+    (Robert Evans via acmurthy)
 
     MAPREDUCE-2716. MRReliabilityTest job fails because of missing
     job-file. (Jeffrey Naisbitt via vinodkv)
@@ -5873,42 +6111,42 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-2882. TestLineRecordReader depends on ant jars. (todd)
 
     MAPREDUCE-2687. Fix NodeManager to use the right version of
-    LocalDirAllocator.getLocalPathToWrite. (mahadev & acmurthy) 
+    LocalDirAllocator.getLocalPathToWrite. (mahadev & acmurthy)
 
     MAPREDUCE-2800. Set final progress for tasks to ensure all task information
     is correctly logged to JobHistory. (Siddharth Seth via acmurthy)
 
     MAPREDUCE-2938. Log application submission failure in CapacityScheduler.
-    (acmurthy) 
+    (acmurthy)
 
     MAPREDUCE-2948. Hadoop streaming test failure, post MR-2767 (mahadev)
 
-    MAPREDUCE-2908. Fix all findbugs warnings. (vinodkv via acmurthy) 
+    MAPREDUCE-2908. Fix all findbugs warnings. (vinodkv via acmurthy)
 
     MAPREDUCE-2947. Fixed race condition in AuxiliaryServices. (vinodkv via
-    acmurthy) 
+    acmurthy)
 
     MAPREDUCE-2844. Fixed display of nodes in UI. (Ravi Teja Ch N V via
-    acmurthy) 
+    acmurthy)
 
     MAPREDUCE-2677. Fixed 404 for some links from HistoryServer. (Robert Evans
-    via acmurthy) 
+    via acmurthy)
 
     MAPREDUCE-2937. Ensure reason for application failure is displayed to the
-    user. (mahadev via acmurthy) 
+    user. (mahadev via acmurthy)
 
-    MAPREDUCE-2953. Fix a race condition on submission which caused client to 
+    MAPREDUCE-2953. Fix a race condition on submission which caused client to
     incorrectly assume application was gone by making submission synchronous
-    for RMAppManager. (Thomas Graves via acmurthy) 
+    for RMAppManager. (Thomas Graves via acmurthy)
 
-    MAPREDUCE-2963. Fix hang in TestMRJobs. (Siddharth Seth via acmurthy) 
+    MAPREDUCE-2963. Fix hang in TestMRJobs. (Siddharth Seth via acmurthy)
 
     MAPREDUCE-2954. Fixed a deadlock in NM caused due to wrong synchronization
     in protocol buffer records. (Siddharth Seth via vinodkv)
 
     MAPREDUCE-2975. Fixed YARNRunner to use YarnConfiguration rather than
-    Configuration. (mahadev via acmurthy) 
- 
+    Configuration. (mahadev via acmurthy)
+
     MAPREDUCE-2971. ant build mapreduce fails protected access jc.displayJobList
     (jobs) (Thomas Graves via mahadev)
 
@@ -5928,18 +6166,18 @@ Release 0.23.0 - 2011-11-01
     acmurthy)
 
     MAPREDUCE-2995. Better handling of expired containers in MapReduce
-    ApplicationMaster. (vinodkv via acmurthy) 
+    ApplicationMaster. (vinodkv via acmurthy)
 
-    MAPREDUCE-2995. Fixed race condition in ContainerLauncher. (vinodkv via 
-    acmurthy) 
+    MAPREDUCE-2995. Fixed race condition in ContainerLauncher. (vinodkv via
+    acmurthy)
 
     MAPREDUCE-2949. Fixed NodeManager to shut-down correctly if a service
     startup fails. (Ravi Teja via vinodkv)
 
     MAPREDUCE-3005. Fix both FifoScheduler and CapacityScheduler to correctly
-    enforce locality constraints. (acmurthy) 
+    enforce locality constraints. (acmurthy)
 
-    MAPREDUCE-3007. Fixed Yarn Mapreduce client to be able to connect to 
+    MAPREDUCE-3007. Fixed Yarn Mapreduce client to be able to connect to
     JobHistoryServer in secure mode. (vinodkv)
 
     MAPREDUCE-2987. Fixed display of logged user on RM Web-UI. (Thomas Graves
@@ -5955,7 +6193,7 @@ Release 0.23.0 - 2011-11-01
     reject all NMs. (Devaraj K via vinodkv)
 
     MAPREDUCE-3042. Fixed default ResourceTracker address. (Chris Riccomini
-    via acmurthy) 
+    via acmurthy)
 
     MAPREDUCE-3038. job history server not starting because conf() missing
     HsController (Jeffrey Naisbitt via mahadev)
@@ -5968,9 +6206,9 @@ Release 0.23.0 - 2011-11-01
 
     MAPREDUCE-3040. Fixed extra copy of Configuration in
     YarnClientProtocolProvider and ensured MiniMRYarnCluster sets JobHistory
-    configuration for tests. (acmurthy) 
+    configuration for tests. (acmurthy)
 
-    MAPREDUCE-3018. Fixed -file option for streaming. (mahadev via acmurthy) 
+    MAPREDUCE-3018. Fixed -file option for streaming. (mahadev via acmurthy)
 
     MAPREDUCE-3036. Fixed metrics for reserved resources in CS. (Robert Evans
     via acmurthy)
@@ -5979,16 +6217,16 @@ Release 0.23.0 - 2011-11-01
     bin/mapred too many times. (vinodkv via acmurthy)
 
     MAPREDUCE-3023. Fixed clients to display queue state correctly. (Ravi
-    Prakash via acmurthy) 
+    Prakash via acmurthy)
 
     MAPREDUCE-2970. Fixed NPEs in corner cases with different configurations
     for mapreduce.framework.name. (Venu Gopala Rao via vinodkv)
 
     MAPREDUCE-3062. Fixed default RMAdmin address. (Chris Riccomini
-    via acmurthy) 
+    via acmurthy)
 
-    MAPREDUCE-3066. Fixed default ResourceTracker address for the NodeManager. 
-    (Chris Riccomini via acmurthy) 
+    MAPREDUCE-3066. Fixed default ResourceTracker address for the NodeManager.
+    (Chris Riccomini via acmurthy)
 
     MAPREDUCE-3044. Pipes jobs stuck without making progress. (mahadev)
 
@@ -6002,7 +6240,7 @@ Release 0.23.0 - 2011-11-01
 
 
     MAPREDUCE-2990. Fixed display of NodeHealthStatus. (Subroto Sanyal via
-    acmurthy) 
+    acmurthy)
 
     MAPREDUCE-3053. Better diagnostic message for unknown methods in ProtoBuf
     RPCs. (vinodkv via acmurthy)
@@ -6010,12 +6248,12 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-2952. Fixed ResourceManager/MR-client to consume diagnostics
     for AM failures in a couple of corner cases. (Arun C Murthy via vinodkv)
 
-    MAPREDUCE-3064. 27 unit test failures with Invalid 
-    "mapreduce.jobtracker.address" configuration value for 
+    MAPREDUCE-3064. 27 unit test failures with Invalid
+    "mapreduce.jobtracker.address" configuration value for
     JobTracker: "local" (Venu Gopala Rao via mahadev)
 
     MAPREDUCE-3090. Fix MR AM to use ApplicationAttemptId rather than
-    (ApplicationId, startCount) consistently. (acmurthy)  
+    (ApplicationId, startCount) consistently. (acmurthy)
 
     MAPREDUCE-2646. Fixed AMRMProtocol to return containers based on
     priority. (Sharad Agarwal and Arun C Murthy via vinodkv)
@@ -6026,7 +6264,7 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-2984. Better error message for displaying completed containers.
     (Devaraj K via acmurthy)
 
-    MAPREDUCE-3071. app master configuration web UI link under the Job menu 
+    MAPREDUCE-3071. app master configuration web UI link under the Job menu
     opens up application menu. (thomas graves  via mahadev)
 
     MAPREDUCE-3067. Ensure exit-code is set correctly for containers. (Hitesh
@@ -6041,7 +6279,7 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-3054. Unable to kill submitted jobs. (mahadev)
 
     MAPREDUCE-3021. Change base urls for RM web-ui. (Thomas Graves via
-    acmurthy) 
+    acmurthy)
 
     MAPREDUCE-3041. Fixed ClientRMProtocol to provide min/max resource
     capabilities along-with new ApplicationId for application submission.
@@ -6065,16 +6303,13 @@ Release 0.23.0 - 2011-11-01
     via acmurthy)
 
     MAPREDUCE-3050. Add ability to get resource usage information for
-    applications and nodes. (Robert Evans via acmurthy) 
+    applications and nodes. (Robert Evans via acmurthy)
 
     MAPREDUCE-3113. Ensure bin/yarn and bin/yarn-daemon.sh identify the root
-    of the install properly. (Xie Xianshan via acmurthy) 
-
-    MAPREDUCE-3137. Fix broken merge of MAPREDUCE-2179. (Hitesh Shah via
-    acmurthy) 
+    of the install properly. (Xie Xianshan via acmurthy)
 
     MAPREDUCE-2792. Replace usage of node ip-addresses with hostnames.
-    (vinodkv via acmurthy) 
+    (vinodkv via acmurthy)
 
     MAPREDUCE-3112. Fixed recursive sourcing of HADOOP_OPTS environment
     variable. (Eric Yang)
@@ -6085,7 +6320,7 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-2913. Fixed TestMRJobs.testFailingMapper to assert the correct
     TaskCompletionEventStatus. (Jonathan Eagles via vinodkv)
 
-    MAPREDUCE-2794. [MR-279] Incorrect metrics value for AvailableGB per 
+    MAPREDUCE-2794. [MR-279] Incorrect metrics value for AvailableGB per
     queue per user. (John George via mahadev)
 
     MAPREDUCE-2783. Fixing RM web-UI to show no tracking-URL when AM
@@ -6101,19 +6336,19 @@ Release 0.23.0 - 2011-11-01
     frameworks. (Hitesh Shah via acmurthy)
 
     MAPREDUCE-2802. Ensure JobHistory filenames have jobId. (Jonathan Eagles
-    via acmurthy) 
+    via acmurthy)
 
     MAPREDUCE-2876. Use a different config for ContainerAllocationExpirer.
-    (Anupam Seth via acmurthy) 
+    (Anupam Seth via acmurthy)
 
     MAPREDUCE-3153. Fix TestFileOutputCommitter which was broken by
-    MAPREDUCE-2702. (mahadev via acmurthy) 
+    MAPREDUCE-2702. (mahadev via acmurthy)
 
     MAPREDUCE-3123. Fix NM to quote symlink names to escape special
-    characters. (Hitesh Shah via acmurthy) 
+    characters. (Hitesh Shah via acmurthy)
 
     MAPREDUCE-3154. Fix JobSubmitter to check for output specs before copying
-    job submission files to fail fast. (Abhijit Suresh Shingate via acmurthy) 
+    job submission files to fail fast. (Abhijit Suresh Shingate via acmurthy)
 
     MAPREDUCE-3158. Fix test failures in MRv1 due to default framework being
     set to yarn. (Hitesh Shah via acmurthy)
@@ -6128,7 +6363,7 @@ Release 0.23.0 - 2011-11-01
     to all the services. (Thomas Graves via vinodkv)
 
     MAPREDUCE-3126. Fixed a corner case in CapacityScheduler where headroom
-    wasn't updated on changes to cluster size. (acmurthy) 
+    wasn't updated on changes to cluster size. (acmurthy)
 
     MAPREDUCE-3140. Fixed the invalid JobHistory URL for failed
     applications. (Subroto Sanyal via vinodkv)
@@ -6137,31 +6372,31 @@ Release 0.23.0 - 2011-11-01
     task-attempts for obtaining task's progress. (Hitesh Shah via vinodkv)
 
     MAPREDUCE-2666. Retrieve shuffle port number from JobHistory on MR AM
-    restart. (Jonathan Eagles via acmurthy) 
+    restart. (Jonathan Eagles via acmurthy)
 
-    MAPREDUCE-2789. Complete schedulingInfo on CLI. (Eric Payne via acmurthy) 
+    MAPREDUCE-2789. Complete schedulingInfo on CLI. (Eric Payne via acmurthy)
 
     MAPREDUCE-3170. Fixed job output commit for deep hierarchies. (Hitesh Shah
     via acmurthy)
 
     MAPREDUCE-3124. Fixed location of native libs i.e. libhadoop.so for
-    containers. (John George via acmurthy) 
+    containers. (John George via acmurthy)
 
-    MAPREDUCE-3057. Job History Server goes of OutOfMemory with 1200 Jobs 
+    MAPREDUCE-3057. Job History Server goes of OutOfMemory with 1200 Jobs
     and Heap Size set to 10 GB. (Eric Payne via mahadev)
 
     MAPREDUCE-2840. mr279 TestUberAM.testSleepJob test fails. (jonathan eagles
     via mahadev)
 
     MAPREDUCE-3190. Ensure bin/yarn fails early with a clear error message
-    when HADOOP_COMMON_HOME or HADOOP_HDFS_HOME are not set. (todd & acmurthy 
+    when HADOOP_COMMON_HOME or HADOOP_HDFS_HOME are not set. (todd & acmurthy
     via acmurthy)
 
     MAPREDUCE-3189. Add link decoration back to MR2's CSS. (Todd Lipcon via
     mahadev)
-    
+
     MAPREDUCE-3127. Changed default value of yarn.resourcemanager.acl.enable
-    to true and added some more documentation. (acmurthy) 
+    to true and added some more documentation. (acmurthy)
 
     MAPREDUCE-3032. Fixed TaskAttemptImpl so that JobHistory can have error
     information about failed tasks. (Devaraj K via vinodkv)
@@ -6169,16 +6404,19 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-3196. TestLinuxContainerExecutorWithMocks fails on Mac OSX.
     (Arun Murthy via mahadev)
 
-    MAPREDUCE-3197. TestMRClientService failing on building clean checkout of 
+    MAPREDUCE-3197. TestMRClientService failing on building clean checkout of
     branch 0.23 (mahadev)
 
     MAPREDUCE-2762. Cleanup MR staging directory on completion. (mahadev via
-    acmurthy) 
+    acmurthy)
 
     MAPREDUCE-3165. Ensure logging options are set correctly for MR AM and
-    tasks. (todd via acmurthy) 
+    tasks. (todd via acmurthy)
 
     MAPREDUCE-3203. Fix some javac warnings in MRAppMaster. (mahadev)
+
+    MAPREDUCE-3199. Fixed pom files to include correct log4j configuration for
+    tests. (vinodkv)
 
     MAPREDUCE-3162. Separated application-init and container-init event types
     in NodeManager's Application state machine. (Todd Lipcon via vinodkv)
@@ -6187,30 +6425,30 @@ Release 0.23.0 - 2011-11-01
     of wrong framework name. (Hitesh Shah via vinodkv)
 
     MAPREDUCE-3181. Fixed MapReduce runtime to load yarn-default.xml and
-    yarn-site.xml. (acmurthy) 
+    yarn-site.xml. (acmurthy)
 
     MAPREDUCE-2788. Normalize resource requests in FifoScheduler
-    appropriately. (Ahmed Radwan via acmurthy) 
+    appropriately. (Ahmed Radwan via acmurthy)
 
-    MAPREDUCE-2693. Fix NPE in job-blacklisting. (Hitesh Shah via acmurthy) 
+    MAPREDUCE-2693. Fix NPE in job-blacklisting. (Hitesh Shah via acmurthy)
 
     MAPREDUCE-3208. Fix NPE task/container log appenders. (liangzhwa via
-    acmurthy) 
+    acmurthy)
 
-    MAPREDUCE-3212. Fix usage/help message for bin/yarn. (Bhallamudi Venkata 
-    Siva Kamesh via acmurthy) 
+    MAPREDUCE-3212. Fix usage/help message for bin/yarn. (Bhallamudi Venkata
+    Siva Kamesh via acmurthy)
 
     MAPREDUCE-3179. Ensure failed tests exit with right error code. (Jonathan
     Eagles via acmurthy)
 
-    MAPREDUCE-3188. Ensure correct shutdown in services. (todd via acmurthy) 
+    MAPREDUCE-3188. Ensure correct shutdown in services. (todd via acmurthy)
 
-    MAPREDUCE-3226. Fix shutdown of fetcher threads. (vinodkv via acmurthy) 
+    MAPREDUCE-3226. Fix shutdown of fetcher threads. (vinodkv via acmurthy)
 
     MAPREDUCE-3070. Fix NodeManager to use ephemeral ports by default.
-    (Devaraj K via acmurthy) 
+    (Devaraj K via acmurthy)
 
-    MAPREDUCE-3242. Trunk compilation broken with bad interaction from 
+    MAPREDUCE-3242. Trunk compilation broken with bad interaction from
     MAPREDUCE-3070 and MAPREDUCE-3239. (mahadev)
 
     MAPREDUCE-3058. Fixed MR YarnChild to report failure when task throws an
@@ -6223,10 +6461,10 @@ Release 0.23.0 - 2011-11-01
     application on AM crash. (Mahadev Konar via vinodkv)
 
     MAPREDUCE-3028. Added job-end notification support. (Ravi Prakash via
-    acmurthy) 
+    acmurthy)
 
-    MAPREDUCE-3249. Ensure shuffle-port is correctly used duringMR AM recovery. 
-    (vinodkv via acmurthy) 
+    MAPREDUCE-3249. Ensure shuffle-port is correctly used duringMR AM recovery.
+    (vinodkv via acmurthy)
 
     MAPREDUCE-3252. Fix map tasks to not rewrite data an extra time when
     map output fits in spill buffer. (todd)
@@ -6234,26 +6472,31 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-3159. Ensure DefaultContainerExecutor doesn't delete application
     directories during app-init. (todd via acmurthy)
 
-    MAPREDUCE-2746. Yarn servers can't communicate with each other with 
+    MAPREDUCE-3248. Fixed log4j properties. (vinodkv via acmurthy)
+
+    MAPREDUCE-2746. Yarn servers can't communicate with each other with
     hadoop.security.authorization set to true (acmurthy via mahadev)
 
     MAPREDUCE-2821. Added missing fields (resourcePerMap & resourcePerReduce)
     to JobSummary logs. (mahadev via acmurthy)
 
     MAPREDUCE-3253. Fixed ContextFactory to clone JobContext correctly.
-    (acmurthy) 
+    (acmurthy)
 
     MAPREDUCE-3263. Fixed the MAPREDUCE-3028 commit which broke MR1. (Hitesh
-    Shah via acmurthy) 
+    Shah via acmurthy)
 
     MAPREDUCE-3269. Fixed log4j properties to correctly set logging options
-    for JobHistoryServer vis-a-vis JobSummary logs. (mahadev via acmurthy) 
+    for JobHistoryServer vis-a-vis JobSummary logs. (mahadev via acmurthy)
 
-    MAPREDUCE-3250. When AM restarts, client keeps reconnecting to the new AM 
+    MAPREDUCE-2977. Fix ResourceManager to renew HDFS delegation tokens for
+    applications. (acmurthy)
+
+    MAPREDUCE-3250. When AM restarts, client keeps reconnecting to the new AM
     and prints a lots of logs. (vinodkv via mahadev)
 
     MAPREDUCE-3254. Fixed streaming to set the job.jar by using the right
-    JobConf ctor. (acmurthy) 
+    JobConf ctor. (acmurthy)
 
     MAPREDUCE-3264. mapreduce.job.user.name needs to be set automatically.
     (acmurthy via mahadev)
@@ -6262,17 +6505,17 @@ Release 0.23.0 - 2011-11-01
     etc. (Jonathan Eagles via acmurthy)
 
     MAPREDUCE-3257. Added authorization checks for the protocol between
-    ResourceManager and ApplicationMaster. (vinodkv via acmurthy) 
+    ResourceManager and ApplicationMaster. (vinodkv via acmurthy)
 
     MAPREDUCE-3259. Added java.library.path of NodeManager to
-    ContainerLocalizer in LinuxContainerExecutor. (Kihwal Lee via acmurthy) 
+    ContainerLocalizer in LinuxContainerExecutor. (Kihwal Lee via acmurthy)
 
     MAPREDUCE-3279. Fixed TestJobHistoryParsing which assumed user name to be
     mapred all the time. (Siddharth Seth via acmurthy)
 
     MAPREDUCE-3240. Fixed NodeManager to be able to forcefully cleanup its
     containers (process-trees) irrespective of whether the container succeeded,
-    or killed. Contributed by Hitesh Shah.
+    or killed. (Hitesh Shah via vinodkv)
 
     MAPREDUCE-3281. Fixed a bug in TestLinuxContainerExecutorWithMocks. (vinodkv)
 
@@ -6280,27 +6523,27 @@ Release 0.23.0 - 2011-11-01
     via acmurthy)
 
     MAPREDUCE-3284. Moved JobQueueClient to hadoop-mapreduce-client-core.
-    (acmurthy) 
+    (acmurthy)
 
-    MAPREDUCE-3282. bin/mapred job -list throws exception. (acmurthy via 
+    MAPREDUCE-3282. bin/mapred job -list throws exception. (acmurthy via
     mahadev)
 
     MAPREDUCE-3186. User jobs are getting hanged if the Resource manager
-    process goes down and comes up while job is getting executed. 
+    process goes down and comes up while job is getting executed.
     (Eric Payne via mahadev)
 
-    MAPREDUCE-3285. Tests on branch-0.23 failing (Siddharth Seth via mahadev)
+    MAPREDUCE-3209. Jenkins reports 160 FindBugs warnings (mahadev)
 
     MAPREDUCE-3258. Fixed AM & JobHistory web-ui to display counters properly.
     (Siddharth Seth via acmurthy)
 
-    MAPREDUCE-3290. Fixed a NPE in ClientRMService. (acmurthy) 
+    MAPREDUCE-3290. Fixed a NPE in ClientRMService. (acmurthy)
 
     MAPREDUCE-3185. RM Web UI does not sort the columns in some cases.
     (Jonathan Eagles via mahadev)
 
-    MAPREDUCE-3292. In secure mode job submission fails with Provider 
-    org.apache.hadoop.mapreduce.security.token.JobTokenIndentifier$Renewer 
+    MAPREDUCE-3292. In secure mode job submission fails with Provider
+    org.apache.hadoop.mapreduce.security.token.JobTokenIndentifier$Renewer
     not found. (mahadev)
 
     MAPREDUCE-3296. Fixed the remaining nine FindBugs warnings. (vinodkv)
@@ -6309,32 +6552,16 @@ Release 0.23.0 - 2011-11-01
     decommissioned node to shutdown. (Devaraj K via vinodkv)
 
     MAPREDUCE-3304. Fixed intermittent test failure due to a race in
-    TestRMContainerAllocator#testBlackListedNodes. (Ravi Prakash via acmurthy) 
+    TestRMContainerAllocator#testBlackListedNodes. (Ravi Prakash via acmurthy)
 
     MAPREDUCE-3306. Fixed a bug in NodeManager ApplicationImpl that was causing
     NodeManager to crash. (vinodkv)
 
-    MAPREDUCE-3295. TestAMAuthorization failing on branch 0.23. (vinodkv via mahadev)
-
-    MAPREDUCE-3183. hadoop-assemblies/src/main/resources/assemblies/hadoop-mapreduce-dist.xml
-    missing license header. (Hitesh Shah via tucu).
-
-    MAPREDUCE-3003. Publish MR JARs to Maven snapshot repository. (tucu)
-
-    MAPREDUCE-3199. Fixed pom files to include correct log4j configuration for
-    tests. (vinodkv)
-
-    MAPREDUCE-3204. mvn site:site fails on MapReduce. (tucu)
-
-    MAPREDUCE-3248. Fixed log4j properties. (vinodkv via acmurthy)
-
     MAPREDUCE-3256. Added authorization checks for the protocol between
-    NodeManager and ApplicationMaster. (vinodkv via acmurthy) 
+    NodeManager and ApplicationMaster. (vinodkv via acmurthy)
 
     MAPREDUCE-3274. Fixed a race condition in MRAppMaster that was causing a
     task-scheduling deadlock. (Robert Joseph Evans via vinodkv)
-
-    MAPREDUCE-3171 merge from trunk reverted changes from MAPREDUCE-2747 MAPREDUCE-3240.
 
     MAPREDUCE-3313. Fixed initialization of ClusterMetrics which was failing
     TestResourceTrackerService sometimes. (Hitesh Shah via vinodkv)
@@ -6353,20 +6580,20 @@ Release 0.23.0 - 2011-11-01
     (chakravarthy via acmurthy)
 
     MAPREDUCE-3321. Disabled a few MR tests for 0.23. (Hitesh Shah via
-    acmurthy) 
+    acmurthy)
 
-    MAPREDUCE-3220. Fixed TestCombineOutputCollector. (Devaraj K via acmurthy) 
+    MAPREDUCE-3220. Fixed TestCombineOutputCollector. (Devaraj K via acmurthy)
 
-    MAPREDUCE-3103. Implement Job ACLs for MRAppMaster. 
+    MAPREDUCE-3103. Implement Job ACLs for MRAppMaster.
     (mahadev)
-    
+
     MAPREDUCE-3241. [Rumen] Fix Rumen to ignore the AMStartedEvent. (amarrk)
 
     MAPREDUCE-3166. [Rumen] Make Rumen use job history api instead of relying
-    on current history file name format. (Ravi Gummadi via amarrk)
+    on current history file name format. (Ravi Gummadi)
 
     MAPREDUCE-3157. [Rumen] Fix TraceBuilder to handle 0.20 history file
-                    names also. (Ravi Gummadi via amarrk)
+    names also. (Ravi Gummadi)
 
     MAPREDUCE-3081. Fix vaidya startup script. (gkesavan via suhas).
 
@@ -6376,9 +6603,9 @@ Release 0.23.0 - 2011-11-01
     (jitendra)
 
     MAPREDUCE-3237. Move LocalJobRunner to hadoop-mapreduce-client-core.
-    (tomwhite via acmurthy) 
+    (tomwhite via acmurthy)
 
-    MAPREDUCE-3316. Rebooted link is not working properly. 
+    MAPREDUCE-3316. Rebooted link is not working properly.
     (Bhallamudi Venkata Siva Kamesh via mahadev)
 
     MAPREDUCE-3317. Rumen TraceBuilder is emiting null as hostname.
@@ -6387,8 +6614,8 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-3332. contrib/raid compile breaks due to changes in hdfs/protocol/datatransfer/
     Sender#writeBlock related to checksum handling (Hitesh Shah via mahadev)
 
-    MAPREDUCE-3337. Added missing license headers. (acmurthy) 
-    
+    MAPREDUCE-3337. Added missing license headers. (acmurthy)
+
 Release 0.22.1 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -6402,7 +6629,7 @@ Release 0.22.1 - Unreleased
   BUG FIXES
 
     MAPREDUCE-3837. Job tracker is not able to recover jobs after crash.
-    (Mayank Bansal via shv) 
+    (Mayank Bansal via shv)
 
 Release 0.22.0 - 2011-11-29
 
@@ -6491,7 +6718,7 @@ Release 0.22.0 - 2011-11-29
 
     MAPREDUCE-1851. Documents configuration parameters in streaming.
     (amareshwari)
-    
+
     MAPREDUCE-1868. Add a read and connection timeout to JobClient while
     pulling tasklogs. (Krishna Ramachandran via acmurthy)
 
@@ -6511,7 +6738,7 @@ Release 0.22.0 - 2011-11-29
     Also includes compatibility with security enhancements, and scalability
     improvements. (Amar Kamat, Rahul Singh, Hong Tang, and cdouglas)
 
-    MAPREDUCE-1848. Put number of speculative, data local, rack local 
+    MAPREDUCE-1848. Put number of speculative, data local, rack local
     tasks in JobTracker metrics. (Scott Chen via dhruba)
 
     MAPREDUCE-1935. Makes the Distcp to work in a secure environment.
@@ -6529,8 +6756,8 @@ Release 0.22.0 - 2011-11-29
     specify a credentials file. The tokens from there will be passed to the job.
     (Jitendra Pandey and Owen O'Malley via ddas)
 
-    MAPREDUCE-1624. Documents the job credentials and associated details to do 
-    with delegation tokens (on the client side). 
+    MAPREDUCE-1624. Documents the job credentials and associated details to do
+    with delegation tokens (on the client side).
     (Jitendra Pandey and Devaraj Das via ddas)
 
     MAPREDUCE-1834. TestSimulatorDeterministicReplay timesout on trunk.
@@ -6549,7 +6776,7 @@ Release 0.22.0 - 2011-11-29
     MAPREDUCE-1881. Improve TaskTrackerInstrumentation to enable collection of
     advanced metrics. (Matei Zaharia via acmurthy)
 
-    MAPREDUCE-1548. Hadoop archives preserve times and other properties from 
+    MAPREDUCE-1548. Hadoop archives preserve times and other properties from
     original files. (Rodrigo Schmidt via dhruba)
 
     MAPREDUCE-1517. Supports streaming job to run in the background. (Bochun Bai
@@ -6562,7 +6789,7 @@ Release 0.22.0 - 2011-11-29
 
     MAPREDUCE-2147. Remove redundant lines in JobInProgress ctor.
     (Harsh J Chouraria via cutting)
-   
+
     HADOOP-7007. Update the hudson-test-patch ant target to work with the
     latest test-patch.sh script (gkesavan)
 
@@ -6575,7 +6802,7 @@ Release 0.22.0 - 2011-11-29
     MAPREDUCE-1892. RaidNode can allow layered policies more efficiently.
     (Ramkumar Vadali via schen)
 
-    MAPREDUCE-1592. Generate Eclipse's .classpath file from Ivy config. 
+    MAPREDUCE-1592. Generate Eclipse's .classpath file from Ivy config.
     (tomwhite via nigel)
 
     MAPREDUCE-2073. TestTrackerDistributedCacheManager should be up-front
@@ -6620,13 +6847,13 @@ Release 0.22.0 - 2011-11-29
     MAPREDUCE-2505. Explain how to use ACLs in the fair scheduler.
     (matei via eli)
 
-    MAPREDUCE-3138. Add a utility to help applications bridge changes in 
+    MAPREDUCE-3138. Add a utility to help applications bridge changes in
     Context Objects APIs due to MAPREDUCE-954. (omalley via acmurthy)
 
   OPTIMIZATIONS
 
     MAPREDUCE-1354. Enhancements to JobTracker for better performance and
-    scalability. (Arun C. Murthy & Richard King via acmurthy) 
+    scalability. (Arun C. Murthy & Richard King via acmurthy)
 
     MAPREDUCE-1829. JobInProgress.findSpeculativeTask should use min() to
     find the candidate instead of sort(). (Scott Chen via vinodkv)
@@ -6638,12 +6865,12 @@ Release 0.22.0 - 2011-11-29
 
     MAPREDUCE-1707. TaskRunner can get NPE in getting ugi from TaskTracker.
     (Vinod Kumar Vavilapalli)
-    
+
     MAPREDUCE-1532. Ensures that delegation tokens is obtained as the
     actual user when the proxy-user is used for submitting jobs. Also
     refactors the DelegationTokenToRenew class. (ddas)
 
-    MAPREDUCE-1558. Fixes MRAdmin to look up the principal of the 
+    MAPREDUCE-1558. Fixes MRAdmin to look up the principal of the
     JobTracker and use that in the RefreshUserToGroupsMapping protocol and
     RefreshAuthorizationPolicyProtocol. (Boris Shkolnik via ddas)
 
@@ -6667,7 +6894,7 @@ Release 0.22.0 - 2011-11-29
     MAPREDUCE-1225. Fixes DistributedCache to check if the file is fresh or not,
     for the first localization also. (Zhong Wang via amareshwari)
 
-    MAPREDUCE-1559. Fixes the token renewer to use the JobTracker's 
+    MAPREDUCE-1559. Fixes the token renewer to use the JobTracker's
     credentials for talking to the NameNode. (ddas)
 
     MAPREDUCE-1492. Delete  obsolete har files used on the parity files
@@ -6685,13 +6912,13 @@ Release 0.22.0 - 2011-11-29
     MAPREDUCE-1864. Removes uninitialized/unused variables in
     org.apache.hadoop.streaming.PipeMapRed. (amareshwari)
 
-    MAPREDUCE-1888. Fixes Streaming to override output key and value types, 
+    MAPREDUCE-1888. Fixes Streaming to override output key and value types,
     only if mapper/reducer is a command. (Ravi Gummadi via amareshwari)
 
     MAPREDUCE-577. Fixes duplicate records in StreamXmlRecordReader.
     (Ravi Gummadi via amareshwari)
 
-    MAPREDUCE-1894. Fixed a bug in DistributedRaidFileSystem.readFully() 
+    MAPREDUCE-1894. Fixed a bug in DistributedRaidFileSystem.readFully()
     that was causing it to loop infinitely. (Ramkumar Vadali via dhruba)
 
     MAPREDUCE-1838. Reduce the time needed for raiding a bunch of files
@@ -6710,7 +6937,7 @@ Release 0.22.0 - 2011-11-29
     MAPREDUCE-1621. Fixes NPE in TextOutputReader.getLastOutput if it has never
     read any output. (amareshwari)
 
-    MAPREDUCE-1911. Fixes errors in -info message in streaming. (amareshwari) 
+    MAPREDUCE-1911. Fixes errors in -info message in streaming. (amareshwari)
 
     MAPREDUCE-1772. Corrects errors in streaming documentation in forrest.
     (amareshwari)
@@ -6721,7 +6948,7 @@ Release 0.22.0 - 2011-11-29
     mapping that the tasks use at runtime for looking up delegation tokens.
     (Boris Shkolnik via ddas)
 
-    MAPREDUCE-1701. Fixes a problem to do with exception handling in 
+    MAPREDUCE-1701. Fixes a problem to do with exception handling in
     delegation-token renewals. (Boris Shkolnik via ddas)
 
     MAPREDUCE-1686. Fixes StreamUtil.goodClassOrNull to find classes without
@@ -6731,7 +6958,7 @@ Release 0.22.0 - 2011-11-29
     the owner of the localized file in the mapping from cache URIs to
     CacheStatus objects. (ddas)
 
-    MAPREDUCE-1982. Fixes Rumen's TraceBuilder to extract job name from either 
+    MAPREDUCE-1982. Fixes Rumen's TraceBuilder to extract job name from either
     of configuration properties "mapreduce.job.name" and "mapred.job.name".
     (Ravi Gummadi via amareshwari)
 
@@ -6744,7 +6971,7 @@ Release 0.22.0 - 2011-11-29
     MAPREDUCE-1992. Fixes a problem to do with bringing up the JobTracker in
     unsecure mode. (Kan Zhang via ddas)
 
-    MAPREDUCE-1999. Fixes ClientProtocol to use the correct 
+    MAPREDUCE-1999. Fixes ClientProtocol to use the correct
     DelegationTokenSelector. (Jitendra Pandey via ddas)
 
     MAPREDUCE-1780. AccessControlList.toString() is used for serialization of
@@ -6761,7 +6988,7 @@ Release 0.22.0 - 2011-11-29
     MAPREDUCE-1670. RAID policies should not scan their own destination path.
     (Ramkumar Vadali via dhruba)
 
-    MAPREDUCE-1668. RaidNode Hars a directory only if all its parity files 
+    MAPREDUCE-1668. RaidNode Hars a directory only if all its parity files
     have been created. (Ramkumar Vadali via dhruba)
 
     MAPREDUCE-2021. Fixes duplicate hostnames in CombineFileInputFormat's
@@ -6806,7 +7033,7 @@ Release 0.22.0 - 2011-11-29
     MAPREDUCE-2029. DistributedRaidFileSystem removes itself from FileSystem
     cache when it is closed. (Ramkumar Vadali via dhruba)
 
-    MAPREDUCE-1816. HAR files used for RAID parity-bite have configurable 
+    MAPREDUCE-1816. HAR files used for RAID parity-bite have configurable
     partfile size. (Ramkumar Vadali via dhruba)
 
     MAPREDUCE-2082. Fixes Pipes to create the jobtoken file in the right
@@ -6892,7 +7119,7 @@ Release 0.22.0 - 2011-11-29
 
     MAPREDUCE-2283. Add timeout for Raid Tests (Ramkumar Vadali via schen)
 
-    MAPREDUCE-1754. Replace mapred.persmissions.supergroup with an 
+    MAPREDUCE-1754. Replace mapred.persmissions.supergroup with an
     acl : mapreduce.cluster.administrators (Amareshwari Sriramadasu via shv)
 
     MAPREDUCE-2256. FairScheduler fairshare preemption from multiple pools may
@@ -6904,7 +7131,7 @@ Release 0.22.0 - 2011-11-29
     MAPREDUCE-2200. TestUmbilicalProtocolWithJobToken is failing without Krb
     evironment: needs to be conditional. (cos)
 
-    MAPREDUCE-2077. Resolve name clash in the deprecated 
+    MAPREDUCE-2077. Resolve name clash in the deprecated
     o.a.h.util.MemoryCalculatorPlugin (Luke Lu via shv)
 
     MAPREDUCE-2188. The new API MultithreadedMapper doesn't initialize
@@ -6944,7 +7171,7 @@ Release 0.22.0 - 2011-11-29
 
     MAPREDUCE-2336. Tool-related packages should be in the Tool javadoc group.
     (tomwhite)
-    
+
     MAPREDUCE-2394. JUnit output format doesn't propagate into raid contrib
     build. (todd)
 
@@ -6987,13 +7214,16 @@ Release 0.22.0 - 2011-11-29
     MAPREDUCE-2571. CombineFileInputFormat.getSplits throws a
     java.lang.ArrayStoreException. (Bochun Bai via todd)
 
-    MAPREDUCE-2767. Remove Linux task-controller. (Milind Bhandarkar via shv) 
+    MAPREDUCE-2767. Remove Linux task-controller. (Milind Bhandarkar via shv)
 
-    MAPREDUCE-2991. queueinfo.jsp fails to show queue status for Capacity 
+    MAPREDUCE-2991. queueinfo.jsp fails to show queue status for Capacity
     scheduler if queue names contain special symbols. (Priyo Mustafi via shv)
 
+    MAPREDUCE-2779. JobSplitWriter.java can't handle large job.split file.
+    (Ming Ma via shv)
+
     MAPREDUCE-2531. Fixed jobcontrol to downgrade JobID. (Robert Evans via
-    acmurthy) 
+    acmurthy)
 
     MAPREDUCE-3139. SlivePartitioner generates negative partitions. (jghoman)
 
@@ -7034,21 +7264,18 @@ Release 0.21.1 - Unreleased
 
     MAPREDUCE-2317. Fix a NPE in HadoopArchives.  (Devaraj K via szetszwo)
 
-    MAPREDUCE-2127. mapreduce trunk builds are filing on hudson. 
+    MAPREDUCE-2127. mapreduce trunk builds are filing on hudson.
     (Bruno Mahé via eli)
-
-    MAPREDUCE-2779. JobSplitWriter.java can't handle large job.split file.
-    (Ming Ma via shv)
 
 Release 0.21.0 - 2010-08-13
 
   INCOMPATIBLE CHANGES
 
-    MAPREDUCE-516. Fix the starvation problem in the Capacity Scheduler 
+    MAPREDUCE-516. Fix the starvation problem in the Capacity Scheduler
     when running High RAM Jobs. (Arun Murthy via yhemanth)
 
-    MAPREDUCE-358. Change org.apache.hadoop.examples. AggregateWordCount 
-    and org.apache.hadoop.examples.AggregateWordHistogram to use new 
+    MAPREDUCE-358. Change org.apache.hadoop.examples. AggregateWordCount
+    and org.apache.hadoop.examples.AggregateWordHistogram to use new
     mapreduce api. (Amareshwari Sriramadasu via sharad)
 
     MAPREDUCE-245. Change Job and jobcontrol classes to use the List interface
@@ -7057,7 +7284,7 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-766. Enhanced list-blacklisted-trackers to display reasons
     for blacklisting a node. (Sreekanth Ramakrishnan via yhemanth)
 
-    MAPREDUCE-817. Add a cache for retired jobs with minimal job info and 
+    MAPREDUCE-817. Add a cache for retired jobs with minimal job info and
     provide a way to access history file url. (sharad)
 
     MAPREDUCE-711. Moved Distributed Cache from Common to Map/Reduce
@@ -7070,16 +7297,16 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-479. Provide full task id to map output servlet rather than the
     reduce id, only. (Jiaqi Tan via cdouglas)
 
-    MAPREDUCE-873. Simplify job recovery. Incomplete jobs are resubmitted on 
+    MAPREDUCE-873. Simplify job recovery. Incomplete jobs are resubmitted on
     jobtracker restart. Removes a public constructor in JobInProgress. (sharad)
 
     HADOOP-6230. Moved process tree and memory calculator related classes from
     Common to Map/Reduce. (Vinod Kumar Vavilapalli via yhemanth)
 
-    MAPREDUCE-157. Refactor job history APIs and change the history format to 
+    MAPREDUCE-157. Refactor job history APIs and change the history format to
     JSON. (Jothi Padmanabhan via sharad)
 
-    MAPREDUCE-849. Rename configuration properties. (Amareshwari Sriramadasu 
+    MAPREDUCE-849. Rename configuration properties. (Amareshwari Sriramadasu
     via sharad)
 
     MAPREDUCE-1287. Only call the partitioner with more than one reducer.
@@ -7096,7 +7323,7 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-1683. Remove JNI calls from ClusterStatus cstr. (Arun Murthy and
     Luke Lu via cdouglas)
 
-    MAPREDUCE-1855. Makes the refresh methods (for groups and proxy users) 
+    MAPREDUCE-1855. Makes the refresh methods (for groups and proxy users)
     independent of the client side configuration. (Boris Shkolnik via ddas)
 
   NEW FEATURES
@@ -7122,17 +7349,17 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-637. Add an example, distbbp, which able to compute the n th bit
     of Pi for some large n.  (szetszwo)
 
-    MAPREDUCE-532. Provide a way to limit the number of used slots 
+    MAPREDUCE-532. Provide a way to limit the number of used slots
     per queue in the capacity scheduler.
     (Rahul Kumar Singh via yhemanth)
 
-    MAPREDUCE-467. Provide ability to collect statistics about total tasks 
+    MAPREDUCE-467. Provide ability to collect statistics about total tasks
     and succeeded tasks in different time windows. (sharad)
 
     MAPREDUCE-740. Log a job-summary at the end of a job, while allowing it
     to be configured to use a custom appender if desired. (acmurthy)
 
-    MAPREDUCE-814. Provide a way to configure completed job history files 
+    MAPREDUCE-814. Provide a way to configure completed job history files
     to be on HDFS. (sharad)
 
     MAPREDUCE-800. MRUnit should support the new API. (Aaron Kimball via
@@ -7144,7 +7371,7 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-768. Provide an option to dump jobtracker configuration in JSON
     format to standard output. (V.V.Chaitanya Krishna via yhemanth)
 
-    MAPREDUCE-824. Add support for a hierarchy of queues in the capacity 
+    MAPREDUCE-824. Add support for a hierarchy of queues in the capacity
     scheduler. (Rahul Kumar Singh via yhemanth)
 
     MAPREDUCE-751. Add Rumen, a tool for extracting statistics from job tracker
@@ -7167,7 +7394,7 @@ Release 0.21.0 - 2010-08-13
     replacement for JobClient. (Amareshwari Sriramadasu via acmurthy)
 
     MAPREDUCE-775. Add native and streaming support for Vertica as an input
-    or output format taking advantage of parallel read and write properties of 
+    or output format taking advantage of parallel read and write properties of
     the DBMS. (Omer Trajman via ddas)
 
     MAPREDUCE-679. XML-based metrics as JSP servlet for JobTracker.
@@ -7179,10 +7406,10 @@ Release 0.21.0 - 2010-08-13
     Tamas Sarlos, Anirban Dasgupta, Guanying Wang, and Hong Tang via cdouglas)
 
     MAPREDUCE-1383. Automates fetching of delegation tokens in File*Formats
-    Distributed Cache and Distcp. Also, provides a config 
+    Distributed Cache and Distcp. Also, provides a config
     mapreduce.job.hdfs-servers that the jobs can populate with a comma
     separated list of namenodes. The job client automatically fetches
-    delegation tokens from those namenodes. (Boris Shkolnik via ddas)    
+    delegation tokens from those namenodes. (Boris Shkolnik via ddas)
 
     MAPREDUCE-698. Per-pool task limits for the fair scheduler.
     (Kevin Peterson via matei)
@@ -7198,11 +7425,11 @@ Release 0.21.0 - 2010-08-13
     tokens and secrets can be sent by the Job client to the JobTracker.
     (Boris Shkolnik via ddas)
 
-    HDFS-503. This patch implements an optional layer over HDFS that 
-    implements offline erasure-coding.  It can be used to reduce the 
+    HDFS-503. This patch implements an optional layer over HDFS that
+    implements offline erasure-coding.  It can be used to reduce the
     total storage requirements of HDFS.  (dhruba)
 
-    MAPREDUCE-1432. Adds hooks in the jobtracker and tasktracker 
+    MAPREDUCE-1432. Adds hooks in the jobtracker and tasktracker
     for loading the tokens in the user's ugi. This is required
     for the copying of files from the hdfs. (ddas)
 
@@ -7214,7 +7441,7 @@ Release 0.21.0 - 2010-08-13
 
     MAPREDUCE-1433. Add a delegation token for MapReduce. (omalley)
 
-    MAPREDUCE-1307. Introduces the Job level ACLs feature. 
+    MAPREDUCE-1307. Introduces the Job level ACLs feature.
     (Vinod Kumar Vavilapalli via ddas)
 
     MAPREDUCE-1430. JobTracker automatically renews delegation tokens for jobs.
@@ -7231,13 +7458,13 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-502. Allow jobtracker to be configured with zero completed jobs
     in memory. (Amar Kamat via sharad)
 
-    MAPREDUCE-416. Moves the history file to a "done" folder whenever a job 
+    MAPREDUCE-416. Moves the history file to a "done" folder whenever a job
     completes. (Amar Kamat via ddas)
 
     MAPREDUCE-646. Increase srcfilelist replication number in dictcp job.
     (Ravi Gummadi via szetszwo)
-   
-    HADOOP-6106. Updated hadoop-core and test jars from hudson trunk 
+
+    HADOOP-6106. Updated hadoop-core and test jars from hudson trunk
     build #12. (Giridharan Kesavan)
 
     MAPREDUCE-642. A option to distcp that allows preserving the full
@@ -7266,7 +7493,7 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-655. Change KeyValueLineRecordReader and KeyValueTextInputFormat
     to use new mapreduce api. (Amareshwari Sriramadasu via sharad)
 
-    MAPREDUCE-632. Merge TestCustomOutputCommitter with 
+    MAPREDUCE-632. Merge TestCustomOutputCommitter with
     TestCommandLineJobSubmission. (Jothi Padmanabhan via sharad)
 
     MAPREDUCE-627. Improves execution time of TestTrackerBlacklistAcrossJobs.
@@ -7290,16 +7517,16 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-785. Separate sub-test of TestReduceFetch to be included in
     MR-670. (Jothi Padmanabhan via cdouglas)
 
-    MAPREDUCE-784. Modify TestUserDefinedCounters to use LocalJobRunner 
+    MAPREDUCE-784. Modify TestUserDefinedCounters to use LocalJobRunner
     instead of MiniMR. (Jothi Padmanabhan via sharad)
 
-    HADOOP-6160. Fix releaseaudit target to run on specific directories. 
+    HADOOP-6160. Fix releaseaudit target to run on specific directories.
     (gkesavan)
 
     MAPREDUCE-782. Use PureJavaCrc32 in SpillRecord.  (Todd Lipcon via
     szetszwo)
 
-    MAPREDUCE-369. Change org.apache.hadoop.mapred.lib.MultipleInputs to 
+    MAPREDUCE-369. Change org.apache.hadoop.mapred.lib.MultipleInputs to
     use new api. (Amareshwari Sriramadasu via sharad)
 
     MAPREDUCE-373. Change org.apache.hadoop.mapred.lib.FieldSelectionMapReduce
@@ -7310,9 +7537,9 @@ Release 0.21.0 - 2010-08-13
 
     MAPREDUCE-793. Creates a new test that consolidates a few tests to
     include in the commit-test list. (Jothi Padmanabhan via ddas)
-    
+
     MAPREDUCE-797. Adds combiner support to MRUnit MapReduceDriver.
-    (Aaron Kimball via johan)    
+    (Aaron Kimball via johan)
 
     MAPREDUCE-656. Change org.apache.hadoop.mapred.SequenceFile* classes
     to use new mapreduce api. (Amareshwari Sriramadasu via sharad)
@@ -7320,17 +7547,17 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-670. Creates ant target for 10 mins patch test build.
     (Jothi Padmanabhan via gkesavan)
 
-    MAPREDUCE-375. Change org.apache.hadoop.mapred.lib.NLineInputFormat 
+    MAPREDUCE-375. Change org.apache.hadoop.mapred.lib.NLineInputFormat
     and org.apache.hadoop.mapred.MapFileOutputFormat to use new api.
     (Amareshwari Sriramadasu via ddas)
 
-    MAPREDUCE-779. Added node health failure counts into 
+    MAPREDUCE-779. Added node health failure counts into
     JobTrackerStatistics. (Sreekanth Ramakrishnan via yhemanth)
 
     MAPREDUCE-842. Setup secure permissions for localized job files,
     intermediate outputs and log files on tasktrackers.
     (Vinod Kumar Vavilapalli via yhemanth)
-    
+
     MAPREDUCE-478. Allow map and reduce jvm parameters, environment variables
     and ulimit to be set separately.
     Configuration changes:
@@ -7350,16 +7577,16 @@ Release 0.21.0 - 2010-08-13
 
     MAPREDUCE-712. Minor efficiency tweaks to RandomTextWriter. (cdouglas)
 
-    MAPREDUCE-870. Remove the job retire thread and the associated 
+    MAPREDUCE-870. Remove the job retire thread and the associated
     config parameters. (sharad)
 
     MAPREDUCE-874. Rename the PiEstimator example to QuasiMonteCarlo.
     (szetszwo)
 
-    MAPREDUCE-336. Allow logging level of map/reduce tasks to be configurable. 
+    MAPREDUCE-336. Allow logging level of map/reduce tasks to be configurable.
     Configuration changes:
-      add mapred.map.child.log.level 
-      add mapred.reduce.child.log.level 
+      add mapred.map.child.log.level
+      add mapred.reduce.child.log.level
     (acmurthy)
 
     MAPREDUCE-355. Update mapred.join package to use the new API. (Amareshwari
@@ -7380,10 +7607,10 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-788. Update gridmix2 to use the new API (Amareshwari Sriramadasu
     via cdouglas)
 
-    MAPREDUCE-875. Make DBRecordReader execute queries lazily. (Aaron Kimball 
+    MAPREDUCE-875. Make DBRecordReader execute queries lazily. (Aaron Kimball
     via enis)
 
-    MAPREDUCE-318. Modularizes the shuffle code. (Jothi Padmanabhan and 
+    MAPREDUCE-318. Modularizes the shuffle code. (Jothi Padmanabhan and
     Arun Murthy via ddas)
 
     MAPREDUCE-936. Allow a load difference for fairshare scheduler.
@@ -7395,7 +7622,7 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-898. Changes DistributedCache to use the new API.
     (Amareshwari Sriramadasu via ddas)
 
-    MAPREDUCE-144. Includes dump of the process tree in task diagnostics when 
+    MAPREDUCE-144. Includes dump of the process tree in task diagnostics when
     a task is killed due to exceeding memory limits.
     (Vinod Kumar Vavilapalli via yhemanth)
 
@@ -7417,7 +7644,7 @@ Release 0.21.0 - 2010-08-13
     to support regulating tasks for a job based on resources currently in use
     by that job. (dhruba)
 
-    MAPREDUCE-973. Move FailJob and SleepJob from examples to test. (cdouglas 
+    MAPREDUCE-973. Move FailJob and SleepJob from examples to test. (cdouglas
     via omalley)
 
     MAPREDUCE-966. Modify Rumen to clean up interfaces and simplify integration
@@ -7426,7 +7653,7 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-856. Setup secure permissions for distributed cache files.
     (Vinod Kumar Vavilapalli via yhemanth)
 
-    MAPREDUCE-885. More efficient SQL queries for DBInputFormat. (Aaron Kimball 
+    MAPREDUCE-885. More efficient SQL queries for DBInputFormat. (Aaron Kimball
     via enis)
 
     MAPREDUCE-284. Enables ipc.client.tcpnodelay in Tasktracker's Child.
@@ -7449,7 +7676,7 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-781. Let the name of distcp jobs be configurable. (Venkatesh S
     via cdouglas)
 
-    MAPREDUCE-975. Add an API in job client to get the history file url for 
+    MAPREDUCE-975. Add an API in job client to get the history file url for
     a given job id. (sharad)
 
     MAPREDUCE-905. Add Eclipse launch tasks for MapReduce. (Philip Zeyliger
@@ -7465,9 +7692,9 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-1011. Add build.properties to svn and git ignore. (omalley)
 
     MAPREDUCE-954. Change Map-Reduce context objects to be interfaces.
-    (acmurthy) 
+    (acmurthy)
 
-    MAPREDUCE-639. Change Terasort example to reflect the 2009 updates. 
+    MAPREDUCE-639. Change Terasort example to reflect the 2009 updates.
     (omalley)
 
     MAPREDUCE-1063. Document gridmix benchmark. (cdouglas)
@@ -7483,7 +7710,7 @@ Release 0.21.0 - 2010-08-13
 
     HDFS-663. DFSIO for append. (shv)
 
-    HDFS-641. Move all of the components that depend on map/reduce to 
+    HDFS-641. Move all of the components that depend on map/reduce to
     map/reduce. (omalley)
 
     HADOOP-5107. Use Maven ant tasks to publish artifacts. (Giridharan Kesavan
@@ -7504,14 +7731,14 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-1198. Alternatively schedule different types of tasks in
     fair share scheduler. (Scott Chen via matei)
 
-    MAPREDUCE-707. Provide a jobconf property for explicitly assigning a job to 
+    MAPREDUCE-707. Provide a jobconf property for explicitly assigning a job to
     a pool in the Fair Scheduler. (Alan Heirich via matei)
 
     MAPREDUCE-947. Added commitJob and abortJob apis to OutputCommitter.
     Enhanced FileOutputCommitter to create a _SUCCESS file for successful
-    jobs. (Amar Kamat & Jothi Padmanabhan via acmurthy) 
+    jobs. (Amar Kamat & Jothi Padmanabhan via acmurthy)
 
-    MAPREDUCE-1103. Added more metrics to Jobtracker. (sharad) 
+    MAPREDUCE-1103. Added more metrics to Jobtracker. (sharad)
 
     MAPREDUCE-1048. Add occupied/reserved slot usage summary on jobtracker UI.
     (Amareshwari Sriramadasu and Hemanth Yamijala via sharad)
@@ -7533,7 +7760,7 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-1119. When tasks fail to report status, show tasks's stack dump
     before killing. (Aaron Kimball via tomwhite)
 
-    MAPREDUCE-1185. Redirect running job url to history url if job is already 
+    MAPREDUCE-1185. Redirect running job url to history url if job is already
     retired. (Amareshwari Sriramadasu and Sharad Agarwal via sharad)
 
     MAPREDUCE-1050. Introduce a mock object testing framework. (tomwhite)
@@ -7547,8 +7774,8 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-967. TaskTracker does not need to fully unjar job jars.
     (Todd Lipcon via tomwhite)
 
-    MAPREDUCE-1083. Changes in MapReduce so that group information of users 
-    can be refreshed in the JobTracker via command line. 
+    MAPREDUCE-1083. Changes in MapReduce so that group information of users
+    can be refreshed in the JobTracker via command line.
     (Boris Shkolnik via ddas)
 
     MAPREDUCE-181. Changes the job submission process to be secure.
@@ -7561,7 +7788,7 @@ Release 0.21.0 - 2010-08-13
     been created by user tasks with non-writable permissions.
     (Ravi Gummadi via yhemanth)
 
-    MAPREDUCE-372. Change org.apache.hadoop.mapred.lib.ChainMapper/Reducer 
+    MAPREDUCE-372. Change org.apache.hadoop.mapred.lib.ChainMapper/Reducer
     to use new mapreduce api. (Amareshwari Sriramadasu via sharad)
 
     MAPREDUCE-1295. Add a tool in Rumen for folding and manipulating job
@@ -7592,7 +7819,7 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-1440. Replace the long user name in MapReduce with the local
     name. (omalley)
 
-    MAPREDUCE-1470. Move delegation tokens from HDFS to Common so that 
+    MAPREDUCE-1470. Move delegation tokens from HDFS to Common so that
     MapReduce can use them too. (omalley)
 
     MAPREDUCE-1425. Reduce memory usage by archive. (mahadev via szetszwo)
@@ -7604,7 +7831,7 @@ Release 0.21.0 - 2010-08-13
     and add extensible support for log formats. (Dick King via cdouglas)
 
     MAPREDUCE-1503. Delegation token renewing and cancelling should provide
-    meaningful exceptions when there are failures instead of returning 
+    meaningful exceptions when there are failures instead of returning
     false. (omalley)
 
     HADOOP-6579. Upgrade commons-codec library to 1.4. (omalley)
@@ -7666,7 +7893,7 @@ Release 0.21.0 - 2010-08-13
     (Rodrigo Schmidt via dhruba)
 
     MAPREDUCE-1221. Allow admins to control physical memory limits per-task
-    and per-node. (Scott Chen via acmurthy) 
+    and per-node. (Scott Chen via acmurthy)
 
     MAPREDUCE-1065. Update mapred tutorial to use the new API. (Aaron Kimball
     via cdouglas)
@@ -7682,7 +7909,7 @@ Release 0.21.0 - 2010-08-13
 
     MAPREDUCE-1625. Improve grouping of packages in Javadoc. (tomwhite)
 
-    MAPREDUCE-1417. Forrest documentation should be updated to reflect 
+    MAPREDUCE-1417. Forrest documentation should be updated to reflect
     the changes in MAPREDUCE-744. (Ravi Gummadi via vinodkv)
 
     MAPREDUCE-1568. TrackerDistributedCacheManager should clean up cache
@@ -7692,7 +7919,7 @@ Release 0.21.0 - 2010-08-13
     can be made public stable. (omalley)
 
     MAPREDUCE-1623. Apply audience and stability notations to Hadoop
-    Map-Reduce. (tomwhite via acmurthy) 
+    Map-Reduce. (tomwhite via acmurthy)
 
     MAPREDUCE-1751. Change MapReduce to depend on Hadoop 'common' artifacts
     instead of 'core'. (tomwhite)
@@ -7724,20 +7951,20 @@ Release 0.21.0 - 2010-08-13
   OPTIMIZATIONS
 
     MAPREDUCE-270. Fix the tasktracker to optionally send an out-of-band
-    heartbeat on task-completion for better job-latency. (acmurthy) 
+    heartbeat on task-completion for better job-latency. (acmurthy)
     Configuration changes:
-      add mapreduce.tasktracker.outofband.heartbeat 
+      add mapreduce.tasktracker.outofband.heartbeat
 
     MAPREDUCE-1186. Modified code in distributed cache to set permissions
     only on required set of localized paths.
     (Amareshwari Sriramadasu via yhemanth)
 
-    MAPREDUCE-1501. FileInputFormat supports multi-level, recursive 
+    MAPREDUCE-1501. FileInputFormat supports multi-level, recursive
     directory listing.  (Zheng Shao via dhruba)
 
     MAPREDUCE-1556. upgrade to Avro 1.3.0. (cutting via tomwhite)
 
-    MAPREDUCE-1613. Install/deploy source jars to Maven repo 
+    MAPREDUCE-1613. Install/deploy source jars to Maven repo
     (Patrick Angeles via ddas)
 
     MAPREDUCE-1610. Forrest documentation should be updated to reflect
@@ -7748,10 +7975,10 @@ Release 0.21.0 - 2010-08-13
 
   BUG FIXES
 
-    MAPREDUCE-878. Rename fair scheduler design doc to 
+    MAPREDUCE-878. Rename fair scheduler design doc to
     fair-scheduler-design-doc.tex and add Apache license header (matei)
 
-    HADOOP-4687. MapReduce is split from Hadoop Core. It is a subproject under 
+    HADOOP-4687. MapReduce is split from Hadoop Core. It is a subproject under
     Hadoop (Owen O'Malley)
 
     HADOOP-6096. Fix Eclipse project and classpath files following project
@@ -7763,7 +7990,7 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-2. Fixes a bug in KeyFieldBasedPartitioner in handling empty
     keys. (Amar Kamat via sharad)
 
-    MAPREDUCE-130. Delete the jobconf copy from the log directory of the 
+    MAPREDUCE-130. Delete the jobconf copy from the log directory of the
     JobTracker when the job is retired. (Amar Kamat via sharad)
 
     MAPREDUCE-657. Fix hardcoded filesystem problem in CompletedJobStatusStore.
@@ -7779,20 +8006,20 @@ Release 0.21.0 - 2010-08-13
 
     MAPREDUCE-433. Use more reliable counters in TestReduceFetch. (cdouglas)
 
-    MAPREDUCE-124. Fix a bug in failure handling of abort task of 
+    MAPREDUCE-124. Fix a bug in failure handling of abort task of
     OutputCommiter. (Amareshwari Sriramadasu via sharad)
 
     MAPREDUCE-694. Fix to add jsp-api jars to capacity-scheduler classpath.
     (Giridharan Kesavan)
-    
-    MAPREDUCE-702. Fix eclipse-plugin jar target (Giridharan Kesavan) 
+
+    MAPREDUCE-702. Fix eclipse-plugin jar target (Giridharan Kesavan)
 
     MAPREDUCE-522. Replace TestQueueCapacities with simpler test case to
     test integration between capacity scheduler and MR framework.
     (Sreekanth Ramakrishnan via yhemanth)
 
-    MAPREDUCE-683. Fixes an initialization problem in the JobHistory. 
-    The initialization of JobHistoryFilesManager is now done in the 
+    MAPREDUCE-683. Fixes an initialization problem in the JobHistory.
+    The initialization of JobHistoryFilesManager is now done in the
     JobHistory.init call. (Amar Kamat via ddas)
 
     MAPREDUCE-708. Fixes a bug to allow updating the reason for
@@ -7810,7 +8037,7 @@ Release 0.21.0 - 2010-08-13
     high memory jobs in capacity scheduler.
     (Vinod Kumar Vavilapalli via yhemanth)
 
-    HADOOP-6090. Updates gridmix script to use new mapreduce api output 
+    HADOOP-6090. Updates gridmix script to use new mapreduce api output
     format. (Amareshwari Sriramadasu via sharad)
 
     MAPREDUCE-732. Removed spurious log statements in the node
@@ -7824,10 +8051,10 @@ Release 0.21.0 - 2010-08-13
     that are blacklisted for a job.
     (Arun Murthy and Sreekanth Ramakrishnan via yhemanth)
 
-    MAPREDUCE-677. Fix timeout in TestNodeRefresh. (Amar Kamat via 
+    MAPREDUCE-677. Fix timeout in TestNodeRefresh. (Amar Kamat via
     sharad)
 
-    MAPREDUCE-153. Fix timeout in TestJobInProgressListener. (Amar 
+    MAPREDUCE-153. Fix timeout in TestJobInProgressListener. (Amar
     Kamat via sharad)
 
     MAPREDUCE-742. Fix output messages and java comments in the Pi related
@@ -7835,7 +8062,7 @@ Release 0.21.0 - 2010-08-13
 
     MAPREDUCE-565. Fix partitioner to work with new API. (Owen O'Malley via
     cdouglas)
-    
+
     MAPREDUCE-680. Fix so MRUnit can handle reuse of Writable objects.
     (Aaron Kimball via johan)
 
@@ -7845,13 +8072,13 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-771. Fix scheduling of setup and cleanup tasks to use
     free slots instead of tasks for scheduling. (yhemanth)
 
-    MAPREDUCE-717. Fixes some corner case issues in speculative 
+    MAPREDUCE-717. Fixes some corner case issues in speculative
     execution heuristics. (Devaraj Das)
 
     MAPREDUCE-716. Make DBInputFormat work with Oracle. (Aaron Kimball
     via tomwhite)
 
-    MAPREDUCE-735. Fixes a problem in the KeyFieldHelper to do with 
+    MAPREDUCE-735. Fixes a problem in the KeyFieldHelper to do with
     the end index for some inputs (Amar Kamat via ddas)
 
     MAPREDUCE-682. Removes reservations on tasktrackers which are
@@ -7863,7 +8090,7 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-765. Eliminate the deprecated warnings introduced by H-5438.
     (He Yongqiang via szetszwo)
 
-    MAPREDUCE-383. Fix a bug in Pipes combiner due to bytes count not 
+    MAPREDUCE-383. Fix a bug in Pipes combiner due to bytes count not
     getting reset after the spill. (Christian Kunz via sharad)
 
     MAPREDUCE-809. Fix job-summary logs to correctly record status of FAILED
@@ -7872,18 +8099,18 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-792. Fix unchecked warnings in DBInputFormat.  (Aaron Kimball
     via szetszwo)
 
-    MAPREDUCE-760. Fix a timing issue in TestNodeRefresh. (Amar Kamat via 
+    MAPREDUCE-760. Fix a timing issue in TestNodeRefresh. (Amar Kamat via
     sharad)
 
     MAPREDUCE-40. Keep memory management backwards compatible for job
     configuration parameters and limits. (Rahul Kumar Singh via yhemanth)
 
     MAPREDUCE-587. Fixes a OOM issue in TestStreamingExitStatus.
-    (Amar Kamat via ddas) 
+    (Amar Kamat via ddas)
 
     MAPREDUCE-408. Fixes an assertion problem in TestKillSubProcesses
     (Ravi Gummadi via ddas)
-     
+
     MAPREDUCE-659. Fix gridmix2 compilation. (Giridharan Kesavan)
 
     MAPREDUCE-796. Fixes a ClassCastException in an exception log in
@@ -7905,9 +8132,9 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-805. Fixes some deadlocks in the JobTracker due to the fact
     the JobTracker lock hierarchy wasn't maintained in some JobInProgress
     method calls. (Amar Kamat via ddas)
-    
+
     MAPREDUCE-799. Fixes so all of the MRUnit self-tests run.
-    (Aaron Kimball via johan)    
+    (Aaron Kimball via johan)
 
     MAPREDUCE-848. Fixes a problem to do with TestCapacityScheduler
     failing (Amar Kamat via ddas)
@@ -7915,10 +8142,10 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-840. DBInputFormat leaves open transaction.
     (Aaron Kimball via tomwhite)
 
-    MAPREDUCE-859. Adds Avro and its dependencies required by Hadoop 
+    MAPREDUCE-859. Adds Avro and its dependencies required by Hadoop
     common. (Ravi Gummadi via sharad)
-    
-    MAPREDUCE-867. Fix ivy conf to look for avro jar from maven repo.	
+
+    MAPREDUCE-867. Fix ivy conf to look for avro jar from maven repo.
     (Giridharan Kesavan)
 
     MAPREDUCE-877. Added avro as a dependency to contrib ivy settings.
@@ -7941,21 +8168,21 @@ Release 0.21.0 - 2010-08-13
     memory management parameters are used in configuration.
     (Sreekanth Ramakrishnan via yhemanth)
 
-    MAPREDUCE-818. Fixes Counters#getGroup API. (Amareshwari Sriramadasu 
+    MAPREDUCE-818. Fixes Counters#getGroup API. (Amareshwari Sriramadasu
     via sharad)
 
     MAPREDUCE-807. Handles the AccessControlException during the deletion of
     mapred.system.dir in the JobTracker. The JobTracker will bail out if it
     encounters such an exception. (Amar Kamat via ddas)
 
-    MAPREDUCE-430. Fix a bug related to task getting stuck in case of 
+    MAPREDUCE-430. Fix a bug related to task getting stuck in case of
     OOM error. (Amar Kamat via ddas)
 
-    MAPREDUCE-871. Fix ownership of Job/Task local files to have correct 
+    MAPREDUCE-871. Fix ownership of Job/Task local files to have correct
     group ownership according to the egid of the tasktracker.
-    (Vinod Kumar Vavilapalli via yhemanth) 
+    (Vinod Kumar Vavilapalli via yhemanth)
 
-    MAPREDUCE-911. Fix a bug in TestTaskFail related to speculative 
+    MAPREDUCE-911. Fix a bug in TestTaskFail related to speculative
     execution. (Amareshwari Sriramadasu via sharad)
 
     MAPREDUCE-687. Fix an assertion in TestMiniMRMapRedDebugScript.
@@ -7967,7 +8194,7 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-903. Add Avro jar to eclipse classpath.
     (Philip Zeyliger via tomwhite)
 
-    MAPREDUCE-943. Removes a testcase in TestNodeRefresh that doesn't make 
+    MAPREDUCE-943. Removes a testcase in TestNodeRefresh that doesn't make
     sense in the new Job recovery model. (Amar Kamat via ddas)
 
     MAPREDUCE-764. TypedBytesInput's readRaw() does not preserve custom type
@@ -7978,7 +8205,7 @@ Release 0.21.0 - 2010-08-13
 
     MAPREDUCE-968. NPE in distcp encountered when placing _logs directory on
     S3FileSystem. (Aaron Kimball via tomwhite)
- 
+
     MAPREDUCE-826. harchive doesn't use ToolRunner / harchive returns 0 even
     if the job fails with exception (koji Noguchi via mahadev)
 
@@ -8024,7 +8251,7 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-912. Add and standardize Apache license headers. (Chad Metcalf
     via cdouglas)
 
-    MAPREDUCE-1022. Fix compilation of vertica testcases. (Vinod Kumar 
+    MAPREDUCE-1022. Fix compilation of vertica testcases. (Vinod Kumar
     Vavilapalli via acmurthy)
 
     MAPREDUCE-1000. Handle corrupt history files in JobHistory.initDone().
@@ -8044,7 +8271,7 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-979. Fixed JobConf APIs related to memory parameters to return
     values of new configuration variables when deprecated variables are
     disabled. (Sreekanth Ramakrishnan via yhemanth)
-   
+
     MAPREDUCE-1030. Modified scheduling algorithm to return a map and reduce
     task per heartbeat in the capacity scheduler.
     (Rahul Kumar Singh via yhemanth)
@@ -8092,17 +8319,17 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-1163. Remove unused, hard-coded paths from libhdfs. (Allen
     Wittenauer via cdouglas)
 
-    MAPREDUCE-962. Fix a NullPointerException while killing task process 
+    MAPREDUCE-962. Fix a NullPointerException while killing task process
     trees. (Ravi Gummadi via yhemanth)
 
     MAPREDUCE-1177. Correct setup/cleanup inversion in
     JobTracker::getTaskReports. (Vinod Kumar Vavilapalli via cdouglas)
 
-    MAPREDUCE-1178. Fix ClassCastException in MultipleInputs by adding 
-    a DelegatingRecordReader. (Amareshwari Sriramadasu and Jay Booth 
+    MAPREDUCE-1178. Fix ClassCastException in MultipleInputs by adding
+    a DelegatingRecordReader. (Amareshwari Sriramadasu and Jay Booth
     via sharad)
 
-    MAPREDUCE-1068. Fix streaming job to show proper message if file is 
+    MAPREDUCE-1068. Fix streaming job to show proper message if file is
     is not present. (Amareshwari Sriramadasu via sharad)
 
     MAPREDUCE-1147. Add map output counters to new API. (Amar Kamat via
@@ -8110,7 +8337,7 @@ Release 0.21.0 - 2010-08-13
 
     MAPREDUCE-915. The debug scripts are run as the job user. (ddas)
 
-    MAPREDUCE-1007. Fix NPE in CapacityTaskScheduler.getJobs(). 
+    MAPREDUCE-1007. Fix NPE in CapacityTaskScheduler.getJobs().
     (V.V.Chaitanya Krishna via sharad)
 
     MAPREDUCE-28. Refactor TestQueueManager and fix default ACLs.
@@ -8119,8 +8346,8 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-1182. Fix overflow in reduce causing allocations to exceed the
     configured threshold. (cdouglas)
 
-    MAPREDUCE-1239. Fix contrib components build dependencies. 
-    (Giridharan Kesavan and omalley) 
+    MAPREDUCE-1239. Fix contrib components build dependencies.
+    (Giridharan Kesavan and omalley)
 
     MAPREDUCE-787. Fix JobSubmitter to honor user given symlink path.
     (Amareshwari Sriramadasu via sharad)
@@ -8136,7 +8363,7 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-1075. Fix JobTracker to not throw an NPE for a non-existent
     queue. (V.V.Chaitanya Krishna via yhemanth)
 
-    MAPREDUCE-754. Fix NPE in expiry thread when a TT is lost. (Amar Kamat 
+    MAPREDUCE-754. Fix NPE in expiry thread when a TT is lost. (Amar Kamat
     via sharad)
 
     MAPREDUCE-1074. Document Reducer mark/reset functionality. (Jothi
@@ -8171,7 +8398,7 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-1241. Use a default queue configuration in JobTracker when
     mapred-queues.xml is unavailable. (Todd Lipcon via cdouglas)
 
-    MAPREDUCE-1301. Fix set up of permission checking script used in 
+    MAPREDUCE-1301. Fix set up of permission checking script used in
     localization tests. (Amareshwari Sriramadasu via yhemanth)
 
     MAPREDUCE-1286. Remove quoting from client opts in TaskRunner. (Yuri
@@ -8226,7 +8453,7 @@ Release 0.21.0 - 2010-08-13
 
     MAPREDUCE-1014. Fix the libraries for common and hdfs. (omalley)
 
-    MAPREDUCE-1111. JT Jetty UI not working if we run mumak.sh 
+    MAPREDUCE-1111. JT Jetty UI not working if we run mumak.sh
     off packaged distribution directory. (hong tang via mahadev)
 
     MAPREDUCE-1133. Eclipse .classpath template has outdated jar files and is
@@ -8252,7 +8479,7 @@ Release 0.21.0 - 2010-08-13
 
     MAPREDUCE-1196. Fix FileOutputCommitter to use the deprecated cleanupJob
     api correctly. (acmurthy)
-   
+
     MAPREDUCE-1244. Fix eclipse-plugin's build dependencies. (gkesavan)
 
     MAPREDUCE-1140. Fix DistributedCache to not decrement reference counts for
@@ -8277,7 +8504,7 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-1213. TaskTrackers restart is faster because it deletes
     distributed cache directory asynchronously. (Zheng Shao via dhruba)
 
-    MAPREDUCE-1265. The task attempt error log prints the name of the 
+    MAPREDUCE-1265. The task attempt error log prints the name of the
     tasktracker machine. (Scott Chen via dhruba)
 
     MAPREDUCE-1201. ProcfsBasedProcessTree collects CPU usage information.
@@ -8316,9 +8543,9 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-1443. DBInputFormat can leak connections.
     (Aaron Kimball via tomwhite)
 
-    MAPREDUCE-1457. Fixes JobTracker to get the FileSystem object within 
+    MAPREDUCE-1457. Fixes JobTracker to get the FileSystem object within
     getStagingAreaDir within a privileged block. Fixes Child.java to use the
-    appropriate UGIs while getting the TaskUmbilicalProtocol proxy and 
+    appropriate UGIs while getting the TaskUmbilicalProtocol proxy and
     while executing the task. (Jakob Homan via ddas)
 
     MAPREDUCE-1399. The archive command shows a null error message (nicholas
@@ -8336,8 +8563,8 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-1358. Avoid false positives in OutputLogFilter. (Todd Lipcon via
     cdouglas)
 
-    MAPREDUCE-1490. Fix a NullPointerException that could occur during 
-    instantiation and initialization of the DistributedRaidFileSystem. 
+    MAPREDUCE-1490. Fix a NullPointerException that could occur during
+    instantiation and initialization of the DistributedRaidFileSystem.
     (Rodrigo Schmidt via dhruba)
 
     MAPREDUCE-1476. Fix the M/R framework to not call commit for special
@@ -8354,7 +8581,7 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-1378. URL encode link in jobhistory.jsp to avoid errors caused by
     unescaped characters. (E. Sammer via cdouglas)
 
-    MAPREDUCE-1519. RaidNode fails to create new parity file 
+    MAPREDUCE-1519. RaidNode fails to create new parity file
     if an older version already exists. (Rodrigo Schmidt via dhruba)
 
     MAPREDUCE-1537. Fixes a compilation problem in a testcase after commit
@@ -8404,7 +8631,7 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-1536. DataDrivenDBInputFormat does not split date columns correctly.
     (Aaron Kimball via enis)
 
-    MAPREDUCE-890. After HADOOP-4491, the user who started mapred system is 
+    MAPREDUCE-890. After HADOOP-4491, the user who started mapred system is
     not able to run job. (Ravi Gummadi via vinodkv)
 
     MAPREDUCE-1615. Fix compilation of TestSubmitJob. (cdouglas)
@@ -8467,13 +8694,13 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-1618. Add missing javadoc to JobStatus::*JobAcls. (Amareshwari
     Sriramadasu via cdouglas)
 
-    MAPREDUCE-1219. Remove job level metrics from jobtracker metrics to ease 
+    MAPREDUCE-1219. Remove job level metrics from jobtracker metrics to ease
     undue load on jobtracker. (Sreekanth Ramakrishnan via sharad)
 
     MAPREDUCE-1604. Add Forrest documentation for Job ACLs.
     (Amareshwari Sriramadasu via yhemanth)
 
-    MAPREDUCE-1705. Archiving and Purging of HDFS parity files should 
+    MAPREDUCE-1705. Archiving and Purging of HDFS parity files should
     handle globbed policies accurately. (Rodrigo Schmidt via dhruba)
 
     MAPREDUCE-1612. job conf file is not accessible from job history web page.
@@ -8485,10 +8712,10 @@ Release 0.21.0 - 2010-08-13
     MAPREDUCE-1728. Oracle timezone strings do not match Java.
     (Aaron Kimball via tomwhite)
 
-    MAPREDUCE-1609. TaskTracker.localizeJob should not set permissions on 
+    MAPREDUCE-1609. TaskTracker.localizeJob should not set permissions on
     job log directory recursively. (Amareshwari Sriramadasu via vinodkv)
 
-    MAPREDUCE-1657. After task logs directory is deleted, tasklog servlet 
+    MAPREDUCE-1657. After task logs directory is deleted, tasklog servlet
     displays wrong error message about job ACLs. (Ravi Gummadi via vinodkv)
 
     MAPREDUCE-1727. TestJobACLs fails after HADOOP-6686. (Ravi Gummadi via vinodkv)
