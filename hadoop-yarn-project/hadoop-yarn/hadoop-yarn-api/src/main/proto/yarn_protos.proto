@@ -131,6 +131,7 @@ enum FinalApplicationStatusProto {
   APP_SUCCEEDED = 1;
   APP_FAILED = 2;
   APP_KILLED = 3;
+  APP_ENDED = 4;
 }
 
 message URLProto {

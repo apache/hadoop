@@ -618,6 +618,8 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4418. AM Resource Limit per partition can be updated to ResourceUsage as well.
     (Sunil G via wangda)
+    
+    YARN-4207. Add a non-judgemental YARN app completion status. (Rich Haase via sseth)
 
   OPTIMIZATIONS
 
