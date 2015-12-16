@@ -1051,6 +1051,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4461. Redundant nodeLocalityDelay log in LeafQueue (Eric Payne via
     jlowe)
 
+    YARN-4452. NPE when submit Unmanaged application. (Naganarasimha G R
+    via junping_du)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1089,6 +1092,9 @@ Release 2.7.3 - UNRELEASED
     fails intermittently. (Varun Saxena via ozawa)
 
     YARN-4439. Clarify NMContainerStatus#toString method. (Jian He via xgong)
+
+    YARN-4452. NPE when submit Unmanaged application. (Naganarasimha G R
+    via junping_du)
 
 Release 2.7.2 - UNRELEASED
 
@@ -1943,6 +1949,9 @@ Release 2.6.4 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    YARN-4452. NPE when submit Unmanaged application. (Naganarasimha G R
+    via junping_du)
 
 Release 2.6.3 - UNRELEASED
 
