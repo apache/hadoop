@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.api.records;
+package org.apache.hadoop.yarn.api.records;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -28,10 +28,13 @@ import org.apache.hadoop.yarn.util.Records;
  * resources in the cluster.
  * </p>
  */
-@Private
-@Evolving
+@Public
+@Unstable
 public abstract class ResourceUtilization implements
     Comparable<ResourceUtilization> {
+
+  @Public
+  @Unstable
   public static ResourceUtilization newInstance(int pmem, int vmem, float cpu) {
     ResourceUtilization utilization =
         Records.newRecord(ResourceUtilization.class);
@@ -46,6 +49,8 @@ public abstract class ResourceUtilization implements
    *
    * @return <em>virtual memory</em> in MB
    */
+  @Public
+  @Unstable
   public abstract int getVirtualMemory();
 
   /**
@@ -53,6 +58,8 @@ public abstract class ResourceUtilization implements
    *
    * @param vmem <em>virtual memory</em> in MB
    */
+  @Public
+  @Unstable
   public abstract void setVirtualMemory(int vmem);
 
   /**
@@ -60,6 +67,8 @@ public abstract class ResourceUtilization implements
    *
    * @return <em>physical memory</em> in MB
    */
+  @Public
+  @Unstable
   public abstract int getPhysicalMemory();
 
   /**
@@ -67,6 +76,8 @@ public abstract class ResourceUtilization implements
    *
    * @param pmem <em>physical memory</em> in MB
    */
+  @Public
+  @Unstable
   public abstract void setPhysicalMemory(int pmem);
 
   /**
@@ -74,6 +85,8 @@ public abstract class ResourceUtilization implements
    *
    * @return <em>CPU utilization</em> normalized to 1 CPU
    */
+  @Public
+  @Unstable
   public abstract float getCPU();
 
   /**
@@ -81,6 +94,8 @@ public abstract class ResourceUtilization implements
    *
    * @param cpu <em>CPU utilization</em> normalized to 1 CPU
    */
+  @Public
+  @Unstable
   public abstract void setCPU(float cpu);
 
   @Override
@@ -125,6 +140,8 @@ public abstract class ResourceUtilization implements
    * @param vmem Virtual memory used to add.
    * @param cpu CPU utilization to add.
    */
+  @Public
+  @Unstable
   public void addTo(int pmem, int vmem, float cpu) {
     this.setPhysicalMemory(this.getPhysicalMemory() + pmem);
     this.setVirtualMemory(this.getVirtualMemory() + vmem);

@@ -58,6 +58,12 @@ message ResourceProto {
   optional int32 virtual_cores = 2;
 }
 
+message ResourceUtilizationProto {
+  optional int32 pmem = 1;
+  optional int32 vmem = 2;
+  optional float cpu = 3;
+}
+
 message ResourceOptionProto {
   optional ResourceProto resource = 1;
   optional int32 over_commit_timeout = 2;
@@ -254,6 +260,8 @@ message NodeReportProto {
   optional string health_report = 8;
   optional int64 last_health_report_time = 9;
   repeated string node_labels = 10;
+  optional ResourceUtilizationProto containers_utilization = 11;
+  optional ResourceUtilizationProto node_utilization = 12;
 }
 
 message NodeIdToLabelsInfoProto {
