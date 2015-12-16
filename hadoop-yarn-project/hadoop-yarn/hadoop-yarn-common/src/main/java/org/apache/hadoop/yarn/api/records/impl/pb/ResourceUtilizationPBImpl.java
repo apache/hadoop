@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.api.records.impl.pb;
+package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.ResourceUtilizationProto;
-import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.ResourceUtilizationProtoOrBuilder;
-import org.apache.hadoop.yarn.server.api.records.ResourceUtilization;
+import org.apache.hadoop.yarn.proto.YarnProtos.ResourceUtilizationProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ResourceUtilizationProtoOrBuilder;
+import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 
 @Private
 @Unstable

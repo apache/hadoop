@@ -218,6 +218,27 @@ public class NodeCLI extends YarnCLI {
           new ArrayList<String>(report.getNodeLabels());
       Collections.sort(nodeLabelsList);
       nodeReportStr.println(StringUtils.join(nodeLabelsList.iterator(), ','));
+
+      nodeReportStr.print("\tResource Utilization by Node : ");
+      if (nodeReport.getNodeUtilization() != null) {
+        nodeReportStr.print("PMem:"
+            + nodeReport.getNodeUtilization().getPhysicalMemory()
+            + " MB, VMem:" + nodeReport.getNodeUtilization().getVirtualMemory()
+            + " MB, VCores:" + nodeReport.getNodeUtilization().getCPU());
+      }
+      nodeReportStr.println();
+
+      nodeReportStr.print("\tResource Utilization by Containers : ");
+      if (nodeReport.getAggregatedContainersUtilization() != null) {
+        nodeReportStr.print("PMem:"
+            + nodeReport.getAggregatedContainersUtilization()
+                .getPhysicalMemory()
+            + " MB, VMem:"
+            + nodeReport.getAggregatedContainersUtilization()
+                .getVirtualMemory() + " MB, VCores:"
+            + nodeReport.getAggregatedContainersUtilization().getCPU());
+      }
+      nodeReportStr.println();
     }
 
     if (nodeReport == null) {

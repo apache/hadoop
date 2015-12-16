@@ -989,13 +989,14 @@ public class ClientRMService extends AbstractService implements
       used = schedulerNodeReport.getUsedResource();
       numContainers = schedulerNodeReport.getNumContainers();
     } 
-    
+
     NodeReport report =
         BuilderUtils.newNodeReport(rmNode.getNodeID(), rmNode.getState(),
             rmNode.getHttpAddress(), rmNode.getRackName(), used,
             rmNode.getTotalCapability(), numContainers,
             rmNode.getHealthReport(), rmNode.getLastHealthReportTime(),
-            rmNode.getNodeLabels());
+            rmNode.getNodeLabels(), rmNode.getAggregatedContainersUtilization(),
+            rmNode.getNodeUtilization());
 
     return report;
   }

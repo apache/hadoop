@@ -621,6 +621,8 @@ Release 2.8.0 - UNRELEASED
     
     YARN-4207. Add a non-judgemental YARN app completion status. (Rich Haase via sseth)
 
+    YARN-4293. ResourceUtilization should be a part of yarn node CLI. (Sunil G via wangda)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
