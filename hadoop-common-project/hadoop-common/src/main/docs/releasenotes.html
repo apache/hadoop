@@ -12,6 +12,14 @@ These release notes include new developer and user-facing incompatibilities, fea
 <a name="changes"/>
 <h2>Changes since Hadoop 2.7.1</h2>
 <ul>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-4424">YARN-4424</a>.
+     Blocker bug reported by Yesha Vora and fixed by Jian He <br>
+     <b>Fix deadlock in RMAppImpl</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-4354">YARN-4354</a>.
+     Blocker bug reported by Jason Lowe and fixed by Jason Lowe (nodemanager)<br>
+     <b>Public resource localization fails with NPE</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-4321">YARN-4321</a>.
      Major bug reported by Varun Saxena and fixed by Varun Saxena (resourcemanager)<br>
      <b>Incessant retries if NoAuthException is thrown by Zookeeper in non HA mode</b><br>
@@ -300,6 +308,22 @@ These release notes include new developer and user-facing incompatibilities, fea
      Major bug reported by stanley shi and fixed by Gera Shegalov (mrv2)<br>
      <b>Reduce cannot use more than 2G memory  for the final merge</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-9470">HDFS-9470</a>.
+     Critical bug reported by Xiao Chen and fixed by Xiao Chen <br>
+     <b>Encryption zone on root not loaded from fsimage after NN restart</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-9445">HDFS-9445</a>.
+     Blocker bug reported by Kihwal Lee and fixed by Walter Su <br>
+     <b>Datanode may deadlock while handling a bad volume</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-9426">HDFS-9426</a>.
+     Blocker bug reported by Kihwal Lee and fixed by Kihwal Lee <br>
+     <b>Rollingupgrade finalization is not backward compatible</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-9413">HDFS-9413</a>.
+     Critical bug reported by Brahma Reddy Battula and fixed by Brahma Reddy Battula <br>
+     <b>getContentSummary() on standby should throw StandbyException</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-9317">HDFS-9317</a>.
      Major bug reported by Akira AJISAKA and fixed by Akira AJISAKA (documentation)<br>
      <b>Document fsck -blockId and -storagepolicy options in branch-2.7</b><br>
@@ -308,9 +332,17 @@ These release notes include new developer and user-facing incompatibilities, fea
      Major bug reported by Chris Nauroth and fixed by Arpit Agarwal (datanode)<br>
      <b>Delayed heartbeat processing causes storm of subsequent heartbeats</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-9294">HDFS-9294</a>.
+     Blocker bug reported by &#37011;&#39134; and fixed by Brahma Reddy Battula (hdfs-client)<br>
+     <b>DFSClient  deadlock when close file and failed to renew lease</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-9290">HDFS-9290</a>.
      Blocker bug reported by Tony Wu and fixed by Tony Wu <br>
      <b>DFSClient#callAppend() is not backward compatible for slightly older NameNodes</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-9273">HDFS-9273</a>.
+     Critical bug reported by Xiao Chen and fixed by Xiao Chen (namenode)<br>
+     <b>ACLs on root directory may be lost after NN restart</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-9221">HDFS-9221</a>.
      Major improvement reported by Staffan Friberg and fixed by Staffan Friberg (performance)<br>
@@ -329,7 +361,7 @@ These release notes include new developer and user-facing incompatibilities, fea
      <b>Transfer failure during pipeline recovery causes permanent write failures</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-9083">HDFS-9083</a>.
-     Blocker bug reported by Rushabh S Shah and fixed by Rushabh S Shah (HDFS , namenode)<br>
+     Blocker bug reported by Rushabh S Shah and fixed by Rushabh S Shah (namenode)<br>
      <b>Replication violates block placement policy.</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-9043">HDFS-9043</a>.
@@ -388,10 +420,6 @@ These release notes include new developer and user-facing incompatibilities, fea
      Critical bug reported by Haohui Mai and fixed by Kanaka Kumar Avvaru <br>
      <b>RawLocalFileSystem.listStatus() returns null for UNIX pipefile</b><br>
      <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-8727">HDFS-8727</a>.
-     Major improvement reported by Andrew Baptist and fixed by Andrew Baptist (HDFS)<br>
-     <b>Allow using path style addressing for accessing the s3 endpoint</b><br>
-     <blockquote>Add new flag to allow supporting path style addressing for s3a</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-8722">HDFS-8722</a>.
      Critical improvement reported by Kihwal Lee and fixed by Kihwal Lee <br>
      <b>Optimize datanode writes for small writes and flushes</b><br>
@@ -409,7 +437,7 @@ These release notes include new developer and user-facing incompatibilities, fea
      <b>Preserve compatibility of ClientProtocol#rollingUpgrade after finalization</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-8431">HDFS-8431</a>.
-     Critical bug reported by Sumana Sathish and fixed by Anu Engineer (HDFS)<br>
+     Critical bug reported by Sumana Sathish and fixed by Anu Engineer (scripts)<br>
      <b>hdfs crypto class not found in Windows</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-8384">HDFS-8384</a>.
@@ -448,6 +476,10 @@ These release notes include new developer and user-facing incompatibilities, fea
      Critical bug reported by Akira AJISAKA and fixed by Akira AJISAKA (namenode)<br>
      <b>BlockManager should remove a block from excessReplicateMap and decrement ExcessBlocks metric when the block is removed</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-12577">HADOOP-12577</a>.
+     Blocker bug reported by Wei-Chiu Chuang and fixed by Wei-Chiu Chuang (build , security)<br>
+     <b>Bump up commons-collections version to 3.2.2 to address a security flaw</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-12465">HADOOP-12465</a>.
      Minor bug reported by Martin Petricek and fixed by Jagadesh Kiran N (documentation)<br>
      <b>Incorrect javadoc in WritableUtils.java</b><br>
@@ -459,6 +491,10 @@ These release notes include new developer and user-facing incompatibilities, fea
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-12451">HADOOP-12451</a>.
      Blocker bug reported by Karthik Kambatla and fixed by Karthik Kambatla (scripts)<br>
      <b>[Branch-2] Setting HADOOP_HOME explicitly should be allowed</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-12415">HADOOP-12415</a>.
+     Major bug reported by Konstantin Boudnik and fixed by Tom Zeng (nfs)<br>
+     <b>hdfs and nfs builds broken on -missing compile-time dependency on netty</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-12359">HADOOP-12359</a>.
      Major bug reported by Daniel Templeton and fixed by Jagadesh Kiran N (documentation)<br>
