@@ -26,7 +26,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -44,7 +43,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobPriority;
 import org.apache.hadoop.mapreduce.JobStatus;
-import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.TaskReport;
@@ -265,7 +263,7 @@ public class CLI extends Configured implements Tool {
         System.out.println("Created job " + job.getJobID());
         exitCode = 0;
       } else if (getStatus) {
-        Job job = getJob(JobID.forName(jobid));
+        Job job = cluster.getJob(JobID.forName(jobid));
         if (job == null) {
           System.out.println("Could not find job " + jobid);
         } else {
@@ -280,7 +278,7 @@ public class CLI extends Configured implements Tool {
           exitCode = 0;
         }
       } else if (getCounter) {
-        Job job = getJob(JobID.forName(jobid));
+        Job job = cluster.getJob(JobID.forName(jobid));
         if (job == null) {
           System.out.println("Could not find job " + jobid);
         } else {
@@ -296,7 +294,7 @@ public class CLI extends Configured implements Tool {
           }
         }
       } else if (killJob) {
-        Job job = getJob(JobID.forName(jobid));
+        Job job = cluster.getJob(JobID.forName(jobid));
         if (job == null) {
           System.out.println("Could not find job " + jobid);
         } else {
@@ -320,7 +318,7 @@ public class CLI extends Configured implements Tool {
           }
         }
       } else if (setJobPriority) {
-        Job job = getJob(JobID.forName(jobid));
+        Job job = cluster.getJob(JobID.forName(jobid));
         if (job == null) {
           System.out.println("Could not find job " + jobid);
         } else {
@@ -332,7 +330,7 @@ public class CLI extends Configured implements Tool {
         viewHistory(historyFile, viewAllHistory);
         exitCode = 0;
       } else if (listEvents) {
-        listEvents(getJob(JobID.forName(jobid)), fromEvent, nEvents);
+        listEvents(cluster.getJob(JobID.forName(jobid)), fromEvent, nEvents);
         exitCode = 0;
       } else if (listJobs) {
         listJobs(cluster);
@@ -347,11 +345,11 @@ public class CLI extends Configured implements Tool {
         listBlacklistedTrackers(cluster);
         exitCode = 0;
       } else if (displayTasks) {
-        displayTasks(getJob(JobID.forName(jobid)), taskType, taskState);
+        displayTasks(cluster.getJob(JobID.forName(jobid)), taskType, taskState);
         exitCode = 0;
       } else if(killTask) {
         TaskAttemptID taskID = TaskAttemptID.forName(taskid);
-        Job job = getJob(taskID.getJobID());
+        Job job = cluster.getJob(taskID.getJobID());
         if (job == null) {
           System.out.println("Could not find job " + jobid);
         } else if (job.killTask(taskID, false)) {
@@ -363,7 +361,7 @@ public class CLI extends Configured implements Tool {
         }
       } else if(failTask) {
         TaskAttemptID taskID = TaskAttemptID.forName(taskid);
-        Job job = getJob(taskID.getJobID());
+        Job job = cluster.getJob(taskID.getJobID());
         if (job == null) {
             System.out.println("Could not find job " + jobid);
         } else if(job.killTask(taskID, true)) {
@@ -517,29 +515,6 @@ public class CLI extends Configured implements Tool {
 
   protected static String getTaskLogURL(TaskAttemptID taskId, String baseUrl) {
     return (baseUrl + "/tasklog?plaintext=true&attemptid=" + taskId); 
-  }
-
-  @VisibleForTesting
-  Job getJob(JobID jobid) throws IOException, InterruptedException {
-
-    int maxRetry = getConf().getInt(MRJobConfig.MR_CLIENT_JOB_MAX_RETRIES,
-        MRJobConfig.DEFAULT_MR_CLIENT_JOB_MAX_RETRIES);
-    long retryInterval = getConf()
-        .getLong(MRJobConfig.MR_CLIENT_JOB_RETRY_INTERVAL,
-            MRJobConfig.DEFAULT_MR_CLIENT_JOB_RETRY_INTERVAL);
-    Job job = cluster.getJob(jobid);
-
-    for (int i = 0; i < maxRetry; ++i) {
-      if (job != null) {
-        return job;
-      }
-      LOG.info("Could not obtain job info after " + String.valueOf(i + 1)
-          + " attempt(s). Sleeping for " + String.valueOf(retryInterval / 1000)
-          + " seconds and retrying.");
-      Thread.sleep(retryInterval);
-      job = cluster.getJob(jobid);
-    }
-    return job;
   }
   
 
