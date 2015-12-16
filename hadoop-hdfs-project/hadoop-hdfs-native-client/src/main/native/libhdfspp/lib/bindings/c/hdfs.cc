@@ -112,14 +112,20 @@ int hdfsFileIsOpenForRead(hdfsFile file) {
 hdfsFS hdfsConnect(const char *nn, tPort port) {
   std::string port_as_string = std::to_string(port);
   IoService * io_service = IoService::New();
-  FileSystem *fs = FileSystem::New(io_service, Options(), nn, port_as_string);
+  FileSystem *fs = FileSystem::New(io_service, Options());
   if (!fs) {
+    return nullptr;
+  }
+
+  if (!fs->Connect(nn, port_as_string).ok()) {
     ReportError(ENODEV, "Unable to connect to NameNode.");
 
     // FileSystem's ctor might take ownership of the io_service; if it does,
     //    it will null out the pointer
     if (io_service)
       delete io_service;
+
+    delete fs;
 
     return nullptr;
   }

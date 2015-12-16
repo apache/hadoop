@@ -26,6 +26,7 @@
 #include <limits>
 #include <future>
 #include <tuple>
+#include <iostream>
 
 namespace hdfs {
 
@@ -41,7 +42,7 @@ using ::asio::ip::tcp;
 
 void NameNodeOperations::Connect(const std::string &server,
                              const std::string &service,
-                             std::function<void(const Status &)> &handler) {
+                             std::function<void(const Status &)> &&handler) {
   using namespace asio_continuation;
   typedef std::vector<tcp::endpoint> State;
   auto m = Pipeline<State>::Create();
@@ -106,41 +107,9 @@ void NameNodeOperations::GetBlockLocations(const std::string & path,
  *                    FILESYSTEM BASE CLASS
  ****************************************************************************/
 
-void FileSystem::New(
-    IoService *io_service, const Options &options, const std::string &server,
-    const std::string &service,
-    const std::function<void(const Status &, FileSystem *)> &handler) {
-  FileSystemImpl *impl = new FileSystemImpl(io_service, options);
-  impl->Connect(server, service, [impl, handler](const Status &stat) {
-    if (stat.ok()) {
-      handler(stat, impl);
-    } else {
-      delete impl;
-      handler(stat, nullptr);
-    }
-  });
-}
-
 FileSystem * FileSystem::New(
-    IoService *io_service, const Options &options, const std::string &server,
-    const std::string &service) {
-  auto callstate = std::make_shared<std::promise<std::tuple<Status, FileSystem *>>>();
-  std::future<std::tuple<Status, FileSystem *>> future(callstate->get_future());
-
-  auto callback = [callstate](const Status &s, FileSystem * fs) {
-    callstate->set_value(std::make_tuple(s, fs));
-  };
-
-  New(io_service, options, server, service, callback);
-
-  /* block until promise is set */
-  auto returnstate = future.get();
-
-  if (std::get<0>(returnstate).ok()) {
-    return std::get<1>(returnstate);
-  } else {
-    return nullptr;
-  }
+    IoService *&io_service, const Options &options) {
+  return new FileSystemImpl(io_service, options);
 }
 
 /*****************************************************************************
@@ -175,12 +144,15 @@ FileSystemImpl::~FileSystemImpl() {
 
 void FileSystemImpl::Connect(const std::string &server,
                              const std::string &service,
-                             std::function<void(const Status &)> &&handler) {
+                             const std::function<void(const Status &, FileSystem * fs)> &&handler) {
   /* IoService::New can return nullptr */
   if (!io_service_) {
-    handler (Status::Error("Null IoService"));
+    handler (Status::Error("Null IoService"), this);
   }
-  nn_.Connect(server, service, handler);
+
+  nn_.Connect(server, service, [this, handler](const Status & s) {
+    handler(s, this);
+  });
 }
 
 Status FileSystemImpl::Connect(const std::string &server, const std::string &service) {
@@ -188,7 +160,8 @@ Status FileSystemImpl::Connect(const std::string &server, const std::string &ser
   auto stat = std::make_shared<std::promise<Status>>();
   std::future<Status> future = stat->get_future();
 
-  auto callback = [stat](const Status &s) {
+  auto callback = [stat](const Status &s, FileSystem *fs) {
+    (void)fs;
     stat->set_value(s);
   };
 
@@ -245,6 +218,19 @@ Status FileSystemImpl::Open(const std::string &path,
 
   *handle = file_handle;
   return stat;
+}
+
+void FileSystemImpl::WorkerDeleter::operator()(std::thread *t) {
+  // It is far too easy to destroy the filesystem (and thus the threadpool)
+  //     from within one of the worker threads, leading to a deadlock.  Let's
+  //     provide some explicit protection.
+  if(t->get_id() == std::this_thread::get_id()) {
+    //TODO: When we get good logging support, add it in here
+    std::cerr << "FATAL: Attempted to destroy a thread pool from within a "
+                 "callback of the thread pool.\n";
+  }
+  t->join();
+  delete t;
 }
 
 }
