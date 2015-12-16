@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.protocolPB;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
@@ -99,6 +100,7 @@ import org.junit.Test;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.protobuf.ByteString;
 
 /**
  * Tests for {@link PBHelper}
@@ -109,6 +111,11 @@ public class TestPBHelper {
    * Used for asserting equality on doubles.
    */
   private static final double DELTA = 0.000001;
+
+  @Test
+  public void testGetByteString() {
+    assertSame(ByteString.EMPTY, PBHelperClient.getByteString(new byte[0]));
+  }
 
   @Test
   public void testConvertNamenodeRole() {
