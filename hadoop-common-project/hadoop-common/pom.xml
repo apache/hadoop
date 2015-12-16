@@ -976,10 +976,21 @@
                         <requiresOnline>true</requiresOnline>
                         <arguments>
                             <argument>${basedir}/../../dev-support/releasedocmaker.py</argument>
+                            <argument>--index</argument>
+                            <argument>--license</argument>
+                            <argument>--project</argument>
+                            <argument>HADOOP</argument>
+                            <argument>--project</argument>
+                            <argument>HDFS</argument>
+                            <argument>--project</argument>
+                            <argument>MAPREDUCE</argument>
+                            <argument>--project</argument>
+                            <argument>YARN</argument>
+                            <argument>--projecttitle</argument>
+                            <argument>"Apache Hadoop"</argument>
+                            <argument>--usetoday</argument>
                             <argument>--version</argument>
                             <argument>${project.version}</argument>
-                            <argument>--index</argument>
-                            <argument>--usetoday</argument>
                         </arguments>
                     </configuration>
                 </execution>
