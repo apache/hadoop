@@ -19,6 +19,9 @@ Release 2.6.4 - UNRELEASED
     YARN-3535. Scheduler must re-request container resources when RMContainer transitions
     from ALLOCATED to KILLED. (rohithsharma and peng.zhang via asuresh)
 
+    YARN-4452. NPE when submit Unmanaged application. (Naganarasimha G R
+    via junping_du)
+
 Release 2.6.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
