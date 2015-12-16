@@ -109,9 +109,6 @@ public class LeafQueue extends AbstractCSQueue {
   // cache last cluster resource to compute actual capacity
   private Resource lastClusterResource = Resources.none();
   
-  // absolute capacity as a resource (based on cluster resource)
-  private Resource absoluteCapacityResource = Resources.none();
-  
   private final QueueResourceLimitsInfo queueResourceLimitsInfo =
       new QueueResourceLimitsInfo();
 
@@ -144,7 +141,6 @@ public class LeafQueue extends AbstractCSQueue {
     super.setupQueueConfigs(clusterResource);
     
     this.lastClusterResource = clusterResource;
-    updateAbsoluteCapacityResource(clusterResource);
     
     this.cachedResourceLimitsForHeadroom = new ResourceLimits(clusterResource);
     
@@ -345,10 +341,6 @@ public class LeafQueue extends AbstractCSQueue {
   @Private
   public synchronized int getNumActiveApplications(String user) {
     return getUser(user).getActiveApplications();
-  }
-  
-  public synchronized int getNumContainers() {
-    return numContainers;
   }
 
   @Override
@@ -1328,13 +1320,6 @@ public class LeafQueue extends AbstractCSQueue {
     }
   }
   
-  private void updateAbsoluteCapacityResource(Resource clusterResource) {
-    absoluteCapacityResource =
-        Resources.multiplyAndNormalizeUp(resourceCalculator, labelManager
-            .getResourceByLabel(RMNodeLabelsManager.NO_LABEL, clusterResource),
-            queueCapacities.getAbsoluteCapacity(), minimumAllocation);
-  }
-  
   private void updateCurrentResourceLimits(
       ResourceLimits currentResourceLimits, Resource clusterResource) {
     // TODO: need consider non-empty node labels when resource limits supports
@@ -1360,7 +1345,6 @@ public class LeafQueue extends AbstractCSQueue {
       ResourceLimits currentResourceLimits) {
     updateCurrentResourceLimits(currentResourceLimits, clusterResource);
     lastClusterResource = clusterResource;
-    updateAbsoluteCapacityResource(clusterResource);
     
     // Update headroom info based on new cluster resource value
     // absoluteMaxCapacity now,  will be replaced with absoluteMaxAvailCapacity
