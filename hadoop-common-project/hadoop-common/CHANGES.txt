@@ -54,6 +54,9 @@ Release 2.7.2 - 2015-11-11
     HADOOP-9242. Duplicate surefire plugin config in hadoop-common.
     (Andrey Klochkov via suresh)
 
+    HADOOP-12415. Fixed pom files to correctly include compile-time dependency on
+    netty. (Tom Zeng via cos)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
