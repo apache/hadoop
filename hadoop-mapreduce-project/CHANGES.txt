@@ -1,6 +1,6 @@
 Hadoop MapReduce Change Log
 
-Release 2.7.2 - 2015-11-11
+Release 2.7.2 - 2015-12-16
 
   INCOMPATIBLE CHANGES
 
