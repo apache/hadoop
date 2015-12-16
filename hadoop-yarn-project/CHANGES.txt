@@ -48,8 +48,6 @@ Release 2.7.3 - UNRELEASED
 
     YARN-4439. Clarify NMContainerStatus#toString method. (Jian He via xgong)
 
-    MAPREDUCE-6436. JobHistory cache issue. (Kai Sasaki via zxu)
-
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
