@@ -110,9 +110,11 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
   RpcConnection(LockFreeRpcEngine *engine);
   virtual ~RpcConnection();
 
-  virtual void Connect(const ::asio::ip::tcp::endpoint &server,
+  // Note that a single server can have multiple endpoints - especially both
+  //   an ipv4 and ipv6 endpoint
+  virtual void Connect(const std::vector<::asio::ip::tcp::endpoint> &server,
                        RpcCallback &handler) = 0;
-  virtual void ConnectAndFlush(const ::asio::ip::tcp::endpoint &server) = 0;
+  virtual void ConnectAndFlush(const std::vector<::asio::ip::tcp::endpoint> &server) = 0;
   virtual void Handshake(RpcCallback &handler) = 0;
   virtual void Disconnect() = 0;
 
@@ -231,7 +233,7 @@ class RpcEngine : public LockFreeRpcEngine {
             const std::string &client_name, const char *protocol_name,
             int protocol_version);
 
-  void Connect(const ::asio::ip::tcp::endpoint &server, RpcCallback &handler);
+  void Connect(const std::vector<::asio::ip::tcp::endpoint> &server, RpcCallback &handler);
 
   void AsyncRpc(const std::string &method_name,
                 const ::google::protobuf::MessageLite *req,
@@ -272,6 +274,9 @@ class RpcEngine : public LockFreeRpcEngine {
   std::shared_ptr<RpcConnection> conn_;
   virtual std::shared_ptr<RpcConnection> NewConnection();
   virtual std::unique_ptr<const RetryPolicy> MakeRetryPolicy(const Options &options);
+
+  // Remember all of the last endpoints in case we need to reconnect and retry
+  std::vector<::asio::ip::tcp::endpoint> last_endpoints_;
 private:
   ::asio::io_service * const io_service_;
   const Options options_;
@@ -281,9 +286,6 @@ private:
   const std::unique_ptr<const RetryPolicy> retry_policy_; //null --> no retry
   std::atomic_int call_id_;
   ::asio::deadline_timer retry_timer;
-
-  // Remember the last endpoint in case we need to reconnect to retry
-  ::asio::ip::tcp::endpoint last_endpoint_;
 
   std::mutex engine_state_lock_;
 

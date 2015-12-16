@@ -39,13 +39,13 @@ RpcEngine::RpcEngine(::asio::io_service *io_service, const Options &options,
       call_id_(0),
       retry_timer(*io_service) {}
 
-void RpcEngine::Connect(const ::asio::ip::tcp::endpoint &server,
+void RpcEngine::Connect(const std::vector<::asio::ip::tcp::endpoint> &server,
                         RpcCallback &handler) {
   std::lock_guard<std::mutex> state_lock(engine_state_lock_);
-  last_endpoint_ = server;
+  last_endpoints_ = server;
 
   conn_ = NewConnection();
-  conn_->Connect(server, handler);
+  conn_->Connect(last_endpoints_, handler);
 }
 
 void RpcEngine::Shutdown() {
@@ -75,7 +75,7 @@ void RpcEngine::AsyncRpc(
   std::lock_guard<std::mutex> state_lock(engine_state_lock_);
   if (!conn_) {
     conn_ = NewConnection();
-    conn_->ConnectAndFlush(last_endpoint_);
+    conn_->ConnectAndFlush(last_endpoints_);
   }
   conn_->AsyncRpc(method_name, req, resp, handler);
 }
@@ -103,7 +103,7 @@ Status RpcEngine::RawRpc(const std::string &method_name, const std::string &req,
     std::lock_guard<std::mutex> state_lock(engine_state_lock_);
     if (!conn_) {
         conn_ = NewConnection();
-        conn_->ConnectAndFlush(last_endpoint_);
+        conn_->ConnectAndFlush(last_endpoints_);
       }
     conn = conn_;
   }
@@ -170,10 +170,10 @@ void RpcEngine::RpcCommsError(
       retry_timer.expires_from_now(
           std::chrono::milliseconds(options_.rpc_retry_delay_ms));
       retry_timer.async_wait([this](asio::error_code ec) {
-        if (!ec) conn_->ConnectAndFlush(last_endpoint_);
+        if (!ec) conn_->ConnectAndFlush(last_endpoints_);
       });
     } else {
-      conn_->ConnectAndFlush(last_endpoint_);
+      conn_->ConnectAndFlush(last_endpoints_);
     }
   } else {
     // Connection will try again if someone calls AsyncRpc
