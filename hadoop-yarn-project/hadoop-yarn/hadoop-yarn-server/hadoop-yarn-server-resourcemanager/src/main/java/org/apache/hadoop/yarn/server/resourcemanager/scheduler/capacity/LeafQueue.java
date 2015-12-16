@@ -253,7 +253,6 @@ public class LeafQueue extends AbstractCSQueue {
         " [= configuredAcls ]" + "\n" + 
         "nodeLocalityDelay = " + nodeLocalityDelay + "\n" +
         "labels=" + labelStrBuilder.toString() + "\n" +
-        "nodeLocalityDelay = " +  nodeLocalityDelay + "\n" +
         "reservationsContinueLooking = " +
         reservationsContinueLooking + "\n" +
         "preemptionDisabled = " + getPreemptionDisabled() + "\n" +
