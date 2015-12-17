@@ -280,6 +280,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3623. Add a new config to indicate the Timeline Service version. 
     (Xuan Gong via junping_du)
 
+    YARN-3226. UI changes for decommissioning node. (Sunil G via
+    junping_du)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
