@@ -934,7 +934,7 @@ public final class CacheManager {
     try {
       final DatanodeDescriptor datanode = 
           blockManager.getDatanodeManager().getDatanode(datanodeID);
-      if (datanode == null || !datanode.isAlive()) {
+      if (datanode == null || !datanode.isRegistered()) {
         throw new IOException(
             "processCacheReport from dead or unregistered datanode: " +
             datanode);
