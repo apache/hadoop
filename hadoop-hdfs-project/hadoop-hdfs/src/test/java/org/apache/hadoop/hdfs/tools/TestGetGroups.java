@@ -42,7 +42,10 @@ public class TestGetGroups extends GetGroupsTestBase {
   
   @After
   public void tearDownNameNode() {
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 
   @Override

@@ -54,6 +54,7 @@ public class TestDFSClientExcludedNodes {
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

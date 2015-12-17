@@ -477,7 +477,9 @@ public class TestBackupNode {
       assertTrue(e.getLocalizedMessage(), false);
     } finally {
       fileSys.close();
-      cluster.shutdown();
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 

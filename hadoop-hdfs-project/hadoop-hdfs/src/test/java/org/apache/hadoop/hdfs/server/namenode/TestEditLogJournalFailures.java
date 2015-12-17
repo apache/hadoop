@@ -70,11 +70,14 @@ public class TestEditLogJournalFailures {
   
   @After
   public void shutDownMiniCluster() throws IOException {
-    if (fs != null)
+    if (fs != null) {
       fs.close();
+      fs = null;
+    }
     if (cluster != null) {
       try {
         cluster.shutdown();
+        cluster = null;
       } catch (ExitException ee) {
         // Ignore ExitExceptions as the tests may result in the
         // NameNode doing an immediate shutdown.

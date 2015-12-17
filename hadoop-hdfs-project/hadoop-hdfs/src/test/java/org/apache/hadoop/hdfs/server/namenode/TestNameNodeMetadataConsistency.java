@@ -63,6 +63,7 @@ public class TestNameNodeMetadataConsistency {
   public void cleanup() {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

@@ -82,8 +82,12 @@ public class TestFileStatus {
   
   @AfterClass
   public static void testTearDown() throws Exception {
-    fs.close();
-    cluster.shutdown();
+    if (fs != null) {
+      fs.close();
+    }
+    if (cluster != null) {
+      cluster.shutdown();
+    }
   }
 
   private static void writeFile(FileSystem fileSys, Path name, int repl,

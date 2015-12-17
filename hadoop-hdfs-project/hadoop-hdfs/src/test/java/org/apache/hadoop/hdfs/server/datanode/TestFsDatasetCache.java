@@ -149,9 +149,11 @@ public class TestFsDatasetCache {
     DFSTestUtil.verifyExpectedCacheUsage(0, 0, fsd);
     if (fs != null) {
       fs.close();
+      fs = null;
     }
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
     // Restore the original CacheManipulator
     NativeIO.POSIX.setCacheManipulator(prevCacheManipulator);

@@ -84,10 +84,12 @@ public class TestHDFSConcat {
   public void shutDownCluster() throws IOException {
     if(dfs != null) {
       dfs.close();
+      dfs = null;
     }
     if(cluster != null) {
       cluster.shutdownDataNodes();
       cluster.shutdown();
+      cluster = null;
     }
   }
   

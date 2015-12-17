@@ -147,6 +147,7 @@ public class TestRetryCacheWithHA {
   public void cleanup() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
   

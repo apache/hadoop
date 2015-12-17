@@ -69,7 +69,10 @@ public class TestDataTransferKeepalive {
   
   @After
   public void teardown() {
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
   
   /**

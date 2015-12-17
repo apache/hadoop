@@ -62,7 +62,10 @@ public class TestNNMetricFilesInGetListingOps {
 
   @After
   public void tearDown() throws Exception {
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 
   /** create a file with a length of <code>fileLen</code> */

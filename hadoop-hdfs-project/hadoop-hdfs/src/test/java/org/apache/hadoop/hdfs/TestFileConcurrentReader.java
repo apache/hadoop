@@ -84,8 +84,10 @@ public class TestFileConcurrentReader {
 
   @After
   public void tearDown() throws Exception {
-    cluster.shutdown();
-    cluster = null;
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 
   private void init(Configuration conf) throws IOException {

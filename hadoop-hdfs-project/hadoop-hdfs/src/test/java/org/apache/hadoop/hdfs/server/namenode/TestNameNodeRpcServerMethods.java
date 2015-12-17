@@ -55,8 +55,10 @@ public class TestNameNodeRpcServerMethods {
    */
   @After
   public void cleanup() throws IOException {
-    if (cluster != null)
+    if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
+    }
   }
 
   @Test

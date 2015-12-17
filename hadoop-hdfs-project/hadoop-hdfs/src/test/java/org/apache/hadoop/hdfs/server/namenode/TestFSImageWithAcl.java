@@ -55,7 +55,9 @@ public class TestFSImageWithAcl {
 
   @AfterClass
   public static void tearDown() {
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+    }
   }
 
   private void testAcl(boolean persistNamespace) throws IOException {

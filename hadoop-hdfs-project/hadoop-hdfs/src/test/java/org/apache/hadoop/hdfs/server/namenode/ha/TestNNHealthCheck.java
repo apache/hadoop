@@ -53,6 +53,7 @@ public class TestNNHealthCheck {
   public void shutdown() {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 
