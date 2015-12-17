@@ -304,8 +304,7 @@ public class TestPendingReplication {
           reportDnNum++;
         }
       }
-      // IBRs are async, make sure the NN processes all of them.
-      cluster.getNamesystem().getBlockManager().flushBlockOps();
+
       assertEquals(DATANODE_COUNT - 3,
           blkManager.pendingReplications.getNumReplicas(blocks[0]));
 
@@ -323,7 +322,6 @@ public class TestPendingReplication {
         }
       }
 
-      cluster.getNamesystem().getBlockManager().flushBlockOps();
       assertEquals(DATANODE_COUNT - 3,
           blkManager.pendingReplications.getNumReplicas(blocks[0]));
 
