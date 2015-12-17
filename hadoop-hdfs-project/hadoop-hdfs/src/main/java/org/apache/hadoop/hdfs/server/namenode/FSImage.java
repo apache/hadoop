@@ -675,8 +675,8 @@ public class FSImage implements Closeable {
         imageFile = imageFiles.get(i);
         loadFSImageFile(target, recovery, imageFile, startOpt);
         break;
-      } catch (IOException ioe) {
-        LOG.error("Failed to load image from " + imageFile, ioe);
+      } catch (Exception e) {
+        LOG.error("Failed to load image from " + imageFile, e);
         target.clear();
         imageFile = null;
       }
@@ -727,7 +727,7 @@ public class FSImage implements Closeable {
 
   void loadFSImageFile(FSNamesystem target, MetaRecoveryContext recovery,
       FSImageFile imageFile, StartupOption startupOption) throws IOException {
-    LOG.debug("Planning to load image :\n" + imageFile);
+    LOG.info("Planning to load image: " + imageFile);
     StorageDirectory sdForProperties = imageFile.sd;
     storage.readProperties(sdForProperties, startupOption);
 

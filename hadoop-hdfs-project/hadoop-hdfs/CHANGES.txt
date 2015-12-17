@@ -11,6 +11,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-8647. Abstract BlockManager's rack policy into BlockPlacementPolicy.
     (Brahma Reddy Battula via mingma)
 
+    HDFS-9569. Log the name of the fsimage being loaded for better
+    supportability (Yongjun Zhang via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
