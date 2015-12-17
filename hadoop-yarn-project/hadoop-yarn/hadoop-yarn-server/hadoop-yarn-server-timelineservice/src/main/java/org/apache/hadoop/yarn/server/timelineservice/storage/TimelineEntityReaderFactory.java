@@ -34,23 +34,23 @@ class TimelineEntityReaderFactory {
    * the specified input.
    */
   public static TimelineEntityReader createSingleEntityReader(String userId,
-      String clusterId, String flowId, Long flowRunId, String appId,
+      String clusterId, String flowName, Long flowRunId, String appId,
       String entityType, String entityId, TimelineFilterList confs,
       TimelineFilterList metrics, EnumSet<Field> fieldsToRetrieve) {
     // currently the types that are handled separate from the generic entity
     // table are application, flow run, and flow activity entities
     if (TimelineEntityType.YARN_APPLICATION.matches(entityType)) {
-      return new ApplicationEntityReader(userId, clusterId, flowId, flowRunId,
+      return new ApplicationEntityReader(userId, clusterId, flowName, flowRunId,
           appId, entityType, entityId, confs, metrics, fieldsToRetrieve);
     } else if (TimelineEntityType.YARN_FLOW_RUN.matches(entityType)) {
-      return new FlowRunEntityReader(userId, clusterId, flowId, flowRunId,
+      return new FlowRunEntityReader(userId, clusterId, flowName, flowRunId,
           appId, entityType, entityId, confs, metrics, fieldsToRetrieve);
     } else if (TimelineEntityType.YARN_FLOW_ACTIVITY.matches(entityType)) {
-      return new FlowActivityEntityReader(userId, clusterId, flowId, flowRunId,
+      return new FlowActivityEntityReader(userId, clusterId, flowName, flowRunId,
           appId, entityType, entityId, fieldsToRetrieve);
     } else {
       // assume we're dealing with a generic entity read
-      return new GenericEntityReader(userId, clusterId, flowId, flowRunId,
+      return new GenericEntityReader(userId, clusterId, flowName, flowRunId,
         appId, entityType, entityId, confs, metrics, fieldsToRetrieve);
     }
   }
@@ -60,7 +60,7 @@ class TimelineEntityReaderFactory {
    * the specified input and predicates.
    */
   public static TimelineEntityReader createMultipleEntitiesReader(String userId,
-      String clusterId, String flowId, Long flowRunId, String appId,
+      String clusterId, String flowName, Long flowRunId, String appId,
       String entityType, Long limit, Long createdTimeBegin, Long createdTimeEnd,
       Long modifiedTimeBegin, Long modifiedTimeEnd,
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
@@ -71,26 +71,26 @@ class TimelineEntityReaderFactory {
     // currently the types that are handled separate from the generic entity
     // table are application, flow run, and flow activity entities
     if (TimelineEntityType.YARN_APPLICATION.matches(entityType)) {
-      return new ApplicationEntityReader(userId, clusterId, flowId, flowRunId,
+      return new ApplicationEntityReader(userId, clusterId, flowName, flowRunId,
           appId, entityType, limit, createdTimeBegin, createdTimeEnd,
           modifiedTimeBegin, modifiedTimeEnd, relatesTo, isRelatedTo,
           infoFilters, configFilters, metricFilters, eventFilters, confs,
           metrics, fieldsToRetrieve);
     } else if (TimelineEntityType.YARN_FLOW_ACTIVITY.matches(entityType)) {
-      return new FlowActivityEntityReader(userId, clusterId, flowId, flowRunId,
+      return new FlowActivityEntityReader(userId, clusterId, flowName, flowRunId,
           appId, entityType, limit, createdTimeBegin, createdTimeEnd,
           modifiedTimeBegin, modifiedTimeEnd, relatesTo, isRelatedTo,
           infoFilters, configFilters, metricFilters, eventFilters,
           fieldsToRetrieve);
     } else if (TimelineEntityType.YARN_FLOW_RUN.matches(entityType)) {
-      return new FlowRunEntityReader(userId, clusterId, flowId, flowRunId,
+      return new FlowRunEntityReader(userId, clusterId, flowName, flowRunId,
           appId, entityType, limit, createdTimeBegin, createdTimeEnd,
           modifiedTimeBegin, modifiedTimeEnd, relatesTo, isRelatedTo,
           infoFilters, configFilters, metricFilters, eventFilters, confs,
           metrics, fieldsToRetrieve);
     } else {
       // assume we're dealing with a generic entity read
-      return new GenericEntityReader(userId, clusterId, flowId, flowRunId,
+      return new GenericEntityReader(userId, clusterId, flowName, flowRunId,
           appId, entityType, limit, createdTimeBegin, createdTimeEnd,
           modifiedTimeBegin, modifiedTimeEnd, relatesTo, isRelatedTo,
           infoFilters, configFilters, metricFilters, eventFilters, confs,

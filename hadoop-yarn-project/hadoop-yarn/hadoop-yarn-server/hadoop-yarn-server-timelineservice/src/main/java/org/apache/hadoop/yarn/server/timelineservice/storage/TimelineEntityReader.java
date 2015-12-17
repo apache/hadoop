@@ -53,7 +53,7 @@ abstract class TimelineEntityReader {
 
   protected String userId;
   protected String clusterId;
-  protected String flowId;
+  protected String flowName;
   protected Long flowRunId;
   protected String appId;
   protected String entityType;
@@ -92,7 +92,7 @@ abstract class TimelineEntityReader {
    * Instantiates a reader for multiple-entity reads.
    */
   protected TimelineEntityReader(String userId, String clusterId,
-      String flowId, Long flowRunId, String appId, String entityType,
+      String flowName, Long flowRunId, String appId, String entityType,
       Long limit, Long createdTimeBegin, Long createdTimeEnd,
       Long modifiedTimeBegin, Long modifiedTimeEnd,
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
@@ -104,7 +104,7 @@ abstract class TimelineEntityReader {
     this.sortedKeys = sortedKeys;
     this.userId = userId;
     this.clusterId = clusterId;
-    this.flowId = flowId;
+    this.flowName = flowName;
     this.flowRunId = flowRunId;
     this.appId = appId;
     this.entityType = entityType;
@@ -130,13 +130,13 @@ abstract class TimelineEntityReader {
    * Instantiates a reader for single-entity reads.
    */
   protected TimelineEntityReader(String userId, String clusterId,
-      String flowId, Long flowRunId, String appId, String entityType,
+      String flowName, Long flowRunId, String appId, String entityType,
       String entityId, TimelineFilterList confsToRetrieve,
       TimelineFilterList metricsToRetrieve, EnumSet<Field> fieldsToRetrieve) {
     this.singleEntityRead = true;
     this.userId = userId;
     this.clusterId = clusterId;
-    this.flowId = flowId;
+    this.flowName = flowName;
     this.flowRunId = flowRunId;
     this.appId = appId;
     this.entityType = entityType;

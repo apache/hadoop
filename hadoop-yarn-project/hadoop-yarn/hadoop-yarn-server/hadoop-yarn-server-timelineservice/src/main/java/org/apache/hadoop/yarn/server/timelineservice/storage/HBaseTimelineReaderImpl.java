@@ -64,20 +64,20 @@ public class HBaseTimelineReaderImpl
 
   @Override
   public TimelineEntity getEntity(String userId, String clusterId,
-      String flowId, Long flowRunId, String appId, String entityType,
+      String flowName, Long flowRunId, String appId, String entityType,
       String entityId, TimelineFilterList confsToRetrieve,
       TimelineFilterList metricsToRetrieve, EnumSet<Field> fieldsToRetrieve)
       throws IOException {
     TimelineEntityReader reader =
         TimelineEntityReaderFactory.createSingleEntityReader(userId, clusterId,
-            flowId, flowRunId, appId, entityType, entityId, confsToRetrieve,
+            flowName, flowRunId, appId, entityType, entityId, confsToRetrieve,
             metricsToRetrieve, fieldsToRetrieve);
     return reader.readEntity(hbaseConf, conn);
   }
 
   @Override
   public Set<TimelineEntity> getEntities(String userId, String clusterId,
-      String flowId, Long flowRunId, String appId, String entityType,
+      String flowName, Long flowRunId, String appId, String entityType,
       Long limit, Long createdTimeBegin, Long createdTimeEnd,
       Long modifiedTimeBegin, Long modifiedTimeEnd,
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
@@ -87,7 +87,7 @@ public class HBaseTimelineReaderImpl
       EnumSet<Field> fieldsToRetrieve) throws IOException {
     TimelineEntityReader reader =
         TimelineEntityReaderFactory.createMultipleEntitiesReader(userId,
-            clusterId, flowId, flowRunId, appId, entityType, limit,
+            clusterId, flowName, flowRunId, appId, entityType, limit,
             createdTimeBegin, createdTimeEnd, modifiedTimeBegin,
             modifiedTimeEnd, relatesTo, isRelatedTo, infoFilters, configFilters,
             metricFilters, eventFilters, confsToRetrieve, metricsToRetrieve,

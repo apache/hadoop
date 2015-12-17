@@ -49,23 +49,23 @@ class FlowActivityEntityReader extends TimelineEntityReader {
       new FlowActivityTable();
 
   public FlowActivityEntityReader(String userId, String clusterId,
-      String flowId, Long flowRunId, String appId, String entityType,
+      String flowName, Long flowRunId, String appId, String entityType,
       Long limit, Long createdTimeBegin, Long createdTimeEnd,
       Long modifiedTimeBegin, Long modifiedTimeEnd,
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
       Map<String, Object> infoFilters, Map<String, String> configFilters,
       Set<String> metricFilters, Set<String> eventFilters,
       EnumSet<Field> fieldsToRetrieve) {
-    super(userId, clusterId, flowId, flowRunId, appId, entityType, limit,
+    super(userId, clusterId, flowName, flowRunId, appId, entityType, limit,
         createdTimeBegin, createdTimeEnd, modifiedTimeBegin, modifiedTimeEnd,
         relatesTo, isRelatedTo, infoFilters, configFilters, metricFilters,
         eventFilters, null, null, fieldsToRetrieve, true);
   }
 
   public FlowActivityEntityReader(String userId, String clusterId,
-      String flowId, Long flowRunId, String appId, String entityType,
+      String flowName, Long flowRunId, String appId, String entityType,
       String entityId, EnumSet<Field> fieldsToRetrieve) {
-    super(userId, clusterId, flowId, flowRunId, appId, entityType, entityId,
+    super(userId, clusterId, flowName, flowRunId, appId, entityType, entityId,
         null, null, fieldsToRetrieve);
   }
 
@@ -135,7 +135,7 @@ class FlowActivityEntityReader extends TimelineEntityReader {
 
     long time = rowKey.getDayTimestamp();
     String user = rowKey.getUserId();
-    String flowName = rowKey.getFlowId();
+    String flowName = rowKey.getFlowName();
 
     FlowActivityEntity flowActivity =
         new FlowActivityEntity(clusterId, time, user, flowName);

@@ -150,11 +150,11 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     }
   }
 
-  private String getFlowRunPath(String userId, String clusterId, String flowId,
+  private String getFlowRunPath(String userId, String clusterId, String flowName,
       Long flowRunId, String appId)
       throws IOException {
-    if (userId != null && flowId != null && flowRunId != null) {
-      return userId + "/" + flowId + "/" + flowRunId;
+    if (userId != null && flowName != null && flowRunId != null) {
+      return userId + "/" + flowName + "/" + flowRunId;
     }
     if (clusterId == null || appId == null) {
       throw new IOException("Unable to get flow info");
@@ -387,11 +387,11 @@ public class FileSystemTimelineReaderImpl extends AbstractService
 
   @Override
   public TimelineEntity getEntity(String userId, String clusterId,
-      String flowId, Long flowRunId, String appId, String entityType,
+      String flowName, Long flowRunId, String appId, String entityType,
       String entityId, TimelineFilterList confsToRetrieve,
       TimelineFilterList metricsToRetrieve, EnumSet<Field> fieldsToRetrieve)
       throws IOException {
-    String flowRunPath = getFlowRunPath(userId, clusterId, flowId,
+    String flowRunPath = getFlowRunPath(userId, clusterId, flowName,
         flowRunId, appId);
     File dir = new File(new File(rootPath, ENTITIES_DIR),
         clusterId + "/" + flowRunPath + "/" + appId + "/" + entityType);
@@ -411,7 +411,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
 
   @Override
   public Set<TimelineEntity> getEntities(String userId, String clusterId,
-      String flowId, Long flowRunId, String appId, String entityType,
+      String flowName, Long flowRunId, String appId, String entityType,
       Long limit, Long createdTimeBegin, Long createdTimeEnd,
       Long modifiedTimeBegin, Long modifiedTimeEnd,
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
@@ -420,7 +420,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
       TimelineFilterList confsToRetrieve, TimelineFilterList metricsToRetrieve,
       EnumSet<Field> fieldsToRetrieve) throws IOException {
     String flowRunPath =
-        getFlowRunPath(userId, clusterId, flowId, flowRunId, appId);
+        getFlowRunPath(userId, clusterId, flowName, flowRunId, appId);
     File dir =
         new File(new File(rootPath, ENTITIES_DIR),
             clusterId + "/" + flowRunPath + "/" + appId + "/" + entityType);

@@ -47,7 +47,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineHBas
  * |-------------------------------------------------------------------------|
  * | clusterId! | id:appId                     | metricId1:   | configKey1:  |
  * | userName!  |                              | metricValue1 | configValue1 |
- * | flowId!    | created_time:                | @timestamp1  |              |
+ * | flowName!  | created_time:                | @timestamp1  |              |
  * | flowRunId! | 1392993084018                |              | configKey2:  |
  * | AppId      |                              | metriciD1:   | configValue2 |
  * |            | modified_time:               | metricValue2 |              |

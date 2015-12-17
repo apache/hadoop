@@ -160,7 +160,7 @@ public class TimelineUtils {
     return SecurityUtil.buildTokenService(timelineServiceAddr);
   }
 
-  public static String generateDefaultFlowIdBasedOnAppId(ApplicationId appId) {
+  public static String generateDefaultFlowNameBasedOnAppId(ApplicationId appId) {
     return "flow_" + appId.getClusterTimestamp() + "_" + appId.getId();
   }
 

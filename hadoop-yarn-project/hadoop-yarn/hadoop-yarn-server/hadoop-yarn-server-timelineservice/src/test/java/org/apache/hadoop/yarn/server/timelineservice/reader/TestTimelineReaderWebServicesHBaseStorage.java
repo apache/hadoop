@@ -595,7 +595,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     try {
       URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
           "timeline/app/cluster1/application_1111111111_1111?" +
-          "userid=user1&fields=ALL&flowid=flow_name&flowrunid=1002345678919");
+          "userid=user1&fields=ALL&flowname=flow_name&flowrunid=1002345678919");
       ClientResponse resp = getResponse(client, uri);
       TimelineEntity entity = resp.getEntity(TimelineEntity.class);
       assertNotNull(entity);
@@ -613,7 +613,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
 
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
               "timeline/app/application_1111111111_2222?userid=user1" +
-              "&fields=metrics&flowid=flow_name&flowrunid=1002345678919");
+              "&fields=metrics&flowname=flow_name&flowrunid=1002345678919");
       resp = getResponse(client, uri);
       entity = resp.getEntity(TimelineEntity.class);
       assertNotNull(entity);

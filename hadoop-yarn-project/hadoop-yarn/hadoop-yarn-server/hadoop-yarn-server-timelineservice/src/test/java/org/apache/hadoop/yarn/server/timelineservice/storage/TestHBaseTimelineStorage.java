@@ -841,7 +841,7 @@ public class TestHBaseTimelineStorage {
 
     assertEquals(user, key.getUserId());
     assertEquals(cluster, key.getClusterId());
-    assertEquals(flow, key.getFlowId());
+    assertEquals(flow, key.getFlowName());
     assertEquals(runid, key.getFlowRunId());
     assertEquals(appName, key.getAppId());
     assertEquals(te.getType(), key.getEntityType());
@@ -856,7 +856,7 @@ public class TestHBaseTimelineStorage {
 
     assertEquals(cluster, key.getClusterId());
     assertEquals(user, key.getUserId());
-    assertEquals(flow, key.getFlowId());
+    assertEquals(flow, key.getFlowName());
     assertEquals(runid, key.getFlowRunId());
     assertEquals(appName, key.getAppId());
     return true;
