@@ -50,6 +50,8 @@ public class ResourceHandlerModule {
   private static volatile CGroupsHandler cGroupsHandler;
   private static volatile CGroupsBlkioResourceHandlerImpl
       cGroupsBlkioResourceHandler;
+  private static volatile CGroupsMemoryResourceHandlerImpl
+      cGroupsMemoryResourceHandler;
 
   /**
    * Returns an initialized, thread-safe CGroupsHandler instance.
@@ -69,7 +71,7 @@ public class ResourceHandlerModule {
   }
 
   private static TrafficControlBandwidthHandlerImpl
-  getTrafficControlBandwidthHandler(Configuration conf)
+    getTrafficControlBandwidthHandler(Configuration conf)
       throws ResourceHandlerException {
     if (conf.getBoolean(YarnConfiguration.NM_NETWORK_RESOURCE_ENABLED,
         YarnConfiguration.DEFAULT_NM_NETWORK_RESOURCE_ENABLED)) {
@@ -92,7 +94,7 @@ public class ResourceHandlerModule {
   }
 
   public static OutboundBandwidthResourceHandler
-  getOutboundBandwidthResourceHandler(Configuration conf)
+    getOutboundBandwidthResourceHandler(Configuration conf)
       throws ResourceHandlerException {
     return getTrafficControlBandwidthHandler(conf);
   }
@@ -119,6 +121,29 @@ public class ResourceHandlerModule {
     return cGroupsBlkioResourceHandler;
   }
 
+  public static MemoryResourceHandler getMemoryResourceHandler(
+      Configuration conf) throws ResourceHandlerException {
+    if (conf.getBoolean(YarnConfiguration.NM_MEMORY_RESOURCE_ENABLED,
+        YarnConfiguration.DEFAULT_NM_MEMORY_RESOURCE_ENABLED)) {
+      return getCgroupsMemoryResourceHandler(conf);
+    }
+    return null;
+  }
+
+  private static CGroupsMemoryResourceHandlerImpl
+    getCgroupsMemoryResourceHandler(
+      Configuration conf) throws ResourceHandlerException {
+    if (cGroupsMemoryResourceHandler == null) {
+      synchronized (MemoryResourceHandler.class) {
+        if (cGroupsMemoryResourceHandler == null) {
+          cGroupsMemoryResourceHandler =
+              new CGroupsMemoryResourceHandlerImpl(getCGroupsHandler(conf));
+        }
+      }
+    }
+    return cGroupsMemoryResourceHandler;
+  }
+
   private static void addHandlerIfNotNull(List<ResourceHandler> handlerList,
       ResourceHandler handler) {
     if (handler != null) {
@@ -132,6 +157,7 @@ public class ResourceHandlerModule {
 
     addHandlerIfNotNull(handlerList, getOutboundBandwidthResourceHandler(conf));
     addHandlerIfNotNull(handlerList, getDiskResourceHandler(conf));
+    addHandlerIfNotNull(handlerList, getMemoryResourceHandler(conf));
     resourceHandlerChain = new ResourceHandlerChain(handlerList);
   }
 
