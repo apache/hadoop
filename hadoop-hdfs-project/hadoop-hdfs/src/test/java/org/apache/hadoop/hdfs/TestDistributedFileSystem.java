@@ -729,6 +729,7 @@ public class TestDistributedFileSystem {
       final int repl = 2;
       DFSTestUtil.createFile(fs, testFile, blockSize, numBlocks * blockSize,
           blockSize, (short) repl, 0xADDED);
+      DFSTestUtil.waitForReplication(fs, testFile, (short) repl, 30000);
       // Get the listing
       RemoteIterator<LocatedFileStatus> it = fs.listLocatedStatus(testFile);
       assertTrue("Expected file to be present", it.hasNext());
