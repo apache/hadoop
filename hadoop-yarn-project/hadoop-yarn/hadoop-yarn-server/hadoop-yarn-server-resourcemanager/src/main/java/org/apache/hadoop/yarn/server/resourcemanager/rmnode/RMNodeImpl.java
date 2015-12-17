@@ -647,13 +647,34 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
   }
 
-  // Treats nodes in decommissioning as active nodes
-  // TODO we may want to differentiate active nodes and decommissioning node in
-  // metrics later.
-  private void updateMetricsForGracefulDecommissionOnUnhealthyNode() {
+  // Update metrics when moving to Decommissioning state
+  private void updateMetricsForGracefulDecommission(NodeState initialState,
+      NodeState finalState) {
     ClusterMetrics metrics = ClusterMetrics.getMetrics();
-    metrics.incrNumActiveNodes();
-    metrics.decrNumUnhealthyNMs();
+    switch (initialState) {
+    case UNHEALTHY :
+      metrics.decrNumUnhealthyNMs();
+      break;
+    case RUNNING :
+      metrics.decrNumActiveNodes();
+      break;
+    case DECOMMISSIONING :
+      metrics.decrDecommissioningNMs();
+      break;
+    default :
+      LOG.warn("Unexpcted initial state");
+    }
+
+    switch (finalState) {
+    case DECOMMISSIONING :
+      metrics.incrDecommissioningNMs();
+      break;
+    case RUNNING :
+      metrics.incrNumActiveNodes();
+      break;
+    default :
+      LOG.warn("Unexpected final state");
+    }
   }
 
   private void updateMetricsForDeactivatedNode(NodeState initialState,
@@ -665,18 +686,18 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       metrics.decrNumActiveNodes();
       break;
     case DECOMMISSIONING:
-      metrics.decrNumActiveNodes();
+      metrics.decrDecommissioningNMs();
       break;
     case UNHEALTHY:
       metrics.decrNumUnhealthyNMs();
       break;
     default:
-      LOG.debug("Unexpected inital state");
+      LOG.warn("Unexpected initial state");
     }
 
     switch (finalState) {
     case DECOMMISSIONED:
-        metrics.incrDecommisionedNMs();
+      metrics.incrDecommisionedNMs();
       break;
     case LOST:
       metrics.incrNumLostNMs();
@@ -691,7 +712,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       metrics.incrNumShutdownNMs();
       break;
     default:
-      LOG.debug("Unexpected final state");
+      LOG.warn("Unexpected final state");
     }
   }
 
@@ -1014,9 +1035,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     @Override
     public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
       LOG.info("Put Node " + rmNode.nodeId + " in DECOMMISSIONING.");
-      if (initState.equals(NodeState.UNHEALTHY)) {
-        rmNode.updateMetricsForGracefulDecommissionOnUnhealthyNode();
-      }
+      // Update NM metrics during graceful decommissioning.
+      rmNode.updateMetricsForGracefulDecommission(initState, finalState);
       // TODO (in YARN-3223) Keep NM's available resource to be 0
     }
   }
@@ -1033,6 +1053,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
       LOG.info("Node " + rmNode.nodeId + " in DECOMMISSIONING is " +
           "recommissioned back to RUNNING.");
+      rmNode
+          .updateMetricsForGracefulDecommission(rmNode.getState(), finalState);
       // TODO handle NM resource resume in YARN-3223.
     }
   }

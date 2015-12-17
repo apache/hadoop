@@ -94,6 +94,9 @@ class NodesPage extends RmView {
           rmNodes = this.rm.getRMContext().getInactiveRMNodes().values();
           isInactive = true;
           break;
+        case DECOMMISSIONING:
+          // Do nothing
+          break;
         default:
           LOG.debug("Unexpected state filter for inactive RM node");
         }
