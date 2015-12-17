@@ -36,6 +36,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9516. Truncate file fails with data dirs on multiple disks.
     (Plamen Jeliazkov via shv)
 
+    HDFS-9533. seen_txid in the shared edits directory is modified during
+    bootstrapping (kihwal)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
