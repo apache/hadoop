@@ -101,10 +101,13 @@ public class TestIncrementalBrVariations {
 
   @After
   public void shutDownCluster() throws IOException {
-    client.close();
-    fs.close();
-    cluster.shutdownDataNodes();
-    cluster.shutdown();
+    if (cluster != null) {
+      client.close();
+      fs.close();
+      cluster.shutdownDataNodes();
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 
   /**

@@ -86,7 +86,10 @@ public class TestWriteRead {
 
   @After
   public void shutdown() {
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 
   // Equivalence of @Before for cluster mode testing.

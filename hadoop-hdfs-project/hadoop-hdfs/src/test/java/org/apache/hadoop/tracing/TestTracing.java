@@ -222,7 +222,10 @@ public class TestTracing {
 
   @After
   public void shutDown() throws IOException {
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
     FsTracer.clear();
   }
 }

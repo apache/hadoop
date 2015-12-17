@@ -123,6 +123,7 @@ public class TestDFSPermission {
   public void tearDown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
   

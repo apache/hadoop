@@ -111,16 +111,22 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
   
   @After
   public void shutdown() throws Exception {
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
     
     if (thr1 != null) {
       thr1.interrupt();
+      thr1 = null;
     }
     if (thr2 != null) {
       thr2.interrupt();
+      thr2 = null;
     }
     if (ctx != null) {
       ctx.stop();
+      ctx = null;
     }
   }
 

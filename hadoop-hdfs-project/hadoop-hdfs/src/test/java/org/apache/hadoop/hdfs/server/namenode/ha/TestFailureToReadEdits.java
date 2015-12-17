@@ -130,15 +130,18 @@ public class TestFailureToReadEdits {
   public void tearDownCluster() throws Exception {
     if (fs != null) {
       fs.close();
+      fs = null;
     }
     
     if (clusterType == TestType.SHARED_DIR_HA) {
       if (cluster != null) {
         cluster.shutdown();
+        cluster = null;
       }
     } else {
       if (miniQjmHaCluster != null) {
         miniQjmHaCluster.shutdown();
+        miniQjmHaCluster = null;
       }
     }
   }

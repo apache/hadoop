@@ -116,12 +116,15 @@ public class TestDataNodeVolumeFailure {
   public void tearDown() throws Exception {
     if(data_fail != null) {
       FileUtil.setWritable(data_fail, true);
+      data_fail = null;
     }
     if(failedDir != null) {
       FileUtil.setWritable(failedDir, true);
+      failedDir = null;
     }
     if(cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
   

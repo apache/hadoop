@@ -73,13 +73,16 @@ public class TestJMXGet {
    */
   @After
   public void tearDown() throws Exception {
-    if(cluster.isClusterUp())
-      cluster.shutdown();
-
-    File data_dir = new File(cluster.getDataDirectory());
-    if(data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
-      throw new IOException("Could not delete hdfs directory in tearDown '"
-          + data_dir + "'");
+    if (cluster != null) {
+      if (cluster.isClusterUp()) {
+        cluster.shutdown();
+      }
+      File data_dir = new File(cluster.getDataDirectory());
+      if (data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
+        throw new IOException(
+            "Could not delete hdfs directory in tearDown '" + data_dir + "'");
+      }
+      cluster = null;
     }
   }
 

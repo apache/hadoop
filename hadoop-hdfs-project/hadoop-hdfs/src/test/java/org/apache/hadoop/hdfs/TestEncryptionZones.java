@@ -170,6 +170,7 @@ public class TestEncryptionZones {
   public void teardown() {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
     EncryptionFaultInjector.instance = new EncryptionFaultInjector();
   }

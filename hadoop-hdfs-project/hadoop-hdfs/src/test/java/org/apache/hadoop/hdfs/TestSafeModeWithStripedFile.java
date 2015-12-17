@@ -63,6 +63,7 @@ public class TestSafeModeWithStripedFile {
   public void tearDown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

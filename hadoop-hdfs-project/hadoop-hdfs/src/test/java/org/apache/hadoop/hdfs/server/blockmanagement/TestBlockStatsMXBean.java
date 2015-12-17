@@ -67,6 +67,7 @@ public class TestBlockStatsMXBean {
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

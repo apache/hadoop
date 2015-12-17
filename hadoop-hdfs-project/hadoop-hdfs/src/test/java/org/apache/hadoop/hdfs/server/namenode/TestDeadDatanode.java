@@ -62,7 +62,10 @@ public class TestDeadDatanode {
 
   @After
   public void cleanup() {
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 
   /**

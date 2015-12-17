@@ -47,6 +47,7 @@ public class TestHdfsAdmin {
   public void shutDownCluster() {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

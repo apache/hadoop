@@ -81,9 +81,11 @@ public class TestBootstrapStandbyWithQJM {
   public void cleanup() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
     if (jCluster != null) {
       jCluster.shutdown();
+      jCluster = null;
     }
   }
   

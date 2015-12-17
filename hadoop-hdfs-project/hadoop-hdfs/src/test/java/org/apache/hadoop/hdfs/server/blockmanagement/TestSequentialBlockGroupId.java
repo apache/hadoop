@@ -93,6 +93,7 @@ public class TestSequentialBlockGroupId {
   public void teardown() {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

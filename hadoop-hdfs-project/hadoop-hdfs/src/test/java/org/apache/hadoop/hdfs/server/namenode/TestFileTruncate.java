@@ -110,8 +110,14 @@ public class TestFileTruncate {
 
   @After
   public void tearDown() throws IOException {
-    if(fs != null)      fs.close();
-    if(cluster != null) cluster.shutdown();
+    if(fs != null) {
+      fs.close();
+      fs = null;
+    }
+    if(cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 
   /**

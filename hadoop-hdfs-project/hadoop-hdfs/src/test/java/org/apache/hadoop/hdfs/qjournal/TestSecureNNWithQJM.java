@@ -154,9 +154,11 @@ public class TestSecureNNWithQJM {
     IOUtils.cleanup(null, fs);
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
     if (mjc != null) {
       mjc.shutdown();
+      mjc = null;
     }
   }
 

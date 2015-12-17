@@ -65,11 +65,14 @@ public class TestPipelines {
 
   @After
   public void shutDownCluster() throws IOException {
-    if (fs != null)
+    if (fs != null) {
       fs.close();
+      fs = null;
+    }
     if (cluster != null) {
       cluster.shutdownDataNodes();
       cluster.shutdown();
+      cluster = null;
     }
   }
 

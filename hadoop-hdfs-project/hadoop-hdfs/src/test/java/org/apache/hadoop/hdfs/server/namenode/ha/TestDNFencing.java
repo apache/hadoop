@@ -118,6 +118,7 @@ public class TestDNFencing {
       banner("Shutting down cluster. NN2 metadata:");
       doMetasave(nn2);
       cluster.shutdown();
+      cluster = null;
     }
   }
   

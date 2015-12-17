@@ -2510,6 +2510,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9570. Minor typos, grammar, and case sensitivity cleanup in
     HdfsPermissionsGuide.md's (Travis Campbell via aw)
 
+    HDFS-9515. NPE when MiniDFSCluster#shutdown is invoked on uninitialized
+    reference. (Wei-Chiu Chuang via Arpit Agarwal)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

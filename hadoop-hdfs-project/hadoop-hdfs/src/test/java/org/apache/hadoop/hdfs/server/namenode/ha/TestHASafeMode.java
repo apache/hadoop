@@ -112,6 +112,7 @@ public class TestHASafeMode {
   public void shutdownCluster() {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
   

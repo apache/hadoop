@@ -76,6 +76,7 @@ public class TestQuotaWithStripedBlocks {
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

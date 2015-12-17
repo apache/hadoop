@@ -96,7 +96,9 @@ abstract public class TestSymlinkHdfs extends SymlinkBaseTest {
 
   @AfterClass
   public static void afterClassTeardown() throws Exception {
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+    }
   }
 
   @Test(timeout=10000)

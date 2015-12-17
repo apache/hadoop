@@ -80,6 +80,7 @@ public class TestNameNodeRetryCacheMetrics {
   public void cleanup() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

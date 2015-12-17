@@ -82,6 +82,7 @@ public class TestDFSClientSocketSize {
     if (cluster != null) {
       LOG.info("Shutting down MiniDFSCluster.");
       cluster.shutdown();
+      cluster = null;
     }
   }
 

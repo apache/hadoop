@@ -46,6 +46,7 @@ public class TestGetGroupsWithHA extends GetGroupsTestBase {
   public void tearDownNameNode() {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

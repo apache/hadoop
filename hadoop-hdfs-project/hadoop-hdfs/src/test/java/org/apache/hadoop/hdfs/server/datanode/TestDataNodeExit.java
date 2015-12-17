@@ -59,8 +59,10 @@ public class TestDataNodeExit {
 
   @After
   public void tearDown() throws Exception {
-    if (cluster != null)
+    if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
+    }
   }
   
   private void stopBPServiceThreads(int numStopThreads, DataNode dn)

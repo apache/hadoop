@@ -114,6 +114,7 @@ public class TestQuorumJournalManager {
     
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
   

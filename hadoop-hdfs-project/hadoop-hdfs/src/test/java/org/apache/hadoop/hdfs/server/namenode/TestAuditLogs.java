@@ -137,8 +137,14 @@ public class TestAuditLogs {
   @After
   public void teardownCluster() throws Exception {
     util.cleanup(fs, "/srcdat");
-    fs.close();
-    cluster.shutdown();
+    if (fs != null) {
+      fs.close();
+      fs = null;
+    }
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 
   /** test that allowed operation puts proper entry in audit log */

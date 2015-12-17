@@ -158,6 +158,7 @@ public class TestCacheDirectives {
     waitForCachedBlocks(namenode, 0, 0, "teardown");
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
     // Restore the original CacheManipulator
     NativeIO.POSIX.setCacheManipulator(prevCacheManipulator);
