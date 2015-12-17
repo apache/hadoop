@@ -905,6 +905,30 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_NM_ENABLE_HARDWARE_CAPABILITY_DETECTION =
       false;
 
+  @Private
+  public static final String NM_MEMORY_RESOURCE_PREFIX = NM_PREFIX
+      + "resource.memory.";
+
+  @Private
+  public static final String NM_MEMORY_RESOURCE_ENABLED =
+      NM_MEMORY_RESOURCE_PREFIX + "enabled";
+  @Private
+  public static final boolean DEFAULT_NM_MEMORY_RESOURCE_ENABLED = false;
+
+  @Private
+  public static final String NM_MEMORY_RESOURCE_CGROUPS_SWAPPINESS =
+      NM_MEMORY_RESOURCE_PREFIX + "cgroups.swappiness";
+  @Private
+  public static final int DEFAULT_NM_MEMORY_RESOURCE_CGROUPS_SWAPPINESS = 0;
+
+  @Private
+  public static final String NM_MEMORY_RESOURCE_CGROUPS_SOFT_LIMIT_PERCENTAGE =
+      NM_MEMORY_RESOURCE_PREFIX + "cgroups.soft-limit-percentage";
+  @Private
+  public static final float
+      DEFAULT_NM_MEMORY_RESOURCE_CGROUPS_SOFT_LIMIT_PERCENTAGE =
+      90.0f;
+
   /**
    * Prefix for disk configurations. Work in progress: This configuration
    * parameter may be changed/removed in the future.

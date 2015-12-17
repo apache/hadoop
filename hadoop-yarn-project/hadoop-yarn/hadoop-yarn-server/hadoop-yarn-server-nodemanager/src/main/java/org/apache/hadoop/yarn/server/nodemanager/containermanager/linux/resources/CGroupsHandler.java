@@ -31,10 +31,12 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public interface CGroupsHandler {
+
   public enum CGroupController {
     CPU("cpu"),
     NET_CLS("net_cls"),
-    BLKIO("blkio");
+    BLKIO("blkio"),
+    MEMORY("memory");
 
     private final String name;
 
@@ -50,6 +52,11 @@ public interface CGroupsHandler {
   public static final String CGROUP_FILE_TASKS = "tasks";
   public static final String CGROUP_PARAM_CLASSID = "classid";
   public static final String CGROUP_PARAM_BLKIO_WEIGHT = "weight";
+
+  String CGROUP_PARAM_MEMORY_HARD_LIMIT_BYTES = "limit_in_bytes";
+  String CGROUP_PARAM_MEMORY_SOFT_LIMIT_BYTES = "soft_limit_in_bytes";
+  String CGROUP_PARAM_MEMORY_SWAPPINESS = "swappiness";
+
 
   /**
    * Mounts a cgroup controller

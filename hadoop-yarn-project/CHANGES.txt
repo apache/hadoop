@@ -61,6 +61,9 @@ Release 2.9.0 - UNRELEASED
 
   NEW FEATURES
 
+    YARN-1856. Added cgroups based memory monitoring for containers as another
+    alternative to custom memory-monitoring. (Varun Vasudev via vinodkv)
+
   IMPROVEMENTS
 
     YARN-4072. ApplicationHistoryServer, WebAppProxyServer, NodeManager and
