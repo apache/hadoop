@@ -2513,6 +2513,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9515. NPE when MiniDFSCluster#shutdown is invoked on uninitialized
     reference. (Wei-Chiu Chuang via Arpit Agarwal)
 
+    HDFS-9572. Prevent DataNode log spam if a client connects on the data
+    transfer port but sends no data. (cnauroth)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
