@@ -66,7 +66,7 @@ public class TimelineReaderManager extends AbstractService {
    * @see TimelineReader#getEntities
    */
   Set<TimelineEntity> getEntities(String userId, String clusterId,
-      String flowId, Long flowRunId, String appId, String entityType,
+      String flowName, Long flowRunId, String appId, String entityType,
       Long limit, Long createdTimeBegin, Long createdTimeEnd,
       Long modifiedTimeBegin, Long modifiedTimeEnd,
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
@@ -74,7 +74,7 @@ public class TimelineReaderManager extends AbstractService {
       Set<String>  metricFilters, Set<String> eventFilters,
       EnumSet<Field> fieldsToRetrieve) throws IOException {
     String cluster = getClusterID(clusterId, getConfig());
-    return reader.getEntities(userId, cluster, flowId, flowRunId, appId,
+    return reader.getEntities(userId, cluster, flowName, flowRunId, appId,
         entityType, limit, createdTimeBegin, createdTimeEnd, modifiedTimeBegin,
         modifiedTimeEnd, relatesTo, isRelatedTo, infoFilters, configFilters,
         metricFilters, eventFilters, null, null, fieldsToRetrieve);
@@ -87,10 +87,10 @@ public class TimelineReaderManager extends AbstractService {
    * @see TimelineReader#getEntity
    */
   public TimelineEntity getEntity(String userId, String clusterId,
-      String flowId, Long flowRunId, String appId, String entityType,
+      String flowName, Long flowRunId, String appId, String entityType,
       String entityId, EnumSet<Field> fields) throws IOException {
     String cluster = getClusterID(clusterId, getConfig());
-    return reader.getEntity(userId, cluster, flowId, flowRunId, appId,
+    return reader.getEntity(userId, cluster, flowName, flowRunId, appId,
         entityType, entityId, null, null, fields);
   }
 }

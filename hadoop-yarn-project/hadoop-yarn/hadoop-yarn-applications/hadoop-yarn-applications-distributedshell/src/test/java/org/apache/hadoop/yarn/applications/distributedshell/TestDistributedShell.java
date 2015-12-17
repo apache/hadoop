@@ -493,7 +493,7 @@ public class TestDistributedShell {
           YarnConfiguration.DEFAULT_RM_CLUSTER_ID + "/" +
           UserGroupInformation.getCurrentUser().getShortUserName() +
           (defaultFlow ? "/" +
-              TimelineUtils.generateDefaultFlowIdBasedOnAppId(appId) +
+              TimelineUtils.generateDefaultFlowNameBasedOnAppId(appId) +
               "/1/1/" : "/test_flow_name/test_flow_version/12345678/") +
               appId.toString();
       // for this test, we expect DS_APP_ATTEMPT AND DS_CONTAINER dirs

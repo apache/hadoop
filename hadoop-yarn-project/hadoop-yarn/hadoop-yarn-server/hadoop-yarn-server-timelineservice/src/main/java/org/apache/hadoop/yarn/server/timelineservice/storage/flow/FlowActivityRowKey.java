@@ -29,14 +29,14 @@ public class FlowActivityRowKey {
   private final String clusterId;
   private final long dayTs;
   private final String userId;
-  private final String flowId;
+  private final String flowName;
 
   public FlowActivityRowKey(String clusterId, long dayTs, String userId,
-      String flowId) {
+      String flowName) {
     this.clusterId = clusterId;
     this.dayTs = dayTs;
     this.userId = userId;
-    this.flowId = flowId;
+    this.flowName = flowName;
   }
 
   public String getClusterId() {
@@ -51,8 +51,8 @@ public class FlowActivityRowKey {
     return userId;
   }
 
-  public String getFlowId() {
-    return flowId;
+  public String getFlowName() {
+    return flowName;
   }
 
   /**
@@ -82,38 +82,38 @@ public class FlowActivityRowKey {
 
   /**
    * Constructs a row key for the flow activity table as follows:
-   * {@code clusterId!dayTimestamp!user!flowId}
+   * {@code clusterId!dayTimestamp!user!flowName}
    *
    * Will insert into current day's record in the table
    * @param clusterId
    * @param userId
-   * @param flowId
+   * @param flowName
    * @return byte array with the row key prefix
    */
   public static byte[] getRowKey(String clusterId, String userId,
-      String flowId) {
+      String flowName) {
     long dayTs = TimelineStorageUtils.getTopOfTheDayTimestamp(System
         .currentTimeMillis());
-    return getRowKey(clusterId, dayTs, userId, flowId);
+    return getRowKey(clusterId, dayTs, userId, flowName);
   }
 
   /**
    * Constructs a row key for the flow activity table as follows:
-   * {@code clusterId!dayTimestamp!user!flowId}
+   * {@code clusterId!dayTimestamp!user!flowName}
    *
    * @param clusterId
    * @param dayTs
    * @param userId
-   * @param flowId
+   * @param flowName
    * @return byte array for the row key
    */
   public static byte[] getRowKey(String clusterId, long dayTs, String userId,
-      String flowId) {
+      String flowName) {
     return Separator.QUALIFIERS.join(
         Bytes.toBytes(Separator.QUALIFIERS.encode(clusterId)),
         Bytes.toBytes(TimelineStorageUtils.invertLong(dayTs)),
         Bytes.toBytes(Separator.QUALIFIERS.encode(userId)),
-        Bytes.toBytes(Separator.QUALIFIERS.encode(flowId)));
+        Bytes.toBytes(Separator.QUALIFIERS.encode(flowName)));
   }
 
   /**
@@ -133,8 +133,8 @@ public class FlowActivityRowKey {
         TimelineStorageUtils.invertLong(Bytes.toLong(rowKeyComponents[1]));
     String userId = Separator.QUALIFIERS.decode(Bytes
         .toString(rowKeyComponents[2]));
-    String flowId = Separator.QUALIFIERS.decode(Bytes
+    String flowName = Separator.QUALIFIERS.decode(Bytes
         .toString(rowKeyComponents[3]));
-    return new FlowActivityRowKey(clusterId, dayTs, userId, flowId);
+    return new FlowActivityRowKey(clusterId, dayTs, userId, flowName);
   }
 }
