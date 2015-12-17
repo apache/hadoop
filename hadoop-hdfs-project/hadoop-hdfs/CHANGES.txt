@@ -211,6 +211,9 @@ Trunk (Unreleased)
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HDFS-9570. Minor typos, grammar, and case sensitivity cleanup in
+    HdfsPermissionsGuide.md's (Travis Campbell via aw)
  
     HADOOP-9635 Fix potential Stack Overflow in DomainSocket.c (V. Karthik Kumar
                 via cmccabe)
