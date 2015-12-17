@@ -1770,6 +1770,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9557. Reduce object allocation in PB conversion
     (Daryn Sharp via cnauroth)
 
+    HDFS-9552. Document types of permission checks performed for HDFS
+    operations. (cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
