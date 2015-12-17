@@ -36,6 +36,7 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 import com.google.common.collect.Lists;
 
@@ -1358,9 +1359,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // DatanodeProtocol
-  public DatanodeCommand blockReport(DatanodeRegistration nodeReg,
-        String poolId, StorageBlockReport[] reports,
-        BlockReportContext context) throws IOException {
+  public DatanodeCommand blockReport(final DatanodeRegistration nodeReg,
+        String poolId, final StorageBlockReport[] reports,
+        final BlockReportContext context) throws IOException {
     checkNNStartup();
     verifyRequest(nodeReg);
     if(blockStateChangeLog.isDebugEnabled()) {
@@ -1376,8 +1377,14 @@ class NameNodeRpcServer implements NamenodeProtocols {
       // for the same node and storage, so the value returned by the last
       // call of this loop is the final updated value for noStaleStorage.
       //
-      noStaleStorages = bm.processReport(nodeReg, reports[r].getStorage(),
-          blocks, context, (r == reports.length - 1));
+      final int index = r;
+      noStaleStorages = bm.runBlockOp(new Callable<Boolean>() {
+        @Override
+        public Boolean call() throws IOException {
+          return bm.processReport(nodeReg, reports[index].getStorage(),
+              blocks, context, (index == reports.length - 1));
+        }
+      });
       metrics.incrStorageBlockReportOps();
     }
     BlockManagerFaultInjector.getInstance().
@@ -1407,8 +1414,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // DatanodeProtocol
-  public void blockReceivedAndDeleted(DatanodeRegistration nodeReg, String poolId,
-      StorageReceivedDeletedBlocks[] receivedAndDeletedBlocks) throws IOException {
+  public void blockReceivedAndDeleted(final DatanodeRegistration nodeReg,
+      String poolId, StorageReceivedDeletedBlocks[] receivedAndDeletedBlocks)
+          throws IOException {
     checkNNStartup();
     verifyRequest(nodeReg);
     metrics.incrBlockReceivedAndDeletedOps();
@@ -1417,8 +1425,22 @@ class NameNodeRpcServer implements NamenodeProtocols {
           +"from "+nodeReg+" "+receivedAndDeletedBlocks.length
           +" blocks.");
     }
-    for(StorageReceivedDeletedBlocks r : receivedAndDeletedBlocks) {
-      namesystem.processIncrementalBlockReport(nodeReg, r);
+    final BlockManager bm = namesystem.getBlockManager();
+    for (final StorageReceivedDeletedBlocks r : receivedAndDeletedBlocks) {
+      bm.enqueueBlockOp(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            namesystem.processIncrementalBlockReport(nodeReg, r);
+          } catch (Exception ex) {
+            // usually because the node is unregistered/dead.  next heartbeat
+            // will correct the problem
+            blockStateChangeLog.error(
+                "*BLOCK* NameNode.blockReceivedAndDeleted: "
+                    + "failed from " + nodeReg + ": " + ex.getMessage());
+          }
+        }
+      });
     }
   }
   
