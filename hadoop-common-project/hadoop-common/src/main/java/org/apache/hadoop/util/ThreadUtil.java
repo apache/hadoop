@@ -22,6 +22,9 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.classification.InterfaceStability;
 
+import java.io.IOException;
+import java.io.InputStream;
+
 @InterfaceStability.Evolving
 public class ThreadUtil {
   
@@ -45,5 +48,32 @@ public class ThreadUtil {
         LOG.warn("interrupted while sleeping", ie);
       }
     }
+  }
+
+  /**
+   * Convenience method that returns a resource as inputstream from the
+   * classpath.
+   * <p>
+   * It first attempts to use the Thread's context classloader and if not
+   * set it uses the class' classloader.
+   *
+   * @param resourceName resource to retrieve.
+   *
+   * @throws IOException thrown if resource cannot be loaded
+   * @return inputstream with the resource.
+   */
+  public static InputStream getResourceAsStream(String resourceName)
+      throws IOException {
+    ClassLoader cl = Thread.currentThread().getContextClassLoader();
+    if (cl == null) {
+      throw new IOException("Can not read resource file '" + resourceName +
+          "' because class loader of the current thread is null");
+    }
+    InputStream is = cl.getResourceAsStream(resourceName);
+    if (is == null) {
+      throw new IOException("Can not read resource file '" +
+          resourceName + "'");
+    }
+    return is;
   }
 }

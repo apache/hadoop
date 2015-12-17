@@ -61,6 +61,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.IOException;
 import java.io.StringReader;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
@@ -389,6 +390,32 @@ public class MiniKdc {
     ds.getAdminSession().add(entry);
   }
 
+  /**
+   * Convenience method that returns a resource as inputstream from the
+   * classpath.
+   * <p>
+   * It first attempts to use the Thread's context classloader and if not
+   * set it uses the class' classloader.
+   *
+   * @param resourceName resource to retrieve.
+   *
+   * @throws IOException thrown if resource cannot be loaded
+   * @return inputstream with the resource.
+   */
+  public static InputStream getResourceAsStream(String resourceName)
+      throws IOException {
+    ClassLoader cl = Thread.currentThread().getContextClassLoader();
+    if (cl == null) {
+      cl = MiniKdc.class.getClassLoader();
+    }
+    InputStream is = cl.getResourceAsStream(resourceName);
+    if (is == null) {
+      throw new IOException("Can not read resource file '" +
+          resourceName + "'");
+    }
+    return is;
+  }
+
   private void initKDCServer() throws Exception {
     String orgName= conf.getProperty(ORG_NAME);
     String orgDomain = conf.getProperty(ORG_DOMAIN);
@@ -400,8 +427,7 @@ public class MiniKdc {
     map.put("3", orgDomain.toUpperCase(Locale.ENGLISH));
     map.put("4", bindAddress);
 
-    ClassLoader cl = Thread.currentThread().getContextClassLoader();
-    InputStream is1 = cl.getResourceAsStream("minikdc.ldiff");
+    InputStream is1 = getResourceAsStream("minikdc.ldiff");
 
     SchemaManager schemaManager = ds.getSchemaManager();
     LdifReader reader = null;
@@ -443,7 +469,7 @@ public class MiniKdc {
     kdc.start();
 
     StringBuilder sb = new StringBuilder();
-    InputStream is2 = cl.getResourceAsStream("minikdc-krb5.conf");
+    InputStream is2 = getResourceAsStream("minikdc-krb5.conf");
 
     BufferedReader r = null;
 

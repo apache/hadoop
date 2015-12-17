@@ -543,6 +543,8 @@ Trunk (Unreleased)
     HADOOP-12638. UnsatisfiedLinkError while checking ISA-L in checknative
     command. (Kai Sasaki via Colin P. McCabe)
 
+    HADOOP-12615. Fix NPE in MiniKMS.start(). (Wei-Chiu Chuang via zhz)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
