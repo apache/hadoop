@@ -601,7 +601,7 @@ public class TestDirectoryScanner {
       ratio = 0.0f;
       retries = maxRetries;
 
-      while ((retries > 0) && ((ratio < 3f) || (ratio > 4.5f))) {
+      while ((retries > 0) && ((ratio < 2.75f) || (ratio > 4.5f))) {
         scanner = new DirectoryScanner(dataNode, fds, conf);
         ratio = runThrottleTest(blocks);
         retries -= 1;
@@ -610,7 +610,7 @@ public class TestDirectoryScanner {
       // Waiting should be about 4x running.
       LOG.info("RATIO: " + ratio);
       assertTrue("Throttle is too restrictive", ratio <= 4.5f);
-      assertTrue("Throttle is too permissive", ratio >= 3.0f);
+      assertTrue("Throttle is too permissive", ratio >= 2.75f);
 
       // Test with more than 1 thread
       conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY, 3);
