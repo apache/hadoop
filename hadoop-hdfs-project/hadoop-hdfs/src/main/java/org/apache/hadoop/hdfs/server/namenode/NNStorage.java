@@ -482,8 +482,24 @@ public class NNStorage extends Storage implements Closeable,
    * @param txid the txid that has been reached
    */
   public void writeTransactionIdFileToStorage(long txid) {
+    writeTransactionIdFileToStorage(txid, null);
+  }
+
+  /**
+   * Write a small file in all available storage directories that
+   * indicates that the namespace has reached some given transaction ID.
+   *
+   * This is used when the image is loaded to avoid accidental rollbacks
+   * in the case where an edit log is fully deleted but there is no
+   * checkpoint. See TestNameEditsConfigs.testNameEditsConfigsFailure()
+   * @param txid the txid that has been reached
+   * @param type the type of directory
+   */
+  public void writeTransactionIdFileToStorage(long txid,
+      NameNodeDirType type) {
     // Write txid marker in all storage directories
-    for (StorageDirectory sd : storageDirs) {
+    for (Iterator<StorageDirectory> it = dirIterator(type); it.hasNext();) {
+      StorageDirectory sd = it.next();
       try {
         writeTransactionIdFile(sd, txid);
       } catch(IOException e) {
