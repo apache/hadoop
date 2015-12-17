@@ -245,7 +245,7 @@ public class TestMRTimelineEventHandling {
     Assert.assertTrue(tmpRootFolder.isDirectory());
     String basePath = tmpRoot + YarnConfiguration.DEFAULT_RM_CLUSTER_ID + "/" +
         UserGroupInformation.getCurrentUser().getShortUserName() +
-        "/" + TimelineUtils.generateDefaultFlowIdBasedOnAppId(appId) +
+        "/" + TimelineUtils.generateDefaultFlowNameBasedOnAppId(appId) +
         "/1/1/" + appId.toString();
     // for this test, we expect MAPREDUCE_JOB and MAPREDUCE_TASK dirs
     String outputDirJob = basePath + "/MAPREDUCE_JOB/";

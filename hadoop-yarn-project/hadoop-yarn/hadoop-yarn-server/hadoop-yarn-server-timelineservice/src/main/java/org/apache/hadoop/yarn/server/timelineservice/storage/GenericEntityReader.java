@@ -76,7 +76,7 @@ class GenericEntityReader extends TimelineEntityReader {
   private final AppToFlowTable appToFlowTable = new AppToFlowTable();
 
   public GenericEntityReader(String userId, String clusterId,
-      String flowId, Long flowRunId, String appId, String entityType,
+      String flowName, Long flowRunId, String appId, String entityType,
       Long limit, Long createdTimeBegin, Long createdTimeEnd,
       Long modifiedTimeBegin, Long modifiedTimeEnd,
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
@@ -84,7 +84,7 @@ class GenericEntityReader extends TimelineEntityReader {
       Set<String> metricFilters, Set<String> eventFilters,
       TimelineFilterList confsToRetrieve, TimelineFilterList metricsToRetrieve,
       EnumSet<Field> fieldsToRetrieve, boolean sortedKeys) {
-    super(userId, clusterId, flowId, flowRunId, appId, entityType, limit,
+    super(userId, clusterId, flowName, flowRunId, appId, entityType, limit,
         createdTimeBegin, createdTimeEnd, modifiedTimeBegin, modifiedTimeEnd,
         relatesTo, isRelatedTo, infoFilters, configFilters, metricFilters,
         eventFilters, confsToRetrieve, metricsToRetrieve, fieldsToRetrieve,
@@ -92,10 +92,10 @@ class GenericEntityReader extends TimelineEntityReader {
   }
 
   public GenericEntityReader(String userId, String clusterId,
-      String flowId, Long flowRunId, String appId, String entityType,
+      String flowName, Long flowRunId, String appId, String entityType,
       String entityId, TimelineFilterList confsToRetrieve,
       TimelineFilterList metricsToRetrieve, EnumSet<Field> fieldsToRetrieve) {
-    super(userId, clusterId, flowId, flowRunId, appId, entityType, entityId,
+    super(userId, clusterId, flowName, flowRunId, appId, entityType, entityId,
         confsToRetrieve, metricsToRetrieve, fieldsToRetrieve);
   }
 
@@ -204,11 +204,11 @@ class GenericEntityReader extends TimelineEntityReader {
 
   protected static class FlowContext {
     protected final String userId;
-    protected final String flowId;
+    protected final String flowName;
     protected final Long flowRunId;
-    public FlowContext(String user, String flowId, Long flowRunId) {
+    public FlowContext(String user, String flowName, Long flowRunId) {
       this.userId = user;
-      this.flowId = flowId;
+      this.flowName = flowName;
       this.flowRunId = flowRunId;
     }
   }
@@ -227,10 +227,10 @@ class GenericEntityReader extends TimelineEntityReader {
   protected void augmentParams(Configuration hbaseConf, Connection conn)
       throws IOException {
     // In reality all three should be null or neither should be null
-    if (flowId == null || flowRunId == null || userId == null) {
+    if (flowName == null || flowRunId == null || userId == null) {
       FlowContext context =
           lookupFlowContext(clusterId, appId, hbaseConf, conn);
-      flowId = context.flowId;
+      flowName = context.flowName;
       flowRunId = context.flowRunId;
       userId = context.userId;
     }
@@ -269,7 +269,7 @@ class GenericEntityReader extends TimelineEntityReader {
   protected Result getResult(Configuration hbaseConf, Connection conn,
       FilterList filterList) throws IOException {
     byte[] rowKey =
-        EntityRowKey.getRowKey(clusterId, userId, flowId, flowRunId, appId,
+        EntityRowKey.getRowKey(clusterId, userId, flowName, flowRunId, appId,
             entityType, entityId);
     Get get = new Get(rowKey);
     get.setMaxVersions(Integer.MAX_VALUE);
@@ -286,7 +286,7 @@ class GenericEntityReader extends TimelineEntityReader {
     // and one type
     Scan scan = new Scan();
     scan.setRowPrefixFilter(EntityRowKey.getRowKeyPrefix(
-        clusterId, userId, flowId, flowRunId, appId, entityType));
+        clusterId, userId, flowName, flowRunId, appId, entityType));
     scan.setMaxVersions(Integer.MAX_VALUE);
     if (filterList != null && !filterList.getFilters().isEmpty()) {
       scan.setFilter(filterList);

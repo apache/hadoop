@@ -60,7 +60,7 @@ class ApplicationEntityReader extends GenericEntityReader {
       new ApplicationTable();
 
   public ApplicationEntityReader(String userId, String clusterId,
-      String flowId, Long flowRunId, String appId, String entityType,
+      String flowName, Long flowRunId, String appId, String entityType,
       Long limit, Long createdTimeBegin, Long createdTimeEnd,
       Long modifiedTimeBegin, Long modifiedTimeEnd,
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
@@ -68,7 +68,7 @@ class ApplicationEntityReader extends GenericEntityReader {
       Set<String> metricFilters, Set<String> eventFilters,
       TimelineFilterList confsToRetrieve, TimelineFilterList metricsToRetrieve,
       EnumSet<Field> fieldsToRetrieve) {
-    super(userId, clusterId, flowId, flowRunId, appId, entityType, limit,
+    super(userId, clusterId, flowName, flowRunId, appId, entityType, limit,
         createdTimeBegin, createdTimeEnd, modifiedTimeBegin, modifiedTimeEnd,
         relatesTo, isRelatedTo, infoFilters, configFilters, metricFilters,
         eventFilters, confsToRetrieve, metricsToRetrieve, fieldsToRetrieve,
@@ -76,10 +76,10 @@ class ApplicationEntityReader extends GenericEntityReader {
   }
 
   public ApplicationEntityReader(String userId, String clusterId,
-      String flowId, Long flowRunId, String appId, String entityType,
+      String flowName, Long flowRunId, String appId, String entityType,
       String entityId, TimelineFilterList confsToRetrieve,
       TimelineFilterList metricsToRetrieve, EnumSet<Field> fieldsToRetrieve) {
-    super(userId, clusterId, flowId, flowRunId, appId, entityType, entityId,
+    super(userId, clusterId, flowName, flowRunId, appId, entityType, entityId,
         confsToRetrieve, metricsToRetrieve, fieldsToRetrieve);
   }
 
@@ -173,7 +173,7 @@ class ApplicationEntityReader extends GenericEntityReader {
   protected Result getResult(Configuration hbaseConf, Connection conn,
       FilterList filterList) throws IOException {
     byte[] rowKey =
-        ApplicationRowKey.getRowKey(clusterId, userId, flowId, flowRunId,
+        ApplicationRowKey.getRowKey(clusterId, userId, flowName, flowRunId,
             appId);
     Get get = new Get(rowKey);
     get.setMaxVersions(Integer.MAX_VALUE);
@@ -191,7 +191,7 @@ class ApplicationEntityReader extends GenericEntityReader {
       Preconditions.checkNotNull(appId, "appId shouldn't be null");
     } else {
       Preconditions.checkNotNull(userId, "userId shouldn't be null");
-      Preconditions.checkNotNull(flowId, "flowId shouldn't be null");
+      Preconditions.checkNotNull(flowName, "flowName shouldn't be null");
     }
   }
 
@@ -199,10 +199,10 @@ class ApplicationEntityReader extends GenericEntityReader {
   protected void augmentParams(Configuration hbaseConf, Connection conn)
       throws IOException {
     if (singleEntityRead) {
-      if (flowId == null || flowRunId == null || userId == null) {
+      if (flowName == null || flowRunId == null || userId == null) {
         FlowContext context =
             lookupFlowContext(clusterId, appId, hbaseConf, conn);
-        flowId = context.flowId;
+        flowName = context.flowName;
         flowRunId = context.flowRunId;
         userId = context.userId;
       }
@@ -244,10 +244,10 @@ class ApplicationEntityReader extends GenericEntityReader {
     Scan scan = new Scan();
     if (flowRunId != null) {
       scan.setRowPrefixFilter(ApplicationRowKey.
-          getRowKeyPrefix(clusterId, userId, flowId, flowRunId));
+          getRowKeyPrefix(clusterId, userId, flowName, flowRunId));
     } else {
       scan.setRowPrefixFilter(ApplicationRowKey.
-          getRowKeyPrefix(clusterId, userId, flowId));
+          getRowKeyPrefix(clusterId, userId, flowName));
     }
     FilterList newList = new FilterList();
     newList.addFilter(new PageFilter(limit));

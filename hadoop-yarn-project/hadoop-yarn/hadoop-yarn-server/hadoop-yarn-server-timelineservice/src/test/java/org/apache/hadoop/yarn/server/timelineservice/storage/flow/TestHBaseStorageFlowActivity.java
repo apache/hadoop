@@ -165,7 +165,7 @@ public class TestHBaseStorageFlowActivity {
     assertNotNull(flowActivityRowKey);
     assertEquals(cluster, flowActivityRowKey.getClusterId());
     assertEquals(user, flowActivityRowKey.getUserId());
-    assertEquals(flow, flowActivityRowKey.getFlowId());
+    assertEquals(flow, flowActivityRowKey.getFlowName());
     long dayTs = TimelineStorageUtils.getTopOfTheDayTimestamp(System
         .currentTimeMillis());
     assertEquals(dayTs, flowActivityRowKey.getDayTimestamp());
@@ -280,7 +280,7 @@ public class TestHBaseStorageFlowActivity {
       assertNotNull(flowActivityRowKey);
       assertEquals(cluster, flowActivityRowKey.getClusterId());
       assertEquals(user, flowActivityRowKey.getUserId());
-      assertEquals(flow, flowActivityRowKey.getFlowId());
+      assertEquals(flow, flowActivityRowKey.getFlowName());
       long dayTs = TimelineStorageUtils.getTopOfTheDayTimestamp(System
           .currentTimeMillis());
       assertEquals(dayTs, flowActivityRowKey.getDayTimestamp());
@@ -409,7 +409,7 @@ public class TestHBaseStorageFlowActivity {
       assertNotNull(flowActivityRowKey);
       assertEquals(cluster, flowActivityRowKey.getClusterId());
       assertEquals(user, flowActivityRowKey.getUserId());
-      assertEquals(flow, flowActivityRowKey.getFlowId());
+      assertEquals(flow, flowActivityRowKey.getFlowName());
       long dayTs = TimelineStorageUtils.getTopOfTheDayTimestamp(System
           .currentTimeMillis());
       assertEquals(dayTs, flowActivityRowKey.getDayTimestamp());
