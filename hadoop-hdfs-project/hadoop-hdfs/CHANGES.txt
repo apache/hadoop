@@ -2499,6 +2499,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-9430. Remove waitForLoadingFSImage since checkNNStartup has ensured
     image loaded and namenode started. (Brahma Reddy Battula via mingma)
 
+    HDFS-9198. Coalesce IBR processing in the NN. (Daryn Sharp via umamahesh)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

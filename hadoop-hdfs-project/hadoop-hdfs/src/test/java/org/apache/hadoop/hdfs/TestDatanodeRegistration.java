@@ -20,21 +20,32 @@ package org.apache.hadoop.hdfs;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.junit.Test;
 
+import com.google.common.base.Supplier;
+
 import java.net.InetSocketAddress;
 import java.security.Permission;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.doReturn;
@@ -306,5 +317,132 @@ public class TestDatanodeRegistration {
         cluster.shutdown();
       }
     }
+  }
+
+  // IBRs are async operations to free up IPC handlers.  This means the IBR
+  // response will not contain non-IPC level exceptions - which in practice
+  // should not occur other than dead/unregistered node which will trigger a
+  // re-registration.  If a non-IPC exception does occur, the safety net is
+  // a forced re-registration on the next heartbeat.
+  @Test(timeout=10000)
+  public void testForcedRegistration() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HANDLER_COUNT_KEY, 4);
+    conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, Integer.MAX_VALUE);
+
+    final MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    cluster.waitActive();
+    cluster.getHttpUri(0);
+    FSNamesystem fsn = cluster.getNamesystem();
+    String bpId = fsn.getBlockPoolId();
+
+    DataNode dn = cluster.getDataNodes().get(0);
+    DatanodeDescriptor dnd =
+        NameNodeAdapter.getDatanode(fsn, dn.getDatanodeId());
+    DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, true);
+    DatanodeStorageInfo storage = dnd.getStorageInfos()[0];
+
+    // registration should not change after heartbeat.
+    assertTrue(dnd.isRegistered());
+    DatanodeRegistration lastReg = dn.getDNRegistrationForBP(bpId);
+    waitForHeartbeat(dn, dnd);
+    assertSame(lastReg, dn.getDNRegistrationForBP(bpId));
+
+    // force a re-registration on next heartbeat.
+    dnd.setForceRegistration(true);
+    assertFalse(dnd.isRegistered());
+    waitForHeartbeat(dn, dnd);
+    assertTrue(dnd.isRegistered());
+    DatanodeRegistration newReg = dn.getDNRegistrationForBP(bpId);
+    assertNotSame(lastReg, newReg);
+    lastReg = newReg;
+
+    // registration should not change on subsequent heartbeats.
+    waitForHeartbeat(dn, dnd);
+    assertTrue(dnd.isRegistered());
+    assertSame(lastReg, dn.getDNRegistrationForBP(bpId));
+    assertTrue(waitForBlockReport(dn, dnd));
+    assertTrue(dnd.isRegistered());
+    assertSame(lastReg, dn.getDNRegistrationForBP(bpId));
+
+    // check that block report is not processed and registration didn't change.
+    dnd.setForceRegistration(true);
+    assertFalse(waitForBlockReport(dn, dnd));
+    assertFalse(dnd.isRegistered());
+    assertSame(lastReg, dn.getDNRegistrationForBP(bpId));
+
+    // heartbeat should trigger re-registration, and next block report should
+    // not change registration.
+    waitForHeartbeat(dn, dnd);
+    assertTrue(dnd.isRegistered());
+    newReg = dn.getDNRegistrationForBP(bpId);
+    assertNotSame(lastReg, newReg);
+    lastReg = newReg;
+    assertTrue(waitForBlockReport(dn, dnd));
+    assertTrue(dnd.isRegistered());
+    assertSame(lastReg, dn.getDNRegistrationForBP(bpId));
+
+    // registration doesn't change.
+    ExtendedBlock eb = new ExtendedBlock(bpId, 1234);
+    dn.notifyNamenodeDeletedBlock(eb, storage.getStorageID());
+    DataNodeTestUtils.triggerDeletionReport(dn);
+    assertTrue(dnd.isRegistered());
+    assertSame(lastReg, dn.getDNRegistrationForBP(bpId));
+
+    // a failed IBR will effectively unregister the node.
+    boolean failed = false;
+    try {
+      // pass null to cause a failure since there aren't any easy failure
+      // modes since it shouldn't happen.
+      fsn.processIncrementalBlockReport(lastReg, null);
+    } catch (NullPointerException npe) {
+      failed = true;
+    }
+    assertTrue("didn't fail", failed);
+    assertFalse(dnd.isRegistered());
+
+    // should remain unregistered until next heartbeat.
+    dn.notifyNamenodeDeletedBlock(eb, storage.getStorageID());
+    DataNodeTestUtils.triggerDeletionReport(dn);
+    assertFalse(dnd.isRegistered());
+    assertSame(lastReg, dn.getDNRegistrationForBP(bpId));
+    waitForHeartbeat(dn, dnd);
+    assertTrue(dnd.isRegistered());
+    assertNotSame(lastReg, dn.getDNRegistrationForBP(bpId));
+  }
+
+  private void waitForHeartbeat(final DataNode dn, final DatanodeDescriptor dnd)
+      throws Exception {
+    final long lastUpdate = dnd.getLastUpdateMonotonic();
+    Thread.sleep(1);
+    DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, false);
+    DataNodeTestUtils.triggerHeartbeat(dn);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return lastUpdate != dnd.getLastUpdateMonotonic();
+      }
+    }, 10, 100000);
+    DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, true);
+  }
+
+  private boolean waitForBlockReport(final DataNode dn,
+      final DatanodeDescriptor dnd) throws Exception {
+    final DatanodeStorageInfo storage = dnd.getStorageInfos()[0];
+    final long lastCount = storage.getBlockReportCount();
+    dn.triggerBlockReport(
+        new BlockReportOptions.Factory().setIncremental(false).build());
+    try {
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return lastCount != storage.getBlockReportCount();
+        }
+      }, 10, 100);
+    } catch (TimeoutException te) {
+      return false;
+    }
+    return true;
   }
 }
