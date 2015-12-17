@@ -2501,6 +2501,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9198. Coalesce IBR processing in the NN. (Daryn Sharp via umamahesh)
 
+    HDFS-9565. TestDistributedFileSystem.testLocatedFileStatusStorageIdsTypes
+    is flaky due to race condition. (Wei-Chiu Chuang via Arpit Agarwal)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
