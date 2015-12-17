@@ -2518,9 +2518,6 @@ Release 2.7.3 - UNRELEASED
 
   IMPROVEMENTS
 
-    HDFS-9569. Log the name of the fsimage being loaded for better
-    supportability (Yongjun Zhang via kihwal)
-
   OPTIMIZATIONS
 
   BUG FIXES
