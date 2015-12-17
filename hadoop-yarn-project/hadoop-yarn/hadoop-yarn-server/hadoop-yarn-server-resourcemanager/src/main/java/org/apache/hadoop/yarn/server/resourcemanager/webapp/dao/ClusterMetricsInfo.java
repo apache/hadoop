@@ -54,6 +54,7 @@ public class ClusterMetricsInfo {
   protected int totalNodes;
   protected int lostNodes;
   protected int unhealthyNodes;
+  protected int decommissioningNodes;
   protected int decommissionedNodes;
   protected int rebootedNodes;
   protected int activeNodes;
@@ -91,6 +92,7 @@ public class ClusterMetricsInfo {
     this.activeNodes = clusterMetrics.getNumActiveNMs();
     this.lostNodes = clusterMetrics.getNumLostNMs();
     this.unhealthyNodes = clusterMetrics.getUnhealthyNMs();
+    this.decommissioningNodes = clusterMetrics.getNumDecommissioningNMs();
     this.decommissionedNodes = clusterMetrics.getNumDecommisionedNMs();
     this.rebootedNodes = clusterMetrics.getNumRebootedNMs();
     this.shutdownNodes = clusterMetrics.getNumShutdownNMs();
@@ -184,6 +186,10 @@ public class ClusterMetricsInfo {
 
   public int getUnhealthyNodes() {
     return this.unhealthyNodes;
+  }
+
+  public int getDecommissioningNodes() {
+    return this.decommissioningNodes;
   }
 
   public int getDecommissionedNodes() {
