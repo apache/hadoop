@@ -568,4 +568,11 @@ public abstract class FSImageTestUtil {
     FSImageTestUtil.assertParallelFilesAreIdentical(curDirs,
         ignoredFiles);
   }
+
+  public static long getStorageTxId(NameNode node, URI storageUri)
+      throws IOException {
+    StorageDirectory sDir = getFSImage(node).getStorage().
+        getStorageDirectory(storageUri);
+    return NNStorage.readTransactionIdFile(sDir);
+  }
 }

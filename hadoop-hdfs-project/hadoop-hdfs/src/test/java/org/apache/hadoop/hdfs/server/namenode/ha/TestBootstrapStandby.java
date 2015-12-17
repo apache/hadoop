@@ -135,6 +135,13 @@ public class TestBootstrapStandby {
       .getFSImage().getMostRecentCheckpointTxId();
     assertEquals(6, expectedCheckpointTxId);
 
+    // advance the current txid
+    cluster.getFileSystem(0).create(new Path("/test_txid"), (short)1).close();
+
+    // obtain the content of seen_txid
+    URI editsUri = cluster.getSharedEditsDir(0, 1);
+    long seen_txid_shared = FSImageTestUtil.getStorageTxId(nn0, editsUri);
+
     int rc = BootstrapStandby.run(
         new String[]{"-force"},
         cluster.getConfiguration(1));
@@ -144,6 +151,10 @@ public class TestBootstrapStandby {
     FSImageTestUtil.assertNNHasCheckpoints(cluster, 1,
         ImmutableList.of((int)expectedCheckpointTxId));
     FSImageTestUtil.assertNNFilesMatch(cluster);
+
+    // Make sure the seen_txid was not modified by the standby
+    assertEquals(seen_txid_shared,
+        FSImageTestUtil.getStorageTxId(nn0, editsUri));
 
     // We should now be able to start the standby successfully.
     cluster.restartNameNode(1);
