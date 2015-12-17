@@ -901,6 +901,9 @@ Release 2.9.0 - UNRELEASED
 
     HDFS-9371. Code cleanup for DatanodeManager. (jing9)
 
+    HDFS-9300. TestDirectoryScanner.testThrottle() is still a little flakey.
+    (Daniel Templeton via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
