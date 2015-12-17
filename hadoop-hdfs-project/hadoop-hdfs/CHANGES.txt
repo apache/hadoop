@@ -1586,6 +1586,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-9429. Tests in TestDFSAdminWithHA intermittently fail with
     EOFException (Xiao Chen via Colin P. McCabe)
 
+    HDFS-9198. Coalesce IBR processing in the NN. (Daryn Sharp via umamahesh)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
