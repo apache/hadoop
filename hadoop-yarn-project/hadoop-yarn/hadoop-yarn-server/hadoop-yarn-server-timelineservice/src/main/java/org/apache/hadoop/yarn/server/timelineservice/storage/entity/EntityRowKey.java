@@ -27,17 +27,17 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStor
 public class EntityRowKey {
   private final String clusterId;
   private final String userId;
-  private final String flowId;
+  private final String flowName;
   private final long flowRunId;
   private final String appId;
   private final String entityType;
   private final String entityId;
 
-  public EntityRowKey(String clusterId, String userId, String flowId,
+  public EntityRowKey(String clusterId, String userId, String flowName,
       long flowRunId, String appId, String entityType, String entityId) {
     this.clusterId = clusterId;
     this.userId = userId;
-    this.flowId = flowId;
+    this.flowName = flowName;
     this.flowRunId = flowRunId;
     this.appId = appId;
     this.entityType = entityType;
@@ -52,8 +52,8 @@ public class EntityRowKey {
     return userId;
   }
 
-  public String getFlowId() {
-    return flowId;
+  public String getFlowName() {
+    return flowName;
   }
 
   public long getFlowRunId() {
@@ -74,20 +74,20 @@ public class EntityRowKey {
 
   /**
    * Constructs a row key prefix for the entity table as follows:
-   * {@code userName!clusterId!flowId!flowRunId!AppId}
+   * {@code userName!clusterId!flowName!flowRunId!AppId}
    *
    * @param clusterId
    * @param userId
-   * @param flowId
+   * @param flowName
    * @param flowRunId
    * @param appId
    * @return byte array with the row key prefix
    */
   public static byte[] getRowKeyPrefix(String clusterId, String userId,
-      String flowId, Long flowRunId, String appId) {
+      String flowName, Long flowRunId, String appId) {
     byte[] first =
         Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(userId, clusterId,
-            flowId));
+            flowName));
     // Note that flowRunId is a long, so we can't encode them all at the same
     // time.
     byte[] second = Bytes.toBytes(TimelineStorageUtils.invertLong(flowRunId));
@@ -97,21 +97,21 @@ public class EntityRowKey {
 
   /**
    * Constructs a row key prefix for the entity table as follows:
-   * {@code userName!clusterId!flowId!flowRunId!AppId!entityType!}
+   * {@code userName!clusterId!flowName!flowRunId!AppId!entityType!}
    *
    * @param clusterId
    * @param userId
-   * @param flowId
+   * @param flowName
    * @param flowRunId
    * @param appId
    * @param entityType
    * @return byte array with the row key prefix
    */
   public static byte[] getRowKeyPrefix(String clusterId, String userId,
-      String flowId, Long flowRunId, String appId, String entityType) {
+      String flowName, Long flowRunId, String appId, String entityType) {
     byte[] first =
         Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(userId, clusterId,
-            flowId));
+            flowName));
     // Note that flowRunId is a long, so we can't encode them all at the same
     // time.
     byte[] second = Bytes.toBytes(TimelineStorageUtils.invertLong(flowRunId));
@@ -123,11 +123,11 @@ public class EntityRowKey {
 
   /**
    * Constructs a row key for the entity table as follows:
-   * {@code userName!clusterId!flowId!flowRunId!AppId!entityType!entityId}
+   * {@code userName!clusterId!flowName!flowRunId!AppId!entityType!entityId}
    *
    * @param clusterId
    * @param userId
-   * @param flowId
+   * @param flowName
    * @param flowRunId
    * @param appId
    * @param entityType
@@ -135,11 +135,11 @@ public class EntityRowKey {
    * @return byte array with the row key
    */
   public static byte[] getRowKey(String clusterId, String userId,
-      String flowId, Long flowRunId, String appId, String entityType,
+      String flowName, Long flowRunId, String appId, String entityType,
       String entityId) {
     byte[] first =
         Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(userId, clusterId,
-            flowId));
+            flowName));
     // Note that flowRunId is a long, so we can't encode them all at the same
     // time.
     byte[] second = Bytes.toBytes(TimelineStorageUtils.invertLong(flowRunId));
@@ -164,7 +164,7 @@ public class EntityRowKey {
         Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[0]));
     String clusterId =
         Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[1]));
-    String flowId =
+    String flowName =
         Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[2]));
     long flowRunId =
         TimelineStorageUtils.invertLong(Bytes.toLong(rowKeyComponents[3]));
@@ -173,7 +173,7 @@ public class EntityRowKey {
         Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[5]));
     String entityId =
         Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[6]));
-    return new EntityRowKey(clusterId, userId, flowId, flowRunId, appId,
+    return new EntityRowKey(clusterId, userId, flowName, flowRunId, appId,
         entityType, entityId);
   }
 }

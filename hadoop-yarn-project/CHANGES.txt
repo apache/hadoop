@@ -146,6 +146,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3862. Support for fetching specific configs and metrics based on
     prefixes (Varun Saxena via sjlee)
 
+    YARN-4445. Unify the term flowId and flowName in timeline v2 codebase. 
+    (Zhan Zhang via gtcarrera9). 
+
   OPTIMIZATIONS
 
   BUG FIXES

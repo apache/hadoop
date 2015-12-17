@@ -47,7 +47,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
  * |-------------------------------------------|
  * | clusterId! | flow_version:version7        |
  * | userName!  |                              |
- * | flowId!    | running_apps:1               |
+ * | flowName!  | running_apps:1               |
  * | flowRunId  |                              |
  * |            | min_start_time:1392995080000 |
  * |            | #0:""                        |

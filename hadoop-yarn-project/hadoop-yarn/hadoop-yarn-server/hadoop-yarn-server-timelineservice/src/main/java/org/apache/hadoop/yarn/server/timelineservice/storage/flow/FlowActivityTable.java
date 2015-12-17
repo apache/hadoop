@@ -47,7 +47,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
  * | inv Top of |                              |
  * | Day!       | r!runid2:version7            |
  * | userName!  |                              |
- * | flowId     |                              |
+ * | flowName   |                              |
  * |-------------------------------------------|
  * </pre>
  */

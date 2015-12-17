@@ -26,7 +26,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
  */
 public enum AppToFlowColumnFamily implements ColumnFamily<AppToFlowTable> {
   /**
-   * Mapping column family houses known columns such as flowId and flowRunId
+   * Mapping column family houses known columns such as flowName and flowRunId
    */
   MAPPING("m");
 

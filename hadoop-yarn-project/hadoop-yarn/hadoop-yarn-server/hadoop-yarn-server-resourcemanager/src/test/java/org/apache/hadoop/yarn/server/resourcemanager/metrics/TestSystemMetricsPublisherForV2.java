@@ -307,7 +307,7 @@ public class TestSystemMetricsPublisherForV2 {
             + "/"
             + app.getUser()
             + "/"
-            + TimelineUtils.generateDefaultFlowIdBasedOnAppId(app
+            + TimelineUtils.generateDefaultFlowNameBasedOnAppId(app
                 .getApplicationId()) + "/" + DEFAULT_FLOW_VERSION + "/"
             + DEFAULT_FLOW_RUN + "/" + app.getApplicationId();
     return outputDirApp;

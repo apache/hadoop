@@ -62,7 +62,7 @@ public interface TimelineReader extends Service {
    *    Context user Id(optional).
    * @param clusterId
    *    Context cluster Id(mandatory).
-   * @param flowId
+   * @param flowName
    *    Context flow Id (optional).
    * @param flowRunId
    *    Context flow run Id (optional).
@@ -93,7 +93,7 @@ public interface TimelineReader extends Service {
    *    contain the metadata plus the given fields to retrieve.
    * @throws IOException
    */
-  TimelineEntity getEntity(String userId, String clusterId, String flowId,
+  TimelineEntity getEntity(String userId, String clusterId, String flowName,
       Long flowRunId, String appId, String entityType, String entityId,
       TimelineFilterList confsToRetrieve, TimelineFilterList metricsToRetrieve,
       EnumSet<Field> fieldsToRetrieve) throws IOException;
@@ -113,7 +113,7 @@ public interface TimelineReader extends Service {
    *    Context user Id(optional).
    * @param clusterId
    *    Context cluster Id(mandatory).
-   * @param flowId
+   * @param flowName
    *    Context flow Id (optional).
    * @param flowRunId
    *    Context flow run Id (optional).
@@ -183,7 +183,7 @@ public interface TimelineReader extends Service {
    * @throws IOException
    */
   Set<TimelineEntity> getEntities(String userId, String clusterId,
-      String flowId, Long flowRunId, String appId, String entityType,
+      String flowName, Long flowRunId, String appId, String entityType,
       Long limit, Long createdTimeBegin, Long createdTimeEnd,
       Long modifiedTimeBegin, Long modifiedTimeEnd,
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,

@@ -27,15 +27,15 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStor
 public class ApplicationRowKey {
   private final String clusterId;
   private final String userId;
-  private final String flowId;
+  private final String flowName;
   private final long flowRunId;
   private final String appId;
 
-  public ApplicationRowKey(String clusterId, String userId, String flowId,
+  public ApplicationRowKey(String clusterId, String userId, String flowName,
       long flowRunId, String appId) {
     this.clusterId = clusterId;
     this.userId = userId;
-    this.flowId = flowId;
+    this.flowName = flowName;
     this.flowRunId = flowRunId;
     this.appId = appId;
   }
@@ -48,8 +48,8 @@ public class ApplicationRowKey {
     return userId;
   }
 
-  public String getFlowId() {
-    return flowId;
+  public String getFlowName() {
+    return flowName;
   }
 
   public long getFlowRunId() {
@@ -62,54 +62,54 @@ public class ApplicationRowKey {
 
   /**
    * Constructs a row key prefix for the application table as follows:
-   * {@code clusterId!userName!flowId!}
+   * {@code clusterId!userName!flowName!}
    *
    * @param clusterId
    * @param userId
-   * @param flowId
+   * @param flowName
    * @return byte array with the row key prefix
    */
   public static byte[] getRowKeyPrefix(String clusterId, String userId,
-      String flowId) {
+      String flowName) {
     byte[] first = Bytes.toBytes(
-        Separator.QUALIFIERS.joinEncoded(clusterId, userId, flowId));
+        Separator.QUALIFIERS.joinEncoded(clusterId, userId, flowName));
     return Separator.QUALIFIERS.join(first, new byte[0]);
   }
 
   /**
    * Constructs a row key prefix for the application table as follows:
-   * {@code clusterId!userName!flowId!flowRunId!}
+   * {@code clusterId!userName!flowName!flowRunId!}
    *
    * @param clusterId
    * @param userId
-   * @param flowId
+   * @param flowName
    * @param flowRunId
    * @return byte array with the row key prefix
    */
   public static byte[] getRowKeyPrefix(String clusterId, String userId,
-      String flowId, Long flowRunId) {
+      String flowName, Long flowRunId) {
     byte[] first = Bytes.toBytes(
-        Separator.QUALIFIERS.joinEncoded(clusterId, userId, flowId));
+        Separator.QUALIFIERS.joinEncoded(clusterId, userId, flowName));
     byte[] second = Bytes.toBytes(TimelineStorageUtils.invertLong(flowRunId));
     return Separator.QUALIFIERS.join(first, second, new byte[0]);
   }
 
   /**
    * Constructs a row key for the application table as follows:
-   * {@code clusterId!userName!flowId!flowRunId!AppId}
+   * {@code clusterId!userName!flowName!flowRunId!AppId}
    *
    * @param clusterId
    * @param userId
-   * @param flowId
+   * @param flowName
    * @param flowRunId
    * @param appId
    * @return byte array with the row key
    */
   public static byte[] getRowKey(String clusterId, String userId,
-      String flowId, Long flowRunId, String appId) {
+      String flowName, Long flowRunId, String appId) {
     byte[] first =
         Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(clusterId, userId,
-            flowId));
+            flowName));
     // Note that flowRunId is a long, so we can't encode them all at the same
     // time.
     byte[] second = Bytes.toBytes(TimelineStorageUtils.invertLong(flowRunId));
@@ -132,11 +132,11 @@ public class ApplicationRowKey {
         Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[0]));
     String userId =
         Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[1]));
-    String flowId =
+    String flowName =
         Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[2]));
     long flowRunId =
         TimelineStorageUtils.invertLong(Bytes.toLong(rowKeyComponents[3]));
     String appId = TimelineStorageUtils.decodeAppId(rowKeyComponents[4]);
-    return new ApplicationRowKey(clusterId, userId, flowId, flowRunId, appId);
+    return new ApplicationRowKey(clusterId, userId, flowName, flowRunId, appId);
   }
 }

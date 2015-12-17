@@ -34,7 +34,7 @@ import java.io.IOException;
 
 /**
  * The app_flow table as column families mapping. Mapping stores
- * appId to flowId and flowRunId mapping information
+ * appId to flowName and flowRunId mapping information
  *
  * Example app_flow table record:
  *
@@ -43,7 +43,7 @@ import java.io.IOException;
  * |  Row       | Column Family           |
  * |  key       | info                    |
  * |--------------------------------------|
- * | clusterId! | flowId:                 |
+ * | clusterId! | flowName:               |
  * | AppId      | foo@daily_hive_report   |
  * |            |                         |
  * |            | flowRunId:              |

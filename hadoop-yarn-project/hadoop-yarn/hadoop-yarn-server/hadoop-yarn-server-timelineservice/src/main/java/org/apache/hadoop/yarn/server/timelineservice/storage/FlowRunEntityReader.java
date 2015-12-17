@@ -58,7 +58,7 @@ class FlowRunEntityReader extends TimelineEntityReader {
   private static final FlowRunTable FLOW_RUN_TABLE = new FlowRunTable();
 
   public FlowRunEntityReader(String userId, String clusterId,
-      String flowId, Long flowRunId, String appId, String entityType,
+      String flowName, Long flowRunId, String appId, String entityType,
       Long limit, Long createdTimeBegin, Long createdTimeEnd,
       Long modifiedTimeBegin, Long modifiedTimeEnd,
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
@@ -66,17 +66,17 @@ class FlowRunEntityReader extends TimelineEntityReader {
       Set<String> metricFilters, Set<String> eventFilters,
       TimelineFilterList confsToRetrieve, TimelineFilterList metricsToRetrieve,
       EnumSet<Field> fieldsToRetrieve) {
-    super(userId, clusterId, flowId, flowRunId, appId, entityType, limit,
+    super(userId, clusterId, flowName, flowRunId, appId, entityType, limit,
         createdTimeBegin, createdTimeEnd, modifiedTimeBegin, modifiedTimeEnd,
         relatesTo, isRelatedTo, infoFilters, configFilters, metricFilters,
         eventFilters, null, metricsToRetrieve, fieldsToRetrieve, true);
   }
 
   public FlowRunEntityReader(String userId, String clusterId,
-      String flowId, Long flowRunId, String appId, String entityType,
+      String flowName, Long flowRunId, String appId, String entityType,
       String entityId, TimelineFilterList confsToRetrieve,
       TimelineFilterList metricsToRetrieve, EnumSet<Field> fieldsToRetrieve) {
-    super(userId, clusterId, flowId, flowRunId, appId, entityType, entityId,
+    super(userId, clusterId, flowName, flowRunId, appId, entityType, entityId,
         null, metricsToRetrieve, fieldsToRetrieve);
   }
 
@@ -92,7 +92,7 @@ class FlowRunEntityReader extends TimelineEntityReader {
   protected void validateParams() {
     Preconditions.checkNotNull(clusterId, "clusterId shouldn't be null");
     Preconditions.checkNotNull(userId, "userId shouldn't be null");
-    Preconditions.checkNotNull(flowId, "flowId shouldn't be null");
+    Preconditions.checkNotNull(flowName, "flowName shouldn't be null");
     if (singleEntityRead) {
       Preconditions.checkNotNull(flowRunId, "flowRunId shouldn't be null");
     }
@@ -155,7 +155,7 @@ class FlowRunEntityReader extends TimelineEntityReader {
   protected Result getResult(Configuration hbaseConf, Connection conn,
       FilterList filterList) throws IOException {
     byte[] rowKey =
-        FlowRunRowKey.getRowKey(clusterId, userId, flowId, flowRunId);
+        FlowRunRowKey.getRowKey(clusterId, userId, flowName, flowRunId);
     Get get = new Get(rowKey);
     get.setMaxVersions(Integer.MAX_VALUE);
     if (filterList != null && !filterList.getFilters().isEmpty()) {
@@ -169,7 +169,7 @@ class FlowRunEntityReader extends TimelineEntityReader {
       Connection conn, FilterList filterList) throws IOException {
     Scan scan = new Scan();
     scan.setRowPrefixFilter(
-        FlowRunRowKey.getRowKeyPrefix(clusterId, userId, flowId));
+        FlowRunRowKey.getRowKeyPrefix(clusterId, userId, flowName));
     FilterList newList = new FilterList();
     newList.addFilter(new PageFilter(limit));
     if (filterList != null && !filterList.getFilters().isEmpty()) {
@@ -183,7 +183,7 @@ class FlowRunEntityReader extends TimelineEntityReader {
   protected TimelineEntity parseEntity(Result result) throws IOException {
     FlowRunEntity flowRun = new FlowRunEntity();
     flowRun.setUser(userId);
-    flowRun.setName(flowId);
+    flowRun.setName(flowName);
     if (singleEntityRead) {
       flowRun.setRunId(flowRunId);
     } else {
