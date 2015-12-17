@@ -80,6 +80,7 @@ public class TestBootstrapStandby {
   public void shutdownCluster() {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
   

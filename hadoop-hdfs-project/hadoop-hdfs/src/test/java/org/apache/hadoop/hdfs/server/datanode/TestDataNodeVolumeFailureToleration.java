@@ -78,6 +78,7 @@ public class TestDataNodeVolumeFailureToleration {
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

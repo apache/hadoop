@@ -43,9 +43,11 @@ public class TestBlocksScheduledCounter {
   public void tearDown() throws IOException {
     if (fs != null) {
       fs.close();
+      fs = null;
     }
     if(cluster!=null){
       cluster.shutdown();
+      cluster = null;
     }
   }
 

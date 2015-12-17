@@ -61,6 +61,7 @@ public class TestJournalNodeMXBean {
   public void cleanup() throws IOException {
     if (jCluster != null) {
       jCluster.shutdown();
+      jCluster = null;
     }
   }
   

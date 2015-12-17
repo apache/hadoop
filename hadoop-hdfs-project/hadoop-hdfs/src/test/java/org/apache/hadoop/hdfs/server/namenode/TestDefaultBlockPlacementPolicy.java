@@ -71,6 +71,7 @@ public class TestDefaultBlockPlacementPolicy {
   public void teardown() {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

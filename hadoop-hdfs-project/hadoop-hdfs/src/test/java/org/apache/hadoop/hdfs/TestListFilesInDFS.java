@@ -46,8 +46,10 @@ public class TestListFilesInDFS extends TestListFiles {
   
   @AfterClass
   public static void testShutdown() throws Exception {
-    fs.close();
-    cluster.shutdown();
+    if (cluster != null) {
+      fs.close();
+      cluster.shutdown();
+    }
   }
   
   protected static Path getTestDir() {

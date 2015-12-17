@@ -83,7 +83,9 @@ public class TestListFilesInFileContext {
   
   @AfterClass
   public static void testShutdown() throws Exception {
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+    }
   }
 
   /** Test when input path is a file */

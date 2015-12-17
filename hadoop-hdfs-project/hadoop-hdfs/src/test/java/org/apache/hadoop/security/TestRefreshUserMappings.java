@@ -99,10 +99,12 @@ public class TestRefreshUserMappings {
   public void tearDown() throws Exception {
     if(cluster!=null) {
       cluster.shutdown();
+      cluster = null;
     }
     if(tempResource!=null) {
       File f = new File(tempResource);
       f.delete();
+      tempResource = null;
     }
   }
     

@@ -70,6 +70,7 @@ public class TestComputeInvalidateWork {
   public void teardown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

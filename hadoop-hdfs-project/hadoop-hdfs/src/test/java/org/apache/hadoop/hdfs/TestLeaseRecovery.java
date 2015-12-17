@@ -57,6 +57,7 @@ public class TestLeaseRecovery {
   public void shutdown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

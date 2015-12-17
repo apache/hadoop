@@ -70,6 +70,7 @@ public class TestGetContentSummaryWithSnapshot {
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

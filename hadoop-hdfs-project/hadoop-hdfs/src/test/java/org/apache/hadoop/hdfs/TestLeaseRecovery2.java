@@ -101,8 +101,10 @@ public class TestLeaseRecovery2 {
    */
   @AfterClass
   public static void tearDown() throws IOException {
-    IOUtils.closeStream(dfs);
-    if (cluster != null) {cluster.shutdown();}
+    if (cluster != null) {
+      IOUtils.closeStream(dfs);
+      cluster.shutdown();
+    }
   }
 
   /**

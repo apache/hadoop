@@ -452,6 +452,9 @@ public class TestDFSStorageStateRecovery {
   @After
   public void tearDown() throws Exception {
     LOG.info("Shutting down MiniDFSCluster");
-    if (cluster != null) cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 }

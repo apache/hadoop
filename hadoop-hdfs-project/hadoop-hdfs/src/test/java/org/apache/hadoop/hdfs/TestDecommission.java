@@ -126,6 +126,7 @@ public class TestDecommission {
     cleanupFile(localFileSys, dir);
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
   

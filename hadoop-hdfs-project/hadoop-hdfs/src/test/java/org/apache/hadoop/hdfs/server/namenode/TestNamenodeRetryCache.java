@@ -105,7 +105,10 @@ public class TestNamenodeRetryCache {
    * @throws AccessControlException */
   @After
   public void cleanup() throws IOException {
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
   
   /** Set the current Server RPC call */

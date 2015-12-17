@@ -74,6 +74,7 @@ public class TestQuotaByStorageType {
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

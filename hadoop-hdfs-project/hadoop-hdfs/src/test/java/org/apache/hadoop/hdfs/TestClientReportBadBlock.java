@@ -82,8 +82,14 @@ public class TestClientReportBadBlock {
 
   @After
   public void shutDownCluster() throws IOException {
-    dfs.close();
-    cluster.shutdown();
+    if (dfs != null) {
+      dfs.close();
+      dfs = null;
+    }
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 
   /*

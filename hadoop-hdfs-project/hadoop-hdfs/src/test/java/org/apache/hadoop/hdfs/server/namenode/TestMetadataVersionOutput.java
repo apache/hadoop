@@ -45,6 +45,7 @@ public class TestMetadataVersionOutput {
   public void tearDown() throws Exception {
     if (dfsCluster != null) {
       dfsCluster.shutdown();
+      dfsCluster = null;
     }
     Thread.sleep(2000);
   }
