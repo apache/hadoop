@@ -35,9 +35,6 @@ Release 2.9.0 - UNRELEASED
 
   BUG FIXES
 
-    HDFS-9516. Truncate file fails with data dirs on multiple disks.
-    (Plamen Jeliazkov via shv)
-
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1661,6 +1658,9 @@ Release 2.7.3 - UNRELEASED
     (szetszwo via kihwal)
 
     HDFS-8785. TestDistributedFileSystem is failing in trunk. (Xiaoyu Yao)
+
+    HDFS-9516. Truncate file fails with data dirs on multiple disks.
+    (Plamen Jeliazkov via shv)
 
 Release 2.7.2 - UNRELEASED
 
