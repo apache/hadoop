@@ -59,13 +59,11 @@ public class StripedFileTestUtil {
   public static final short NUM_DATA_BLOCKS = (short) 6;
   public static final short NUM_PARITY_BLOCKS = (short) 3;
   public static final int BLOCK_STRIPED_CELL_SIZE = 64 * 1024;
-  public static final int BLOCK_STRIPE_SIZE = BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS;
 
-  public static final int stripesPerBlock = 4;
-  public static final int blockSize = BLOCK_STRIPED_CELL_SIZE * stripesPerBlock;
-  public static final int numDNs = NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS + 2;
-  public static final int BLOCK_GROUP_SIZE = blockSize * NUM_DATA_BLOCKS;
-
+  static int stripesPerBlock = 4;
+  public static int blockSize = BLOCK_STRIPED_CELL_SIZE * stripesPerBlock;
+  static int numDNs = NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS + 2;
+  static int BLOCK_GROUP_SIZE = blockSize * NUM_DATA_BLOCKS;
 
   static byte[] generateBytes(int cnt) {
     byte[] bytes = new byte[cnt];

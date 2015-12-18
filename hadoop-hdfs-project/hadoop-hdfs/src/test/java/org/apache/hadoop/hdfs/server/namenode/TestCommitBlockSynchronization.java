@@ -199,14 +199,15 @@ public class TestCommitBlockSynchronization {
     FSNamesystem namesystemSpy = makeNameSystemSpy(block, file);
     DatanodeID[] newTargets = new DatanodeID[]{
         new DatanodeID("0.0.0.0", "nonexistantHost", "1", 0, 0, 0, 0)};
+    String[] storageIDs = new String[]{"fake-storage-ID"};
 
     ExtendedBlock lastBlock = new ExtendedBlock();
     namesystemSpy.commitBlockSynchronization(
         lastBlock, genStamp, length, true,
-        false, newTargets, null);
+        false, newTargets, storageIDs);
 
     // Repeat the call to make sure it returns true
     namesystemSpy.commitBlockSynchronization(
-        lastBlock, genStamp, length, true, false, newTargets, null);
+        lastBlock, genStamp, length, true, false, newTargets, storageIDs);
   }
 }

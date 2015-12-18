@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.protocol.*;
 import org.apache.hadoop.hdfs.server.protocol.BlockECRecoveryCommand.BlockECRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringStripedBlock;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.*;
 import org.apache.hadoop.net.NetworkTopology.InvalidTopologyException;
@@ -504,6 +505,7 @@ public class DatanodeManager {
   public DatanodeStorageInfo[] getDatanodeStorageInfos(
       DatanodeID[] datanodeID, String[] storageIDs,
       String format, Object... args) throws UnregisteredNodeException {
+    storageIDs = storageIDs == null ? new String[0] : storageIDs;
     if (datanodeID.length != storageIDs.length) {
       final String err = (storageIDs.length == 0?
           "Missing storageIDs: It is likely that the HDFS client,"
@@ -524,9 +526,11 @@ public class DatanodeManager {
         continue;
       }
       final DatanodeDescriptor dd = getDatanode(datanodeID[i]);
-      storages[i] = dd.getStorageInfo(storageIDs[i]);
+      if (dd != null) {
+        storages[i] = dd.getStorageInfo(storageIDs[i]);
+      }
     }
-    return storages; 
+    return storages;
   }
 
   /** Prints information about all datanodes. */
@@ -1366,6 +1370,10 @@ public class DatanodeManager {
       } else {
         rBlock = new RecoveringBlock(primaryBlock, recoveryInfos,
             uc.getBlockRecoveryId());
+        if (b.isStriped()) {
+          rBlock = new RecoveringStripedBlock(rBlock, uc.getBlockIndices(),
+              ((BlockInfoStriped) b).getErasureCodingPolicy());
+        }
       }
       brCommand.add(rBlock);
     }

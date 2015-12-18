@@ -46,7 +46,6 @@ import java.util.List;
 import static org.apache.hadoop.hdfs.StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
 import static org.apache.hadoop.hdfs.StripedFileTestUtil.NUM_DATA_BLOCKS;
 import static org.apache.hadoop.hdfs.StripedFileTestUtil.NUM_PARITY_BLOCKS;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.blockSize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -183,7 +182,7 @@ public class TestRecoverStripedBlocks {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1000);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1000);
-    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, StripedFileTestUtil.blockSize);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(GROUP_SIZE + 2)
         .build();
     try {
@@ -191,7 +190,7 @@ public class TestRecoverStripedBlocks {
       DistributedFileSystem fs = cluster.getFileSystem();
       BlockManager bm = cluster.getNamesystem().getBlockManager();
       fs.getClient().setErasureCodingPolicy("/", null);
-      int fileLen = NUM_DATA_BLOCKS * blockSize;
+      int fileLen = NUM_DATA_BLOCKS * StripedFileTestUtil.blockSize;
       Path p = new Path("/test2RecoveryTasksForSameBlockGroup");
       final byte[] data = new byte[fileLen];
       DFSTestUtil.writeFile(fs, p, data);

@@ -35,6 +35,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.CreateFlag;
@@ -970,7 +971,8 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     }
   }
 
-  private void enqueueAllCurrentPackets() throws IOException {
+  @VisibleForTesting
+  void enqueueAllCurrentPackets() throws IOException {
     int idx = streamers.indexOf(getCurrentStreamer());
     for(int i = 0; i < streamers.size(); i++) {
       final StripedDataStreamer si = setCurrentStreamer(i);

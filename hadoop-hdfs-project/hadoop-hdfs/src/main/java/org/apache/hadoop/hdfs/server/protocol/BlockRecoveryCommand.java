@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 
@@ -76,6 +77,13 @@ public class BlockRecoveryCommand extends DatanodeCommand {
       this.recoveryBlock = recoveryBlock;
     }
 
+    public RecoveringBlock(RecoveringBlock rBlock) {
+      super(rBlock.getBlock(), rBlock.getLocations(), rBlock.getStorageIDs(),
+          rBlock.getStorageTypes());
+      this.newGenerationStamp = rBlock.newGenerationStamp;
+      this.recoveryBlock = rBlock.recoveryBlock;
+    }
+
     /**
      * Return the new generation stamp of the block,
      * which also plays role of the recovery id.
@@ -89,6 +97,31 @@ public class BlockRecoveryCommand extends DatanodeCommand {
      */
     public Block getNewBlock() {
       return recoveryBlock;
+    }
+  }
+
+  public static class RecoveringStripedBlock extends RecoveringBlock {
+    private final int[] blockIndices;
+    private final ErasureCodingPolicy ecPolicy;
+
+    public RecoveringStripedBlock(RecoveringBlock rBlock, int[] blockIndices,
+        ErasureCodingPolicy ecPolicy) {
+      super(rBlock);
+      this.blockIndices = blockIndices;
+      this.ecPolicy = ecPolicy;
+    }
+
+    public int[] getBlockIndices() {
+      return blockIndices;
+    }
+
+    public ErasureCodingPolicy getErasureCodingPolicy() {
+      return ecPolicy;
+    }
+
+    @Override
+    public boolean isStriped() {
+      return true;
     }
   }
 

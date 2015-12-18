@@ -87,6 +87,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockIdCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockECRecoveryCommand.BlockECRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringStripedBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
@@ -359,6 +360,12 @@ public class PBHelper {
     builder.setBlock(lb).setNewGenStamp(b.getNewGenerationStamp());
     if(b.getNewBlock() != null)
       builder.setTruncateBlock(PBHelperClient.convert(b.getNewBlock()));
+    if (b instanceof RecoveringStripedBlock) {
+      RecoveringStripedBlock sb = (RecoveringStripedBlock) b;
+      builder.setEcPolicy(PBHelperClient.convertErasureCodingPolicy(
+          sb.getErasureCodingPolicy()));
+      builder.addAllBlockIndices(asList(sb.getBlockIndices()));
+    }
     return builder.build();
   }
 
@@ -371,6 +378,16 @@ public class PBHelper {
     } else {
       rBlock = new RecoveringBlock(lb.getBlock(), lb.getLocations(),
           b.getNewGenStamp());
+    }
+
+    if (b.hasEcPolicy()) {
+      List<Integer> BlockIndicesList = b.getBlockIndicesList();
+      int[] indices = new int[BlockIndicesList.size()];
+      for (int i = 0; i < BlockIndicesList.size(); i++) {
+        indices[i] = BlockIndicesList.get(i).shortValue();
+      }
+      rBlock = new RecoveringStripedBlock(rBlock, indices,
+          PBHelperClient.convertErasureCodingPolicy(b.getEcPolicy()));
     }
     return rBlock;
   }
@@ -823,12 +840,20 @@ public class PBHelper {
         build();
   }
 
-  private static List<Integer> convertIntArray(short[] liveBlockIndices) {
-    List<Integer> liveBlockIndicesList = new ArrayList<>();
-    for (short s : liveBlockIndices) {
-      liveBlockIndicesList.add((int) s);
+  private static List<Integer> asList(int[] arr) {
+    List<Integer> list = new ArrayList<>(arr.length);
+    for (int s : arr) {
+      list.add(s);
     }
-    return liveBlockIndicesList;
+    return list;
+  }
+
+  private static List<Integer> asList(short[] arr) {
+    List<Integer> list = new ArrayList<>(arr.length);
+    for (int s : arr) {
+      list.add(s);
+    }
+    return list;
   }
 
   private static StorageTypesProto convertStorageTypesProto(
@@ -925,7 +950,7 @@ public class PBHelper {
     builder.setTargetStorageTypes(convertStorageTypesProto(targetStorageTypes));
 
     short[] liveBlockIndices = blockEcRecoveryInfo.getLiveBlockIndices();
-    builder.addAllLiveBlockIndices(convertIntArray(liveBlockIndices));
+    builder.addAllLiveBlockIndices(asList(liveBlockIndices));
 
     builder.setEcPolicy(PBHelperClient.convertErasureCodingPolicy(
         blockEcRecoveryInfo.getErasureCodingPolicy()));

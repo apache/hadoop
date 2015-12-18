@@ -873,6 +873,9 @@ Trunk (Unreleased)
       HDFS-9373. Erasure coding: friendly log information for write operations
       with some failed streamers. (Li Bo via zhz)
 
+      HDFS-9173. Erasure Coding: Lease recovery for striped file. (Walter Su and
+      Jing Zhao via zhz)
+
       HDFS-9451. Clean up depreated umasks and related unit tests.
       (Wei-Chiu Chuang via wheat9)
 
