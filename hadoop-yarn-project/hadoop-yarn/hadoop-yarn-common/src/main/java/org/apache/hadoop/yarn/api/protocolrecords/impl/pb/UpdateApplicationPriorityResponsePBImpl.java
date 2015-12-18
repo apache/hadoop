@@ -19,7 +19,11 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.impl.pb.PriorityPBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.UpdateApplicationPriorityResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.UpdateApplicationPriorityResponseProtoOrBuilder;
 
 import com.google.protobuf.TextFormat;
 
@@ -30,6 +34,8 @@ public class UpdateApplicationPriorityResponsePBImpl extends
       UpdateApplicationPriorityResponseProto.getDefaultInstance();
   UpdateApplicationPriorityResponseProto.Builder builder = null;
   boolean viaProto = false;
+
+  private Priority updatedAppPriority = null;
 
   public UpdateApplicationPriorityResponsePBImpl() {
     builder = UpdateApplicationPriorityResponseProto.newBuilder();
@@ -42,9 +48,66 @@ public class UpdateApplicationPriorityResponsePBImpl extends
   }
 
   public UpdateApplicationPriorityResponseProto getProto() {
+    mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  private void mergeLocalToProto() {
+    if (viaProto) {
+      maybeInitBuilder();
+    }
+    mergeLocalToBuilder();
+    proto = builder.build();
+    viaProto = true;
+  }
+
+  private void maybeInitBuilder() {
+    if (viaProto || builder == null) {
+      builder = UpdateApplicationPriorityResponseProto.newBuilder(proto);
+    }
+    viaProto = false;
+  }
+
+  private void mergeLocalToBuilder() {
+    if (this.updatedAppPriority != null) {
+      builder
+          .setApplicationPriority(
+              convertToProtoFormat(this.updatedAppPriority));
+    }
+  }
+
+  @Override
+  public Priority getApplicationPriority() {
+    UpdateApplicationPriorityResponseProtoOrBuilder p =
+        viaProto ? proto : builder;
+    if (this.updatedAppPriority != null) {
+      return this.updatedAppPriority;
+    }
+    if (!p.hasApplicationPriority()) {
+      return null;
+    }
+    this.updatedAppPriority =
+        convertFromProtoFormat(p.getApplicationPriority());
+    return this.updatedAppPriority;
+  }
+
+  @Override
+  public void setApplicationPriority(Priority priority) {
+    maybeInitBuilder();
+    if (priority == null) {
+      builder.clearApplicationPriority();
+    }
+    this.updatedAppPriority = priority;
+  }
+
+  private PriorityPBImpl convertFromProtoFormat(PriorityProto p) {
+    return new PriorityPBImpl(p);
+  }
+
+  private PriorityProto convertToProtoFormat(Priority t) {
+    return ((PriorityPBImpl) t).getProto();
   }
 
   @Override

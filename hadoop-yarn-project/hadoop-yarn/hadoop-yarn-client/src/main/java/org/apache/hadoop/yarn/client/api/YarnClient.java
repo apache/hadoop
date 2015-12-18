@@ -692,12 +692,14 @@ public abstract class YarnClient extends AbstractService {
    * </p>
    * @param applicationId
    * @param priority
+   * @return updated priority of an application.
    * @throws YarnException
    * @throws IOException
    */
   @Public
   @Unstable
-  public abstract void updateApplicationPriority(ApplicationId applicationId,
+  public abstract Priority updateApplicationPriority(
+      ApplicationId applicationId,
       Priority priority) throws YarnException, IOException;
 
   /**

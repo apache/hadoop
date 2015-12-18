@@ -476,9 +476,9 @@ public class ResourceMgrDelegate extends YarnClient {
   }
 
   @Override
-  public void updateApplicationPriority(ApplicationId applicationId,
+  public Priority updateApplicationPriority(ApplicationId applicationId,
       Priority priority) throws YarnException, IOException {
-    client.updateApplicationPriority(applicationId, priority);
+    return client.updateApplicationPriority(applicationId, priority);
   }
 
   @Override
