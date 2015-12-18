@@ -256,6 +256,7 @@ message UpdateApplicationPriorityRequestProto {
 }
 
 message UpdateApplicationPriorityResponseProto {
+   optional PriorityProto applicationPriority = 1;
 }
 
 message SignalContainerRequestProto {

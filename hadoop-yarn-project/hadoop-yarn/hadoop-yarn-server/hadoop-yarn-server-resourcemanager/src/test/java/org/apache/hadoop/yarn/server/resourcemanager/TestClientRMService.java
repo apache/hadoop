@@ -86,6 +86,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -1661,48 +1662,36 @@ public class TestClientRMService {
         appPriority, app1.getApplicationSubmissionContext().getPriority()
             .getPriority());
 
-    appPriority = 9;
+    appPriority = 11;
     ClientRMService rmService = rm.getClientRMService();
-    UpdateApplicationPriorityRequest updateRequest =
-        UpdateApplicationPriorityRequest.newInstance(app1.getApplicationId(),
-            Priority.newInstance(appPriority));
+    testAplicationPriorityUpdation(rmService, app1, appPriority, maxPriority);
 
-    rmService.updateApplicationPriority(updateRequest);
-
-    Assert.assertEquals("Incorrect priority has been set to application",
-        appPriority, app1.getApplicationSubmissionContext().getPriority()
-            .getPriority());
+    appPriority = 9;
+    testAplicationPriorityUpdation(rmService, app1, appPriority, appPriority);
 
     rm.killApp(app1.getApplicationId());
     rm.waitForState(app1.getApplicationId(), RMAppState.KILLED);
 
-    appPriority = 8;
-    UpdateApplicationPriorityRequest updateRequestNew =
-        UpdateApplicationPriorityRequest.newInstance(app1.getApplicationId(),
-            Priority.newInstance(appPriority));
-    // Update priority request for application in KILLED state
-    rmService.updateApplicationPriority(updateRequestNew);
-
-    // Hence new priority should not be updated
-    Assert.assertNotEquals("Priority should not be updated as app is in KILLED state",
-        appPriority, app1.getApplicationSubmissionContext().getPriority()
-            .getPriority());
-    Assert.assertEquals("Priority should be same as old one before update",
-        9, app1.getApplicationSubmissionContext().getPriority()
-            .getPriority());
 
     // Update priority request for invalid application id.
     ApplicationId invalidAppId = ApplicationId.newInstance(123456789L, 3);
-    updateRequest =
+    UpdateApplicationPriorityRequest updateRequest =
         UpdateApplicationPriorityRequest.newInstance(invalidAppId,
             Priority.newInstance(appPriority));
     try {
       rmService.updateApplicationPriority(updateRequest);
-      Assert
-          .fail("ApplicationNotFoundException should be thrown for invalid application id");
+      Assert.fail("ApplicationNotFoundException should be thrown "
+          + "for invalid application id");
     } catch (ApplicationNotFoundException e) {
       // Expected
     }
+
+    updateRequest =
+        UpdateApplicationPriorityRequest.newInstance(app1.getApplicationId(),
+            Priority.newInstance(11));
+    Assert.assertEquals("Incorrect priority has been set to application",
+        appPriority, rmService.updateApplicationPriority(updateRequest)
+            .getApplicationPriority().getPriority());
 
     rm.stop();
   }
@@ -1723,23 +1712,23 @@ public class TestClientRMService {
     String excludeFile = "excludeFile";
     createExcludeFile(excludeFile);
     YarnConfiguration conf = new YarnConfiguration();
-    conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
-        excludeFile);
+    conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, excludeFile);
     MockRM rm = new MockRM(conf) {
       protected ClientRMService createClientRMService() {
-        return new ClientRMService(this.rmContext, scheduler,
-            this.rmAppManager, this.applicationACLsManager, this.queueACLsManager,
+        return new ClientRMService(this.rmContext, scheduler, this.rmAppManager,
+            this.applicationACLsManager, this.queueACLsManager,
             this.getRMContext().getRMDelegationTokenSecretManager());
-      };
+      }
+
+      ;
     };
     rm.start();
 
     YarnRPC rpc = YarnRPC.create(conf);
     InetSocketAddress rmAddress = rm.getClientRMService().getBindAddress();
     LOG.info("Connecting to ResourceManager at " + rmAddress);
-    ApplicationClientProtocol client =
-        (ApplicationClientProtocol) rpc
-            .getProxy(ApplicationClientProtocol.class, rmAddress, conf);
+    ApplicationClientProtocol client = (ApplicationClientProtocol) rpc
+        .getProxy(ApplicationClientProtocol.class, rmAddress, conf);
 
     // Make call
     GetClusterNodesRequest request =
@@ -1750,5 +1739,22 @@ public class TestClientRMService {
     rm.stop();
     rpc.stopProxy(client, conf);
     new File(excludeFile).delete();
+  }
+
+  private void testAplicationPriorityUpdation(ClientRMService rmService,
+      RMApp app1, int tobeUpdatedPriority, int expected) throws YarnException,
+      IOException {
+    UpdateApplicationPriorityRequest updateRequest =
+        UpdateApplicationPriorityRequest.newInstance(app1.getApplicationId(),
+            Priority.newInstance(tobeUpdatedPriority));
+
+    UpdateApplicationPriorityResponse updateApplicationPriority =
+        rmService.updateApplicationPriority(updateRequest);
+
+    Assert.assertEquals("Incorrect priority has been set to application",
+        expected, app1.getApplicationSubmissionContext().getPriority()
+            .getPriority());
+    Assert.assertEquals("Incorrect priority has been returned", expected,
+        updateApplicationPriority.getApplicationPriority().getPriority());
   }
 }

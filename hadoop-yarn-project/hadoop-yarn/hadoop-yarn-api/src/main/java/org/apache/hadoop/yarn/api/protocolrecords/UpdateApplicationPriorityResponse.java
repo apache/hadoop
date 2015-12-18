@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -39,9 +40,24 @@ import org.apache.hadoop.yarn.util.Records;
 @Unstable
 public abstract class UpdateApplicationPriorityResponse {
 
-  public static UpdateApplicationPriorityResponse newInstance() {
+  public static UpdateApplicationPriorityResponse newInstance(
+      Priority priority) {
     UpdateApplicationPriorityResponse response =
         Records.newRecord(UpdateApplicationPriorityResponse.class);
+    response.setApplicationPriority(priority);
     return response;
   }
+
+  /**
+   * Get the <code>Priority</code> of the application to be set.
+   * @return Updated <code>Priority</code> of the application.
+   */
+  public abstract Priority getApplicationPriority();
+
+  /**
+   * Set the <code>Priority</code> of the application.
+   *
+   * @param priority <code>Priority</code> of the application
+   */
+  public abstract void setApplicationPriority(Priority priority);
 }
