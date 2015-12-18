@@ -2516,6 +2516,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9572. Prevent DataNode log spam if a client connects on the data
     transfer port but sends no data. (cnauroth)
 
+    HDFS-9571. Fix ASF Licence warnings in Jenkins reports
+    (Brahma Reddy Battula via cnauroth)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
