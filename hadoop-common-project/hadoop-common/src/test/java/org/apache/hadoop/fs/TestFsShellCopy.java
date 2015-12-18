@@ -318,6 +318,7 @@ public class TestFsShellCopy {
     Path f1 = new Path(root, "f1");
     Path f2 = new Path(root, "f2");
     Path f3 = new Path(root, "f3");
+    Path empty = new Path(root, "empty");
     Path fnf = new Path(root, "fnf");
     Path d = new Path(root, "dir");
     Path df1 = new Path(d, "df1");
@@ -325,7 +326,8 @@ public class TestFsShellCopy {
     Path df3 = new Path(d, "df3");
     
     createFile(f1, f2, f3, df1, df2, df3);
-    
+    createEmptyFile(empty);
+
     int exit;
     // one file, kind of silly
     exit = shell.run(new String[]{
@@ -366,6 +368,13 @@ public class TestFsShellCopy {
     assertEquals(0, exit);
     assertEquals("f1\nf2\n", readFile("out"));
 
+    exit = shell.run(new String[]{
+        "-getmerge", "-nl", "-skip-empty-file",
+        f1.toString(), f2.toString(), empty.toString(),
+    "out" });
+    assertEquals(0, exit);
+    assertEquals("f1\nf2\n", readFile("out"));
+
     // glob three files
     shell.run(new String[]{
         "-getmerge", "-nl",
@@ -374,13 +383,13 @@ public class TestFsShellCopy {
     assertEquals(0, exit);
     assertEquals("f1\nf2\nf3\n", readFile("out"));
 
-    // directory with 3 files, should skip subdir
+    // directory with 1 empty + 3 non empty files, should skip subdir
     shell.run(new String[]{
         "-getmerge", "-nl",
         root.toString(),
         "out" });
     assertEquals(0, exit);
-    assertEquals("f1\nf2\nf3\n", readFile("out"));
+    assertEquals("\nf1\nf2\nf3\n", readFile("out"));
 
     // subdir
     shell.run(new String[]{
@@ -538,7 +547,14 @@ public class TestFsShellCopy {
       out.close();
     }
   }
-  
+
+  private void createEmptyFile(Path ... paths) throws IOException {
+    for (Path path : paths) {
+      FSDataOutputStream out = lfs.create(path);
+      out.close();
+    }
+  }
+
   private String readFile(String out) throws IOException {
     Path path = new Path(out);
     FileStatus stat = lfs.getFileStatus(path);
