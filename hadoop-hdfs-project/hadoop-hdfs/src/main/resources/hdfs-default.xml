@@ -2589,4 +2589,12 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.ha.zkfc.port</name>
+  <value>8019</value>
+  <description>
+    RPC port for Zookeeper Failover Controller.
+  </description>
+</property>
+
 </configuration>

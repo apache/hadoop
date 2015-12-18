@@ -907,6 +907,9 @@ Release 2.9.0 - UNRELEASED
     HDFS-9300. TestDirectoryScanner.testThrottle() is still a little flakey.
     (Daniel Templeton via wang)
 
+    HDFS-8477. describe dfs.ha.zkfc.port in hdfs-default.xml.
+    (Kanaka Kumar Avvaru via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
