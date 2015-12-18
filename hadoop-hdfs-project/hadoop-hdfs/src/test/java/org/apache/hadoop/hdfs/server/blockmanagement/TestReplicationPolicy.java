@@ -1454,4 +1454,44 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
     assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 0, 0);
   }
+
+  /**
+   * In this testcase, passed 2 favored nodes dataNodes[0],dataNodes[1]
+   *
+   * Both favored nodes should be chosen as target for placing replication and
+   * then should fall into BlockPlacement policy for choosing remaining targets
+   * ie. third target as local writer rack , forth target on remote rack and
+   * fifth on same rack as second.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testChooseExcessReplicaApartFromFavoredNodes() throws Exception {
+    DatanodeStorageInfo[] targets;
+    List<DatanodeDescriptor> expectedTargets =
+        new ArrayList<DatanodeDescriptor>();
+    expectedTargets.add(dataNodes[0]);
+    expectedTargets.add(dataNodes[1]);
+    expectedTargets.add(dataNodes[2]);
+    expectedTargets.add(dataNodes[4]);
+    expectedTargets.add(dataNodes[5]);
+    List<DatanodeDescriptor> favouredNodes =
+        new ArrayList<DatanodeDescriptor>();
+    favouredNodes.add(dataNodes[0]);
+    favouredNodes.add(dataNodes[1]);
+    targets = chooseTarget(5, dataNodes[2], null, favouredNodes);
+    assertEquals(targets.length, 5);
+    for (int i = 0; i < targets.length; i++) {
+      assertTrue("Target should be a part of Expected Targets",
+          expectedTargets.contains(targets[i].getDatanodeDescriptor()));
+    }
+  }
+
+  private DatanodeStorageInfo[] chooseTarget(int numOfReplicas,
+      DatanodeDescriptor writer, Set<Node> excludedNodes,
+      List<DatanodeDescriptor> favoredNodes) {
+    return replicator.chooseTarget(filename, numOfReplicas, writer,
+        excludedNodes, BLOCK_SIZE, favoredNodes,
+        TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
+  }
 }
