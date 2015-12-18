@@ -688,6 +688,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-10300. Allowed deferred sending of call responses. (Daryn Sharp via
     yliu)
 
+    HADOOP-12657. Add a option to skip newline on empty files with getMerge -nl.
+    (Kanaka Kumar Avvaru via aajisaka)
+
   IMPROVEMENTS
 
     HADOOP-12458. Retries is typoed to spell Retires in parts of

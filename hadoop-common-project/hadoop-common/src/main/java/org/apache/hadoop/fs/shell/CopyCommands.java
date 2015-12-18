@@ -53,24 +53,29 @@ class CopyCommands {
   /** merge multiple files together */
   public static class Merge extends FsCommand {
     public static final String NAME = "getmerge";    
-    public static final String USAGE = "[-nl] <src> <localdst>";
+    public static final String USAGE = "[-nl] [-skip-empty-file] "
+        + "<src> <localdst>";
     public static final String DESCRIPTION =
-      "Get all the files in the directories that " +
-      "match the source file pattern and merge and sort them to only " +
-      "one file on local fs. <src> is kept.\n" +
-      "-nl: Add a newline character at the end of each file.";
+        "Get all the files in the directories that "
+        + "match the source file pattern and merge and sort them to only "
+        + "one file on local fs. <src> is kept.\n"
+        + "-nl: Add a newline character at the end of each file.\n"
+        + "-skip-empty-file: Do not add new line character for empty file.";
 
     protected PathData dst = null;
     protected String delimiter = null;
+    private boolean skipEmptyFileDelimiter;
     protected List<PathData> srcs = null;
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
       try {
-        CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "nl");
+        CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "nl",
+            "skip-empty-file");
         cf.parse(args);
 
         delimiter = cf.getOpt("nl") ? "\n" : null;
+        skipEmptyFileDelimiter = cf.getOpt("skip-empty-file");
 
         dst = new PathData(new URI(args.removeLast()), getConf());
         if (dst.exists && dst.stat.isDirectory()) {
@@ -92,21 +97,26 @@ class CopyCommands {
       FSDataOutputStream out = dst.fs.create(dst.path);
       try {
         for (PathData src : srcs) {
-          FSDataInputStream in = src.fs.open(src.path);
-          try {
-            IOUtils.copyBytes(in, out, getConf(), false);
-            if (delimiter != null) {
-              out.write(delimiter.getBytes("UTF-8"));
+          if (src.stat.getLen() != 0) {
+            try (FSDataInputStream in = src.fs.open(src.path)) {
+              IOUtils.copyBytes(in, out, getConf(), false);
+              writeDelimiter(out);
             }
-          } finally {
-            in.close();
+          } else if (!skipEmptyFileDelimiter) {
+            writeDelimiter(out);
           }
         }
       } finally {
         out.close();
-      }      
+      }
     }
- 
+
+    private void writeDelimiter(FSDataOutputStream out) throws IOException {
+      if (delimiter != null) {
+        out.write(delimiter.getBytes("UTF-8"));
+      }
+    }
+
     @Override
     protected void processNonexistentPath(PathData item) throws IOException {
       exitCode = 1; // flag that a path is bad
