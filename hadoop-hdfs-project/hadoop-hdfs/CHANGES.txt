@@ -910,6 +910,9 @@ Release 2.9.0 - UNRELEASED
     HDFS-8477. describe dfs.ha.zkfc.port in hdfs-default.xml.
     (Kanaka Kumar Avvaru via wang)
 
+    HDFS-9350. Avoid creating temprorary strings in Block.toString() and
+    getBlockName() (Staffan Friberg via cmccabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
