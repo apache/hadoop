@@ -147,11 +147,18 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
           avoidStaleNodes, storageTypes);
 
       if (results.size() < numOfReplicas) {
-        // Not enough favored nodes, choose other nodes.
+        // Not enough favored nodes, choose other nodes, based on block
+        // placement policy (HDFS-9393).
         numOfReplicas -= results.size();
-        DatanodeStorageInfo[] remainingTargets = 
-            chooseTarget(src, numOfReplicas, writer, results,
-                false, favoriteAndExcludedNodes, blocksize, storagePolicy);
+        for (DatanodeStorageInfo storage : results) {
+          // add localMachine and related nodes to favoriteAndExcludedNodes
+          addToExcludedNodes(storage.getDatanodeDescriptor(),
+              favoriteAndExcludedNodes);
+        }
+        DatanodeStorageInfo[] remainingTargets =
+            chooseTarget(src, numOfReplicas, writer,
+                new ArrayList<DatanodeStorageInfo>(numOfReplicas), false,
+                favoriteAndExcludedNodes, blocksize, storagePolicy);
         for (int i = 0; i < remainingTargets.length; i++) {
           results.add(remainingTargets[i]);
         }

@@ -2519,6 +2519,10 @@ Release 2.8.0 - UNRELEASED
     HDFS-9571. Fix ASF Licence warnings in Jenkins reports
     (Brahma Reddy Battula via cnauroth)
 
+    HDFS-9393. After choosing favored nodes, choosing nodes for remaining
+    replicas should go through BlockPlacementPolicy
+    (J.Andreina via vinayakumarb)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

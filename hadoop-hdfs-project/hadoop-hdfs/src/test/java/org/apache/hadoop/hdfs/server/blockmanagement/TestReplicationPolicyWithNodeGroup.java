@@ -781,4 +781,36 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     assertTrue("2nd Replica is incorrect",
       expectedTargets.contains(targets[1].getDatanodeDescriptor()));
   }
+
+  /**
+   * In this testcase, passed 3 favored nodes
+   * dataNodes[0],dataNodes[1],dataNodes[2]
+   *
+   * Favored nodes on different nodegroup should be selected. Remaining replica
+   * should go through BlockPlacementPolicy.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testChooseRemainingReplicasApartFromFavoredNodes()
+      throws Exception {
+    DatanodeStorageInfo[] targets;
+    List<DatanodeDescriptor> expectedTargets =
+        new ArrayList<DatanodeDescriptor>();
+    expectedTargets.add(dataNodes[0]);
+    expectedTargets.add(dataNodes[2]);
+    expectedTargets.add(dataNodes[3]);
+    expectedTargets.add(dataNodes[6]);
+    expectedTargets.add(dataNodes[7]);
+    List<DatanodeDescriptor> favouredNodes =
+        new ArrayList<DatanodeDescriptor>();
+    favouredNodes.add(dataNodes[0]);
+    favouredNodes.add(dataNodes[1]);
+    favouredNodes.add(dataNodes[2]);
+    targets = chooseTarget(3, dataNodes[3], null, favouredNodes);
+    for (int i = 0; i < targets.length; i++) {
+      assertTrue("Target should be a part of Expected Targets",
+          expectedTargets.contains(targets[i].getDatanodeDescriptor()));
+    }
+  }
 }
