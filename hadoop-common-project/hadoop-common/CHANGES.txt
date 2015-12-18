@@ -545,6 +545,9 @@ Trunk (Unreleased)
 
     HADOOP-12615. Fix NPE in MiniKMS.start(). (Wei-Chiu Chuang via zhz)
 
+    HADOOP-12647. Add /usr/lib default for ISAL library and fix missing .c file
+    in CMakeLists (Kai Zheng via cmccabe)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

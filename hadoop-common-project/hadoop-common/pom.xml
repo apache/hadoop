@@ -672,7 +672,7 @@
                       <arg value="-c"/>
                       <arg value="[ ! -f ${project.build.directory}/native/erasure_code_test ] || ${project.build.directory}/native/erasure_code_test"/>
                       <env key="SKIPTESTS" value="${skipTests}"/>
-                      <env key="LD_LIBRARY_PATH" value="${LD_LIBRARY_PATH}:${isal.lib}:${isal.prefix}"/>
+                      <env key="LD_LIBRARY_PATH" value="${LD_LIBRARY_PATH}:${isal.lib}:${isal.prefix}:/usr/lib"/>
                     </exec>
                 </target>
                 </configuration>

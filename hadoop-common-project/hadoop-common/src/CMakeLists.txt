@@ -99,12 +99,13 @@ hadoop_set_find_shared_library_version("2")
 find_library(ISAL_LIBRARY
     NAMES isal
      PATHS ${CUSTOM_ISAL_PREFIX} ${CUSTOM_ISAL_PREFIX}/lib
-              ${CUSTOM_ISAL_PREFIX}/lib64 ${CUSTOM_ISAL_LIB})
+              ${CUSTOM_ISAL_PREFIX}/lib64 ${CUSTOM_ISAL_LIB /usr/lib})
 set(CMAKE_FIND_LIBRARY_SUFFIXES ${STORED_CMAKE_FIND_LIBRARY_SUFFIXES})
 if (ISAL_LIBRARY)
     GET_FILENAME_COMPONENT(HADOOP_ISAL_LIBRARY ${ISAL_LIBRARY} NAME)
     set(ISAL_INCLUDE_DIR ${SRC}/io/erasurecode/include)
     set(ISAL_SOURCE_FILES
+        ${SRC}/io/erasurecode/coder/erasure_code_native.c
         ${SRC}/io/erasurecode/erasure_code.c)
         add_executable(erasure_code_test
              ${SRC}/io/erasurecode/erasure_code.c
