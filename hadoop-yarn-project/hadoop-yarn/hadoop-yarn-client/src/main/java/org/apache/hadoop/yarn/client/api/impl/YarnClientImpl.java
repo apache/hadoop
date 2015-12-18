@@ -832,11 +832,11 @@ public class YarnClientImpl extends YarnClient {
   }
 
   @Override
-  public void updateApplicationPriority(ApplicationId applicationId,
+  public Priority updateApplicationPriority(ApplicationId applicationId,
       Priority priority) throws YarnException, IOException {
     UpdateApplicationPriorityRequest request =
         UpdateApplicationPriorityRequest.newInstance(applicationId, priority);
-    rmClient.updateApplicationPriority(request);
+    return rmClient.updateApplicationPriority(request).getApplicationPriority();
   }
 
   @Override

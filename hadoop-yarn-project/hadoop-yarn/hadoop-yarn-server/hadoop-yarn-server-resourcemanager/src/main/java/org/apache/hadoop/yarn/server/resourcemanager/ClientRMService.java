@@ -1448,6 +1448,8 @@ public class ClientRMService extends AbstractService implements
         RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
             AuditConstants.UPDATE_APP_PRIORITY, "ClientRMService",
             applicationId);
+        response.setApplicationPriority(application
+            .getApplicationSubmissionContext().getPriority());
         return response;
       }
       String msg = "Application in " + application.getState()
@@ -1471,6 +1473,8 @@ public class ClientRMService extends AbstractService implements
 
     RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
         AuditConstants.UPDATE_APP_PRIORITY, "ClientRMService", applicationId);
+    response.setApplicationPriority(application
+        .getApplicationSubmissionContext().getPriority());
     return response;
   }
 
@@ -1479,6 +1483,7 @@ public class ClientRMService extends AbstractService implements
    * After the request passes some sanity check, it will be delivered
    * to RMNodeImpl so that the next NM heartbeat will pick up the signal request
    */
+  @SuppressWarnings("unchecked")
   @Override
   public SignalContainerResponse signalContainer(
       SignalContainerRequest request) throws YarnException, IOException {
