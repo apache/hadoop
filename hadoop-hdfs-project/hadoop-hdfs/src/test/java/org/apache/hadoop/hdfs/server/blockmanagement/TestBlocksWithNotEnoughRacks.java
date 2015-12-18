@@ -386,8 +386,8 @@ public class TestBlocksWithNotEnoughRacks {
 
     // Configure an excludes file
     FileSystem localFileSys = FileSystem.getLocal(conf);
-    Path workingDir = localFileSys.getWorkingDirectory();
-    Path dir = new Path(workingDir, "build/test/data/temp/decommission");
+    Path workingDir = new Path(MiniDFSCluster.getBaseDirectory());
+    Path dir = new Path(workingDir, "temp/decommission");
     Path excludeFile = new Path(dir, "exclude");
     Path includeFile = new Path(dir, "include");
     assertTrue(localFileSys.mkdirs(dir));
@@ -439,8 +439,8 @@ public class TestBlocksWithNotEnoughRacks {
 
     // Configure an excludes file
     FileSystem localFileSys = FileSystem.getLocal(conf);
-    Path workingDir = localFileSys.getWorkingDirectory();
-    Path dir = new Path(workingDir, "build/test/data/temp/decommission");
+    Path workingDir = new Path(MiniDFSCluster.getBaseDirectory());
+    Path dir = new Path(workingDir, "temp/decommission");
     Path excludeFile = new Path(dir, "exclude");
     Path includeFile = new Path(dir, "include");
     assertTrue(localFileSys.mkdirs(dir));

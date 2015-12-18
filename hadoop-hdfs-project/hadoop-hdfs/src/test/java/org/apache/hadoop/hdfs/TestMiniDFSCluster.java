@@ -63,17 +63,24 @@ public class TestMiniDFSCluster {
    */
   @Test(timeout=100000)
   public void testClusterWithoutSystemProperties() throws Throwable {
+    String oldPrp = System.getProperty(MiniDFSCluster.PROP_TEST_BUILD_DATA);
     System.clearProperty(MiniDFSCluster.PROP_TEST_BUILD_DATA);
-    Configuration conf = new HdfsConfiguration();
-    File testDataCluster1 = new File(testDataPath, CLUSTER_1);
-    String c1Path = testDataCluster1.getAbsolutePath();
-    conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, c1Path);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    MiniDFSCluster cluster = null;
     try {
+      Configuration conf = new HdfsConfiguration();
+      File testDataCluster1 = new File(testDataPath, CLUSTER_1);
+      String c1Path = testDataCluster1.getAbsolutePath();
+      conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, c1Path);
+      cluster = new MiniDFSCluster.Builder(conf).build();
       assertEquals(new File(c1Path + "/data"),
           new File(cluster.getDataDirectory()));
     } finally {
-      cluster.shutdown();
+      if (oldPrp != null) {
+        System.setProperty(MiniDFSCluster.PROP_TEST_BUILD_DATA, oldPrp);
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 
