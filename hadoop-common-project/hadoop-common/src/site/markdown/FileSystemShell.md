@@ -375,6 +375,7 @@ getmerge
 Usage: `hadoop fs -getmerge [-nl] <src> <localdst>`
 
 Takes a source directory and a destination file as input and concatenates files in src into the destination local file. Optionally -nl can be set to enable adding a newline character (LF) at the end of each file.
+-skip-empty-file can be used to avoid unwanted newline characters in case of empty files.
 
 Examples:
 
