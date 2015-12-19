@@ -202,6 +202,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
 
     YARN-4460. [Bug fix] RM fails to start when SMP is enabled. (Li Lu via varunsaxena)
 
+    YARN-4350. TestDistributedShell fails for V2 scenarios. (Naganarasimha G R
+    via varunsaxena)
+
 Trunk - Unreleased
 
   INCOMPATIBLE CHANGES

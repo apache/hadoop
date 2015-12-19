@@ -35,9 +35,9 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
-import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
@@ -757,8 +757,8 @@ public class MiniYARNCluster extends CompositeService {
       if (!useFixedPorts) {
         String hostname = MiniYARNCluster.getHostname();
         conf.set(YarnConfiguration.TIMELINE_SERVICE_ADDRESS, hostname + ":0");
-        conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS, hostname
-            + ":0");
+        conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+            hostname + ":" + ServerSocketUtil.getPort(9188, 10));
       }
       appHistoryServer.init(conf);
       super.serviceInit(conf);

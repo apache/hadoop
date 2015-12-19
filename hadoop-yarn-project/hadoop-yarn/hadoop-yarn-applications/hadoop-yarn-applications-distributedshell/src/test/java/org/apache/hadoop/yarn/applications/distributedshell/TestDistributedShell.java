@@ -104,6 +104,7 @@ public class TestDistributedShell {
     if (!testName.getMethodName().toLowerCase().contains("v2")) {
       // disable aux-service based timeline collectors
       conf.set(YarnConfiguration.NM_AUX_SERVICES, "");
+      conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 1.0f);
     } else {
       // set version to 2
       conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
