@@ -1238,6 +1238,9 @@ Release 2.6.5 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-9347. Invariant assumption in TestQuorumJournalManager.shutdown()
+    is wrong. (Wei-Chiu Chuang via zhz)
+
 Release 2.6.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES

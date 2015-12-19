@@ -394,23 +394,59 @@ public abstract class GenericTestUtils {
   }
 
   /**
+   * Determine if there are any threads whose name matches the regex.
+   * @param pattern a Pattern object used to match thread names
+   * @return true if there is any thread that matches the pattern
+   */
+  public static boolean anyThreadMatching(Pattern pattern) {
+    ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+
+    ThreadInfo[] infos =
+        threadBean.getThreadInfo(threadBean.getAllThreadIds(), 20);
+    for (ThreadInfo info : infos) {
+      if (info == null)
+        continue;
+      if (pattern.matcher(info.getThreadName()).matches()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Assert that there are no threads running whose name matches the
    * given regular expression.
    * @param regex the regex to match against
    */
   public static void assertNoThreadsMatching(String regex) {
     Pattern pattern = Pattern.compile(regex);
-    ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
-    
-    ThreadInfo[] infos = threadBean.getThreadInfo(threadBean.getAllThreadIds(), 20);
-    for (ThreadInfo info : infos) {
-      if (info == null) continue;
-      if (pattern.matcher(info.getThreadName()).matches()) {
-        Assert.fail("Leaked thread: " + info + "\n" +
-            Joiner.on("\n").join(info.getStackTrace()));
-      }
+    if (anyThreadMatching(pattern)) {
+      Assert.fail("Leaked thread matches " + regex);
     }
   }
+
+  /**
+   * Periodically check and wait for any threads whose name match the
+   * given regular expression.
+   *
+   * @param regex the regex to match against.
+   * @param checkEveryMillis time (in milliseconds) between checks.
+   * @param waitForMillis total time (in milliseconds) to wait before throwing
+   *                      a time out exception.
+   * @throws TimeoutException
+   * @throws InterruptedException
+   */
+  public static void waitForThreadTermination(String regex,
+      int checkEveryMillis, final int waitForMillis) throws TimeoutException,
+      InterruptedException {
+    final Pattern pattern = Pattern.compile(regex);
+    waitFor(new Supplier<Boolean>() {
+      @Override public Boolean get() {
+        return !anyThreadMatching(pattern);
+      }
+    }, checkEveryMillis, waitForMillis);
+  }
+
 
   /**
    * Skip test if native build profile of Maven is not activated.
