@@ -121,6 +121,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3864. Implement support for querying single app and all apps for a
     flow run (Varun Saxena via sjlee)
 
+    YARN-4237 Support additional queries for ATSv2 Web UI. (Varun Saxena via
+    gtcarrera9)
+ 
     YARN-4179. [reader implementation] support flow activity queries based on
     time (Varun Saxena via sjlee)
 
@@ -145,6 +148,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
 
     YARN-3862. Support for fetching specific configs and metrics based on
     prefixes (Varun Saxena via sjlee)
+
+    YARN-4356. Ensure the timeline service v.2 is disabled cleanly and has no
+    impact when it's turned off. (Sangjin Lee via gtcarrera9)
 
     YARN-4445. Unify the term flowId and flowName in timeline v2 codebase. 
     (Zhan Zhang via gtcarrera9). 
@@ -191,7 +197,10 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-4297. TestJobHistoryEventHandler and TestRMContainerAllocator failing
     on YARN-2928 branch (Varun Saxena via sjlee)
 
-    YARN-4460. [Bug fix] RM fails to start when SMP is enabled. (Li Lu via Varun Saxena)
+    YARN-4450. TestTimelineAuthenticationFilter and TestYarnConfigurationFields
+    fail. (Sangjin Lee via gtcarrera9)
+
+    YARN-4460. [Bug fix] RM fails to start when SMP is enabled. (Li Lu via varunsaxena)
 
 Trunk - Unreleased
 
