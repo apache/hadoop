@@ -176,6 +176,8 @@ public class TestDistributedShell {
       conf.set(YarnConfiguration.TIMELINE_SERVICE_ENTITY_GROUP_PLUGIN_CLASSES,
           DistributedShellTimelinePlugin.class.getName());
     } else if (timelineVersion == 2.0f) {
+      // set version to 2
+      conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
       // disable v1 timeline server since we no longer have a server here
       // enable aux-service based timeline aggregators
       conf.set(YarnConfiguration.NM_AUX_SERVICES, TIMELINE_AUX_SERVICE_NAME);
