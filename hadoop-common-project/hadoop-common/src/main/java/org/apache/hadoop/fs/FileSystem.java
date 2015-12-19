@@ -35,6 +35,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.Stack;
@@ -61,6 +62,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.ClassUtil;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -2622,8 +2624,20 @@ public abstract class FileSystem extends Configured implements Closeable {
     synchronized (FileSystem.class) {
       if (!FILE_SYSTEMS_LOADED) {
         ServiceLoader<FileSystem> serviceLoader = ServiceLoader.load(FileSystem.class);
-        for (FileSystem fs : serviceLoader) {
-          SERVICE_FILE_SYSTEMS.put(fs.getScheme(), fs.getClass());
+        Iterator<FileSystem> it = serviceLoader.iterator();
+        while (it.hasNext()) {
+          FileSystem fs = null;
+          try {
+            fs = it.next();
+            try {
+              SERVICE_FILE_SYSTEMS.put(fs.getScheme(), fs.getClass());
+            } catch (Exception e) {
+              LOG.warn("Cannot load: " + fs + " from " +
+                  ClassUtil.findContainingJar(fs.getClass()), e);
+            }
+          } catch (ServiceConfigurationError ee) {
+            LOG.warn("Cannot load filesystem", ee);
+          }
         }
         FILE_SYSTEMS_LOADED = true;
       }

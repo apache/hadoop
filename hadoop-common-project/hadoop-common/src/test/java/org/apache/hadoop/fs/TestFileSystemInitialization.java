@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.ServiceConfigurationError;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -42,5 +43,20 @@ public class TestFileSystemInitialization {
       // we might get an exception but this not related to infinite loop problem
       assertFalse(false);
     }
+  }
+
+  @Test
+  public void testMissingLibraries() {
+    boolean catched = false;
+    try {
+      Configuration conf = new Configuration();
+      FileSystem.getFileSystemClass("s3a", conf);
+    } catch (Exception e) {
+      catched = true;
+    } catch (ServiceConfigurationError e) {
+      // S3A shouldn't find AWS SDK and fail
+      catched = true;
+    }
+    assertTrue(catched);
   }
 }
