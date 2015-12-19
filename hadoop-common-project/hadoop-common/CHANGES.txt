@@ -1406,6 +1406,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12468. Partial group resolution failure should not result in user
     lockout. (Wei-Chiu Chuang via Yongjun Zhang)
 
+    HADOOP-12656. MiniKdc throws "address in use" BindException.
+    (Wei-Chiu Chuang via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
