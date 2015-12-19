@@ -1412,8 +1412,6 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12656. MiniKdc throws "address in use" BindException.
     (Wei-Chiu Chuang via Arpit Agarwal)
 
-  OPTIMIZATIONS
-
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
     over getMessage() in logging/span events. (Varun Saxena via stevel)
 
@@ -1525,6 +1523,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-10729. Add tests for PB RPC in case version mismatch of client and
     server. (Junping Du via wheat9)
+
+    HADOOP-12636. Prevent ServiceLoader failure init for unused FileSystems.
+    (Inigo Goiri via cdouglas)
 
 Release 2.7.3 - UNRELEASED
 
