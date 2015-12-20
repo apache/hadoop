@@ -208,6 +208,9 @@ Trunk (Unreleased)
 
     HDFS-8831. Trash Support for deletion in HDFS encryption zone. (xyao)
 
+    HDFS-9582. TestLeaseRecoveryStriped file missing Apache License header 
+    and not well formatted. (umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES
