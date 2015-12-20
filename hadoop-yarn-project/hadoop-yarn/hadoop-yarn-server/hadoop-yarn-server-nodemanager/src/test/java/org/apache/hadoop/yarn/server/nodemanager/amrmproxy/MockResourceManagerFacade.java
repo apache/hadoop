@@ -25,8 +25,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.directory.api.util.Strings;
-import org.apache.directory.api.util.exception.NotImplementedException;
+import com.google.common.base.Strings;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -224,7 +224,7 @@ public class MockResourceManagerFacade implements
           // it is OK to hard code it to some dummy value
           NodeId nodeId =
               NodeId.newInstance(
-                  !Strings.isEmpty(rr.getResourceName()) ? rr
+                  !Strings.isNullOrEmpty(rr.getResourceName()) ? rr
                       .getResourceName() : "dummy", 1000);
           container.setNodeId(nodeId);
           container.setResource(rr.getCapability());
