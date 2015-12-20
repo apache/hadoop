@@ -385,6 +385,9 @@ Release 2.7.3 - UNRELEASED
     MAPREDUCE-5883. "Total megabyte-seconds" in job counters is slightly
     misleading (Nathan Roberts via jlowe)
 
+    MAPREDUCE-6583. Clarify confusing sentence in MapReduce tutorial document.
+    (Kai Sasaki via aajisaka)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
