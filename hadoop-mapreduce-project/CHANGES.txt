@@ -28,6 +28,9 @@ Release 2.7.3 - UNRELEASED
     MAPREDUCE-6549. multibyte delimiters with LineRecordReader cause
     duplicate records (wilfreds via rkanter)
 
+    MAPREDUCE-6583. Clarify confusing sentence in MapReduce tutorial document.
+    (Kai Sasaki via aajisaka)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
