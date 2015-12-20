@@ -632,6 +632,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4164. Changed updateApplicationPriority API to return the updated
     application priority. (Rohith Sharma K S via jianhe)
 
+    YARN-4480. Clean up some inappropriate imports. (Kai Zheng via umamahesh)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
