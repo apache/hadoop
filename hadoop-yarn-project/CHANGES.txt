@@ -1070,9 +1070,6 @@ Release 2.8.0 - UNRELEASED
     YARN-4402. TestNodeManagerShutdown And TestNodeManagerResync fails with
     bind exception. (Brahma Reddy Battula via jianhe)
 
-    YARN-4461. Redundant nodeLocalityDelay log in LeafQueue (Eric Payne via
-    jlowe)
-
     YARN-4452. NPE when submit Unmanaged application. (Naganarasimha G R
     via junping_du)
 
@@ -1087,6 +1084,12 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4416. Deadlock due to synchronised get Methods in AbstractCSQueue.
     (Naganarasimha G R via wangda)
+
+    YARN-4461. Redundant nodeLocalityDelay log in LeafQueue (Eric Payne via
+    jlowe)
+
+    YARN-4454. NM to nodelabel mapping going wrong after RM restart. 
+    (Bibin A Chundatt via wangda)
 
 Release 2.7.3 - UNRELEASED
 

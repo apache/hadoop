@@ -2141,11 +2141,11 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     // Add node Label to Node h1->x
     NodeId n1 = NodeId.newInstance("h1", 0);
     nodeLabelManager.addLabelsToNode(ImmutableMap.of(n1, toSet("x")));
-    
+
     clusterNodeLabels.remove("z");
     // Remove cluster label z
     nodeLabelManager.removeFromClusterNodeLabels(toSet("z"));
-    
+
     // Replace nodelabel h1->x,y
     nodeLabelManager.replaceLabelsOnNode(ImmutableMap.of(n1, toSet("y")));
 
@@ -2179,8 +2179,8 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     rm2.start();
 
     nodeLabelManager = rm2.getRMContext().getNodeLabelManager();
-    Assert.assertEquals(clusterNodeLabels.size(), nodeLabelManager
-        .getClusterNodeLabelNames().size());
+    Assert.assertEquals(clusterNodeLabels.size(),
+        nodeLabelManager.getClusterNodeLabelNames().size());
 
     nodeLabels = nodeLabelManager.getNodeLabels();
     Assert.assertEquals(1, nodeLabelManager.getNodeLabels().size());
@@ -2254,6 +2254,71 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   private <E> Set<E> toSet(E... elements) {
     Set<E> set = Sets.newHashSet(elements);
     return set;
+  }
+
+  @Test(timeout = 20000)
+  public void testRMRestartNodeMapping() throws Exception {
+    // Initial FS node label store root dir to a random tmp dir
+    File nodeLabelFsStoreDir = new File("target",
+        this.getClass().getSimpleName() + "-testRMRestartNodeMapping");
+    if (nodeLabelFsStoreDir.exists()) {
+      FileUtils.deleteDirectory(nodeLabelFsStoreDir);
+    }
+    nodeLabelFsStoreDir.deleteOnExit();
+    String nodeLabelFsStoreDirURI = nodeLabelFsStoreDir.toURI().toString();
+    conf.set(YarnConfiguration.FS_NODE_LABELS_STORE_ROOT_DIR,
+        nodeLabelFsStoreDirURI);
+
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
+    MockRM rm1 = new MockRM(conf, memStore) {
+      @Override
+      protected RMNodeLabelsManager createNodeLabelManager() {
+        RMNodeLabelsManager mgr = new RMNodeLabelsManager();
+        mgr.init(getConfig());
+        return mgr;
+      }
+    };
+    rm1.init(conf);
+    rm1.start();
+    RMNodeLabelsManager nodeLabelManager =
+        rm1.getRMContext().getNodeLabelManager();
+
+    Set<String> clusterNodeLabels = new HashSet<String>();
+    clusterNodeLabels.add("x");
+    clusterNodeLabels.add("y");
+    nodeLabelManager
+        .addToCluserNodeLabelsWithDefaultExclusivity(clusterNodeLabels);
+    // Add node Label to Node h1->x
+    NodeId n1 = NodeId.newInstance("h1", 1234);
+    NodeId n2 = NodeId.newInstance("h1", 1235);
+    NodeId nihost = NodeId.newInstance("h1", 0);
+    nodeLabelManager.replaceLabelsOnNode(ImmutableMap.of(n1, toSet("x")));
+    nodeLabelManager.replaceLabelsOnNode(ImmutableMap.of(n2, toSet("x")));
+    nodeLabelManager.replaceLabelsOnNode(ImmutableMap.of(nihost, toSet("y")));
+    nodeLabelManager.replaceLabelsOnNode(ImmutableMap.of(n1, toSet("x")));
+    MockRM rm2 = null;
+    for (int i = 0; i < 2; i++) {
+      rm2 = new MockRM(conf, memStore) {
+        @Override
+        protected RMNodeLabelsManager createNodeLabelManager() {
+          RMNodeLabelsManager mgr = new RMNodeLabelsManager();
+          mgr.init(getConfig());
+          return mgr;
+        }
+      };
+      rm2.init(conf);
+      rm2.start();
+
+      nodeLabelManager = rm2.getRMContext().getNodeLabelManager();
+      Map<String, Set<NodeId>> labelsToNodes =
+          nodeLabelManager.getLabelsToNodes(toSet("x"));
+      Assert.assertEquals(1,
+          null == labelsToNodes.get("x") ? 0 : labelsToNodes.get("x").size());
+    }
+    rm1.stop();
+    rm2.stop();
   }
 
 }
