@@ -2541,6 +2541,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9347. Invariant assumption in TestQuorumJournalManager.shutdown()
     is wrong. (Wei-Chiu Chuang via zhz)
 
+    HDFS-9589. Block files which have been hardlinked should be duplicated
+    before the DataNode appends to the them (cmccabe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
