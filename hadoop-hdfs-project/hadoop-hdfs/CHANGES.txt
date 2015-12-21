@@ -2565,6 +2565,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9533. seen_txid in the shared edits directory is modified during
     bootstrapping (kihwal)
 
+    HDFS-9505. HDFS Architecture documentation needs to be refreshed.
+    (Masatake Iwasaki via aajisaka)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
