@@ -634,6 +634,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4480. Clean up some inappropriate imports. (Kai Zheng via umamahesh)
 
+    YARN-4290. Add -showDetails option to YARN Nodes CLI to print all nodes reports
+    information. (Sunil G via wangda)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
