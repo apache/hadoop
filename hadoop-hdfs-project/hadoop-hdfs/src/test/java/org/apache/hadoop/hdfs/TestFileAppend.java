@@ -43,6 +43,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.junit.Assert;
@@ -107,6 +109,70 @@ public class TestFileAppend{
     AppendTestUtil.checkFullFile(fileSys, name,
         AppendTestUtil.NUM_BLOCKS * AppendTestUtil.BLOCK_SIZE,
         expected, "Read 1", false);
+  }
+
+  @Test
+  public void testBreakHardlinksIfNeeded() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    if (simulatedStorage) {
+      SimulatedFSDataset.setFactory(conf);
+    }
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    FileSystem fs = cluster.getFileSystem();
+    InetSocketAddress addr = new InetSocketAddress("localhost",
+                                                   cluster.getNameNodePort());
+    DFSClient client = new DFSClient(addr, conf);
+    try {
+      // create a new file, write to it and close it.
+      Path file1 = new Path("/filestatus.dat");
+      FSDataOutputStream stm = AppendTestUtil.createFile(fs, file1, 1);
+      writeFile(stm);
+      stm.close();
+
+      // Get a handle to the datanode
+      DataNode[] dn = cluster.listDataNodes();
+      assertTrue("There should be only one datanode but found " + dn.length,
+                  dn.length == 1);
+
+      LocatedBlocks locations = client.getNamenode().getBlockLocations(
+                                  file1.toString(), 0, Long.MAX_VALUE);
+      List<LocatedBlock> blocks = locations.getLocatedBlocks();
+      final FsDatasetSpi<?> fsd = dn[0].getFSDataset();
+
+      //
+      // Create hard links for a few of the blocks
+      //
+      for (int i = 0; i < blocks.size(); i = i + 2) {
+        ExtendedBlock b = blocks.get(i).getBlock();
+        final File f = FsDatasetTestUtil.getBlockFile(
+            fsd, b.getBlockPoolId(), b.getLocalBlock());
+        File link = new File(f.toString() + ".link");
+        System.out.println("Creating hardlink for File " + f + " to " + link);
+        HardLink.createHardLink(f, link);
+      }
+
+      // Detach all blocks. This should remove hardlinks (if any)
+      for (int i = 0; i < blocks.size(); i++) {
+        ExtendedBlock b = blocks.get(i).getBlock();
+        System.out.println("breakHardlinksIfNeeded detaching block " + b);
+        assertTrue("breakHardlinksIfNeeded(" + b + ") should have returned true",
+            FsDatasetTestUtil.breakHardlinksIfNeeded(fsd, b));
+      }
+
+      // Since the blocks were already detached earlier, these calls should
+      // return false
+      for (int i = 0; i < blocks.size(); i++) {
+        ExtendedBlock b = blocks.get(i).getBlock();
+        System.out.println("breakHardlinksIfNeeded re-attempting to " +
+                "detach block " + b);
+        assertTrue("breakHardlinksIfNeeded(" + b + ") should have returned false",
+            FsDatasetTestUtil.breakHardlinksIfNeeded(fsd, b));
+      }
+    } finally {
+      client.close();
+      fs.close();
+      cluster.shutdown();
+    }
   }
 
   /**

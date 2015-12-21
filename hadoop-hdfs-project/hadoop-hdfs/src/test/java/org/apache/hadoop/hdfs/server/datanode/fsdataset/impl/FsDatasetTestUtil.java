@@ -55,6 +55,12 @@ public class FsDatasetTestUtil {
         .getGenerationStamp());
   }
 
+  public static boolean breakHardlinksIfNeeded(FsDatasetSpi<?> fsd,
+      ExtendedBlock block) throws IOException {
+    final ReplicaInfo info = ((FsDatasetImpl)fsd).getReplicaInfo(block);
+    return info.breakHardLinksIfNeeded();
+  }
+
   public static ReplicaInfo fetchReplicaInfo (final FsDatasetSpi<?> fsd,
       final String bpid, final long blockId) {
     return ((FsDatasetImpl)fsd).fetchReplicaInfo(bpid, blockId);
