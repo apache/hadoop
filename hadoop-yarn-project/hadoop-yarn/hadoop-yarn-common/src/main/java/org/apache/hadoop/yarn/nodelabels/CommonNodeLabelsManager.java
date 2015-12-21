@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -1074,7 +1075,7 @@ public class CommonNodeLabelsManager extends AbstractService {
   
   protected Map<NodeId, Set<String>> normalizeNodeIdToLabels(
       Map<NodeId, Set<String>> nodeIdToLabels) {
-    Map<NodeId, Set<String>> newMap = new HashMap<NodeId, Set<String>>();
+    Map<NodeId, Set<String>> newMap = new TreeMap<NodeId, Set<String>>();
     for (Entry<NodeId, Set<String>> entry : nodeIdToLabels.entrySet()) {
       NodeId id = entry.getKey();
       Set<String> labels = entry.getValue();

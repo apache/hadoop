@@ -1165,6 +1165,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4461. Redundant nodeLocalityDelay log in LeafQueue (Eric Payne via
     jlowe)
 
+    YARN-4454. NM to nodelabel mapping going wrong after RM restart. 
+    (Bibin A Chundatt via wangda)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
