@@ -18,12 +18,18 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.HardLink;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.LightWeightResizableGSet;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -208,6 +214,79 @@ abstract public class ReplicaInfo extends Block
    */
   public long getOriginalBytesReserved() {
     return 0;
+  }
+
+  /**
+   * Copy specified file into a temporary file. Then rename the
+   * temporary file to the original name. This will cause any
+   * hardlinks to the original file to be removed. The temporary
+   * files are created in the same directory. The temporary files will
+   * be recovered (especially on Windows) on datanode restart.
+   */
+  private void breakHardlinks(File file, Block b) throws IOException {
+    File tmpFile = DatanodeUtil.createTmpFile(b, DatanodeUtil.getUnlinkTmpFile(file));
+    try {
+      FileInputStream in = new FileInputStream(file);
+      try {
+        FileOutputStream out = new FileOutputStream(tmpFile);
+        try {
+          IOUtils.copyBytes(in, out, 16 * 1024);
+        } finally {
+          out.close();
+        }
+      } finally {
+        in.close();
+      }
+      if (file.length() != tmpFile.length()) {
+        throw new IOException("Copy of file " + file + " size " + file.length()+
+                              " into file " + tmpFile +
+                              " resulted in a size of " + tmpFile.length());
+      }
+      FileUtil.replaceFile(tmpFile, file);
+    } catch (IOException e) {
+      boolean done = tmpFile.delete();
+      if (!done) {
+        DataNode.LOG.info("detachFile failed to delete temporary file " +
+                          tmpFile);
+      }
+      throw e;
+    }
+  }
+
+  /**
+   * This function "breaks hardlinks" to the current replica file.
+   *
+   * When doing a DataNode upgrade, we create a bunch of hardlinks to each block
+   * file.  This cleverly ensures that both the old and the new storage
+   * directories can contain the same block file, without using additional space
+   * for the data.
+   *
+   * However, when we want to append to the replica file, we need to "break" the
+   * hardlink to ensure that the old snapshot continues to contain the old data
+   * length.  If we failed to do that, we could roll back to the previous/
+   * directory during a downgrade, and find that the block contents were longer
+   * than they were at the time of upgrade.
+   *
+   * @return true only if data was copied.
+   * @throws IOException
+   */
+  public boolean breakHardLinksIfNeeded() throws IOException {
+    File file = getBlockFile();
+    if (file == null || getVolume() == null) {
+      throw new IOException("detachBlock:Block not found. " + this);
+    }
+    File meta = getMetaFile();
+
+    int linkCount = HardLink.getLinkCount(file);
+    if (linkCount > 1) {
+      DataNode.LOG.info("Breaking hardlink for " + linkCount + "x-linked " +
+          "block " + this);
+      breakHardlinks(file, this);
+    }
+    if (HardLink.getLinkCount(meta) > 1) {
+      breakHardlinks(meta, this);
+    }
+    return true;
   }
 
   @Override  //Object
