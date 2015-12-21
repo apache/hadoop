@@ -993,6 +993,35 @@ public class TestYarnCLI {
     verify(sysOut, times(3)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
+    result = cli.run(new String[] { "-list", "-showDetails" });
+    assertEquals(0, result);
+    baos = new ByteArrayOutputStream();
+    pw = new PrintWriter(baos);
+    pw.println("Total Nodes:2");
+    pw.print("         Node-Id\t     Node-State\tNode-Http-Address\t");
+    pw.println("Number-of-Running-Containers");
+    pw.print("         host0:0\t        RUNNING\t       host1:8888\t");
+    pw.println("                           0");
+    pw.println("Detailed Node Information :");
+    pw.println("\tConfigured Resources : <memory:0, vCores:0>");
+    pw.println("\tAllocated Resources : <memory:0, vCores:0>");
+    pw.println("\tResource Utilization by Node : PMem:2048 MB, VMem:4096 MB, VCores:8.0");
+    pw.println("\tResource Utilization by Containers : PMem:1024 MB, VMem:2048 MB, VCores:4.0");
+    pw.println("\tNode-Labels : ");
+    pw.print("         host1:0\t        RUNNING\t       host1:8888\t");
+    pw.println("                           0");
+    pw.println("Detailed Node Information :");
+    pw.println("\tConfigured Resources : <memory:0, vCores:0>");
+    pw.println("\tAllocated Resources : <memory:0, vCores:0>");
+    pw.println("\tResource Utilization by Node : PMem:2048 MB, VMem:4096 MB, VCores:8.0");
+    pw.println("\tResource Utilization by Containers : PMem:1024 MB, VMem:2048 MB, VCores:4.0");
+    pw.println("\tNode-Labels : ");
+    pw.close();
+    nodesReportStr = baos.toString("UTF-8");
+    Assert.assertEquals(nodesReportStr, sysOutStream.toString());
+    verify(sysOut, times(4)).write(any(byte[].class), anyInt(), anyInt());
+
+    sysOutStream.reset();
     nodeStates.clear();
     nodeStates.add(NodeState.UNHEALTHY);
     states = nodeStates.toArray(new NodeState[0]);
@@ -1011,7 +1040,7 @@ public class TestYarnCLI {
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
     Assert.assertEquals(nodesReportStr, sysOutStream.toString());
-    verify(sysOut, times(4)).write(any(byte[].class), anyInt(), anyInt());
+    verify(sysOut, times(5)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
     nodeStates.clear();
@@ -1032,7 +1061,7 @@ public class TestYarnCLI {
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
     Assert.assertEquals(nodesReportStr, sysOutStream.toString());
-    verify(sysOut, times(5)).write(any(byte[].class), anyInt(), anyInt());
+    verify(sysOut, times(6)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
     nodeStates.clear();
@@ -1053,7 +1082,7 @@ public class TestYarnCLI {
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
     Assert.assertEquals(nodesReportStr, sysOutStream.toString());
-    verify(sysOut, times(6)).write(any(byte[].class), anyInt(), anyInt());
+    verify(sysOut, times(7)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
     nodeStates.clear();
@@ -1074,7 +1103,7 @@ public class TestYarnCLI {
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
     Assert.assertEquals(nodesReportStr, sysOutStream.toString());
-    verify(sysOut, times(7)).write(any(byte[].class), anyInt(), anyInt());
+    verify(sysOut, times(8)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
     nodeStates.clear();
@@ -1107,7 +1136,7 @@ public class TestYarnCLI {
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
     Assert.assertEquals(nodesReportStr, sysOutStream.toString());
-    verify(sysOut, times(8)).write(any(byte[].class), anyInt(), anyInt());
+    verify(sysOut, times(9)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
     nodeStates.clear();
@@ -1142,7 +1171,7 @@ public class TestYarnCLI {
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
     Assert.assertEquals(nodesReportStr, sysOutStream.toString());
-    verify(sysOut, times(9)).write(any(byte[].class), anyInt(), anyInt());
+    verify(sysOut, times(10)).write(any(byte[].class), anyInt(), anyInt());
   }
 
   private List<NodeReport> getNodeReports(
@@ -1727,7 +1756,9 @@ public class TestYarnCLI {
     pw.println(" -help              Displays help for all commands.");
     pw.println(" -list              List all running nodes. Supports optional use of");
     pw.println("                    -states to filter nodes based on node state, all -all");
-    pw.println("                    to list all nodes.");
+    pw.println("                    to list all nodes, -showDetails to display more");
+    pw.println("                    details about each node.");
+    pw.println(" -showDetails       Works with -list to show more details about each node.");
     pw.println(" -states <States>   Works with -list to filter nodes based on input");
     pw.println("                    comma-separated list of node states.");
     pw.println(" -status <NodeId>   Prints the status report of the node.");
