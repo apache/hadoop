@@ -97,14 +97,31 @@ The existence of a single NameNode in a cluster greatly simplifies the architect
 The File System Namespace
 -------------------------
 
-HDFS supports a traditional hierarchical file organization. A user or an application can create directories and store files inside these directories. The file system namespace hierarchy is similar to most other existing file systems; one can create and remove files, move a file from one directory to another, or rename a file. HDFS does not yet implement user quotas or access permissions. HDFS does not support hard links or soft links. However, the HDFS architecture does not preclude implementing these features.
+HDFS supports a traditional hierarchical file organization.
+A user or an application can create directories and store files inside these directories.
+The file system namespace hierarchy is similar to most other existing file systems;
+one can create and remove files, move a file from one directory to another, or rename a file.
+HDFS supports [user quotas](HdfsQuotaAdminGuide.html) and [access permissions](HdfsPermissionsGuide.html).
+HDFS does not support hard links or soft links.
+However, the HDFS architecture does not preclude implementing these features.
 
 The NameNode maintains the file system namespace. Any change to the file system namespace or its properties is recorded by the NameNode. An application can specify the number of replicas of a file that should be maintained by HDFS. The number of copies of a file is called the replication factor of that file. This information is stored by the NameNode.
 
 Data Replication
 ----------------
 
-HDFS is designed to reliably store very large files across machines in a large cluster. It stores each file as a sequence of blocks; all blocks in a file except the last block are the same size. The blocks of a file are replicated for fault tolerance. The block size and replication factor are configurable per file. An application can specify the number of replicas of a file. The replication factor can be specified at file creation time and can be changed later. Files in HDFS are write-once and have strictly one writer at any time.
+HDFS is designed to reliably store very large files across machines in a large cluster.
+It stores each file as a sequence of blocks.
+The blocks of a file are replicated for fault tolerance.
+The block size and replication factor are configurable per file.
+
+All blocks in a file except the last block are the same size,
+while users can start a new block without filling out the last block to the configured block size
+after the support for variable length block was added to append and hsync.
+
+An application can specify the number of replicas of a file.
+The replication factor can be specified at file creation time and can be changed later.
+Files in HDFS are write-once (except for appends and truncates) and have strictly one writer at any time.
 
 The NameNode makes all decisions regarding replication of blocks. It periodically receives a Heartbeat and a Blockreport from each of the DataNodes in the cluster. Receipt of a Heartbeat implies that the DataNode is functioning properly. A Blockreport contains a list of all blocks on a DataNode.
 
@@ -144,7 +161,12 @@ The current, default replica placement policy described here is a work in progre
 
 ### Replica Selection
 
-To minimize global bandwidth consumption and read latency, HDFS tries to satisfy a read request from a replica that is closest to the reader. If there exists a replica on the same rack as the reader node, then that replica is preferred to satisfy the read request. If angg/ HDFS cluster spans multiple data centers, then a replica that is resident in the local data center is preferred over any remote replica.
+To minimize global bandwidth consumption and read latency,
+HDFS tries to satisfy a read request from a replica that is closest to the reader.
+If there exists a replica on the same rack as the reader node,
+then that replica is preferred to satisfy the read request.
+If HDFS cluster spans multiple data centers,
+then a replica that is resident in the local data center is preferred over any remote replica.
 
 ### Safemode
 
@@ -174,6 +196,12 @@ The primary objective of HDFS is to store data reliably even in the presence of 
 
 Each DataNode sends a Heartbeat message to the NameNode periodically. A network partition can cause a subset of DataNodes to lose connectivity with the NameNode. The NameNode detects this condition by the absence of a Heartbeat message. The NameNode marks DataNodes without recent Heartbeats as dead and does not forward any new IO requests to them. Any data that was registered to a dead DataNode is not available to HDFS any more. DataNode death may cause the replication factor of some blocks to fall below their specified value. The NameNode constantly tracks which blocks need to be replicated and initiates replication whenever necessary. The necessity for re-replication may arise due to many reasons: a DataNode may become unavailable, a replica may become corrupted, a hard disk on a DataNode may fail, or the replication factor of a file may be increased.
 
+The time-out to mark DataNodes dead is conservatively long (over 10 minutes by default)
+in order to avoid replication storm caused by state flapping of DataNodes.
+Users can set shorter interval to mark DataNodes as stale
+and avoid stale nodes on reading and/or writing by configuration
+for performance sensitive workloads.
+
 ### Cluster Rebalancing
 
 The HDFS architecture is compatible with data rebalancing schemes. A scheme might automatically move data from one DataNode to another if the free space on a DataNode falls below a certain threshold. In the event of a sudden high demand for a particular file, a scheme might dynamically create additional replicas and rebalance other data in the cluster. These types of data rebalancing schemes are not yet implemented.
@@ -190,33 +218,80 @@ Another option to increase resilience against failures is to enable High Availab
 
 ### Snapshots
 
-Snapshots support storing a copy of data at a particular instant of time. One usage of the snapshot feature may be to roll back a corrupted HDFS instance to a previously known good point in time. HDFS does not currently support snapshots but will in a future release.
+[Snapshots](./HdfsSnapshots.html) support storing a copy of data at a particular instant of time.
+One usage of the snapshot feature may be to roll back a corrupted HDFS instance to a previously known good point in time.
 
 Data Organization
 -----------------
 
 ### Data Blocks
 
-HDFS is designed to support very large files. Applications that are compatible with HDFS are those that deal with large data sets. These applications write their data only once but they read it one or more times and require these reads to be satisfied at streaming speeds. HDFS supports write-once-read-many semantics on files. A typical block size used by HDFS is 64 MB. Thus, an HDFS file is chopped up into 64 MB chunks, and if possible, each chunk will reside on a different DataNode.
+HDFS is designed to support very large files.
+Applications that are compatible with HDFS are those that deal with large data sets.
+These applications write their data only once but they read it one or more times
+and require these reads to be satisfied at streaming speeds.
+HDFS supports write-once-read-many semantics on files.
+A typical block size used by HDFS is 128 MB.
+Thus, an HDFS file is chopped up into 128 MB chunks, and if possible,
+each chunk will reside on a different DataNode.
 
 ### Staging
 
-A client request to create a file does not reach the NameNode immediately. In fact, initially the HDFS client caches the file data into a temporary local file. Application writes are transparently redirected to this temporary local file. When the local file accumulates data worth over one HDFS block size, the client contacts the NameNode. The NameNode inserts the file name into the file system hierarchy and allocates a data block for it. The NameNode responds to the client request with the identity of the DataNode and the destination data block. Then the client flushes the block of data from the local temporary file to the specified DataNode. When a file is closed, the remaining un-flushed data in the temporary local file is transferred to the DataNode. The client then tells the NameNode that the file is closed. At this point, the NameNode commits the file creation operation into a persistent store. If the NameNode dies before the file is closed, the file is lost.
+A client request to create a file does not reach the NameNode immediately.
+In fact, initially the HDFS client caches the file data into a local buffer.
+Application writes are transparently redirected to this local buffer.
+When the local file accumulates data worth over one chunk size, the client contacts the NameNode.
+The NameNode inserts the file name into the file system hierarchy and allocates a data block for it.
+The NameNode responds to the client request with the identity of the DataNode and the destination data block.
+Then the client flushes the chunk of data from the local buffer to the specified DataNode.
+When a file is closed, the remaining un-flushed data in the local buffer is transferred to the DataNode.
+The client then tells the NameNode that the file is closed. At this point,
+the NameNode commits the file creation operation into a persistent store.
+If the NameNode dies before the file is closed, the file is lost.
 
-The above approach has been adopted after careful consideration of target applications that run on HDFS. These applications need streaming writes to files. If a client writes to a remote file directly without any client side buffering, the network speed and the congestion in the network impacts throughput considerably. This approach is not without precedent. Earlier distributed file systems, e.g. AFS, have used client side caching to improve performance. A POSIX requirement has been relaxed to achieve higher performance of data uploads.
+The above approach has been adopted after careful consideration of target applications that run on HDFS.
+These applications need streaming writes to files.
+If a client writes to a remote file directly without any client side buffering,
+the network speed and the congestion in the network impacts throughput considerably.
+This approach is not without precedent.
+Earlier distributed file systems, e.g. AFS, have used client side caching to improve performance.
+A POSIX requirement has been relaxed to achieve higher performance of data uploads.
 
 ### Replication Pipelining
 
-When a client is writing data to an HDFS file, its data is first written to a local file as explained in the previous section. Suppose the HDFS file has a replication factor of three. When the local file accumulates a full block of user data, the client retrieves a list of DataNodes from the NameNode. This list contains the DataNodes that will host a replica of that block. The client then flushes the data block to the first DataNode. The first DataNode starts receiving the data in small portions, writes each portion to its local repository and transfers that portion to the second DataNode in the list. The second DataNode, in turn starts receiving each portion of the data block, writes that portion to its repository and then flushes that portion to the third DataNode. Finally, the third DataNode writes the data to its local repository. Thus, a DataNode can be receiving data from the previous one in the pipeline and at the same time forwarding data to the next one in the pipeline. Thus, the data is pipelined from one DataNode to the next.
+When a client is writing data to an HDFS file,
+its data is first written to a local buffer as explained in the previous section.
+Suppose the HDFS file has a replication factor of three.
+When the local buffer accumulates a chunk of user data,
+the client retrieves a list of DataNodes from the NameNode.
+This list contains the DataNodes that will host a replica of that block.
+The client then flushes the data chunk to the first DataNode.
+The first DataNode starts receiving the data in small portions,
+writes each portion to its local repository and transfers that portion to the second DataNode in the list.
+The second DataNode, in turn starts receiving each portion of the data block,
+writes that portion to its repository and then flushes that portion to the third DataNode.
+Finally, the third DataNode writes the data to its local repository.
+Thus, a DataNode can be receiving data from the previous one in the pipeline
+and at the same time forwarding data to the next one in the pipeline.
+Thus, the data is pipelined from one DataNode to the next.
 
 Accessibility
 -------------
 
-HDFS can be accessed from applications in many different ways. Natively, HDFS provides a [FileSystem Java API](http://hadoop.apache.org/docs/current/api/) for applications to use. A C language wrapper for this Java API is also available. In addition, an HTTP browser can also be used to browse the files of an HDFS instance. Work is in progress to expose HDFS through the WebDAV protocol.
+HDFS can be accessed from applications in many different ways.
+Natively, HDFS provides a [FileSystem Java API](http://hadoop.apache.org/docs/current/api/) for applications to use.
+A [C language wrapper for this Java API](./LibHdfs.html) and [REST API](./WebHDFS.html) is also available.
+In addition, an HTTP browser and can also be used to browse the files of an HDFS instance.
+By using [NFS gateway](./HdfsNfsGateway.html),
+HDFS can be mounted as part of the client’s local file system.
 
 ### FS Shell
 
-HDFS allows user data to be organized in the form of files and directories. It provides a commandline interface called FS shell that lets a user interact with the data in HDFS. The syntax of this command set is similar to other shells (e.g. bash, csh) that users are already familiar with. Here are some sample action/command pairs:
+HDFS allows user data to be organized in the form of files and directories.
+It provides a commandline interface called [FS shell](../hadoop-common/FileSystemShell.html)
+that lets a user interact with the data in HDFS.
+The syntax of this command set is similar to other shells (e.g. bash, csh)
+that users are already familiar with. Here are some sample action/command pairs:
 
 | Action | Command |
 |:---- |:---- |
@@ -245,49 +320,55 @@ Space Reclamation
 
 ### File Deletes and Undeletes
 
-When a file is deleted by a user or an application, it is not immediately removed from HDFS. Instead, HDFS moves it to a trash directory (each user has its own trash directory under `/user/<username>/.Trash`).
-The file can be restored quickly as long as it remains in trash. Most recent deleted files are moved to the current trash directory (`/user/<username>/.Trash/Current`), and in a configurable interval, HDFS creates checkpoints (under `/user/<username>/.Trash/<date>`) for files in current trash directory and deletes old checkpoints when they are expired.
+If trash configuration is enabled, files removed by
+[FS Shell](../hadoop-common/FileSystemShell.html#rm)
+is not immediately removed from HDFS.
+Instead, HDFS moves it to a trash directory
+(each user has its own trash directory under `/user/<username>/.Trash`).
+The file can be restored quickly as long as it remains in trash.
+
+Most recent deleted files are moved to the current trash directory
+(`/user/<username>/.Trash/Current`), and in a configurable interval,
+HDFS creates checkpoints (under `/user/<username>/.Trash/<date>`)
+for files in current trash directory and deletes old checkpoints when they are expired.
+See [expunge command of FS shell](../hadoop-common/FileSystemShell.html#expunge)
+about checkpointing of trash.
+
 After the expiry of its life in trash, the NameNode deletes the file from the HDFS namespace. The deletion of a file causes the blocks associated with the file to be freed. Note that there could be an appreciable time delay between the time a file is deleted by a user and the time of the corresponding increase in free space in HDFS.
 
-Currently, the trash feature is disabled by default (deleting files without storing in trash). User can enable this feature by setting a value greater than zero for parameter `fs.trash.interval` (in core-site.xml). This value tells the NameNode how long a checkpoint will be expired and removed from HDFS. In addition, user can configure an appropriate time to tell NameNode how often to create checkpoints in trash (the parameter stored as `fs.trash.checkpoint.interval` in core-site.xml), this value should be smaller or equal to fs.trash.interval.
+Following is an example which will show how the files are deleted from HDFS by FS Shell.
+We created 2 files (test1 & test2) under the directory delete
+
+    $ hadoop fs -mkdir -p delete/test1
+    $ hadoop fs -mkdir -p delete/test2
+    $ hadoop fs -ls delete/
+    Found 2 items
+    drwxr-xr-x   - hadoop hadoop          0 2015-05-08 12:39 delete/test1
+    drwxr-xr-x   - hadoop hadoop          0 2015-05-08 12:40 delete/test2
+
+We are going to remove the file test1.
+The comment below shows that the file has been moved to Trash directory.
+
+    $ hadoop fs -rm -r delete/test1
+    Moved: hdfs://localhost:8020/user/hadoop/delete/test1 to trash at: hdfs://localhost:8020/user/hadoop/.Trash/Current
+
+now we are going to remove the file with skipTrash option,
+which will not send the file to Trash.It will be completely removed from HDFS.
+
+    $ hadoop fs -rm -r -skipTrash delete/test2
+    Deleted delete/test2
+
+We can see now that the Trash directory contains only file test1.
+
+    $ hadoop fs -ls .Trash/Current/user/hadoop/delete/
+    Found 1 items\
+    drwxr-xr-x   - hadoop hadoop          0 2015-05-08 12:39 .Trash/Current/user/hadoop/delete/test1
+
+So file test1 goes to Trash and file test2 is deleted permanently.
 
 ### Decrease Replication Factor
 
 When the replication factor of a file is reduced, the NameNode selects excess replicas that can be deleted. The next Heartbeat transfers this information to the DataNode. The DataNode then removes the corresponding blocks and the corresponding free space appears in the cluster. Once again, there might be a time delay between the completion of the setReplication API call and the appearance of free space in the cluster.
-
-### HDFS Trash Management
-
-Following is an example which will show how the files are deleted from HDFS.
-We created 2 files (test1 & test2) under the directory delete
-
-$ hadoop fs -mkdir -p delete/test1
-$ hadoop fs -mkdir -p delete/test2
-$ hadoop fs -ls delete/
-Found 2 items
-drwxr-xr-x   - hadoop hadoop          0 2015-05-08 12:39 delete/test1
-drwxr-xr-x   - hadoop hadoop          0 2015-05-08 12:40 delete/test2
-
-We are going to remove the file test1.The comment below shows that the file has been moved to Trash directory and it will be deleted after a period of 1440 mins which is the time set up in core-site.xml  file.
-
-$ hadoop fs -rm -r delete/test1
-
-15/05/08 12:40:43 INFO fs.TrashPolicyDefault: Namenode trash configuration: Deletion interval = 1440 minutes, Emptier interval = 0 minutes.
-Moved: 'hdfs://localhost:8020/user/hadoop/delete/test1' to trash at: hdfs://localhost:8020/user/hadoop/.Trash/Current
-
-now we are going to remove the file with skipTrash option , which will not send the file to Trash.It will be completely removed from HDFS.
-
-$ hadoop fs -rm -r -skipTrash delete/test2
-Deleted delete/test2
-
- We can see now that the Trash directory contains only file test1
-$ hadoop fs -ls .Trash/Current/user/hadoop/delete/
-Found 1 items\
-drwxr-xr-x   - hadoop hadoop          0 2015-05-08 12:39 .Trash/Current/user/hadoop/delete/test1
-
-so file test1 goes to Trash  and file test2 is deleted permanently
-
- The below command will empty the Trash folder and all the files in .Trash folder will be deleted.
-$ hadoop fs -expunge
 
 References
 ----------
