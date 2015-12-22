@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -143,8 +144,9 @@ public class TestBackupNode {
     Configuration c = new HdfsConfiguration();
     StartupOption startupOpt = StartupOption.CHECKPOINT;
     String dirs = getBackupNodeDir(startupOpt, 1);
-    c.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "hdfs://127.0.0.1:1234");
-    c.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, "localhost:0");
+    c.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY,
+        "hdfs://127.0.0.1:" + ServerSocketUtil.getPort(0, 100));
+    c.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");
     c.set(DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY, "0");
     c.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY,
         -1); // disable block scanner
@@ -179,7 +181,8 @@ public class TestBackupNode {
           bn.getNamesystem() == null);
       fail("Incorrect authentication setting should throw IOException");
     } catch (IOException e) {
-      LOG.info("IOException thrown as expected", e);
+      LOG.info("IOException thrown.", e);
+      assertTrue(e.getMessage().contains("Running in secure mode"));
     } finally {
       if (nn != null) {
         nn.stop();
