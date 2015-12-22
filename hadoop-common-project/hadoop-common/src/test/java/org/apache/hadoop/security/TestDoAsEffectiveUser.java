@@ -431,7 +431,7 @@ public class TestDoAsEffectiveUser {
   public void testProxyWithToken() throws Exception {
     final Configuration conf = new Configuration(masterConf);
     TestTokenSecretManager sm = new TestTokenSecretManager();
-    SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, conf);
+
     UserGroupInformation.setConfiguration(conf);
     final Server server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
         .setInstance(new TestImpl()).setBindAddress(ADDRESS).setPort(0)
@@ -485,7 +485,7 @@ public class TestDoAsEffectiveUser {
   public void testTokenBySuperUser() throws Exception {
     TestTokenSecretManager sm = new TestTokenSecretManager();
     final Configuration newConf = new Configuration(masterConf);
-    SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, newConf);
+    
     UserGroupInformation.setConfiguration(newConf);
     final Server server = new RPC.Builder(newConf)
         .setProtocol(TestProtocol.class).setInstance(new TestImpl())

@@ -386,7 +386,7 @@ public class SecurityUtil {
     if (token != null) {
       token.setService(service);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Acquired token "+token);  // Token#toString() prints service
+        LOG.debug("Acquired token " + token);  // Token#toString() prints service
       }
     } else {
       LOG.warn("Failed to get token for service "+service);
@@ -400,18 +400,15 @@ public class SecurityUtil {
    *          hadoop.security.token.service.use_ip
    */
   public static Text buildTokenService(InetSocketAddress addr) {
-    String host = null;
     if (useIpForTokenService) {
       if (addr.isUnresolved()) { // host has no ip address
         throw new IllegalArgumentException(
             new UnknownHostException(addr.getHostName())
         );
       }
-      host = addr.getAddress().getHostAddress();
-    } else {
-      host = StringUtils.toLowerCase(addr.getHostName());
+      return new Text(NetUtils.getIPPortString(addr));
     }
-    return new Text(host + ":" + addr.getPort());
+    return new Text(NetUtils.getHostPortString(addr));
   }
 
   /**

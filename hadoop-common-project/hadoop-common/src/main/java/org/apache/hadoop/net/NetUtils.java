@@ -650,7 +650,7 @@ public class NetUtils {
     if (InetAddressUtils.isIPv6Address(hostName)) {
       return "[" + hostName + "]:" + addr.getPort();
     }
-    return hostName + ":" + addr.getPort();
+    return hostName.toLowerCase() + ":" + addr.getPort();
   }
 
   /**

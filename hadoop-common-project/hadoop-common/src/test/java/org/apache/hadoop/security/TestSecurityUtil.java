@@ -163,15 +163,15 @@ public class TestSecurityUtil {
   @Test
   public void testBuildTokenServiceSockAddr() {
     SecurityUtil.setTokenServiceUseIp(true);
-    assertEquals("127.0.0.1:123",
-        SecurityUtil.buildTokenService(new InetSocketAddress("LocalHost", 123)).toString()
+    assertOneOf(
+        SecurityUtil.buildTokenService(NetUtils.createSocketAddrForHost("LocalHost", 123)).toString(),
+        "127.0.0.1:123",
+        "[0:0:0:0:0:0:0:1]:123"
     );
-    assertEquals("127.0.0.1:123",
-        SecurityUtil.buildTokenService(new InetSocketAddress("127.0.0.1", 123)).toString()
-    );
-    // what goes in, comes out
-    assertEquals("127.0.0.1:123",
-        SecurityUtil.buildTokenService(NetUtils.createSocketAddr("127.0.0.1", 123)).toString()
+    assertOneOf(
+        SecurityUtil.buildTokenService(NetUtils.createSocketAddrForHost("127.0.0.1", 123)).toString(),
+        "127.0.0.1:123",
+        "[0:0:0:0:0:0:0:1]:123"
     );
   }
 
@@ -394,4 +394,14 @@ public class TestSecurityUtil {
     SecurityUtil.setAuthenticationMethod(KERBEROS, conf);
     assertEquals("kerberos", conf.get(HADOOP_SECURITY_AUTHENTICATION));
   }
+
+  private void assertOneOf(String value, String... expected) {
+    boolean found = false;
+    for (String ip : expected) {
+      found |= ip.equals(value);
+    }
+    assertTrue("Expected value [" + value + "]  to be one of " +
+        org.apache.commons.lang.StringUtils.join(expected, ","), found);
+  }
+
 }
