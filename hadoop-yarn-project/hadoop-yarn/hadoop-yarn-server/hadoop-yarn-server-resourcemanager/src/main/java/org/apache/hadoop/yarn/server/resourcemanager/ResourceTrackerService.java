@@ -26,7 +26,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
@@ -543,16 +542,15 @@ public class ResourceTrackerService extends AbstractService implements
       nodeHeartBeatResponse.setSystemCredentialsForApps(systemCredentials);
     }
 
-    List<ApplicationId> keepAliveApps =
-        remoteNodeStatus.getKeepAliveApplications();
-    if (timelineV2Enabled && keepAliveApps != null) {
+    if (timelineV2Enabled) {
       // Return collectors' map that NM needs to know
-      // TODO we should optimize this to only include collector info that NM
-      // doesn't know yet.
-      setAppCollectorsMapToResponse(keepAliveApps, nodeHeartBeatResponse);
+      setAppCollectorsMapToResponse(rmNode.getRunningApps(),
+          nodeHeartBeatResponse);
     }
 
     // 4. Send status to RMNode, saving the latest response.
+    List<ApplicationId> keepAliveApps =
+        remoteNodeStatus.getKeepAliveApplications();
     RMNodeStatusEvent nodeStatusEvent =
         new RMNodeStatusEvent(nodeId, remoteNodeStatus, nodeHeartBeatResponse);
     if (request.getLogAggregationReportsForApps() != null
@@ -596,18 +594,20 @@ public class ResourceTrackerService extends AbstractService implements
   }
 
   private void setAppCollectorsMapToResponse(
-      List<ApplicationId> liveApps, NodeHeartbeatResponse response) {
+      List<ApplicationId> runningApps, NodeHeartbeatResponse response) {
     Map<ApplicationId, String> liveAppCollectorsMap = new
-        ConcurrentHashMap<ApplicationId, String>();
+        HashMap<ApplicationId, String>();
     Map<ApplicationId, RMApp> rmApps = rmContext.getRMApps();
-    // Set collectors for all apps now.
-    // TODO set collectors for only active apps running on NM (liveApps cannot be
-    // used for this case)
-    for (Map.Entry<ApplicationId, RMApp> rmApp : rmApps.entrySet()) {
-      ApplicationId appId = rmApp.getKey();
-      String appCollectorAddr = rmApp.getValue().getCollectorAddr();
+    // Set collectors for all running apps on this node.
+    for (ApplicationId appId : runningApps) {
+      String appCollectorAddr = rmApps.get(appId).getCollectorAddr();
       if (appCollectorAddr != null) {
         liveAppCollectorsMap.put(appId, appCollectorAddr);
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Collector for applicaton: " + appId +
+              " hasn't registered yet!");
+        }
       }
     }
     response.setAppCollectorsMap(liveAppCollectorsMap);
