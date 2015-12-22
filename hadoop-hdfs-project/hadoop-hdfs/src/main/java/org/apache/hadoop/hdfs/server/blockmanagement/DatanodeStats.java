@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 
 import java.util.EnumMap;
 import java.util.HashSet;
@@ -61,8 +62,10 @@ class DatanodeStats {
     }
     Set<StorageType> storageTypes = new HashSet<>();
     for (DatanodeStorageInfo storageInfo : node.getStorageInfos()) {
-      statsMap.addStorage(storageInfo, node);
-      storageTypes.add(storageInfo.getStorageType());
+      if (storageInfo.getState() != DatanodeStorage.State.FAILED) {
+        statsMap.addStorage(storageInfo, node);
+        storageTypes.add(storageInfo.getStorageType());
+      }
     }
     for (StorageType storageType : storageTypes) {
       statsMap.addNode(storageType, node);
@@ -86,8 +89,10 @@ class DatanodeStats {
     }
     Set<StorageType> storageTypes = new HashSet<>();
     for (DatanodeStorageInfo storageInfo : node.getStorageInfos()) {
-      statsMap.subtractStorage(storageInfo, node);
-      storageTypes.add(storageInfo.getStorageType());
+      if (storageInfo.getState() != DatanodeStorage.State.FAILED) {
+        statsMap.subtractStorage(storageInfo, node);
+        storageTypes.add(storageInfo.getStorageType());
+      }
     }
     for (StorageType storageType : storageTypes) {
       statsMap.subtractNode(storageType, node);
@@ -202,10 +207,12 @@ class DatanodeStats {
 
     private void subtractNode(StorageType storageType,
         final DatanodeDescriptor node) {
-      StorageTypeStats storageTypeStats =
-          storageTypeStatsMap.get(storageType);
+      StorageTypeStats storageTypeStats = storageTypeStatsMap.get(storageType);
       if (storageTypeStats != null) {
         storageTypeStats.subtractNode(node);
+        if (storageTypeStats.getNodesInService() == 0) {
+          storageTypeStatsMap.remove(storageType);
+        }
       }
     }
   }
