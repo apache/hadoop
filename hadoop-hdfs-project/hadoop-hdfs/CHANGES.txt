@@ -397,6 +397,9 @@ Trunk (Unreleased)
     HDFS-9423. Fix intermittent failure of TestEditLogTailer.
     (Masatake Iwasaki via waltersu4549)
 
+    HDFS-9580. TestComputeInvalidateWork#testDatanodeReRegistration failed
+    due to unexpected number of invalidate blocks. (Wei-Chiu Chuang via zhz)
+
     BREAKDOWN OF HDFS-7285 SUBTASKS AND RELATED JIRAS
 
       HDFS-7347. Configurable erasure coding policy for individual files and
