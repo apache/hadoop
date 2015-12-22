@@ -201,6 +201,7 @@ class HeartbeatManager implements DatanodeStatistics {
 
       //update its timestamp
       d.updateHeartbeatState(StorageReport.EMPTY_ARRAY, 0L, 0L, 0, 0, null);
+      stats.add(d);
     }
   }
 
@@ -210,9 +211,12 @@ class HeartbeatManager implements DatanodeStatistics {
 
   synchronized void addDatanode(final DatanodeDescriptor d) {
     // update in-service node count
-    stats.add(d);
     datanodes.add(d);
     d.setAlive(true);
+  }
+
+  void updateDnStat(final DatanodeDescriptor d){
+    stats.add(d);
   }
 
   synchronized void removeDatanode(DatanodeDescriptor node) {
