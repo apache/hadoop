@@ -1173,6 +1173,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4454. NM to nodelabel mapping going wrong after RM restart. 
     (Bibin A Chundatt via wangda)
 
+    YARN-4477. FairScheduler: Handle condition which can result in an
+    infinite loop in attemptScheduling. (Tao Jie via asuresh)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
