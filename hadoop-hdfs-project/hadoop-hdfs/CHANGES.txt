@@ -2544,6 +2544,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9589. Block files which have been hardlinked should be duplicated
     before the DataNode appends to the them (cmccabe)
 
+    HDFS-9458. TestBackupNode always binds to port 50070, which can cause bind
+    failures. (Xiao Chen via cnauroth)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
