@@ -283,6 +283,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3226. UI changes for decommissioning node. (Sunil G via
     junping_du)
 
+    YARN-3458. CPU resource monitoring in Windows. (Inigo Goiri via cnauroth)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
