@@ -203,7 +203,7 @@ public class TestRecoverStripedFile {
         (LocatedStripedBlock)locatedBlocks.getLastLocatedBlock();
     
     DatanodeInfo[] storageInfos = lastBlock.getLocations();
-    int[] indices = lastBlock.getBlockIndices();
+    byte[] indices = lastBlock.getBlockIndices();
     
     BitSet bitset = new BitSet(dnNum);
     for (DatanodeInfo storageInfo : storageInfos) {
@@ -355,7 +355,7 @@ public class TestRecoverStripedFile {
     // thread pool submission should succeed, so that it will not prevent
     // processing other tasks in the list if any exceptions.
     int size = cluster.dataNodes.size();
-    short[] liveIndices = new short[size];
+    byte[] liveIndices = new byte[size];
     DatanodeInfo[] dataDNs = new DatanodeInfo[size + 1];
     DatanodeStorageInfo targetDnInfos_1 = BlockManagerTestUtil
         .newDatanodeStorageInfo(DFSTestUtil.getLocalDatanodeDescriptor(),

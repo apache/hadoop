@@ -526,13 +526,9 @@ public class PBHelperClient {
           .toArray(new String[storageIDsCount]);
     }
 
-    int[] indices = null;
-    final int indexCount = proto.getBlockIndexCount();
-    if (indexCount > 0) {
-      indices = new int[indexCount];
-      for (int i = 0; i < indexCount; i++) {
-        indices[i] = proto.getBlockIndex(i);
-      }
+    byte[] indices = null;
+    if (proto.hasBlockIndices()) {
+      indices = proto.getBlockIndices().toByteArray();
     }
 
     // Set values from the isCached list, re-using references from loc
@@ -814,10 +810,10 @@ public class PBHelperClient {
     }
     if (b instanceof LocatedStripedBlock) {
       LocatedStripedBlock sb = (LocatedStripedBlock) b;
-      int[] indices = sb.getBlockIndices();
+      byte[] indices = sb.getBlockIndices();
+      builder.setBlockIndices(PBHelperClient.getByteString(indices));
       Token<BlockTokenIdentifier>[] blockTokens = sb.getBlockTokens();
       for (int i = 0; i < indices.length; i++) {
-        builder.addBlockIndex(indices[i]);
         builder.addBlockTokens(PBHelperClient.convert(blockTokens[i]));
       }
     }

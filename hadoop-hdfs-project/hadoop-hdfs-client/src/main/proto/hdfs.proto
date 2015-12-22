@@ -217,7 +217,7 @@ message LocatedBlockProto {
   repeated string storageIDs = 8;
 
   // striped block related fields
-  repeated uint32 blockIndex = 9; // used for striped block to indicate block index for each storage
+  optional bytes blockIndices = 9; // used for striped block to indicate block index for each storage
   repeated hadoop.common.TokenProto blockTokens = 10; // each internal block has a block token
 }
 

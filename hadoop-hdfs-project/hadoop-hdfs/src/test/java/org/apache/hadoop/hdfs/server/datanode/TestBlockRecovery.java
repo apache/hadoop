@@ -757,7 +757,7 @@ public class TestBlockRecovery {
     ErasureCodingPolicy ecPolicy = ErasureCodingPolicyManager
         .getSystemDefaultPolicy();
     RecoveringStripedBlock rBlockStriped = new RecoveringStripedBlock(rBlock,
-        new int[9], ecPolicy);
+        new byte[9], ecPolicy);
     BlockRecoveryWorker recoveryWorker = new BlockRecoveryWorker(dn);
     BlockRecoveryWorker.RecoveryTaskStriped recoveryTask =
         recoveryWorker.new RecoveryTaskStriped(rBlockStriped);

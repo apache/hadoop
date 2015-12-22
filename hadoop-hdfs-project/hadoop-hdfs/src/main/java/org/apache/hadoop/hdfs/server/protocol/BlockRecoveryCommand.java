@@ -101,17 +101,17 @@ public class BlockRecoveryCommand extends DatanodeCommand {
   }
 
   public static class RecoveringStripedBlock extends RecoveringBlock {
-    private final int[] blockIndices;
+    private final byte[] blockIndices;
     private final ErasureCodingPolicy ecPolicy;
 
-    public RecoveringStripedBlock(RecoveringBlock rBlock, int[] blockIndices,
+    public RecoveringStripedBlock(RecoveringBlock rBlock, byte[] blockIndices,
         ErasureCodingPolicy ecPolicy) {
       super(rBlock);
-      this.blockIndices = blockIndices;
+      this.blockIndices = blockIndices == null ? new byte[]{} : blockIndices;
       this.ecPolicy = ecPolicy;
     }
 
-    public int[] getBlockIndices() {
+    public byte[] getBlockIndices() {
       return blockIndices;
     }
 

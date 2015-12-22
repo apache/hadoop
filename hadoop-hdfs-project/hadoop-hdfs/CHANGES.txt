@@ -885,6 +885,9 @@ Trunk (Unreleased)
       HDFS-9451. Clean up depreated umasks and related unit tests.
       (Wei-Chiu Chuang via wheat9)
 
+      HDFS-9575. Use byte array for internal block indices in a striped block.
+      (jing9 via szetszwo)
+
 Release 2.9.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

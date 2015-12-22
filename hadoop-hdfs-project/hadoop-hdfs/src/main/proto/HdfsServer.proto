@@ -123,7 +123,7 @@ message RecoveringBlockProto {
 
   optional ErasureCodingPolicyProto ecPolicy = 4;
   // block indices of striped internal blocks for each storage in LocatedBlock
-  repeated uint32 blockIndices = 5;
+  optional bytes blockIndices = 5;
 }
 
 /**

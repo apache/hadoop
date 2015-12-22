@@ -688,7 +688,7 @@ public class TestPBHelper {
             new DatanodeStorage("s01"));
     DatanodeStorageInfo[] targetDnInfos0 = new DatanodeStorageInfo[] {
         targetDnInfos_0, targetDnInfos_1 };
-    short[] liveBlkIndices0 = new short[2];
+    byte[] liveBlkIndices0 = new byte[2];
     BlockECRecoveryInfo blkECRecoveryInfo0 = new BlockECRecoveryInfo(
         new ExtendedBlock("bp1", 1234), dnInfos0, targetDnInfos0,
         liveBlkIndices0, ErasureCodingPolicyManager.getSystemDefaultPolicy());
@@ -702,7 +702,7 @@ public class TestPBHelper {
             new DatanodeStorage("s03"));
     DatanodeStorageInfo[] targetDnInfos1 = new DatanodeStorageInfo[] {
         targetDnInfos_2, targetDnInfos_3 };
-    short[] liveBlkIndices1 = new short[2];
+    byte[] liveBlkIndices1 = new byte[2];
     BlockECRecoveryInfo blkECRecoveryInfo1 = new BlockECRecoveryInfo(
         new ExtendedBlock("bp2", 3256), dnInfos1, targetDnInfos1,
         liveBlkIndices1, ErasureCodingPolicyManager.getSystemDefaultPolicy());
@@ -741,8 +741,8 @@ public class TestPBHelper {
       assertEquals(targetStorageIDs1[i], targetStorageIDs2[i]);
     }
 
-    short[] liveBlockIndices1 = blkECRecoveryInfo1.getLiveBlockIndices();
-    short[] liveBlockIndices2 = blkECRecoveryInfo2.getLiveBlockIndices();
+    byte[] liveBlockIndices1 = blkECRecoveryInfo1.getLiveBlockIndices();
+    byte[] liveBlockIndices2 = blkECRecoveryInfo2.getLiveBlockIndices();
     for (int i = 0; i < liveBlockIndices1.length; i++) {
       assertEquals(liveBlockIndices1[i], liveBlockIndices2[i]);
     }

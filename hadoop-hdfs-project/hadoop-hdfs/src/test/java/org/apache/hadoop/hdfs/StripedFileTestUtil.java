@@ -345,7 +345,7 @@ public class StripedFileTestUtil {
       assertEquals(groupSize, locs.size());
 
       // verify that every internal blocks exists
-      int[] blockIndices = ((LocatedStripedBlock) lb).getBlockIndices();
+      byte[] blockIndices = ((LocatedStripedBlock) lb).getBlockIndices();
       assertEquals(groupSize, blockIndices.length);
       HashSet<Integer> found = new HashSet<>();
       for (int index : blockIndices) {

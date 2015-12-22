@@ -253,7 +253,7 @@ public final class ErasureCodingWorker {
     private long positionInBlock;
 
     // sources
-    private final short[] liveIndices;
+    private final byte[] liveIndices;
     private final DatanodeInfo[] sources;
 
     private final List<StripedReader> stripedReaders;

@@ -594,7 +594,7 @@ public class BlockManager implements BlockStatsMXBean {
     // source node returned is not used
     chooseSourceDatanodes(getStoredBlock(block), containingNodes,
         containingLiveReplicasNodes, numReplicas,
-        new LinkedList<Short>(), UnderReplicatedBlocks.LEVEL);
+        new LinkedList<Byte>(), UnderReplicatedBlocks.LEVEL);
     
     // containingLiveReplicasNodes can include READ_ONLY_SHARED replicas which are 
     // not included in the numReplicas.liveReplicas() count
@@ -951,7 +951,7 @@ public class BlockManager implements BlockStatsMXBean {
         numCorruptNodes == numNodes;
     final int numMachines = isCorrupt ? numNodes: numNodes - numCorruptNodes;
     final DatanodeStorageInfo[] machines = new DatanodeStorageInfo[numMachines];
-    final int[] blockIndices = blk.isStriped() ? new int[numMachines] : null;
+    final byte[] blockIndices = blk.isStriped() ? new byte[numMachines] : null;
     int j = 0, i = 0;
     if (numMachines > 0) {
       for(DatanodeStorageInfo storage : blocksMap.getStorages(blk)) {
@@ -961,7 +961,7 @@ public class BlockManager implements BlockStatsMXBean {
           machines[j++] = storage;
           // TODO this can be more efficient
           if (blockIndices != null) {
-            int index = ((BlockInfoStriped) blk).getStorageBlockIndex(storage);
+            byte index = ((BlockInfoStriped) blk).getStorageBlockIndex(storage);
             assert index >= 0;
             blockIndices[i++] = index;
           }
@@ -1036,7 +1036,7 @@ public class BlockManager implements BlockStatsMXBean {
       if (b.isStriped()) {
         Preconditions.checkState(b instanceof LocatedStripedBlock);
         LocatedStripedBlock sb = (LocatedStripedBlock) b;
-        int[] indices = sb.getBlockIndices();
+        byte[] indices = sb.getBlockIndices();
         Token<BlockTokenIdentifier>[] blockTokens = new Token[indices.length];
         ExtendedBlock internalBlock = new ExtendedBlock(b.getBlock());
         for (int i = 0; i < indices.length; i++) {
@@ -1562,7 +1562,7 @@ public class BlockManager implements BlockStatsMXBean {
     List<DatanodeDescriptor> containingNodes = new ArrayList<>();
     List<DatanodeStorageInfo> liveReplicaNodes = new ArrayList<>();
     NumberReplicas numReplicas = new NumberReplicas();
-    List<Short> liveBlockIndices = new ArrayList<>();
+    List<Byte> liveBlockIndices = new ArrayList<>();
     final DatanodeDescriptor[] srcNodes = chooseSourceDatanodes(block,
         containingNodes, liveReplicaNodes, numReplicas,
         liveBlockIndices, priority);
@@ -1599,7 +1599,7 @@ public class BlockManager implements BlockStatsMXBean {
         // Wait the previous recovery to finish.
         return null;
       }
-      short[] indices = new short[liveBlockIndices.size()];
+      byte[] indices = new byte[liveBlockIndices.size()];
       for (int i = 0 ; i < liveBlockIndices.size(); i++) {
         indices[i] = liveBlockIndices.get(i);
       }
@@ -1807,7 +1807,7 @@ public class BlockManager implements BlockStatsMXBean {
       List<DatanodeDescriptor> containingNodes,
       List<DatanodeStorageInfo> nodesContainingLiveReplicas,
       NumberReplicas numReplicas,
-      List<Short> liveBlockIndices, int priority) {
+      List<Byte> liveBlockIndices, int priority) {
     containingNodes.clear();
     nodesContainingLiveReplicas.clear();
     List<DatanodeDescriptor> srcNodes = new ArrayList<>();
@@ -1866,7 +1866,7 @@ public class BlockManager implements BlockStatsMXBean {
       if(isStriped || srcNodes.isEmpty()) {
         srcNodes.add(node);
         if (isStriped) {
-          liveBlockIndices.add((short) ((BlockInfoStriped) block).
+          liveBlockIndices.add(((BlockInfoStriped) block).
               getStorageBlockIndex(storage));
         }
         continue;
@@ -4160,7 +4160,7 @@ public class BlockManager implements BlockStatsMXBean {
 
   public static LocatedStripedBlock newLocatedStripedBlock(
       ExtendedBlock b, DatanodeStorageInfo[] storages,
-      int[] indices, long startOffset, boolean corrupt) {
+      byte[] indices, long startOffset, boolean corrupt) {
     // startOffset is unknown
     return new LocatedStripedBlock(
         b, DatanodeStorageInfo.toDatanodeInfos(storages),

@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Set;
 
 class ErasureCodingWork extends BlockRecoveryWork {
-  private final short[] liveBlockIndicies;
+  private final byte[] liveBlockIndicies;
 
   public ErasureCodingWork(BlockInfo block,
       BlockCollection bc,
@@ -31,14 +31,14 @@ class ErasureCodingWork extends BlockRecoveryWork {
       List<DatanodeDescriptor> containingNodes,
       List<DatanodeStorageInfo> liveReplicaStorages,
       int additionalReplRequired,
-      int priority, short[] liveBlockIndicies) {
+      int priority, byte[] liveBlockIndicies) {
     super(block, bc, srcNodes, containingNodes,
         liveReplicaStorages, additionalReplRequired, priority);
     this.liveBlockIndicies = liveBlockIndicies;
     BlockManager.LOG.debug("Creating an ErasureCodingWork to recover " + block);
   }
 
-  short[] getLiveBlockIndicies() {
+  byte[] getLiveBlockIndicies() {
     return liveBlockIndicies;
   }
 

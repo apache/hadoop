@@ -372,7 +372,7 @@ public class BlockRecoveryWorker {
     private final DatanodeInfo[] locs;
     private final long recoveryId;
 
-    private final int[] blockIndices;
+    private final byte[] blockIndices;
     private final ErasureCodingPolicy ecPolicy;
 
     RecoveryTaskStriped(RecoveringStripedBlock rBlock) {

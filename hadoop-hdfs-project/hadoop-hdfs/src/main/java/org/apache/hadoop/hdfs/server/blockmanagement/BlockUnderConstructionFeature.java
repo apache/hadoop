@@ -110,9 +110,9 @@ public class BlockUnderConstructionFeature {
    * @return the index array indicating the block index in each storage. Used
    * only by striped blocks.
    */
-  public int[] getBlockIndices() {
+  public byte[] getBlockIndices() {
     int numLocations = getNumExpectedLocations();
-    int[] indices = new int[numLocations];
+    byte[] indices = new byte[numLocations];
     for (int i = 0; i < numLocations; i++) {
       indices[i] = BlockIdManager.getBlockIndex(replicas[i]);
     }

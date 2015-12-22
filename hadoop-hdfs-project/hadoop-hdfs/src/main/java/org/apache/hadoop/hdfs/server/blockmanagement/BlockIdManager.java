@@ -244,8 +244,8 @@ public class BlockIdManager {
     return id & (~HdfsServerConstants.BLOCK_GROUP_INDEX_MASK);
   }
 
-  public static int getBlockIndex(Block reportedBlock) {
-    return (int) (reportedBlock.getBlockId() &
+  public static byte getBlockIndex(Block reportedBlock) {
+    return (byte) (reportedBlock.getBlockId() &
         HdfsServerConstants.BLOCK_GROUP_INDEX_MASK);
   }
 

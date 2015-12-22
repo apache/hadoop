@@ -364,7 +364,7 @@ public class PBHelper {
       RecoveringStripedBlock sb = (RecoveringStripedBlock) b;
       builder.setEcPolicy(PBHelperClient.convertErasureCodingPolicy(
           sb.getErasureCodingPolicy()));
-      builder.addAllBlockIndices(asList(sb.getBlockIndices()));
+      builder.setBlockIndices(PBHelperClient.getByteString(sb.getBlockIndices()));
     }
     return builder.build();
   }
@@ -381,11 +381,8 @@ public class PBHelper {
     }
 
     if (b.hasEcPolicy()) {
-      List<Integer> BlockIndicesList = b.getBlockIndicesList();
-      int[] indices = new int[BlockIndicesList.size()];
-      for (int i = 0; i < BlockIndicesList.size(); i++) {
-        indices[i] = BlockIndicesList.get(i).shortValue();
-      }
+      assert b.hasBlockIndices();
+      byte[] indices = b.getBlockIndices().toByteArray();
       rBlock = new RecoveringStripedBlock(rBlock, indices,
           PBHelperClient.convertErasureCodingPolicy(b.getEcPolicy()));
     }
@@ -840,22 +837,6 @@ public class PBHelper {
         build();
   }
 
-  private static List<Integer> asList(int[] arr) {
-    List<Integer> list = new ArrayList<>(arr.length);
-    for (int s : arr) {
-      list.add(s);
-    }
-    return list;
-  }
-
-  private static List<Integer> asList(short[] arr) {
-    List<Integer> list = new ArrayList<>(arr.length);
-    for (int s : arr) {
-      list.add(s);
-    }
-    return list;
-  }
-
   private static StorageTypesProto convertStorageTypesProto(
       StorageType[] targetStorageTypes) {
     StorageTypesProto.Builder builder = StorageTypesProto.newBuilder();
@@ -914,17 +895,11 @@ public class PBHelper {
         targetStorageTypesProto.getStorageTypesList(), targetStorageTypesProto
             .getStorageTypesList().size());
 
-    List<Integer> liveBlockIndicesList = blockEcRecoveryInfoProto
-        .getLiveBlockIndicesList();
-    short[] liveBlkIndices = new short[liveBlockIndicesList.size()];
-    for (int i = 0; i < liveBlockIndicesList.size(); i++) {
-      liveBlkIndices[i] = liveBlockIndicesList.get(i).shortValue();
-    }
-
+    byte[] liveBlkIndices = blockEcRecoveryInfoProto.getLiveBlockIndices()
+        .toByteArray();
     ErasureCodingPolicy ecPolicy =
         PBHelperClient.convertErasureCodingPolicy(
             blockEcRecoveryInfoProto.getEcPolicy());
-
     return new BlockECRecoveryInfo(block, sourceDnInfos, targetDnInfos,
         targetStorageUuids, convertStorageTypes, liveBlkIndices, ecPolicy);
   }
@@ -949,8 +924,8 @@ public class PBHelper {
         .getTargetStorageTypes();
     builder.setTargetStorageTypes(convertStorageTypesProto(targetStorageTypes));
 
-    short[] liveBlockIndices = blockEcRecoveryInfo.getLiveBlockIndices();
-    builder.addAllLiveBlockIndices(asList(liveBlockIndices));
+    byte[] liveBlockIndices = blockEcRecoveryInfo.getLiveBlockIndices();
+    builder.setLiveBlockIndices(PBHelperClient.getByteString(liveBlockIndices));
 
     builder.setEcPolicy(PBHelperClient.convertErasureCodingPolicy(
         blockEcRecoveryInfo.getErasureCodingPolicy()));

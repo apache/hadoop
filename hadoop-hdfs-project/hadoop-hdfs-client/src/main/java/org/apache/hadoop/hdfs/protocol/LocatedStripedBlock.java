@@ -33,22 +33,22 @@ import java.util.Arrays;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class LocatedStripedBlock extends LocatedBlock {
-  private static final int[] EMPTY_INDICES = {};
+  private static final byte[] EMPTY_INDICES = {};
   private static final Token<BlockTokenIdentifier> EMPTY_TOKEN = new Token<>();
 
-  private int[] blockIndices;
+  private final byte[] blockIndices;
   private Token<BlockTokenIdentifier>[] blockTokens;
 
   @SuppressWarnings({"unchecked"})
   public LocatedStripedBlock(ExtendedBlock b, DatanodeInfo[] locs,
-      String[] storageIDs, StorageType[] storageTypes, int[] indices,
+      String[] storageIDs, StorageType[] storageTypes, byte[] indices,
       long startOffset, boolean corrupt, DatanodeInfo[] cachedLocs) {
     super(b, locs, storageIDs, storageTypes, startOffset, corrupt, cachedLocs);
 
     if (indices == null) {
       this.blockIndices = EMPTY_INDICES;
     } else {
-      this.blockIndices = new int[indices.length];
+      this.blockIndices = new byte[indices.length];
       System.arraycopy(indices, 0, blockIndices, 0, indices.length);
     }
     blockTokens = new Token[blockIndices.length];
@@ -68,7 +68,7 @@ public class LocatedStripedBlock extends LocatedBlock {
         + "}";
   }
 
-  public int[] getBlockIndices() {
+  public byte[] getBlockIndices() {
     return this.blockIndices;
   }
 
