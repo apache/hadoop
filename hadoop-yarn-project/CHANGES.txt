@@ -155,6 +155,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-4445. Unify the term flowId and flowName in timeline v2 codebase. 
     (Zhan Zhang via gtcarrera9). 
 
+    YARN-3586. RM to only get back addresses of Collectors that NM needs to know.
+    (Junping Du via varunsaxena)
+
   OPTIMIZATIONS
 
   BUG FIXES
