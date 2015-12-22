@@ -981,6 +981,43 @@ public class TestFairScheduler extends FairSchedulerTestBase {
             scheduler.getSchedulerApp(attId).getNumReservations(null, true));
   }
 
+  @Test (timeout = 5000)
+  public void testReservationThresholdWithAssignMultiple() throws Exception {
+    // set reservable-nodes to 0 which make reservation exceed
+    conf.setFloat(FairSchedulerConfiguration.RESERVABLE_NODES, 0f);
+    conf.setBoolean(FairSchedulerConfiguration.ASSIGN_MULTIPLE, true);
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Add two node
+    RMNode node1 =
+        MockNodes
+                .newNodeInfo(1, Resources.createResource(4096, 4), 1, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+    RMNode node2 =
+        MockNodes
+                .newNodeInfo(2, Resources.createResource(4096, 4), 1, "127.0.0.2");
+    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
+    scheduler.handle(nodeEvent2);
+
+    //create one request and assign containers
+    ApplicationAttemptId attId = createSchedulingRequest(1024, "queue1", "user1", 10);
+    scheduler.update();
+    scheduler.handle(new NodeUpdateSchedulerEvent(node1));
+    scheduler.update();
+    scheduler.handle(new NodeUpdateSchedulerEvent(node2));
+
+    // Verify capacity allocation
+    assertEquals(8192, scheduler.getQueueManager().getQueue("queue1").
+            getResourceUsage().getMemory());
+
+    // Verify number of reservations have decremented
+    assertEquals(0,
+            scheduler.getSchedulerApp(attId).getNumReservations(null, true));
+  }
+
   @Test (timeout = 500000)
   public void testContainerReservationAttemptExceedingQueueMax()
       throws Exception {
@@ -4152,6 +4189,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   @Test
   public void testQueueMaxAMShareWithContainerReservation() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    conf.setFloat(FairSchedulerConfiguration.RESERVABLE_NODES, 1f);
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
     out.println("<allocations>");
