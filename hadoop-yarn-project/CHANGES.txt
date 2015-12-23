@@ -288,6 +288,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3458. CPU resource monitoring in Windows. (Inigo Goiri via cnauroth)
 
+    YARN-4234. New put APIs in TimelineClient for ats v1.5. (Xuan Gong via
+    junping_du)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
