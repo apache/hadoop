@@ -338,7 +338,7 @@ public class YarnClientImpl extends YarnClient {
     }
     credentials.addToken(timelineService, timelineDelegationToken);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Add timline delegation token into credentials: "
+      LOG.debug("Add timeline delegation token to credentials: "
           + timelineDelegationToken);
     }
     DataOutputBuffer dob = new DataOutputBuffer();
@@ -354,8 +354,10 @@ public class YarnClientImpl extends YarnClient {
           return timelineClient.getDelegationToken(timelineDTRenewer);
         } catch (Exception e ) {
           if (timelineServiceBestEffort) {
-            LOG.warn("Failed to get delegation token from the timeline server: "
+            LOG.warn("Failed to get delegation token from the timeline server;" +
+                " timeline client no longer publishing data: "
                 + e.getMessage());
+            LOG.debug("Full exception details", e);
             return null;
           }
           throw e;
