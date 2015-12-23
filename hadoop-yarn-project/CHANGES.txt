@@ -77,6 +77,9 @@ Release 2.9.0 - UNRELEASED
 
   BUG FIXES
 
+  YARN-4109. Exception on RM scheduler page loading with labels. 
+  (Mohammad Shahid Khan via rohithsharmaks)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
