@@ -11,6 +11,9 @@ Release 2.7.4 - UNRELEASED
     YARN-6457. Allow custom SSL configuration to be supplied in WebApps.
     (Sanjay M Pujare via haibochen)
 
+    YARN-4109. Exception on RM scheduler page loading with labels.
+    (Mohammad Shahid Khan via rohithsharmaks)
+
   OPTIMIZATIONS
 
     YARN-5262. Optimize sending RMNodeFinishedContainersPulledByAMEvent for
