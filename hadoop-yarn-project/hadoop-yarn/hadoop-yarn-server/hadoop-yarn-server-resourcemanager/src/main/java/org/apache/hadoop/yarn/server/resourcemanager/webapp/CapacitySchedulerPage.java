@@ -447,7 +447,7 @@ class CapacitySchedulerPage extends RmView {
                   used > 1 ? Q_OVER : Q_UNDER))._(".")._().
               span(".q", partitionUiTag)._().
             span().$class("qstats").$style(left(Q_STATS_POS)).
-              _(join(percent(used), " used"))._();
+              _(join(percent(used), " used"))._()._();
 
             //for the queue hierarchy under label
             UL<Hamlet> underLabel = html.ul("#pq");
