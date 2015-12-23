@@ -33,8 +33,6 @@ import java.security.PrivilegedExceptionAction;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
-import javax.ws.rs.core.MediaType;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -54,19 +52,19 @@ import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthentica
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticator;
 import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticator;
 import org.apache.hadoop.security.token.delegation.web.PseudoDelegationTokenAuthenticator;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntityGroupId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.codehaus.jackson.map.ObjectMapper;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -74,7 +72,6 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 import com.sun.jersey.api.client.filter.ClientFilter;
@@ -110,6 +107,9 @@ public class TimelineClientImpl extends TimelineClient {
   private URI resURI;
   private UserGroupInformation authUgi;
   private String doAsUser;
+  private Configuration configuration;
+  private float timelineServiceVersion;
+  private TimelineWriter timelineWriter;
 
   @Private
   @VisibleForTesting
@@ -254,6 +254,7 @@ public class TimelineClientImpl extends TimelineClient {
   }
 
   protected void serviceInit(Configuration conf) throws Exception {
+    this.configuration = conf;
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     UserGroupInformation realUgi = ugi.getRealUser();
     if (realUgi != null) {
@@ -293,58 +294,48 @@ public class TimelineClientImpl extends TimelineClient {
           RESOURCE_URI_STR));
     }
     LOG.info("Timeline service address: " + resURI);
+    timelineServiceVersion =
+        conf.getFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION,
+          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_VERSION);
     super.serviceInit(conf);
+  }
+
+  @Override
+  protected void serviceStart() throws Exception {
+    timelineWriter = createTimelineWriter(
+        configuration, authUgi, client, resURI);
+  }
+
+  protected TimelineWriter createTimelineWriter(Configuration conf,
+      UserGroupInformation ugi, Client webClient, URI uri)
+      throws IOException {
+    if (Float.compare(this.timelineServiceVersion, 1.5f) == 0) {
+      return new FileSystemTimelineWriter(
+          conf, ugi, webClient, uri);
+    } else {
+      return new DirectTimelineWriter(ugi, webClient, uri);
+    }
+  }
+
+  @Override
+  protected void serviceStop() throws Exception {
+    if (this.timelineWriter != null) {
+      this.timelineWriter.close();
+    }
+    super.serviceStop();
   }
 
   @Override
   public TimelinePutResponse putEntities(
       TimelineEntity... entities) throws IOException, YarnException {
-    TimelineEntities entitiesContainer = new TimelineEntities();
-    for (TimelineEntity entity : entities) {
-      if (entity.getEntityId() == null || entity.getEntityType() == null) {
-        throw new YarnException("Incomplete entity without entity id/type");
-      }
-      entitiesContainer.addEntity(entity);
-    }
-    ClientResponse resp = doPosting(entitiesContainer, null);
-    return resp.getEntity(TimelinePutResponse.class);
+    return timelineWriter.putEntities(entities);
   }
 
 
   @Override
   public void putDomain(TimelineDomain domain) throws IOException,
       YarnException {
-    doPosting(domain, "domain");
-  }
-
-  private ClientResponse doPosting(final Object obj, final String path)
-      throws IOException, YarnException {
-    ClientResponse resp;
-    try {
-      resp = authUgi.doAs(new PrivilegedExceptionAction<ClientResponse>() {
-        @Override
-        public ClientResponse run() throws Exception {
-          return doPostingObject(obj, path);
-        }
-      });
-    } catch (UndeclaredThrowableException e) {
-        throw new IOException(e.getCause());
-    } catch (InterruptedException ie) {
-      throw new IOException(ie);
-    }
-    if (resp == null ||
-        resp.getClientResponseStatus() != ClientResponse.Status.OK) {
-      String msg =
-          "Failed to get the response from the timeline server.";
-      LOG.error(msg);
-      if (LOG.isDebugEnabled() && resp != null) {
-        String output = resp.getEntity(String.class);
-        LOG.debug("HTTP error code: " + resp.getStatus()
-            + " Server response : \n" + output);
-      }
-      throw new YarnException(msg);
-    }
-    return resp;
+    timelineWriter.putDomain(domain);
   }
 
   @SuppressWarnings("unchecked")
@@ -468,23 +459,6 @@ public class TimelineClientImpl extends TimelineClient {
     };
 
     return connectionRetry.retryOn(tokenRetryOp);
-  }
-
-  @Private
-  @VisibleForTesting
-  public ClientResponse doPostingObject(Object object, String path) {
-    WebResource webResource = client.resource(resURI);
-    if (path == null) {
-      return webResource.accept(MediaType.APPLICATION_JSON)
-          .type(MediaType.APPLICATION_JSON)
-          .post(ClientResponse.class, object);
-    } else if (path.equals("domain")) {
-      return webResource.path(path).accept(MediaType.APPLICATION_JSON)
-          .type(MediaType.APPLICATION_JSON)
-          .put(ClientResponse.class, object);
-    } else {
-      throw new YarnRuntimeException("Unknown resource type");
-    }
   }
 
   private class TimelineURLConnectionFactory
@@ -662,5 +636,35 @@ public class TimelineClientImpl extends TimelineClient {
   @Private
   public UserGroupInformation getUgi() {
     return authUgi;
+  }
+
+  @Override
+  public TimelinePutResponse putEntities(ApplicationAttemptId appAttemptId,
+      TimelineEntityGroupId groupId, TimelineEntity... entities)
+      throws IOException, YarnException {
+    if (Float.compare(this.timelineServiceVersion, 1.5f) != 0) {
+      throw new YarnException(
+        "This API is not supported under current Timeline Service Version: "
+            + timelineServiceVersion);
+    }
+
+    return timelineWriter.putEntities(appAttemptId, groupId, entities);
+  }
+
+  @Override
+  public void putDomain(ApplicationAttemptId appAttemptId,
+      TimelineDomain domain) throws IOException, YarnException {
+    if (Float.compare(this.timelineServiceVersion, 1.5f) != 0) {
+      throw new YarnException(
+        "This API is not supported under current Timeline Service Version: "
+            + timelineServiceVersion);
+    }
+    timelineWriter.putDomain(appAttemptId, domain);
+  }
+
+  @Private
+  @VisibleForTesting
+  public void setTimelineWriter(TimelineWriter writer) {
+    this.timelineWriter = writer;
   }
 }

@@ -1557,12 +1557,55 @@ public class YarnConfiguration extends Configuration {
   public static final String TIMELINE_SERVICE_UI_WEB_PATH_PREFIX =
       TIMELINE_SERVICE_PREFIX + "ui-web-path.";
 
+  /** Timeline client settings */
+  public static final String TIMELINE_SERVICE_CLIENT_PREFIX =
+      TIMELINE_SERVICE_PREFIX + "client.";
+
   /**
    * Path to war file or static content directory for this UI
    * (For pluggable UIs).
    */
   public static final String TIMELINE_SERVICE_UI_ON_DISK_PATH_PREFIX =
       TIMELINE_SERVICE_PREFIX + "ui-on-disk-path.";
+
+  /**
+   * The setting for timeline service v1.5
+   */
+  public static final String TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX =
+      TIMELINE_SERVICE_PREFIX + "entity-group-fs-store.";
+
+  public static final String TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_ACTIVE_DIR =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "active-dir";
+
+  public static final String
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_ACTIVE_DIR_DEFAULT =
+      "/tmp/entity-file-history/active";
+
+  public static final String
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_RETRY_POLICY_SPEC =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "retry-policy-spec";
+  public static final String
+      DEFAULT_TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_RETRY_POLICY_SPEC =
+      "2000, 500";
+
+  public static final String
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_SUMMARY_ENTITY_TYPES =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "summary-entity-types";
+
+  public static final String TIMELINE_SERVICE_CLIENT_FD_FLUSH_INTERVAL_SECS =
+      TIMELINE_SERVICE_CLIENT_PREFIX + "fd-flush-interval-secs";
+  public static final long
+      TIMELINE_SERVICE_CLIENT_FD_FLUSH_INTERVAL_SECS_DEFAULT = 10;
+
+  public static final String TIMELINE_SERVICE_CLIENT_FD_CLEAN_INTERVAL_SECS =
+      TIMELINE_SERVICE_CLIENT_PREFIX + "fd-clean-interval-secs";
+  public static final long
+      TIMELINE_SERVICE_CLIENT_FD_CLEAN_INTERVAL_SECS_DEFAULT = 60;
+
+  public static final String TIMELINE_SERVICE_CLIENT_FD_RETAIN_SECS =
+      TIMELINE_SERVICE_CLIENT_PREFIX + "fd-retain-secs";
+  public static final long TIMELINE_SERVICE_CLIENT_FD_RETAIN_SECS_DEFAULT =
+      5*60;
 
   // mark app-history related configs @Private as application history is going
   // to be integrated into the timeline service
@@ -1604,8 +1647,8 @@ public class YarnConfiguration extends Configuration {
   public static final String FS_APPLICATION_HISTORY_STORE_COMPRESSION_TYPE =
       APPLICATION_HISTORY_PREFIX + "fs-history-store.compression-type";
   @Private
-  public static final String DEFAULT_FS_APPLICATION_HISTORY_STORE_COMPRESSION_TYPE =
-      "none";
+  public static final String
+      DEFAULT_FS_APPLICATION_HISTORY_STORE_COMPRESSION_TYPE = "none";
 
   /** The setting that controls whether timeline service is enabled or not. */
   public static final String TIMELINE_SERVICE_ENABLED =
@@ -1654,7 +1697,7 @@ public class YarnConfiguration extends Configuration {
       APPLICATION_HISTORY_PREFIX + "max-applications";
   public static final long DEFAULT_APPLICATION_HISTORY_MAX_APPS = 10000;
 
-  /** Timeline service store class */
+  /** Timeline service store class. */
   public static final String TIMELINE_SERVICE_STORE =
       TIMELINE_SERVICE_PREFIX + "store-class";
 
@@ -1766,10 +1809,6 @@ public class YarnConfiguration extends Configuration {
   /** Default value for cross origin support for timeline server.*/
   public static final boolean
       TIMELINE_SERVICE_HTTP_CROSS_ORIGIN_ENABLED_DEFAULT = false;
-
-  /** Timeline client settings */
-  public static final String TIMELINE_SERVICE_CLIENT_PREFIX =
-      TIMELINE_SERVICE_PREFIX + "client.";
 
   /** Timeline client call, max retries (-1 means no limit) */
   public static final String TIMELINE_SERVICE_CLIENT_MAX_RETRIES =

@@ -19,15 +19,20 @@
 package org.apache.hadoop.yarn.server.timeline.webapp;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.URI;
 import java.util.EnumSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
+import org.apache.hadoop.yarn.client.api.impl.DirectTimelineWriter;
 import org.apache.hadoop.yarn.client.api.impl.TimelineClientImpl;
+import org.apache.hadoop.yarn.client.api.impl.TimelineWriter;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebApp;
@@ -39,6 +44,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 
 public class TestTimelineWebServicesWithSSL {
@@ -60,6 +66,7 @@ public class TestTimelineWebServicesWithSSL {
     conf.setClass(YarnConfiguration.TIMELINE_SERVICE_STORE,
         MemoryTimelineStore.class, TimelineStore.class);
     conf.set(YarnConfiguration.YARN_HTTP_POLICY_KEY, "HTTPS_ONLY");
+    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 1.0f);
 
     File base = new File(BASEDIR);
     FileUtil.fullyDelete(base);
@@ -123,11 +130,17 @@ public class TestTimelineWebServicesWithSSL {
     private ClientResponse resp;
 
     @Override
-    public ClientResponse doPostingObject(Object obj, String path) {
-      resp = super.doPostingObject(obj, path);
-      return resp;
+    protected TimelineWriter createTimelineWriter(Configuration conf,
+        UserGroupInformation authUgi, Client client, URI resURI)
+            throws IOException {
+      return new DirectTimelineWriter(authUgi, client, resURI) {
+        @Override
+        public ClientResponse doPostingObject(Object obj, String path) {
+          resp = super.doPostingObject(obj, path);
+          return resp;
+        }
+      };
     }
-
   }
 
 }
