@@ -651,6 +651,8 @@ Release 2.9.0 - UNRELEASED
 
     HADOOP-12625. Add a config to disable the /logs endpoints (rkanter)
 
+    HADOOP-12566. Add NullGroupMapping. (Daniel Templeton via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
