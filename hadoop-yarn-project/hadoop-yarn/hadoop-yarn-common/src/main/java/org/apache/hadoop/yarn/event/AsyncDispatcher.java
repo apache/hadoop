@@ -59,7 +59,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   // Indicates all the remaining dispatcher's events on stop have been drained
   // and processed.
   private volatile boolean drained = true;
-  private Object waitForDrained = new Object();
+  private final Object waitForDrained = new Object();
 
   // For drainEventsOnStop enabled only, block newly coming events into the
   // queue while stopping.

@@ -1182,6 +1182,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4477. FairScheduler: Handle condition which can result in an
     infinite loop in attemptScheduling. (Tao Jie via asuresh)
 
+    YARN-4400. AsyncDispatcher.waitForDrained should be final. (Daniel Templeton 
+    via junping_du)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
