@@ -671,6 +671,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6550. archive-logs tool changes log ownership to the Yarn
     user when using DefaultContainerExecutor (rkanter)
 
+   MAPREDUCE-6419. JobHistoryServer doesn't sort properly based on Job ID when Job id's 
+   exceed 9999. (Mohammad Shahid Khan via rohithsharmaks)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
