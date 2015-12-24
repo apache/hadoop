@@ -298,7 +298,7 @@ public class HsTaskPage extends HsView {
       .append("\n{'aTargets': [ 4 ]")
       .append(", 'bSearchable': false }")
 
-      .append("\n, {'sType':'numeric', 'aTargets': [ 0 ]")
+      .append("\n, {'sType':'natural', 'aTargets': [ 0 ]")
       .append(", 'mRender': parseHadoopID }")
 
       .append("\n, {'sType':'numeric', 'aTargets': [ 5, 6")
