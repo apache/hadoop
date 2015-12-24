@@ -382,6 +382,8 @@ public class TestAMRestart {
   @Test(timeout = 100000)
   public void testAMBlacklistPreventsRestartOnSameNode() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
     conf.setBoolean(YarnConfiguration.AM_BLACKLISTING_ENABLED, true);
     testAMBlacklistPreventRestartOnSameNode(false, conf);
   }
