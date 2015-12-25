@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.junit.matchers.JUnitMatchers.containsString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -48,6 +47,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
@@ -81,19 +81,21 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
-import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch.ShellScriptBuilder;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
@@ -108,6 +110,7 @@ import org.junit.Test;
 
 public class TestContainerLaunch extends BaseContainerManagerTest {
 
+  private static final String INVALID_JAVA_HOME = "/no/jvm/here";
   protected Context distContext = new NMContext(new NMContainerTokenSecretManager(
     conf), new NMTokenSecretManagerInNM(), null,
     new ApplicationACLsManager(conf), new NMNullStateStoreService()) {
@@ -490,6 +493,147 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     Assert.assertTrue(
       result.get(0).endsWith("userjarlink.jar"));
 
+  }
+
+  @Test
+  public void testErrorLogOnContainerExit() throws Exception {
+    verifyTailErrorLogOnContainerExit(new Configuration(), "/stderr", false);
+  }
+
+  @Test
+  public void testErrorLogOnContainerExitForCase() throws Exception {
+    verifyTailErrorLogOnContainerExit(new Configuration(), "/STDERR.log",
+        false);
+  }
+
+  @Test
+  public void testErrorLogOnContainerExitForExt() throws Exception {
+    verifyTailErrorLogOnContainerExit(new Configuration(), "/AppMaster.stderr",
+        false);
+  }
+
+  @Test
+  public void testErrorLogOnContainerExitWithCustomPattern() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setStrings(YarnConfiguration.NM_CONTAINER_STDERR_PATTERN,
+        "{*stderr*,*log*}");
+    verifyTailErrorLogOnContainerExit(conf, "/error.log", false);
+  }
+
+  @Test
+  public void testErrorLogOnContainerExitWithMultipleFiles() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setStrings(YarnConfiguration.NM_CONTAINER_STDERR_PATTERN,
+        "{*stderr*,*stdout*}");
+    verifyTailErrorLogOnContainerExit(conf, "/stderr.log", true);
+  }
+
+  private void verifyTailErrorLogOnContainerExit(Configuration conf,
+      String errorFileName, boolean testForMultipleErrFiles) throws Exception {
+    Container container = mock(Container.class);
+    ApplicationId appId =
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    ContainerId containerId = ContainerId
+        .newContainerId(ApplicationAttemptId.newInstance(appId, 1), 1);
+    when(container.getContainerId()).thenReturn(containerId);
+    when(container.getUser()).thenReturn("test");
+    String relativeContainerLogDir = ContainerLaunch.getRelativeContainerLogDir(
+        appId.toString(), ConverterUtils.toString(containerId));
+    Path containerLogDir =
+        dirsHandler.getLogPathForWrite(relativeContainerLogDir, false);
+
+    ContainerLaunchContext clc = mock(ContainerLaunchContext.class);
+    List<String> invalidCommand = new ArrayList<String>();
+    invalidCommand.add("$JAVA_HOME/bin/java");
+    invalidCommand.add("-Djava.io.tmpdir=$PWD/tmp");
+    invalidCommand.add("-Dlog4j.configuration=container-log4j.properties");
+    invalidCommand.add("-Dyarn.app.container.log.dir=" + containerLogDir);
+    invalidCommand.add("-Dyarn.app.container.log.filesize=0");
+    invalidCommand.add("-Dhadoop.root.logger=INFO,CLA");
+    invalidCommand.add("-Dhadoop.root.logfile=syslog");
+    invalidCommand.add("-Xmx1024m");
+    invalidCommand.add("org.apache.hadoop.mapreduce.v2.app.MRAppMaster");
+    invalidCommand.add("1>" + containerLogDir + "/stdout");
+    invalidCommand.add("2>" + containerLogDir + errorFileName);
+    when(clc.getCommands()).thenReturn(invalidCommand);
+
+    Map<String, String> userSetEnv = new HashMap<String, String>();
+    userSetEnv.put(Environment.CONTAINER_ID.name(), "user_set_container_id");
+    userSetEnv.put("JAVA_HOME", INVALID_JAVA_HOME);
+    userSetEnv.put(Environment.NM_HOST.name(), "user_set_NM_HOST");
+    userSetEnv.put(Environment.NM_PORT.name(), "user_set_NM_PORT");
+    userSetEnv.put(Environment.NM_HTTP_PORT.name(), "user_set_NM_HTTP_PORT");
+    userSetEnv.put(Environment.LOCAL_DIRS.name(), "user_set_LOCAL_DIR");
+    userSetEnv.put(Environment.USER.key(),
+        "user_set_" + Environment.USER.key());
+    userSetEnv.put(Environment.LOGNAME.name(), "user_set_LOGNAME");
+    userSetEnv.put(Environment.PWD.name(), "user_set_PWD");
+    userSetEnv.put(Environment.HOME.name(), "user_set_HOME");
+    userSetEnv.put(Environment.CLASSPATH.name(), "APATH");
+    when(clc.getEnvironment()).thenReturn(userSetEnv);
+    when(container.getLaunchContext()).thenReturn(clc);
+
+    when(container.getLocalizedResources())
+        .thenReturn(Collections.<Path, List<String>> emptyMap());
+    Dispatcher dispatcher = mock(Dispatcher.class);
+
+    @SuppressWarnings("rawtypes")
+    ContainerExitHandler eventHandler =
+        new ContainerExitHandler(testForMultipleErrFiles);
+    when(dispatcher.getEventHandler()).thenReturn(eventHandler);
+
+    Application app = mock(Application.class);
+    when(app.getAppId()).thenReturn(appId);
+    when(app.getUser()).thenReturn("test");
+
+    Credentials creds = mock(Credentials.class);
+    when(container.getCredentials()).thenReturn(creds);
+
+    ((NMContext) context).setNodeId(NodeId.newInstance("127.0.0.1", HTTP_PORT));
+
+    ContainerLaunch launch = new ContainerLaunch(context, conf, dispatcher,
+        exec, app, container, dirsHandler, containerManager);
+    launch.call();
+    Assert.assertTrue("ContainerExitEvent should have occured",
+        eventHandler.isContainerExitEventOccured());
+  }
+
+  private static class ContainerExitHandler
+      implements EventHandler<ContainerEvent> {
+    private boolean testForMultiFile;
+
+    ContainerExitHandler(boolean testForMultiFile) {
+      this.testForMultiFile = testForMultiFile;
+    }
+
+    boolean containerExitEventOccured = false;
+
+    public boolean isContainerExitEventOccured() {
+      return containerExitEventOccured;
+    }
+
+    public void handle(ContainerEvent event) {
+      if (event instanceof ContainerExitEvent) {
+        containerExitEventOccured = true;
+        ContainerExitEvent exitEvent = (ContainerExitEvent) event;
+        Assert.assertEquals(ContainerEventType.CONTAINER_EXITED_WITH_FAILURE,
+            exitEvent.getType());
+        LOG.info("Diagnostic Info : " + exitEvent.getDiagnosticInfo());
+        if (testForMultiFile) {
+          Assert.assertTrue("Should contain the Multi file information",
+              exitEvent.getDiagnosticInfo().contains("Error files: "));
+        }
+        Assert.assertTrue(
+            "Should contain the error Log message with tail size info",
+            exitEvent.getDiagnosticInfo()
+                .contains("Last "
+                    + YarnConfiguration.DEFAULT_NM_CONTAINER_STDERR_BYTES
+                    + " bytes of"));
+        Assert.assertTrue("Should contain contents of error Log",
+            exitEvent.getDiagnosticInfo().contains(
+                INVALID_JAVA_HOME + "/bin/java: No such file or directory"));
+      }
+    }
   }
 
   private static List<String> getJarManifestClasspath(String path)
