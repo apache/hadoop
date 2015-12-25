@@ -98,6 +98,8 @@ abstract public class BaseReplicationPolicyTest {
       cluster.add(dataNodes[i]);
       bm.getDatanodeManager().getHeartbeatManager().addDatanode(
           dataNodes[i]);
+      bm.getDatanodeManager().getHeartbeatManager().updateDnStat(
+          dataNodes[i]);
     }
     updateHeartbeatWithUsage();
   }
