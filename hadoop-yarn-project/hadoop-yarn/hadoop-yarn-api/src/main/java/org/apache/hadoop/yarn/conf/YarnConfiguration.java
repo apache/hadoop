@@ -1332,7 +1332,18 @@ public class YarnConfiguration extends Configuration {
 
   public static final String NM_USER_HOME_DIR =
       NM_PREFIX + "user-home-dir";
-  
+
+  public static final String NM_CONTAINER_STDERR_PATTERN =
+      NM_PREFIX + "container.stderr.pattern";
+
+  public static final String DEFAULT_NM_CONTAINER_STDERR_PATTERN =
+      "{*stderr*,*STDERR*}";
+
+  public static final String NM_CONTAINER_STDERR_BYTES =
+      NM_PREFIX + "container.stderr.tail.bytes";
+
+  public static final long DEFAULT_NM_CONTAINER_STDERR_BYTES = 4 * 1024;
+
   /**The kerberos principal to be used for spnego filter for NM.*/
   public static final String NM_WEBAPP_SPNEGO_USER_NAME_KEY =
       NM_PREFIX + "webapp.spnego-principal";

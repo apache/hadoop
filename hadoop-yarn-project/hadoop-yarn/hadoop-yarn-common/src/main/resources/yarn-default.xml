@@ -2459,6 +2459,29 @@
     <value>org.apache.hadoop.yarn.server.nodemanager.amrmproxy.DefaultRequestInterceptor</value>
   </property>
 
+  <property>
+    <description>
+    Error filename pattern, to identify the file in the container's
+    Log directory which contain the container's error log. As error file
+    redirection is done by client/AM and yarn will not be aware of the error
+    file name. YARN uses this pattern to identify the error file and tail
+    the error log as diagnostics when the container execution returns non zero
+    value. Filename patterns are case sensitive and should match the
+    specifications of FileSystem.globStatus(Path) api. If multiple filenames
+    matches the pattern, first file matching the pattern will be picked.
+    </description>
+    <name>yarn.nodemanager.container.stderr.pattern</name>
+    <value>{*stderr*,*STDERR*}</value>
+  </property>
+
+  <property>
+    <description>
+    Size of the container error file which needs to be tailed, in bytes.
+    </description>
+    <name>yarn.nodemanager.container.stderr.tail.bytes </name>
+    <value>4096</value>
+  </property>
+
  <property>
     <description>
     Enable/disable blacklisting of hosts for AM based on AM failures on those

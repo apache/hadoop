@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -38,7 +39,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
@@ -61,6 +65,7 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
+import org.apache.hadoop.yarn.server.nodemanager.WindowsSecureContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -71,7 +76,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
-import org.apache.hadoop.yarn.server.nodemanager.WindowsSecureContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
@@ -171,6 +175,7 @@ public class ContainerLaunch implements Callable<Integer> {
       return 0;
     }
 
+    Path containerLogDir;
     try {
       localResources = container.getLocalizedResources();
       if (localResources == null) {
@@ -186,7 +191,7 @@ public class ContainerLaunch implements Callable<Integer> {
       String appIdStr = app.getAppId().toString();
       String relativeContainerLogDir = ContainerLaunch
           .getRelativeContainerLogDir(appIdStr, containerIdStr);
-      Path containerLogDir =
+      containerLogDir =
           dirsHandler.getLogPathForWrite(relativeContainerLogDir, false);
       for (String str : command) {
         // TODO: Should we instead work via symlinks without this grammar?
@@ -334,6 +339,11 @@ public class ContainerLaunch implements Callable<Integer> {
       LOG.debug("Container " + containerIdStr + " completed with exit code "
                 + ret);
     }
+
+    StringBuilder diagnosticInfo =
+        new StringBuilder("Container exited with a non-zero exit code ");
+    diagnosticInfo.append(ret);
+    diagnosticInfo.append(". ");
     if (ret == ExitCode.FORCE_KILLED.getExitCode()
         || ret == ExitCode.TERMINATED.getExitCode()) {
       // If the process was killed, Send container_cleanedup_after_kill and
@@ -341,16 +351,13 @@ public class ContainerLaunch implements Callable<Integer> {
       dispatcher.getEventHandler().handle(
             new ContainerExitEvent(containerID,
                 ContainerEventType.CONTAINER_KILLED_ON_REQUEST, ret,
-                "Container exited with a non-zero exit code " + ret));
+                diagnosticInfo.toString()));
       return ret;
     }
 
     if (ret != 0) {
-      LOG.warn("Container exited with a non-zero exit code " + ret);
-      this.dispatcher.getEventHandler().handle(new ContainerExitEvent(
-          containerID,
-          ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret,
-          "Container exited with a non-zero exit code " + ret));
+      handleContainerExitWithFailure(containerID, ret, containerLogDir,
+          diagnosticInfo);
       return ret;
     }
 
@@ -359,6 +366,78 @@ public class ContainerLaunch implements Callable<Integer> {
         new ContainerEvent(containerID,
             ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS));
     return 0;
+  }
+
+  /**
+   * Tries to tail and fetch TAIL_SIZE_IN_BYTES of data from the error log.
+   * ErrorLog filename is not fixed and depends upon app, hence file name
+   * pattern is used.
+   * @param containerID
+   * @param ret
+   * @param containerLogDir
+   * @param diagnosticInfo
+   */
+  @SuppressWarnings("unchecked")
+  private void handleContainerExitWithFailure(ContainerId containerID, int ret,
+      Path containerLogDir, StringBuilder diagnosticInfo) {
+    LOG.warn(diagnosticInfo);
+
+    String errorFileNamePattern =
+        conf.get(YarnConfiguration.NM_CONTAINER_STDERR_PATTERN,
+            YarnConfiguration.DEFAULT_NM_CONTAINER_STDERR_PATTERN);
+    FSDataInputStream errorFileIS = null;
+    try {
+      FileSystem fileSystem = FileSystem.getLocal(conf).getRaw();
+      FileStatus[] errorFileStatuses = fileSystem
+          .globStatus(new Path(containerLogDir, errorFileNamePattern));
+      if (errorFileStatuses != null && errorFileStatuses.length != 0) {
+        long tailSizeInBytes =
+            conf.getLong(YarnConfiguration.NM_CONTAINER_STDERR_BYTES,
+                YarnConfiguration.DEFAULT_NM_CONTAINER_STDERR_BYTES);
+        Path errorFile = errorFileStatuses[0].getPath();
+        long fileSize = errorFileStatuses[0].getLen();
+
+        // if more than one file matches the stderr pattern, take the latest
+        // modified file, and also append the file names in the diagnosticInfo
+        if (errorFileStatuses.length > 1) {
+          String[] errorFileNames = new String[errorFileStatuses.length];
+          long latestModifiedTime = errorFileStatuses[0].getModificationTime();
+          errorFileNames[0] = errorFileStatuses[0].getPath().getName();
+          for (int i = 1; i < errorFileStatuses.length; i++) {
+            errorFileNames[i] = errorFileStatuses[i].getPath().getName();
+            if (errorFileStatuses[i]
+                .getModificationTime() > latestModifiedTime) {
+              latestModifiedTime = errorFileStatuses[i].getModificationTime();
+              errorFile = errorFileStatuses[i].getPath();
+              fileSize = errorFileStatuses[i].getLen();
+            }
+          }
+          diagnosticInfo.append("Error files: ")
+              .append(StringUtils.join(", ", errorFileNames)).append(".\n");
+        }
+
+        long startPosition =
+            (fileSize < tailSizeInBytes) ? 0 : fileSize - tailSizeInBytes;
+        int bufferSize =
+            (int) ((fileSize < tailSizeInBytes) ? fileSize : tailSizeInBytes);
+        byte[] tailBuffer = new byte[bufferSize];
+        errorFileIS = fileSystem.open(errorFile);
+        errorFileIS.readFully(startPosition, tailBuffer);
+
+        diagnosticInfo.append("Last ").append(tailSizeInBytes)
+            .append(" bytes of ").append(errorFile.getName()).append(" :\n")
+            .append(new String(tailBuffer, StandardCharsets.UTF_8));
+      }
+    } catch (IOException e) {
+      LOG.error("Failed to get tail of the container's error log file", e);
+    } finally {
+      IOUtils.cleanup(LOG, errorFileIS);
+    }
+
+    this.dispatcher.getEventHandler()
+        .handle(new ContainerExitEvent(containerID,
+            ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret,
+            diagnosticInfo.toString()));
   }
 
   protected String getPidFileSubpath(String appIdStr, String containerIdStr) {
