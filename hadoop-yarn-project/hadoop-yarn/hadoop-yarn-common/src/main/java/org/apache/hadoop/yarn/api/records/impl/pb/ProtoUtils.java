@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ContainerRetryPolicy;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -56,6 +57,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationAttemptStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerRetryPolicyProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerTypeProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ExecutionTypeProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 
@@ -296,5 +298,15 @@ public class ProtoUtils {
   public static ContainerRetryPolicy convertFromProtoFormat(
       ContainerRetryPolicyProto e) {
     return ContainerRetryPolicy.valueOf(e.name());
+  }
+
+  /*
+   * ExecutionType
+   */
+  public static ExecutionTypeProto convertToProtoFormat(ExecutionType e) {
+    return ExecutionTypeProto.valueOf(e.name());
+  }
+  public static ExecutionType convertFromProtoFormat(ExecutionTypeProto e) {
+    return ExecutionType.valueOf(e.name());
   }
 }

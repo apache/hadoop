@@ -288,6 +288,12 @@ message AMBlackListingRequestProto {
   optional bool blacklisting_enabled = 1 [default = false];
   optional float blacklisting_failure_threshold = 2;
 }
+
+enum ExecutionTypeProto {
+  GUARANTEED = 1;
+  OPPORTUNISTIC = 2;
+}
+
 ////////////////////////////////////////////////////////////////////////
 ////// From AM_RM_Protocol /////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
@@ -513,6 +519,7 @@ message ContainerStatusProto {
   optional string diagnostics = 3 [default = "N/A"];
   optional int32 exit_status = 4 [default = -1000];
   optional ResourceProto capability = 5;
+  optional ExecutionTypeProto executionType = 6 [default = GUARANTEED];
 }
 
 enum ContainerExitStatusProto {

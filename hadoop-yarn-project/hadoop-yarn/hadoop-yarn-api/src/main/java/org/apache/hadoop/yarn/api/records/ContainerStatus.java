@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.api.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
@@ -31,6 +32,7 @@ import org.apache.hadoop.yarn.util.Records;
  * It provides details such as:
  * <ul>
  *   <li>{@code ContainerId} of the container.</li>
+ *   <li>{@code ExecutionType} of the container.</li>
  *   <li>{@code ContainerState} of the container.</li>
  *   <li><em>Exit status</em> of a completed container.</li>
  *   <li><em>Diagnostic</em> message for a failed container.</li>
@@ -45,7 +47,17 @@ public abstract class ContainerStatus {
   @Unstable
   public static ContainerStatus newInstance(ContainerId containerId,
       ContainerState containerState, String diagnostics, int exitStatus) {
+    return newInstance(containerId, ExecutionType.GUARANTEED, containerState,
+        diagnostics, exitStatus);
+  }
+
+  @Private
+  @Unstable
+  public static ContainerStatus newInstance(ContainerId containerId,
+      ExecutionType executionType, ContainerState containerState,
+      String diagnostics, int exitStatus) {
     ContainerStatus containerStatus = Records.newRecord(ContainerStatus.class);
+    containerStatus.setExecutionType(executionType);
     containerStatus.setState(containerState);
     containerStatus.setContainerId(containerId);
     containerStatus.setDiagnostics(diagnostics);
@@ -64,6 +76,18 @@ public abstract class ContainerStatus {
   @Private
   @Unstable
   public abstract void setContainerId(ContainerId containerId);
+
+  /**
+   * Get the <code>ExecutionType</code> of the container.
+   * @return <code>ExecutionType</code> of the container
+   */
+  @Public
+  @Evolving
+  public abstract ExecutionType getExecutionType();
+
+  @Private
+  @Unstable
+  public abstract void setExecutionType(ExecutionType executionType);
 
   /**
    * Get the <code>ContainerState</code> of the container.
