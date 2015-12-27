@@ -6,6 +6,9 @@ Trunk - Unreleased
 
   NEW FEATURES
 
+    YARN-2882. Add an OPPORTUNISTIC ExecutionType. 
+    (Konstantinos Karanasos and Inigo Goiri via kasha)
+
   IMPROVEMENTS
 
     YARN-2438. yarn-env.sh cleanup (aw)

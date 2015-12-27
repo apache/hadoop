@@ -51,6 +51,7 @@ message ContainerTokenIdentifierProto {
   optional LogAggregationContextProto logAggregationContext = 10;
   optional string nodeLabelExpression = 11;
   optional ContainerTypeProto containerType = 12;
+  optional ExecutionTypeProto executionType = 13 [default = GUARANTEED];
 }
 
 message ClientToAMTokenIdentifierProto {

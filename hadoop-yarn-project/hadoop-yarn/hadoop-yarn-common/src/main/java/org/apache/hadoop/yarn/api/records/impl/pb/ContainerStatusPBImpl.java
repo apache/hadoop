@@ -24,9 +24,11 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ExecutionTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProtoOrBuilder;
@@ -79,6 +81,7 @@ public class ContainerStatusPBImpl extends ContainerStatus {
     StringBuilder sb = new StringBuilder();
     sb.append("ContainerStatus: [");
     sb.append("ContainerId: ").append(getContainerId()).append(", ");
+    sb.append("ExecutionType: ").append(getExecutionType()).append(", ");
     sb.append("State: ").append(getState()).append(", ");
     sb.append("Capability: ").append(getCapability()).append(", ");
     sb.append("Diagnostics: ").append(getDiagnostics()).append(", ");
@@ -107,7 +110,25 @@ public class ContainerStatusPBImpl extends ContainerStatus {
     }
     viaProto = false;
   }
-    
+
+  @Override
+  public synchronized ExecutionType getExecutionType() {
+    ContainerStatusProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasExecutionType()) {
+      return null;
+    }
+    return convertFromProtoFormat(p.getExecutionType());
+  }
+
+  @Override
+  public synchronized void setExecutionType(ExecutionType executionType) {
+    maybeInitBuilder();
+    if (executionType == null) {
+      builder.clearExecutionType();
+      return;
+    }
+    builder.setExecutionType(convertToProtoFormat(executionType));
+  }
   
   @Override
   public synchronized ContainerState getState() {
@@ -204,6 +225,14 @@ public class ContainerStatusPBImpl extends ContainerStatus {
 
   private ContainerIdProto convertToProtoFormat(ContainerId t) {
     return ((ContainerIdPBImpl)t).getProto();
+  }
+
+  private ExecutionType convertFromProtoFormat(ExecutionTypeProto e) {
+    return ProtoUtils.convertFromProtoFormat(e);
+  }
+
+  private ExecutionTypeProto convertToProtoFormat(ExecutionType e) {
+    return ProtoUtils.convertToProtoFormat(e);
   }
 
   private ResourceProto convertToProtoFormat(Resource e) {

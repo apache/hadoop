@@ -33,6 +33,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -43,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerTypeProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ExecutionTypeProto;
 import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.ContainerTokenIdentifierProto;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 
@@ -85,6 +87,16 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
       long rmIdentifier, Priority priority, long creationTime,
       LogAggregationContext logAggregationContext, String nodeLabelExpression,
       ContainerType containerType) {
+    this(containerID, hostName, appSubmitter, r, expiryTimeStamp, masterKeyId,
+        rmIdentifier, priority, creationTime, logAggregationContext,
+        nodeLabelExpression, containerType, ExecutionType.GUARANTEED);
+  }
+
+  public ContainerTokenIdentifier(ContainerId containerID, String hostName,
+      String appSubmitter, Resource r, long expiryTimeStamp, int masterKeyId,
+      long rmIdentifier, Priority priority, long creationTime,
+      LogAggregationContext logAggregationContext, String nodeLabelExpression,
+      ContainerType containerType, ExecutionType executionType) {
     ContainerTokenIdentifierProto.Builder builder =
         ContainerTokenIdentifierProto.newBuilder();
     if (containerID != null) {
@@ -112,6 +124,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
       builder.setNodeLabelExpression(nodeLabelExpression);
     }
     builder.setContainerType(convertToProtoFormat(containerType));
+    builder.setExecutionType(convertToProtoFormat(executionType));
 
     proto = builder.build();
   }
@@ -163,7 +176,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     return proto.getCreationTime();
   }
   /**
-   * Get the RMIdentifier of RM in which containers are allocated
+   * Get the RMIdentifier of RM in which containers are allocated.
    * @return RMIdentifier
    */
   public long getRMIdentifier() {
@@ -179,6 +192,17 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
       return null;
     }
     return convertFromProtoFormat(proto.getContainerType());
+  }
+
+  /**
+   * Get the ExecutionType of container to allocate
+   * @return ExecutionType
+   */
+  public ExecutionType getExecutionType(){
+    if (!proto.hasExecutionType()) {
+      return null;
+    }
+    return convertFromProtoFormat(proto.getExecutionType());
   }
 
   public ContainerTokenIdentifierProto getProto() {
@@ -264,5 +288,14 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
   private ContainerType convertFromProtoFormat(
       ContainerTypeProto containerType) {
     return ProtoUtils.convertFromProtoFormat(containerType);
+  }
+
+  private ExecutionTypeProto convertToProtoFormat(ExecutionType executionType) {
+    return ProtoUtils.convertToProtoFormat(executionType);
+  }
+
+  private ExecutionType convertFromProtoFormat(
+      ExecutionTypeProto executionType) {
+    return ProtoUtils.convertFromProtoFormat(executionType);
   }
 }
