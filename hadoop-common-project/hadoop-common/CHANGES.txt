@@ -1529,6 +1529,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12636. Prevent ServiceLoader failure init for unused FileSystems.
     (Inigo Goiri via cdouglas)
 
+    HADOOP-12681. start-build-env.sh fails in branch-2.
+    (Kengo Seki via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
