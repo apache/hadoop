@@ -454,6 +454,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6566. Add retry support to mapreduce CLI tool.
     (Varun Vasudev via xgong)
 
+    MAPREDUCE-6574. MR AM should print host of failed tasks. 
+    (Mohammad Shahid Khan via wangda)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6376. Add avro binary support for jhist files (Ray Chiang via
