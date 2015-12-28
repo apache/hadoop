@@ -76,6 +76,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4341. add doc about timeline performance tool usage (Chang Li via
     sjlee)
 
+    YARN-4417. Make RM and Timeline-server REST APIs more consistent.
+    (wtan via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
