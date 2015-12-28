@@ -169,6 +169,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInf
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.server.webapp.WebServices;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.AdHocLogDumper;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
@@ -182,7 +185,7 @@ import com.google.inject.Singleton;
 
 @Singleton
 @Path("/ws/v1/cluster")
-public class RMWebServices {
+public class RMWebServices extends WebServices {
   private static final Log LOG =
       LogFactory.getLog(RMWebServices.class.getName());
   private static final String EMPTY = "";
@@ -201,6 +204,7 @@ public class RMWebServices {
 
   @Inject
   public RMWebServices(final ResourceManager rm, Configuration conf) {
+    super(rm.getClientRMService());
     this.rm = rm;
     this.conf = conf;
     isCentralizedNodeLabelConfiguration =
@@ -335,8 +339,8 @@ public class RMWebServices {
       }
     }
     
-    Collection<RMNode> rmNodes = RMServerUtils.queryRMNodes(this.rm.getRMContext(),
-        acceptedStates);
+    Collection<RMNode> rmNodes = RMServerUtils.queryRMNodes(
+        this.rm.getRMContext(), acceptedStates);
     NodesInfo nodesInfo = new NodesInfo();
     for (RMNode rmNode : rmNodes) {
       NodeInfo nodeInfo = new NodeInfo(rmNode, sched);
@@ -617,39 +621,6 @@ public class RMWebServices {
     return appStatInfo;
   }
 
-  private static Set<String> parseQueries(
-      Set<String> queries, boolean isState) {
-    Set<String> params = new HashSet<String>();
-    if (!queries.isEmpty()) {
-      for (String query : queries) {
-        if (query != null && !query.trim().isEmpty()) {
-          String[] paramStrs = query.split(",");
-          for (String paramStr : paramStrs) {
-            if (paramStr != null && !paramStr.trim().isEmpty()) {
-              if (isState) {
-                try {
-                  // enum string is in the uppercase
-                  YarnApplicationState.valueOf(
-                      StringUtils.toUpperCase(paramStr.trim()));
-                } catch (RuntimeException e) {
-                  YarnApplicationState[] stateArray =
-                      YarnApplicationState.values();
-                  String allAppStates = Arrays.toString(stateArray);
-                  throw new BadRequestException(
-                      "Invalid application-state " + paramStr.trim()
-                      + " specified. It should be one of " + allAppStates);
-                }
-              }
-              params.add(
-                  StringUtils.toLowerCase(paramStr.trim()));
-            }
-          }
-        }
-      }
-    }
-    return params;
-  }
-
   private static Map<YarnApplicationState, Map<String, Long>> buildScoreboard(
      Set<String> states, Set<String> types) {
     Map<YarnApplicationState, Map<String, Long>> scoreboard
@@ -726,6 +697,40 @@ public class RMWebServices {
     }
 
     return appAttemptsInfo;
+  }
+
+  @GET
+  @Path("/apps/{appid}/appattempts/{appattemptid}")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Override
+  public org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo getAppAttempt(@Context HttpServletRequest req,
+      @Context HttpServletResponse res, @PathParam("appid") String appId,
+      @PathParam("appattemptid") String appAttemptId) {
+    init(res);
+    return super.getAppAttempt(req, res, appId, appAttemptId);
+  }
+
+  @GET
+  @Path("/apps/{appid}/appattempts/{appattemptid}/containers")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Override
+  public ContainersInfo getContainers(@Context HttpServletRequest req,
+      @Context HttpServletResponse res, @PathParam("appid") String appId,
+      @PathParam("appattemptid") String appAttemptId) {
+    init(res);
+    return super.getContainers(req, res, appId, appAttemptId);
+  }
+
+  @GET
+  @Path("/apps/{appid}/appattempts/{appattemptid}/containers/{containerid}")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Override
+  public ContainerInfo getContainer(@Context HttpServletRequest req,
+      @Context HttpServletResponse res, @PathParam("appid") String appId,
+      @PathParam("appattemptid") String appAttemptId,
+      @PathParam("containerid") String containerId) {
+    init(res);
+    return super.getContainer(req, res, appId, appAttemptId, containerId);
   }
 
   @GET
@@ -885,8 +890,7 @@ public class RMWebServices {
     NodeId nid = ConverterUtils.toNodeIdWithDefaultPort(nodeId);
     Map<NodeId, Set<String>> newLabelsForNode =
         new HashMap<NodeId, Set<String>>();
-    newLabelsForNode.put(nid,
-        new HashSet<String>(newNodeLabelsName));
+    newLabelsForNode.put(nid, new HashSet<String>(newNodeLabelsName));
 
     return replaceLabelsOnNode(newLabelsForNode, hsr,
         "/nodes/nodeid/replace-labels");
