@@ -383,7 +383,9 @@ public class TestWebHdfsTokens {
     reset(fs);
 
     // verify an expired token is replaced with a new token
-    fs.open(p).close();
+    InputStream is = fs.open(p);
+    is.read();
+    is.close();
     verify(fs, times(2)).getDelegationToken(); // first bad, then good
     verify(fs, times(1)).replaceExpiredDelegationToken();
     verify(fs, times(1)).getDelegationToken(null);
@@ -398,7 +400,7 @@ public class TestWebHdfsTokens {
     // verify with open because it's a little different in how it
     // opens connections
     fs.cancelDelegationToken(fs.getRenewToken());
-    InputStream is = fs.open(p);
+    is = fs.open(p);
     is.read();
     is.close();
     verify(fs, times(2)).getDelegationToken(); // first bad, then good

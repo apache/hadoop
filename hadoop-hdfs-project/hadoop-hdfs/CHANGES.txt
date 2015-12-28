@@ -11,6 +11,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-8647. Abstract BlockManager's rack policy into BlockPlacementPolicy.
     (Brahma Reddy Battula via mingma)
 
+    HDFS-7163. WebHdfsFileSystem should retry reads according to the configured
+    retry policy. (Eric Payne via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES

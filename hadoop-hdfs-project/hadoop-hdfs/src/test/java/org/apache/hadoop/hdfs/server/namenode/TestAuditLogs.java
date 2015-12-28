@@ -279,7 +279,7 @@ public class TestAuditLogs {
     setupAuditLogs();
 
     WebHdfsFileSystem webfs = WebHdfsTestUtil.getWebHdfsFileSystemAs(userGroupInfo, conf, WebHdfsFileSystem.SCHEME);
-    webfs.open(file);
+    webfs.open(file).read();
 
     verifyAuditLogsCheckPattern(true, 3, webOpenPattern);
   }
