@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.junit.Test;
@@ -57,6 +58,8 @@ public class TestSeveralNameNodes {
     // setup the harness
     harness.setNumberOfNameNodes(NUM_NAMENODES);
     harness.addFailoverThread(TIME_BETWEEN_FAILOVERS);
+    harness.conf.setInt(HdfsClientConfigKeys.Failover.SLEEPTIME_MAX_KEY, 1000);
+    harness.conf.setInt(HdfsClientConfigKeys.Failover.MAX_ATTEMPTS_KEY, 128);
 
     final MiniDFSCluster cluster = harness.startCluster();
     try {
@@ -78,7 +81,8 @@ public class TestSeveralNameNodes {
 
       // wait for all the writer threads to finish, or that we exceed the time
       long start = System.currentTimeMillis();
-      while ((System.currentTimeMillis() - start) < RUNTIME) {
+      while ((System.currentTimeMillis() - start) < RUNTIME &&
+          writers.size() > 0) {
         for (int i = 0; i < writers.size(); i++) {
           CircularWriter writer = writers.get(i);
           // remove the writer from the ones to check
