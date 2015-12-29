@@ -400,6 +400,9 @@ Trunk (Unreleased)
     HDFS-9580. TestComputeInvalidateWork#testDatanodeReRegistration failed
     due to unexpected number of invalidate blocks. (Wei-Chiu Chuang via zhz)
 
+    HDFS-9376. TestSeveralNameNodes fails occasionally.
+    (Masatake Iwasaki via cnauroth)
+
     BREAKDOWN OF HDFS-7285 SUBTASKS AND RELATED JIRAS
 
       HDFS-7347. Configurable erasure coding policy for individual files and
