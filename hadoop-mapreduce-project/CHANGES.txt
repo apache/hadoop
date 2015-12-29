@@ -680,6 +680,9 @@ Release 2.8.0 - UNRELEASED
    MAPREDUCE-6419. JobHistoryServer doesn't sort properly based on Job ID when Job id's 
    exceed 9999. (Mohammad Shahid Khan via rohithsharmaks)
 
+    MAPREDUCE-6589. TestTaskLog outputs a log under directory other than
+    target/test-dir. (aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
