@@ -457,6 +457,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6574. MR AM should print host of failed tasks. 
     (Mohammad Shahid Khan via wangda)
 
+    MAPREDUCE-6584. Remove trailing whitespaces from mapred-default.xml.
+    (aajisaka)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6376. Add avro binary support for jhist files (Ray Chiang via
