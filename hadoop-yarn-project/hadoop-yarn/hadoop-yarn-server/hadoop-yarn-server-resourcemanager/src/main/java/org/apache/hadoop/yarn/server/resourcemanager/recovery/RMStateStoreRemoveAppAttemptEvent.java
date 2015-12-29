@@ -18,22 +18,20 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-public enum RMStateStoreEventType {
-  STORE_APP_ATTEMPT,
-  STORE_APP,
-  UPDATE_APP,
-  UPDATE_APP_ATTEMPT,
-  REMOVE_APP,
-  REMOVE_APP_ATTEMPT,
-  FENCED,
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 
-  // Below events should be called synchronously
-  STORE_MASTERKEY,
-  REMOVE_MASTERKEY,
-  STORE_DELEGATION_TOKEN,
-  REMOVE_DELEGATION_TOKEN,
-  UPDATE_DELEGATION_TOKEN,
-  UPDATE_AMRM_TOKEN,
-  STORE_RESERVATION,
-  REMOVE_RESERVATION,
+/**
+ * A event used to remove an attempt.
+ */
+public class RMStateStoreRemoveAppAttemptEvent extends RMStateStoreEvent {
+  private ApplicationAttemptId applicationAttemptId;
+
+  RMStateStoreRemoveAppAttemptEvent(ApplicationAttemptId applicationAttemptId) {
+    super(RMStateStoreEventType.REMOVE_APP_ATTEMPT);
+    this.applicationAttemptId = applicationAttemptId;
+  }
+
+  public ApplicationAttemptId getApplicationAttemptId() {
+    return applicationAttemptId;
+  }
 }

@@ -482,6 +482,18 @@ public class FileSystemRMStateStore extends RMStateStore {
   }
 
   @Override
+  public synchronized void removeApplicationAttemptInternal(
+      ApplicationAttemptId appAttemptId)
+      throws Exception {
+    Path appDirPath =
+        getAppDir(rmAppRoot, appAttemptId.getApplicationId());
+    Path nodeRemovePath = getNodePath(appDirPath, appAttemptId.toString());
+    LOG.info("Removing info for attempt: " + appAttemptId + " at: "
+        + nodeRemovePath);
+    deleteFileWithRetries(nodeRemovePath);
+  }
+
+  @Override
   public synchronized void removeApplicationStateInternal(
       ApplicationStateData appState)
       throws Exception {

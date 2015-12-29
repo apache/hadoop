@@ -132,6 +132,12 @@ public class NullRMStateStore extends RMStateStore {
   }
 
   @Override
+  public synchronized void removeApplicationAttemptInternal(
+      ApplicationAttemptId attemptId) throws Exception {
+    // Do nothing
+  }
+
+  @Override
   public void checkVersion() throws Exception {
     // Do nothing
   }
