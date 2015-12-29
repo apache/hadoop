@@ -2547,6 +2547,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9458. TestBackupNode always binds to port 50070, which can cause bind
     failures. (Xiao Chen via cnauroth)
 
+    HDFS-7553. fix the TestDFSUpgradeWithHA due to BindException.
+    (Xiao Chen via cnauroth)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

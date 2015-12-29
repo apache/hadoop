@@ -194,6 +194,15 @@ public class NameNodeHttpServer {
     return params;
   }
 
+  /**
+   * Joins the httpserver.
+   */
+  public void join() throws InterruptedException {
+    if (httpServer != null) {
+      httpServer.join();
+    }
+  }
+
   void stop() throws Exception {
     if (httpServer != null) {
       httpServer.stop();
