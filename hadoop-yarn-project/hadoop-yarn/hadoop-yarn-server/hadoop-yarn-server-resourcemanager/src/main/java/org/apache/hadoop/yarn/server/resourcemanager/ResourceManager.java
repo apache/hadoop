@@ -817,6 +817,33 @@ public class ResourceManager extends CompositeService implements Recoverable {
             LOG.error("Error in handling event type " + event.getType()
                 + " for applicationAttempt " + appAttemptId, t);
           }
+        } else if (rmApp.getApplicationSubmissionContext() != null
+            && rmApp.getApplicationSubmissionContext()
+            .getKeepContainersAcrossApplicationAttempts()
+            && event.getType() == RMAppAttemptEventType.CONTAINER_FINISHED) {
+          // For work-preserving AM restart, failed attempts are still
+          // capturing CONTAINER_FINISHED events and record the finished
+          // containers which will be used by current attempt.
+          // We just keep 'yarn.resourcemanager.am.max-attempts' in
+          // RMStateStore. If the finished container's attempt is deleted, we
+          // use the first attempt in app.attempts to deal with these events.
+
+          RMAppAttempt previousFailedAttempt =
+              rmApp.getAppAttempts().values().iterator().next();
+          if (previousFailedAttempt != null) {
+            try {
+              LOG.debug("Event " + event.getType() + " handled by "
+                  + previousFailedAttempt);
+              previousFailedAttempt.handle(event);
+            } catch (Throwable t) {
+              LOG.error("Error in handling event type " + event.getType()
+                  + " for applicationAttempt " + appAttemptId
+                  + " with " + previousFailedAttempt, t);
+            }
+          } else {
+            LOG.error("Event " + event.getType()
+                + " not handled, because previousFailedAttempt is null");
+          }
         }
       }
     }

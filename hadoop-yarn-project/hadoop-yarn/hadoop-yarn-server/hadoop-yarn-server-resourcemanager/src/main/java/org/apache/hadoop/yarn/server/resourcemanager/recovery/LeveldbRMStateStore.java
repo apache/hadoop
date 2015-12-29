@@ -500,6 +500,22 @@ public class LeveldbRMStateStore extends RMStateStore {
     return createApplicationState(appId.toString(), data);
   }
 
+  @VisibleForTesting
+  ApplicationAttemptStateData loadRMAppAttemptState(
+      ApplicationAttemptId attemptId) throws IOException {
+    String attemptKey = getApplicationAttemptNodeKey(attemptId);
+    byte[] data = null;
+    try {
+      data = db.get(bytes(attemptKey));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+    if (data == null) {
+      return null;
+    }
+    return createAttemptState(attemptId.toString(), data);
+  }
+
   private ApplicationAttemptStateData createAttemptState(String itemName,
       byte[] data) throws IOException {
     ApplicationAttemptId attemptId =
@@ -572,6 +588,22 @@ public class LeveldbRMStateStore extends RMStateStore {
       ApplicationAttemptId attemptId,
       ApplicationAttemptStateData attemptStateData) throws IOException {
     storeApplicationAttemptStateInternal(attemptId, attemptStateData);
+  }
+
+  @Override
+  public synchronized void removeApplicationAttemptInternal(
+      ApplicationAttemptId attemptId)
+      throws IOException {
+    String attemptKey = getApplicationAttemptNodeKey(attemptId);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Removing state for attempt " + attemptId + " at "
+          + attemptKey);
+    }
+    try {
+      db.delete(bytes(attemptKey));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
   }
 
   @Override

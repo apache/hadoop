@@ -230,6 +230,11 @@ public class ResourceTrackerService extends AbstractService implements
     }
 
     RMAppAttempt rmAppAttempt = rmApp.getRMAppAttempt(appAttemptId);
+    if (rmAppAttempt == null) {
+      LOG.info("Ignoring not found attempt " + appAttemptId);
+      return;
+    }
+
     Container masterContainer = rmAppAttempt.getMasterContainer();
     if (masterContainer.getId().equals(containerStatus.getContainerId())
         && containerStatus.getContainerState() == ContainerState.COMPLETE) {

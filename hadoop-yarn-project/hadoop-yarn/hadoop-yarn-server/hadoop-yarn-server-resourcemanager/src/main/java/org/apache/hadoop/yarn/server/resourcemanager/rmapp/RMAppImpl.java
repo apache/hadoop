@@ -149,6 +149,8 @@ public class RMAppImpl implements RMApp, Recoverable {
   private long startTime;
   private long finishTime = 0;
   private long storedFinishTime = 0;
+  private int firstAttemptIdInStateStore = 1;
+  private int nextAttemptId = 1;
   // This field isn't protected by readlock now.
   private volatile RMAppAttempt currentAttempt;
   private String queue;
@@ -809,6 +811,11 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.storedFinishTime = appState.getFinishTime();
     this.startTime = appState.getStartTime();
     this.callerContext = appState.getCallerContext();
+    // If interval > 0, some attempts might have been deleted.
+    if (submissionContext.getAttemptFailuresValidityInterval() > 0) {
+      this.firstAttemptIdInStateStore = appState.getFirstAttemptId();
+      this.nextAttemptId = firstAttemptIdInStateStore;
+    }
 
     // send the ATS create Event
     sendATSCreateEvent(this, this.startTime);
@@ -822,7 +829,7 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   private void createNewAttempt() {
     ApplicationAttemptId appAttemptId =
-        ApplicationAttemptId.newInstance(applicationId, attempts.size() + 1);
+        ApplicationAttemptId.newInstance(applicationId, nextAttemptId++);
 
     BlacklistManager currentAMBlacklist;
     if (currentAttempt != null) {
@@ -1304,6 +1311,9 @@ public class RMAppImpl implements RMApp, Recoverable {
               + app.attemptFailuresValidityInterval + " milliseconds " : " ")
           + "is " + numberOfFailure + ". The max attempts is "
           + app.maxAppAttempts);
+
+      removeExcessAttempts(app);
+
       if (!app.submissionContext.getUnmanagedAM()
           && numberOfFailure < app.maxAppAttempts) {
         if (initialState.equals(RMAppState.KILLING)) {
@@ -1338,6 +1348,19 @@ public class RMAppImpl implements RMApp, Recoverable {
           new AttemptFailedFinalStateSavedTransition(), RMAppState.FAILED,
           RMAppState.FAILED);
         return RMAppState.FINAL_SAVING;
+      }
+    }
+
+    private void removeExcessAttempts(RMAppImpl app) {
+      while (app.nextAttemptId - app.firstAttemptIdInStateStore
+          > app.maxAppAttempts) {
+        // attempts' first element is oldest attempt because it is a
+        // LinkedHashMap
+        ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+            app.getApplicationId(), app.firstAttemptIdInStateStore);
+        app.firstAttemptIdInStateStore++;
+        LOG.info("Remove attempt from state store : " + attemptId);
+        app.rmContext.getStateStore().removeApplicationAttempt(attemptId);
       }
     }
   }

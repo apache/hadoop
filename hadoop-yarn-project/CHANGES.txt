@@ -79,6 +79,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4417. Make RM and Timeline-server REST APIs more consistent.
     (wtan via jianhe)
 
+    YARN-3480. Remove attempts that are beyond max-attempt limit from state
+    store. (Jun Gong via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES

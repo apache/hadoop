@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -87,6 +88,12 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
         Path appRootDir = new Path(rootDir, RM_APP_ROOT);
         Path appDir = new Path(appRootDir, appId);
         return appDir;
+      }
+
+      public Path getAttemptDir(String appId, String attemptId) {
+        Path appDir = getAppDir(appId);
+        Path attemptDir = new Path(appDir, attemptId);
+        return attemptDir;
       }
     }
 
@@ -151,6 +158,15 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
               store.getAppDir(app.getApplicationId().toString());
       return fs.exists(nodePath);
     }
+
+    public boolean attemptExists(RMAppAttempt attempt) throws IOException {
+      FileSystem fs = cluster.getFileSystem();
+      ApplicationAttemptId attemptId = attempt.getAppAttemptId();
+      Path nodePath =
+          store.getAttemptDir(attemptId.getApplicationId().toString(),
+              attemptId.toString());
+      return fs.exists(nodePath);
+    }
   }
 
   @Test(timeout = 60000)
@@ -185,6 +201,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       testAppDeletion(fsTester);
       testDeleteStore(fsTester);
       testRemoveApplication(fsTester);
+      testRemoveAttempt(fsTester);
       testAMRMTokenSecretManagerStateStore(fsTester);
       testReservationStateStore(fsTester);
     } finally {

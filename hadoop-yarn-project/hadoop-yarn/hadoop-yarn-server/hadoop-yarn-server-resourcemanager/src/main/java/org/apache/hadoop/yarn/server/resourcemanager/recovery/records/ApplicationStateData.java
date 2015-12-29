@@ -80,6 +80,16 @@ public abstract class ApplicationStateData {
     return attempts.get(attemptId);
   }
 
+  public int getFirstAttemptId() {
+    int min = Integer.MAX_VALUE;
+    for(ApplicationAttemptId attemptId : attempts.keySet()) {
+      if (attemptId.getAttemptId() < min) {
+        min = attemptId.getAttemptId();
+      }
+    }
+    return min == Integer.MAX_VALUE ? 1 : min;
+  }
+
   public abstract ApplicationStateDataProto getProto();
 
   /**
