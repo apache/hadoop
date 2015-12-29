@@ -1152,6 +1152,8 @@ Release 2.7.3 - UNRELEASED
     YARN-4422. Generic AHS sometimes doesn't show started, node, or logs on App page
     (Eric Payne via jeagles)
 
+    YARN-4315. NaN in Queue percentage for cluster apps page. (Bibin A Chundatt via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
