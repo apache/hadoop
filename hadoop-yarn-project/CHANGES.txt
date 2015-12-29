@@ -1248,6 +1248,8 @@ Release 2.7.3 - UNRELEASED
     YARN-4452. NPE when submit Unmanaged application. (Naganarasimha G R via
     junping_du)
 
+    YARN-4315. NaN in Queue percentage for cluster apps page. (Bibin A Chundatt via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
