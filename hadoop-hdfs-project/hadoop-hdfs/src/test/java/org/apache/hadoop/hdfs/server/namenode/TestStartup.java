@@ -459,6 +459,7 @@ public class TestStartup {
     nnRpc.saveNamespace();
     namenode.stop();
     namenode.join();
+    namenode.joinHttpServer();
 
     // compress image using default codec
     LOG.info("Read an uncomressed image and store it compressed using default codec.");
@@ -489,6 +490,7 @@ public class TestStartup {
     nnRpc.saveNamespace();
     namenode.stop();
     namenode.join();
+    namenode.joinHttpServer();
   }
   
   @Test
