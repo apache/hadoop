@@ -965,6 +965,42 @@ public class UserGroupInformation {
     LOG.info("Login successful for user " + keytabPrincipal
         + " using keytab file " + keytabFile);
   }
+
+  /**
+   * Log the current user out who previously logged in using keytab.
+   * This method assumes that the user logged in by calling
+   * {@link #loginUserFromKeytab(String, String)}.
+   *
+   * @throws IOException if a failure occurred in logout, or if the user did
+   * not log in by invoking loginUserFromKeyTab() before.
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public void logoutUserFromKeytab() throws IOException {
+    if (!isSecurityEnabled() ||
+        user.getAuthenticationMethod() != AuthenticationMethod.KERBEROS) {
+      return;
+    }
+    LoginContext login = getLogin();
+    if (login == null || keytabFile == null) {
+      throw new IOException("loginUserFromKeytab must be done first");
+    }
+
+    try {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Initiating logout for " + getUserName());
+      }
+      synchronized (UserGroupInformation.class) {
+        login.logout();
+      }
+    } catch (LoginException le) {
+      throw new IOException("Logout failure for " + user + " from keytab " +
+          keytabFile, le);
+    }
+
+    LOG.info("Logout successful for user " + keytabPrincipal
+        + " using keytab file " + keytabFile);
+  }
   
   /**
    * Re-login a user from keytab if TGT is expired or is close to expiry.
