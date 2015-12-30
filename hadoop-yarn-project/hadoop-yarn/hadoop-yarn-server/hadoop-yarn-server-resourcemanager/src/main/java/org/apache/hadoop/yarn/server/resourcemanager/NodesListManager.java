@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -62,9 +60,6 @@ public class NodesListManager extends CompositeService implements
 
   private HostsFileReader hostsReader;
   private Configuration conf;
-  private Set<RMNode> unusableRMNodesConcurrentSet = Collections
-      .newSetFromMap(new ConcurrentHashMap<RMNode,Boolean>());
-  
   private final RMContext rmContext;
 
   private String includesFile;
@@ -290,24 +285,12 @@ public class NodesListManager extends CompositeService implements
     }
   }
 
-  /**
-   * Provides the currently unusable nodes. Copies it into provided collection.
-   * @param unUsableNodes
-   *          Collection to which the unusable nodes are added
-   * @return number of unusable nodes added
-   */
-  public int getUnusableNodes(Collection<RMNode> unUsableNodes) {
-    unUsableNodes.addAll(unusableRMNodesConcurrentSet);
-    return unusableRMNodesConcurrentSet.size();
-  }
-
   @Override
   public void handle(NodesListManagerEvent event) {
     RMNode eventNode = event.getNode();
     switch (event.getType()) {
     case NODE_UNUSABLE:
       LOG.debug(eventNode + " reported unusable");
-      unusableRMNodesConcurrentSet.add(eventNode);
       for(RMApp app: rmContext.getRMApps().values()) {
         if (!app.isAppFinalStateStored()) {
           this.rmContext
@@ -320,10 +303,7 @@ public class NodesListManager extends CompositeService implements
       }
       break;
     case NODE_USABLE:
-      if (unusableRMNodesConcurrentSet.contains(eventNode)) {
-        LOG.debug(eventNode + " reported usable");
-        unusableRMNodesConcurrentSet.remove(eventNode);
-      }
+      LOG.debug(eventNode + " reported usable");
       for (RMApp app : rmContext.getRMApps().values()) {
         if (!app.isAppFinalStateStored()) {
           this.rmContext
