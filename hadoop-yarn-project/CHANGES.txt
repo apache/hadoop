@@ -1202,6 +1202,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4400. AsyncDispatcher.waitForDrained should be final. (Daniel Templeton 
     via junping_du)
 
+    YARN-1382. Remove unusableRMNodesConcurrentSet (never used) in NodeListManager
+    to get rid of memory leak. (Rohith Sharma K S via junping_du)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
