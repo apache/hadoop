@@ -172,10 +172,11 @@ public class RMNodeWrapper implements RMNode {
     // TODO Auto-generated method stub
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public List<Container> pullNewlyIncreasedContainers() {
     // TODO Auto-generated method stub
-    return null;
+    return Collections.EMPTY_LIST;
   }
 
   @Override
