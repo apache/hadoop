@@ -24,6 +24,7 @@ Hadoop: Capacity Scheduler
     * [Queue Properties](#Queue_Properties)
     * [Other Properties](#Other_Properties)
     * [Reviewing the configuration of the CapacityScheduler](#Reviewing_the_configuration_of_the_CapacityScheduler)
+    * [Setup for application priority](#Setup_for_application_priority.)
 * [Changing Queue Configuration](#Changing_Queue_Configuration)
 
 Purpose
@@ -70,6 +71,8 @@ The `CapacityScheduler` supports the following features:
 * **Resource-based Scheduling** - Support for resource-intensive applications, where-in a application can optionally specify higher resource-requirements than the default, there-by accomodating applications with differing resource requirements. Currently, *memory* is the resource requirement supported.
 
 * **Queue Mapping based on User or Group** - This feature allows users to map a job to a specific queue based on the user or group.
+
+* **Priority Scheduling** - This feature allows applications to be submitted and scheduled with different priorities. Higher integer value indicates higher priority for an application. Currently Application priority is supported only for FIFO ordering policy.
 
 Configuration
 -------------
@@ -200,6 +203,28 @@ Example:
   * Open the `ResourceManager` web UI.
 
   * The */scheduler* web-page should show the resource usages of individual queues.
+
+###Setup for application priority.
+
+  Application priority works only along with FIFO ordering policy. Default ordering policy is FIFO.
+
+  Default priority for an application can be at cluster level and queue level.
+
+  * Cluster-level priority : Any application that is submitted with a priority is greater then cluster max priority then application priority will be reset with cluster-max priority.
+          $HADOOP_HOME/etc/hadoop/yarn-site.xml is the configuration file for cluster-max priority.
+
+| Property | Description |
+|:---- |:---- |
+| `yarn.cluster.max-application-priority` | Defines maximum application priority in a cluster. |
+
+  * Leaf Queue-level priority : Each leaf queue provides default priority by the administrator. If application is not submitted with any priority, then default priority of the queue will be taken in account.
+         $HADOOP_HOME/etc/hadoop/capacity-scheduler.xml is the configuration file for queue-level priority.
+
+| Property | Description |
+|:---- |:---- |
+| `yarn.scheduler.capacity.root.<leaf-queue-path>.default-application-priority` | Defines default application priority in a leaf queue. |
+
+**Note:** Priority of an application will not be changed when application is moved to different queue.
 
 Changing Queue Configuration
 ----------------------------
