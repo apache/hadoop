@@ -82,6 +82,8 @@ Release 2.9.0 - UNRELEASED
     YARN-3480. Remove attempts that are beyond max-attempt limit from state
     store. (Jun Gong via jianhe)
 
+    YARN-4522. Queue acl can be checked at app submission. (Jian He via wangda)
+
   OPTIMIZATIONS
 
   BUG FIXES
