@@ -1260,6 +1260,8 @@ Release 2.7.3 - UNRELEASED
 
     YARN-4315. NaN in Queue percentage for cluster apps page. (Bibin A Chundatt via wangda)
 
+    YARN-4510. Fix SLS startup failure caused by NPE. (Bibin A Chundatt via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
