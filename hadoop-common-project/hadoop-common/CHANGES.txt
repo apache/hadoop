@@ -892,6 +892,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12682. Fix TestKMS#testKMSRestart* failure.
     (Wei-Chiu Chuang via xyao)
 
+    HADOOP-12608. Fix exception message in WASB when connecting with anonymous
+    credential. (Dushyanth via xyao)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
