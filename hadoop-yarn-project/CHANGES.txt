@@ -580,6 +580,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4304. AM max resource configuration per partition to be displayed/updated
     correctly in UI and in various partition related metrics. (Sunil G via wangda)
 
+    YARN-4524. Cleanup AppSchedulingInfo. (Karthik Kambatla via wangda)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

@@ -332,7 +332,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   public synchronized void stop(RMAppAttemptState rmAppAttemptFinalState) {
     // Cleanup all scheduling information
     isStopped = true;
-    appSchedulingInfo.stop(rmAppAttemptFinalState);
+    appSchedulingInfo.stop();
   }
 
   public synchronized boolean isStopped() {
