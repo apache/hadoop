@@ -84,6 +84,8 @@ Release 2.9.0 - UNRELEASED
 
     YARN-4522. Queue acl can be checked at app submission. (Jian He via wangda)
 
+    YARN-4524. Cleanup AppSchedulingInfo. (Karthik Kambatla via wangda)
+
   OPTIMIZATIONS
 
   BUG FIXES
