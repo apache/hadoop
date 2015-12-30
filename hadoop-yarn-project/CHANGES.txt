@@ -660,6 +660,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4290. Add -showDetails option to YARN Nodes CLI to print all nodes reports
     information. (Sunil G via wangda)
 
+    YARN-4098. Document ApplicationPriority feature. (Rohith Sharma K S via jianhe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

@@ -67,11 +67,13 @@ Usage: `yarn application [options] `
 
 | COMMAND\_OPTIONS | Description |
 |:---- |:---- |
+| -appId \<ApplicationId\> | Specify Application Id to be operated |
 | -appStates \<States\> | Works with -list to filter applications based on input comma-separated list of application states. The valid application state can be one of the following:  ALL, NEW, NEW\_SAVING, SUBMITTED, ACCEPTED, RUNNING, FINISHED, FAILED, KILLED |
 | -appTypes \<Types\> | Works with -list to filter applications based on input comma-separated list of application types. |
 | -list | Lists applications from the RM. Supports optional use of -appTypes to filter applications based on application type, and -appStates to filter applications based on application state. |
 | -kill \<ApplicationId\> | Kills the application. |
 | -status \<ApplicationId\> | Prints the status of the application. |
+| -updatePriority \<Priority\> | Update priority of an application. ApplicationId can be passed using 'appId' option. |
 
 Prints application(s) report/kill application
 
