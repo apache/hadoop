@@ -1535,6 +1535,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12559. KMS connection failures should trigger TGT renewal.
     (Zhe Zhang via xyao)
 
+    HADOOP-12682. Fix TestKMS#testKMSRestart* failure.
+    (Wei-Chiu Chuang via xyao)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
