@@ -1061,6 +1061,35 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
+  <name>ipc.client.ping</name>
+  <value>true</value>
+  <description>Send a ping to the server when timeout on reading the response,
+  if set to true. If no failure is detected, the client retries until at least
+  a byte is read.
+  </description>
+</property>
+
+<property>
+  <name>ipc.ping.interval</name>
+  <value>60000</value>
+  <description>Timeout on waiting response from server, in milliseconds.
+  The client will send ping when the interval is passed without receiving bytes,
+  if ipc.client.ping is set to true.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.rpc-timeout.ms</name>
+  <value>0</value>
+  <description>Timeout on waiting response from server, in milliseconds.
+  Currently this timeout works only when ipc.client.ping is set to true
+  because it uses the same facilities with IPC ping.
+  The timeout overrides the ipc.ping.interval and client will throw exception
+  instead of sending ping when the interval is passed.
+  </description>
+</property>
+
+<property>
   <name>ipc.server.listen.queue.size</name>
   <value>128</value>
   <description>Indicates the length of the listen queue for servers accepting

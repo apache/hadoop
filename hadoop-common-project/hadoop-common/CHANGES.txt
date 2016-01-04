@@ -2365,6 +2365,9 @@ Release 2.6.4 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-11252. RPC client does not time out by default.
+    (Wilfred Spiegelenburg and Masatake Iwasaki via aajisaka)
+
 Release 2.6.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
