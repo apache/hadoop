@@ -1022,6 +1022,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12570. HDFS Secure Mode Documentation updates.
     (Arpit Agarwal via cnauroth)
 
+    HADOOP-12686. Update FileSystemShell documentation to mention the meaning
+    of each columns of fs -du. (Daisuke Kobayashi via aajisaka)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
