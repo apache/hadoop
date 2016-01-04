@@ -165,7 +165,7 @@ public class ShortCircuitRegistry {
             DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS +
             " was set to " + interruptCheck);
       }
-      String shmPaths[] =
+      String[] shmPaths =
           conf.getTrimmedStrings(DFS_DATANODE_SHARED_FILE_DESCRIPTOR_PATHS);
       if (shmPaths.length == 0) {
         shmPaths =
@@ -263,12 +263,20 @@ public class ShortCircuitRegistry {
   }
 
   public static class NewShmInfo implements Closeable {
-    public final ShmId shmId;
-    public final FileInputStream stream;
+    private final ShmId shmId;
+    private final FileInputStream stream;
 
     NewShmInfo(ShmId shmId, FileInputStream stream) {
       this.shmId = shmId;
       this.stream = stream;
+    }
+
+    public ShmId getShmId() {
+      return shmId;
+    }
+
+    public FileInputStream getFileStream() {
+      return stream;
     }
 
     @Override

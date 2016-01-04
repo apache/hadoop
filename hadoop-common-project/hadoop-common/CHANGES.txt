@@ -1025,6 +1025,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12686. Update FileSystemShell documentation to mention the meaning
     of each columns of fs -du. (Daisuke Kobayashi via aajisaka)
 
+    HADOOP-12658. Clear javadoc and check style issues around DomainSocket
+    (Kai Zheng via umamahesh)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
