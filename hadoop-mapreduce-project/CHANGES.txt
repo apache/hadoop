@@ -683,6 +683,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6589. TestTaskLog outputs a log under directory other than
     target/test-dir. (aajisaka)
 
+    MAPREDUCE-6593. TestJobHistoryEventHandler.testTimelineEventHandling fails
+    on trunk because of NPE. (Naganarasimha G R via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
