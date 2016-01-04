@@ -251,6 +251,10 @@ Options:
 * The -s option will result in an aggregate summary of file lengths being displayed, rather than the individual files.
 * The -h option will format file sizes in a "human-readable" fashion (e.g 64.0m instead of 67108864)
 
+The du returns three columns with the following format:
+
+    size disk_space_consumed_with_all_replicas full_path_name
+
 Example:
 
 * `hadoop fs -du /user/hadoop/dir1 /user/hadoop/file1 hdfs://nn.example.com/user/hadoop/dir1`
