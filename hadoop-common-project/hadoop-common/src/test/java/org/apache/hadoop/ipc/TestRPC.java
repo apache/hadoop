@@ -38,6 +38,7 @@ import java.lang.reflect.Proxy;
 import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -1074,6 +1075,35 @@ public class TestRPC {
         RPC.stopProxy(proxy);
         executorService.shutdown();
       }
+    }
+  }
+
+  /**
+   *  Test RPC timeout.
+   */
+  @Test(timeout=30000)
+  public void testClientRpcTimeout() throws Exception {
+    final Server server = new RPC.Builder(conf)
+        .setProtocol(TestProtocol.class).setInstance(new TestImpl())
+        .setBindAddress(ADDRESS).setPort(0)
+        .setQueueSizePerHandler(1).setNumHandlers(1).setVerbose(true)
+        .build();
+    server.start();
+
+    final Configuration conf = new Configuration();
+    conf.setInt(CommonConfigurationKeys.IPC_CLIENT_RPC_TIMEOUT_KEY, 1000);
+    final TestProtocol proxy =
+        RPC.getProxy(TestProtocol.class, TestProtocol.versionID,
+            NetUtils.getConnectAddress(server), conf);
+
+    try {
+      proxy.sleep(3000);
+      fail("RPC should time out.");
+    } catch (SocketTimeoutException e) {
+      LOG.info("got expected timeout.", e);
+    } finally {
+      server.stop();
+      RPC.stopProxy(proxy);
     }
   }
 
