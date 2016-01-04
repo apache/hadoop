@@ -212,7 +212,7 @@ public class Client {
    * @param conf Configuration
    * @param pingInterval the ping interval
    */
-  final public static void setPingInterval(Configuration conf, int pingInterval) {
+  static final void setPingInterval(Configuration conf, int pingInterval) {
     conf.setInt(CommonConfigurationKeys.IPC_PING_INTERVAL_KEY, pingInterval);
   }
 
@@ -223,7 +223,7 @@ public class Client {
    * @param conf Configuration
    * @return the ping interval
    */
-  final public static int getPingInterval(Configuration conf) {
+  static final int getPingInterval(Configuration conf) {
     return conf.getInt(CommonConfigurationKeys.IPC_PING_INTERVAL_KEY,
         CommonConfigurationKeys.IPC_PING_INTERVAL_DEFAULT);
   }
