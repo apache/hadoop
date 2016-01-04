@@ -99,6 +99,9 @@ Release 2.9.0 - UNRELEASED
     YARN-2934. Improve handling of container's stderr.
     (Naganarasimha G R via gera)
 
+    YARN-4530. LocalizedResource trigger a NPE Cause the NodeManager exit
+    (tangshangwen via rohithsharmaks)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
