@@ -168,7 +168,7 @@ public class DfsClientShmManager implements Closeable {
       case SUCCESS:
         DomainSocket sock = peer.getDomainSocket();
         byte buf[] = new byte[1];
-        FileInputStream fis[] = new FileInputStream[1];
+        FileInputStream[] fis = new FileInputStream[1];
         if (sock.recvFileInputStreams(fis, buf, 0, buf.length) < 0) {
           throw new EOFException("got EOF while trying to transfer the " +
               "file descriptor for the shared memory segment.");
