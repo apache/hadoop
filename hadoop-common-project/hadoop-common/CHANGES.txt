@@ -2368,7 +2368,7 @@ Release 2.6.4 - UNRELEASED
     HADOOP-11252. RPC client does not time out by default.
     (Wilfred Spiegelenburg and Masatake Iwasaki via aajisaka)
 
-Release 2.6.3 - UNRELEASED
+Release 2.6.3 - 2015-12-17
 
   INCOMPATIBLE CHANGES
 

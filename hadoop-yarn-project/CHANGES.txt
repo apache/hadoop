@@ -2124,7 +2124,7 @@ Release 2.6.4 - UNRELEASED
   YARN-4452. NPE when submit Unmanaged application. (Naganarasimha G R
   via junping_du)
 
-Release 2.6.3 - UNRELEASED
+Release 2.6.3 - 2015-12-17
 
   INCOMPATIBLE CHANGES
 
