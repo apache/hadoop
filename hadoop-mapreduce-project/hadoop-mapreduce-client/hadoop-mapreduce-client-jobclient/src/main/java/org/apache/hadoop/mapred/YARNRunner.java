@@ -472,13 +472,14 @@ public class YARNRunner implements ClientProtocol {
         conf.get(MRJobConfig.MAPRED_ADMIN_USER_SHELL,
             MRJobConfig.DEFAULT_SHELL));
 
-    // Add the container working directory at the front of LD_LIBRARY_PATH
+    // Add the container working directory in front of LD_LIBRARY_PATH
     MRApps.addToEnvironment(environment, Environment.LD_LIBRARY_PATH.name(),
         MRApps.crossPlatformifyMREnv(conf, Environment.PWD), conf);
 
     // Setup the environment variables for Admin first
     MRApps.setEnvFromInputString(environment, 
-        conf.get(MRJobConfig.MR_AM_ADMIN_USER_ENV), conf);
+        conf.get(MRJobConfig.MR_AM_ADMIN_USER_ENV,
+            MRJobConfig.DEFAULT_MR_AM_ADMIN_USER_ENV), conf);
     // Setup the environment variables (LD_LIBRARY_PATH, etc)
     MRApps.setEnvFromInputString(environment, 
         conf.get(MRJobConfig.MR_AM_ENV), conf);
