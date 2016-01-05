@@ -2127,6 +2127,9 @@ Release 2.6.4 - UNRELEASED
   YARN-4452. NPE when submit Unmanaged application. (Naganarasimha G R
   via junping_du)
 
+  YARN-3697. FairScheduler: ContinuousSchedulingThread can fail to shutdown.
+  (Zhihai Xu via kasha)
+
 Release 2.6.3 - 2015-12-17
 
   INCOMPATIBLE CHANGES
