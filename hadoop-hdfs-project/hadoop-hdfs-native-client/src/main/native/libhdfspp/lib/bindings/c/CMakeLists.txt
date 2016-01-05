@@ -16,5 +16,6 @@
 # under the License.
 
 
-add_library(bindings_c hdfs.cc)
-add_dependencies(bindings_c fs rpc reader proto common fs rpc reader proto common)
+add_library(bindings_c_obj OBJECT hdfs.cc)
+add_dependencies(bindings_c_obj fs rpc reader proto common fs rpc reader proto common)
+add_library(bindings_c $<TARGET_OBJECTS:bindings_c_obj>)

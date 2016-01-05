@@ -18,6 +18,8 @@
 
 project (libhdfspp)
 
+cmake_minimum_required(VERSION 2.8)
+
 enable_testing()
 include (CTest)
 
@@ -59,10 +61,53 @@ add_custom_target(doc ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/doc/Doxy
                   COMMENT "Generating API documentation with Doxygen" VERBATIM)
 endif(DOXYGEN_FOUND)
 
+
+# Copy files from the hadoop tree into the output/extern directory if
+#    they've changed
+function (copy_on_demand input_src_glob input_dest_dir)
+  get_filename_component(src_glob ${input_src_glob} REALPATH)
+  get_filename_component(dest_dir ${input_dest_dir} REALPATH)
+  get_filename_component(src_dir ${src_glob} DIRECTORY)
+  message(STATUS "Syncing ${src_glob} to ${dest_dir}")
+
+  file(GLOB_RECURSE src_files ${src_glob})
+  foreach(src_path ${src_files})
+    file(RELATIVE_PATH relative_src ${src_dir} ${src_path})
+    set(dest_path "${dest_dir}/${relative_src}")
+    add_custom_command(TARGET copy_hadoop_files
+     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${src_path}" "${dest_path}"
+    )
+  endforeach()
+endfunction()
+
+# If we're building in the hadoop tree, pull the Hadoop files that
+#     libhdfspp depends on.  This allows us to ensure that
+#     the distribution will have a consistent set of headers and
+#     .proto files
+if(HADOOP_BUILD)
+    set(HADOOP_IMPORT_DIR ${PROJECT_BINARY_DIR}/extern)
+    get_filename_component(HADOOP_IMPORT_DIR ${HADOOP_IMPORT_DIR} REALPATH)
+
+  add_custom_target(copy_hadoop_files ALL)
+
+  # Gather the Hadoop files and resources that libhdfs++ needs to build
+  copy_on_demand(../libhdfs/include/*.h* ${HADOOP_IMPORT_DIR}/include)
+  copy_on_demand(${CMAKE_CURRENT_LIST_DIR}/../../../../../hadoop-hdfs-client/src/main/proto/*.proto ${HADOOP_IMPORT_DIR}/proto/hdfs)
+  copy_on_demand(${CMAKE_CURRENT_LIST_DIR}/../../../../../../hadoop-common-project/hadoop-common/src/main/proto/*.proto  ${HADOOP_IMPORT_DIR}/proto/hadoop)
+  copy_on_demand(${CMAKE_CURRENT_LIST_DIR}/../../../../../../hadoop-common-project/hadoop-common/src/test/proto/*.proto  ${HADOOP_IMPORT_DIR}/proto/hadoop_test)
+else(HADOOP_BUILD)
+  set(HADOOP_IMPORT_DIR ${CMAKE_CURRENT_LIST_DIR}/extern)
+endif(HADOOP_BUILD)
+
+# Paths to find the imported files
+set(PROTO_HDFS_DIR         ${HADOOP_IMPORT_DIR}/proto/hdfs)
+set(PROTO_HADOOP_DIR       ${HADOOP_IMPORT_DIR}/proto/hadoop)
+set(PROTO_HADOOP_TEST_DIR  ${HADOOP_IMPORT_DIR}/proto/hadoop_test)
+
 include_directories(
   include
   lib
-  ../libhdfs/include
+  ${HADOOP_IMPORT_DIR}/include
 )
 
 include_directories( SYSTEM
@@ -75,9 +120,6 @@ include_directories( SYSTEM
   ${OPENSSL_INCLUDE_DIR}
 )
 
-set(PROTO_HDFS_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../../hadoop-hdfs-client/src/main/proto)
-set(PROTO_HADOOP_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../../../hadoop-common-project/hadoop-common/src/main/proto)
-set(PROTO_HADOOP_TEST_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../../../hadoop-common-project/hadoop-common/src/test/proto)
 
 add_subdirectory(third_party/gmock-1.7.0)
 add_subdirectory(lib)
@@ -88,20 +130,43 @@ add_subdirectory(tests)
 set(EMPTY_FILE_CC ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/empty.cc)
 file(WRITE ${EMPTY_FILE_CC} "")
 
-hadoop_add_dual_library(hdfspp ${EMPTY_FILE_CC})
+# Build the output libraries
 if(NEED_LINK_DL)
    set(LIB_DL dl)
 endif()
 
-SET(LIBHDFSPP_SUBLIBS bindings_c fs rpc reader proto common)
-IF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-  # linking a shared library from static ones requires --whole-archive
-  SET(LIBHDFSPP_SUBLIBS -Wl,--whole-archive ${LIBHDFSPP_SUBLIBS} -Wl,--no-whole-archive)
-ENDIF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-
-hadoop_target_link_dual_libraries(hdfspp
-    ${LIBHDFSPP_SUBLIBS}
+set(LIBHDFSPP_ALL_OBJECTS $<TARGET_OBJECTS:bindings_c_obj> $<TARGET_OBJECTS:fs_obj> $<TARGET_OBJECTS:rpc_obj> $<TARGET_OBJECTS:reader_obj> $<TARGET_OBJECTS:proto_obj> $<TARGET_OBJECTS:connection_obj> $<TARGET_OBJECTS:common_obj>)
+if (HADOOP_BUILD)
+  hadoop_add_dual_library(hdfspp ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
+  hadoop_target_link_dual_libraries(hdfspp
     ${LIB_DL}
     ${PROTOBUF_LIBRARY}
     ${OPENSSL_LIBRARIES}
-)
+  )
+else (HADOOP_BUILD)
+  add_library(hdfspp_static STATIC ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
+  target_link_libraries(hdfspp_static
+    ${LIB_DL}
+    ${PROTOBUF_LIBRARY}
+    ${OPENSSL_LIBRARIES}
+    )
+  add_library(hdfspp SHARED ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
+  target_link_libraries(hdfspp_static
+    ${LIB_DL}
+    ${PROTOBUF_LIBRARY}
+    ${OPENSSL_LIBRARIES}
+    )
+endif (HADOOP_BUILD)
+set(LIBHDFSPP_VERSION "0.1.0")
+set_target_properties(hdfspp PROPERTIES
+  SOVERSION ${LIBHDFSPP_VERSION})
+
+# Set up make install targets
+# Can be installed to a particular location via "make DESTDIR=... install"
+file(GLOB_RECURSE LIBHDFSPP_HEADER_FILES "${CMAKE_CURRENT_LIST_DIR}/include/*.h*")
+file(GLOB_RECURSE LIBHDFS_HEADER_FILES "${HADOOP_IMPORT_DIR}/include/*.h*")
+install(FILES ${LIBHDFSPP_HEADER_FILES} DESTINATION /include/libhdfspp)
+install(FILES ${LIBHDFS_HEADER_FILES} DESTINATION /include/libhdfs)
+
+install(TARGETS hdfspp_static ARCHIVE DESTINATION /lib)
+install(TARGETS hdfspp LIBRARY DESTINATION /lib)

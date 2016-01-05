@@ -16,5 +16,6 @@
 # limitations under the License.
 #
 
-add_library(reader block_reader.cc datatransfer.cc)
-add_dependencies(reader proto)
+add_library(reader_obj OBJECT block_reader.cc datatransfer.cc)
+add_dependencies(reader_obj proto)
+add_library(reader $<TARGET_OBJECTS:reader_obj>)
