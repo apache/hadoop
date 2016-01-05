@@ -20,6 +20,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=9" />
     <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.0.2/css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.0.2/css/bootstrap-editable.css"/>
     <link rel="stylesheet" type="text/css" href="/static/hadoop.css" />
     <title>Browsing HDFS</title>
   </head>
@@ -231,11 +232,11 @@
               {type|helper_to_directory}{permission|helper_to_permission}
               {aclBit|helper_to_acl_bit}
               </span></td>
-            <td>{owner}</td>
-            <td>{group}</td>
+            <td><span class="explorer-owner-links">{owner}</span></td>
+            <td><span class="explorer-group-links">{group}</span></td>
             <td>{length|fmt_bytes}</td>
             <td>{#helper_date_tostring value="{modificationTime}"/}</td>
-            <td>{replication}</td>
+            <td><span class="explorer-replication-links">{replication}</span></td>
             <td>{blockSize|fmt_bytes}</td>
             <td><a inode-type="{type}" class="explorer-browse-links">{pathSuffix}</a></td>
             <td><span class="glyphicon glyphicon-trash"></span></td>
@@ -262,6 +263,7 @@
     </script>
     <script type="text/javascript" src="/static/jquery-1.10.2.min.js">
     </script><script type="text/javascript" src="/static/bootstrap-3.0.2/js/bootstrap.min.js">
+    </script><script type="text/javascript" src="/static/bootstrap-3.0.2/js/bootstrap-editable.min.js">
     </script><script type="text/javascript" src="/static/dust-full-2.0.0.min.js">
     </script><script type="text/javascript" src="/static/dust-helpers-1.1.1.min.js">
     </script><script type="text/javascript" src="/static/dfs-dust.js">
