@@ -79,4 +79,8 @@ gen_hrpc(HRPC_SRCS
   ${PROTO_HDFS_DIR}/ClientNamenodeProtocol.proto
 )
 
-add_library(proto ${PROTO_SRCS} ${PROTO_HDRS} ${HRPC_SRCS})
+add_library(proto_obj OBJECT ${PROTO_SRCS} ${PROTO_HDRS} ${HRPC_SRCS})
+if(HADOOP_BUILD)
+  add_dependencies(proto_obj copy_hadoop_files)
+endif(HADOOP_BUILD)
+add_library(proto $<TARGET_OBJECTS:proto_obj>)

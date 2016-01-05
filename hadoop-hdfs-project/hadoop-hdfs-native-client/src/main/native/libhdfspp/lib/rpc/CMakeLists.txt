@@ -17,5 +17,6 @@
 #
 
 include_directories(${OPENSSL_INCLUDE_DIRS})
-add_library(rpc rpc_connection.cc rpc_engine.cc)
-add_dependencies(rpc proto)
+add_library(rpc_obj OBJECT rpc_connection.cc rpc_engine.cc)
+add_dependencies(rpc_obj proto)
+add_library(rpc $<TARGET_OBJECTS:rpc_obj>)

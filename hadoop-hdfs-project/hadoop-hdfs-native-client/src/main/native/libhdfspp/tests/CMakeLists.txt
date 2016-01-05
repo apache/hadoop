@@ -32,9 +32,8 @@ include_directories(
     ${LIBHDFS_SRC_DIR}
     ${OS_DIR}
 )
-add_library(hdfspp_test_shim_static STATIC hdfs_shim.c libhdfs_wrapper.c libhdfspp_wrapper.cc ${LIBHDFSPP_BINDING_C}/hdfs.cc)
-
-add_library(test_common OBJECT mock_connection.cc)
+add_library(test_common_obj OBJECT mock_connection.cc)
+add_library(test_common $<TARGET_OBJECTS:test_common_obj>)
 
 set(PROTOBUF_IMPORT_DIRS ${PROTO_HADOOP_TEST_DIR})
 
@@ -56,8 +55,8 @@ function(add_memcheck_test name binary)
 endfunction(add_memcheck_test)
 
 
-add_executable(remote_block_reader_test remote_block_reader_test.cc $<TARGET_OBJECTS:test_common>)
-target_link_libraries(remote_block_reader_test reader proto common connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
+add_executable(remote_block_reader_test remote_block_reader_test.cc)
+target_link_libraries(remote_block_reader_test test_common reader proto common connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(remote_block_reader remote_block_reader_test)
 
 add_executable(sasl_digest_md5_test sasl_digest_md5_test.cc)
@@ -69,8 +68,8 @@ target_link_libraries(retry_policy_test common gmock_main ${CMAKE_THREAD_LIBS_IN
 add_memcheck_test(retry_policy retry_policy_test)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
-add_executable(rpc_engine_test rpc_engine_test.cc ${PROTO_TEST_SRCS} ${PROTO_TEST_HDRS} $<TARGET_OBJECTS:test_common>)
-target_link_libraries(rpc_engine_test rpc proto common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
+add_executable(rpc_engine_test rpc_engine_test.cc ${PROTO_TEST_SRCS} ${PROTO_TEST_HDRS})
+target_link_libraries(rpc_engine_test test_common rpc proto common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(rpc_engine rpc_engine_test)
 
 add_executable(bad_datanode_test bad_datanode_test.cc)
@@ -89,6 +88,11 @@ add_executable(hdfs_configuration_test hdfs_configuration_test.cc)
 target_link_libraries(hdfs_configuration_test common gmock_main ${CMAKE_THREAD_LIBS_INIT})
 add_test(hdfs_configuration hdfs_configuration_test)
 
+#This test requires a great deal of Hadoop Java infrastructure to run.
+if(HADOOP_BUILD)
+add_library(hdfspp_test_shim_static STATIC hdfs_shim.c libhdfs_wrapper.c libhdfspp_wrapper.cc ${LIBHDFSPP_BINDING_C}/hdfs.cc)
+
 build_libhdfs_test(libhdfs_threaded hdfspp_test_shim_static expect.c test_libhdfs_threaded.c ${OS_DIR}/thread.c)
 link_libhdfs_test(libhdfs_threaded hdfspp_test_shim_static fs reader rpc proto common connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} native_mini_dfs ${JAVA_JVM_LIBRARY})
 add_libhdfs_test(libhdfs_threaded hdfspp_test_shim_static)
+endif(HADOOP_BUILD)
