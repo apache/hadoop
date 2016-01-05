@@ -395,56 +395,56 @@ public class TestMiniMRChildTask {
   /**
    * To test OS dependent setting of default execution path for a MapRed task.
    * Mainly that we can use MRJobConfig.DEFAULT_MAPRED_ADMIN_USER_ENV to set -
-   * for WINDOWS: %HADOOP_COMMON_HOME%\bin is expected to be included in PATH - for
-   * Linux: $HADOOP_COMMON_HOME/lib/native is expected to be included in
+   * for WINDOWS: %HADOOP_COMMON_HOME%\bin is expected to be included in PATH -
+   * for Linux: $HADOOP_COMMON_HOME/lib/native is expected to be included in
    * LD_LIBRARY_PATH
    */
   @Test
   public void testMapRedExecutionEnv() {
-    // test if the env variable can be set
-    try {
-      // Application environment
-      Map<String, String> environment = new HashMap<String, String>();
-      String setupHadoopHomeCommand = Shell.WINDOWS ? 
-          "HADOOP_COMMON_HOME=C:\\fake\\PATH\\to\\hadoop\\common\\home" :
-          "HADOOP_COMMON_HOME=/fake/path/to/hadoop/common/home";
-      MRApps.setEnvFromInputString(environment, setupHadoopHomeCommand, conf);
+    // for windows, test if the env variable can be set
+    // this may be removed as part of MAPREDUCE-6588
+    if (Shell.WINDOWS) {
+      try {
+        // Application environment
+        Map<String, String> environment = new HashMap<String, String>();
+        String setupHadoopHomeCommand =
+          "HADOOP_COMMON_HOME=C:\\fake\\PATH\\to\\hadoop\\common\\home";
+        MRApps.setEnvFromInputString(environment, setupHadoopHomeCommand, conf);
 
-      // Add the env variables passed by the admin
-      MRApps.setEnvFromInputString(environment, conf.get(
-          MRJobConfig.MAPRED_ADMIN_USER_ENV,
-          MRJobConfig.DEFAULT_MAPRED_ADMIN_USER_ENV), conf);
-      
-      String executionPaths = environment.get(
-          Shell.WINDOWS ? "PATH" : "LD_LIBRARY_PATH");
-      String toFind = Shell.WINDOWS ? 
-          "C:\\fake\\PATH\\to\\hadoop\\common\\home\\bin" : 
-          "/fake/path/to/hadoop/common/home/lib/native";
-      
-      // Ensure execution PATH/LD_LIBRARY_PATH set up pointing to hadoop lib
-      assertTrue("execution path does not include the hadoop lib location "
-          + toFind, executionPaths.contains(toFind));
-    } catch (Exception e) {
-      e.printStackTrace();
-      fail("Exception in testing execution environment for MapReduce task");
-      tearDown();
+        // Add the env variables passed by the admin
+        MRApps.setEnvFromInputString(environment, conf.get(
+            MRJobConfig.MAPRED_ADMIN_USER_ENV,
+            MRJobConfig.DEFAULT_MAPRED_ADMIN_USER_ENV), conf);
+
+        String executionPaths = environment.get("PATH");
+        String toFind =
+            "C:\\fake\\PATH\\to\\hadoop\\common\\home\\bin";
+
+        // Ensure execution PATH/LD_LIBRARY_PATH set up pointing to hadoop lib
+        assertTrue("execution path does not include the hadoop lib location "
+            + toFind, executionPaths.contains(toFind));
+      } catch (Exception e) {
+        e.printStackTrace();
+        fail("Exception in testing execution environment for MapReduce task");
+        tearDown();
+      }
     }
-    
+
     // now launch a mapreduce job to ensure that the child 
     // also gets the configured setting for hadoop lib
     try {
-      
-      JobConf conf = new JobConf(mr.getConfig());      
+
+      JobConf conf = new JobConf(mr.getConfig());
       // initialize input, output directories
       Path inDir = new Path("input");
       Path outDir = new Path("output");
       String input = "The input";
-      
+
       // set config to use the ExecutionEnvCheckMapClass map class
       configure(conf, inDir, outDir, input, 
           ExecutionEnvCheckMapClass.class, IdentityReducer.class);
       launchTest(conf, inDir, outDir, input);
-                 
+
     } catch(Exception e) {
       e.printStackTrace();
       fail("Exception in testing propagation of env setting to child task");
