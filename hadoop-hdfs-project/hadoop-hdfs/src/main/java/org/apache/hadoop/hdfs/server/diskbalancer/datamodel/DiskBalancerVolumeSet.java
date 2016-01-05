@@ -21,8 +21,8 @@ package org.apache.hadoop.hdfs.server.diskbalancer.datamodel;
 import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.htrace.fasterxml.jackson.annotation.JsonIgnore;
-import org.apache.htrace.fasterxml.jackson.annotation.JsonProperty;
+import org.codehaus.jackson.annotate.JsonIgnore;
+import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
 import java.io.Serializable;

@@ -7,3 +7,7 @@ HDFS-1312 Change Log
     HDFS-9449. DiskBalancer: Add connectors. (Anu Engineer via szetszwo)
 
     HDFS-9526. Fix jackson annotation imports. (Xiaobing Zhou via szetszwo)
+
+    HDFS-9611. DiskBalancer : Replace htrace json imports with jackson.
+    (Anu Engineer via Arpit Agarwal)
+
