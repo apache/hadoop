@@ -211,6 +211,32 @@
     }).error(network_error_handler(url));
   }
 
+  /**Use X-editable to make fields editable with a nice UI.
+   * elementType is the class of element(s) you want to make editable
+   * op is the WebHDFS operation that will be triggered
+   * parameter is (currently the 1) parameter which will be passed along with
+   *   the value entered by the user
+   */
+  function makeEditable(elementType, op, parameter) {
+    $(elementType).each(function(index, value) {
+      $(this).editable({
+        url: function(params) {
+          var inode_name = $(this).closest('tr').attr('inode-path');
+          var absolute_file_path = append_path(current_directory, inode_name);
+          var url = '/webhdfs/v1' + encode_path(absolute_file_path) + '?op=' +
+            op + '&' + parameter + '=' + encodeURIComponent(params.value);
+
+          return $.ajax(url, { type: 'PUT', })
+            .error(network_error_handler(url))
+            .success(function() {
+                browse_directory(current_directory);
+             });
+        },
+        error: function(response, newValue) {return "";}
+      });
+    });
+  }
+
   function browse_directory(dir) {
     var HELPERS = {
       'helper_date_tostring' : function (chunk, ctx, bodies, params) {
@@ -251,6 +277,10 @@
           var perms = $(this).closest('tr').attr('data-permission');
           view_perm_details($(this), filename, abs_path, perms);
         });
+
+        makeEditable('.explorer-owner-links', 'SETOWNER', 'owner');
+        makeEditable('.explorer-group-links', 'SETOWNER', 'group');
+        makeEditable('.explorer-replication-links', 'SETREPLICATION', 'replication');
 
         $('.explorer-entry .glyphicon-trash').click(function() {
           var inode_name = $(this).closest('tr').attr('inode-path');
