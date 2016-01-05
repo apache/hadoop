@@ -2556,6 +2556,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7553. fix the TestDFSUpgradeWithHA due to BindException.
     (Xiao Chen via cnauroth)
 
+    HDFS-9605. Add links to failed volumes to explorer.html in HDFS Web UI.
+    (Archana T via wheat9)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
