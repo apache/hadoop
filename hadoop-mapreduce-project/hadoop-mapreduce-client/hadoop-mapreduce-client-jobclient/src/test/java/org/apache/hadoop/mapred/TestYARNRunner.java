@@ -63,6 +63,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -570,16 +571,34 @@ public class TestYARNRunner extends TestCase {
   }
 
   @Test
-  public void testAMStandardEnv() throws Exception {
+  public void testAMStandardEnvWithDefaultLibPath() throws Exception {
+    testAMStandardEnv(false);
+  }
+
+  @Test
+  public void testAMStandardEnvWithCustomLibPath() throws Exception {
+    testAMStandardEnv(true);
+  }
+
+  private void testAMStandardEnv(boolean customLibPath) throws Exception {
+    // the Windows behavior is different and this test currently doesn't really
+    // apply
+    // MAPREDUCE-6588 should revisit this test
+    if (Shell.WINDOWS) {
+      return;
+    }
+
     final String ADMIN_LIB_PATH = "foo";
     final String USER_LIB_PATH = "bar";
     final String USER_SHELL = "shell";
     JobConf jobConf = new JobConf();
+    String pathKey = Environment.LD_LIBRARY_PATH.name();
 
-    jobConf.set(MRJobConfig.MR_AM_ADMIN_USER_ENV, "LD_LIBRARY_PATH=" +
-        ADMIN_LIB_PATH);
-    jobConf.set(MRJobConfig.MR_AM_ENV, "LD_LIBRARY_PATH="
-        + USER_LIB_PATH);
+    if (customLibPath) {
+      jobConf.set(MRJobConfig.MR_AM_ADMIN_USER_ENV, pathKey + "=" +
+          ADMIN_LIB_PATH);
+      jobConf.set(MRJobConfig.MR_AM_ENV, pathKey + "=" + USER_LIB_PATH);
+    }
     jobConf.set(MRJobConfig.MAPRED_ADMIN_USER_SHELL, USER_SHELL);
 
     YARNRunner yarnRunner = new YARNRunner(jobConf);
@@ -589,15 +608,23 @@ public class TestYARNRunner extends TestCase {
     // make sure PWD is first in the lib path
     ContainerLaunchContext clc = appSubCtx.getAMContainerSpec();
     Map<String, String> env = clc.getEnvironment();
-    String libPath = env.get(Environment.LD_LIBRARY_PATH.name());
-    assertNotNull("LD_LIBRARY_PATH not set", libPath);
+    String libPath = env.get(pathKey);
+    assertNotNull(pathKey + " not set", libPath);
     String cps = jobConf.getBoolean(
         MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM,
         MRConfig.DEFAULT_MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM)
         ? ApplicationConstants.CLASS_PATH_SEPARATOR : File.pathSeparator;
-    assertEquals("Bad AM LD_LIBRARY_PATH setting",
-        MRApps.crossPlatformifyMREnv(conf, Environment.PWD)
-        + cps + ADMIN_LIB_PATH + cps + USER_LIB_PATH, libPath);
+    String expectedLibPath =
+        MRApps.crossPlatformifyMREnv(conf, Environment.PWD);
+    if (customLibPath) {
+      // append admin libpath and user libpath
+      expectedLibPath += cps + ADMIN_LIB_PATH + cps + USER_LIB_PATH;
+    } else {
+      expectedLibPath += cps +
+          MRJobConfig.DEFAULT_MR_AM_ADMIN_USER_ENV.substring(
+              pathKey.length() + 1);
+    }
+    assertEquals("Bad AM " + pathKey + " setting", expectedLibPath, libPath);
 
     // make sure SHELL is set
     String shell = env.get(Environment.SHELL.name());

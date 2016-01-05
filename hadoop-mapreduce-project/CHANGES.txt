@@ -315,6 +315,9 @@ Release 2.9.0 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-6577. MR AM unable to load native library without
+    MR_AM_ADMIN_USER_ENV set (sjlee)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
