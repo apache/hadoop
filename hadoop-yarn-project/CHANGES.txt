@@ -28,6 +28,9 @@ Release 2.6.4 - UNRELEASED
     YARN-3697. FairScheduler: ContinuousSchedulingThread can fail to shutdown.
     (Zhihai Xu via kasha)
 
+    YARN-4546. ResourceManager crash due to scheduling opportunity overflow.
+    (Jason Lowe via junping_du)
+
 Release 2.6.3 - 2015-12-17
 
   INCOMPATIBLE CHANGES
