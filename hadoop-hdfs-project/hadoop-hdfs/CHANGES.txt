@@ -1,4 +1,4 @@
- Hadoop HDFS Change Log
+Hadoop HDFS Change Log
 
 Trunk (Unreleased)
 
@@ -1799,6 +1799,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-7779. Support changing ownership, group and replication in HDFS Web
     UI. (Ravi Prakash via wheat9)
+
+    HDFS-9498. Move code that tracks blocks with future generation stamps
+    to BlockManagerSafeMode. (Mingliang Liu via Arpit Agarwal)
 
   OPTIMIZATIONS
 

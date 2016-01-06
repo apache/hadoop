@@ -306,7 +306,7 @@ public class TestEditLogRace {
         assertEquals(fsimage.getStorage().getMostRecentCheckpointTxId(),
                      editLog.getLastWrittenTxId() - 1);
 
-        namesystem.leaveSafeMode();
+        namesystem.leaveSafeMode(false);
         LOG.info("Save " + i + ": complete");
       }
     } finally {

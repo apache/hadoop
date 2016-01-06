@@ -464,7 +464,7 @@ public class TestFSEditLogLoader {
 
       fns.enterSafeMode(false);
       fns.saveNamespace(0, 0);
-      fns.leaveSafeMode();
+      fns.leaveSafeMode(false);
 
       // Add a striped block to the file
       BlockInfoStriped stripedBlk = new BlockInfoStriped(
@@ -542,7 +542,7 @@ public class TestFSEditLogLoader {
       file.toCompleteFile(System.currentTimeMillis());
       fns.enterSafeMode(false);
       fns.saveNamespace(0, 0);
-      fns.leaveSafeMode();
+      fns.leaveSafeMode(false);
 
       //update the last block
       long newBlkNumBytes = 1024*8;

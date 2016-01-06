@@ -986,6 +986,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   
   @Override
   public void startSecretManagerIfNecessary() {
+    assert hasWriteLock() : "Starting secret manager needs write lock";
     boolean shouldRun = shouldUseDelegationTokens() &&
       !isInSafeMode() && getEditLog().isOpenForWrite();
     boolean running = dtSecretManager.isRunning();
@@ -4006,29 +4007,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkSuperuserPrivilege();
       switch(action) {
       case SAFEMODE_LEAVE: // leave safe mode
-        if (blockManager.getBytesInFuture() > 0) {
-          LOG.error("Refusing to leave safe mode without a force flag. " +
-              "Exiting safe mode will cause a deletion of " + blockManager
-              .getBytesInFuture() + " byte(s). Please use " +
-              "-forceExit flag to exit safe mode forcefully and data loss is " +
-              "acceptable.");
-        } else {
-          leaveSafeMode();
-        }
+        leaveSafeMode(false);
         break;
       case SAFEMODE_ENTER: // enter safe mode
         enterSafeMode(false);
         break;
       case SAFEMODE_FORCE_EXIT:
-        if (blockManager.getBytesInFuture() > 0) {
-          LOG.warn("Leaving safe mode due to forceExit. This will cause a data "
-              + "loss of " + blockManager.getBytesInFuture() + " byte(s).");
-          blockManager.clearBytesInFuture();
-        } else {
-          LOG.warn("forceExit used when normal exist would suffice. Treating " +
-              "force exit as normal safe mode exit.");
-        }
-        leaveSafeMode();
+        leaveSafeMode(true);
         break;
       default:
         LOG.error("Unexpected safe mode action");
@@ -4125,16 +4110,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   /**
    * Leave safe mode.
+   * @param force true if to leave safe mode forcefully with -forceExit option
    */
-  void leaveSafeMode() {
+  void leaveSafeMode(boolean force) {
     writeLock();
     try {
       if (!isInSafeMode()) {
         NameNode.stateChangeLog.info("STATE* Safe mode is already OFF"); 
         return;
       }
-      setManualAndResourceLowSafeMode(false, false);
-      blockManager.leaveSafeMode(true);
+      if (blockManager.leaveSafeMode(force)) {
+        setManualAndResourceLowSafeMode(false, false);
+        startSecretManagerIfNecessary();
+      }
     } finally {
       writeUnlock();
     }

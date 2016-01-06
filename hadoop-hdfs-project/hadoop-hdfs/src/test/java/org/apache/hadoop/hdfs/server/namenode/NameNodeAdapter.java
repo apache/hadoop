@@ -96,7 +96,7 @@ public class NameNodeAdapter {
   }
   
   public static void leaveSafeMode(NameNode namenode) {
-    namenode.getNamesystem().leaveSafeMode();
+    namenode.getNamesystem().leaveSafeMode(false);
   }
   
   public static void abortEditLogs(NameNode nn) {

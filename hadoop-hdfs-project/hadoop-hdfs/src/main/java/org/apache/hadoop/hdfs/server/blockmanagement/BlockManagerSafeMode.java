@@ -21,6 +21,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportReplica;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
@@ -106,6 +109,11 @@ class BlockManagerSafeMode {
   /** Counter for tracking startup progress of reported blocks. */
   private Counter awaitingReportedBlocksCounter;
 
+  /** Keeps track of how many bytes are in Future Generation blocks. */
+  private final AtomicLong numberOfBytesInFutureBlocks = new AtomicLong();
+  /** Reports if Name node was started with Rollback option. */
+  private final boolean inRollBack;
+
   BlockManagerSafeMode(BlockManager blockManager, Namesystem namesystem,
       Configuration conf) {
     this.blockManager = blockManager;
@@ -135,8 +143,9 @@ class BlockManagerSafeMode {
     this.replQueueThreshold =
         conf.getFloat(DFS_NAMENODE_REPL_QUEUE_THRESHOLD_PCT_KEY,
             (float) threshold);
-
     this.extension = conf.getInt(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
+
+    this.inRollBack = isInRollBackMode(NameNode.getStartupOption(conf));
 
     LOG.info("{} = {}", DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, threshold);
     LOG.info("{} = {}", DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY,
@@ -300,15 +309,15 @@ class BlockManagerSafeMode {
           numLive, datanodeThreshold);
     }
 
-    if (blockManager.getBytesInFuture() > 0) {
+    if (getBytesInFuture() > 0) {
       msg += "Name node detected blocks with generation stamps " +
-          "in future. This means that Name node metadata is inconsistent." +
+          "in future. This means that Name node metadata is inconsistent. " +
           "This can happen if Name node metadata files have been manually " +
-          "replaced. Exiting safe mode will cause loss of " + blockManager
-          .getBytesInFuture() + " byte(s). Please restart name node with " +
-          "right metadata or use \"hdfs dfsadmin -safemode forceExit" +
-          "if you are certain that the NameNode was started with the" +
-          "correct FsImage and edit logs. If you encountered this during" +
+          "replaced. Exiting safe mode will cause loss of " +
+          getBytesInFuture() + " byte(s). Please restart name node with " +
+          "right metadata or use \"hdfs dfsadmin -safemode forceExit\" " +
+          "if you are certain that the NameNode was started with the " +
+          "correct FsImage and edit logs. If you encountered this during " +
           "a rollback, it is safe to exit with -safemode forceExit.";
       return msg;
     }
@@ -333,24 +342,36 @@ class BlockManagerSafeMode {
 
   /**
    * Leave start up safe mode.
+   *
    * @param force - true to force exit
+   * @return true if it leaves safe mode successfully else false
    */
-  void leaveSafeMode(boolean force) {
+  boolean leaveSafeMode(boolean force) {
     assert namesystem.hasWriteLock() : "Leaving safe mode needs write lock!";
+
+    final long bytesInFuture = numberOfBytesInFutureBlocks.get();
+    if (bytesInFuture > 0) {
+      if (force) {
+        LOG.warn("Leaving safe mode due to forceExit. This will cause a data "
+            + "loss of {} byte(s).", bytesInFuture);
+        numberOfBytesInFutureBlocks.set(0);
+      } else {
+        LOG.error("Refusing to leave safe mode without a force flag. " +
+            "Exiting safe mode will cause a deletion of {} byte(s). Please " +
+            "use -forceExit flag to exit safe mode forcefully if data loss is" +
+            " acceptable.", bytesInFuture);
+        return false;
+      }
+    } else if (force) {
+      LOG.warn("forceExit used when normal exist would suffice. Treating " +
+          "force exit as normal safe mode exit.");
+    }
 
     // if not done yet, initialize replication queues.
     // In the standby, do not populate repl queues
     if (!blockManager.isPopulatingReplQueues() &&
         blockManager.shouldPopulateReplQueues()) {
       blockManager.initializeReplQueues();
-    }
-
-    if (!force && blockManager.getBytesInFuture() > 0) {
-      LOG.error("Refusing to leave safe mode without a force flag. " +
-          "Exiting safe mode will cause a deletion of {} byte(s). Please use " +
-          "-forceExit flag to exit safe mode forcefully if data loss is " +
-          "acceptable.", blockManager.getBytesInFuture());
-      return;
     }
 
     if (status != BMSafeModeStatus.OFF) {
@@ -379,6 +400,8 @@ class BlockManagerSafeMode {
           BlockManagerSafeMode.STEP_AWAITING_REPORTED_BLOCKS);
       prog.endPhase(Phase.SAFEMODE);
     }
+
+    return true;
   }
 
   /**
@@ -436,6 +459,35 @@ class BlockManagerSafeMode {
     }
   }
 
+  /**
+   * Check if the block report replica has a generation stamp (GS) in future.
+   * If safe mode is not currently on, this is a no-op.
+   *
+   * @param brr block report replica which belongs to no file in BlockManager
+   */
+  void checkBlocksWithFutureGS(BlockReportReplica brr) {
+    assert namesystem.hasWriteLock();
+    if (status == BMSafeModeStatus.OFF) {
+      return;
+    }
+
+    if (!blockManager.getShouldPostponeBlocksFromFuture() &&
+        !inRollBack &&
+        namesystem.isGenStampInFuture(brr)) {
+      numberOfBytesInFutureBlocks.addAndGet(brr.getBytesOnDisk());
+    }
+  }
+
+  /**
+   * Returns the number of bytes that reside in blocks with Generation Stamps
+   * greater than generation stamp known to Namenode.
+   *
+   * @return Bytes in future
+   */
+  long getBytesInFuture() {
+    return numberOfBytesInFutureBlocks.get();
+  }
+
   void close() {
     assert namesystem.hasWriteLock() : "Closing bmSafeMode needs write lock!";
     try {
@@ -452,6 +504,19 @@ class BlockManagerSafeMode {
    */
   private long timeToLeaveExtension() {
     return reachedTime.get() + extension - monotonicNow();
+  }
+
+  /**
+   * Returns true if Namenode was started with a RollBack option.
+   *
+   * @param option - StartupOption
+   * @return boolean
+   */
+  private static boolean isInRollBackMode(StartupOption option) {
+    return (option == StartupOption.ROLLBACK) ||
+        (option == StartupOption.ROLLINGUPGRADE &&
+            option.getRollingUpgradeStartupOption() ==
+                RollingUpgradeStartupOption.ROLLBACK);
   }
 
   /** Check if we are ready to initialize replication queues. */

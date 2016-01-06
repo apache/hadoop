@@ -105,7 +105,7 @@ public class TestFSNamesystem {
     Mockito.when(fsImage.getEditLog()).thenReturn(fsEditLog);
     FSNamesystem fsn = new FSNamesystem(conf, fsImage);
 
-    fsn.leaveSafeMode();
+    fsn.leaveSafeMode(false);
     assertTrue("After leaving safemode FSNamesystem.isInStartupSafeMode still "
       + "returned true", !fsn.isInStartupSafeMode());
     assertTrue("After leaving safemode FSNamesystem.isInSafeMode still returned"
@@ -145,7 +145,7 @@ public class TestFSNamesystem {
     assertTrue("FSNamesystem didn't enter safemode", fsn.isInSafeMode());
     assertTrue("Replication queues were being populated during very first "
         + "safemode", !bm.isPopulatingReplQueues());
-    fsn.leaveSafeMode();
+    fsn.leaveSafeMode(false);
     assertTrue("FSNamesystem didn't leave safemode", !fsn.isInSafeMode());
     assertTrue("Replication queues weren't being populated even after leaving "
       + "safemode", bm.isPopulatingReplQueues());

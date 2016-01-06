@@ -1608,7 +1608,7 @@ public class TestCheckpoint {
       FSNamesystem fsns = cluster.getNamesystem();
       fsns.enterSafeMode(false);
       fsns.saveNamespace(0, 0);
-      fsns.leaveSafeMode();
+      fsns.leaveSafeMode(false);
       
       secondary = startSecondaryNameNode(conf);
 
