@@ -2124,6 +2124,8 @@ Release 2.6.4 - UNRELEASED
 
   BUG FIXES
 
+  YARN-2975. FSLeafQueue app lists are accessed without required locks. (kasha)
+
   YARN-3857: Memory leak in ResourceManager with SIMPLE mode.
   (mujunchao via zxu)
 
@@ -2133,11 +2135,20 @@ Release 2.6.4 - UNRELEASED
   YARN-4452. NPE when submit Unmanaged application. (Naganarasimha G R
   via junping_du)
 
+  YARN-3893. Both RM in active state when Admin#transitionToActive failure
+  from refeshAll() (Bibin A Chundatt via rohithsharmaks)
+
   YARN-3697. FairScheduler: ContinuousSchedulingThread can fail to shutdown.
   (Zhihai Xu via kasha)
 
   YARN-4546. ResourceManager crash due to scheduling opportunity overflow.
   (Jason Lowe via junping_du)
+
+  YARN-2902. Killing a container that is localizing can orphan resources in
+  the DOWNLOADING state (Varun Saxena via jlowe)
+
+  YARN-4354. Public resource localization fails with NPE. (Jason Lowe via
+  junping_du)
 
 Release 2.6.3 - 2015-12-17
 
