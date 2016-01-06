@@ -536,45 +536,13 @@ public class NativeAzureFileSystem extends FileSystem {
       Path dstFile = fullPath(dstKey, fileName);
       boolean srcExists = fs.exists(srcFile);
       boolean dstExists = fs.exists(dstFile);
-      if (srcExists && !dstExists) {
-
+      if(srcExists) {
         // Rename gets exclusive access (via a lease) for HBase write-ahead log
         // (WAL) file processing correctness.  See the rename code for details.
         String srcName = fs.pathToKey(srcFile);
         String dstName = fs.pathToKey(dstFile);
         fs.getStoreInterface().rename(srcName, dstName, true, null);
-      } else if (srcExists && dstExists) {
-
-        // Get a lease on source to block write access.
-        String srcName = fs.pathToKey(srcFile);
-        SelfRenewingLease lease = null;
-        try {
-          lease = fs.acquireLease(srcFile);
-          // Delete the file. This will free the lease too.
-          fs.getStoreInterface().delete(srcName, lease);
-        } catch(AzureException e) {
-            String errorCode = "";
-            try {
-              StorageException e2 = (StorageException) e.getCause();
-              errorCode = e2.getErrorCode();
-            } catch(Exception e3) {
-              // do nothing if cast fails
-            }
-            // If the rename already finished do nothing
-            if(!errorCode.equals("BlobNotFound")){
-              throw e;
-            }
-        } finally {
-          try {
-            if(lease != null){
-              lease.free();
-            }
-          } catch(StorageException e) {
-            LOG.warn("Unable to free lease because: " + e.getMessage());
-          }
-        }
       } else if (!srcExists && dstExists) {
-
         // The rename already finished, so do nothing.
         ;
       } else {
