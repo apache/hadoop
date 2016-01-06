@@ -1553,6 +1553,10 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12689. S3 filesystem operations stopped working correctly
     (Matt Paduano via raviprak)
 
+    HADOOP-12634. Change Lazy Rename Pending Operation Completion of WASB to
+    address case of potential data loss due to partial copy
+    (Gaurav Kanade via cnauroth)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

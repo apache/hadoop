@@ -24,6 +24,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.CountDownLatch;
 
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 
@@ -43,6 +45,26 @@ public class TestNativeAzureFileSystemLive extends
     return AzureBlobStorageTestAccount.create();
   }
 
+  @Test
+  public void testLazyRenamePendingCanOverwriteExistingFile()
+    throws Exception {
+    final String SRC_FILE_KEY = "srcFile";
+    final String DST_FILE_KEY = "dstFile";
+    Path srcPath = new Path(SRC_FILE_KEY);
+    FSDataOutputStream srcStream = fs.create(srcPath);
+    assertTrue(fs.exists(srcPath));
+    Path dstPath = new Path(DST_FILE_KEY);
+    FSDataOutputStream dstStream = fs.create(dstPath);
+    assertTrue(fs.exists(dstPath));
+    NativeAzureFileSystem nfs = (NativeAzureFileSystem)fs;
+    final String fullSrcKey = nfs.pathToKey(nfs.makeAbsolute(srcPath));
+    final String fullDstKey = nfs.pathToKey(nfs.makeAbsolute(dstPath));
+    nfs.getStoreInterface().rename(fullSrcKey, fullDstKey, true, null);
+    assertTrue(fs.exists(dstPath));
+    assertFalse(fs.exists(srcPath));
+    IOUtils.cleanup(null, srcStream);
+    IOUtils.cleanup(null, dstStream);
+  }
   /**
    * Tests fs.delete() function to delete a blob when another blob is holding a
    * lease on it. Delete if called without a lease should fail if another process
