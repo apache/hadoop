@@ -1215,6 +1215,9 @@ Release 2.8.0 - UNRELEASED
     YARN-1382. Remove unusableRMNodesConcurrentSet (never used) in NodeListManager
     to get rid of memory leak. (Rohith Sharma K S via junping_du)
 
+    YARN-4546. ResourceManager crash due to scheduling opportunity overflow.
+    (Jason Lowe via junping_du)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1269,6 +1272,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4315. NaN in Queue percentage for cluster apps page. (Bibin A Chundatt via wangda)
 
     YARN-4510. Fix SLS startup failure caused by NPE. (Bibin A Chundatt via wangda)
+
+    YARN-4546. ResourceManager crash due to scheduling opportunity overflow.
+    (Jason Lowe via junping_du)
 
 Release 2.7.2 - UNRELEASED
 
@@ -2129,6 +2135,9 @@ Release 2.6.4 - UNRELEASED
 
   YARN-3697. FairScheduler: ContinuousSchedulingThread can fail to shutdown.
   (Zhihai Xu via kasha)
+
+  YARN-4546. ResourceManager crash due to scheduling opportunity overflow.
+  (Jason Lowe via junping_du)
 
 Release 2.6.3 - 2015-12-17
 
