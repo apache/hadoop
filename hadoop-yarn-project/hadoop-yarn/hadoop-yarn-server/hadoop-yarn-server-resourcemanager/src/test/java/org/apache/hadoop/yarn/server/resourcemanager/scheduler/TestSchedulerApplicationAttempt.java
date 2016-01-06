@@ -163,4 +163,26 @@ public class TestSchedulerApplicationAttempt {
         ApplicationAttemptId.newInstance(appIdImpl, attemptId);
     return attId;
   }
+
+  @Test
+  public void testSchedulingOpportunityOverflow() throws Exception {
+    ApplicationAttemptId attemptId = createAppAttemptId(0, 0);
+    Queue queue = createQueue("test", null);
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getEpoch()).thenReturn(3L);
+    SchedulerApplicationAttempt app = new SchedulerApplicationAttempt(
+        attemptId, "user", queue, queue.getActiveUsersManager(), rmContext);
+    Priority priority = Priority.newInstance(1);
+    assertEquals(0, app.getSchedulingOpportunities(priority));
+    app.addSchedulingOpportunity(priority);
+    assertEquals(1, app.getSchedulingOpportunities(priority));
+    // verify the count is capped at MAX_VALUE and does not overflow
+    app.setSchedulingOpportunities(priority, Integer.MAX_VALUE - 1);
+    assertEquals(Integer.MAX_VALUE - 1,
+        app.getSchedulingOpportunities(priority));
+    app.addSchedulingOpportunity(priority);
+    assertEquals(Integer.MAX_VALUE, app.getSchedulingOpportunities(priority));
+    app.addSchedulingOpportunity(priority);
+    assertEquals(Integer.MAX_VALUE, app.getSchedulingOpportunities(priority));
+  }
 }
