@@ -254,4 +254,38 @@ public abstract class TestRawCoderBase extends TestCoderBase {
     decoder.setConf(getConf());
     return decoder;
   }
+
+  /**
+   * Tests that the input buffer's position is moved to the end after
+   * encode/decode.
+   */
+  protected void testInputPosition(boolean usingDirectBuffer) {
+    this.usingDirectBuffer = usingDirectBuffer;
+    prepareCoders();
+    prepareBufferAllocator(false);
+
+    // verify encode
+    ECChunk[] dataChunks = prepareDataChunksForEncoding();
+    ECChunk[] parityChunks = prepareParityChunksForEncoding();
+    ECChunk[] clonedDataChunks = cloneChunksWithData(dataChunks);
+    encoder.encode(dataChunks, parityChunks);
+    verifyBufferPositionAtEnd(dataChunks);
+
+    // verify decode
+    backupAndEraseChunks(clonedDataChunks, parityChunks);
+    ECChunk[] inputChunks = prepareInputChunksForDecoding(
+        clonedDataChunks, parityChunks);
+    ensureOnlyLeastRequiredChunks(inputChunks);
+    ECChunk[] recoveredChunks = prepareOutputChunksForDecoding();
+    decoder.decode(inputChunks, getErasedIndexesForDecoding(), recoveredChunks);
+    verifyBufferPositionAtEnd(inputChunks);
+  }
+
+  private void verifyBufferPositionAtEnd(ECChunk[] inputChunks) {
+    for (ECChunk chunk : inputChunks) {
+      if (chunk != null) {
+        Assert.assertEquals(0, chunk.getBuffer().remaining());
+      }
+    }
+  }
 }

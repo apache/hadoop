@@ -115,4 +115,11 @@ public class TestRSRawCoder extends TestRSRawCoderBase {
     prepare(null, 10, 4, new int[] {0}, new int[] {0});
     testCodingDoMixAndTwice();
   }
+
+  @Test
+  public void testCodingInputBufferPosition() {
+    prepare(null, 6, 3, new int[]{0}, new int[]{0});
+    testInputPosition(false);
+    testInputPosition(true);
+  }
 }

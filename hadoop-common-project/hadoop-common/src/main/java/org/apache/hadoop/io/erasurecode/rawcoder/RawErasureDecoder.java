@@ -56,9 +56,10 @@ public interface RawErasureDecoder extends RawErasureCoder {
    *
    * If the coder option ALLOW_CHANGE_INPUTS is set true (false by default), the
    * content of input buffers may change after the call, subject to concrete
-   * implementation. Anyway the positions of input buffers will move forward.
+   * implementation.
    *
-   * @param inputs input buffers to read data from
+   * @param inputs input buffers to read data from. The buffers' remaining will
+   *               be 0 after decoding
    * @param erasedIndexes indexes of erased units in the inputs array
    * @param outputs output buffers to put decoded data into according to
    *                erasedIndexes, ready for read after the call

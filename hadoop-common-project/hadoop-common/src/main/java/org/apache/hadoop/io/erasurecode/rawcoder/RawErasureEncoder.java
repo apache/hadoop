@@ -42,8 +42,9 @@ public interface RawErasureEncoder extends RawErasureCoder {
    * content of input buffers may change after the call, subject to concrete
    * implementation. Anyway the positions of input buffers will move forward.
    *
-   * @param inputs input buffers to read data from
-   * @param outputs output buffers to put the encoded data into, read to read
+   * @param inputs input buffers to read data from. The buffers' remaining will
+   *               be 0 after encoding
+   * @param outputs output buffers to put the encoded data into, ready to read
    *                after the call
    */
   void encode(ByteBuffer[] inputs, ByteBuffer[] outputs);

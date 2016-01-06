@@ -48,34 +48,42 @@ public abstract class AbstractRawErasureEncoder extends AbstractRawErasureCoder
     checkParameterBuffers(inputs, false, dataLen, usingDirectBuffer, false);
     checkParameterBuffers(outputs, false, dataLen, usingDirectBuffer, true);
 
+    int[] inputPositions = new int[inputs.length];
+    for (int i = 0; i < inputPositions.length; i++) {
+      if (inputs[i] != null) {
+        inputPositions[i] = inputs[i].position();
+      }
+    }
+
     if (usingDirectBuffer) {
       doEncode(inputs, outputs);
-      return;
+    } else {
+      int[] inputOffsets = new int[inputs.length];
+      int[] outputOffsets = new int[outputs.length];
+      byte[][] newInputs = new byte[inputs.length][];
+      byte[][] newOutputs = new byte[outputs.length][];
+
+      ByteBuffer buffer;
+      for (int i = 0; i < inputs.length; ++i) {
+        buffer = inputs[i];
+        inputOffsets[i] = buffer.arrayOffset() + buffer.position();
+        newInputs[i] = buffer.array();
+      }
+
+      for (int i = 0; i < outputs.length; ++i) {
+        buffer = outputs[i];
+        outputOffsets[i] = buffer.arrayOffset() + buffer.position();
+        newOutputs[i] = buffer.array();
+      }
+
+      doEncode(newInputs, inputOffsets, dataLen, newOutputs, outputOffsets);
     }
 
-    int[] inputOffsets = new int[inputs.length];
-    int[] outputOffsets = new int[outputs.length];
-    byte[][] newInputs = new byte[inputs.length][];
-    byte[][] newOutputs = new byte[outputs.length][];
-
-    ByteBuffer buffer;
-    for (int i = 0; i < inputs.length; ++i) {
-      buffer = inputs[i];
-      inputOffsets[i] = buffer.arrayOffset() + buffer.position();
-      newInputs[i] = buffer.array();
-    }
-
-    for (int i = 0; i < outputs.length; ++i) {
-      buffer = outputs[i];
-      outputOffsets[i] = buffer.arrayOffset() + buffer.position();
-      newOutputs[i] = buffer.array();
-    }
-
-    doEncode(newInputs, inputOffsets, dataLen, newOutputs, outputOffsets);
-
-    for (int i = 0; i < inputs.length; ++i) {
-      buffer = inputs[i];
-      buffer.position(buffer.position() + dataLen); // dataLen bytes consumed
+    for (int i = 0; i < inputs.length; i++) {
+      if (inputs[i] != null) {
+        // dataLen bytes consumed
+        inputs[i].position(inputPositions[i] + dataLen);
+      }
     }
   }
 
