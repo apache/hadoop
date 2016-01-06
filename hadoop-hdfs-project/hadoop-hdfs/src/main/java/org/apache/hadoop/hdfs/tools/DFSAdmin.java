@@ -731,7 +731,7 @@ public class DFSAdmin extends FsShell {
           DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT);
       final int toleratePeriodNum = dfsConf.getInt(
           DFSConfigKeys.DFS_NAMENODE_MISSING_CHECKPOINT_PERIODS_BEFORE_SHUTDOWN_KEY,
-          DFSConfigKeys.DFS_NAMENODE_MISSING_CHECKPOINT_PERIODS_BEFORE_SHUTDONW_DEFAULT);
+          DFSConfigKeys.DFS_NAMENODE_MISSING_CHECKPOINT_PERIODS_BEFORE_SHUTDOWN_DEFAULT);
       timeWindow = checkpointPeriod * toleratePeriodNum;
       txGap = checkpointTxnCount * toleratePeriodNum;
       System.out.println("Do checkpoint if necessary before stopping " +
