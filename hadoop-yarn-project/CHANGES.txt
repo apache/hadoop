@@ -31,6 +31,9 @@ Release 2.6.4 - UNRELEASED
     YARN-4546. ResourceManager crash due to scheduling opportunity overflow.
     (Jason Lowe via junping_du)
 
+    YARN-2902. Killing a container that is localizing can orphan resources in
+    the DOWNLOADING state (Varun Saxena via jlowe)
+
 Release 2.6.3 - 2015-12-17
 
   INCOMPATIBLE CHANGES
