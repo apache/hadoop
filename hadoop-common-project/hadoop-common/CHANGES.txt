@@ -1550,6 +1550,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12682. Fix TestKMS#testKMSRestart* failure.
     (Wei-Chiu Chuang via xyao)
 
+    HADOOP-12689. S3 filesystem operations stopped working correctly
+    (Matt Paduano via raviprak)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
