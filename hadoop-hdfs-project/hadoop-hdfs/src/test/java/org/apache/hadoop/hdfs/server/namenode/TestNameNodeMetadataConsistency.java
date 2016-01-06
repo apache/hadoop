@@ -23,26 +23,26 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.hamcrest.CoreMatchers;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
-import org.mockito.internal.util.reflection.Whitebox;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertTrue;
 
 public class TestNameNodeMetadataConsistency {
   private static final Path filePath1 = new Path("/testdata1.txt");
   private static final Path filePath2 = new Path("/testdata2.txt");
+  private static final String TEST_DATA_IN_FUTURE = "This is test data";
 
   private static final int SCAN_INTERVAL = 1;
   private static final int SCAN_WAIT = 3;
@@ -75,59 +75,45 @@ public class TestNameNodeMetadataConsistency {
   @Test
   public void testGenerationStampInFuture() throws
       IOException, InterruptedException {
-
-    String testData = " This is test data";
-    int datalen = testData.length();
-
     cluster.waitActive();
+
     FileSystem fs = cluster.getFileSystem();
     OutputStream ostream = fs.create(filePath1);
-    ostream.write(testData.getBytes());
+    ostream.write(TEST_DATA_IN_FUTURE.getBytes());
     ostream.close();
 
-    ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath1);
-    long genStamp = block.getGenerationStamp();
-
     // Re-write the Generation Stamp to a Generation Stamp in future.
-    cluster.changeGenStampOfBlock(0, block, genStamp + 1);
-    MiniDFSCluster.DataNodeProperties dnProps = cluster.stopDataNode(0);
+    ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath1);
+    final long genStamp = block.getGenerationStamp();
+    final int datanodeIndex = 0;
+    cluster.changeGenStampOfBlock(datanodeIndex, block, genStamp + 1);
+    // stop the data node so that it won't remove block
+    final DataNodeProperties dnProps = cluster.stopDataNode(datanodeIndex);
 
-
-    // Simulate  Namenode forgetting a Block
+    // Simulate Namenode forgetting a Block
     cluster.restartNameNode(true);
-    BlockInfo bInfo = cluster.getNameNode().getNamesystem().getBlockManager
-        ().getStoredBlock(block.getLocalBlock());
     cluster.getNameNode().getNamesystem().writeLock();
+    BlockInfo bInfo = cluster.getNameNode().getNamesystem().getBlockManager()
+        .getStoredBlock(block.getLocalBlock());
     cluster.getNameNode().getNamesystem().getBlockManager()
         .removeBlock(bInfo);
     cluster.getNameNode().getNamesystem().writeUnlock();
 
     // we also need to tell block manager that we are in the startup path
-    FSNamesystem spyNameSystem = spy(cluster.getNameNode().getNamesystem());
-    Whitebox.setInternalState(cluster.getNameNode()
-            .getNamesystem().getBlockManager(),
-        "namesystem", spyNameSystem);
-    Whitebox.setInternalState(cluster.getNameNode(),
-        "namesystem", spyNameSystem);
-    Mockito.doReturn(true).when(spyNameSystem).isInStartupSafeMode();
+    BlockManagerTestUtil.setStartupSafeModeForTest(
+        cluster.getNameNode().getNamesystem().getBlockManager());
 
-
-    // Since Data Node is already shutdown we didn't remove blocks
     cluster.restartDataNode(dnProps);
     waitTil(TimeUnit.SECONDS.toMillis(SCAN_WAIT));
     cluster.triggerBlockReports();
-
-    // Give some buffer to process the block reports
     waitTil(TimeUnit.SECONDS.toMillis(SCAN_WAIT));
 
     // Make sure that we find all written bytes in future block
-    assertEquals(datalen, cluster.getNameNode().getBytesWithFutureGenerationStamps());
-
+    assertEquals(TEST_DATA_IN_FUTURE.length(),
+        cluster.getNameNode().getBytesWithFutureGenerationStamps());
     // Assert safemode reason
-    String safeModeMessage = cluster.getNameNode().getNamesystem()
-        .getSafeModeTip();
-    assertThat(safeModeMessage, CoreMatchers.containsString("Name node " +
-        "detected blocks with generation stamps in future"));
+    assertTrue(cluster.getNameNode().getNamesystem().getSafeModeTip().contains(
+        "Name node detected blocks with generation stamps in future"));
   }
 
   /**
