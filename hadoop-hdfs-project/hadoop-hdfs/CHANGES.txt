@@ -4,6 +4,8 @@ Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HDFS-9047. Retire libwebhdfs. (wheat9)
+
   NEW FEATURES
 
     HDFS-7891. A block placement policy with best rack failure tolerance.
