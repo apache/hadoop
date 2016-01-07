@@ -253,8 +253,9 @@ public class DecommissionManager {
       NumberReplicas numberReplicas) {
     final int numExpected = bc.getBlockReplication();
     final int numLive = numberReplicas.liveReplicas();
-    if (!blockManager.isNeededReplication(block, numExpected, numLive)) {
-      // Block doesn't need replication. Skip.
+    if (numLive >= numExpected
+        && blockManager.isPlacementPolicySatisfied(block)) {
+      // Block has enough replica, skip
       LOG.trace("Block {} does not need replication.", block);
       return true;
     }

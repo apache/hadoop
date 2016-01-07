@@ -3444,7 +3444,14 @@ public class BlockManager {
    * or if it does not have enough racks.
    */
   boolean isNeededReplication(Block b, int expected, int current) {
-    return current < expected || !isPlacementPolicySatisfied(b);
+    BlockInfoContiguous blockInfo;
+    if (b instanceof BlockInfoContiguous) {
+      blockInfo = (BlockInfoContiguous) b;
+    } else {
+      blockInfo = getStoredBlock(b);
+    }
+    return blockInfo.isComplete()
+        && (current < expected || !isPlacementPolicySatisfied(b));
   }
   
   public long getMissingBlocksCount() {
