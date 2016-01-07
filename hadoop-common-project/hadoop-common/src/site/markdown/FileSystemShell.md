@@ -280,7 +280,7 @@ from trash directory, and create new checkpoint.
 
 When checkpoint is created,
 recently deleted files in trash are moved under the checkpoint.
-Files in checkpoints older than `fs.trash.checkpoint.interval`
+Files in checkpoints older than `fs.trash.interval`
 will be permanently deleted on the next invocation of `-expunge` command.
 
 If the file system supports the feature,
