@@ -898,6 +898,8 @@ Release 2.9.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HDFS-9047. Retire libwebhdfs. (wheat9)
+
   NEW FEATURES
 
   IMPROVEMENTS
