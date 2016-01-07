@@ -658,7 +658,9 @@ Release 2.9.0 - UNRELEASED
 
     HADOOP-12663. Remove Hard-Coded Values From FileSystem.java.
     (BELUGA BEHR via stevel)
-    
+
+    HADOOP-12655. TestHttpServer.testBindAddress bind port range is wider
+    than expected. (Wei-Chiu Chuang via stevel)
 
   BUG FIXES
 
