@@ -189,12 +189,12 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       }
     } else {
       if (configuredRollingMonitorInterval <= 0) {
-        LOG.warn("rollingMonitorInterval is set as "
+        LOG.info("rollingMonitorInterval is set as "
             + configuredRollingMonitorInterval + ". "
-            + "The log rolling mornitoring interval is disabled. "
+            + "The log rolling monitoring interval is disabled. "
             + "The logs will be aggregated after this application is finished.");
       } else {
-        LOG.warn("rollingMonitorInterval is set as "
+        LOG.info("rollingMonitorInterval is set as "
             + configuredRollingMonitorInterval + ". "
             + "The logs will be aggregated every "
             + configuredRollingMonitorInterval + " seconds");
