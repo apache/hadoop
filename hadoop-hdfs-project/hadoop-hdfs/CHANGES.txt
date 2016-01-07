@@ -3724,6 +3724,9 @@ Release 2.6.4 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-9600. do not check replication if the block is under construction
+    (Phil Yang via vinayakumarb)
+
 Release 2.6.3 - 2015-12-17
 
   INCOMPATIBLE CHANGES

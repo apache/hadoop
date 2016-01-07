@@ -3946,7 +3946,8 @@ public class BlockManager implements BlockStatsMXBean {
    */
   boolean isNeededReplication(BlockInfo storedBlock, int current) {
     int expected = getExpectedReplicaNum(storedBlock);
-    return current < expected || !isPlacementPolicySatisfied(storedBlock);
+    return storedBlock.isComplete()
+        && (current < expected || !isPlacementPolicySatisfied(storedBlock));
   }
 
   public short getExpectedReplicaNum(BlockInfo block) {
