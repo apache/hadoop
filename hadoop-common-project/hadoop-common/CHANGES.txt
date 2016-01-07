@@ -659,14 +659,14 @@ Release 2.9.0 - UNRELEASED
     HADOOP-12663. Remove Hard-Coded Values From FileSystem.java.
     (BELUGA BEHR via stevel)
 
-    HADOOP-12655. TestHttpServer.testBindAddress bind port range is wider
-    than expected. (Wei-Chiu Chuang via stevel)
-
   BUG FIXES
 
     HADOOP-12687. SecureUtil#QualifiedHostResolver#getByName should also try to
     resolve direct hostname, incase multiple loopback addresses are present in
     /etc/hosts (Sunil G via rohithsharmaks)
+
+    HADOOP-12655. TestHttpServer.testBindAddress bind port range is wider
+    than expected. (Wei-Chiu Chuang via stevel)
 
 Release 2.8.0 - UNRELEASED
 
