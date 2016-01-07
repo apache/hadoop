@@ -580,7 +580,13 @@ public class SecurityUtil {
           addr = getByNameWithSearch(host);
           if (addr == null) {
             addr = getByExactName(host);
+            // If multiple loopback addresses are present, a direct lookup
+            // will be helpful
+            if (addr == null) {
+              addr = InetAddress.getByName(host);
+            }
           }
+
         }
       }
       // unresolvable!
