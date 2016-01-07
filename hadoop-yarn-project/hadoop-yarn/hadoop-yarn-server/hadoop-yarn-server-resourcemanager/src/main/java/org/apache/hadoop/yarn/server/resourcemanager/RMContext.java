@@ -135,4 +135,8 @@ public interface RMContext {
   PlacementManager getQueuePlacementManager();
   
   void setQueuePlacementManager(PlacementManager placementMgr);
+
+  void setLeaderElectorService(LeaderElectorService elector);
+
+  LeaderElectorService getLeaderElectorService();
 }

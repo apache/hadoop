@@ -550,6 +550,11 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_HA_FC_ELECTOR_ZK_RETRIES_KEY = RM_HA_PREFIX
       + "failover-controller.active-standby-elector.zk.retries";
 
+  @Private
+  public static final String CURATOR_LEADER_ELECTOR =
+      RM_HA_PREFIX + "curator-leader-elector.enabled";
+  public static final boolean DEFAULT_CURATOR_LEADER_ELECTOR_ENABLED = false;
+
   ////////////////////////////////
   // RM state store configs
   ////////////////////////////////
