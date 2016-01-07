@@ -678,6 +678,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4098. Document ApplicationPriority feature. (Rohith Sharma K S via jianhe)
 
+    YARN-4544. All the log messages about rolling monitoring interval are
+    shown with WARN level. (Takashi Ohnishi via aajisaka)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
