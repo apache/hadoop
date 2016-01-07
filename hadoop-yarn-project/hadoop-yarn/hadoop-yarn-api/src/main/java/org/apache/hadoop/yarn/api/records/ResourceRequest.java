@@ -79,6 +79,15 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
   public static ResourceRequest newInstance(Priority priority, String hostName,
       Resource capability, int numContainers, boolean relaxLocality,
       String labelExpression) {
+    return newInstance(priority, hostName, capability, numContainers,
+        relaxLocality, labelExpression, ExecutionType.GUARANTEED);
+  }
+
+  @Public
+  @Stable
+  public static ResourceRequest newInstance(Priority priority, String hostName,
+      Resource capability, int numContainers, boolean relaxLocality, String
+      labelExpression, ExecutionType execType) {
     ResourceRequest request = Records.newRecord(ResourceRequest.class);
     request.setPriority(priority);
     request.setResourceName(hostName);
@@ -86,6 +95,7 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
     request.setNumContainers(numContainers);
     request.setRelaxLocality(relaxLocality);
     request.setNodeLabelExpression(labelExpression);
+    request.setExecutionType(execType);
     return request;
   }
 
@@ -221,7 +231,28 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
   @Public
   @Stable
   public abstract boolean getRelaxLocality();
-  
+
+  /**
+   * Set the <code>ExecutionType</code> of the requested container.
+   *
+   * @param execType
+   *          ExecutionType of the requested container
+   */
+  @Public
+  @Stable
+  public abstract void setExecutionType(ExecutionType execType);
+
+  /**
+   * Get whether locality relaxation is enabled with this
+   * <code>ResourceRequest</code>. Defaults to true.
+   *
+   * @return whether locality relaxation is enabled with this
+   * <code>ResourceRequest</code>.
+   */
+  @Public
+  @Stable
+  public abstract ExecutionType getExecutionType();
+
   /**
    * <p>For a request at a network hierarchy level, set whether locality can be relaxed
    * to that level and beyond.<p>
@@ -322,6 +353,14 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
         return false;
     } else if (!priority.equals(other.getPriority()))
       return false;
+    ExecutionType executionType = getExecutionType();
+    if (executionType == null) {
+      if (other.getExecutionType() != null) {
+        return false;
+      }
+    } else if (executionType != other.getExecutionType()) {
+      return false;
+    }
     if (getNodeLabelExpression() == null) {
       if (other.getNodeLabelExpression() != null) {
         return false;

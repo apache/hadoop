@@ -1,0 +1,15 @@
+Hadoop YARN Change Log
+
+Hadoop YARN Change Log for YARN-2877
+
+yarn-2877 distributed scheduling (Unreleased)
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    YARN-4335. Allow ResourceRequests to specify ExecutionType of a request
+    ask (kkaranasos via asuresh)
+
