@@ -3290,8 +3290,9 @@ public class BlockManager {
         NumberReplicas num = countNodes(block);
         int curReplicas = num.liveReplicas();
         int curExpectedReplicas = getReplication(block);
-                
-        if (isNeededReplication(block, curExpectedReplicas, curReplicas)) {
+
+        if (curReplicas < curExpectedReplicas
+            || !isPlacementPolicySatisfied(block)) {
           if (curExpectedReplicas > curReplicas) {
             if (bc.isUnderConstruction()) {
               if (block.equals(bc.getLastBlock()) && curReplicas > minReplication) {
@@ -3502,8 +3503,15 @@ public class BlockManager {
    * A block needs replication if the number of replicas is less than expected
    * or if it does not have enough racks.
    */
-  private boolean isNeededReplication(Block b, int expected, int current) {
-    return current < expected || !isPlacementPolicySatisfied(b);
+  boolean isNeededReplication(Block b, int expected, int current) {
+    BlockInfo blockInfo;
+    if (b instanceof BlockInfo) {
+      blockInfo = (BlockInfo) b;
+    } else {
+      blockInfo = getStoredBlock(b);
+    }
+    return blockInfo.isComplete()
+        && (current < expected || !isPlacementPolicySatisfied(b));
   }
   
   public long getMissingBlocksCount() {
