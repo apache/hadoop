@@ -38,10 +38,15 @@ import org.apache.hadoop.fs.shell.find.Find;
 import org.apache.hadoop.fs.shell.find.FindOptions;
 import org.apache.hadoop.fs.shell.find.Result;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.mockito.InOrder;
 
 public class TestFind {
+  @Rule
+  public Timeout timeout = new Timeout(10000);
+
   private static FileSystem mockFs;
   private static Configuration conf;
 
@@ -52,7 +57,7 @@ public class TestFind {
   }
   
   // check follow link option is recognized
-  @Test(timeout = 1000)
+  @Test
   public void processOptionsFollowLink() throws IOException {
     Find find = new Find();
     String args = "-L path";
@@ -62,7 +67,7 @@ public class TestFind {
   }
 
   // check follow arg link option is recognized
-  @Test(timeout = 1000)
+  @Test
   public void processOptionsFollowArgLink() throws IOException {
     Find find = new Find();
     String args = "-H path";
@@ -72,7 +77,7 @@ public class TestFind {
   }
 
   // check follow arg link option is recognized
-  @Test(timeout = 1000)
+  @Test
   public void processOptionsFollowLinkFollowArgLink() throws IOException {
     Find find = new Find();
     String args = "-L -H path";
@@ -84,7 +89,7 @@ public class TestFind {
   }
   
   // check options and expressions are stripped from args leaving paths
-  @Test(timeout = 1000)
+  @Test
   public void processOptionsExpression() throws IOException {
     Find find = new Find();
     find.setConf(conf);
@@ -98,7 +103,7 @@ public class TestFind {
   }
 
   // check print is used as the default expression
-  @Test(timeout = 1000)
+  @Test
   public void processOptionsNoExpression() throws IOException {
     Find find = new Find();
     find.setConf(conf);
@@ -110,7 +115,7 @@ public class TestFind {
   }
 
   // check unknown options are rejected
-  @Test(timeout = 1000)
+  @Test
   public void processOptionsUnknown() throws IOException {
     Find find = new Find();
     find.setConf(conf);
@@ -123,7 +128,7 @@ public class TestFind {
   }
 
   // check unknown options are rejected when mixed with known options
-  @Test(timeout = 1000)
+  @Test
   public void processOptionsKnownUnknown() throws IOException {
     Find find = new Find();
     find.setConf(conf);
@@ -136,7 +141,7 @@ public class TestFind {
   }
 
   // check no path defaults to current working directory
-  @Test(timeout = 1000)
+  @Test
   public void processOptionsNoPath() throws IOException {
     Find find = new Find();
     find.setConf(conf);
@@ -148,7 +153,7 @@ public class TestFind {
   }
 
   // check -name is handled correctly
-  @Test(timeout = 1000)
+  @Test
   public void processOptionsName() throws IOException {
     Find find = new Find();
     find.setConf(conf);
@@ -160,7 +165,7 @@ public class TestFind {
   }
 
   // check -iname is handled correctly
-  @Test(timeout = 1000)
+  @Test
   public void processOptionsIname() throws IOException {
     Find find = new Find();
     find.setConf(conf);
@@ -172,7 +177,7 @@ public class TestFind {
   }
 
   // check -print is handled correctly
-  @Test(timeout = 1000)
+  @Test
   public void processOptionsPrint() throws IOException {
     Find find = new Find();
     find.setConf(conf);
@@ -184,7 +189,7 @@ public class TestFind {
   }
 
   // check -print0 is handled correctly
-  @Test(timeout = 1000)
+  @Test
   public void processOptionsPrint0() throws IOException {
     Find find = new Find();
     find.setConf(conf);
@@ -196,7 +201,7 @@ public class TestFind {
   }
 
   // check an implicit and is handled correctly
-  @Test(timeout = 1000)
+  @Test
   public void processOptionsNoop() throws IOException {
     Find find = new Find();
     find.setConf(conf);
@@ -209,7 +214,7 @@ public class TestFind {
   }
 
   // check -a is handled correctly
-  @Test(timeout = 1000)
+  @Test
   public void processOptionsA() throws IOException {
     Find find = new Find();
     find.setConf(conf);
@@ -222,7 +227,7 @@ public class TestFind {
   }
 
   // check -and is handled correctly
-  @Test(timeout = 1000)
+  @Test
   public void processOptionsAnd() throws IOException {
     Find find = new Find();
     find.setConf(conf);
@@ -235,7 +240,7 @@ public class TestFind {
   }
 
   // check expressions are called in the correct order
-  @Test(timeout = 1000)
+  @Test
   public void processArguments() throws IOException {
     LinkedList<PathData> items = createDirectories();
 
@@ -294,7 +299,7 @@ public class TestFind {
   }
 
   // check that directories are descended correctly when -depth is specified
-  @Test(timeout = 1000)
+  @Test
   public void processArgumentsDepthFirst() throws IOException {
     LinkedList<PathData> items = createDirectories();
 
@@ -355,7 +360,7 @@ public class TestFind {
 
   // check symlinks given as path arguments are processed correctly with the
   // follow arg option set
-  @Test(timeout = 1000)
+  @Test
   public void processArgumentsOptionFollowArg() throws IOException {
     LinkedList<PathData> items = createDirectories();
 
@@ -415,7 +420,7 @@ public class TestFind {
 
   // check symlinks given as path arguments are processed correctly with the
   // follow option
-  @Test(timeout = 1000)
+  @Test
   public void processArgumentsOptionFollow() throws IOException {
     LinkedList<PathData> items = createDirectories();
 
@@ -478,7 +483,7 @@ public class TestFind {
   }
 
   // check minimum depth is handledfollowLink
-  @Test(timeout = 1000)
+  @Test
   public void processArgumentsMinDepth() throws IOException {
     LinkedList<PathData> items = createDirectories();
 
@@ -528,7 +533,7 @@ public class TestFind {
   }
 
   // check maximum depth is handled
-  @Test(timeout = 1000)
+  @Test
   public void processArgumentsMaxDepth() throws IOException {
     LinkedList<PathData> items = createDirectories();
 
@@ -584,7 +589,7 @@ public class TestFind {
   }
 
   // check min depth is handled when -depth is specified
-  @Test(timeout = 1000)
+  @Test
   public void processArgumentsDepthFirstMinDepth() throws IOException {
     LinkedList<PathData> items = createDirectories();
 
@@ -635,7 +640,7 @@ public class TestFind {
   }
 
   // check max depth is handled when -depth is specified
-  @Test(timeout = 1000)
+  @Test
   public void processArgumentsDepthFirstMaxDepth() throws IOException {
     LinkedList<PathData> items = createDirectories();
 
@@ -692,7 +697,7 @@ public class TestFind {
   }
 
   // check expressions are called in the correct order
-  @Test(timeout = 1000)
+  @Test
   public void processArgumentsNoDescend() throws IOException {
     LinkedList<PathData> items = createDirectories();
 

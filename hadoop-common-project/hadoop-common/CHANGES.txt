@@ -82,6 +82,9 @@ Release 2.7.3 - UNRELEASED
     HADOOP-12902. JavaDocs for SignerSecretProvider are out-of-date in
     AuthenticationFilter. (Gabor Liptak via aajisaka)
 
+    HADOOP-12613. TestFind.processArguments occasionally fails.
+    (Wei-Chiu Chuang via stevel)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
