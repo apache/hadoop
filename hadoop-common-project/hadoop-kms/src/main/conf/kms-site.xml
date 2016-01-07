@@ -25,10 +25,10 @@
   </property>
 
   <property>
-    <name>hadoop.security.keystore.JavaKeyStoreProvider.password</name>
-    <value>none</value>
+    <name>hadoop.security.keystore.java-keystore-provider.password-file</name>
+    <value>kms.keystore.password</value>
     <description>
-      If using the JavaKeyStoreProvider, the password for the keystore file.
+      If using the JavaKeyStoreProvider, the file name for the keystore password.
     </description>
   </property>
 
