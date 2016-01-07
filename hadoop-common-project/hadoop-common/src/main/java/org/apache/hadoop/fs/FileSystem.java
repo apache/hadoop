@@ -74,6 +74,8 @@ import org.apache.htrace.core.TraceScope;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
+
 /****************************************************************
  * An abstract base class for a fairly generic filesystem.  It
  * may be implemented as a distributed filesystem, or as a "local"
@@ -730,9 +732,9 @@ public abstract class FileSystem extends Configured implements Closeable {
         conf.getInt("io.bytes.per.checksum", 512), 
         64 * 1024, 
         getDefaultReplication(),
-        conf.getInt("io.file.buffer.size", 4096),
+        conf.getInt(IO_FILE_BUFFER_SIZE_KEY, IO_FILE_BUFFER_SIZE_DEFAULT),
         false,
-        CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT,
+        FS_TRASH_INTERVAL_DEFAULT,
         DataChecksum.Type.CRC32);
   }
 
@@ -772,7 +774,8 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @param f the file to open
    */
   public FSDataInputStream open(Path f) throws IOException {
-    return open(f, getConf().getInt("io.file.buffer.size", 4096));
+    return open(f, getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+        IO_FILE_BUFFER_SIZE_DEFAULT));
   }
 
   /**
@@ -793,7 +796,8 @@ public abstract class FileSystem extends Configured implements Closeable {
   public FSDataOutputStream create(Path f, boolean overwrite)
       throws IOException {
     return create(f, overwrite, 
-                  getConf().getInt("io.file.buffer.size", 4096),
+                  getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+                      IO_FILE_BUFFER_SIZE_DEFAULT),
                   getDefaultReplication(f),
                   getDefaultBlockSize(f));
   }
@@ -808,7 +812,8 @@ public abstract class FileSystem extends Configured implements Closeable {
   public FSDataOutputStream create(Path f, Progressable progress) 
       throws IOException {
     return create(f, true, 
-                  getConf().getInt("io.file.buffer.size", 4096),
+                  getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+                      IO_FILE_BUFFER_SIZE_DEFAULT),
                   getDefaultReplication(f),
                   getDefaultBlockSize(f), progress);
   }
@@ -822,7 +827,8 @@ public abstract class FileSystem extends Configured implements Closeable {
   public FSDataOutputStream create(Path f, short replication)
       throws IOException {
     return create(f, true, 
-                  getConf().getInt("io.file.buffer.size", 4096),
+                  getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+                      IO_FILE_BUFFER_SIZE_DEFAULT),
                   replication,
                   getDefaultBlockSize(f));
   }
@@ -838,11 +844,9 @@ public abstract class FileSystem extends Configured implements Closeable {
   public FSDataOutputStream create(Path f, short replication, 
       Progressable progress) throws IOException {
     return create(f, true, 
-                  getConf().getInt(
-                      CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY,
-                      CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT),
-                  replication,
-                  getDefaultBlockSize(f), progress);
+                  getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+                      IO_FILE_BUFFER_SIZE_DEFAULT),
+                  replication, getDefaultBlockSize(f), progress);
   }
 
     
@@ -1151,19 +1155,22 @@ public abstract class FileSystem extends Configured implements Closeable {
     if (exists(f)) {
       return false;
     } else {
-      create(f, false, getConf().getInt("io.file.buffer.size", 4096)).close();
+      create(f, false, getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+          IO_FILE_BUFFER_SIZE_DEFAULT)).close();
       return true;
     }
   }
 
   /**
    * Append to an existing file (optional operation).
-   * Same as append(f, getConf().getInt("io.file.buffer.size", 4096), null)
+   * Same as append(f, getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+   *     IO_FILE_BUFFER_SIZE_DEFAULT), null)
    * @param f the existing file to be appended.
    * @throws IOException
    */
   public FSDataOutputStream append(Path f) throws IOException {
-    return append(f, getConf().getInt("io.file.buffer.size", 4096), null);
+    return append(f, getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+        IO_FILE_BUFFER_SIZE_DEFAULT), null);
   }
   /**
    * Append to an existing file (optional operation).

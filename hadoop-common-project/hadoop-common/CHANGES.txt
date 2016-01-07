@@ -656,7 +656,9 @@ Release 2.9.0 - UNRELEASED
 
     HADOOP-12566. Add NullGroupMapping. (Daniel Templeton via kasha)
 
-  OPTIMIZATIONS
+    HADOOP-12663. Remove Hard-Coded Values From FileSystem.java.
+    (BELUGA BEHR via stevel)
+    
 
   BUG FIXES
 
