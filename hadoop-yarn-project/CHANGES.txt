@@ -105,6 +105,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4535. Fix checkstyle error in CapacityScheduler.java
     (Naganarasimha G R via rohithsharmaks)
 
+    YARN-4393. Fix intermittent test failure for TestResourceLocalizationService
+    #testFailedDirsResourceRelease (Varun Saxana via rohithsharmaks)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
