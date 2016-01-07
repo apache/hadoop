@@ -33,9 +33,9 @@ import java.util.UUID;
  * Helper class to create various cluster configrations at run time.
  */
 public class DiskBalancerTestUtil {
-  // we modeling disks here, hence HDD style units
-  public static final long GB = 1000000000L;
-  public static final long TB = 1000000000000L;
+  public static final long MB = 1024 * 1024L;
+  public static final long GB = MB * 1024L;
+  public static final long TB = GB * 1024L;
   private static int[] diskSizes =
       {1, 2, 3, 4, 5, 6, 7, 8, 9, 100, 200, 300, 400, 500, 600, 700, 800, 900};
   Random rand;
