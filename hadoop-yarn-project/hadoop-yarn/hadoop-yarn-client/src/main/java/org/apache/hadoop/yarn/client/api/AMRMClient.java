@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRespo
 
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -108,6 +109,7 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     final Priority priority;
     final boolean relaxLocality;
     final String nodeLabelsExpression;
+    final ExecutionType executionType;
     
     /**
      * Instantiates a {@link ContainerRequest} with the given constraints and
@@ -152,6 +154,33 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
         String[] racks, Priority priority, boolean relaxLocality) {
       this(capability, nodes, racks, priority, relaxLocality, null);
     }
+
+    /**
+     * Instantiates a {@link ContainerRequest} with the given constraints.
+     *
+     * @param capability
+     *          The {@link Resource} to be requested for each container.
+     * @param nodes
+     *          Any hosts to request that the containers are placed on.
+     * @param racks
+     *          Any racks to request that the containers are placed on. The
+     *          racks corresponding to any hosts requested will be automatically
+     *          added to this list.
+     * @param priority
+     *          The priority at which to request the containers. Higher
+     *          priorities have lower numerical values.
+     * @param relaxLocality
+     *          If true, containers for this request may be assigned on hosts
+     *          and racks other than the ones explicitly requested.
+     * @param nodeLabelsExpression
+     *          Set node labels to allocate resource, now we only support
+     *          asking for only a single node label
+     */
+    public ContainerRequest(Resource capability, String[] nodes, String[] racks,
+        Priority priority, boolean relaxLocality, String nodeLabelsExpression) {
+      this(capability, nodes, racks, priority, relaxLocality, null,
+          ExecutionType.GUARANTEED);
+    }
           
     /**
      * Instantiates a {@link ContainerRequest} with the given constraints.
@@ -173,10 +202,12 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
      * @param nodeLabelsExpression
      *          Set node labels to allocate resource, now we only support
      *          asking for only a single node label
+     * @param executionType
+     *          Set the execution type of the container request.
      */
-    public ContainerRequest(Resource capability, String[] nodes,
-        String[] racks, Priority priority, boolean relaxLocality,
-        String nodeLabelsExpression) {
+    public ContainerRequest(Resource capability, String[] nodes, String[] racks,
+        Priority priority, boolean relaxLocality, String nodeLabelsExpression,
+        ExecutionType executionType) {
       // Validate request
       Preconditions.checkArgument(capability != null,
           "The Resource to be requested for each container " +
@@ -194,6 +225,7 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
       this.priority = priority;
       this.relaxLocality = relaxLocality;
       this.nodeLabelsExpression = nodeLabelsExpression;
+      this.executionType = executionType;
     }
     
     public Resource getCapability() {
@@ -220,10 +252,15 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
       return nodeLabelsExpression;
     }
     
+    public ExecutionType getExecutionType() {
+      return executionType;
+    }
+
     public String toString() {
       StringBuilder sb = new StringBuilder();
       sb.append("Capability[").append(capability).append("]");
       sb.append("Priority[").append(priority).append("]");
+      sb.append("ExecutionType[").append(executionType).append("]");
       return sb.toString();
     }
   }
