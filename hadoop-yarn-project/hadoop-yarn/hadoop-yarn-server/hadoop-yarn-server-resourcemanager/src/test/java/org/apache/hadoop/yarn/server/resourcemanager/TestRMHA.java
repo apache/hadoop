@@ -471,8 +471,12 @@ public class TestRMHA {
     memStore.init(conf);
     rm = new MockRM(conf, memStore) {
       @Override
-      void stopActiveServices() throws Exception {
-        Thread.sleep(10000);
+      void stopActiveServices() {
+        try {
+          Thread.sleep(10000);
+        } catch (Exception e) {
+          throw new RuntimeException (e);
+        }
         super.stopActiveServices();
       }
     };

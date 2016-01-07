@@ -86,6 +86,8 @@ Release 2.9.0 - UNRELEASED
 
     YARN-4524. Cleanup AppSchedulingInfo. (Karthik Kambatla via wangda)
 
+    YARN-4438. Implement RM leader election with curator. (Jian He via xgong)
+
   OPTIMIZATIONS
 
   BUG FIXES
