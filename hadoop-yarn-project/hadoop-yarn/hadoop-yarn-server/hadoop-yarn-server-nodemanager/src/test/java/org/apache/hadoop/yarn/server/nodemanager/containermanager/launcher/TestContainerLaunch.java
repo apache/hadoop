@@ -631,7 +631,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
                     + " bytes of"));
         Assert.assertTrue("Should contain contents of error Log",
             exitEvent.getDiagnosticInfo().contains(
-                INVALID_JAVA_HOME + "/bin/java: No such file or directory"));
+                INVALID_JAVA_HOME + "/bin/java"));
       }
     }
   }

@@ -108,6 +108,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4393. Fix intermittent test failure for TestResourceLocalizationService
     #testFailedDirsResourceRelease (Varun Saxana via rohithsharmaks)
 
+    YARN-4550. Some tests in TestContainerLanch fails on non-english locale
+    environment. (Takashi Ohnishi via stevel)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
