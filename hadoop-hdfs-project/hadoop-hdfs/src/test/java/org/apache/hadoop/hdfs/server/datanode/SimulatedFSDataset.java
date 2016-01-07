@@ -29,6 +29,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
@@ -521,7 +522,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   private final Map<String, Map<Block, BInfo>> blockMap
-      = new HashMap<String, Map<Block,BInfo>>();
+      = new ConcurrentHashMap<String, Map<Block,BInfo>>();
   private final SimulatedStorage storage;
   private final SimulatedVolume volume;
   private final String datanodeUuid;

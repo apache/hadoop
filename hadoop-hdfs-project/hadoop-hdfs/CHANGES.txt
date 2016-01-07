@@ -2567,6 +2567,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9605. Add links to failed volumes to explorer.html in HDFS Web UI.
     (Archana T via wheat9)
 
+    HDFS-9619. SimulatedFSDataset sometimes can not find blockpool for the
+    correct namenode (Wei-Chiu Chuang via vinayakumarb)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
