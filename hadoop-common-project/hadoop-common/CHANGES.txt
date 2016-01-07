@@ -668,6 +668,9 @@ Release 2.9.0 - UNRELEASED
     HADOOP-12655. TestHttpServer.testBindAddress bind port range is wider
     than expected. (Wei-Chiu Chuang via stevel)
 
+    HADOOP-12613. TestFind.processArguments occasionally fails.
+   (Wei-Chiu Chuang via stevel)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
