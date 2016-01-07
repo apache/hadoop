@@ -671,6 +671,9 @@ Release 2.9.0 - UNRELEASED
    "hadoop.security.keystore.JavaKeyStoreProvider.password"
    should be updated with new name. (Surendra Singh Lilhore via stevel)
 
+   HADOOP-12573. TestRPC.testClientBackOff failing.
+   (Xiao Chen via stevel)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
