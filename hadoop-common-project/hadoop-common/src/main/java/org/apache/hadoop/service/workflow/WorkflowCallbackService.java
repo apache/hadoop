@@ -30,26 +30,28 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * A service that calls the supplied callback when it is started -after the 
- * given delay. It can be configured to stop itself after the callback has
+ * given delay.
+ * <p>
+ * It can be configured to stop itself after the callback has
  * completed, marking any exception raised as the exception of this service.
  * The notifications come in on a callback thread -a thread that is only
  * started in this service's <code>start()</code> operation.
  */
 public class WorkflowCallbackService<V> extends
-    AbstractWorkflowExecutorService {
+      AbstractWorkflowExecutorService {
   protected static final Logger LOG =
     LoggerFactory.getLogger(WorkflowCallbackService.class);
-  private final Callable<V> callback;
-  private final int delay;
-  private final ServiceTerminatingCallable<V> command;
   /**
    * This is the callback
    */
-  private Callable<V> callable;
+  private final Callable<V> callback;
+  private final int delay;
+  private final ServiceTerminatingCallable<V> command;
+
   private ScheduledFuture<V> scheduledFuture;
 
   /**
-   * Create an instance of the service
+   * Create an instance of the service.
    * @param name service name
    * @param callback callback to invoke
    * @param delay delay -or 0 for no delay

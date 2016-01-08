@@ -43,8 +43,7 @@ public abstract class AbstractWorkflowExecutorService extends AbstractService {
   private ExecutorService executor;
 
   /**
-   * Construct an instance with the given name -but
-   * no executor
+   * Construct an instance with the given name -but no executor.
    * @param name service name
    */
   protected AbstractWorkflowExecutorService(String name) {
@@ -52,9 +51,9 @@ public abstract class AbstractWorkflowExecutorService extends AbstractService {
   }
 
   /**
-   * Construct an instance with the given name and executor
+   * Construct an instance with the given name and executor.
    * @param name service name
-   * @param executor exectuor
+   * @param executor executor
    */
   protected AbstractWorkflowExecutorService(String name,
       ExecutorService executor) {
@@ -63,7 +62,7 @@ public abstract class AbstractWorkflowExecutorService extends AbstractService {
   }
 
   /**
-   * Get the executor
+   * Get the executor.
    * @return the executor
    */
   public synchronized ExecutorService getExecutor() {
@@ -71,17 +70,19 @@ public abstract class AbstractWorkflowExecutorService extends AbstractService {
   }
 
   /**
-   * Set the executor. This is protected as it
+   * Set the executor.
+   * <p>
+   * This is protected as it
    * is intended to be restricted to subclasses
-   * @param executor executor
+   * @param ex executor
    */
-  protected synchronized void setExecutor(ExecutorService executor) {
-    this.executor = executor;
+  protected synchronized void setExecutor(ExecutorService ex) {
+    this.executor = ex;
   }
 
   /**
    * Execute the runnable with the executor (which 
-   * must have been created already)
+   * must have been created already).
    * @param runnable runnable to execute
    */
   public void execute(Runnable runnable) {
@@ -89,7 +90,7 @@ public abstract class AbstractWorkflowExecutorService extends AbstractService {
   }
 
   /**
-   * Submit a callable
+   * Submit a callable.
    * @param callable callable
    * @param <V> type of the final get
    * @return a future to wait on

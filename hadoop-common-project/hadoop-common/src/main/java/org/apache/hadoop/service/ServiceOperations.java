@@ -121,7 +121,7 @@ public final class ServiceOperations {
      * that it will never be null.
      */
     private final List<ServiceStateChangeListener> listeners =
-      new ArrayList<>();
+        new ArrayList<>();
 
     /**
      * Thread-safe addition of a new listener to the end of a list.

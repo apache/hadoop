@@ -39,7 +39,7 @@ public class WorkflowRpcService extends AbstractService {
   private final Server server;
 
   /**
-   * Construct an instance
+   * Construct an instance.
    * @param name service name
    * @param server service to stop. It must not be null
    * @throws IllegalArgumentException if <code>server</code> is null.
@@ -51,7 +51,7 @@ public class WorkflowRpcService extends AbstractService {
   }
 
   /**
-   * Get the server
+   * Get the server.
    * @return the server
    */
   public Server getServer() {

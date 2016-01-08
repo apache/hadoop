@@ -61,10 +61,10 @@ public class WorkflowSequenceService extends AbstractService implements
     ServiceParent, ServiceStateChangeListener {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(WorkflowSequenceService.class);
+      LoggerFactory.getLogger(WorkflowSequenceService.class);
 
   /**
-   * list of services
+   * list of services.
    */
   private final List<Service> serviceList = new ArrayList<>();
 
@@ -83,7 +83,7 @@ public class WorkflowSequenceService extends AbstractService implements
   private volatile Service previousService;
 
   /**
-   * Construct an instance
+   * Construct an instance.
    * @param name service name
    */
   public WorkflowSequenceService(String name) {
@@ -91,14 +91,14 @@ public class WorkflowSequenceService extends AbstractService implements
   }
 
   /**
-   * Construct an instance with the default name
+   * Construct an instance with the default name.
    */
   public WorkflowSequenceService() {
     this("WorkflowSequenceService");
   }
 
   /**
-   * Create a service sequence with the given list of services
+   * Create a service sequence with the given list of services.
    * @param name service name
    * @param children initial sequence
    */
@@ -110,7 +110,7 @@ public class WorkflowSequenceService extends AbstractService implements
   }
 
   /**
-   * Create a service sequence with the given list of services
+   * Create a service sequence with the given list of services.
    * @param name service name
    * @param children initial sequence
    */
@@ -122,7 +122,7 @@ public class WorkflowSequenceService extends AbstractService implements
   }
 
   /**
-   * Get the current service -which may be null
+   * Get the current service -which may be null.
    * @return service running
    */
   public Service getActiveService() {
@@ -130,7 +130,7 @@ public class WorkflowSequenceService extends AbstractService implements
   }
 
   /**
-   * Get the previously active service
+   * Get the previously active service.
    * @return the service last run, or null if there is none.
    */
   public Service getPreviousService() {
@@ -138,19 +138,23 @@ public class WorkflowSequenceService extends AbstractService implements
   }
 
   /**
-   * start the first service. If there are none to start, <code>stop()</code> this service.
+   * start the first service.
+   *
+   * If there are none to start, <code>stop()</code> this service.
    * @throws Exception
    */
   @Override
   protected void serviceStart() throws Exception {
     if (!startNextService()) {
-        //nothing to start -so stop
-        stop();
+      //nothing to start -so stop
+      stop();
     }
   }
 
   /**
-   * Stop the service. This stops any currently running child service.
+   * Stop the service.
+   *
+   * This stops any currently running child service.
    * @throws Exception on any failure
    */
   @Override
@@ -167,6 +171,7 @@ public class WorkflowSequenceService extends AbstractService implements
 
   /**
    * Start the next service in the list.
+   *
    * Return false if there are no more services to run, or this
    * service has stopped
    * @return true if a service was started
@@ -224,8 +229,9 @@ public class WorkflowSequenceService extends AbstractService implements
 
   /**
    * State change event relays service stop events to
-   * {@link #onServiceCompleted(Service)}. Subclasses can
-   * extend that with extra logic
+   * {@link #onServiceCompleted(Service)}.
+   *
+   * Subclasses can extend that with extra logic
    * @param service the service that has changed.
    */
   @Override
@@ -238,14 +244,12 @@ public class WorkflowSequenceService extends AbstractService implements
   }
 
   /**
-   * handler for service completion: base class starts the next service
+   * Handler for service completion: base class starts the next service.
    * @param service service that has completed
    */
   protected synchronized void onServiceCompleted(Service service) {
     LOG.info("Running service stopped: {}", service);
     previousService = activeService;
-    
-
     //start the next service if we are not stopped ourselves
     if (isInState(STATE.STARTED)) {
 
@@ -281,7 +285,7 @@ public class WorkflowSequenceService extends AbstractService implements
   }
 
   /**
-   * Add the passed {@link Service} to the list of services managed by this
+   * Add the passed {@link Service} to the list of services managed by this.
    * {@link WorkflowSequenceService}
    * @param service the {@link Service} to be added
    */
@@ -295,7 +299,7 @@ public class WorkflowSequenceService extends AbstractService implements
   }
 
   /**
-   * Get an unmodifiable list of services
+   * Get an unmodifiable list of services.
    * @return a list of child services at the time of invocation -
    * added services will not be picked up.
    */

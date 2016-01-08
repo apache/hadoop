@@ -37,7 +37,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * Example
  * <pre>
- *  ExecutorService exec = ServiceThreadFactory.newSingleThreadExecutor("live", true)
+ *  ExecutorService exec =
+ *    ServiceThreadFactory.newSingleThreadExecutor("live", true)
  * </pre>
  */
 public class ServiceThreadFactory implements ThreadFactory {
@@ -52,7 +53,7 @@ public class ServiceThreadFactory implements ThreadFactory {
   private final String namingFormat;
 
   /**
-   * Create an instance
+   * Create an instance.
    * @param name base thread name
    * @param daemons flag to indicate the threads should be marked as daemons
    * @param namingFormat format string to generate thread names from
@@ -69,7 +70,7 @@ public class ServiceThreadFactory implements ThreadFactory {
 
   /**
    *
-   * Create an instance with the default naming format
+   * Create an instance with the default naming format.
    * @param name base thread name
    * @param daemons flag to indicate the threads should be marked as daemons
    */
@@ -89,7 +90,7 @@ public class ServiceThreadFactory implements ThreadFactory {
   }
 
   /**
-   * Create a single thread executor using this naming policy
+   * Create a single thread executor using this naming policy.
    * @param name base thread name
    * @param daemons flag to indicate the threads should be marked as daemons
    * @return an executor

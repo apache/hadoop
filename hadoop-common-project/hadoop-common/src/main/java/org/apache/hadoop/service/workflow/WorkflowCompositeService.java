@@ -44,10 +44,10 @@ public class WorkflowCompositeService extends CompositeService
     implements ServiceParent, ServiceStateChangeListener {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(WorkflowCompositeService.class);
+      LoggerFactory.getLogger(WorkflowCompositeService.class);
 
   /**
-   * Construct an instance
+   * Construct an instance.
    * @param name name of this service instance
    */
   public WorkflowCompositeService(String name) {
@@ -62,7 +62,7 @@ public class WorkflowCompositeService extends CompositeService
   }
 
   /**
-   * Varargs constructor
+   * Varargs constructor.
    * @param name name of this service instance
    * @param children children
    */
@@ -74,7 +74,7 @@ public class WorkflowCompositeService extends CompositeService
   }
 
   /**
-   * Construct with a list of children
+   * Construct with a list of children.
    * @param name name of this service instance
    * @param children children to add
    */
@@ -86,7 +86,7 @@ public class WorkflowCompositeService extends CompositeService
   }
 
   /**
-   * Add a service, and register it
+   * Add a service, and register it.
    * @param service the {@link Service} to be added.
    */
   @Override
@@ -97,6 +97,8 @@ public class WorkflowCompositeService extends CompositeService
   }
 
   /**
+   * Handle state change events.
+   * <p>
    * When this service is started, any service stopping with a failure
    * exception is converted immediately into a failure of this service, 
    * storing the failure and stopping ourselves.
@@ -130,7 +132,7 @@ public class WorkflowCompositeService extends CompositeService
   /**
    * Probe to query if all children are stopped -simply
    * by taking a snapshot of the child service list and enumerating
-   * their state. 
+   * their state.
    * The state of the children may change during this operation -that will
    * not get picked up.
    * @return true if all the children are stopped.

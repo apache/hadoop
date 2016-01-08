@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.service.workflow;
 
 /**
 
@@ -29,8 +28,6 @@ and composite services with a shared lifespan.
 Core concepts:
 </h2>
 
-
-<p>
 The Workflow Services are set of Hadoop YARN services, all implementing
 the {@link org.apache.hadoop.service.Service} API.
 They are designed to be aggregated, to be composed to produce larger
@@ -44,8 +41,9 @@ they consider it appropriate.</p>
 <p>
 Workflow Services that have children implement the
 {@link org.apache.hadoop.service.ServiceParent}
-class, which provides (thread-safe) access to the children -allowing new children
-to be added, and existing children to be ennumerated. The implement policies
+class, which provides (thread-safe) access to the children -allowing new
+children to be added, and existing children to be enumerated.
+They implement policies
 on how to react to the termination of children -so can sequence operations
 which terminate themselves when complete.
 
@@ -62,35 +60,35 @@ swapping the composite service implementation may be sufficient to adopt it.
 
 <h2>How do the workflow services differ from the YARN Composite Service? </h2>
 
-
 There was originally one YARN service for managing children, the
 {@link org.apache.hadoop.service.CompositeService}.
-</p><p>
+</p>
 The {@link org.apache.hadoop.service.workflow.WorkflowCompositeService}
 shares the same model of "child services, all inited and started together".
 Where it differs is that if any child service stops -either due to a failure
 or to an action which invokes that service's
 {@link org.apache.hadoop.service.Service#stop()} method.
- <p>
-
+<p>
 In contrast, the original {@link org.apache.hadoop.service.CompositeService}
-class starts its children in its {@link org.apache.hadoop.service.Service#start()}
+class starts its children in its
+{@link org.apache.hadoop.service.Service#start()}
 method, but does not  listen or react to any child service halting.
+<p>
 
 As a result, changes in child
 state are not automatically detected or propagated, other than failures in
 the actual <code>init()</code> and <code>start()</code> methods.
 
- <p>
- If a child service runs until completed; is it will not be stopped until
- instructed to do so, and if it is only the parent service that attempts to
- stop the child, then this difference is unimportant.
- <p>
+<p>
+If a child service runs until completed; is it will not be stopped until
+instructed to do so, and if it is only the parent service that attempts to
+stop the child, then this difference is unimportant.
+<p>
 
- However, if any service that depends upon all it child services running -
- and if those child services are written so as to stop when they fail, using
- the <code>WorkflowCompositeService</code> as a base class will enable the
- parent service to be automatically notified of a child stopping.
+However, if any service that depends upon all it child services running -
+and if those child services are written so as to stop when they fail, using
+the <code>WorkflowCompositeService</code> as a base class will enable the
+parent service to be automatically notified of a child stopping.
 
 <p>
 The {@link org.apache.hadoop.service.workflow.WorkflowSequenceService}
@@ -121,24 +119,25 @@ This is useful for callbacks when a workflow  reaches a specific point
 Other Workflow Services
 </h2>
 
-There are some minor services that have proven useful within aggregate workflows,
-and simply in applications which are built from composite YARN services.
+There are some minor services that have proven useful within aggregate
+workflows, and simply in applications which are built from composite YARN
+services.
 
-  <ul>
-   <li>
-   {@link org.apache.hadoop.service.workflow.WorkflowRpcService }:
-   Maintains a reference to an RPC {@link org.apache.hadoop.ipc.Server} instance.
-   When the service is started, so is the RPC server. Similarly, when the service
-   is stopped, so is the RPC server instance.
-   </li>
+<ul>
+  <li>
+  {@link org.apache.hadoop.service.workflow.WorkflowRpcService }:
+  Maintains a reference to an RPC {@link org.apache.hadoop.ipc.Server} instance.
+  When the service is started, so is the RPC server. Similarly, when the service
+  is stopped, so is the RPC server instance.
+  </li>
 
-   <li>
-   {@link org.apache.hadoop.service.workflow.WorkflowClosingService}: Closes
-   an instance of {@link java.io.Closeable} when the service is stopped. This
-   is purely a housekeeping class.
-   </li>
+  <li>
+  {@link org.apache.hadoop.service.workflow.WorkflowClosingService}: Closes
+  an instance of {@link java.io.Closeable} when the service is stopped. This
+  is purely a housekeeping class.
+  </li>
 
-  </ul>
+</ul>
 
 <h2> Lower-level classes </h2>
 
@@ -152,7 +151,8 @@ and simply in applications which are built from composite YARN services.
 
   <li>
   {@link org.apache.hadoop.service.workflow.AbstractWorkflowExecutorService}:
-  A base class for services that wish to have a {@link java.util.concurrent.ExecutorService}
+  A base class for services that wish to have a
+ {@link java.util.concurrent.ExecutorService}
   with a lifespan mapped to that of a service. When the service is stopped, the
   {@link java.util.concurrent.ExecutorService#shutdownNow()} method is called to
   attempt to shut down all running tasks.
@@ -168,3 +168,5 @@ and simply in applications which are built from composite YARN services.
 </li>
 
  */
+
+package org.apache.hadoop.service.workflow;

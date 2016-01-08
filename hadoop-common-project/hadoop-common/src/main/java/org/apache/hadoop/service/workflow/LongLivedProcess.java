@@ -49,26 +49,26 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p>
  * Key Features:
  * <ol>
- *   <li>Output is streamed to the output logger provided</li>.
- *   <li>The most recent lines of output are saved to a linked list</li>.
- *   <li>A synchronous callback, {@link LongLivedProcessLifecycleEvent}, is raised on the start
- *   and finish of a process.</li>
+ *   <li>Output is streamed to the output logger provided</li>
+ *   <li>The most recent lines of output are saved to a linked list.</li>
+ *   <li>A synchronous callback, {@link LongLivedProcessLifecycleEvent},
+ *   is raised on the start and finish of a process.</li>
  * </ol>
  * 
  */
 public class LongLivedProcess implements Runnable {
   /**
-   * Limit on number of lines to retain in the "recent" line list:{@value}
+   * Limit on number of lines to retain in the "recent" line list: {@value}.
    */
   public static final int RECENT_LINE_LOG_LIMIT = 64;
 
   /**
-   * Const defining the time in millis between polling for new text
+   * Const defining the time in millis between polling for new text.
    */
   private static final int STREAM_READER_SLEEP_TIME = 200;
   
   /**
-   * limit on the length of a stream before it triggers an automatic newline
+   * Limit on the length of a stream before it triggers an automatic newline.
    */
   private static final int LINE_LENGTH = 256;
   private final ProcessBuilder processBuilder;
@@ -79,7 +79,7 @@ public class LongLivedProcess implements Runnable {
   private final ExecutorService logExecutor;
   
   private ProcessStreamReader processStreamReader;
-  //list of recent lines, recorded for extraction into reports
+  /** list of recent lines, recorded for extraction into reports */
   private final List<String> recentLines = new LinkedList<>();
   // tagged as volatile to stop findbugs complaining
   private volatile int recentLineLimit = RECENT_LINE_LOG_LIMIT;
@@ -88,20 +88,27 @@ public class LongLivedProcess implements Runnable {
 
   /**
    * Log supplied in the constructor for the spawned process -accessible
-   * to inner classes
+   * to inner classes.
    */
   private Logger processLog;
   
   /**
-   * Class log -accessible to inner classes
+   * Class log -accessible to inner classes.
    */
-  private static final Logger LOG = LoggerFactory.getLogger(LongLivedProcess.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(LongLivedProcess.class);
 
   /**
-   * Volatile flag to indicate that the process is done
+   * Volatile flag to indicate that the process is done.
    */
   private volatile boolean finished;
 
+  /**
+   * Construct a service instance
+   * @param name name of the process
+   * @param processLog log to log to
+   * @param commands list of commands
+   */
   public LongLivedProcess(String name,
       Logger processLog,
       List<String> commands) {
@@ -132,23 +139,24 @@ public class LongLivedProcess implements Runnable {
   }
 
   /**
-   * Set the limit on recent lines to retain
-   * @param recentLineLimit size of rolling list of recent lines.
+   * Set the limit on recent lines to retain.
+   * @param limit size of rolling list of recent lines.
    */
-  public void setRecentLineLimit(int recentLineLimit) {
-    this.recentLineLimit = recentLineLimit;
+  public void setRecentLineLimit(int limit) {
+    this.recentLineLimit = limit;
   }
 
   /**
-   * Set an optional application exit callback
+   * Set an optional application exit callback.
    * @param lifecycleCallback callback to notify on application exit
    */
-  public void setLifecycleCallback(LongLivedProcessLifecycleEvent lifecycleCallback) {
+  public void setLifecycleCallback(
+      LongLivedProcessLifecycleEvent lifecycleCallback) {
     this.lifecycleCallback = lifecycleCallback;
   }
 
   /**
-   * Add an entry to the environment
+   * Add an entry to the environment.
    * @param envVar envVar -must not be null
    * @param val value 
    */
@@ -159,9 +167,9 @@ public class LongLivedProcess implements Runnable {
   }
 
   /**
-   * Bulk set the environment from a map. This does
-   * not replace the existing environment, just extend it/overwrite single
-   * entries.
+   * Bulk set the environment from a map.
+   * This does not replace the existing environment, just extends it
+   * and/or overwrites existing entries.
    * @param map map to add
    */
   public void putEnvMap(Map<String, String> map) {
@@ -173,7 +181,7 @@ public class LongLivedProcess implements Runnable {
   }
 
   /**
-   * Get the process environment
+   * Get the process environment.
    * @param variable environment variable
    * @return the value or null if there is no match
    */
@@ -182,15 +190,17 @@ public class LongLivedProcess implements Runnable {
   }
 
   /**
-   * Set the process log. Ignored once the process starts
-   * @param processLog new log ... may be null
+   * Set the process log.
+   * <p>
+   * Ignored once the process starts
+   * @param log new log ... may be null
    */
-  public void setProcessLog(Logger processLog) {
-    this.processLog = processLog;
+  public void setProcessLog(Logger log) {
+    this.processLog = log;
   }
 
   /**
-   * Get the process reference
+   * Get the process reference.
    * @return the process -null if the process is  not started
    */
   public Process getProcess() {
@@ -199,8 +209,10 @@ public class LongLivedProcess implements Runnable {
 
   /**
    * Get the process builder -this can be manipulated
-   * up to the start() operation. As there is no synchronization
-   * around it, it must only be used in the same thread setting up the commmand.
+   * up to the {@Code start()} operation.
+   * <p>
+   * As there is no synchronization
+   * around it, it must only be used in the same thread setting up the command.
    * @return the process builder
    */
   public ProcessBuilder getProcessBuilder() {
@@ -208,8 +220,8 @@ public class LongLivedProcess implements Runnable {
   }
 
   /**
-   * Get the command list
-   * @return the comands
+   * Get the command list.
+   * @return the commands
    */
   public List<String> getCommands() {
     return processBuilder.command();
@@ -225,7 +237,7 @@ public class LongLivedProcess implements Runnable {
   }
 
   /**
-   * probe to see if the process is running
+   * Probe to see if the process is running.
    * @return true iff the process has been started and is not yet finished
    */
   public boolean isRunning() {
@@ -233,15 +245,15 @@ public class LongLivedProcess implements Runnable {
   }
 
   /**
-   * Get the exit code: null until the process has finished
+   * Get the exit code: null until the process has finished.
    * @return the exit code or null
    */
   public Integer getExitCode() {
     return exitCode;
   }
 
-    /**
-   * Get the exit code sign corrected: null until the process has finished
+  /**
+   * Get the exit code sign corrected: null until the process has finished.
    * @return the exit code or null
    */
   public Integer getExitCodeSignCorrected() {
@@ -266,7 +278,7 @@ public class LongLivedProcess implements Runnable {
   }
 
   /**
-   * Get a text description of the builder suitable for log output
+   * Get a text description of the builder suitable for log output.
    * @return a multiline string 
    */
   protected String describeBuilder() {
@@ -278,7 +290,7 @@ public class LongLivedProcess implements Runnable {
   }
 
   /**
-   * Dump the environment to a string builder
+   * Dump the environment to a string builder.
    * @param buffer the buffer to append to
    */
   public void dumpEnv(StringBuilder buffer) {
@@ -349,7 +361,7 @@ public class LongLivedProcess implements Runnable {
   }
 
   /**
-   * Spawn the application
+   * Spawn the application.
    * @throws IOException IO problems
    */
   public void start() throws IOException {
@@ -364,7 +376,7 @@ public class LongLivedProcess implements Runnable {
   }
 
   /**
-   * Get the lines of recent output
+   * Get the lines of recent output.
    * @return the last few lines of output; an empty list if there are none
    * or the process is not actually running
    */
@@ -373,26 +385,27 @@ public class LongLivedProcess implements Runnable {
   }
 
   /**
-   * @return whether lines of recent output are empty
+   * @return whether lines of recent output are empty.
    */
   public synchronized boolean isRecentOutputEmpty() {
     return recentLines.isEmpty();
   }
 
   /**
-   * Query to see if the final output has been processed
-   * @return
+   * Query to see if the final output has been processed.
+   * @return true if the final output has been processed
    */
   public boolean isFinalOutputProcessed() {
     return finalOutputProcessed.get();
   }
 
   /**
-   * Get the recent output from the process, or [] if not defined
+   * Get the recent output from the process, or an empty list if not defined.
    *
-   * @param finalOutput flag to indicate "wait for the final output of the process"
-   * @param duration the duration, in ms,
-   * ro wait for recent output to become non-empty
+   * @param finalOutput flag to indicate
+   * "wait for the final output of the process"
+   * @param duration the duration, in milliseconds,
+   * to wait for recent output to become non-empty
    * @return a possibly empty list
    */
   public List<String> getRecentOutput(boolean finalOutput, int duration) {
@@ -451,7 +464,6 @@ public class LongLivedProcess implements Runnable {
     }
   }
 
-
   /**
    * Class to read data from the two process streams, and, when run in a thread
    * to keep running until the <code>done</code> flag is set. 
@@ -459,7 +471,7 @@ public class LongLivedProcess implements Runnable {
    * respectively.
    */
 
-  private class ProcessStreamReader implements Runnable {
+  private final class ProcessStreamReader implements Runnable {
     private final Logger streamLog;
     private final int sleepTime;
 
@@ -484,7 +496,7 @@ public class LongLivedProcess implements Runnable {
 
     /**
      * Read in a line, or, if the limit has been reached, the buffer
-     * so far
+     * so far.
      * @param reader source of data
      * @param line line to build
      * @param limit limit of line length
@@ -566,13 +578,13 @@ public class LongLivedProcess implements Runnable {
   }
 
   /**
-   * Record the final output of a process stream
+   * Record the final output of a process stream.
    * @param reader reader of output
    * @param lineBuilder string builder into which line is built
    * @param isErrorStream flag to indicate whether or not this is the
    * is the line from the error stream
    * @param logger logger to log to
-   * @throws IOException
+   * @throws IOException problems reading the data
    */
   protected void recordFinalOutput(BufferedReader reader,
       StringBuilder lineBuilder, boolean isErrorStream, Logger logger) throws

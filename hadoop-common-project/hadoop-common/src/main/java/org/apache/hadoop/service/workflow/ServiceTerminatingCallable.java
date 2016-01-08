@@ -20,27 +20,28 @@ package org.apache.hadoop.service.workflow;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.service.ServiceOperations;
 
 import java.util.concurrent.Callable;
 
 /**
  * A runnable which terminates its owner; it also catches any
- * exception raised and can serve it back.  
+ * exception raised and can serve it back.
  * 
  */
 public class ServiceTerminatingCallable<V> implements Callable<V> {
 
   /**
-   * Owning service: may be null
+   * Owning service: may be null.
    */
   private final Service owner;
   
   /**
-   * Any exception raised
+   * Any exception raised.
    */
   private Exception exception;
   /**
-   * This is the callback
+   * This is the callback.
    */
   private final Callable<V> callable;
 
@@ -58,7 +59,7 @@ public class ServiceTerminatingCallable<V> implements Callable<V> {
   }
 
   /**
-   * Get the owning service
+   * Get the owning service.
    * @return the service to receive notification when
    * the runnable completes.
    */
@@ -90,9 +91,7 @@ public class ServiceTerminatingCallable<V> implements Callable<V> {
       exception = e;
       throw e;
     } finally {
-      if (owner != null) {
-        owner.stop();
-      }
+      ServiceOperations.stop(owner);
     }
   }
 }

@@ -24,13 +24,13 @@ package org.apache.hadoop.service.workflow;
 public interface LongLivedProcessLifecycleEvent {
 
   /**
-   * Callback when a process is started
+   * Callback when a process is started.
    * @param process the process invoking the callback
    */
   void onProcessStarted(LongLivedProcess process);
 
   /**
-   * Callback when a process has finished
+   * Callback when a process has finished.
    * @param process the process invoking the callback
    * @param exitCode exit code from the process
    * @param signCorrectedCode the code- as sign corrected

@@ -29,26 +29,26 @@ import java.io.IOException;
  * As the Service interface itself extends Closeable, this service
  * can be used to shut down other services if desired.
  */
-public class WorkflowClosingService<C extends Closeable> extends AbstractService {
+public class WorkflowClosingService<C extends Closeable>
+      extends AbstractService {
 
   /**
-   * Entity to close
+   * Entity to close.
    */
   private C closeable;
 
   /**
-   * Construct an instance of the service
+   * Construct an instance of the service.
    * @param name service name
    * @param closeable closeable to close (may be null)
    */
-  public WorkflowClosingService(String name,
-      C closeable) {
+  public WorkflowClosingService(String name, C closeable) {
     super(name);
     this.closeable = closeable;
   }
 
   /**
-   * Construct an instance of the service, using the default name
+   * Construct an instance of the service, using the default name.
    * @param closeable closeable to close (may be null)
    */
   public WorkflowClosingService(C closeable) {
@@ -56,7 +56,7 @@ public class WorkflowClosingService<C extends Closeable> extends AbstractService
   }
 
   /**
-   * Get the closeable
+   * Get the closeable.
    * @return the closeable
    */
   public synchronized C getCloseable() {
@@ -65,17 +65,17 @@ public class WorkflowClosingService<C extends Closeable> extends AbstractService
 
   /**
    * Set or update the closeable.
-   * @param closeable
+   * @param c new closeable
    */
-  public synchronized void setCloseable(C closeable) {
-    this.closeable = closeable;
+  public synchronized void setCloseable(C c) {
+    this.closeable = c;
   }
 
   /**
    * Stop routine will close the closeable -if not null - and set the
-   * reference to null afterwards
+   * reference to null afterwards.
    * This operation does raise any exception on the close, though it does
-   * record it
+   * record it.
    */
   @Override
   protected void serviceStop() {
