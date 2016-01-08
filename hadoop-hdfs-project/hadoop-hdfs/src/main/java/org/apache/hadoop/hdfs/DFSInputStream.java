@@ -323,6 +323,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
         Arrays.asList(locatedblock.getLocations()));
     LinkedList<DatanodeInfo> retryList = new LinkedList<DatanodeInfo>();
     boolean isRetry = false;
+    boolean timerStarted = false;
     long startTime = 0;
     while (nodeList.size() > 0) {
       DatanodeInfo datanode = nodeList.pop();
@@ -370,8 +371,9 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
 
       if (isRetry) {
         // start tracking the time
-        if (startTime == 0) {
+        if (!timerStarted) {
           startTime = Time.monotonicNow();
+          timerStarted = true;
         }
         try {
           Thread.sleep(500); // delay between retries.
@@ -381,7 +383,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       }
 
       // see if we ran out of retry time
-      if (startTime > 0 && (Time.monotonicNow() - startTime > timeout)) {
+      if (timerStarted && (Time.monotonicNow() - startTime > timeout)) {
         break;
       }
     }
