@@ -81,7 +81,8 @@ public class LongLivedProcess implements Runnable {
   private ProcessStreamReader processStreamReader;
   //list of recent lines, recorded for extraction into reports
   private final List<String> recentLines = new LinkedList<>();
-  private int recentLineLimit = RECENT_LINE_LOG_LIMIT;
+  // tagged as volatile to stop findbugs complaining
+  private volatile int recentLineLimit = RECENT_LINE_LOG_LIMIT;
   private LongLivedProcessLifecycleEvent lifecycleCallback;
   private final AtomicBoolean finalOutputProcessed = new AtomicBoolean(false);
 
