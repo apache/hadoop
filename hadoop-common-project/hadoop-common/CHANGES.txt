@@ -661,10 +661,6 @@ Release 2.9.0 - UNRELEASED
 
   BUG FIXES
 
-    HADOOP-12687. SecureUtil#QualifiedHostResolver#getByName should also try to
-    resolve direct hostname, incase multiple loopback addresses are present in
-    /etc/hosts (Sunil G via rohithsharmaks)
-
     HADOOP-12655. TestHttpServer.testBindAddress bind port range is wider
     than expected. (Wei-Chiu Chuang via stevel)
 
