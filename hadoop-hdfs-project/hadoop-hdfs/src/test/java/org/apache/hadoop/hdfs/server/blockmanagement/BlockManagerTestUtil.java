@@ -323,4 +323,17 @@ public class BlockManagerTestUtil {
     Whitebox.setInternalState(bmSafeMode, "extension", Integer.MAX_VALUE);
     Whitebox.setInternalState(bmSafeMode, "status", BMSafeModeStatus.EXTENSION);
   }
+
+  /**
+   * Check if a given Datanode (specified by uuid) is removed. Removed means the
+   * Datanode is no longer present in HeartbeatManager and NetworkTopology.
+   * @param nn Namenode
+   * @param dnUuid Datanode UUID
+   * @return true if datanode is removed.
+   */
+  public static boolean isDatanodeRemoved(NameNode nn, String dnUuid){
+      final DatanodeManager dnm =
+          nn.getNamesystem().getBlockManager().getDatanodeManager();
+      return !dnm.getNetworkTopology().contains(dnm.getDatanode(dnUuid));
+  }
 }

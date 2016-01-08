@@ -2573,6 +2573,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9619. SimulatedFSDataset sometimes can not find blockpool for the
     correct namenode (Wei-Chiu Chuang via vinayakumarb)
 
+    HDFS-9493. Test o.a.h.hdfs.server.namenode.TestMetaSave fails in trunk.
+    (Tony Wu via lei)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
