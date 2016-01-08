@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.net.*;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.datatransfer.*;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.util.DataChecksum;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
@@ -162,17 +163,20 @@ public class TestDataXceiverLazyPersistHint {
     return peer;
   }
 
-  private static DataNode getMockDn(NonLocalLazyPersist nonLocalLazyPersist) {
+  private static DataNode getMockDn(NonLocalLazyPersist nonLocalLazyPersist)
+      throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean(
         DFS_DATANODE_NON_LOCAL_LAZY_PERSIST,
         nonLocalLazyPersist == NonLocalLazyPersist.ALLOWED);
     DNConf dnConf = new DNConf(conf);
+    DatanodeRegistration mockDnReg = mock(DatanodeRegistration.class);
     DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
     DataNode mockDn = mock(DataNode.class);
     when(mockDn.getDnConf()).thenReturn(dnConf);
     when(mockDn.getConf()).thenReturn(conf);
     when(mockDn.getMetrics()).thenReturn(mockMetrics);
+    when(mockDn.getDNRegistrationForBP("Dummy-pool")).thenReturn(mockDnReg);
     return mockDn;
   }
 }
