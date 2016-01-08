@@ -205,6 +205,8 @@
       <Field name="userLimitFactor" />
       <Field name="maxAMResourcePerQueuePercent" />
       <Field name="lastClusterResource" />
+      <Field name="pendingOrderingPolicy" />
+      <Field name="pendingOPForRecoveredApps" />
     </Or>
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>

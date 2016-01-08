@@ -109,6 +109,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   private LogAggregationContext logAggregationContext;
 
   private volatile Priority appPriority = null;
+  private boolean isAttemptRecovering;
 
   protected ResourceUsage attemptResourceUsage = new ResourceUsage();
   private AtomicLong firstAllocationRequestSentTime = new AtomicLong(0);
@@ -965,6 +966,14 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     // Give the specific information which might be applicable for the
     // respective scheduler
     // queue's resource usage for specific partition
+  }
+
+  public boolean isAttemptRecovering() {
+    return isAttemptRecovering;
+  }
+
+  protected void setAttemptRecovering(boolean isRecovering) {
+    this.isAttemptRecovering = isRecovering;
   }
 
   public static enum AMState {
