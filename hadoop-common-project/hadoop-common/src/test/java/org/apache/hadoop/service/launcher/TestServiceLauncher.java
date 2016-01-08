@@ -165,24 +165,14 @@ public class TestServiceLauncher extends AbstractServiceLauncherTestBase {
   @Test
   public void testNoArgsHasConfsStripped() throws Throwable {
     assertRuns(
-        LauncherArguments.ARG_CONF,
-        configFile(newConf()),
-        NoArgsAllowedService.NAME);
+        NoArgsAllowedService.NAME,
+        LauncherArguments.ARG_CONF_PREFIXED,
+        configFile(newConf()));
   }
 
   @Test
   public void testRunLaunchableService() throws Throwable {
     assertRuns(LaunchableRunningService.NAME);
-  }
-
-  @Test
-  public void testConfPropagationOverInitBindings() throws Throwable {
-    Configuration conf = newConf(RunningService.FAIL_IN_RUN, "true");
-    assertLaunchOutcome(EXIT_FAIL,
-        "failed",
-        ARG_CONF_PREFIXED,
-        configFile(conf),
-        LaunchableRunningService.NAME);
   }
 
   @Test

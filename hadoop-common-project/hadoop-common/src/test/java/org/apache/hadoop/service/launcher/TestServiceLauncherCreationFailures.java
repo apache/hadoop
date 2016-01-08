@@ -24,6 +24,9 @@ import org.apache.hadoop.service.launcher.testservices.FailInStartService;
 import org.apache.hadoop.service.launcher.testservices.FailingStopInStartService;
 import org.junit.Test;
 
+/**
+ * Explore the ways in which the launcher is expected to (safely) fail.
+ */
 public class TestServiceLauncherCreationFailures extends
     AbstractServiceLauncherTestBase {
 

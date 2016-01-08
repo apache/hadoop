@@ -48,4 +48,7 @@ public class ExitTrackingServiceLauncher<S extends Service> extends
     exit(new ServiceLaunchException(exitCode, message));
   }
 
+  public void bindCommandOptions() {
+    super.bindCommandOptions();
+  }
 }

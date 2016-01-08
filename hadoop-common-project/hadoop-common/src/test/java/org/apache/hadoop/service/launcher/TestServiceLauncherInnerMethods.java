@@ -29,7 +29,7 @@ import org.junit.Test;
 import java.util.List;
 
 /**
- * Test the inner launcher methods. 
+ * Test the inner launcher methods.
  */
 @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
 public class TestServiceLauncherInnerMethods extends
@@ -48,8 +48,10 @@ public class TestServiceLauncherInnerMethods extends
   public void testLaunchServiceArgs() throws Throwable {
     launchExpectingException(NoArgsAllowedService.class,
         new Configuration(),
-        "arguments", EXIT_COMMAND_ARGUMENT_ERROR,
-        "one", "two");
+        "arguments",
+        EXIT_COMMAND_ARGUMENT_ERROR,
+        "one",
+        "two");
   }
 
   @Test

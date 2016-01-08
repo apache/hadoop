@@ -81,8 +81,9 @@ public class TestServiceConf
    */
   @Test
   public void testConfExtraction() throws Throwable {
-    ServiceLauncher<Service> launcher =
-      new ServiceLauncher<>(RunningService.NAME);
+    ExitTrackingServiceLauncher<Service> launcher =
+      new ExitTrackingServiceLauncher<>(RunningService.NAME);
+    launcher.bindCommandOptions();
     Configuration conf = newConf("propagated", "true");
     assertEquals("true", conf.get("propagated", "unset"));
 
@@ -106,8 +107,9 @@ public class TestServiceConf
    */
   @Test
   public void testDualConfArgs() throws Throwable {
-    ServiceLauncher<Service> launcher =
-        new ServiceLauncher<>(RunningService.NAME);
+    ExitTrackingServiceLauncher<Service> launcher =
+        new ExitTrackingServiceLauncher<>(RunningService.NAME);
+    launcher.bindCommandOptions();
     String key1 = "key1";
     Configuration conf1 = newConf(key1, "true");
     String key2 = "file2";
@@ -118,8 +120,8 @@ public class TestServiceConf
         asList("Name",
             ARG_CONF_PREFIXED, configFile(conf1),
             ARG_CONF_PREFIXED, configFile(conf2));
-    List<String> args = launcher.extractCommandOptions(extracted,
-        argsList);
+
+    List<String> args = launcher.extractCommandOptions(extracted, argsList);
     if (!args.isEmpty()) {
       assertEquals("args beginning with " + args.get(0),
           0, args.size());
@@ -131,6 +133,7 @@ public class TestServiceConf
 
   @Test
   public void testConfArgWrongFiletype() throws Throwable {
+    new File(CONF_FILE_DIR).mkdirs();
     File file = new File(CONF_FILE_DIR, methodName.getMethodName());
     try (FileWriter fileWriter = new FileWriter(file)) {
       fileWriter.write("not-a-conf-file");

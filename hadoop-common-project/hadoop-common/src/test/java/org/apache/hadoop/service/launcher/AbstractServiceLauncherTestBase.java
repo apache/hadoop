@@ -46,7 +46,7 @@ public class AbstractServiceLauncherTestBase extends Assert implements
     LauncherExitCodes {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbstractServiceLauncherTestBase.class);
-  public static final String CONF_FILE_DIR = "target/conf";
+  public static final String CONF_FILE_DIR = "target/launcher/conf";
 
   /**
    * A service which will be automatically stopped on teardown
@@ -153,6 +153,12 @@ public class AbstractServiceLauncherTestBase extends Assert implements
       String text,
       String... args) {
     try {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Launching service with expected outcome {}", expected);
+        for (String arg : args) {
+          LOG.debug(arg);
+        }
+      }
       ServiceLauncher.serviceMain(args);
     } catch (ServiceLaunchException e) {
       assertExceptionDetails(expected, text, e);
