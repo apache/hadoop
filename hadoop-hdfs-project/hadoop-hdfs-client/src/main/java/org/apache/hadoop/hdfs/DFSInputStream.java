@@ -29,6 +29,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -72,10 +73,12 @@ import org.apache.hadoop.hdfs.shortcircuit.ClientMmap;
 import org.apache.hadoop.io.ByteBufferPool;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.IdentityHashStore;
+import org.apache.hadoop.util.StopWatch;
 import org.apache.htrace.core.SpanId;
 import org.apache.htrace.core.TraceScope;
 import org.apache.htrace.core.Tracer;
@@ -357,12 +360,18 @@ public class DFSInputStream extends FSInputStream
     int replicaNotFoundCount = locatedblock.getLocations().length;
 
     final DfsClientConf conf = dfsClient.getConf();
-    for(DatanodeInfo datanode : locatedblock.getLocations()) {
+    final int timeout = conf.getSocketTimeout();
+    LinkedList<DatanodeInfo> nodeList = new LinkedList<DatanodeInfo>(
+        Arrays.asList(locatedblock.getLocations()));
+    LinkedList<DatanodeInfo> retryList = new LinkedList<DatanodeInfo>();
+    boolean isRetry = false;
+    StopWatch sw = new StopWatch();
+    while (nodeList.size() > 0) {
+      DatanodeInfo datanode = nodeList.pop();
       ClientDatanodeProtocol cdp = null;
-
       try {
         cdp = DFSUtilClient.createClientDatanodeProtocolProxy(datanode,
-            dfsClient.getConfiguration(), conf.getSocketTimeout(),
+            dfsClient.getConfiguration(), timeout,
             conf.isConnectToDnViaHostname(), locatedblock);
 
         final long n = cdp.getReplicaVisibleLength(locatedblock.getBlock());
@@ -370,21 +379,49 @@ public class DFSInputStream extends FSInputStream
         if (n >= 0) {
           return n;
         }
-      }
-      catch(IOException ioe) {
-        if (ioe instanceof RemoteException &&
-            (((RemoteException) ioe).unwrapRemoteException() instanceof
-                ReplicaNotFoundException)) {
-          // special case : replica might not be on the DN, treat as 0 length
-          replicaNotFoundCount--;
+      } catch (IOException ioe) {
+        if (ioe instanceof RemoteException) {
+          if (((RemoteException) ioe).unwrapRemoteException() instanceof
+              ReplicaNotFoundException) {
+            // replica is not on the DN. We will treat it as 0 length
+            // if no one actually has a replica.
+            replicaNotFoundCount--;
+          } else if (((RemoteException) ioe).unwrapRemoteException() instanceof
+              RetriableException) {
+            // add to the list to be retried if necessary.
+            retryList.add(datanode);
+          }
         }
-
         DFSClient.LOG.debug("Failed to getReplicaVisibleLength from datanode {}"
               + " for block {}", datanode, locatedblock.getBlock(), ioe);
       } finally {
         if (cdp != null) {
           RPC.stopProxy(cdp);
         }
+      }
+
+      // Ran out of nodes, but there are retriable nodes.
+      if (nodeList.size() == 0 && retryList.size() > 0) {
+        nodeList.addAll(retryList);
+        retryList.clear();
+        isRetry = true;
+      }
+
+      if (isRetry) {
+        // start the stop watch if not already running.
+        if (!sw.isRunning()) {
+          sw.start();
+        }
+        try {
+          Thread.sleep(500); // delay between retries.
+        } catch (InterruptedException e) {
+          throw new IOException("Interrupted while getting the length.");
+        }
+      }
+
+      // see if we ran out of retry time
+      if (sw.isRunning() && sw.now(TimeUnit.MILLISECONDS) > timeout) {
+        break;
       }
     }
 

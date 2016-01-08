@@ -2721,4 +2721,14 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.datanode.bp-ready.timeout</name>
+  <value>20</value>
+  <description>
+    The maximum wait time for datanode to be ready before failing the
+    received request. Setting this to 0 fails requests right away if the
+    datanode is not yet registered with the namenode. This wait time
+    reduces initial request failures after datanode restart.
+  </description>
+</property>
 </configuration>
