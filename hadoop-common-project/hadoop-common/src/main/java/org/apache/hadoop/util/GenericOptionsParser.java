@@ -376,14 +376,14 @@ public class GenericOptionsParser {
   }
 
   /**
-   * takes input as a comma separated list of files
+   * Takes input as a comma separated list of files
    * and verifies if they exist. It defaults for file:///
    * if the files specified do not have a scheme.
    * it returns the paths uri converted defaulting to file:///.
    * So an input of  /home/user/file1,/home/user/file2 would return
    * file:///home/user/file1,file:///home/user/file2
    * @param files
-   * @return
+   * @return the comma separated list of file URLs
    */
   private String validateFiles(String files, Configuration conf) 
       throws IOException  {
@@ -485,18 +485,18 @@ public class GenericOptionsParser {
    * Parse the user-specified options, get the generic options, and modify
    * configuration accordingly
    * @param opts Options to use for parsing args.
-   * @param conf Configuration to be modified
+   * @param c Configuration to be modified
    * @param args User-specified arguments
-   * @return true if the parse was succesful
+   * @return true if the parse was successful
    */
-  private boolean parseGeneralOptions(Options opts, Configuration conf, 
+  private boolean parseGeneralOptions(Options opts, Configuration c,
       String[] args) throws IOException {
     opts = buildGeneralOptions(opts);
     CommandLineParser parser = new GnuParser();
     boolean parsed = false;
     try {
       commandLine = parser.parse(opts, preProcessForWindows(args), true);
-      processGeneralOptions(conf, commandLine);
+      processGeneralOptions(c, commandLine);
       parsed = true;
     } catch(ParseException e) {
       LOG.warn("options parsing failed: "+e.getMessage());

@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Handler of interrupts -relays them to a registered
- * implementation of {@link IrqHandler.Interrupted}
+ * implementation of {@link IrqHandler.Interrupted}.
  *
  * This class bundles up all the compiler warnings about abuse of sun.misc
  * interrupt handling code into one place.
@@ -42,34 +42,35 @@ public final class IrqHandler implements SignalHandler {
   private static final Logger LOG = LoggerFactory.getLogger(IrqHandler.class);
   
   /**
-   * Definition of the Control-C handler name: {@value}
+   * Definition of the Control-C handler name: {@value}.
    */
   public static final String CONTROL_C = "INT";
 
   /**
-   * Definition of default <code>kill</code> signal: {@value}
+   * Definition of default <code>kill</code> signal: {@value}.
    */
   public static final String SIGTERM = "TERM";
 
   /**
-   * Signal name
+   * Signal name.
    */
   private final String name;
 
   /**
-   * Handler to relay to
+   * Handler to relay to.
    */
   private final Interrupted handler;
 
+  /** Count of how many times a signal has been raised. */
   private final AtomicInteger signalCount = new AtomicInteger(0);
 
   /**
-   * stored signal
+   * stored signal.
    */
   private Signal signal;
 
   /**
-   * Create an IRQ handler bound to the specific interrupt
+   * Create an IRQ handler bound to the specific interrupt.
    * @param name signal name
    * @param handler handler
    */
@@ -81,7 +82,7 @@ public final class IrqHandler implements SignalHandler {
   }
 
   /**
-   * Bind to the interrupt handler
+   * Bind to the interrupt handler.
    * @throws IllegalArgumentException if the exception could not be set
    */
   protected void bind() {
@@ -98,8 +99,7 @@ public final class IrqHandler implements SignalHandler {
   }
 
   /**
-   * 
-   * @return the signal name
+   * @return the signal name.
    */
   public String getName() {
     return name;
@@ -118,20 +118,19 @@ public final class IrqHandler implements SignalHandler {
   }
 
   /**
-   * Handler for the JVM API for signal handling
+   * Handler for the JVM API for signal handling.
    * @param s signal raised
    */
   @Override
   public void handle(Signal s) {
     signalCount.incrementAndGet();
-    InterruptData data =
-        new InterruptData(s.getName(), s.getNumber());
+    InterruptData data = new InterruptData(s.getName(), s.getNumber());
     LOG.info("Interrupted: {}", data);
     handler.interrupted(data);
   }
 
   /**
-   * Get the count of how many times a signal has been raised
+   * Get the count of how many times a signal has been raised.
    * @return the count of signals
    */
   public int getSignalCount() {
@@ -139,12 +138,12 @@ public final class IrqHandler implements SignalHandler {
   }
   
   /**
-   * Callback issues on an interrupt
+   * Callback issues on an interrupt.
    */
   public interface Interrupted {
 
     /**
-     * Handle an interrupt
+     * Handle an interrupt.
      * @param interruptData data
      */
     void interrupted(InterruptData interruptData);

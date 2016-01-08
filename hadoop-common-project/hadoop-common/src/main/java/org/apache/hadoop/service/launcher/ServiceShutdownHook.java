@@ -74,11 +74,11 @@ public class ServiceShutdownHook implements Runnable {
    * Unregister the hook.
    */
   public synchronized void unregister() {
-      try {
-        ShutdownHookManager.get().removeShutdownHook(this);
-      } catch (IllegalStateException e) {
-        LOG.info("Failed to unregister shutdown hook: {}", e, e);
-      }
+    try {
+      ShutdownHookManager.get().removeShutdownHook(this);
+    } catch (IllegalStateException e) {
+      LOG.info("Failed to unregister shutdown hook: {}", e, e);
+    }
   }
 
   /**
@@ -105,12 +105,14 @@ public class ServiceShutdownHook implements Runnable {
       service = serviceRef.get();
       serviceRef.clear();
     }
-    if (service != null)  try {
-      // Stop the  Service
-      service.stop();
-      result = true;
-    } catch (Throwable t) {
-      LOG.info("Error stopping {}", service.getName(), t);
+    if (service != null) {
+      try {
+        // Stop the  Service
+        service.stop();
+        result = true;
+      } catch (Throwable t) {
+        LOG.info("Error stopping {}", service.getName(), t);
+      }
     }
     return result;
   }

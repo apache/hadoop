@@ -45,33 +45,33 @@ import org.apache.hadoop.classification.InterfaceStability;
 public interface LauncherExitCodes {
 
   /**
-   * 0: success
+   * 0: success.
    */
   int EXIT_SUCCESS = 0;
 
   /**
    * -1: generic "false/fail" response. The operation worked but
-   * the result was not true
+   * the result was not true.
    */
   int EXIT_FAIL = -1;
 
   /**
-   * Exit code when a client requested service termination: {@value}
+   * Exit code when a client requested service termination: {@value}.
    */
   int EXIT_CLIENT_INITIATED_SHUTDOWN = 1;
 
   /**
-   * Exit code when targets could not be launched: {@value}
+   * Exit code when targets could not be launched: {@value}.
    */
   int EXIT_TASK_LAUNCH_FAILURE = 2;
 
   /**
-   * Exit code when a control-C, kill -3, signal was picked up: {@value}
+   * Exit code when a control-C, kill -3, signal was picked up: {@value}.
    */
   int EXIT_INTERRUPTED = 3;
 
   /**
-   * Exit code when something happened but we can't be specific: {@value}
+   * Exit code when something happened but we can't be specific: {@value}.
    */
   int EXIT_OTHER_FAILURE = 5;
 
@@ -84,54 +84,54 @@ public interface LauncherExitCodes {
   int EXIT_COMMAND_ARGUMENT_ERROR = 40;
 
   /**
-   * The request requires user authentication: {@value}
+   * The request requires user authentication: {@value}.
    * <p>
    * <code>401 Unauthorized</code>
    */
   int EXIT_UNAUTHORIZED = 41;
 
   /**
-   * Exit code when a usage message was printed: {@value}
+   * Exit code when a usage message was printed: {@value}.
    */
   int EXIT_USAGE = 42;
 
   /**
-   * Forbidden action: {@value}
+   * Forbidden action: {@value}.
    * <p>
    * <code>403: Forbidden</code>
    */
   int EXIT_FORBIDDEN = 43;
 
   /**
-   * Something was not found: {@value}
+   * Something was not found: {@value}.
    * <p>
    * <code>404: NOT FOUND</code>
    */
   int EXIT_NOT_FOUND = 44;
 
   /**
-   * The operation is not allowed: {@value}
+   * The operation is not allowed: {@value}.
    * <p>
    * <code>405: NOT ALLOWED</code>
    */
   int EXIT_OPERATION_NOT_ALLOWED = 45;
 
   /**
-   * The command is somehow not acceptable: {@value}
+   * The command is somehow not acceptable: {@value}.
    * <p>
    * <code>406: NOT ACCEPTABLE</code>
    */
   int EXIT_NOT_ACCEPTABLE = 46;
 
   /**
-   * Exit code on connectivity problems: {@value}
+   * Exit code on connectivity problems: {@value}.
    * <p>
    * <code>408: Request Timeout</code>
    */
   int EXIT_CONNECTIVITY_PROBLEM = 48;
 
   /**
-   * Exit code when the configurations in valid/incomplete: {@value}
+   * Exit code when the configurations in valid/incomplete: {@value}.
    * <p>
    * <code>409: conflict</code>
    */
@@ -139,28 +139,30 @@ public interface LauncherExitCodes {
 
 
   /**
-   * Exit code when an exception was thrown from the service: {@value}
+   * Exit code when an exception was thrown from the service: {@value}.
    * <p>
    * <code>500 Internal Server Error</code>
    */
   int EXIT_EXCEPTION_THROWN = 50;
 
   /**
-   * Unimplemented feature: {@value}
+   * Unimplemented feature: {@value}.
    * <p>
    * <code>501: Not Implemented</code>
    */
   int EXIT_UNIMPLEMENTED = 51;
 
   /**
-   * Service Unavailable; it may be available later: {@value}
+   * Service Unavailable; it may be available later: {@value}.
    * <p>
    * <code>503 Service Unavailable</code>
    */
   int EXIT_SERVICE_UNAVAILABLE = 53;
 
   /**
-   * The application does not support, or refuses to support this version: {@value}.
+   * The application does not support, or refuses to support this
+   * version: {@value}.
+   * <p>
    * If raised, this is expected to be raised server-side and likely due
    * to client/server version incompatibilities.
    * <p>
@@ -169,13 +171,13 @@ public interface LauncherExitCodes {
   int EXIT_UNSUPPORTED_VERSION = 55;
 
    /**
-   * the service instance could not be created: {@value}
+   * the service instance could not be created: {@value}.
    */
-  int EXIT_SERVICE_CREATION_FAILURE       = 56;
+  int EXIT_SERVICE_CREATION_FAILURE = 56;
  
     /**
-   * the service instance could not be created: {@value}
+   * the service instance could not be created: {@value}.
    */
-  int EXIT_SERVICE_LIFECYCLE_EXCEPTION    = 57;
+  int EXIT_SERVICE_LIFECYCLE_EXCEPTION = 57;
   
 }

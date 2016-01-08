@@ -649,11 +649,11 @@ public class StringUtils {
    * @param msg content of the message
    * @return a message for logging
    */
-  public static String toStartupShutdownString(String prefix, String [] msg) {
+  public static String toStartupShutdownString(String prefix, String[] msg) {
     StringBuilder b = new StringBuilder(prefix);
     b.append("\n/************************************************************");
     for(String s : msg)
-      b.append("\n" + prefix + s);
+      b.append("\n").append(prefix).append(s);
     b.append("\n************************************************************/");
     return b.toString();
   }
@@ -705,7 +705,7 @@ public class StringUtils {
   }
 
   /**
-   * Generate the text for the startup/shutdown message of processes 
+   * Generate the text for the startup/shutdown message of processes.
    * @param classname short classname of the class
    * @param hostname hostname
    * @param args Command arguments

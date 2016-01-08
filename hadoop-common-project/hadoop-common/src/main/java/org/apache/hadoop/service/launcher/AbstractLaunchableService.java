@@ -29,7 +29,7 @@ import java.util.List;
 
 /**
  * Subclass of {@link AbstractService} that provides basic implementations
- * of the new methods
+ * of the {@link LaunchableService} methods.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -51,14 +51,13 @@ public abstract class AbstractLaunchableService extends AbstractService
    * <p>
    * The base implementation logs all arguments at the debug level,
    * then returns the passed in config unchanged.
-   * 
    */
   
   @Override
   public Configuration bindArgs(Configuration config, List<String> args) throws
       Exception {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Service {} passed in {} arguments:", getName(),args.size());
+      LOG.debug("Service {} passed in {} arguments:", getName(), args.size());
       for (String arg : args) {
         LOG.debug(arg);
       }
@@ -67,7 +66,7 @@ public abstract class AbstractLaunchableService extends AbstractService
   }
 
   /**
-   * {@inheritDoc}
+   * {@inheritDoc}.
    * <p>
    * The action is to signal success by returning the exit code 0.
    */

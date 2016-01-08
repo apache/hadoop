@@ -39,6 +39,9 @@ public final class ExitUtil {
   private static volatile ExitException firstExitException;
   private static volatile HaltException firstHaltException;
 
+  private ExitUtil() {
+  }
+
   /**
    * An exception raised when a call to {@link #terminate(int)} was
    * called and system exits were blocked.
@@ -47,7 +50,7 @@ public final class ExitUtil {
       implements ExitCodeProvider {
     private static final long serialVersionUID = 1L;
     /**
-     * The status code
+     * The status code.
      */
     public final int status;
 
@@ -74,7 +77,7 @@ public final class ExitUtil {
     }
 
     /**
-     * String value does not include exception type, just exit code and message
+     * String value does not include exception type, just exit code and message.
      * @return the exit code and any message
      */
     @Override
@@ -119,7 +122,7 @@ public final class ExitUtil {
     }
 
     /**
-     * String value does not include exception type, just exit code and message
+     * String value does not include exception type, just exit code and message.
      * @return the exit code and any message
      */
     @Override
@@ -148,7 +151,7 @@ public final class ExitUtil {
   }
 
   /**
-   * @return true if terminate has been called
+   * @return true if terminate has been called.
    */
   public static boolean terminateCalled() {
     // Either we set this member or we actually called System#exit
@@ -156,21 +159,21 @@ public final class ExitUtil {
   }
 
   /**
-   * @return true if halt has been called
+   * @return true if halt has been called.
    */
   public static boolean haltCalled() {
     return firstHaltException != null;
   }
 
   /**
-   * @return the first ExitException thrown, null if none thrown yet
+   * @return the first ExitException thrown, null if none thrown yet.
    */
   public static ExitException getFirstExitException() {
     return firstExitException;
   }
 
   /**
-   * @return the first {@code HaltException} thrown, null if none thrown yet
+   * @return the first {@code HaltException} thrown, null if none thrown yet.
    */
   public static HaltException getFirstHaltException() {
     return firstHaltException;
@@ -190,10 +193,11 @@ public final class ExitUtil {
 
   /**
    * Inner termination: either exit with the exception's exit code,
-   * or, if system exits are disabled, rethrow the exception
+   * or, if system exits are disabled, rethrow the exception.
    * @param ee exit exception
    */
-  public static synchronized void terminate(ExitException ee) throws ExitException {
+  public static synchronized void terminate(ExitException ee)
+      throws ExitException {
     int status = ee.getExitCode();
     String msg = ee.getMessage();
     if (status != 0) {
@@ -213,7 +217,7 @@ public final class ExitUtil {
 
   /**
    * Forcibly terminates the currently running Java virtual machine.
-   * The exception argument is rethrown if JVM halitng is disabled.
+   * The exception argument is rethrown if JVM halting is disabled.
    * @param ee the exception containing the status code, message and any stack
    * trace.
    * @throws HaltException if {@link Runtime#halt(int)} is disabled.
@@ -242,9 +246,9 @@ public final class ExitUtil {
 
   /**
    * Like {@link #terminate(int, String)} but uses the given throwable to
-   * Used to build the message to display or throw as an
-   * {@link ExitException}
-   *
+   * build the message to display or throw as an
+   * {@link ExitException}.
+   * <p>
    * @param status exit code to use if the exception is not an ExitException.
    * @param t throwable which triggered the termination. If this exception
    * is an {@link ExitException} its status overrides that passed in.
@@ -318,7 +322,7 @@ public final class ExitUtil {
   /**
    * Handler for out of memory events -no attempt is made here
    * to cleanly shutdown or support halt blocking; a robust
-   * printing of the event to stderr is all that can be done
+   * printing of the event to stderr is all that can be done.
    * @param oome out of memory event
    */
   public static void haltOnOutOfMemory(OutOfMemoryError oome) {
