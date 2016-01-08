@@ -99,12 +99,12 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       String user, Queue queue, ActiveUsersManager activeUsersManager,
       RMContext rmContext) {
     this(applicationAttemptId, user, queue, activeUsersManager, rmContext,
-        Priority.newInstance(0));
+        Priority.newInstance(0), false);
   }
 
   public FiCaSchedulerApp(ApplicationAttemptId applicationAttemptId,
       String user, Queue queue, ActiveUsersManager activeUsersManager,
-      RMContext rmContext, Priority appPriority) {
+      RMContext rmContext, Priority appPriority, boolean isAttemptRecovering) {
     super(applicationAttemptId, user, queue, activeUsersManager, rmContext);
     
     RMApp rmApp = rmContext.getRMApps().get(getApplicationId());
@@ -129,6 +129,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     setAppAMNodePartitionName(partition);
     setAMResource(partition, amResource);
     setPriority(appPriority);
+    setAttemptRecovering(isAttemptRecovering);
 
     scheduler = rmContext.getScheduler();
 
