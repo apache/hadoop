@@ -20,6 +20,8 @@ Release 2.6.4 - UNRELEASED
     HDFS-6945. BlockManager should remove a block from excessReplicateMap and
     decrement ExcessBlocks metric when the block is removed. (aajisaka)
 
+    HDFS-9574. Reduce client failures during datanode restart (kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
