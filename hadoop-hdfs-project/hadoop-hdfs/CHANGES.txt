@@ -406,6 +406,9 @@ Trunk (Unreleased)
     HDFS-9615. Fix variable name typo in DFSConfigKeys. (Ray Chiang via
     Arpit Agarwal)
 
+    HDFS-9626. TestBlockReplacement#testBlockReplacement fails occasionally.
+    (Xiao Chen via zhz)
+
     BREAKDOWN OF HDFS-7285 SUBTASKS AND RELATED JIRAS
 
       HDFS-7347. Configurable erasure coding policy for individual files and
