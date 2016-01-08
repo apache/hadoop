@@ -1229,6 +1229,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4546. ResourceManager crash due to scheduling opportunity overflow.
     (Jason Lowe via junping_du)
 
+    YARN-4479. Change CS LeafQueue pendingOrderingPolicy to hornor recovered apps.
+    (Rohith Sharma K S via jianhe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
