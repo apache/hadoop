@@ -1651,6 +1651,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9584. NPE in distcp when ssl configuration file does not exist in
     class path. (Surendra Singh Lilhore via Xiaoyu Yao)
 
+    HDFS-9493. Test o.a.h.hdfs.server.namenode.TestMetaSave fails in trunk.
+    (Tony Wu via lei)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
