@@ -1640,6 +1640,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9619. SimulatedFSDataset sometimes can not find blockpool for the
     correct namenode (Wei-Chiu Chuang via vinayakumarb)
 
+    HDFS-9626. TestBlockReplacement#testBlockReplacement fails occasionally.
+    (Xiao Chen via zhz)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
