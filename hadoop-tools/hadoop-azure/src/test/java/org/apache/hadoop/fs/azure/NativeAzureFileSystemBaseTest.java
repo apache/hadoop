@@ -846,6 +846,63 @@ public abstract class NativeAzureFileSystemBaseTest {
   }
 
   /**
+   * Test the situation when the rename metadata file is empty
+   * i.e. it is created but not written yet. In that case in next rename
+   * this empty file should be deleted. As zero byte metadata file means
+   * rename has not started yet. This is to emulate the scenario where
+   * the process crashes just after creating rename metadata file.
+   *  We had a bug (HADOOP-12678) that in that case listing used to fail and
+   * hbase master did not use to come up
+   */
+  @Test
+  public void testRedoRenameFolderInFolderListingWithZeroByteRenameMetadata()
+      throws IOException {
+    // create original folder
+    String parent = "parent";
+    Path parentFolder = new Path(parent);
+    assertTrue(fs.mkdirs(parentFolder));
+    Path inner = new Path(parentFolder, "innerFolder");
+    assertTrue(fs.mkdirs(inner));
+    Path inner2 = new Path(parentFolder, "innerFolder2");
+    assertTrue(fs.mkdirs(inner2));
+    Path innerFile = new Path(inner2, "file");
+    assertTrue(fs.createNewFile(innerFile));
+
+    Path inner2renamed = new Path(parentFolder, "innerFolder2Renamed");
+
+    // Create an empty rename-pending file
+    final String renamePendingStr = inner2 + FolderRenamePending.SUFFIX;
+    Path renamePendingFile = new Path(renamePendingStr);
+    FSDataOutputStream out = fs.create(renamePendingFile, true);
+    assertTrue(out != null);
+    out.close();
+
+    // Redo the rename operation based on the contents of the
+    // -RenamePending.json file. Trigger the redo by listing
+    // the parent folder. It should not throw and it should
+    // delete empty rename pending file
+    FileStatus[] listed = fs.listStatus(parentFolder);
+    assertEquals(2, listed.length);
+    assertTrue(listed[0].isDirectory());
+    assertTrue(listed[1].isDirectory());
+    assertFalse(fs.exists(renamePendingFile));
+
+    // Verify that even if rename pending file is deleted,
+    // deletion should handle that
+    Path home = fs.getHomeDirectory();
+    String relativeHomeDir = getRelativePath(home.toString());
+    NativeAzureFileSystem.FolderRenamePending pending =
+            new NativeAzureFileSystem.FolderRenamePending(
+                relativeHomeDir + "/" + inner2,
+                relativeHomeDir + "/" + inner2renamed, null,
+                (NativeAzureFileSystem) fs);
+    pending.deleteRenamePendingFile(fs, renamePendingFile);
+
+    assertTrue(fs.exists(inner2)); // verify original folder is there
+    assertFalse(fs.exists(inner2renamed)); // verify the target is not there
+  }
+
+  /**
    * Test the situation where a rename pending file exists but the rename
    * is really done. This could happen if the rename process died just
    * before deleting the rename pending file. It exercises a non-standard
