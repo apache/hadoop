@@ -150,7 +150,7 @@ public class AuthenticationFilter implements Filter {
    * that indicates the max inactive interval of the generated token.
    */
   public static final String
-      AUTH_TOKEN_MAX_INACTIVE_INTERVAL = "token.MaxInactiveInterval";
+      AUTH_TOKEN_MAX_INACTIVE_INTERVAL = "token.max-inactive-interval";
 
   /**
    * Constant for the configuration property that indicates the validity of the generated token.
@@ -234,9 +234,11 @@ public class AuthenticationFilter implements Filter {
     } else {
       authHandlerClassName = authHandlerName;
     }
-
     maxInactiveInterval = Long.parseLong(config.getProperty(
-        AUTH_TOKEN_MAX_INACTIVE_INTERVAL, "1800")) * 1000; // 30 minutes;
+        AUTH_TOKEN_MAX_INACTIVE_INTERVAL, "-1")); // By default, disable.
+    if (maxInactiveInterval > 0) {
+      maxInactiveInterval *= 1000;
+    }
     validity = Long.parseLong(config.getProperty(AUTH_TOKEN_VALIDITY, "36000"))
         * 1000; //10 hours
     initializeSecretProvider(filterConfig);
@@ -559,7 +561,7 @@ public class AuthenticationFilter implements Filter {
           }
           token = authHandler.authenticate(httpRequest, httpResponse);
           if (token != null && token != AuthenticationToken.ANONYMOUS) {
-            if (token.getMaxInactives() != 0) {
+            if (token.getMaxInactives() > 0) {
               token.setMaxInactives(System.currentTimeMillis()
                   + getMaxInactiveInterval() * 1000);
             }
@@ -603,6 +605,7 @@ public class AuthenticationFilter implements Filter {
               && getMaxInactiveInterval() > 0) {
             token.setMaxInactives(System.currentTimeMillis()
                 + getMaxInactiveInterval() * 1000);
+            token.setExpires(token.getExpires());
             newToken = true;
           }
           if (newToken && !token.isExpired()
