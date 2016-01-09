@@ -39,8 +39,7 @@ public class AuthToken implements Principal {
   private static final String TYPE = "t";
 
   private final static Set<String> ATTRIBUTES =
-    new HashSet<String>(Arrays.asList(USER_NAME, PRINCIPAL,
-        MAX_INACTIVES, EXPIRES, TYPE));
+      new HashSet<>(Arrays.asList(USER_NAME, PRINCIPAL, EXPIRES, TYPE));
 
   private String userName;
   private String principal;
@@ -133,8 +132,10 @@ public class AuthToken implements Principal {
     sb.append(USER_NAME).append("=").append(getUserName()).append(ATTR_SEPARATOR);
     sb.append(PRINCIPAL).append("=").append(getName()).append(ATTR_SEPARATOR);
     sb.append(TYPE).append("=").append(getType()).append(ATTR_SEPARATOR);
-    sb.append(MAX_INACTIVES).append("=")
+    if (getMaxInactives() != -1) {
+      sb.append(MAX_INACTIVES).append("=")
       .append(getMaxInactives()).append(ATTR_SEPARATOR);
+    }
     sb.append(EXPIRES).append("=").append(getExpires());
     tokenStr = sb.toString();
   }
@@ -209,13 +210,16 @@ public class AuthToken implements Principal {
     // remove the signature part, since client doesn't care about it
     map.remove("s");
 
-    if (!map.keySet().equals(ATTRIBUTES)) {
+    if (!map.keySet().containsAll(ATTRIBUTES)) {
       throw new AuthenticationException("Invalid token string, missing attributes");
     }
-    long maxInactives = Long.parseLong(map.get(MAX_INACTIVES));
     long expires = Long.parseLong(map.get(EXPIRES));
     AuthToken token = new AuthToken(map.get(USER_NAME), map.get(PRINCIPAL), map.get(TYPE));
-    token.setMaxInactives(maxInactives);
+    //process optional attributes
+    if (map.containsKey(MAX_INACTIVES)) {
+      long maxInactives = Long.parseLong(map.get(MAX_INACTIVES));
+      token.setMaxInactives(maxInactives);
+    }
     token.setExpires(expires);
     return token;
   }
