@@ -674,6 +674,9 @@ Release 2.9.0 - UNRELEASED
    HADOOP-12573. TestRPC.testClientBackOff failing.
    (Xiao Chen via stevel)
 
+   HADOOP-12590. TestCompressorDecompressor failing without stack traces
+   (John Zhuge via stevel)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
