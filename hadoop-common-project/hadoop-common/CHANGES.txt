@@ -1571,6 +1571,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12675. Fix description about retention period in usage of expunge
     command. (Masatake Iwasaki via stevel)
 
+    HADOOP-12678. Handle empty rename pending metadata file during atomic rename
+    in redo path. (Madhumita Chakraborty via cnauroth)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
