@@ -143,9 +143,15 @@ public class NativeAzureFileSystem extends FileSystem {
       FSDataInputStream input = fs.open(f);
       byte[] bytes = new byte[MAX_RENAME_PENDING_FILE_SIZE];
       int l = input.read(bytes);
-      if (l < 0) {
-        throw new IOException(
-            "Error reading pending rename file contents -- no data available");
+      if (l <= 0) {
+        // Jira HADOOP-12678 -Handle empty rename pending metadata file during
+        // atomic rename in redo path. If during renamepending file is created
+        // but not written yet, then this means that rename operation
+        // has not started yet. So we should delete rename pending metadata file.
+        LOG.error("Deleting empty rename pending file "
+            + redoFile + " -- no data available");
+        deleteRenamePendingFile(fs, redoFile);
+        return;
       }
       if (l == MAX_RENAME_PENDING_FILE_SIZE) {
         throw new IOException(
@@ -178,7 +184,7 @@ public class NativeAzureFileSystem extends FileSystem {
             redoFile, contents);
 
         // delete the -RenamePending.json file
-        fs.delete(redoFile, false);
+        deleteRenamePendingFile(fs, redoFile);
         return;
       }
 
@@ -213,6 +219,30 @@ public class NativeAzureFileSystem extends FileSystem {
 
     public SelfRenewingLease getFolderLease() {
       return folderLease;
+    }
+
+    /**
+     * Deletes rename pending metadata file
+     * @param fs -- the file system
+     * @param redoFile - rename pending metadata file path
+     * @throws IOException - If deletion fails
+     */
+    @VisibleForTesting
+    void deleteRenamePendingFile(FileSystem fs, Path redoFile)
+        throws IOException {
+      try {
+        fs.delete(redoFile, false);
+      } catch (IOException e) {
+        // If the rename metadata was not found then somebody probably
+        // raced with us and finished the delete first
+        Throwable t = e.getCause();
+        if (t != null && t instanceof StorageException
+            && "BlobNotFound".equals(((StorageException) t).getErrorCode())) {
+          LOG.warn("rename pending file " + redoFile + " is already deleted");
+        } else {
+          throw e;
+        }
+      }
     }
 
     /**
