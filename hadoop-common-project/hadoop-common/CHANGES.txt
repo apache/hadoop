@@ -970,6 +970,9 @@ Release 2.7.3 - UNRELEASED
     HADOOP-12706. TestLocalFsFCStatistics#testStatisticsThreadLocalDataCleanUp
     times out occasionally (Sangjin Lee and Colin Patrick McCabe via jlowe)
 
+    HADOOP-12590. TestCompressorDecompressor failing without stack traces
+    (John Zhuge via stevel)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
