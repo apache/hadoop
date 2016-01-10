@@ -1580,6 +1580,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12678. Handle empty rename pending metadata file during atomic rename
     in redo path. (Madhumita Chakraborty via cnauroth)
 
+    HADOOP-12551. Introduce FileNotFoundException for WASB FileSystem API
+    (Dushyanth via cnauroth)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
