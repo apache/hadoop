@@ -19,9 +19,12 @@
 #include "fs/filesystem.h"
 
 #include <hdfs/hdfs.h>
+#include <libhdfspp/hdfs_ext.h>
+
 #include <string>
 #include <cstring>
 #include <iostream>
+#include <algorithm>
 
 using namespace hdfs;
 
@@ -49,9 +52,31 @@ struct hdfsFile_internal {
   std::unique_ptr<FileHandle> file_;
 };
 
+/* Keep thread local copy of last error string */
+thread_local std::string errstr;
+
+/* Fetch last error that happened in this thread */
+void hdfsGetLastError(char *buf, int len) {
+  if(nullptr == buf || len < 1 || errstr.empty()) {
+    return;
+  }
+
+  /* leave space for a trailing null */
+  size_t copylen = std::min((size_t)errstr.size(), (size_t)len);
+  if(copylen == (size_t)len) {
+    copylen--;
+  }
+
+  strncpy(buf, errstr.c_str(), copylen);
+
+  /* stick in null */
+  buf[copylen] = 0;
+}
+
 /* Error handling with optional debug to stderr */
 static void ReportError(int errnum, std::string msg) {
   errno = errnum;
+  errstr = msg;
 #ifdef LIBHDFSPP_C_API_ENABLE_DEBUG
   std::cerr << "Error: errno=" << strerror(errnum) << " message=\"" << msg
             << "\"" << std::endl;

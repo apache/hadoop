@@ -86,7 +86,11 @@ add_memcheck_test(configuration configuration_test)
 
 add_executable(hdfs_configuration_test hdfs_configuration_test.cc)
 target_link_libraries(hdfs_configuration_test common gmock_main ${CMAKE_THREAD_LIBS_INIT})
-add_test(hdfs_configuration hdfs_configuration_test)
+add_memcheck_test(hdfs_configuration hdfs_configuration_test)
+
+add_executable(hdfspp_errors_test hdfspp_errors.cc)
+target_link_libraries(hdfspp_errors_test common gmock_main bindings_c fs rpc proto common reader connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
+add_memcheck_test(hdfspp_errors hdfspp_errors_test)
 
 #This test requires a great deal of Hadoop Java infrastructure to run.
 if(HADOOP_BUILD)
