@@ -26,7 +26,7 @@
 #include <set>
 
 #include "libhdfspp/options.h"
-#include "libhdfspp/hdfs.h"
+#include "libhdfspp/hdfspp.h"
 
 namespace hdfs {
 

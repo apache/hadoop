@@ -21,7 +21,7 @@
 #include "filehandle.h"
 #include "common/hdfs_public_api.h"
 #include "common/async_stream.h"
-#include "libhdfspp/hdfs.h"
+#include "libhdfspp/hdfspp.h"
 #include "fs/bad_datanode_tracker.h"
 #include "rpc/rpc_engine.h"
 #include "reader/block_reader.h"

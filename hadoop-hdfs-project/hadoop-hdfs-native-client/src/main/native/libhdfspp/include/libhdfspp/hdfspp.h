@@ -15,8 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef LIBHDFSPP_HDFS_H_
-#define LIBHDFSPP_HDFS_H_
+#ifndef LIBHDFSPP_HDFSPP_H_
+#define LIBHDFSPP_HDFSPP_H_
 
 #include "libhdfspp/options.h"
 #include "libhdfspp/status.h"
