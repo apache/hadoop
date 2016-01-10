@@ -20,11 +20,12 @@ package org.apache.hadoop.fs.azure;
 
 import java.io.FileNotFoundException;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.junit.After;
 import org.junit.Test;
 
@@ -32,6 +33,11 @@ public class TestFileSystemOperationsExceptionHandlingMultiThreaded extends
   NativeAzureFileSystemBaseTest {
 
   FSDataInputStream inputStream = null;
+
+  private static Path testPath = new Path("testfile.dat");
+  private static Path testFolderPath = new Path("testfolder");
+
+
   /*
    * Helper method to creates an input stream to test various scenarios.
    */
@@ -87,6 +93,135 @@ public class TestFileSystemOperationsExceptionHandlingMultiThreaded extends
     inputStream.seek(5);
   }
 
+  @Test(expected=FileNotFoundException.class)
+  /*
+   * Tests basic multi threaded setPermission scenario
+   */
+  public void testMultiThreadedPageBlobSetPermissionScenario() throws Throwable {
+    ExceptionHandlingTestHelper.createEmptyFile(ExceptionHandlingTestHelper.getPageBlobTestStorageAccount(),
+        testPath);
+    Thread t = new Thread(new DeleteThread(fs, testPath));
+    t.start();
+    while (t.isAlive()) {
+      fs.setPermission(testPath, new FsPermission(FsAction.EXECUTE, FsAction.READ, FsAction.READ));
+    }
+    fs.setPermission(testPath, new FsPermission(FsAction.EXECUTE, FsAction.READ, FsAction.READ));
+  }
+
+  @Test(expected=FileNotFoundException.class)
+  /*
+   * Tests basic multi threaded setPermission scenario
+   */
+  public void testMultiThreadedBlockBlobSetPermissionScenario() throws Throwable {
+    ExceptionHandlingTestHelper.createEmptyFile(createTestAccount(),
+        testPath);
+    Thread t = new Thread(new DeleteThread(fs, testPath));
+    t.start();
+    while (t.isAlive()) {
+      fs.setPermission(testPath, new FsPermission(FsAction.EXECUTE, FsAction.READ, FsAction.READ));
+    }
+    fs.setPermission(testPath, new FsPermission(FsAction.EXECUTE, FsAction.READ, FsAction.READ));
+  }
+
+  @Test(expected=FileNotFoundException.class)
+  /*
+   * Tests basic multi threaded setPermission scenario
+   */
+  public void testMultiThreadedPageBlobOpenScenario() throws Throwable {
+
+    ExceptionHandlingTestHelper.createEmptyFile(createTestAccount(),
+        testPath);
+    Thread t = new Thread(new DeleteThread(fs, testPath));
+    t.start();
+    while (t.isAlive()) {
+      inputStream = fs.open(testPath);
+      inputStream.close();
+    }
+
+    inputStream = fs.open(testPath);
+    inputStream.close();
+  }
+
+  @Test(expected=FileNotFoundException.class)
+  /*
+   * Tests basic multi threaded setPermission scenario
+   */
+  public void testMultiThreadedBlockBlobOpenScenario() throws Throwable {
+
+    ExceptionHandlingTestHelper.createEmptyFile(ExceptionHandlingTestHelper.getPageBlobTestStorageAccount(),
+        testPath);
+    Thread t = new Thread(new DeleteThread(fs, testPath));
+    t.start();
+
+    while (t.isAlive()) {
+      inputStream = fs.open(testPath);
+      inputStream.close();
+    }
+    inputStream = fs.open(testPath);
+    inputStream.close();
+  }
+
+  @Test(expected=FileNotFoundException.class)
+  /*
+   * Tests basic multi threaded setOwner scenario
+   */
+  public void testMultiThreadedBlockBlobSetOwnerScenario() throws Throwable {
+
+    ExceptionHandlingTestHelper.createEmptyFile(createTestAccount(), testPath);
+    Thread t = new Thread(new DeleteThread(fs, testPath));
+    t.start();
+    while (t.isAlive()) {
+      fs.setOwner(testPath, "testowner", "testgroup");
+    }
+    fs.setOwner(testPath, "testowner", "testgroup");
+  }
+
+  @Test(expected=FileNotFoundException.class)
+  /*
+   * Tests basic multi threaded setOwner scenario
+   */
+  public void testMultiThreadedPageBlobSetOwnerScenario() throws Throwable {
+    ExceptionHandlingTestHelper.createEmptyFile(ExceptionHandlingTestHelper.getPageBlobTestStorageAccount(),
+        testPath);
+    Thread t = new Thread(new DeleteThread(fs, testPath));
+    t.start();
+    while (t.isAlive()) {
+      fs.setOwner(testPath, "testowner", "testgroup");
+    }
+    fs.setOwner(testPath, "testowner", "testgroup");
+  }
+
+  @Test(expected=FileNotFoundException.class)
+  /*
+   * Tests basic multi threaded listStatus scenario
+   */
+  public void testMultiThreadedBlockBlobListStatusScenario() throws Throwable {
+
+    ExceptionHandlingTestHelper.createTestFolder(createTestAccount(), testFolderPath);
+    Thread t = new Thread(new DeleteThread(fs, testFolderPath));
+    t.start();
+    while (t.isAlive()) {
+      fs.listStatus(testFolderPath);
+    }
+    fs.listStatus(testFolderPath);
+  }
+
+  @Test(expected=FileNotFoundException.class)
+  /*
+   * Tests basic multi threaded listStatus scenario
+   */
+  public void testMultiThreadedPageBlobListStatusScenario() throws Throwable {
+
+    ExceptionHandlingTestHelper.createTestFolder(ExceptionHandlingTestHelper.getPageBlobTestStorageAccount(),
+        testFolderPath);
+    Thread t = new Thread(new DeleteThread(fs, testFolderPath));
+    t.start();
+    while (t.isAlive()) {
+      fs.listStatus(testFolderPath);
+    }
+    fs.listStatus(testFolderPath);
+  }
+
   /*
    * Test to validate correct exception is thrown for Multithreaded read
    * scenario for page blobs
@@ -95,7 +230,7 @@ public class TestFileSystemOperationsExceptionHandlingMultiThreaded extends
   @Test(expected=FileNotFoundException.class)
   public void testMultiThreadedPageBlobReadScenario() throws Throwable {
 
-    AzureBlobStorageTestAccount testAccount = getPageBlobTestStorageAccount();
+    AzureBlobStorageTestAccount testAccount = ExceptionHandlingTestHelper.getPageBlobTestStorageAccount();
     fs = testAccount.getFileSystem();
     Path testFilePath1 = new Path("test1.dat");
 
@@ -116,7 +251,7 @@ public class TestFileSystemOperationsExceptionHandlingMultiThreaded extends
   @Test(expected=FileNotFoundException.class)
   public void testMultiThreadedPageBlobSeekScenario() throws Throwable {
 
-    AzureBlobStorageTestAccount testAccount = getPageBlobTestStorageAccount();
+    AzureBlobStorageTestAccount testAccount = ExceptionHandlingTestHelper.getPageBlobTestStorageAccount();
     fs = testAccount.getFileSystem();
     Path testFilePath1 = new Path("test1.dat");
 
@@ -133,27 +268,15 @@ public class TestFileSystemOperationsExceptionHandlingMultiThreaded extends
     return AzureBlobStorageTestAccount.create();
   }
 
-  /*
-   * Helper method to create a PageBlob test storage account.
-   */
-  private AzureBlobStorageTestAccount getPageBlobTestStorageAccount()
-      throws Exception {
-
-    Configuration conf = new Configuration();
-
-    // Configure the page blob directories key so every file created is a page blob.
-    conf.set(AzureNativeFileSystemStore.KEY_PAGE_BLOB_DIRECTORIES, "/");
-
-    // Configure the atomic rename directories key so every folder will have
-    // atomic rename applied.
-    conf.set(AzureNativeFileSystemStore.KEY_ATOMIC_RENAME_DIRECTORIES, "/");
-    return AzureBlobStorageTestAccount.create(conf);
-  }
-
   @After
   public void tearDown() throws Exception {
+
     if (inputStream != null) {
       inputStream.close();
+    }
+
+    if (fs != null && fs.exists(testPath)) {
+      fs.delete(testPath, true);
     }
   }
 }
@@ -177,6 +300,27 @@ class RenameThread implements Runnable {
     try {
       fs.rename(testPath, renamePath);
     }catch (Exception e) {
+      // Swallowing the exception as the
+      // correctness of the test is controlled
+      // by the other thread
+    }
+  }
+}
+
+class DeleteThread implements Runnable {
+  private FileSystem fs;
+  private Path testPath;
+
+  public DeleteThread(FileSystem fs, Path testPath) {
+    this.fs = fs;
+    this.testPath = testPath;
+  }
+
+  @Override
+  public void run() {
+    try {
+      fs.delete(testPath, true);
+    } catch (Exception e) {
       // Swallowing the exception as the
       // correctness of the test is controlled
       // by the other thread
