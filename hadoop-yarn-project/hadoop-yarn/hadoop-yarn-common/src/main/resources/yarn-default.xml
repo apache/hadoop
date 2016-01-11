@@ -2213,6 +2213,13 @@
     <value>60</value>
   </property>
 
+  <property>
+    <description>Time period till which the application collector will be alive
+     in NM, after the  application master container finishes.</description>
+    <name>yarn.timeline-service.app-collector.linger-period.ms</name>
+    <value>1000</value>
+  </property>
+
   <!--  Shared Cache Configuration -->
 
   <property>
