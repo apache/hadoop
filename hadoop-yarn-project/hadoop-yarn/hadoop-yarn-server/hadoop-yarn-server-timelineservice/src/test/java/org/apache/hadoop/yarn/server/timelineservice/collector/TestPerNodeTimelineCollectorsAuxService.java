@@ -22,11 +22,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.any;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+
+import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ExitUtil;
@@ -44,8 +46,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorCon
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
 import org.junit.After;
 import org.junit.Test;
-
-import java.io.IOException;
 
 public class TestPerNodeTimelineCollectorsAuxService {
   private ApplicationAttemptId appAttemptId;
@@ -103,8 +103,9 @@ public class TestPerNodeTimelineCollectorsAuxService {
     when(context.getContainerType()).thenReturn(
         ContainerType.APPLICATION_MASTER);
     auxService.stopContainer(context);
-
-    // TODO Temporary Fix until solution for YARN-3995 is finalized
+    // auxService should have the app's collector and need to remove only after
+    // a configured period
+    assertTrue(auxService.hasApplication(appAttemptId.getApplicationId()));
     for (int i = 0; i < 4; i++) {
       Thread.sleep(500l);
       if (!auxService.hasApplication(appAttemptId.getApplicationId())) {

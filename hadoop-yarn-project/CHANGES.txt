@@ -208,6 +208,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-4350. TestDistributedShell fails for V2 scenarios. (Naganarasimha G R
     via varunsaxena)
 
+    YARN-3995. Some of the NM events are not getting published due race
+    condition when AM container finishes in NM (Naganarasimha G R via sjlee)
+
 Trunk - Unreleased
 
   INCOMPATIBLE CHANGES
