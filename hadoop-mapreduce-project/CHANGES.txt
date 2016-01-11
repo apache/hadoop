@@ -10,6 +10,9 @@ Release 2.6.4 - UNRELEASED
 
     MAPREDUCE-6436. JobHistory cache issue. (Kai Sasaki via zxu)
 
+    MAPREDUCE-5982. Task attempts that fail from the ASSIGNED state can
+    disappear (Chang Li via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES
