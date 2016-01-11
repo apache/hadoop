@@ -1981,6 +1981,11 @@ public class YarnConfiguration extends Configuration {
   public static final int
       DEFAULT_TIMELINE_SERVICE_WRITER_FLUSH_INTERVAL_SECONDS = 60;
 
+  public static final String ATS_APP_COLLECTOR_LINGER_PERIOD_IN_MS =
+      TIMELINE_SERVICE_PREFIX + "app-collector.linger-period.ms";
+
+  public static final int DEFAULT_ATS_APP_COLLECTOR_LINGER_PERIOD_IN_MS = 1000;
+
   // mark app-history related configs @Private as application history is going
   // to be integrated into the timeline service
   @Private
