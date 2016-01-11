@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.tools.util;
 
-import org.apache.hadoop.tools.util.WorkReport;
-import org.apache.hadoop.tools.util.WorkRequest;
-
 /**
  *  Interface for ProducerConsumer worker loop.
  *

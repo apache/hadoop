@@ -39,7 +39,8 @@ import org.apache.hadoop.security.Credentials;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import java.io.*;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 
@@ -165,9 +166,9 @@ public class SimpleCopyListing extends CopyListing {
     }
   }
 
-  /** {@inheritDoc} */
   @Override
-  public void doBuildListing(Path pathToListingFile, DistCpOptions options) throws IOException {
+  protected void doBuildListing(Path pathToListingFile,
+                                DistCpOptions options) throws IOException {
     if(options.shouldUseDiff()) {
       doBuildListingWithSnapshotDiff(getWriter(pathToListingFile), options);
     }else {
@@ -227,8 +228,9 @@ public class SimpleCopyListing extends CopyListing {
    * @throws IOException
    */
   @VisibleForTesting
-  public void doBuildListingWithSnapshotDiff(SequenceFile.Writer fileListWriter,
-      DistCpOptions options) throws IOException {
+  protected void doBuildListingWithSnapshotDiff(
+      SequenceFile.Writer fileListWriter, DistCpOptions options)
+      throws IOException {
     ArrayList<DiffInfo> diffList = distCpSync.prepareDiffList();
     Path sourceRoot = options.getSourcePaths().get(0);
     FileSystem sourceFS = sourceRoot.getFileSystem(getConf());
@@ -287,7 +289,7 @@ public class SimpleCopyListing extends CopyListing {
    * @throws IOException
    */
   @VisibleForTesting
-  public void doBuildListing(SequenceFile.Writer fileListWriter,
+  protected void doBuildListing(SequenceFile.Writer fileListWriter,
       DistCpOptions options) throws IOException {
     if (options.getNumListstatusThreads() > 0) {
       numListstatusThreads = options.getNumListstatusThreads();

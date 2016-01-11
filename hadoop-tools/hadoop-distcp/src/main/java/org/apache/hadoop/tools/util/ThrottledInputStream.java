@@ -18,13 +18,10 @@
 
 package org.apache.hadoop.tools.util;
 
-import java.io.IOException;
-import java.io.InputStream;
-
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.PositionedReadable;
 
-import com.google.common.base.Preconditions;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * The ThrottleInputStream provides bandwidth throttling on a specified
