@@ -1005,6 +1005,13 @@ Release 2.6.4 - UNRELEASED
     MAPREDUCE-6577. MR AM unable to load native library without
     MR_AM_ADMIN_USER_ENV set (sjlee)
 
+    MAPREDUCE-5982. Task attempts that fail from the ASSIGNED state can
+    disappear (Chang Li via jlowe)
+
+    MAPREDUCE-6492. AsyncDispatcher exit with NPE on
+    TaskAttemptImpl#sendJHStartEventForAssignedFailTask (Bibin A Chundatt via
+    jlowe)
+
 Release 2.6.3 - 2015-12-17
 
   INCOMPATIBLE CHANGES
