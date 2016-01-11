@@ -1645,6 +1645,12 @@ Release 2.8.0 - UNRELEASED
     HDFS-9626. TestBlockReplacement#testBlockReplacement fails occasionally.
     (Xiao Chen via zhz)
 
+    HDFS-9493. Test o.a.h.hdfs.server.namenode.TestMetaSave fails in trunk.
+    (Tony Wu via lei)
+
+    HDFS-9639. Inconsistent Logging in BootstrapStandby. (Xiaobing Zhou via
+    Arpit Agarwal)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
