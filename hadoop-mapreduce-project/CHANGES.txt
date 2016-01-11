@@ -677,14 +677,17 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6550. archive-logs tool changes log ownership to the Yarn
     user when using DefaultContainerExecutor (rkanter)
 
-   MAPREDUCE-6419. JobHistoryServer doesn't sort properly based on Job ID when Job id's 
-   exceed 9999. (Mohammad Shahid Khan via rohithsharmaks)
+    MAPREDUCE-6419. JobHistoryServer doesn't sort properly based on Job ID when Job id's 
+    exceed 9999. (Mohammad Shahid Khan via rohithsharmaks)
 
     MAPREDUCE-6589. TestTaskLog outputs a log under directory other than
     target/test-dir. (aajisaka)
 
     MAPREDUCE-6593. TestJobHistoryEventHandler.testTimelineEventHandling fails
     on trunk because of NPE. (Naganarasimha G R via aajisaka)
+
+    MAPREDUCE-6068. Illegal progress value warnings in map tasks. (Binglin Chang
+    via junping_du)
 
 Release 2.7.3 - UNRELEASED
 
