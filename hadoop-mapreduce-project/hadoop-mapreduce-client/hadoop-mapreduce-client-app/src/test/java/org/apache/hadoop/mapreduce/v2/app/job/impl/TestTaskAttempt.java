@@ -753,6 +753,14 @@ public class TestTaskAttempt{
     assertFalse(
         "InternalError occurred trying to handle TA_DIAGNOSTICS_UPDATE on assigned task",
         eventHandler.internalError);
+    try {
+      taImpl.handle(new TaskAttemptEvent(attemptId,
+          TaskAttemptEventType.TA_KILL));
+      Assert.assertTrue("No exception on UNASSIGNED STATE KILL event", true);
+    } catch (Exception e) {
+      Assert.assertFalse(
+          "Exception not expected for UNASSIGNED STATE KILL event", true);
+    }
   }
 
   @Test
