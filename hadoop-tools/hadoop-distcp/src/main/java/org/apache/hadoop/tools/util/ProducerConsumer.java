@@ -20,15 +20,11 @@ package org.apache.hadoop.tools.util;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.tools.util.WorkReport;
-import org.apache.hadoop.tools.util.WorkRequest;
-import org.apache.hadoop.tools.util.WorkRequestProcessor;
 
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * ProducerConsumer class encapsulates input and output queues and a
@@ -51,8 +47,8 @@ public class ProducerConsumer<T, R> {
    *  @param numThreads   Size of thread-pool to execute Workers.
    */
   public ProducerConsumer(int numThreads) {
-    this.inputQueue = new LinkedBlockingQueue<WorkRequest<T>>();
-    this.outputQueue = new LinkedBlockingQueue<WorkReport<R>>();
+    this.inputQueue = new LinkedBlockingQueue<>();
+    this.outputQueue = new LinkedBlockingQueue<>();
     executor = Executors.newFixedThreadPool(numThreads);
     workCnt = new AtomicInteger(0);
   }

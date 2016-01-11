@@ -378,8 +378,9 @@ public class TestCopyMapper {
               workPath);
       copyMapper.setup(context);
 
-      copyMapper.map(new Text(DistCpUtils.getRelativePath(new Path(SOURCE_PATH), pathList.get(0))),
-              new CopyListingFileStatus(fs.getFileStatus(pathList.get(0))), context);
+      copyMapper.map(new Text(DistCpUtils.getRelativePath(new Path(SOURCE_PATH),
+          pathList.get(0))),
+          new CopyListingFileStatus(fs.getFileStatus(pathList.get(0))), context);
 
       Assert.assertTrue("There should have been an exception.", false);
     }
@@ -525,7 +526,8 @@ public class TestCopyMapper {
       mkdirs(TARGET_PATH);
       cluster.getFileSystem().setPermission(new Path(SOURCE_PATH + "/src/file"),
           new FsPermission(FsAction.READ, FsAction.READ, FsAction.READ));
-      cluster.getFileSystem().setPermission(new Path(TARGET_PATH), new FsPermission((short)511));
+      cluster.getFileSystem().setPermission(new Path(TARGET_PATH),
+          new FsPermission((short)511));
 
       final FileSystem tmpFS = tmpUser.doAs(new PrivilegedAction<FileSystem>() {
         @Override
@@ -785,7 +787,8 @@ public class TestCopyMapper {
       }
       if (ignoreFailures) {
         for (Text value : stubContext.getWriter().values()) {
-          Assert.assertTrue(value.toString() + " is not skipped", value.toString().startsWith("FAIL:"));
+          Assert.assertTrue(value.toString() + " is not skipped",
+              value.toString().startsWith("FAIL:"));
         }
       }
       Assert.assertTrue("There should have been an exception.", ignoreFailures);
@@ -813,7 +816,6 @@ public class TestCopyMapper {
   @Test(timeout=40000)
   public void testCopyFailOnBlockSizeDifference() {
     try {
-
       deleteState();
       createSourceDataWithDifferentBlockSize();
 
@@ -833,16 +835,18 @@ public class TestCopyMapper {
 
       for (Path path : pathList) {
         final FileStatus fileStatus = fs.getFileStatus(path);
-        copyMapper.map(new Text(DistCpUtils.getRelativePath(new Path(SOURCE_PATH), path)),
-            new CopyListingFileStatus(fileStatus), context);
+        copyMapper.map(new Text(DistCpUtils.getRelativePath(new Path(SOURCE_PATH),
+            path)), new CopyListingFileStatus(fileStatus), context);
       }
 
       Assert.fail("Copy should have failed because of block-size difference.");
     }
     catch (Exception exception) {
       // Check that the exception suggests the use of -pb/-skipCrc.
-      Assert.assertTrue("Failure exception should have suggested the use of -pb.", exception.getCause().getCause().getMessage().contains("pb"));
-      Assert.assertTrue("Failure exception should have suggested the use of -skipCrc.", exception.getCause().getCause().getMessage().contains("skipCrc"));
+      Assert.assertTrue("Failure exception should have suggested the use of -pb.",
+          exception.getCause().getCause().getMessage().contains("pb"));
+      Assert.assertTrue("Failure exception should have suggested the use of -skipCrc.",
+          exception.getCause().getCause().getMessage().contains("skipCrc"));
     }
   }
 
