@@ -211,8 +211,6 @@ Trunk (Unreleased)
     HDFS-9582. TestLeaseRecoveryStriped file missing Apache License header 
     and not well formatted. (umamahesh)
 
-    HDFS-9630. DistCp minor refactoring and clean up. (Kai Zheng via zhz)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -407,9 +405,6 @@ Trunk (Unreleased)
 
     HDFS-9615. Fix variable name typo in DFSConfigKeys. (Ray Chiang via
     Arpit Agarwal)
-
-    HDFS-9626. TestBlockReplacement#testBlockReplacement fails occasionally.
-    (Xiao Chen via zhz)
 
     BREAKDOWN OF HDFS-7285 SUBTASKS AND RELATED JIRAS
 
@@ -1809,6 +1804,11 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9498. Move code that tracks blocks with future generation stamps
     to BlockManagerSafeMode. (Mingliang Liu via Arpit Agarwal)
+
+    HDFS-9626. TestBlockReplacement#testBlockReplacement fails occasionally.
+    (Xiao Chen via zhz)
+
+    HDFS-9630. DistCp minor refactoring and clean up. (Kai Zheng via zhz)
 
   OPTIMIZATIONS
 
