@@ -519,7 +519,7 @@ public class Merger {
       boolean hasNext = reader.nextRawKey();
       long endPos = reader.getReader().bytesRead;
       totalBytesProcessed += endPos - startPos;
-      mergeProgress.set(totalBytesProcessed * progPerByte);
+      mergeProgress.set(Math.min(1.0f, totalBytesProcessed * progPerByte));
       if (hasNext) {
         adjustTop();
       } else {
@@ -571,7 +571,7 @@ public class Merger {
       }
       long endPos = minSegment.getReader().bytesRead;
       totalBytesProcessed += endPos - startPos;
-      mergeProgress.set(totalBytesProcessed * progPerByte);
+      mergeProgress.set(Math.min(1.0f, totalBytesProcessed * progPerByte));
       return true;
     }
 
@@ -698,7 +698,7 @@ public class Merger {
           
           totalBytesProcessed += startBytes;         
           if (totalBytes != 0)
-            mergeProgress.set(totalBytesProcessed * progPerByte);
+            mergeProgress.set(Math.min(1.0f, totalBytesProcessed * progPerByte));
           else
             mergeProgress.set(1.0f); // Last pass and no segments left - we're done
           
