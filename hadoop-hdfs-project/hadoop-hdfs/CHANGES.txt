@@ -211,6 +211,8 @@ Trunk (Unreleased)
     HDFS-9582. TestLeaseRecoveryStriped file missing Apache License header 
     and not well formatted. (umamahesh)
 
+    HDFS-9630. DistCp minor refactoring and clean up. (Kai Zheng via zhz)
+
   OPTIMIZATIONS
 
   BUG FIXES
