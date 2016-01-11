@@ -376,11 +376,8 @@ public class BootstrapStandby implements Tool, Configurable {
           "Please copy these logs into the shared edits storage " + 
           "or call saveNamespace on the active node.\n" +
           "Error: " + e.getLocalizedMessage();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(msg, e);
-      } else {
-        LOG.fatal(msg);
-      }
+      LOG.fatal(msg, e);
+
       return false;
     }
   }
