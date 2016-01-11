@@ -43,6 +43,8 @@ Release 2.6.4 - UNRELEASED
     YARN-4180. AMLauncher does not retry on failures when talking to NM.
     (adhoot)
 
+    YARN-3849. Too much of preemption activity causing continuos killing of
+    containers across queues. (Sunil G via wangda)
 
 Release 2.6.3 - 2015-12-17
 
