@@ -1665,11 +1665,11 @@ public class FSDirectory implements Closeable {
 
   INodeAttributes getAttributes(String fullPath, byte[] path,
       INode node, int snapshot) {
-    INodeAttributes nodeAttrs = node;
+    INodeAttributes nodeAttrs;
     if (attributeProvider != null) {
       nodeAttrs = node.getSnapshotINode(snapshot);
-      fullPath = fullPath + (fullPath.endsWith(Path.SEPARATOR) ? ""
-                                                               : Path.SEPARATOR)
+      fullPath = fullPath
+          + (fullPath.endsWith(Path.SEPARATOR) ? "" : Path.SEPARATOR)
           + DFSUtil.bytes2String(path);
       nodeAttrs = attributeProvider.getAttributes(fullPath, nodeAttrs);
     } else {

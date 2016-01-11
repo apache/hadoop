@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -63,6 +64,63 @@ public class TestErasureCodingPolicies {
       cluster.shutdown();
       cluster = null;
     }
+  }
+
+  /**
+   * for pre-existing files (with replicated blocks) in an EC dir, getListing
+   * should report them as non-ec.
+   */
+  @Test(timeout=60000)
+  public void testReplicatedFileUnderECDir() throws IOException {
+    final Path dir = new Path("/ec");
+    final Path replicatedFile = new Path(dir, "replicatedFile");
+    // create a file with replicated blocks
+    DFSTestUtil.createFile(fs, replicatedFile, 0, (short) 3, 0L);
+
+    // set ec policy on dir
+    fs.setErasureCodingPolicy(dir, null);
+    // create a file which should be using ec
+    final Path ecSubDir = new Path(dir, "ecSubDir");
+    final Path ecFile = new Path(ecSubDir, "ecFile");
+    DFSTestUtil.createFile(fs, ecFile, 0, (short) 1, 0L);
+
+    assertNull(fs.getClient().getFileInfo(replicatedFile.toString())
+        .getErasureCodingPolicy());
+    assertNotNull(fs.getClient().getFileInfo(ecFile.toString())
+        .getErasureCodingPolicy());
+
+    // list "/ec"
+    DirectoryListing listing = fs.getClient().listPaths(dir.toString(),
+        new byte[0], false);
+    HdfsFileStatus[] files = listing.getPartialListing();
+    assertEquals(2, files.length);
+    // the listing is always sorted according to the local name
+    assertEquals(ecSubDir.getName(), files[0].getLocalName());
+    assertNotNull(files[0].getErasureCodingPolicy()); // ecSubDir
+    assertEquals(replicatedFile.getName(), files[1].getLocalName());
+    assertNull(files[1].getErasureCodingPolicy()); // replicatedFile
+
+    // list "/ec/ecSubDir"
+    files = fs.getClient().listPaths(ecSubDir.toString(),
+        new byte[0], false).getPartialListing();
+    assertEquals(1, files.length);
+    assertEquals(ecFile.getName(), files[0].getLocalName());
+    assertNotNull(files[0].getErasureCodingPolicy()); // ecFile
+
+    // list "/"
+    files = fs.getClient().listPaths("/", new byte[0], false).getPartialListing();
+    assertEquals(1, files.length);
+    assertEquals(dir.getName(), files[0].getLocalName()); // ec
+    assertNotNull(files[0].getErasureCodingPolicy());
+
+    // rename "/ec/ecSubDir/ecFile" to "/ecFile"
+    assertTrue(fs.rename(ecFile, new Path("/ecFile")));
+    files = fs.getClient().listPaths("/", new byte[0], false).getPartialListing();
+    assertEquals(2, files.length);
+    assertEquals(dir.getName(), files[0].getLocalName()); // ec
+    assertNotNull(files[0].getErasureCodingPolicy());
+    assertEquals(ecFile.getName(), files[1].getLocalName());
+    assertNotNull(files[1].getErasureCodingPolicy());
   }
 
   @Test(timeout = 60000)
