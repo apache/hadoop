@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.timelineservice.storage;
+package org.apache.hadoop.yarn.server.timelineservice.storage.reader;
 
 import java.util.EnumSet;
 import java.util.Map;
@@ -28,7 +28,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Fiel
 /**
  * Factory methods for instantiating a timeline entity reader.
  */
-class TimelineEntityReaderFactory {
+public class TimelineEntityReaderFactory {
   /**
    * Creates a timeline entity reader instance for reading a single entity with
    * the specified input.
