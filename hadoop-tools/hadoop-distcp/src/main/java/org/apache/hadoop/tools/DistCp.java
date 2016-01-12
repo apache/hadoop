@@ -19,6 +19,7 @@
 package org.apache.hadoop.tools;
 
 import java.io.IOException;
+import java.net.URL;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -270,8 +271,14 @@ public class DistCp extends Configured implements Tool {
    */
   private void setupSSLConfig(Job job) throws IOException  {
     Configuration configuration = job.getConfiguration();
-    Path sslConfigPath = new Path(configuration.
-        getResource(inputOptions.getSslConfigurationFile()).toString());
+    URL sslFileUrl = configuration.getResource(inputOptions
+        .getSslConfigurationFile());
+    if (sslFileUrl == null) {
+      throw new IOException(
+          "Given ssl configuration file doesn't exist in class path : "
+              + inputOptions.getSslConfigurationFile());
+    }
+    Path sslConfigPath = new Path(sslFileUrl.toString());
 
     addSSLFilesToDistCache(job, sslConfigPath);
     configuration.set(DistCpConstants.CONF_LABEL_SSL_CONF, sslConfigPath.getName());
