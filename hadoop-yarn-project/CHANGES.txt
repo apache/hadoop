@@ -113,6 +113,8 @@ Release 2.9.0 - UNRELEASED
     YARN-4550. Some tests in TestContainerLanch fails on non-english locale
     environment. (Takashi Ohnishi via stevel)
 
+    YARN-4567. javadoc failing on java 8. (Steve Loughran via aajisaka)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
