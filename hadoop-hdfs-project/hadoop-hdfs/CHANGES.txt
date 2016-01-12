@@ -2584,7 +2584,7 @@ Release 2.8.0 - UNRELEASED
     HDFS-9639. Inconsistent Logging in BootstrapStandby. (Xiaobing Zhou via
     Arpit Agarwal)
 
-    HDFS-8584. NPE in distcp when ssl configuration file does not exist in
+    HDFS-9584. NPE in distcp when ssl configuration file does not exist in
     class path. (Surendra Singh Lilhore via Xiaoyu Yao)
 
 Release 2.7.3 - UNRELEASED
