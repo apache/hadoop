@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.timelineservice.storage;
+package org.apache.hadoop.yarn.server.timelineservice.storage.reader;
 
 import java.io.IOException;
 import java.util.EnumSet;
@@ -44,7 +44,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix
  * HBase storage. Different types can be defined for different types of the
  * entities that are being requested.
  */
-abstract class TimelineEntityReader {
+public abstract class TimelineEntityReader {
   private static final Log LOG = LogFactory.getLog(TimelineEntityReader.class);
   protected static final long DEFAULT_BEGIN_TIME = 0L;
   protected static final long DEFAULT_END_TIME = Long.MAX_VALUE;
