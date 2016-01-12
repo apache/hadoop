@@ -1301,6 +1301,9 @@ Release 2.7.3 - UNRELEASED
     YARN-3695. ServerProxy (NMProxy, etc.) shouldn't retry forever for non
     network exception. (Raju Bairishetti via jianhe)
 
+    YARN-4414. Nodemanager connection errors are retried at multiple levels
+    (Chang Li via jlowe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -2183,6 +2186,9 @@ Release 2.6.4 - UNRELEASED
 
     YARN-3695. ServerProxy (NMProxy, etc.) shouldn't retry forever for non
     network exception. (Raju Bairishetti via jianhe)
+
+    YARN-4414. Nodemanager connection errors are retried at multiple levels
+    (Chang Li via jlowe)
 
 Release 2.6.3 - 2015-12-17
 
