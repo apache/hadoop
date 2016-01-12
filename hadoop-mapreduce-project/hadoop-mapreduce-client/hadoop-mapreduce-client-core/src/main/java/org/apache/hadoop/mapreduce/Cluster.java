@@ -66,7 +66,23 @@ public class Cluster {
 
   private static ServiceLoader<ClientProtocolProvider> frameworkLoader =
       ServiceLoader.load(ClientProtocolProvider.class);
-  
+  private volatile List<ClientProtocolProvider> providerList = null;
+
+  private void initProviderList() {
+    if (providerList == null) {
+      synchronized (frameworkLoader) {
+        if (providerList == null) {
+          List<ClientProtocolProvider> localProviderList =
+              new ArrayList<ClientProtocolProvider>();
+          for (ClientProtocolProvider provider : frameworkLoader) {
+            localProviderList.add(provider);
+          }
+          providerList = localProviderList;
+        }
+      }
+    }
+  }
+
   static {
     ConfigUtil.loadResources();
   }
@@ -85,34 +101,31 @@ public class Cluster {
   private void initialize(InetSocketAddress jobTrackAddr, Configuration conf)
       throws IOException {
 
-    synchronized (frameworkLoader) {
-      for (ClientProtocolProvider provider : frameworkLoader) {
-        LOG.debug("Trying ClientProtocolProvider : "
-            + provider.getClass().getName());
-        ClientProtocol clientProtocol = null; 
-        try {
-          if (jobTrackAddr == null) {
-            clientProtocol = provider.create(conf);
-          } else {
-            clientProtocol = provider.create(jobTrackAddr, conf);
-          }
-
-          if (clientProtocol != null) {
-            clientProtocolProvider = provider;
-            client = clientProtocol;
-            LOG.debug("Picked " + provider.getClass().getName()
-                + " as the ClientProtocolProvider");
-            break;
-          }
-          else {
-            LOG.debug("Cannot pick " + provider.getClass().getName()
-                + " as the ClientProtocolProvider - returned null protocol");
-          }
-        } 
-        catch (Exception e) {
-          LOG.info("Failed to use " + provider.getClass().getName()
-              + " due to error: ", e);
+    initProviderList();
+    for (ClientProtocolProvider provider : providerList) {
+      LOG.debug("Trying ClientProtocolProvider : "
+          + provider.getClass().getName());
+      ClientProtocol clientProtocol = null;
+      try {
+        if (jobTrackAddr == null) {
+          clientProtocol = provider.create(conf);
+        } else {
+          clientProtocol = provider.create(jobTrackAddr, conf);
         }
+
+        if (clientProtocol != null) {
+          clientProtocolProvider = provider;
+          client = clientProtocol;
+          LOG.debug("Picked " + provider.getClass().getName()
+              + " as the ClientProtocolProvider");
+          break;
+        } else {
+          LOG.debug("Cannot pick " + provider.getClass().getName()
+              + " as the ClientProtocolProvider - returned null protocol");
+        }
+      } catch (Exception e) {
+        LOG.info("Failed to use " + provider.getClass().getName()
+            + " due to error: ", e);
       }
     }
 
