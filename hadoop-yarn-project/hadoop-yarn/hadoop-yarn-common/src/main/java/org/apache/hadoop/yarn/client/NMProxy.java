@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -42,8 +43,12 @@ public class NMProxy extends ServerProxy {
           YarnConfiguration.DEFAULT_CLIENT_NM_CONNECT_MAX_WAIT_MS,
           YarnConfiguration.CLIENT_NM_CONNECT_RETRY_INTERVAL_MS,
           YarnConfiguration.DEFAULT_CLIENT_NM_CONNECT_RETRY_INTERVAL_MS);
-
-    return createRetriableProxy(conf, protocol, ugi, rpc, serverAddress,
+    Configuration confClone = new Configuration(conf);
+    confClone.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
+    confClone.setInt(CommonConfigurationKeysPublic.
+            IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY, 0);
+    return createRetriableProxy(confClone, protocol, ugi, rpc, serverAddress,
       retryPolicy);
   }
 }
