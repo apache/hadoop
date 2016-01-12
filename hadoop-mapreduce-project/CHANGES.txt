@@ -468,6 +468,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6394. Speed up Task processing loop in HsTasksBlock#render()
     (Ray Chiang via jlowe)
 
+    MAPREDUCE-6473. Job submission can take a long time during Cluster
+    initialization (Kuhu Shukla via jlowe)
+
   BUG FIXES
 
     MAPREDUCE-6314. TestPipeApplication fails on trunk.
