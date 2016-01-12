@@ -43,6 +43,9 @@ Release 2.9.0 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-9621. Consolidate FSDirStatAndListingOp#createFileStatus to let its
+    INodesInPath parameter always include the target INode. (jing9)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
