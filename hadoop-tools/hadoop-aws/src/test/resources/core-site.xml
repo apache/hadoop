@@ -23,29 +23,28 @@
 
 <configuration>
 
-    <property>
-        <name>hadoop.tmp.dir</name>
-        <value>target/build/test</value>
-        <description>A base for other temporary directories.</description>
-        <final>true</final>
-    </property>
+  <property>
+    <name>hadoop.tmp.dir</name>
+    <value>target/build/test</value>
+    <description>A base for other temporary directories.</description>
+    <final>true</final>
+  </property>
 
-    <!-- Turn security off for tests by default -->
-    <property>
-        <name>hadoop.security.authentication</name>
-        <value>simple</value>
-    </property>
+  <!-- Turn security off for tests by default -->
+  <property>
+    <name>hadoop.security.authentication</name>
+    <value>simple</value>
+  </property>
 
-    <!--
-    To run these tests.
+  <!--
+  To run these tests.
 
-    # Create a file auth-keys.xml  - DO NOT ADD TO REVISION CONTROL
-    # add the property test.fs.s3n.name to point to an S3 filesystem URL
-    # Add the credentials for the service you are testing against
-    -->
-    <include xmlns="http://www.w3.org/2001/XInclude"
-             href="auth-keys.xml"/>
-
-
+  # Create a file auth-keys.xml  - DO NOT ADD TO REVISION CONTROL
+  # add the property test.fs.s3n.name to point to an S3 filesystem URL
+  # Add the credentials for the service you are testing against
+  -->
+  <include xmlns="http://www.w3.org/2001/XInclude" href="auth-keys.xml">
+    <fallback/>
+  </include>
 
 </configuration>

@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileContext;
 import org.junit.internal.AssumptionViolatedException;
 
 import java.io.IOException;
@@ -50,5 +51,25 @@ public class S3ATestUtils {
     conf.setInt(Constants.PURGE_EXISTING_MULTIPART_AGE, 0);
     fs1.initialize(testURI, conf);
     return fs1;
+  }
+
+  public static FileContext createTestFileContext(Configuration conf) throws
+      IOException {
+    String fsname = conf.getTrimmed(TestS3AFileSystemContract.TEST_FS_S3A_NAME, "");
+
+    boolean liveTest = !StringUtils.isEmpty(fsname);
+    URI testURI = null;
+    if (liveTest) {
+      testURI = URI.create(fsname);
+      liveTest = testURI.getScheme().equals(Constants.FS_S3A);
+    }
+    if (!liveTest) {
+      // This doesn't work with our JUnit 3 style test cases, so instead we'll
+      // make this whole class not run by default
+      throw new AssumptionViolatedException(
+          "No test filesystem in " + TestS3AFileSystemContract.TEST_FS_S3A_NAME);
+    }
+    FileContext fc = FileContext.getFileContext(testURI,conf);
+    return fc;
   }
 }

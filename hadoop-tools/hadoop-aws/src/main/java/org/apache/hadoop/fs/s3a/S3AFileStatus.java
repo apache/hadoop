@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.fs.FileStatus;
@@ -40,7 +39,12 @@ public class S3AFileStatus extends FileStatus {
   public boolean isEmptyDirectory() {
     return isEmptyDirectory;
   }
-  
+
+  @Override
+  public String getOwner() {
+    return System.getProperty("user.name");
+  }
+
   /** Compare if this object is equal to another object
    * @param   o the object to be compared.
    * @return  true if two file status has the same path name; false if not.
@@ -59,5 +63,24 @@ public class S3AFileStatus extends FileStatus {
   @Override
   public int hashCode() {
     return super.hashCode();
+  }
+
+  /** Get the modification time of the file/directory.
+   *
+   * s3a uses objects as "fake" directories, which are not updated to
+   * reflect the accurate modification time. We choose to report the
+   * current time because some parts of the ecosystem (e.g. the
+   * HistoryServer) use modification time to ignore "old" directories.
+   *
+   * @return for files the modification time in milliseconds since January 1,
+   *         1970 UTC or for directories the current time.
+   */
+  @Override
+  public long getModificationTime(){
+    if(isDirectory()){
+      return System.currentTimeMillis();
+    } else {
+      return super.getModificationTime();
+    }
   }
 }
