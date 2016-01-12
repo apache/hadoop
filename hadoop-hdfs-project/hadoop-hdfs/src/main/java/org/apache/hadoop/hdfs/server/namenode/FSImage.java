@@ -665,14 +665,19 @@ public class FSImage implements Closeable {
       LOG.info("No edit log streams selected.");
     }
     
+    Exception le = null;
     FSImageFile imageFile = null;
     for (int i = 0; i < imageFiles.size(); i++) {
       try {
         imageFile = imageFiles.get(i);
         loadFSImageFile(target, recovery, imageFile, startOpt);
         break;
-      } catch (IOException ioe) {
-        LOG.error("Failed to load image from " + imageFile, ioe);
+      } catch (IllegalReservedPathException ie) {
+        throw new IOException("Failed to load image from " + imageFile,
+            ie);
+      } catch (Exception e) {
+        le = e;
+        LOG.error("Failed to load image from " + imageFile, e);
         target.clear();
         imageFile = null;
       }
@@ -680,7 +685,8 @@ public class FSImage implements Closeable {
     // Failed to load any images, error out
     if (imageFile == null) {
       FSEditLog.closeAllStreams(editStreams);
-      throw new IOException("Failed to load an FSImage file!");
+      throw new IOException("Failed to load FSImage file, see error(s) " +
+          "above for more info.");
     }
     prog.endPhase(Phase.LOADING_FSIMAGE);
     
@@ -721,7 +727,7 @@ public class FSImage implements Closeable {
 
   void loadFSImageFile(FSNamesystem target, MetaRecoveryContext recovery,
       FSImageFile imageFile, StartupOption startupOption) throws IOException {
-    LOG.debug("Planning to load image :\n" + imageFile);
+    LOG.info("Planning to load image: " + imageFile);
     StorageDirectory sdForProperties = imageFile.sd;
     storage.readProperties(sdForProperties, startupOption);
 

@@ -669,7 +669,8 @@ public class FSImageFormat {
    * This method is only used for image loading so that synchronization,
    * modification time update and space count update are not needed.
    */
-  private void addToParent(INodeDirectory parent, INode child) {
+  private void addToParent(INodeDirectory parent, INode child)
+      throws IllegalReservedPathException {
     FSDirectory fsDir = namesystem.dir;
     if (parent == fsDir.rootDir) {
         child.setLocalName(renameReservedRootComponentOnUpgrade(
@@ -1097,7 +1098,7 @@ public class FSImageFormat {
    * @return New path with reserved path components renamed to user value
    */
   static String renameReservedPathsOnUpgrade(String path,
-      final int layoutVersion) {
+      final int layoutVersion) throws IllegalReservedPathException {
     final String oldPath = path;
     // If any known LVs aren't supported, we're doing an upgrade
     if (!NameNodeLayoutVersion.supports(Feature.ADD_INODE_ID, layoutVersion)) {
@@ -1147,13 +1148,13 @@ public class FSImageFormat {
    * byte array path component.
    */
   private static byte[] renameReservedComponentOnUpgrade(byte[] component,
-      final int layoutVersion) {
+      final int layoutVersion) throws IllegalReservedPathException {
     // If the LV doesn't support snapshots, we're doing an upgrade
     if (!NameNodeLayoutVersion.supports(Feature.SNAPSHOT, layoutVersion)) {
       if (Arrays.equals(component, HdfsServerConstants.DOT_SNAPSHOT_DIR_BYTES)) {
-        Preconditions.checkArgument(
-            renameReservedMap.containsKey(HdfsConstants.DOT_SNAPSHOT_DIR),
-            RESERVED_ERROR_MSG);
+        if (!renameReservedMap.containsKey(HdfsConstants.DOT_SNAPSHOT_DIR)) {
+          throw new IllegalReservedPathException(RESERVED_ERROR_MSG);
+        }
         component =
             DFSUtil.string2Bytes(renameReservedMap
                 .get(HdfsConstants.DOT_SNAPSHOT_DIR));
@@ -1167,13 +1168,13 @@ public class FSImageFormat {
    * byte array path component.
    */
   private static byte[] renameReservedRootComponentOnUpgrade(byte[] component,
-      final int layoutVersion) {
+      final int layoutVersion) throws IllegalReservedPathException {
     // If the LV doesn't support inode IDs, we're doing an upgrade
     if (!NameNodeLayoutVersion.supports(Feature.ADD_INODE_ID, layoutVersion)) {
       if (Arrays.equals(component, FSDirectory.DOT_RESERVED)) {
-        Preconditions.checkArgument(
-            renameReservedMap.containsKey(FSDirectory.DOT_RESERVED_STRING),
-            RESERVED_ERROR_MSG);
+        if (!renameReservedMap.containsKey(HdfsConstants.DOT_SNAPSHOT_DIR)) {
+          throw new IllegalReservedPathException(RESERVED_ERROR_MSG);
+        }
         final String renameString = renameReservedMap
             .get(FSDirectory.DOT_RESERVED_STRING);
         component =

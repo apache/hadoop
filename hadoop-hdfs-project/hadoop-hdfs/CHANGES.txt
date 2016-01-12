@@ -2600,6 +2600,9 @@ Release 2.7.3 - UNRELEASED
 
     HDFS-9574. Reduce client failures during datanode restart (kihwal)
 
+    HDFS-9569. Log the name of the fsimage being loaded for better
+    supportability. (Yongjun Zhang)
+
   OPTIMIZATIONS
 
   BUG FIXES
