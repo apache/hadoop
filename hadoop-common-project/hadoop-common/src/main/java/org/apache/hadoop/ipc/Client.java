@@ -625,6 +625,7 @@ public class Client {
               // If host name is a valid local address then bind socket to it
               InetAddress localAddr = NetUtils.getLocalInetAddress(host);
               if (localAddr != null) {
+                this.socket.setReuseAddress(true);
                 this.socket.bind(new InetSocketAddress(localAddr, 0));
               }
             }
