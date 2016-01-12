@@ -406,9 +406,6 @@ Trunk (Unreleased)
     HDFS-9615. Fix variable name typo in DFSConfigKeys. (Ray Chiang via
     Arpit Agarwal)
 
-    HDFS-9621. getListing wrongly associates Erasure Coding policy to pre-existing
-    replicated files under an EC directory. (jing9)
-
     BREAKDOWN OF HDFS-7285 SUBTASKS AND RELATED JIRAS
 
       HDFS-7347. Configurable erasure coding policy for individual files and
@@ -939,6 +936,9 @@ Release 2.9.0 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HDFS-9621. getListing wrongly associates Erasure Coding policy to pre-existing
+    replicated files under an EC directory. (jing9)
 
 Release 2.8.0 - UNRELEASED
 
