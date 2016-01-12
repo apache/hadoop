@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
+import org.apache.hadoop.hdfs.server.namenode.IllegalReservedPathException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Logger;
@@ -326,7 +327,7 @@ public class TestDFSUpgradeFromImage {
       fail("Upgrade did not fail with bad MD5");
     } catch (IOException ioe) {
       String msg = StringUtils.stringifyException(ioe);
-      if (!msg.contains("Failed to load an FSImage file")) {
+      if (!msg.contains("Failed to load FSImage file")) {
         throw ioe;
       }
       int md5failures = appender.countExceptionsWithMessage(
@@ -485,10 +486,15 @@ public class TestDFSUpgradeFromImage {
               .format(false)
               .startupOption(StartupOption.UPGRADE)
               .numDataNodes(0).build();
-    } catch (IllegalArgumentException e) {
-      GenericTestUtils.assertExceptionContains(
-          "reserved path component in this version",
-          e);
+    } catch (IOException ioe) {
+        Throwable cause = ioe.getCause();
+        if (cause != null && cause instanceof IllegalReservedPathException) {
+          GenericTestUtils.assertExceptionContains(
+              "reserved path component in this version",
+              cause);
+        } else {
+          throw ioe;
+        }
     } finally {
       if (cluster != null) {
         cluster.shutdown();
