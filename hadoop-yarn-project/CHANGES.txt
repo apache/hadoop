@@ -1298,6 +1298,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4546. ResourceManager crash due to scheduling opportunity overflow.
     (Jason Lowe via junping_du)
 
+    YARN-3695. ServerProxy (NMProxy, etc.) shouldn't retry forever for non
+    network exception. (Raju Bairishetti via jianhe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -2174,6 +2177,12 @@ Release 2.6.4 - UNRELEASED
 
     YARN-3849. Too much of preemption activity causing continuos killing of
     containers across queues. (Sunil G via wangda)
+
+    YARN-3842. NMProxy should retry on NMNotYetReadyException. 
+    (Robert Kanter via kasha)
+
+    YARN-3695. ServerProxy (NMProxy, etc.) shouldn't retry forever for non
+    network exception. (Raju Bairishetti via jianhe)
 
 Release 2.6.3 - 2015-12-17
 
