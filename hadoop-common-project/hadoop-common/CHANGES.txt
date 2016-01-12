@@ -1583,6 +1583,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12551. Introduce FileNotFoundException for WASB FileSystem API
     (Dushyanth via cnauroth)
 
+    HADOOP-12584. Disable browsing the static directory in HttpServer2.
+    (Robert Kanter via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

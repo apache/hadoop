@@ -543,6 +543,9 @@ public final class HttpServer2 implements FilterContainer {
     staticContext.setResourceBase(appDir + "/static");
     staticContext.addServlet(DefaultServlet.class, "/*");
     staticContext.setDisplayName("static");
+    @SuppressWarnings("unchecked")
+    Map<String, String> params = staticContext.getInitParams();
+    params.put("org.mortbay.jetty.servlet.Default.dirAllowed", "false");
     SessionHandler handler = new SessionHandler();
     SessionManager sm = handler.getSessionManager();
     if (sm instanceof AbstractSessionManager) {
