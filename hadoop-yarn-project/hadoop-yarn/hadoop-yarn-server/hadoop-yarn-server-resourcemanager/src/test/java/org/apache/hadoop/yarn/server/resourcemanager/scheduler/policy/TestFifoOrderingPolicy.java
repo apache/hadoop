@@ -24,11 +24,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 
 public class TestFifoOrderingPolicy {
   
@@ -80,4 +75,32 @@ public class TestFifoOrderingPolicy {
     }
   }
   
+  @Test
+  public void testFifoOrderingPolicyAlongWithPriorty() {
+    FifoOrderingPolicy<MockSchedulableEntity> policy =
+        new FifoOrderingPolicy<MockSchedulableEntity>();
+    MockSchedulableEntity r1 = new MockSchedulableEntity();
+    MockSchedulableEntity r2 = new MockSchedulableEntity();
+
+    Priority p1 = Priority.newInstance(1);
+    Priority p2 = Priority.newInstance(0);
+
+    // Both r1 and r1 priority is null
+    Assert.assertEquals(0, policy.getComparator().compare(r1, r2));
+
+    // r1 is null and r2 is not null
+    r2.setApplicationPriority(p2);
+    Assert.assertEquals(-1, policy.getComparator().compare(r1, r2));
+
+    // r1 is not null and r2 is null
+    r2.setApplicationPriority(null);
+    r1.setApplicationPriority(p1);
+    Assert.assertEquals(1, policy.getComparator().compare(r1, r2));
+
+    // r1 is not null and r2 is not null
+    r1.setApplicationPriority(p1);
+    r2.setApplicationPriority(p2);
+    Assert.assertEquals(-1, policy.getComparator().compare(r1, r2));
+  }
+
 }
