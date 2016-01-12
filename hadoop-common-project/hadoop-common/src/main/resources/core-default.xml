@@ -937,6 +937,12 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
+  <name>fs.AbstractFileSystem.s3a.impl</name>
+  <value>org.apache.hadoop.fs.s3a.S3A</value>
+  <description>The implementation class of the S3A AbstractFileSystem.</description>
+</property>
+
+<property>
   <name>io.seqfile.compress.blocksize</name>
   <value>1000000</value>
   <description>The minimum block size for compression in block compressed 

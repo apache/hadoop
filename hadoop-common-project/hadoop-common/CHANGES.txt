@@ -720,6 +720,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12657. Add a option to skip newline on empty files with getMerge -nl.
     (Kanaka Kumar Avvaru via aajisaka)
 
+    HADOOP-11262. Enable YARN to use S3A. (Pieter Reuse via lei)
+
   IMPROVEMENTS
 
     HADOOP-12458. Retries is typoed to spell Retires in parts of
