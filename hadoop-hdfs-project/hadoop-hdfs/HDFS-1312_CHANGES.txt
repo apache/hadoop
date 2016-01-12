@@ -13,3 +13,6 @@ HDFS-1312 Change Log
 
     HDFS-9469. DiskBalancer: Add Planner. (Anu Engineer via Arpit Agarwal)
 
+    HDFS-9588. DiskBalancer: Add submitDiskbalancer RPC. (Anu Engineer via
+    Arpit Agarwal)
+

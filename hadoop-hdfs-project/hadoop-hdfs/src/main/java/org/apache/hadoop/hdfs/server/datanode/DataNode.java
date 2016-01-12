@@ -169,6 +169,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.web.DatanodeHttpServer;
+import org.apache.hadoop.hdfs.server.diskbalancer.DiskbalancerException;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -3286,4 +3287,27 @@ public class DataNode extends ReconfigurableBase
   public Tracer getTracer() {
     return tracer;
   }
+
+  /**
+   * Allows submission of a disk balancer Job.
+   * @param planID  - Hash value of the plan.
+   * @param planVersion - Plan version, reserved for future use. We have only
+   *                    version 1 now.
+   * @param bandwidth - Max disk bandwidth to use, 0 means use value defined
+   *                  in the configration.
+   * @param plan - Actual plan
+   * @return  success or throws an exception.
+   * @throws Exception
+   */
+  @Override
+  public void submitDiskBalancerPlan(String planID,
+      long planVersion, long bandwidth, String plan) throws IOException {
+
+    // TODO : This will be replaced with actual code later.
+    // Right now throwing DiskbalancerException instead
+    // NotImplementedException to indicate the eventually disk balancer code
+    // will throw DiskbalancerException.
+    throw new DiskbalancerException("Not Implemented", 0);
+  }
+
 }
