@@ -1166,7 +1166,7 @@ public abstract class FileContextMainOperationsBaseTest  {
         fc.createSymlink(file, link, false);
         Assert.fail("Created a symlink on a file system that "+
                     "does not support symlinks.");
-      } catch (IOException e) {
+      } catch (UnsupportedOperationException e) {
         // Expected
       }
       createFile(file);
