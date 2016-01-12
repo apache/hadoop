@@ -46,6 +46,9 @@ Release 2.6.4 - UNRELEASED
     YARN-3849. Too much of preemption activity causing continuos killing of
     containers across queues. (Sunil G via wangda)
 
+    YARN-3842. NMProxy should retry on NMNotYetReadyException. 
+    (Robert Kanter via kasha)
+
 Release 2.6.3 - 2015-12-17
 
   INCOMPATIBLE CHANGES
