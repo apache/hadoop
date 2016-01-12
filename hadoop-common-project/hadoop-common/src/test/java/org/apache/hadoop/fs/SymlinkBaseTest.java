@@ -1388,7 +1388,8 @@ public abstract class SymlinkBaseTest {
     long at = wrapper.getFileLinkStatus(link).getAccessTime();
     // the local file system may not support millisecond timestamps
     wrapper.setTimes(link, 2000L, 3000L);
-    assertEquals(at, wrapper.getFileLinkStatus(link).getAccessTime());
+    assertTrue("The atime of symlink should not be lesser after setTimes()",
+        wrapper.getFileLinkStatus(link).getAccessTime() >= at);
     assertEquals(2000, wrapper.getFileStatus(dir).getModificationTime());
     assertEquals(3000, wrapper.getFileStatus(dir).getAccessTime());
   }
