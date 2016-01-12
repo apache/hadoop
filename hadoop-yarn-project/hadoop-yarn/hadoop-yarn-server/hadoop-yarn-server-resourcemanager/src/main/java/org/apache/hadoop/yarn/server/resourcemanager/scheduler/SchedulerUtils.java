@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.exceptions.InvalidLabelResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -291,7 +292,7 @@ public class SchedulerUtils {
     
     // we don't allow specify label expression with more than one node labels now
     if (labelExp != null && labelExp.contains("&&")) {
-      throw new InvalidResourceRequestException(
+      throw new InvalidLabelResourceRequestException(
           "Invailid resource request, queue=" + queueInfo.getQueueName()
               + " specified more than one node label "
               + "in a node label expression, node label expression = "
@@ -301,7 +302,8 @@ public class SchedulerUtils {
     if (labelExp != null && !labelExp.trim().isEmpty() && queueInfo != null) {
       if (!checkQueueLabelExpression(queueInfo.getAccessibleNodeLabels(),
           labelExp, rmContext)) {
-        throw new InvalidResourceRequestException("Invalid resource request"
+        throw new InvalidLabelResourceRequestException(
+            "Invalid resource request"
             + ", queue="
             + queueInfo.getQueueName()
             + " doesn't have permission to access all labels "

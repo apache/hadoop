@@ -686,6 +686,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4537. Pull out priority comparison from fifocomparator and use compound
     comparator for FifoOrdering policy. (Rohith Sharma K S via jianhe)
 
+    YARN-4582. Label-related invalid resource request exception should be able to 
+    properly handled by application. (Bibin A Chundatt via wangda)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
