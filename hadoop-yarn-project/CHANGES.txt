@@ -683,6 +683,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4544. All the log messages about rolling monitoring interval are
     shown with WARN level. (Takashi Ohnishi via aajisaka)
 
+    YARN-4537. Pull out priority comparison from fifocomparator and use compound
+    comparator for FifoOrdering policy. (Rohith Sharma K S via jianhe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

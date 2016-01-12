@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy;
 
 import java.util.*;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.*;
 
 /**
  * An OrderingPolicy which orders SchedulableEntities by input order
@@ -28,8 +27,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.*;
 public class FifoOrderingPolicy<S extends SchedulableEntity> extends AbstractComparatorOrderingPolicy<S> {
   
   public FifoOrderingPolicy() {
-    this.comparator = new FifoComparator();
+    List<Comparator<SchedulableEntity>> comparators =
+        new ArrayList<Comparator<SchedulableEntity>>();
+    comparators.add(new PriorityComparator());
+    comparators.add(new FifoComparator());
+    this.comparator = new CompoundComparator(comparators);
     this.schedulableEntities = new TreeSet<S>(comparator);
+
   }
   
   @Override
