@@ -674,9 +674,6 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6557. Tests in mapreduce-client-app are writing outside of
     target. (Akira AJISAKA via junping_du)
 
-    MAPREDUCE-6549. multibyte delimiters with LineRecordReader cause
-    duplicate records (wilfreds via rkanter)
-
     MAPREDUCE-6550. archive-logs tool changes log ownership to the Yarn
     user when using DefaultContainerExecutor (rkanter)
 
@@ -709,9 +706,6 @@ Release 2.7.3 - UNRELEASED
 
     MAPREDUCE-5883. "Total megabyte-seconds" in job counters is slightly
     misleading (Nathan Roberts via jlowe)
-
-    MAPREDUCE-6549. multibyte delimiters with LineRecordReader cause
-    duplicate records (wilfreds via rkanter)
 
     MAPREDUCE-6583. Clarify confusing sentence in MapReduce tutorial document.
     (Kai Sasaki via aajisaka)
@@ -1048,7 +1042,7 @@ Release 2.6.3 - 2015-12-17
     MAPREDUCE-5883. "Total megabyte-seconds" in job counters is slightly
     misleading (Nathan Roberts via jlowe)
 
-    MAPREDUCE-6549. multibyte delimiters with LineRecordReader cause
+    MAPREDUCE-6549. multibyte delimiters with LineRecordReader cause 
     duplicate records (wilfreds via rkanter)
 
 Release 2.6.2 - 2015-10-28
