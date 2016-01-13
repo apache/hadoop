@@ -744,6 +744,20 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       rmNode.totalCapability = resourceOption.getResource();
   }
 
+  private static NodeHealthStatus updateRMNodeFromStatusEvents(
+      RMNodeImpl rmNode, RMNodeStatusEvent statusEvent) {
+    // Switch the last heartbeatresponse.
+    rmNode.latestNodeHeartBeatResponse = statusEvent.getLatestResponse();
+    NodeHealthStatus remoteNodeHealthStatus = statusEvent.getNodeHealthStatus();
+    rmNode.setHealthReport(remoteNodeHealthStatus.getHealthReport());
+    rmNode.setLastHealthReportTime(remoteNodeHealthStatus
+        .getLastHealthReportTime());
+    rmNode.setAggregatedContainersUtilization(statusEvent
+        .getAggregatedContainersUtilization());
+    rmNode.setNodeUtilization(statusEvent.getNodeUtilization());
+    return remoteNodeHealthStatus;
+  }
+
   public static class AddNodeTransition implements
       SingleArcTransition<RMNodeImpl, RMNodeEvent> {
 
@@ -1069,17 +1083,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
       RMNodeStatusEvent statusEvent = (RMNodeStatusEvent) event;
 
-      // Switch the last heartbeatresponse.
-      rmNode.latestNodeHeartBeatResponse = statusEvent.getLatestResponse();
-
-      NodeHealthStatus remoteNodeHealthStatus =
-          statusEvent.getNodeHealthStatus();
-      rmNode.setHealthReport(remoteNodeHealthStatus.getHealthReport());
-      rmNode.setLastHealthReportTime(
-          remoteNodeHealthStatus.getLastHealthReportTime());
-      rmNode.setAggregatedContainersUtilization(
-          statusEvent.getAggregatedContainersUtilization());
-      rmNode.setNodeUtilization(statusEvent.getNodeUtilization());
+      NodeHealthStatus remoteNodeHealthStatus = updateRMNodeFromStatusEvents(
+          rmNode, statusEvent);
       NodeState initialState = rmNode.getState();
       boolean isNodeDecommissioning =
           initialState.equals(NodeState.DECOMMISSIONING);
@@ -1151,15 +1156,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       RMNodeStatusEvent statusEvent = (RMNodeStatusEvent)event;
 
       // Switch the last heartbeatresponse.
-      rmNode.latestNodeHeartBeatResponse = statusEvent.getLatestResponse();
-      NodeHealthStatus remoteNodeHealthStatus =
-          statusEvent.getNodeHealthStatus();
-      rmNode.setHealthReport(remoteNodeHealthStatus.getHealthReport());
-      rmNode.setLastHealthReportTime(
-          remoteNodeHealthStatus.getLastHealthReportTime());
-      rmNode.setAggregatedContainersUtilization(
-          statusEvent.getAggregatedContainersUtilization());
-      rmNode.setNodeUtilization(statusEvent.getNodeUtilization());
+      NodeHealthStatus remoteNodeHealthStatus = updateRMNodeFromStatusEvents(
+          rmNode, statusEvent);
       if (remoteNodeHealthStatus.getIsNodeHealthy()) {
         rmNode.context.getDispatcher().getEventHandler().handle(
             new NodeAddedSchedulerEvent(rmNode));
