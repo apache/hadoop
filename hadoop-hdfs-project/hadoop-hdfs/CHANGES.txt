@@ -2638,9 +2638,6 @@ Release 2.7.2 - UNRELEASED
 
     HDFS-8659. Block scanner INFO message is spamming logs. (Yongjun Zhang)
 
-    HADOOP-5323. Trash documentation should describe its directory structure and
-    configurations. (Weiwei Yang via ozawa)
-
     HDFS-8099. Change "DFSInputStream has been closed already" message to
     debug log level (Charles Lamb via Colin P. McCabe)
 
