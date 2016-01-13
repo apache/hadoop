@@ -20,16 +20,22 @@ package org.apache.hadoop.yarn.server.resourcemanager.security;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.AccessRequest;
+import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 
 public class QueueACLsManager {
   private ResourceScheduler scheduler;
   private boolean isACLsEnable;
-  
+  private YarnAuthorizationProvider authorizer;
+
   @VisibleForTesting
   public QueueACLsManager() {
     this(null, new Configuration());
@@ -39,13 +45,21 @@ public class QueueACLsManager {
     this.scheduler = scheduler;
     this.isACLsEnable = conf.getBoolean(YarnConfiguration.YARN_ACL_ENABLE,
         YarnConfiguration.DEFAULT_YARN_ACL_ENABLE);
+    this.authorizer = YarnAuthorizationProvider.getInstance(conf);
   }
 
-  public boolean checkAccess(UserGroupInformation callerUGI,
-      QueueACL acl, String queueName) {
+  public boolean checkAccess(UserGroupInformation callerUGI, QueueACL acl,
+      String queueName, ApplicationId appId, String appName) {
     if (!isACLsEnable) {
       return true;
     }
-    return scheduler.checkAccess(callerUGI, acl, queueName);
+    if (scheduler instanceof CapacityScheduler) {
+      return authorizer.checkPermission(new AccessRequest(
+          ((CapacityScheduler) scheduler).getQueue(queueName)
+              .getPrivilegedEntity(), callerUGI,
+          SchedulerUtils.toAccessType(acl), appId.toString(), appName));
+    } else {
+      return scheduler.checkAccess(callerUGI, acl, queueName);
+    }
   }
 }
