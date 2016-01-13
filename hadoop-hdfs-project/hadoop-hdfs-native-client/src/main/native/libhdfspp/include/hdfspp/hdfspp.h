@@ -18,8 +18,8 @@
 #ifndef LIBHDFSPP_HDFSPP_H_
 #define LIBHDFSPP_HDFSPP_H_
 
-#include "libhdfspp/options.h"
-#include "libhdfspp/status.h"
+#include "hdfspp/options.h"
+#include "hdfspp/status.h"
 
 #include <functional>
 #include <memory>

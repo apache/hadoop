@@ -18,7 +18,7 @@
 #ifndef LIB_COMMON_CONTINUATION_CONTINUATION_H_
 #define LIB_COMMON_CONTINUATION_CONTINUATION_H_
 
-#include "libhdfspp/status.h"
+#include "hdfspp/status.h"
 
 #include <functional>
 #include <memory>

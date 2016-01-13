@@ -19,7 +19,7 @@
 #include "fs/filesystem.h"
 
 #include <hdfs/hdfs.h>
-#include <libhdfspp/hdfs_ext.h>
+#include <hdfspp/hdfs_ext.h>
 
 #include <string>
 #include <cstring>

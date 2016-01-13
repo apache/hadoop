@@ -165,8 +165,8 @@ set_target_properties(hdfspp PROPERTIES
 # Can be installed to a particular location via "make DESTDIR=... install"
 file(GLOB_RECURSE LIBHDFSPP_HEADER_FILES "${CMAKE_CURRENT_LIST_DIR}/include/*.h*")
 file(GLOB_RECURSE LIBHDFS_HEADER_FILES "${HADOOP_IMPORT_DIR}/include/*.h*")
-install(FILES ${LIBHDFSPP_HEADER_FILES} DESTINATION /include/libhdfspp)
-install(FILES ${LIBHDFS_HEADER_FILES} DESTINATION /include/libhdfs)
+install(FILES ${LIBHDFSPP_HEADER_FILES} DESTINATION /include/hdfspp)
+install(FILES ${LIBHDFS_HEADER_FILES} DESTINATION /include/hdfs)
 
 install(TARGETS hdfspp_static ARCHIVE DESTINATION /lib)
 install(TARGETS hdfspp LIBRARY DESTINATION /lib)

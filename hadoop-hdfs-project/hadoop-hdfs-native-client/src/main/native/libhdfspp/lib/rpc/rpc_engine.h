@@ -18,8 +18,8 @@
 #ifndef LIB_RPC_RPC_ENGINE_H_
 #define LIB_RPC_RPC_ENGINE_H_
 
-#include "libhdfspp/options.h"
-#include "libhdfspp/status.h"
+#include "hdfspp/options.h"
+#include "hdfspp/status.h"
 
 #include "common/retry_policy.h"
 

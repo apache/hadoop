@@ -19,7 +19,7 @@
 #ifndef COMMON_HDFS_PUBLIC_API_H_
 #define COMMON_HDFS_PUBLIC_API_H_
 
-#include "libhdfspp/hdfspp.h"
+#include "hdfspp/hdfspp.h"
 
 #include <asio/io_service.hpp>
 

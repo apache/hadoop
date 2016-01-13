@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "libhdfspp/options.h"
+#include "hdfspp/options.h"
 
 namespace hdfs {
 
