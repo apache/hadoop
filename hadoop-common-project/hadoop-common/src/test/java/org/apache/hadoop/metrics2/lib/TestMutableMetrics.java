@@ -86,6 +86,10 @@ public class TestMutableMetrics {
                            eq(0.0, EPSILON));
     verify(mb).addGauge(eq(info("S1MaxTime","Max time for stat")),
                            eq(0.0, EPSILON));
+    verify(mb).addGauge(
+        eq(info("S1INumOps", "Interval number of ops for stat")),
+        eq(1L));
+
     verify(mb, times(2))
         .addCounter(info("S2NumOps", "Number of ops for stat"), 1L);
     verify(mb, times(2)).addGauge(eq(info("S2AvgTime",
@@ -94,6 +98,16 @@ public class TestMutableMetrics {
     verify(mb).addCounter(info("S2NumOps", "Number of ops for stat"), 2L);
     verify(mb).addGauge(eq(info("S2AvgTime", "Average time for stat")),
                            eq(1.0, EPSILON));
+
+    // Add one more sample to s1 and verify that total number of ops
+    // has increased to 2, but interval number is 1 for both intervals.
+    MutableStat s1 = (MutableStat) registry.get("s1");
+    s1.add(0);
+    registry.snapshot(mb, true);
+    verify(mb).addCounter(info("S1NumOps", "Number of ops for stat"), 2L);
+    verify(mb, times(2)).addGauge(
+        eq(info("S1INumOps", "Interval number of ops for stat")),
+        eq(1L));
   }
 
   interface TestProtocol {

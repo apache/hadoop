@@ -663,6 +663,9 @@ Release 2.9.0 - UNRELEASED
     when using kerberos and attempting to bind to any port on the local IP
     address (cmccabe)
 
+    HADOOP-12683. Add number of samples in last interval in snapshot of 
+    MutableStat. (Vikram Srivastava via kasha)
+
   BUG FIXES
 
     HADOOP-12655. TestHttpServer.testBindAddress bind port range is wider
