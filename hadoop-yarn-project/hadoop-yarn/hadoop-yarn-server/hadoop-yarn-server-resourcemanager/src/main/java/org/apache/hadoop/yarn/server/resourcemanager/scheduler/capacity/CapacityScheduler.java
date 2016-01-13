@@ -68,6 +68,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
+import org.apache.hadoop.yarn.security.Permission;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -533,11 +534,13 @@ public class CapacityScheduler extends
   @VisibleForTesting
   public static void setQueueAcls(YarnAuthorizationProvider authorizer,
       Map<String, CSQueue> queues) throws IOException {
+    List<Permission> permissions = new ArrayList<>();
     for (CSQueue queue : queues.values()) {
       AbstractCSQueue csQueue = (AbstractCSQueue) queue;
-      authorizer.setPermission(csQueue.getPrivilegedEntity(),
-        csQueue.getACLs(), UserGroupInformation.getCurrentUser());
+      permissions.add(
+          new Permission(csQueue.getPrivilegedEntity(), csQueue.getACLs()));
     }
+    authorizer.setPermission(permissions, UserGroupInformation.getCurrentUser());
   }
 
   private Map<String, Set<String>> getQueueToLabels() {

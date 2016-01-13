@@ -88,6 +88,9 @@ Release 2.9.0 - UNRELEASED
 
     YARN-4438. Implement RM leader election with curator. (Jian He via xgong)
 
+    YARN-4571. Make app id/name available to the yarn authorizer provider for 
+    better auditing. (Jian He via wangda)
+
   OPTIMIZATIONS
 
   BUG FIXES

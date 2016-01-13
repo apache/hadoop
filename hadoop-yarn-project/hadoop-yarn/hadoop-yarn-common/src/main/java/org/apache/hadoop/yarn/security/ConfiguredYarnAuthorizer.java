@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn.security;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -38,10 +40,12 @@ import org.apache.hadoop.yarn.security.PrivilegedEntity.EntityType;
 @Unstable
 public class ConfiguredYarnAuthorizer extends YarnAuthorizationProvider {
 
-  private final ConcurrentMap<PrivilegedEntity, Map<AccessType, AccessControlList>> allAcls =
-      new ConcurrentHashMap<>();
+  private final ConcurrentMap<PrivilegedEntity, Map<AccessType, AccessControlList>>
+      allAcls = new ConcurrentHashMap<>();
   private volatile AccessControlList adminAcl = null;
-
+  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();;
+  private final ReentrantReadWriteLock.ReadLock readLock = lock.readLock();
+  private final ReentrantReadWriteLock.WriteLock writeLock =  lock.writeLock();
 
   @Override
   public void init(Configuration conf) {
@@ -51,13 +55,19 @@ public class ConfiguredYarnAuthorizer extends YarnAuthorizationProvider {
   }
 
   @Override
-  public void setPermission(PrivilegedEntity target,
-      Map<AccessType, AccessControlList> acls, UserGroupInformation ugi) {
-    allAcls.put(target, acls);
+  public void setPermission(List<Permission> permissions,
+      UserGroupInformation user) {
+    try {
+      writeLock.lock();
+      for (Permission perm : permissions) {
+        allAcls.put(perm.getTarget(), perm.getAcls());
+      }
+    } finally {
+      writeLock.unlock();
+    }
   }
 
-  @Override
-  public boolean checkPermission(AccessType accessType,
+  private boolean checkPermissionInternal(AccessType accessType,
       PrivilegedEntity target, UserGroupInformation user) {
     boolean ret = false;
     Map<AccessType, AccessControlList> acls = allAcls.get(target);
@@ -74,11 +84,23 @@ public class ConfiguredYarnAuthorizer extends YarnAuthorizationProvider {
       if (!queueName.contains(".")) {
         return ret;
       }
-      String parentQueueName = queueName.substring(0, queueName.lastIndexOf("."));
-      return checkPermission(accessType, new PrivilegedEntity(target.getType(),
-        parentQueueName), user);
+      String parentQueueName =
+          queueName.substring(0, queueName.lastIndexOf("."));
+      return checkPermissionInternal(accessType,
+          new PrivilegedEntity(target.getType(), parentQueueName), user);
     }
     return ret;
+  }
+
+  @Override
+  public boolean checkPermission(AccessRequest accessRequest) {
+    try {
+      readLock.lock();
+      return checkPermissionInternal(accessRequest.getAccessType(),
+          accessRequest.getEntity(), accessRequest.getUser());
+    } finally {
+      readLock.unlock();
+    }
   }
 
   @Override

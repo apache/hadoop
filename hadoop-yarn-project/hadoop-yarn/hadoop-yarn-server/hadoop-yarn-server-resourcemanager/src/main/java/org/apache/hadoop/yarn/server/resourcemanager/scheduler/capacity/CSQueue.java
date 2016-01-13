@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.security.PrivilegedEntity;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
@@ -73,7 +74,9 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @return the full name of the queue
    */
   public String getQueuePath();
-  
+
+  public PrivilegedEntity getPrivilegedEntity();
+
   /**
    * Get the configured <em>capacity</em> of the queue.
    * @return configured queue capacity
