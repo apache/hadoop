@@ -10,6 +10,9 @@ Release 2.7.2 - 2015-12-16
 
     HADOOP-12232. Upgrade Tomcat dependency to 6.0.44. (cnauroth)
 
+    HADOOP-5323. Trash documentation should describe its directory structure and
+    configurations. (Weiwei Yang via ozawa)
+
   OPTIMIZATIONS
 
   BUG FIXES
