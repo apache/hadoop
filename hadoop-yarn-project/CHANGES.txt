@@ -91,6 +91,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4571. Make app id/name available to the yarn authorizer provider for 
     better auditing. (Jian He via wangda)
 
+    YARN-4551. Address the duplication between StatusUpdateWhenHealthy and
+    StatusUpdateWhenUnhealthy transitions. (Sunil G via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
