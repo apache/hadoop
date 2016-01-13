@@ -250,7 +250,4 @@ if (NOT WIN32)
     endif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 endif(NOT WIN32)
 
-IF(REQUIRE_LIBWEBHDFS)
-    add_subdirectory(contrib/libwebhdfs)
-ENDIF(REQUIRE_LIBWEBHDFS)
 add_subdirectory(main/native/fuse-dfs)

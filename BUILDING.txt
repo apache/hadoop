@@ -11,7 +11,6 @@ Requirements:
 * CMake 2.6 or newer (if compiling native code), must be 3.0 or newer on Mac
 * Zlib devel (if compiling native code)
 * openssl devel ( if compiling native hadoop-pipes and to get the best HDFS encryption performance )
-* Jansson C XML parsing library ( if compiling libwebhdfs )
 * Linux FUSE (Filesystem in Userspace) version 2.6 or above ( if compiling fuse_dfs )
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
 
