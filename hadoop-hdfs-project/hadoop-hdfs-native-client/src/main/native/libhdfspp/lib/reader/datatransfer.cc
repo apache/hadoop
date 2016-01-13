@@ -18,7 +18,7 @@
 
 #include "datatransfer.h"
 
-#include "libhdfspp/status.h"
+#include "hdfspp/status.h"
 
 namespace hdfs {
 

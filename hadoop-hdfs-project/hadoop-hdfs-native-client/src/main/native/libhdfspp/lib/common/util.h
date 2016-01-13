@@ -18,7 +18,7 @@
 #ifndef LIB_COMMON_UTIL_H_
 #define LIB_COMMON_UTIL_H_
 
-#include "libhdfspp/status.h"
+#include "hdfspp/status.h"
 
 #include <sstream>
 

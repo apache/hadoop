@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "libhdfspp/status.h"
+#include "hdfspp/status.h"
 
 #include <cassert>
 #include <cstring>

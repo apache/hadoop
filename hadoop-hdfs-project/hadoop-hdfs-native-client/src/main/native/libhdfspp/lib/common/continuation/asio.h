@@ -21,7 +21,7 @@
 #include "continuation.h"
 #include "common/util.h"
 
-#include "libhdfspp/status.h"
+#include "hdfspp/status.h"
 
 #include <asio/connect.hpp>
 #include <asio/read.hpp>

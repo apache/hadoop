@@ -18,7 +18,7 @@
 
 
 #include <hdfs/hdfs.h>
-#include <libhdfspp/hdfs_ext.h>
+#include <hdfspp/hdfs_ext.h>
 
 #include <google/protobuf/io/coded_stream.h>
 #include <gmock/gmock.h>
@@ -114,4 +114,3 @@ int main(int argc, char *argv[]) {
 
   return exit_code;
 }
-

@@ -20,7 +20,7 @@
 #define COMMON_HDFS_CONFIGURATION_H_
 
 #include "common/configuration.h"
-#include "libhdfspp/options.h"
+#include "hdfspp/options.h"
 
 #include <string>
 #include <map>

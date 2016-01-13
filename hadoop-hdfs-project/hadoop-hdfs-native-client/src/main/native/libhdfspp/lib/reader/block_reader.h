@@ -18,7 +18,7 @@
 #ifndef BLOCK_READER_H_
 #define BLOCK_READER_H_
 
-#include "libhdfspp/status.h"
+#include "hdfspp/status.h"
 #include "common/async_stream.h"
 #include "datatransfer.pb.h"
 #include "connection/datanodeconnection.h"
