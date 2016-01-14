@@ -101,8 +101,6 @@ Release 2.7.2 - 2015-12-16
     HDFS-9445. Datanode may deadlock while handling a bad volume.
     (Wlater Su via Kihwal)
 
-Release 2.7.1 - 2015-07-06
-
     HDFS-8767. RawLocalFileSystem.listStatus() returns null for UNIX pipefile.
     (Kanaka Kumar Avvaru via wheat9)
 
