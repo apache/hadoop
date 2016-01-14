@@ -241,7 +241,7 @@ public class RMAdminCLI extends HAAdmin {
                   + "label2(exclusive=false),label3\">]" +
       " [-removeFromClusterNodeLabels <label1,label2,label3>]" +
       " [-replaceLabelsOnNode <\"node1[:port]=label1,label2 node2[:port]=label1\">]" +
-      " [-directlyAccessNodeLabelStore]]" +
+      " [-directlyAccessNodeLabelStore]" +
       " [-updateNodeResource [NodeID] [MemSize] [vCores] ([OvercommitTimeout])");
     if (isHAEnabled) {
       appendHAUsage(summary);
