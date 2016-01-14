@@ -26,7 +26,6 @@ using namespace hdfs;
 
 namespace hdfs
 {
-
 TEST(HdfsConfigurationTest, TestDefaultOptions)
 {
   // Completely empty stream
@@ -71,6 +70,34 @@ TEST(HdfsConfigurationTest, TestDefaultConfigs) {
     optional<HdfsConfiguration> config = loader.LoadDefaultResources<HdfsConfiguration>();
     EXPECT_TRUE(config && "Parse streams");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
+    EXPECT_EQ("value2", config->GetWithDefault("key2", ""));
+  }
+
+  // Only core-site.xml available
+  {
+    TempDir tempDir;
+    TempFile coreSite(tempDir.path + "/core-site.xml");
+    writeSimpleConfig(coreSite.filename, "key1", "value1");
+
+    ConfigurationLoader loader;
+    loader.SetSearchPath(tempDir.path);
+
+    optional<HdfsConfiguration> config = loader.LoadDefaultResources<HdfsConfiguration>();
+    EXPECT_TRUE(config && "Parse streams");
+    EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
+  }
+
+  // Only hdfs-site available
+  {
+    TempDir tempDir;
+    TempFile hdfsSite(tempDir.path + "/hdfs-site.xml");
+    writeSimpleConfig(hdfsSite.filename, "key2", "value2");
+
+    ConfigurationLoader loader;
+    loader.SetSearchPath(tempDir.path);
+
+    optional<HdfsConfiguration> config = loader.LoadDefaultResources<HdfsConfiguration>();
+    EXPECT_TRUE(config && "Parse streams");
     EXPECT_EQ("value2", config->GetWithDefault("key2", ""));
   }
 }

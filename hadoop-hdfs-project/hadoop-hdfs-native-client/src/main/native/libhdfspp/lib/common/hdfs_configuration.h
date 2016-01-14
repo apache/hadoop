@@ -37,6 +37,7 @@ class HdfsConfiguration : public Configuration {
     Options GetOptions();
 
     // Keys to look for in the configuration file
+    static constexpr const char * kFsDefaultFsKey = "fs.defaultFS";
     static constexpr const char * kDfsClientSocketTimeoutKey = "dfs.client.socket-timeout";
     static constexpr const char * kIpcClientConnectMaxRetriesKey = "ipc.client.connect.max.retries";
     static constexpr const char * kIpcClientConnectRetryIntervalKey = "ipc.client.connect.retry.interval";
@@ -48,6 +49,7 @@ private:
 
     // Constructs a configuration with some static data
     HdfsConfiguration(ConfigMap &src_map);
+    HdfsConfiguration(const ConfigMap &src_map);
 
     static std::vector<std::string> GetDefaultFilenames();
 };

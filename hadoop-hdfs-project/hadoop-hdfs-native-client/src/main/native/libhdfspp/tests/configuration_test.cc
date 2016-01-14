@@ -70,6 +70,15 @@ TEST(ConfigurationTest, TestBasicOperations) {
     EXPECT_EQ("value2", config->GetWithDefault("key2", ""));
   }
 
+  /* Case-insensitive */
+  {
+    std::stringstream stream;
+    simpleConfigStream(stream, "key1", "value1");
+    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
+    EXPECT_TRUE(config && "Parse single value");
+    EXPECT_EQ("value1", config->GetWithDefault("KEY1", ""));
+  }
+
   /* No defaults */
   {
     std::stringstream stream;
@@ -123,6 +132,36 @@ TEST(ConfigurationTest, TestStringResource) {
     optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse single value");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
+  }
+}
+
+TEST(ConfigurationTest, TestValueOverlay) {
+  /* Incremental updates */
+  {
+    ConfigurationLoader loader;
+    std::stringstream stream;
+    stream << "<configuration>"
+            "<property><name>key1</name><value>value1</value><final>false</final></property>"
+            "<property><name>final2</name><value>value2</value><final>true</final></property>"
+            "</configuration>";
+    optional<Configuration> config = loader.Load<Configuration>(stream.str());
+    EXPECT_TRUE(config && "Parse single value");
+    EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
+    EXPECT_EQ("value2", config->GetWithDefault("final2", ""));
+    config = loader.OverlayValue(config.value(), "key3", "value3");
+    EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
+    EXPECT_EQ("value2", config->GetWithDefault("final2", ""));
+    EXPECT_EQ("value3", config->GetWithDefault("key3", ""));
+    config = loader.OverlayValue(config.value(), "final2", "value4");
+    EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
+    EXPECT_EQ("value2", config->GetWithDefault("final2", ""));
+    EXPECT_EQ("value3", config->GetWithDefault("key3", ""));
+
+    // Case insensitive overlay
+    config = loader.OverlayValue(config.value(), "KEY3", "value3a");
+    EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
+    EXPECT_EQ("value2", config->GetWithDefault("final2", ""));
+    EXPECT_EQ("value3a", config->GetWithDefault("key3", ""));
   }
 }
 

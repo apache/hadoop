@@ -52,7 +52,8 @@ std::vector<std::string> Configuration::GetDefaultFilenames() {
 
 
 optional<std::string> Configuration::Get(const std::string& key) const {
-  auto found = raw_values_.find(key);
+  std::string caseFixedKey = fixCase(key);
+  auto found = raw_values_.find(caseFixedKey);
   if (found != raw_values_.end()) {
     return std::experimental::make_optional(found->second.value);
   } else {

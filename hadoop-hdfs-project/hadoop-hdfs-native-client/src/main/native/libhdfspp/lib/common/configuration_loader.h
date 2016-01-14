@@ -63,6 +63,11 @@ public:
   template<class T>
   optional<T> OverlayResourceFile(const T &src, const std::string &path) const;
 
+  // Attempts to update the map.  If the update failed (because there was
+  // an existing final value, for example), returns the original map
+  template<class T>
+  optional<T> OverlayValue(const T &src, const std::string &key, const std::string &value) const;
+
   // Returns an instance of the Configuration with all of the default resource
   //    files loaded.
   //    T must be Configuration or a subclass
@@ -103,6 +108,11 @@ protected:
   // Updates the src map with data from the XML
   static bool UpdateMapWithBytes(Configuration::ConfigMap &map,
                                  std::vector<char> &raw_bytes);
+
+  // Attempts to update the map.  If the update failed (because there was
+  // an existing final value, for example), returns false
+  static bool UpdateMapWithValue(ConfigMap& map,
+        const std::string& key, const std::string& value, const std::string& final_text);
 
   std::vector<std::string> search_path_;
 };

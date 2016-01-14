@@ -41,6 +41,10 @@ static const char kFileSeparator = '/';
 static const char kSearchPathSeparator = ':';
 
 bool is_valid_bool(const std::string& raw) {
+  if (raw.empty()) {
+    return false;
+  }
+
   if (!strcasecmp(raw.c_str(), "true")) {
     return true;
   }
@@ -198,35 +202,47 @@ bool ConfigurationLoader::UpdateMapWithBytes(ConfigMap& map,
     auto value_node = property_node->first_node("value", 0, false);
 
     if (name_node && value_node) {
-      auto mapValue = map.find(name_node->value());
-      if (mapValue != map.end() && mapValue->second.final) {
-        continue;
-      }
-
-      map[name_node->value()] = value_node->value();
+      std::string final_value;
       auto final_node = property_node->first_node("final", 0, false);
-      if (final_node && is_valid_bool(final_node->value())) {
-        map[name_node->value()].final = str_to_bool(final_node->value());
+      if (final_node) {
+        final_value = final_node->value();
       }
+      UpdateMapWithValue(map, name_node->value(), value_node->value(), final_value);
     }
 
     auto name_attr = property_node->first_attribute("name", 0, false);
     auto value_attr = property_node->first_attribute("value", 0, false);
 
     if (name_attr && value_attr) {
-      auto mapValue = map.find(name_attr->value());
-      if (mapValue != map.end() && mapValue->second.final) {
-        continue;
-      }
-
-      map[name_attr->value()] = value_attr->value();
+      std::string final_value;
       auto final_attr = property_node->first_attribute("final", 0, false);
-      if (final_attr && is_valid_bool(final_attr->value())) {
-        map[name_attr->value()].final = str_to_bool(final_attr->value());
+      if (final_attr) {
+        final_value = final_attr->value();
       }
+      UpdateMapWithValue(map, name_attr->value(), value_attr->value(), final_value);
     }
   }
 
+  return true;
+}
+
+bool ConfigurationLoader::UpdateMapWithValue(ConfigMap& map,
+                                             const std::string& key, const std::string& value,
+                                             const std::string& final_text)
+{
+  std::string caseFixedKey = Configuration::fixCase(key);
+  auto mapValue = map.find(caseFixedKey);
+  if (mapValue != map.end() && mapValue->second.final) {
+    return false;
+  }
+
+  bool final_value = false;
+  if (is_valid_bool(final_text)) {
+    final_value = str_to_bool(final_text);
+  }
+
+  map[caseFixedKey].value = value;
+  map[caseFixedKey].final = final_value;
   return true;
 }
 
