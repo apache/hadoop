@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import java.io.Serializable;
 import java.text.DecimalFormat;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -85,6 +86,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   // Key = RackName, Value = Set of Nodes reserved by app on rack
   private Map<String, Set<String>> reservations = new HashMap<>();
 
+  private List<NodeId> blacklistNodeIds = new ArrayList<NodeId>();
   /**
    * Delay scheduling: We often want to prioritize scheduling of node-local
    * containers over rack-local or off-switch containers. To achieve this
@@ -179,6 +181,27 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
         + this.attemptResourceUsage.getReserved());
   }
 
+  private void subtractResourcesOnBlacklistedNodes(
+      Resource availableResources) {
+    if (appSchedulingInfo.getAndResetBlacklistChanged()) {
+      blacklistNodeIds.clear();
+      scheduler.addBlacklistedNodeIdsToList(this, blacklistNodeIds);
+    }
+    for (NodeId nodeId: blacklistNodeIds) {
+      SchedulerNode node = scheduler.getSchedulerNode(nodeId);
+      if (node != null) {
+        Resources.subtractFrom(availableResources,
+            node.getAvailableResource());
+      }
+    }
+    if (availableResources.getMemory() < 0) {
+      availableResources.setMemory(0);
+    }
+    if (availableResources.getVirtualCores() < 0) {
+      availableResources.setVirtualCores(0);
+    }
+  }
+
   /**
    * Headroom depends on resources in the cluster, current usage of the
    * queue, queue's fair-share and queue's max-resources.
@@ -196,6 +219,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
     Resource clusterAvailableResources =
         Resources.subtract(clusterResource, clusterUsage);
+    subtractResourcesOnBlacklistedNodes(clusterAvailableResources);
+
     Resource queueMaxAvailableResources =
         Resources.subtract(queue.getMaxShare(), queueUsage);
     Resource maxAvailableResource = Resources.componentwiseMin(

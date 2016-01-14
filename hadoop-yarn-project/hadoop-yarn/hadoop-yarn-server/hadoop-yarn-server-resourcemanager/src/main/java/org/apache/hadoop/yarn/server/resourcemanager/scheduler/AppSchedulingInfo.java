@@ -18,6 +18,20 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -36,19 +50,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.util.resource.Resources;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * This class keeps track of all the consumption of an application. This also
@@ -72,7 +73,7 @@ public class AppSchedulingInfo {
   private ActiveUsersManager activeUsersManager;
   private boolean pending = true; // whether accepted/allocated by scheduler
   private ResourceUsage appResourceUsage;
-
+  private AtomicBoolean userBlacklistChanged = new AtomicBoolean(false);
   private final Set<String> amBlacklist = new HashSet<>();
   private Set<String> userBlacklist = new HashSet<>();
   private Set<String> requestedPartitions = new HashSet<>();
@@ -451,10 +452,12 @@ public class AppSchedulingInfo {
    * @param blacklistAdditions resources to be added to the userBlacklist
    * @param blacklistRemovals resources to be removed from the userBlacklist
    */
-   public void updateBlacklist(
+  public void updateBlacklist(
       List<String> blacklistAdditions, List<String> blacklistRemovals) {
-     updateUserOrAMBlacklist(userBlacklist, blacklistAdditions,
-         blacklistRemovals);
+    if (updateUserOrAMBlacklist(userBlacklist, blacklistAdditions,
+        blacklistRemovals)) {
+      userBlacklistChanged.set(true);
+    }
   }
 
   /**
@@ -468,17 +471,25 @@ public class AppSchedulingInfo {
         blacklistRemovals);
   }
 
-  void updateUserOrAMBlacklist(Set<String> blacklist,
+  boolean updateUserOrAMBlacklist(Set<String> blacklist,
       List<String> blacklistAdditions, List<String> blacklistRemovals) {
+    boolean changed = false;
     synchronized (blacklist) {
       if (blacklistAdditions != null) {
-        blacklist.addAll(blacklistAdditions);
+        changed = blacklist.addAll(blacklistAdditions);
       }
 
       if (blacklistRemovals != null) {
-        blacklist.removeAll(blacklistRemovals);
+        if (blacklist.removeAll(blacklistRemovals)) {
+          changed = true;
+        }
       }
     }
+    return changed;
+  }
+
+  public boolean getAndResetBlacklistChanged() {
+    return userBlacklistChanged.getAndSet(false);
   }
 
   public synchronized Collection<Priority> getPriorities() {
