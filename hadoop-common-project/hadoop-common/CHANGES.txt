@@ -731,6 +731,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11262. Enable YARN to use S3A. (Pieter Reuse via lei)
 
+    HADOOP-12691. Add CSRF Filter for REST APIs to Hadoop Common.
+    (Larry McCay via cnauroth)
+
   IMPROVEMENTS
 
     HADOOP-12458. Retries is typoed to spell Retires in parts of
