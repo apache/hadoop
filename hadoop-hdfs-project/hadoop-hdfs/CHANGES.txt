@@ -159,6 +159,11 @@ Release 2.7.2 - UNRELEASED
 
 Release 2.7.1 - 2015-07-06
 
+    HDFS-8767. RawLocalFileSystem.listStatus() returns null for UNIX pipefile.
+    (Kanaka Kumar Avvaru via wheat9)
+
+Release 2.7.1 - 2015-07-06
+
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
