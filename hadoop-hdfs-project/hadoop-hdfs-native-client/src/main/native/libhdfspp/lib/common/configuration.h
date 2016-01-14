@@ -82,10 +82,20 @@ protected:
 
   Configuration() {};
   Configuration(ConfigMap &src_map) : raw_values_(src_map){};
+  Configuration(const ConfigMap &src_map) : raw_values_(src_map){};
 
   static std::vector<std::string> GetDefaultFilenames();
 
-  const ConfigMap raw_values_;
+  // While we want this to be const, it would preclude copying Configuration
+  //    objects.  The Configuration class must not allow any mutations of
+  //    the raw_values
+  ConfigMap raw_values_;
+
+  static std::string fixCase(const std::string &in) {
+    std::string result(in);
+    for (auto & c: result) c = toupper(c);
+    return result;
+  }
 };
 
 }

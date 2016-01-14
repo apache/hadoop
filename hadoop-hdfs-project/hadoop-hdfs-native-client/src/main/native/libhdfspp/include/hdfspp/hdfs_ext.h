@@ -63,5 +63,42 @@ LIBHDFS_EXTERNAL
 void hdfsGetLastError(char *buf, int len);
 
 
+/**
+ * Create an HDFS builder, using the configuration XML files from the indicated
+ * directory.  If the directory does not exist, or contains no configuration
+ * XML files, a Builder using all default values will be returned.
+ *
+ * @return The HDFS builder, or NULL on error.
+ */
+struct hdfsBuilder *hdfsNewBuilderFromDirectory(const char * configDirectory);
+
+
+/**
+ * Get a configuration string from the settings currently read into the builder.
+ *
+ * @param key      The key to find
+ * @param val      (out param) The value.  This will be set to NULL if the
+ *                 key isn't found.  You must free this string with
+ *                 hdfsConfStrFree.
+ *
+ * @return         0 on success; nonzero error code otherwise.
+ *                 Failure to find the key is not an error.
+ */
+int hdfsBuilderConfGetStr(struct hdfsBuilder *bld, const char *key,
+                          char **val);
+
+    /**
+     * Get a configuration integer from the settings currently read into the builder.
+     *
+     * @param key      The key to find
+     * @param val      (out param) The value.  This will NOT be changed if the
+     *                 key isn't found.
+     *
+     * @return         0 on success; nonzero error code otherwise.
+     *                 Failure to find the key is not an error.
+     */
+int hdfsBuilderConfGetInt(struct hdfsBuilder *bld, const char *key, int32_t *val);
+
+
 } /* end extern "C" */
 #endif

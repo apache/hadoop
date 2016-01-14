@@ -25,6 +25,7 @@ HdfsConfiguration::HdfsConfiguration() : Configuration() {}
 
 // Constructs a configuration with a copy of the input data
 HdfsConfiguration::HdfsConfiguration(ConfigMap &src_map) : Configuration(src_map) {}
+HdfsConfiguration::HdfsConfiguration(const ConfigMap &src_map) : Configuration(src_map) {}
 
 std::vector<std::string> HdfsConfiguration::GetDefaultFilenames() {
   auto result = Configuration::GetDefaultFilenames();

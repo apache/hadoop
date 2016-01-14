@@ -84,17 +84,24 @@ optional<T> ConfigurationLoader::OverlayResourceString(const T& src, const std::
   }
 }
 
+template<class T>
+optional<T> ConfigurationLoader::OverlayValue(const T& src, const std::string &key, const std::string &value) const {
+  ConfigMap map(src.raw_values_);
+  UpdateMapWithValue(map, key, value, "");
+
+  return std::experimental::make_optional<T>(map);
+}
+
 template <class T>
 optional<T> ConfigurationLoader::LoadDefaultResources() {
   std::vector<std::string> default_filenames = T::GetDefaultFilenames();
 
   ConfigMap result;
-  bool success = true;
+  bool success = false;
 
   for (auto fn: default_filenames) {
-    success &= UpdateMapWithFile(result, fn);
-    if (!success)
-      break;
+    // We succeed if we have loaded data from any file
+    success |= UpdateMapWithFile(result, fn);
   }
 
   if (success) {

@@ -84,8 +84,9 @@ public:
   }
   TempFile(const std::string & fn) : filename(fn), tempFileHandle(-1) {
     strncpy(fn_buffer, fn.c_str(), sizeof(fn_buffer));
+    fn_buffer[sizeof(fn_buffer)-1] = 0;
   }
-  ~TempFile() { close(tempFileHandle); unlink(fn_buffer); }
+  ~TempFile() { if(-1 != tempFileHandle) close(tempFileHandle); unlink(fn_buffer); }
 };
 
 
