@@ -2628,6 +2628,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-8914. Document HA support in the HDFS HdfsDesign.md.
     (Lars Francke via wheat9)
 
+    HDFS-9648. TestStartup.testImageChecksum is broken by HDFS-9569's message
+    change. (Wei-Chiu Chuang via Yongjun Zhang)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
