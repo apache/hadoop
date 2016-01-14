@@ -1258,7 +1258,7 @@ public class Job extends JobContextImpl implements JobContext {
   /**
    * Default to the new APIs unless they are explicitly set or the old mapper or
    * reduce attributes are used.
-   * @throws IOException if the configuration is inconsistant
+   * @throws IOException if the configuration is inconsistent
    */
   private void setUseNewAPI() throws IOException {
     int numReduces = conf.getNumReduceTasks();
@@ -1276,7 +1276,7 @@ public class Job extends JobContextImpl implements JobContext {
         ensureNotSet("mapred.output.format.class", mode);
       }      
     } else {
-      String mode = "map compatability";
+      String mode = "map compatibility";
       ensureNotSet(INPUT_FORMAT_CLASS_ATTR, mode);
       ensureNotSet(MAP_CLASS_ATTR, mode);
       if (numReduces != 0) {
@@ -1293,7 +1293,7 @@ public class Job extends JobContextImpl implements JobContext {
         ensureNotSet("mapred.output.format.class", mode);
         ensureNotSet(oldReduceClass, mode);   
       } else {
-        String mode = "reduce compatability";
+        String mode = "reduce compatibility";
         ensureNotSet(OUTPUT_FORMAT_CLASS_ATTR, mode);
         ensureNotSet(REDUCE_CLASS_ATTR, mode);   
       }
