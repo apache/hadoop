@@ -179,6 +179,10 @@ Maven build goals:
   * -Dtest=<TESTCLASSNAME>,<TESTCLASSNAME#METHODNAME>,....
   * -Dtest.exclude=<TESTCLASSNAME>
   * -Dtest.exclude.pattern=**/<TESTCLASSNAME1>.java,**/<TESTCLASSNAME2>.java
+  * To run all native unit tests, use: mvn test -Pnative -Dtest=allNative
+  * To run a specific native unit test, use: mvn test -Pnative -Dtest=<test>
+  For example, to run test_bulk_crc32, you would use:
+  mvn test -Pnative -Dtest=test_bulk_crc32
 
  Intel ISA-L build options:
 

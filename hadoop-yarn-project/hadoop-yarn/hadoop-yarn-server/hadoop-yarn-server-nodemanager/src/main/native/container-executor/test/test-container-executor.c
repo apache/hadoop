@@ -470,6 +470,13 @@ void run_test_in_child(const char* test_name, void (*func)()) {
 }
 
 void test_signal_container() {
+  sigset_t set;
+
+  // unblock SIGQUIT
+  sigemptyset(&set);
+  sigaddset(&set, SIGQUIT);
+  sigprocmask(SIG_UNBLOCK, &set, NULL);
+
   printf("\nTesting signal_container\n");
   fflush(stdout);
   fflush(stderr);

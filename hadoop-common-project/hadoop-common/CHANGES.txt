@@ -666,6 +666,9 @@ Release 2.9.0 - UNRELEASED
     HADOOP-12683. Add number of samples in last interval in snapshot of 
     MutableStat. (Vikram Srivastava via kasha)
 
+    HADOOP-8887. Use a Maven plugin to build the native code using CMake
+    (cmccabe)
+
   BUG FIXES
 
     HADOOP-12655. TestHttpServer.testBindAddress bind port range is wider
