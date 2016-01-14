@@ -22,6 +22,9 @@ Release 2.6.4 - UNRELEASED
 
     HDFS-9574. Reduce client failures during datanode restart (kihwal)
 
+    HDFS-9415. Document dfs.cluster.administrators and
+    dfs.permissions.superusergroup. (Xiaobing Zhou via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
