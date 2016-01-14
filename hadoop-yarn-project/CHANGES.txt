@@ -124,6 +124,9 @@ Release 2.9.0 - UNRELEASED
 
     YARN-4567. javadoc failing on java 8. (Steve Loughran via aajisaka)
 
+    YARN-3446. FairScheduler headroom calculation should exclude nodes in the 
+    blacklist. (Zhihai Xu via kasha)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

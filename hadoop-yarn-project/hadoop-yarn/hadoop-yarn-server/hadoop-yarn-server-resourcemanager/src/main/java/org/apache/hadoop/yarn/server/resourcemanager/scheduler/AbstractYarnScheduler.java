@@ -181,6 +181,21 @@ public abstract class AbstractYarnScheduler
     return applications;
   }
 
+  /**
+   * Add blacklisted NodeIds to the list that is passed.
+   *
+   * @param app application attempt.
+   * @param blacklistNodeIdList the list to store blacklisted NodeIds.
+   */
+  public void addBlacklistedNodeIdsToList(SchedulerApplicationAttempt app,
+      List<NodeId> blacklistNodeIdList) {
+    for (Map.Entry<NodeId, N> nodeEntry : nodes.entrySet()) {
+      if (SchedulerAppUtils.isBlacklisted(app, nodeEntry.getValue(), LOG)) {
+        blacklistNodeIdList.add(nodeEntry.getKey());
+      }
+    }
+  }
+
   @Override
   public Resource getClusterResource() {
     return clusterResource;

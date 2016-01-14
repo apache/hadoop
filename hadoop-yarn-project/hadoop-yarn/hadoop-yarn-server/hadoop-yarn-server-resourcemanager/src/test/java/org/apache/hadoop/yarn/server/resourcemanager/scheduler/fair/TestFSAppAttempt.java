@@ -18,16 +18,30 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.isA;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
@@ -254,6 +268,73 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
             clusterAvailable.getVirtualCores(),
             queueMaxResourcesAvailable.getVirtualCores())
     );
+  }
+
+  @Test
+  public void testHeadroomWithBlackListedNodes() {
+    // Add two nodes
+    RMNode node1 =
+        MockNodes.newNodeInfo(1, Resources.createResource(8 * 1024, 8), 1,
+            "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+    RMNode node2 =
+        MockNodes.newNodeInfo(1, Resources.createResource(4 * 1024, 4), 2,
+            "127.0.0.2");
+    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
+    scheduler.handle(nodeEvent2);
+    assertEquals("We should have two alive nodes.",
+        2, scheduler.getNumClusterNodes());
+    Resource clusterResource = scheduler.getClusterResource();
+    Resource clusterUsage = scheduler.getRootQueueMetrics()
+        .getAllocatedResources();
+    assertEquals(12 * 1024, clusterResource.getMemory());
+    assertEquals(12, clusterResource.getVirtualCores());
+    assertEquals(0, clusterUsage.getMemory());
+    assertEquals(0, clusterUsage.getVirtualCores());
+    ApplicationAttemptId id11 = createAppAttemptId(1, 1);
+    createMockRMApp(id11);
+    scheduler.addApplication(id11.getApplicationId(),
+            "default", "user1", false);
+    scheduler.addApplicationAttempt(id11, false, false);
+    assertNotNull(scheduler.getSchedulerApplications().get(id11.
+            getApplicationId()));
+    FSAppAttempt app = scheduler.getSchedulerApp(id11);
+    assertNotNull(app);
+    Resource queueUsage = app.getQueue().getResourceUsage();
+    assertEquals(0, queueUsage.getMemory());
+    assertEquals(0, queueUsage.getVirtualCores());
+    SchedulerNode n1 = scheduler.getSchedulerNode(node1.getNodeID());
+    SchedulerNode n2 = scheduler.getSchedulerNode(node2.getNodeID());
+    assertNotNull(n1);
+    assertNotNull(n2);
+    List<String> blacklistAdditions = new ArrayList<String>(1);
+    List<String> blacklistRemovals = new ArrayList<String>(1);
+    blacklistAdditions.add(n1.getNodeName());
+    app.updateBlacklist(blacklistAdditions, blacklistRemovals);
+    app.getQueue().setFairShare(clusterResource);
+    FSAppAttempt spyApp = spy(app);
+    doReturn(false)
+        .when(spyApp).isWaitingForAMContainer();
+    assertTrue(spyApp.isBlacklisted(n1.getNodeName()));
+    assertFalse(spyApp.isBlacklisted(n2.getNodeName()));
+    assertEquals(n2.getAvailableResource(), spyApp.getHeadroom());
+
+    blacklistAdditions.clear();
+    blacklistAdditions.add(n2.getNodeName());
+    blacklistRemovals.add(n1.getNodeName());
+    app.updateBlacklist(blacklistAdditions, blacklistRemovals);
+    assertFalse(spyApp.isBlacklisted(n1.getNodeName()));
+    assertTrue(spyApp.isBlacklisted(n2.getNodeName()));
+    assertEquals(n1.getAvailableResource(), spyApp.getHeadroom());
+
+    blacklistAdditions.clear();
+    blacklistRemovals.clear();
+    blacklistRemovals.add(n2.getNodeName());
+    app.updateBlacklist(blacklistAdditions, blacklistRemovals);
+    assertFalse(spyApp.isBlacklisted(n1.getNodeName()));
+    assertFalse(spyApp.isBlacklisted(n2.getNodeName()));
+    assertEquals(clusterResource, spyApp.getHeadroom());
   }
 
   private static int min(int value1, int value2, int value3) {
