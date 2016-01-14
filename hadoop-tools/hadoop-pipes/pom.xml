@@ -43,72 +43,24 @@
       <build>
         <plugins>
           <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-antrun-plugin</artifactId>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-maven-plugins</artifactId>
             <executions>
               <execution>
-                <id>make</id>
+                <id>cmake-compile</id>
                 <phase>compile</phase>
-                <goals><goal>run</goal></goals>
+                <goals><goal>cmake-compile</goal></goals>
                 <configuration>
-                  <target>
-                    <mkdir dir="${project.build.directory}/native"/>
-                    <exec executable="cmake" dir="${project.build.directory}/native" 
-                        failonerror="true">
-                      <arg line="${basedir}/src/ -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model}"/>
-                    </exec>
-                    <exec executable="make" dir="${project.build.directory}/native" failonerror="true">
-                      <arg line="VERBOSE=1"/>
-                    </exec>
-                    <!-- The second make is a workaround for HADOOP-9215.  It can
-                         be removed when version 2.6 of cmake is no longer supported . -->
-                    <exec executable="make" dir="${project.build.directory}/native" failonerror="true"></exec>
-                  </target>
+                  <source>${basedir}/src</source>
+                  <vars>
+                    <JVM_ARCH_DATA_MODEL>${sun.arch.data.model}</JVM_ARCH_DATA_MODEL>
+                  </vars>
                 </configuration>
               </execution>
-              <!-- TODO wire here native testcases
-              <execution>
-                <id>test</id>
-                <phase>test</phase>
-                <goals>
-                  <goal>test</goal>
-                </goals>
-                <configuration>
-                  <destDir>${project.build.directory}/native/target</destDir>
-                </configuration>
-              </execution>
-              -->
             </executions>
           </plugin>
         </plugins>
       </build>
     </profile>
   </profiles> 
-
-<!--
-  <build>
-    <plugins>
-     <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>compile</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-                <mkdir dir="${basedir}/../target/native"/>
-                <copy toDir="${basedir}/../target/native">
-                  <fileset dir="${basedir}/src/main/native"/>
-                </copy>
-              </target>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
--->
 </project>
