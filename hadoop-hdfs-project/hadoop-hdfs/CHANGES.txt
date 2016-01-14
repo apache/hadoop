@@ -19,6 +19,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9569. Log the name of the fsimage being loaded for better
     supportability. (Yongjun Zhang)
 
+    HDFS-9415. Document dfs.cluster.administrators and
+    dfs.permissions.superusergroup. (Xiaobing Zhou via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
