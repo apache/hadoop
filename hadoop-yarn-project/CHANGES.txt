@@ -94,6 +94,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4551. Address the duplication between StatusUpdateWhenHealthy and
     StatusUpdateWhenUnhealthy transitions. (Sunil G via kasha)
 
+    YARN-4553. Add cgroups support for docker containers.
+    (Sidharta Seethana via vvasudev)
+
   OPTIMIZATIONS
 
   BUG FIXES
