@@ -16,6 +16,8 @@ Release 2.7.2 - 2015-12-16
     HDFS-9221. HdfsServerConstants#ReplicaState#getState should avoid calling
     values() since it creates a temporary array. (Staffan Friberg via yliu)
 
+    HDFS-9574. Reduce client failures during datanode restart (kihwal)
+
   OPTIMIZATIONS
 
     HDFS-8722. Optimize datanode writes for small writes and flushes (kihwal)
