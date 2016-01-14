@@ -928,6 +928,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12590. TestCompressorDecompressor failing without stack traces
     (John Zhuge via stevel)
 
+    HADOOP-12700. Remove unused import in TestCompressorDecompressor.java.
+    (John Zhuge via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
