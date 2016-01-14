@@ -1009,6 +1009,9 @@ Release 2.6.4 - UNRELEASED
     TaskAttemptImpl#sendJHStartEventForAssignedFailTask (Bibin A Chundatt via
     jlowe)
 
+    MAPREDUCE-6363. [NNBench] Lease mismatch error when running with multiple
+    mappers. (Vlad Sharanhovich and Bibin A Chundatt via aajisaka)
+
 Release 2.6.3 - 2015-12-17
 
   INCOMPATIBLE CHANGES
