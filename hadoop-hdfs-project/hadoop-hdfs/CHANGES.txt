@@ -14,8 +14,6 @@ Release 2.7.3 - UNRELEASED
     HDFS-7163. WebHdfsFileSystem should retry reads according to the configured
     retry policy. (Eric Payne via kihwal)
 
-    HDFS-9574. Reduce client failures during datanode restart (kihwal)
-
     HDFS-9047. Retire libwebhdfs (kihwal)
 
     HDFS-9569. Log the name of the fsimage being loaded for better
@@ -70,6 +68,8 @@ Release 2.7.2 - UNRELEASED
 
     HDFS-9221. HdfsServerConstants#ReplicaState#getState should avoid calling
     values() since it creates a temporary array. (Staffan Friberg via yliu)
+
+    HDFS-9574. Reduce client failures during datanode restart (kihwal)
 
   OPTIMIZATIONS
 
