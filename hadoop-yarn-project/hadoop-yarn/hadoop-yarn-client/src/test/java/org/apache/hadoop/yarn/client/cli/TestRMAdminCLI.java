@@ -397,7 +397,7 @@ public class TestRMAdminCLI {
               "[-removeFromClusterNodeLabels <label1,label2,label3>] " +
               "[-replaceLabelsOnNode " +
               "<\"node1[:port]=label1,label2 node2[:port]=label1\">] " +
-              "[-directlyAccessNodeLabelStore]] [-updateNodeResource " +
+              "[-directlyAccessNodeLabelStore] [-updateNodeResource " +
               "[NodeID] [MemSize] [vCores] ([OvercommitTimeout]) " +
               "[-help [cmd]]"));
       assertTrue(dataOut
@@ -487,7 +487,7 @@ public class TestRMAdminCLI {
               + " [username]] [-addToClusterNodeLabels <\"label1(exclusive=true),"
                   + "label2(exclusive=false),label3\">]"
               + " [-removeFromClusterNodeLabels <label1,label2,label3>] [-replaceLabelsOnNode "
-              + "<\"node1[:port]=label1,label2 node2[:port]=label1\">] [-directlyAccessNodeLabelStore]] "
+              + "<\"node1[:port]=label1,label2 node2[:port]=label1\">] [-directlyAccessNodeLabelStore] "
               + "[-updateNodeResource [NodeID] [MemSize] [vCores] ([OvercommitTimeout]) "
               + "[-transitionToActive [--forceactive] <serviceId>] "
               + "[-transitionToStandby <serviceId>] "

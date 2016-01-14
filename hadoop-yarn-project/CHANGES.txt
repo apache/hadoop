@@ -1246,6 +1246,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4479. Change CS LeafQueue pendingOrderingPolicy to hornor recovered apps.
     (Rohith Sharma K S via jianhe)
 
+    YARN-4534. Remove the redundant symbol in yarn rmadmin help msg.
+    (Lin Yiqun via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
