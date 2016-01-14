@@ -39,6 +39,9 @@ Release 2.7.3 - UNRELEASED
     HADOOP-12588. Fix intermittent test failure of TestGangliaMetrics.
     (Masatake Iwasaki via aajisaka)
 
+    HADOOP-12107. long running apps may have a huge number of StatisticsData
+    instances under FileSystem (Sangjin Lee via Ming Ma)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
