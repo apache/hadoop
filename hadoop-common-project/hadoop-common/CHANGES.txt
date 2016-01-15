@@ -689,6 +689,8 @@ Release 2.9.0 - UNRELEASED
    HDFS-9517. Fix missing @Test annotation on
    TestDistCpUtils.testUnpackAttributes (Wei-Chiu Chuang via cmccabe)
 
+   HADOOP-12712. Fix some cmake plugin and native build warnings (cmccabe)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

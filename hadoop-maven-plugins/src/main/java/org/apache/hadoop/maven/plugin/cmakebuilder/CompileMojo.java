@@ -22,18 +22,15 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.concurrent.TimeUnit;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Goal which builds the native sources
+ * Goal which builds the native sources.
  */
 @Mojo(name="cmake-compile", defaultPhase = LifecyclePhase.COMPILE)
 public class CompileMojo extends AbstractMojo {
@@ -203,8 +200,6 @@ public class CompileMojo extends AbstractMojo {
   public void runMake() throws MojoExecutionException {
     List<String> cmd = new LinkedList<String>();
     cmd.add("make");
-    // TODO: it would be nice to determine the number of CPUs and set the
-    // parallelism to that.  It requires some platform-specific logic, though.
     cmd.add("-j");
     cmd.add(String.valueOf(availableProcessors));
     cmd.add("VERBOSE=1");
@@ -259,11 +254,13 @@ public class CompileMojo extends AbstractMojo {
         }
         // We always print stderr, since it contains the compiler warning
         // messages.  These are interesting even if compilation succeeded.
-          for (String line: stderrThread.getOutput()) {
-            getLog().warn(line);
-          }
+        for (String line: stderrThread.getOutput()) {
+          getLog().warn(line);
+        }
       }
-      if (proc != null) proc.destroy();
+      if (proc != null) {
+        proc.destroy();
+      }
     }
   }
 }

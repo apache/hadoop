@@ -60,7 +60,6 @@ public class TestMojo extends AbstractMojo {
 
   /**
    * Environment variables to pass to the binary.
-   *
    */
   @Parameter
   private Map<String, String> env;
@@ -105,7 +104,7 @@ public class TestMojo extends AbstractMojo {
   private String expectedResult;
 
   /**
-   * The Maven Session Object
+   * The Maven Session Object.
    */
   @Parameter(defaultValue="${session}", readonly=true, required=true)
   private MavenSession session;
@@ -205,7 +204,7 @@ public class TestMojo extends AbstractMojo {
   private boolean shouldRunTest() throws MojoExecutionException {
     // Were we told to skip all tests?
     String skipTests = session.
-        getExecutionProperties().getProperty("skipTests");
+        getSystemProperties().getProperty("skipTests");
     if (isTruthy(skipTests)) {
       getLog().info("skipTests is in effect for test " + testName);
       return false;
@@ -223,7 +222,7 @@ public class TestMojo extends AbstractMojo {
     // If there is an explicit list of tests to run, it should include this
     // test.
     String testProp = session.
-        getExecutionProperties().getProperty("test");
+        getSystemProperties().getProperty("test");
     if (testProp != null) {
       String testPropArr[] = testProp.split(",");
       boolean found = false;
@@ -251,8 +250,9 @@ public class TestMojo extends AbstractMojo {
         String val = entry.getValue();
         if (key == null) {
           throw new MojoExecutionException("NULL is not a valid " +
-          		"precondition type.  " + VALID_PRECONDITION_TYPES_STR);
-        } if (key.equals("and")) {
+               "precondition type.  " + VALID_PRECONDITION_TYPES_STR);
+        }
+        if (key.equals("and")) {
           if (!isTruthy(val)) {
             getLog().info("Skipping test " + testName +
                 " because precondition number " + idx + " was not met.");
@@ -267,7 +267,7 @@ public class TestMojo extends AbstractMojo {
           }
         } else {
           throw new MojoExecutionException(key + " is not a valid " +
-          		"precondition type.  " + VALID_PRECONDITION_TYPES_STR);
+              "precondition type.  " + VALID_PRECONDITION_TYPES_STR);
         }
         idx++;
       }

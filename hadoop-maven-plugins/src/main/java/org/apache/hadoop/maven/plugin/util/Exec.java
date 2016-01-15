@@ -127,9 +127,9 @@ public class Exec {
     }
 
     /**
-     * Returns every line consumed from the input.
+     * Get every line consumed from the input.
      * 
-     * @return List<String> every line consumed from the input
+     * @return  Every line consumed from the input
      */
     public List<String> getOutput() {
       return output;
@@ -138,6 +138,9 @@ public class Exec {
 
   /**
    * Add environment variables to a ProcessBuilder.
+   *
+   * @param pb      The ProcessBuilder
+   * @param env     A map of environment variable names to values.
    */
   public static void addEnvironment(ProcessBuilder pb,
         Map<String, String> env) {
@@ -156,6 +159,10 @@ public class Exec {
 
   /**
    * Pretty-print the environment to a StringBuilder.
+   *
+   * @param env     A map of environment variable names to values to print.
+   *
+   * @return        The pretty-printed string.
    */
   public static String envToString(Map<String, String> env) {
     StringBuilder bld = new StringBuilder();
