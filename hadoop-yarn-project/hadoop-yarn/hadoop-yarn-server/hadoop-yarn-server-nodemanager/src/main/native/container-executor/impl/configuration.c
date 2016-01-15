@@ -320,7 +320,7 @@ char ** extract_values_delim(char *value, const char *delim) {
  * Extracts array of values from the '%' separated list of values.
  */
 char ** extract_values(char *value) {
-  extract_values_delim(value, "%");
+  return extract_values_delim(value, "%");
 }
 
 // free an entry set of values

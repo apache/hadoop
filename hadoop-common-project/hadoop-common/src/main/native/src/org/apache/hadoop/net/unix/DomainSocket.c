@@ -268,7 +268,7 @@ Java_org_apache_hadoop_net_unix_DomainSocket_validateSocketPathSecurity0(
 JNIEnv *env, jclass clazz, jobject jstr, jint skipComponents)
 {
   jint utfLength;
-  char path[PATH_MAX], check[PATH_MAX], *token, *rest, *rest_free;
+  char path[PATH_MAX], check[PATH_MAX], *token, *rest, *rest_free = NULL;
   struct stat st;
   int ret, mode, strlenPath;
   uid_t uid;
