@@ -26,6 +26,8 @@ public interface WorkRequestProcessor<T, R> {
 
   /**
    * Work processor.
+   * The processor should be stateless: that is, it can be repeated after
+   * being interrupted.
    *
    * @param   workRequest  Input work item.
    * @return  Outputs WorkReport after processing workRequest item.

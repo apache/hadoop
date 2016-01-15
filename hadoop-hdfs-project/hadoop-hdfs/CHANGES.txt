@@ -2590,6 +2590,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9584. NPE in distcp when ssl configuration file does not exist in
     class path. (Surendra Singh Lilhore via Xiaoyu Yao)
 
+    HDFS-9612. DistCp worker threads are not terminated after jobs are done.
+    (Wei-Chiu Chuang via Yongjun Zhang)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
