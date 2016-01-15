@@ -1200,6 +1200,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4534. Remove the redundant symbol in yarn rmadmin help msg.
     (Lin Yiqun via aajisaka)
 
+    YARN-4581. AHS writer thread leak makes RM crash while RM is recovering. 
+    (sandflee via junping_du)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1263,6 +1266,9 @@ Release 2.7.3 - UNRELEASED
 
     YARN-4414. Nodemanager connection errors are retried at multiple levels
     (Chang Li via jlowe)
+
+    YARN-4581. AHS writer thread leak makes RM crash while RM is recovering.
+    (sandflee via junping_du)
 
 Release 2.7.2 - UNRELEASED
 
@@ -2155,6 +2161,9 @@ Release 2.6.4 - UNRELEASED
 
     YARN-4414. Nodemanager connection errors are retried at multiple levels
     (Chang Li via jlowe)
+
+    YARN-4581. AHS writer thread leak makes RM crash while RM is recovering.
+    (sandflee via junping_du)
 
 Release 2.6.3 - 2015-12-17
 

@@ -734,12 +734,17 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       } else {
         fsdos = fs.create(historyFile);
       }
-      fs.setPermission(historyFile, HISTORY_FILE_UMASK);
-      writer =
-          new TFile.Writer(fsdos, MIN_BLOCK_SIZE, getConfig().get(
-            YarnConfiguration.FS_APPLICATION_HISTORY_STORE_COMPRESSION_TYPE,
-            YarnConfiguration.DEFAULT_FS_APPLICATION_HISTORY_STORE_COMPRESSION_TYPE), null,
-            getConfig());
+      try {
+        fs.setPermission(historyFile, HISTORY_FILE_UMASK);
+        writer =
+            new TFile.Writer(fsdos, MIN_BLOCK_SIZE, getConfig().get(
+                YarnConfiguration.FS_APPLICATION_HISTORY_STORE_COMPRESSION_TYPE,
+                YarnConfiguration.DEFAULT_FS_APPLICATION_HISTORY_STORE_COMPRESSION_TYPE), null,
+                getConfig());
+      } catch (IOException e) {
+        IOUtils.cleanup(LOG, fsdos);
+        throw e;
+      }
     }
 
     public synchronized void close() {
