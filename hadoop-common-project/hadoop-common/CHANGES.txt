@@ -684,9 +684,6 @@ Release 2.9.0 - UNRELEASED
    HADOOP-12573. TestRPC.testClientBackOff failing.
    (Xiao Chen via stevel)
 
-   HADOOP-12590. TestCompressorDecompressor failing without stack traces
-   (John Zhuge via stevel)
-
    HDFS-9517. Fix missing @Test annotation on
    TestDistCpUtils.testUnpackAttributes (Wei-Chiu Chuang via cmccabe)
 
@@ -1606,6 +1603,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12603. TestSymlinkLocalFSFileContext#testSetTimesSymlinkToDir
     occasionally fail. (Wei-Chiu Chuang via cnauroth)
+
+    HADOOP-12590. TestCompressorDecompressor failing without stack traces
+    (John Zhuge via stevel)
 
     HADOOP-12700. Remove unused import in TestCompressorDecompressor.java.
     (John Zhuge via aajisaka)
