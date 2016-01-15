@@ -41,7 +41,7 @@
     <hadoop.component>UNDEF</hadoop.component>
     <bundle.snappy>false</bundle.snappy>
     <bundle.snappy.in.bin>false</bundle.snappy.in.bin>
-    <bundle.isal>true</bundle.isal>
+    <bundle.isal>false</bundle.isal>
     <bundle.openssl>false</bundle.openssl>
     <bundle.openssl.in.bin>false</bundle.openssl.in.bin>
   </properties>
@@ -324,52 +324,96 @@
                   <target>
                     <!-- Using Unix script to preserve symlinks -->
                     <echo file="${project.build.directory}/dist-copynativelibs.sh">
+
+                      # Bundle a native library if requested. Exit 1 in case error happens.
+                      # Usage: bundle_native_lib bundleOption libOption libPattern libDir
+                      function bundle_native_lib() {
+                        bundleOption="$1"
+                        libOption="$2"
+                        libPattern="$3"
+                        libDir="$4"
+
+                        echo "Checking to bundle with:"
+                        echo "bundleOption=${bundleOption}, libOption=${libOption}, libDir=${libDir}, pattern=${libPattern}"
+
+                        if [[ "${bundleOption}" != "true" ]]; then
+                          return
+                        fi
+
+                        if [[ -z "${libDir}" ]] || [[ ! -d ${libDir} ]]; then
+                          echo "The required option $libOption isn't given or invalid. Bundling the lib failed"
+                          exit 1
+                        fi
+
+                        cd "$libDir"
+                        $$TAR *$libPattern* | (cd $${TARGET_DIR}/; $$UNTAR)
+                        if [[ $? -ne 0 ]]; then
+                          echo "Bundling library with ${libOption} failed "
+                          exit 1
+                        fi
+                      }
+
                       BUILD_DIR="${project.build.directory}"
                       TAR='tar cf -'
                       UNTAR='tar xfBp -'
                       LIB_DIR="${BUILD_DIR}/native/target/usr/local/lib"
-                      if [ -d $${LIB_DIR} ] ; then
+
+                      set -o pipefail
+
+                      if [[ -d $${LIB_DIR} ]]; then
                         TARGET_DIR="${BUILD_DIR}/${project.artifactId}-${project.version}/lib/native"
                         mkdir -p $${TARGET_DIR}
                         cd $${LIB_DIR}
                         $$TAR lib* | (cd $${TARGET_DIR}/; $$UNTAR)
-                        if [ "X${bundle.snappy}" = "Xtrue" ] ; then
-                          cd "${snappy.lib}"
-                          $$TAR *snappy* | (cd $${TARGET_DIR}/; $$UNTAR)
+                        if [[ $? -ne 0 ]]; then
+                          echo "Bundling lib files failed"
+                          exit 1
                         fi
-                        if [ "X${bundle.openssl}" = "Xtrue" ] ; then
-                          cd "${openssl.lib}"
-                          $$TAR *crypto* | (cd $${TARGET_DIR}/; $$UNTAR)
-                        fi
-                        if [ "X${bundle.isal}" = "Xtrue" ] ; then
-                          if [ "X${isal.lib}" != "X" ]; then
-                            cd "${isal.lib}"
-                            $$TAR *isa* | (cd $${TARGET_DIR}/; $$UNTAR)
-                          else
-                            echo "The required option isal.lib isn't given, bundling ISA-L skipped"
-                          fi
-                        fi
+
+                        echo bundle_native_lib "${bundle.snappy}" "snappy.lib" "snappy" "${snappy.lib}"
+                        bundle_native_lib "${bundle.snappy}" "snappy.lib" "snappy" "${snappy.lib}"
+
+                        echo bundle_native_lib "${bundle.openssl}" "openssl.lib" "crypto" "${openssl.lib}"
+                        bundle_native_lib "${bundle.openssl}" "openssl.lib" "crypto" "${openssl.lib}"
+
+                        echo bundle_native_lib "${bundle.isal}" "isal.lib" "isa" "${isal.lib}"
+                        bundle_native_lib "${bundle.isal}" "isal.lib" "isa" "${isal.lib}"
                       fi
+
                       BIN_DIR="${BUILD_DIR}/bin"
-                      if [ -d $${BIN_DIR} ] ; then
+                      if [[ -d $${BIN_DIR} ]] ; then
                         TARGET_BIN_DIR="${BUILD_DIR}/${project.artifactId}-${project.version}/bin"
                         mkdir -p $${TARGET_BIN_DIR}
                         cd $${BIN_DIR}
                         $$TAR * | (cd $${TARGET_BIN_DIR}/; $$UNTAR)
-                        if [ "${bundle.snappy.in.bin}" = "true" ] ; then
-                          if [ "${bundle.snappy}" = "true" ] ; then
+                        if [[ $? -ne 0 ]]; then
+                          echo "Bundling bin files failed"
+                          exit 1
+                        fi
+
+                        if [[ "${bundle.snappy.in.bin}" == "true" ]]; then
+                          if [[ "${bundle.snappy}" == "true" ]]; then
                             cd "${snappy.lib}"
                             $$TAR *snappy* | (cd $${TARGET_BIN_DIR}/; $$UNTAR)
+                            if [[ $? -ne 0 ]]; then
+                              echo "Bundling snappy bin files failed"
+                              exit 1
+                            fi
                           fi
                         fi
-                        if [ "${bundle.openssl.in.bin}" = "true" ] ; then
-                          if [ "${bundle.openssl}" = "true" ] ; then
+                        if [[ "${bundle.openssl.in.bin}" == "true" ]]; then
+                          if [[ "${bundle.openssl}" == "true" ]]; then
                             cd "${openssl.lib}"
                             $$TAR *crypto* | (cd $${TARGET_BIN_DIR}/; $$UNTAR)
+                            if [[ $? -ne 0 ]]; then
+                              echo "Bundling openssl bin files failed"
+                              exit 1
+                            fi
                           fi
                         fi
                       fi
                     </echo>
+
                     <exec executable="${shell-executable}" dir="${project.build.directory}" failonerror="true">
                       <arg line="./dist-copynativelibs.sh"/>
                     </exec>

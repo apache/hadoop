@@ -671,6 +671,9 @@ Release 2.9.0 - UNRELEASED
 
     HADOOP-12713. Disable spurious checkstyle checks. (wang)
 
+    HADOOP-12662. The build should fail if a -Dbundle option fails (Kai Zheng
+    via cmccabe)
+
   BUG FIXES
 
     HADOOP-12655. TestHttpServer.testBindAddress bind port range is wider

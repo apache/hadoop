@@ -149,7 +149,8 @@ Maven build goals:
     installed snappy using a package manager.
   * Use -Dbundle.snappy to copy the contents of the snappy.lib directory into
     the final tar file. This option requires that -Dsnappy.lib is also given,
-    and it ignores the -Dsnappy.prefix option.
+    and it ignores the -Dsnappy.prefix option. If -Dsnappy.lib isn't given, the
+    bundling and building will fail.
 
  OpenSSL build options:
 
@@ -170,7 +171,8 @@ Maven build goals:
     installed openssl using a package manager.
   * Use -Dbundle.openssl to copy the contents of the openssl.lib directory into
     the final tar file. This option requires that -Dopenssl.lib is also given,
-    and it ignores the -Dopenssl.prefix option.
+    and it ignores the -Dopenssl.prefix option. If -Dopenssl.lib isn't given, the
+    bundling and building will fail.
 
    Tests options:
 
@@ -205,7 +207,8 @@ Maven build goals:
     files.
   * Use -Dbundle.isal to copy the contents of the isal.lib directory into
     the final tar file. This option requires that -Disal.lib is also given,
-    and it ignores the -Disal.prefix option.
+    and it ignores the -Disal.prefix option. If -Disal.lib isn't given, the
+    bundling and building will fail.
 
 ----------------------------------------------------------------------------------
 Building components separately
