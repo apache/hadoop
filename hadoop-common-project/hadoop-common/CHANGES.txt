@@ -669,6 +669,8 @@ Release 2.9.0 - UNRELEASED
     HADOOP-8887. Use a Maven plugin to build the native code using CMake
     (cmccabe)
 
+    HADOOP-12713. Disable spurious checkstyle checks. (wang)
+
   BUG FIXES
 
     HADOOP-12655. TestHttpServer.testBindAddress bind port range is wider
