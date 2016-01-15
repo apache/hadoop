@@ -289,6 +289,10 @@ enum ExecutionTypeProto {
   OPPORTUNISTIC = 2;
 }
 
+message AMBlackListingRequestProto {
+  optional bool blacklisting_enabled = 1 [default = false];
+  optional float blacklisting_failure_threshold = 2;
+}
 ////////////////////////////////////////////////////////////////////////
 ////// From AM_RM_Protocol /////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
@@ -354,6 +358,7 @@ message ApplicationSubmissionContextProto {
   optional ReservationIdProto reservation_id = 15;
   optional string node_label_expression = 16;
   optional ResourceRequestProto am_container_resource_request = 17;
+  optional AMBlackListingRequestProto am_blacklisting_request = 18;
 }
 
 message LogAggregationContextProto {

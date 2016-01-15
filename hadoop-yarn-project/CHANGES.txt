@@ -1255,6 +1255,10 @@ Release 2.8.0 - UNRELEASED
     YARN-4534. Remove the redundant symbol in yarn rmadmin help msg.
     (Lin Yiqun via aajisaka)
 
+    YARN-4389. "yarn.am.blacklisting.enabled" and "yarn.am.blacklisting.disable-
+    failure-threshold" should be app specific rather than a setting for whole 
+    YARN cluster. (Sunil G via rohithsharmaks)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
