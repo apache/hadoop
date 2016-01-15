@@ -712,6 +712,9 @@ Release 2.7.3 - UNRELEASED
     MAPREDUCE-6583. Clarify confusing sentence in MapReduce tutorial document.
     (Kai Sasaki via aajisaka)
 
+    MAPREDUCE-6554. MRAppMaster servicestart failing with NPE in
+    MRAppMaster#parsePreviousJobHistory (Bibin A Chundatt via jlowe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1013,6 +1016,9 @@ Release 2.6.4 - UNRELEASED
 
     MAPREDUCE-6363. [NNBench] Lease mismatch error when running with multiple
     mappers. (Vlad Sharanhovich and Bibin A Chundatt via aajisaka)
+
+    MAPREDUCE-6554. MRAppMaster servicestart failing with NPE in
+    MRAppMaster#parsePreviousJobHistory (Bibin A Chundatt via jlowe)
 
 Release 2.6.3 - 2015-12-17
 
