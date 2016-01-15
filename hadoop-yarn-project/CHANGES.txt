@@ -60,6 +60,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4414. Nodemanager connection errors are retried at multiple levels
     (Chang Li via jlowe)
 
+    YARN-4121. Fix typos in capacity scheduler documentation.
+    (Kai Sasaki via vvasudev)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
