@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DiskChecker;
+import org.apache.hadoop.util.FakeTimer;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -57,13 +58,18 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DN_CACHED_DFSUSED_CHECK_INTERVAL_MS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -443,5 +449,96 @@ public class TestFsDatasetImpl {
         BlockPoolSlice.selectReplicaToDelete(replicaOtherOlder, replica));
     assertSame(replica,
         BlockPoolSlice.selectReplicaToDelete(replicaOtherNewer, replica));
+  }
+
+  @Test
+  public void testLoadingDfsUsedForVolumes() throws IOException,
+      InterruptedException {
+    long waitIntervalTime = 5000;
+    // Initialize the cachedDfsUsedIntervalTime larger than waitIntervalTime
+    // to avoid cache-dfsused time expired
+    long cachedDfsUsedIntervalTime = waitIntervalTime + 1000;
+    conf.setLong(DFS_DN_CACHED_DFSUSED_CHECK_INTERVAL_MS,
+        cachedDfsUsedIntervalTime);
+
+    long cacheDfsUsed = 1024;
+    long dfsUsed = getDfsUsedValueOfNewVolume(cacheDfsUsed, waitIntervalTime);
+
+    assertEquals(cacheDfsUsed, dfsUsed);
+  }
+
+  @Test
+  public void testLoadingDfsUsedForVolumesExpired() throws IOException,
+      InterruptedException {
+    long waitIntervalTime = 5000;
+    // Initialize the cachedDfsUsedIntervalTime smaller than waitIntervalTime
+    // to make cache-dfsused time expired
+    long cachedDfsUsedIntervalTime = waitIntervalTime - 1000;
+    conf.setLong(DFS_DN_CACHED_DFSUSED_CHECK_INTERVAL_MS,
+        cachedDfsUsedIntervalTime);
+
+    long cacheDfsUsed = 1024;
+    long dfsUsed = getDfsUsedValueOfNewVolume(cacheDfsUsed, waitIntervalTime);
+
+    // Because the cache-dfsused expired and the dfsUsed will be recalculated
+    assertTrue(cacheDfsUsed != dfsUsed);
+  }
+
+  private long getDfsUsedValueOfNewVolume(long cacheDfsUsed,
+      long waitIntervalTime) throws IOException, InterruptedException {
+    List<NamespaceInfo> nsInfos = Lists.newArrayList();
+    nsInfos.add(new NamespaceInfo(0, CLUSTER_ID, BLOCK_POOL_IDS[0], 1));
+
+    String CURRENT_DIR = "current";
+    String DU_CACHE_FILE = BlockPoolSlice.DU_CACHE_FILE;
+    String path = BASE_DIR + "/newData0";
+    String pathUri = new Path(path).toUri().toString();
+    StorageLocation loc = StorageLocation.parse(pathUri);
+    Storage.StorageDirectory sd = createStorageDirectory(new File(path));
+    DataStorage.VolumeBuilder builder =
+        new DataStorage.VolumeBuilder(storage, sd);
+    when(
+        storage.prepareVolume(eq(datanode), eq(loc.getFile()),
+            anyListOf(NamespaceInfo.class))).thenReturn(builder);
+
+    String cacheFilePath =
+        String.format("%s/%s/%s/%s/%s", path, CURRENT_DIR, BLOCK_POOL_IDS[0],
+            CURRENT_DIR, DU_CACHE_FILE);
+    File outFile = new File(cacheFilePath);
+
+    if (!outFile.getParentFile().exists()) {
+      outFile.getParentFile().mkdirs();
+    }
+
+    if (outFile.exists()) {
+      outFile.delete();
+    }
+
+    FakeTimer timer = new FakeTimer();
+    try {
+      try (Writer out =
+          new OutputStreamWriter(new FileOutputStream(outFile),
+              StandardCharsets.UTF_8)) {
+        // Write the dfsUsed value and the time to cache file
+        out.write(Long.toString(cacheDfsUsed) + " "
+            + Long.toString(timer.now()));
+        out.flush();
+      }
+    } catch (IOException ioe) {
+    }
+
+    dataset.setTimer(timer);
+    timer.advance(waitIntervalTime);
+    dataset.addVolume(loc, nsInfos);
+
+    // Get the last volume which was just added before
+    FsVolumeImpl newVolume;
+    try (FsDatasetSpi.FsVolumeReferences volumes =
+        dataset.getFsVolumeReferences()) {
+      newVolume = (FsVolumeImpl) volumes.get(volumes.size() - 1);
+    }
+    long dfsUsed = newVolume.getDfsUsed();
+
+    return dfsUsed;
   }
 }
