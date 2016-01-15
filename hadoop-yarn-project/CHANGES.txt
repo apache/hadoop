@@ -55,6 +55,9 @@ Release 2.6.4 - UNRELEASED
     YARN-4414. Nodemanager connection errors are retried at multiple levels
     (Chang Li via jlowe)
 
+    YARN-4581. AHS writer thread leak makes RM crash while RM is recovering.
+    (sandflee via junping_du)
+
 Release 2.6.3 - 2015-12-17
 
   INCOMPATIBLE CHANGES
