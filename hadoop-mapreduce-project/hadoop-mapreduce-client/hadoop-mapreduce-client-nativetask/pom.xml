@@ -209,6 +209,7 @@
                 <goals><goal>cmake-test</goal></goals>
                 <configuration>
                   <testName>test-native-task</testName>
+                  <workingDirectory>${project.build.directory}/native/test</workingDirectory>
                   <source>${basedir}/src</source>
                   <binary>${project.build.directory}/native/test/nttest</binary>
                   <args><arg>--gtest_filter=-Perf.</arg></args>

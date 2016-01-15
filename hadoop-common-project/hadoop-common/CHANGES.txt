@@ -691,6 +691,9 @@ Release 2.9.0 - UNRELEASED
 
    HADOOP-12712. Fix some cmake plugin and native build warnings (cmccabe)
 
+   HADOOP-12714. Fix hadoop-mapreduce-client-nativetask unit test which fails
+   because it is not able to open the "glibc bug spill" file. (cmccabe)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
