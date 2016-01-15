@@ -70,7 +70,10 @@ public class ProducerConsumer<T, R> {
    *  completion of any pending work.
    */
   public void shutdown() {
-    executor.shutdown();
+    if (hasWork()) {
+      LOG.warn("Shutdown() is called but there are still unprocessed work!");
+    }
+    executor.shutdownNow();
   }
 
   /**
@@ -117,6 +120,8 @@ public class ProducerConsumer<T, R> {
   /**
    *  Blocking take from ProducerConsumer output queue that can be interrupted.
    *
+   *  @throws InterruptedException if interrupted before an element becomes
+   *  available.
    *  @return  item returned by processor's processItem().
    */
   public WorkReport<R> take() throws InterruptedException {
@@ -143,30 +148,52 @@ public class ProducerConsumer<T, R> {
     }
   }
 
+  /**
+   * Worker thread implementation.
+   *
+   */
   private class Worker implements Runnable {
     private WorkRequestProcessor<T, R> processor;
 
+    /**
+     * Constructor.
+     * @param processor is used to process an item from input queue.
+     */
     public Worker(WorkRequestProcessor<T, R> processor) {
       this.processor = processor;
     }
 
+    /**
+     * The worker continuously gets an item from input queue, process it and
+     * then put the processed result into output queue. It waits to get an item
+     * from input queue if there's none.
+     */
     public void run() {
       while (true) {
-        try {
-          WorkRequest<T> work = inputQueue.take();
-          WorkReport<R> result = processor.processItem(work);
+        WorkRequest<T> work;
 
-          boolean isDone = false;
-          while (!isDone) {
-            try {
-              outputQueue.put(result);
-              isDone = true;
-            } catch (InterruptedException ie) {
-              LOG.debug("Could not put report into outputQueue. Retrying...");
-            }
+        try {
+          work = inputQueue.take();
+        } catch (InterruptedException e) {
+          // It is assumed that if an interrupt occurs while taking a work
+          // out from input queue, the interrupt is likely triggered by
+          // ProducerConsumer.shutdown(). Therefore, exit the thread.
+          LOG.debug("Interrupted while waiting for requests from inputQueue.");
+          return;
+        }
+
+        boolean isDone = false;
+        while (!isDone) {
+          try {
+            // if the interrupt happens while the work is being processed,
+            // go back to process the same work again.
+            WorkReport<R> result = processor.processItem(work);
+            outputQueue.put(result);
+            isDone = true;
+          } catch (InterruptedException ie) {
+            LOG.debug("Worker thread was interrupted while processing an item,"
+                + " or putting into outputQueue. Retrying...");
           }
-        } catch (InterruptedException ie) {
-          LOG.debug("Interrupted while waiting for request from inputQueue.");
         }
       }
     }
