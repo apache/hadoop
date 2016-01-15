@@ -138,8 +138,8 @@ public class RMAppImpl implements RMApp, Recoverable {
   private final Set<String> applicationTags;
 
   private final long attemptFailuresValidityInterval;
-  private final boolean amBlacklistingEnabled;
-  private final float blacklistDisableThreshold;
+  private boolean amBlacklistingEnabled = false;
+  private float blacklistDisableThreshold;
 
   private Clock systemClock;
 
@@ -389,7 +389,9 @@ public class RMAppImpl implements RMApp, Recoverable {
                                                                  stateMachine;
 
   private static final int DUMMY_APPLICATION_ATTEMPT_NUMBER = -1;
-  
+  private static final float MINIMUM_THRESHOLD_VALUE = 0.0f;
+  private static final float MAXIMUM_THRESHOLD_VALUE = 1.0f;
+
   public RMAppImpl(ApplicationId applicationId, RMContext rmContext,
       Configuration config, String name, String user, String queue,
       ApplicationSubmissionContext submissionContext, YarnScheduler scheduler,
@@ -467,16 +469,43 @@ public class RMAppImpl implements RMApp, Recoverable {
         YarnConfiguration.RM_MAX_LOG_AGGREGATION_DIAGNOSTICS_IN_MEMORY,
         YarnConfiguration.DEFAULT_RM_MAX_LOG_AGGREGATION_DIAGNOSTICS_IN_MEMORY);
 
-    amBlacklistingEnabled = conf.getBoolean(
-        YarnConfiguration.AM_BLACKLISTING_ENABLED,
-        YarnConfiguration.DEFAULT_AM_BLACKLISTING_ENABLED);
-
-    if (amBlacklistingEnabled) {
-      blacklistDisableThreshold = conf.getFloat(
-          YarnConfiguration.AM_BLACKLISTING_DISABLE_THRESHOLD,
-          YarnConfiguration.DEFAULT_AM_BLACKLISTING_DISABLE_THRESHOLD);
-    } else {
+    // amBlacklistingEnabled can be configured globally and by each
+    // application.
+    // Case 1: If AMBlackListRequest is available in submission context, we
+    // will consider only app level request (RM level configuration will be
+    // skipped).
+    // Case 2: AMBlackListRequest is available in submission context and
+    // amBlacklisting is disabled. In this case, AM blacklisting wont be
+    // enabled for this app even if this feature is enabled in RM level.
+    // Case 3: AMBlackListRequest is not available through submission context.
+    // RM level AM black listing configuration will be considered.
+    if (null != submissionContext.getAMBlackListRequest()) {
+      amBlacklistingEnabled = submissionContext.getAMBlackListRequest()
+          .isAMBlackListingEnabled();
       blacklistDisableThreshold = 0.0f;
+      if (amBlacklistingEnabled) {
+        blacklistDisableThreshold = submissionContext.getAMBlackListRequest()
+            .getBlackListingDisableFailureThreshold();
+
+        // Verify whether blacklistDisableThreshold is valid. And for invalid
+        // threshold, reset to global level blacklistDisableThreshold
+        // configured.
+        if (blacklistDisableThreshold < MINIMUM_THRESHOLD_VALUE
+            || blacklistDisableThreshold > MAXIMUM_THRESHOLD_VALUE) {
+          blacklistDisableThreshold = conf.getFloat(
+              YarnConfiguration.AM_BLACKLISTING_DISABLE_THRESHOLD,
+              YarnConfiguration.DEFAULT_AM_BLACKLISTING_DISABLE_THRESHOLD);
+        }
+      }
+    } else {
+      amBlacklistingEnabled = conf.getBoolean(
+          YarnConfiguration.AM_BLACKLISTING_ENABLED,
+          YarnConfiguration.DEFAULT_AM_BLACKLISTING_ENABLED);
+      if (amBlacklistingEnabled) {
+        blacklistDisableThreshold = conf.getFloat(
+            YarnConfiguration.AM_BLACKLISTING_DISABLE_THRESHOLD,
+            YarnConfiguration.DEFAULT_AM_BLACKLISTING_DISABLE_THRESHOLD);
+      }
     }
   }
 
@@ -1754,5 +1783,15 @@ public class RMAppImpl implements RMApp, Recoverable {
   private void sendATSCreateEvent(RMApp app, long startTime) {
     rmContext.getRMApplicationHistoryWriter().applicationStarted(app);
     rmContext.getSystemMetricsPublisher().appCreated(app, startTime);
+  }
+
+  @VisibleForTesting
+  public boolean isAmBlacklistingEnabled() {
+    return amBlacklistingEnabled;
+  }
+
+  @VisibleForTesting
+  public float getAmBlacklistingDisableThreshold() {
+    return blacklistDisableThreshold;
   }
 }
