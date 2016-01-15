@@ -933,6 +933,9 @@ Release 2.9.0 - UNRELEASED
     HDFS-9350. Avoid creating temprorary strings in Block.toString() and
     getBlockName() (Staffan Friberg via cmccabe)
 
+    HDFS-9624. DataNode start slowly due to the initial DU command operations.
+    (Lin Yiqun via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -2738,4 +2738,17 @@
     reduces initial request failures after datanode restart.
   </description>
 </property>
+
+<property>
+  <name>dfs.datanode.cached-dfsused.check.interval.ms</name>
+  <value>600000</value>
+  <description>
+    The interval check time of loading DU_CACHE_FILE in each volume.
+    When the cluster doing the rolling upgrade operations, it will
+    usually lead dfsUsed cache file of each volume expired and redo the
+    du operations in datanode and that makes datanode start slowly. Adjust
+    this property can make cache file be available for the time as you want.
+  </description>
+</property>
+
 </configuration>
