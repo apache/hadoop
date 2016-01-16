@@ -156,9 +156,6 @@ Release 2.7.2 - UNRELEASED
     HDFS-9426. Rollingupgrade finalization is not backward compatible
     (Kihwal Lee via vinayakumarb)
 
-    HDFS-9294. DFSClient deadlock when close file and failed to renew lease.
-    (Brahma Reddy Battula via szetszwo)
-
     HDFS-9445. Datanode may deadlock while handling a bad volume.
     (Wlater Su via Kihwal)
 
@@ -1207,6 +1204,9 @@ Release 2.6.4 - UNRELEASED
 
     HDFS-9600. do not check replication if the block is under construction
     (Phil Yang via vinayakumarb)
+
+    HDFS-9294. DFSClient deadlock when close file and failed to renew lease.
+    (Brahma Reddy Battula via szetszwo)
 
 Release 2.6.3 - 2015-12-17
 
