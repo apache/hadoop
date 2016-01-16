@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer.planner;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel
@@ -90,6 +91,9 @@ public class GreedyPlanner implements Planner {
   public void balanceVolumeSet(DiskBalancerDataNode node,
                                DiskBalancerVolumeSet vSet, NodePlan plan)
       throws Exception {
+    Preconditions.checkNotNull(vSet);
+    Preconditions.checkNotNull(plan);
+    Preconditions.checkNotNull(node);
     DiskBalancerVolumeSet currentSet = new DiskBalancerVolumeSet(vSet);
 
     while (currentSet.isBalancingNeeded(this.threshold)) {

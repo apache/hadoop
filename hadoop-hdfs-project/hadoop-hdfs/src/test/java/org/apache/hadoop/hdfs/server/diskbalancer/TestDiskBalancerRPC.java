@@ -42,10 +42,10 @@ public class TestDiskBalancerRPC {
   public ExpectedException thrown = ExpectedException.none();
 
   private MiniDFSCluster cluster;
-
+  private Configuration conf;
   @Before
   public void setUp() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     cluster.waitActive();
   }
@@ -59,21 +59,54 @@ public class TestDiskBalancerRPC {
 
   @Test
   public void TestSubmitTestRpc() throws Exception {
-    URI clusterJson = getClass()
-        .getResource("/diskBalancer/data-cluster-3node-3disk.json").toURI();
-    ClusterConnector jsonConnector = ConnectorFactory.getCluster(clusterJson,
-        null);
-    DiskBalancerCluster diskBalancerCluster = new DiskBalancerCluster(jsonConnector);
+    final int dnIndex = 0;
+    cluster.restartDataNode(dnIndex);
+    cluster.waitActive();
+    ClusterConnector nameNodeConnector =
+        ConnectorFactory.getCluster(cluster.getFileSystem(0).getUri(), conf);
+
+    DiskBalancerCluster diskBalancerCluster = new DiskBalancerCluster(nameNodeConnector);
     diskBalancerCluster.readClusterInfo();
-    Assert.assertEquals(3, diskBalancerCluster.getNodes().size());
+    Assert.assertEquals(cluster.getDataNodes().size(),
+                                    diskBalancerCluster.getNodes().size());
+    diskBalancerCluster.setNodesToProcess(diskBalancerCluster.getNodes());
+    DiskBalancerDataNode node = diskBalancerCluster.getNodes().get(dnIndex);
+    GreedyPlanner planner = new GreedyPlanner(10.0f, node);
+    NodePlan plan = new NodePlan(node.getDataNodeName(), node.getDataNodePort
+        ());
+    planner.balanceVolumeSet(node, node.getVolumeSets().get("DISK"), plan);
+    final int planVersion = 0; // So far we support only one version.
+    DataNode dataNode = cluster.getDataNodes().get(dnIndex);
+
+    String planHash = DigestUtils.sha512Hex(plan.toJson());
+
+    // Since submitDiskBalancerPlan is not implemented yet, it throws an
+    // Exception, this will be modified with the actual implementation.
+    thrown.expect(DiskbalancerException.class);
+    dataNode.submitDiskBalancerPlan(planHash, planVersion, 10, plan.toJson());
+
+
+  }
+
+  @Test
+  public void TestCancelTestRpc() throws Exception {
+    final int dnIndex = 0;
+    cluster.restartDataNode(dnIndex);
+    cluster.waitActive();
+    ClusterConnector nameNodeConnector =
+        ConnectorFactory.getCluster(cluster.getFileSystem(0).getUri(), conf);
+
+    DiskBalancerCluster diskBalancerCluster = new DiskBalancerCluster(nameNodeConnector);
+    diskBalancerCluster.readClusterInfo();
+    Assert.assertEquals(cluster.getDataNodes().size(),
+        diskBalancerCluster.getNodes().size());
     diskBalancerCluster.setNodesToProcess(diskBalancerCluster.getNodes());
     DiskBalancerDataNode node = diskBalancerCluster.getNodes().get(0);
     GreedyPlanner planner = new GreedyPlanner(10.0f, node);
     NodePlan plan = new NodePlan(node.getDataNodeName(), node.getDataNodePort
         ());
-    planner.balanceVolumeSet(node, node.getVolumeSets().get("SSD"), plan);
+    planner.balanceVolumeSet(node, node.getVolumeSets().get("DISK"), plan);
 
-    final int dnIndex = 0;
     final int planVersion = 0; // So far we support only one version.
     DataNode dataNode = cluster.getDataNodes().get(dnIndex);
     String planHash = DigestUtils.sha512Hex(plan.toJson());
@@ -82,6 +115,9 @@ public class TestDiskBalancerRPC {
     // Exception, this will be modified with the actual implementation.
     thrown.expect(DiskbalancerException.class);
     dataNode.submitDiskBalancerPlan(planHash, planVersion, 10, plan.toJson());
+
+    thrown.expect(DiskbalancerException.class);
+    dataNode.cancelDiskBalancePlan(planHash);
 
   }
 }
