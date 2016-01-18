@@ -511,20 +511,28 @@ public abstract class AbstractYarnScheduler
    * Recover resource request back from RMContainer when a container is 
    * preempted before AM pulled the same. If container is pulled by
    * AM, then RMContainer will not have resource request to recover.
-   * @param rmContainer
+   * @param rmContainer rmContainer
    */
-  protected void recoverResourceRequestForContainer(RMContainer rmContainer) {
+  private void recoverResourceRequestForContainer(RMContainer rmContainer) {
     List<ResourceRequest> requests = rmContainer.getResourceRequests();
 
     // If container state is moved to ACQUIRED, request will be empty.
     if (requests == null) {
       return;
     }
-    // Add resource request back to Scheduler.
-    SchedulerApplicationAttempt schedulerAttempt 
-        = getCurrentAttemptForContainer(rmContainer.getContainerId());
+
+    // Add resource request back to Scheduler ApplicationAttempt.
+
+    // We lookup the application-attempt here again using
+    // getCurrentApplicationAttempt() because there is only one app-attempt at
+    // any point in the scheduler. But in corner cases, AMs can crash,
+    // corresponding containers get killed and recovered to the same-attempt,
+    // but because the app-attempt is extinguished right after, the recovered
+    // requests don't serve any purpose, but that's okay.
+    SchedulerApplicationAttempt schedulerAttempt =
+        getCurrentAttemptForContainer(rmContainer.getContainerId());
     if (schedulerAttempt != null) {
-      schedulerAttempt.recoverResourceRequests(requests);
+      schedulerAttempt.recoverResourceRequestsForContainer(requests);
     }
   }
 
@@ -559,8 +567,30 @@ public abstract class AbstractYarnScheduler
     }
   }
 
+  @VisibleForTesting
+  @Private
   // clean up a completed container
-  protected abstract void completedContainer(RMContainer rmContainer,
+  public void completedContainer(RMContainer rmContainer,
+      ContainerStatus containerStatus, RMContainerEventType event) {
+
+    if (rmContainer == null) {
+      LOG.info("Container " + containerStatus.getContainerId()
+          + " completed with event " + event
+          + ", but corresponding RMContainer doesn't exist.");
+      return;
+    }
+
+    completedContainerInternal(rmContainer, containerStatus, event);
+
+    // If the container is getting killed in ACQUIRED state, the requester (AM
+    // for regular containers and RM itself for AM container) will not know what
+    // happened. Simply add the ResourceRequest back again so that requester
+    // doesn't need to do anything conditionally.
+    recoverResourceRequestForContainer(rmContainer);
+  }
+
+  // clean up a completed container
+  protected abstract void completedContainerInternal(RMContainer rmContainer,
       ContainerStatus containerStatus, RMContainerEventType event);
 
   protected void releaseContainers(List<ContainerId> containers,

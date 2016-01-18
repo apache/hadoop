@@ -31,7 +31,7 @@ public interface PreemptableResourceScheduler extends ResourceScheduler {
    * ask the scheduler to drop the reservation for the given container.
    * @param container Reference to reserved container allocation.
    */
-  void dropContainerReservation(RMContainer container);
+  void killReservedContainer(RMContainer container);
 
   /**
    * Ask the scheduler to obtain back the container from a specific application
@@ -45,6 +45,6 @@ public interface PreemptableResourceScheduler extends ResourceScheduler {
    * Ask the scheduler to forcibly interrupt the container given as input
    * @param container
    */
-  void killContainer(RMContainer container);
+  void killPreemptedContainer(RMContainer container);
 
 }
