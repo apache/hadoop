@@ -18,13 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.isA;
@@ -52,6 +50,7 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.yarn.MockApps;
@@ -95,10 +94,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSch
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerExpiredSchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerRescheduledEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueuePlacementRule.Default;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
@@ -4735,11 +4735,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       }
     }
   }
-    
+
   @Test(timeout = 5000)
   public void testRecoverRequestAfterPreemption() throws Exception {
     conf.setLong(FairSchedulerConfiguration.WAIT_TIME_BEFORE_KILL, 10);
-    
+
     ControlledClock clock = new ControlledClock();
     scheduler.setClock(clock);
     scheduler.init(conf);
@@ -4779,7 +4779,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     assertEquals(1, scheduler.getSchedulerApp(appAttemptId).getLiveContainers()
         .size());
-    FSAppAttempt app = scheduler.getSchedulerApp(appAttemptId);
+    SchedulerApplicationAttempt app = scheduler.getSchedulerApp(appAttemptId);
 
     // ResourceRequest will be empty once NodeUpdate is completed
     Assert.assertNull(app.getResourceRequest(priority, host));
@@ -4797,7 +4797,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.warnOrKillContainer(rmContainer);
 
     // Trigger container rescheduled event
-    scheduler.handle(new ContainerRescheduledEvent(rmContainer));
+    scheduler.handle(new ContainerPreemptEvent(appAttemptId, rmContainer,
+      SchedulerEventType.KILL_PREEMPTED_CONTAINER));
 
     List<ResourceRequest> requests = rmContainer.getResourceRequests();
     // Once recovered, resource request will be present again in app
@@ -4820,7 +4821,6 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     Assert.assertTrue(containers.size() == 1);
   }
   
-  @SuppressWarnings("resource")
   @Test
   public void testBlacklistNodes() throws Exception {
     scheduler.init(conf);
