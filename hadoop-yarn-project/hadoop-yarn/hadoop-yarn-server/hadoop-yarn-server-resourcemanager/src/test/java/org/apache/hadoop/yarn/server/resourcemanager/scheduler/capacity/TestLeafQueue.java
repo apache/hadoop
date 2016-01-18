@@ -263,18 +263,18 @@ public class TestLeafQueue {
     assertEquals(0.1, c.getMaximumCapacity(), epsilon);
     assertEquals(0.1, c.getAbsoluteMaximumCapacity(), epsilon);
 
-	  //Verify the value for getAMResourceLimit for queues with < .1 maxcap
-	  Resource clusterResource = Resource.newInstance(50 * GB, 50);
-	  
+    // Verify the value for getAMResourceLimit for queues with < .1 maxcap
+    Resource clusterResource = Resource.newInstance(50 * GB, 50);
+
     a.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
-	  assertEquals(Resource.newInstance(1 * GB, 1), 
-	    a.getAMResourceLimit());
-    
-	  b.updateClusterResource(clusterResource,
+    assertEquals(Resource.newInstance(1 * GB, 1),
+        a.calculateAndGetAMResourceLimit());
+
+    b.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
-	  assertEquals(Resource.newInstance(5 * GB, 1), 
-	    b.getAMResourceLimit());
+    assertEquals(Resource.newInstance(5 * GB, 1),
+        b.calculateAndGetAMResourceLimit());
   }
  
   @Test
@@ -2323,21 +2323,24 @@ public class TestLeafQueue {
     csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + A, 80);
     LeafQueue a = new LeafQueue(csContext, A, root, null);
     assertEquals(0.1f, a.getMaxAMResourcePerQueuePercent(), 1e-3f);
-    assertEquals(a.getAMResourceLimit(), Resources.createResource(160 * GB, 1));
+    assertEquals(a.calculateAndGetAMResourceLimit(),
+        Resources.createResource(160 * GB, 1));
     
     csConf.setFloat(CapacitySchedulerConfiguration.
         MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT, 0.2f);
     LeafQueue newA = new LeafQueue(csContext, A, root, null);
     a.reinitialize(newA, clusterResource);
     assertEquals(0.2f, a.getMaxAMResourcePerQueuePercent(), 1e-3f);
-    assertEquals(a.getAMResourceLimit(), Resources.createResource(320 * GB, 1));
+    assertEquals(a.calculateAndGetAMResourceLimit(),
+        Resources.createResource(320 * GB, 1));
 
     Resource newClusterResource = Resources.createResource(100 * 20 * GB,
         100 * 32);
     a.updateClusterResource(newClusterResource, 
         new ResourceLimits(newClusterResource));
     //  100 * 20 * 0.2 = 400
-    assertEquals(a.getAMResourceLimit(), Resources.createResource(400 * GB, 1));
+    assertEquals(a.calculateAndGetAMResourceLimit(),
+        Resources.createResource(400 * GB, 1));
   }
   
   @Test

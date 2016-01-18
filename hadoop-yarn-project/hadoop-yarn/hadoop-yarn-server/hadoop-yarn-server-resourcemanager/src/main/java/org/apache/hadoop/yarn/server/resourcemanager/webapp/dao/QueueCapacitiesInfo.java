@@ -38,7 +38,8 @@ public class QueueCapacitiesInfo {
   public QueueCapacitiesInfo() {
   }
 
-  public QueueCapacitiesInfo(QueueCapacities capacities) {
+  public QueueCapacitiesInfo(QueueCapacities capacities,
+      boolean considerAMUsage) {
     if (capacities == null) {
       return;
     }
@@ -48,6 +49,7 @@ public class QueueCapacitiesInfo {
     float absCapacity;
     float absUsedCapacity;
     float absMaxCapacity;
+    Float maxAMLimitPercentage;
     for (String partitionName : capacities.getExistingNodeLabels()) {
       usedCapacity = capacities.getUsedCapacity(partitionName) * 100;
       capacity = capacities.getCapacity(partitionName) * 100;
@@ -58,13 +60,20 @@ public class QueueCapacitiesInfo {
           .cap(capacities.getAbsoluteUsedCapacity(partitionName), 0f, 1f) * 100;
       absMaxCapacity = CapacitySchedulerQueueInfo.cap(
           capacities.getAbsoluteMaximumCapacity(partitionName), 0f, 1f) * 100;
+      maxAMLimitPercentage = capacities
+          .getMaxAMResourcePercentage(partitionName) * 100;
       if (maxCapacity < CapacitySchedulerQueueInfo.EPSILON || maxCapacity > 1f)
         maxCapacity = 1f;
       maxCapacity = maxCapacity * 100;
-      queueCapacitiesByPartition.add(
-          new PartitionQueueCapacitiesInfo(partitionName, capacity, usedCapacity,
-              maxCapacity, absCapacity, absUsedCapacity, absMaxCapacity));
+      queueCapacitiesByPartition.add(new PartitionQueueCapacitiesInfo(
+          partitionName, capacity, usedCapacity, maxCapacity, absCapacity,
+          absUsedCapacity, absMaxCapacity,
+          considerAMUsage ? maxAMLimitPercentage : null));
     }
+  }
+
+  public QueueCapacitiesInfo(QueueCapacities capacities) {
+    this(capacities, true);
   }
 
   public void add(PartitionQueueCapacitiesInfo partitionQueueCapacitiesInfo) {

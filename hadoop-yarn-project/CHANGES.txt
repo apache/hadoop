@@ -706,6 +706,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4582. Label-related invalid resource request exception should be able to 
     properly handled by application. (Bibin A Chundatt via wangda)
 
+    YARN-4304. AM max resource configuration per partition to be displayed/updated
+    correctly in UI and in various partition related metrics. (Sunil G via wangda)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
