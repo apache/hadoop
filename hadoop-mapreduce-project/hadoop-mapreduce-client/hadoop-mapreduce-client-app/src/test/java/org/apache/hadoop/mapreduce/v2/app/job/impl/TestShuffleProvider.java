@@ -99,7 +99,7 @@ public class TestShuffleProvider {
         new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
             mock(TaskSplitMetaInfo.class), jobConf, taListener,
             jobToken, credentials,
-            new SystemClock(), null);
+            SystemClock.getInstance(), null);
 
     jobConf.set(MRJobConfig.APPLICATION_ATTEMPT_ID, taImpl.getID().toString());
 

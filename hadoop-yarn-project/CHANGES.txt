@@ -95,6 +95,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4553. Add cgroups support for docker containers.
     (Sidharta Seethana via vvasudev)
 
+    YARN-4526. Make SystemClock singleton so AppSchedulingInfo could use it. 
+    (kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES

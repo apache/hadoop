@@ -258,7 +258,7 @@ public class TestTaskAttemptListenerImpl {
 
   @Test (timeout=10000)
   public void testCommitWindow() throws IOException {
-    SystemClock clock = new SystemClock();
+    SystemClock clock = SystemClock.getInstance();
 
     org.apache.hadoop.mapreduce.v2.app.job.Task mockTask =
         mock(org.apache.hadoop.mapreduce.v2.app.job.Task.class);
@@ -309,7 +309,7 @@ public class TestTaskAttemptListenerImpl {
   public void testCheckpointIDTracking()
     throws IOException, InterruptedException{
 
-    SystemClock clock = new SystemClock();
+    SystemClock clock = SystemClock.getInstance();
 
     org.apache.hadoop.mapreduce.v2.app.job.Task mockTask =
         mock(org.apache.hadoop.mapreduce.v2.app.job.Task.class);

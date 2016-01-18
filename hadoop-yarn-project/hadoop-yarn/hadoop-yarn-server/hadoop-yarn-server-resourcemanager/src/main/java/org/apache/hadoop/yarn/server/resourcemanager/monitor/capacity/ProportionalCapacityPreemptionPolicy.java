@@ -136,12 +136,12 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
   private RMNodeLabelsManager nlm;
 
   public ProportionalCapacityPreemptionPolicy() {
-    clock = new SystemClock();
+    clock = SystemClock.getInstance();
   }
 
   public ProportionalCapacityPreemptionPolicy(Configuration config,
       RMContext context, CapacityScheduler scheduler) {
-    this(config, context, scheduler, new SystemClock());
+    this(config, context, scheduler, SystemClock.getInstance());
   }
 
   public ProportionalCapacityPreemptionPolicy(Configuration config,

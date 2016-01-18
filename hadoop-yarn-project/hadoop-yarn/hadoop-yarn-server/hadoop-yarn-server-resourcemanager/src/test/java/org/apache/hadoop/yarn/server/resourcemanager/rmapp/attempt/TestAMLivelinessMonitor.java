@@ -41,7 +41,7 @@ public class TestAMLivelinessMonitor {
     conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
     conf.setBoolean(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED, true);
     conf.setInt(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, 6000);
-    final ControlledClock clock = new ControlledClock(new SystemClock());
+    final ControlledClock clock = new ControlledClock();
     clock.setTime(0);
     MemoryRMStateStore memStore = new MemoryRMStateStore() {
       @Override

@@ -88,7 +88,7 @@ public class AllocationFileLoaderService extends AbstractService {
   private volatile boolean running = true;
 
   public AllocationFileLoaderService() {
-    this(new SystemClock());
+    this(SystemClock.getInstance());
   }
   
   public AllocationFileLoaderService(Clock clock) {

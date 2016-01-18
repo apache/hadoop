@@ -30,7 +30,17 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
  */
 @Public
 @Stable
-public class SystemClock implements Clock {
+public final class SystemClock implements Clock {
+
+  private static final SystemClock INSTANCE = new SystemClock();
+
+  public static SystemClock getInstance() {
+    return INSTANCE;
+  }
+
+  private SystemClock() {
+    // do nothing
+  }
 
   public long getTime() {
     return System.currentTimeMillis();

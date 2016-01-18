@@ -47,7 +47,7 @@ public class TestTaskAttemptFinishingMonitor {
   @Test
   public void testFinshingAttemptTimeout()
       throws IOException, InterruptedException {
-    SystemClock clock = new SystemClock();
+    SystemClock clock = SystemClock.getInstance();
     Configuration conf = new Configuration();
     conf.setInt(MRJobConfig.TASK_EXIT_TIMEOUT, 100);
     conf.setInt(MRJobConfig.TASK_EXIT_TIMEOUT_CHECK_INTERVAL_MS, 10);

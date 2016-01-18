@@ -51,7 +51,7 @@ public class TestWindowsBasedProcessTree {
     }
     assertTrue("WindowsBasedProcessTree should be available on Windows", 
                WindowsBasedProcessTree.isAvailable());
-    ControlledClock testClock = new ControlledClock(new SystemClock());
+    ControlledClock testClock = new ControlledClock();
     long elapsedTimeBetweenUpdatesMsec = 0;
     testClock.setTime(elapsedTimeBetweenUpdatesMsec);
 

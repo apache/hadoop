@@ -1163,7 +1163,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     rm2.start();
     nm1.setResourceTrackerService(rm2.getResourceTrackerService());
     nm1.registerNode();
-    ControlledClock clock = new ControlledClock(new SystemClock());
+    ControlledClock clock = new ControlledClock();
     long startTime = System.currentTimeMillis();
     ((RMContextImpl)rm2.getRMContext()).setSystemClock(clock);
     am1.setAMRMProtocol(rm2.getApplicationMasterService(), rm2.getRMContext());

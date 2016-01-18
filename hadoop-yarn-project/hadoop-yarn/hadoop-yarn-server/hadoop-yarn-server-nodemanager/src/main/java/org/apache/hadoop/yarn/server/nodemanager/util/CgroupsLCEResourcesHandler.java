@@ -87,7 +87,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
 
   public CgroupsLCEResourcesHandler() {
     this.controllerPaths = new HashMap<String, String>();
-    clock = new SystemClock();
+    clock = SystemClock.getInstance();
   }
 
   @Override

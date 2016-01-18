@@ -536,7 +536,7 @@ public class HistoryFileManager extends AbstractService {
     long maxFSWaitTime = conf.getLong(
         JHAdminConfig.MR_HISTORY_MAX_START_WAIT_TIME,
         JHAdminConfig.DEFAULT_MR_HISTORY_MAX_START_WAIT_TIME);
-    createHistoryDirs(new SystemClock(), 10 * 1000, maxFSWaitTime);
+    createHistoryDirs(SystemClock.getInstance(), 10 * 1000, maxFSWaitTime);
 
     this.aclsMgr = new JobACLsManager(conf);
 

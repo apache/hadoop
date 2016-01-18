@@ -99,7 +99,7 @@ public class ContainerImpl implements Container {
   private boolean wasLaunched;
   private long containerLocalizationStartTime;
   private long containerLaunchStartTime;
-  private static Clock clock = new SystemClock();
+  private static Clock clock = SystemClock.getInstance();
 
   /** The NM-wide configuration - not specific to this container */
   private final Configuration daemonConf;

@@ -243,7 +243,7 @@ public class TestTaskImpl {
     jobToken = (Token<JobTokenIdentifier>) mock(Token.class);
     remoteJobConfFile = mock(Path.class);
     credentials = null;
-    clock = new SystemClock();
+    clock = SystemClock.getInstance();
     metrics = mock(MRAppMetrics.class);  
     dataLocations = new String[1];
     

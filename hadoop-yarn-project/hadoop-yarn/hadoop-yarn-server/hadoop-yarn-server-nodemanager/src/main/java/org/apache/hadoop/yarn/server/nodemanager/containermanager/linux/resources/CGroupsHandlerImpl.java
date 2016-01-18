@@ -88,7 +88,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
     this.controllerPaths = new HashMap<>();
     this.rwLock = new ReentrantReadWriteLock();
     this.privilegedOperationExecutor = privilegedOperationExecutor;
-    this.clock = new SystemClock();
+    this.clock = SystemClock.getInstance();
 
     init();
   }

@@ -136,7 +136,7 @@ public class TestNodesListManager {
   public void testCachedResolver() throws Exception {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
-    ControlledClock clock = new ControlledClock(new SystemClock());
+    ControlledClock clock = new ControlledClock();
     clock.setTime(0);
     final int CACHE_EXPIRY_INTERVAL_SECS = 30;
     NodesListManager.CachedResolver resolver =

@@ -57,7 +57,7 @@ public class TestSpeculativeExecutionWithMRApp {
   @Test
   public void testSpeculateSuccessfulWithoutUpdateEvents() throws Exception {
 
-    Clock actualClock = new SystemClock();
+    Clock actualClock = SystemClock.getInstance();
     final ControlledClock clock = new ControlledClock(actualClock);
     clock.setTime(System.currentTimeMillis());
 
@@ -128,7 +128,7 @@ public class TestSpeculativeExecutionWithMRApp {
   @Test
   public void testSepculateSuccessfulWithUpdateEvents() throws Exception {
 
-    Clock actualClock = new SystemClock();
+    Clock actualClock = SystemClock.getInstance();
     final ControlledClock clock = new ControlledClock(actualClock);
     clock.setTime(System.currentTimeMillis());
 

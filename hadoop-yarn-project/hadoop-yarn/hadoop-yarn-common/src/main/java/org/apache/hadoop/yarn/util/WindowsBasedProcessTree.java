@@ -83,7 +83,7 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
    * @param pid Identifier of the job object.
    */
   public WindowsBasedProcessTree(final String pid) {
-    this(pid, new SystemClock());
+    this(pid, SystemClock.getInstance());
   }
 
   /**

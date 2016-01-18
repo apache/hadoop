@@ -42,7 +42,7 @@ public class TestFSParentQueue {
     AllocationConfiguration allocConf = new AllocationConfiguration(conf);
     when(scheduler.getAllocationConfiguration()).thenReturn(allocConf);
     when(scheduler.getConf()).thenReturn(conf);
-    SystemClock clock = new SystemClock();
+    SystemClock clock = SystemClock.getInstance();
     when(scheduler.getClock()).thenReturn(clock);
     notEmptyQueues = new HashSet<FSQueue>();
     queueManager = new QueueManager(scheduler) {
