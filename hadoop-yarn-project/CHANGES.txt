@@ -84,8 +84,6 @@ Release 2.9.0 - UNRELEASED
 
     YARN-4522. Queue acl can be checked at app submission. (Jian He via wangda)
 
-    YARN-4524. Cleanup AppSchedulingInfo. (Karthik Kambatla via wangda)
-
     YARN-4438. Implement RM leader election with curator. (Jian He via xgong)
 
     YARN-4571. Make app id/name available to the yarn authorizer provider for 
@@ -708,6 +706,8 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4304. AM max resource configuration per partition to be displayed/updated
     correctly in UI and in various partition related metrics. (Sunil G via wangda)
+
+    YARN-4524. Cleanup AppSchedulingInfo. (Karthik Kambatla via wangda)
 
   OPTIMIZATIONS
 
