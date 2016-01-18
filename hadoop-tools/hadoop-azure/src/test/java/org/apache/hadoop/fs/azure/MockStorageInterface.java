@@ -32,11 +32,12 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.TimeZone;
-
+import java.util.List;
 import org.apache.commons.httpclient.URIException;
 import org.apache.commons.httpclient.util.URIUtil;
 import org.apache.commons.lang.NotImplementedException;
 
+import com.microsoft.azure.storage.AccessCondition;
 import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.OperationContext;
 import com.microsoft.azure.storage.RetryPolicyFactory;
@@ -46,6 +47,8 @@ import com.microsoft.azure.storage.StorageUri;
 import com.microsoft.azure.storage.blob.BlobListingDetails;
 import com.microsoft.azure.storage.blob.BlobProperties;
 import com.microsoft.azure.storage.blob.BlobRequestOptions;
+import com.microsoft.azure.storage.blob.BlockEntry;
+import com.microsoft.azure.storage.blob.BlockListingFilter;
 import com.microsoft.azure.storage.blob.CloudBlob;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import com.microsoft.azure.storage.blob.CloudBlobDirectory;
@@ -524,6 +527,30 @@ public class MockStorageInterface extends StorageInterface {
     public CloudBlob getBlob() {
       return null;
     }
+
+    @Override
+    public List<BlockEntry> downloadBlockList(BlockListingFilter filter, BlobRequestOptions options,
+        OperationContext opContext) throws IOException, StorageException {
+
+      throw new UnsupportedOperationException("downloadBlockList not used in Mock Tests");
+    }
+    @Override
+    public void uploadBlock(String blockId, InputStream sourceStream,
+        long length, BlobRequestOptions options,
+        OperationContext opContext) throws IOException, StorageException {
+      throw new UnsupportedOperationException("uploadBlock not used in Mock Tests");
+    }
+
+    @Override
+    public void commitBlockList(List<BlockEntry> blockList, AccessCondition accessCondition,
+        BlobRequestOptions options, OperationContext opContext) throws IOException, StorageException {
+      throw new UnsupportedOperationException("commitBlockList not used in Mock Tests");
+    }
+
+    public void uploadMetadata(AccessCondition accessCondition, BlobRequestOptions options,
+        OperationContext opContext) throws StorageException {
+      throw new UnsupportedOperationException("uploadMetadata not used in Mock Tests");
+    }
   }
 
   class MockCloudPageBlobWrapper extends MockCloudBlobWrapper
@@ -579,6 +606,11 @@ public class MockStorageInterface extends StorageInterface {
     @Override
     public CloudBlob getBlob() {
       return null;
+    }
+
+    public void uploadMetadata(AccessCondition accessCondition, BlobRequestOptions options,
+        OperationContext opContext) throws StorageException {
+      throw new UnsupportedOperationException("uploadMetadata not used in Mock Tests");
     }
   }
 }
