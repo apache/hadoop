@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -611,5 +612,28 @@ public abstract class AbstractCSQueue implements CSQueue {
   public Priority getDefaultApplicationPriority() {
     // TODO add dummy implementation
     return null;
+  }
+
+  @Override
+  public Set<String> getNodeLabelsForQueue() {
+    // if queue's label is *, queue can access any labels. Instead of
+    // considering all labels in cluster, only those labels which are
+    // use some resource of this queue can be considered.
+    Set<String> nodeLabels = new HashSet<String>();
+    if (this.getAccessibleNodeLabels() != null
+        && this.getAccessibleNodeLabels().contains(RMNodeLabelsManager.ANY)) {
+      nodeLabels.addAll(Sets.union(this.getQueueCapacities()
+          .getNodePartitionsSet(), this.getQueueResourceUsage()
+          .getNodePartitionsSet()));
+    } else {
+      nodeLabels.addAll(this.getAccessibleNodeLabels());
+    }
+
+    // Add NO_LABEL also to this list as NO_LABEL also can be granted with
+    // resource in many general cases.
+    if (!nodeLabels.contains(RMNodeLabelsManager.NO_LABEL)) {
+      nodeLabels.add(RMNodeLabelsManager.NO_LABEL);
+    }
+    return nodeLabels;
   }
 }

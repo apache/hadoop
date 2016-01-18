@@ -61,7 +61,7 @@ public class CapacitySchedulerQueueInfo {
   protected long reservedContainers;
   protected long pendingContainers;
   protected QueueCapacitiesInfo capacities;
-  protected ResourceUsageInfo resources;
+  protected ResourcesInfo resources;
 
   CapacitySchedulerQueueInfo() {
   };
@@ -101,14 +101,18 @@ public class CapacitySchedulerQueueInfo {
       Collections.sort(nodeLabels);
     }
     QueueCapacities qCapacities = q.getQueueCapacities();
-    capacities = new QueueCapacitiesInfo(qCapacities);
+    populateQueueCapacities(qCapacities);
 
     ResourceUsage queueResourceUsage = q.getQueueResourceUsage();
     populateQueueResourceUsage(queueResourceUsage);
   }
 
   protected void populateQueueResourceUsage(ResourceUsage queueResourceUsage) {
-    resources = new ResourceUsageInfo(queueResourceUsage, false);
+    resources = new ResourcesInfo(queueResourceUsage, false);
+  }
+
+  protected void populateQueueCapacities(QueueCapacities qCapacities) {
+    capacities = new QueueCapacitiesInfo(qCapacities, false);
   }
 
   public float getCapacity() {
@@ -193,7 +197,7 @@ public class CapacitySchedulerQueueInfo {
     return capacities;
   }
 
-  public ResourceUsageInfo getResources() {
+  public ResourcesInfo getResources() {
     return resources;
   }
 }

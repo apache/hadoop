@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
@@ -332,4 +333,10 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
   public void decreaseContainer(Resource clusterResource,
       SchedContainerChangeRequest decreaseRequest,
       FiCaSchedulerApp app);
+
+  /**
+   * Get valid Node Labels for this queue
+   * @return valid node labels
+   */
+  public Set<String> getNodeLabelsForQueue();
 }

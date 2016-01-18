@@ -528,10 +528,20 @@ public class LeafQueue extends AbstractCSQueue {
 
   }
   
-  public synchronized Resource getAMResourceLimit() {
-    return getAMResourceLimitPerPartition(RMNodeLabelsManager.NO_LABEL);
+  public Resource getAMResourceLimit() {
+    return queueUsage.getAMLimit();
   }
 
+  public Resource getAMResourceLimitPerPartition(String nodePartition) {
+    return queueUsage.getAMLimit(nodePartition);
+  }
+
+  public synchronized Resource calculateAndGetAMResourceLimit() {
+    return calculateAndGetAMResourceLimitPerPartition(
+        RMNodeLabelsManager.NO_LABEL);
+  }
+
+  @VisibleForTesting
   public synchronized Resource getUserAMResourceLimit() {
      return getUserAMResourceLimitPerPartition(RMNodeLabelsManager.NO_LABEL);
   }
@@ -552,13 +562,17 @@ public class LeafQueue extends AbstractCSQueue {
         labelManager.getResourceByLabel(nodePartition, lastClusterResource),
         queueCapacities.getAbsoluteCapacity(nodePartition), minimumAllocation);
 
-    return Resources.multiplyAndNormalizeUp(resourceCalculator,
+    Resource userAMLimit = Resources.multiplyAndNormalizeUp(resourceCalculator,
         queuePartitionResource,
         queueCapacities.getMaxAMResourcePercentage(nodePartition)
             * effectiveUserLimit * userLimitFactor, minimumAllocation);
+    return Resources.lessThanOrEqual(resourceCalculator, lastClusterResource,
+        userAMLimit, getAMResourceLimitPerPartition(nodePartition))
+        ? userAMLimit
+        : getAMResourceLimitPerPartition(nodePartition);
   }
 
-  public synchronized Resource getAMResourceLimitPerPartition(
+  public synchronized Resource calculateAndGetAMResourceLimitPerPartition(
       String nodePartition) {
     /*
      * For non-labeled partition, get the max value from resources currently
@@ -601,20 +615,26 @@ public class LeafQueue extends AbstractCSQueue {
 
   private synchronized void activateApplications() {
     // limit of allowed resource usage for application masters
-    Map<String, Resource> amPartitionLimit = new HashMap<String, Resource>();
     Map<String, Resource> userAmPartitionLimit =
         new HashMap<String, Resource>();
 
+    // AM Resource Limit for accessible labels can be pre-calculated.
+    // This will help in updating AMResourceLimit for all labels when queue
+    // is initialized for the first time (when no applications are present).
+    for (String nodePartition : getNodeLabelsForQueue()) {
+      calculateAndGetAMResourceLimitPerPartition(nodePartition);
+    }
+
     activateApplications(getPendingAppsOrderingPolicyRecovery()
-        .getAssignmentIterator(), amPartitionLimit, userAmPartitionLimit);
+        .getAssignmentIterator(), userAmPartitionLimit);
 
     activateApplications(
         getPendingAppsOrderingPolicy().getAssignmentIterator(),
-        amPartitionLimit, userAmPartitionLimit);
+        userAmPartitionLimit);
   }
 
   private synchronized void activateApplications(
-      Iterator<FiCaSchedulerApp> fsApp, Map<String, Resource> amPartitionLimit,
+      Iterator<FiCaSchedulerApp> fsApp,
       Map<String, Resource> userAmPartitionLimit) {
     while (fsApp.hasNext()) {
       FiCaSchedulerApp application = fsApp.next();
@@ -624,11 +644,10 @@ public class LeafQueue extends AbstractCSQueue {
       // and calculate max-am resource limit for this partition.
       String partitionName = application.getAppAMNodePartitionName();
 
-      Resource amLimit = amPartitionLimit.get(partitionName);
+      Resource amLimit = getAMResourceLimitPerPartition(partitionName);
       // Verify whether we already calculated am-limit for this label.
       if (amLimit == null) {
-        amLimit = getAMResourceLimitPerPartition(partitionName);
-        amPartitionLimit.put(partitionName, amLimit);
+        amLimit = calculateAndGetAMResourceLimitPerPartition(partitionName);
       }
       // Check am resource limit.
       Resource amIfStarted = Resources.add(
@@ -705,6 +724,7 @@ public class LeafQueue extends AbstractCSQueue {
           application.getAMResource(partitionName));
       user.getResourceUsage().incAMUsed(partitionName,
           application.getAMResource(partitionName));
+      user.getResourceUsage().setAMLimit(partitionName, userAMLimit);
       metrics.incAMUsed(application.getUser(),
           application.getAMResource(partitionName));
       metrics.setAMResouceLimitForUser(application.getUser(), userAMLimit);
