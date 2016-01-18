@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -46,11 +47,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
@@ -490,6 +495,114 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       rm1.waitForState(nm2, containerId4, RMContainerState.RUNNING);
     } finally {
       rm1.stop();
+    }
+  }
+
+  /**
+   * Test to verify that ResourceRequests recovery back to the right app-attempt
+   * after a container gets killed at ACQUIRED state: YARN-4502.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testResourceRequestRecoveryToTheRightAppAttempt()
+      throws Exception {
+
+    configureScheduler();
+    YarnConfiguration conf = getConf();
+    MockRM rm = new MockRM(conf);
+    try {
+      rm.start();
+      RMApp rmApp =
+          rm.submitApp(200, "name", "user",
+            new HashMap<ApplicationAccessType, String>(), false, "default", -1,
+            null, "Test", false, true);
+      MockNM node =
+          new MockNM("127.0.0.1:1234", 10240, rm.getResourceTrackerService());
+      node.registerNode();
+
+      MockAM am1 = MockRM.launchAndRegisterAM(rmApp, rm, node);
+      ApplicationAttemptId applicationAttemptOneID =
+          am1.getApplicationAttemptId();
+      ContainerId am1ContainerID =
+          ContainerId.newContainerId(applicationAttemptOneID, 1);
+
+      // allocate NUM_CONTAINERS containers
+      am1.allocate("127.0.0.1", 1024, 1, new ArrayList<ContainerId>());
+      node.nodeHeartbeat(true);
+
+      // wait for containers to be allocated.
+      List<Container> containers =
+          am1.allocate(new ArrayList<ResourceRequest>(),
+            new ArrayList<ContainerId>()).getAllocatedContainers();
+      while (containers.size() != 1) {
+        node.nodeHeartbeat(true);
+        containers.addAll(am1.allocate(new ArrayList<ResourceRequest>(),
+          new ArrayList<ContainerId>()).getAllocatedContainers());
+        Thread.sleep(200);
+      }
+
+      // launch a 2nd container, for testing running-containers transfer.
+      node.nodeHeartbeat(applicationAttemptOneID, 2, ContainerState.RUNNING);
+      ContainerId runningContainerID =
+          ContainerId.newContainerId(applicationAttemptOneID, 2);
+      rm.waitForState(node, runningContainerID, RMContainerState.RUNNING);
+
+      // 3rd container is in Allocated state.
+      int ALLOCATED_CONTAINER_PRIORITY = 1047;
+      am1.allocate("127.0.0.1", 1024, 1, ALLOCATED_CONTAINER_PRIORITY,
+        new ArrayList<ContainerId>(), null);
+      node.nodeHeartbeat(true);
+      ContainerId allocatedContainerID =
+          ContainerId.newContainerId(applicationAttemptOneID, 3);
+      rm.waitForContainerAllocated(node, allocatedContainerID);
+      rm.waitForState(node, allocatedContainerID, RMContainerState.ALLOCATED);
+      RMContainer allocatedContainer =
+          rm.getResourceScheduler().getRMContainer(allocatedContainerID);
+
+      // Capture scheduler app-attempt before AM crash.
+      SchedulerApplicationAttempt firstSchedulerAppAttempt =
+          ((AbstractYarnScheduler<SchedulerApplicationAttempt, SchedulerNode>) rm
+            .getResourceScheduler())
+            .getApplicationAttempt(applicationAttemptOneID);
+
+      // AM crashes, and a new app-attempt gets created
+      node.nodeHeartbeat(applicationAttemptOneID, 1, ContainerState.COMPLETE);
+      rm.waitForState(node, am1ContainerID, RMContainerState.COMPLETED);
+      RMAppAttempt rmAppAttempt2 = MockRM.waitForAttemptScheduled(rmApp, rm);
+      ApplicationAttemptId applicationAttemptTwoID =
+          rmAppAttempt2.getAppAttemptId();
+      Assert.assertEquals(2, applicationAttemptTwoID.getAttemptId());
+
+      // All outstanding allocated containers will be killed (irrespective of
+      // keep-alive of container across app-attempts)
+      Assert.assertEquals(RMContainerState.KILLED,
+        allocatedContainer.getState());
+
+      // The core part of this test
+      // The killed containers' ResourceRequests are recovered back to the
+      // original app-attempt, not the new one
+      for (ResourceRequest request : firstSchedulerAppAttempt
+        .getAppSchedulingInfo().getAllResourceRequests()) {
+        if (request.getPriority().getPriority() == 0) {
+          Assert.assertEquals(0, request.getNumContainers());
+        } else if (request.getPriority().getPriority() == ALLOCATED_CONTAINER_PRIORITY) {
+          Assert.assertEquals(1, request.getNumContainers());
+        }
+      }
+
+      // Also, only one running container should be transferred after AM
+      // launches
+      MockRM.launchAM(rmApp, rm, node);
+      List<Container> transferredContainers =
+          rm.getResourceScheduler().getTransferredContainers(
+            applicationAttemptTwoID);
+      Assert.assertEquals(1, transferredContainers.size());
+      Assert.assertEquals(runningContainerID, transferredContainers.get(0)
+        .getId());
+
+    } finally {
+      rm.stop();
     }
   }
 
