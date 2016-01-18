@@ -67,7 +67,6 @@ public class TimelineDataManager extends AbstractService {
     super(TimelineDataManager.class.getName());
     this.store = store;
     this.timelineACLsManager = timelineACLsManager;
-    timelineACLsManager.setTimelineStore(store);
   }
 
   @Override
