@@ -23,6 +23,7 @@
     * [Page Blob Support and Configuration](#Page_Blob_Support_and_Configuration)
     * [Atomic Folder Rename](#Atomic_Folder_Rename)
     * [Accessing wasb URLs](#Accessing_wasb_URLs)
+    * [Append API Support and Configuration](#Append_API_Support_and_Configuration)
 * [Testing the hadoop-azure Module](#Testing_the_hadoop-azure_Module)
 
 ## <a name="Introduction" />Introduction
@@ -51,7 +52,6 @@ on the additional artifacts it requires, notably the
 
 ## <a name="Limitations" />Limitations
 
-* The append operation is not implemented.
 * File owner and group are persisted, but the permissions model is not enforced.
   Authorization occurs at the level of the entire Azure Blob Storage account.
 * File last access time is not tracked.
@@ -198,6 +198,24 @@ container named `yourcontainer`.
 It's also possible to configure `fs.defaultFS` to use a `wasb` or `wasbs` URL.
 This causes all bare paths, such as `/testDir/testFile` to resolve automatically
 to that file system.
+
+### <a name="Append_API_Support_and_Configuration" />Append API Support and Configuration
+
+The Azure Blob Storage interface for Hadoop has optional support for Append API for
+single writer by setting the configuration `fs.azure.enable.append.support` to true.
+
+For Example:
+
+    <property>
+      <name>fs.azure.enable.append.support</name>
+      <value>true</value>
+    </property>
+
+It must be noted Append support in Azure Blob Storage interface DIFFERS FROM HDFS SEMANTICS. Append
+support does not enforce single writer internally but requires applications to guarantee this semantic.
+It becomes a responsibility of the application either to ensure single-threaded handling for a particular
+file path, or rely on some external locking mechanism of its own.  Failure to do so will result in
+unexpected behavior.
 
 ## <a name="Testing_the_hadoop-azure_Module" />Testing the hadoop-azure Module
 

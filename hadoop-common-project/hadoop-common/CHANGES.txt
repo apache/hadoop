@@ -741,6 +741,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12691. Add CSRF Filter for REST APIs to Hadoop Common.
     (Larry McCay via cnauroth)
 
+    HADOOP-12635. Adding Append API support for WASB. (Dushyanth via cnauroth)
+
   IMPROVEMENTS
 
     HADOOP-12458. Retries is typoed to spell Retires in parts of

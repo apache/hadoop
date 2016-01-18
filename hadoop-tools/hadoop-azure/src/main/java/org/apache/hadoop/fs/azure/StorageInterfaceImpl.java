@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
-
+import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 import com.microsoft.azure.storage.AccessCondition;
@@ -40,6 +40,8 @@ import com.microsoft.azure.storage.StorageUri;
 import com.microsoft.azure.storage.blob.BlobListingDetails;
 import com.microsoft.azure.storage.blob.BlobProperties;
 import com.microsoft.azure.storage.blob.BlobRequestOptions;
+import com.microsoft.azure.storage.blob.BlockEntry;
+import com.microsoft.azure.storage.blob.BlockListingFilter;
 import com.microsoft.azure.storage.blob.CloudBlob;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
@@ -362,7 +364,13 @@ class StorageInterfaceImpl extends StorageInterface {
     @Override
     public void uploadMetadata(OperationContext opContext)
         throws StorageException {
-      getBlob().uploadMetadata(null, null, opContext);
+      uploadMetadata(null, null, opContext);
+    }
+
+    @Override
+    public void uploadMetadata(AccessCondition accessConditions, BlobRequestOptions options,
+        OperationContext opContext) throws StorageException{
+      getBlob().uploadMetadata(accessConditions, options, opContext);
     }
 
     public void uploadProperties(OperationContext opContext, SelfRenewingLease lease)
@@ -396,7 +404,7 @@ class StorageInterfaceImpl extends StorageInterface {
     public void startCopyFromBlob(CloudBlobWrapper sourceBlob, BlobRequestOptions options,
         OperationContext opContext)
             throws StorageException, URISyntaxException {
-      getBlob().startCopyFromBlob(((CloudBlobWrapperImpl)sourceBlob).blob,
+      getBlob().startCopyFromBlob(((CloudBlobWrapperImpl) sourceBlob).blob,
           null, null, options, opContext);
     }
 
@@ -440,6 +448,25 @@ class StorageInterfaceImpl extends StorageInterface {
       getBlob().uploadProperties(null, null, opContext);
     }
 
+    @Override
+    public List<BlockEntry> downloadBlockList(BlockListingFilter filter, BlobRequestOptions options,
+        OperationContext opContext) throws IOException, StorageException {
+      return ((CloudBlockBlob) getBlob()).downloadBlockList(filter, null, options, opContext);
+
+    }
+
+    @Override
+    public void uploadBlock(String blockId, InputStream sourceStream,
+        long length, BlobRequestOptions options,
+        OperationContext opContext) throws IOException, StorageException {
+      ((CloudBlockBlob) getBlob()).uploadBlock(blockId, sourceStream, length, null, options, opContext);
+    }
+
+    @Override
+    public void commitBlockList(List<BlockEntry> blockList, AccessCondition accessCondition, BlobRequestOptions options,
+        OperationContext opContext) throws IOException, StorageException {
+      ((CloudBlockBlob) getBlob()).commitBlockList(blockList, accessCondition, options, opContext);
+    }
   }
 
   static class CloudPageBlobWrapperImpl extends CloudBlobWrapperImpl implements CloudPageBlobWrapper {

@@ -33,13 +33,11 @@ import java.net.URLEncoder;
 import java.security.InvalidKeyException;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -64,6 +62,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.mortbay.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.OperationContext;
@@ -2679,5 +2678,25 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     LOG.debug("finalize() called");
     close();
     super.finalize();
+  }
+
+  @Override
+  public DataOutputStream retrieveAppendStream(String key, int bufferSize) throws IOException {
+
+    try {
+
+      if (isPageBlobKey(key)) {
+        throw new UnsupportedOperationException("Append not supported for Page Blobs");
+      }
+
+      CloudBlobWrapper blob =  this.container.getBlockBlobReference(key);
+
+      BlockBlobAppendStream appendStream = new BlockBlobAppendStream((CloudBlockBlobWrapper) blob, key, bufferSize, getInstrumentedContext());
+      appendStream.initialize();
+
+      return new DataOutputStream(appendStream);
+    } catch(Exception ex) {
+      throw new AzureException(ex);
+    }
   }
 }
