@@ -1265,6 +1265,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4581. AHS writer thread leak makes RM crash while RM is recovering. 
     (sandflee via junping_du)
 
+    YARN-4538. QueueMetrics pending cores and memory metrics wrong.
+    (Bibin A Chundatt via wangda)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

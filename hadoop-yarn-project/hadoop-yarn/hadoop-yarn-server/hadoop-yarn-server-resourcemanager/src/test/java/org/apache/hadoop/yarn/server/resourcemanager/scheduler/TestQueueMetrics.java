@@ -87,6 +87,14 @@ public class TestQueueMetrics {
     metrics.releaseResources(user, 1, Resources.createResource(2*GB, 2));
     checkResources(queueSource, 4*GB, 4, 2, 3, 1, 100*GB, 100, 9*GB, 9, 2, 0, 0, 0);
 
+    metrics.incrPendingResources(user, 0, Resources.createResource(2 * GB, 2));
+    checkResources(queueSource, 4 * GB, 4, 2, 3, 1, 100 * GB, 100, 9 * GB, 9, 2,
+        0, 0, 0);
+
+    metrics.decrPendingResources(user, 0, Resources.createResource(2 * GB, 2));
+    checkResources(queueSource, 4 * GB, 4, 2, 3, 1, 100 * GB, 100, 9 * GB, 9, 2,
+        0, 0, 0);
+
     metrics.finishAppAttempt(
         app.getApplicationId(), app.isPending(), app.getUser());
     checkApps(queueSource, 1, 0, 0, 0, 0, 0, true);
