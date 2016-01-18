@@ -24,11 +24,13 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.EnumSet;
 import java.util.HashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
+import com.microsoft.azure.storage.AccessCondition;
 import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.OperationContext;
 import com.microsoft.azure.storage.RetryPolicyFactory;
@@ -36,6 +38,8 @@ import com.microsoft.azure.storage.StorageCredentials;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.BlobListingDetails;
 import com.microsoft.azure.storage.blob.BlobProperties;
+import com.microsoft.azure.storage.blob.BlockEntry;
+import com.microsoft.azure.storage.blob.BlockListingFilter;
 import com.microsoft.azure.storage.blob.BlobRequestOptions;
 import com.microsoft.azure.storage.blob.CloudBlob;
 import com.microsoft.azure.storage.blob.CopyState;
@@ -269,13 +273,13 @@ abstract class StorageInterface {
 
     /**
      * Uploads the container's metadata using the specified operation context.
-     * 
+     *
      * @param opContext
      *          An {@link OperationContext} object that represents the context
      *          for the current operation. This object is used to track requests
      *          to the storage service, and to provide additional runtime
      *          information about the operation.
-     * 
+     *
      * @throws StorageException
      *           If a storage service error occurred.
      */
@@ -545,6 +549,30 @@ abstract class StorageInterface {
     void uploadMetadata(OperationContext opContext)
         throws StorageException;
 
+    /**
+     * Uploads the blob's metadata to the storage service using the specified
+     * lease ID, request options, and operation context.
+     *
+     * @param accessCondition
+     *           A {@link AccessCondition} object that represents the access conditions for the blob.
+     *
+     * @param options
+     *            A {@link BlobRequestOptions} object that specifies any additional options for the request. Specifying
+     *            <code>null</code> will use the default request options from the associated service client (
+     *            {@link CloudBlobClient}).
+     *
+     * @param opContext
+     *          An {@link OperationContext} object that represents the context
+     *          for the current operation. This object is used to track requests
+     *          to the storage service, and to provide additional runtime
+     *          information about the operation.
+     *
+     * @throws StorageException
+     *           If a storage service error occurred.
+     */
+    void uploadMetadata(AccessCondition accessCondition, BlobRequestOptions options,
+        OperationContext opContext) throws StorageException;
+
     void uploadProperties(OperationContext opContext,
         SelfRenewingLease lease)
         throws StorageException;
@@ -602,6 +630,63 @@ abstract class StorageInterface {
     OutputStream openOutputStream(
         BlobRequestOptions options,
         OperationContext opContext) throws StorageException;
+
+    /**
+     *
+     * @param filter    A {@link BlockListingFilter} value that specifies whether to download
+     *                  committed blocks, uncommitted blocks, or all blocks.
+     * @param options   A {@link BlobRequestOptions} object that specifies any additional options for
+     *                  the request. Specifying null will use the default request options from
+     *                  the associated service client ( CloudBlobClient).
+     * @param opContext An {@link OperationContext} object that represents the context for the current
+     *                  operation. This object is used to track requests to the storage service,
+     *                  and to provide additional runtime information about the operation.
+     * @return          An ArrayList object of {@link BlockEntry} objects that represent the list
+     *                  block items downloaded from the block blob.
+     * @throws IOException  If an I/O error occurred.
+     * @throws StorageException If a storage service error occurred.
+     */
+    List<BlockEntry> downloadBlockList(BlockListingFilter filter, BlobRequestOptions options,
+        OperationContext opContext) throws IOException, StorageException;
+
+    /**
+     *
+     * @param blockId      A String that represents the Base-64 encoded block ID. Note for a given blob
+     *                     the length of all Block IDs must be identical.
+     * @param sourceStream An {@link InputStream} object that represents the input stream to write to the
+     *                     block blob.
+     * @param length       A long which represents the length, in bytes, of the stream data,
+     *                     or -1 if unknown.
+     * @param options      A {@link BlobRequestOptions} object that specifies any additional options for the
+     *                     request. Specifying null will use the default request options from the
+     *                     associated service client ( CloudBlobClient).
+     * @param opContext    An {@link OperationContext} object that represents the context for the current operation.
+     *                     This object is used to track requests to the storage service, and to provide
+     *                     additional runtime information about the operation.
+     * @throws IOException  If an I/O error occurred.
+     * @throws StorageException If a storage service error occurred.
+     */
+    void uploadBlock(String blockId, InputStream sourceStream,
+        long length, BlobRequestOptions options,
+        OperationContext opContext) throws IOException, StorageException;
+
+    /**
+     *
+     * @param blockList       An enumerable collection of {@link BlockEntry} objects that represents the list
+     *                        block items being committed. The size field is ignored.
+     * @param accessCondition An {@link AccessCondition} object that represents the access conditions for the blob.
+     * @param options         A {@link BlobRequestOptions} object that specifies any additional options for the
+     *                        request. Specifying null will use the default request options from the associated
+     *                        service client ( CloudBlobClient).
+     * @param opContext       An {@link OperationContext} object that represents the context for the current operation.
+     *                        This object is used to track requests to the storage service, and to provide additional
+     *                        runtime information about the operation.
+     * @throws IOException      If an I/O error occurred.
+     * @throws StorageException If a storage service error occurred.
+     */
+    void commitBlockList(List<BlockEntry> blockList, AccessCondition accessCondition, BlobRequestOptions options,
+        OperationContext opContext) throws IOException, StorageException;
+
   }
 
   /**
