@@ -38,7 +38,7 @@ public class TaskAttemptFinishingMonitor extends
   private EventHandler eventHandler;
 
   public TaskAttemptFinishingMonitor(EventHandler eventHandler) {
-    super("TaskAttemptFinishingMonitor", new SystemClock());
+    super("TaskAttemptFinishingMonitor", SystemClock.getInstance());
     this.eventHandler = eventHandler;
   }
 

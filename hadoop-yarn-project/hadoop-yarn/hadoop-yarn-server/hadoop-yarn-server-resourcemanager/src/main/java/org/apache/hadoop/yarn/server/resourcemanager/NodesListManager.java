@@ -83,7 +83,8 @@ public class NodesListManager extends CompositeService implements
     if (nodeIpCacheTimeout <= 0) {
       resolver = new DirectResolver();
     } else {
-      resolver = new CachedResolver(new SystemClock(), nodeIpCacheTimeout);
+      resolver =
+          new CachedResolver(SystemClock.getInstance(), nodeIpCacheTimeout);
       addIfService(resolver);
     }
 

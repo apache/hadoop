@@ -43,7 +43,7 @@ public class TestFairSchedulerQueueInfo {
     when(scheduler.getAllocationConfiguration()).thenReturn(allocConf);
     when(scheduler.getConf()).thenReturn(conf);
     when(scheduler.getClusterResource()).thenReturn(Resource.newInstance(1, 1));
-    SystemClock clock = new SystemClock();
+    SystemClock clock = SystemClock.getInstance();
     when(scheduler.getClock()).thenReturn(clock);
     QueueManager queueManager = new QueueManager(scheduler);
     queueManager.initialize(conf);

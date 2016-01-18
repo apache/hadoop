@@ -23,7 +23,7 @@ public class ControlledClock implements Clock {
   private final Clock actualClock;
   // Convenience for getting a controlled clock with overridden time
   public ControlledClock() {
-    this(new SystemClock());
+    this(SystemClock.getInstance());
     setTime(0);
   }
   public ControlledClock(Clock actualClock) {

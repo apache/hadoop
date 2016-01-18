@@ -430,7 +430,7 @@ public class TestRMContainerAllocator {
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
             0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
     final MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
-        appAttemptId, mockJob, new SystemClock());
+        appAttemptId, mockJob, SystemClock.getInstance());
     // add resources to scheduler
     dispatcher.await();
 
@@ -484,7 +484,7 @@ public class TestRMContainerAllocator {
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
             0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
     MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
-        appAttemptId, mockJob, new SystemClock());
+        appAttemptId, mockJob, SystemClock.getInstance());
     allocator.setMapResourceRequest(BuilderUtils.newResource(1024, 1));
     allocator.setReduceResourceRequest(BuilderUtils.newResource(1024, 1));
     RMContainerAllocator.AssignedRequests assignedRequests =
@@ -652,7 +652,7 @@ public class TestRMContainerAllocator {
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
             0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
     final MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
-        appAttemptId, mockJob, new SystemClock());
+        appAttemptId, mockJob, SystemClock.getInstance());
 
     // request to allocate two reduce priority containers
     final String[] locations = new String[] { host };
@@ -697,7 +697,7 @@ public class TestRMContainerAllocator {
     final MockScheduler mockScheduler = new MockScheduler(appAttemptId);
     MyContainerAllocator allocator =
         new MyContainerAllocator(null, conf, appAttemptId, mockJob,
-            new SystemClock()) {
+            SystemClock.getInstance()) {
           @Override
           protected void register() {
           }
@@ -789,7 +789,7 @@ public class TestRMContainerAllocator {
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
             0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
     MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
-        appAttemptId, mockJob, new SystemClock());
+        appAttemptId, mockJob, SystemClock.getInstance());
 
     // add resources to scheduler
     MockNM nodeManager1 = rm.registerNode("h1:1234", 1024);
@@ -2262,7 +2262,7 @@ public class TestRMContainerAllocator {
 
     Configuration conf = new Configuration();
     conf.setInt(MRJobConfig.MR_AM_TO_RM_HEARTBEAT_INTERVAL_MS, 1);
-    ControlledClock clock = new ControlledClock(new SystemClock());
+    ControlledClock clock = new ControlledClock();
     AppContext appContext = mock(AppContext.class);
     when(appContext.getClock()).thenReturn(clock);
     when(appContext.getApplicationID()).thenReturn(
@@ -2746,7 +2746,7 @@ public class TestRMContainerAllocator {
             0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
     final MockScheduler mockScheduler = new MockScheduler(appAttemptId);
     MyContainerAllocator allocator = new MyContainerAllocator(null, conf,
-        appAttemptId, mockJob, new SystemClock()) {
+        appAttemptId, mockJob, SystemClock.getInstance()) {
           @Override
           protected void register() {
           }

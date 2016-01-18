@@ -399,7 +399,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       String applicationType, Set<String> applicationTags, 
       ResourceRequest amReq) {
 
-    this.systemClock = new SystemClock();
+    this.systemClock = SystemClock.getInstance();
 
     this.applicationId = applicationId;
     this.name = name;

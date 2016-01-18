@@ -1785,7 +1785,7 @@ public class TestRecovery {
     Token<JobTokenIdentifier> jobToken =
         (Token<JobTokenIdentifier>) mock(Token.class);
     Credentials credentials = null;
-    Clock clock = new SystemClock();
+    Clock clock = SystemClock.getInstance();
     int appAttemptId = 3;
     MRAppMetrics metrics = mock(MRAppMetrics.class);
     Resource minContainerRequirements = mock(Resource.class);

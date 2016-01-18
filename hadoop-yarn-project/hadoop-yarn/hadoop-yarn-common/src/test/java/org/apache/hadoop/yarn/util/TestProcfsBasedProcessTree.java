@@ -395,7 +395,7 @@ public class TestProcfsBasedProcessTree {
 
     // test processes
     String[] pids = { "100", "200", "300", "400" };
-    ControlledClock testClock = new ControlledClock(new SystemClock());
+    ControlledClock testClock = new ControlledClock();
     testClock.setTime(0);
     // create the fake procfs root directory.
     File procfsRootDir = new File(TEST_ROOT_DIR, "proc");
@@ -575,7 +575,7 @@ public class TestProcfsBasedProcessTree {
       // crank up the process tree class.
       ProcfsBasedProcessTree processTree =
           createProcessTree("100", procfsRootDir.getAbsolutePath(),
-              new SystemClock());
+              SystemClock.getInstance());
       setSmapsInProceTree(processTree, smapEnabled);
 
       // verify virtual memory
@@ -774,7 +774,8 @@ public class TestProcfsBasedProcessTree {
       setupProcfsRootDir(procfsRootDir);
 
       // crank up the process tree class.
-      createProcessTree(pid, procfsRootDir.getAbsolutePath(), new SystemClock());
+      createProcessTree(pid, procfsRootDir.getAbsolutePath(),
+          SystemClock.getInstance());
 
       // Let us not create stat file for pid 100.
       Assert.assertTrue(ProcfsBasedProcessTree.checkPidPgrpidForMatch(pid,
@@ -844,7 +845,7 @@ public class TestProcfsBasedProcessTree {
 
       ProcfsBasedProcessTree processTree =
           createProcessTree("100", procfsRootDir.getAbsolutePath(),
-              new SystemClock());
+              SystemClock.getInstance());
       // build the process tree.
       processTree.updateProcessTree();
 

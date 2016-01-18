@@ -185,7 +185,8 @@ public class TestHistoryFileManager {
         }
       }
     }.start();
-    testCreateHistoryDirs(dfsCluster.getConfiguration(0), new SystemClock());
+    testCreateHistoryDirs(dfsCluster.getConfiguration(0),
+        SystemClock.getInstance());
   }
 
   @Test(expected = YarnRuntimeException.class)
@@ -194,7 +195,7 @@ public class TestHistoryFileManager {
     dfsCluster.getFileSystem().setSafeMode(
         HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
     Assert.assertTrue(dfsCluster.getFileSystem().isInSafeMode());
-    final ControlledClock clock = new ControlledClock(new SystemClock());
+    final ControlledClock clock = new ControlledClock();
     clock.setTime(1);
     new Thread() {
       @Override

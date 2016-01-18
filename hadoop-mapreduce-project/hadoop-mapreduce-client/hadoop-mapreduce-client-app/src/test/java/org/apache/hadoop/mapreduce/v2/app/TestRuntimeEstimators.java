@@ -788,7 +788,7 @@ public class TestRuntimeEstimators {
       public MyAppMaster(Clock clock) {
         super(MyAppMaster.class.getName());
         if (clock == null) {
-          clock = new SystemClock();
+          clock = SystemClock.getInstance();
         }
       this.clock = clock;
       LOG.info("Created MyAppMaster");
