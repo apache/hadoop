@@ -39,10 +39,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedule
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerLeafQueueInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionQueueCapacitiesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionResourceUsageInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionResourcesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.Times;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
@@ -134,8 +135,23 @@ class CapacitySchedulerPage extends RmView {
     private void renderQueueCapacityInfo(ResponseInfo ri, String label) {
       PartitionQueueCapacitiesInfo capacities =
           lqinfo.getCapacities().getPartitionQueueCapacitiesInfo(label);
-      PartitionResourceUsageInfo resourceUsages =
+      PartitionResourcesInfo resourceUsages =
           lqinfo.getResources().getPartitionResourceUsageInfo(label);
+
+      // Get UserInfo from first user to calculate AM Resource Limit per user.
+      ResourceInfo userAMResourceLimit = null;
+      ArrayList<UserInfo> usersList = lqinfo.getUsers().getUsersList();
+      if (usersList.isEmpty()) {
+        // If no users are present, consider AM Limit for that queue.
+        userAMResourceLimit = resourceUsages.getAMLimit();
+      } else {
+        userAMResourceLimit = usersList.get(0)
+            .getResourceUsageInfo().getPartitionResourceUsageInfo(label)
+            .getAMLimit();
+      }
+      ResourceInfo amUsed = (resourceUsages.getAmUsed() == null)
+          ? new ResourceInfo(Resources.none())
+          : resourceUsages.getAmUsed();
       ri.
       _("Used Capacity:", percent(capacities.getUsedCapacity() / 100)).
       _("Configured Capacity:", percent(capacities.getCapacity() / 100)).
@@ -143,7 +159,15 @@ class CapacitySchedulerPage extends RmView {
       _("Absolute Used Capacity:", percent(capacities.getAbsoluteUsedCapacity() / 100)).
       _("Absolute Configured Capacity:", percent(capacities.getAbsoluteCapacity() / 100)).
       _("Absolute Configured Max Capacity:", percent(capacities.getAbsoluteMaxCapacity() / 100)).
-      _("Used Resources:", resourceUsages.getUsed().toString());
+      _("Used Resources:", resourceUsages.getUsed().toString()).
+      _("Configured Max Application Master Limit:", StringUtils.format("%.1f",
+          capacities.getMaxAMLimitPercentage())).
+      _("Max Application Master Resources:",
+          resourceUsages.getAMLimit().toString()).
+      _("Used Application Master Resources:",
+          amUsed.toString()).
+      _("Max Application Master Resources Per User:",
+          userAMResourceLimit.toString());
     }
 
     private void renderCommonLeafQueueInfo(ResponseInfo ri) {
@@ -153,9 +177,6 @@ class CapacitySchedulerPage extends RmView {
       _("Num Containers:", Integer.toString(lqinfo.getNumContainers())).
       _("Max Applications:", Integer.toString(lqinfo.getMaxApplications())).
       _("Max Applications Per User:", Integer.toString(lqinfo.getMaxApplicationsPerUser())).
-      _("Max Application Master Resources:", lqinfo.getAMResourceLimit().toString()).
-      _("Used Application Master Resources:", lqinfo.getUsedAMResource().toString()).
-      _("Max Application Master Resources Per User:", lqinfo.getUserAMResourceLimit().toString()).
       _("Configured Minimum User Limit Percent:", Integer.toString(lqinfo.getUserLimit()) + "%").
       _("Configured User Limit Factor:", lqinfo.getUserLimitFactor()).
       _("Accessible Node Labels:", StringUtils.join(",", lqinfo.getNodeLabels())).
@@ -197,15 +218,21 @@ class CapacitySchedulerPage extends RmView {
       ArrayList<UserInfo> users = lqinfo.getUsers().getUsersList();
       for (UserInfo userInfo : users) {
         ResourceInfo resourcesUsed = userInfo.getResourcesUsed();
+        PartitionResourcesInfo resourceUsages = lqinfo
+            .getResources()
+            .getPartitionResourceUsageInfo((nodeLabel == null) ? "" : nodeLabel);
         if (nodeLabel != null) {
           resourcesUsed = userInfo.getResourceUsageInfo()
               .getPartitionResourceUsageInfo(nodeLabel).getUsed();
         }
+        ResourceInfo amUsed = (resourceUsages.getAmUsed() == null)
+            ? new ResourceInfo(Resources.none())
+            : resourceUsages.getAmUsed();
         tbody.tr().td(userInfo.getUsername())
             .td(userInfo.getUserResourceLimit().toString())
             .td(resourcesUsed.toString())
-            .td(lqinfo.getUserAMResourceLimit().toString())
-            .td(userInfo.getAMResourcesUsed().toString())
+            .td(resourceUsages.getAMLimit().toString())
+            .td(amUsed.toString())
             .td(Integer.toString(userInfo.getNumActiveApplications()))
             .td(Integer.toString(userInfo.getNumPendingApplications()))._();
       }

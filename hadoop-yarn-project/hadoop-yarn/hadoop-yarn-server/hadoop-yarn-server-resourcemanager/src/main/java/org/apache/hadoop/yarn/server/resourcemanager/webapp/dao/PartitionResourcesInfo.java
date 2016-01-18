@@ -26,25 +26,27 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
-public class PartitionResourceUsageInfo {
+public class PartitionResourcesInfo {
   private String partitionName;
   private ResourceInfo used = new ResourceInfo();
   private ResourceInfo reserved;
   private ResourceInfo pending;
   private ResourceInfo amUsed;
+  private ResourceInfo amLimit = new ResourceInfo();
 
-  public PartitionResourceUsageInfo() {
+  public PartitionResourcesInfo() {
   }
 
-  public PartitionResourceUsageInfo(String partitionName, ResourceInfo used,
+  public PartitionResourcesInfo(String partitionName, ResourceInfo used,
       ResourceInfo reserved, ResourceInfo pending,
-      ResourceInfo amResourceUsed) {
+      ResourceInfo amResourceUsed, ResourceInfo amResourceLimit) {
     super();
     this.partitionName = partitionName;
     this.used = used;
     this.reserved = reserved;
     this.pending = pending;
     this.amUsed = amResourceUsed;
+    this.amLimit = amResourceLimit;
   }
 
   public String getPartitionName() {
@@ -85,5 +87,13 @@ public class PartitionResourceUsageInfo {
 
   public void setAmUsed(ResourceInfo amResourceUsed) {
     this.amUsed = amResourceUsed;
+  }
+
+  public ResourceInfo getAMLimit() {
+    return amLimit;
+  }
+
+  public void setAMLimit(ResourceInfo amLimit) {
+    this.amLimit = amLimit;
   }
 }

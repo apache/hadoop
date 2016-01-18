@@ -31,49 +31,51 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
  */
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ResourceUsageInfo {
-  List<PartitionResourceUsageInfo> resourceUsagesByPartition =
+public class ResourcesInfo {
+  List<PartitionResourcesInfo> resourceUsagesByPartition =
       new ArrayList<>();
 
-  public ResourceUsageInfo() {
+  public ResourcesInfo() {
   }
 
-  public ResourceUsageInfo(ResourceUsage resourceUsage,
+  public ResourcesInfo(ResourceUsage resourceUsage,
       boolean considerAMUsage) {
     if (resourceUsage == null) {
       return;
     }
     for (String partitionName : resourceUsage.getNodePartitionsSet()) {
-      resourceUsagesByPartition.add(new PartitionResourceUsageInfo(
-          partitionName, new ResourceInfo(resourceUsage.getUsed(partitionName)),
+      resourceUsagesByPartition.add(new PartitionResourcesInfo(partitionName,
+          new ResourceInfo(resourceUsage.getUsed(partitionName)),
           new ResourceInfo(resourceUsage.getReserved(partitionName)),
           new ResourceInfo(resourceUsage.getPending(partitionName)),
-          considerAMUsage
-              ? new ResourceInfo(resourceUsage.getAMUsed(partitionName))
-              : null));
+          considerAMUsage ? new ResourceInfo(resourceUsage
+              .getAMUsed(partitionName)) : null,
+          considerAMUsage ? new ResourceInfo(resourceUsage
+              .getAMLimit(partitionName)) : null));
     }
   }
 
-  public ResourceUsageInfo(ResourceUsage resourceUsage) {
+  public ResourcesInfo(ResourceUsage resourceUsage) {
     this(resourceUsage, true);
   }
 
-  public List<PartitionResourceUsageInfo> getPartitionResourceUsages() {
+  public List<PartitionResourcesInfo> getPartitionResourceUsages() {
     return resourceUsagesByPartition;
   }
 
   public void setPartitionResourceUsages(
-      List<PartitionResourceUsageInfo> resources) {
+      List<PartitionResourcesInfo> resources) {
     this.resourceUsagesByPartition = resources;
   }
 
-  public PartitionResourceUsageInfo getPartitionResourceUsageInfo(
+  public PartitionResourcesInfo getPartitionResourceUsageInfo(
       String partitionName) {
-    for (PartitionResourceUsageInfo partitionResourceUsageInfo : resourceUsagesByPartition) {
+    for (PartitionResourcesInfo partitionResourceUsageInfo :
+      resourceUsagesByPartition) {
       if (partitionResourceUsageInfo.getPartitionName().equals(partitionName)) {
         return partitionResourceUsageInfo;
       }
     }
-    return new PartitionResourceUsageInfo();
+    return new PartitionResourcesInfo();
   }
 }
