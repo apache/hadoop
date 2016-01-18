@@ -42,5 +42,6 @@
     <module>hadoop-yarn-server-sharedcachemanager</module>
     <module>hadoop-yarn-server-tests</module>
     <module>hadoop-yarn-server-applicationhistoryservice</module>
+    <module>hadoop-yarn-server-timeline-pluginstorage</module>
   </modules>
 </project>
