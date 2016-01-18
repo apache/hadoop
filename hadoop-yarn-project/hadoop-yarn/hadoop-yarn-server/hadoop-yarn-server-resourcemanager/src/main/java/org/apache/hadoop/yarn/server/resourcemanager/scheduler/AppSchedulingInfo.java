@@ -526,8 +526,8 @@ public class AppSchedulingInfo {
     }
     
     // Set queue metrics
-    queue.getMetrics().allocateResources(user, 0,
-        increaseRequest.getDeltaCapacity(), true);
+    queue.getMetrics().allocateResources(user,
+        increaseRequest.getDeltaCapacity());
     
     // remove the increase request from pending increase request map
     removeIncreaseRequest(nodeId, priority, containerId);
@@ -550,7 +550,7 @@ public class AppSchedulingInfo {
     }
     
     // Set queue metrics
-    queue.getMetrics().releaseResources(user, 0, absDelta);
+    queue.getMetrics().releaseResources(user, absDelta);
 
     // update usage
     appResourceUsage.decUsed(decreaseRequest.getNodePartition(), absDelta);
