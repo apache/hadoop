@@ -74,10 +74,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
@@ -86,6 +86,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptA
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerExpiredSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerRescheduledEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeResourceUpdateSchedulerEvent;
@@ -467,7 +468,7 @@ public class FifoScheduler extends
         LOG.info("Skip killing " + container.getContainerId());
         continue;
       }
-      super.completedContainer(container,
+      completedContainer(container,
         SchedulerUtils.createAbnormalContainerStatus(
           container.getContainerId(), SchedulerUtils.COMPLETED_APPLICATION),
         RMContainerEventType.KILL);
@@ -738,7 +739,7 @@ public class FifoScheduler extends
     for (ContainerStatus completedContainer : completedContainers) {
       ContainerId containerId = completedContainer.getContainerId();
       LOG.debug("Container FINISHED: " + containerId);
-      super.completedContainer(getRMContainer(containerId),
+      completedContainer(getRMContainer(containerId), 
           completedContainer, RMContainerEventType.FINISHED);
     }
 
@@ -857,11 +858,19 @@ public class FifoScheduler extends
       ContainerExpiredSchedulerEvent containerExpiredEvent = 
           (ContainerExpiredSchedulerEvent) event;
       ContainerId containerid = containerExpiredEvent.getContainerId();
-      super.completedContainer(getRMContainer(containerid),
+      completedContainer(getRMContainer(containerid), 
           SchedulerUtils.createAbnormalContainerStatus(
               containerid, 
               SchedulerUtils.EXPIRED_CONTAINER),
           RMContainerEventType.EXPIRE);
+    }
+    break;
+    case CONTAINER_RESCHEDULED:
+    {
+      ContainerRescheduledEvent containerRescheduledEvent =
+          (ContainerRescheduledEvent) event;
+      RMContainer container = containerRescheduledEvent.getContainer();
+      recoverResourceRequestForContainer(container);
     }
     break;
     default:
@@ -871,9 +880,12 @@ public class FifoScheduler extends
 
   @Lock(FifoScheduler.class)
   @Override
-  protected synchronized void completedContainerInternal(
-      RMContainer rmContainer, ContainerStatus containerStatus,
-      RMContainerEventType event) {
+  protected synchronized void completedContainer(RMContainer rmContainer,
+      ContainerStatus containerStatus, RMContainerEventType event) {
+    if (rmContainer == null) {
+      LOG.info("Null container completed...");
+      return;
+    }
 
     // Get the application for the finished container
     Container container = rmContainer.getContainer();
@@ -919,7 +931,7 @@ public class FifoScheduler extends
     }
     // Kill running containers
     for(RMContainer container : node.getRunningContainers()) {
-      super.completedContainer(container,
+      completedContainer(container, 
           SchedulerUtils.createAbnormalContainerStatus(
               container.getContainerId(), 
               SchedulerUtils.LOST_CONTAINER),

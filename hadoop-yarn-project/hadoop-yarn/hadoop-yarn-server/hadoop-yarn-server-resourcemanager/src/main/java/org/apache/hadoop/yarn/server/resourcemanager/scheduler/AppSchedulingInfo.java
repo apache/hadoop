@@ -289,15 +289,12 @@ public class AppSchedulingInfo {
    * application, by asking for more resources and releasing resources acquired
    * by the application.
    *
-   * @param requests
-   *          resources to be acquired
-   * @param recoverPreemptedRequestForAContainer
-   *          recover ResourceRequest on preemption
+   * @param requests resources to be acquired
+   * @param recoverPreemptedRequest recover ResourceRequest on preemption
    * @return true if any resource was updated, false otherwise
    */
   public synchronized boolean updateResourceRequests(
-      List<ResourceRequest> requests,
-      boolean recoverPreemptedRequestForAContainer) {
+      List<ResourceRequest> requests, boolean recoverPreemptedRequest) {
     // Flag to track if any incoming requests update "ANY" requests
     boolean anyResourcesUpdated = false;
 
@@ -318,7 +315,7 @@ public class AppSchedulingInfo {
 
       // Increment number of containers if recovering preempted resources
       ResourceRequest lastRequest = asks.get(resourceName);
-      if (recoverPreemptedRequestForAContainer && lastRequest != null) {
+      if (recoverPreemptedRequest && lastRequest != null) {
         request.setNumContainers(lastRequest.getNumContainers() + 1);
       }
 

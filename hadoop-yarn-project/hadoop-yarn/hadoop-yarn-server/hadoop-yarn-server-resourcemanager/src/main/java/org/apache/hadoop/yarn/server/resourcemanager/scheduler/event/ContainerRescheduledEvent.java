@@ -18,31 +18,18 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
 
-public enum SchedulerEventType {
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 
-  // Source: Node
-  NODE_ADDED,
-  NODE_REMOVED,
-  NODE_UPDATE,
-  NODE_RESOURCE_UPDATE,
-  NODE_LABELS_UPDATE,
+public class ContainerRescheduledEvent extends SchedulerEvent {
 
-  // Source: RMApp
-  APP_ADDED,
-  APP_REMOVED,
+  private RMContainer container;
 
-  // Source: RMAppAttempt
-  APP_ATTEMPT_ADDED,
-  APP_ATTEMPT_REMOVED,
+  public ContainerRescheduledEvent(RMContainer container) {
+    super(SchedulerEventType.CONTAINER_RESCHEDULED);
+    this.container = container;
+  }
 
-  // Source: ContainerAllocationExpirer
-  CONTAINER_EXPIRED,
-
-  // Source: RMContainer
-  CONTAINER_RESCHEDULED,
-
-  // Source: SchedulingEditPolicy
-  DROP_RESERVATION,
-  PREEMPT_CONTAINER,
-  KILL_CONTAINER
+  public RMContainer getContainer() {
+    return container;
+  }
 }
