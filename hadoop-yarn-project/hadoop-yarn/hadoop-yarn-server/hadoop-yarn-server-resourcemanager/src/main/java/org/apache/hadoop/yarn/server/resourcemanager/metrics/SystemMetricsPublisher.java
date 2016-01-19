@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
+import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -500,7 +501,18 @@ public class SystemMetricsPublisher extends CompositeService {
         LOG.debug("Publishing the entity " + entity.getEntityId() +
             ", JSON-style content: " + TimelineUtils.dumpTimelineRecordtoJSON(entity));
       }
-      client.putEntities(entity);
+      TimelinePutResponse response = client.putEntities(entity);
+      List<TimelinePutResponse.TimelinePutError> errors = response.getErrors();
+      if (errors.size() == 0) {
+        LOG.debug("Timeline entities are successfully put");
+      } else {
+        for (TimelinePutResponse.TimelinePutError error : errors) {
+          LOG.error(
+              "Error when publishing entity [" + error.getEntityType() + ","
+                  + error.getEntityId() + "], server side error code: "
+                  + error.getErrorCode());
+        }
+      }
     } catch (Exception e) {
       LOG.error("Error when publishing entity [" + entity.getEntityType() + ","
           + entity.getEntityId() + "]", e);
