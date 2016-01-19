@@ -975,7 +975,8 @@ public class CapacityScheduler extends
                    clusterResource, getMinimumResourceCapability());
     }
 
-    if (updateDemandForQueue != null) {
+    if (updateDemandForQueue != null && !application
+        .isWaitingForAMContainer()) {
       updateDemandForQueue.getOrderingPolicy().demandUpdated(application);
     }
 

@@ -863,7 +863,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   }
   
   @Override
-  public synchronized ResourceUsage getSchedulingResourceUsage() {
+  public ResourceUsage getSchedulingResourceUsage() {
     return attemptResourceUsage;
   }
   

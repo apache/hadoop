@@ -30,6 +30,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.StringTokenizer;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -958,5 +959,17 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         + DEFAULT_APPLICATION_PRIORITY,
         DEFAULT_CONFIGURATION_APPLICATION_PRIORITY);
     return defaultPriority;
+  }
+
+  @VisibleForTesting
+  public void setOrderingPolicy(String queue, String policy) {
+    set(getQueuePrefix(queue) + ORDERING_POLICY, policy);
+  }
+
+  @VisibleForTesting
+  public void setOrderingPolicyParameter(String queue,
+      String parameterKey, String parameterValue) {
+    set(getQueuePrefix(queue) + ORDERING_POLICY + "."
+        + parameterKey, parameterValue);
   }
 }
