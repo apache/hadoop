@@ -116,15 +116,13 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
    */
   @Test
   public void testSeekReadClosedFile() throws Throwable {
-    boolean supportsSeekOnClosedFiles = isSupported(SUPPORTS_SEEK_ON_CLOSED_FILE);
-
     instream = getFileSystem().open(smallSeekFile);
     getLog().debug(
       "Stream is of type " + instream.getClass().getCanonicalName());
     instream.close();
     try {
       instream.seek(0);
-      if (!supportsSeekOnClosedFiles) {
+      if (!isSupported(SUPPORTS_SEEK_ON_CLOSED_FILE)) {
         fail("seek succeeded on a closed stream");
       }
     } catch (IOException e) {
@@ -132,7 +130,9 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     }
     try {
       int data = instream.available();
-      fail("read() succeeded on a closed stream, got " + data);
+      if (!isSupported(SUPPORTS_AVAILABLE_ON_CLOSED_FILE)) {
+        fail("available() succeeded on a closed stream, got " + data);
+      }
     } catch (IOException e) {
       //expected a closed file
     }
