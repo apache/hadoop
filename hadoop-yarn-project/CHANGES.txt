@@ -1277,6 +1277,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4596. SystemMetricPublisher should not swallow error messages from
     TimelineClient#putEntities. (Li Lu via jianhe)
 
+    YARN-4502. Fix two AM containers get allocated when AM restart.
+    (Vinod Kumar Vavilapalli via wangda)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
