@@ -275,7 +275,8 @@ public class MockRM extends ResourceManager {
         nm.nodeHeartbeat(true);
       }
       container = getResourceScheduler().getRMContainer(containerId);
-      System.out.println("Waiting for container " + containerId + " to be allocated.");
+      System.out.println("Waiting for container " + containerId + " to be "
+          + containerState + ", container is null right now.");
       Thread.sleep(100);
       
       if (timeoutMillisecs <= timeoutSecs * 100) {

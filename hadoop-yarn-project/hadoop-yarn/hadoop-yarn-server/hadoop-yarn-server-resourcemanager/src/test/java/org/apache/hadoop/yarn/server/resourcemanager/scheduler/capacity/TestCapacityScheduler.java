@@ -1170,7 +1170,7 @@ public class TestCapacityScheduler {
 
     // kill the 3 containers
     for (Container c : allocatedContainers) {
-      cs.killContainer(schedulerAppAttempt.getRMContainer(c.getId()));
+      cs.killPreemptedContainer(schedulerAppAttempt.getRMContainer(c.getId()));
     }
 
     // check values
@@ -1179,7 +1179,7 @@ public class TestCapacityScheduler {
         Resource.newInstance(CONTAINER_MEMORY * 3, 3), false, 3);
 
     // kill app0-attempt0 AM container
-    cs.killContainer(schedulerAppAttempt.getRMContainer(app0
+    cs.killPreemptedContainer(schedulerAppAttempt.getRMContainer(app0
         .getCurrentAppAttempt().getMasterContainer().getId()));
 
     // wait for app0 failed
@@ -1202,7 +1202,7 @@ public class TestCapacityScheduler {
     allocatedContainers =
         am1.allocateAndWaitForContainers(3, CONTAINER_MEMORY, nm1);
     for (Container c : allocatedContainers) {
-      cs.killContainer(schedulerAppAttempt.getRMContainer(c.getId()));
+      cs.killPreemptedContainer(schedulerAppAttempt.getRMContainer(c.getId()));
     }
 
     // check values
@@ -1251,7 +1251,7 @@ public class TestCapacityScheduler {
     }
 
     // Call killContainer to preempt the container
-    cs.killContainer(rmContainer);
+    cs.killPreemptedContainer(rmContainer);
 
     Assert.assertEquals(3, requests.size());
     for (ResourceRequest request : requests) {
