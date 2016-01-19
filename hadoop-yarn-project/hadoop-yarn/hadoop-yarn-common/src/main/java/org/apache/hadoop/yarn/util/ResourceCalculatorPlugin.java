@@ -120,12 +120,21 @@ public class ResourceCalculatorPlugin extends Configured {
   }
 
   /**
-   * Obtain the CPU usage % of the machine. Return -1 if it is unavailable
+   * Obtain the CPU usage % of the machine. Return -1 if it is unavailable.
    *
    * @return CPU usage in %
    */
-  public float getCpuUsage() {
-    return sys.getCpuUsage();
+  public float getCpuUsagePercentage() {
+    return sys.getCpuUsagePercentage();
+  }
+
+  /**
+   * Obtain the number of VCores used. Return -1 if it is unavailable.
+   *
+   * @return Number of VCores used a percentage (from 0 to #VCores)
+   */
+  public float getNumVCoresUsed() {
+    return sys.getNumVCoresUsed();
   }
 
    /**

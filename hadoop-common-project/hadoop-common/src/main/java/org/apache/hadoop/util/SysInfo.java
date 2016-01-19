@@ -104,9 +104,16 @@ public abstract class SysInfo {
   /**
    * Obtain the CPU usage % of the machine. Return -1 if it is unavailable
    *
-   * @return CPU usage as a percentage of available cycles.
+   * @return CPU usage as a percentage (from 0 to 100) of available cycles.
    */
-  public abstract float getCpuUsage();
+  public abstract float getCpuUsagePercentage();
+
+  /**
+   * Obtain the number of VCores used. Return -1 if it is unavailable
+   *
+   * @return Number of VCores used a percentage (from 0 to #VCores).
+   */
+  public abstract float getNumVCoresUsed();
 
   /**
    * Obtain the aggregated number of bytes read over the network.

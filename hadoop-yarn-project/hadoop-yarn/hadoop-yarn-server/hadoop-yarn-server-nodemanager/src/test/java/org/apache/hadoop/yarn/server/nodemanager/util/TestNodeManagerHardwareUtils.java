@@ -73,7 +73,7 @@ public class TestNodeManagerHardwareUtils {
     }
 
     @Override
-    public float getCpuUsage() {
+    public float getCpuUsagePercentage() {
       return 0;
     }
 
