@@ -301,7 +301,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     return ret;
   }
 
-  public synchronized void preemptContainer(ContainerId cont) {
+  public synchronized void addPreemptContainer(ContainerId cont) {
     // ignore already completed containers
     if (liveContainers.containsKey(cont)) {
       containersToPreempt.add(cont);

@@ -322,7 +322,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     return false;
   }
   
-  public synchronized void recoverResourceRequestsForContainer(
+  public synchronized void recoverResourceRequests(
       List<ResourceRequest> requests) {
     if (!isStopped) {
       appSchedulingInfo.updateResourceRequests(requests, true);

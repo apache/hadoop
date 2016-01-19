@@ -16,10 +16,12 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 
 /**
  * Simple event class used to communicate containers unreservations, preemption, killing
