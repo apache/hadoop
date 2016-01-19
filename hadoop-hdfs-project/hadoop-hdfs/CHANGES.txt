@@ -2596,6 +2596,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9612. DistCp worker threads are not terminated after jobs are done.
     (Wei-Chiu Chuang via Yongjun Zhang)
 
+    HDFS-9623. Update example configuration of block state change log in
+    log4j.properties. (Masatake Iwasaki via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
