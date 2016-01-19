@@ -1280,6 +1280,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4502. Fix two AM containers get allocated when AM restart.
     (Vinod Kumar Vavilapalli via wangda)
 
+    YARN-4565. Fix a bug that leads to AM resource limit not hornored when
+    sizeBasedWeight enabled for FairOrderingPolicy. (wtan via jianhe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
