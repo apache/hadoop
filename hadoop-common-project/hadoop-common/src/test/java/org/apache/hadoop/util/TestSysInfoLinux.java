@@ -229,7 +229,10 @@ public class TestSysInfoLinux {
     updateStatFile(uTime, nTime, sTime);
     assertEquals(plugin.getCumulativeCpuTime(),
                  FAKE_JIFFY_LENGTH * (uTime + nTime + sTime));
-    assertEquals(plugin.getCpuUsage(), (float)(CpuTimeTracker.UNAVAILABLE),0.0);
+    assertEquals(plugin.getCpuUsagePercentage(),
+        (float)(CpuTimeTracker.UNAVAILABLE),0.0);
+    assertEquals(plugin.getNumVCoresUsed(),
+        (float)(CpuTimeTracker.UNAVAILABLE),0.0);
 
     // Advance the time and sample again to test the CPU usage calculation
     uTime += 100L;
@@ -237,13 +240,15 @@ public class TestSysInfoLinux {
     updateStatFile(uTime, nTime, sTime);
     assertEquals(plugin.getCumulativeCpuTime(),
                  FAKE_JIFFY_LENGTH * (uTime + nTime + sTime));
-    assertEquals(plugin.getCpuUsage(), 6.25F, 0.0);
+    assertEquals(plugin.getCpuUsagePercentage(), 6.25F, 0.0);
+    assertEquals(plugin.getNumVCoresUsed(), 0.5F, 0.0);
 
-    // Advance the time and sample again. This time, we call getCpuUsage() only.
+    // Advance the time and sample again. This time, we call getCpuUsagePercentage() only.
     uTime += 600L;
     plugin.advanceTime(300L);
     updateStatFile(uTime, nTime, sTime);
-    assertEquals(plugin.getCpuUsage(), 25F, 0.0);
+    assertEquals(plugin.getCpuUsagePercentage(), 25F, 0.0);
+    assertEquals(plugin.getNumVCoresUsed(), 2F, 0.0);
 
     // Advance very short period of time (one jiffy length).
     // In this case, CPU usage should not be updated.
@@ -252,7 +257,10 @@ public class TestSysInfoLinux {
     updateStatFile(uTime, nTime, sTime);
     assertEquals(plugin.getCumulativeCpuTime(),
                  FAKE_JIFFY_LENGTH * (uTime + nTime + sTime));
-    assertEquals(plugin.getCpuUsage(), 25F, 0.0); // CPU usage is not updated.
+    assertEquals(
+        plugin.getCpuUsagePercentage(), 25F, 0.0); // CPU usage is not updated.
+    assertEquals(
+        plugin.getNumVCoresUsed(), 2F, 0.0); // CPU usage is not updated.
   }
 
   /**

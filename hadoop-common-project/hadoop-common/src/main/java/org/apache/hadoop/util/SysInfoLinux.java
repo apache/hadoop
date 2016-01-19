@@ -608,13 +608,24 @@ public class SysInfoLinux extends SysInfo {
 
   /** {@inheritDoc} */
   @Override
-  public float getCpuUsage() {
+  public float getCpuUsagePercentage() {
     readProcStatFile();
     float overallCpuUsage = cpuTimeTracker.getCpuTrackerUsagePercent();
     if (overallCpuUsage != CpuTimeTracker.UNAVAILABLE) {
       overallCpuUsage = overallCpuUsage / getNumProcessors();
     }
     return overallCpuUsage;
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public float getNumVCoresUsed() {
+    readProcStatFile();
+    float overallVCoresUsage = cpuTimeTracker.getCpuTrackerUsagePercent();
+    if (overallVCoresUsage != CpuTimeTracker.UNAVAILABLE) {
+      overallVCoresUsage = overallVCoresUsage / 100F;
+    }
+    return overallVCoresUsage;
   }
 
   /** {@inheritDoc} */
@@ -676,7 +687,7 @@ public class SysInfoLinux extends SysInfo {
     } catch (InterruptedException e) {
       // do nothing
     }
-    System.out.println("CPU usage % : " + plugin.getCpuUsage());
+    System.out.println("CPU usage % : " + plugin.getCpuUsagePercentage());
   }
 
   @VisibleForTesting
