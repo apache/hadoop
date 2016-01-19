@@ -58,7 +58,10 @@ public class TestSysInfoWindows {
     assertEquals(2805000L, tester.getCpuFrequency());
     assertEquals(6261812L, tester.getCumulativeCpuTime());
     // undef on first call
-    assertEquals(-1.0, tester.getCpuUsage(), 0.0);
+    assertEquals((float)CpuTimeTracker.UNAVAILABLE,
+        tester.getCpuUsagePercentage(), 0.0);
+    assertEquals((float)CpuTimeTracker.UNAVAILABLE,
+        tester.getNumVCoresUsed(), 0.0);
   }
 
   @Test(timeout = 10000)
@@ -70,22 +73,60 @@ public class TestSysInfoWindows {
     tester.getAvailablePhysicalMemorySize();
     // verify information has been refreshed
     assertEquals(6400417792L, tester.getAvailablePhysicalMemorySize());
-    assertEquals(-1.0, tester.getCpuUsage(), 0.0);
+    assertEquals((float)CpuTimeTracker.UNAVAILABLE,
+        tester.getCpuUsagePercentage(), 0.0);
+    assertEquals((float)CpuTimeTracker.UNAVAILABLE,
+        tester.getNumVCoresUsed(), 0.0);
 
     tester.setSysinfoString(
         "17177038848,8589467648,15232745472,5400417792,1,2805000,6263012\r\n");
     tester.getAvailablePhysicalMemorySize();
     // verify information has not been refreshed
     assertEquals(6400417792L, tester.getAvailablePhysicalMemorySize());
-    assertEquals(-1.0, tester.getCpuUsage(), 0.0);
+    assertEquals((float)CpuTimeTracker.UNAVAILABLE,
+        tester.getCpuUsagePercentage(), 0.0);
+    assertEquals((float)CpuTimeTracker.UNAVAILABLE,
+        tester.getNumVCoresUsed(), 0.0);
 
     // advance clock
     tester.advance(SysInfoWindows.REFRESH_INTERVAL_MS + 1);
 
     // verify information has been refreshed
     assertEquals(5400417792L, tester.getAvailablePhysicalMemorySize());
-    assertEquals((6263012 - 6261812) / (SysInfoWindows.REFRESH_INTERVAL_MS + 1f),
-        tester.getCpuUsage(), 0.0);
+    assertEquals((6263012 - 6261812) * 100F /
+                 (SysInfoWindows.REFRESH_INTERVAL_MS + 1f) / 1,
+                 tester.getCpuUsagePercentage(), 0.0);
+    assertEquals((6263012 - 6261812) /
+                 (SysInfoWindows.REFRESH_INTERVAL_MS + 1f) / 1,
+                 tester.getNumVCoresUsed(), 0.0);
+  }
+
+  @Test(timeout = 10000)
+  public void refreshAndCpuUsageMulticore() throws InterruptedException {
+    // test with 12 cores
+    SysInfoWindowsMock tester = new SysInfoWindowsMock();
+    tester.setSysinfoString(
+        "17177038848,8589467648,15232745472,6400417792,12,2805000,6261812\r\n");
+    // verify information has been refreshed
+    assertEquals(6400417792L, tester.getAvailablePhysicalMemorySize());
+
+    tester.setSysinfoString(
+        "17177038848,8589467648,15232745472,5400417792,12,2805000,6263012\r\n");
+    // verify information has not been refreshed
+    assertEquals(6400417792L, tester.getAvailablePhysicalMemorySize());
+
+    // advance clock
+    tester.advance(SysInfoWindows.REFRESH_INTERVAL_MS + 1);
+
+    // verify information has been refreshed
+    assertEquals(5400417792L, tester.getAvailablePhysicalMemorySize());
+    // verify information has been refreshed
+    assertEquals((6263012 - 6261812) * 100F /
+                 (SysInfoWindows.REFRESH_INTERVAL_MS + 1f) / 12,
+                 tester.getCpuUsagePercentage(), 0.0);
+    assertEquals((6263012 - 6261812) /
+                 (SysInfoWindows.REFRESH_INTERVAL_MS + 1f),
+                 tester.getNumVCoresUsed(), 0.0);
   }
 
   @Test(timeout = 10000)

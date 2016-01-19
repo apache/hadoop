@@ -104,8 +104,13 @@ public class SysInfoWindows extends SysInfo {
             cpuFrequencyKhz = Long.parseLong(sysInfo[5]);
             cumulativeCpuTimeMs = Long.parseLong(sysInfo[6]);
             if (lastCumCpuTimeMs != -1) {
+              /**
+               * This number will be the aggregated usage across all cores in
+               * [0.0, 100.0]. For example, it will be 400.0 if there are 8
+               * cores and each of them is running at 50% utilization.
+               */
               cpuUsage = (cumulativeCpuTimeMs - lastCumCpuTimeMs)
-                  / (refreshInterval * 1.0f);
+                  * 100F / refreshInterval;
             }
           } catch (NumberFormatException nfe) {
             LOG.warn("Error parsing sysInfo", nfe);
@@ -175,9 +180,24 @@ public class SysInfoWindows extends SysInfo {
 
   /** {@inheritDoc} */
   @Override
-  public float getCpuUsage() {
+  public float getCpuUsagePercentage() {
     refreshIfNeeded();
-    return cpuUsage;
+    float ret = cpuUsage;
+    if (ret != -1) {
+      ret = ret / numProcessors;
+    }
+    return ret;
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public float getNumVCoresUsed() {
+    refreshIfNeeded();
+    float ret = cpuUsage;
+    if (ret != -1) {
+      ret = ret / 100F;
+    }
+    return ret;
   }
 
   /** {@inheritDoc} */
