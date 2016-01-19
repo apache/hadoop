@@ -29,8 +29,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.SchedulerEventDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.junit.Assert;
@@ -55,11 +55,10 @@ public class TestRMDispatcher {
       ApplicationAttemptId appAttemptId = mock(ApplicationAttemptId.class);
       RMContainer container = mock(RMContainer.class);
       ContainerPreemptEvent event1 = new ContainerPreemptEvent(
-          appAttemptId, container, SchedulerEventType.KILL_RESERVED_CONTAINER);
+          appAttemptId, container, SchedulerEventType.DROP_RESERVATION);
       rmDispatcher.getEventHandler().handle(event1);
-      ContainerPreemptEvent event2 =
-          new ContainerPreemptEvent(appAttemptId, container,
-            SchedulerEventType.KILL_PREEMPTED_CONTAINER);
+      ContainerPreemptEvent event2 = new ContainerPreemptEvent(
+           appAttemptId, container, SchedulerEventType.KILL_CONTAINER);
       rmDispatcher.getEventHandler().handle(event2);
       ContainerPreemptEvent event3 = new ContainerPreemptEvent(
           appAttemptId, container, SchedulerEventType.PREEMPT_CONTAINER);
@@ -67,9 +66,9 @@ public class TestRMDispatcher {
       // Wait for events to be processed by scheduler dispatcher.
       Thread.sleep(1000);
       verify(sched, times(3)).handle(any(SchedulerEvent.class));
-      verify(sched).killReservedContainer(container);
+      verify(sched).dropContainerReservation(container);
       verify(sched).preemptContainer(appAttemptId, container);
-      verify(sched).killPreemptedContainer(container);
+      verify(sched).killContainer(container);
     } catch (InterruptedException e) {
       Assert.fail();
     } finally {
