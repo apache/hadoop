@@ -1140,7 +1140,8 @@ public class ApplicationMaster {
       ugi.doAs(new PrivilegedExceptionAction<TimelinePutResponse>() {
         @Override
         public TimelinePutResponse run() throws Exception {
-          return timelineClient.putEntities(entity);
+          return processTimelineResponseErrors(
+              timelineClient.putEntities(entity));
         }
       });
     } catch (Exception e) {
@@ -1165,7 +1166,8 @@ public class ApplicationMaster {
     event.addEventInfo("Exit Status", container.getExitStatus());
     entity.addEvent(event);
     try {
-      timelineClient.putEntities(entity);
+      TimelinePutResponse response = timelineClient.putEntities(entity);
+      processTimelineResponseErrors(response);
     } catch (YarnException | IOException e) {
       LOG.error("Container end event could not be published for "
           + container.getContainerId().toString(), e);
@@ -1185,13 +1187,30 @@ public class ApplicationMaster {
     event.setTimestamp(System.currentTimeMillis());
     entity.addEvent(event);
     try {
-      timelineClient.putEntities(entity);
+      TimelinePutResponse response = timelineClient.putEntities(entity);
+      processTimelineResponseErrors(response);
     } catch (YarnException | IOException e) {
       LOG.error("App Attempt "
           + (appEvent.equals(DSEvent.DS_APP_ATTEMPT_START) ? "start" : "end")
           + " event could not be published for "
           + appAttemptId.toString(), e);
     }
+  }
+
+  private static TimelinePutResponse processTimelineResponseErrors(
+      TimelinePutResponse response) {
+    List<TimelinePutResponse.TimelinePutError> errors = response.getErrors();
+    if (errors.size() == 0) {
+      LOG.debug("Timeline entities are successfully put");
+    } else {
+      for (TimelinePutResponse.TimelinePutError error : errors) {
+        LOG.error(
+            "Error when publishing entity [" + error.getEntityType() + ","
+                + error.getEntityId() + "], server side error code: "
+                + error.getErrorCode());
+      }
+    }
+    return response;
   }
 
   RMCallbackHandler getRMCallbackHandler() {
