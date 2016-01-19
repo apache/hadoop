@@ -43,7 +43,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -51,6 +50,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
@@ -257,7 +257,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
           // kill it
           rmContext.getDispatcher().getEventHandler().handle(
               new ContainerPreemptEvent(appAttemptId, container,
-                  SchedulerEventType.KILL_CONTAINER));
+                  SchedulerEventType.KILL_PREEMPTED_CONTAINER));
           preempted.remove(container);
         } else {
           if (preempted.get(container) != null) {
@@ -268,7 +268,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
           //otherwise just send preemption events
           rmContext.getDispatcher().getEventHandler().handle(
               new ContainerPreemptEvent(appAttemptId, container,
-                  SchedulerEventType.PREEMPT_CONTAINER));
+                  SchedulerEventType.MARK_CONTAINER_FOR_PREEMPTION));
           preempted.put(container, clock.getTime());
         }
       }
@@ -764,7 +764,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       if (!observeOnly) {
         rmContext.getDispatcher().getEventHandler().handle(
             new ContainerPreemptEvent(
-                appId, c, SchedulerEventType.DROP_RESERVATION));
+                appId, c, SchedulerEventType.KILL_RESERVED_CONTAINER));
       }
     }
 
