@@ -676,6 +676,9 @@ Release 2.9.0 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-12605. Fix intermittent failure of TestIPC.testIpcWithReaderQueuing
+    (iwasakims)
+
     HADOOP-12655. TestHttpServer.testBindAddress bind port range is wider
     than expected. (Wei-Chiu Chuang via stevel)
 
