@@ -22,6 +22,7 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.EOFException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -46,14 +47,14 @@ class S3InputStream extends FSInputStream {
   private long pos = 0;
 
   private File blockFile;
-  
+
   private DataInputStream blockStream;
 
   private long blockEnd = -1;
-  
+
   private FileSystem.Statistics stats;
-  
-  private static final Log LOG = 
+
+  private static final Log LOG =
     LogFactory.getLog(S3InputStream.class.getName());
 
 
@@ -65,7 +66,7 @@ class S3InputStream extends FSInputStream {
 
   public S3InputStream(Configuration conf, FileSystemStore store,
                        INode inode, FileSystem.Statistics stats) {
-    
+
     this.store = store;
     this.stats = stats;
     this.blocks = inode.getBlocks();
@@ -86,8 +87,12 @@ class S3InputStream extends FSInputStream {
 
   @Override
   public synchronized void seek(long targetPos) throws IOException {
+    String message = String.format("Cannot seek to %d", targetPos);
     if (targetPos > fileLength) {
-      throw new IOException("Cannot seek after EOF");
+      throw new EOFException(message + ": after EOF");
+    }
+    if (targetPos < 0) {
+      throw new EOFException(message + ": negative");
     }
     pos = targetPos;
     blockEnd = -1;

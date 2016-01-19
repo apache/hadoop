@@ -190,7 +190,7 @@ tests against remote FileSystems that require login details require usernames/ID
 
 All these details MUST be required to be placed in the file `src/test/resources/contract-test-options.xml`, and your SCM tools configured to never commit this file to subversion, git or
 equivalent. Furthermore, the build MUST be configured to never bundle this file in any `-test` artifacts generated. The Hadoop build does this, excluding `src/test/**/*.xml` from the JAR files.
-
+In addition, `src/test/resources/auth-keys.xml` will need to be created.  It can be a copy of `contract-test-options.xml`.
 The `AbstractFSContract` class automatically loads this resource file if present; specific keys for specific test cases can be added.
 
 As an example, here are what S3N test keys look like:
@@ -214,7 +214,7 @@ As an example, here are what S3N test keys look like:
 
 The `AbstractBondedFSContract` automatically skips a test suite if the FileSystem URL is not defined in the property `fs.contract.test.fs.%s`, where `%s` matches the schema name of the FileSystem.
 
-
+When running the tests `maven.test.skip` will need to be turned off since it is true by default on these tests.  This can be done with a command like `mvn test -Ptests-on`.
 
 ### Important: passing the tests does not guarantee compatibility
 

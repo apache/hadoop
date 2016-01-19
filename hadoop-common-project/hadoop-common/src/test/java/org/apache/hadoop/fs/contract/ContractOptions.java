@@ -148,6 +148,12 @@ public interface ContractOptions {
   String SUPPORTS_SEEK_ON_CLOSED_FILE = "supports-seek-on-closed-file";
 
   /**
+   * Is available() on a closed InputStream supported?
+   * @{value}
+   */
+  String SUPPORTS_AVAILABLE_ON_CLOSED_FILE = "supports-available-on-closed-file";
+
+  /**
    * Flag to indicate that this FS expects to throw the strictest
    * exceptions it can, not generic IOEs, which, if returned,
    * must be rejected.
