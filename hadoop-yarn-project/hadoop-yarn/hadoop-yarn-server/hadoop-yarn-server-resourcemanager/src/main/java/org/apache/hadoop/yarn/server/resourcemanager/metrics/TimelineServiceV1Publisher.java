@@ -88,6 +88,17 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
         app.getAmNodeLabelExpression());
     entityInfo.put(ApplicationMetricsConstants.APP_NODE_LABEL_EXPRESSION,
         app.getAppNodeLabelExpression());
+    if (app.getCallerContext() != null) {
+      if (app.getCallerContext().getContext() != null) {
+        entityInfo.put(ApplicationMetricsConstants.YARN_APP_CALLER_CONTEXT,
+            app.getCallerContext().getContext());
+      }
+      if (app.getCallerContext().getSignature() != null) {
+        entityInfo.put(ApplicationMetricsConstants.YARN_APP_CALLER_SIGNATURE,
+            app.getCallerContext().getSignature());
+      }
+    }
+
     entity.setOtherInfo(entityInfo);
     TimelineEvent tEvent = new TimelineEvent();
     tEvent.setEventType(ApplicationMetricsConstants.CREATED_EVENT_TYPE);
@@ -200,8 +211,10 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
         appAttempt.getHost());
     eventInfo.put(AppAttemptMetricsConstants.RPC_PORT_EVENT_INFO,
         appAttempt.getRpcPort());
-    eventInfo.put(AppAttemptMetricsConstants.MASTER_CONTAINER_EVENT_INFO,
-        appAttempt.getMasterContainer().getId().toString());
+    if (appAttempt.getMasterContainer() != null) {
+      eventInfo.put(AppAttemptMetricsConstants.MASTER_CONTAINER_EVENT_INFO,
+          appAttempt.getMasterContainer().getId().toString());
+    }
     tEvent.setEventInfo(eventInfo);
     entity.addEvent(tEvent);
     getDispatcher().getEventHandler().handle(
