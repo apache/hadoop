@@ -1841,20 +1841,16 @@ public class RMAppImpl implements RMApp, Recoverable {
     }
     return amNodeLabelExpression;
   }
-<<<<<<< 93f2f13bc1c25fa441a3819c98b7073fca45b07a
-  
+
   @Override
   public CallerContext getCallerContext() {
     return callerContext;
   }
-=======
->>>>>>> YARN-4392. ApplicationCreatedEvent event time resets after RM
 
   private void sendATSCreateEvent(RMApp app, long startTime) {
     rmContext.getRMApplicationHistoryWriter().applicationStarted(app);
     rmContext.getSystemMetricsPublisher().appCreated(app, startTime);
   }
-<<<<<<< 93f2f13bc1c25fa441a3819c98b7073fca45b07a
 
   @VisibleForTesting
   public boolean isAmBlacklistingEnabled() {
@@ -1865,6 +1861,4 @@ public class RMAppImpl implements RMApp, Recoverable {
   public float getAmBlacklistingDisableThreshold() {
     return blacklistDisableThreshold;
   }
-=======
->>>>>>> YARN-4392. ApplicationCreatedEvent event time resets after RM
 }
