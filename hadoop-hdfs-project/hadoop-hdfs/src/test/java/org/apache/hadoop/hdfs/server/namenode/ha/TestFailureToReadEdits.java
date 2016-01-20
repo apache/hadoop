@@ -27,10 +27,14 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -62,11 +66,14 @@ import com.google.common.collect.ImmutableList;
 
 @RunWith(Parameterized.class)
 public class TestFailureToReadEdits {
+  private static final Log LOG =
+      LogFactory.getLog(TestFailureToReadEdits.class);
 
   private static final String TEST_DIR1 = "/test1";
   private static final String TEST_DIR2 = "/test2";
   private static final String TEST_DIR3 = "/test3";
-  
+  private static final Random RANDOM = new Random();
+
   private final TestType clusterType;
   private Configuration conf;
   private MiniDFSCluster cluster;
@@ -103,14 +110,32 @@ public class TestFailureToReadEdits {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_NUM_CHECKPOINTS_RETAINED_KEY, 10);
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     HAUtil.setAllowStandbyReads(conf, true);
-    
+
     if (clusterType == TestType.SHARED_DIR_HA) {
-      MiniDFSNNTopology topology = MiniQJMHACluster.createDefaultTopology(10000);
-      cluster = new MiniDFSCluster.Builder(conf)
-        .nnTopology(topology)
-        .numDataNodes(0)
-        .checkExitOnShutdown(false)
-        .build();
+      int basePort = 10000;
+      int retryCount = 0;
+      while (true) {
+        try {
+          basePort = 10000 + RANDOM.nextInt(1000) * 4;
+          LOG.info("Set SHARED_DIR_HA cluster's basePort to " + basePort);
+          MiniDFSNNTopology topology =
+              MiniQJMHACluster.createDefaultTopology(basePort);
+          cluster = new MiniDFSCluster.Builder(conf)
+          .nnTopology(topology)
+          .numDataNodes(0)
+          .checkExitOnShutdown(false)
+          .build();
+          break;
+        } catch (BindException e) {
+          if (cluster != null) {
+            cluster.shutdown(true);
+            cluster = null;
+          }
+          ++retryCount;
+          LOG.info("SHARED_DIR_HA: MiniQJMHACluster port conflicts, retried " +
+              retryCount + " times " + e);
+        }
+      }
     } else {
       Builder builder = new MiniQJMHACluster.Builder(conf);
       builder.getDfsBuilder().numDataNodes(0).checkExitOnShutdown(false);
