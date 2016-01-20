@@ -32,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.tools.rumen.JobTraceReader;
 import org.apache.hadoop.tools.rumen.LoggedJob;
 import org.apache.hadoop.tools.rumen.LoggedTask;
@@ -43,9 +44,15 @@ import org.codehaus.jackson.map.ObjectMapper;
 @Unstable
 public class SLSUtils {
 
+  // hostname includes the network path and the host name. for example
+  // "/default-rack/hostFoo" or "/coreSwitchA/TORSwitchB/hostBar".
+  // the function returns two Strings, the first element is the network
+  // location without "/", the second element is the host name. for example,
+  // {"default-rack", "hostFoo"} or "coreSwitchA/TORSwitchB", "hostBar"
   public static String[] getRackHostName(String hostname) {
-    hostname = hostname.substring(1);
-    return hostname.split("/");
+    NodeBase node = new NodeBase(hostname);
+    return new String[] {node.getNetworkLocation().substring(1),
+        node.getName()};
   }
 
   /**
