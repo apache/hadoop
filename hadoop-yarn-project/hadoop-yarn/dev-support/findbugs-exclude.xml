@@ -272,6 +272,11 @@
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
   <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore" />
+    <Field name="resourceManager"/>
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
+  <Match>
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer"/>
     <Field name="renewalTimer" />
     <Bug code="IS"/>
