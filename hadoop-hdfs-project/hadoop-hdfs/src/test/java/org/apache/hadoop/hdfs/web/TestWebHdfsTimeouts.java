@@ -115,7 +115,7 @@ public class TestWebHdfsTimeouts {
       fs.listFiles(new Path("/"), false);
       fail("expected timeout");
     } catch (SocketTimeoutException e) {
-      assertEquals("connect timed out", e.getMessage());
+      assertEquals(fs.getUri().getAuthority() + ": connect timed out", e.getMessage());
     }
   }
 
@@ -128,7 +128,7 @@ public class TestWebHdfsTimeouts {
       fs.listFiles(new Path("/"), false);
       fail("expected timeout");
     } catch (SocketTimeoutException e) {
-      assertEquals("Read timed out", e.getMessage());
+      assertEquals(fs.getUri().getAuthority() + ": Read timed out", e.getMessage());
     }
   }
 
@@ -143,7 +143,7 @@ public class TestWebHdfsTimeouts {
       fs.getDelegationToken("renewer");
       fail("expected timeout");
     } catch (SocketTimeoutException e) {
-      assertEquals("connect timed out", e.getMessage());
+      assertEquals(fs.getUri().getAuthority() + ": connect timed out", e.getMessage());
     }
   }
 
@@ -157,7 +157,7 @@ public class TestWebHdfsTimeouts {
       fs.getDelegationToken("renewer");
       fail("expected timeout");
     } catch (SocketTimeoutException e) {
-      assertEquals("Read timed out", e.getMessage());
+      assertEquals(fs.getUri().getAuthority() + ": Read timed out", e.getMessage());
     }
   }
 
@@ -172,7 +172,7 @@ public class TestWebHdfsTimeouts {
       fs.getFileChecksum(new Path("/file"));
       fail("expected timeout");
     } catch (SocketTimeoutException e) {
-      assertEquals("connect timed out", e.getMessage());
+      assertEquals(fs.getUri().getAuthority() + ": connect timed out", e.getMessage());
     }
   }
 
@@ -187,7 +187,7 @@ public class TestWebHdfsTimeouts {
       fs.getFileChecksum(new Path("/file"));
       fail("expected timeout");
     } catch (SocketTimeoutException e) {
-      assertEquals("Read timed out", e.getMessage());
+      assertEquals(fs.getUri().getAuthority() + ": Read timed out", e.getMessage());
     }
   }
 
@@ -203,7 +203,7 @@ public class TestWebHdfsTimeouts {
       os = fs.create(new Path("/file"));
       fail("expected timeout");
     } catch (SocketTimeoutException e) {
-      assertEquals("connect timed out", e.getMessage());
+      assertEquals(fs.getUri().getAuthority() + ": connect timed out", e.getMessage());
     } finally {
       IOUtils.cleanup(LOG, os);
     }
