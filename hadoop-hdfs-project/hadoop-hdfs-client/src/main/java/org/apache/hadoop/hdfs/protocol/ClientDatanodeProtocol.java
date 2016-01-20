@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenSelector;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
+import org.apache.hadoop.hdfs.server.datanode.WorkStatus;
 
 /** An client-datanode protocol for block recovery
  */
@@ -177,4 +178,9 @@ public interface ClientDatanodeProtocol {
    */
   void cancelDiskBalancePlan(String planID) throws IOException;
 
+
+  /**
+   * Gets the status of an executing diskbalancer Plan.
+   */
+  WorkStatus queryDiskBalancerPlan() throws IOException;
 }

@@ -180,6 +180,26 @@ message CancelPlanRequestProto {
 message CancelPlanResponseProto {
 }
 
+
+/**
+ * This message allows a client to query data node to see
+ * if a disk balancer plan is executing and if so what is
+ * the status.
+ */
+message QueryPlanStatusRequestProto {
+}
+
+/**
+ * This message describes a plan if it is in progress
+ */
+message QueryPlanStatusResponseProto {
+  optional uint32 result = 1;
+  optional string status = 2;
+  optional string planID = 3;
+  optional string currentStatus = 4;
+
+}
+
 /**
  * Protocol used from client to the Datanode.
  * See the request and response for details of rpc call.
@@ -249,4 +269,10 @@ service ClientDatanodeProtocolService {
    */
   rpc cancelDiskBalancerPlan(CancelPlanRequestProto)
       returns (CancelPlanResponseProto);
+
+  /**
+   * Gets the status of an executing Plan
+   */
+  rpc queryDiskBalancerPlan(QueryPlanStatusRequestProto)
+      returns (QueryPlanStatusResponseProto);
 }

@@ -3317,4 +3317,9 @@ public class DataNode extends ReconfigurableBase
     throw new DiskbalancerException("Not Implemented", 0);
   }
 
+  @Override
+  public WorkStatus queryDiskBalancerPlan() throws IOException {
+    checkSuperuserPrivilege();
+    throw new DiskbalancerException("Not Implemented", 0);
+  }
 }

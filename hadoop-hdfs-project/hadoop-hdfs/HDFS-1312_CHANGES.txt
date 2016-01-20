@@ -19,3 +19,5 @@ HDFS-1312 Change Log
     HDFS-9595. DiskBalancer: Add cancelPlan RPC. (Anu Engineer via
     Arpit Agarwal)
 
+    HDFS-9645. DiskBalancer: Add Query RPC. (Anu Engineer via Arpit Agarwal)
+
