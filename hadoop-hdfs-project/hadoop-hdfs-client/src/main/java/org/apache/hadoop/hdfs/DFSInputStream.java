@@ -973,18 +973,29 @@ public class DFSInputStream extends FSInputStream
   public synchronized int read(@Nonnull final byte buf[], int off, int len)
       throws IOException {
     ReaderStrategy byteArrayReader = new ByteArrayStrategy(buf);
-    try (TraceScope ignored =
-             dfsClient.newPathTraceScope("DFSInputStream#byteArrayRead", src)) {
-      return readWithStrategy(byteArrayReader, off, len);
+    try (TraceScope scope =
+             dfsClient.newReaderTraceScope("DFSInputStream#byteArrayRead",
+                 src, getPos(), len)) {
+      int retLen = readWithStrategy(byteArrayReader, off, len);
+      if (retLen < len) {
+        dfsClient.addRetLenToReaderScope(scope, retLen);
+      }
+      return retLen;
     }
   }
 
   @Override
   public synchronized int read(final ByteBuffer buf) throws IOException {
     ReaderStrategy byteBufferReader = new ByteBufferStrategy(buf);
-    try (TraceScope ignored =
-             dfsClient.newPathTraceScope("DFSInputStream#byteBufferRead", src)){
-      return readWithStrategy(byteBufferReader, 0, buf.remaining());
+    int reqLen = buf.remaining();
+    try (TraceScope scope =
+             dfsClient.newReaderTraceScope("DFSInputStream#byteBufferRead",
+                 src, getPos(), reqLen)){
+      int retLen = readWithStrategy(byteBufferReader, 0, reqLen);
+      if (retLen < reqLen) {
+        dfsClient.addRetLenToReaderScope(scope, retLen);
+      }
+      return retLen;
     }
   }
 
@@ -1433,9 +1444,14 @@ public class DFSInputStream extends FSInputStream
   @Override
   public int read(long position, byte[] buffer, int offset, int length)
       throws IOException {
-    try (TraceScope ignored = dfsClient.
-        newPathTraceScope("DFSInputStream#byteArrayPread", src)) {
-      return pread(position, buffer, offset, length);
+    try (TraceScope scope = dfsClient.
+        newReaderTraceScope("DFSInputStream#byteArrayPread",
+            src, position, length)) {
+      int retLen = pread(position, buffer, offset, length);
+      if (retLen < length) {
+        dfsClient.addRetLenToReaderScope(scope, retLen);
+      }
+      return retLen;
     }
   }
 

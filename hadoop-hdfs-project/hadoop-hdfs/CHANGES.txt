@@ -936,6 +936,9 @@ Release 2.9.0 - UNRELEASED
     HDFS-9624. DataNode start slowly due to the initial DU command operations.
     (Lin Yiqun via wang)
 
+    HDFS-9576: HTrace: collect position/length information on read operations
+    (zhz via cmccabe)
+
   OPTIMIZATIONS
 
   BUG FIXES

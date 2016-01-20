@@ -2967,6 +2967,25 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
+   * Full detailed tracing for read requests: path, position in the file,
+   * and length.
+   *
+   * @param reqLen requested length
+   */
+  TraceScope newReaderTraceScope(String description, String path, long pos,
+      int reqLen) {
+    TraceScope scope = newPathTraceScope(description, path);
+    scope.addKVAnnotation("pos", Long.toString(pos));
+    scope.addKVAnnotation("reqLen", Integer.toString(reqLen));
+    return scope;
+  }
+
+  /** Add the returned length info to the scope. */
+  void addRetLenToReaderScope(TraceScope scope, int retLen) {
+    scope.addKVAnnotation("retLen", Integer.toString(retLen));
+  }
+
+  /**
    * Get the erasure coding policy information for the specified path
    *
    * @param src path to get the information for
