@@ -22,6 +22,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9415. Document dfs.cluster.administrators and
     dfs.permissions.superusergroup. (Xiaobing Zhou via Arpit Agarwal)
 
+    HDFS-9634. webhdfs client side exceptions don't provide enough details
+    (Eric Payne via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
