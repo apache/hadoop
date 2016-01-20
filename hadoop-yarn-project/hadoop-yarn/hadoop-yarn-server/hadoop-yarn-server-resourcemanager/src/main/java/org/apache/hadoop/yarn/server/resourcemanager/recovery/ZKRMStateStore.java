@@ -18,26 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.nio.charset.Charset;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.curator.framework.AuthInfo;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.api.transaction.CuratorTransaction;
 import org.apache.curator.framework.api.transaction.CuratorTransactionFinal;
-import org.apache.curator.retry.RetryNTimes;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -77,7 +64,15 @@ import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 /**
  * {@link RMStateStore} implementation backed by ZooKeeper.
@@ -140,12 +135,6 @@ public class ZKRMStateStore extends RMStateStore {
   private static final String RM_DT_MASTER_KEYS_ROOT_ZNODE_NAME =
       "RMDTMasterKeysRoot";
 
-  private String zkHostPort = null;
-  private int numRetries;
-  private int zkSessionTimeout;
-  @VisibleForTesting
-  int zkRetryInterval;
-
   /** Znode paths */
   private String zkRootNodePath;
   private String rmAppRoot;
@@ -160,17 +149,15 @@ public class ZKRMStateStore extends RMStateStore {
 
   /** Fencing related variables */
   private static final String FENCING_LOCK = "RM_ZK_FENCING_LOCK";
-  private boolean useDefaultFencingScheme = false;
   private String fencingNodePath;
   private Thread verifyActiveStatusThread;
+  private int zkSessionTimeout;
 
   /** ACL and auth info */
   private List<ACL> zkAcl;
-  private List<ZKUtil.ZKAuthInfo> zkAuths;
   @VisibleForTesting
   List<ACL> zkRootNodeAcl;
   private String zkRootNodeUsername;
-  private final String zkRootNodePassword = Long.toString(random.nextLong());
   public static final int CREATE_DELETE_PERMS =
       ZooDefs.Perms.CREATE | ZooDefs.Perms.DELETE;
   private final String zkRootNodeAuthScheme =
@@ -204,45 +191,25 @@ public class ZKRMStateStore extends RMStateStore {
         YarnConfiguration.DEFAULT_RM_ADDRESS, conf);
     Id rmId = new Id(zkRootNodeAuthScheme,
         DigestAuthenticationProvider.generateDigest(
-            zkRootNodeUsername + ":" + zkRootNodePassword));
+            zkRootNodeUsername + ":" + resourceManager.getZkRootNodePassword()));
     zkRootNodeAcl.add(new ACL(CREATE_DELETE_PERMS, rmId));
     return zkRootNodeAcl;
   }
 
   @Override
   public synchronized void initInternal(Configuration conf) throws Exception {
-    zkHostPort = conf.get(YarnConfiguration.RM_ZK_ADDRESS);
-    if (zkHostPort == null) {
-      throw new YarnRuntimeException("No server address specified for " +
-          "zookeeper state store for Resource Manager recovery. " +
-          YarnConfiguration.RM_ZK_ADDRESS + " is not configured.");
-    }
-    numRetries =
-        conf.getInt(YarnConfiguration.RM_ZK_NUM_RETRIES,
-            YarnConfiguration.DEFAULT_ZK_RM_NUM_RETRIES);
+
+    /* Initialize fencing related paths, acls, and ops */
     znodeWorkingPath =
         conf.get(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH,
             YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_PARENT_PATH);
-    zkSessionTimeout =
-        conf.getInt(YarnConfiguration.RM_ZK_TIMEOUT_MS,
-            YarnConfiguration.DEFAULT_RM_ZK_TIMEOUT_MS);
-
-    if (HAUtil.isHAEnabled(conf)) {
-      zkRetryInterval = zkSessionTimeout / numRetries;
-    } else {
-      zkRetryInterval =
-          conf.getInt(YarnConfiguration.RM_ZK_RETRY_INTERVAL_MS,
-              YarnConfiguration.DEFAULT_RM_ZK_RETRY_INTERVAL_MS);
-    }
+    zkRootNodePath = getNodePath(znodeWorkingPath, ROOT_ZNODE_NAME);
+    fencingNodePath = getNodePath(zkRootNodePath, FENCING_LOCK);
+    rmAppRoot = getNodePath(zkRootNodePath, RM_APP_ROOT);
+    zkSessionTimeout = conf.getInt(YarnConfiguration.RM_ZK_TIMEOUT_MS,
+        YarnConfiguration.DEFAULT_RM_ZK_TIMEOUT_MS);
 
     zkAcl = RMZKUtils.getZKAcls(conf);
-    zkAuths = RMZKUtils.getZKAuths(conf);
-
-    zkRootNodePath = getNodePath(znodeWorkingPath, ROOT_ZNODE_NAME);
-    rmAppRoot = getNodePath(zkRootNodePath, RM_APP_ROOT);
-
-    /* Initialize fencing related paths, acls, and ops */
-    fencingNodePath = getNodePath(zkRootNodePath, FENCING_LOCK);
     if (HAUtil.isHAEnabled(conf)) {
       String zkRootNodeAclConf = HAUtil.getConfValueForRMInstance
           (YarnConfiguration.ZK_RM_STATE_STORE_ROOT_NODE_ACL, conf);
@@ -256,7 +223,6 @@ public class ZKRMStateStore extends RMStateStore {
           throw bafe;
         }
       } else {
-        useDefaultFencingScheme = true;
         zkRootNodeAcl = constructZkRootNodeACL(conf, zkAcl);
       }
     }
@@ -272,19 +238,22 @@ public class ZKRMStateStore extends RMStateStore {
     amrmTokenSecretManagerRoot =
         getNodePath(zkRootNodePath, AMRMTOKEN_SECRET_MANAGER_ROOT);
     reservationRoot = getNodePath(zkRootNodePath, RESERVATION_SYSTEM_ROOT);
+    curatorFramework = resourceManager.getCurator();
+    if (curatorFramework == null) {
+      curatorFramework = resourceManager.createAndStartCurator(conf);
+    }
   }
 
   @Override
   public synchronized void startInternal() throws Exception {
-    // createConnection for future API calls
-    createConnection();
 
     // ensure root dirs exist
     createRootDirRecursively(znodeWorkingPath);
     create(zkRootNodePath);
     setRootNodeAcls();
     delete(fencingNodePath);
-    if (HAUtil.isHAEnabled(getConfig())) {
+    if (HAUtil.isHAEnabled(getConfig()) && !HAUtil
+        .isAutomaticFailoverEnabled(getConfig())) {
       verifyActiveStatusThread = new VerifyActiveStatusThread();
       verifyActiveStatusThread.start();
     }
@@ -332,7 +301,9 @@ public class ZKRMStateStore extends RMStateStore {
       verifyActiveStatusThread.interrupt();
       verifyActiveStatusThread.join(1000);
     }
-    IOUtils.closeStream(curatorFramework);
+    if (!HAUtil.isHAEnabled(getConfig())) {
+      IOUtils.closeStream(curatorFramework);
+    }
   }
 
   @Override
@@ -907,34 +878,6 @@ public class ZKRMStateStore extends RMStateStore {
       sb.append("/").append(pathParts[i]);
       create(sb.toString());
     }
-  }
-
-  /*
-   * ZK operations using curator
-   */
-  private void createConnection() throws Exception {
-    // Curator connection
-    CuratorFrameworkFactory.Builder builder = CuratorFrameworkFactory.builder();
-    builder = builder.connectString(zkHostPort)
-        .connectionTimeoutMs(zkSessionTimeout)
-        .retryPolicy(new RetryNTimes(numRetries, zkRetryInterval));
-
-    // Set up authorization based on fencing scheme
-    List<AuthInfo> authInfos = new ArrayList<>();
-    for (ZKUtil.ZKAuthInfo zkAuth : zkAuths) {
-      authInfos.add(new AuthInfo(zkAuth.getScheme(), zkAuth.getAuth()));
-    }
-    if (useDefaultFencingScheme) {
-      byte[] defaultFencingAuth =
-          (zkRootNodeUsername + ":" + zkRootNodePassword).getBytes(
-              Charset.forName("UTF-8"));
-      authInfos.add(new AuthInfo(zkRootNodeAuthScheme, defaultFencingAuth));
-    }
-    builder = builder.authorization(authInfos);
-
-    // Connect to ZK
-    curatorFramework = builder.build();
-    curatorFramework.start();
   }
 
   @VisibleForTesting

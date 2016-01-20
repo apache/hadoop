@@ -95,7 +95,7 @@ public abstract class RMStateStore extends AbstractService {
       "ReservationSystemRoot";
   protected static final String VERSION_NODE = "RMVersionNode";
   protected static final String EPOCH_NODE = "EpochNode";
-  private ResourceManager resourceManager;
+  protected ResourceManager resourceManager;
   private final ReadLock readLock;
   private final WriteLock writeLock;
 

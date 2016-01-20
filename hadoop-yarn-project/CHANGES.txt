@@ -98,6 +98,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4526. Make SystemClock singleton so AppSchedulingInfo could use it. 
     (kasha)
 
+    YARN-4559. Make leader elector and zk store share the same curator client.
+    (Jian He via xgong)
+
   OPTIMIZATIONS
 
   BUG FIXES
