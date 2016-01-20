@@ -59,6 +59,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9648. TestStartup.testImageChecksum is broken by HDFS-9569's message
     change. (Wei-Chiu Chuang via Yongjun Zhang)
 
+    HDFS-9661. Deadlock in DN.FsDatasetImpl between moveBlockAcrossStorage and
+    createRbw (ade via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
