@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreTestBase.TestDispatcher;
 import org.apache.hadoop.util.ZKUtil;
 
@@ -80,6 +81,7 @@ public class TestZKRMStateStoreZKClientConnections {
 
       public TestZKRMStateStore(Configuration conf, String workingZnode)
           throws Exception {
+        setResourceManager(new ResourceManager());
         init(conf);
         start();
         assertTrue(znodeWorkingPath.equals(workingZnode));
@@ -167,25 +169,5 @@ public class TestZKRMStateStoreZKClientConnections {
     conf.set(YarnConfiguration.RM_ZK_AUTH, TEST_AUTH_GOOD);
 
     zkClientTester.getRMStateStore(conf);
-  }
-
-  @Test
-  public void testZKRetryInterval() throws Exception {
-    TestZKClient zkClientTester = new TestZKClient();
-    YarnConfiguration conf = new YarnConfiguration();
-
-    ZKRMStateStore store =
-        (ZKRMStateStore) zkClientTester.getRMStateStore(conf);
-    assertEquals(YarnConfiguration.DEFAULT_RM_ZK_RETRY_INTERVAL_MS,
-        store.zkRetryInterval);
-    store.stop();
-
-    conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
-    store =
-        (ZKRMStateStore) zkClientTester.getRMStateStore(conf);
-    assertEquals(YarnConfiguration.DEFAULT_RM_ZK_TIMEOUT_MS /
-            YarnConfiguration.DEFAULT_ZK_RM_NUM_RETRIES,
-        store.zkRetryInterval);
-    store.stop();
   }
 }

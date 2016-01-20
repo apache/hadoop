@@ -106,6 +106,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
 
       public TestZKRMStateStoreInternal(Configuration conf, String workingZnode)
           throws Exception {
+        setResourceManager(new ResourceManager());
         init(conf);
         start();
         assertTrue(znodeWorkingPath.equals(workingZnode));

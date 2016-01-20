@@ -19,14 +19,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
-import org.apache.curator.retry.RetryNTimes;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.service.AbstractService;
@@ -44,35 +41,23 @@ public class LeaderElectorService extends AbstractService implements
   private RMContext rmContext;
   private String latchPath;
   private String rmId;
+  private ResourceManager rm;
 
-  public LeaderElectorService(RMContext rmContext) {
+  public LeaderElectorService(RMContext rmContext, ResourceManager rm) {
     super(LeaderElectorService.class.getName());
     this.rmContext = rmContext;
-
+    this.rm = rm;
   }
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    String zkHostPort = conf.get(YarnConfiguration.RM_ZK_ADDRESS);
-    Preconditions.checkNotNull(zkHostPort,
-        YarnConfiguration.RM_ZK_ADDRESS + " is not set");
-
     rmId = HAUtil.getRMHAId(conf);
     String clusterId = YarnConfiguration.getClusterId(conf);
-
-    int zkSessionTimeout = conf.getInt(YarnConfiguration.RM_ZK_TIMEOUT_MS,
-        YarnConfiguration.DEFAULT_RM_ZK_TIMEOUT_MS);
-    int maxRetryNum = conf.getInt(YarnConfiguration.RM_ZK_NUM_RETRIES,
-        YarnConfiguration.DEFAULT_ZK_RM_NUM_RETRIES);
-
     String zkBasePath = conf.get(
         YarnConfiguration.AUTO_FAILOVER_ZK_BASE_PATH,
         YarnConfiguration.DEFAULT_AUTO_FAILOVER_ZK_BASE_PATH);
     latchPath = zkBasePath + "/" + clusterId;
-
-    curator = CuratorFrameworkFactory.builder().connectString(zkHostPort)
-        .retryPolicy(new RetryNTimes(maxRetryNum, zkSessionTimeout)).build();
-    curator.start();
+    curator = rm.getCurator();
     initAndStartLeaderLatch();
     super.serviceInit(conf);
   }
