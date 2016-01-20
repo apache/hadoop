@@ -915,8 +915,10 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     statusList.add(status1);
     NodeHealthStatus nodeHealth = NodeHealthStatus.newInstance(true,
         "", System.currentTimeMillis());
-    node1.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeHealth,
-        statusList, null, nodeHeartbeat1));
+    NodeStatus nodeStatus = NodeStatus.newInstance(nm1.getNodeId(), 0,
+        statusList, null, nodeHealth, null, null, null);
+    node1.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeStatus,
+        nodeHeartbeat1));
 
     Assert.assertEquals(1, node1.getRunningApps().size());
     Assert.assertEquals(app1.getApplicationId(), node1.getRunningApps().get(0));
@@ -930,8 +932,10 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         ContainerState.RUNNING, "", 0);
     statusList = new ArrayList<ContainerStatus>();
     statusList.add(status2);
-    node2.handle(new RMNodeStatusEvent(nm2.getNodeId(), nodeHealth,
-        statusList, null, nodeHeartbeat2));
+    nodeStatus = NodeStatus.newInstance(nm1.getNodeId(), 0,
+        statusList, null, nodeHealth, null, null, null);
+    node2.handle(new RMNodeStatusEvent(nm2.getNodeId(), nodeStatus,
+        nodeHeartbeat2));
     Assert.assertEquals(1, node2.getRunningApps().size());
     Assert.assertEquals(app2.getApplicationId(), node2.getRunningApps().get(0));
 
