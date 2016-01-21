@@ -56,7 +56,7 @@ public abstract class AbstractErasureDecoder extends AbstractErasureCoder {
    * We have all the data blocks and parity blocks as input blocks for
    * recovering by default. It's codec specific
    * @param blockGroup
-   * @return
+   * @return input blocks
    */
   protected ECBlock[] getInputBlocks(ECBlockGroup blockGroup) {
     ECBlock[] inputBlocks = new ECBlock[getNumDataUnits() +

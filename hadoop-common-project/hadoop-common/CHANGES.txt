@@ -262,6 +262,9 @@ Trunk (Unreleased)
     HADOOP-11887. Introduce Intel ISA-L erasure coding library for native
     erasure encoding support (Kai Zheng via Colin P. McCabe)
 
+    HADOOP-11828. Implement the Hitchhiker erasure coding algorithm.
+    (Jack Liuquan via zhz)
+
   BUG FIXES
 
     HADOOP-12617. SPNEGO authentication request to non-default realm gets
