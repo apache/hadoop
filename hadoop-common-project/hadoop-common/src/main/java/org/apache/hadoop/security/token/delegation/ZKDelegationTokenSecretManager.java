@@ -141,7 +141,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         conf.getLong(DelegationTokenManager.MAX_LIFETIME,
             DelegationTokenManager.MAX_LIFETIME_DEFAULT) * 1000,
         conf.getLong(DelegationTokenManager.RENEW_INTERVAL,
-            DelegationTokenManager.RENEW_INTERVAL_DEFAULT * 1000),
+            DelegationTokenManager.RENEW_INTERVAL_DEFAULT) * 1000,
         conf.getLong(DelegationTokenManager.REMOVAL_SCAN_INTERVAL,
             DelegationTokenManager.REMOVAL_SCAN_INTERVAL_DEFAULT) * 1000);
     shutdownTimeout = conf.getLong(ZK_DTSM_ZK_SHUTDOWN_TIMEOUT,
