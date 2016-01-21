@@ -22,9 +22,10 @@ Hadoop: Capacity Scheduler
     * [Setting up `ResourceManager` to use `CapacityScheduler`](#Setting_up_ResourceManager_to_use_CapacityScheduler`)
     * [Setting up queues](#Setting_up_queues)
     * [Queue Properties](#Queue_Properties)
+    * [Setup for application priority](#Setup_for_application_priority.)
+    * [Capacity Scheduler container preemption](#Capacity_Scheduler_container_preemption)
     * [Other Properties](#Other_Properties)
     * [Reviewing the configuration of the CapacityScheduler](#Reviewing_the_configuration_of_the_CapacityScheduler)
-    * [Setup for application priority](#Setup_for_application_priority.)
 * [Changing Queue Configuration](#Changing_Queue_Configuration)
 
 Purpose
@@ -58,7 +59,7 @@ The `CapacityScheduler` supports the following features:
 
 * **Security** - Each queue has strict ACLs which controls which users can submit applications to individual queues. Also, there are safe-guards to ensure that users cannot view and/or modify applications from other users. Also, per-queue and system administrator roles are supported.
 
-* **Elasticity** - Free resources can be allocated to any queue beyond it's capacity. When there is demand for these resources from queues running below capacity at a future point in time, as tasks scheduled on these resources complete, they will be assigned to applications on queues running below the capacity (pre-emption is not supported). This ensures that resources are available in a predictable and elastic manner to queues, thus preventing artifical silos of resources in the cluster which helps utilization.
+* **Elasticity** - Free resources can be allocated to any queue beyond its capacity. When there is demand for these resources from queues running below capacity at a future point in time, as tasks scheduled on these resources complete, they will be assigned to applications on queues running below the capacity (pre-emption is also supported). This ensures that resources are available in a predictable and elastic manner to queues, thus preventing artifical silos of resources in the cluster which helps utilization.
 
 * **Multi-tenancy** - Comprehensive set of limits are provided to prevent a single application, user and queue from monopolizing resources of the queue or the cluster as a whole to ensure that the cluster isn't overwhelmed.
 
@@ -180,6 +181,54 @@ Example:
  </property>
 ```
 
+###Setup for application priority.
+
+  Application priority works only along with FIFO ordering policy. Default ordering policy is FIFO.
+
+  Default priority for an application can be at cluster level and queue level.
+
+  * Cluster-level priority : Any application submitted with a priority greater than the cluster-max priority will have its priority reset to the cluster-max priority.
+          $HADOOP_HOME/etc/hadoop/yarn-site.xml is the configuration file for cluster-max priority.
+
+| Property | Description |
+|:---- |:---- |
+| `yarn.cluster.max-application-priority` | Defines maximum application priority in a cluster. |
+
+  * Leaf Queue-level priority : Each leaf queue provides default priority by the administrator. The queue's default priority will be used for any application submitted without a specified priority.
+         $HADOOP_HOME/etc/hadoop/capacity-scheduler.xml is the configuration file for queue-level priority.
+
+| Property | Description |
+|:---- |:---- |
+| `yarn.scheduler.capacity.root.<leaf-queue-path>.default-application-priority` | Defines default application priority in a leaf queue. |
+
+**Note:** Priority of an application will not be changed when application is moved to different queue.
+
+### Capacity Scheduler container preemption
+
+ The `CapacityScheduler` supports preemption of container from the queues whose resource usage is more than their guaranteed capacity. The following configuration parameters need to be enabled in yarn-site.xml for supporting preemption of application containers.
+
+| Property | Description |
+|:---- |:---- |
+| `yarn.resourcemanager.scheduler.monitor.enable` | Enable a set of periodic monitors (specified in yarn.resourcemanager.scheduler.monitor.policies) that affect the scheduler. Default value is false. |
+| `yarn.resourcemanager.scheduler.monitor.policies` | The list of SchedulingEditPolicy classes that interact with the scheduler. Configured policies need to be compatible with the scheduler. Default value is `org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy` which is compatible with `CapacityScheduler` |
+
+The following configuration parameters can be configured in yarn-site.xml to control the preemption of containers when `ProportionalCapacityPreemptionPolicy` class is configured for `yarn.resourcemanager.scheduler.monitor.policies`
+
+| Property | Description |
+|:---- |:---- |
+| `yarn.resourcemanager.monitor.capacity.preemption.observe_only` | If true, run the policy but do not affect the cluster with preemption and kill events. Default value is false |
+| `yarn.resourcemanager.monitor.capacity.preemption.monitoring_interval` | Time in milliseconds between invocations of this ProportionalCapacityPreemptionPolicy policy. Default value is 3000 |
+| `yarn.resourcemanager.monitor.capacity.preemption.max_wait_before_kill` | Time in milliseconds between requesting a preemption from an application and killing the container. Default value is 15000 |
+| `yarn.resourcemanager.monitor.capacity.preemption.total_preemption_per_round` | Maximum percentage of resources preempted in a single round. By controlling this value one can throttle the pace at which containers are reclaimed from the cluster. After computing the total desired preemption, the policy scales it back within this limit. Default value is `0.1` |
+| `yarn.resourcemanager.monitor.capacity.preemption.max_ignored_over_capacity` | Maximum amount of resources above the target capacity ignored for preemption. This defines a deadzone around the target capacity that helps prevent thrashing and oscillations around the computed target balance. High values would slow the time to capacity and (absent natural.completions) it might prevent convergence to guaranteed capacity. Default value is  `0.1` |
+| `yarn.resourcemanager.monitor.capacity.preemption.natural_termination_factor` | Given a computed preemption target, account for containers naturally expiring and preempt only this percentage of the delta. This determines the rate of geometric convergence into the deadzone (`MAX_IGNORED_OVER_CAPACITY`). For example, a termination factor of 0.5 will reclaim almost 95% of resources within 5 * #`WAIT_TIME_BEFORE_KILL`, even absent natural termination. Default value is `0.2` |
+
+ The `CapacityScheduler` supports the following configurations in capacity-scheduler.xml to control the preemption of application containers submitted to a queue.
+
+| Property | Description |
+|:---- |:---- |
+| `yarn.scheduler.capacity.<queue-path>.disable_preemption` | This configuration can be set to `true` to selectively disable preemption of application containers submitted to a given queue. This property applies only when system wide preemption is enabled by configuring `yarn.resourcemanager.scheduler.monitor.enable` to *true* and `yarn.resourcemanager.scheduler.monitor.policies` to *ProportionalCapacityPreemptionPolicy*. If this property is not set for a queue, then the property value is inherited from the queue's parent. Default value is false.
+
 ###Other Properties
 
   * Resource Calculator
@@ -203,28 +252,6 @@ Example:
   * Open the `ResourceManager` web UI.
 
   * The */scheduler* web-page should show the resource usages of individual queues.
-
-###Setup for application priority.
-
-  Application priority works only along with FIFO ordering policy. Default ordering policy is FIFO.
-
-  Default priority for an application can be at cluster level and queue level.
-
-  * Cluster-level priority : Any application that is submitted with a priority is greater then cluster max priority then application priority will be reset with cluster-max priority.
-          $HADOOP_HOME/etc/hadoop/yarn-site.xml is the configuration file for cluster-max priority.
-
-| Property | Description |
-|:---- |:---- |
-| `yarn.cluster.max-application-priority` | Defines maximum application priority in a cluster. |
-
-  * Leaf Queue-level priority : Each leaf queue provides default priority by the administrator. If application is not submitted with any priority, then default priority of the queue will be taken in account.
-         $HADOOP_HOME/etc/hadoop/capacity-scheduler.xml is the configuration file for queue-level priority.
-
-| Property | Description |
-|:---- |:---- |
-| `yarn.scheduler.capacity.root.<leaf-queue-path>.default-application-priority` | Defines default application priority in a leaf queue. |
-
-**Note:** Priority of an application will not be changed when application is moved to different queue.
 
 Changing Queue Configuration
 ----------------------------
