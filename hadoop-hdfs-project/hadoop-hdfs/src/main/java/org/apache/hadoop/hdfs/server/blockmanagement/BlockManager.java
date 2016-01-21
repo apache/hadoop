@@ -75,7 +75,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
@@ -292,11 +291,15 @@ public class BlockManager implements BlockStatsMXBean {
   /** Check whether name system is running before terminating */
   private boolean checkNSRunning = true;
 
-  public BlockManager(final Namesystem namesystem, final Configuration conf)
+  private final BlockIdManager blockIdManager;
+
+  public BlockManager(final Namesystem namesystem, boolean haEnabled,
+      final Configuration conf)
     throws IOException {
     this.namesystem = namesystem;
     datanodeManager = new DatanodeManager(this, namesystem, conf);
     heartbeatManager = datanodeManager.getHeartbeatManager();
+    this.blockIdManager = new BlockIdManager(this);
 
     startupDelayBlockDeletionInMs = conf.getLong(
         DFSConfigKeys.DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_KEY,
@@ -371,7 +374,7 @@ public class BlockManager implements BlockStatsMXBean {
         DFSConfigKeys.DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT_DEFAULT);
     this.blockReportLeaseManager = new BlockReportLeaseManager(conf);
 
-    bmSafeMode = new BlockManagerSafeMode(this, namesystem, conf);
+    bmSafeMode = new BlockManagerSafeMode(this, namesystem, haEnabled, conf);
 
     LOG.info("defaultReplication         = " + defaultReplication);
     LOG.info("maxReplication             = " + maxReplication);
@@ -475,8 +478,7 @@ public class BlockManager implements BlockStatsMXBean {
 
   /** Should the access keys be updated? */
   boolean shouldUpdateBlockKey(final long updateTime) throws IOException {
-    return isBlockTokenEnabled()? blockTokenSecretManager.updateKeys(updateTime)
-        : false;
+    return isBlockTokenEnabled() && blockTokenSecretManager.updateKeys(updateTime);
   }
 
   public void activate(Configuration conf, long blockTotal) {
@@ -523,7 +525,7 @@ public class BlockManager implements BlockStatsMXBean {
 
   /** Dump meta data to out. */
   public void metaSave(PrintWriter out) {
-    assert namesystem.hasWriteLock();
+    assert namesystem.hasWriteLock(); // TODO: block manager read lock and NS write lock
     final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
     datanodeManager.fetchDatanodes(live, dead, false);
@@ -1033,27 +1035,8 @@ public class BlockManager implements BlockStatsMXBean {
     return countNodes(b).liveReplicas() >= replication;
   }
 
-  /**
-   * return a list of blocks & their locations on <code>datanode</code> whose
-   * total size is <code>size</code>
-   * 
-   * @param datanode on which blocks are located
-   * @param size total size of blocks
-   */
-  public BlocksWithLocations getBlocks(DatanodeID datanode, long size
-      ) throws IOException {
-    namesystem.checkOperation(OperationCategory.READ);
-    namesystem.readLock();
-    try {
-      namesystem.checkOperation(OperationCategory.READ);
-      return getBlocksWithLocations(datanode, size);  
-    } finally {
-      namesystem.readUnlock();
-    }
-  }
-
   /** Get all blocks with location information from a datanode. */
-  private BlocksWithLocations getBlocksWithLocations(final DatanodeID datanode,
+  public BlocksWithLocations getBlocksWithLocations(final DatanodeID datanode,
       final long size) throws UnregisteredNodeException {
     final DatanodeDescriptor node = getDatanodeManager().getDatanode(datanode);
     if (node == null) {
@@ -2183,8 +2166,7 @@ public class BlockManager implements BlockStatsMXBean {
             + " on " + storageInfo.getDatanodeDescriptor() + " size " +
             iblk.getNumBytes() + " replicaState = " + reportedState);
       }
-      if (shouldPostponeBlocksFromFuture &&
-          namesystem.isGenStampInFuture(iblk)) {
+      if (shouldPostponeBlocksFromFuture && isGenStampInFuture(iblk)) {
         queueReportedBlock(storageInfo, iblk, reportedState,
             QUEUE_REASON_FUTURE_GENSTAMP);
         continue;
@@ -2326,8 +2308,7 @@ public class BlockManager implements BlockStatsMXBean {
           + " replicaState = " + reportedState);
     }
   
-    if (shouldPostponeBlocksFromFuture &&
-        namesystem.isGenStampInFuture(block)) {
+    if (shouldPostponeBlocksFromFuture && isGenStampInFuture(block)) {
       queueReportedBlock(storageInfo, block, reportedState,
           QUEUE_REASON_FUTURE_GENSTAMP);
       return null;
@@ -3054,8 +3035,7 @@ public class BlockManager implements BlockStatsMXBean {
 
   private void removeStoredBlock(DatanodeStorageInfo storageInfo, Block block,
       DatanodeDescriptor node) {
-    if (shouldPostponeBlocksFromFuture &&
-        namesystem.isGenStampInFuture(block)) {
+    if (shouldPostponeBlocksFromFuture && isGenStampInFuture(block)) {
       queueReportedBlock(storageInfo, block, null,
           QUEUE_REASON_FUTURE_GENSTAMP);
       return;
@@ -3814,6 +3794,7 @@ public class BlockManager implements BlockStatsMXBean {
   }
   
   public void clear() {
+    blockIdManager.clear();
     clearQueues();
     blocksMap.clear();
   }
@@ -3976,5 +3957,25 @@ public class BlockManager implements BlockStatsMXBean {
         queue.put(action);
       }
     }
+  }
+
+  public BlockIdManager getBlockIdManager() {
+    return blockIdManager;
+  }
+
+  public long nextGenerationStamp(boolean legacyBlock) throws IOException {
+    return blockIdManager.nextGenerationStamp(legacyBlock);
+  }
+
+  public boolean isLegacyBlock(Block block) {
+    return blockIdManager.isLegacyBlock(block);
+  }
+
+  public long nextBlockId() {
+    return blockIdManager.nextBlockId();
+  }
+
+  boolean isGenStampInFuture(Block block) {
+    return blockIdManager.isGenStampInFuture(block);
   }
 }

@@ -219,7 +219,7 @@ final class FSDirTruncateOp {
     if (newBlock == null) {
       newBlock = (shouldCopyOnTruncate) ? fsn.createNewBlock() : new Block(
           oldBlock.getBlockId(), oldBlock.getNumBytes(),
-          fsn.nextGenerationStamp(fsn.getBlockIdManager().isLegacyBlock(
+          fsn.nextGenerationStamp(fsn.getBlockManager().isLegacyBlock(
               oldBlock)));
     }
 

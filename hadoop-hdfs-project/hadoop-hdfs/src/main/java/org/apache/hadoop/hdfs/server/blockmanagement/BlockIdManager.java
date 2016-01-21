@@ -144,7 +144,7 @@ public class BlockIdManager {
   /**
    * Increments, logs and then returns the stamp
    */
-  public long nextGenerationStamp(boolean legacyBlock) throws IOException {
+  long nextGenerationStamp(boolean legacyBlock) throws IOException {
     return legacyBlock ? getNextGenerationStampV1() :
       getNextGenerationStampV2();
   }
@@ -180,18 +180,18 @@ public class BlockIdManager {
    *
    * @return true if the block ID was randomly generated, false otherwise.
    */
-  public boolean isLegacyBlock(Block block) {
+  boolean isLegacyBlock(Block block) {
     return block.getGenerationStamp() < getGenerationStampV1Limit();
   }
 
   /**
    * Increments, logs and then returns the block ID
    */
-  public long nextBlockId() {
+  long nextBlockId() {
     return blockIdGenerator.nextValue();
   }
 
-  public boolean isGenStampInFuture(Block block) {
+  boolean isGenStampInFuture(Block block) {
     if (isLegacyBlock(block)) {
       return block.getGenerationStamp() > getGenerationStampV1();
     } else {
@@ -199,7 +199,7 @@ public class BlockIdManager {
     }
   }
 
-  public void clear() {
+  void clear() {
     generationStampV1.setCurrentValue(GenerationStamp.LAST_RESERVED_STAMP);
     generationStampV2.setCurrentValue(GenerationStamp.LAST_RESERVED_STAMP);
     getBlockIdGenerator().setCurrentValue(SequentialBlockIdGenerator

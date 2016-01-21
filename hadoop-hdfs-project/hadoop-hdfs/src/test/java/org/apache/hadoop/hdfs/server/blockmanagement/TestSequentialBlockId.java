@@ -116,8 +116,8 @@ public class TestSequentialBlockId {
 
       // Rewind the block ID counter in the name system object. This will result
       // in block ID collisions when we try to allocate new blocks.
-      SequentialBlockIdGenerator blockIdGenerator = fsn.getBlockIdManager()
-        .getBlockIdGenerator();
+      SequentialBlockIdGenerator blockIdGenerator = fsn.getBlockManager()
+          .getBlockIdManager().getBlockIdGenerator();
       blockIdGenerator.setCurrentValue(blockIdGenerator.getCurrentValue() - 5);
 
       // Trigger collisions by creating a new file.
