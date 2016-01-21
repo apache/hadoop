@@ -656,7 +656,8 @@ public class FairScheduler extends
     if (!queue.hasAccess(QueueACL.SUBMIT_APPLICATIONS, userUgi)
         && !queue.hasAccess(QueueACL.ADMINISTER_QUEUE, userUgi)) {
       String msg = "User " + userUgi.getUserName() +
-              " cannot submit applications to queue " + queue.getName();
+              " cannot submit applications to queue " + queue.getName() +
+              "(requested queuename is " + queueName + ")";
       LOG.info(msg);
       rmContext.getDispatcher().getEventHandler()
           .handle(new RMAppEvent(applicationId,
