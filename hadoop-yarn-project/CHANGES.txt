@@ -1289,6 +1289,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4565. Fix a bug that leads to AM resource limit not hornored when
     sizeBasedWeight enabled for FairOrderingPolicy. (wtan via jianhe)
 
+    YARN-4557. Fix improper Queues sorting in PartitionedQueueComparator
+    when accessible-node-labels=*. (Naganarasimha G R via wangda)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

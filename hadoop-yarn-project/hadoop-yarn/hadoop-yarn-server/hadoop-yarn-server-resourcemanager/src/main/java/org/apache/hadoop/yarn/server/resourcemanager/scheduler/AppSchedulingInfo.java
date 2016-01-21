@@ -57,7 +57,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 public class AppSchedulingInfo {
   
   private static final Log LOG = LogFactory.getLog(AppSchedulingInfo.class);
-  private static final Comparator COMPARATOR =
+  private static final Comparator<Priority> COMPARATOR =
       new org.apache.hadoop.yarn.server.resourcemanager.resource.Priority.Comparator();
   private static final int EPOCH_BIT_SHIFT = 40;
 
