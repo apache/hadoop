@@ -58,6 +58,8 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.htrace.core.Span;
+import org.apache.htrace.core.Tracer;
 
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_DONTNEED;
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.SYNC_FILE_RANGE_WRITE;
@@ -136,6 +138,7 @@ class BlockReceiver implements Closeable {
   private long lastResponseTime = 0;
   private boolean isReplaceBlock = false;
   private DataOutputStream replyOut = null;
+  private long maxWriteToDiskMs = 0;
   
   private boolean pinning;
   private long lastSentTime;
@@ -302,6 +305,11 @@ class BlockReceiver implements Closeable {
    */
   @Override
   public void close() throws IOException {
+    Span span = Tracer.getCurrentSpan();
+    if (span != null) {
+      span.addKVAnnotation("maxWriteToDiskMs",
+            Long.toString(maxWriteToDiskMs));
+    }
     packetReceiver.close();
 
     IOException ioe = null;
@@ -697,6 +705,9 @@ class BlockReceiver implements Closeable {
           long begin = Time.monotonicNow();
           out.write(dataBuf.array(), startByteToDisk, numBytesToDisk);
           long duration = Time.monotonicNow() - begin;
+          if (duration > maxWriteToDiskMs) {
+            maxWriteToDiskMs = duration;
+          }
           if (duration > datanodeSlowLogThresholdMs) {
             LOG.warn("Slow BlockReceiver write data to disk cost:" + duration
                 + "ms (threshold=" + datanodeSlowLogThresholdMs + "ms)");

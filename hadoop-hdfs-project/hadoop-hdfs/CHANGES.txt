@@ -941,6 +941,9 @@ Release 2.9.0 - UNRELEASED
 
     HDFS-9542. Move BlockIdManager from FSNamesystem to BlockManager. (jing9)
 
+    HDFS-9674. The HTrace span for OpWriteBlock should record the maxWriteToDisk
+    time. (cmccabe via zhz)
+
   OPTIMIZATIONS
 
   BUG FIXES
