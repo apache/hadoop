@@ -44,22 +44,27 @@ public class ShutdownHookManager {
   private static final Log LOG = LogFactory.getLog(ShutdownHookManager.class);
 
   static {
-    Runtime.getRuntime().addShutdownHook(
-      new Thread() {
-        @Override
-        public void run() {
-          MGR.shutdownInProgress.set(true);
-          for (Runnable hook: MGR.getShutdownHooksInOrder()) {
-            try {
-              hook.run();
-            } catch (Throwable ex) {
-              LOG.warn("ShutdownHook '" + hook.getClass().getSimpleName() +
-                       "' failed, " + ex.toString(), ex);
+    try {
+      Runtime.getRuntime().addShutdownHook(
+        new Thread() {
+          @Override
+          public void run() {
+            MGR.shutdownInProgress.set(true);
+            for (Runnable hook: MGR.getShutdownHooksInOrder()) {
+              try {
+                hook.run();
+              } catch (Throwable ex) {
+                LOG.warn("ShutdownHook '" + hook.getClass().getSimpleName() +
+                         "' failed, " + ex.toString(), ex);
+              }
             }
           }
         }
-      }
-    );
+      );
+    } catch (IllegalStateException ex) {
+      // JVM is being shut down. Ignore
+      LOG.warn("Failed to add the ShutdownHook", ex);
+    }
   }
 
   /**
