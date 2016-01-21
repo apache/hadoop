@@ -811,6 +811,10 @@ public class FSDirectory implements Closeable {
       long dsDelta, short oldRep, short newRep) {
     EnumCounters<StorageType> typeSpaceDeltas =
         new EnumCounters<StorageType>(StorageType.class);
+    // empty file
+    if(dsDelta == 0){
+      return typeSpaceDeltas;
+    }
     // Storage type and its quota are only available when storage policy is set
     if (storagePolicyID != HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
       BlockStoragePolicy storagePolicy = getBlockManager().getStoragePolicy(storagePolicyID);
