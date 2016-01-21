@@ -1633,6 +1633,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12423. Handle failure of registering shutdownhook by
     ShutdownHookManager in static block (Abhishek Agarwal via vinayakumarb)
 
+    HADOOP-7161. Remove unnecessary oro package from dependency management
+    section. (Sean Busbey via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
