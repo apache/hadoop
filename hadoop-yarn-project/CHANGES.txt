@@ -72,6 +72,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4610. Reservations continue looking for one app causes other apps to
     starve (jlowe)
 
+    YARN-4623. TestSystemMetricsPublisher#testPublishAppAttemptMetricsForUnmanagedAM
+    fails with NPE on branch-2.7. (Naganarasimha G R via junping_du)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

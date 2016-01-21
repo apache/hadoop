@@ -160,6 +160,8 @@ public class SystemMetricsPublisher extends CompositeService {
   public void appAttemptFinished(RMAppAttempt appAttempt,
       RMAppAttemptState appAttemtpState, RMApp app, long finishedTime) {
     if (publishSystemMetrics) {
+      ContainerId container = (appAttempt.getMasterContainer() == null) ? null
+          : appAttempt.getMasterContainer().getId();
       dispatcher.getEventHandler().handle(
           new AppAttemptFinishedEvent(
               appAttempt.getAppAttemptId(),
@@ -171,7 +173,7 @@ public class SystemMetricsPublisher extends CompositeService {
               app.getFinalApplicationStatus(),
               RMServerUtils.createApplicationAttemptState(appAttemtpState),
               finishedTime,
-              appAttempt.getMasterContainer().getId()));
+              container));
     }
   }
 
