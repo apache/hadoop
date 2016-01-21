@@ -29,6 +29,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRIT
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -44,6 +45,8 @@ import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.QuotaUsage;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.AfterClass;
@@ -160,7 +163,55 @@ public class TestViewFsDefaultValue {
     assertEquals(100, cs.getQuota()); 
     assertEquals(500, cs.getSpaceQuota()); 
   }
- 
+
+  /**
+   * Test that getQuotaUsage can be retrieved on the client side.
+   */
+  @Test
+  public void testGetQuotaUsage() throws IOException {
+    FileSystem hFs = cluster.getFileSystem(0);
+    final DistributedFileSystem dfs = (DistributedFileSystem)hFs;
+    dfs.setQuota(testFileDirPath, 100, 500);
+    QuotaUsage qu = vfs.getQuotaUsage(testFileDirPath);
+    assertEquals(100, qu.getQuota());
+    assertEquals(500, qu.getSpaceQuota());
+  }
+
+  /**
+   * Test that getQuotaUsage can be retrieved on the client side if
+   * storage types are defined.
+   */
+  @Test
+  public void testGetQuotaUsageWithStorageTypes() throws IOException {
+    FileSystem hFs = cluster.getFileSystem(0);
+    final DistributedFileSystem dfs = (DistributedFileSystem)hFs;
+    dfs.setQuotaByStorageType(testFileDirPath, StorageType.SSD, 500);
+    dfs.setQuotaByStorageType(testFileDirPath, StorageType.DISK, 600);
+    QuotaUsage qu = vfs.getQuotaUsage(testFileDirPath);
+    assertEquals(500, qu.getTypeQuota(StorageType.SSD));
+    assertEquals(600, qu.getTypeQuota(StorageType.DISK));
+  }
+
+  /**
+   * Test that getQuotaUsage can be retrieved on the client side if
+   * quota isn't defined.
+   */
+  @Test
+  public void testGetQuotaUsageWithQuotaDefined() throws IOException {
+    FileSystem hFs = cluster.getFileSystem(0);
+    final DistributedFileSystem dfs = (DistributedFileSystem)hFs;
+    dfs.setQuota(testFileDirPath, -1, -1);
+    dfs.setQuotaByStorageType(testFileDirPath, StorageType.SSD, -1);
+    dfs.setQuotaByStorageType(testFileDirPath, StorageType.DISK, -1);
+    QuotaUsage qu = vfs.getQuotaUsage(testFileDirPath);
+    assertEquals(-1, qu.getTypeQuota(StorageType.SSD));
+    assertEquals(-1, qu.getQuota());
+    assertEquals(-1, qu.getSpaceQuota());
+    assertEquals(2, qu.getFileAndDirectoryCount());
+    assertEquals(0, qu.getTypeConsumed(StorageType.SSD));
+    assertTrue(qu.getSpaceConsumed() > 0);
+  }
+
   @AfterClass
   public static void cleanup() throws IOException {
     fHdfs.delete(new Path(testFileName), true);

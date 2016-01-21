@@ -1496,6 +1496,13 @@ public abstract class FileSystem extends Configured implements Closeable {
         spaceConsumed(summary[0]).build();
   }
 
+  /** Return the {@link QuotaUsage} of a given {@link Path}.
+   * @param f path to use
+   */
+  public QuotaUsage getQuotaUsage(Path f) throws IOException {
+    return getContentSummary(f);
+  }
+
   final private static PathFilter DEFAULT_FILTER = new PathFilter() {
     @Override
     public boolean accept(Path file) {

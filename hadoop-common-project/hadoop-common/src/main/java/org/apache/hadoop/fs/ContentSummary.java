@@ -30,26 +30,15 @@ import org.apache.hadoop.util.StringUtils;
 /** Store the summary of a content (a directory or a file). */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class ContentSummary implements Writable{
+public class ContentSummary extends QuotaUsage implements Writable{
   private long length;
   private long fileCount;
   private long directoryCount;
-  private long quota;
-  private long spaceConsumed;
-  private long spaceQuota;
-  private long typeConsumed[];
-  private long typeQuota[];
 
-  public static class Builder{
+  /** We don't use generics. Instead override spaceConsumed and other methods
+      in order to keep backward compatibility. */
+  public static class Builder extends QuotaUsage.Builder {
     public Builder() {
-      this.quota = -1;
-      this.spaceQuota = -1;
-
-      typeConsumed = new long[StorageType.values().length];
-      typeQuota = new long[StorageType.values().length];
-      for (int i = 0; i < typeQuota.length; i++) {
-        typeQuota[i] = -1;
-      }
     }
 
     public Builder length(long length) {
@@ -67,58 +56,57 @@ public class ContentSummary implements Writable{
       return this;
     }
 
+    @Override
     public Builder quota(long quota){
-      this.quota = quota;
+      super.quota(quota);
       return this;
     }
 
+    @Override
     public Builder spaceConsumed(long spaceConsumed) {
-      this.spaceConsumed = spaceConsumed;
+      super.spaceConsumed(spaceConsumed);
       return this;
     }
 
+    @Override
     public Builder spaceQuota(long spaceQuota) {
-      this.spaceQuota = spaceQuota;
+      super.spaceQuota(spaceQuota);
       return this;
     }
 
+    @Override
     public Builder typeConsumed(long typeConsumed[]) {
-      for (int i = 0; i < typeConsumed.length; i++) {
-        this.typeConsumed[i] = typeConsumed[i];
-      }
+      super.typeConsumed(typeConsumed);
       return this;
     }
 
+    @Override
     public Builder typeQuota(StorageType type, long quota) {
-      this.typeQuota[type.ordinal()] = quota;
+      super.typeQuota(type, quota);
       return this;
     }
 
+    @Override
     public Builder typeConsumed(StorageType type, long consumed) {
-      this.typeConsumed[type.ordinal()] = consumed;
+      super.typeConsumed(type, consumed);
       return this;
     }
 
+    @Override
     public Builder typeQuota(long typeQuota[]) {
-      for (int i = 0; i < typeQuota.length; i++) {
-        this.typeQuota[i] = typeQuota[i];
-      }
+      super.typeQuota(typeQuota);
       return this;
     }
 
     public ContentSummary build() {
-      return new ContentSummary(length, fileCount, directoryCount, quota,
-          spaceConsumed, spaceQuota, typeConsumed, typeQuota);
+      // Set it in case applications call QuotaUsage#getFileAndDirectoryCount.
+      super.fileAndDirectoryCount(this.fileCount + this.directoryCount);
+      return new ContentSummary(this);
     }
 
     private long length;
     private long fileCount;
     private long directoryCount;
-    private long quota;
-    private long spaceConsumed;
-    private long spaceQuota;
-    private long typeConsumed[];
-    private long typeQuota[];
   }
 
   /** Constructor deprecated by ContentSummary.Builder*/
@@ -143,24 +131,17 @@ public class ContentSummary implements Writable{
     this.length = length;
     this.fileCount = fileCount;
     this.directoryCount = directoryCount;
-    this.quota = quota;
-    this.spaceConsumed = spaceConsumed;
-    this.spaceQuota = spaceQuota;
+    setQuota(quota);
+    setSpaceConsumed(spaceConsumed);
+    setSpaceQuota(spaceQuota);
   }
 
   /** Constructor for ContentSummary.Builder*/
-  private ContentSummary(
-      long length, long fileCount, long directoryCount, long quota,
-      long spaceConsumed, long spaceQuota, long typeConsumed[],
-      long typeQuota[]) {
-    this.length = length;
-    this.fileCount = fileCount;
-    this.directoryCount = directoryCount;
-    this.quota = quota;
-    this.spaceConsumed = spaceConsumed;
-    this.spaceQuota = spaceQuota;
-    this.typeConsumed = typeConsumed;
-    this.typeQuota = typeQuota;
+  private ContentSummary(Builder builder) {
+    super(builder);
+    this.length = builder.length;
+    this.fileCount = builder.fileCount;
+    this.directoryCount = builder.directoryCount;
   }
 
   /** @return the length */
@@ -171,51 +152,6 @@ public class ContentSummary implements Writable{
 
   /** @return the file count */
   public long getFileCount() {return fileCount;}
-  
-  /** Return the directory quota */
-  public long getQuota() {return quota;}
-  
-  /** Returns storage space consumed */
-  public long getSpaceConsumed() {return spaceConsumed;}
-
-  /** Returns storage space quota */
-  public long getSpaceQuota() {return spaceQuota;}
-
-  /** Returns storage type quota */
-  public long getTypeQuota(StorageType type) {
-    return (typeQuota != null) ? typeQuota[type.ordinal()] : -1;
-  }
-
-  /** Returns storage type consumed*/
-  public long getTypeConsumed(StorageType type) {
-    return (typeConsumed != null) ? typeConsumed[type.ordinal()] : 0;
-  }
-
-  /** Returns true if any storage type quota has been set*/
-  public boolean isTypeQuotaSet() {
-    if (typeQuota == null) {
-      return false;
-    }
-    for (StorageType t : StorageType.getTypesSupportingQuota()) {
-      if (typeQuota[t.ordinal()] > 0) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /** Returns true if any storage type consumption information is available*/
-  public boolean isTypeConsumedAvailable() {
-    if (typeConsumed == null) {
-      return false;
-    }
-    for (StorageType t : StorageType.getTypesSupportingQuota()) {
-      if (typeConsumed[t.ordinal()] > 0) {
-        return true;
-      }
-    }
-    return false;
-  }
 
   @Override
   @InterfaceAudience.Private
@@ -223,9 +159,9 @@ public class ContentSummary implements Writable{
     out.writeLong(length);
     out.writeLong(fileCount);
     out.writeLong(directoryCount);
-    out.writeLong(quota);
-    out.writeLong(spaceConsumed);
-    out.writeLong(spaceQuota);
+    out.writeLong(getQuota());
+    out.writeLong(getSpaceConsumed());
+    out.writeLong(getSpaceQuota());
   }
 
   @Override
@@ -234,9 +170,29 @@ public class ContentSummary implements Writable{
     this.length = in.readLong();
     this.fileCount = in.readLong();
     this.directoryCount = in.readLong();
-    this.quota = in.readLong();
-    this.spaceConsumed = in.readLong();
-    this.spaceQuota = in.readLong();
+    setQuota(in.readLong());
+    setSpaceConsumed(in.readLong());
+    setSpaceQuota(in.readLong());
+  }
+
+  @Override
+  public boolean equals(Object to) {
+    if (this == to) {
+      return true;
+    } else if (to instanceof ContentSummary) {
+      return getLength() == ((ContentSummary) to).getLength() &&
+          getFileCount() == ((ContentSummary) to).getFileCount() &&
+          getDirectoryCount() == ((ContentSummary) to).getDirectoryCount() &&
+          super.equals(to);
+    } else {
+      return super.equals(to);
+    }
+  }
+
+  @Override
+  public int hashCode() {
+    long result = getLength() ^ getFileCount() ^ getDirectoryCount();
+    return ((int) result) ^ super.hashCode();
   }
 
   /**
@@ -245,35 +201,16 @@ public class ContentSummary implements Writable{
    *    DIR_COUNT   FILE_COUNT       CONTENT_SIZE
    */
   private static final String SUMMARY_FORMAT = "%12s %12s %18s ";
-  /**
-   * Output format:
-   * <----12----> <------15-----> <------15-----> <------15----->
-   *        QUOTA       REM_QUOTA     SPACE_QUOTA REM_SPACE_QUOTA
-   * <----12----> <----12----> <-------18------->
-   *    DIR_COUNT   FILE_COUNT       CONTENT_SIZE
-   */
-  private static final String QUOTA_SUMMARY_FORMAT = "%12s %15s ";
-  private static final String SPACE_QUOTA_SUMMARY_FORMAT = "%15s %15s ";
 
-  private static final String STORAGE_TYPE_SUMMARY_FORMAT = "%13s %17s ";
-
-  private static final String[] HEADER_FIELDS = new String[] { "DIR_COUNT",
-      "FILE_COUNT", "CONTENT_SIZE"};
-  private static final String[] QUOTA_HEADER_FIELDS = new String[] { "QUOTA",
-      "REM_QUOTA", "SPACE_QUOTA", "REM_SPACE_QUOTA" };
+  private static final String[] SUMMARY_HEADER_FIELDS =
+      new String[] {"DIR_COUNT", "FILE_COUNT", "CONTENT_SIZE"};
 
   /** The header string */
-  private static final String HEADER = String.format(
-      SUMMARY_FORMAT, (Object[]) HEADER_FIELDS);
+  private static final String SUMMARY_HEADER = String.format(
+      SUMMARY_FORMAT, (Object[]) SUMMARY_HEADER_FIELDS);
 
-  private static final String QUOTA_HEADER = String.format(
-      QUOTA_SUMMARY_FORMAT + SPACE_QUOTA_SUMMARY_FORMAT,
-      (Object[]) QUOTA_HEADER_FIELDS) +
-      HEADER;
+  private static final String ALL_HEADER = QUOTA_HEADER + SUMMARY_HEADER;
 
-  /** default quota display string */
-  private static final String QUOTA_NONE = "none";
-  private static final String QUOTA_INF = "inf";
 
   /** Return the header of the output.
    * if qOption is false, output directory count, file count, and content size;
@@ -283,28 +220,10 @@ public class ContentSummary implements Writable{
    * @return the header of the output
    */
   public static String getHeader(boolean qOption) {
-    return qOption ? QUOTA_HEADER : HEADER;
+    return qOption ? ALL_HEADER : SUMMARY_HEADER;
   }
 
-  /**
-   * return the header of with the StorageTypes
-   *
-   * @param storageTypes
-   * @return storage header string
-   */
-  public static String getStorageTypeHeader(List<StorageType> storageTypes) {
-    StringBuffer header = new StringBuffer();
 
-    for (StorageType st : storageTypes) {
-      /* the field length is 13/17 for quota and remain quota
-       * as the max length for quota name is ARCHIVE_QUOTA
-        * and remain quota name REM_ARCHIVE_QUOTA */
-      String storageName = st.toString();
-      header.append(String.format(STORAGE_TYPE_SUMMARY_FORMAT, storageName + "_QUOTA",
-          "REM_" + storageName + "_QUOTA"));
-    }
-    return header.toString();
-  }
 
   /**
    * Returns the names of the fields from the summary header.
@@ -312,7 +231,7 @@ public class ContentSummary implements Writable{
    * @return names of fields as displayed in the header
    */
   public static String[] getHeaderFields() {
-    return HEADER_FIELDS;
+    return SUMMARY_HEADER_FIELDS;
   }
 
   /**
@@ -370,41 +289,11 @@ public class ContentSummary implements Writable{
     String prefix = "";
 
     if (tOption) {
-      StringBuffer content = new StringBuffer();
-      for (StorageType st : types) {
-        long typeQuota = getTypeQuota(st);
-        long typeConsumed = getTypeConsumed(st);
-        String quotaStr = QUOTA_NONE;
-        String quotaRem = QUOTA_INF;
-
-        if (typeQuota > 0) {
-          quotaStr = formatSize(typeQuota, hOption);
-          quotaRem = formatSize(typeQuota - typeConsumed, hOption);
-        }
-
-        content.append(String.format(STORAGE_TYPE_SUMMARY_FORMAT,
-            quotaStr, quotaRem));
-      }
-      return content.toString();
+      return getTypesQuotaUsage(hOption, types);
     }
 
     if (qOption) {
-      String quotaStr = QUOTA_NONE;
-      String quotaRem = QUOTA_INF;
-      String spaceQuotaStr = QUOTA_NONE;
-      String spaceQuotaRem = QUOTA_INF;
-
-      if (quota>0) {
-        quotaStr = formatSize(quota, hOption);
-        quotaRem = formatSize(quota-(directoryCount+fileCount), hOption);
-      }
-      if (spaceQuota>0) {
-        spaceQuotaStr = formatSize(spaceQuota, hOption);
-        spaceQuotaRem = formatSize(spaceQuota - spaceConsumed, hOption);
-      }
-
-      prefix = String.format(QUOTA_SUMMARY_FORMAT + SPACE_QUOTA_SUMMARY_FORMAT,
-          quotaStr, quotaRem, spaceQuotaStr, spaceQuotaRem);
+      prefix = getQuotaUsage(hOption);
     }
 
     return prefix + String.format(SUMMARY_FORMAT,

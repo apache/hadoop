@@ -170,11 +170,15 @@ Similar to get command, except that the destination is restricted to a local fil
 count
 -----
 
-Usage: `hadoop fs -count [-q] [-h] [-v] <paths> `
+Usage: `hadoop fs -count [-q] [-h] [-v] [-t [<storage type>]] [-u] <paths> `
 
-Count the number of directories, files and bytes under the paths that match the specified file pattern. The output columns with -count are: DIR\_COUNT, FILE\_COUNT, CONTENT\_SIZE, PATHNAME
+Count the number of directories, files and bytes under the paths that match the specified file pattern. Get the quota and the usage. The output columns with -count are: DIR\_COUNT, FILE\_COUNT, CONTENT\_SIZE, PATHNAME
 
 The output columns with -count -q are: QUOTA, REMAINING\_QUOTA, SPACE\_QUOTA, REMAINING\_SPACE\_QUOTA, DIR\_COUNT, FILE\_COUNT, CONTENT\_SIZE, PATHNAME
+
+The output columns with -count -u are: QUOTA, REMAINING\_QUOTA, SPACE\_QUOTA, REMAINING\_SPACE\_QUOTA
+
+The -t option shows the quota and usage for each storage type.
 
 The -h option shows sizes in human readable format.
 
@@ -186,6 +190,9 @@ Example:
 * `hadoop fs -count -q hdfs://nn1.example.com/file1`
 * `hadoop fs -count -q -h hdfs://nn1.example.com/file1`
 * `hadoop fs -count -q -h -v hdfs://nn1.example.com/file1`
+* `hadoop fs -count -u hdfs://nn1.example.com/file1`
+* `hadoop fs -count -u -h hdfs://nn1.example.com/file1`
+* `hadoop fs -count -u -h -v hdfs://nn1.example.com/file1`
 
 Exit Code:
 

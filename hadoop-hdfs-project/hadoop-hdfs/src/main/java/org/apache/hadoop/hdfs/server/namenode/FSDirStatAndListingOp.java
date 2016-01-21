@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -621,6 +622,58 @@ class FSDirStatAndListingOp {
         fsd.addYieldCount(cscc.getYieldCount());
         return cs;
       }
+    } finally {
+      fsd.readUnlock();
+    }
+  }
+
+  static QuotaUsage getQuotaUsage(
+      FSDirectory fsd, String src) throws IOException {
+    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    FSPermissionChecker pc = fsd.getPermissionChecker();
+    final INodesInPath iip;
+    fsd.readLock();
+    try {
+      src = fsd.resolvePath(pc, src, pathComponents);
+      iip = fsd.getINodesInPath(src, false);
+      if (fsd.isPermissionEnabled()) {
+        fsd.checkPermission(pc, iip, false, null, null, null,
+            FsAction.READ_EXECUTE);
+      }
+    } finally {
+      fsd.readUnlock();
+    }
+    QuotaUsage usage = getQuotaUsageInt(fsd, iip);
+    if (usage != null) {
+      return usage;
+    } else {
+      //If quota isn't set, fall back to getContentSummary.
+      return getContentSummaryInt(fsd, iip);
+    }
+  }
+
+  private static QuotaUsage getQuotaUsageInt(FSDirectory fsd, INodesInPath iip)
+    throws IOException {
+    fsd.readLock();
+    try {
+      INode targetNode = iip.getLastINode();
+      QuotaUsage usage = null;
+      if (targetNode.isDirectory()) {
+        DirectoryWithQuotaFeature feature =
+            targetNode.asDirectory().getDirectoryWithQuotaFeature();
+        if (feature != null) {
+          QuotaCounts counts = feature.getSpaceConsumed();
+          QuotaCounts quotas = feature.getQuota();
+          usage = new QuotaUsage.Builder().
+              fileAndDirectoryCount(counts.getNameSpace()).
+              quota(quotas.getNameSpace()).
+              spaceConsumed(counts.getStorageSpace()).
+              spaceQuota(quotas.getStorageSpace()).
+              typeConsumed(counts.getTypeSpaces().asArray()).
+              typeQuota(quotas.getTypeSpaces().asArray()).build();
+        }
+      }
+      return usage;
     } finally {
       fsd.readUnlock();
     }

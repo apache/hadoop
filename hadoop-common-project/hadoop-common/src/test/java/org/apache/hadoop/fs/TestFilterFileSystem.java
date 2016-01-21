@@ -131,8 +131,9 @@ public class TestFilterFileSystem {
     public String getScheme();
     public Path fixRelativePart(Path p);
     public ContentSummary getContentSummary(Path f);
+    public QuotaUsage getQuotaUsage(Path f);
   }
-  
+
   @Test
   public void testFilterFileSystem() throws Exception {
     int errors = 0;
