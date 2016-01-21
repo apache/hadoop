@@ -70,6 +70,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.codehaus.jackson.map.ObjectMapper;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -334,9 +335,10 @@ public class TimelineClientImpl extends TimelineClient {
 
   @Override
   protected void serviceStart() throws Exception {
-    timelineWriter = createTimelineWriter(
-        configuration, authUgi, client,
-        constructResURI(getConfig(), timelineServiceAddress, false));
+    if (!timelineServiceV2) {
+      timelineWriter = createTimelineWriter(configuration, authUgi, client,
+          constructResURI(getConfig(), timelineServiceAddress, false));
+    }
   }
 
   protected TimelineWriter createTimelineWriter(Configuration conf,
