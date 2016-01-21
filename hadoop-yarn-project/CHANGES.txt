@@ -1295,6 +1295,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4557. Fix improper Queues sorting in PartitionedQueueComparator
     when accessible-node-labels=*. (Naganarasimha G R via wangda)
 
+    YARN-4608. Redundant code statement in WritingYarnApplications.
+    (Kai Sasaki via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
