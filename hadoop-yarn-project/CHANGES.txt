@@ -1302,6 +1302,9 @@ Release 2.7.3 - UNRELEASED
 
     YARN-4287. Capacity Scheduler: Rack Locality improvement (Nathan Roberts via wangda)
 
+    YARN-4492. Add documentation for preemption supported in Capacity
+    scheduler (Naganarasimha G R via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES
