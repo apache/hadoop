@@ -1152,8 +1152,10 @@ public class LeafQueue extends AbstractCSQueue {
   @Private
   protected synchronized boolean canAssignToUser(Resource clusterResource,
       String userName, Resource limit, FiCaSchedulerApp application,
-      String nodePartition, ResourceLimits currentResoureLimits) {
+      String nodePartition, ResourceLimits currentResourceLimits) {
     User user = getUser(userName);
+
+    currentResourceLimits.setAmountNeededUnreserve(Resources.none());
 
     // Note: We aren't considering the current request since there is a fixed
     // overhead of the AM, but it's a > check, not a >= check, so...
@@ -1181,7 +1183,7 @@ public class LeafQueue extends AbstractCSQueue {
               Resources.subtract(user.getUsed(nodePartition), limit);
           // we can only acquire a new container if we unreserve first to
           // respect user-limit
-          currentResoureLimits.setAmountNeededUnreserve(amountNeededToUnreserve);
+          currentResourceLimits.setAmountNeededUnreserve(amountNeededToUnreserve);
           return true;
         }
       }
