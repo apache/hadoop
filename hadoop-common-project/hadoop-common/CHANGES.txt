@@ -1630,6 +1630,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12356. Fix computing CPU usage statistics on Windows.
     (Inigo Goiri via wangda)
 
+    HADOOP-12423. Handle failure of registering shutdownhook by
+    ShutdownHookManager in static block (Abhishek Agarwal via vinayakumarb)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
