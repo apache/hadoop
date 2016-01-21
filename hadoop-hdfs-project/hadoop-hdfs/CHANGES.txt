@@ -2655,6 +2655,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9661. Deadlock in DN.FsDatasetImpl between moveBlockAcrossStorage and
     createRbw (ade via vinayakumarb)
 
+    HDFS-9625. set replication for empty file failed when set storage policy
+    (DENG FEI via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
