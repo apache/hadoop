@@ -82,8 +82,8 @@ public class TestSequentialBlockGroupId {
     cluster.waitActive();
 
     fs = cluster.getFileSystem();
-    blockGrpIdGenerator = cluster.getNamesystem().getBlockIdManager()
-        .getBlockGroupIdGenerator();
+    blockGrpIdGenerator = cluster.getNamesystem().getBlockManager()
+        .getBlockIdManager().getBlockGroupIdGenerator();
     fs.mkdirs(ecDir);
     cluster.getFileSystem().getClient()
         .setErasureCodingPolicy("/ecDir", null);
@@ -179,10 +179,10 @@ public class TestSequentialBlockGroupId {
     // collision during blockGroup Id generation
     FSNamesystem fsn = cluster.getNamesystem();
     // Replace SequentialBlockIdGenerator with a spy
-    SequentialBlockIdGenerator blockIdGenerator = spy(fsn.getBlockIdManager()
-        .getBlockIdGenerator());
-    Whitebox.setInternalState(fsn.getBlockIdManager(), "blockIdGenerator",
-        blockIdGenerator);
+    SequentialBlockIdGenerator blockIdGenerator = spy(fsn.getBlockManager()
+        .getBlockIdManager().getBlockIdGenerator());
+    Whitebox.setInternalState(fsn.getBlockManager().getBlockIdManager(),
+        "blockIdGenerator", blockIdGenerator);
     SequentialBlockIdGenerator spySequentialBlockIdGenerator = new SequentialBlockIdGenerator(
         null) {
       @Override

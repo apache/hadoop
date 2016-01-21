@@ -94,16 +94,16 @@ public class TestBlockManagerSafeMode {
     doReturn(true).when(fsn).hasWriteLock();
     doReturn(true).when(fsn).hasReadLock();
     doReturn(true).when(fsn).isRunning();
-    doReturn(true).when(fsn).isGenStampInFuture(any(Block.class));
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
 
-    bm = spy(new BlockManager(fsn, conf));
+    bm = spy(new BlockManager(fsn, false, conf));
+    doReturn(true).when(bm).isGenStampInFuture(any(Block.class));
     dn = spy(bm.getDatanodeManager());
     Whitebox.setInternalState(bm, "datanodeManager", dn);
     // the datanode threshold is always met
     when(dn.getNumLiveDataNodes()).thenReturn(DATANODE_NUM);
 
-    bmSafeMode = new BlockManagerSafeMode(bm, fsn, conf);
+    bmSafeMode = new BlockManagerSafeMode(bm, fsn, false, conf);
   }
 
   /**

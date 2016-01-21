@@ -48,11 +48,11 @@ import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutFlags;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockIdManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -344,27 +344,26 @@ public class FSImageFormat {
 
         // read in the last generation stamp for legacy blocks.
         long genstamp = in.readLong();
-        namesystem.getBlockIdManager().setGenerationStampV1(genstamp);
+        final BlockIdManager blockIdManager = namesystem.getBlockManager()
+            .getBlockIdManager();
+        blockIdManager.setGenerationStampV1(genstamp);
 
         if (NameNodeLayoutVersion.supports(
             LayoutVersion.Feature.SEQUENTIAL_BLOCK_ID, imgVersion)) {
           // read the starting generation stamp for sequential block IDs
           genstamp = in.readLong();
-          namesystem.getBlockIdManager().setGenerationStampV2(genstamp);
+          blockIdManager.setGenerationStampV2(genstamp);
 
           // read the last generation stamp for blocks created after
           // the switch to sequential block IDs.
           long stampAtIdSwitch = in.readLong();
-          namesystem.getBlockIdManager().setGenerationStampV1Limit(stampAtIdSwitch);
+          blockIdManager.setGenerationStampV1Limit(stampAtIdSwitch);
 
           // read the max sequential block ID.
           long maxSequentialBlockId = in.readLong();
-          namesystem.getBlockIdManager().setLastAllocatedContiguousBlockId(
-              maxSequentialBlockId);
+          blockIdManager.setLastAllocatedContiguousBlockId(maxSequentialBlockId);
         } else {
-
-          long startingGenStamp = namesystem.getBlockIdManager()
-            .upgradeGenerationStampToV2();
+          long startingGenStamp = blockIdManager.upgradeGenerationStampToV2();
           // This is an upgrade.
           LOG.info("Upgrading to sequential block IDs. Generation stamp " +
                    "for new blocks set to " + startingGenStamp);
@@ -1269,10 +1268,12 @@ public class FSImageFormat {
         out.writeInt(sourceNamesystem.unprotectedGetNamespaceInfo()
             .getNamespaceID());
         out.writeLong(numINodes);
-        out.writeLong(sourceNamesystem.getBlockIdManager().getGenerationStampV1());
-        out.writeLong(sourceNamesystem.getBlockIdManager().getGenerationStampV2());
-        out.writeLong(sourceNamesystem.getBlockIdManager().getGenerationStampAtblockIdSwitch());
-        out.writeLong(sourceNamesystem.getBlockIdManager().getLastAllocatedContiguousBlockId());
+        final BlockIdManager blockIdManager = sourceNamesystem.getBlockManager()
+            .getBlockIdManager();
+        out.writeLong(blockIdManager.getGenerationStampV1());
+        out.writeLong(blockIdManager.getGenerationStampV2());
+        out.writeLong(blockIdManager.getGenerationStampAtblockIdSwitch());
+        out.writeLong(blockIdManager.getLastAllocatedContiguousBlockId());
         out.writeLong(context.getTxId());
         out.writeLong(sourceNamesystem.dir.getLastInodeId());
 

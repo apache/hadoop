@@ -939,6 +939,8 @@ Release 2.9.0 - UNRELEASED
     HDFS-9576: HTrace: collect position/length information on read operations
     (zhz via cmccabe)
 
+    HDFS-9542. Move BlockIdManager from FSNamesystem to BlockManager. (jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES

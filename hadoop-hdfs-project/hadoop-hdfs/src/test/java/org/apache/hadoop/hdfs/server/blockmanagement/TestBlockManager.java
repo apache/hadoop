@@ -130,7 +130,7 @@ public class TestBlockManager {
     Mockito.doReturn(true).when(fsn).hasWriteLock();
     Mockito.doReturn(true).when(fsn).hasReadLock();
     Mockito.doReturn(true).when(fsn).isRunning();
-    bm = new BlockManager(fsn, conf);
+    bm = new BlockManager(fsn, false, conf);
     final String[] racks = {
         "/rackA",
         "/rackA",

@@ -41,13 +41,7 @@ public interface Namesystem extends RwLock, SafeMode {
   /** @return the block pool ID */
   String getBlockPoolId();
 
-  boolean isInStandbyState();
-
-  boolean isGenStampInFuture(Block block);
-
   BlockCollection getBlockCollection(long id);
-
-  void checkOperation(OperationCategory read) throws StandbyException;
 
   void startSecretManagerIfNecessary();
 
@@ -66,11 +60,6 @@ public interface Namesystem extends RwLock, SafeMode {
   CacheManager getCacheManager();
 
   HAContext getHAContext();
-
-  /**
-   * @return true if the HA is enabled else false
-   */
-  boolean isHaEnabled();
 
   /**
    * @return Whether the namenode is transitioning to active state and is in the

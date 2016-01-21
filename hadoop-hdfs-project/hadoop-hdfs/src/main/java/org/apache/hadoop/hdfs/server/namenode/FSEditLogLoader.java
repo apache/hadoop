@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
@@ -116,12 +117,14 @@ public class FSEditLogLoader {
   static final long REPLAY_TRANSACTION_LOG_INTERVAL = 1000; // 1sec
 
   private final FSNamesystem fsNamesys;
+  private final BlockManager blockManager;
   private long lastAppliedTxId;
   /** Total number of end transactions loaded. */
   private int totalEdits = 0;
   
   public FSEditLogLoader(FSNamesystem fsNamesys, long lastAppliedTxId) {
     this.fsNamesys = fsNamesys;
+    this.blockManager = fsNamesys.getBlockManager();
     this.lastAppliedTxId = lastAppliedTxId;
   }
   
@@ -586,7 +589,7 @@ public class FSEditLogLoader {
     }
     case OP_SET_GENSTAMP_V1: {
       SetGenstampV1Op setGenstampV1Op = (SetGenstampV1Op)op;
-      fsNamesys.getBlockIdManager().setGenerationStampV1(
+      blockManager.getBlockIdManager().setGenerationStampV1(
           setGenstampV1Op.genStampV1);
       break;
     }
@@ -794,7 +797,7 @@ public class FSEditLogLoader {
     }
     case OP_SET_GENSTAMP_V2: {
       SetGenstampV2Op setGenstampV2Op = (SetGenstampV2Op) op;
-      fsNamesys.getBlockIdManager().setGenerationStampV2(
+      blockManager.getBlockIdManager().setGenerationStampV2(
           setGenstampV2Op.genStampV2);
       break;
     }
@@ -803,10 +806,10 @@ public class FSEditLogLoader {
       if (BlockIdManager.isStripedBlockID(allocateBlockIdOp.blockId)) {
         // ALLOCATE_BLOCK_ID is added for sequential block id, thus if the id
         // is negative, it must belong to striped blocks
-        fsNamesys.getBlockIdManager().setLastAllocatedStripedBlockId(
+        blockManager.getBlockIdManager().setLastAllocatedStripedBlockId(
             allocateBlockIdOp.blockId);
       } else {
-        fsNamesys.getBlockIdManager().setLastAllocatedContiguousBlockId(
+        blockManager.getBlockIdManager().setLastAllocatedContiguousBlockId(
             allocateBlockIdOp.blockId);
       }
       break;

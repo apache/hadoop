@@ -115,10 +115,10 @@ class BlockManagerSafeMode {
   private final boolean inRollBack;
 
   BlockManagerSafeMode(BlockManager blockManager, Namesystem namesystem,
-      Configuration conf) {
+      boolean haEnabled, Configuration conf) {
     this.blockManager = blockManager;
     this.namesystem = namesystem;
-    this.haEnabled = namesystem.isHaEnabled();
+    this.haEnabled = haEnabled;
     this.threshold = conf.getFloat(DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY,
         DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_DEFAULT);
     if (this.threshold > 1.0) {
@@ -473,7 +473,7 @@ class BlockManagerSafeMode {
 
     if (!blockManager.getShouldPostponeBlocksFromFuture() &&
         !inRollBack &&
-        namesystem.isGenStampInFuture(brr)) {
+        blockManager.isGenStampInFuture(brr)) {
       numberOfBytesInFutureBlocks.addAndGet(brr.getBytesOnDisk());
     }
   }

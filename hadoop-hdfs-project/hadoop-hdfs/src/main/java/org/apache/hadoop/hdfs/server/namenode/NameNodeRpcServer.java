@@ -560,7 +560,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     }
     checkNNStartup();
     namesystem.checkSuperuserPrivilege();
-    return namesystem.getBlockManager().getBlocks(datanode, size); 
+    return namesystem.getBlocks(datanode, size);
   }
 
   @Override // NamenodeProtocol

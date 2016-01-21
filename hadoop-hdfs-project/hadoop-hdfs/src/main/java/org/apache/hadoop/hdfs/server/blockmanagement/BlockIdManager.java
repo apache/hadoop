@@ -163,7 +163,7 @@ public class BlockIdManager {
   /**
    * Increments, logs and then returns the stamp
    */
-  public long nextGenerationStamp(boolean legacyBlock) throws IOException {
+  long nextGenerationStamp(boolean legacyBlock) throws IOException {
     return legacyBlock ? getNextGenerationStampV1() :
       getNextGenerationStampV2();
   }
@@ -199,22 +199,19 @@ public class BlockIdManager {
    *
    * @return true if the block ID was randomly generated, false otherwise.
    */
-  public boolean isLegacyBlock(Block block) {
+  boolean isLegacyBlock(Block block) {
     return block.getGenerationStamp() < getGenerationStampV1Limit();
   }
 
   /**
    * Increments, logs and then returns the block ID
    */
-  public long nextContiguousBlockId() {
-    return blockIdGenerator.nextValue();
+  long nextBlockId(boolean isStriped) {
+    return isStriped ? blockGroupIdGenerator.nextValue() :
+        blockIdGenerator.nextValue();
   }
 
-  public long nextStripedBlockId() {
-    return blockGroupIdGenerator.nextValue();
-  }
-
-  public boolean isGenStampInFuture(Block block) {
+  boolean isGenStampInFuture(Block block) {
     if (isLegacyBlock(block)) {
       return block.getGenerationStamp() > getGenerationStampV1();
     } else {
@@ -222,7 +219,7 @@ public class BlockIdManager {
     }
   }
 
-  public void clear() {
+  void clear() {
     generationStampV1.setCurrentValue(GenerationStamp.LAST_RESERVED_STAMP);
     generationStampV2.setCurrentValue(GenerationStamp.LAST_RESERVED_STAMP);
     getBlockIdGenerator().setCurrentValue(SequentialBlockIdGenerator
@@ -240,7 +237,7 @@ public class BlockIdManager {
    * and the other 60 bits are 1. Group ID is the first 60 bits of any
    * data/parity block id in the same striped block group.
    */
-  public static long convertToStripedID(long id) {
+  static long convertToStripedID(long id) {
     return id & (~HdfsServerConstants.BLOCK_GROUP_INDEX_MASK);
   }
 
