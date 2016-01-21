@@ -68,8 +68,8 @@ public class DelegationTokenManager {
       super(conf.getLong(UPDATE_INTERVAL, UPDATE_INTERVAL_DEFAULT) * 1000,
           conf.getLong(MAX_LIFETIME, MAX_LIFETIME_DEFAULT) * 1000,
           conf.getLong(RENEW_INTERVAL, RENEW_INTERVAL_DEFAULT) * 1000,
-          conf.getLong(REMOVAL_SCAN_INTERVAL,
-              REMOVAL_SCAN_INTERVAL_DEFAULT * 1000));
+          conf.getLong(REMOVAL_SCAN_INTERVAL, REMOVAL_SCAN_INTERVAL_DEFAULT)
+              * 1000);
       this.tokenKind = tokenKind;
     }
 
