@@ -513,10 +513,9 @@
                     <goal>exec</goal>
                 </goals>
                 <configuration>
-                    <executable>python</executable>
+                    <executable>${basedir}/../../dev-support/bin/shelldocs</executable>
                     <workingDirectory>src/site/markdown</workingDirectory>
                     <arguments>
-                        <argument>${basedir}/../../dev-support/shelldocs.py</argument>
                         <argument>--skipprnorep</argument>
                         <argument>--output</argument>
                         <argument>${basedir}/src/site/markdown/UnixShellAPI.md</argument>
@@ -982,11 +981,10 @@
                         <goal>exec</goal>
                     </goals>
                     <configuration>
-                        <executable>python</executable>
+                        <executable>${basedir}/../../dev-support/bin/releasedocmaker</executable>
                         <workingDirectory>src/site/markdown/release/</workingDirectory>
                         <requiresOnline>true</requiresOnline>
                         <arguments>
-                            <argument>${basedir}/../../dev-support/releasedocmaker.py</argument>
                             <argument>--index</argument>
                             <argument>--license</argument>
                             <argument>--project</argument>

@@ -39,7 +39,7 @@ and all required tools for testing and building have been installed and configur
 
 Note that from within this docker environment you ONLY have access to the Hadoop source
 tree from where you started. So if you need to run
-    dev-support/test-patch.sh /path/to/my.patch
+    dev-support/bin/test-patch /path/to/my.patch
 then the patch must be placed inside the hadoop source tree.
 
 Known issues:
