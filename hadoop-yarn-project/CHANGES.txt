@@ -69,6 +69,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4581. AHS writer thread leak makes RM crash while RM is recovering.
     (sandflee via junping_du)
 
+    YARN-4610. Reservations continue looking for one app causes other apps to
+    starve (jlowe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
