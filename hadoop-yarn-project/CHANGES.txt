@@ -101,6 +101,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4559. Make leader elector and zk store share the same curator client.
     (Jian He via xgong)
 
+    YARN-4603. FairScheduler should mention user requested queuename in error 
+    message when failed in queue ACL check. (Tao Jie via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
