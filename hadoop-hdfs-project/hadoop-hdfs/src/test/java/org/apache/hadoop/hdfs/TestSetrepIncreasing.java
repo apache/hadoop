@@ -83,4 +83,23 @@ public class TestSetrepIncreasing {
   public void testSetrepIncreasingSimulatedStorage() throws IOException {
     setrep(3, 7, true);
   }
+
+  @Test
+  public void testSetRepWithStoragePolicyOnEmptyFile() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    DistributedFileSystem dfs = cluster.getFileSystem();
+    try {
+      Path d = new Path("/tmp");
+      dfs.mkdirs(d);
+      dfs.setStoragePolicy(d, "HOT");
+      Path f = new Path(d, "foo");
+      dfs.createNewFile(f);
+      dfs.setReplication(f, (short) 4);
+    } finally {
+      dfs.close();
+      cluster.shutdown();
+    }
+ }
 }
