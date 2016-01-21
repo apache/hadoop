@@ -208,7 +208,7 @@ if (debugFlag) {
 vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stdout");
 vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stderr");
 
-// Get final commmand
+// Get final command
 StringBuilder command = new StringBuilder();
 for (CharSequence str : vargs) {
   command.append(str).append(" ");
@@ -339,7 +339,7 @@ ApplicationAttemptId appAttemptID = containerId.getApplicationAttemptId();
   nmClientAsync.start();
 ```
 
-* The AM has to emit heartbeats to the RM to keep it informed that the AM is alive and still running. The timeout expiry interval at the RM is defined by a config setting accessible via `YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS` with the default being defined by `YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS`. The ApplicationMaster needs to register itself with the ResourceManager to start hearbeating.
+* The AM has to emit heartbeats to the RM to keep it informed that the AM is alive and still running. The timeout expiry interval at the RM is defined by a config setting accessible via `YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS` with the default being defined by `YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS`. The ApplicationMaster needs to register itself with the ResourceManager to start heartbeating.
 
 ```java
 // Register self with ResourceManager
@@ -384,8 +384,6 @@ LOG.info("Received " + previousAMRunningContainers.size()
 * Based on the task requirements, the AM can ask for a set of containers to run its tasks on. We can now calculate how many containers we need, and request those many containers.
 
 ```java
-List<Container> previousAMRunningContainers =
-    response.getContainersFromPreviousAttempts();
 List<Container> previousAMRunningContainers =
     response.getContainersFromPreviousAttempts();
 LOG.info("Received " + previousAMRunningContainers.size()
@@ -486,7 +484,7 @@ vargs.add(shellArgs);
 vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout");
 vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr");
 
-// Get final commmand
+// Get final command
 StringBuilder command = new StringBuilder();
 for (CharSequence str : vargs) {
   command.append(str).append(" ");
