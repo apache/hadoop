@@ -143,6 +143,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4578. Directories that are mounted in docker containers need to be more
     restrictive/container-specific. (Sidharta Seethana via vvasudev)
 
+    YARN-4497. RM might fail to restart when recovering apps whose attempts are missing.
+    (Jun Gong via rohithsharmaks)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

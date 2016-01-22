@@ -2113,4 +2113,12 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   public void updateAMLaunchDiagnostics(String amLaunchDiagnostics) {
     this.amLaunchDiagnostics = amLaunchDiagnostics;
   }
+
+  public RMAppAttemptState getRecoveredFinalState() {
+    return recoveredFinalState;
+  }
+
+  public void setRecoveredFinalState(RMAppAttemptState finalState) {
+    this.recoveredFinalState = finalState;
+  }
 }
