@@ -20,6 +20,7 @@ package org.apache.hadoop.security;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_TOKEN_FILES;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 import java.io.File;
@@ -70,6 +71,7 @@ import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -820,6 +822,26 @@ public class UserGroupInformation {
         proxyUser = System.getProperty(HADOOP_PROXY_USER);
       }
       loginUser = proxyUser == null ? realUser : createProxyUser(proxyUser, realUser);
+
+      String tokenFileLocation = System.getProperty(HADOOP_TOKEN_FILES);
+      if (tokenFileLocation == null) {
+        tokenFileLocation = conf.get(HADOOP_TOKEN_FILES);
+      }
+      if (tokenFileLocation != null) {
+        for (String tokenFileName:
+             StringUtils.getTrimmedStrings(tokenFileLocation)) {
+          if (tokenFileName.length() > 0) {
+            File tokenFile = new File(tokenFileName);
+            if (tokenFile.exists() && tokenFile.isFile()) {
+              Credentials cred = Credentials.readTokenStorageFile(
+                  tokenFile, conf);
+              loginUser.addCredentials(cred);
+            } else {
+              LOG.info("tokenFile("+tokenFileName+") does not exist");
+            }
+          }
+        }
+      }
 
       String fileLocation = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
       if (fileLocation != null) {

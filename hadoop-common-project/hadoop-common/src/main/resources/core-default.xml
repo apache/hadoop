@@ -466,6 +466,12 @@ for ldap providers in the same way as above does.
   <description>Maps kerberos principals to local user names</description>
 </property>
 
+<property>
+  <name>hadoop.token.files</name>
+  <value></value>
+  <description>List of token cache files that have delegation tokens for hadoop service</description>
+</property>
+
 <!-- i/o properties -->
 <property>
   <name>io.file.buffer.size</name>

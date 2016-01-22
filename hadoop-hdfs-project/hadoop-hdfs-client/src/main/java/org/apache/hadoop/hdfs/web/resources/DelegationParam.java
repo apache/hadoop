@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
-import org.apache.hadoop.security.UserGroupInformation;
-
 /** Represents delegation token used for authentication. */
 public class DelegationParam extends StringParam {
   /** Parameter name. */
@@ -33,8 +31,7 @@ public class DelegationParam extends StringParam {
    * @param str a string representation of the parameter value.
    */
   public DelegationParam(final String str) {
-    super(DOMAIN, UserGroupInformation.isSecurityEnabled()
-        && str != null && !str.equals(DEFAULT)? str: null);
+    super(DOMAIN, str != null && !str.equals(DEFAULT)? str: null);
   }
 
   @Override
