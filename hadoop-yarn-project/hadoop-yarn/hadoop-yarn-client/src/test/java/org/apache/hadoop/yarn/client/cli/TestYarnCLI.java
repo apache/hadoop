@@ -1721,7 +1721,7 @@ public class TestYarnCLI {
     pw.println(" -fail <Application Attempt ID>     Fails application attempt.");
     pw.println(" -help                              Displays help for all commands.");
     pw.println(" -list <Application ID>             List application attempts for");
-    pw.println("                                    aplication.");
+    pw.println("                                    application.");
     pw.println(" -status <Application Attempt ID>   Prints the status of the application");
     pw.println("                                    attempt.");
     pw.close();

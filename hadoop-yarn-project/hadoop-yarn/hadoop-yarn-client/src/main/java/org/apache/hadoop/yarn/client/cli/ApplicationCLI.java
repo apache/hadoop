@@ -138,7 +138,7 @@ public class ApplicationCLI extends YarnCLI {
       opts.addOption(STATUS_CMD, true,
           "Prints the status of the application attempt.");
       opts.addOption(LIST_CMD, true,
-          "List application attempts for aplication.");
+          "List application attempts for application.");
       opts.addOption(FAIL_CMD, true, "Fails application attempt.");
       opts.addOption(HELP_CMD, false, "Displays help for all commands.");
       opts.getOption(STATUS_CMD).setArgName("Application Attempt ID");
@@ -712,7 +712,7 @@ public class ApplicationCLI extends YarnCLI {
       throws YarnException, IOException {
     ApplicationId appId = ConverterUtils.toApplicationId(applicationId);
     Priority newAppPriority = Priority.newInstance(Integer.parseInt(priority));
-    sysout.println("Updating priority of an aplication " + applicationId);
+    sysout.println("Updating priority of an application " + applicationId);
     client.updateApplicationPriority(appId, newAppPriority);
     sysout.println("Successfully updated the application with id "
         + applicationId + " with priority '" + priority + "'");
