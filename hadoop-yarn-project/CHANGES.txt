@@ -1304,6 +1304,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4608. Redundant code statement in WritingYarnApplications.
     (Kai Sasaki via aajisaka)
 
+    YARN-4605. Spelling mistake in the help message of "yarn applicationattempt"
+    command. (Weiwei Yang via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
