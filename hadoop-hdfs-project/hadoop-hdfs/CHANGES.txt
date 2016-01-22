@@ -2619,6 +2619,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-6054. MiniQJMHACluster should not use static port to avoid binding
     failure in unit test. (Yongjun Zhang)
 
+    HDFS-9682. Fix a typo "aplication" in HttpFS document.
+    (Weiwei Yang via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

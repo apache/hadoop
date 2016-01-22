@@ -23,7 +23,7 @@ HttpFS can be used to access data in HDFS on a cluster behind of a firewall (the
 
 HttpFS can be used to access data in HDFS using HTTP utilities (such as curl and wget) and HTTP libraries Perl from other languages than Java.
 
-The **webhdfs** client FileSytem implementation can be used to access HttpFS using the Hadoop filesystem command (`hadoop fs`) line tool as well as from Java aplications using the Hadoop FileSystem Java API.
+The **webhdfs** client FileSytem implementation can be used to access HttpFS using the Hadoop filesystem command (`hadoop fs`) line tool as well as from Java applications using the Hadoop FileSystem Java API.
 
 HttpFS has built-in security supporting Hadoop pseudo authentication and HTTP SPNEGO Kerberos and other pluggable authentication mechanims. It also provides Hadoop proxy user support.
 
