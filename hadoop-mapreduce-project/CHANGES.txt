@@ -691,6 +691,10 @@ Release 2.8.0 - UNRELEASED
 
     MAPREDUCE-6601. Fix typo in Job#setUseNewAPI. (Kai Sasaki via aajisaka)
 
+    MAPREDUCE-6605. Fix typos mapreduce.map.skip.proc.count.autoincr and
+    mapreduce.reduce.skip.proc.count.autoincr in mapred-default.xml.
+    (Kai Sasaki via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
