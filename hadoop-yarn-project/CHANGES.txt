@@ -75,6 +75,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4623. TestSystemMetricsPublisher#testPublishAppAttemptMetricsForUnmanagedAM
     fails with NPE on branch-2.7. (Naganarasimha G R via junping_du)
 
+    YARN-4598. Invalid event: RESOURCE_FAILED at
+    CONTAINER_CLEANEDUP_AFTER_KILL (tangshangwen via jlowe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -951,6 +954,9 @@ Release 2.6.4 - UNRELEASED
 
     YARN-4414. Nodemanager connection errors are retried at multiple levels
     (Chang Li via jlowe)
+
+    YARN-4598. Invalid event: RESOURCE_FAILED at
+    CONTAINER_CLEANEDUP_AFTER_KILL (tangshangwen via jlowe)
 
 Release 2.6.3 - 2015-12-17
 
