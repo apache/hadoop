@@ -58,6 +58,9 @@ Release 2.6.4 - UNRELEASED
     YARN-4581. AHS writer thread leak makes RM crash while RM is recovering.
     (sandflee via junping_du)
 
+    YARN-4598. Invalid event: RESOURCE_FAILED at
+    CONTAINER_CLEANEDUP_AFTER_KILL (tangshangwen via jlowe)
+
 Release 2.6.3 - 2015-12-17
 
   INCOMPATIBLE CHANGES
