@@ -139,6 +139,17 @@ message ContentSummaryProto {
 }
 
 /**
+ * Summary of quota usage of a directory
+ */
+message QuotaUsageProto {
+  required uint64 fileAndDirectoryCount = 1;
+  required uint64 quota = 2;
+  required uint64 spaceConsumed = 3;
+  required uint64 spaceQuota = 4;
+  optional StorageTypeQuotaInfosProto typeQuotaInfos = 5;
+}
+
+/**
  * Storage type quota and usage information of a file or directory
  */
 message StorageTypeQuotaInfosProto {

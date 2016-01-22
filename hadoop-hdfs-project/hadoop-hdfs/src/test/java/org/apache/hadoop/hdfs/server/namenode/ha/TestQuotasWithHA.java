@@ -139,11 +139,23 @@ public class TestQuotasWithHA {
    * exception.
    */
   @Test(expected = StandbyException.class)
-  public void testgetContentSummaryOnStandby() throws Exception {
+  public void testGetContentSummaryOnStandby() throws Exception {
     Configuration nn1conf =cluster.getConfiguration(1);
     // just reset the standby reads to default i.e False on standby.
     HAUtil.setAllowStandbyReads(nn1conf, false);
     cluster.restartNameNode(1);
     cluster.getNameNodeRpc(1).getContentSummary("/");
+  }
+
+  /**
+   * Test that getQuotaUsage on Standby should should throw standby exception.
+   */
+  @Test(expected = StandbyException.class)
+  public void testGetQuotaUsageOnStandby() throws Exception {
+    Configuration nn1conf =cluster.getConfiguration(1);
+    // just reset the standby reads to default i.e False on standby.
+    HAUtil.setAllowStandbyReads(nn1conf, false);
+    cluster.restartNameNode(1);
+    cluster.getNameNodeRpc(1).getQuotaUsage("/");
   }
 }

@@ -68,7 +68,7 @@ public class CLITestHelper {
   protected String clitestDataDir = null;
   protected String username = null;
   /**
-   * Read the test config file - testConfig.xml
+   * Read the test config file - testConf.xml
    */
   protected void readTestConfigFile() {
     String testConfigFile = getTestFile();

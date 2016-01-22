@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
@@ -135,6 +136,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.HdfsFileStatusProto.File
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto.Builder;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlocksProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.QuotaUsageProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RollingUpgradeStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotDiffReportEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotDiffReportProto;
@@ -1364,12 +1366,37 @@ public class PBHelperClient {
         spaceConsumed(cs.getSpaceConsumed()).
         spaceQuota(cs.getSpaceQuota());
     if (cs.hasTypeQuotaInfos()) {
-      for (HdfsProtos.StorageTypeQuotaInfoProto info :
-          cs.getTypeQuotaInfos().getTypeQuotaInfoList()) {
-        StorageType type = convertStorageType(info.getType());
-        builder.typeConsumed(type, info.getConsumed());
-        builder.typeQuota(type, info.getQuota());
-      }
+      addStorageTypes(cs.getTypeQuotaInfos(), builder);
+    }
+    return builder.build();
+  }
+
+  public static QuotaUsage convert(QuotaUsageProto qu) {
+    if (qu == null) {
+      return null;
+    }
+    QuotaUsage.Builder builder = new QuotaUsage.Builder();
+    builder.fileAndDirectoryCount(qu.getFileAndDirectoryCount()).
+        quota(qu.getQuota()).
+        spaceConsumed(qu.getSpaceConsumed()).
+        spaceQuota(qu.getSpaceQuota());
+    if (qu.hasTypeQuotaInfos()) {
+      addStorageTypes(qu.getTypeQuotaInfos(), builder);
+    }
+    return builder.build();
+  }
+
+  public static QuotaUsageProto convert(QuotaUsage qu) {
+    if (qu == null) {
+      return null;
+    }
+    QuotaUsageProto.Builder builder = QuotaUsageProto.newBuilder();
+    builder.setFileAndDirectoryCount(qu.getFileAndDirectoryCount()).
+        setQuota(qu.getQuota()).
+        setSpaceConsumed(qu.getSpaceConsumed()).
+        setSpaceQuota(qu.getSpaceQuota());
+    if (qu.isTypeQuotaSet() || qu.isTypeConsumedAvailable()) {
+      builder.setTypeQuotaInfos(getBuilder(qu));
     }
     return builder.build();
   }
@@ -1927,20 +1954,36 @@ public class PBHelperClient {
         setSpaceQuota(cs.getSpaceQuota());
 
     if (cs.isTypeQuotaSet() || cs.isTypeConsumedAvailable()) {
-      HdfsProtos.StorageTypeQuotaInfosProto.Builder isb =
-          HdfsProtos.StorageTypeQuotaInfosProto.newBuilder();
-      for (StorageType t: StorageType.getTypesSupportingQuota()) {
-        HdfsProtos.StorageTypeQuotaInfoProto info =
-            HdfsProtos.StorageTypeQuotaInfoProto.newBuilder().
-                setType(convertStorageType(t)).
-                setConsumed(cs.getTypeConsumed(t)).
-                setQuota(cs.getTypeQuota(t)).
-                build();
-        isb.addTypeQuotaInfo(info);
-      }
-      builder.setTypeQuotaInfos(isb);
+      builder.setTypeQuotaInfos(getBuilder(cs));
     }
     return builder.build();
+  }
+
+  private static void addStorageTypes(
+      HdfsProtos.StorageTypeQuotaInfosProto typeQuotaInfos,
+      QuotaUsage.Builder builder) {
+    for (HdfsProtos.StorageTypeQuotaInfoProto info :
+        typeQuotaInfos.getTypeQuotaInfoList()) {
+      StorageType type = convertStorageType(info.getType());
+      builder.typeConsumed(type, info.getConsumed());
+      builder.typeQuota(type, info.getQuota());
+    }
+  }
+
+  private static HdfsProtos.StorageTypeQuotaInfosProto.Builder getBuilder(
+      QuotaUsage qu) {
+    HdfsProtos.StorageTypeQuotaInfosProto.Builder isb =
+            HdfsProtos.StorageTypeQuotaInfosProto.newBuilder();
+    for (StorageType t: StorageType.getTypesSupportingQuota()) {
+      HdfsProtos.StorageTypeQuotaInfoProto info =
+          HdfsProtos.StorageTypeQuotaInfoProto.newBuilder().
+              setType(convertStorageType(t)).
+              setConsumed(qu.getTypeConsumed(t)).
+              setQuota(qu.getTypeQuota(t)).
+              build();
+      isb.addTypeQuotaInfo(info);
+    }
+    return isb;
   }
 
   public static DatanodeStorageProto convert(DatanodeStorage s) {
