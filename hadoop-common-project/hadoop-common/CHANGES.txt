@@ -1642,6 +1642,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12659. Incorrect usage of config parameters in token manager of
     KMS. (Mingliang Liu via xyao)
 
+    HADOOP-12730. Hadoop streaming -mapper and -reducer options are wrongly
+    documented as required. (Kengo Seki via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
