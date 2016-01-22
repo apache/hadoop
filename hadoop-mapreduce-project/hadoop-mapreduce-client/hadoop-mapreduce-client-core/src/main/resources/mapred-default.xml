@@ -884,7 +884,7 @@
   </property>
 
   <property>
-    <name>mapreduce.map.skip.proc.count.autoincr</name>
+    <name>mapreduce.map.skip.proc-count.auto-incr</name>
     <value>true</value>
     <description> The flag which if set to true, 
     SkipBadRecords.COUNTER_MAP_PROCESSED_RECORDS is incremented 
@@ -896,7 +896,7 @@
   </property>
   
   <property>
-    <name>mapreduce.reduce.skip.proc.count.autoincr</name>
+    <name>mapreduce.reduce.skip.proc-count.auto-incr</name>
     <value>true</value>
     <description> The flag which if set to true, 
     SkipBadRecords.COUNTER_REDUCE_PROCESSED_GROUPS is incremented 
