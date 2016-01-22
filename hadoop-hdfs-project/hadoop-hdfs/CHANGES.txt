@@ -406,6 +406,9 @@ Trunk (Unreleased)
     HDFS-9615. Fix variable name typo in DFSConfigKeys. (Ray Chiang via
     Arpit Agarwal)
 
+    HDFS-9646. ErasureCodingWorker may fail when recovering data blocks with
+    length less than the first internal block. (jing9)
+
     BREAKDOWN OF HDFS-7285 SUBTASKS AND RELATED JIRAS
 
       HDFS-7347. Configurable erasure coding policy for individual files and

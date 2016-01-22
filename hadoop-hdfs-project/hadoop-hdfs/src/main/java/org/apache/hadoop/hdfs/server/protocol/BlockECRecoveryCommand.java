@@ -136,7 +136,7 @@ public class BlockECRecoveryCommand extends DatanodeCommand {
           .append("Recovering ").append(block).append(" From: ")
           .append(Arrays.asList(sources)).append(" To: [")
           .append(Arrays.asList(targets)).append(")\n")
-          .append(" Block Indices: ").append(Arrays.asList(liveBlockIndices))
+          .append(" Block Indices: ").append(Arrays.toString(liveBlockIndices))
           .toString();
     }
   }
