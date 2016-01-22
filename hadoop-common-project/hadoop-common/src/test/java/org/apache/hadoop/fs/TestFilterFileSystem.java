@@ -126,13 +126,13 @@ public class TestFilterFileSystem {
     public Token<?> getDelegationToken(String renewer) throws IOException;
     public boolean deleteOnExit(Path f) throws IOException;
     public boolean cancelDeleteOnExit(Path f) throws IOException;
-    public Token<?>[] addDelegationTokens(String renewer, Credentials creds)
-        throws IOException;
+    public Token<?>[] addDelegationTokens(String renewer, Credentials creds);
     public String getScheme();
     public Path fixRelativePart(Path p);
     public ContentSummary getContentSummary(Path f);
+    public QuotaUsage getQuotaUsage(Path f);
   }
-  
+
   @Test
   public void testFilterFileSystem() throws Exception {
     int errors = 0;

@@ -158,6 +158,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
@@ -2819,6 +2820,36 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     } finally {
       readUnlock();
       logAuditEvent(success, "contentSummary", src);
+    }
+  }
+
+  /**
+   * Get the quota usage for a specific file/dir.
+   *
+   * @param src The string representation of the path to the file
+   *
+   * @throws AccessControlException if access is denied
+   * @throws UnresolvedLinkException if a symlink is encountered.
+   * @throws FileNotFoundException if no file exists
+   * @throws StandbyException
+   * @throws IOException for issues with writing to the audit log
+   *
+   * @return object containing information regarding the file
+   *         or null if file not found
+   */
+  QuotaUsage getQuotaUsage(final String src) throws IOException {
+    checkOperation(OperationCategory.READ);
+    readLock();
+    boolean success = true;
+    try {
+      checkOperation(OperationCategory.READ);
+      return FSDirStatAndListingOp.getQuotaUsage(dir, src);
+    } catch (AccessControlException ace) {
+      success = false;
+      throw ace;
+    } finally {
+      readUnlock();
+      logAuditEvent(success, "quotaUsage", src);
     }
   }
 
