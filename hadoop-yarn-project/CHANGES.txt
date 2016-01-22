@@ -1389,6 +1389,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4610. Reservations continue looking for one app causes other apps to
     starve (jlowe)
 
+    YARN-4598. Invalid event: RESOURCE_FAILED at
+    CONTAINER_CLEANEDUP_AFTER_KILL (tangshangwen via jlowe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -2277,6 +2280,9 @@ Release 2.6.4 - UNRELEASED
 
     YARN-4581. AHS writer thread leak makes RM crash while RM is recovering.
     (sandflee via junping_du)
+
+    YARN-4598. Invalid event: RESOURCE_FAILED at
+    CONTAINER_CLEANEDUP_AFTER_KILL (tangshangwen via jlowe)
 
 Release 2.6.3 - 2015-12-17
 
