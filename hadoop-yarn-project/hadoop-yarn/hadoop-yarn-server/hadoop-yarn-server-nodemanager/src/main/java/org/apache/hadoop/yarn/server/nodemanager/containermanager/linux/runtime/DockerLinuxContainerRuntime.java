@@ -223,6 +223,12 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     List<String> localDirs = ctx.getExecutionAttribute(LOCAL_DIRS);
     @SuppressWarnings("unchecked")
     List<String> logDirs = ctx.getExecutionAttribute(LOG_DIRS);
+    @SuppressWarnings("unchecked")
+    List<String> containerLocalDirs = ctx.getExecutionAttribute(
+        CONTAINER_LOCAL_DIRS);
+    @SuppressWarnings("unchecked")
+    List<String> containerLogDirs = ctx.getExecutionAttribute(
+        CONTAINER_LOG_DIRS);
     Set<String> capabilities = new HashSet<>(Arrays.asList(conf.getStrings(
         YarnConfiguration.NM_DOCKER_CONTAINER_CAPABILITIES,
         YarnConfiguration.DEFAULT_NM_DOCKER_CONTAINER_CAPABILITIES)));
@@ -235,10 +241,10 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         .setNetworkType("host")
         .setCapabilities(capabilities)
         .addMountLocation("/etc/passwd", "/etc/password:ro");
-    List<String> allDirs = new ArrayList<>(localDirs);
+    List<String> allDirs = new ArrayList<>(containerLocalDirs);
 
     allDirs.add(containerWorkDir.toString());
-    allDirs.addAll(logDirs);
+    allDirs.addAll(containerLogDirs);
     for (String dir: allDirs) {
       runCommand.addMountLocation(dir, dir);
     }

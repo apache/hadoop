@@ -253,6 +253,7 @@ public class ContainerLaunch implements Callable<Integer> {
             + dirsHandler.getDisksHealthReport(false));
       }
 
+      List<String> containerLocalDirs = new ArrayList<>(localDirs.size());
       try {
         // /////////// Write out the container-script in the nmPrivate space.
         List<Path> appDirs = new ArrayList<Path>(localDirs.size());
@@ -261,6 +262,14 @@ public class ContainerLaunch implements Callable<Integer> {
           Path userdir = new Path(usersdir, user);
           Path appsdir = new Path(userdir, ContainerLocalizer.APPCACHE);
           appDirs.add(new Path(appsdir, appIdStr));
+
+          String containerLocalDir = localDir + Path.SEPARATOR +
+              ContainerLocalizer.USERCACHE + Path.SEPARATOR + user
+              + Path.SEPARATOR
+              + ContainerLocalizer.APPCACHE + Path.SEPARATOR + appIdStr
+              + Path.SEPARATOR;
+
+          containerLocalDirs.add(containerLocalDir);
         }
         containerScriptOutStream =
           lfs.create(nmPrivateContainerScriptPath,
@@ -317,6 +326,8 @@ public class ContainerLaunch implements Callable<Integer> {
             .setContainerWorkDir(containerWorkDir)
             .setLocalDirs(localDirs)
             .setLogDirs(logDirs)
+            .setContainerLocalDirs(containerLocalDirs)
+            .setContainerLogDirs(containerLogDirs)
             .build());
       }
     } catch (Throwable e) {
