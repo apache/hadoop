@@ -54,6 +54,9 @@ Release 2.9.0 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-9601. NNThroughputBenchmark.BlockReportStats should handle
+    NotReplicatedYetException on adding block (iwasakims)
+
     HDFS-9621. Consolidate FSDirStatAndListingOp#createFileStatus to let its
     INodesInPath parameter always include the target INode. (jing9)
 
