@@ -45,6 +45,8 @@ public final class ContainerStartContext {
   private final Path containerWorkDir;
   private final List<String> localDirs;
   private final List<String> logDirs;
+  private final List<String> containerLocalDirs;
+  private final List<String> containerLogDirs;
 
   public static final class Builder {
     private Container container;
@@ -56,6 +58,8 @@ public final class ContainerStartContext {
     private Path containerWorkDir;
     private List<String> localDirs;
     private List<String> logDirs;
+    private List<String> containerLocalDirs;
+    private List<String> containerLogDirs;
 
     public Builder() {
     }
@@ -107,6 +111,16 @@ public final class ContainerStartContext {
       return this;
     }
 
+    public Builder setContainerLocalDirs(List<String> containerLocalDirs) {
+      this.containerLocalDirs = containerLocalDirs;
+      return this;
+    }
+
+    public Builder setContainerLogDirs(List<String> containerLogDirs) {
+      this.containerLogDirs = containerLogDirs;
+      return this;
+    }
+
     public ContainerStartContext build() {
       return new ContainerStartContext(this);
     }
@@ -122,6 +136,8 @@ public final class ContainerStartContext {
     this.containerWorkDir = builder.containerWorkDir;
     this.localDirs = builder.localDirs;
     this.logDirs = builder.logDirs;
+    this.containerLocalDirs = builder.containerLocalDirs;
+    this.containerLogDirs = builder.containerLogDirs;
   }
 
   public Container getContainer() {
@@ -162,5 +178,13 @@ public final class ContainerStartContext {
 
   public List<String> getLogDirs() {
     return Collections.unmodifiableList(this.logDirs);
+  }
+
+  public List<String> getContainerLocalDirs() {
+    return this.containerLocalDirs;
+  }
+
+  public List<String> getContainerLogDirs() {
+    return this.containerLogDirs;
   }
 }

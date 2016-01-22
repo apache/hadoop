@@ -81,6 +81,8 @@ public class TestDockerContainerRuntime {
   Path pidFilePath;
   List<String> localDirs;
   List<String> logDirs;
+  List<String> containerLocalDirs;
+  List<String> containerLogDirs;
   String resourcesOptions;
   ContainerRuntimeContext.Builder builder;
   String submittingUser = "anakin";
@@ -123,9 +125,13 @@ public class TestDockerContainerRuntime {
     localDirs = new ArrayList<>();
     logDirs = new ArrayList<>();
     resourcesOptions = "cgroups=none";
+    containerLocalDirs = new ArrayList<>();
+    containerLogDirs = new ArrayList<>();
 
     localDirs.add("/test_local_dir");
     logDirs.add("/test_log_dir");
+    containerLocalDirs.add("/test_container_local_dir");
+    containerLogDirs.add("/test_container_log_dir");
 
     builder = new ContainerRuntimeContext
         .Builder(container);
@@ -141,6 +147,8 @@ public class TestDockerContainerRuntime {
         .setExecutionAttribute(PID_FILE_PATH, pidFilePath)
         .setExecutionAttribute(LOCAL_DIRS, localDirs)
         .setExecutionAttribute(LOG_DIRS, logDirs)
+        .setExecutionAttribute(CONTAINER_LOCAL_DIRS, containerLocalDirs)
+        .setExecutionAttribute(CONTAINER_LOG_DIRS, containerLogDirs)
         .setExecutionAttribute(RESOURCES_OPTIONS, resourcesOptions);
   }
 
@@ -245,8 +253,8 @@ public class TestDockerContainerRuntime {
         .append("bash %8$s/launch_container.sh");
 
     String expectedCommand = String.format(expectedCommandTemplate.toString(),
-        containerId, runAsUser, containerWorkDir, localDirs.get(0),
-        containerWorkDir, logDirs.get(0), image, containerWorkDir);
+        containerId, runAsUser, containerWorkDir, containerLocalDirs.get(0),
+        containerWorkDir, containerLogDirs.get(0), image, containerWorkDir);
 
     List<String> dockerCommands = Files.readAllLines(Paths.get
             (dockerCommandFile), Charset.forName("UTF-8"));
