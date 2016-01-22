@@ -951,6 +951,9 @@ Release 2.9.0 - UNRELEASED
     HDFS-9601. NNThroughputBenchmark.BlockReportStats should handle
     NotReplicatedYetException on adding block (iwasakims)
 
+    HDFS-9618. Fix mismatch between log level and guard in
+    BlockManager#computeRecoveryWorkForBlocks (iwasakims)
+
     HDFS-9621. getListing wrongly associates Erasure Coding policy to pre-existing
     replicated files under an EC directory. (jing9)
 

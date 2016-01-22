@@ -1488,7 +1488,7 @@ public class BlockManager implements BlockStatsMXBean {
       namesystem.writeUnlock();
     }
 
-    if (blockLog.isInfoEnabled()) {
+    if (blockLog.isDebugEnabled()) {
       // log which blocks have been scheduled for replication
       for(BlockRecoveryWork rw : recovWork){
         DatanodeStorageInfo[] targets = rw.getTargets();
@@ -1502,8 +1502,7 @@ public class BlockManager implements BlockStatsMXBean {
               rw.getBlock(), targetList);
         }
       }
-    }
-    if (blockLog.isDebugEnabled()) {
+
       blockLog.debug("BLOCK* neededReplications = {} pendingReplications = {}",
           neededReplications.size(), pendingReplications.size());
     }
