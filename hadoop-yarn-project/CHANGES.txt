@@ -137,6 +137,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4611. Fix scheduler load simulator to support multi-layer network
     location. (Ming Ma via xgong)
 
+    YARN-4584. RM startup failure when AM attempts greater than max-attempts.
+    (Bibin A Chundatt via rohithsharmaks)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
