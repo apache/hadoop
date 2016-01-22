@@ -219,6 +219,7 @@ public class TestAMRMClientOnRMRestart {
     // request
     nm1.nodeHeartbeat(containerId.getApplicationAttemptId(),
         containerId.getContainerId(), ContainerState.RUNNING);
+    dispatcher.await();
     amClient.requestContainerResourceChange(
         container, Resource.newInstance(2048, 1));
     it.remove();
