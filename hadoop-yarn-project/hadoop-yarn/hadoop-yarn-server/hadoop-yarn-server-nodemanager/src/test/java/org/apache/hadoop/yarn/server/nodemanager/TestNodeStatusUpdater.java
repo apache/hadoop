@@ -74,6 +74,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.client.RMProxy;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -443,7 +444,8 @@ public class TestNodeStatusUpdater {
 
     @Override
     protected ResourceTracker getRMClient() throws IOException {
-      RetryPolicy retryPolicy = RMProxy.createRetryPolicy(conf);
+      RetryPolicy retryPolicy = RMProxy.createRetryPolicy(conf,
+          HAUtil.isHAEnabled(conf));
       resourceTracker =
           (ResourceTracker) RetryProxy.create(ResourceTracker.class,
             new MyResourceTracker6(rmStartIntervalMS, rmNeverStart),
@@ -476,7 +478,8 @@ public class TestNodeStatusUpdater {
 
     @Override
     protected ResourceTracker getRMClient() {
-      RetryPolicy retryPolicy = RMProxy.createRetryPolicy(conf);
+      RetryPolicy retryPolicy = RMProxy.createRetryPolicy(conf,
+          HAUtil.isHAEnabled(conf));
       return (ResourceTracker) RetryProxy.create(ResourceTracker.class,
         resourceTracker, retryPolicy);
     }
