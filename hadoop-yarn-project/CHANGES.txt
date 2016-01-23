@@ -104,6 +104,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4603. FairScheduler should mention user requested queuename in error 
     message when failed in queue ACL check. (Tao Jie via kasha)
 
+    YARN-4496. Improve HA ResourceManager Failover detection on the client.
+    (Jian He via xgong)
+
   OPTIMIZATIONS
 
   BUG FIXES

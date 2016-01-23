@@ -457,6 +457,7 @@ public class MiniYARNCluster extends CompositeService {
     protected synchronized void serviceStart() throws Exception {
       startResourceManager(index);
       Configuration conf = resourceManagers[index].getConfig();
+      LOG.info("Starting resourcemanager " + index);
       LOG.info("MiniYARN ResourceManager address: " +
           conf.get(YarnConfiguration.RM_ADDRESS));
       LOG.info("MiniYARN ResourceManager web address: " + WebAppUtils
