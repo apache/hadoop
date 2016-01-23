@@ -490,7 +490,6 @@ public class TestApplicationPriority {
     RMApp app2 = rm.submitApp(1 * GB, appPriority2);
 
     // kick the scheduler, 1 GB which was free is given to AM of App2
-    nm1.nodeHeartbeat(true);
     MockAM am2 = MockRM.launchAM(app2, rm, nm1);
     am2.registerAppAttempt();
 

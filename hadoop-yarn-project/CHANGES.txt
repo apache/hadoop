@@ -1319,6 +1319,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4605. Spelling mistake in the help message of "yarn applicationattempt"
     command. (Weiwei Yang via aajisaka)
 
+    YARN-4614. Fix random failure in TestApplicationPriority#testApplicationPriority
+    AllocationWithChangeInPriority. (Sunil G via rohithsharmaks)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
