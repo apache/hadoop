@@ -184,6 +184,7 @@ class HeartbeatManager implements DatanodeStatistics {
                        -1L,
                        -1L,
                        -1L,
+                       -1L,
                        -1L};
   }
 

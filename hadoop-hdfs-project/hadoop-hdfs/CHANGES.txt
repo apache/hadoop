@@ -82,6 +82,9 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-9653.  Added blocks pending deletion report to dfsadmin.
+    (Weiwei Yang via eyang)
+
     HDFS-9257. improve error message for "Absolute path required" in INode.java
     to contain the rejected path (Marcell Szabo via harsh)
 
