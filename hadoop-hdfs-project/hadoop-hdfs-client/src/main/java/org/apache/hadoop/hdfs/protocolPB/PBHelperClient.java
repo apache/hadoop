@@ -1509,6 +1509,8 @@ public class PBHelperClient {
         res.getMissingReplOneBlocks();
     result[ClientProtocol.GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX] =
         res.hasBlocksInFuture() ? res.getBlocksInFuture() : 0;
+    result[ClientProtocol.GET_STATS_PENDING_DELETION_BLOCKS_IDX] =
+        res.getPendingDeletionBlocks();
     return result;
   }
 
@@ -1868,6 +1870,11 @@ public class PBHelperClient {
         ClientProtocol.GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX + 1) {
       result.setBlocksInFuture(
           fsStats[ClientProtocol.GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX]);
+    }
+    if (fsStats.length >=
+        ClientProtocol.GET_STATS_PENDING_DELETION_BLOCKS_IDX + 1) {
+      result.setPendingDeletionBlocks(
+          fsStats[ClientProtocol.GET_STATS_PENDING_DELETION_BLOCKS_IDX]);
     }
     return result.build();
   }
