@@ -205,8 +205,9 @@ void RpcConnectionImpl<NextLayer>::FlushPendingRequests() {
 
     req->timer().expires_from_now(
         std::chrono::milliseconds(options_.rpc_timeout));
-    req->timer().async_wait(std::bind(
-      &RpcConnection::HandleRpcTimeout, this, req, _1));
+    req->timer().async_wait([shared_this, this, req](const ::asio::error_code &ec) {
+        this->HandleRpcTimeout(req, ec);
+    });
 
     asio::async_write(next_layer_, asio::buffer(*payload),
                       [shared_this, this, payload](const ::asio::error_code &ec,
