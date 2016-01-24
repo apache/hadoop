@@ -126,6 +126,11 @@ void DataTransferSaslStream<Stream>::Handshake(const Handler &next) {
   m->Run([next](const Status &status, const State &) { next(status); });
 }
 
+template <class Stream>
+void DataTransferSaslStream<Stream>::Cancel() {
+  /* implement with secured reads */
+}
+
 }
 
 #endif

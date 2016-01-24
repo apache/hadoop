@@ -58,6 +58,8 @@ public:
 
   void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) override
   {(void)handler;  /*TODO: Handshaking goes here*/};
+
+  void Cancel();
 private:
   DataTransferSaslStream(const DataTransferSaslStream &) = delete;
   DataTransferSaslStream &operator=(const DataTransferSaslStream &) = delete;

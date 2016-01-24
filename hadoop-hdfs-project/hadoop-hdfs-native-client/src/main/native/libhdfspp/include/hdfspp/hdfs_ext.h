@@ -64,6 +64,15 @@ void hdfsGetLastError(char *buf, int len);
 
 
 /**
+ *  Cancels operations being made by the FileHandle.
+ *  Note: Cancel cannot be reversed.  This is intended
+ *  to be used before hdfsClose to avoid waiting for
+ *  operations to complete.
+ **/
+LIBHDFS_EXTERNAL
+int hdfsCancel(hdfsFS fs, hdfsFile file);
+
+/**
  * Create an HDFS builder, using the configuration XML files from the indicated
  * directory.  If the directory does not exist, or contains no configuration
  * XML files, a Builder using all default values will be returned.
@@ -98,7 +107,6 @@ int hdfsBuilderConfGetStr(struct hdfsBuilder *bld, const char *key,
      *                 Failure to find the key is not an error.
      */
 int hdfsBuilderConfGetInt(struct hdfsBuilder *bld, const char *key, int32_t *val);
-
 
 } /* end extern "C" */
 #endif

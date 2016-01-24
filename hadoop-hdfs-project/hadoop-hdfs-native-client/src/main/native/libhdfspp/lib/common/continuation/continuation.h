@@ -19,6 +19,7 @@
 #define LIB_COMMON_CONTINUATION_CONTINUATION_H_
 
 #include "hdfspp/status.h"
+#include "common/cancel_tracker.h"
 
 #include <functional>
 #include <memory>
@@ -81,6 +82,9 @@ template <class State> class Pipeline {
 public:
   typedef std::function<void(const Status &, const State &)> UserHandler;
   static Pipeline *Create() { return new Pipeline(); }
+  static Pipeline *Create(CancelHandle cancel_handle) {
+    return new Pipeline(cancel_handle);
+  }
   Pipeline &Push(Continuation *stage);
   void Run(UserHandler &&handler);
   State &state() { return state_; }
@@ -91,9 +95,11 @@ private:
   size_t stage_;
   std::function<void(const Status &, const State &)> handler_;
 
-  Pipeline() : stage_(0) {}
+  Pipeline() : stage_(0), cancel_handle_(CancelTracker::New()) {}
+  Pipeline(CancelHandle cancel_handle) : stage_(0), cancel_handle_(cancel_handle) {}
   ~Pipeline() = default;
   void Schedule(const Status &status);
+  CancelHandle cancel_handle_;
 };
 
 template <class State>
@@ -104,7 +110,12 @@ inline Pipeline<State> &Pipeline<State>::Push(Continuation *stage) {
 
 template <class State>
 inline void Pipeline<State>::Schedule(const Status &status) {
-  if (!status.ok() || stage_ >= routines_.size()) {
+  // catch cancelation signalled from outside of pipeline
+  if(cancel_handle_->is_canceled()) {
+    handler_(Status::Canceled(), state_);
+    routines_.clear();
+    delete this;
+  } else if (!status.ok() || stage_ >= routines_.size()) {
     handler_(status, state_);
     routines_.clear();
     delete this;

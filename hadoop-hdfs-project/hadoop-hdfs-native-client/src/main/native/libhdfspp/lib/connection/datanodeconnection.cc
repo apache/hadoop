@@ -53,5 +53,11 @@ void DataNodeConnectionImpl::Connect(
             handler(ToStatus(ec), shared_this); });
 }
 
+void DataNodeConnectionImpl::Cancel() {
+  // best to do a shutdown() first for portability
+  conn_->shutdown(asio::ip::tcp::socket::shutdown_both);
+  conn_->close();
+}
+
 
 }

@@ -93,6 +93,12 @@ public:
   virtual Status Seek(off_t *offset, std::ios_base::seekdir whence) = 0;
 
   /**
+   * Cancel outstanding file operations.  This is not reversable, once called
+   * the handle should be disposed of.
+   **/
+  virtual void CancelOperations(void) = 0;
+
+  /**
    * Determine if a datanode should be excluded from future operations
    * based on the return Status.
    *
