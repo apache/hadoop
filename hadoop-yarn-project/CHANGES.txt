@@ -152,6 +152,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4574. Fix random failure in TestAMRMClientOnRMRestart.
     (Takashi Ohnishi via rohithsharmaks)
 
+    YARN-4613. Fix test failure in TestClientRMService#testGetClusterNodes.
+    (Takashi Ohnishi via rohithsharmaks)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
