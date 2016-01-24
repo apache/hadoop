@@ -60,6 +60,9 @@ Trunk (Unreleased)
 
   IMPROVEMENTS
 
+    HDFS-9653.  Added blocks pending deletion report to dfsadmin.  
+    (Weiwei Yang via eyang)
+
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
     (Junping Du via llu)
 

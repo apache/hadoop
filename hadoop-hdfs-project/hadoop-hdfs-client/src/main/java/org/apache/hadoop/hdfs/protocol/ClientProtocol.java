@@ -714,7 +714,8 @@ public interface ClientProtocol {
   int GET_STATS_MISSING_BLOCKS_IDX = 5;
   int GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX = 6;
   int GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX = 7;
-  int STATS_ARRAY_LENGTH = 8;
+  int GET_STATS_PENDING_DELETION_BLOCKS_IDX = 8;
+  int STATS_ARRAY_LENGTH = 9;
 
   /**
    * Get a set of statistics about the filesystem.
@@ -729,6 +730,7 @@ public interface ClientProtocol {
    * <li> [6] contains number of blocks which have replication factor
    *          1 and have lost the only replica. </li>
    * <li> [7] contains number of bytes  that are at risk for deletion. </li>
+   * <li> [8] contains number of pending deletion blocks. </li>
    * </ul>
    * Use public constants like {@link #GET_STATS_CAPACITY_IDX} in place of
    * actual numbers to index into the array.

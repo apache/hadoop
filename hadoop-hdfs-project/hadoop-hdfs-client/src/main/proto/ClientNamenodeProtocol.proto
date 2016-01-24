@@ -307,6 +307,7 @@ message GetFsStatsResponseProto {
   required uint64 missing_blocks = 6;
   optional uint64 missing_repl_one_blocks = 7;
   optional uint64 blocks_in_future = 8;
+  optional uint64 pending_deletion_blocks = 9;
 }
 
 enum DatanodeReportTypeProto {  // type of the datanode report

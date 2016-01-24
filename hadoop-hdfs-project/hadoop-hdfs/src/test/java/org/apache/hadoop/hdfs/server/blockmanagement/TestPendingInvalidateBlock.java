@@ -17,16 +17,19 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
@@ -88,15 +91,31 @@ public class TestPendingInvalidateBlock {
     Assert.assertEquals(0, cluster.getNamesystem().getBlocksTotal());
     Assert.assertEquals(REPLICATION, cluster.getNamesystem()
         .getPendingDeletionBlocks());
+    Assert.assertEquals(REPLICATION,
+        dfs.getPendingDeletionBlocksCount());
     Thread.sleep(6000);
     Assert.assertEquals(0, cluster.getNamesystem().getBlocksTotal());
     Assert.assertEquals(0, cluster.getNamesystem().getPendingDeletionBlocks());
+    Assert.assertEquals(0, dfs.getPendingDeletionBlocksCount());
     long nnStarted = cluster.getNamesystem().getNNStartedTimeInMillis();
     long blockDeletionStartTime = cluster.getNamesystem()
         .getBlockDeletionStartTime();
     Assert.assertTrue(String.format(
         "Expect blockDeletionStartTime = %d > nnStarted = %d.",
         blockDeletionStartTime, nnStarted), blockDeletionStartTime > nnStarted);
+
+    // test client protocol compatibility
+    Method method = DFSClient.class.
+        getDeclaredMethod("getStateByIndex", int.class);
+    method.setAccessible(true);
+    // get number of pending deletion blocks by its index
+    long validState = (Long) method.invoke(dfs.getClient(),
+        ClientProtocol.GET_STATS_PENDING_DELETION_BLOCKS_IDX);
+    // get an out of index value
+    long invalidState = (Long) method.invoke(dfs.getClient(),
+        ClientProtocol.STATS_ARRAY_LENGTH);
+    Assert.assertEquals(0, validState);
+    Assert.assertEquals(-1, invalidState);
   }
 
   /**

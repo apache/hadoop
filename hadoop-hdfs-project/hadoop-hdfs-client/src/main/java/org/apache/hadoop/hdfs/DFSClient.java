@@ -1957,10 +1957,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  private long[] callGetStats() throws IOException {
+  private long getStateByIndex(int stateIndex) throws IOException {
     checkOpen();
     try (TraceScope ignored = tracer.newScope("getStats")) {
-      return namenode.getStats();
+      long[] states =  namenode.getStats();
+      return states.length > stateIndex ? states[stateIndex] : -1;
     }
   }
 
@@ -1968,8 +1969,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#getStats()
    */
   public FsStatus getDiskStatus() throws IOException {
-    long rawNums[] = callGetStats();
-    return new FsStatus(rawNums[0], rawNums[1], rawNums[2]);
+    return new FsStatus(getStateByIndex(0),
+        getStateByIndex(1), getStateByIndex(2));
   }
 
   /**
@@ -1978,7 +1979,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @throws IOException
    */
   public long getMissingBlocksCount() throws IOException {
-    return callGetStats()[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX];
+    return getStateByIndex(ClientProtocol.
+        GET_STATS_MISSING_BLOCKS_IDX);
   }
 
   /**
@@ -1987,8 +1989,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @throws IOException
    */
   public long getMissingReplOneBlocksCount() throws IOException {
-    return callGetStats()[ClientProtocol.
-        GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX];
+    return getStateByIndex(ClientProtocol.
+        GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX);
+  }
+
+  /**
+   * Returns count of blocks pending on deletion.
+   * @throws IOException
+   */
+  public long getPendingDeletionBlocksCount() throws IOException {
+    return getStateByIndex(ClientProtocol.
+        GET_STATS_PENDING_DELETION_BLOCKS_IDX);
   }
 
   /**
@@ -1996,7 +2007,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @throws IOException
    */
   public long getUnderReplicatedBlocksCount() throws IOException {
-    return callGetStats()[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX];
+    return getStateByIndex(ClientProtocol.
+        GET_STATS_UNDER_REPLICATED_IDX);
   }
 
   /**
@@ -2004,7 +2016,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @throws IOException
    */
   public long getCorruptBlocksCount() throws IOException {
-    return callGetStats()[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX];
+    return getStateByIndex(ClientProtocol.
+        GET_STATS_CORRUPT_BLOCKS_IDX);
   }
 
   /**
@@ -2014,7 +2027,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @throws IOException
    */
   public long getBytesInFutureBlocks() throws IOException {
-    return callGetStats()[ClientProtocol.GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX];
+    return getStateByIndex(ClientProtocol.
+        GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX);
   }
 
   /**

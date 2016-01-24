@@ -1115,6 +1115,15 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
+   * Returns count of blocks pending on deletion.
+   *
+   * @throws IOException
+   */
+  public long getPendingDeletionBlocksCount() throws IOException {
+    return dfs.getPendingDeletionBlocksCount();
+  }
+
+  /**
    * Returns count of blocks with replication factor 1 and have
    * lost the only replica.
    *

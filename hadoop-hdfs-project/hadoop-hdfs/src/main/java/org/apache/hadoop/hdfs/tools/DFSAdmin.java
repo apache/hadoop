@@ -502,6 +502,8 @@ public class DFSAdmin extends FsShell {
                        dfs.getMissingBlocksCount());
     System.out.println("Missing blocks (with replication factor 1): " +
                       dfs.getMissingReplOneBlocksCount());
+    System.out.println("Pending deletion blocks: " +
+        dfs.getPendingDeletionBlocksCount());
 
     System.out.println();
 
