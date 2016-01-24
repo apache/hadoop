@@ -33,6 +33,7 @@ public:
 
     virtual ~DataNodeConnection();
     virtual void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) = 0;
+    virtual void Cancel() = 0;
 };
 
 
@@ -47,6 +48,8 @@ public:
                           const hadoop::common::TokenProto *token);
 
   void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) override;
+
+  void Cancel() override;
 
   void async_read_some(const MutableBuffers &buf,
         std::function<void (const asio::error_code & error,

@@ -20,6 +20,7 @@
 
 #include "hdfspp/status.h"
 #include "common/async_stream.h"
+#include "common/cancel_tracker.h"
 #include "datatransfer.pb.h"
 #include "connection/datanodeconnection.h"
 
@@ -82,14 +83,17 @@ public:
     uint64_t length,
     uint64_t offset,
     const std::function<void(Status)> &handler) = 0;
+
+  virtual void CancelOperation() = 0;
 };
 
 class BlockReaderImpl
     : public BlockReader, public std::enable_shared_from_this<BlockReaderImpl> {
 public:
-  explicit BlockReaderImpl(const BlockReaderOptions &options, std::shared_ptr<DataNodeConnection> dn)
+  explicit BlockReaderImpl(const BlockReaderOptions &options, std::shared_ptr<DataNodeConnection> dn,
+                           CancelHandle cancel_state)
       : dn_(dn), state_(kOpen), options_(options),
-        chunk_padding_bytes_(0) {}
+        chunk_padding_bytes_(0), cancel_state_(cancel_state) {}
 
   virtual void AsyncReadPacket(
     const MutableBuffers &buffers,
@@ -107,6 +111,8 @@ public:
     const hadoop::hdfs::LocatedBlockProto &block, size_t offset,
     const MutableBuffers &buffers,
     const std::function<void(const Status &, size_t)> handler) override;
+
+  virtual void CancelOperation() override;
 
   size_t ReadPacket(const MutableBuffers &buffers, Status *status);
 
@@ -143,6 +149,7 @@ private:
   int chunk_padding_bytes_;
   long long bytes_to_read_;
   std::vector<char> checksum_;
+  CancelHandle cancel_state_;
 };
 }
 

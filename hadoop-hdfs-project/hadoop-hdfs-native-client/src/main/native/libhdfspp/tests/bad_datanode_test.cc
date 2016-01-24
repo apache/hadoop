@@ -55,6 +55,10 @@ public:
     size_t offset,
     const MutableBuffers &buffers,
     const std::function<void(const Status &, size_t)> handler));
+
+  virtual void CancelOperation() override {
+    /* no-op, declared pure virtual */
+  }
 };
 
 class MockDNConnection : public DataNodeConnection, public std::enable_shared_from_this<MockDNConnection> {
@@ -74,6 +78,10 @@ class MockDNConnection : public DataNodeConnection, public std::enable_shared_fr
                                  std::size_t bytes_transferred) > handler) override {
       (void)buf;
       handler(asio::error::fault, 0);
+  }
+
+  virtual void Cancel() override {
+    /* no-op, declared pure virtual */
   }
 };
 

@@ -34,13 +34,17 @@ FileHandleImpl::FileHandleImpl(::asio::io_service *io_service, const std::string
                                  const std::shared_ptr<const struct FileInfo> file_info,
                                  std::shared_ptr<BadDataNodeTracker> bad_data_nodes)
     : io_service_(io_service), client_name_(client_name), file_info_(file_info),
-      bad_node_tracker_(bad_data_nodes), offset_(0) {
+      bad_node_tracker_(bad_data_nodes), offset_(0), cancel_state_(CancelTracker::New()) {
 }
 
 void FileHandleImpl::PositionRead(
     void *buf, size_t nbyte, uint64_t offset,
-    const std::function<void(const Status &, size_t)>
-        &handler) {
+    const std::function<void(const Status &, size_t)> &handler) {
+  /* prevent usage after cancelation */
+  if(cancel_state_->is_canceled()) {
+    handler(Status::Canceled(), 0);
+    return;
+  }
 
   auto callback = [this, handler](const Status &status,
                                   const std::string &contacted_datanode,
@@ -90,6 +94,10 @@ Status FileHandleImpl::Read(void *buf, size_t *nbyte) {
 }
 
 Status FileHandleImpl::Seek(off_t *offset, std::ios_base::seekdir whence) {
+  if(cancel_state_->is_canceled()) {
+    return Status::Canceled();
+  }
+
   off_t new_offset = -1;
 
   switch (whence) {
@@ -137,6 +145,11 @@ void FileHandleImpl::AsyncPreadSome(
     const std::function<void(const Status &, const std::string &, size_t)> handler) {
   using ::hadoop::hdfs::DatanodeInfoProto;
   using ::hadoop::hdfs::LocatedBlockProto;
+
+  if(cancel_state_->is_canceled()) {
+    handler(Status::Canceled(), "", 0);
+    return;
+  }
 
   /**
    *  Note: block and chosen_dn will end up pointing to things inside
@@ -210,7 +223,9 @@ void FileHandleImpl::AsyncPreadSome(
 std::shared_ptr<BlockReader> FileHandleImpl::CreateBlockReader(const BlockReaderOptions &options,
                                                std::shared_ptr<DataNodeConnection> dn)
 {
-  return std::make_shared<BlockReaderImpl>(options, dn);
+  std::shared_ptr<BlockReader> reader = std::make_shared<BlockReaderImpl>(options, dn, cancel_state_);
+  readers_.AddReader(reader);
+  return reader;
 }
 
 std::shared_ptr<DataNodeConnection> FileHandleImpl::CreateDataNodeConnection(
@@ -220,6 +235,17 @@ std::shared_ptr<DataNodeConnection> FileHandleImpl::CreateDataNodeConnection(
   return std::make_shared<DataNodeConnectionImpl>(io_service, dn, token);
 }
 
+void FileHandleImpl::CancelOperations() {
+  cancel_state_->set_canceled();
+
+  /* Push update to BlockReaders that may be hung in an asio call */
+  std::vector<std::shared_ptr<BlockReader>> live_readers = readers_.GetLiveReaders();
+  for(auto reader : live_readers) {
+    reader->CancelOperation();
+  }
+}
+
+
 bool FileHandle::ShouldExclude(const Status &s) {
   if (s.ok()) {
     return false;
@@ -228,6 +254,7 @@ bool FileHandle::ShouldExclude(const Status &s) {
   switch (s.code()) {
     /* client side resource exhaustion */
     case Status::kResourceUnavailable:
+    case Status::kOperationCanceled:
       return false;
     case Status::kInvalidArgument:
     case Status::kUnimplemented:

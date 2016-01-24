@@ -20,7 +20,9 @@
 
 #include "common/hdfs_public_api.h"
 #include "common/async_stream.h"
+#include "common/cancel_tracker.h"
 #include "reader/fileinfo.h"
+#include "reader/readergroup.h"
 
 #include "asio.hpp"
 #include "bad_datanode_tracker.h"
@@ -94,6 +96,14 @@ public:
                       const std::function<void(const Status &status,
                       const std::string &dn_id, size_t bytes_read)> handler);
 
+
+  /**
+   *  Cancels all operations instantiated from this FileHandle.
+   *  Will set a flag to abort continuation pipelines when they try to move to the next step.
+   *  Closes TCP connections to Datanode in order to abort pipelines waiting on slow IO.
+   **/
+  virtual void CancelOperations(void) override;
+
 protected:
   virtual std::shared_ptr<BlockReader> CreateBlockReader(const BlockReaderOptions &options,
                                                  std::shared_ptr<DataNodeConnection> dn);
@@ -108,6 +118,8 @@ private:
   std::shared_ptr<BadDataNodeTracker> bad_node_tracker_;
   bool CheckSeekBounds(ssize_t desired_position);
   off_t offset_;
+  CancelHandle cancel_state_;
+  ReaderGroup readers_;
 };
 
 }

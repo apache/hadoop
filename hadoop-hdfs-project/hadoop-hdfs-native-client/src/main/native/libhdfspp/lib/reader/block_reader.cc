@@ -22,6 +22,7 @@
 
 #include <future>
 
+
 namespace hdfs {
 
 hadoop::hdfs::OpReadBlockProto
@@ -65,7 +66,7 @@ void BlockReaderImpl::AsyncRequestBlock(
     hadoop::hdfs::BlockOpResponseProto response;
   };
 
-  auto m = continuation::Pipeline<State>::Create();
+  auto m = continuation::Pipeline<State>::Create(cancel_state_);
   State *s = &m->state();
 
   s->header.insert(s->header.begin(),
@@ -287,7 +288,7 @@ struct BlockReaderImpl::AckRead : continuation::Continuation {
     }
 
     auto m =
-        continuation::Pipeline<hadoop::hdfs::ClientReadStatusProto>::Create();
+        continuation::Pipeline<hadoop::hdfs::ClientReadStatusProto>::Create(parent_->cancel_state_);
     m->state().set_status(parent_->options_.verify_checksum
                               ? hadoop::hdfs::Status::CHECKSUM_OK
                               : hadoop::hdfs::Status::SUCCESS);
@@ -316,7 +317,7 @@ void BlockReaderImpl::AsyncReadPacket(
   struct State {
     std::shared_ptr<size_t> bytes_transferred;
   };
-  auto m = continuation::Pipeline<State>::Create();
+  auto m = continuation::Pipeline<State>::Create(cancel_state_);
   m->state().bytes_transferred = std::make_shared<size_t>(0);
 
   m->Push(new ReadPacketHeader(this))
@@ -415,7 +416,7 @@ void BlockReaderImpl::AsyncReadBlock(
     const MutableBuffers &buffers,
     const std::function<void(const Status &, size_t)> handler) {
 
-  auto m = continuation::Pipeline<size_t>::Create();
+  auto m = continuation::Pipeline<size_t>::Create(cancel_state_);
   size_t * bytesTransferred = &m->state();
 
   size_t size = asio::buffer_size(buffers);
@@ -428,6 +429,11 @@ void BlockReaderImpl::AsyncReadBlock(
                          const size_t totalBytesTransferred) {
     handler(status, totalBytesTransferred);
   });
+}
+
+void BlockReaderImpl::CancelOperation() {
+  /* just forward cancel to DNConnection */
+  dn_->Cancel();
 }
 
 }

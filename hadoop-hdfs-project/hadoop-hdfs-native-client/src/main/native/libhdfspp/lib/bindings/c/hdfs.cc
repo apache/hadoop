@@ -267,6 +267,13 @@ tOffset hdfsTell(hdfsFS fs, hdfsFile file) {
   return offset;
 }
 
+int hdfsCancel(hdfsFS fs, hdfsFile file) {
+  if (!CheckSystemAndHandle(fs, file)) {
+    return -1;
+  }
+  static_cast<FileHandleImpl*>(file->get_impl())->CancelOperations();
+  return 0;
+}
 
 /*******************************************************************
  *                BUILDER INTERFACE
