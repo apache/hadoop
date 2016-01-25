@@ -262,13 +262,6 @@ message StopContainerRequestProto {
 message StopContainerResponseProto {
 }
 
-message GetContainerStatusRequestProto {
-  optional ContainerIdProto container_id = 1;
-}
-
-message GetContainerStatusResponseProto {
-  optional ContainerStatusProto status = 1;
-}
 
 //// bulk API records
 message StartContainersRequestProto {
