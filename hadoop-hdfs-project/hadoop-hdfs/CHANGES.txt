@@ -2690,6 +2690,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9625. set replication for empty file failed when set storage policy
     (DENG FEI via vinayakumarb)
 
+    HDFS-9672. o.a.h.hdfs.TestLeaseRecovery2 fails intermittently (Mingliang Liu
+    via jitendra)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
