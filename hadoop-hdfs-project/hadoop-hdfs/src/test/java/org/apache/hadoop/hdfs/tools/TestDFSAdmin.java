@@ -20,6 +20,9 @@ package org.apache.hadoop.hdfs.tools;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 
 import com.google.common.collect.Lists;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -27,6 +30,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,10 +56,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class TestDFSAdmin {
+  private static final Log LOG = LogFactory.getLog(DFSAdmin.class);
   private Configuration conf = null;
   private MiniDFSCluster cluster;
   private DFSAdmin admin;
   private DataNode datanode;
+  private NameNode namenode;
 
   @Before
   public void setUp() throws Exception {
@@ -80,21 +86,64 @@ public class TestDFSAdmin {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
     datanode = cluster.getDataNodes().get(0);
+    namenode = cluster.getNameNode();
   }
 
-  private List<String> getReconfigureStatus(String nodeType, String address)
-      throws IOException {
+  private void startReconfiguration(String nodeType, String address,
+      final List<String> outs, final List<String> errs) throws IOException {
+    reconfigurationOutErrFormatter("startReconfiguration", nodeType,
+        address, outs, errs);
+  }
+
+  private void getReconfigurableProperties(String nodeType, String address,
+      final List<String> outs, final List<String> errs) throws IOException {
+    reconfigurationOutErrFormatter("getReconfigurableProperties", nodeType,
+        address, outs, errs);
+  }
+
+  private void getReconfigurationStatus(String nodeType, String address,
+      final List<String> outs, final List<String> errs) throws IOException {
+    reconfigurationOutErrFormatter("getReconfigurationStatus", nodeType,
+        address, outs, errs);
+  }
+
+  private void reconfigurationOutErrFormatter(String methodName,
+      String nodeType, String address, final List<String> outs,
+      final List<String> errs) throws IOException {
     ByteArrayOutputStream bufOut = new ByteArrayOutputStream();
     PrintStream out = new PrintStream(bufOut);
     ByteArrayOutputStream bufErr = new ByteArrayOutputStream();
     PrintStream err = new PrintStream(bufErr);
-    admin.getReconfigurationStatus(nodeType, address, out, err);
-    Scanner scanner = new Scanner(bufOut.toString());
-    List<String> outputs = Lists.newArrayList();
-    while (scanner.hasNextLine()) {
-      outputs.add(scanner.nextLine());
+
+    if (methodName.equals("getReconfigurableProperties")) {
+      admin.getReconfigurableProperties(nodeType, address, out, err);
+    } else if (methodName.equals("getReconfigurationStatus")) {
+      admin.getReconfigurationStatus(nodeType, address, out, err);
+    } else if (methodName.equals("startReconfiguration")) {
+      admin.startReconfiguration(nodeType, address, out, err);
     }
-    return outputs;
+
+    Scanner scanner = new Scanner(bufOut.toString());
+    while (scanner.hasNextLine()) {
+      outs.add(scanner.nextLine());
+    }
+    scanner.close();
+    scanner = new Scanner(bufErr.toString());
+    while (scanner.hasNextLine()) {
+      errs.add(scanner.nextLine());
+    }
+    scanner.close();
+  }
+
+  @Test(timeout = 30000)
+  public void testDataNodeGetReconfigurableProperties() throws IOException {
+    final int port = datanode.getIpcPort();
+    final String address = "localhost:" + port;
+    final List<String> outs = Lists.newArrayList();
+    final List<String> errs = Lists.newArrayList();
+    getReconfigurableProperties("datanode", address, outs, errs);
+    assertEquals(3, outs.size());
+    assertEquals(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, outs.get(1));
   }
 
   /**
@@ -103,7 +152,7 @@ public class TestDFSAdmin {
    * @throws IOException
    * @throws InterruptedException
    */
-  private void testGetReconfigurationStatus(boolean expectedSuccuss)
+  private void testDataNodeGetReconfigurationStatus(boolean expectedSuccuss)
       throws IOException, InterruptedException {
     ReconfigurationUtil ru = mock(ReconfigurationUtil.class);
     datanode.setReconfigurationUtil(ru);
@@ -130,21 +179,25 @@ public class TestDFSAdmin {
 
     assertThat(admin.startReconfiguration("datanode", address), is(0));
 
-    List<String> outputs = null;
     int count = 100;
+    final List<String> outs = Lists.newArrayList();
+    final List<String> errs = Lists.newArrayList();
     while (count > 0) {
-      outputs = getReconfigureStatus("datanode", address);
-      if (!outputs.isEmpty() && outputs.get(0).contains("finished")) {
+      outs.clear();
+      errs.clear();
+      getReconfigurationStatus("datanode", address, outs, errs);
+      if (!outs.isEmpty() && outs.get(0).contains("finished")) {
         break;
       }
       count--;
       Thread.sleep(100);
     }
+    LOG.info(String.format("count=%d", count));
     assertTrue(count > 0);
     if (expectedSuccuss) {
-      assertThat(outputs.size(), is(4));
+      assertThat(outs.size(), is(4));
     } else {
-      assertThat(outputs.size(), is(6));
+      assertThat(outs.size(), is(6));
     }
 
     List<StorageLocation> locations = DataNode.getStorageLocations(
@@ -160,55 +213,78 @@ public class TestDFSAdmin {
 
     int offset = 1;
     if (expectedSuccuss) {
-      assertThat(outputs.get(offset),
+      assertThat(outs.get(offset),
           containsString("SUCCESS: Changed property " +
               DFS_DATANODE_DATA_DIR_KEY));
     } else {
-      assertThat(outputs.get(offset),
+      assertThat(outs.get(offset),
           containsString("FAILED: Change property " +
               DFS_DATANODE_DATA_DIR_KEY));
     }
-    assertThat(outputs.get(offset + 1),
+    assertThat(outs.get(offset + 1),
         is(allOf(containsString("From:"), containsString("data1"),
             containsString("data2"))));
-    assertThat(outputs.get(offset + 2),
+    assertThat(outs.get(offset + 2),
         is(not(anyOf(containsString("data1"), containsString("data2")))));
-    assertThat(outputs.get(offset + 2),
+    assertThat(outs.get(offset + 2),
         is(allOf(containsString("To"), containsString("data_new"))));
   }
 
   @Test(timeout = 30000)
-  public void testGetReconfigurationStatus()
-      throws IOException, InterruptedException {
-    testGetReconfigurationStatus(true);
+  public void testDataNodeGetReconfigurationStatus() throws IOException,
+      InterruptedException {
+    testDataNodeGetReconfigurationStatus(true);
     restartCluster();
-    testGetReconfigurationStatus(false);
-  }
-
-  private List<String> getReconfigurationAllowedProperties(
-      String nodeType, String address)
-      throws IOException {
-    ByteArrayOutputStream bufOut = new ByteArrayOutputStream();
-    PrintStream out = new PrintStream(bufOut);
-    ByteArrayOutputStream bufErr = new ByteArrayOutputStream();
-    PrintStream err = new PrintStream(bufErr);
-    admin.getReconfigurableProperties(nodeType, address, out, err);
-    Scanner scanner = new Scanner(bufOut.toString());
-    List<String> outputs = Lists.newArrayList();
-    while (scanner.hasNextLine()) {
-      outputs.add(scanner.nextLine());
-    }
-    return outputs;
+    testDataNodeGetReconfigurationStatus(false);
   }
 
   @Test(timeout = 30000)
-  public void testGetReconfigAllowedProperties() throws IOException {
-    final int port = datanode.getIpcPort();
-    final String address = "localhost:" + port;
-    List<String> outputs =
-        getReconfigurationAllowedProperties("datanode", address);
-    assertEquals(3, outputs.size());
-    assertEquals(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
-        outputs.get(1));
+  public void testNameNodeStartReconfiguration() throws IOException {
+    final String address = namenode.getHostAndPort();
+    final List<String> outs = Lists.newArrayList();
+    final List<String> errs = Lists.newArrayList();
+    startReconfiguration("namenode", address, outs, errs);
+    assertEquals(0, outs.size());
+    assertTrue(errs.size() > 1);
+    assertThat(
+        errs.get(0),
+        is(allOf(containsString("Namenode"), containsString("reconfiguring:"),
+            containsString("startReconfiguration"),
+            containsString("is not implemented"),
+            containsString("UnsupportedOperationException"))));
+  }
+
+  @Test(timeout = 30000)
+  public void testNameNodeGetReconfigurableProperties() throws IOException {
+    final String address = namenode.getHostAndPort();
+    final List<String> outs = Lists.newArrayList();
+    final List<String> errs = Lists.newArrayList();
+    getReconfigurableProperties("namenode", address, outs, errs);
+    assertEquals(0, outs.size());
+    assertTrue(errs.size() > 1);
+    assertThat(
+        errs.get(0),
+        is(allOf(containsString("Namenode"),
+            containsString("reconfiguration:"),
+            containsString("listReconfigurableProperties"),
+            containsString("is not implemented"),
+            containsString("UnsupportedOperationException"))));
+  }
+
+  @Test(timeout = 30000)
+  public void testNameNodeGetReconfigurationStatus() throws IOException {
+    final String address = namenode.getHostAndPort();
+    final List<String> outs = Lists.newArrayList();
+    final List<String> errs = Lists.newArrayList();
+    getReconfigurationStatus("namenode", address, outs, errs);
+    assertEquals(0, outs.size());
+    assertTrue(errs.size() > 1);
+    assertThat(
+        errs.get(0),
+        is(allOf(containsString("Namenode"),
+            containsString("reloading configuration:"),
+            containsString("getReconfigurationStatus"),
+            containsString("is not implemented"),
+            containsString("UnsupportedOperationException"))));
   }
 }

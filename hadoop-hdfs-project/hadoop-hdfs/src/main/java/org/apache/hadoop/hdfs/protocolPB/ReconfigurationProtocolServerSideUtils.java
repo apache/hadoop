@@ -41,9 +41,7 @@ public final class ReconfigurationProtocolServerSideUtils {
           List<String> reconfigurableProperties) {
     ListReconfigurablePropertiesResponseProto.Builder builder =
         ListReconfigurablePropertiesResponseProto.newBuilder();
-    for (String name : reconfigurableProperties) {
-      builder.addName(name);
-    }
+    builder.addAllName(reconfigurableProperties);
     return builder.build();
   }
 

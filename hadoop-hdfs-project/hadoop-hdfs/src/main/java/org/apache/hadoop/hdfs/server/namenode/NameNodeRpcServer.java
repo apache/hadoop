@@ -42,6 +42,8 @@ import com.google.common.collect.Lists;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.ReconfigurationException;
+import org.apache.hadoop.conf.ReconfigurationTaskStatus;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.CacheFlag;
@@ -111,12 +113,15 @@ import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeProtocolService;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.NamenodeProtocolService;
+import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.ReconfigurationProtocolService;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.ReconfigurationProtocolPB;
+import org.apache.hadoop.hdfs.protocolPB.ReconfigurationProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -286,6 +291,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
     BlockingService haPbService = HAServiceProtocolService
         .newReflectiveBlockingService(haServiceProtocolXlator);
 
+    ReconfigurationProtocolServerSideTranslatorPB reconfigurationProtocolXlator
+        = new ReconfigurationProtocolServerSideTranslatorPB(this);
+    BlockingService reconfigurationPbService = ReconfigurationProtocolService
+        .newReflectiveBlockingService(reconfigurationProtocolXlator);
+
     TraceAdminProtocolServerSideTranslatorPB traceAdminXlator =
         new TraceAdminProtocolServerSideTranslatorPB(this);
     BlockingService traceAdminService = TraceAdminService
@@ -319,6 +329,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
       // Add all the RPC protocols that the namenode implements
       DFSUtil.addPBProtocol(conf, HAServiceProtocolPB.class, haPbService,
           serviceRpcServer);
+      DFSUtil.addPBProtocol(conf, ReconfigurationProtocolPB.class,
+          reconfigurationPbService, serviceRpcServer);
       DFSUtil.addPBProtocol(conf, NamenodeProtocolPB.class, NNPbService,
           serviceRpcServer);
       DFSUtil.addPBProtocol(conf, DatanodeProtocolPB.class, dnProtoPbService,
@@ -403,6 +415,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
     // Add all the RPC protocols that the namenode implements
     DFSUtil.addPBProtocol(conf, HAServiceProtocolPB.class, haPbService,
         clientRpcServer);
+    DFSUtil.addPBProtocol(conf, ReconfigurationProtocolPB.class,
+        reconfigurationPbService, clientRpcServer);
     DFSUtil.addPBProtocol(conf, NamenodeProtocolPB.class, NNPbService,
         clientRpcServer);
     DFSUtil.addPBProtocol(conf, DatanodeProtocolPB.class, dnProtoPbService,
@@ -2172,5 +2186,26 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public ErasureCodingPolicy getErasureCodingPolicy(String src) throws IOException {
     checkNNStartup();
     return namesystem.getErasureCodingPolicy(src);
+  }
+
+  @Override // ReconfigurationProtocol
+  public void startReconfiguration() {
+    throw new UnsupportedOperationException(
+        "Namenode startReconfiguration is not implemented.",
+        new ReconfigurationException());
+  }
+
+  @Override // ReconfigurationProtocol
+  public ReconfigurationTaskStatus getReconfigurationStatus() {
+    throw new UnsupportedOperationException(
+        " Namenode getReconfigurationStatus is not implemented.",
+        new ReconfigurationException());
+  }
+
+  @Override // ReconfigurationProtocol
+  public List<String> listReconfigurableProperties() {
+    throw new UnsupportedOperationException(
+        " Namenode listReconfigurableProperties is not implemented.",
+        new ReconfigurationException());
   }
 }

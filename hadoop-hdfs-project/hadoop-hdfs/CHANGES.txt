@@ -953,6 +953,9 @@ Release 2.9.0 - UNRELEASED
     HDFS-9674. The HTrace span for OpWriteBlock should record the maxWriteToDisk
     time. (cmccabe via zhz)
 
+    HDFS-9094. Add command line option to ask NameNode reload
+    configuration. (Xiaobing Zhou via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES

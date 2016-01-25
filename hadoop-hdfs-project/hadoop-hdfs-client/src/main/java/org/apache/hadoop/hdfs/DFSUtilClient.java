@@ -38,9 +38,11 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.ReconfigurationProtocol;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataEncryptionKeyFactory;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferClient;
 import org.apache.hadoop.hdfs.protocolPB.ClientDatanodeProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.ReconfigurationProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.util.IOUtilsClient;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
@@ -494,6 +496,12 @@ public class DFSUtilClient {
       InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
       SocketFactory factory) throws IOException {
     return new ClientDatanodeProtocolTranslatorPB(addr, ticket, conf, factory);
+  }
+
+  public static ReconfigurationProtocol createReconfigurationProtocolProxy(
+      InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
+      SocketFactory factory) throws IOException {
+    return new ReconfigurationProtocolTranslatorPB(addr, ticket, conf, factory);
   }
 
   /**
