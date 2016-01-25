@@ -2496,6 +2496,9 @@ Release 2.6.4 - UNRELEASED
     HADOOP-12736. TestTimedOutTestsListener#testThreadDumpAndDeadlocks
     sometimes times out. (Xiao Chen via aajisaka)
 
+    HADOOP-12715. TestValueQueue#testgetAtMostPolicyALL fails intermittently.
+    (Xiao Chen via waltersu4549)
+
 Release 2.6.3 - 2015-12-17
 
   INCOMPATIBLE CHANGES

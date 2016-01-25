@@ -19,18 +19,24 @@ package org.apache.hadoop.crypto.key;
 
 import java.io.IOException;
 import java.util.Queue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.crypto.key.kms.ValueQueue;
 import org.apache.hadoop.crypto.key.kms.ValueQueue.QueueRefiller;
 import org.apache.hadoop.crypto.key.kms.ValueQueue.SyncGenerationPolicy;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.Sets;
 
 public class TestValueQueue {
+  Logger LOG = LoggerFactory.getLogger(TestValueQueue.class);
 
   private static class FillInfo {
     final int num;
@@ -60,7 +66,7 @@ public class TestValueQueue {
   /**
    * Verifies that Queue is initially filled to "numInitValues"
    */
-  @Test
+  @Test(timeout=30000)
   public void testInitFill() throws Exception {
     MockFiller filler = new MockFiller();
     ValueQueue<String> vq =
@@ -74,7 +80,7 @@ public class TestValueQueue {
   /**
    * Verifies that Queue is initialized (Warmed-up) for provided keys
    */
-  @Test
+  @Test(timeout=30000)
   public void testWarmUp() throws Exception {
     MockFiller filler = new MockFiller();
     ValueQueue<String> vq =
@@ -97,7 +103,7 @@ public class TestValueQueue {
    * Verifies that the refill task is executed after "checkInterval" if
    * num values below "lowWatermark"
    */
-  @Test
+  @Test(timeout=30000)
   public void testRefill() throws Exception {
     MockFiller filler = new MockFiller();
     ValueQueue<String> vq =
@@ -116,7 +122,7 @@ public class TestValueQueue {
    * Verifies that the No refill Happens after "checkInterval" if
    * num values above "lowWatermark"
    */
-  @Test
+  @Test(timeout=30000)
   public void testNoRefill() throws Exception {
     MockFiller filler = new MockFiller();
     ValueQueue<String> vq =
@@ -131,29 +137,56 @@ public class TestValueQueue {
   /**
    * Verify getAtMost when SyncGeneration Policy = ALL
    */
-  @Test
+  @Test(timeout=30000)
   public void testgetAtMostPolicyALL() throws Exception {
     MockFiller filler = new MockFiller();
-    ValueQueue<String> vq =
+    final ValueQueue<String> vq =
         new ValueQueue<String>(10, 0.1f, 300, 1,
             SyncGenerationPolicy.ALL, filler);
     Assert.assertEquals("test", vq.getNext("k1"));
     Assert.assertEquals(1, filler.getTop().num);
-    // Drain completely
-    Assert.assertEquals(10, vq.getAtMost("k1", 10).size());
-    // Synchronous call
-    Assert.assertEquals(10, filler.getTop().num);
-    // Ask for more... return all
-    Assert.assertEquals(19, vq.getAtMost("k1", 19).size());
+
+    // Synchronous call:
+    // 1. Synchronously fill returned list
+    // 2. Start another async task to fill the queue in the cache
+    Assert.assertEquals("Failed in sync call.", 10,
+        vq.getAtMost("k1", 10).size());
+    Assert.assertEquals("Sync call filler got wrong number.", 10,
+        filler.getTop().num);
+
+    // Wait for the async task to finish
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          int size = vq.getSize("k1");
+          if (size != 10) {
+            LOG.info("Current ValueQueue size is " + size);
+            return false;
+          }
+          return true;
+        } catch (ExecutionException e) {
+          LOG.error("Exception when getSize.", e);
+          return false;
+        }
+      }
+    }, 100, 3000);
+    Assert.assertEquals("Failed in async call.", 10, filler.getTop().num);
+
+    // Drain completely after filled by the async thread
+    Assert.assertEquals("Failed to drain completely after async.", 10,
+        vq.getAtMost("k1", 10).size());
     // Synchronous call (No Async call since num > lowWatermark)
-    Assert.assertEquals(19, filler.getTop().num);
+    Assert.assertEquals("Failed to get all 19.", 19,
+        vq.getAtMost("k1", 19).size());
+    Assert.assertEquals("Failed in sync call.", 19, filler.getTop().num);
     vq.shutdown();
   }
 
   /**
    * Verify getAtMost when SyncGeneration Policy = ALL
    */
-  @Test
+  @Test(timeout=30000)
   public void testgetAtMostPolicyATLEAST_ONE() throws Exception {
     MockFiller filler = new MockFiller();
     ValueQueue<String> vq =
@@ -171,7 +204,7 @@ public class TestValueQueue {
   /**
    * Verify getAtMost when SyncGeneration Policy = LOW_WATERMARK
    */
-  @Test
+  @Test(timeout=30000)
   public void testgetAtMostPolicyLOW_WATERMARK() throws Exception {
     MockFiller filler = new MockFiller();
     ValueQueue<String> vq =
@@ -188,7 +221,7 @@ public class TestValueQueue {
     vq.shutdown();
   }
 
-  @Test
+  @Test(timeout=30000)
   public void testDrain() throws Exception {
     MockFiller filler = new MockFiller();
     ValueQueue<String> vq =
