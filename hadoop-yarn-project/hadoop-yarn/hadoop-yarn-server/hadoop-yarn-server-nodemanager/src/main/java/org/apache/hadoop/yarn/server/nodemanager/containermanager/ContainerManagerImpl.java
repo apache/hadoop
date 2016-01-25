@@ -1310,6 +1310,12 @@ public class ContainerManagerImpl extends CompositeService implements
       CMgrCompletedAppsEvent appsFinishedEvent =
           (CMgrCompletedAppsEvent) event;
       for (ApplicationId appID : appsFinishedEvent.getAppsToCleanup()) {
+        Application app = this.context.getApplications().get(appID);
+        if (app == null) {
+          LOG.warn("couldn't find application " + appID + " while processing"
+              + " FINISH_APPS event");
+          continue;
+        }
         String diagnostic = "";
         if (appsFinishedEvent.getReason() == CMgrCompletedAppsEvent.Reason.ON_SHUTDOWN) {
           diagnostic = "Application killed on shutdown";
