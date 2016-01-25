@@ -479,6 +479,6 @@ public abstract class GenericTestUtils {
    */
   public static void assumeInNativeProfile() {
     Assume.assumeTrue(
-        Boolean.valueOf(System.getProperty("runningWithNative", "false")));
+        Boolean.parseBoolean(System.getProperty("runningWithNative", "false")));
   }
 }
