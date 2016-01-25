@@ -1325,6 +1325,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4614. Fix random failure in TestApplicationPriority#testApplicationPriority
     AllocationWithChangeInPriority. (Sunil G via rohithsharmaks)
 
+    YARN-4592. Remove unused GetContainerStatus proto. (Chang Li via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
