@@ -51,6 +51,9 @@ Release 2.7.3 - UNRELEASED
 
     YARN-4439. Clarify NMContainerStatus#toString method. (Jian He via xgong)
 
+    YARN-4452. NPE when submit Unmanaged application. (Naganarasimha G R via
+    junping_du)
+
     YARN-4546. ResourceManager crash due to scheduling opportunity overflow.
     (Jason Lowe via junping_du)
 
@@ -948,6 +951,9 @@ Release 2.6.4 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    YARN-4452. NPE when submit Unmanaged application. (Naganarasimha G R
+    via junping_du)
 
     YARN-4414. Nodemanager connection errors are retried at multiple levels
     (Chang Li via jlowe)
