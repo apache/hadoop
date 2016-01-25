@@ -21,11 +21,14 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.google.common.base.Supplier;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -42,6 +45,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -49,10 +53,11 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class TestLeaseRecovery2 {
   
@@ -85,12 +90,15 @@ public class TestLeaseRecovery2 {
    * 
    * @throws IOException
    */
-  @BeforeClass
-  public static void startUp() throws IOException {
+  @Before
+  public void startUp() throws IOException {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
 
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5).build();
+    cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(5)
+        .checkExitOnShutdown(false)
+        .build();
     cluster.waitActive();
     dfs = cluster.getFileSystem();
   }
@@ -99,8 +107,8 @@ public class TestLeaseRecovery2 {
    * stop the cluster
    * @throws IOException
    */
-  @AfterClass
-  public static void tearDown() throws IOException {
+  @After
+  public void tearDown() throws IOException {
     if (cluster != null) {
       IOUtils.closeStream(dfs);
       cluster.shutdown();
@@ -419,17 +427,17 @@ public class TestLeaseRecovery2 {
    * 
    * @throws Exception
    */
-  @Test
+  @Test(timeout = 30000)
   public void testHardLeaseRecoveryAfterNameNodeRestart() throws Exception {
     hardLeaseRecoveryRestartHelper(false, -1);
   }
 
-  @Test
+  @Test(timeout = 30000)
   public void testHardLeaseRecoveryAfterNameNodeRestart2() throws Exception {
     hardLeaseRecoveryRestartHelper(false, 1535);
   }
 
-  @Test
+  @Test(timeout = 30000)
   public void testHardLeaseRecoveryWithRenameAfterNameNodeRestart()
       throws Exception {
     hardLeaseRecoveryRestartHelper(true, -1);
@@ -489,10 +497,22 @@ public class TestLeaseRecovery2 {
     cluster.setLeasePeriod(LONG_LEASE_PERIOD, SHORT_LEASE_PERIOD);
     
     // Make sure lease recovery begins.
-    Thread.sleep(HdfsServerConstants.NAMENODE_LEASE_RECHECK_INTERVAL * 2);
-    
-    checkLease(fileStr, size);
-    
+    final String path = fileStr;
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return HdfsServerConstants.NAMENODE_LEASE_HOLDER.equals(
+            NameNodeAdapter.getLeaseHolderForPath(cluster.getNameNode(), path));
+      }
+    }, (int)SHORT_LEASE_PERIOD, (int)SHORT_LEASE_PERIOD * 10);
+
+    // Normally, the in-progress edit log would be finalized by
+    // FSEditLog#endCurrentLogSegment.  For testing purposes, we
+    // disable that here.
+    FSEditLog spyLog = spy(cluster.getNameNode().getFSImage().getEditLog());
+    doNothing().when(spyLog).endCurrentLogSegment(Mockito.anyBoolean());
+    DFSTestUtil.setEditLogForTesting(cluster.getNamesystem(), spyLog);
+
     cluster.restartNameNode(false);
     
     checkLease(fileStr, size);
