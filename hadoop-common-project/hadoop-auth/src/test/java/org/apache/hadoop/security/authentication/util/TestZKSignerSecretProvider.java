@@ -35,7 +35,7 @@ public class TestZKSignerSecretProvider {
 
   // rollover every 2 sec
   private final int timeout = 4000;
-  private final long rolloverFrequency = Long.valueOf(timeout / 2);
+  private final long rolloverFrequency = timeout / 2;
 
   @Before
   public void setup() throws Exception {

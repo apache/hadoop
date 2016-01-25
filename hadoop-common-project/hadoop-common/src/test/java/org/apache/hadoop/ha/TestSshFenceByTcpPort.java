@@ -34,20 +34,20 @@ public class TestSshFenceByTcpPort {
   static {
     ((Log4JLogger)SshFenceByTcpPort.LOG).getLogger().setLevel(Level.ALL);
   }
-  
+
   private static String TEST_FENCING_HOST = System.getProperty(
       "test.TestSshFenceByTcpPort.host", "localhost");
   private static final String TEST_FENCING_PORT = System.getProperty(
       "test.TestSshFenceByTcpPort.port", "8020");
   private static final String TEST_KEYFILE = System.getProperty(
       "test.TestSshFenceByTcpPort.key");
-  
+
   private static final InetSocketAddress TEST_ADDR =
     new InetSocketAddress(TEST_FENCING_HOST,
-      Integer.valueOf(TEST_FENCING_PORT));
+      Integer.parseInt(TEST_FENCING_PORT));
   private static final HAServiceTarget TEST_TARGET =
     new DummyHAService(HAServiceState.ACTIVE, TEST_ADDR);
-  
+
   /**
    *  Connect to Google's DNS server - not running ssh!
    */

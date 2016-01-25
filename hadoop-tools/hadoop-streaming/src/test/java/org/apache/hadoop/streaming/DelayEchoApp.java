@@ -45,7 +45,7 @@ public class DelayEchoApp {
     int seconds = 5;
     if (args.length >= 1) {
       try {
-        seconds = Integer.valueOf(args[0]);
+        seconds = Integer.parseInt(args[0]);
       } catch (NumberFormatException e) {
         // just use default 5.
       }

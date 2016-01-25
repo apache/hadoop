@@ -177,7 +177,7 @@ public class Key implements WritableComparable<Key> {
     }
     
     if (result == 0) {
-      result = Double.valueOf(this.weight - other.weight).intValue();
+      result = (int)(this.weight - other.weight);
     }
     return result;
   }
