@@ -203,9 +203,8 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
    * Integer, e.g. 4294967294 maps to -2 and 4294967295 maps to -1.
    */
   private static Integer parseId(final String idStr) {
-    Long longVal = Long.parseLong(idStr);
-    int intVal = longVal.intValue();
-    return Integer.valueOf(intVal);
+    long longVal = Long.parseLong(idStr);
+    return Integer.valueOf((int)longVal);
   }
   
   /**
@@ -605,8 +604,8 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
         // We know the line is fine to parse without error checking like this
         // since it matched the regex above.
         String firstComponent = lineMatcher.group(1);
-        int remoteId = parseId(lineMatcher.group(2));
-        int localId = parseId(lineMatcher.group(3));
+        Integer remoteId = parseId(lineMatcher.group(2));
+        Integer localId = parseId(lineMatcher.group(3));
         if (firstComponent.equals("uid")) {
           uidMapping.put(localId, remoteId);
         } else {

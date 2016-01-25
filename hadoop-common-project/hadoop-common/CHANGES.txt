@@ -1645,6 +1645,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12730. Hadoop streaming -mapper and -reducer options are wrongly
     documented as required. (Kengo Seki via aajisaka)
 
+    HADOOP-12731. Remove useless boxing/unboxing code.
+    (Kousuke Saruta via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

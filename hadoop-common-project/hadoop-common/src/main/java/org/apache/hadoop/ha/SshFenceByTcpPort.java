@@ -256,10 +256,10 @@ public class SshFenceByTcpPort extends Configured
       }
     }
 
-    private Integer parseConfiggedPort(String portStr)
+    private int parseConfiggedPort(String portStr)
         throws BadFencingConfigurationException {
       try {
-        return Integer.valueOf(portStr);
+        return Integer.parseInt(portStr);
       } catch (NumberFormatException nfe) {
         throw new BadFencingConfigurationException(
             "Port number '" + portStr + "' invalid");

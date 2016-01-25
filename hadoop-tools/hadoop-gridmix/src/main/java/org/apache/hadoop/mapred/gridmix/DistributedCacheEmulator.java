@@ -330,7 +330,7 @@ class DistributedCacheEmulator {
         // Check if visibilities are available because older hadoop versions
         // didn't have public, private Distributed Caches separately.
         boolean visibility =
-            (visibilities == null) ? true : Boolean.valueOf(visibilities[i]);
+            (visibilities == null) || Boolean.parseBoolean(visibilities[i]);
         if (isLocalDistCacheFile(files[i], user, visibility)) {
           // local FS based distributed cache file.
           // Create this file on the pseudo local FS on the fly (i.e. when the
@@ -514,7 +514,7 @@ class DistributedCacheEmulator {
           // Check if visibilities are available because older hadoop versions
           // didn't have public, private Distributed Caches separately.
           boolean visibility =
-            (visibilities == null) ? true : Boolean.valueOf(visibilities[i]);
+              (visibilities == null) || Boolean.parseBoolean(visibilities[i]);
           if (isLocalDistCacheFile(files[i], user, visibility)) {
             // local FS based distributed cache file.
             // Create this file on the pseudo local FS.

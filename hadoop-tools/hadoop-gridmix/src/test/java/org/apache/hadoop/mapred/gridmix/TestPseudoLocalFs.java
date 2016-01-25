@@ -95,7 +95,7 @@ public class TestPseudoLocalFs {
 
       // validate fileSize
       String[] parts = path.toUri().getPath().split("\\.");
-      long expectedFileSize = Long.valueOf(parts[parts.length - 1]);
+      long expectedFileSize = Long.parseLong(parts[parts.length - 1]);
       assertEquals("Invalid file size.", expectedFileSize, stat.getLen());
     } else {
       assertTrue("getFileStatus() did not throw Exception for invalid file "
