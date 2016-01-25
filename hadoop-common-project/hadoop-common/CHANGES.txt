@@ -1693,7 +1693,7 @@ Release 2.7.3 - UNRELEASED
     HADOOP-12706. TestLocalFsFCStatistics#testStatisticsThreadLocalDataCleanUp
     times out occasionally (Sangjin Lee and Colin Patrick McCabe via jlowe)
 
-Release 2.7.2 - UNRELEASED
+Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
 
