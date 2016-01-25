@@ -194,30 +194,10 @@ public class TestSystemMetricsPublisher {
   }
 
   @Test(timeout = 10000)
-  public void testPublishAppAttemptMetricsForUnmanagedAM() throws Exception {
-    ApplicationAttemptId appAttemptId =
-        ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1);
-    RMAppAttempt appAttempt = createRMAppAttempt(appAttemptId,true);
-    metricsPublisher.appAttemptRegistered(appAttempt, Integer.MAX_VALUE + 1L);
-    RMApp app = mock(RMApp.class);
-    when(app.getFinalApplicationStatus()).thenReturn(FinalApplicationStatus.UNDEFINED);
-    metricsPublisher.appAttemptFinished(appAttempt, RMAppAttemptState.FINISHED, app,
-        Integer.MAX_VALUE + 2L);
-    TimelineEntity entity = null;
-    do {
-      entity =
-          store.getEntity(appAttemptId.toString(),
-              AppAttemptMetricsConstants.ENTITY_TYPE,
-              EnumSet.allOf(Field.class));
-      // ensure two events are both published before leaving the loop
-    } while (entity == null || entity.getEvents().size() < 2);
-  }
-
-  @Test(timeout = 10000)
   public void testPublishAppAttemptMetrics() throws Exception {
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1);
-    RMAppAttempt appAttempt = createRMAppAttempt(appAttemptId, false);
+    RMAppAttempt appAttempt = createRMAppAttempt(appAttemptId);
     metricsPublisher.appAttemptRegistered(appAttempt, Integer.MAX_VALUE + 1L);
     RMApp app = mock(RMApp.class);
     when(app.getFinalApplicationStatus()).thenReturn(FinalApplicationStatus.UNDEFINED);
@@ -376,17 +356,15 @@ public class TestSystemMetricsPublisher {
   }
 
   private static RMAppAttempt createRMAppAttempt(
-      ApplicationAttemptId appAttemptId, boolean unmanagedAMAttempt) {
+      ApplicationAttemptId appAttemptId) {
     RMAppAttempt appAttempt = mock(RMAppAttempt.class);
     when(appAttempt.getAppAttemptId()).thenReturn(appAttemptId);
     when(appAttempt.getHost()).thenReturn("test host");
     when(appAttempt.getRpcPort()).thenReturn(-100);
-    if (!unmanagedAMAttempt) {
-      Container container = mock(Container.class);
-      when(container.getId())
-          .thenReturn(ContainerId.newContainerId(appAttemptId, 1));
-      when(appAttempt.getMasterContainer()).thenReturn(container);
-    }
+    Container container = mock(Container.class);
+    when(container.getId())
+        .thenReturn(ContainerId.newContainerId(appAttemptId, 1));
+    when(appAttempt.getMasterContainer()).thenReturn(container);
     when(appAttempt.getDiagnostics()).thenReturn("test diagnostics info");
     when(appAttempt.getTrackingUrl()).thenReturn("test tracking url");
     when(appAttempt.getOriginalTrackingUrl()).thenReturn(

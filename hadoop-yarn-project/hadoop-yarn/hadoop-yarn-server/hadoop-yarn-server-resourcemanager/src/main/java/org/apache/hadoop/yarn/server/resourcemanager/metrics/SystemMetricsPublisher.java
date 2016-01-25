@@ -142,8 +142,6 @@ public class SystemMetricsPublisher extends CompositeService {
   public void appAttemptRegistered(RMAppAttempt appAttempt,
       long registeredTime) {
     if (publishSystemMetrics) {
-      ContainerId container = (appAttempt.getMasterContainer() == null) ? null
-          : appAttempt.getMasterContainer().getId();
       dispatcher.getEventHandler().handle(
           new AppAttemptRegisteredEvent(
               appAttempt.getAppAttemptId(),
@@ -151,7 +149,7 @@ public class SystemMetricsPublisher extends CompositeService {
               appAttempt.getRpcPort(),
               appAttempt.getTrackingUrl(),
               appAttempt.getOriginalTrackingUrl(),
-              container,
+              appAttempt.getMasterContainer().getId(),
               registeredTime));
     }
   }
@@ -337,10 +335,9 @@ public class SystemMetricsPublisher extends CompositeService {
         event.getHost());
     eventInfo.put(AppAttemptMetricsConstants.RPC_PORT_EVENT_INFO,
         event.getRpcPort());
-    if (event.getMasterContainerId() != null) {
-      eventInfo.put(AppAttemptMetricsConstants.MASTER_CONTAINER_EVENT_INFO,
-          event.getMasterContainerId().toString());
-    }
+    eventInfo.put(
+        AppAttemptMetricsConstants.MASTER_CONTAINER_EVENT_INFO,
+        event.getMasterContainerId().toString());
     tEvent.setEventInfo(eventInfo);
     entity.addEvent(tEvent);
     putEntity(entity);
