@@ -144,7 +144,7 @@ public class TestTimedOutTestsListener {
   
   }
 
-  @Test(timeout=500)
+  @Test(timeout=30000)
   public void testThreadDumpAndDeadlocks() throws Exception {
     new Deadlock();
     String s = null;
