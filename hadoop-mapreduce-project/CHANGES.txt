@@ -695,6 +695,9 @@ Release 2.8.0 - UNRELEASED
     mapreduce.reduce.skip.proc.count.autoincr in mapred-default.xml.
     (Kai Sasaki via aajisaka)
 
+    MAPREDUCE-6614. Remove unnecessary code in TestMapreduceConfigFields.
+    (Kai Sasaki via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
