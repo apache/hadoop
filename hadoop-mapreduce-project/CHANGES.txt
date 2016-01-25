@@ -31,7 +31,7 @@ Release 2.7.3 - UNRELEASED
     MAPREDUCE-6554. MRAppMaster servicestart failing with NPE in
     MRAppMaster#parsePreviousJobHistory (Bibin A Chundatt via jlowe)
 
-Release 2.7.2 - UNRELEASED
+Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
 
