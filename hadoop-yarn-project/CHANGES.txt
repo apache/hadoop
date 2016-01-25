@@ -1327,6 +1327,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4592. Remove unused GetContainerStatus proto. (Chang Li via aajisaka)
 
+    YARN-4520. Finished app info is unnecessarily persisted in NM state-store
+    if container is acquired but not lunched on this node. (sandflee via jianeh)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
