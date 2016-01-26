@@ -3070,18 +3070,18 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       src = dir.resolvePath(pc, src, pathComponents);
       FileState fileState = analyzeFileState(
           src, fileId, clientName, previous, onRetryBlock);
-      final INodeFile pendingFile = fileState.inode;
-      // Check if the penultimate block is minimally replicated
-      if (!checkFileProgress(src, pendingFile, false)) {
-        throw new NotReplicatedYetException("Not replicated yet: " + src);
-      }
-      src = fileState.path;
-
       if (onRetryBlock[0] != null && onRetryBlock[0].getLocations().length > 0) {
         // This is a retry. No need to generate new locations.
         // Use the last block if it has locations.
         return null;
       }
+
+      final INodeFile pendingFile = fileState.inode;
+      if (!checkFileProgress(src, pendingFile, false)) {
+        throw new NotReplicatedYetException("Not replicated yet: " + src);
+      }
+      src = fileState.path;
+
       if (pendingFile.getBlocks().length >= maxBlocksPerFile) {
         throw new IOException("File has reached the limit on maximum number of"
             + " blocks (" + DFSConfigKeys.DFS_NAMENODE_MAX_BLOCKS_PER_FILE_KEY

@@ -68,6 +68,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9625. set replication for empty file failed when set storage policy
     (DENG FEI via vinayakumarb)
 
+    HDFS-9690. ClientProtocol.addBlock is not idempotent after HDFS-8071.
+    (szetszwo)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
