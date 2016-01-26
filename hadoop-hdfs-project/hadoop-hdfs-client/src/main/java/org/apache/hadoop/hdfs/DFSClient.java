@@ -119,6 +119,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZoneIterator;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -160,10 +161,10 @@ import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.io.retry.LossyRetryInvocationHandler;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.RpcNoSuchMethodException;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
@@ -178,16 +179,15 @@ import org.apache.hadoop.util.DataChecksum.Type;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
 import org.apache.htrace.core.TraceScope;
+import org.apache.htrace.core.Tracer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.net.InetAddresses;
-import org.apache.htrace.core.Tracer;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /********************************************************
  * DFSClient can connect to a Hadoop Filesystem and
@@ -1291,17 +1291,43 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
+  /**
+   * Invoke namenode append RPC.
+   * It retries in case of {@link BlockNotYetCompleteException}.
+   */
+  private LastBlockWithStatus callAppend(String src,
+      EnumSetWritable<CreateFlag> flag) throws IOException {
+    final long startTime = Time.monotonicNow();
+    for(;;) {
+      try {
+        return namenode.append(src, clientName, flag);
+      } catch(RemoteException re) {
+        if (Time.monotonicNow() - startTime > 5000
+            || !RetriableException.class.getName().equals(
+                re.getClassName())) {
+          throw re;
+        }
+
+        try { // sleep and retry
+          Thread.sleep(500);
+        } catch (InterruptedException e) {
+          throw DFSUtilClient.toInterruptedIOException("callAppend", e);
+        }
+      }
+    }
+  }
+
   /** Method to get stream returned by append call */
   private DFSOutputStream callAppend(String src, EnumSet<CreateFlag> flag,
       Progressable progress, String[] favoredNodes) throws IOException {
     CreateFlag.validateForAppend(flag);
     try {
-      LastBlockWithStatus blkWithStatus = namenode.append(src, clientName,
+      final LastBlockWithStatus blkWithStatus = callAppend(src,
           new EnumSetWritable<>(flag, CreateFlag.class));
       HdfsFileStatus status = blkWithStatus.getFileStatus();
       if (status == null) {
-        DFSClient.LOG.debug("NameNode is on an older version, request file " +
-            "info with additional RPC call for file: " + src);
+        LOG.debug("NameNode is on an older version, request file " +
+            "info with additional RPC call for file: {}", src);
         status = getFileInfo(src);
       }
       return DFSOutputStream.newStreamForAppend(this, src, flag, progress,

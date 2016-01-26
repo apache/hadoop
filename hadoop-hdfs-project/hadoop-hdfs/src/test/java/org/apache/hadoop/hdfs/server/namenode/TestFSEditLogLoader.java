@@ -21,7 +21,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.spy;
 
@@ -42,20 +41,19 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
@@ -473,7 +471,7 @@ public class TestFSEditLogLoader {
       file.toUnderConstruction(clientName, clientMachine);
       file.addBlock(stripedBlk);
       fns.getEditLog().logAddBlock(testFilePath, file);
-      file.toCompleteFile(System.currentTimeMillis());
+      TestINodeFile.toCompleteFile(file);
 
       //If the block by loaded is the same as above it means that
       //we have successfully applied the edit log to the fsimage.
@@ -539,7 +537,7 @@ public class TestFSEditLogLoader {
       file.toUnderConstruction(clientName, clientMachine);
       file.addBlock(stripedBlk);
       fns.getEditLog().logAddBlock(testFilePath, file);
-      file.toCompleteFile(System.currentTimeMillis());
+      TestINodeFile.toCompleteFile(file);
       fns.enterSafeMode(false);
       fns.saveNamespace(0, 0);
       fns.leaveSafeMode(false);
@@ -551,7 +549,7 @@ public class TestFSEditLogLoader {
       file.getLastBlock().setNumBytes(newBlkNumBytes);
       file.getLastBlock().setGenerationStamp(newTimestamp);
       fns.getEditLog().logUpdateBlocks(testFilePath, file, true);
-      file.toCompleteFile(System.currentTimeMillis());
+      TestINodeFile.toCompleteFile(file);
 
       //After the namenode restarts if the block by loaded is the same as above
       //(new block size and timestamp) it means that we have successfully
@@ -616,7 +614,7 @@ public class TestFSEditLogLoader {
       file.toUnderConstruction(clientName, clientMachine);
       file.addBlock(cBlk);
       fns.getEditLog().logAddBlock(testFilePath, file);
-      file.toCompleteFile(System.currentTimeMillis());
+      TestINodeFile.toCompleteFile(file);
       cluster.restartNameNodes();
       cluster.waitActive();
       fns = cluster.getNamesystem();
@@ -662,7 +660,7 @@ public class TestFSEditLogLoader {
       INodeFile file = (INodeFile)fns.getFSDirectory().getINode(testFilePath);
       file.toUnderConstruction(clientName, clientMachine);
       file.addBlock(cBlk);
-      file.toCompleteFile(System.currentTimeMillis());
+      TestINodeFile.toCompleteFile(file);
 
       long newBlkNumBytes = 1024*8;
       long newTimestamp = 1426222918+3600;
@@ -671,7 +669,7 @@ public class TestFSEditLogLoader {
       file.getLastBlock().setNumBytes(newBlkNumBytes);
       file.getLastBlock().setGenerationStamp(newTimestamp);
       fns.getEditLog().logUpdateBlocks(testFilePath, file, true);
-      file.toCompleteFile(System.currentTimeMillis());
+      TestINodeFile.toCompleteFile(file);
       cluster.restartNameNodes();
       cluster.waitActive();
       fns = cluster.getNamesystem();
@@ -685,5 +683,4 @@ public class TestFSEditLogLoader {
       }
     }
   }
-
 }

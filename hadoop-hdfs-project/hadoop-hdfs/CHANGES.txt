@@ -1910,6 +1910,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9436. Make NNThroughputBenchmark$BlockReportStats run with 10
     datanodes by default. (Mingliang Liu via shv)
 
+    HDFS-8999. Allow a file to be closed with COMMITTED but not yet COMPLETE
+    blocks.  (szetszwo)
+
   BUG FIXES
 
     HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.

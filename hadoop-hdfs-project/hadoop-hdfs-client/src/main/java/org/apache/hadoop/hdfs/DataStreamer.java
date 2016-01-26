@@ -475,8 +475,7 @@ class DataStreamer extends Daemon {
     setPipeline(lastBlock);
     if (nodes.length < 1) {
       throw new IOException("Unable to retrieve blocks locations " +
-          " for last block " + block +
-          "of file " + src);
+          " for last block " + block + " of file " + src);
     }
   }
 

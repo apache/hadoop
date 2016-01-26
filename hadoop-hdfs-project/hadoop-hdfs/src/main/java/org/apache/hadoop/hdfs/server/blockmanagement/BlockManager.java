@@ -641,6 +641,10 @@ public class BlockManager implements BlockStatsMXBean {
     }
   }
 
+  public short getMinReplication() {
+    return minReplication;
+  }
+
   public short getMinStorageNum(BlockInfo block) {
     if (block.isStriped()) {
       return ((BlockInfoStriped) block).getRealDataBlockNum();
@@ -703,8 +707,8 @@ public class BlockManager implements BlockStatsMXBean {
     
     final boolean b = commitBlock(lastBlock, commitBlock);
     if (hasMinStorage(lastBlock)) {
-      if (b && !bc.isStriped()) {
-        addExpectedReplicasToPending(lastBlock);
+      if (b) {
+        addExpectedReplicasToPending(lastBlock, bc);
       }
       completeBlock(lastBlock, false);
     }
@@ -716,6 +720,12 @@ public class BlockManager implements BlockStatsMXBean {
    * pendingReplications in order to keep ReplicationMonitor from scheduling
    * the block.
    */
+  public void addExpectedReplicasToPending(BlockInfo blk, BlockCollection bc) {
+    if (!bc.isStriped()) {
+      addExpectedReplicasToPending(blk);
+    }
+  }
+
   private void addExpectedReplicasToPending(BlockInfo lastBlock) {
     DatanodeStorageInfo[] expectedStorages =
         lastBlock.getUnderConstructionFeature().getExpectedStorageLocations();
@@ -2844,9 +2854,7 @@ public class BlockManager implements BlockStatsMXBean {
 
     if(storedBlock.getBlockUCState() == BlockUCState.COMMITTED &&
         hasMinStorage(storedBlock, numLiveReplicas)) {
-      if (!bc.isStriped()) {
-        addExpectedReplicasToPending(storedBlock);
-      }
+      addExpectedReplicasToPending(storedBlock, bc);
       completeBlock(storedBlock, false);
     } else if (storedBlock.isComplete() && result == AddBlockResult.ADDED) {
       // check whether safe replication is reached for the block
@@ -3823,26 +3831,6 @@ public class BlockManager implements BlockStatsMXBean {
         processOverReplicatedBlock(block, expected, null, null);
       }
     }
-  }
-
-  /**
-   * Check that the indicated blocks are present and
-   * replicated.
-   */
-  public boolean checkBlocksProperlyReplicated(
-      String src, BlockInfo[] blocks) {
-    for (BlockInfo b: blocks) {
-      if (!b.isComplete()) {
-        final int numNodes = b.numNodes();
-        final int min = getMinStorageNum(b);
-        final BlockUCState state = b.getBlockUCState();
-        LOG.info("BLOCK* " + b + " is not COMPLETE (ucState = " + state
-            + ", replication# = " + numNodes + (numNodes < min ? " < " : " >= ")
-            + " minimum = " + min + ") in file " + src);
-        return false;
-      }
-    }
-    return true;
   }
 
   /** 
