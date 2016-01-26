@@ -21,11 +21,15 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.util.CgroupsLCEResourcesHandler;
+import org.apache.hadoop.yarn.server.nodemanager.util.DefaultLCEResourcesHandler;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +42,7 @@ import java.util.List;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class ResourceHandlerModule {
+  static final Log LOG = LogFactory.getLog(ResourceHandlerModule.class);
   private static volatile ResourceHandlerChain resourceHandlerChain;
 
   /**
@@ -52,6 +57,8 @@ public class ResourceHandlerModule {
       cGroupsBlkioResourceHandler;
   private static volatile CGroupsMemoryResourceHandlerImpl
       cGroupsMemoryResourceHandler;
+  private static volatile CGroupsCpuResourceHandlerImpl
+      cGroupsCpuResourceHandler;
 
   /**
    * Returns an initialized, thread-safe CGroupsHandler instance.
@@ -70,6 +77,30 @@ public class ResourceHandlerModule {
     return cGroupsHandler;
   }
 
+  private static CGroupsCpuResourceHandlerImpl getcGroupsCpuResourceHandler(
+      Configuration conf) throws ResourceHandlerException {
+    boolean cgroupsCpuEnabled =
+        conf.getBoolean(YarnConfiguration.NM_CPU_RESOURCE_ENABLED,
+            YarnConfiguration.DEFAULT_NM_CPU_RESOURCE_ENABLED);
+    boolean cgroupsLCEResourcesHandlerEnabled =
+        conf.getClass(YarnConfiguration.NM_LINUX_CONTAINER_RESOURCES_HANDLER,
+            DefaultLCEResourcesHandler.class)
+            .equals(CgroupsLCEResourcesHandler.class);
+    if (cgroupsCpuEnabled || cgroupsLCEResourcesHandlerEnabled) {
+      if (cGroupsCpuResourceHandler == null) {
+        synchronized (CpuResourceHandler.class) {
+          if (cGroupsCpuResourceHandler == null) {
+            LOG.debug("Creating new cgroups cpu handler");
+            cGroupsCpuResourceHandler =
+                new CGroupsCpuResourceHandlerImpl(getCGroupsHandler(conf));
+            return cGroupsCpuResourceHandler;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   private static TrafficControlBandwidthHandlerImpl
     getTrafficControlBandwidthHandler(Configuration conf)
       throws ResourceHandlerException {
@@ -78,6 +109,7 @@ public class ResourceHandlerModule {
       if (trafficControlBandwidthHandler == null) {
         synchronized (OutboundBandwidthResourceHandler.class) {
           if (trafficControlBandwidthHandler == null) {
+            LOG.debug("Creating new traffic control bandwidth handler");
             trafficControlBandwidthHandler = new
                 TrafficControlBandwidthHandlerImpl(PrivilegedOperationExecutor
                 .getInstance(conf), getCGroupsHandler(conf),
@@ -113,6 +145,7 @@ public class ResourceHandlerModule {
     if (cGroupsBlkioResourceHandler == null) {
       synchronized (DiskResourceHandler.class) {
         if (cGroupsBlkioResourceHandler == null) {
+          LOG.debug("Creating new cgroups blkio handler");
           cGroupsBlkioResourceHandler =
               new CGroupsBlkioResourceHandlerImpl(getCGroupsHandler(conf));
         }
@@ -158,6 +191,7 @@ public class ResourceHandlerModule {
     addHandlerIfNotNull(handlerList, getOutboundBandwidthResourceHandler(conf));
     addHandlerIfNotNull(handlerList, getDiskResourceHandler(conf));
     addHandlerIfNotNull(handlerList, getMemoryResourceHandler(conf));
+    addHandlerIfNotNull(handlerList, getcGroupsCpuResourceHandler(conf));
     resourceHandlerChain = new ResourceHandlerChain(handlerList);
   }
 

@@ -938,6 +938,18 @@ public class YarnConfiguration extends Configuration {
       DEFAULT_NM_MEMORY_RESOURCE_CGROUPS_SOFT_LIMIT_PERCENTAGE =
       90.0f;
 
+  @Private
+  public static final String NM_CPU_RESOURCE_PREFIX = NM_PREFIX
+      + "resource.cpu.";
+
+  /** Enable cpu isolation. */
+  @Private
+  public static final String NM_CPU_RESOURCE_ENABLED =
+      NM_CPU_RESOURCE_PREFIX + "enabled";
+
+  @Private
+  public static final boolean DEFAULT_NM_CPU_RESOURCE_ENABLED = false;
+
   /**
    * Prefix for disk configurations. Work in progress: This configuration
    * parameter may be changed/removed in the future.
