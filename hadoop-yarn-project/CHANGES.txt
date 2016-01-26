@@ -107,6 +107,10 @@ Release 2.9.0 - UNRELEASED
     YARN-4496. Improve HA ResourceManager Failover detection on the client.
     (Jian He via xgong)
 
+    YARN-3542. Refactored existing CPU cgroups support to use the newer and
+    integrated ResourceHandler mechanism, and also deprecated the old
+    LCEResourceHandler inteface hierarchy. (Varun Vasudev via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

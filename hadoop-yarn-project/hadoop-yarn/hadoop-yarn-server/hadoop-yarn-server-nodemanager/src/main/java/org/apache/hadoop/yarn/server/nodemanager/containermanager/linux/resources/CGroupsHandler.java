@@ -58,6 +58,10 @@ public interface CGroupsHandler {
   String CGROUP_PARAM_MEMORY_SWAPPINESS = "swappiness";
 
 
+  String CGROUP_CPU_PERIOD_US = "cfs_period_us";
+  String CGROUP_CPU_QUOTA_US = "cfs_quota_us";
+  String CGROUP_CPU_SHARES = "shares";
+
   /**
    * Mounts a cgroup controller
    * @param controller - the controller being mounted

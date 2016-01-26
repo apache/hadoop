@@ -111,6 +111,8 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
         .add(YarnConfiguration.NM_DISK_RESOURCE_ENABLED);
     configurationPrefixToSkipCompare
         .add(YarnConfiguration.NM_MEMORY_RESOURCE_PREFIX);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.NM_CPU_RESOURCE_ENABLED);
 
     // Set by container-executor.cfg
     configurationPrefixToSkipCompare.add(YarnConfiguration.NM_USER_HOME_DIR);

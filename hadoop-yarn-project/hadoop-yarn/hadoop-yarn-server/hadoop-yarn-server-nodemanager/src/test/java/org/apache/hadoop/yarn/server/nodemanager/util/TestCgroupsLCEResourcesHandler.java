@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.CountDownLatch;
 
+@Deprecated
 public class TestCgroupsLCEResourcesHandler {
   static File cgroupDir = null;
 
