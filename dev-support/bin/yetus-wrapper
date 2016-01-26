@@ -165,6 +165,7 @@ if [[ $? != 0 ]]; then
 fi
 
 if [[ -x "${HADOOP_PATCHPROCESS}/yetus-${HADOOP_YETUS_VERSION}/bin/${WANTED}" ]]; then
+  popd >/dev/null
   exec "${HADOOP_PATCHPROCESS}/yetus-${HADOOP_YETUS_VERSION}/bin/${WANTED}" "${ARGV[@]}"
 fi
 
