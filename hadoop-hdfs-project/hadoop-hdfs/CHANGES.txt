@@ -2696,6 +2696,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9672. o.a.h.hdfs.TestLeaseRecovery2 fails intermittently (Mingliang Liu
     via jitendra)
 
+    HDFS-9690. ClientProtocol.addBlock is not idempotent after HDFS-8071.
+    (szetszwo)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
