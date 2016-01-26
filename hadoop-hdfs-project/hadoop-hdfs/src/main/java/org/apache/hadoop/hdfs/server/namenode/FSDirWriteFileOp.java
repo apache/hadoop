@@ -177,16 +177,15 @@ class FSDirWriteFileOp {
     src = fsn.dir.resolvePath(pc, src, pathComponents);
     FileState fileState = analyzeFileState(fsn, src, fileId, clientName,
                                            previous, onRetryBlock);
-    final INodeFile pendingFile = fileState.inode;
-    // Check if the penultimate block is minimally replicated
-    if (!fsn.checkFileProgress(src, pendingFile, false)) {
-      throw new NotReplicatedYetException("Not replicated yet: " + src);
-    }
-
     if (onRetryBlock[0] != null && onRetryBlock[0].getLocations().length > 0) {
       // This is a retry. No need to generate new locations.
       // Use the last block if it has locations.
       return null;
+    }
+
+    final INodeFile pendingFile = fileState.inode;
+    if (!fsn.checkFileProgress(src, pendingFile, false)) {
+      throw new NotReplicatedYetException("Not replicated yet: " + src);
     }
     if (pendingFile.getBlocks().length >= fsn.maxBlocksPerFile) {
       throw new IOException("File has reached the limit on maximum number of"
