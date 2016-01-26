@@ -956,6 +956,9 @@ Release 2.9.0 - UNRELEASED
     HDFS-9094. Add command line option to ask NameNode reload
     configuration. (Xiaobing Zhou via Arpit Agarwal)
 
+    HDFS-9541. Add hdfsStreamBuilder API to libhdfs to support defaultBlockSizes
+    greater than 2 GB. (cmccabe via zhz)
+
   OPTIMIZATIONS
 
   BUG FIXES
