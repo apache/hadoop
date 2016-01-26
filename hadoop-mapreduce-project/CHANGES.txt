@@ -698,6 +698,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6614. Remove unnecessary code in TestMapreduceConfigFields.
     (Kai Sasaki via aajisaka)
 
+    MAPREDUCE-6610. JobHistoryEventHandler should not swallow timeline response
+    (Li Lu via jianhe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
