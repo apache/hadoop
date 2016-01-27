@@ -127,7 +127,7 @@ public class TestPhoenixOfflineAggregationWriterImpl extends BaseTest {
     TimelineEntities te = new TimelineEntities();
     te.addEntity(getTestAggregationTimelineEntity());
     TimelineCollectorContext context = new TimelineCollectorContext("cluster_1",
-        "user1", "testFlow", null, 0, null);
+        "user1", "testFlow", null, 0L, null);
     storage.writeAggregatedEntity(context, te,
         aggregationInfo);
 
