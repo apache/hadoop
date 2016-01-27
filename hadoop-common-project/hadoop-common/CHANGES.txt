@@ -1648,6 +1648,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12731. Remove useless boxing/unboxing code.
     (Kousuke Saruta via aajisaka)
 
+    HADOOP-12718. Incorrect error message by fs -put local dir without
+    permission. (John Zhuge via Yongjun Zhang)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
