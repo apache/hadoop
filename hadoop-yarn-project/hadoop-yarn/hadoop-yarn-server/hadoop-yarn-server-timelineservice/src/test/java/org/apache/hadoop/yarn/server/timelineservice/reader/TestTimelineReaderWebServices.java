@@ -174,9 +174,8 @@ public class TestTimelineReaderWebServices {
       assertEquals("id_1", entity.getId());
       assertEquals("app", entity.getType());
       assertEquals(1425016502000L, entity.getCreatedTime());
-      assertEquals(1425016503000L, entity.getModifiedTime());
       // Default view i.e. when no fields are specified, entity contains only
-      // entity id, entity type, created and modified time.
+      // entity id, entity type and created time.
       assertEquals(0, entity.getConfigs().size());
       assertEquals(0, entity.getMetrics().size());
     } finally {
@@ -198,7 +197,6 @@ public class TestTimelineReaderWebServices {
       assertEquals("id_1", entity.getId());
       assertEquals("app", entity.getType());
       assertEquals(1425016502000L, entity.getCreatedTime());
-      assertEquals(1425016503000L, entity.getModifiedTime());
     } finally {
       client.destroy();
     }
@@ -369,50 +367,6 @@ public class TestTimelineReaderWebServices {
 
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/" +
           "entities/cluster1/app1/app?createdtimestart=1425016502010");
-      resp = getResponse(client, uri);
-      entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
-      assertNotNull(entities);
-      assertEquals(1, entities.size());
-      assertTrue("Entity with id_4 should have been present in response.",
-          entities.contains(newEntity("app", "id_4")));
-    } finally {
-      client.destroy();
-    }
-  }
-
-  @Test
-  public void testGetEntitiesBasedOnModifiedTime() throws Exception {
-    Client client = createClient();
-    try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
-          "timeline/entities/cluster1/app1/app?modifiedtimestart=1425016502090"
-          + "&modifiedtimeend=1425016503020");
-      ClientResponse resp = getResponse(client, uri);
-      Set<TimelineEntity> entities =
-          resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
-      assertNotNull(entities);
-      assertEquals(2, entities.size());
-      assertTrue("Entities with id_1 and id_4 should have been" +
-          " present in response.",
-          entities.contains(newEntity("app", "id_1")) &&
-          entities.contains(newEntity("app", "id_4")));
-
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/" +
-          "entities/cluster1/app1/app?modifiedtimeend=1425016502090");
-      resp = getResponse(client, uri);
-      entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
-      assertNotNull(entities);
-      assertEquals(2, entities.size());
-      assertTrue("Entities with id_2 and id_3 should have been " +
-          "present in response.",
-          entities.contains(newEntity("app", "id_2")) &&
-          entities.contains(newEntity("app", "id_3")));
-
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/" +
-          "entities/cluster1/app1/app?modifiedtimestart=1425016503005");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
       assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());

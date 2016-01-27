@@ -62,7 +62,6 @@ public class TimelineEntityReaderFactory {
   public static TimelineEntityReader createMultipleEntitiesReader(String userId,
       String clusterId, String flowName, Long flowRunId, String appId,
       String entityType, Long limit, Long createdTimeBegin, Long createdTimeEnd,
-      Long modifiedTimeBegin, Long modifiedTimeEnd,
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
       Map<String, Object> infoFilters, Map<String, String> configFilters,
       Set<String> metricFilters, Set<String> eventFilters,
@@ -72,29 +71,25 @@ public class TimelineEntityReaderFactory {
     // table are application, flow run, and flow activity entities
     if (TimelineEntityType.YARN_APPLICATION.matches(entityType)) {
       return new ApplicationEntityReader(userId, clusterId, flowName, flowRunId,
-          appId, entityType, limit, createdTimeBegin, createdTimeEnd,
-          modifiedTimeBegin, modifiedTimeEnd, relatesTo, isRelatedTo,
-          infoFilters, configFilters, metricFilters, eventFilters, confs,
-          metrics, fieldsToRetrieve);
+          appId, entityType, limit, createdTimeBegin, createdTimeEnd, relatesTo,
+          isRelatedTo, infoFilters, configFilters, metricFilters, eventFilters,
+          confs, metrics, fieldsToRetrieve);
     } else if (TimelineEntityType.YARN_FLOW_ACTIVITY.matches(entityType)) {
       return new FlowActivityEntityReader(userId, clusterId, flowName, flowRunId,
-          appId, entityType, limit, createdTimeBegin, createdTimeEnd,
-          modifiedTimeBegin, modifiedTimeEnd, relatesTo, isRelatedTo,
-          infoFilters, configFilters, metricFilters, eventFilters,
+          appId, entityType, limit, createdTimeBegin, createdTimeEnd, relatesTo,
+          isRelatedTo, infoFilters, configFilters, metricFilters, eventFilters,
           fieldsToRetrieve);
     } else if (TimelineEntityType.YARN_FLOW_RUN.matches(entityType)) {
       return new FlowRunEntityReader(userId, clusterId, flowName, flowRunId,
-          appId, entityType, limit, createdTimeBegin, createdTimeEnd,
-          modifiedTimeBegin, modifiedTimeEnd, relatesTo, isRelatedTo,
-          infoFilters, configFilters, metricFilters, eventFilters, confs,
-          metrics, fieldsToRetrieve);
+          appId, entityType, limit, createdTimeBegin, createdTimeEnd, relatesTo,
+          isRelatedTo, infoFilters, configFilters, metricFilters, eventFilters,
+          confs, metrics, fieldsToRetrieve);
     } else {
       // assume we're dealing with a generic entity read
       return new GenericEntityReader(userId, clusterId, flowName, flowRunId,
-          appId, entityType, limit, createdTimeBegin, createdTimeEnd,
-          modifiedTimeBegin, modifiedTimeEnd, relatesTo, isRelatedTo,
-          infoFilters, configFilters, metricFilters, eventFilters, confs,
-          metrics, fieldsToRetrieve, false);
+          appId, entityType, limit, createdTimeBegin, createdTimeEnd, relatesTo,
+          isRelatedTo, infoFilters, configFilters, metricFilters, eventFilters,
+          confs, metrics, fieldsToRetrieve, false);
     }
   }
 }

@@ -463,7 +463,6 @@ public class ContainersMonitorImpl extends AbstractService implements
             pTree.updateProcessTree();    // update process-tree
             long currentVmemUsage = pTree.getVirtualMemorySize();
             long currentPmemUsage = pTree.getRssMemorySize();
-            long currentTime = System.currentTimeMillis();
 
             // if machine has 6 cores and 3 are used,
             // cpuUsagePercentPerCore should be 300% and
@@ -577,9 +576,8 @@ public class ContainersMonitorImpl extends AbstractService implements
             NMTimelinePublisher nmMetricsPublisher =
                 container.getNMTimelinePublisher();
             if (nmMetricsPublisher != null) {
-              nmMetricsPublisher.reportContainerResourceUsage(
-                  container, currentTime, pId, currentPmemUsage,
-                  cpuUsageTotalCoresPercentage);
+              nmMetricsPublisher.reportContainerResourceUsage(container, pId,
+                  currentPmemUsage, cpuUsageTotalCoresPercentage);
             }
           } catch (Exception e) {
             // Log the exception and proceed to the next container.

@@ -64,8 +64,6 @@ public abstract class TimelineEntityReader {
   protected Long limit;
   protected Long createdTimeBegin;
   protected Long createdTimeEnd;
-  protected Long modifiedTimeBegin;
-  protected Long modifiedTimeEnd;
   protected Map<String, Set<String>> relatesTo;
   protected Map<String, Set<String>> isRelatedTo;
   protected Map<String, Object> infoFilters;
@@ -94,7 +92,6 @@ public abstract class TimelineEntityReader {
   protected TimelineEntityReader(String userId, String clusterId,
       String flowName, Long flowRunId, String appId, String entityType,
       Long limit, Long createdTimeBegin, Long createdTimeEnd,
-      Long modifiedTimeBegin, Long modifiedTimeEnd,
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
       Map<String, Object> infoFilters, Map<String, String> configFilters,
       Set<String> metricFilters, Set<String> eventFilters,
@@ -112,8 +109,6 @@ public abstract class TimelineEntityReader {
     this.limit = limit;
     this.createdTimeBegin = createdTimeBegin;
     this.createdTimeEnd = createdTimeEnd;
-    this.modifiedTimeBegin = modifiedTimeBegin;
-    this.modifiedTimeEnd = modifiedTimeEnd;
     this.relatesTo = relatesTo;
     this.isRelatedTo = isRelatedTo;
     this.infoFilters = infoFilters;

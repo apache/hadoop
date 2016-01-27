@@ -188,7 +188,6 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     TimelineEntity entityToBeReturned = new TimelineEntity();
     entityToBeReturned.setIdentifier(entity.getIdentifier());
     entityToBeReturned.setCreatedTime(entity.getCreatedTime());
-    entityToBeReturned.setModifiedTime(entity.getModifiedTime());
     if (fieldsToRetrieve != null) {
       fillFields(entityToBeReturned, entity, fieldsToRetrieve);
     }
@@ -205,9 +204,6 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     // Ideally created time wont change except in the case of issue from client.
     if (entity2.getCreatedTime() > 0) {
       entity1.setCreatedTime(entity2.getCreatedTime());
-    }
-    if (entity2.getModifiedTime() > 0) {
-      entity1.setModifiedTime(entity2.getModifiedTime());
     }
     for (Entry<String, String> configEntry : entity2.getConfigs().entrySet()) {
       entity1.addConfig(configEntry.getKey(), configEntry.getValue());
@@ -268,8 +264,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
   }
 
   private Set<TimelineEntity> getEntities(File dir, String entityType,
-      Long limit, Long createdTimeBegin,
-      Long createdTimeEnd, Long modifiedTimeBegin, Long modifiedTimeEnd,
+      Long limit, Long createdTimeBegin, Long createdTimeEnd,
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
       Map<String, Object> infoFilters, Map<String, String> configFilters,
       Set<String> metricFilters, Set<String> eventFilters,
@@ -283,12 +278,6 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     }
     if (createdTimeEnd == null || createdTimeEnd <= 0) {
       createdTimeEnd = Long.MAX_VALUE;
-    }
-    if (modifiedTimeBegin == null || modifiedTimeBegin <= 0) {
-      modifiedTimeBegin = 0L;
-    }
-    if (modifiedTimeEnd == null || modifiedTimeEnd <= 0) {
-      modifiedTimeEnd = Long.MAX_VALUE;
     }
 
     // First sort the selected entities based on created/start time.
@@ -316,10 +305,6 @@ public class FileSystemTimelineReaderImpl extends AbstractService
         }
         if (!isTimeInRange(entity.getCreatedTime(), createdTimeBegin,
             createdTimeEnd)) {
-          continue;
-        }
-        if (!isTimeInRange(entity.getModifiedTime(), modifiedTimeBegin,
-            modifiedTimeEnd)) {
           continue;
         }
         if (relatesTo != null && !relatesTo.isEmpty() &&
@@ -413,7 +398,6 @@ public class FileSystemTimelineReaderImpl extends AbstractService
   public Set<TimelineEntity> getEntities(String userId, String clusterId,
       String flowName, Long flowRunId, String appId, String entityType,
       Long limit, Long createdTimeBegin, Long createdTimeEnd,
-      Long modifiedTimeBegin, Long modifiedTimeEnd,
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
       Map<String, Object> infoFilters, Map<String, String> configFilters,
       Set<String> metricFilters, Set<String> eventFilters,
@@ -424,8 +408,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     File dir =
         new File(new File(rootPath, ENTITIES_DIR),
             clusterId + "/" + flowRunPath + "/" + appId + "/" + entityType);
-    return getEntities(dir, entityType, limit,
-        createdTimeBegin, createdTimeEnd, modifiedTimeBegin, modifiedTimeEnd,
+    return getEntities(dir, entityType, limit, createdTimeBegin, createdTimeEnd,
         relatesTo, isRelatedTo, infoFilters, configFilters, metricFilters,
         eventFilters, confsToRetrieve, metricsToRetrieve, fieldsToRetrieve);
   }

@@ -143,10 +143,10 @@ public class PhoenixOfflineAggregationWriterImpl
     TimelineWriteResponse response = new TimelineWriteResponse();
     String sql = "UPSERT INTO " + info.getTableName()
         + " (" + StringUtils.join(info.getPrimaryKeyList(), ",")
-        + ", created_time, modified_time, metric_names) "
+        + ", created_time, metric_names) "
         + "VALUES ("
         + StringUtils.repeat("?,", info.getPrimaryKeyList().length)
-        + "?, ?, ?)";
+        + "?, ?)";
     if (LOG.isDebugEnabled()) {
       LOG.debug("TimelineEntity write SQL: " + sql);
     }
@@ -162,7 +162,6 @@ public class PhoenixOfflineAggregationWriterImpl
         }
         int idx = info.setStringsForPrimaryKey(ps, context, null, 1);
         ps.setLong(idx++, entity.getCreatedTime());
-        ps.setLong(idx++, entity.getModifiedTime());
         ps.setString(idx++, StringUtils.join(formattedMetrics.keySet().toArray(),
             AGGREGATION_STORAGE_SEPARATOR));
         ps.execute();
@@ -197,7 +196,7 @@ public class PhoenixOfflineAggregationWriterImpl
           + OfflineAggregationInfo.FLOW_AGGREGATION_TABLE_NAME
           + "(user VARCHAR NOT NULL, cluster VARCHAR NOT NULL, "
           + "flow_name VARCHAR NOT NULL, "
-          + "created_time UNSIGNED_LONG, modified_time UNSIGNED_LONG, "
+          + "created_time UNSIGNED_LONG, "
           + METRIC_COLUMN_FAMILY + PHOENIX_COL_FAMILY_PLACE_HOLDER + " VARBINARY, "
           + "metric_names VARCHAR, info_keys VARCHAR "
           + "CONSTRAINT pk PRIMARY KEY("
@@ -206,7 +205,7 @@ public class PhoenixOfflineAggregationWriterImpl
       sql = "CREATE TABLE IF NOT EXISTS "
           + OfflineAggregationInfo.USER_AGGREGATION_TABLE_NAME
           + "(user VARCHAR NOT NULL, cluster VARCHAR NOT NULL, "
-          + "created_time UNSIGNED_LONG, modified_time UNSIGNED_LONG, "
+          + "created_time UNSIGNED_LONG, "
           + METRIC_COLUMN_FAMILY + PHOENIX_COL_FAMILY_PLACE_HOLDER + " VARBINARY, "
           + "metric_names VARCHAR, info_keys VARCHAR "
           + "CONSTRAINT pk PRIMARY KEY(user, cluster))";

@@ -44,11 +44,6 @@ public enum ApplicationColumn implements Column<ApplicationTable> {
   CREATED_TIME(ApplicationColumnFamily.INFO, "created_time"),
 
   /**
-   * When it was modified.
-   */
-  MODIFIED_TIME(ApplicationColumnFamily.INFO, "modified_time"),
-
-  /**
    * The version of the flow that this app belongs to.
    */
   FLOW_VERSION(ApplicationColumnFamily.INFO, "flow_version");

@@ -49,11 +49,6 @@ public enum EntityColumn implements Column<EntityTable> {
   CREATED_TIME(EntityColumnFamily.INFO, "created_time"),
 
   /**
-   * When it was modified.
-   */
-  MODIFIED_TIME(EntityColumnFamily.INFO, "modified_time"),
-
-  /**
    * The version of the flow that this entity belongs to.
    */
   FLOW_VERSION(EntityColumnFamily.INFO, "flow_version");

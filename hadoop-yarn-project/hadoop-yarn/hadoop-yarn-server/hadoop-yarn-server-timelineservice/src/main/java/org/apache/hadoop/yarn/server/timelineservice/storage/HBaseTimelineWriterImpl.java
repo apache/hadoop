@@ -315,8 +315,6 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       ApplicationColumn.ID.store(rowKey, applicationTable, null, te.getId());
       ApplicationColumn.CREATED_TIME.store(rowKey, applicationTable, null,
           te.getCreatedTime());
-      ApplicationColumn.MODIFIED_TIME.store(rowKey, applicationTable, null,
-          te.getModifiedTime());
       ApplicationColumn.FLOW_VERSION.store(rowKey, applicationTable, null,
           flowVersion);
       Map<String, Object> info = te.getInfo();
@@ -331,8 +329,6 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       EntityColumn.TYPE.store(rowKey, entityTable, null, te.getType());
       EntityColumn.CREATED_TIME.store(rowKey, entityTable, null,
           te.getCreatedTime());
-      EntityColumn.MODIFIED_TIME.store(rowKey, entityTable, null,
-          te.getModifiedTime());
       EntityColumn.FLOW_VERSION.store(rowKey, entityTable, null, flowVersion);
       Map<String, Object> info = te.getInfo();
       if (info != null) {

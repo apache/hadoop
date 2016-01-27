@@ -111,7 +111,6 @@ public class TestPhoenixOfflineAggregationWriterImpl extends BaseTest {
     entity.setId(id);
     entity.setType(type);
     entity.setCreatedTime(1425016501000L);
-    entity.setModifiedTime(1425016502000L);
 
     TimelineMetric metric = new TimelineMetric();
     metric.setId("HDFS_BYTES_READ");

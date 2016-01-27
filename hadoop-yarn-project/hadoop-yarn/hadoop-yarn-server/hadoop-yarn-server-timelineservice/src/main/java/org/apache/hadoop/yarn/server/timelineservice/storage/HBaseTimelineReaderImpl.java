@@ -81,7 +81,6 @@ public class HBaseTimelineReaderImpl
   public Set<TimelineEntity> getEntities(String userId, String clusterId,
       String flowName, Long flowRunId, String appId, String entityType,
       Long limit, Long createdTimeBegin, Long createdTimeEnd,
-      Long modifiedTimeBegin, Long modifiedTimeEnd,
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
       Map<String, Object> infoFilters, Map<String, String> configFilters,
       Set<String> metricFilters, Set<String> eventFilters,
@@ -90,10 +89,9 @@ public class HBaseTimelineReaderImpl
     TimelineEntityReader reader =
         TimelineEntityReaderFactory.createMultipleEntitiesReader(userId,
             clusterId, flowName, flowRunId, appId, entityType, limit,
-            createdTimeBegin, createdTimeEnd, modifiedTimeBegin,
-            modifiedTimeEnd, relatesTo, isRelatedTo, infoFilters, configFilters,
-            metricFilters, eventFilters, confsToRetrieve, metricsToRetrieve,
-            fieldsToRetrieve);
+            createdTimeBegin, createdTimeEnd, relatesTo, isRelatedTo,
+            infoFilters, configFilters, metricFilters, eventFilters,
+            confsToRetrieve, metricsToRetrieve, fieldsToRetrieve);
     return reader.readEntities(hbaseConf, conn);
   }
 }

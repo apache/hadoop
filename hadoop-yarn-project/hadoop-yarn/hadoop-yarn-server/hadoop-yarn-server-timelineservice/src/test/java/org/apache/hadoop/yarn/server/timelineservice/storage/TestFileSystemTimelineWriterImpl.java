@@ -49,7 +49,6 @@ public class TestFileSystemTimelineWriterImpl {
     entity.setId(id);
     entity.setType(type);
     entity.setCreatedTime(1425016501000L);
-    entity.setModifiedTime(1425016502000L);
     te.addEntity(entity);
 
     FileSystemTimelineWriterImpl fsi = null;
@@ -80,7 +79,7 @@ public class TestFileSystemTimelineWriterImpl {
       assertTrue(!(f.exists()));
     } finally {
       if (fsi != null) {
-        fsi.stop();
+        fsi.close();
         FileUtils.deleteDirectory(new File(fsi.getOutputRoot()));
       }
     }
