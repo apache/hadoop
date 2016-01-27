@@ -1028,7 +1028,9 @@
     <profile>
       <id>shelltest</id>
       <activation>
-        <activeByDefault>true</activeByDefault>
+        <property>
+          <name>!skipTests</name>
+        </property>
       </activation>
       <build>
         <plugins>
@@ -1037,7 +1039,7 @@
             <executions>
                 <execution>
                     <id>common-test-bats-driver</id>
-                    <phase>process-test-classes</phase>
+                    <phase>test</phase>
                     <goals>
                         <goal>run</goal>
                     </goals>
