@@ -261,6 +261,10 @@ public class MRApps extends Apps {
     addClasspathToEnv(environment, classpathEnvVar, conf);
     addClasspathToEnv(environment, hadoopClasspathEnvVar, conf);
 
+    // MAPREDUCE-6619, retain $HADOOP_CLASSPATH
+    MRApps.addToEnvironment(environment, hadoopClasspathEnvVar,
+        System.getenv(hadoopClasspathEnvVar), conf);
+
     if (userClassesTakesPrecedence) {
       MRApps.setMRFrameworkClasspath(environment, conf);
     }
