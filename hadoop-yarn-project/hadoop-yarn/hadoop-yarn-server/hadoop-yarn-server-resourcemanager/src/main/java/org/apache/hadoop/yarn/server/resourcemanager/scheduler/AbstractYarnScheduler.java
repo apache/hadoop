@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -55,13 +54,13 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -74,6 +73,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEven
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerRecoverEvent;
+
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeDecreaseContainerEvent;
@@ -618,28 +618,20 @@ public abstract class AbstractYarnScheduler
           SchedulerUtils.RELEASED_CONTAINER), RMContainerEventType.RELEASED);
     }
   }
-  
+
   protected void decreaseContainers(
-      List<SchedContainerChangeRequest> decreaseRequests,
+      List<ContainerResourceChangeRequest> decreaseRequests,
       SchedulerApplicationAttempt attempt) {
-    for (SchedContainerChangeRequest request : decreaseRequests) {
+    if (null == decreaseRequests || decreaseRequests.isEmpty()) {
+      return;
+    }
+    // Pre-process decrease requests
+    List<SchedContainerChangeRequest> schedDecreaseRequests =
+        createSchedContainerChangeRequests(decreaseRequests, false);
+    for (SchedContainerChangeRequest request : schedDecreaseRequests) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Processing decrease request:" + request);
       }
-      
-      boolean hasIncreaseRequest =
-          attempt.removeIncreaseRequest(request.getNodeId(),
-              request.getPriority(), request.getContainerId());
-      
-      if (hasIncreaseRequest) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("While processing decrease request, found a increase request "
-              + "for the same container "
-              + request.getContainerId()
-              + ", removed the increase request");
-        }
-      }
-      
       // handle decrease request
       decreaseContainer(request, attempt);
     }
@@ -877,7 +869,7 @@ public abstract class AbstractYarnScheduler
   }
   
   /**
-   * Normalize container increase/decrease request, and return
+   * Sanity check increase/decrease request, and return
    * SchedulerContainerResourceChangeRequest according to given
    * ContainerResourceChangeRequest.
    * 
@@ -886,37 +878,34 @@ public abstract class AbstractYarnScheduler
    * - Throw exception when any other error happens
    * </pre>
    */
-  private SchedContainerChangeRequest
-      checkAndNormalizeContainerChangeRequest(
-          ContainerResourceChangeRequest request, boolean increase)
-          throws YarnException {
-    // We have done a check in ApplicationMasterService, but RMContainer status
-    // / Node resource could change since AMS won't acquire lock of scheduler.
-    RMServerUtils.checkAndNormalizeContainerChangeRequest(rmContext, request,
-        increase);
+  private SchedContainerChangeRequest createSchedContainerChangeRequest(
+      ContainerResourceChangeRequest request, boolean increase)
+      throws YarnException {
     ContainerId containerId = request.getContainerId();
     RMContainer rmContainer = getRMContainer(containerId);
+    if (null == rmContainer) {
+      String msg =
+          "Failed to get rmContainer for "
+              + (increase ? "increase" : "decrease")
+              + " request, with container-id=" + containerId;
+      throw new InvalidResourceRequestException(msg);
+    }
     SchedulerNode schedulerNode =
         getSchedulerNode(rmContainer.getAllocatedNode());
-    
-    return new SchedContainerChangeRequest(schedulerNode, rmContainer,
-        request.getCapability());
+    return new SchedContainerChangeRequest(
+        this.rmContext, schedulerNode, rmContainer, request.getCapability());
   }
 
   protected List<SchedContainerChangeRequest>
-      checkAndNormalizeContainerChangeRequests(
+      createSchedContainerChangeRequests(
           List<ContainerResourceChangeRequest> changeRequests,
           boolean increase) {
-    if (null == changeRequests || changeRequests.isEmpty()) {
-      return Collections.EMPTY_LIST;
-    }
-    
     List<SchedContainerChangeRequest> schedulerChangeRequests =
         new ArrayList<SchedContainerChangeRequest>();
     for (ContainerResourceChangeRequest r : changeRequests) {
       SchedContainerChangeRequest sr = null;
       try {
-        sr = checkAndNormalizeContainerChangeRequest(r, increase);
+        sr = createSchedContainerChangeRequest(r, increase);
       } catch (YarnException e) {
         LOG.warn("Error happens when checking increase request, Ignoring.."
             + " exception=", e);
@@ -924,7 +913,6 @@ public abstract class AbstractYarnScheduler
       }
       schedulerChangeRequests.add(sr);
     }
-
     return schedulerChangeRequests;
   }
 }

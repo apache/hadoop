@@ -53,9 +53,10 @@ import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler
+    .SchedContainerChangeRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -114,43 +115,25 @@ public class RMServerUtils {
           queueName, scheduler, rmContext, queueInfo);
     }
   }
-  
+
   /**
-   * Normalize container increase/decrease request, it will normalize and update
-   * ContainerResourceChangeRequest.targetResource
+   * Validate increase/decrease request. This function must be called under
+   * the queue lock to make sure that the access to container resource is
+   * atomic. Refer to LeafQueue.decreaseContainer() and
+   * CapacityScheduelr.updateIncreaseRequests()
+   *
    * 
    * <pre>
    * - Throw exception when any other error happens
    * </pre>
    */
-  public static void checkAndNormalizeContainerChangeRequest(
-      RMContext rmContext, ContainerResourceChangeRequest request,
-      boolean increase) throws InvalidResourceRequestException {
+  public static void checkSchedContainerChangeRequest(
+      SchedContainerChangeRequest request, boolean increase)
+      throws InvalidResourceRequestException {
+    RMContext rmContext = request.getRmContext();
     ContainerId containerId = request.getContainerId();
-    ResourceScheduler scheduler = rmContext.getScheduler();
-    RMContainer rmContainer = scheduler.getRMContainer(containerId);
-    ResourceCalculator rc = scheduler.getResourceCalculator();
-    
-    if (null == rmContainer) {
-      String msg =
-          "Failed to get rmContainer for "
-              + (increase ? "increase" : "decrease")
-              + " request, with container-id=" + containerId;
-      throw new InvalidResourceRequestException(msg);
-    }
-
-    if (rmContainer.getState() != RMContainerState.RUNNING) {
-      String msg =
-          "rmContainer's state is not RUNNING, for "
-              + (increase ? "increase" : "decrease")
-              + " request, with container-id=" + containerId;
-      throw new InvalidResourceRequestException(msg);
-    }
-
-    Resource targetResource = Resources.normalize(rc, request.getCapability(),
-        scheduler.getMinimumResourceCapability(),
-        scheduler.getMaximumResourceCapability(),
-        scheduler.getMinimumResourceCapability());
+    RMContainer rmContainer = request.getRMContainer();
+    Resource targetResource = request.getTargetCapacity();
 
     // Compare targetResource and original resource
     Resource originalResource = rmContainer.getAllocatedResource();
@@ -181,10 +164,10 @@ public class RMServerUtils {
         throw new InvalidResourceRequestException(msg);
       }
     }
-    
-    RMNode rmNode = rmContext.getRMNodes().get(rmContainer.getAllocatedNode());
-    
+
     // Target resource of the increase request is more than NM can offer
+    ResourceScheduler scheduler = rmContext.getScheduler();
+    RMNode rmNode = request.getSchedulerNode().getRMNode();
     if (!Resources.fitsIn(scheduler.getResourceCalculator(),
         scheduler.getClusterResource(), targetResource,
         rmNode.getTotalCapability())) {
@@ -193,9 +176,6 @@ public class RMServerUtils {
           + rmNode.getTotalCapability();
       throw new InvalidResourceRequestException(msg);
     }
-
-    // Update normalized target resource
-    request.setCapability(targetResource);
   }
 
   /*
@@ -253,7 +233,8 @@ public class RMServerUtils {
       }
     }
   }
-  
+
+  // Sanity check and normalize target resource
   private static void validateIncreaseDecreaseRequest(RMContext rmContext,
       List<ContainerResourceChangeRequest> requests, Resource maximumAllocation,
       boolean increase)
@@ -283,8 +264,23 @@ public class RMServerUtils {
             + request.getCapability().getVirtualCores() + ", maxVirtualCores="
             + maximumAllocation.getVirtualCores());
       }
-      
-      checkAndNormalizeContainerChangeRequest(rmContext, request, increase);
+      ContainerId containerId = request.getContainerId();
+      ResourceScheduler scheduler = rmContext.getScheduler();
+      RMContainer rmContainer = scheduler.getRMContainer(containerId);
+      if (null == rmContainer) {
+        String msg =
+            "Failed to get rmContainer for "
+                + (increase ? "increase" : "decrease")
+                + " request, with container-id=" + containerId;
+        throw new InvalidResourceRequestException(msg);
+      }
+      ResourceCalculator rc = scheduler.getResourceCalculator();
+      Resource targetResource = Resources.normalize(rc, request.getCapability(),
+          scheduler.getMinimumResourceCapability(),
+          scheduler.getMaximumResourceCapability(),
+          scheduler.getMinimumResourceCapability());
+      // Update normalized target resource
+      request.setCapability(targetResource);
     }
   }
 
