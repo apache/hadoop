@@ -68,6 +68,9 @@ Release 2.6.3 - 2015-12-17
     MAPREDUCE-6549. multibyte delimiters with LineRecordReader cause
     duplicate records (wilfreds via rkanter)
 
+    MAPREDUCE-6619. HADOOP_CLASSPATH is overwritten in MR container.
+    (Junping Du via jianhe)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
