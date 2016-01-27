@@ -72,11 +72,17 @@ public class SLSUtils {
       while ((job = reader.getNext()) != null) {
         for(LoggedTask mapTask : job.getMapTasks()) {
           // select the last attempt
+          if (mapTask.getAttempts().size() == 0) {
+            continue;
+          }
           LoggedTaskAttempt taskAttempt = mapTask.getAttempts()
                   .get(mapTask.getAttempts().size() - 1);
           nodeSet.add(taskAttempt.getHostName().getValue());
         }
         for(LoggedTask reduceTask : job.getReduceTasks()) {
+          if (reduceTask.getAttempts().size() == 0) {
+            continue;
+          }
           LoggedTaskAttempt taskAttempt = reduceTask.getAttempts()
                   .get(reduceTask.getAttempts().size() - 1);
           nodeSet.add(taskAttempt.getHostName().getValue());

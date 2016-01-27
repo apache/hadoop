@@ -159,6 +159,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4613. Fix test failure in TestClientRMService#testGetClusterNodes.
     (Takashi Ohnishi via rohithsharmaks)
 
+    YARN-4612. Fix rumen and scheduler load simulator handle killed tasks properly.
+    (Ming Ma via xgong)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
