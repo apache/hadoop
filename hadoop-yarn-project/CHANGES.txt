@@ -90,6 +90,9 @@ Release 2.7.4 - UNRELEASED
 
     YARN-4367. SLS webapp doesn't load. (kasha)
 
+    YARN-4612. Fix rumen and scheduler load simulator handle killed tasks properly.
+    (Ming Ma via xgong)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
