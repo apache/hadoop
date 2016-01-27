@@ -65,6 +65,8 @@ public class FairSchedulerQueueInfo {
   private String queueName;
   private String schedulingPolicy;
 
+  private boolean preemptable;
+
   private FairSchedulerQueueInfoList childQueues;
 
   public FairSchedulerQueueInfo() {
@@ -108,6 +110,7 @@ public class FairSchedulerQueueInfo {
       return;
     }
 
+    preemptable = queue.isPreemptable();
     childQueues = getChildQueues(queue, scheduler);
   }
 
@@ -227,5 +230,9 @@ public class FairSchedulerQueueInfo {
   public Collection<FairSchedulerQueueInfo> getChildQueues() {
     return childQueues != null ? childQueues.getQueueInfoList() :
         new ArrayList<FairSchedulerQueueInfo>();
+  }
+
+  public boolean isPreemptable() {
+    return preemptable;
   }
 }

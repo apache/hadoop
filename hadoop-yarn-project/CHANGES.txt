@@ -67,6 +67,8 @@ Release 2.9.0 - UNRELEASED
     YARN-1856. Added cgroups based memory monitoring for containers as another
     alternative to custom memory-monitoring. (Varun Vasudev via vinodkv)
 
+    YARN-4462. FairScheduler: Disallow preemption from a queue. (Tao Jie via kasha)
+
   IMPROVEMENTS
 
     YARN-4072. ApplicationHistoryServer, WebAppProxyServer, NodeManager and

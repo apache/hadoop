@@ -98,6 +98,8 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   // Reservation system configuration
   private ReservationQueueConfiguration globalReservationQueueConfig;
 
+  private final Set<String> nonPreemptableQueues;
+
   public AllocationConfiguration(Map<String, Resource> minQueueResources,
       Map<String, Resource> maxQueueResources,
       Map<String, Integer> queueMaxApps, Map<String, Integer> userMaxApps,
@@ -114,7 +116,8 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
       QueuePlacementPolicy placementPolicy,
       Map<FSQueueType, Set<String>> configuredQueues,
       ReservationQueueConfiguration globalReservationQueueConfig,
-      Set<String> reservableQueues) {
+      Set<String> reservableQueues,
+      Set<String> nonPreemptableQueues) {
     this.minQueueResources = minQueueResources;
     this.maxQueueResources = maxQueueResources;
     this.queueMaxApps = queueMaxApps;
@@ -135,6 +138,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     this.globalReservationQueueConfig = globalReservationQueueConfig;
     this.placementPolicy = placementPolicy;
     this.configuredQueues = configuredQueues;
+    this.nonPreemptableQueues = nonPreemptableQueues;
   }
   
   public AllocationConfiguration(Configuration conf) {
@@ -161,6 +165,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     }
     placementPolicy = QueuePlacementPolicy.fromConfiguration(conf,
         configuredQueues);
+    nonPreemptableQueues = new HashSet<String>();
   }
   
   /**
@@ -208,6 +213,10 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
         fairSharePreemptionThresholds.get(queueName);
     return (fairSharePreemptionThreshold == null) ?
         -1f : fairSharePreemptionThreshold;
+  }
+
+  public boolean isPreemptable(String queueName) {
+    return !nonPreemptableQueues.contains(queueName);
   }
 
   public ResourceWeights getQueueWeight(String queue) {

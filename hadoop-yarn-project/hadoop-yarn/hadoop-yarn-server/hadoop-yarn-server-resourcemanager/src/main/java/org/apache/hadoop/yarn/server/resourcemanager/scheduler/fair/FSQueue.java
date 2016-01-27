@@ -62,6 +62,7 @@ public abstract class FSQueue implements Queue, Schedulable {
   private long fairSharePreemptionTimeout = Long.MAX_VALUE;
   private long minSharePreemptionTimeout = Long.MAX_VALUE;
   private float fairSharePreemptionThreshold = 0.5f;
+  private boolean preemptable = true;
 
   public FSQueue(String name, FairScheduler scheduler, FSParentQueue parent) {
     this.name = name;
@@ -235,6 +236,10 @@ public abstract class FSQueue implements Queue, Schedulable {
     this.fairSharePreemptionThreshold = fairSharePreemptionThreshold;
   }
 
+  public boolean isPreemptable() {
+    return preemptable;
+  }
+
   /**
    * Recomputes the shares for all child queues and applications based on this
    * queue's current share
@@ -242,7 +247,8 @@ public abstract class FSQueue implements Queue, Schedulable {
   public abstract void recomputeShares();
 
   /**
-   * Update the min/fair share preemption timeouts and threshold for this queue.
+   * Update the min/fair share preemption timeouts, threshold and preemption
+   * disabled flag for this queue.
    */
   public void updatePreemptionVariables() {
     // For min share timeout
@@ -263,6 +269,9 @@ public abstract class FSQueue implements Queue, Schedulable {
     if (fairSharePreemptionThreshold < 0 && parent != null) {
       fairSharePreemptionThreshold = parent.getFairSharePreemptionThreshold();
     }
+    // For option whether allow preemption from this queue
+    preemptable = scheduler.getAllocationConfiguration()
+        .isPreemptable(getName());
   }
 
   /**
