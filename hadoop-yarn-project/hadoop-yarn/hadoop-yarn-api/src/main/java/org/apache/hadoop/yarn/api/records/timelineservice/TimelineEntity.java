@@ -504,6 +504,19 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
     }
   }
 
+  /**
+   * Set UID in info which will be then used for query by UI.
+   * @param uidKey key for UID in info.
+   * @param uId UID to be set for the key.
+   */
+  public void setUID(String uidKey, String uId) {
+    if (real == null) {
+      info.put(uidKey, uId);
+    } else {
+      real.addInfo(uidKey, uId);
+    }
+  }
+
   public boolean isValid() {
     return (getId() != null && getType() != null);
   }

@@ -60,6 +60,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumn
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
+import org.apache.hadoop.yarn.webapp.NotFoundException;
 
 import com.google.common.base.Preconditions;
 
@@ -195,9 +196,9 @@ class GenericEntityReader extends TimelineEntityReader {
           AppToFlowColumn.FLOW_ID.readResult(result).toString(),
           ((Number)AppToFlowColumn.FLOW_RUN_ID.readResult(result)).longValue());
     } else {
-       throw new IOException(
-           "Unable to find the context flow ID and flow run ID for clusterId=" +
-           clusterId + ", appId=" + appId);
+      throw new NotFoundException(
+          "Unable to find the context flow ID and flow run ID for clusterId=" +
+          clusterId + ", appId=" + appId);
     }
   }
 
