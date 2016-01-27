@@ -67,8 +67,8 @@ message FileSummary {
  */
 message NameSystemSection {
   optional uint32 namespaceId = 1;
-  optional uint64 genstampV1 = 2;
-  optional uint64 genstampV2 = 3;
+  optional uint64 genstampV1 = 2; // legacy generation stamp
+  optional uint64 genstampV2 = 3; // generation stamp of latest version
   optional uint64 genstampV1Limit = 4;
   optional uint64 lastAllocatedBlockId = 5;
   optional uint64 transactionId = 6;

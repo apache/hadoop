@@ -1145,7 +1145,7 @@ public class TestEditLog {
     editlog.initJournalsForWrite();
     editlog.openForWrite(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     for (int i = 2; i < TXNS_PER_ROLL; i++) {
-      editlog.logGenerationStampV2((long) 0);
+      editlog.logGenerationStamp((long) 0);
     }
     editlog.logSync();
     
@@ -1157,7 +1157,7 @@ public class TestEditLog {
     for (int i = 0; i < numrolls; i++) {
       editlog.rollEditLog(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       
-      editlog.logGenerationStampV2((long) i);
+      editlog.logGenerationStamp((long) i);
       editlog.logSync();
 
       while (aborts.size() > 0 
@@ -1167,7 +1167,7 @@ public class TestEditLog {
       } 
       
       for (int j = 3; j < TXNS_PER_ROLL; j++) {
-        editlog.logGenerationStampV2((long) i);
+        editlog.logGenerationStamp((long) i);
       }
       editlog.logSync();
     }
