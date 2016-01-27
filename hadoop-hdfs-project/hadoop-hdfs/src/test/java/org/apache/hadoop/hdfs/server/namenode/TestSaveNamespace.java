@@ -519,7 +519,7 @@ public class TestSaveNamespace {
     DelayAnswer delayer = new GenericTestUtils.DelayAnswer(LOG);
     BlockIdManager bid = spy(spyFsn.getBlockManager().getBlockIdManager());
     Whitebox.setInternalState(finalFsn.getBlockManager(), "blockIdManager", bid);
-    doAnswer(delayer).when(bid).getGenerationStampV2();
+    doAnswer(delayer).when(bid).getGenerationStamp();
 
     ExecutorService pool = Executors.newFixedThreadPool(2);
     

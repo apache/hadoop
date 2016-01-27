@@ -23,16 +23,16 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * This exception is thrown when the name node runs out of V1 generation
- * stamps.
+ * This exception is thrown when the name node runs out of V1 (legacy)
+ * generation stamps.
  *
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class OutOfV1GenerationStampsException extends IOException {
+public class OutOfLegacyGenerationStampsException extends IOException {
   private static final long serialVersionUID = 1L;
 
-  public OutOfV1GenerationStampsException() {
+  public OutOfLegacyGenerationStampsException() {
     super("Out of V1 (legacy) generation stamps\n");
   }
 }

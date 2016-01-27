@@ -346,24 +346,24 @@ public class FSImageFormat {
         long genstamp = in.readLong();
         final BlockIdManager blockIdManager = namesystem.getBlockManager()
             .getBlockIdManager();
-        blockIdManager.setGenerationStampV1(genstamp);
+        blockIdManager.setLegacyGenerationStamp(genstamp);
 
         if (NameNodeLayoutVersion.supports(
             LayoutVersion.Feature.SEQUENTIAL_BLOCK_ID, imgVersion)) {
           // read the starting generation stamp for sequential block IDs
           genstamp = in.readLong();
-          blockIdManager.setGenerationStampV2(genstamp);
+          blockIdManager.setGenerationStamp(genstamp);
 
           // read the last generation stamp for blocks created after
           // the switch to sequential block IDs.
           long stampAtIdSwitch = in.readLong();
-          blockIdManager.setGenerationStampV1Limit(stampAtIdSwitch);
+          blockIdManager.setLegacyGenerationStampLimit(stampAtIdSwitch);
 
           // read the max sequential block ID.
           long maxSequentialBlockId = in.readLong();
           blockIdManager.setLastAllocatedContiguousBlockId(maxSequentialBlockId);
         } else {
-          long startingGenStamp = blockIdManager.upgradeGenerationStampToV2();
+          long startingGenStamp = blockIdManager.upgradeLegacyGenerationStamp();
           // This is an upgrade.
           LOG.info("Upgrading to sequential block IDs. Generation stamp " +
                    "for new blocks set to " + startingGenStamp);
@@ -1270,8 +1270,8 @@ public class FSImageFormat {
         out.writeLong(numINodes);
         final BlockIdManager blockIdManager = sourceNamesystem.getBlockManager()
             .getBlockIdManager();
-        out.writeLong(blockIdManager.getGenerationStampV1());
-        out.writeLong(blockIdManager.getGenerationStampV2());
+        out.writeLong(blockIdManager.getLegacyGenerationStamp());
+        out.writeLong(blockIdManager.getGenerationStamp());
         out.writeLong(blockIdManager.getGenerationStampAtblockIdSwitch());
         out.writeLong(blockIdManager.getLastAllocatedContiguousBlockId());
         out.writeLong(context.getTxId());
