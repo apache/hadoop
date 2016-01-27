@@ -44,6 +44,8 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -148,6 +150,18 @@ public class AppSchedulingInfo {
     boolean resourceUpdated = false;
 
     for (SchedContainerChangeRequest r : increaseRequests) {
+      if (r.getRMContainer().getState() != RMContainerState.RUNNING) {
+        LOG.warn("rmContainer's state is not RUNNING, for increase request with"
+            + " container-id=" + r.getContainerId());
+        continue;
+      }
+      try {
+        RMServerUtils.checkSchedContainerChangeRequest(r, true);
+      } catch (YarnException e) {
+        LOG.warn("Error happens when checking increase request, Ignoring.."
+            + " exception=", e);
+        continue;
+      }
       NodeId nodeId = r.getRMContainer().getAllocatedNode();
 
       Map<Priority, Map<ContainerId, SchedContainerChangeRequest>> requestsOnNode =
@@ -221,7 +235,7 @@ public class AppSchedulingInfo {
     
     if (LOG.isDebugEnabled()) {
       LOG.debug("Added increase request:" + request.getContainerId()
-          + " delta=" + request.getDeltaCapacity());
+          + " delta=" + delta);
     }
     
     // update priorities
@@ -520,24 +534,20 @@ public class AppSchedulingInfo {
     NodeId nodeId = increaseRequest.getNodeId();
     Priority priority = increaseRequest.getPriority();
     ContainerId containerId = increaseRequest.getContainerId();
-    
+    Resource deltaCapacity = increaseRequest.getDeltaCapacity();
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("allocated increase request : applicationId=" + applicationId
           + " container=" + containerId + " host="
           + increaseRequest.getNodeId() + " user=" + user + " resource="
-          + increaseRequest.getDeltaCapacity());
+          + deltaCapacity);
     }
-    
     // Set queue metrics
-    queue.getMetrics().allocateResources(user,
-        increaseRequest.getDeltaCapacity());
-    
+    queue.getMetrics().allocateResources(user, deltaCapacity);
     // remove the increase request from pending increase request map
     removeIncreaseRequest(nodeId, priority, containerId);
-    
     // update usage
-    appResourceUsage.incUsed(increaseRequest.getNodePartition(),
-        increaseRequest.getDeltaCapacity());
+    appResourceUsage.incUsed(increaseRequest.getNodePartition(), deltaCapacity);
   }
   
   public synchronized void decreaseContainer(

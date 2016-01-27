@@ -22,6 +22,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -32,18 +33,19 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  */
 public class SchedContainerChangeRequest implements
     Comparable<SchedContainerChangeRequest> {
-  RMContainer rmContainer;
-  Resource targetCapacity;
-  SchedulerNode schedulerNode;
-  Resource deltaCapacity;
+  private RMContext rmContext;
+  private RMContainer rmContainer;
+  private Resource targetCapacity;
+  private SchedulerNode schedulerNode;
+  private Resource deltaCapacity;
 
-  public SchedContainerChangeRequest(SchedulerNode schedulerNode,
+  public SchedContainerChangeRequest(
+      RMContext rmContext, SchedulerNode schedulerNode,
       RMContainer rmContainer, Resource targetCapacity) {
+    this.rmContext = rmContext;
     this.rmContainer = rmContainer;
     this.targetCapacity = targetCapacity;
     this.schedulerNode = schedulerNode;
-    deltaCapacity = Resources.subtract(targetCapacity,
-        rmContainer.getAllocatedResource());
   }
   
   public NodeId getNodeId() {
@@ -58,11 +60,19 @@ public class SchedContainerChangeRequest implements
     return this.targetCapacity;
   }
 
+  public RMContext getRmContext() {
+    return this.rmContext;
+  }
   /**
-   * Delta capacity = before - target, so if it is a decrease request, delta
+   * Delta capacity = target - before, so if it is a decrease request, delta
    * capacity will be negative
    */
-  public Resource getDeltaCapacity() {
+  public synchronized Resource getDeltaCapacity() {
+    // Only calculate deltaCapacity once
+    if (deltaCapacity == null) {
+      deltaCapacity = Resources.subtract(
+          targetCapacity, rmContainer.getAllocatedResource());
+    }
     return deltaCapacity;
   }
   
@@ -81,7 +91,7 @@ public class SchedContainerChangeRequest implements
   public SchedulerNode getSchedulerNode() {
     return schedulerNode;
   }
-  
+
   @Override
   public int hashCode() {
     return (getContainerId().hashCode() << 16) + targetCapacity.hashCode();
@@ -112,7 +122,6 @@ public class SchedContainerChangeRequest implements
   @Override
   public String toString() {
     return "<container=" + getContainerId() + ", targetCapacity="
-        + targetCapacity + ", delta=" + deltaCapacity + ", node="
-        + getNodeId().toString() + ">";
+        + targetCapacity + ", node=" + getNodeId().toString() + ">";
   }
 }

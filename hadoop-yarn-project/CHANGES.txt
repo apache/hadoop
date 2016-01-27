@@ -170,6 +170,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4633. Fix random test failure in TestRMRestart#testRMRestartAfterPreemption
     (Bibin A Chundatt via rohithsharmaks)
 
+    YARN-4519. Potential deadlock of CapacityScheduler between decrease container
+    and assign containers. (Meng Ding via jianhe)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

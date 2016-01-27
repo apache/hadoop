@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -65,6 +65,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
@@ -895,9 +896,36 @@ public class CapacityScheduler extends
     }
   }
 
+  // It is crucial to acquire leaf queue lock first to prevent:
+  // 1. Race condition when calculating the delta resource in
+  //    SchedContainerChangeRequest
+  // 2. Deadlock with the scheduling thread.
+  private LeafQueue updateIncreaseRequests(
+      List<ContainerResourceChangeRequest> increaseRequests,
+      FiCaSchedulerApp app) {
+    if (null == increaseRequests || increaseRequests.isEmpty()) {
+      return null;
+    }
+    // Pre-process increase requests
+    List<SchedContainerChangeRequest> schedIncreaseRequests =
+        createSchedContainerChangeRequests(increaseRequests, true);
+    LeafQueue leafQueue = (LeafQueue) app.getQueue();
+    synchronized(leafQueue) {
+      // make sure we aren't stopping/removing the application
+      // when the allocate comes in
+      if (app.isStopped()) {
+        return null;
+      }
+      // Process increase resource requests
+      if (app.updateIncreaseRequests(schedIncreaseRequests)) {
+        return leafQueue;
+      }
+      return null;
+    }
+  }
+
   @Override
-  // Note: when AM asks to decrease container or release container, we will
-  // acquire scheduler lock
+  // Note: when AM asks to release container, we will acquire scheduler lock
   @Lock(Lock.NoLock.class)
   public Allocation allocate(ApplicationAttemptId applicationAttemptId,
       List<ResourceRequest> ask, List<ContainerId> release,
@@ -909,26 +937,23 @@ public class CapacityScheduler extends
     if (application == null) {
       return EMPTY_ALLOCATION;
     }
-    
-    // Sanity check
-    SchedulerUtils.normalizeRequests(
-        ask, getResourceCalculator(), getClusterResource(),
-        getMinimumResourceCapability(), getMaximumResourceCapability());
-    
-    // Pre-process increase requests
-    List<SchedContainerChangeRequest> normalizedIncreaseRequests =
-        checkAndNormalizeContainerChangeRequests(increaseRequests, true);
-    
-    // Pre-process decrease requests
-    List<SchedContainerChangeRequest> normalizedDecreaseRequests =
-        checkAndNormalizeContainerChangeRequests(decreaseRequests, false);
 
     // Release containers
     releaseContainers(release, application);
 
-    Allocation allocation;
+    // update increase requests
+    LeafQueue updateDemandForQueue =
+        updateIncreaseRequests(increaseRequests, application);
 
-    LeafQueue updateDemandForQueue = null;
+    // Decrease containers
+    decreaseContainers(decreaseRequests, application);
+
+    // Sanity check for new allocation requests
+    SchedulerUtils.normalizeRequests(
+        ask, getResourceCalculator(), getClusterResource(),
+        getMinimumResourceCapability(), getMaximumResourceCapability());
+
+    Allocation allocation;
 
     synchronized (application) {
 
@@ -947,7 +972,8 @@ public class CapacityScheduler extends
         }
 
         // Update application requests
-        if (application.updateResourceRequests(ask)) {
+        if (application.updateResourceRequests(ask)
+            && (updateDemandForQueue == null)) {
           updateDemandForQueue = (LeafQueue) application.getQueue();
         }
 
@@ -957,12 +983,6 @@ public class CapacityScheduler extends
         }
       }
       
-      // Process increase resource requests
-      if (application.updateIncreaseRequests(normalizedIncreaseRequests)
-          && (updateDemandForQueue == null)) {
-        updateDemandForQueue = (LeafQueue) application.getQueue();
-      }
-
       if (application.isWaitingForAMContainer()) {
         // Allocate is for AM and update AM blacklist for this
         application.updateAMBlacklist(
@@ -971,8 +991,6 @@ public class CapacityScheduler extends
         application.updateBlacklist(blacklistAdditions, blacklistRemovals);
       }
       
-      // Decrease containers
-      decreaseContainers(normalizedDecreaseRequests, application);
 
       allocation = application.getAllocation(getResourceCalculator(),
                    clusterResource, getMinimumResourceCapability());
@@ -1167,7 +1185,8 @@ public class CapacityScheduler extends
       .getAssignmentInformation().getReserved());
  }
 
-  private synchronized void allocateContainersToNode(FiCaSchedulerNode node) {
+  @VisibleForTesting
+  protected synchronized void allocateContainersToNode(FiCaSchedulerNode node) {
     if (rmContext.isWorkPreservingRecoveryEnabled()
         && !rmContext.isSchedulerReadyForAllocatingContainers()) {
       return;
@@ -1517,48 +1536,30 @@ public class CapacityScheduler extends
     }
   }
   
-  @Lock(CapacityScheduler.class)
   @Override
-  protected synchronized void decreaseContainer(
-      SchedContainerChangeRequest decreaseRequest,
+  protected void decreaseContainer(SchedContainerChangeRequest decreaseRequest,
       SchedulerApplicationAttempt attempt) {
     RMContainer rmContainer = decreaseRequest.getRMContainer();
-
     // Check container status before doing decrease
     if (rmContainer.getState() != RMContainerState.RUNNING) {
       LOG.info("Trying to decrease a container not in RUNNING state, container="
           + rmContainer + " state=" + rmContainer.getState().name());
       return;
     }
-    
-    // Delta capacity of this decrease request is 0, this decrease request may
-    // just to cancel increase request
-    if (Resources.equals(decreaseRequest.getDeltaCapacity(), Resources.none())) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Decrease target resource equals to existing resource for container:"
-            + decreaseRequest.getContainerId()
-            + " ignore this decrease request.");
-      }
-      return;
-    }
-
-    // Save resource before decrease
-    Resource resourceBeforeDecrease =
-        Resources.clone(rmContainer.getContainer().getResource());
-
     FiCaSchedulerApp app = (FiCaSchedulerApp)attempt;
     LeafQueue queue = (LeafQueue) attempt.getQueue();
-    queue.decreaseContainer(clusterResource, decreaseRequest, app);
-    
-    // Notify RMNode the container will be decreased
-    this.rmContext.getDispatcher().getEventHandler()
-        .handle(new RMNodeDecreaseContainerEvent(decreaseRequest.getNodeId(),
-            Arrays.asList(rmContainer.getContainer())));
-    
-    LOG.info("Application attempt " + app.getApplicationAttemptId()
-        + " decreased container:" + decreaseRequest.getContainerId() + " from "
-        + resourceBeforeDecrease + " to "
-        + decreaseRequest.getTargetCapacity());
+    try {
+      queue.decreaseContainer(clusterResource, decreaseRequest, app);
+      // Notify RMNode that the container can be pulled by NodeManager in the
+      // next heartbeat
+      this.rmContext.getDispatcher().getEventHandler()
+          .handle(new RMNodeDecreaseContainerEvent(
+              decreaseRequest.getNodeId(),
+              Collections.singletonList(rmContainer.getContainer())));
+    } catch (InvalidResourceRequestException e) {
+      LOG.warn("Error happens when checking decrease request, Ignoring.."
+          + " exception=", e);
+    }
   }
 
   @Lock(Lock.NoLock.class)
