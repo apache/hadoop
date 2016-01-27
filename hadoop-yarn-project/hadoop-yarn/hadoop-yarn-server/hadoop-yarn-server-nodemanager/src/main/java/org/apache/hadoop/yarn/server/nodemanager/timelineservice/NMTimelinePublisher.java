@@ -113,9 +113,8 @@ public class NMTimelinePublisher extends CompositeService {
   }
 
   @SuppressWarnings("unchecked")
-  public void reportContainerResourceUsage(Container container,
-      long createdTime, String pId, Long pmemUsage,
-      Float cpuUsageTotalCoresPercentage) {
+  public void reportContainerResourceUsage(Container container, String pId,
+      Long pmemUsage, Float cpuUsageTotalCoresPercentage) {
     if (pmemUsage != ResourceCalculatorProcessTree.UNAVAILABLE ||
         cpuUsageTotalCoresPercentage !=
             ResourceCalculatorProcessTree.UNAVAILABLE) {
@@ -164,6 +163,7 @@ public class NMTimelinePublisher extends CompositeService {
     tEvent.setTimestamp(timestamp);
 
     entity.addEvent(tEvent);
+    entity.setCreatedTime(timestamp);
     putEntity(entity, containerId.getApplicationAttemptId().getApplicationId());
   }
 

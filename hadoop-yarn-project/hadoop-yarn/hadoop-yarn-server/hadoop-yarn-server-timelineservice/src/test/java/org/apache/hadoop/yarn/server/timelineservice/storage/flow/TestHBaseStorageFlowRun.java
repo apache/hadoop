@@ -375,8 +375,7 @@ public class TestHBaseStorageFlowRun {
 
       Set<TimelineEntity> entities = hbr.getEntities(user, cluster, flow, runid,
           null, TimelineEntityType.YARN_FLOW_RUN.toString(), null, null, null,
-          null, null, null, null, null, null, null, null, null,
-          metricsToRetrieve, null);
+          null, null, null, null, null, null, null, metricsToRetrieve, null);
       assertEquals(1, entities.size());
       for (TimelineEntity timelineEntity : entities) {
         Set<TimelineMetric> timelineMetrics = timelineEntity.getMetrics();
@@ -444,7 +443,7 @@ public class TestHBaseStorageFlowRun {
       hbr.start();
       Set<TimelineEntity> entities = hbr.getEntities(user, cluster, flow, runid,
           null, TimelineEntityType.YARN_FLOW_RUN.toString(), null, null, null,
-          null, null, null, null, null, null, null, null, null, null, null);
+          null, null, null, null, null, null, null, null, null);
       assertEquals(1, entities.size());
       for (TimelineEntity timelineEntity : entities) {
         assertEquals(0, timelineEntity.getMetrics().size());
@@ -452,8 +451,8 @@ public class TestHBaseStorageFlowRun {
 
       entities = hbr.getEntities(user, cluster, flow, runid,
           null, TimelineEntityType.YARN_FLOW_RUN.toString(), null, null, null,
-          null, null, null, null, null, null, null, null, null,
-          null, EnumSet.of(Field.METRICS));
+          null, null, null, null, null, null, null, null,
+          EnumSet.of(Field.METRICS));
       assertEquals(1, entities.size());
       for (TimelineEntity timelineEntity : entities) {
         Set<TimelineMetric> timelineMetrics = timelineEntity.getMetrics();

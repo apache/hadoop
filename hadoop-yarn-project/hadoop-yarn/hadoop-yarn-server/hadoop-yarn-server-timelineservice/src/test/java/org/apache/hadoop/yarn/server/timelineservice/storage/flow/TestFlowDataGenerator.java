@@ -106,7 +106,6 @@ class TestFlowDataGenerator {
     long cTime = 20000000000000L;
     long mTime = 1425026901000L;
     entity.setCreatedTime(cTime);
-    entity.setModifiedTime(mTime);
     // add metrics
     Set<TimelineMetric> metrics = new HashSet<>();
     TimelineMetric m1 = new TimelineMetric();

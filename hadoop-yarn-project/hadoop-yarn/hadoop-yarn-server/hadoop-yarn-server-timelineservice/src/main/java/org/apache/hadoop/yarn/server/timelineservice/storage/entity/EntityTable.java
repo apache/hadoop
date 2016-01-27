@@ -48,16 +48,13 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineHBas
  * | clusterId! |                              | metricValue1 | configValue1 |
  * | flowName!  | type:entityType              | @timestamp1  |              |
  * | flowRunId! |                              |              | configKey2:  |
- * | AppId!     | created_time:                | metriciD1:   | configValue2 |
+ * | AppId!     | created_time:                | metricId1:   | configValue2 |
  * | entityType!| 1392993084018                | metricValue2 |              |
  * | entityId   |                              | @timestamp2  |              |
- * |            | modified_time:               |              |              |
- * |            | 1392995081012                | metricId2:   |              |
+ * |            | i!infoKey:                   |              |              |
+ * |            | infoValue                    | metricId1:   |              |
  * |            |                              | metricValue1 |              |
- * |            | i!infoKey:                   | @timestamp2  |              |
- * |            | infoValue                    |              |              |
- * |            |                              |              |              |
- * |            | r!relatesToKey:              |              |              |
+ * |            | r!relatesToKey:              | @timestamp2  |              |
  * |            | id3=id4=id5                  |              |              |
  * |            |                              |              |              |
  * |            | s!isRelatedToKey             |              |              |

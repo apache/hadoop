@@ -79,17 +79,15 @@ class GenericEntityReader extends TimelineEntityReader {
   public GenericEntityReader(String userId, String clusterId,
       String flowName, Long flowRunId, String appId, String entityType,
       Long limit, Long createdTimeBegin, Long createdTimeEnd,
-      Long modifiedTimeBegin, Long modifiedTimeEnd,
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
       Map<String, Object> infoFilters, Map<String, String> configFilters,
       Set<String> metricFilters, Set<String> eventFilters,
       TimelineFilterList confsToRetrieve, TimelineFilterList metricsToRetrieve,
       EnumSet<Field> fieldsToRetrieve, boolean sortedKeys) {
     super(userId, clusterId, flowName, flowRunId, appId, entityType, limit,
-        createdTimeBegin, createdTimeEnd, modifiedTimeBegin, modifiedTimeEnd,
-        relatesTo, isRelatedTo, infoFilters, configFilters, metricFilters,
-        eventFilters, confsToRetrieve, metricsToRetrieve, fieldsToRetrieve,
-        sortedKeys);
+        createdTimeBegin, createdTimeEnd, relatesTo, isRelatedTo, infoFilters,
+        configFilters, metricFilters, eventFilters, confsToRetrieve,
+        metricsToRetrieve, fieldsToRetrieve, sortedKeys);
   }
 
   public GenericEntityReader(String userId, String clusterId,
@@ -257,12 +255,6 @@ class GenericEntityReader extends TimelineEntityReader {
       if (createdTimeEnd == null) {
         createdTimeEnd = DEFAULT_END_TIME;
       }
-      if (modifiedTimeBegin == null) {
-        modifiedTimeBegin = DEFAULT_BEGIN_TIME;
-      }
-      if (modifiedTimeEnd == null) {
-        modifiedTimeEnd = DEFAULT_END_TIME;
-      }
     }
   }
 
@@ -311,14 +303,6 @@ class GenericEntityReader extends TimelineEntityReader {
     entity.setCreatedTime(createdTime.longValue());
     if (!singleEntityRead && (entity.getCreatedTime() < createdTimeBegin ||
         entity.getCreatedTime() > createdTimeEnd)) {
-      return null;
-    }
-
-    // fetch modified time
-    Number modifiedTime = (Number)EntityColumn.MODIFIED_TIME.readResult(result);
-    entity.setModifiedTime(modifiedTime.longValue());
-    if (!singleEntityRead && (entity.getModifiedTime() < modifiedTimeBegin ||
-        entity.getModifiedTime() > modifiedTimeEnd)) {
       return null;
     }
 
