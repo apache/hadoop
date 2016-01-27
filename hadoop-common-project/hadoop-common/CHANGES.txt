@@ -1651,6 +1651,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12718. Incorrect error message by fs -put local dir without
     permission. (John Zhuge via Yongjun Zhang)
 
+    HADOOP-12735. core-default.xml misspells
+    hadoop.workaround.non.threadsafe.getpwuid (Ray Chiang via cmccabe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

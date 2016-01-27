@@ -428,7 +428,7 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
-  <name>hadoop.work.around.non.threadsafe.getpwuid</name>
+  <name>hadoop.workaround.non.threadsafe.getpwuid</name>
   <value>false</value>
   <description>Some operating systems or authentication modules are known to
   have broken implementations of getpwuid_r and getpwgid_r, such that these
