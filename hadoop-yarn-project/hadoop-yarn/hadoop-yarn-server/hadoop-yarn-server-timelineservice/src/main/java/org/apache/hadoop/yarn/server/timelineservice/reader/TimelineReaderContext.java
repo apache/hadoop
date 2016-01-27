@@ -16,34 +16,32 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.timelineservice.collector;
+package org.apache.hadoop.yarn.server.timelineservice.reader;
 
 import org.apache.hadoop.yarn.server.timelineservice.TimelineContext;
 
 /**
- * Encapsulates context information required by collector during a put.
+ * Encapsulates fields necessary to make a query in timeline reader.
  */
-public class TimelineCollectorContext extends TimelineContext {
+public class TimelineReaderContext extends TimelineContext {
 
-  private String flowVersion;
-
-  public TimelineCollectorContext() {
-    this(null, null, null, null, 0L, null);
-  }
-
-  public TimelineCollectorContext(String clusterId, String userId,
-      String flowName, String flowVersion, Long flowRunId, String appId) {
+  private String entityType;
+  private String entityId;
+  public TimelineReaderContext(String clusterId, String userId, String flowName,
+      Long flowRunId, String appId, String entityType, String entityId) {
     super(clusterId, userId, flowName, flowRunId, appId);
-    this.flowVersion = flowVersion;
+    this.entityType = entityType;
+    this.entityId = entityId;
   }
 
   @Override
   public int hashCode() {
     final int prime = 31;
     int result = super.hashCode();
+    result = prime * result + ((entityId == null) ? 0 : entityId.hashCode());
     result =
-        prime * result + ((flowVersion == null) ? 0 : flowVersion.hashCode());
-    return result + super.hashCode();
+        prime * result + ((entityType == null) ? 0 : entityType.hashCode());
+    return result;
   }
 
   @Override
@@ -54,22 +52,37 @@ public class TimelineCollectorContext extends TimelineContext {
     if (!super.equals(obj)) {
       return false;
     }
-    TimelineCollectorContext other = (TimelineCollectorContext) obj;
-    if (flowVersion == null) {
-      if (other.flowVersion != null) {
+    TimelineReaderContext other = (TimelineReaderContext) obj;
+    if (entityId == null) {
+      if (other.entityId != null) {
         return false;
       }
-    } else if (!flowVersion.equals(other.flowVersion)) {
+    } else if (!entityId.equals(other.entityId)) {
+      return false;
+    }
+    if (entityType == null) {
+      if (other.entityType != null) {
+        return false;
+      }
+    } else if (!entityType.equals(other.entityType)) {
       return false;
     }
     return true;
   }
 
-  public String getFlowVersion() {
-    return flowVersion;
+  public String getEntityType() {
+    return entityType;
   }
 
-  public void setFlowVersion(String version) {
-    this.flowVersion = version;
+  public void setEntityType(String type) {
+    this.entityType = type;
+  }
+
+  public String getEntityId() {
+    return entityId;
+  }
+
+  public void setEntityId(String id) {
+    this.entityId = id;
   }
 }

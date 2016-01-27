@@ -27,15 +27,22 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
+
+import com.google.common.annotations.VisibleForTesting;
 
 @Private
 @Unstable
 public class TimelineReaderManager extends AbstractService {
 
+  @VisibleForTesting
+  public static final String UID_KEY = "UID";
   private TimelineReader reader;
 
   public TimelineReaderManager(TimelineReader timelineReader) {
@@ -59,13 +66,63 @@ public class TimelineReaderManager extends AbstractService {
     return clusterId;
   }
 
+  private static TimelineEntityType getTimelineEntityType(String entityType) {
+    if (entityType == null) {
+      return null;
+    }
+    try {
+      return TimelineEntityType.valueOf(entityType);
+    } catch (IllegalArgumentException e) {
+      return null;
+    }
+  }
+
+  /**
+   * Fill UID in the info field of entity based on the query(identified by
+   * entity type).
+   * @param entityType Entity type of query.
+   * @param entity Timeline Entity.
+   * @param context Context defining the query.
+   */
+  private static void fillUID(TimelineEntityType entityType,
+      TimelineEntity entity, TimelineReaderContext context) {
+    if (entityType != null) {
+      switch(entityType) {
+      case YARN_FLOW_ACTIVITY:
+        FlowActivityEntity activityEntity = (FlowActivityEntity)entity;
+        context.setUserId(activityEntity.getUser());
+        context.setFlowName(activityEntity.getFlowName());
+        entity.setUID(UID_KEY,
+            TimelineUIDConverter.FLOW_UID.encodeUID(context));
+        return;
+      case YARN_FLOW_RUN:
+        FlowRunEntity runEntity = (FlowRunEntity)entity;
+        context.setFlowRunId(runEntity.getRunId());
+        entity.setUID(UID_KEY,
+            TimelineUIDConverter.FLOWRUN_UID.encodeUID(context));
+        return;
+      case YARN_APPLICATION:
+        context.setAppId(entity.getId());
+        entity.setUID(UID_KEY,
+            TimelineUIDConverter.APPLICATION_UID.encodeUID(context));
+        return;
+      default:
+        break;
+      }
+    }
+    context.setEntityType(entity.getType());
+    context.setEntityId(entity.getId());
+    entity.setUID(UID_KEY,
+        TimelineUIDConverter.GENERIC_ENTITY_UID.encodeUID(context));
+  }
+
   /**
    * Get a set of entities matching given predicates. The meaning of each
    * argument has been documented with {@link TimelineReader#getEntities}.
    *
    * @see TimelineReader#getEntities
    */
-  Set<TimelineEntity> getEntities(String userId, String clusterId,
+  public Set<TimelineEntity> getEntities(String userId, String clusterId,
       String flowName, Long flowRunId, String appId, String entityType,
       Long limit, Long createdTimeBegin, Long createdTimeEnd,
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
@@ -73,10 +130,20 @@ public class TimelineReaderManager extends AbstractService {
       Set<String>  metricFilters, Set<String> eventFilters,
       EnumSet<Field> fieldsToRetrieve) throws IOException {
     String cluster = getClusterID(clusterId, getConfig());
-    return reader.getEntities(userId, cluster, flowName, flowRunId, appId,
+    Set<TimelineEntity> entities =
+        reader.getEntities(userId, cluster, flowName, flowRunId, appId,
         entityType, limit, createdTimeBegin, createdTimeEnd, relatesTo,
         isRelatedTo, infoFilters, configFilters, metricFilters, eventFilters,
         null, null, fieldsToRetrieve);
+    if (entities != null) {
+      TimelineEntityType type = getTimelineEntityType(entityType);
+      TimelineReaderContext context = new TimelineReaderContext(cluster, userId,
+          flowName, flowRunId, appId, entityType, null);
+      for (TimelineEntity entity : entities) {
+        fillUID(type, entity, context);
+      }
+    }
+    return entities;
   }
 
   /**
@@ -89,7 +156,16 @@ public class TimelineReaderManager extends AbstractService {
       String flowName, Long flowRunId, String appId, String entityType,
       String entityId, EnumSet<Field> fields) throws IOException {
     String cluster = getClusterID(clusterId, getConfig());
-    return reader.getEntity(userId, cluster, flowName, flowRunId, appId,
+    TimelineEntity entity =
+        reader.getEntity(userId, cluster, flowName, flowRunId, appId,
         entityType, entityId, null, null, fields);
+
+    if (entity != null) {
+      TimelineEntityType type = getTimelineEntityType(entityType);
+      TimelineReaderContext context = new TimelineReaderContext(cluster, userId,
+          flowName, flowRunId, appId, entityType, null);
+      fillUID(type, entity, context);
+    }
+    return entity;
   }
 }

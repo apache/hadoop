@@ -26,6 +26,8 @@ import java.util.Set;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelinePrefixFilter;
@@ -87,10 +89,14 @@ public interface TimelineReader extends Service {
    * @param fieldsToRetrieve
    *    Specifies which fields of the entity object to retrieve(optional), see
    *    {@link Field}. If null, retrieves 4 fields namely entity id,
-   *    entity type and entity created time. All entities will be returned if
+   *    entity type and entity created time. All fields will be returned if
    *    {@link Field#ALL} is specified.
    * @return a {@link TimelineEntity} instance or null. The entity will
    *    contain the metadata plus the given fields to retrieve.
+   *    If entityType is YARN_FLOW_RUN, entity returned is of type
+   *    {@link FlowRunEntity}.
+   *    For all other entity types, entity returned is of type
+   *    {@link TimelineEntity}.
    * @throws IOException
    */
   TimelineEntity getEntity(String userId, String clusterId, String flowName,
@@ -167,12 +173,18 @@ public interface TimelineReader extends Service {
    * @param fieldsToRetrieve
    *    Specifies which fields of the entity object to retrieve(optional), see
    *    {@link Field}. If null, retrieves 4 fields namely entity id,
-   *    entity type and entity created time. All entities will be returned if
+   *    entity type and entity created time. All fields will be returned if
    *    {@link Field#ALL} is specified.
    * @return A set of {@link TimelineEntity} instances of the given entity type
    *    in the given context scope which matches the given predicates
    *    ordered by created time, descending. Each entity will only contain the
    *    metadata(id, type and created time) plus the given fields to retrieve.
+   *    If entityType is YARN_FLOW_ACTIVITY, entities returned are of type
+   *    {@link FlowActivityEntity}.
+   *    If entityType is YARN_FLOW_RUN, entities returned are of type
+   *    {@link FlowRunEntity}.
+   *    For all other entity types, entities returned are of type
+   *    {@link TimelineEntity}.
    * @throws IOException
    */
   Set<TimelineEntity> getEntities(String userId, String clusterId,

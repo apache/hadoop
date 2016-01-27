@@ -18,17 +18,12 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
-import java.io.IOException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Date;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 
@@ -51,10 +46,11 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
-import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
@@ -63,7 +59,7 @@ import org.apache.hadoop.yarn.webapp.NotFoundException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Singleton;
 
-/** REST end point for Timeline Reader */
+/** REST end point for Timeline Reader. */
 @Private
 @Unstable
 @Singleton
@@ -167,117 +163,6 @@ public class TimelineReaderWebServices {
     }
   }
 
-  private static Set<String> parseValuesStr(String str, String delimiter) {
-    if (str == null || str.isEmpty()) {
-      return null;
-    }
-    Set<String> strSet = new HashSet<String>();
-    String[] strs = str.split(delimiter);
-    for (String aStr : strs) {
-      strSet.add(aStr.trim());
-    }
-    return strSet;
-  }
-
-  @SuppressWarnings("unchecked")
-  private static <T> void parseKeyValues(Map<String,T> map, String str,
-      String pairsDelim, String keyValuesDelim, boolean stringValue,
-      boolean multipleValues) {
-    String[] pairs = str.split(pairsDelim);
-    for (String pair : pairs) {
-      if (pair == null || pair.trim().isEmpty()) {
-        continue;
-      }
-      String[] pairStrs = pair.split(keyValuesDelim);
-      if (pairStrs.length < 2) {
-        continue;
-      }
-      if (!stringValue) {
-        try {
-          Object value =
-              GenericObjectMapper.OBJECT_READER.readValue(pairStrs[1].trim());
-          map.put(pairStrs[0].trim(), (T) value);
-        } catch (IOException e) {
-          map.put(pairStrs[0].trim(), (T) pairStrs[1].trim());
-        }
-      } else {
-        String key = pairStrs[0].trim();
-        if (multipleValues) {
-          Set<String> values = new HashSet<String>();
-          for (int i = 1; i < pairStrs.length; i++) {
-            values.add(pairStrs[i].trim());
-          }
-          map.put(key, (T) values);
-        } else {
-          map.put(key, (T) pairStrs[1].trim());
-        }
-      }
-    }
-  }
-
-  private static Map<String, Set<String>> parseKeyStrValuesStr(String str,
-      String pairsDelim, String keyValuesDelim) {
-    if (str == null) {
-      return null;
-    }
-    Map<String, Set<String>> map = new HashMap<String, Set<String>>();
-    parseKeyValues(map, str,pairsDelim, keyValuesDelim, true, true);
-    return map;
-  }
-
-  private static Map<String, String> parseKeyStrValueStr(String str,
-      String pairsDelim, String keyValDelim) {
-    if (str == null) {
-      return null;
-    }
-    Map<String, String> map = new HashMap<String, String>();
-    parseKeyValues(map, str, pairsDelim, keyValDelim, true, false);
-    return map;
-  }
-
-  private static Map<String, Object> parseKeyStrValueObj(String str,
-      String pairsDelim, String keyValDelim) {
-    if (str == null) {
-      return null;
-    }
-    Map<String, Object> map = new HashMap<String, Object>();
-    parseKeyValues(map, str, pairsDelim, keyValDelim, false, false);
-    return map;
-  }
-
-  private static EnumSet<Field> parseFieldsStr(String str, String delimiter) {
-    if (str == null) {
-      return null;
-    }
-    String[] strs = str.split(delimiter);
-    EnumSet<Field> fieldList = EnumSet.noneOf(Field.class);
-    for (String s : strs) {
-      fieldList.add(Field.valueOf(s.trim().toUpperCase()));
-    }
-    return fieldList;
-  }
-
-  private static Long parseLongStr(String str) {
-    return str == null ? null : Long.parseLong(str.trim());
-  }
-
-  private static String parseStr(String str) {
-    return str == null ? null : str.trim();
-  }
-
-  private static UserGroupInformation getUser(HttpServletRequest req) {
-    String remoteUser = req.getRemoteUser();
-    UserGroupInformation callerUGI = null;
-    if (remoteUser != null) {
-      callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
-    }
-    return callerUGI;
-  }
-
-  private static String getUserName(UserGroupInformation callerUGI) {
-    return ((callerUGI != null) ? callerUGI.getUserName().trim() : "");
-  }
-
   private TimelineReaderManager getTimelineReaderManager() {
     return (TimelineReaderManager)
         ctxt.getAttribute(TimelineReaderServer.TIMELINE_READER_MANAGER_ATTR);
@@ -294,6 +179,10 @@ public class TimelineReaderWebServices {
     } else if (e instanceof IllegalArgumentException) {
       throw new BadRequestException(e.getMessage() == null ?
           "Requested Invalid Field." : e.getMessage());
+    } else if (e instanceof NotFoundException) {
+      throw (NotFoundException)e;
+    } else if (e instanceof BadRequestException) {
+      throw (BadRequestException)e;
     } else {
       LOG.error("Error while processing REST request", e);
       throw new WebApplicationException(e,
@@ -303,6 +192,11 @@ public class TimelineReaderWebServices {
 
   /**
    * Return the description of the timeline reader web services.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   *
+   * @return information about the cluster including timeline version.
    */
   @GET
   @Produces(MediaType.APPLICATION_JSON)
@@ -314,11 +208,188 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a set of entities that match the given parameters. Cluster ID is not
-   * provided by client so default cluster ID has to be taken.
+   * Return a single entity for a given entity type and UID which is a delimited
+   * string containing clusterid, userid, flow name, flowrun id and app id.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param uId a delimited string containing clusterid, userid, flow name,
+   *     flowrun id and app id which are extracted from UID and then used to
+   *     query backend(Mandatory path param).
+   * @param limit Number of entities to return(Optional query param).
+   * @param createdTimeStart If specified, matched entities should not be
+   *     created before this timestamp(Optional query param).
+   * @param createdTimeEnd If specified, matched entities should not be created
+   *     after this timestamp(Optional query param).
+   * @param relatesTo If specified, matched entities should relate to given
+   *     entities associated with a entity type. relatesto is a comma separated
+   *     list in the format [entitytype]:[entityid1]:[entityid2]... (Optional
+   *     query param).
+   * @param isRelatedTo If specified, matched entities should be related to
+   *     given entities associated with a entity type. relatesto is a comma
+   *     separated list in the format [entitytype]:[entityid1]:[entityid2]...
+   *     (Optional query param).
+   * @param infofilters If specified, matched entities should have exact matches
+   *     to the given info represented as key-value pairs. This is represented
+   *     as infofilters=info1:value1,info2:value2... (Optional query param).
+   * @param conffilters If specified, matched entities should have exact matches
+   *     to the given configs represented as key-value pairs. This is
+   *     represented as conffilters=conf1:value1,conf2:value2... (Optional query
+   *     param).
+   * @param metricfilters If specified, matched entities should contain the
+   *     given metrics. This is represented as
+   *     metricfilters=metricid1, metricid2... (Optional query param).
+   * @param eventfilters If specified, matched entities should contain the given
+   *     events. This is represented as eventfilters=eventid1, eventid2...
+   * @param fields Specifies which fields of the entity object to retrieve, see
+   *     {@link Field}. All fields will be retrieved if fields=ALL. If not
+   *     specified, 4 fields i.e. entity type, id and created time is returned
+   *     (Optional query param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing
+   *     a set of {@link TimelineEntity} instances of the given entity type is
+   *     returned.
+   *     On failures,
+   *     If any problem occurs in parsing request or UID is incorrect,
+   *     HTTP 400(Bad Request) is returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
    */
   @GET
-  @Path("/entities/{appid}/{entitytype}/")
+  @Path("/app-uid/{uid}/entities/{entitytype}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Set<TimelineEntity> getEntities(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("uid") String uId,
+      @PathParam("entitytype") String entityType,
+      @QueryParam("limit") String limit,
+      @QueryParam("createdtimestart") String createdTimeStart,
+      @QueryParam("createdtimeend") String createdTimeEnd,
+      @QueryParam("relatesto") String relatesTo,
+      @QueryParam("isrelatedto") String isRelatedTo,
+      @QueryParam("infofilters") String infofilters,
+      @QueryParam("conffilters") String conffilters,
+      @QueryParam("metricfilters") String metricfilters,
+      @QueryParam("eventfilters") String eventfilters,
+      @QueryParam("fields") String fields) {
+    String url = req.getRequestURI() +
+        (req.getQueryString() == null ? "" :
+            QUERY_STRING_SEP + req.getQueryString());
+    UserGroupInformation callerUGI =
+        TimelineReaderWebServicesUtils.getUser(req);
+    LOG.info("Received URL " + url + " from user " +
+        TimelineReaderWebServicesUtils.getUserName(callerUGI));
+    long startTime = Time.monotonicNow();
+    init(res);
+    TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
+    Set<TimelineEntity> entities = null;
+    try {
+      TimelineReaderContext context =
+          TimelineUIDConverter.APPLICATION_UID.decodeUID(uId);
+      if (context == null) {
+        throw new BadRequestException("Incorrect UID " +  uId);
+      }
+      entities = timelineReaderManager.getEntities(
+          TimelineReaderWebServicesUtils.parseStr(context.getUserId()),
+          TimelineReaderWebServicesUtils.parseStr(context.getClusterId()),
+          TimelineReaderWebServicesUtils.parseStr(context.getFlowName()),
+          context.getFlowRunId(),
+          TimelineReaderWebServicesUtils.parseStr(context.getAppId()),
+          TimelineReaderWebServicesUtils.parseStr(entityType),
+          TimelineReaderWebServicesUtils.parseLongStr(limit),
+          TimelineReaderWebServicesUtils.parseLongStr(createdTimeStart),
+          TimelineReaderWebServicesUtils.parseLongStr(createdTimeEnd),
+          TimelineReaderWebServicesUtils.parseKeyStrValuesStr(
+          relatesTo, COMMA_DELIMITER, COLON_DELIMITER),
+          TimelineReaderWebServicesUtils.parseKeyStrValuesStr(
+          isRelatedTo, COMMA_DELIMITER, COLON_DELIMITER),
+          TimelineReaderWebServicesUtils.parseKeyStrValueObj(
+          infofilters, COMMA_DELIMITER, COLON_DELIMITER),
+          TimelineReaderWebServicesUtils.parseKeyStrValueStr(
+          conffilters, COMMA_DELIMITER, COLON_DELIMITER),
+          TimelineReaderWebServicesUtils.parseValuesStr(
+           metricfilters, COMMA_DELIMITER),
+          TimelineReaderWebServicesUtils.parseValuesStr(
+          eventfilters, COMMA_DELIMITER),
+          TimelineReaderWebServicesUtils.parseFieldsStr(
+          fields, COMMA_DELIMITER));
+    } catch (Exception e) {
+      handleException(e, url, startTime,
+          "createdTime start/end or limit or flowrunid");
+    }
+    long endTime = Time.monotonicNow();
+    if (entities == null) {
+      entities = Collections.emptySet();
+    }
+    LOG.info("Processed URL " + url +
+        " (Took " + (endTime - startTime) + " ms.)");
+    return entities;
+  }
+
+  /**
+   * Return a set of entities that match the given parameters. Cluster ID is not
+   * provided by client so default cluster ID has to be taken. If userid, flow
+   * name and flowrun id which are optional query parameters are not specified,
+   * they will be queried based on app id and default cluster id from the flow
+   * context information stored in underlying storage implementation. If number
+   * of matching entities are more than the limit, most recent entities till the
+   * limit is reached, will be returned.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param appId Application id to which the entities to be queried belong to(
+   *     Mandatory path param).
+   * @param entityType Type of entities(Mandatory path param).
+   * @param userId User id which should match for the entities(Optional query
+   *     param)
+   * @param flowName Flow name which should match for the entities(Optional
+   *     query param).
+   * @param flowRunId Run id which should match for the entities(Optional query
+   *     param).
+   * @param limit Number of entities to return(Optional query param).
+   * @param createdTimeStart If specified, matched entities should not be
+   *     created before this timestamp(Optional query param).
+   * @param createdTimeEnd If specified, matched entities should not be created
+   *     after this timestamp(Optional query param).
+   * @param relatesTo If specified, matched entities should relate to given
+   *     entities associated with a entity type. relatesto is a comma separated
+   *     list in the format [entitytype]:[entityid1]:[entityid2]... (Optional
+   *     query param).
+   * @param isRelatedTo If specified, matched entities should be related to
+   *     given entities associated with a entity type. relatesto is a comma
+   *     separated list in the format [entitytype]:[entityid1]:[entityid2]...
+   *     (Optional query param).
+   * @param infofilters If specified, matched entities should have exact matches
+   *     to the given info represented as key-value pairs. This is represented
+   *     as infofilters=info1:value1,info2:value2... (Optional query param).
+   * @param conffilters If specified, matched entities should have exact matches
+   *     to the given configs represented as key-value pairs. This is
+   *     represented as conffilters=conf1:value1,conf2:value2... (Optional query
+   *     param).
+   * @param metricfilters If specified, matched entities should contain the
+   *     given metrics. This is represented as
+   *     metricfilters=metricid1, metricid2... (Optional query param).
+   * @param eventfilters If specified, matched entities should contain the given
+   *     events. This is represented as eventfilters=eventid1, eventid2...
+   * @param fields Specifies which fields of the entity object to retrieve, see
+   *     {@link Field}. All fields will be retrieved if fields=ALL. If not
+   *     specified, 4 fields i.e. entity type, id, created time is returned
+   *     (Optional query param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing
+   *     a set of {@link TimelineEntity} instances of the given entity type is
+   *     returned.
+   *     On failures,
+   *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
+   *     returned.
+   *     If flow context information cannot be retrieved, HTTP 404(Not Found)
+   *     is returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
+   */
+  @GET
+  @Path("/apps/{appid}/entities/{entitytype}")
   @Produces(MediaType.APPLICATION_JSON)
   public Set<TimelineEntity> getEntities(
       @Context HttpServletRequest req,
@@ -337,7 +408,7 @@ public class TimelineReaderWebServices {
       @QueryParam("conffilters") String conffilters,
       @QueryParam("metricfilters") String metricfilters,
       @QueryParam("eventfilters") String eventfilters,
-       @QueryParam("fields") String fields) {
+      @QueryParam("fields") String fields) {
     return getEntities(req, res, null, appId, entityType, userId, flowName,
         flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
         isRelatedTo, infofilters, conffilters, metricfilters, eventfilters,
@@ -345,10 +416,69 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a set of entities that match the given parameters.
+   * Return a set of entities that match the given parameters. If userid, flow
+   * name and flowrun id which are optional query parameters are not specified,
+   * they will be queried based on app id and cluster id from the flow context
+   * information stored in underlying storage implementation. If number of
+   * matching entities are more than the limit, most recent entities till the
+   * limit is reached, will be returned.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param clusterId Cluster id to which the entities to be queried belong to(
+   *     Mandatory path param).
+   * @param appId Application id to which the entities to be queried belong to(
+   *     Mandatory path param).
+   * @param entityType Type of entities(Mandatory path param).
+   * @param userId User id which should match for the entities(Optional query
+   *     param)
+   * @param flowName Flow name which should match for the entities(Optional
+   *     query param).
+   * @param flowRunId Run id which should match for the entities(Optional query
+   *     param).
+   * @param limit Number of entities to return(Optional query param).
+   * @param createdTimeStart If specified, matched entities should not be
+   *     created before this timestamp(Optional query param).
+   * @param createdTimeEnd If specified, matched entities should not be created
+   *     after this timestamp(Optional query param).
+   * @param relatesTo If specified, matched entities should relate to given
+   *     entities associated with a entity type. relatesto is a comma separated
+   *     list in the format [entitytype]:[entityid1]:[entityid2]... (Optional
+   *     query param).
+   * @param isRelatedTo If specified, matched entities should be related to
+   *     given entities associated with a entity type. relatesto is a comma
+   *     separated list in the format [entitytype]:[entityid1]:[entityid2]...
+   *     (Optional query param).
+   * @param infofilters If specified, matched entities should have exact matches
+   *     to the given info represented as key-value pairs. This is represented
+   *     as infofilters=info1:value1,info2:value2... (Optional query param).
+   * @param conffilters If specified, matched entities should have exact matches
+   *     to the given configs represented as key-value pairs. This is
+   *     represented as conffilters=conf1:value1,conf2:value2... (Optional query
+   *     param).
+   * @param metricfilters If specified, matched entities should contain the
+   *     given metrics. This is represented as
+   *     metricfilters=metricid1, metricid2... (Optional query param).
+   * @param eventfilters If specified, matched entities should contain the given
+   *     events. This is represented as eventfilters=eventid1, eventid2...
+   * @param fields Specifies which fields of the entity object to retrieve, see
+   *     {@link Field}. All fields will be retrieved if fields=ALL. If not
+   *     specified, 4 fields i.e. entity type, id, created time is returned
+   *     (Optional query param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing
+   *     a set of {@link TimelineEntity} instances of the given entity type is
+   *     returned.
+   *     On failures,
+   *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
+   *     returned.
+   *     If flow context information cannot be retrieved, HTTP 404(Not Found)
+   *     is returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
    */
   @GET
-  @Path("/entities/{clusterid}/{appid}/{entitytype}/")
+  @Path("/clusters/{clusterid}/apps/{appid}/entities/{entitytype}")
   @Produces(MediaType.APPLICATION_JSON)
   public Set<TimelineEntity> getEntities(
       @Context HttpServletRequest req,
@@ -372,25 +502,39 @@ public class TimelineReaderWebServices {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
-    UserGroupInformation callerUGI = getUser(req);
-    LOG.info("Received URL " + url + " from user " + getUserName(callerUGI));
+    UserGroupInformation callerUGI =
+        TimelineReaderWebServicesUtils.getUser(req);
+    LOG.info("Received URL " + url + " from user " +
+        TimelineReaderWebServicesUtils.getUserName(callerUGI));
     long startTime = Time.monotonicNow();
     init(res);
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
     Set<TimelineEntity> entities = null;
     try {
       entities = timelineReaderManager.getEntities(
-          parseStr(userId), parseStr(clusterId), parseStr(flowName),
-          parseLongStr(flowRunId), parseStr(appId), parseStr(entityType),
-          parseLongStr(limit), parseLongStr(createdTimeStart),
-          parseLongStr(createdTimeEnd),
-          parseKeyStrValuesStr(relatesTo, COMMA_DELIMITER, COLON_DELIMITER),
-          parseKeyStrValuesStr(isRelatedTo, COMMA_DELIMITER, COLON_DELIMITER),
-          parseKeyStrValueObj(infofilters, COMMA_DELIMITER, COLON_DELIMITER),
-          parseKeyStrValueStr(conffilters, COMMA_DELIMITER, COLON_DELIMITER),
-          parseValuesStr(metricfilters, COMMA_DELIMITER),
-          parseValuesStr(eventfilters, COMMA_DELIMITER),
-          parseFieldsStr(fields, COMMA_DELIMITER));
+          TimelineReaderWebServicesUtils.parseStr(userId),
+          TimelineReaderWebServicesUtils.parseStr(clusterId),
+          TimelineReaderWebServicesUtils.parseStr(flowName),
+          TimelineReaderWebServicesUtils.parseLongStr(flowRunId),
+          TimelineReaderWebServicesUtils.parseStr(appId),
+          TimelineReaderWebServicesUtils.parseStr(entityType),
+          TimelineReaderWebServicesUtils.parseLongStr(limit),
+          TimelineReaderWebServicesUtils.parseLongStr(createdTimeStart),
+          TimelineReaderWebServicesUtils.parseLongStr(createdTimeEnd),
+          TimelineReaderWebServicesUtils.parseKeyStrValuesStr(
+          relatesTo, COMMA_DELIMITER, COLON_DELIMITER),
+          TimelineReaderWebServicesUtils.parseKeyStrValuesStr(
+          isRelatedTo, COMMA_DELIMITER, COLON_DELIMITER),
+          TimelineReaderWebServicesUtils.parseKeyStrValueObj(
+          infofilters, COMMA_DELIMITER, COLON_DELIMITER),
+          TimelineReaderWebServicesUtils.parseKeyStrValueStr(
+          conffilters, COMMA_DELIMITER, COLON_DELIMITER),
+          TimelineReaderWebServicesUtils.parseValuesStr(
+          metricfilters, COMMA_DELIMITER),
+          TimelineReaderWebServicesUtils.parseValuesStr(
+          eventfilters, COMMA_DELIMITER),
+          TimelineReaderWebServicesUtils.parseFieldsStr(
+          fields, COMMA_DELIMITER));
     } catch (Exception e) {
       handleException(e, url, startTime,
           "createdTime start/end or limit or flowrunid");
@@ -405,11 +549,110 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a single entity of the given entity type and Id. Cluster ID is not
-   * provided by client so default cluster ID has to be taken.
+   * Return a single entity for given UID which is a delimited string containing
+   * clusterid, userid, flow name, flowrun id, app id, entity type and entityid.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param uId a delimited string containing clusterid, userid, flow name,
+   *     flowrun id, app id, entity type and entity id which are extracted from
+   *     UID and then used to query backend(Mandatory path param).
+   * @param fields Specifies which fields of the entity object to retrieve, see
+   *     {@link Field}. All fields will be retrieved if fields=ALL. If not
+   *     specified, 4 fields i.e. entity type, id, created time is returned
+   *     (Optional query param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   *     {@link TimelineEntity} instance is returned.
+   *     On failures,
+   *     If any problem occurs in parsing request or UID is incorrect,
+   *     HTTP 400(Bad Request) is returned.
+   *     If entity for the given entity id cannot be found, HTTP 404(Not Found)
+   *     is returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
    */
   @GET
-  @Path("/entity/{appid}/{entitytype}/{entityid}/")
+  @Path("/entity-uid/{uid}/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public TimelineEntity getEntity(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("uid") String uId,
+      @QueryParam("fields") String fields) {
+    String url = req.getRequestURI() +
+        (req.getQueryString() == null ? "" :
+            QUERY_STRING_SEP + req.getQueryString());
+    UserGroupInformation callerUGI =
+        TimelineReaderWebServicesUtils.getUser(req);
+    LOG.info("Received URL " + url + " from user " +
+        TimelineReaderWebServicesUtils.getUserName(callerUGI));
+    long startTime = Time.monotonicNow();
+    init(res);
+    TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
+    TimelineEntity entity = null;
+    try {
+      TimelineReaderContext context =
+          TimelineUIDConverter.GENERIC_ENTITY_UID.decodeUID(uId);
+      if (context == null) {
+        throw new BadRequestException("Incorrect UID " +  uId);
+      }
+      entity = timelineReaderManager.getEntity(context.getUserId(),
+          context.getClusterId(), context.getFlowName(), context.getFlowRunId(),
+          context.getAppId(), context.getEntityType(), context.getEntityId(),
+          TimelineReaderWebServicesUtils.parseFieldsStr(
+          fields, COMMA_DELIMITER));
+    } catch (Exception e) {
+      handleException(e, url, startTime, "flowrunid");
+    }
+    long endTime = Time.monotonicNow();
+    if (entity == null) {
+      LOG.info("Processed URL " + url + " but entity not found" + " (Took " +
+          (endTime - startTime) + " ms.)");
+      throw new NotFoundException("Timeline entity with uid: " + uId +
+          "is not found");
+    }
+    LOG.info("Processed URL " + url +
+        " (Took " + (endTime - startTime) + " ms.)");
+    return entity;
+  }
+
+  /**
+   * Return a single entity of the given entity type and Id. Cluster ID is not
+   * provided by client so default cluster ID has to be taken. If userid, flow
+   * name and flowrun id which are optional query parameters are not specified,
+   * they will be queried based on app id and default cluster id from the flow
+   * context information stored in underlying storage implementation.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param appId Application id to which the entity to be queried belongs to(
+   *     Mandatory path param).
+   * @param entityType Type of entity(Mandatory path param).
+   * @param entityId Id of the entity to be fetched(Mandatory path param).
+   * @param userId User id which should match for the entity(Optional query
+   *     param).
+   * @param flowName Flow name which should match for the entity(Optional query
+   *     param).
+   * @param flowRunId Run id which should match for the entity(Optional query
+   *     param).
+   * @param fields Specifies which fields of the entity object to retrieve, see
+   *     {@link Field}. All fields will be retrieved if fields=ALL. If not
+   *     specified, 4 fields i.e. entity type, id, created time is returned
+   *     (Optional query param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   *     {@link TimelineEntity} instance is returned.
+   *     On failures,
+   *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
+   *     returned.
+   *     If flow context information cannot be retrieved or entity for the given
+   *     entity id cannot be found, HTTP 404(Not Found) is returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
+   */
+  @GET
+  @Path("/apps/{appid}/entities/{entitytype}/{entityid}/")
   @Produces(MediaType.APPLICATION_JSON)
   public TimelineEntity getEntity(
       @Context HttpServletRequest req,
@@ -426,10 +669,42 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a single entity of the given entity type and Id.
+   * Return a single entity of the given entity type and Id. If userid, flowname
+   * and flowrun id which are optional query parameters are not specified, they
+   * will be queried based on app id and cluster id from the flow context
+   * information stored in underlying storage implementation.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param clusterId Cluster id to which the entity to be queried belongs to(
+   *     Mandatory path param).
+   * @param appId Application id to which the entity to be queried belongs to(
+   *     Mandatory path param).
+   * @param entityType Type of entity(Mandatory path param).
+   * @param entityId Id of the entity to be fetched(Mandatory path param).
+   * @param userId User id which should match for the entity(Optional query
+   *     param).
+   * @param flowName Flow name which should match for the entity(Optional query
+   *     param).
+   * @param flowRunId Run id which should match for the entity(Optional query
+   *     param).
+   * @param fields Specifies which fields of the entity object to retrieve, see
+   *     {@link Field}. All fields will be retrieved if fields=ALL. If not
+   *     specified, 4 fields i.e. entity type, id and created time is returned
+   *     (Optional query param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   *     {@link TimelineEntity} instance is returned.
+   *     On failures,
+   *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
+   *     returned.
+   *     If flow context information cannot be retrieved or entity for the given
+   *     entity id cannot be found, HTTP 404(Not Found) is returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
    */
   @GET
-  @Path("/entity/{clusterid}/{appid}/{entitytype}/{entityid}/")
+  @Path("/clusters/{clusterid}/apps/{appid}/entities/{entitytype}/{entityid}/")
   @Produces(MediaType.APPLICATION_JSON)
   public TimelineEntity getEntity(
       @Context HttpServletRequest req,
@@ -445,17 +720,25 @@ public class TimelineReaderWebServices {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
-    UserGroupInformation callerUGI = getUser(req);
-    LOG.info("Received URL " + url + " from user " + getUserName(callerUGI));
+    UserGroupInformation callerUGI =
+        TimelineReaderWebServicesUtils.getUser(req);
+    LOG.info("Received URL " + url + " from user " +
+        TimelineReaderWebServicesUtils.getUserName(callerUGI));
     long startTime = Time.monotonicNow();
     init(res);
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
     TimelineEntity entity = null;
+    String type = TimelineReaderWebServicesUtils.parseStr(entityType);
+    String id = TimelineReaderWebServicesUtils.parseStr(entityId);
     try {
       entity = timelineReaderManager.getEntity(
-          parseStr(userId), parseStr(clusterId), parseStr(flowName),
-          parseLongStr(flowRunId), parseStr(appId), parseStr(entityType),
-          parseStr(entityId), parseFieldsStr(fields, COMMA_DELIMITER));
+          TimelineReaderWebServicesUtils.parseStr(userId),
+          TimelineReaderWebServicesUtils.parseStr(clusterId),
+          TimelineReaderWebServicesUtils.parseStr(flowName),
+          TimelineReaderWebServicesUtils.parseLongStr(flowRunId),
+          TimelineReaderWebServicesUtils.parseStr(appId), type, id,
+          TimelineReaderWebServicesUtils.parseFieldsStr(
+          fields, COMMA_DELIMITER));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -463,8 +746,8 @@ public class TimelineReaderWebServices {
     if (entity == null) {
       LOG.info("Processed URL " + url + " but entity not found" + " (Took " +
           (endTime - startTime) + " ms.)");
-      throw new NotFoundException("Timeline entity {id: " + parseStr(entityId) +
-          ", type: " + parseStr(entityType) + " } is not found");
+      throw new NotFoundException("Timeline entity {id: " + id + ", type: " +
+          type + " } is not found");
     }
     LOG.info("Processed URL " + url +
         " (Took " + (endTime - startTime) + " ms.)");
@@ -472,50 +755,53 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a single flow run for the given user, flow id and run id.
-   * Cluster ID is not provided by client so default cluster ID has to be taken.
+   * Return a single flow run for given UID which is a delimited string
+   * containing clusterid, userid, flow name and flowrun id.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param uId a delimited string containing clusterid, userid, flow name and
+   *     flowrun id which are extracted from UID and then used to query backend
+   *     (Mandatory path param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   *     {@link FlowRunEntity} instance is returned. By default, all metrics for
+   *     the flow run will be returned.
+   *     On failures,
+   *     If any problem occurs in parsing request or UID is incorrect,
+   *     HTTP 400(Bad Request) is returned.
+   *     If flow run for the given flow run id cannot be found, HTTP 404
+   *     (Not Found) is returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
    */
   @GET
-  @Path("/flowrun/{userid}/{flowname}/{flowrunid}/")
+  @Path("/run-uid/{uid}/")
   @Produces(MediaType.APPLICATION_JSON)
   public TimelineEntity getFlowRun(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
-      @PathParam("userid") String userId,
-      @PathParam("flowname") String flowName,
-      @PathParam("flowrunid") String flowRunId,
-      @QueryParam("fields") String fields) {
-    return getFlowRun(req, res, userId, null, flowName, flowRunId, fields);
-  }
-
-  /**
-   * Return a single flow run for the given user, cluster, flow id and run id.
-   */
-  @GET
-  @Path("/flowrun/{userid}/{clusterid}/{flowname}/{flowrunid}/")
-  @Produces(MediaType.APPLICATION_JSON)
-  public TimelineEntity getFlowRun(
-      @Context HttpServletRequest req,
-      @Context HttpServletResponse res,
-      @PathParam("userid") String userId,
-      @PathParam("clusterid") String clusterId,
-      @PathParam("flowname") String flowName,
-      @PathParam("flowrunid") String flowRunId,
-      @QueryParam("fields") String fields) {
+      @PathParam("uid") String uId) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
-    UserGroupInformation callerUGI = getUser(req);
-    LOG.info("Received URL " + url + " from user " + getUserName(callerUGI));
+    UserGroupInformation callerUGI =
+        TimelineReaderWebServicesUtils.getUser(req);
+    LOG.info("Received URL " + url + " from user " +
+        TimelineReaderWebServicesUtils.getUserName(callerUGI));
     long startTime = Time.monotonicNow();
     init(res);
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
     TimelineEntity entity = null;
     try {
-      entity = timelineReaderManager.getEntity(parseStr(userId),
-          parseStr(clusterId), parseStr(flowName), parseLongStr(flowRunId), null,
-          TimelineEntityType.YARN_FLOW_RUN.toString(), null,
-          parseFieldsStr(fields, COMMA_DELIMITER));
+      TimelineReaderContext context =
+          TimelineUIDConverter.FLOWRUN_UID.decodeUID(uId);
+      if (context == null) {
+        throw new BadRequestException("Incorrect UID " +  uId);
+      }
+      entity = timelineReaderManager.getEntity(context.getUserId(),
+          context.getClusterId(), context.getFlowName(), context.getFlowRunId(),
+          null, TimelineEntityType.YARN_FLOW_RUN.toString(), null, null);
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -523,8 +809,7 @@ public class TimelineReaderWebServices {
     if (entity == null) {
       LOG.info("Processed URL " + url + " but flowrun not found (Took " +
           (endTime - startTime) + " ms.)");
-      throw new NotFoundException("Flow run {flow id: " + parseStr(flowName) +
-          ", run id: " + parseLongStr(flowRunId) + " } is not found");
+      throw new NotFoundException("Flowrun with uid: " + uId + "is not found");
     }
     LOG.info("Processed URL " + url +
         " (Took " + (endTime - startTime) + " ms.)");
@@ -532,37 +817,146 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a set of flows runs for the given user and flow id.
+   * Return a single flow run for the given user, flow name and run id.
    * Cluster ID is not provided by client so default cluster ID has to be taken.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param userId User id representing the user who ran the flow run(Mandatory
+   *     path param).
+   * @param flowName Flow name to which the flow run to be queried belongs to(
+   *     Mandatory path param).
+   * @param flowRunId Id of the flow run to be queried(Mandatory path param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   *     {@link FlowRunEntity} instance is returned. By default, all metrics for
+   *     the flow run will be returned.
+   *     On failures,
+   *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
+   *     returned.
+   *     If flow run for the given flow run id cannot be found, HTTP 404
+   *     (Not Found) is returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
    */
   @GET
-  @Path("/flowruns/{userid}/{flowname}/")
+  @Path("/users/{userid}/flows/{flowname}/runs/{flowrunid}/")
   @Produces(MediaType.APPLICATION_JSON)
-  public Set<TimelineEntity> getFlowRuns(
+  public TimelineEntity getFlowRun(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
       @PathParam("userid") String userId,
       @PathParam("flowname") String flowName,
-      @QueryParam("limit") String limit,
-      @QueryParam("createdtimestart") String createdTimeStart,
-      @QueryParam("createdtimeend") String createdTimeEnd,
-      @QueryParam("fields") String fields) {
-    return getFlowRuns(req, res, userId, null, flowName, limit, createdTimeStart,
-        createdTimeEnd, fields);
+      @PathParam("flowrunid") String flowRunId) {
+    return getFlowRun(req, res, null, userId, flowName, flowRunId);
   }
 
   /**
-   * Return a set of flow runs for the given user, cluster and flow id.
+   * Return a single flow run for the given user, cluster, flow name and run id.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param clusterId Cluster id to which the flow run to be queried belong to(
+   *     Mandatory path param).
+   * @param userId User id representing the user who ran the flow run(Mandatory
+   *     path param).
+   * @param flowName Flow name to which the flow run to be queried belongs to(
+   *     Mandatory path param).
+   * @param flowRunId Id of the flow run to be queried(Mandatory path param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   *     {@link FlowRunEntity} instance is returned. By default, all metrics for
+   *     the flow run will be returned.
+   *     On failures,
+   *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
+   *     returned.
+   *     If flow run for the given flow run id cannot be found, HTTP 404
+   *     (Not Found) is returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
    */
   @GET
-  @Path("/flowruns/{userid}/{clusterid}/{flowname}/")
+  @Path("/clusters/{clusterid}/users/{userid}/flows/{flowname}/"
+      + "runs/{flowrunid}/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public TimelineEntity getFlowRun(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("clusterid") String clusterId,
+      @PathParam("userid") String userId,
+      @PathParam("flowname") String flowName,
+      @PathParam("flowrunid") String flowRunId) {
+    String url = req.getRequestURI() +
+        (req.getQueryString() == null ? "" :
+            QUERY_STRING_SEP + req.getQueryString());
+    UserGroupInformation callerUGI =
+        TimelineReaderWebServicesUtils.getUser(req);
+    LOG.info("Received URL " + url + " from user " +
+        TimelineReaderWebServicesUtils.getUserName(callerUGI));
+    long startTime = Time.monotonicNow();
+    init(res);
+    TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
+    TimelineEntity entity = null;
+    try {
+      entity = timelineReaderManager.getEntity(
+          TimelineReaderWebServicesUtils.parseStr(userId),
+          TimelineReaderWebServicesUtils.parseStr(clusterId),
+          TimelineReaderWebServicesUtils.parseStr(flowName),
+          TimelineReaderWebServicesUtils.parseLongStr(flowRunId),
+          null, TimelineEntityType.YARN_FLOW_RUN.toString(), null, null);
+    } catch (Exception e) {
+      handleException(e, url, startTime, "flowrunid");
+    }
+    long endTime = Time.monotonicNow();
+    if (entity == null) {
+      LOG.info("Processed URL " + url + " but flowrun not found (Took " +
+          (endTime - startTime) + " ms.)");
+      throw new NotFoundException("Flow run {flow name: " +
+          TimelineReaderWebServicesUtils.parseStr(flowName) + ", run id: " +
+          TimelineReaderWebServicesUtils.parseLongStr(flowRunId) +
+          " } is not found");
+    }
+    LOG.info("Processed URL " + url +
+        " (Took " + (endTime - startTime) + " ms.)");
+    return entity;
+  }
+
+  /**
+   * Return a list of flow runs for given UID which is a delimited string
+   * containing clusterid, userid and flow name.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param uId a delimited string containing clusterid, userid, and flow name
+   *     which are extracted from UID and then used to query backend(Mandatory
+   *     path param).
+   * @param flowName Flow name to which the flow runs to be queried belongs to(
+   *     Mandatory path param).
+   * @param limit Number of flow runs to return(Optional query param).
+   * @param createdTimeStart If specified, matched flow runs should not be
+   *     created before this timestamp(Optional query param).
+   * @param createdTimeEnd If specified, matched flow runs should not be created
+   *     after this timestamp(Optional query param).
+   * @param fields Specifies which fields to retrieve, see {@link Field}.
+   *     All fields will be retrieved if fields=ALL. Fields other than METRICS
+   *     have no meaning for this REST endpoint. If not specified, all fields
+   *     other than metrics are returned(Optional query param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   *     set of {@link FlowRunEntity} instances for the given flow are returned.
+   *     On failures,
+   *     If any problem occurs in parsing request or UID is incorrect,
+   *     HTTP 400(Bad Request) is returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
+   */
+  @GET
+  @Path("/flow-uid/{uid}/runs/")
   @Produces(MediaType.APPLICATION_JSON)
   public Set<TimelineEntity> getFlowRuns(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
-      @PathParam("userid") String userId,
-      @PathParam("clusterid") String clusterId,
-      @PathParam("flowname") String flowName,
+      @PathParam("uid") String uId,
       @QueryParam("limit") String limit,
       @QueryParam("createdtimestart") String createdTimeStart,
       @QueryParam("createdtimeend") String createdTimeEnd,
@@ -570,18 +964,27 @@ public class TimelineReaderWebServices {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
-    UserGroupInformation callerUGI = getUser(req);
-    LOG.info("Received URL " + url + " from user " + getUserName(callerUGI));
+    UserGroupInformation callerUGI =
+        TimelineReaderWebServicesUtils.getUser(req);
+    LOG.info("Received URL " + url + " from user " +
+        TimelineReaderWebServicesUtils.getUserName(callerUGI));
     long startTime = Time.monotonicNow();
     init(res);
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
     Set<TimelineEntity> entities = null;
     try {
-      entities = timelineReaderManager.getEntities(
-          parseStr(userId), parseStr(clusterId), parseStr(flowName), null, null,
-          TimelineEntityType.YARN_FLOW_RUN.toString(), parseLongStr(limit),
-          parseLongStr(createdTimeStart), parseLongStr(createdTimeEnd),
-          null, null, null, null, null, null,
+      TimelineReaderContext context =
+          TimelineUIDConverter.FLOW_UID.decodeUID(uId);
+      if (context == null) {
+        throw new BadRequestException("Incorrect UID " +  uId);
+      }
+      entities = timelineReaderManager.getEntities(context.getUserId(),
+          context.getClusterId(), context.getFlowName(), null, null,
+          TimelineEntityType.YARN_FLOW_RUN.toString(),
+          TimelineReaderWebServicesUtils.parseLongStr(limit),
+          TimelineReaderWebServicesUtils.parseLongStr(createdTimeStart),
+          TimelineReaderWebServicesUtils.parseLongStr(createdTimeEnd),
+          null, null, null, null, null, null, TimelineReaderWebServicesUtils.
           parseFieldsStr(fields, COMMA_DELIMITER));
     } catch (Exception e) {
       handleException(e, url, startTime, "createdTime start/end or limit");
@@ -596,20 +999,155 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a list of flows. Cluster ID is not provided by client so default
-   * cluster ID has to be taken. daterange, if specified is given as
-   * "[startdate]-[enddate]"(i.e. start and end date separated by -) or
-   * single date. Dates are interpreted in yyyyMMdd format and are assumed to
-   * be in GMT. If a single date is specified, all flows active on that date are
-   * returned. If both startdate and enddate is given, all flows active between
-   * start and end date will be returned. If only startdate is given, flows
-   * active on and after startdate are returned. If only enddate is given, flows
-   * active on and before enddate are returned.
-   * For example :
-   * "daterange=20150711" returns flows active on 20150711.
-   * "daterange=20150711-20150714" returns flows active between these 2 dates.
-   * "daterange=20150711-" returns flows active on and after 20150711.
-   * "daterange=-20150711" returns flows active on and before 20150711.
+   * Return a set of flows runs for the given user and flow name.
+   * Cluster ID is not provided by client so default cluster ID has to be taken.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param userId User id representing the user who ran the flow runs(
+   *     Mandatory path param)
+   * @param flowName Flow name to which the flow runs to be queried belongs to(
+   *     Mandatory path param).
+   * @param limit Number of flow runs to return(Optional query param).
+   * @param createdTimeStart If specified, matched flow runs should not be
+   *     created before this timestamp(Optional query param).
+   * @param createdTimeEnd If specified, matched flow runs should not be created
+   *     after this timestamp(Optional query param).
+   * @param fields Specifies which fields to retrieve, see {@link Field}.
+   *     All fields will be retrieved if fields=ALL. Fields other than METRICS
+   *     have no meaning for this REST endpoint. If not specified, all fields
+   *     other than metrics are returned(Optional query param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   *     set of {@link FlowRunEntity} instances for the given flow are returned.
+   *     On failures,
+   *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
+   *     returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
+   */
+  @GET
+  @Path("/users/{userid}/flows/{flowname}/runs/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Set<TimelineEntity> getFlowRuns(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("userid") String userId,
+      @PathParam("flowname") String flowName,
+      @QueryParam("limit") String limit,
+      @QueryParam("createdtimestart") String createdTimeStart,
+      @QueryParam("createdtimeend") String createdTimeEnd,
+      @QueryParam("fields") String fields) {
+    return getFlowRuns(req, res, null, userId, flowName, limit,
+        createdTimeStart, createdTimeEnd, fields);
+  }
+
+  /**
+   * Return a set of flows runs for the given cluster, user and flow name.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param clusterId Cluster id to which the flow runs to be queried belong to(
+   *     Mandatory path param).
+   * @param userId User id representing the user who ran the flow runs(
+   *     Mandatory path param)
+   * @param flowName Flow name to which the flow runs to be queried belongs to(
+   *     Mandatory path param).
+   * @param limit Number of flow runs to return(Optional query param).
+   * @param createdTimeStart If specified, matched flow runs should not be
+   *     created before this timestamp(Optional query param).
+   * @param createdTimeEnd If specified, matched flow runs should not be created
+   *     after this timestamp(Optional query param).
+   * @param fields Specifies which fields to retrieve, see {@link Field}.
+   *     All fields will be retrieved if fields=ALL. Fields other than METRICS
+   *     have no meaning for this REST endpoint. If not specified, all fields
+   *     other than metrics are returned(Optional query param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   *     set of {@link FlowRunEntity} instances for the given flow are returned.
+   *     On failures,
+   *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
+   *     returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
+   */
+  @GET
+  @Path("/clusters/{clusterid}/users/{userid}/flows/{flowname}/runs/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Set<TimelineEntity> getFlowRuns(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("clusterid") String clusterId,
+      @PathParam("userid") String userId,
+      @PathParam("flowname") String flowName,
+      @QueryParam("limit") String limit,
+      @QueryParam("createdtimestart") String createdTimeStart,
+      @QueryParam("createdtimeend") String createdTimeEnd,
+      @QueryParam("fields") String fields) {
+    String url = req.getRequestURI() +
+        (req.getQueryString() == null ? "" :
+            QUERY_STRING_SEP + req.getQueryString());
+    UserGroupInformation callerUGI =
+        TimelineReaderWebServicesUtils.getUser(req);
+    LOG.info("Received URL " + url + " from user " +
+        TimelineReaderWebServicesUtils.getUserName(callerUGI));
+    long startTime = Time.monotonicNow();
+    init(res);
+    TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
+    Set<TimelineEntity> entities = null;
+    try {
+      entities = timelineReaderManager.getEntities(
+          TimelineReaderWebServicesUtils.parseStr(userId),
+          TimelineReaderWebServicesUtils.parseStr(clusterId),
+          TimelineReaderWebServicesUtils.parseStr(flowName), null, null,
+          TimelineEntityType.YARN_FLOW_RUN.toString(),
+          TimelineReaderWebServicesUtils.parseLongStr(limit),
+          TimelineReaderWebServicesUtils.parseLongStr(createdTimeStart),
+          TimelineReaderWebServicesUtils.parseLongStr(createdTimeEnd),
+          null, null, null, null, null, null, TimelineReaderWebServicesUtils.
+          parseFieldsStr(fields, COMMA_DELIMITER));
+    } catch (Exception e) {
+      handleException(e, url, startTime, "createdTime start/end or limit");
+    }
+    long endTime = Time.monotonicNow();
+    if (entities == null) {
+      entities = Collections.emptySet();
+    }
+    LOG.info("Processed URL " + url +
+        " (Took " + (endTime - startTime) + " ms.)");
+    return entities;
+  }
+
+  /**
+   * Return a list of active flows. Cluster ID is not provided by client so
+   * default cluster ID has to be taken.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param limit Number of flows to return(Optional query param).
+   * @param dateRange If specified is given as "[startdate]-[enddate]"(i.e.
+   *     start and end date separated by "-") or single date. Dates are
+   *     interpreted in yyyyMMdd format and are assumed to be in GMT(Optional
+   *     query param).
+   *     If a single date is specified, all flows active on that date are
+   *     returned. If both startdate and enddate is given, all flows active
+   *     between start and end date will be returned. If only startdate is
+   *     given, flows active on and after startdate are returned. If only
+   *     enddate is given, flows active on and before enddate are returned.
+   *     For example :
+   *     "daterange=20150711" returns flows active on 20150711.
+   *     "daterange=20150711-20150714" returns flows active between these
+   *     2 dates.
+   *     "daterange=20150711-" returns flows active on and after 20150711.
+   *     "daterange=-20150711" returns flows active on and before 20150711.
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   *     set of {@link FlowActivityEntity} instances are returned.
+   *     On failures,
+   *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
+   *     returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
    */
   @GET
   @Path("/flows/")
@@ -618,41 +1156,58 @@ public class TimelineReaderWebServices {
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
       @QueryParam("limit") String limit,
-      @QueryParam("daterange") String dateRange,
-      @QueryParam("fields") String fields) {
-    return getFlows(req, res, null, limit, dateRange, fields);
+      @QueryParam("daterange") String dateRange) {
+    return getFlows(req, res, null, limit, dateRange);
   }
 
   /**
-   * Return a list of flows for a given cluster id. daterange, if specified is
-   * given as "[startdate]-[enddate]"(i.e. start and end date separated by -) or
-   * single date. Dates are interpreted in yyyyMMdd format and are assumed to
-   * be in GMT. If a single date is specified, all flows active on that date are
-   * returned. If both startdate and enddate is given, all flows active between
-   * start and end date will be returned. If only startdate is given, flows
-   * active on and after startdate are returned. If only enddate is given, flows
-   * active on and before enddate are returned.
-   * For example :
-   * "daterange=20150711" returns flows active on 20150711.
-   * "daterange=20150711-20150714" returns flows active between these 2 dates.
-   * "daterange=20150711-" returns flows active on and after 20150711.
-   * "daterange=-20150711" returns flows active on and before 20150711.
+   * Return a list of active flows for a given cluster id.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param clusterId Cluster id to which the flows to be queried belong to(
+   *     Mandatory path param).
+   * @param limit Number of flows to return(Optional query param).
+   * @param dateRange If specified is given as "[startdate]-[enddate]"(i.e.
+   *     start and end date separated by "-") or single date. Dates are
+   *     interpreted in yyyyMMdd format and are assumed to be in GMT(Optional
+   *     query param).
+   *     If a single date is specified, all flows active on that date are
+   *     returned. If both startdate and enddate is given, all flows active
+   *     between start and end date will be returned. If only startdate is
+   *     given, flows active on and after startdate are returned. If only
+   *     enddate is given, flows active on and before enddate are returned.
+   *     For example :
+   *     "daterange=20150711" returns flows active on 20150711.
+   *     "daterange=20150711-20150714" returns flows active between these
+   *     2 dates.
+   *     "daterange=20150711-" returns flows active on and after 20150711.
+   *     "daterange=-20150711" returns flows active on and before 20150711.
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   *     set of {@link FlowActivityEntity} instances are returned.
+   *     On failures,
+   *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
+   *     returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
    */
   @GET
-  @Path("/flows/{clusterid}/")
+  @Path("/clusters/{clusterid}/flows/")
   @Produces(MediaType.APPLICATION_JSON)
   public Set<TimelineEntity> getFlows(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
       @PathParam("clusterid") String clusterId,
       @QueryParam("limit") String limit,
-      @QueryParam("daterange") String dateRange,
-      @QueryParam("fields") String fields) {
+      @QueryParam("daterange") String dateRange) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
-    UserGroupInformation callerUGI = getUser(req);
-    LOG.info("Received URL " + url + " from user " + getUserName(callerUGI));
+    UserGroupInformation callerUGI =
+        TimelineReaderWebServicesUtils.getUser(req);
+    LOG.info("Received URL " + url + " from user " +
+        TimelineReaderWebServicesUtils.getUserName(callerUGI));
     long startTime = Time.monotonicNow();
     init(res);
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
@@ -660,10 +1215,10 @@ public class TimelineReaderWebServices {
     try {
       DateRange range = parseDateRange(dateRange);
       entities = timelineReaderManager.getEntities(
-          null, parseStr(clusterId), null, null, null,
-          TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), parseLongStr(limit),
-          range.dateStart, range.dateEnd, null, null, null, null, null, null,
-          parseFieldsStr(fields, COMMA_DELIMITER));
+          null, TimelineReaderWebServicesUtils.parseStr(clusterId), null, null,
+          null, TimelineEntityType.YARN_FLOW_ACTIVITY.toString(),
+          TimelineReaderWebServicesUtils.parseLongStr(limit), range.dateStart,
+          range.dateEnd, null, null, null, null, null, null, null);
     } catch (Exception e) {
       handleException(e, url, startTime, "limit");
     }
@@ -677,11 +1232,105 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a single app for given app id. Cluster ID is not provided by
-   * client so default cluster ID has to be taken.
+   * Return a single app for given UID which is a delimited string containing
+   * clusterid, userid, flow name, flowrun id and app id.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param uId a delimited string containing clusterid, userid, flow name, flow
+   *     run id and app id which are extracted from UID and then used to query
+   *     backend(Mandatory path param).
+   * @param fields Specifies which fields of the app entity object to retrieve,
+   *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
+   *     specified, 4 fields i.e. entity type(equivalent to YARN_APPLICATION),
+   *     app id and app created time is returned(Optional query param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   *     {@link TimelineEntity} instance is returned.
+   *     On failures,
+   *     If any problem occurs in parsing request or UID is incorrect,
+   *     HTTP 400(Bad Request) is returned.
+   *     If app for the given app id cannot be found, HTTP 404(Not Found) is
+   *     returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
    */
   @GET
-  @Path("/app/{appid}/")
+  @Path("/app-uid/{uid}/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public TimelineEntity getApp(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("uid") String uId,
+      @QueryParam("fields") String fields) {
+    String url = req.getRequestURI() +
+        (req.getQueryString() == null ? "" :
+            QUERY_STRING_SEP + req.getQueryString());
+    UserGroupInformation callerUGI =
+        TimelineReaderWebServicesUtils.getUser(req);
+    LOG.info("Received URL " + url + " from user " +
+        TimelineReaderWebServicesUtils.getUserName(callerUGI));
+    long startTime = Time.monotonicNow();
+    init(res);
+    TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
+    TimelineEntity entity = null;
+    try {
+      TimelineReaderContext context =
+          TimelineUIDConverter.APPLICATION_UID.decodeUID(uId);
+      if (context == null) {
+        throw new BadRequestException("Incorrect UID " +  uId);
+      }
+      entity = timelineReaderManager.getEntity(context.getUserId(),
+          context.getClusterId(), context.getFlowName(), context.getFlowRunId(),
+          context.getAppId(), TimelineEntityType.YARN_APPLICATION.toString(),
+          null, TimelineReaderWebServicesUtils.parseFieldsStr(
+          fields, COMMA_DELIMITER));
+    } catch (Exception e) {
+      handleException(e, url, startTime, "flowrunid");
+    }
+    long endTime = Time.monotonicNow();
+    if (entity == null) {
+      LOG.info("Processed URL " + url + " but app not found" + " (Took " +
+          (endTime - startTime) + " ms.)");
+      throw new NotFoundException("App with uid " + uId + " not found");
+    }
+    LOG.info("Processed URL " + url +
+        " (Took " + (endTime - startTime) + " ms.)");
+    return entity;
+  }
+
+  /**
+   * Return a single app for given app id. Cluster ID is not provided by client
+   * client so default cluster ID has to be taken. If userid, flow name and flow
+   * run id which are optional query parameters are not specified, they will be
+   * queried based on app id and cluster id from the flow context information
+   * stored in underlying storage implementation.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param appId Application id to be queried(Mandatory path param).
+   * @param flowName Flow name which should match for the app(Optional query
+   *     param).
+   * @param flowRunId Run id which should match for the app(Optional query
+   *     param).
+   * @param userId User id which should match for the app(Optional query param).
+   * @param fields Specifies which fields of the app entity object to retrieve,
+   *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
+   *     specified, 4 fields i.e. entity type(equivalent to YARN_APPLICATION),
+   *     app id and app created time is returned(Optional query param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   *     {@link TimelineEntity} instance is returned.
+   *     On failures,
+   *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
+   *     returned.
+   *     If flow context information cannot be retrieved or app for the given
+   *     app id cannot be found, HTTP 404(Not Found) is returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
+   */
+  @GET
+  @Path("/apps/{appid}/")
   @Produces(MediaType.APPLICATION_JSON)
   public TimelineEntity getApp(
       @Context HttpServletRequest req,
@@ -695,10 +1344,38 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a single app for given cluster id and app id.
+   * Return a single app for given cluster id and app id. If userid, flow name
+   * and flowrun id which are optional query parameters are not specified, they
+   * will be queried based on app id and cluster id from the flow context
+   * information stored in underlying storage implementation.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param clusterId Cluster id to which the app to be queried belong to(
+   *     Mandatory path param).
+   * @param appId Application id to be queried(Mandatory path param).
+   * @param flowName Flow name which should match for the app(Optional query
+   *     param).
+   * @param flowRunId Run id which should match for the app(Optional query
+   *     param).
+   * @param userId User id which should match for the app(Optional query param).
+   * @param fields Specifies which fields of the app entity object to retrieve,
+   *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
+   *     specified, 4 fields i.e. entity type(equivalent to YARN_APPLICATION),
+   *     app id and app created time is returned(Optional query param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   *     {@link TimelineEntity} instance is returned.
+   *     On failures,
+   *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
+   *     returned.
+   *     If flow context information cannot be retrieved or app for the given
+   *     app id cannot be found, HTTP 404(Not Found) is returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
    */
   @GET
-  @Path("/app/{clusterid}/{appid}/")
+  @Path("/clusters/{clusterid}/apps/{appid}/")
   @Produces(MediaType.APPLICATION_JSON)
   public TimelineEntity getApp(
       @Context HttpServletRequest req,
@@ -712,17 +1389,24 @@ public class TimelineReaderWebServices {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
-    UserGroupInformation callerUGI = getUser(req);
-    LOG.info("Received URL " + url + " from user " + getUserName(callerUGI));
+    UserGroupInformation callerUGI =
+        TimelineReaderWebServicesUtils.getUser(req);
+    LOG.info("Received URL " + url + " from user " +
+        TimelineReaderWebServicesUtils.getUserName(callerUGI));
     long startTime = Time.monotonicNow();
     init(res);
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
     TimelineEntity entity = null;
     try {
-      entity = timelineReaderManager.getEntity(parseStr(userId),
-          parseStr(clusterId), parseStr(flowName), parseLongStr(flowRunId),
-          parseStr(appId), TimelineEntityType.YARN_APPLICATION.toString(), null,
-          parseFieldsStr(fields, COMMA_DELIMITER));
+      entity = timelineReaderManager.getEntity(
+          TimelineReaderWebServicesUtils.parseStr(userId),
+          TimelineReaderWebServicesUtils.parseStr(clusterId),
+          TimelineReaderWebServicesUtils.parseStr(flowName),
+          TimelineReaderWebServicesUtils.parseLongStr(flowRunId),
+          TimelineReaderWebServicesUtils.parseStr(appId),
+          TimelineEntityType.YARN_APPLICATION.toString(), null,
+          TimelineReaderWebServicesUtils.parseFieldsStr(
+          fields, COMMA_DELIMITER));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -738,13 +1422,180 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a list of apps for given user, flow id and flow run id. Cluster ID
+   * Return a list of apps for given UID which is a delimited string containing
+   * clusterid, userid, flow name and flowrun id. If number of matching apps are
+   * more than the limit, most recent apps till the limit is reached, will be
+   * returned.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param uId a delimited string containing clusterid, userid, flow name and
+   *     flowrun id which are extracted from UID and then used to query backend.
+   *     (Mandatory path param).
+   * @param limit Number of apps to return(Optional query param).
+   * @param createdTimeStart If specified, matched apps should not be created
+   *     before this timestamp(Optional query param).
+   * @param createdTimeEnd If specified, matched apps should not be created
+   *     after this timestamp(Optional query param).
+   * @param relatesTo If specified, matched apps should relate to given
+   *     entities associated with a entity type. relatesto is a comma separated
+   *     list in the format [entitytype]:[entityid1]:[entityid2]... (Optional
+   *     query param).
+   * @param isRelatedTo If specified, matched apps should be related to given
+   *     entities associated with a entity type. relatesto is a comma separated
+   *     list in the format [entitytype]:[entityid1]:[entityid2]... (Optional
+   *     query param).
+   * @param infofilters If specified, matched apps should have exact matches
+   *     to the given info represented as key-value pairs. This is represented
+   *     as infofilters=info1:value1,info2:value2... (Optional query param).
+   * @param conffilters If specified, matched apps should have exact matches
+   *     to the given configs represented as key-value pairs. This is
+   *     represented as conffilters=conf1:value1,conf2:value2... (Optional query
+   *     param).
+   * @param metricfilters If specified, matched apps should contain the given
+   *     metrics. This is represented as metricfilters=metricid1, metricid2...
+   *     (Optional query param).
+   * @param eventfilters If specified, matched apps should contain the given
+   *     events. This is represented as eventfilters=eventid1, eventid2...
+   * @param fields Specifies which fields of the app entity object to retrieve,
+   *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
+   *     specified, 4 fields i.e. entity type(equivalent to YARN_APPLICATION),
+   *     app id and app created time is returned(Optional query param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing
+   *     a set of {@link TimelineEntity} instances representing apps is
+   *     returned.
+   *     On failures,
+   *     If any problem occurs in parsing request or UID is incorrect,
+   *     HTTP 400(Bad Request) is returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
+   */
+  @GET
+  @Path("/run-uid/{uid}/apps")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Set<TimelineEntity> getFlowRunApps(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("uid") String uId,
+      @QueryParam("limit") String limit,
+      @QueryParam("createdtimestart") String createdTimeStart,
+      @QueryParam("createdtimeend") String createdTimeEnd,
+      @QueryParam("relatesto") String relatesTo,
+      @QueryParam("isrelatedto") String isRelatedTo,
+      @QueryParam("infofilters") String infofilters,
+      @QueryParam("conffilters") String conffilters,
+      @QueryParam("metricfilters") String metricfilters,
+      @QueryParam("eventfilters") String eventfilters,
+      @QueryParam("fields") String fields) {
+    String url = req.getRequestURI() +
+        (req.getQueryString() == null ? "" :
+            QUERY_STRING_SEP + req.getQueryString());
+    UserGroupInformation callerUGI =
+        TimelineReaderWebServicesUtils.getUser(req);
+    LOG.info("Received URL " + url + " from user " +
+        TimelineReaderWebServicesUtils.getUserName(callerUGI));
+    long startTime = Time.monotonicNow();
+    init(res);
+    TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
+    Set<TimelineEntity> entities = null;
+    try {
+      TimelineReaderContext context =
+          TimelineUIDConverter.FLOWRUN_UID.decodeUID(uId);
+      if (context == null) {
+        throw new BadRequestException("Incorrect UID " +  uId);
+      }
+      entities = timelineReaderManager.getEntities(
+          TimelineReaderWebServicesUtils.parseStr(context.getUserId()),
+          TimelineReaderWebServicesUtils.parseStr(context.getClusterId()),
+          TimelineReaderWebServicesUtils.parseStr(context.getFlowName()),
+          context.getFlowRunId(),
+          TimelineReaderWebServicesUtils.parseStr(context.getAppId()),
+          TimelineEntityType.YARN_APPLICATION.toString(),
+          TimelineReaderWebServicesUtils.parseLongStr(limit),
+          TimelineReaderWebServicesUtils.parseLongStr(createdTimeStart),
+          TimelineReaderWebServicesUtils.parseLongStr(createdTimeEnd),
+          TimelineReaderWebServicesUtils.parseKeyStrValuesStr(
+          relatesTo, COMMA_DELIMITER, COLON_DELIMITER),
+          TimelineReaderWebServicesUtils.parseKeyStrValuesStr(
+          isRelatedTo, COMMA_DELIMITER, COLON_DELIMITER),
+          TimelineReaderWebServicesUtils.parseKeyStrValueObj(
+          infofilters, COMMA_DELIMITER, COLON_DELIMITER),
+          TimelineReaderWebServicesUtils.parseKeyStrValueStr(
+          conffilters, COMMA_DELIMITER, COLON_DELIMITER),
+          TimelineReaderWebServicesUtils.parseValuesStr(
+          metricfilters, COMMA_DELIMITER),
+          TimelineReaderWebServicesUtils.parseValuesStr(
+          eventfilters, COMMA_DELIMITER),
+          TimelineReaderWebServicesUtils.parseFieldsStr(
+          fields, COMMA_DELIMITER));
+    } catch (Exception e) {
+      handleException(e, url, startTime,
+          "createdTime start/end or limit or flowrunid");
+    }
+    long endTime = Time.monotonicNow();
+    if (entities == null) {
+      entities = Collections.emptySet();
+    }
+    LOG.info("Processed URL " + url +
+        " (Took " + (endTime - startTime) + " ms.)");
+    return entities;
+  }
+
+  /**
+   * Return a list of apps for given user, flow name and flow run id. Cluster ID
    * is not provided by client so default cluster ID has to be taken. If number
    * of matching apps are more than the limit, most recent apps till the limit
    * is reached, will be returned.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param userId User id which should match for the apps(Mandatory path param)
+   * @param flowName Flow name which should match for the apps(Mandatory path
+   *     param).
+   * @param flowRunId Run id which should match for the apps(Mandatory path
+   *     param).
+   * @param limit Number of apps to return(Optional query param).
+   * @param createdTimeStart If specified, matched apps should not be created
+   *     before this timestamp(Optional query param).
+   * @param createdTimeEnd If specified, matched apps should not be created
+   *     after this timestamp(Optional query param).
+   * @param relatesTo If specified, matched apps should relate to given
+   *     entities associated with a entity type. relatesto is a comma separated
+   *     list in the format [entitytype]:[entityid1]:[entityid2]... (Optional
+   *     query param).
+   * @param isRelatedTo If specified, matched apps should be related to given
+   *     entities associated with a entity type. relatesto is a comma separated
+   *     list in the format [entitytype]:[entityid1]:[entityid2]... (Optional
+   *     query param).
+   * @param infofilters If specified, matched apps should have exact matches
+   *     to the given info represented as key-value pairs. This is represented
+   *     as infofilters=info1:value1,info2:value2... (Optional query param).
+   * @param conffilters If specified, matched apps should have exact matches
+   *     to the given configs represented as key-value pairs. This is
+   *     represented as conffilters=conf1:value1,conf2:value2... (Optional query
+   *     param).
+   * @param metricfilters If specified, matched apps should contain the given
+   *     metrics. This is represented as metricfilters=metricid1, metricid2...
+   *     (Optional query param).
+   * @param eventfilters If specified, matched apps should contain the given
+   *     events. This is represented as eventfilters=eventid1, eventid2...
+   * @param fields Specifies which fields of the app entity object to retrieve,
+   *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
+   *     specified, 4 fields i.e. entity type(equivalent to YARN_APPLICATION),
+   *     app id and app created time is returned(Optional query param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing
+   *     a set of {@link TimelineEntity} instances representing apps is
+   *     returned.
+   *     On failures,
+   *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
+   *     returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
    */
   @GET
-  @Path("/flowrunapps/{userid}/{flowname}/{flowrunid}/")
+  @Path("/users/{userid}/flows/{flowname}/runs/{flowrunid}/apps/")
   @Produces(MediaType.APPLICATION_JSON)
   public Set<TimelineEntity> getFlowRunApps(
       @Context HttpServletRequest req,
@@ -770,18 +1621,67 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a list of apps for a given user, cluster id, flow id and flow run
+   * Return a list of apps for a given user, cluster id, flow name and flow run
    * id. If number of matching apps are more than the limit, most recent apps
    * till the limit is reached, will be returned.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param clusterId Cluster id to which the apps to be queried belong to
+   *     (Mandatory path param).
+   * @param userId User id which should match for the apps(Mandatory path param)
+   * @param flowName Flow name which should match for the apps(Mandatory path
+   *     param).
+   * @param flowRunId Run id which should match for the apps(Mandatory path
+   *     param).
+   * @param limit Number of apps to return(Optional query param).
+   * @param createdTimeStart If specified, matched apps should not be created
+   *     before this timestamp(Optional query param).
+   * @param createdTimeEnd If specified, matched apps should not be created
+   *     after this timestamp(Optional query param).
+   * @param relatesTo If specified, matched apps should relate to given
+   *     entities associated with a entity type. relatesto is a comma separated
+   *     list in the format [entitytype]:[entityid1]:[entityid2]... (Optional
+   *     query param).
+   * @param isRelatedTo If specified, matched apps should be related to given
+   *     entities associated with a entity type. relatesto is a comma separated
+   *     list in the format [entitytype]:[entityid1]:[entityid2]... (Optional
+   *     query param).
+   * @param infofilters If specified, matched apps should have exact matches
+   *     to the given info represented as key-value pairs. This is represented
+   *     as infofilters=info1:value1,info2:value2... (Optional query param).
+   * @param conffilters If specified, matched apps should have exact matches
+   *     to the given configs represented as key-value pairs. This is
+   *     represented as conffilters=conf1:value1,conf2:value2... (Optional query
+   *     param).
+   * @param metricfilters If specified, matched apps should contain the given
+   *     metrics. This is represented as metricfilters=metricid1, metricid2...
+   *     (Optional query param).
+   * @param eventfilters If specified, matched apps should contain the given
+   *     events. This is represented as eventfilters=eventid1, eventid2...
+   * @param fields Specifies which fields of the app entity object to retrieve,
+   *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
+   *     specified, 4 fields i.e. entity type(equivalent to YARN_APPLICATION),
+   *     app id and app created time is returned(Optional query param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing
+   *     a set of {@link TimelineEntity} instances representing apps is
+   *     returned.
+   *     On failures,
+   *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
+   *     returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
    */
   @GET
-  @Path("/flowrunapps/{userid}/{clusterid}/{flowname}/{flowrunid}/")
+  @Path("/clusters/{clusterid}/users/{userid}/flows/{flowname}/runs/"
+      + "{flowrunid}/apps/")
   @Produces(MediaType.APPLICATION_JSON)
   public Set<TimelineEntity> getFlowRunApps(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
-      @PathParam("userid") String userId,
       @PathParam("clusterid") String clusterId,
+      @PathParam("userid") String userId,
       @PathParam("flowname") String flowName,
       @PathParam("flowrunid") String flowRunId,
       @QueryParam("limit") String limit,
@@ -802,13 +1702,57 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a list of apps for given user and flow id. Cluster ID is not
+   * Return a list of apps for given user and flow name. Cluster ID is not
    * provided by client so default cluster ID has to be taken. If number of
    * matching apps are more than the limit, most recent apps till the limit is
    * reached, will be returned.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param userId User id which should match for the apps(Mandatory path param)
+   * @param flowName Flow name which should match for the apps(Mandatory path
+   *     param).
+   * @param limit Number of apps to return(Optional query param).
+   * @param createdTimeStart If specified, matched apps should not be created
+   *     before this timestamp(Optional query param).
+   * @param createdTimeEnd If specified, matched apps should not be created
+   *     after this timestamp(Optional query param).
+   * @param relatesTo If specified, matched apps should relate to given
+   *     entities associated with a entity type. relatesto is a comma separated
+   *     list in the format [entitytype]:[entityid1]:[entityid2]... (Optional
+   *     query param).
+   * @param isRelatedTo If specified, matched apps should be related to given
+   *     entities associated with a entity type. relatesto is a comma separated
+   *     list in the format [entitytype]:[entityid1]:[entityid2]... (Optional
+   *     query param).
+   * @param infofilters If specified, matched apps should have exact matches
+   *     to the given info represented as key-value pairs. This is represented
+   *     as infofilters=info1:value1,info2:value2... (Optional query param).
+   * @param conffilters If specified, matched apps should have exact matches
+   *     to the given configs represented as key-value pairs. This is
+   *     represented as conffilters=conf1:value1,conf2:value2... (Optional query
+   *     param).
+   * @param metricfilters If specified, matched apps should contain the given
+   *     metrics. This is represented as metricfilters=metricid1, metricid2...
+   *     (Optional query param).
+   * @param eventfilters If specified, matched apps should contain the given
+   *     events. This is represented as eventfilters=eventid1, eventid2...
+   * @param fields Specifies which fields of the app entity object to retrieve,
+   *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
+   *     specified, 4 fields i.e. entity type(equivalent to YARN_APPLICATION),
+   *     app id and app created time is returned(Optional query param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing
+   *     a set of {@link TimelineEntity} instances representing apps is
+   *     returned.
+   *     On failures,
+   *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
+   *     returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
    */
   @GET
-  @Path("/flowapps/{userid}/{flowname}/")
+  @Path("/users/{userid}/flows/{flowname}/apps/")
   @Produces(MediaType.APPLICATION_JSON)
   public Set<TimelineEntity> getFlowApps(
       @Context HttpServletRequest req,
@@ -832,18 +1776,65 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a list of apps for a given user, cluster id and flow id. If number
+   * Return a list of apps for a given user, cluster id and flow name. If number
    * of matching apps are more than the limit, most recent apps till the limit
-   * is reached, will be returned.
+   * is reached, will be returned. If number of matching apps are more than the
+   * limit, most recent apps till the limit is reached, will be returned.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param clusterId Cluster id to which the apps to be queried belong to
+   *     (Mandatory path param).
+   * @param userId User id which should match for the apps(Mandatory path param)
+   * @param flowName Flow name which should match for the apps(Mandatory path
+   *     param).
+   * @param limit Number of apps to return(Optional query param).
+   * @param createdTimeStart If specified, matched apps should not be created
+   *     before this timestamp(Optional query param).
+   * @param createdTimeEnd If specified, matched apps should not be created
+   *     after this timestamp(Optional query param).
+   * @param relatesTo If specified, matched apps should relate to given
+   *     entities associated with a entity type. relatesto is a comma separated
+   *     list in the format [entitytype]:[entityid1]:[entityid2]... (Optional
+   *     query param).
+   * @param isRelatedTo If specified, matched apps should be related to given
+   *     entities associated with a entity type. relatesto is a comma separated
+   *     list in the format [entitytype]:[entityid1]:[entityid2]... (Optional
+   *     query param).
+   * @param infofilters If specified, matched apps should have exact matches
+   *     to the given info represented as key-value pairs. This is represented
+   *     as infofilters=info1:value1,info2:value2... (Optional query param).
+   * @param conffilters If specified, matched apps should have exact matches
+   *     to the given configs represented as key-value pairs. This is
+   *     represented as conffilters=conf1:value1,conf2:value2... (Optional query
+   *     param).
+   * @param metricfilters If specified, matched apps should contain the given
+   *     metrics. This is represented as metricfilters=metricid1, metricid2...
+   *     (Optional query param).
+   * @param eventfilters If specified, matched apps should contain the given
+   *     events. This is represented as eventfilters=eventid1, eventid2...
+   * @param fields Specifies which fields of the app entity object to retrieve,
+   *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
+   *     specified, 4 fields i.e. entity type(equivalent to YARN_APPLICATION),
+   *     app id and app created time is returned(Optional query param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing
+   *     a set of {@link TimelineEntity} instances representing apps is
+   *     returned.
+   *     On failures,
+   *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
+   *     returned.
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
    */
   @GET
-  @Path("/flowapps/{userid}/{clusterid}/{flowname}/")
+  @Path("/clusters/{clusterid}/users/{userid}/flows/{flowname}/apps/")
   @Produces(MediaType.APPLICATION_JSON)
   public Set<TimelineEntity> getFlowApps(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
-      @PathParam("userid") String userId,
       @PathParam("clusterid") String clusterId,
+      @PathParam("userid") String userId,
       @PathParam("flowname") String flowName,
       @QueryParam("limit") String limit,
       @QueryParam("createdtimestart") String createdTimeStart,
