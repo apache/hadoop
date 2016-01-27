@@ -224,6 +224,7 @@ public class AllocationFileLoaderService extends AbstractService {
     Map<String, Map<QueueACL, AccessControlList>> queueAcls =
         new HashMap<String, Map<QueueACL, AccessControlList>>();
     Set<String> reservableQueues = new HashSet<String>();
+    Set<String> nonPreemptableQueues = new HashSet<String>();
     int userMaxAppsDefault = Integer.MAX_VALUE;
     int queueMaxAppsDefault = Integer.MAX_VALUE;
     Resource queueMaxResourcesDefault = Resources.unbounded();
@@ -360,7 +361,7 @@ public class AllocationFileLoaderService extends AbstractService {
           queueMaxApps, userMaxApps, queueMaxAMShares, queueWeights,
           queuePolicies, minSharePreemptionTimeouts, fairSharePreemptionTimeouts,
           fairSharePreemptionThresholds, queueAcls, configuredQueues,
-          reservableQueues);
+          reservableQueues, nonPreemptableQueues);
     }
 
     // Load placement policy and pass it configured queues
@@ -409,7 +410,7 @@ public class AllocationFileLoaderService extends AbstractService {
         defaultSchedPolicy, minSharePreemptionTimeouts,
         fairSharePreemptionTimeouts, fairSharePreemptionThresholds, queueAcls,
         newPlacementPolicy, configuredQueues, globalReservationQueueConfig,
-        reservableQueues);
+        reservableQueues, nonPreemptableQueues);
     
     lastSuccessfulReload = clock.getTime();
     lastReloadAttemptFailed = false;
@@ -431,7 +432,8 @@ public class AllocationFileLoaderService extends AbstractService {
       Map<String, Float> fairSharePreemptionThresholds,
       Map<String, Map<QueueACL, AccessControlList>> queueAcls,
       Map<FSQueueType, Set<String>> configuredQueues,
-      Set<String> reservableQueues)
+      Set<String> reservableQueues,
+      Set<String> nonPreemptableQueues)
       throws AllocationConfigurationException {
     String queueName = element.getAttribute("name").trim();
 
@@ -508,13 +510,19 @@ public class AllocationFileLoaderService extends AbstractService {
         isLeaf = false;
         reservableQueues.add(queueName);
         configuredQueues.get(FSQueueType.PARENT).add(queueName);
+      } else if ("allowPreemptionFrom".equals(field.getTagName())) {
+        String text = ((Text)field.getFirstChild()).getData().trim();
+        if (!Boolean.parseBoolean(text)) {
+          nonPreemptableQueues.add(queueName);
+        }
       } else if ("queue".endsWith(field.getTagName()) || 
           "pool".equals(field.getTagName())) {
         loadQueue(queueName, field, minQueueResources, maxQueueResources,
             queueMaxApps, userMaxApps, queueMaxAMShares, queueWeights,
             queuePolicies, minSharePreemptionTimeouts,
             fairSharePreemptionTimeouts, fairSharePreemptionThresholds,
-            queueAcls, configuredQueues, reservableQueues);
+            queueAcls, configuredQueues, reservableQueues,
+            nonPreemptableQueues);
         isLeaf = false;
       }
     }
