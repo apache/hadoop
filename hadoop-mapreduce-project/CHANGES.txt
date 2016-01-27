@@ -409,6 +409,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6610. JobHistoryEventHandler should not swallow timeline response
     (Li Lu via jianhe)
 
+    MAPREDUCE-6619. HADOOP_CLASSPATH is overwritten in MR container.
+    (Junping Du via jianhe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

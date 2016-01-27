@@ -30,8 +30,10 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -239,6 +241,12 @@ public class TestMRApps {
       testTGZ.getAbsolutePath())).toString();
     conf.set(MRJobConfig.CLASSPATH_ARCHIVES, testTGZQualifiedPath);
     conf.set(MRJobConfig.CACHE_ARCHIVES, testTGZQualifiedPath + "#testTGZ");
+    // add hadoop.tgz to env HADOOP_CLASSPATH
+    Map<String, String> newEnv = new HashMap<String, String>();
+    newEnv.put(ApplicationConstants.Environment.HADOOP_CLASSPATH.name(),
+        "hadoop.tgz");
+    setEnv(newEnv);
+
     Map<String, String> environment = new HashMap<String, String>();
     MRApps.setClasspath(environment, conf);
     assertTrue(environment.get(ApplicationConstants.Environment.CLASSPATH.name()).startsWith(
@@ -268,6 +276,53 @@ public class TestMRApps {
     assertTrue(environment.get(
         ApplicationConstants.Environment.HADOOP_CLASSPATH.name()).
         contains("testTGZ"));
+    assertTrue(environment.get(
+        ApplicationConstants.Environment.HADOOP_CLASSPATH.name()).
+        contains("hadoop.tgz"));
+  }
+
+  // Only set env in runtime but not get persistent in OS (Linux or Windows)
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  private static void setEnv(Map<String, String> newEnv) {
+    try {
+      // Hack for Windows
+      Class<?> processEnvClass =
+          Class.forName("java.lang.ProcessEnvironment");
+      Field theEnvField =
+          processEnvClass.getDeclaredField("theEnvironment");
+      theEnvField.setAccessible(true);
+      Map<String, String> currentEnv =
+          (Map<String, String>)theEnvField.get(null);
+      currentEnv.putAll(newEnv);
+
+      Field caseInsensitiveEnvField =
+          processEnvClass.getDeclaredField("theCaseInsensitiveEnvironment");
+      caseInsensitiveEnvField.setAccessible(true);
+      Map<String, String> ciEnv =
+          (Map<String, String>)caseInsensitiveEnvField.get(null);
+      ciEnv.putAll(newEnv);
+    } catch (NoSuchFieldException e) {
+      // Hack for Linux
+      try {
+        Class[] classes = Collections.class.getDeclaredClasses();
+        Map<String, String> env = System.getenv();
+        for (Class cl : classes) {
+          if ("java.util.Collections$UnmodifiableMap".equals(cl.getName())) {
+            Field field = cl.getDeclaredField("m");
+            field.setAccessible(true);
+            Object obj = field.get(env);
+            Map<String, String> map = (Map<String, String>) obj;
+            map.putAll(newEnv);
+          }
+        }
+      } catch (Exception e1) {
+        LOG.error("Hack env on Linux doesn't work:", e1);
+        throw new RuntimeException(e1);
+      }
+    } catch (Exception e) {
+      LOG.error("Hack env on Windows doesn't work:", e);
+      throw new RuntimeException(e);
+    }
   }
 
  @Test (timeout = 120000)
