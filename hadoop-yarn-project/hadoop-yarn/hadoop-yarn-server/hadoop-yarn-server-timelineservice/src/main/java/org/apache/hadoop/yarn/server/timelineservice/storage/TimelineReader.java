@@ -87,8 +87,8 @@ public interface TimelineReader extends Service {
    * @param fieldsToRetrieve
    *    Specifies which fields of the entity object to retrieve(optional), see
    *    {@link Field}. If null, retrieves 4 fields namely entity id,
-   *    entity type, entity created time and entity modified time. All
-   *    entities will be returned if {@link Field#ALL} is specified.
+   *    entity type and entity created time. All entities will be returned if
+   *    {@link Field#ALL} is specified.
    * @return a {@link TimelineEntity} instance or null. The entity will
    *    contain the metadata plus the given fields to retrieve.
    * @throws IOException
@@ -101,13 +101,13 @@ public interface TimelineReader extends Service {
   /**
    * <p>The API to search for a set of entities of the given the entity type in
    * the scope of the given context which matches the given predicates. The
-   * predicates include the created/modified time window, limit to number of
-   * entities to be returned, and the entities can be filtered by checking
-   * whether they contain the given info/configs entries in the form of
-   * key/value pairs, given metrics in the form of metricsIds and its relation
-   * with metric values given events in the form of the Ids, and whether they
-   * relate to/are related to other entities. For those parameters which have
-   * multiple entries, the qualified entity needs to meet all or them.</p>
+   * predicates include the created time window, limit to number of entities to
+   * be returned, and the entities can be filtered by checking whether they
+   * contain the given info/configs entries in the form of key/value pairs,
+   * given metrics in the form of metricsIds and its relation with metric
+   * values, given events in the form of the Ids, and whether they relate to/are
+   * related to other entities. For those parameters which have multiple
+   * entries, the qualified entity needs to meet all or them.</p>
    *
    * @param userId
    *    Context user Id(optional).
@@ -129,12 +129,6 @@ public interface TimelineReader extends Service {
    *    If null or <=0, defaults to 0.
    * @param createdTimeEnd
    *    Matched entities should not be created after this timestamp (optional).
-   *    If null or <=0, defaults to {@link Long#MAX_VALUE}.
-   * @param modifiedTimeBegin
-   *    Matched entities should not be modified before this timestamp
-   *    (optional). If null or <=0, defaults to 0.
-   * @param modifiedTimeEnd
-   *    Matched entities should not be modified after this timestamp (optional).
    *    If null or <=0, defaults to {@link Long#MAX_VALUE}.
    * @param relatesTo
    *    Matched entities should relate to given entities (optional).
@@ -173,19 +167,17 @@ public interface TimelineReader extends Service {
    * @param fieldsToRetrieve
    *    Specifies which fields of the entity object to retrieve(optional), see
    *    {@link Field}. If null, retrieves 4 fields namely entity id,
-   *    entity type, entity created time and entity modified time. All
-   *    entities will be returned if {@link Field#ALL} is specified.
+   *    entity type and entity created time. All entities will be returned if
+   *    {@link Field#ALL} is specified.
    * @return A set of {@link TimelineEntity} instances of the given entity type
    *    in the given context scope which matches the given predicates
    *    ordered by created time, descending. Each entity will only contain the
-   *    metadata(id, type, created and modified times) plus the given fields to
-   *    retrieve.
+   *    metadata(id, type and created time) plus the given fields to retrieve.
    * @throws IOException
    */
   Set<TimelineEntity> getEntities(String userId, String clusterId,
       String flowName, Long flowRunId, String appId, String entityType,
       Long limit, Long createdTimeBegin, Long createdTimeEnd,
-      Long modifiedTimeBegin, Long modifiedTimeEnd,
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
       Map<String, Object> infoFilters, Map<String, String> configFilters,
       Set<String>  metricFilters, Set<String> eventFilters,

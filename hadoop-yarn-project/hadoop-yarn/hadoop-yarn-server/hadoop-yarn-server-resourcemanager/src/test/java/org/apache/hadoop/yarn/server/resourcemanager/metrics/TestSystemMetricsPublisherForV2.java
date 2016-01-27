@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.metrics;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -44,10 +45,15 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
+import org.apache.hadoop.yarn.server.metrics.AppAttemptMetricsConstants;
+import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
+import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
@@ -58,6 +64,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
 import org.apache.hadoop.yarn.server.timelineservice.collector.AppLevelTimelineCollector;
+import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.junit.AfterClass;
@@ -201,8 +208,7 @@ public class TestSystemMetricsPublisherForV2 {
             + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
     File appFile = new File(outputDirApp, timelineServiceFileName);
     Assert.assertTrue(appFile.exists());
-    Assert.assertEquals("Expected 3 events to be published", 3,
-        getNumOfNonEmptyLines(appFile));
+    verifyEntity(appFile, 3, ApplicationMetricsConstants.CREATED_EVENT_TYPE);
   }
 
   @Test(timeout = 10000)
@@ -236,8 +242,7 @@ public class TestSystemMetricsPublisherForV2 {
             + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
     File appFile = new File(outputDirApp, timelineServiceFileName);
     Assert.assertTrue(appFile.exists());
-    Assert.assertEquals("Expected 2 events to be published", 2,
-        getNumOfNonEmptyLines(appFile));
+    verifyEntity(appFile,2, AppAttemptMetricsConstants.REGISTERED_EVENT_TYPE);
   }
 
   @Test(timeout = 10000)
@@ -268,8 +273,8 @@ public class TestSystemMetricsPublisherForV2 {
             + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
     File appFile = new File(outputDirApp, timelineServiceFileName);
     Assert.assertTrue(appFile.exists());
-    Assert.assertEquals("Expected 2 events to be published", 2,
-        getNumOfNonEmptyLines(appFile));
+    verifyEntity(appFile, 2,
+        ContainerMetricsConstants.CREATED_IN_RM_EVENT_TYPE);
   }
 
   private RMApp createAppAndRegister(ApplicationId appId) {
@@ -282,20 +287,31 @@ public class TestSystemMetricsPublisherForV2 {
     return app;
   }
 
-  private long getNumOfNonEmptyLines(File entityFile) throws IOException {
+  private static void verifyEntity(File entityFile, long expectedEvents,
+      String eventForCreatedTime) throws IOException {
     BufferedReader reader = null;
     String strLine;
     long count = 0;
     try {
       reader = new BufferedReader(new FileReader(entityFile));
       while ((strLine = reader.readLine()) != null) {
-        if (strLine.trim().length() > 0)
+        if (strLine.trim().length() > 0) {
+          TimelineEntity entity = FileSystemTimelineReaderImpl.
+              getTimelineRecordFromJSON(strLine.trim(), TimelineEntity.class);
+          for (TimelineEvent event : entity.getEvents()) {
+            if (event.getId().equals(eventForCreatedTime)) {
+              assertTrue(entity.getCreatedTime() > 0);
+              break;
+            }
+          }
           count++;
+        }
       }
     } finally {
       reader.close();
     }
-    return count;
+    assertEquals("Expected " + expectedEvents + " events to be published",
+        count, expectedEvents);
   }
 
   private String getTimelineEntityDir(RMApp app) {

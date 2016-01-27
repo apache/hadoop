@@ -50,15 +50,12 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineHBas
  * | flowName!  | created_time:                | @timestamp1  |              |
  * | flowRunId! | 1392993084018                |              | configKey2:  |
  * | AppId      |                              | metriciD1:   | configValue2 |
- * |            | modified_time:               | metricValue2 |              |
- * |            | 1392995081012                | @timestamp2  |              |
+ * |            | i!infoKey:                   | metricValue2 |              |
+ * |            | infoValue                    | @timestamp2  |              |
  * |            |                              |              |              |
- * |            | i!infoKey:                   | metricId2:   |              |
- * |            | infoValue                    | metricValue1 |              |
+ * |            | r!relatesToKey:              | metricId2:   |              |
+ * |            | id3=id4=id5                  | metricValue1 |              |
  * |            |                              | @timestamp2  |              |
- * |            | r!relatesToKey:              |              |              |
- * |            | id3=id4=id5                  |              |              |
- * |            |                              |              |              |
  * |            | s!isRelatedToKey:            |              |              |
  * |            | id7=id9=id6                  |              |              |
  * |            |                              |              |              |

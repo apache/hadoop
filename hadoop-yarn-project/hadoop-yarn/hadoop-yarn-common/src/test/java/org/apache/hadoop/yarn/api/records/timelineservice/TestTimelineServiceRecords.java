@@ -139,7 +139,6 @@ public class TestTimelineServiceRecords {
         event1, event2);
 
     entity.setCreatedTime(0L);
-    entity.setModifiedTime(1L);
     entity.addRelatesToEntity("test type 2", "test id 2");
     entity.addRelatesToEntity("test type 3", "test id 3");
     entity.addIsRelatedToEntity("test type 4", "test id 4");

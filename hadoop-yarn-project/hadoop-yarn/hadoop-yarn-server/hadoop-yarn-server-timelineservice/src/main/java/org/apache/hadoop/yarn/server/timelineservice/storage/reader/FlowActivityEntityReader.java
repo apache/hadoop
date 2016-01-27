@@ -52,15 +52,14 @@ class FlowActivityEntityReader extends TimelineEntityReader {
   public FlowActivityEntityReader(String userId, String clusterId,
       String flowName, Long flowRunId, String appId, String entityType,
       Long limit, Long createdTimeBegin, Long createdTimeEnd,
-      Long modifiedTimeBegin, Long modifiedTimeEnd,
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
       Map<String, Object> infoFilters, Map<String, String> configFilters,
       Set<String> metricFilters, Set<String> eventFilters,
       EnumSet<Field> fieldsToRetrieve) {
     super(userId, clusterId, flowName, flowRunId, appId, entityType, limit,
-        createdTimeBegin, createdTimeEnd, modifiedTimeBegin, modifiedTimeEnd,
-        relatesTo, isRelatedTo, infoFilters, configFilters, metricFilters,
-        eventFilters, null, null, fieldsToRetrieve, true);
+        createdTimeBegin, createdTimeEnd, relatesTo, isRelatedTo, infoFilters,
+        configFilters, metricFilters, eventFilters, null, null,
+        fieldsToRetrieve, true);
   }
 
   public FlowActivityEntityReader(String userId, String clusterId,

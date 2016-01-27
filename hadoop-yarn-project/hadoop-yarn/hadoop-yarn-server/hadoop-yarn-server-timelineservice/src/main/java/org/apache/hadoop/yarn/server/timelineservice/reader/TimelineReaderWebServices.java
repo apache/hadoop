@@ -331,8 +331,6 @@ public class TimelineReaderWebServices {
       @QueryParam("limit") String limit,
       @QueryParam("createdtimestart") String createdTimeStart,
       @QueryParam("createdtimeend") String createdTimeEnd,
-      @QueryParam("modifiedtimestart") String modifiedTimeStart,
-      @QueryParam("modifiedtimeend") String modifiedTimeEnd,
       @QueryParam("relatesto") String relatesTo,
       @QueryParam("isrelatedto") String isRelatedTo,
       @QueryParam("infofilters") String infofilters,
@@ -341,9 +339,9 @@ public class TimelineReaderWebServices {
       @QueryParam("eventfilters") String eventfilters,
        @QueryParam("fields") String fields) {
     return getEntities(req, res, null, appId, entityType, userId, flowName,
-        flowRunId, limit, createdTimeStart, createdTimeEnd, modifiedTimeStart,
-        modifiedTimeEnd, relatesTo, isRelatedTo, infofilters, conffilters,
-        metricfilters, eventfilters, fields);
+        flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
+        isRelatedTo, infofilters, conffilters, metricfilters, eventfilters,
+        fields);
   }
 
   /**
@@ -364,8 +362,6 @@ public class TimelineReaderWebServices {
       @QueryParam("limit") String limit,
       @QueryParam("createdtimestart") String createdTimeStart,
       @QueryParam("createdtimeend") String createdTimeEnd,
-      @QueryParam("modifiedtimestart") String modifiedTimeStart,
-      @QueryParam("modifiedtimeend") String modifiedTimeEnd,
       @QueryParam("relatesto") String relatesTo,
       @QueryParam("isrelatedto") String isRelatedTo,
       @QueryParam("infofilters") String infofilters,
@@ -387,8 +383,7 @@ public class TimelineReaderWebServices {
           parseStr(userId), parseStr(clusterId), parseStr(flowName),
           parseLongStr(flowRunId), parseStr(appId), parseStr(entityType),
           parseLongStr(limit), parseLongStr(createdTimeStart),
-          parseLongStr(createdTimeEnd), parseLongStr(modifiedTimeStart),
-          parseLongStr(modifiedTimeEnd),
+          parseLongStr(createdTimeEnd),
           parseKeyStrValuesStr(relatesTo, COMMA_DELIMITER, COLON_DELIMITER),
           parseKeyStrValuesStr(isRelatedTo, COMMA_DELIMITER, COLON_DELIMITER),
           parseKeyStrValueObj(infofilters, COMMA_DELIMITER, COLON_DELIMITER),
@@ -398,7 +393,7 @@ public class TimelineReaderWebServices {
           parseFieldsStr(fields, COMMA_DELIMITER));
     } catch (Exception e) {
       handleException(e, url, startTime,
-          "createdTime or modifiedTime start/end or limit or flowrunid");
+          "createdTime start/end or limit or flowrunid");
     }
     long endTime = Time.monotonicNow();
     if (entities == null) {
@@ -585,8 +580,8 @@ public class TimelineReaderWebServices {
       entities = timelineReaderManager.getEntities(
           parseStr(userId), parseStr(clusterId), parseStr(flowName), null, null,
           TimelineEntityType.YARN_FLOW_RUN.toString(), parseLongStr(limit),
-          parseLongStr(createdTimeStart), parseLongStr(createdTimeEnd), null,
-          null, null, null, null, null, null, null,
+          parseLongStr(createdTimeStart), parseLongStr(createdTimeEnd),
+          null, null, null, null, null, null,
           parseFieldsStr(fields, COMMA_DELIMITER));
     } catch (Exception e) {
       handleException(e, url, startTime, "createdTime start/end or limit");
@@ -668,7 +663,7 @@ public class TimelineReaderWebServices {
           null, parseStr(clusterId), null, null, null,
           TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), parseLongStr(limit),
           range.dateStart, range.dateEnd, null, null, null, null, null, null,
-          null, null, parseFieldsStr(fields, COMMA_DELIMITER));
+          parseFieldsStr(fields, COMMA_DELIMITER));
     } catch (Exception e) {
       handleException(e, url, startTime, "limit");
     }
@@ -760,8 +755,6 @@ public class TimelineReaderWebServices {
       @QueryParam("limit") String limit,
       @QueryParam("createdtimestart") String createdTimeStart,
       @QueryParam("createdtimeend") String createdTimeEnd,
-      @QueryParam("modifiedtimestart") String modifiedTimeStart,
-      @QueryParam("modifiedtimeend") String modifiedTimeEnd,
       @QueryParam("relatesto") String relatesTo,
       @QueryParam("isrelatedto") String isRelatedTo,
       @QueryParam("infofilters") String infofilters,
@@ -771,9 +764,9 @@ public class TimelineReaderWebServices {
       @QueryParam("fields") String fields) {
     return getEntities(req, res, null, null,
         TimelineEntityType.YARN_APPLICATION.toString(), userId, flowName,
-        flowRunId, limit, createdTimeStart, createdTimeEnd, modifiedTimeStart,
-        modifiedTimeEnd, relatesTo, isRelatedTo, infofilters, conffilters,
-        metricfilters, eventfilters, fields);
+        flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
+        isRelatedTo, infofilters, conffilters, metricfilters, eventfilters,
+        fields);
   }
 
   /**
@@ -794,8 +787,6 @@ public class TimelineReaderWebServices {
       @QueryParam("limit") String limit,
       @QueryParam("createdtimestart") String createdTimeStart,
       @QueryParam("createdtimeend") String createdTimeEnd,
-      @QueryParam("modifiedtimestart") String modifiedTimeStart,
-      @QueryParam("modifiedtimeend") String modifiedTimeEnd,
       @QueryParam("relatesto") String relatesTo,
       @QueryParam("isrelatedto") String isRelatedTo,
       @QueryParam("infofilters") String infofilters,
@@ -805,9 +796,9 @@ public class TimelineReaderWebServices {
       @QueryParam("fields") String fields) {
     return getEntities(req, res, clusterId, null,
         TimelineEntityType.YARN_APPLICATION.toString(), userId, flowName,
-        flowRunId, limit, createdTimeStart, createdTimeEnd, modifiedTimeStart,
-        modifiedTimeEnd, relatesTo, isRelatedTo, infofilters, conffilters,
-        metricfilters, eventfilters, fields);
+        flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
+        isRelatedTo, infofilters, conffilters, metricfilters, eventfilters,
+        fields);
   }
 
   /**
@@ -827,8 +818,6 @@ public class TimelineReaderWebServices {
       @QueryParam("limit") String limit,
       @QueryParam("createdtimestart") String createdTimeStart,
       @QueryParam("createdtimeend") String createdTimeEnd,
-      @QueryParam("modifiedtimestart") String modifiedTimeStart,
-      @QueryParam("modifiedtimeend") String modifiedTimeEnd,
       @QueryParam("relatesto") String relatesTo,
       @QueryParam("isrelatedto") String isRelatedTo,
       @QueryParam("infofilters") String infofilters,
@@ -838,9 +827,8 @@ public class TimelineReaderWebServices {
       @QueryParam("fields") String fields) {
     return getEntities(req, res, null, null,
         TimelineEntityType.YARN_APPLICATION.toString(), userId, flowName,
-        null, limit, createdTimeStart, createdTimeEnd, modifiedTimeStart,
-        modifiedTimeEnd, relatesTo, isRelatedTo, infofilters, conffilters,
-        metricfilters, eventfilters, fields);
+        null, limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
+        infofilters, conffilters, metricfilters, eventfilters, fields);
   }
 
   /**
@@ -860,8 +848,6 @@ public class TimelineReaderWebServices {
       @QueryParam("limit") String limit,
       @QueryParam("createdtimestart") String createdTimeStart,
       @QueryParam("createdtimeend") String createdTimeEnd,
-      @QueryParam("modifiedtimestart") String modifiedTimeStart,
-      @QueryParam("modifiedtimeend") String modifiedTimeEnd,
       @QueryParam("relatesto") String relatesTo,
       @QueryParam("isrelatedto") String isRelatedTo,
       @QueryParam("infofilters") String infofilters,
@@ -871,8 +857,7 @@ public class TimelineReaderWebServices {
       @QueryParam("fields") String fields) {
     return getEntities(req, res, clusterId, null,
         TimelineEntityType.YARN_APPLICATION.toString(), userId, flowName,
-        null, limit, createdTimeStart, createdTimeEnd, modifiedTimeStart,
-        modifiedTimeEnd, relatesTo, isRelatedTo, infofilters, conffilters,
-        metricfilters, eventfilters, fields);
+        null, limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
+        infofilters, conffilters, metricfilters, eventfilters, fields);
   }
 }

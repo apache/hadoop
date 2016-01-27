@@ -140,7 +140,6 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
   private HashMap<String, Set<String>> isRelatedToEntities = new HashMap<>();
   private HashMap<String, Set<String>> relatesToEntities = new HashMap<>();
   private long createdTime;
-  private long modifiedTime;
 
   public TimelineEntity() {
     identifier = new Identifier();
@@ -502,24 +501,6 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
       this.createdTime = createdTime;
     } else {
       real.setCreatedTime(createdTime);
-    }
-  }
-
-  @XmlElement(name = "modifiedtime")
-  public long getModifiedTime() {
-    if (real == null) {
-      return modifiedTime;
-    } else {
-      return real.getModifiedTime();
-    }
-  }
-
-  @JsonSetter("modifiedtime")
-  public void setModifiedTime(long modifiedTime) {
-    if (real == null) {
-      this.modifiedTime = modifiedTime;
-    } else {
-      real.setModifiedTime(modifiedTime);
     }
   }
 
