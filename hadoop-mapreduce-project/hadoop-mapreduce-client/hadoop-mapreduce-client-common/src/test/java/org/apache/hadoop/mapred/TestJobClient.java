@@ -87,4 +87,14 @@ public class TestJobClient {
         client.getClusterHandle().getStagingAreaDir().toString()
             .equals(client.getStagingAreaDir().toString()));
   }
+
+  /**
+   * Asks the compiler to check if JobClient is AutoClosable.
+   */
+  @Test(timeout = 10000)
+  public void testAutoClosable() throws IOException {
+    Configuration conf = new Configuration();
+    try (JobClient jobClient = new JobClient(conf)) {
+    }
+  }
 }
