@@ -927,13 +927,13 @@ public class BlockManager implements BlockStatsMXBean {
       final BlockUnderConstructionFeature uc = blk.getUnderConstructionFeature();
       if (blk.isStriped()) {
         final DatanodeStorageInfo[] storages = uc.getExpectedStorageLocations();
-        final ExtendedBlock eb = new ExtendedBlock(getBlockPoolId(),
+        final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(),
             blk);
         return newLocatedStripedBlock(eb, storages, uc.getBlockIndices(), pos,
             false);
       } else {
         final DatanodeStorageInfo[] storages = uc.getExpectedStorageLocations();
-        final ExtendedBlock eb = new ExtendedBlock(getBlockPoolId(),
+        final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(),
             blk);
         return newLocatedBlock(eb, storages, pos, false);
       }
@@ -976,7 +976,7 @@ public class BlockManager implements BlockStatsMXBean {
       " numNodes: " + numNodes +
       " numCorrupt: " + numCorruptNodes +
       " numCorruptRepls: " + numCorruptReplicas;
-    final ExtendedBlock eb = new ExtendedBlock(getBlockPoolId(), blk);
+    final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
     return blockIndices == null ?
         newLocatedBlock(eb, machines, pos, isCorrupt) :
         newLocatedStripedBlock(eb, machines, blockIndices, pos, isCorrupt);
@@ -1653,7 +1653,7 @@ public class BlockManager implements BlockStatsMXBean {
         return false;
       }
       rw.getTargets()[0].getDatanodeDescriptor().addBlockToBeErasureCoded(
-          new ExtendedBlock(getBlockPoolId(), block),
+          new ExtendedBlock(namesystem.getBlockPoolId(), block),
           rw.getSrcNodes(), rw.getTargets(),
           ((ErasureCodingWork) rw).getLiveBlockIndicies(), ecPolicy);
     } else {

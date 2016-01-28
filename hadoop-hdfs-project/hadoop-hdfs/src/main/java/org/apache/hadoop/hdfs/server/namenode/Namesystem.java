@@ -35,13 +35,22 @@ public interface Namesystem extends RwLock, SafeMode {
   /** Is this name system running? */
   boolean isRunning();
 
+  /** Check if the user has superuser privilege. */
+  void checkSuperuserPrivilege() throws AccessControlException;
+
+  /** @return the block pool ID */
+  String getBlockPoolId();
+
   BlockCollection getBlockCollection(long id);
 
   void startSecretManagerIfNecessary();
 
   /**
-   * @param src file/directory path
-   * @return The {@link ErasureCodingPolicy} for the given file/directory path
+   * Gets the erasure coding policy for the path
+   * @param src
+   *          - path
+   * @return {@link ErasureCodingPolicy}
+   * @throws IOException
    */
   ErasureCodingPolicy getErasureCodingPolicyForPath(String src)
       throws IOException;

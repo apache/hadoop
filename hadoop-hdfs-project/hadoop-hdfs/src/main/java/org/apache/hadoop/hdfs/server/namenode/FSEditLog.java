@@ -960,7 +960,7 @@ public class FSEditLog implements LogsPurgeable {
   /**
    * Add legacy block generation stamp record to edit log
    */
-  void logLegacyGenerationStamp(long genstamp) {
+  void logGenerationStampV1(long genstamp) {
     SetGenstampV1Op op = SetGenstampV1Op.getInstance(cache.get())
         .setGenerationStamp(genstamp);
     logEdit(op);
@@ -969,7 +969,7 @@ public class FSEditLog implements LogsPurgeable {
   /**
    * Add generation stamp record to edit log
    */
-  void logGenerationStamp(long genstamp) {
+  void logGenerationStampV2(long genstamp) {
     SetGenstampV2Op op = SetGenstampV2Op.getInstance(cache.get())
         .setGenerationStamp(genstamp);
     logEdit(op);

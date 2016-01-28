@@ -4307,7 +4307,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return new PermissionStatus(fsOwner.getShortUserName(), supergroup, permission);
   }
 
-  void checkSuperuserPrivilege() throws AccessControlException {
+  @Override
+  public void checkSuperuserPrivilege()
+      throws AccessControlException {
     if (isPermissionEnabled) {
       FSPermissionChecker pc = getPermissionChecker();
       pc.checkSuperuserPrivilege();
@@ -4573,9 +4575,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     long gs = blockManager.nextGenerationStamp(legacyBlock);
     if (legacyBlock) {
-      getEditLog().logLegacyGenerationStamp(gs);
+      getEditLog().logGenerationStampV1(gs);
     } else {
-      getEditLog().logGenerationStamp(gs);
+      getEditLog().logGenerationStampV2(gs);
     }
 
     // NB: callers sync the log
