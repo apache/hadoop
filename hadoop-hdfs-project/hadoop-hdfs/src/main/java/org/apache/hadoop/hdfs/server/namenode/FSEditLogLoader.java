@@ -589,7 +589,7 @@ public class FSEditLogLoader {
     }
     case OP_SET_GENSTAMP_V1: {
       SetGenstampV1Op setGenstampV1Op = (SetGenstampV1Op)op;
-      blockManager.getBlockIdManager().setGenerationStampV1(
+      blockManager.getBlockIdManager().setLegacyGenerationStamp(
           setGenstampV1Op.genStampV1);
       break;
     }
@@ -797,7 +797,7 @@ public class FSEditLogLoader {
     }
     case OP_SET_GENSTAMP_V2: {
       SetGenstampV2Op setGenstampV2Op = (SetGenstampV2Op) op;
-      blockManager.getBlockIdManager().setGenerationStampV2(
+      blockManager.getBlockIdManager().setGenerationStamp(
           setGenstampV2Op.genStampV2);
       break;
     }

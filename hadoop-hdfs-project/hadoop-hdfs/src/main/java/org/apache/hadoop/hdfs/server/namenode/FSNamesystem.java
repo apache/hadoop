@@ -4575,9 +4575,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     long gs = blockManager.nextGenerationStamp(legacyBlock);
     if (legacyBlock) {
-      getEditLog().logGenerationStampV1(gs);
+      getEditLog().logLegacyGenerationStamp(gs);
     } else {
-      getEditLog().logGenerationStampV2(gs);
+      getEditLog().logGenerationStamp(gs);
     }
 
     // NB: callers sync the log
