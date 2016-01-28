@@ -51,8 +51,8 @@ public class TestLeaseManager {
     }
 
     assertEquals(4, lm.getINodeIdWithLeases().size());
-    synchronized (lm) {
-      lm.removeLeases(ids);
+    for (long id : ids) {
+      lm.removeLease(id);
     }
     assertEquals(0, lm.getINodeIdWithLeases().size());
   }

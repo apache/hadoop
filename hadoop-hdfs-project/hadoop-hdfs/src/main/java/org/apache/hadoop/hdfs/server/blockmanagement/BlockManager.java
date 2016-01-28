@@ -618,6 +618,10 @@ public class BlockManager implements BlockStatsMXBean {
     return (countNodes(block).liveReplicas() >= minReplication);
   }
 
+  public short getMinReplication() {
+    return minReplication;
+  }
+
   /**
    * Commit a block of a file
    * 
@@ -665,7 +669,7 @@ public class BlockManager implements BlockStatsMXBean {
     final boolean b = commitBlock(lastBlock, commitBlock);
     if (countNodes(lastBlock).liveReplicas() >= minReplication) {
       if (b) {
-        addExpectedReplicasToPending(lastBlock);
+        addExpectedReplicasToPending(lastBlock, bc);
       }
       completeBlock(lastBlock, false);
     }
@@ -677,6 +681,10 @@ public class BlockManager implements BlockStatsMXBean {
    * pendingReplications in order to keep ReplicationMonitor from scheduling
    * the block.
    */
+  public void addExpectedReplicasToPending(BlockInfo blk, BlockCollection bc) {
+    addExpectedReplicasToPending(blk);
+  }
+
   private void addExpectedReplicasToPending(BlockInfo lastBlock) {
     DatanodeStorageInfo[] expectedStorages =
         lastBlock.getUnderConstructionFeature().getExpectedStorageLocations();
@@ -2617,7 +2625,7 @@ public class BlockManager implements BlockStatsMXBean {
 
     if(storedBlock.getBlockUCState() == BlockUCState.COMMITTED &&
         numLiveReplicas >= minReplication) {
-      addExpectedReplicasToPending(storedBlock);
+      addExpectedReplicasToPending(storedBlock, bc);
       completeBlock(storedBlock, false);
     } else if (storedBlock.isComplete() && result == AddBlockResult.ADDED) {
       // check whether safe replication is reached for the block
@@ -3451,25 +3459,6 @@ public class BlockManager implements BlockStatsMXBean {
         processOverReplicatedBlock(block, expected, null, null);
       }
     }
-  }
-
-  /**
-   * Check that the indicated blocks are present and
-   * replicated.
-   */
-  public boolean checkBlocksProperlyReplicated(
-      String src, BlockInfo[] blocks) {
-    for (BlockInfo b: blocks) {
-      if (!b.isComplete()) {
-        final int numNodes = b.numNodes();
-        LOG.info("BLOCK* " + b + " is not COMPLETE (ucState = "
-          + b.getBlockUCState() + ", replication# = " + numNodes
-          + (numNodes < minReplication ? " < ": " >= ")
-          + " minimum = " + minReplication + ") in file " + src);
-        return false;
-      }
-    }
-    return true;
   }
 
   /** 
