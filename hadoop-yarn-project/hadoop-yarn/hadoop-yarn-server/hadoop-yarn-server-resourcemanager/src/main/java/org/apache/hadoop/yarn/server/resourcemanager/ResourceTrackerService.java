@@ -550,8 +550,6 @@ public class ResourceTrackerService extends AbstractService implements
     }
 
     // 4. Send status to RMNode, saving the latest response.
-    List<ApplicationId> keepAliveApps =
-        remoteNodeStatus.getKeepAliveApplications();
     RMNodeStatusEvent nodeStatusEvent =
         new RMNodeStatusEvent(nodeId, remoteNodeStatus, nodeHeartBeatResponse);
     if (request.getLogAggregationReportsForApps() != null
