@@ -403,6 +403,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6619. HADOOP_CLASSPATH is overwritten in MR container.
     (Junping Du via jianhe)
 
+    MAPREDUCE-6563. Streaming documentation contains a stray '%' character.
+    (cnauroth)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
