@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
@@ -54,11 +57,13 @@ public class TestDataStorage {
 
   @Before
   public void setUp() throws IOException {
+    Configuration conf = new HdfsConfiguration();
     storage = new DataStorage();
     nsInfo = new NamespaceInfo(0, CLUSTER_ID, DEFAULT_BPID, CTIME,
         BUILD_VERSION, SOFTWARE_VERSION);
     FileUtil.fullyDelete(TEST_DIR);
     assertTrue("Failed to make test dir.", TEST_DIR.mkdirs());
+    Mockito.when(mockDN.getConf()).thenReturn(conf);
   }
 
   @After
@@ -146,7 +151,7 @@ public class TestDataStorage {
     assertEquals(numLocations, storage.getNumStorageDirs());
 
     locations = createStorageLocations(numLocations);
-    List<StorageLocation> addedLocation =
+    List<StorageDirectory> addedLocation =
         storage.addStorageLocations(mockDN, namespaceInfos.get(0),
             locations, START_OPT);
     assertTrue(addedLocation.isEmpty());

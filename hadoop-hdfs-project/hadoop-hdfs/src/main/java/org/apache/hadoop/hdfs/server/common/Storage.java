@@ -640,7 +640,8 @@ public abstract class Storage extends StorageInfo {
         rename(getLastCheckpointTmp(), curDir);
         return;
       default:
-        throw new IOException("Unexpected FS state: " + curState);
+        throw new IOException("Unexpected FS state: " + curState
+            + " for storage directory: " + rootPath);
       }
     }
     
