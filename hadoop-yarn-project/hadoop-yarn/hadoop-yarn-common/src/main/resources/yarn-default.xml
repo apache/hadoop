@@ -2036,6 +2036,14 @@
     <value>604800</value>
   </property>
 
+  <property>
+    <name>yarn.timeline-service.entity-group-fs-store.leveldb-cache-read-cache-size</name>
+    <description>
+      Read cache size for the leveldb cache storage in ATS v1.5 plugin storage.
+    </description>
+    <value>10485760</value>
+  </property>
+
   <!--  Shared Cache Configuration -->
 
   <property>

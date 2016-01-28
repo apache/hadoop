@@ -102,7 +102,8 @@ public class EntityCacheItem {
       }
       if (!appLogs.getDetailLogs().isEmpty()) {
         if (store == null) {
-          store = new MemoryTimelineStore();
+          store = new LevelDBCacheTimelineStore(groupId.toString(),
+              "LeveldbCache." + groupId);
           store.init(config);
           store.start();
         }

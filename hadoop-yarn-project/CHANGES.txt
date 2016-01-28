@@ -384,6 +384,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4265. Provide new timeline plugin storage to support fine-grained entity
     caching. (Li Lu and Jason Lowe via junping_du)
 
+    YARN-4219. New levelDB cache storage for timeline v1.5. (Li Lu via xgong)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before

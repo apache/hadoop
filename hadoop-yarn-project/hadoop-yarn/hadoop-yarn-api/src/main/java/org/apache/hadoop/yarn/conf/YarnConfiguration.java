@@ -1702,6 +1702,13 @@ public class YarnConfiguration extends Configuration {
       DEFAULT_TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_RETRY_POLICY_SPEC =
       "2000, 500";
 
+  public static final String TIMELINE_SERVICE_LEVELDB_CACHE_READ_CACHE_SIZE =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX
+          + "leveldb-cache-read-cache-size";
+
+  public static final long
+      DEFAULT_TIMELINE_SERVICE_LEVELDB_CACHE_READ_CACHE_SIZE = 10 * 1024 * 1024;
+
   public static final String TIMELINE_SERVICE_CLIENT_FD_FLUSH_INTERVAL_SECS =
       TIMELINE_SERVICE_CLIENT_PREFIX + "fd-flush-interval-secs";
   public static final long
