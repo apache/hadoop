@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.timeline.util;
 
 
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.WritableComparator;
 
 import java.io.IOException;
@@ -176,5 +177,11 @@ public class LeveldbUtils {
     return WritableComparator.compareBytes(prefix, 0, prefixlen, b, 0,
         prefixlen) == 0;
   }
+
+  /**
+   * Default permission mask for the level db dir
+   */
+  public static final FsPermission LEVELDB_DIR_UMASK = FsPermission
+      .createImmutable((short) 0700);
 
 }
