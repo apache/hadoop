@@ -874,9 +874,6 @@ public class RMAppImpl implements RMApp, Recoverable {
       this.firstAttemptIdInStateStore = appState.getFirstAttemptId();
       this.nextAttemptId = firstAttemptIdInStateStore;
     }
-
-    // send the ATS create Event
-    sendATSCreateEvent(this, this.startTime);
     //TODO recover collector address.
     //this.collectorAddr = appState.getCollectorAddr();
 
