@@ -200,7 +200,7 @@ class PluginStoreTestUtils {
   }
 
   static TimelineDataManager getTdmWithMemStore(Configuration config) {
-    TimelineStore store = new MemoryTimelineStore();
+    TimelineStore store = new MemoryTimelineStore("MemoryStore.test");
     TimelineDataManager tdm = getTdmWithStore(config, store);
     return tdm;
   }
