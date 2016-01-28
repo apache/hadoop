@@ -498,7 +498,8 @@ public class TestReplication {
       Configuration conf = new HdfsConfiguration();
       conf.setLong(
           DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, 1);
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
+          .storagesPerDatanode(1).build();
       FileSystem fs = cluster.getFileSystem();
       FSDataOutputStream create = fs.create(new Path("/test"));
       fs.setReplication(new Path("/test"), (short) 1);

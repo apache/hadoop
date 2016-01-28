@@ -101,4 +101,19 @@ public class StorageLocation {
   public String toString() {
     return "[" + storageType + "]" + file.toURI();
   }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == this) {
+      return true;
+    } else if (obj == null || !(obj instanceof StorageLocation)) {
+      return false;
+    }
+    return toString().equals(obj.toString());
+  }
+
+  @Override
+  public int hashCode() {
+    return toString().hashCode();
+  }
 }

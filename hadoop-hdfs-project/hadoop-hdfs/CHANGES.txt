@@ -25,6 +25,8 @@ Release 2.7.3 - UNRELEASED
     HDFS-9634. webhdfs client side exceptions don't provide enough details
     (Eric Payne via kihwal)
 
+    HDFS-9654. Code refactoring for HDFS-8578.  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
