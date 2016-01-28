@@ -311,6 +311,8 @@ Release 2.9.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-6431. JobClient should be an AutoClosable (haibochen via rkanter)
+
   OPTIMIZATIONS
 
   BUG FIXES
