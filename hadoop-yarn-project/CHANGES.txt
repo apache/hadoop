@@ -167,6 +167,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4573. Fix test failure in TestRMAppTransitions#testAppRunningKill and
     testAppKilledKilled. (Takashi Ohnishi via rohithsharmaks)
 
+    YARN-4633. Fix random test failure in TestRMRestart#testRMRestartAfterPreemption
+    (Bibin A Chundatt via rohithsharmaks)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
