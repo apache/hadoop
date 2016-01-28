@@ -462,6 +462,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6584. Remove trailing whitespaces from mapred-default.xml.
     (aajisaka)
 
+    MAPREDUCE-6595. Fix findbugs warnings in OutputCommitter and 
+    FileOutputCommitter. (Akira AJISAKA via junping_du)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6376. Add avro binary support for jhist files (Ray Chiang via
