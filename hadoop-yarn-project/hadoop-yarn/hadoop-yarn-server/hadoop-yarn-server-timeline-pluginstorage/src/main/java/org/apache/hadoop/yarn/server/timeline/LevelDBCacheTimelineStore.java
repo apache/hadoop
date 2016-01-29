@@ -46,11 +46,11 @@ import java.util.Map;
  * There are two partitions of the key space. One partition is to store a
  * entity id to start time mapping:
  *
- * i!ENTITY_ID!ENTITY_TYPE -> ENTITY_START_TIME
+ * i!ENTITY_ID!ENTITY_TYPE to ENTITY_START_TIME
  *
  * The other partition is to store the actual data:
  *
- * e!START_TIME!ENTITY_ID!ENTITY_TYPE -> ENTITY_BYTES
+ * e!START_TIME!ENTITY_ID!ENTITY_TYPE to ENTITY_BYTES
  *
  * This storage does not have any garbage collection mechanism, and is designed
  * mainly for caching usages.
