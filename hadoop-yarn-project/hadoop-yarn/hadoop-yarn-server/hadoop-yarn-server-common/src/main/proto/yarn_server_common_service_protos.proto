@@ -72,6 +72,7 @@ message RegisterNodeManagerRequestProto {
   optional NodeLabelsProto nodeLabels = 8;
   optional ResourceProto physicalResource = 9;
   repeated LogAggregationReportProto log_aggregation_reports_for_apps = 10;
+  optional OverAllocationInfoProto overAllocationInfo = 11;
 }
 
 message RegisterNodeManagerResponseProto {
@@ -202,4 +203,13 @@ message SCMUploaderCanUploadRequestProto {
 
 message SCMUploaderCanUploadResponseProto {
   optional bool uploadable = 1;
+}
+
+message OverAllocationInfoProto {
+  optional ResourceThresholdsProto over_allocation_thresholds = 1;
+}
+
+message ResourceThresholdsProto {
+  optional float memory = 1 [default = 0];
+  optional float cpu = 2 [default = 0];
 }

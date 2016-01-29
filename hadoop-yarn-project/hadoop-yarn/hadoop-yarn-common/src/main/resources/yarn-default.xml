@@ -1726,6 +1726,27 @@
   </property>
 
   <property>
+    <description>The extent of over-allocation (container-allocation based on
+      current utilization instead of prior allocation) allowed on this node,
+      expressed as a float between 0 and 0.95. By default, over-allocation is
+      turned off (value = 0). When turned on, the node allows running
+      OPPORTUNISTIC containers when the aggregate utilization is under the
+      value specified here multiplied by the node's advertised capacity.
+    </description>
+    <name>yarn.nodemanager.overallocation.allocation-threshold</name>
+    <value>0f</value>
+  </property>
+
+  <property>
+    <description>When a node is over-allocated to improve utilization by
+      running OPPORTUNISTIC containers, this config captures the utilization
+      beyond which OPPORTUNISTIC containers should start getting preempted.
+    </description>
+    <name>yarn.nodemanager.overallocation.preemption-threshold</name>
+    <value>1</value>
+  </property>
+
+  <property>
     <description>This configuration setting determines the capabilities
       assigned to docker containers when they are launched. While these may not
       be case-sensitive from a docker perspective, it is best to keep these

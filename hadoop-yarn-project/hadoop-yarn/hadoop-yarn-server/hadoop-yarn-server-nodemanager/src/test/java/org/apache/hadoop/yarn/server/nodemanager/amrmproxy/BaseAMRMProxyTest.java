@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerStateTransitionListener;
+import org.apache.hadoop.yarn.server.api.records.OverAllocationInfo;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
@@ -768,6 +769,16 @@ public abstract class BaseAMRMProxyTest {
 
     @Override
     public ConcurrentLinkedQueue<LogAggregationReport> getLogAggregationStatusForApps() {
+      return null;
+    }
+
+    @Override
+    public boolean isOverAllocationEnabled() {
+      return false;
+    }
+
+    @Override
+    public OverAllocationInfo getOverAllocationInfo() {
       return null;
     }
 
