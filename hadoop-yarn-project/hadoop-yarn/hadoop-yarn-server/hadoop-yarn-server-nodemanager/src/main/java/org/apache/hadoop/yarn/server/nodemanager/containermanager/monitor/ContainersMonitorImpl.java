@@ -33,8 +33,11 @@ import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.server.api.records.OverAllocationInfo;
+import org.apache.hadoop.yarn.server.api.records.ResourceThresholds;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
@@ -97,6 +100,8 @@ public class ContainersMonitorImpl extends AbstractService implements
   }
 
   private ResourceUtilization containersUtilization;
+
+  private ResourceThresholds overAllocationPreemptionThresholds;
 
   private volatile boolean stopped = false;
 
@@ -172,6 +177,13 @@ public class ContainersMonitorImpl extends AbstractService implements
     LOG.info("Physical memory check enabled: " + pmemCheckEnabled);
     LOG.info("Virtual memory check enabled: " + vmemCheckEnabled);
 
+    initializeOverAllocation(conf);
+    if (context.isOverAllocationEnabled()) {
+      pmemCheckEnabled = true;
+      LOG.info("Force enabling physical memory checks because " +
+          "overallocation is enabled");
+    }
+
     containersMonitorEnabled =
         isContainerMonitorEnabled() && monitoringInterval > 0;
     LOG.info("ContainersMonitor enabled: " + containersMonitorEnabled);
@@ -209,6 +221,28 @@ public class ContainersMonitorImpl extends AbstractService implements
   private boolean isContainerMonitorEnabled() {
     return conf.getBoolean(YarnConfiguration.NM_CONTAINER_MONITOR_ENABLED,
         YarnConfiguration.DEFAULT_NM_CONTAINER_MONITOR_ENABLED);
+  }
+
+  private void initializeOverAllocation(Configuration conf) {
+    float overAllocationTreshold = conf.getFloat(
+        YarnConfiguration.NM_OVERALLOCATION_ALLOCATION_THRESHOLD,
+        YarnConfiguration.DEFAULT_NM_OVERALLOCATION_ALLOCATION_THRESHOLD);
+    overAllocationTreshold = Math.min(overAllocationTreshold,
+        YarnConfiguration.MAX_NM_OVERALLOCATION_ALLOCATION_THRESHOLD);
+    overAllocationTreshold = Math.max(0, overAllocationTreshold);
+
+    if (overAllocationTreshold > 0f) {
+      ((NodeManager.NMContext) context).setOverAllocationInfo(
+          OverAllocationInfo.newInstance(
+              ResourceThresholds.newInstance(overAllocationTreshold)));
+
+      float preemptionThreshold = conf.getFloat(
+          YarnConfiguration.NM_OVERALLOCATION_PREEMPTION_THRESHOLD,
+          YarnConfiguration.DEFAULT_NM_OVERALLOCATION_PREEMPTION_THRESHOLD);
+
+      this.overAllocationPreemptionThresholds =
+          ResourceThresholds.newInstance(preemptionThreshold);
+    }
   }
 
   private boolean isResourceCalculatorAvailable() {

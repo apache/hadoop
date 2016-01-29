@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManager;
+import org.apache.hadoop.yarn.server.api.records.OverAllocationInfo;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 
@@ -112,4 +113,8 @@ public interface Context {
   NMTimelinePublisher getNMTimelinePublisher();
 
   ContainerExecutor getContainerExecutor();
+
+  boolean isOverAllocationEnabled();
+
+  OverAllocationInfo getOverAllocationInfo();
 }

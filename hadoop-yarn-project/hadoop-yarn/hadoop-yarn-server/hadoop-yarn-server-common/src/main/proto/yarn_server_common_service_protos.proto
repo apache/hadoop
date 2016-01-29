@@ -64,6 +64,7 @@ message RegisterNodeManagerRequestProto {
   repeated ApplicationIdProto runningApplications = 7;
   optional NodeLabelsProto nodeLabels = 8;
   optional ResourceProto physicalResource = 9;
+  optional OverAllocationInfoProto overAllocationInfo = 10;
 }
 
 message RegisterNodeManagerResponseProto {
@@ -184,4 +185,13 @@ message SCMUploaderCanUploadRequestProto {
 
 message SCMUploaderCanUploadResponseProto {
   optional bool uploadable = 1;
+}
+
+message OverAllocationInfoProto {
+  optional ResourceThresholdsProto over_allocation_thresholds = 1;
+}
+
+message ResourceThresholdsProto {
+  optional float memory = 1 [default = 0];
+  optional float cpu = 2 [default = 0];
 }
