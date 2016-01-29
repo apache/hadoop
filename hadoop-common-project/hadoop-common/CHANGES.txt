@@ -650,6 +650,8 @@ Release 2.9.0 - UNRELEASED
 
   NEW FEATURES
 
+    HADOOP-12702. Add an HDFS metrics sink. (Daniel Templeton via kasha)
+
   IMPROVEMENTS
 
     HADOOP-12321. Make JvmPauseMonitor an AbstractService.
