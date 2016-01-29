@@ -1269,7 +1269,14 @@ public class TestNodeStatusUpdater {
     }
 
     Assert.assertEquals(STATE.STOPPED, nm.getServiceState());
-    Assert.assertEquals(numCleanups.get(), 1);
+
+    // It further takes a while after NM reached the STOPPED state.
+    waitCount = 0;
+    while (numCleanups.get() == 0 && waitCount++ != 20) {
+      LOG.info("Waiting for NM shutdown..");
+      Thread.sleep(1000);
+    }
+    Assert.assertEquals(1, numCleanups.get());
   }
 
   @Test
