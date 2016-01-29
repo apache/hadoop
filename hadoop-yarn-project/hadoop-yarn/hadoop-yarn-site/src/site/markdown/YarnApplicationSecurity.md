@@ -14,16 +14,15 @@
 
 # YARN Application Security
 
-YARN applications are somewhere where Hadoop authentication becomes most complex.
-
 Anyone writing a YARN application needs to understand the process, in order
 to write short-lived applications or long-lived services. They also need to
 start testing on secure clusters during early development stages, in order
 to write code that actually works.
 
-## YARN Service security
 
-YARN Resource Managers (RM) and Node Managers (NM) co-operate to execute
+## How YARN Security works
+
+YARN Resource Managers (RMs) and Node Managers (NMs) co-operate to execute
 the user's application with the identity and hence access rights of that user.
 
 The (active) Resource Manager:
@@ -70,41 +69,62 @@ be able to retrieve the security credentials supplied at launch time so
 that it itself may work with HDFS and any other services, and to pass some or
 all of these credentials down to the launched containers. 
 
-# Other aspects of YARN security
+### Acquiring and Adding tokens to a YARN Application
 
-## AM/RM token refresh
+The delegation tokens which a YARN application needs must be acquired
+from a program executing as an authenticated user. For a YARN application,
+this means the user launching the application. It is the client-side part
+of the YARN application which must do this
+
+1. Log in via `UserGroupInformation`.
+1. Identify all tokens which must be acquired.
+1. Request the specific tokens desired.
+1. Marshall all tokens into a byte buffer.
+1. Add them to the `ContainerLaunchContext` within the `ApplicationSubmissionContext`.
+
+Which tokens are required? By default: HDFS.
+
+Applications talking to other services, such as Apache HBase and Apache Hive,
+should request tokens from these services, using the libraries of these
+services to acquire delegation tokens. All tokens can be added to the same
+set of credentials, then saved to a byte buffer for submission.
+
+### Extracting tokens within the AM
+
+## Other Aspects of YARN Security
+
+### AM/RM Token Refresh
 
 The AM/RM token is renewed automatically; the AM pushes out a new token
 to the AM within an `allocate` message. Consult the `AMRMClientImpl` class
 to see the process.
 
-## Token Renewal on AM restart
+### Token Renewal on AM Restart
 
 Even if an application is renewing tokens regularly, if an AM fails and is
-restarted, it's going to be restarted from that original
+restarted, it gets restarted from that original
 `ApplicationSubmissionContext`. The tokens there may have expired, so localization
 may fail, even before the issue of credentials to talk to other services.
 
 How is this problem addressed? The YARN Resource Manager handles it, by
-renewing the tokens on behalf of the user. It needs to be configured with
-the permissions to do this (as with Oozie).
+renewing the tokens on behalf of the user.
 
-## Timeline Server integration
+### Timeline Server integration
 
-The [Timeline Server](TimelineServer.html) can be deployed as a secure service
+The [Application Timeline Server](TimelineServer.html) can be deployed as a secure service
 —in which case the application will need the relevant token to authenticate with
 it. This process is handled automatically in `YarnClientImpl` if ATS is
 enabled in a secure cluster. The AM-side `TimelineClient` client manages
 token renewal automatically.
 
-## Unmanaged Application Masters
+### Unmanaged Application Masters
 
 Unmanaged application masters are not launched in a container set up by
 the RM and NM, so cannot automatically pick up an AM/RM token at launch time.
 The `YarnClient.getAMRMToken()` API permits an Unmanaged AM to request an AM/RM
 token. Consult `UnmanagedAMLauncher` for the specifics.
 
-## Identity on an insecure cluster: `HADOOP_USER_NAME`
+### Identity on an insecure cluster: `HADOOP_USER_NAME`
 
 In an insecure cluster, the application will run as the identity of 
 the account of the node manager, typically something such as `yarn`
@@ -121,14 +141,23 @@ When Kerberos is disabled, the identity of a user is picked up
 by Hadoop first from the environment variable `HADOOP_USER_NAME`, 
 then from the OS-level username (e.g. the system property `user.name`).
 
+YARN applications should propagate the user name of the user launching
+an applicatin by setting this environment variable.
 
 ```java
+Map<String, String> env = new HashMap<>();
 String userName = UserGroupInformation.getCurrentUser().getUserName();
 env.put(UserGroupInformation.HADOOP_USER_NAME, userName);
 containerLaunchContext.setEnvironment(env);
 ```
 
-## Oozie integration and `HADOOP_TOKEN_FILE_LOCATION`
+Note that this environment variable is picked up in all applications
+which talk to HDFS via the hadoop libraries. That is, if set, it
+is the identity picked up by HBase and other applications executed
+within the environment of a YARN container within which this environment
+variable is set.
+
+### Oozie integration and `HADOOP_TOKEN_FILE_LOCATION`
 
 Apache Oozie can launch an application in a secure cluster either by acquiring
 all relevant credentials, saving them to a file in the local filesystem,
@@ -142,7 +171,7 @@ executing the YARN client. This client must use the token information saved
 in the named file *instead of acquiring any tokens of its own*. 
 
 
-# Token renewal on YARN services
+## Securing Long-lived YARN Services
 
 There is a time limit on all token renewals, after which tokens won't renew,
 and the application will stop working. This is somewhere between 72h and 7 days.
@@ -152,36 +181,79 @@ a strategy for renewing credentials.
 
 Here are the strategies:
 
-### Keytabs for AM and containers
+### Pre-installed Keytabs for AM and containers
 
-A keytab is provided for the application. This can be done by:
+A keytab is provided for the application's use on every node.
 
-1. Installing it in every cluster node, then providing the path
-to this in a configuration directory. The keytab must be in a secure directory path, where
-only the service (and other trusted accounts) can read it.
+This is done by:
 
-1. Including the keytab as a resource for the container, relying on the Node Manager localizer
-to download it from HDFS and store it locally. This avoids the administration task of
-installing keytabs for specific services. It does require the client to have access to the keytab
-and as it is uploaded to the distributed filesystem, must be secured through the appropriate 
-path permissions. 
+1. Installing it in every cluster node's local filesystem
+1. Providing the path to this in a configuration option.
+1. The application loading the credentials via `UserGroupInformation.loginUserFromKeytab()`
 
-This is the strategy adopted by Apache Slider (incubating). Slider also pushes out specified
-keytabs for deployed applications such as HBase, with the Application Master declaring the
-HDFS paths to them in its Container Launch Requests.
+The keytab must be in a secure directory path, where
+only the service (and other trusted accounts) can read it. Distribution
+becomes a responsibility of the cluster operations team.
+ 
+This is effectively how all static Hadoop applications get their security credentials.
 
-### AM keytab + renewal and forwarding of Delegation Tokens to containers
+### Keytabs for AM and containers distributed via YARN
 
-The Application Master is given the path to a keytab (usually a client-uploaded localized resource),
-so can stay authenticated with Kerberos. Launched containers are only given delegation tokens.
-Before a delegation token is due to expire, the processes running in the containers must request new
-tokens from the Application Master. Obviously, communications between containers and their Application
-Master must themselves be authenticated, so as to prevent malicious code from requesting the containers
-from an Application Master.
+
+1. A keytab is uploaded to HDFS.
+1. When launching the AM, the keytab is listed as a resource to localize to
+the AM's container.
+1. The Application Master is configured with the relative path to the keytab,
+and logs in with `UserGroupInformation.loginUserFromKeytab()`.
+1. When the AM launches the container, it list the HDFS path to the keytab
+as a resource to localize.
+1. It adds the HDFS delegation token to the container launch context, so
+that the keytab and other application files can be localized.
+1. Launched containers must themselves log in via `UserGroupInformation.loginUserFromKeytab()`.
+
+
+This avoids the administration task of installing keytabs for specific services
+across the entire cluster.
+
+It does require the client to have access to the keytab
+and, as it is uploaded to the distributed filesystem, must be secured through
+the appropriate path permissions/ACLs.
+
+As all containers have access to the keytab, all code executing in the containers
+has to be trusted. Malicious code (or code escaping some form of sandbox)
+could read the keytab, and hence have access to the cluster until the keys
+expire or are revoked.
+
+This is the strategy implemented by Apache Slider (incubating).
+
+### AM keytab distributed via YARN, AM generated and renewed delegation
+tokens for containers.
+
+1. A keytab is uploaded to HDFS.
+1. When launching the AM, the keytab is listed as a resource to localize to
+the AM's container.
+1. The Application Master is configured with the relative path to the keytab,
+and logs in with `UserGroupInformation.loginUserFromKeytab()`.
+1. When the AM launches a container, it acquires all the delegation tokens
+needed by that container, and adds them to the container container launch context.
+1. Launched containers must load the delegation tokens from `$HADOOP_TOKEN_FILE_LOCATION`,
+and use them (including renewals) until they can no longer be renewed.
+1. The AM must implement an IPC interface which permits containers to request
+a new set of delegation tokens; this interface must itself use authentication
+and ideally wire encryption.
+1. Before a delegation token is due to expire, the processes running in the containers
+must request new tokens from the Application Master, over the IPC channel.
 
 This is the strategy used by Apache Spark 1.5+.
-Communications between container processes and the AM is over secured channels.
 
+Because only the AM has direct access to the keytab, it is less exposed.
+Code running in the containers only has access to the delegation tokens.
+
+However, those containers will have access to HDFS from the tokens
+passed in at container launch, so will have access to the copy of the keytab
+used for launching the AM. While the AM could delete that keytab on launch,
+doing so would stop YARN being able to successfully relaunch the AM after any
+failure.
 
 ### Client-side push of renewed Delegation Tokens
 
@@ -191,7 +263,8 @@ for delegation tokens, tokens which are then pushed out to the Application Maste
 some RPC interface.
 
 This does require the client process to be re-executed on a regular basis; a cron or Oozie job
-can do this.
+can do this. The AM will need to implement an IPC API over which renewed
+tokens can be provided.
 
 ### AM-initiated reboot
 
@@ -233,12 +306,12 @@ Any REST endpoint (and equally, any web UI) brought up on a different port does 
 support SPNEGO authentication unless implemented in the YARN application itself.
 
 
-# Checklist for YARN Applications
+## Checklist for YARN Applications
 
 Here is the checklist of core actions which a YARN application must do
 to successfully launch in a YARN cluster.
 
-## Client
+### Client
 
 `[ ]` Client checks for security being enabled via `UserGroupInformation.isSecurityEnabled()`
 
@@ -261,7 +334,7 @@ In an insecure cluster
 `[ ]` Propagate local username to YARN AM, hence HDFS identity via the
 `HADOOP_USER_NAME` environment variable.
 
-## App Master
+### App Master
 
 `[ ]` In a secure cluster, AM retrieves security tokens from `HADOOP_TOKEN_FILE_LOCATION`
 environment variable,
@@ -269,16 +342,19 @@ environment variable,
 `[ ]` AM/RM token is extracted to build a credential set without this token -for
 container launch.
 
-## Container Launch by AM
+### Container Launch by AM
 
 `[ ]` Tokens to be passed to containers are passed set via 
 `ContainerLaunchContext.setTokens()`.
 
-## Launched Containers
+
+`[ ]` In an insecure cluster, propagate `HADOOP_USER_NAME` environment variable.
+
+### Launched Containers
 
 `[ ]` Call `UserGroupInformation.isSecurityEnabled()` to trigger security setup.
 
-## YARN service
+### YARN service
 
 `[ ]` Application has a token renewal strategy: shared keytab, AM keytab or
 client-side token refresh.
@@ -297,7 +373,7 @@ the list of resources to localize.
 all required delegation tokens to the Container Launch context alongside the
 HDFS delegation token.
 
-# Testing YARN applications in a secure cluster.
+## Testing YARN applications in a secure cluster.
 
 It is straightforward to be confident that a YARN application works in secure
 cluster. The process to do so is: test on a secure cluster.
