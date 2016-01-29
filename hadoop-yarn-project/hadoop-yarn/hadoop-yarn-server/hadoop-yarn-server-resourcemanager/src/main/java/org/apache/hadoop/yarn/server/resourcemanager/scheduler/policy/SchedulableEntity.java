@@ -18,15 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy;
 
-import java.util.*;
-
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 
 
 /**
- * A SchedulableEntity is a process to be scheduled, 
+ * A SchedulableEntity is a process to be scheduled.
  * for example, an application / application attempt
  */
 public interface SchedulableEntity {
@@ -52,5 +49,10 @@ public interface SchedulableEntity {
    * Get the priority of the application
    */
   public Priority getPriority();
+
+  /**
+   * Whether application was running before RM restart.
+   */
+  public boolean isRecovering();
 
 }
