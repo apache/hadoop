@@ -187,12 +187,18 @@ class BlockReceiver implements Closeable {
       this.maxSendIdleTime = (long) (readTimeout * 0.9);
       if (LOG.isDebugEnabled()) {
         LOG.debug(getClass().getSimpleName() + ": " + block
-            + "\n  isClient  =" + isClient + ", clientname=" + clientname
-            + "\n  isDatanode=" + isDatanode + ", srcDataNode=" + srcDataNode
-            + "\n  inAddr=" + inAddr + ", myAddr=" + myAddr
-            + "\n  cachingStrategy = " + cachingStrategy
-            + "\n  pinning=" + pinning
-            );
+            + "\n storageType=" + storageType + ", inAddr=" + inAddr
+            + ", myAddr=" + myAddr + "\n stage=" + stage + ", newGs=" + newGs
+            + ", minBytesRcvd=" + minBytesRcvd
+            + ", maxBytesRcvd=" + maxBytesRcvd + "\n clientname=" + clientname
+            + ", srcDataNode=" + srcDataNode
+            + ", datanode=" + datanode.getDisplayName()
+            + "\n requestedChecksum=" + requestedChecksum
+            + "\n cachingStrategy=" + cachingStrategy
+            + "\n allowLazyPersist=" + allowLazyPersist + ", pinning=" + pinning
+            + ", isClient=" + isClient + ", isDatanode=" + isDatanode
+            + ", responseInterval=" + responseInterval
+        );
       }
 
       //
