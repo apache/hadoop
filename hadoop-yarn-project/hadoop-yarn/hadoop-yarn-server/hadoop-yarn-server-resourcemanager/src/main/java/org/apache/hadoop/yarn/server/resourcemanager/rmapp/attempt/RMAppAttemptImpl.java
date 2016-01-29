@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -559,6 +560,21 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     originalTrackingUrl = pjoin(
         WebAppUtils.getResolvedRMWebAppURLWithScheme(conf),
         "cluster", "app", getAppAttemptId().getApplicationId());
+    switch (stateToBeStored) {
+    case KILLED:
+    case FAILED:
+      proxiedTrackingUrl = originalTrackingUrl;
+      break;
+    default:
+      break;
+    }
+  }
+
+  private void setTrackingUrlToAHSPage(RMAppAttemptState stateToBeStored) {
+    originalTrackingUrl = pjoin(
+        WebAppUtils.getHttpSchemePrefix(conf) +
+        WebAppUtils.getAHSWebAppURLWithoutScheme(conf),
+        "applicationhistory", "app", getAppAttemptId().getApplicationId());
     switch (stateToBeStored) {
     case KILLED:
     case FAILED:
@@ -1136,7 +1152,12 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     String diags = null;
 
     // don't leave the tracking URL pointing to a non-existent AM
-    setTrackingUrlToRMAppPage(stateToBeStored);
+    if (conf.getBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
+            YarnConfiguration.DEFAULT_APPLICATION_HISTORY_ENABLED)) {
+      setTrackingUrlToAHSPage(stateToBeStored);
+    } else {
+      setTrackingUrlToRMAppPage(stateToBeStored);
+    }
     String finalTrackingUrl = getOriginalTrackingUrl();
     FinalApplicationStatus finalStatus = null;
     int exitStatus = ContainerExitStatus.INVALID;
