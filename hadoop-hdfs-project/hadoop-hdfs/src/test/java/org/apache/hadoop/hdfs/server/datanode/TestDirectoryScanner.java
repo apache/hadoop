@@ -30,6 +30,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -54,6 +56,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeReferences;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
@@ -63,6 +66,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * Tests {@link DirectoryScanner} handling of differences
@@ -933,5 +937,51 @@ public class TestDirectoryScanner {
             "blk_567"),
         new File(TEST_VOLUME.getFinalizedDir(BPID_2).getAbsolutePath(),
             "blk_567__1004.meta"));
+  }
+
+  /**
+   * Test the behavior of exception handling during directory scan operation.
+   * Directory scanner shouldn't abort the scan on every directory just because
+   * one had an error.
+   */
+  @Test(timeout = 60000)
+  public void testExceptionHandlingWhileDirectoryScan() throws Exception {
+    cluster = new MiniDFSCluster.Builder(CONF).build();
+    try {
+      cluster.waitActive();
+      bpid = cluster.getNamesystem().getBlockPoolId();
+      fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
+      client = cluster.getFileSystem().getClient();
+      CONF.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY, 1);
+      DataNode dataNode = cluster.getDataNodes().get(0);
+
+      // Add files with 2 blocks
+      createFile(GenericTestUtils.getMethodName(), BLOCK_LENGTH * 2, false);
+
+      // Inject error on #getFinalizedDir() so that ReportCompiler#call() will
+      // hit exception while preparing the block info report list.
+      List<FsVolumeSpi> volumes = new ArrayList<>();
+      Iterator<FsVolumeSpi> iterator = fds.getFsVolumeReferences().iterator();
+      while (iterator.hasNext()) {
+        FsVolumeSpi volume = iterator.next();
+        FsVolumeSpi spy = Mockito.spy(volume);
+        Mockito.doThrow(new IOException("Error while getFinalizedDir"))
+            .when(spy).getFinalizedDir(volume.getBlockPoolList()[0]);
+        volumes.add(spy);
+      }
+      FsVolumeReferences volReferences = new FsVolumeReferences(volumes);
+      FsDatasetSpi<? extends FsVolumeSpi> spyFds = Mockito.spy(fds);
+      Mockito.doReturn(volReferences).when(spyFds).getFsVolumeReferences();
+
+      scanner = new DirectoryScanner(dataNode, spyFds, CONF);
+      scanner.setRetainDiffs(true);
+      scanner.reconcile();
+    } finally {
+      if (scanner != null) {
+        scanner.shutdown();
+        scanner = null;
+      }
+      cluster.shutdown();
+    }
   }
 }

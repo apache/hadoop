@@ -962,6 +962,9 @@ Release 2.9.0 - UNRELEASED
     HDFS-9677. Rename generationStampV1/generationStampV2 to
     legacyGenerationStamp/generationStamp. (Mingliang Liu via jing9)
 
+    HDFS-7764. DirectoryScanner shouldn't abort the scan if one directory had
+    an error (Rakesh R via cmccabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
