@@ -113,6 +113,8 @@ Release 2.9.0 - UNRELEASED
     integrated ResourceHandler mechanism, and also deprecated the old
     LCEResourceHandler inteface hierarchy. (Varun Vasudev via vinodkv)
 
+    YARN-4647. Make RegisterNodeManagerRequestPBImpl thread-safe. (kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
