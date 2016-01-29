@@ -1361,6 +1361,10 @@ Release 2.8.0 - UNRELEASED
     YARN-4643. Container recovery is broken with delegating container runtime
     (Sidharta Seethana via jlowe)
 
+    YARN-4617. LeafQueue#pendingOrderingPolicy should always use fixed ordering
+    policy instead of using same as active applications ordering policy.
+    (Rohith Sharma K S via jianhe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
