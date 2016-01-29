@@ -26,6 +26,7 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.RMHAUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
@@ -121,5 +122,9 @@ public class RMWebApp extends WebApp implements YarnWebParams {
   public String getHAZookeeperConnectionState() {
     return rm.getRMContext().getRMAdminService()
       .getHAZookeeperConnectionState();
+  }
+
+  public RMContext getRMContext() {
+    return rm.getRMContext();
   }
 }

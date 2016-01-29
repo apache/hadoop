@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.apache.hadoop.yarn.util.StringHelper.pjoin;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
@@ -35,9 +37,19 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HtmlQuoting;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
+import org.apache.hadoop.yarn.util.Apps;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Sets;
 import com.google.inject.Injector;
@@ -45,6 +57,8 @@ import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 
 @Singleton
 public class RMWebAppFilter extends GuiceContainer {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RMWebAppFilter.class);
 
   private Injector injector;
   /**
@@ -56,6 +70,8 @@ public class RMWebAppFilter extends GuiceContainer {
   private static final Set<String> NON_REDIRECTED_URIS = Sets.newHashSet(
       "/conf", "/stacks", "/logLevel", "/logs");
   private String path;
+  private boolean ahsEnabled;
+  private String ahsPageURLPrefix;
   private static final int BASIC_SLEEP_TIME = 5;
   private static final int MAX_SLEEP_TIME = 5 * 60;
   private static final Random randnum = new Random();
@@ -76,6 +92,13 @@ public class RMWebAppFilter extends GuiceContainer {
     path = YarnConfiguration.useHttps(conf)
         ? "https://" + path
         : "http://" + path;
+    ahsEnabled = conf.getBoolean(
+        YarnConfiguration.APPLICATION_HISTORY_ENABLED,
+        YarnConfiguration.DEFAULT_APPLICATION_HISTORY_ENABLED);
+    ahsPageURLPrefix = pjoin(
+        WebAppUtils.getHttpSchemePrefix(conf) +
+        WebAppUtils.getAHSWebAppURLWithoutScheme(
+            conf), "applicationhistory");
   }
 
   @Override
@@ -137,9 +160,76 @@ public class RMWebAppFilter extends GuiceContainer {
         }
       }
       return;
+    } else if (ahsEnabled) {
+      String ahsRedirectUrl = ahsRedirectPath(uri, rmWebApp);
+      if(ahsRedirectUrl != null) {
+        response.setHeader("Location", ahsRedirectUrl);
+        response.setStatus(HttpServletResponse.SC_TEMPORARY_REDIRECT);
+        return;
+      }
     }
 
     super.doFilter(request, response, chain);
+  }
+
+  private String ahsRedirectPath(String uri, RMWebApp rmWebApp) {
+    // TODO: Commonize URL parsing code. Will be done in YARN-4642.
+    String redirectPath = null;
+    if(uri.contains("/cluster/")) {
+      String[] parts = uri.split("/");
+      if(parts.length > 3) {
+        RMContext context = rmWebApp.getRMContext();
+        String type = parts[2];
+        ApplicationId appId = null;
+        ApplicationAttemptId appAttemptId = null;
+        ContainerId containerId = null;
+        switch(type){
+        case "app":
+          try {
+            appId = Apps.toAppID(parts[3]);
+          } catch (YarnRuntimeException | NumberFormatException e) {
+            LOG.debug("Error parsing {} as an ApplicationId",
+                parts[3], e);
+            return redirectPath;
+          }
+          if(!context.getRMApps().containsKey(appId)) {
+            redirectPath = pjoin(ahsPageURLPrefix, "app", appId);
+          }
+          break;
+        case "appattempt":
+          try{
+            appAttemptId = ConverterUtils.toApplicationAttemptId(parts[3]);
+          } catch (IllegalArgumentException e) {
+            LOG.debug("Error parsing {} as an ApplicationAttemptId",
+                parts[3], e);
+            return redirectPath;
+          }
+          if(!context.getRMApps().containsKey(
+              appAttemptId.getApplicationId())) {
+            redirectPath = pjoin(ahsPageURLPrefix,
+                "appattempt", appAttemptId);
+          }
+          break;
+        case "container":
+          try {
+            containerId = ContainerId.fromString(parts[3]);
+          } catch (IllegalArgumentException e) {
+            LOG.debug("Error parsing {} as an ContainerId",
+                parts[3], e);
+            return redirectPath;
+          }
+          if(!context.getRMApps().containsKey(
+              containerId.getApplicationAttemptId().getApplicationId())) {
+            redirectPath = pjoin(ahsPageURLPrefix,
+                "container", containerId);
+          }
+          break;
+        default:
+          break;
+        }
+      }
+    }
+    return redirectPath;
   }
 
   private boolean shouldRedirect(RMWebApp rmWebApp, String uri) {
