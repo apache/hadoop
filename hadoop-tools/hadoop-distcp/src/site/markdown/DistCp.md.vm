@@ -218,7 +218,7 @@ Command Line Options
 
 Flag              | Description                          | Notes
 ----------------- | ------------------------------------ | --------
-`-p[rbugpcax]` | Preserve r: replication number b: block size u: user g: group p: permission c: checksum-type a: ACL x: XAttr | Modification times are not preserved. Also, when `-update` is specified, status updates will **not** be synchronized unless the file sizes also differ (i.e. unless the file is re-created). If -pa is specified, DistCp preserves the permissions also because ACLs are a super-set of permissions.
+`-p[rbugpcaxt]` | Preserve r: replication number b: block size u: user g: group p: permission c: checksum-type a: ACL x: XAttr t: timestamp | When `-update` is specified, status updates will **not** be synchronized unless the file sizes also differ (i.e. unless the file is re-created). If -pa is specified, DistCp preserves the permissions also because ACLs are a super-set of permissions.
 `-i` | Ignore failures | As explained in the Appendix, this option will keep more accurate statistics about the copy than the default case. It also preserves logs from failed copies, which can be valuable for debugging. Finally, a failing map will not cause the job to fail before all splits are attempted.
 `-log <logdir>` | Write logs to \<logdir\> | DistCp keeps logs of each file it attempts to copy as map output. If a map fails, the log output will not be retained if it is re-executed.
 `-m <num_maps>` | Maximum number of simultaneous copies | Specify the number of maps to copy data. Note that more maps may not necessarily improve throughput.
@@ -234,6 +234,9 @@ Flag              | Description                          | Notes
 `-atomic {-tmp <tmp_dir>}` | Specify atomic commit, with optional tmp directory. | `-atomic` instructs DistCp to copy the source data to a temporary target location, and then move the temporary target to the final-location atomically. Data will either be available at final target in a complete and consistent form, or not at all. Optionally, `-tmp` may be used to specify the location of the tmp-target. If not specified, a default is chosen. **Note:** tmp_dir must be on the final target cluster.
 `-mapredSslConf <ssl_conf_file>` | Specify SSL Config file, to be used with HSFTP source | When using the hsftp protocol with a source, the security- related properties may be specified in a config-file and passed to DistCp. \<ssl_conf_file\> needs to be in the classpath.
 `-async` | Run DistCp asynchronously. Quits as soon as the Hadoop Job is launched. | The Hadoop Job-id is logged, for tracking.
+`-diff` | Use snapshot diff report to identify the difference between source and target. |
+`-numListstatusThreads` | Number of threads to use for building file listing | At most 40 threads.
+`-skipcrccheck` | Whether to skip CRC checks between source and target paths. |
 
 Architecture of DistCp
 ----------------------
@@ -441,8 +444,7 @@ $H3 SSL Configurations for HSFTP sources
   * `ssl.client.truststore.password`: (Optional) Password for the trust-store
     file.
 
-  The following is an example of the contents of the contents of a SSL
-  Configuration file:
+  The following is an example SSL configuration file:
 
     <configuration>
       <property>
