@@ -197,7 +197,21 @@ message QueryPlanStatusResponseProto {
   optional string status = 2;
   optional string planID = 3;
   optional string currentStatus = 4;
+}
 
+/**
+  * This message sends a request to data node get a specific setting
+  * that is used by disk balancer.
+  */
+message DiskBalancerSettingRequestProto {
+  required string key = 1;
+}
+
+/**
+ * Response that describes the value of requested disk balancer setting.
+ */
+message DiskBalancerSettingResponseProto {
+  required string value = 1;
 }
 
 /**
@@ -275,4 +289,9 @@ service ClientDatanodeProtocolService {
    */
   rpc queryDiskBalancerPlan(QueryPlanStatusRequestProto)
       returns (QueryPlanStatusResponseProto);
+  /**
+   *  Gets run-time settings of Disk Balancer.
+   */
+  rpc getDiskBalancerSetting(DiskBalancerSettingRequestProto)
+      returns(DiskBalancerSettingResponseProto);
 }

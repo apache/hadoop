@@ -3322,4 +3322,18 @@ public class DataNode extends ReconfigurableBase
     checkSuperuserPrivilege();
     throw new DiskbalancerException("Not Implemented", 0);
   }
+
+  /**
+   * Gets a run-time configuration value from running diskbalancer instance. For
+   * example : Disk Balancer bandwidth of a running instance.
+   *
+   * @param key - String that represents the run time key value.
+   * @return value of the key as a string.
+   * @throws IOException - Throws if there is no such key
+   */
+  @Override
+  public String getDiskBalancerSetting(String key) throws IOException {
+    checkSuperuserPrivilege();
+    throw new DiskbalancerException("Not Implemented", 0);
+  }
 }

@@ -60,7 +60,7 @@ public class TestDiskBalancerRPC {
   }
 
   @Test
-  public void TestSubmitTestRpc() throws Exception {
+  public void testSubmitTestRpc() throws Exception {
     final int dnIndex = 0;
     cluster.restartDataNode(dnIndex);
     cluster.waitActive();
@@ -91,7 +91,7 @@ public class TestDiskBalancerRPC {
   }
 
   @Test
-  public void TestCancelTestRpc() throws Exception {
+  public void testCancelTestRpc() throws Exception {
     final int dnIndex = 0;
     cluster.restartDataNode(dnIndex);
     cluster.waitActive();
@@ -122,11 +122,10 @@ public class TestDiskBalancerRPC {
     }
     thrown.expect(DiskbalancerException.class);
     dataNode.cancelDiskBalancePlan(planHash);
-
   }
 
   @Test
-  public void TestQueryTestRpc() throws Exception {
+  public void testQueryTestRpc() throws Exception {
     final int dnIndex = 0;
     cluster.restartDataNode(dnIndex);
     cluster.waitActive();
@@ -161,5 +160,14 @@ public class TestDiskBalancerRPC {
     // function in server side.
     thrown.expect(DiskbalancerException.class);
     dataNode.queryDiskBalancerPlan();
+  }
+
+  @Test
+  public void testgetDiskBalancerSetting() throws Exception {
+    final int dnIndex = 0;
+    DataNode dataNode = cluster.getDataNodes().get(dnIndex);
+    thrown.expect(DiskbalancerException.class);
+    dataNode.getDiskBalancerSetting(
+        DiskBalancerConstants.DISKBALANCER_BANDWIDTH);
   }
 }

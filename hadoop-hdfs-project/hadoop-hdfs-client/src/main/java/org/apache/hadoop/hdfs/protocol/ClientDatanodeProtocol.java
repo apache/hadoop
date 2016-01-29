@@ -183,4 +183,14 @@ public interface ClientDatanodeProtocol {
    * Gets the status of an executing diskbalancer Plan.
    */
   WorkStatus queryDiskBalancerPlan() throws IOException;
+
+  /**
+   * Gets a run-time configuration value from running diskbalancer instance.
+   * For example : Disk Balancer bandwidth of a running instance.
+   *
+   * @param key runtime configuration key
+   * @return value of the key as a string.
+   * @throws IOException - Throws if there is no such key
+   */
+  String getDiskBalancerSetting(String key) throws IOException;
 }
