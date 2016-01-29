@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,7 +36,7 @@ public class FileNameIndexUtils {
   // Sanitize job history file for predictable parsing
   static final String DELIMITER = "-";
   static final String DELIMITER_ESCAPE = "%2D";
-  
+
   private static final Log LOG = LogFactory.getLog(FileNameIndexUtils.class);
 
   // Job history file names need to be backwards compatible
@@ -57,7 +58,8 @@ public class FileNameIndexUtils {
    * @param indexInfo the index info.
    * @return the done job history filename.
    */
-  public static String getDoneFileName(JobIndexInfo indexInfo) throws IOException {
+  public static String getDoneFileName(JobIndexInfo indexInfo)
+      throws IOException {
     return getDoneFileName(indexInfo,
         JHAdminConfig.DEFAULT_MR_HS_JOBNAME_LIMIT);
   }
@@ -66,49 +68,58 @@ public class FileNameIndexUtils {
       int jobNameLimit) throws IOException {
     StringBuilder sb = new StringBuilder();
     //JobId
-    sb.append(escapeDelimiters(TypeConverter.fromYarn(indexInfo.getJobId()).toString()));
+    sb.append(encodeJobHistoryFileName(escapeDelimiters(
+        TypeConverter.fromYarn(indexInfo.getJobId()).toString())));
     sb.append(DELIMITER);
-    
+
     //SubmitTime
-    sb.append(indexInfo.getSubmitTime());
+    sb.append(encodeJobHistoryFileName(String.valueOf(
+        indexInfo.getSubmitTime())));
     sb.append(DELIMITER);
-    
+
     //UserName
-    sb.append(escapeDelimiters(getUserName(indexInfo)));
+    sb.append(encodeJobHistoryFileName(escapeDelimiters(
+        getUserName(indexInfo))));
     sb.append(DELIMITER);
-    
+
     //JobName
-    sb.append(escapeDelimiters(trimJobName(
-        getJobName(indexInfo), jobNameLimit)));
+    sb.append(trimURLEncodedString(encodeJobHistoryFileName(escapeDelimiters(
+        getJobName(indexInfo))), jobNameLimit));
     sb.append(DELIMITER);
-    
+
     //FinishTime
-    sb.append(indexInfo.getFinishTime());
+    sb.append(encodeJobHistoryFileName(
+        String.valueOf(indexInfo.getFinishTime())));
     sb.append(DELIMITER);
-    
+
     //NumMaps
-    sb.append(indexInfo.getNumMaps());
+    sb.append(encodeJobHistoryFileName(
+        String.valueOf(indexInfo.getNumMaps())));
     sb.append(DELIMITER);
-    
+
     //NumReduces
-    sb.append(indexInfo.getNumReduces());
+    sb.append(encodeJobHistoryFileName(
+        String.valueOf(indexInfo.getNumReduces())));
     sb.append(DELIMITER);
-    
+
     //JobStatus
-    sb.append(indexInfo.getJobStatus());
+    sb.append(encodeJobHistoryFileName(indexInfo.getJobStatus()));
     sb.append(DELIMITER);
-    
+
     //QueueName
-    sb.append(escapeDelimiters(getQueueName(indexInfo)));
+    sb.append(escapeDelimiters(encodeJobHistoryFileName(
+        getQueueName(indexInfo))));
     sb.append(DELIMITER);
 
     //JobStartTime
-    sb.append(indexInfo.getJobStartTime());
+    sb.append(encodeJobHistoryFileName(
+        String.valueOf(indexInfo.getJobStartTime())));
 
-    sb.append(JobHistoryUtils.JOB_HISTORY_FILE_EXTENSION);
-    return encodeJobHistoryFileName(sb.toString());
+    sb.append(encodeJobHistoryFileName(
+        JobHistoryUtils.JOB_HISTORY_FILE_EXTENSION));
+    return sb.toString();
   }
-  
+
   /**
    * Parses the provided job history file name to construct a
    * JobIndexInfo object which is returned.
@@ -116,21 +127,24 @@ public class FileNameIndexUtils {
    * @param jhFileName the job history filename.
    * @return a JobIndexInfo object built from the filename.
    */
-  public static JobIndexInfo getIndexInfo(String jhFileName) throws IOException {
-    String fileName = jhFileName.substring(0, jhFileName.indexOf(JobHistoryUtils.JOB_HISTORY_FILE_EXTENSION));
+  public static JobIndexInfo getIndexInfo(String jhFileName)
+      throws IOException {
+    String fileName = jhFileName.substring(0,
+        jhFileName.indexOf(JobHistoryUtils.JOB_HISTORY_FILE_EXTENSION));
     JobIndexInfo indexInfo = new JobIndexInfo();
-    
+
     String[] jobDetails = fileName.split(DELIMITER);
-    
-    JobID oldJobId = JobID.forName(decodeJobHistoryFileName(jobDetails[JOB_ID_INDEX]));
+
+    JobID oldJobId =
+        JobID.forName(decodeJobHistoryFileName(jobDetails[JOB_ID_INDEX]));
     JobId jobId = TypeConverter.toYarn(oldJobId);
     indexInfo.setJobId(jobId);
 
     // Do not fail if there are some minor parse errors
     try {
       try {
-        indexInfo.setSubmitTime(
-            Long.parseLong(decodeJobHistoryFileName(jobDetails[SUBMIT_TIME_INDEX])));
+        indexInfo.setSubmitTime(Long.parseLong(
+            decodeJobHistoryFileName(jobDetails[SUBMIT_TIME_INDEX])));
       } catch (NumberFormatException e) {
         LOG.warn("Unable to parse submit time from job history file "
             + jhFileName + " : " + e);
@@ -143,24 +157,24 @@ public class FileNameIndexUtils {
           decodeJobHistoryFileName(jobDetails[JOB_NAME_INDEX]));
 
       try {
-        indexInfo.setFinishTime(
-            Long.parseLong(decodeJobHistoryFileName(jobDetails[FINISH_TIME_INDEX])));
+        indexInfo.setFinishTime(Long.parseLong(
+            decodeJobHistoryFileName(jobDetails[FINISH_TIME_INDEX])));
       } catch (NumberFormatException e) {
         LOG.warn("Unable to parse finish time from job history file "
             + jhFileName + " : " + e);
       }
 
       try {
-        indexInfo.setNumMaps(
-            Integer.parseInt(decodeJobHistoryFileName(jobDetails[NUM_MAPS_INDEX])));
+        indexInfo.setNumMaps(Integer.parseInt(
+            decodeJobHistoryFileName(jobDetails[NUM_MAPS_INDEX])));
       } catch (NumberFormatException e) {
         LOG.warn("Unable to parse num maps from job history file "
             + jhFileName + " : " + e);
       }
 
       try {
-        indexInfo.setNumReduces(
-            Integer.parseInt(decodeJobHistoryFileName(jobDetails[NUM_REDUCES_INDEX])));
+        indexInfo.setNumReduces(Integer.parseInt(
+            decodeJobHistoryFileName(jobDetails[NUM_REDUCES_INDEX])));
       } catch (NumberFormatException e) {
         LOG.warn("Unable to parse num reduces from job history file "
             + jhFileName + " : " + e);
@@ -176,8 +190,8 @@ public class FileNameIndexUtils {
         if (jobDetails.length <= JOB_START_TIME_INDEX) {
           indexInfo.setJobStartTime(indexInfo.getSubmitTime());
         } else {
-          indexInfo.setJobStartTime(
-              Long.parseLong(decodeJobHistoryFileName(jobDetails[JOB_START_TIME_INDEX])));
+          indexInfo.setJobStartTime(Long.parseLong(
+              decodeJobHistoryFileName(jobDetails[JOB_START_TIME_INDEX])));
         }
       } catch (NumberFormatException e){
         LOG.warn("Unable to parse start time from job history file "
@@ -187,13 +201,13 @@ public class FileNameIndexUtils {
       LOG.warn("Parsing job history file with partial data encoded into name: "
           + jhFileName);
     }
-    
+
     return indexInfo;
   }
 
   
   /**
-   * Helper function to encode the URL of the filename of the job-history 
+   * Helper function to encode the URL of the filename of the job-history
    * log file.
    * 
    * @param logFileName file name of the job-history file
@@ -208,7 +222,8 @@ public class FileNameIndexUtils {
     if (logFileName.contains(DELIMITER_ESCAPE)) {
       replacementDelimiterEscape = nonOccursString(logFileName);
 
-      logFileName = logFileName.replaceAll(DELIMITER_ESCAPE, replacementDelimiterEscape);
+      logFileName = logFileName.replaceAll(
+          DELIMITER_ESCAPE, replacementDelimiterEscape);
     }
 
     String encodedFileName = null;
@@ -223,14 +238,15 @@ public class FileNameIndexUtils {
 
     // Restore protected escape delimiters after encoding
     if (replacementDelimiterEscape != null) {
-      encodedFileName = encodedFileName.replaceAll(replacementDelimiterEscape, DELIMITER_ESCAPE);
+      encodedFileName = encodedFileName.replaceAll(
+          replacementDelimiterEscape, DELIMITER_ESCAPE);
     }
 
     return encodedFileName;
   }
-  
+
   /**
-   * Helper function to decode the URL of the filename of the job-history 
+   * Helper function to decode the URL of the filename of the job-history
    * log file.
    * 
    * @param logFileName file name of the job-history file
@@ -250,7 +266,7 @@ public class FileNameIndexUtils {
     }
     return decodedFileName;
   }
-  
+
   static String nonOccursString(String logFileName) {
     int adHocIndex = 0;
 
@@ -262,11 +278,11 @@ public class FileNameIndexUtils {
 
     return unfoundString + "q";
   }
-  
+
   private static String getUserName(JobIndexInfo indexInfo) {
     return getNonEmptyString(indexInfo.getUser());
   }
-  
+
   private static String getJobName(JobIndexInfo indexInfo) {
     return getNonEmptyString(indexInfo.getJobName());
   }
@@ -283,18 +299,65 @@ public class FileNameIndexUtils {
     }
     return in;
   }
-  
+
   private static String escapeDelimiters(String escapee) {
     return escapee.replaceAll(DELIMITER, DELIMITER_ESCAPE);
   }
 
   /**
-   * Trims the job-name if required
+   * Trims the url-encoded string if required
    */
-  private static String trimJobName(String jobName, int jobNameLimit) {
-    if (jobName.length() > jobNameLimit) {
-      jobName = jobName.substring(0, jobNameLimit);
+  private static String trimURLEncodedString(
+      String encodedString, int limitLength) {
+    assert(limitLength >= 0) : "limitLength should be positive integer";
+
+    if (encodedString.length() < limitLength) {
+      return encodedString;
     }
-    return jobName;
+
+    int index = 0;
+    int increase = 0;
+    byte[] strBytes = encodedString.getBytes(UTF_8);
+
+    // calculate effective character length based on UTF-8 specification.
+    // The size of a character coded in UTF-8 should be 4-byte at most.
+    // See RFC3629
+    while (true) {
+      byte b = strBytes[index];
+      if (b == '%') {
+        byte minuend1 = strBytes[index + 1];
+        byte subtrahend1 = (byte)(Character.isDigit(
+            minuend1) ? '0' : 'A' - 10);
+        byte minuend2 = strBytes[index + 2];
+        byte subtrahend2 = (byte)(Character.isDigit(
+            minuend2) ? '0' : 'A' - 10);
+        int initialHex =
+            ((Character.toUpperCase(minuend1) - subtrahend1) << 4) +
+            (Character.toUpperCase(minuend2) - subtrahend2);
+
+        if (0x00 <= initialHex && initialHex <= 0x7F) {
+          // For 1-byte UTF-8 characters
+          increase = 3;
+        } else if (0xC2 <= initialHex && initialHex <= 0xDF) {
+          // For 2-byte UTF-8 characters
+          increase = 6;
+        } else if (0xE0 <= initialHex && initialHex <= 0xEF) {
+          // For 3-byte UTF-8 characters
+          increase = 9;
+        } else {
+          // For 4-byte UTF-8 characters
+          increase = 12;
+        }
+      } else {
+        increase = 1;
+      }
+      if (index + increase > limitLength) {
+        break;
+      } else {
+        index += increase;
+      }
+    }
+
+    return encodedString.substring(0, index);
   }
 }
