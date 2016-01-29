@@ -918,6 +918,19 @@ public class TestRMAppAttemptTransitions {
   }
   
   @Test(timeout = 10000)
+  public void testCreateAppAttemptReport() {
+    RMAppAttemptState[] attemptStates = RMAppAttemptState.values();
+    applicationAttempt.handle(new RMAppAttemptEvent(
+        applicationAttempt.getAppAttemptId(), RMAppAttemptEventType.KILL));
+    // ALL RMAppAttemptState TO BE CHECK
+    RMAppAttempt attempt = spy(applicationAttempt);
+    for (RMAppAttemptState rmAppAttemptState : attemptStates) {
+      when(attempt.getState()).thenReturn(rmAppAttemptState);
+      attempt.createApplicationAttemptReport();
+    }
+  }
+
+  @Test(timeout = 10000)
   public void testLaunchedAtFinalSaving() {
     Container amContainer = allocateApplicationAttempt();
 
