@@ -709,6 +709,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6563. Streaming documentation contains a stray '%' character.
     (cnauroth)
 
+    MAPREDUCE-6616. Fail to create jobhistory file if there are some multibyte
+    characters in the job name. (Kousuke Saruta via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
