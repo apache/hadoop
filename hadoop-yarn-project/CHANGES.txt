@@ -392,6 +392,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4219. New levelDB cache storage for timeline v1.5. (Li Lu via xgong)
 
+    YARN-4411. RMAppAttemptImpl#createApplicationAttemptReport throws
+    IllegalArgumentException. (Bibin A Chundatt, yarntime via devaraj)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
