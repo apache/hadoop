@@ -168,27 +168,21 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         .getAbsolutePath());
 
     writeToHostsFile("");
-    final DrainDispatcher dispatcher = new DrainDispatcher();
-    rm = new MockRM(conf) {
-      @Override
-      protected Dispatcher createDispatcher() {
-        return dispatcher;
-      }
-    };
+    rm = new MockRM(conf);
     rm.start();
 
     MockNM nm1 = rm.registerNode("host1:1234", 5120);
     MockNM nm2 = rm.registerNode("host2:5678", 10240);
     MockNM nm3 = rm.registerNode("localhost:4433", 1024);
 
-    dispatcher.await();
+    rm.drainEvents();
 
     int metricCount = ClusterMetrics.getMetrics().getNumDecommisionedNMs();
     NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     nodeHeartbeat = nm2.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
-    dispatcher.await();
+    rm.drainEvents();
 
     // To test that IPs also work
     String ip = NetUtils.normalizeHostName("localhost");
@@ -207,15 +201,15 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     nodeHeartbeat = nm3.nodeHeartbeat(true);
     Assert.assertTrue("The decommisioned metrics are not updated",
         NodeAction.SHUTDOWN.equals(nodeHeartbeat.getNodeAction()));
-    dispatcher.await();
+    rm.drainEvents();
 
     writeToHostsFile("");
     rm.getNodesListManager().refreshNodes(conf);
 
     nm3 = rm.registerNode("localhost:4433", 1024);
-    dispatcher.await();
+    rm.drainEvents();
     nodeHeartbeat = nm3.nodeHeartbeat(true);
-    dispatcher.await();
+    rm.drainEvents();
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     // decommissined node is 1 since 1 node is rejoined after updating exclude
     // file
@@ -990,7 +984,6 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
 
   @Test
   public void testReconnectNode() throws Exception {
-    final DrainDispatcher dispatcher = new DrainDispatcher();
     rm = new MockRM() {
       @Override
       protected EventHandler<SchedulerEvent> createSchedulerEventDispatcher() {
@@ -1001,11 +994,6 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
           }
         };
       }
-
-      @Override
-      protected Dispatcher createDispatcher() {
-        return dispatcher;
-      }
     };
     rm.start();
 
@@ -1013,7 +1001,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     MockNM nm2 = rm.registerNode("host2:5678", 5120);
     nm1.nodeHeartbeat(true);
     nm2.nodeHeartbeat(false);
-    dispatcher.await();
+    rm.drainEvents();
     checkUnealthyNMCount(rm, nm2, true, 1);
     final int expectedNMs = ClusterMetrics.getMetrics().getNumActiveNMs();
     QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
@@ -1024,7 +1012,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     nm1 = rm.registerNode("host1:1234", 5120);
     NodeHeartbeatResponse response = nm1.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(response.getNodeAction()));
-    dispatcher.await();
+    rm.drainEvents();
     Assert.assertEquals(expectedNMs, ClusterMetrics.getMetrics().getNumActiveNMs());
     checkUnealthyNMCount(rm, nm2, true, 1);
 
@@ -1032,23 +1020,23 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     nm2 = rm.registerNode("host2:5678", 5120);
     response = nm2.nodeHeartbeat(false);
     Assert.assertTrue(NodeAction.NORMAL.equals(response.getNodeAction()));
-    dispatcher.await();
+    rm.drainEvents();
     Assert.assertEquals(expectedNMs, ClusterMetrics.getMetrics().getNumActiveNMs());
     checkUnealthyNMCount(rm, nm2, true, 1);
     
     // unhealthy node changed back to healthy
     nm2 = rm.registerNode("host2:5678", 5120);
-    dispatcher.await();
+    rm.drainEvents();
     response = nm2.nodeHeartbeat(true);
     response = nm2.nodeHeartbeat(true);
-    dispatcher.await();
+    rm.drainEvents();
     Assert.assertEquals(5120 + 5120, metrics.getAvailableMB());
 
     // reconnect of node with changed capability
     nm1 = rm.registerNode("host2:5678", 10240);
-    dispatcher.await();
+    rm.drainEvents();
     response = nm1.nodeHeartbeat(true);
-    dispatcher.await();
+    rm.drainEvents();
     Assert.assertTrue(NodeAction.NORMAL.equals(response.getNodeAction()));
     Assert.assertEquals(5120 + 10240, metrics.getAvailableMB());
 
@@ -1056,9 +1044,9 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     List<ApplicationId> runningApps = new ArrayList<ApplicationId>();
     runningApps.add(ApplicationId.newInstance(1, 0));
     nm1 = rm.registerNode("host2:5678", 15360, 2, runningApps);
-    dispatcher.await();
+    rm.drainEvents();
     response = nm1.nodeHeartbeat(true);
-    dispatcher.await();
+    rm.drainEvents();
     Assert.assertTrue(NodeAction.NORMAL.equals(response.getNodeAction()));
     Assert.assertEquals(5120 + 15360, metrics.getAvailableMB());
     
@@ -1066,10 +1054,10 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     nm1 = new MockNM("host1:1234", 5120, rm.getResourceTrackerService());
     nm1.setHttpPort(3);
     nm1.registerNode();
-    dispatcher.await();
+    rm.drainEvents();
     response = nm1.nodeHeartbeat(true);
     response = nm1.nodeHeartbeat(true);
-    dispatcher.await();
+    rm.drainEvents();
     RMNode rmNode = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
     Assert.assertEquals(3, rmNode.getHttpPort());
     Assert.assertEquals(5120, rmNode.getTotalCapability().getMemory());
@@ -1184,14 +1172,116 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     checkDecommissionedNMCount(rm, ++decommisionedNMsCount);
   }
 
+  @Test(timeout = 30000)
+  public void testInitDecommMetric() throws Exception {
+    testInitDecommMetricHelper(true);
+    testInitDecommMetricHelper(false);
+  }
+
+  public void testInitDecommMetricHelper(boolean hasIncludeList)
+      throws Exception {
+    Configuration conf = new Configuration();
+    rm = new MockRM(conf);
+    rm.start();
+    MockNM nm1 = rm.registerNode("host1:1234", 5120);
+    MockNM nm2 = rm.registerNode("host2:5678", 10240);
+    nm1.nodeHeartbeat(true);
+    nm2.nodeHeartbeat(true);
+
+    File excludeHostFile =
+        new File(TEMP_DIR + File.separator + "excludeHostFile.txt");
+    writeToHostsFile(excludeHostFile, "host1");
+    conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
+        excludeHostFile.getAbsolutePath());
+
+    if (hasIncludeList) {
+      writeToHostsFile(hostFile, "host1", "host2");
+      conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
+          hostFile.getAbsolutePath());
+    }
+    rm.getNodesListManager().refreshNodes(conf);
+    rm.drainEvents();
+    rm.stop();
+
+    MockRM rm1 = new MockRM(conf);
+    rm1.start();
+    nm1 = rm1.registerNode("host1:1234", 5120);
+    nm2 = rm1.registerNode("host2:5678", 10240);
+    nm1.nodeHeartbeat(true);
+    nm2.nodeHeartbeat(true);
+    rm1.drainEvents();
+    Assert.assertEquals("Number of Decommissioned nodes should be 1",
+        1, ClusterMetrics.getMetrics().getNumDecommisionedNMs());
+    Assert.assertEquals("The inactiveRMNodes should contain an entry for the" +
+        "decommissioned node",
+        1, rm1.getRMContext().getInactiveRMNodes().size());
+    excludeHostFile =
+        new File(TEMP_DIR + File.separator + "excludeHostFile.txt");
+    writeToHostsFile(excludeHostFile, "");
+    conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
+        excludeHostFile.getAbsolutePath());
+    rm1.getNodesListManager().refreshNodes(conf);
+    nm1 = rm1.registerNode("host1:1234", 5120);
+    nm1.nodeHeartbeat(true);
+    nm2.nodeHeartbeat(true);
+    rm1.drainEvents();
+    Assert.assertEquals("The decommissioned nodes metric should have " +
+            "decremented to 0",
+        0, ClusterMetrics.getMetrics().getNumDecommisionedNMs());
+    Assert.assertEquals("The active nodes metric should be 2",
+        2, ClusterMetrics.getMetrics().getNumActiveNMs());
+    Assert.assertEquals("The inactive RMNodes entry should have been removed",
+        0, rm1.getRMContext().getInactiveRMNodes().size());
+    rm1.drainEvents();
+    rm1.stop();
+  }
+
+  @Test(timeout = 30000)
+  public void testInitDecommMetricNoRegistration() throws Exception {
+    Configuration conf = new Configuration();
+    rm = new MockRM(conf);
+    rm.start();
+    MockNM nm1 = rm.registerNode("host1:1234", 5120);
+    MockNM nm2 = rm.registerNode("host2:5678", 10240);
+    nm1.nodeHeartbeat(true);
+    nm2.nodeHeartbeat(true);
+    //host3 will not register or heartbeat
+    File excludeHostFile =
+        new File(TEMP_DIR + File.separator + "excludeHostFile.txt");
+    writeToHostsFile(excludeHostFile, "host3", "host2");
+    conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
+        excludeHostFile.getAbsolutePath());
+    writeToHostsFile(hostFile, "host1", "host2");
+    conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
+        hostFile.getAbsolutePath());
+    rm.getNodesListManager().refreshNodes(conf);
+    rm.drainEvents();
+    Assert.assertEquals("The decommissioned nodes metric should be 1 ",
+        1, ClusterMetrics.getMetrics().getNumDecommisionedNMs());
+    rm.stop();
+
+    MockRM rm1 = new MockRM(conf);
+    rm1.start();
+    rm1.getNodesListManager().refreshNodes(conf);
+    rm1.drainEvents();
+    Assert.assertEquals("The decommissioned nodes metric should be 2 ",
+        2, ClusterMetrics.getMetrics().getNumDecommisionedNMs());
+    rm1.stop();
+  }
+
   private void writeToHostsFile(String... hosts) throws IOException {
-    if (!hostFile.exists()) {
+   writeToHostsFile(hostFile, hosts);
+  }
+
+  private void writeToHostsFile(File file, String... hosts)
+      throws IOException {
+    if (!file.exists()) {
       TEMP_DIR.mkdirs();
-      hostFile.createNewFile();
+      file.createNewFile();
     }
     FileOutputStream fStream = null;
     try {
-      fStream = new FileOutputStream(hostFile);
+      fStream = new FileOutputStream(file);
       for (int i = 0; i < hosts.length; i++) {
         fStream.write(hosts[i].getBytes());
         fStream.write("\n".getBytes());
