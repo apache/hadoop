@@ -493,6 +493,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           // Disable the volume from the service.
           asyncDiskService.removeVolume(sd.getCurrentDir());
           volumes.removeVolume(absRoot, clearFailure);
+          volumes.waitVolumeRemoved(5000, this);
 
           // Removed all replica information for the blocks on the volume.
           // Unlike updating the volumeMap in addVolume(), this operation does
@@ -1769,6 +1770,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * 
    * @throws IOException                       May be thrown from the methods called. 
    */
+  @Override // FsDatasetSpi
   public void checkBlock(ExtendedBlock b, long minLength, ReplicaState state)
       throws ReplicaNotFoundException, UnexpectedReplicaStateException,
       FileNotFoundException, EOFException, IOException {

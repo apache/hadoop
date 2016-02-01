@@ -2667,6 +2667,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-9210. Fix some misuse of %n in VolumeScanner#printStats.
     (Xiaoyu Yao)
 
+    HDFS-9701. DN may deadlock when hot-swapping under load. (Xiao Chen via lei)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
