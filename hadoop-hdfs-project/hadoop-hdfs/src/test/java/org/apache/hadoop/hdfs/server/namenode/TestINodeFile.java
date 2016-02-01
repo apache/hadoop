@@ -21,7 +21,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
@@ -1121,6 +1120,6 @@ public class TestINodeFile {
     INodeFile toBeCleared = createINodeFiles(1, "toBeCleared")[0];
     assertEquals(1, toBeCleared.getBlocks().length);
     toBeCleared.clearBlocks();
-    assertNull(toBeCleared.getBlocks());
+    assertTrue(toBeCleared.getBlocks().length == 0);
   }
 }
