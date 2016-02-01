@@ -19,48 +19,62 @@
 #include "hdfspp/status.h"
 
 #include <cassert>
-#include <cstring>
+#include <sstream>
 
 namespace hdfs {
 
-Status::Status(int code, const char *msg1)
-    : state_(ConstructState(code, msg1, nullptr)) {}
-
-Status::Status(int code, const char *msg1, const char *msg2)
-    : state_(ConstructState(code, msg1, msg2)) {}
-
-const char *Status::ConstructState(int code, const char *msg1,
-                                   const char *msg2) {
-  assert(code != kOk);
-  const uint32_t len1 = strlen(msg1);
-  const uint32_t len2 = msg2 ? strlen(msg2) : 0;
-  const uint32_t size = len1 + (len2 ? (2 + len2) : 0);
-  char *result = new char[size + 8 + 2];
-  *reinterpret_cast<uint32_t *>(result) = size;
-  *reinterpret_cast<uint32_t *>(result + 4) = code;
-  memcpy(result + 8, msg1, len1);
-  if (len2) {
-    result[8 + len1] = ':';
-    result[9 + len1] = ' ';
-    memcpy(result + 10 + len1, msg2, len2);
+Status::Status(int code, const char *msg1) : code_(code) {
+  if(msg1) {
+    msg_ = msg1;
   }
-  return result;
 }
+
+Status::Status(int code, const char *msg1, const char *msg2) : code_(code) {
+  std::stringstream ss;
+  if(msg1) {
+    ss << msg1;
+    if(msg2) {
+      ss << ":" << msg2;
+    }
+  }
+  msg_ = ss.str();
+}
+
+
+Status Status::OK() {
+  return Status();
+}
+
+Status Status::InvalidArgument(const char *msg) {
+  return Status(kInvalidArgument, msg);
+}
+
+Status Status::ResourceUnavailable(const char *msg) {
+  return Status(kResourceUnavailable, msg);
+}
+
+Status Status::Unimplemented() {
+  return Status(kUnimplemented, "");
+}
+
+Status Status::Exception(const char *exception_class_name, const char *error_message) {
+  return Status(kException, exception_class_name, error_message);
+}
+
+Status Status::Error(const char *error_message) {
+  return Exception("Exception", error_message);
+}
+
+Status Status::Canceled() {
+  return Status(kOperationCanceled,"Operation canceled");
+}
+
 
 std::string Status::ToString() const {
-  if (!state_) {
+  if (code_ == kOk) {
     return "OK";
-  } else {
-    uint32_t length = *reinterpret_cast<const uint32_t *>(state_);
-    return std::string(state_ + 8, length);
   }
+  return msg_;
 }
 
-const char *Status::CopyState(const char *state) {
-  uint32_t size;
-  memcpy(&size, state, sizeof(size));
-  char *result = new char[size + 8];
-  memcpy(result, state, size + 8);
-  return result;
-}
 }
