@@ -20,14 +20,18 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
+import static org.hamcrest.CoreMatchers.either;
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.URI;
 import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -38,6 +42,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.top.TopAuditLogger;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.log4j.Level;
@@ -47,6 +52,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
 
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -337,5 +343,77 @@ public class TestFSNamesystem {
     int safeReplication = (int)Whitebox.getInternalState(bmSafeMode,
         "safeReplication");
     assertEquals(2, safeReplication);
+  }
+
+  @Test(timeout = 30000)
+  public void testInitAuditLoggers() throws IOException {
+    Configuration conf = new Configuration();
+    FSImage fsImage = Mockito.mock(FSImage.class);
+    FSEditLog fsEditLog = Mockito.mock(FSEditLog.class);
+    Mockito.when(fsImage.getEditLog()).thenReturn(fsEditLog);
+    FSNamesystem fsn;
+    List<AuditLogger> auditLoggers;
+
+    // Not to specify any audit loggers in config
+    conf.set(DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY, "");
+    // Disable top logger
+    conf.setBoolean(DFSConfigKeys.NNTOP_ENABLED_KEY, false);
+    fsn = new FSNamesystem(conf, fsImage);
+    auditLoggers = fsn.getAuditLoggers();
+    assertTrue(auditLoggers.size() == 1);
+    assertTrue(auditLoggers.get(0) instanceof FSNamesystem.DefaultAuditLogger);
+
+    // Not to specify any audit loggers in config
+    conf.set(DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY, "");
+    // Enable top logger
+    conf.setBoolean(DFSConfigKeys.NNTOP_ENABLED_KEY, true);
+    fsn = new FSNamesystem(conf, fsImage);
+    auditLoggers = fsn.getAuditLoggers();
+    assertTrue(auditLoggers.size() == 2);
+    // the audit loggers order is not defined
+    for (AuditLogger auditLogger : auditLoggers) {
+      assertThat(auditLogger,
+          either(instanceOf(FSNamesystem.DefaultAuditLogger.class))
+              .or(instanceOf(TopAuditLogger.class)));
+    }
+
+    // Configure default audit loggers in config
+    conf.set(DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY, "default");
+    // Enable top logger
+    conf.setBoolean(DFSConfigKeys.NNTOP_ENABLED_KEY, true);
+    fsn = new FSNamesystem(conf, fsImage);
+    auditLoggers = fsn.getAuditLoggers();
+    assertTrue(auditLoggers.size() == 2);
+    for (AuditLogger auditLogger : auditLoggers) {
+      assertThat(auditLogger,
+          either(instanceOf(FSNamesystem.DefaultAuditLogger.class))
+              .or(instanceOf(TopAuditLogger.class)));
+    }
+
+    // Configure default and customized audit loggers in config with whitespaces
+    conf.set(DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY,
+        " default, org.apache.hadoop.hdfs.server.namenode.TestFSNamesystem$DummyAuditLogger  ");
+    // Enable top logger
+    conf.setBoolean(DFSConfigKeys.NNTOP_ENABLED_KEY, true);
+    fsn = new FSNamesystem(conf, fsImage);
+    auditLoggers = fsn.getAuditLoggers();
+    assertTrue(auditLoggers.size() == 3);
+    for (AuditLogger auditLogger : auditLoggers) {
+      assertThat(auditLogger,
+          either(instanceOf(FSNamesystem.DefaultAuditLogger.class))
+              .or(instanceOf(TopAuditLogger.class))
+              .or(instanceOf(DummyAuditLogger.class)));
+    }
+  }
+
+  static class DummyAuditLogger implements AuditLogger {
+    @Override
+    public void initialize(Configuration conf) {
+    }
+
+    @Override
+    public void logAuditEvent(boolean succeeded, String userName,
+        InetAddress addr, String cmd, String src, String dst, FileStatus stat) {
+    }
   }
 }
