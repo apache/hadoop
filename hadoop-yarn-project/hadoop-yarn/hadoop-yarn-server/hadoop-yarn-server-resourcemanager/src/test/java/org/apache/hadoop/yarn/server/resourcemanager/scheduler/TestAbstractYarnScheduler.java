@@ -52,10 +52,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
@@ -568,7 +566,8 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
       // AM crashes, and a new app-attempt gets created
       node.nodeHeartbeat(applicationAttemptOneID, 1, ContainerState.COMPLETE);
-      rm.waitForState(node, am1ContainerID, RMContainerState.COMPLETED);
+      rm.waitForContainerState(am1ContainerID, RMContainerState.COMPLETED,
+          30 * 1000);
       RMAppAttempt rmAppAttempt2 = MockRM.waitForAttemptScheduled(rmApp, rm);
       ApplicationAttemptId applicationAttemptTwoID =
           rmAppAttempt2.getAppAttemptId();
