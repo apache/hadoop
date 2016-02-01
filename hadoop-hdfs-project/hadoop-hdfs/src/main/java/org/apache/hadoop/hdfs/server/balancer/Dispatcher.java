@@ -286,7 +286,8 @@ public class Dispatcher {
       // if node group is supported, first try add nodes in the same node group
       if (cluster.isNodeGroupAware()) {
         for (StorageGroup loc : reportedBlock.getLocations()) {
-          if (cluster.isOnSameNodeGroup(loc.getDatanodeInfo(), targetDN)
+            //loc may throw NullPointerException
+          if (loc!=null && cluster.isOnSameNodeGroup(loc.getDatanodeInfo(), targetDN)
               && addTo(loc)) {
             return true;
           }
@@ -294,13 +295,13 @@ public class Dispatcher {
       }
       // check if there is replica which is on the same rack with the target
       for (StorageGroup loc : reportedBlock.getLocations()) {
-        if (cluster.isOnSameRack(loc.getDatanodeInfo(), targetDN) && addTo(loc)) {
+        if (loc!=null && cluster.isOnSameRack(loc.getDatanodeInfo(), targetDN) && addTo(loc)) {
           return true;
         }
       }
       // find out a non-busy replica
       for (StorageGroup loc : reportedBlock.getLocations()) {
-        if (addTo(loc)) {
+        if (loc!=null && addTo(loc)) {
           return true;
         }
       }
