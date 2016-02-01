@@ -81,6 +81,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4428. Redirect RM page to AHS page when AHS turned on and RM page is
     not available (Chang Li via jlowe)
 
+    YARN-3102. Decommisioned Nodes not listed in Web UI (Kuhu Shukla via
+    jlowe)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
