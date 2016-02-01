@@ -121,6 +121,9 @@ static int Error(const Status &stat) {
     case Status::Code::kException:
       ReportError(EINTR, "Exception raised");
       break;
+    case Status::Code::kOperationCanceled:
+      ReportError(EINTR, "Operation canceled");
+      break;
     default:
       ReportError(ENOSYS, "Error: unrecognised code");
   }
@@ -147,9 +150,9 @@ bool CheckSystemAndHandle(hdfsFS fs, hdfsFile file) {
 int hdfsFileIsOpenForRead(hdfsFile file) {
   /* files can only be open for reads at the moment, do a quick check */
   if (file) {
-    return true; // Update implementation when we get file writing
+    return 1; // Update implementation when we get file writing
   }
-  return false;
+  return 0;
 }
 
 hdfsFS hdfsConnect(const char *nn, tPort port) {
@@ -239,6 +242,7 @@ tSize hdfsRead(hdfsFS fs, hdfsFile file, void *buffer, tSize length) {
   return (tSize)len;
 }
 
+/* 0 on success, -1 on error*/
 int hdfsSeek(hdfsFS fs, hdfsFile file, tOffset desiredPos) {
   if (!CheckSystemAndHandle(fs, file)) {
     return -1;
@@ -250,7 +254,7 @@ int hdfsSeek(hdfsFS fs, hdfsFile file, tOffset desiredPos) {
     return Error(stat);
   }
 
-  return (int)desired;
+  return 0;
 }
 
 tOffset hdfsTell(hdfsFS fs, hdfsFile file) {
@@ -267,6 +271,7 @@ tOffset hdfsTell(hdfsFS fs, hdfsFile file) {
   return offset;
 }
 
+/* extended API */
 int hdfsCancel(hdfsFS fs, hdfsFile file) {
   if (!CheckSystemAndHandle(fs, file)) {
     return -1;
@@ -340,10 +345,7 @@ int hdfsBuilderConfSetStr(struct hdfsBuilder *bld, const char *key,
 
 void hdfsConfStrFree(char *val)
 {
-  if (val)
-  {
-    free(val);
-  }
+  free(val);
 }
 
 hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld) {
