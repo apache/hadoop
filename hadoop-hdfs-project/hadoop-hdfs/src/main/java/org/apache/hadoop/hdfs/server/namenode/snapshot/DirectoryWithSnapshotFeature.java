@@ -481,7 +481,16 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
       if (topNode instanceof INodeReference.WithName) {
         INodeReference.WithName wn = (INodeReference.WithName) topNode;
         if (wn.getLastSnapshotId() >= post) {
-          wn.cleanSubtree(bsps, post, prior, collectedBlocks, removedINodes);
+          INodeReference.WithCount wc =
+              (INodeReference.WithCount) wn.getReferredINode();
+          if (wc.getLastWithName() == wn && wc.getParentReference() == null) {
+            // this wn is the last wn inside of the wc, also the dstRef node has
+            // been deleted. In this case, we should treat the referred file/dir
+            // as normal case
+            queue.add(wc.getReferredINode());
+          } else {
+            wn.cleanSubtree(bsps, post, prior, collectedBlocks, removedINodes);
+          }
         }
         // For DstReference node, since the node is not in the created list of
         // prior, we should treat it as regular file/dir

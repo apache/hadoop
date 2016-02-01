@@ -531,7 +531,7 @@ public class INodeFile extends INodeWithAdditionalFields
         blk.setBlockCollection(null);
       }
     }
-    setBlocks(null);
+    setBlocks(BlockInfoContiguous.EMPTY_ARRAY);
     if (getAclFeature() != null) {
       AclStorage.removeAclFeature(getAclFeature());
     }

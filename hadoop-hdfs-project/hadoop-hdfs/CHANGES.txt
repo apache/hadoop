@@ -73,6 +73,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9690. ClientProtocol.addBlock is not idempotent after HDFS-8071.
     (szetszwo)
 
+    HDFS-9406. FSImage may get corrupted after deleting snapshot.
+    (Contributed by Jing Zhao, Stanislav Antic, Vinayakumar B, Yongjun Zhang)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
