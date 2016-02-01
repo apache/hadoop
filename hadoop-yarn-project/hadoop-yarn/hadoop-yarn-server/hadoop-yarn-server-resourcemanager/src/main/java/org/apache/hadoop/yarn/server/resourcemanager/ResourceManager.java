@@ -203,6 +203,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
     clusterTimeStamp = timestamp;
   }
 
+  @VisibleForTesting
+  Dispatcher getRmDispatcher() {
+    return rmDispatcher;
+  }
+
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     this.conf = conf;

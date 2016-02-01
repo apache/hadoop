@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.Node;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.HostsFileReader;
@@ -47,6 +48,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppNodeUpdateEvent.
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.util.Clock;
@@ -96,7 +98,7 @@ public class NodesListManager extends CompositeService implements
           YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH);
       this.hostsReader =
           createHostsFileReader(this.includesFile, this.excludesFile);
-      setDecomissionedNMsMetrics();
+      setDecomissionedNMs();
       printConfiguredHosts();
     } catch (YarnException ex) {
       disableHostsFileReader(ex);
@@ -158,9 +160,24 @@ public class NodesListManager extends CompositeService implements
     }
   }
 
-  private void setDecomissionedNMsMetrics() {
+  private void setDecomissionedNMs() {
     Set<String> excludeList = hostsReader.getExcludedHosts();
-    ClusterMetrics.getMetrics().setDecommisionedNMs(excludeList.size());
+    for (final String host : excludeList) {
+      UnknownNodeId nodeId = new UnknownNodeId(host);
+      RMNodeImpl rmNode = new RMNodeImpl(nodeId,
+          rmContext, host, -1, -1, new UnknownNode(host), null, null);
+
+      RMNode prevRMNode =
+          rmContext.getRMNodes().putIfAbsent(nodeId, rmNode);
+      if (prevRMNode != null) {
+        this.rmContext.getDispatcher().getEventHandler().handle(
+            new RMNodeEvent(prevRMNode.getNodeID(),
+                RMNodeEventType.DECOMMISSION));
+      } else {
+        this.rmContext.getDispatcher().getEventHandler().handle(
+            new RMNodeEvent(nodeId, RMNodeEventType.DECOMMISSION));
+      }
+    }
   }
 
   @VisibleForTesting
@@ -335,7 +352,7 @@ public class NodesListManager extends CompositeService implements
           conf.get(YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH);
       this.hostsReader =
           createHostsFileReader(this.includesFile, this.excludesFile);
-      setDecomissionedNMsMetrics();
+      setDecomissionedNMs();
     } catch (IOException ioe2) {
       // Should *never* happen
       this.hostsReader = null;
@@ -416,6 +433,100 @@ public class NodesListManager extends CompositeService implements
         this.rmContext.getDispatcher().getEventHandler().handle(
             new RMNodeEvent(entry.getKey(), RMNodeEventType.DECOMMISSION));
       }
+    }
+  }
+
+  /**
+   * A NodeId instance needed upon startup for populating inactive nodes Map.
+   * It only knows the hostname/ip and marks the port to -1 or invalid.
+   */
+  public static class UnknownNodeId extends NodeId {
+
+    private String host;
+
+    public UnknownNodeId(String host) {
+      this.host = host;
+    }
+
+    @Override
+    public String getHost() {
+      return this.host;
+    }
+
+    @Override
+    protected void setHost(String hst) {
+
+    }
+
+    @Override
+    public int getPort() {
+      return -1;
+    }
+
+    @Override
+    protected void setPort(int port) {
+
+    }
+
+    @Override
+    protected void build() {
+
+    }
+  }
+
+  /**
+   * A Node instance needed upon startup for populating inactive nodes Map.
+   * It only knows its hostname/ip.
+   */
+  private static class UnknownNode implements Node {
+
+    private String host;
+
+    public UnknownNode(String host) {
+      this.host = host;
+    }
+
+    @Override
+    public String getNetworkLocation() {
+      return null;
+    }
+
+    @Override
+    public void setNetworkLocation(String location) {
+
+    }
+
+    @Override
+    public String getName() {
+      return host;
+    }
+
+    @Override
+    public Node getParent() {
+      return null;
+    }
+
+    @Override
+    public void setParent(Node parent) {
+
+    }
+
+    @Override
+    public int getLevel() {
+      return 0;
+    }
+
+    @Override
+    public void setLevel(int i) {
+
+    }
+
+    public String getHost() {
+      return host;
+    }
+
+    public void setHost(String hst) {
+      this.host = hst;
     }
   }
 }
