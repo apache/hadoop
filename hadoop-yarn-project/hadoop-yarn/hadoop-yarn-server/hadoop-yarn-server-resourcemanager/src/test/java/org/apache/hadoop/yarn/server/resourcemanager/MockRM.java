@@ -202,15 +202,33 @@ public class MockRM extends ResourceManager {
 
   public void waitForContainerState(ContainerId containerId,
       RMContainerState state) throws Exception {
-    int timeoutSecs = 0;
+    // This method will assert if state is not expected after timeout.
+    Assert.assertTrue(waitForContainerState(containerId, state, 8 * 1000));
+  }
+
+  public boolean waitForContainerState(ContainerId containerId,
+      RMContainerState containerState, int timeoutMillisecs) throws Exception {
     RMContainer container = getResourceScheduler().getRMContainer(containerId);
-    while ((container == null || container.getState() != state)
-        && timeoutSecs++ < 40) {
-      System.out.println(
-          "Waiting for" + containerId + " state to be:" + state.name());
-      Thread.sleep(200);
+    int timeoutSecs = 0;
+    while (((container == null) || !containerState.equals(container.getState()))
+        && timeoutSecs++ < timeoutMillisecs / 100) {
+      if(container == null){
+        container = getResourceScheduler().getRMContainer(containerId);
+      }
+      System.out.println("Container : " + containerId +
+          " Waiting for state : " + containerState);
+
+      Thread.sleep(100);
+
+      if (timeoutMillisecs <= timeoutSecs * 100) {
+        return false;
+      }
     }
-    Assert.assertTrue(container.getState() == state);
+
+    System.out.println("Container State is : " + container.getState());
+    Assert.assertEquals("Container state is not correct (timedout)",
+        containerState, container.getState());
+    return true;
   }
 
   public void waitForContainerAllocated(MockNM nm, ContainerId containerId)
