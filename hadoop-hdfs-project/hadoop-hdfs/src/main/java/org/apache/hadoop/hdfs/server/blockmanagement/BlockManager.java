@@ -1137,7 +1137,10 @@ public class BlockManager implements BlockStatsMXBean {
       return;
     }
     StringBuilder datanodes = new StringBuilder();
-    for(DatanodeStorageInfo storage : blocksMap.getStorages(b, State.NORMAL)) {
+    for (DatanodeStorageInfo storage : blocksMap.getStorages(b)) {
+      if (storage.getState() != State.NORMAL) {
+        continue;
+      }
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
       invalidateBlocks.add(b, node, false);
       datanodes.append(node).append(" ");
@@ -2912,7 +2915,10 @@ public class BlockManager implements BlockStatsMXBean {
     Collection<DatanodeStorageInfo> nonExcess = new ArrayList<DatanodeStorageInfo>();
     Collection<DatanodeDescriptor> corruptNodes = corruptReplicas
         .getNodes(block);
-    for(DatanodeStorageInfo storage : blocksMap.getStorages(block, State.NORMAL)) {
+    for (DatanodeStorageInfo storage : blocksMap.getStorages(block)) {
+      if (storage.getState() != State.NORMAL) {
+        continue;
+      }
       final DatanodeDescriptor cur = storage.getDatanodeDescriptor();
       if (storage.areBlockContentsStale()) {
         LOG.trace("BLOCK* processOverReplicatedBlock: Postponing {}"
@@ -3294,7 +3300,10 @@ public class BlockManager implements BlockStatsMXBean {
     // else proceed with fast case
     int live = 0;
     Collection<DatanodeDescriptor> nodesCorrupt = corruptReplicas.getNodes(b);
-    for(DatanodeStorageInfo storage : blocksMap.getStorages(b, State.NORMAL)) {
+    for (DatanodeStorageInfo storage : blocksMap.getStorages(b)) {
+      if (storage.getState() != State.NORMAL) {
+        continue;
+      }
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
       if ((nodesCorrupt == null) || (!nodesCorrupt.contains(node)))
         live++;
