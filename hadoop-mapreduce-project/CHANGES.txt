@@ -736,6 +736,9 @@ Release 2.7.3 - UNRELEASED
     MAPREDUCE-6554. MRAppMaster servicestart failing with NPE in
     MRAppMaster#parsePreviousJobHistory (Bibin A Chundatt via jlowe)
 
+    MAPREDUCE-6618. YarnClientProtocolProvider leaking the YarnClient thread.
+    (Xuan Gong via jlowe)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
@@ -1040,6 +1043,9 @@ Release 2.6.4 - UNRELEASED
 
     MAPREDUCE-6554. MRAppMaster servicestart failing with NPE in
     MRAppMaster#parsePreviousJobHistory (Bibin A Chundatt via jlowe)
+
+    MAPREDUCE-6618. YarnClientProtocolProvider leaking the YarnClient thread.
+    (Xuan Gong via jlowe)
 
 Release 2.6.3 - 2015-12-17
 

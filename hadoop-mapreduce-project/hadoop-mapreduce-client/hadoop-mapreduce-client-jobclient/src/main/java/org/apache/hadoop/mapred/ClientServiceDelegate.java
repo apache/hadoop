@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -530,6 +531,21 @@ public class ClientServiceDelegate {
       }
     } else {
       throw new IOException("Cannot get log path for a in-progress job");
+    }
+  }
+
+  public void close() throws IOException {
+    if (rm != null) {
+      rm.close();
+    }
+
+    if (historyServerProxy != null) {
+      RPC.stopProxy(historyServerProxy);
+    }
+
+    if (realProxy != null) {
+      RPC.stopProxy(realProxy);
+      realProxy = null;
     }
   }
 }
