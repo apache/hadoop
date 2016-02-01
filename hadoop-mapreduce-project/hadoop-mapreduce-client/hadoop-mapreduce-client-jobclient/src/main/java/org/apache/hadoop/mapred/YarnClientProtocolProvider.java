@@ -44,7 +44,8 @@ public class YarnClientProtocolProvider extends ClientProtocolProvider {
 
   @Override
   public void close(ClientProtocol clientProtocol) throws IOException {
-    // nothing to do
+    if (clientProtocol instanceof YARNRunner) {
+      ((YARNRunner)clientProtocol).close();
+    }
   }
-
 }
