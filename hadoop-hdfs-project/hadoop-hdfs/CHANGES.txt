@@ -2664,6 +2664,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9708. FSNamesystem.initAuditLoggers() doesn't trim classnames
     (Mingliang Liu via stevel)
 
+    HDFS-9210. Fix some misuse of %n in VolumeScanner#printStats.
+    (Xiaoyu Yao)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
