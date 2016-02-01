@@ -889,7 +889,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private List<AuditLogger> initAuditLoggers(Configuration conf) {
     // Initialize the custom access loggers if configured.
-    Collection<String> alClasses = conf.getStringCollection(DFS_NAMENODE_AUDIT_LOGGERS_KEY);
+    Collection<String> alClasses =
+        conf.getTrimmedStringCollection(DFS_NAMENODE_AUDIT_LOGGERS_KEY);
     List<AuditLogger> auditLoggers = Lists.newArrayList();
     if (alClasses != null && !alClasses.isEmpty()) {
       for (String className : alClasses) {

@@ -2661,6 +2661,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9566. Remove expensive 'BlocksMap#getStorages(Block b, final
     DatanodeStorage.State state)' method (Daryn Sharp via vinayakumarb)
 
+    HDFS-9708. FSNamesystem.initAuditLoggers() doesn't trim classnames
+    (Mingliang Liu via stevel)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
