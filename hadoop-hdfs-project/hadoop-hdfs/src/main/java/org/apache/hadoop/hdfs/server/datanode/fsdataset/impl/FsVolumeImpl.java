@@ -235,29 +235,30 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   /**
-   * Close this volume and wait all other threads to release the reference count
-   * on this volume.
-   * @throws IOException if the volume is closed or the waiting is interrupted.
+   * Close this volume.
+   * @throws IOException if the volume is closed.
    */
-  void closeAndWait() throws IOException {
+  void setClosed() throws IOException {
     try {
       this.reference.setClosed();
     } catch (ClosedChannelException e) {
       throw new IOException("The volume has already closed.", e);
     }
-    final int SLEEP_MILLIS = 500;
-    while (this.reference.getReferenceCount() > 0) {
+  }
+
+  /**
+   * Check whether this volume has successfully been closed.
+   */
+  boolean checkClosed() {
+    if (this.reference.getReferenceCount() > 0) {
       if (FsDatasetImpl.LOG.isDebugEnabled()) {
         FsDatasetImpl.LOG.debug(String.format(
             "The reference count for %s is %d, wait to be 0.",
             this, reference.getReferenceCount()));
       }
-      try {
-        Thread.sleep(SLEEP_MILLIS);
-      } catch (InterruptedException e) {
-        throw new IOException(e);
-      }
+      return false;
     }
+    return true;
   }
 
   File getCurrentDir() {
