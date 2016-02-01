@@ -23,6 +23,7 @@ import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -49,6 +50,8 @@ class FsVolumeList {
   // Tracks volume failures, sorted by volume path.
   private final Map<String, VolumeFailureInfo> volumeFailureInfos =
       Collections.synchronizedMap(new TreeMap<String, VolumeFailureInfo>());
+  private final ConcurrentLinkedQueue<FsVolumeImpl> volumesBeingRemoved =
+      new ConcurrentLinkedQueue<>();
   private Object checkDirsMutex = new Object();
 
   private final VolumeChoosingPolicy<FsVolumeImpl> blockChooser;
@@ -257,8 +260,31 @@ class FsVolumeList {
             + " failure volumes.");
       }
 
+      waitVolumeRemoved(5000, checkDirsMutex);
       return failedVols;
     }
+  }
+
+  /**
+   * Wait for the reference of the volume removed from a previous
+   * {@link #removeVolume(FsVolumeImpl)} call to be released.
+   *
+   * @param sleepMillis interval to recheck.
+   */
+  void waitVolumeRemoved(int sleepMillis, Object monitor) {
+    while (!checkVolumesRemoved()) {
+      if (FsDatasetImpl.LOG.isDebugEnabled()) {
+        FsDatasetImpl.LOG.debug("Waiting for volume reference to be released.");
+      }
+      try {
+        monitor.wait(sleepMillis);
+      } catch (InterruptedException e) {
+        FsDatasetImpl.LOG.info("Thread interrupted when waiting for "
+            + "volume reference to be released.");
+        Thread.currentThread().interrupt();
+      }
+    }
+    FsDatasetImpl.LOG.info("Volume reference is released.");
   }
 
   @Override
@@ -298,12 +324,13 @@ class FsVolumeList {
         blockScanner.removeVolumeScanner(target);
       }
       try {
-        target.closeAndWait();
+        target.setClosed();
       } catch (IOException e) {
         FsDatasetImpl.LOG.warn(
             "Error occurs when waiting volume to close: " + target, e);
       }
       target.shutdown();
+      volumesBeingRemoved.add(target);
       FsDatasetImpl.LOG.info("Removed volume: " + target);
     } else {
       if (FsDatasetImpl.LOG.isDebugEnabled()) {
@@ -334,6 +361,24 @@ class FsVolumeList {
   VolumeFailureInfo[] getVolumeFailureInfos() {
     Collection<VolumeFailureInfo> infos = volumeFailureInfos.values();
     return infos.toArray(new VolumeFailureInfo[infos.size()]);
+  }
+
+  /**
+   * Check whether the reference of the volume from a previous
+   * {@link #removeVolume(FsVolumeImpl)} call is released.
+   *
+   * @return Whether the reference is released.
+   */
+  boolean checkVolumesRemoved() {
+    Iterator<FsVolumeImpl> it = volumesBeingRemoved.iterator();
+    while (it.hasNext()) {
+      FsVolumeImpl volume = it.next();
+      if (!volume.checkClosed()) {
+        return false;
+      }
+      it.remove();
+    }
+    return true;
   }
 
   void addVolumeFailureInfo(VolumeFailureInfo volumeFailureInfo) {
