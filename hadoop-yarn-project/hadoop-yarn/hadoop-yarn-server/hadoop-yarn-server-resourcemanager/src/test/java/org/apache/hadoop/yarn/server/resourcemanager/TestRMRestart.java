@@ -1888,15 +1888,9 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
       hostFile.getAbsolutePath());
     writeToHostsFile("");
-    final DrainDispatcher dispatcher = new DrainDispatcher();
     MockRM rm1 = null, rm2 = null;
     try {
-      rm1 = new MockRM(conf) {
-        @Override
-        protected Dispatcher createDispatcher() {
-          return dispatcher;
-        }
-      };
+      rm1 = new MockRM(conf);
       rm1.start();
       MockNM nm1 = rm1.registerNode("localhost:1234", 8000);
       MockNM nm2 = rm1.registerNode("host2:1234", 8000);
@@ -1917,7 +1911,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
       Assert.assertTrue("The decommisioned metrics are not updated",
           NodeAction.SHUTDOWN.equals(nodeHeartbeat.getNodeAction()));
 
-      dispatcher.await();
+      rm1.drainEvents();
       Assert
           .assertEquals(2,
               ClusterMetrics.getMetrics().getNumDecommisionedNMs());
@@ -1930,6 +1924,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
       // restart RM.
       rm2 = new MockRM(conf);
       rm2.start();
+      rm2.drainEvents();
       Assert
           .assertEquals(2,
               ClusterMetrics.getMetrics().getNumDecommisionedNMs());
