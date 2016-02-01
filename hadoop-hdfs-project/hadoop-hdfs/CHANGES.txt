@@ -903,6 +903,9 @@ Trunk (Unreleased)
       HDFS-9575. Use byte array for internal block indices in a striped block.
       (jing9 via szetszwo)
 
+      HDFS-9659. EditLogTailerThread to Active Namenode RPC should timeout
+      (surendra singh lilhore via vinayakumarb)
+
 Release 2.9.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
