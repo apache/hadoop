@@ -21,10 +21,11 @@ package org.apache.hadoop.mapreduce;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.doNothing;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
@@ -113,6 +114,8 @@ public class TestYarnClientProtocolProvider extends TestCase {
         @Override
         protected void serviceStart() throws Exception {
           assertTrue(this.client instanceof YarnClientImpl);
+          this.client = spy(this.client);
+          doNothing().when(this.client).close();
           ((YarnClientImpl) this.client).setRMClient(cRMProtocol);
         }
       };
@@ -126,5 +129,4 @@ public class TestYarnClientProtocolProvider extends TestCase {
       }
     }
   }
-
 }
