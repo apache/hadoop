@@ -2655,6 +2655,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9682. Fix a typo "aplication" in HttpFS document.
     (Weiwei Yang via aajisaka)
 
+    HDFS-9566. Remove expensive 'BlocksMap#getStorages(Block b, final
+    DatanodeStorage.State state)' method (Daryn Sharp via vinayakumarb)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
