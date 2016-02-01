@@ -685,18 +685,7 @@ public class DFSOutputStream extends FSOutputSummer
    * received from datanodes.
    */
   protected void flushInternal() throws IOException {
-    long toWaitFor;
-    synchronized (this) {
-      dfsClient.checkOpen();
-      checkClosed();
-      //
-      // If there is data in the current buffer, send it across
-      //
-      getStreamer().queuePacket(currentPacket);
-      currentPacket = null;
-      toWaitFor = getStreamer().getLastQueuedSeqno();
-    }
-
+    long toWaitFor = flushInternalWithoutWaitingAck();
     getStreamer().waitForAckedSeqno(toWaitFor);
   }
 
@@ -862,6 +851,21 @@ public class DFSOutputStream extends FSOutputSummer
    */
   synchronized Token<BlockTokenIdentifier> getBlockToken() {
     return getStreamer().getBlockToken();
+  }
+
+  protected long flushInternalWithoutWaitingAck() throws IOException {
+    long toWaitFor;
+    synchronized (this) {
+      dfsClient.checkOpen();
+      checkClosed();
+      //
+      // If there is data in the current buffer, send it across
+      //
+      getStreamer().queuePacket(currentPacket);
+      currentPacket = null;
+      toWaitFor = getStreamer().getLastQueuedSeqno();
+    }
+    return toWaitFor;
   }
 
   @Override

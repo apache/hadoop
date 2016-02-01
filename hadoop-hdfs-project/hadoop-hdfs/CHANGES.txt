@@ -217,6 +217,9 @@ Trunk (Unreleased)
     HDFS-9582. TestLeaseRecoveryStriped file missing Apache License header 
     and not well formatted. (umamahesh)
 
+    HDFS-9494. Parallel optimization of DFSStripedOutputStream#flushAllInternals.
+    (Gao Rui via jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES
