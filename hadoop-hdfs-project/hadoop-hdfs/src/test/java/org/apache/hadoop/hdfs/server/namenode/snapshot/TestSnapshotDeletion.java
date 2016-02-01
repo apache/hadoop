@@ -18,12 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
@@ -61,6 +56,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -1148,5 +1144,92 @@ public class TestSnapshotDeletion {
     long numberOfBlocks = cluster.getNamesystem().getBlocksTotal();
     cluster.restartNameNode(0);
     assertEquals(numberOfBlocks, cluster.getNamesystem().getBlocksTotal());
+  }
+
+  /*
+   * Test fsimage corruption reported in HDFS-9697.
+   */
+  @Test
+  public void testFsImageCorruption() throws Exception {
+    final Path st = new Path("/st");
+    final Path nonst = new Path("/nonst");
+    final Path stY = new Path(st, "y");
+    final Path nonstTrash = new Path(nonst, "trash");
+
+    hdfs.mkdirs(stY);
+
+    hdfs.allowSnapshot(st);
+    hdfs.createSnapshot(st, "s0");
+
+    Path f = new Path(stY, "nn.log");
+    hdfs.createNewFile(f);
+    hdfs.createSnapshot(st, "s1");
+
+    Path f2 = new Path(stY, "nn2.log");
+    hdfs.rename(f, f2);
+    hdfs.createSnapshot(st, "s2");
+
+    Path trashSt = new Path(nonstTrash, "st");
+    hdfs.mkdirs(trashSt);
+    hdfs.rename(stY, trashSt);
+    hdfs.delete(nonstTrash, true);
+
+    hdfs.deleteSnapshot(st, "s1");
+    hdfs.deleteSnapshot(st, "s2");
+
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.saveNamespace();
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+    cluster.restartNameNodes();
+  }
+
+  /*
+   * Test renaming file to outside of snapshottable dir then deleting it.
+   * Ensure it's deleted from both its parent INodeDirectory and InodeMap,
+   * after the last snapshot containing it is deleted.
+   */
+  @Test
+  public void testRenameAndDelete() throws IOException {
+    final Path foo = new Path("/foo");
+    final Path x = new Path(foo, "x");
+    final Path y = new Path(foo, "y");
+    final Path trash = new Path("/trash");
+    hdfs.mkdirs(x);
+    hdfs.mkdirs(y);
+    final long parentId = fsdir.getINode4Write(y.toString()).getId();
+
+    hdfs.mkdirs(trash);
+    hdfs.allowSnapshot(foo);
+    // 1. create snapshot s0
+    hdfs.createSnapshot(foo, "s0");
+    // 2. create file /foo/x/bar
+    final Path file = new Path(x, "bar");
+    DFSTestUtil.createFile(hdfs, file, BLOCKSIZE, (short) 1, 0L);
+    final long fileId = fsdir.getINode4Write(file.toString()).getId();
+    // 3. move file into /foo/y
+    final Path newFile = new Path(y, "bar");
+    hdfs.rename(file, newFile);
+    // 4. create snapshot s1
+    hdfs.createSnapshot(foo, "s1");
+    // 5. move /foo/y to /trash
+    final Path deletedY = new Path(trash, "y");
+    hdfs.rename(y, deletedY);
+    // 6. create snapshot s2
+    hdfs.createSnapshot(foo, "s2");
+    // 7. delete /trash/y
+    hdfs.delete(deletedY, true);
+    // 8. delete snapshot s1
+    hdfs.deleteSnapshot(foo, "s1");
+
+    // make sure bar has been removed from its parent
+    INode p = fsdir.getInode(parentId);
+    Assert.assertNotNull(p);
+    INodeDirectory pd = p.asDirectory();
+    Assert.assertNotNull(pd);
+    Assert.assertNull(pd.getChild("bar".getBytes(), Snapshot.CURRENT_STATE_ID));
+
+    // make sure bar has been cleaned from inodeMap
+    Assert.assertNull(fsdir.getInode(fileId));
   }
 }

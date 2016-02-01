@@ -576,7 +576,7 @@ public class INodeFile extends INodeWithAdditionalFields
 
   /** Clear all blocks of the file. */
   public void clearBlocks() {
-    setBlocks(null);
+    setBlocks(BlockInfo.EMPTY_ARRAY);
   }
 
   @Override
