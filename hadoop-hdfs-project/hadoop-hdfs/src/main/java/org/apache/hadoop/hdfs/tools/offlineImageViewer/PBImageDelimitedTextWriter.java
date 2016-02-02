@@ -84,6 +84,7 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
       inodeName.isEmpty() ? "/" : inodeName);
     buffer.append(path.toString());
     PermissionStatus p = null;
+    boolean isDir = false;
 
     switch (inode.getType()) {
     case FILE:
@@ -109,6 +110,7 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
       append(buffer, 0);  // Num bytes.
       append(buffer, dir.getNsQuota());
       append(buffer, dir.getDsQuota());
+      isDir = true;
       break;
     case SYMLINK:
       INodeSymlink s = inode.getSymlink();
@@ -126,9 +128,28 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
       break;
     }
     assert p != null;
-    append(buffer, p.getPermission().toString());
+    String dirString = isDir ? "d" : "-";
+    append(buffer, dirString + p.getPermission().toString());
     append(buffer, p.getUserName());
     append(buffer, p.getGroupName());
+    return buffer.toString();
+  }
+
+  @Override
+  public String getHeader() {
+    StringBuffer buffer = new StringBuffer();
+    buffer.append("Path");
+    append(buffer, "Replication");
+    append(buffer, "ModificationTime");
+    append(buffer, "AccessTime");
+    append(buffer, "PreferredBlockSize");
+    append(buffer, "BlocksCount");
+    append(buffer, "FileSize");
+    append(buffer, "NSQUOTA");
+    append(buffer, "DSQUOTA");
+    append(buffer, "Permission");
+    append(buffer, "UserName");
+    append(buffer, "GroupName");
     return buffer.toString();
   }
 }
