@@ -778,6 +778,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4340. Add "list" API to reservation system. (Sean Po via wangda)
 
+    YARN-4100. Add Documentation for Distributed and Delegated-Centralized
+    Node Labels feature. (Naganarasimha G R via devaraj)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
