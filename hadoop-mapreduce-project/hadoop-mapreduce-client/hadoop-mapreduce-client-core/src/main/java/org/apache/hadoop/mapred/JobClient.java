@@ -577,10 +577,18 @@ public class JobClient extends CLI implements AutoCloseable {
           return job;
         }
       });
+
+      Cluster prev = cluster;
       // update our Cluster instance with the one created by Job for submission
       // (we can't pass our Cluster instance to Job, since Job wraps the config
       // instance, and the two configs would then diverge)
       cluster = job.getCluster();
+
+      // It is important to close the previous cluster instance
+      // to cleanup resources.
+      if (prev != null) {
+        prev.close();
+      }
       return new NetworkedJob(job);
     } catch (InterruptedException ie) {
       throw new IOException("interrupted", ie);
