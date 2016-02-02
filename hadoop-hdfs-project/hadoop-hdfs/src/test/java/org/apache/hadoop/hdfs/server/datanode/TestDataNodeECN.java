@@ -22,11 +22,17 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 import java.io.IOException;
 
 public class TestDataNodeECN {
+
+  @Rule
+  public Timeout globalTimeout = new Timeout(300000);
+
   @Test
   public void testECNFlag() throws IOException {
     Configuration conf = new Configuration();

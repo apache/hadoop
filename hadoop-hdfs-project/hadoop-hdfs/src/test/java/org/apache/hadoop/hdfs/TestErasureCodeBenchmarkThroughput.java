@@ -27,6 +27,8 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
 
 import java.io.IOException;
 
@@ -37,6 +39,9 @@ public class TestErasureCodeBenchmarkThroughput {
   private static MiniDFSCluster cluster;
   private static Configuration conf;
   private static FileSystem fs;
+
+  @Rule
+  public Timeout globalTimeout = new Timeout(300000);
 
   @BeforeClass
   public static void setup() throws IOException {

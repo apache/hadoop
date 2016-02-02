@@ -43,7 +43,9 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 /**
  * This class tests INodeFile with striped feature.
@@ -61,6 +63,9 @@ public class TestStripedINodeFile {
 
   private static final ErasureCodingPolicy testECPolicy
       = ErasureCodingPolicyManager.getSystemDefaultPolicy();
+
+  @Rule
+  public Timeout globalTimeout = new Timeout(300000);
 
   private static INodeFile createStripedINodeFile() {
     return new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,

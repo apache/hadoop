@@ -28,6 +28,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
 
 import java.io.IOException;
 
@@ -47,6 +49,9 @@ public class TestReadStripedFileWithMissingBlocks {
   private final short dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
   private final int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
   private final int fileLength = blockSize * dataBlocks + 123;
+
+  @Rule
+  public Timeout globalTimeout = new Timeout(300000);
 
   @Before
   public void setup() throws IOException {

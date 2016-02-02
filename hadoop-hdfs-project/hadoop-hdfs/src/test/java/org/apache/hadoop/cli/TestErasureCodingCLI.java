@@ -1,4 +1,3 @@
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -27,7 +26,9 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.xml.sax.SAXException;
 
 public class TestErasureCodingCLI extends CLITestHelper {
@@ -35,6 +36,9 @@ public class TestErasureCodingCLI extends CLITestHelper {
   private MiniDFSCluster dfsCluster = null;
   private FileSystem fs = null;
   private String namenode = null;
+
+  @Rule
+  public Timeout globalTimeout = new Timeout(300000);
 
   @Before
   @Override

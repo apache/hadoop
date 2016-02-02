@@ -32,7 +32,9 @@ import static org.apache.hadoop.hdfs.util.StripedBlockUtil.*;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 import java.util.Random;
 
@@ -91,6 +93,9 @@ public class TestStripedBlockUtil {
   private int[] blockGroupSizes;
   private int[] byteRangeStartOffsets;
   private int[] byteRangeSizes;
+
+  @Rule
+  public Timeout globalTimeout = new Timeout(300000);
 
   @Before
   public void setup(){

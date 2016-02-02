@@ -23,7 +23,9 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo.AddBloc
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.mockito.internal.util.reflection.Whitebox;
 
 import java.io.DataOutput;
@@ -56,6 +58,9 @@ public class TestBlockInfoStriped {
     }
     return blocks;
   }
+
+  @Rule
+  public Timeout globalTimeout = new Timeout(300000);
 
   /**
    * Test adding storage and reported block

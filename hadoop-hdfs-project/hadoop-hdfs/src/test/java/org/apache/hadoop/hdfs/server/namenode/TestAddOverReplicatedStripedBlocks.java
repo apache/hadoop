@@ -34,7 +34,9 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -55,6 +57,9 @@ public class TestAddOverReplicatedStripedBlocks {
   private final int NUM_STRIPE_PER_BLOCK = 4;
   private final int BLOCK_SIZE = NUM_STRIPE_PER_BLOCK * CELLSIZE;
   private final int numDNs = GROUP_SIZE + 3;
+
+  @Rule
+  public Timeout globalTimeout = new Timeout(300000);
 
   @Before
   public void setup() throws IOException {

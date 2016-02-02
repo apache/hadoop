@@ -35,6 +35,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -60,6 +62,9 @@ public class TestWriteReadStripedFile {
     ((Log4JLogger)LogFactory.getLog(BlockPlacementPolicy.class))
         .getLogger().setLevel(Level.ALL);
   }
+
+  @Rule
+  public Timeout globalTimeout = new Timeout(300000);
 
   @Before
   public void setup() throws IOException {

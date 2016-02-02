@@ -17,12 +17,18 @@
  */
 package org.apache.hadoop.io.erasurecode;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
+
 import static org.junit.Assert.assertEquals;
 import java.util.HashMap;
 import java.util.Map;
 
 public class TestECSchema {
+
+   @Rule
+   public Timeout globalTimeout = new Timeout(300000);
 
   @Test
   public void testGoodSchema() {

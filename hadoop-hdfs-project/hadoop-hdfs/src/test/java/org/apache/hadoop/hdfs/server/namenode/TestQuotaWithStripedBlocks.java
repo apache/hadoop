@@ -35,6 +35,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
 
 import java.io.IOException;
 
@@ -54,6 +56,9 @@ public class TestQuotaWithStripedBlocks {
   private MiniDFSCluster cluster;
   private FSDirectory dir;
   private DistributedFileSystem dfs;
+
+  @Rule
+  public Timeout globalTimeout = new Timeout(300000);
 
   @Before
   public void setUp() throws IOException {

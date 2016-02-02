@@ -18,12 +18,17 @@
 package org.apache.hadoop.io.erasurecode.coder;
 
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 /**
  * Test XOR encoding and decoding.
  */
 public class TestXORCoder extends TestErasureCoderBase {
+
+  @Rule
+  public Timeout globalTimeout = new Timeout(300000);
 
   @Before
   public void setup() {

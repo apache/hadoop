@@ -44,6 +44,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -73,6 +75,9 @@ public class TestReadStripedFileWithDecoding {
   private final int largeFileLength = blockSize * dataBlocks + 123;
   private final int[] fileLengths = {smallFileLength, largeFileLength};
   private final int[] dnFailureNums = {1, 2, 3};
+
+  @Rule
+  public Timeout globalTimeout = new Timeout(300000);
 
   @Before
   public void setup() throws IOException {

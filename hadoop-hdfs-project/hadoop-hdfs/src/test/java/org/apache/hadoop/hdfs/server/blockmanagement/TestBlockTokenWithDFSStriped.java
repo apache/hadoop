@@ -25,7 +25,9 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 import java.io.IOException;
 
@@ -43,6 +45,9 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
     BLOCK_SIZE = cellSize * stripesPerBlock;
     FILE_SIZE =  BLOCK_SIZE * dataBlocks * 3;
   }
+
+  @Rule
+  public Timeout globalTimeout = new Timeout(300000);
 
   private Configuration getConf() {
     Configuration conf = super.getConf(numDNs);
