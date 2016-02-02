@@ -18,7 +18,16 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_BIND_HOST_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_BIND_HOST_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_RPC_BIND_HOST_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_BIND_HOST_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY;
 
 import java.io.IOException;
@@ -63,6 +72,19 @@ public class HAUtil {
   
   private static final DelegationTokenSelector tokenSelector =
       new DelegationTokenSelector();
+
+  private static final String[] HA_SPECIAL_INDEPENDENT_KEYS = new String []{
+    DFS_NAMENODE_RPC_ADDRESS_KEY,
+    DFS_NAMENODE_RPC_BIND_HOST_KEY,
+    DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY,
+    DFS_NAMENODE_LIFELINE_RPC_BIND_HOST_KEY,
+    DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+    DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY,
+    DFS_NAMENODE_HTTP_ADDRESS_KEY,
+    DFS_NAMENODE_HTTPS_ADDRESS_KEY,
+    DFS_NAMENODE_HTTP_BIND_HOST_KEY,
+    DFS_NAMENODE_HTTPS_BIND_HOST_KEY
+  };
 
   private HAUtil() { /* Hidden constructor */ }
 
@@ -188,6 +210,10 @@ public class HAUtil {
     
     // Look up the address of the active NN.
     Configuration confForOtherNode = new Configuration(myConf);
+    // unset independent properties
+    for (String idpKey : HA_SPECIAL_INDEPENDENT_KEYS) {
+      confForOtherNode.unset(idpKey);
+    }
     NameNode.initializeGenericKeys(confForOtherNode, nsId, otherNn);
     return confForOtherNode;
   }
