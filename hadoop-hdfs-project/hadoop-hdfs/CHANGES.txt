@@ -46,6 +46,9 @@ Release 2.6.4 - UNRELEASED
     HDFS-9178. Slow datanode I/O can cause a wrong node to be marked bad.
     (Kihwal Lee)
 
+    HDFS-8722. Optimize datanode writes for small writes and flushes. 
+    (Kihwal Lee)
+
 Release 2.6.3 - 2015-12-17
 
   INCOMPATIBLE CHANGES
