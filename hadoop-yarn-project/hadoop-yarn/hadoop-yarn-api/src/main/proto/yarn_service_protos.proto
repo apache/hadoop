@@ -391,6 +391,18 @@ message ReservationDeleteRequestProto {
 message ReservationDeleteResponseProto {
 }
 
+message ReservationListRequestProto {
+  optional string queue = 1;
+  optional string reservation_id = 3;
+  optional int64 start_time = 4;
+  optional int64 end_time = 5;
+  optional bool include_resource_allocations = 6;
+}
+
+message ReservationListResponseProto {
+  repeated ReservationAllocationStateProto reservations = 1;
+}
+
 //////////////////////////////////////////////////////
 /////// SCM_Admin_Protocol //////////////////////////
 //////////////////////////////////////////////////////

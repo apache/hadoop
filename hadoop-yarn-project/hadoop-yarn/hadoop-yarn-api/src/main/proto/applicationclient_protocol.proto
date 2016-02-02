@@ -53,6 +53,7 @@ service ApplicationClientProtocolService {
   rpc submitReservation (ReservationSubmissionRequestProto) returns (ReservationSubmissionResponseProto);
   rpc updateReservation (ReservationUpdateRequestProto) returns (ReservationUpdateResponseProto);
   rpc deleteReservation (ReservationDeleteRequestProto) returns (ReservationDeleteResponseProto);
+  rpc listReservations (ReservationListRequestProto) returns (ReservationListResponseProto);
   rpc getNodeToLabels (GetNodesToLabelsRequestProto) returns (GetNodesToLabelsResponseProto);
   rpc getLabelsToNodes (GetLabelsToNodesRequestProto) returns (GetLabelsToNodesResponseProto);
   rpc getClusterNodeLabels (GetClusterNodeLabelsRequestProto) returns (GetClusterNodeLabelsResponseProto);

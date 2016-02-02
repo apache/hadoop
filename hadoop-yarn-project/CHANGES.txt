@@ -773,6 +773,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4371. "yarn application -kill" should take multiple application ids
     (Sunil G via jlowe)
 
+    YARN-4340. Add "list" API to reservation system. (Sean Po via wangda)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

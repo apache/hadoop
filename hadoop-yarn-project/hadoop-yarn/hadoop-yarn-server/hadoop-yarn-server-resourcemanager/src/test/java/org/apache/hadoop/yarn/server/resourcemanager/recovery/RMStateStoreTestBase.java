@@ -58,7 +58,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.ReservationAllocationStateProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ReservationAllocationStateProto;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.records.Version;
@@ -896,7 +896,7 @@ public class RMStateStoreTestBase {
       ReservationAllocationStateProto actual) {
 
     Assert.assertEquals(
-        expected.getAcceptanceTimestamp(), actual.getAcceptanceTimestamp());
+        expected.getAcceptanceTime(), actual.getAcceptanceTime());
     Assert.assertEquals(expected.getStartTime(), actual.getStartTime());
     Assert.assertEquals(expected.getEndTime(), actual.getEndTime());
     Assert.assertEquals(expected.getContainsGangs(), actual.getContainsGangs());
@@ -911,7 +911,7 @@ public class RMStateStoreTestBase {
       ReservationAllocation expected,
       ReservationAllocationStateProto actual) {
     Assert.assertEquals(
-        expected.getAcceptanceTime(), actual.getAcceptanceTimestamp());
+        expected.getAcceptanceTime(), actual.getAcceptanceTime());
     Assert.assertEquals(expected.getStartTime(), actual.getStartTime());
     Assert.assertEquals(expected.getEndTime(), actual.getEndTime());
     Assert.assertEquals(expected.containsGangs(), actual.getContainsGangs());

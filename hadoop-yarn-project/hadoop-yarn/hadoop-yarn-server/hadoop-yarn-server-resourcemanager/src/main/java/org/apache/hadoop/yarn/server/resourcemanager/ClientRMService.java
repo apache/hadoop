@@ -92,6 +92,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
@@ -115,6 +117,7 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
+import org.apache.hadoop.yarn.api.records.ReservationAllocationState;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -133,8 +136,11 @@ import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationAllocation;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationInputValidator;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationInterval;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystemUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -1318,6 +1324,44 @@ public class ClientRMService extends AbstractService implements
     }
     RMAuditLogger.logSuccess(user, AuditConstants.DELETE_RESERVATION_REQUEST,
         "ClientRMService: " + reservationId);
+    return response;
+  }
+
+  @Override
+  public ReservationListResponse listReservations(
+        ReservationListRequest requestInfo) throws YarnException, IOException {
+    // Check if reservation system is enabled
+    checkReservationSytem(AuditConstants.LIST_RESERVATION_REQUEST);
+    ReservationListResponse response =
+            recordFactory.newRecordInstance(ReservationListResponse.class);
+
+    Plan plan = rValidator.validateReservationListRequest(
+            reservationSystem, requestInfo);
+    boolean includeResourceAllocations = requestInfo
+            .getIncludeResourceAllocations();
+
+    String user = checkReservationACLs(requestInfo.getQueue(),
+            AuditConstants.LIST_RESERVATION_REQUEST);
+
+    ReservationId requestedId = null;
+    if (requestInfo.getReservationId() != null
+            && !requestInfo.getReservationId().isEmpty()) {
+      requestedId = ReservationId.parseReservationId(requestInfo
+            .getReservationId());
+    }
+
+    long startTime = Math.max(requestInfo.getStartTime(), 0);
+    long endTime = requestInfo.getEndTime() <= -1? Long.MAX_VALUE : requestInfo
+            .getEndTime();
+
+    Set<ReservationAllocation> reservations = plan.getReservations(
+        requestedId, new ReservationInterval(startTime, endTime), user);
+
+    List<ReservationAllocationState> info =
+            ReservationSystemUtil.convertAllocationsToReservationInfo(
+                    reservations, includeResourceAllocations);
+
+    response.setReservationAllocationState(info);
     return response;
   }
 

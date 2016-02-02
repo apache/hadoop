@@ -94,6 +94,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RenewDelegationTokenRe
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RenewDelegationTokenResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ReservationDeleteRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ReservationDeleteResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ReservationListRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ReservationListResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ReservationSubmissionRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ReservationSubmissionResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ReservationUpdateRequestPBImpl;
@@ -135,10 +137,12 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueStatistics;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
+import org.apache.hadoop.yarn.api.records.ReservationAllocationState;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.ReservationRequests;
+import org.apache.hadoop.yarn.api.records.ResourceAllocationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
@@ -282,6 +286,8 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterR
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.ReservationDeleteRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.ReservationDeleteResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.ReservationListRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.ReservationListResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.ReservationSubmissionRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.ReservationSubmissionResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.ReservationUpdateRequestProto;
@@ -500,6 +506,8 @@ public class TestPBImplRecords {
     generateByNewInstance(ReservationRequest.class);
     generateByNewInstance(ReservationRequests.class);
     generateByNewInstance(ReservationDefinition.class);
+    generateByNewInstance(ResourceAllocationRequest.class);
+    generateByNewInstance(ReservationAllocationState.class);
     generateByNewInstance(ResourceUtilization.class);
     generateByNewInstance(AMBlackListingRequest.class);
   }
@@ -1233,7 +1241,19 @@ public class TestPBImplRecords {
     validatePBImplRecord(ReservationDeleteResponsePBImpl.class,
         ReservationDeleteResponseProto.class);
   }
-  
+
+  @Test
+  public void testReservationListRequestPBImpl() throws Exception {
+    validatePBImplRecord(ReservationListRequestPBImpl.class,
+            ReservationListRequestProto.class);
+  }
+
+  @Test
+  public void testReservationListResponsePBImpl() throws Exception {
+    validatePBImplRecord(ReservationListResponsePBImpl.class,
+            ReservationListResponseProto.class);
+  }
+
   @Test
   public void testAddToClusterNodeLabelsRequestPBImpl() throws Exception {
     validatePBImplRecord(AddToClusterNodeLabelsRequestPBImpl.class,

@@ -474,6 +474,23 @@ message ReservationDefinitionProto {
   optional string reservation_name = 4;
 }
 
+message ResourceAllocationRequestProto {
+  optional int64 start_time = 1;
+  optional int64 end_time = 2;
+  optional ResourceProto resource = 3;
+}
+
+message ReservationAllocationStateProto {
+  optional ReservationDefinitionProto reservation_definition = 1;
+  repeated ResourceAllocationRequestProto allocation_requests = 2;
+  optional int64 start_time = 3;
+  optional int64 end_time = 4;
+  optional string user = 5;
+  optional bool contains_gangs = 6;
+  optional int64 acceptance_time = 7;
+  optional ReservationIdProto reservation_id = 8;
+}
+
 enum ReservationRequestInterpreterProto {
   R_ANY = 0;
   R_ALL = 1;
