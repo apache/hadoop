@@ -110,6 +110,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
@@ -436,6 +438,12 @@ public class TestClientRedirect {
     @Override
     public ReservationDeleteResponse deleteReservation(
         ReservationDeleteRequest request) throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public ReservationListResponse listReservations(
+            ReservationListRequest request) throws YarnException, IOException {
       return null;
     }
 

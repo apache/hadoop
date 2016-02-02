@@ -73,6 +73,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
@@ -803,7 +805,13 @@ public class YarnClientImpl extends YarnClient {
       ReservationDeleteRequest request) throws YarnException, IOException {
     return rmClient.deleteReservation(request);
   }
-  
+
+  @Override
+  public ReservationListResponse listReservations(
+          ReservationListRequest request) throws YarnException, IOException {
+    return rmClient.listReservations(request);
+  }
+
   @Override
   public Map<NodeId, Set<NodeLabel>> getNodeToLabels() throws YarnException,
       IOException {

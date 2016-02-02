@@ -49,6 +49,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesReq
 import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
@@ -398,12 +400,57 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
    * @throws YarnException if the request is invalid or reservation cannot be
    *           deleted successfully
    * @throws IOException
-   * 
+   *
    */
   @Public
   @Unstable
   public ReservationDeleteResponse deleteReservation(
       ReservationDeleteRequest request) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by clients to get the list of reservations in a plan.
+   * The reservationId will be used to search for reservations to list if it is
+   * provided. Otherwise, it will select active reservations within the
+   * startTime and endTime (inclusive).
+   * </p>
+   *
+   * @param request to list reservations in a plan. Contains fields to select
+   *                String queue, ReservationId reservationId, long startTime,
+   *                long endTime, and a bool includeReservationAllocations.
+   *
+   *                queue: Required. Cannot be null or empty. Refers to the
+   *                reservable queue in the scheduler that was selected when
+   *                creating a reservation submission
+   *                {@link ReservationSubmissionRequest}.
+   *
+   *                reservationId: Optional. If provided, other fields will
+   *                be ignored.
+   *
+   *                startTime: Optional. If provided, only reservations that
+   *                end after the startTime will be selected. This defaults
+   *                to 0 if an invalid number is used.
+   *
+   *                endTime: Optional. If provided, only reservations that
+   *                start on or before endTime will be selected. This defaults
+   *                to Long.MAX_VALUE if an invalid number is used.
+   *
+   *                includeReservationAllocations: Optional. Flag that
+   *                determines whether the entire reservation allocations are
+   *                to be returned. Reservation allocations are subject to
+   *                change in the event of re-planning as described by
+   *                {@code ReservationDefinition}.
+   *
+   * @return response that contains information about reservations that are
+   *                being searched for.
+   * @throws YarnException if the request is invalid
+   * @throws IOException on IO failures
+   *
+   */
+  @Public
+  @Unstable
+  ReservationListResponse listReservations(
+            ReservationListRequest request) throws YarnException, IOException;
 
   /**
    * <p>
