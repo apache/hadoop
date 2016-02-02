@@ -41,6 +41,8 @@ Release 2.6.4 - UNRELEASED
     HDFS-9294. DFSClient deadlock when close file and failed to renew lease.
     (Brahma Reddy Battula via szetszwo)
 
+    HDFS-4660. Block corruption can happen during pipeline recovery (kihwal)
+
 Release 2.6.3 - 2015-12-17
 
   INCOMPATIBLE CHANGES
