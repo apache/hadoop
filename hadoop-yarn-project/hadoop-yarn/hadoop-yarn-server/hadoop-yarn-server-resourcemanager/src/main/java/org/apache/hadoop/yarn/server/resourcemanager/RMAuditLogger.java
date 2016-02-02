@@ -71,6 +71,8 @@ public class RMAuditLogger {
     public static final String SUBMIT_RESERVATION_REQUEST = "Submit Reservation Request";
     public static final String UPDATE_RESERVATION_REQUEST = "Update Reservation Request";
     public static final String DELETE_RESERVATION_REQUEST = "Delete Reservation Request";
+    public static final String LIST_RESERVATION_REQUEST = "List " +
+            "Reservation Request";
   }
   
   static String createSuccessLog(String user, String operation, String target,

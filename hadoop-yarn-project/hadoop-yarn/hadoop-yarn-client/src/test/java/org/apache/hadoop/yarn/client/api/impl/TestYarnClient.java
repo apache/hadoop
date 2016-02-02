@@ -73,6 +73,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
@@ -1233,6 +1235,163 @@ public class TestYarnClient {
       Assert.assertNotNull(sResponse);
       System.out.println("Update reservation response: " + uResponse);
 
+      // List reservations, search by reservation ID
+      ReservationListRequest request =
+              ReservationListRequest.newInstance(
+                      ReservationSystemTestUtil.reservationQ,
+                      reservationID.toString(), -1, -1, false);
+
+      ReservationListResponse response = null;
+      try {
+        response = client.listReservations(request);
+      } catch (Exception e) {
+        Assert.fail(e.getMessage());
+      }
+      Assert.assertNotNull(response);
+      Assert.assertEquals(1, response.getReservationAllocationState().size());
+      Assert.assertEquals(response.getReservationAllocationState().get(0)
+              .getReservationId().getId(), reservationID.getId());
+      Assert.assertEquals(response.getReservationAllocationState().get(0)
+              .getResourceAllocationRequests().size(), 0);
+
+      // List reservations, search by time interval.
+      request = ReservationListRequest.newInstance(
+              ReservationSystemTestUtil.reservationQ, "", arrival +
+                      duration/2, arrival + duration/2, true);
+
+      response = null;
+      try {
+          response = client.listReservations(request);
+      } catch (Exception e) {
+        Assert.fail(e.getMessage());
+      }
+      Assert.assertNotNull(response);
+      Assert.assertEquals(1, response.getReservationAllocationState().size());
+      Assert.assertEquals(response.getReservationAllocationState().get(0)
+              .getReservationId().getId(), reservationID.getId());
+
+      // List reservations, search by invalid end time == -1.
+      request = ReservationListRequest.newInstance(
+              ReservationSystemTestUtil.reservationQ, "", 1, -1,
+              true);
+
+      response = null;
+      try {
+        response = client.listReservations(request);
+      } catch (Exception e) {
+        Assert.fail(e.getMessage());
+      }
+      Assert.assertNotNull(response);
+      Assert.assertEquals(1, response.getReservationAllocationState().size());
+      Assert.assertEquals(response.getReservationAllocationState().get(0)
+              .getReservationId().getId(), reservationID.getId());
+
+      // List reservations, search by invalid end time < -1.
+      request = ReservationListRequest.newInstance(
+              ReservationSystemTestUtil.reservationQ, "", 1, -10,
+              true);
+
+      response = null;
+      try {
+        response = client.listReservations(request);
+      } catch (Exception e) {
+        Assert.fail(e.getMessage());
+      }
+      Assert.assertNotNull(response);
+      Assert.assertEquals(1, response.getReservationAllocationState().size());
+      Assert.assertEquals(response.getReservationAllocationState().get(0)
+              .getReservationId().getId(), reservationID.getId());
+
+      // List reservations, search by time within reservation interval.
+      request = ReservationListRequest.newInstance(
+              ReservationSystemTestUtil.reservationQ, "", 1, Long.MAX_VALUE,
+              true);
+
+      response = null;
+      try {
+        response = client.listReservations(request);
+      } catch (Exception e) {
+        Assert.fail(e.getMessage());
+      }
+      Assert.assertNotNull(response);
+      Assert.assertEquals(1, response.getReservationAllocationState().size());
+      Assert.assertEquals(response.getReservationAllocationState().get(0)
+              .getReservationId().getId(), reservationID.getId());
+
+      // Verify that the full resource allocations exist.
+      Assert.assertTrue(response.getReservationAllocationState().get(0)
+              .getResourceAllocationRequests().size() > 0);
+
+      // Verify that the full RDL is returned.
+      ReservationRequests reservationRequests = response
+              .getReservationAllocationState().get(0)
+              .getReservationDefinition().getReservationRequests();
+      Assert.assertTrue(reservationRequests.getInterpreter().toString()
+              .equals("R_ALL"));
+      Assert.assertTrue(reservationRequests.getReservationResources().get(0)
+              .getDuration() == duration);
+
+      // List reservations, search by very large start time.
+      request = ReservationListRequest.newInstance(
+              ReservationSystemTestUtil.reservationQ, "", Long.MAX_VALUE,
+              -1, false);
+
+      response = null;
+      try {
+        response = client.listReservations(request);
+      } catch (Exception e) {
+        Assert.fail(e.getMessage());
+      }
+
+      // List reservations, search by start time after the reservation
+      // end time.
+      request = ReservationListRequest.newInstance(
+              ReservationSystemTestUtil.reservationQ, "", deadline + duration,
+              deadline + 2 * duration, false);
+
+      response = null;
+      try {
+        response = client.listReservations(request);
+      } catch (Exception e) {
+        Assert.fail(e.getMessage());
+      }
+
+      // Ensure all reservations are filtered out.
+      Assert.assertNotNull(response);
+      Assert.assertEquals(response.getReservationAllocationState().size(), 0);
+
+      // List reservations, search by end time before the reservation start
+      // time.
+      request = ReservationListRequest.newInstance(
+              ReservationSystemTestUtil.reservationQ, "", 0, arrival -
+                      duration, false);
+
+      response = null;
+      try {
+        response = client.listReservations(request);
+      } catch (Exception e) {
+        Assert.fail(e.getMessage());
+      }
+
+      // Ensure all reservations are filtered out.
+      Assert.assertNotNull(response);
+      Assert.assertEquals(response.getReservationAllocationState().size(), 0);
+
+      // List reservations, search by very small end time.
+      request = ReservationListRequest.newInstance(
+              ReservationSystemTestUtil.reservationQ, "", 0, 1, false);
+
+      response = null;
+      try {
+        response = client.listReservations(request);
+      } catch (Exception e) {
+        Assert.fail(e.getMessage());
+      }
+
+      // Ensure all reservations are filtered out.
+      Assert.assertNotNull(response);
+      Assert.assertEquals(response.getReservationAllocationState().size(), 0);
+
       // Delete the reservation
       ReservationDeleteRequest dRequest =
           ReservationDeleteRequest.newInstance(reservationID);
@@ -1244,6 +1403,20 @@ public class TestYarnClient {
       }
       Assert.assertNotNull(sResponse);
       System.out.println("Delete reservation response: " + dResponse);
+
+      // List reservations, search by non-existent reservationID
+      request = ReservationListRequest.newInstance(
+                      ReservationSystemTestUtil.reservationQ,
+                      reservationID.toString(), -1, -1, false);
+
+      response = null;
+      try {
+        response = client.listReservations(request);
+      } catch (Exception e) {
+        Assert.fail(e.getMessage());
+      }
+      Assert.assertNotNull(response);
+      Assert.assertEquals(0, response.getReservationAllocationState().size());
     } finally {
       // clean-up
       if (client != null) {

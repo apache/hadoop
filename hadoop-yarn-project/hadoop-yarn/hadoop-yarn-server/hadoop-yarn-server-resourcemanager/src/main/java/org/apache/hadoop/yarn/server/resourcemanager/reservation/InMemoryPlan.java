@@ -346,7 +346,7 @@ public class InMemoryPlan implements Plan {
     reservationTable.remove(reservation.getReservationId());
     decrementAllocation(reservation);
     LOG.info("Sucessfully deleted reservation: {} in plan.",
-        reservation.getReservationId());
+            reservation.getReservationId());
     return true;
   }
 
@@ -412,30 +412,7 @@ public class InMemoryPlan implements Plan {
 
   @Override
   public Set<ReservationAllocation> getReservationsAtTime(long tick) {
-    ReservationInterval searchInterval =
-        new ReservationInterval(tick, Long.MAX_VALUE);
-    readLock.lock();
-    try {
-      SortedMap<ReservationInterval, Set<InMemoryReservationAllocation>> reservations =
-          currentReservations.headMap(searchInterval, true);
-      if (!reservations.isEmpty()) {
-        Set<ReservationAllocation> flattenedReservations =
-            new HashSet<ReservationAllocation>();
-        for (Set<InMemoryReservationAllocation> reservationEntries : reservations
-            .values()) {
-          for (InMemoryReservationAllocation reservation : reservationEntries) {
-            if (reservation.getEndTime() > tick) {
-              flattenedReservations.add(reservation);
-            }
-          }
-        }
-        return Collections.unmodifiableSet(flattenedReservations);
-      } else {
-        return Collections.emptySet();
-      }
-    } finally {
-      readLock.unlock();
-    }
+    return getReservations(null, new ReservationInterval(tick, tick), "");
   }
 
   @Override
@@ -493,6 +470,50 @@ public class InMemoryPlan implements Plan {
     readLock.lock();
     try {
       return rleSparseVector.getCapacityAtTime(t);
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Override
+    public Set<ReservationAllocation> getReservations(ReservationId
+                    reservationID, ReservationInterval interval, String user) {
+    if (reservationID != null) {
+      ReservationAllocation allocation = getReservationById(reservationID);
+      if (allocation == null){
+        return Collections.emptySet();
+      }
+      return Collections.singleton(allocation);
+    }
+
+    long startTime = interval == null? 0 : interval.getStartTime();
+    long endTime = interval == null? Long.MAX_VALUE : interval.getEndTime();
+
+    ReservationInterval searchInterval =
+            new ReservationInterval(endTime, Long.MAX_VALUE);
+    readLock.lock();
+    try {
+      SortedMap<ReservationInterval, Set<InMemoryReservationAllocation>>
+            reservations = currentReservations.headMap(searchInterval, true);
+      if (!reservations.isEmpty()) {
+        Set<ReservationAllocation> flattenedReservations =
+                new HashSet<>();
+        for (Set<InMemoryReservationAllocation> reservationEntries :
+                reservations.values()) {
+          for (InMemoryReservationAllocation res : reservationEntries) {
+            if (res.getEndTime() > startTime) {
+              if (user != null && !user.isEmpty()
+                      && !res.getUser().equals(user)) {
+                continue;
+              }
+              flattenedReservations.add(res);
+            }
+          }
+        }
+        return Collections.unmodifiableSet(flattenedReservations);
+      } else {
+        return Collections.emptySet();
+      }
     } finally {
       readLock.unlock();
     }
