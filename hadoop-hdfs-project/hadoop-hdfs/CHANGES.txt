@@ -40,6 +40,8 @@ Release 2.7.3 - UNRELEASED
     HDFS-9383. TestByteArrayManager#testByteArrayManager fails.
     (szetszwo via kihwal)
 
+    HDFS-9072. Fix random failures in TestJMXGet (J.Andreina via kihwal)
+
     HDFS-6481. DatanodeManager#getDatanodeStorageInfos() should check the
     length of storageIDs. (szetszwo via Arpit Agarwal)
 
