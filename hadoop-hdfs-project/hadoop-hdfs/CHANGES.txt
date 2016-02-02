@@ -17,6 +17,9 @@ Release 2.6.5 - UNRELEASED
     HDFS-7258. CacheReplicationMonitor rescan schedule log should use DEBUG
     level instead of INFO level. (Xiaoyu Yao via wheat9)
 
+    HDFS-9669. TcpPeerServer should respect ipc.server.listen.queue.size
+    (Elliot Clark via cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-8845. DiskChecker should not traverse the entire tree (Chang Li via

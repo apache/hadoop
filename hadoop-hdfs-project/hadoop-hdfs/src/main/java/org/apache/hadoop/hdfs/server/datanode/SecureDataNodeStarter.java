@@ -23,6 +23,7 @@ import java.nio.channels.ServerSocketChannel;
 import org.apache.commons.daemon.Daemon;
 import org.apache.commons.daemon.DaemonContext;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -97,10 +98,13 @@ public class SecureDataNodeStarter implements Daemon {
     int socketWriteTimeout = conf.getInt(
         DFSConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY,
         HdfsServerConstants.WRITE_TIMEOUT);
+    int backlogLength = conf.getInt(
+        CommonConfigurationKeysPublic.IPC_SERVER_LISTEN_QUEUE_SIZE_KEY,
+        CommonConfigurationKeysPublic.IPC_SERVER_LISTEN_QUEUE_SIZE_DEFAULT);
 
     ServerSocket ss = (socketWriteTimeout > 0) ? 
         ServerSocketChannel.open().socket() : new ServerSocket();
-    ss.bind(streamingAddr, 0);
+    ss.bind(streamingAddr, backlogLength);
 
     // Check that we got the port we need
     if (ss.getLocalPort() != streamingAddr.getPort()) {
