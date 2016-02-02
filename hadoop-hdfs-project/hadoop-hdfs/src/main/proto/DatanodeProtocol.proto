@@ -60,7 +60,7 @@ message DatanodeCommandProto {
     UnusedUpgradeCommand = 6;
     NullDatanodeCommand = 7;
     BlockIdCommand = 8;
-    BlockECRecoveryCommand = 9;
+    BlockECReconstructionCommand = 9;
   }
 
   required Type cmdType = 1;    // Type of the command
@@ -74,7 +74,7 @@ message DatanodeCommandProto {
   optional KeyUpdateCommandProto keyUpdateCmd = 6;
   optional RegisterCommandProto registerCmd = 7;
   optional BlockIdCommandProto blkIdCmd = 8;
-  optional BlockECRecoveryCommandProto blkECRecoveryCmd = 9;
+  optional BlockECReconstructionCommandProto blkECReconstructionCmd = 9;
 }
 
 /**
@@ -149,10 +149,10 @@ message RegisterCommandProto {
 }
 
 /**
- * Block Erasure coding recovery command
+ * Block Erasure coding reconstruction command
  */
-message BlockECRecoveryCommandProto {
-  repeated BlockECRecoveryInfoProto blockECRecoveryinfo = 1;
+message BlockECReconstructionCommandProto {
+  repeated BlockECReconstructionInfoProto blockECReconstructioninfo = 1;
 }
 
 /**

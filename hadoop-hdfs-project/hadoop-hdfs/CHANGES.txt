@@ -912,6 +912,9 @@ Trunk (Unreleased)
       HDFS-9659. EditLogTailerThread to Active Namenode RPC should timeout
       (surendra singh lilhore via vinayakumarb)
 
+      HDFS-9731. Erasure Coding: Rename BlockECRecoveryCommand to
+      BlockECReconstructionCommand. (Rakesh R via zhz)
+
 Release 2.9.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

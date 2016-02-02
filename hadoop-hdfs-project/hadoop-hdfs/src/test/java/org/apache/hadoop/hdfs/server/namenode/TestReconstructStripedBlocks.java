@@ -37,7 +37,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.protocol.BlockECRecoveryCommand.BlockECRecoveryInfo;
+import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.junit.Test;
@@ -50,7 +50,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class TestRecoverStripedBlocks {
+public class TestReconstructStripedBlocks {
   private static final int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
   private final short GROUP_SIZE =
       (short) (NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS);
@@ -90,9 +90,9 @@ public class TestRecoverStripedBlocks {
    * Start GROUP_SIZE + 1 datanodes.
    * Inject striped blocks to first GROUP_SIZE datanodes.
    * Then make numOfBusy datanodes busy, make numOfMissed datanodes missed.
-   * Then trigger BlockManager to compute recovery works. (so all recovery work
-   * will be scheduled to the last datanode)
-   * Finally, verify the recovery work of the last datanode.
+   * Then trigger BlockManager to compute reconstruction works. (so all
+   * reconstruction work will be scheduled to the last datanode)
+   * Finally, verify the reconstruction work of the last datanode.
    */
   private void doTestMissingStripedBlock(int numOfMissed, int numOfBusy)
       throws Exception {
@@ -148,22 +148,23 @@ public class TestRecoverStripedBlocks {
 
       BlockManagerTestUtil.getComputedDatanodeWork(bm);
 
-      // all the recovery work will be scheduled on the last DN
+      // all the reconstruction work will be scheduled on the last DN
       DataNode lastDn = cluster.getDataNodes().get(GROUP_SIZE);
       DatanodeDescriptor last =
           bm.getDatanodeManager().getDatanode(lastDn.getDatanodeId());
       assertEquals("Counting the number of outstanding EC tasks", numBlocks,
           last.getNumberOfBlocksToBeErasureCoded());
-      List<BlockECRecoveryInfo> recovery =
+      List<BlockECReconstructionInfo> reconstruction =
           last.getErasureCodeCommand(numBlocks);
-      for (BlockECRecoveryInfo info : recovery) {
+      for (BlockECReconstructionInfo info : reconstruction) {
         assertEquals(1, info.getTargetDnInfos().length);
         assertEquals(last, info.getTargetDnInfos()[0]);
         assertEquals(info.getSourceDnInfos().length,
             info.getLiveBlockIndices().length);
         if (GROUP_SIZE - numOfMissed == NUM_DATA_BLOCKS) {
           // It's a QUEUE_HIGHEST_PRIORITY block, so the busy DNs will be chosen
-          // to make sure we have NUM_DATA_BLOCKS DNs to do recovery work.
+          // to make sure we have NUM_DATA_BLOCKS DNs to do reconstruction
+          // work.
           assertEquals(NUM_DATA_BLOCKS, info.getSourceDnInfos().length);
         } else {
           // The block has no highest priority, so we don't use the busy DNs as

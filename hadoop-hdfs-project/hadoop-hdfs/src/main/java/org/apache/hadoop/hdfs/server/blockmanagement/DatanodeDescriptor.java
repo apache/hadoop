@@ -42,7 +42,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
-import org.apache.hadoop.hdfs.server.protocol.BlockECRecoveryCommand.BlockECRecoveryInfo;
+import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
@@ -204,7 +204,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private final BlockQueue<BlockTargetPair> replicateBlocks =
       new BlockQueue<>();
   /** A queue of blocks to be erasure coded by this datanode */
-  private final BlockQueue<BlockECRecoveryInfo> erasurecodeBlocks =
+  private final BlockQueue<BlockECReconstructionInfo> erasurecodeBlocks =
       new BlockQueue<>();
   /** A queue of blocks to be recovered by this datanode */
   private final BlockQueue<BlockInfo> recoverBlocks = new BlockQueue<>();
@@ -605,8 +605,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
       DatanodeDescriptor[] sources, DatanodeStorageInfo[] targets,
       byte[] liveBlockIndices, ErasureCodingPolicy ecPolicy) {
     assert (block != null && sources != null && sources.length > 0);
-    BlockECRecoveryInfo task = new BlockECRecoveryInfo(block, sources, targets,
-        liveBlockIndices, ecPolicy);
+    BlockECReconstructionInfo task = new BlockECReconstructionInfo(block,
+        sources, targets, liveBlockIndices, ecPolicy);
     erasurecodeBlocks.offer(task);
     BlockManager.LOG.debug("Adding block recovery task " + task + "to "
         + getName() + ", current queue size is " + erasurecodeBlocks.size());
@@ -655,7 +655,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return replicateBlocks.poll(maxTransfers);
   }
 
-  public List<BlockECRecoveryInfo> getErasureCodeCommand(int maxTransfers) {
+  public List<BlockECReconstructionInfo> getErasureCodeCommand(
+      int maxTransfers) {
     return erasurecodeBlocks.poll(maxTransfers);
   }
 

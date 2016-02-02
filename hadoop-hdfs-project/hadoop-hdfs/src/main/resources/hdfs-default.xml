@@ -2654,23 +2654,34 @@
 </property>
 
 <property>
-  <name>dfs.datanode.stripedread.timeout.millis</name>
+  <name>dfs.datanode.ec.reconstruction.stripedread.timeout.millis</name>
   <value>5000</value>
   <description>Datanode striped read timeout in milliseconds.
   </description>
 </property>
 
 <property>
-  <name>dfs.datanode.stripedread.threads</name>
+  <name>dfs.datanode.ec.reconstruction.stripedread.threads</name>
   <value>20</value>
-  <description>Number of threads used by the Datanode for background recovery work.
+  <description>
+    Number of threads used by the Datanode to read striped block
+    during background reconstruction work.
   </description>
 </property>
 
 <property>
-  <name>dfs.datanode.stripedread.buffer.size</name>
+  <name>dfs.datanode.ec.reconstruction.stripedread.buffer.size</name>
   <value>65536</value>
   <description>Datanode striped read buffer size.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.ec.reconstruction.stripedblock.threads.size</name>
+  <value>8</value>
+  <description>
+    Number of threads used by the Datanode for background
+    reconstruction work.
   </description>
 </property>
 

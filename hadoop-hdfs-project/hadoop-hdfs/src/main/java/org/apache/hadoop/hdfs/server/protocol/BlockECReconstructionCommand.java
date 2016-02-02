@@ -31,8 +31,8 @@ import java.util.Arrays;
 import java.util.Collection;
 
 /**
- * A BlockECRecoveryCommand is an instruction to a DataNode to reconstruct a
- * striped block group with missing blocks.
+ * A BlockECReconstructionCommand is an instruction to a DataNode to
+ * reconstruct a striped block group with missing blocks.
  *
  * Upon receiving this command, the DataNode pulls data from other DataNodes
  * hosting blocks in this group and reconstructs the lost blocks through codec
@@ -45,23 +45,24 @@ import java.util.Collection;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class BlockECRecoveryCommand extends DatanodeCommand {
-  final Collection<BlockECRecoveryInfo> ecTasks;
+public class BlockECReconstructionCommand extends DatanodeCommand {
+  private final Collection<BlockECReconstructionInfo> ecTasks;
 
   /**
-   * Create BlockECRecoveryCommand from a collection of
-   * {@link BlockECRecoveryInfo}, each representing a recovery task
+   * Create BlockECReconstructionCommand from a collection of
+   * {@link BlockECReconstructionInfo}, each representing a reconstruction
+   * task
    */
-  public BlockECRecoveryCommand(int action,
-      Collection<BlockECRecoveryInfo> blockECRecoveryInfoList) {
+  public BlockECReconstructionCommand(int action,
+      Collection<BlockECReconstructionInfo> blockECReconstructionInfoList) {
     super(action);
-    this.ecTasks = blockECRecoveryInfoList;
+    this.ecTasks = blockECReconstructionInfoList;
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("BlockECRecoveryCommand(\n  ");
+    sb.append("BlockECReconstructionCommand(\n  ");
     Joiner.on("\n  ").appendTo(sb, ecTasks);
     sb.append("\n)");
     return sb.toString();
@@ -70,7 +71,7 @@ public class BlockECRecoveryCommand extends DatanodeCommand {
   /** Block and targets pair */
   @InterfaceAudience.Private
   @InterfaceStability.Evolving
-  public static class BlockECRecoveryInfo {
+  public static class BlockECReconstructionInfo {
     private final ExtendedBlock block;
     private final DatanodeInfo[] sources;
     private DatanodeInfo[] targets;
@@ -79,19 +80,19 @@ public class BlockECRecoveryCommand extends DatanodeCommand {
     private final byte[] liveBlockIndices;
     private final ErasureCodingPolicy ecPolicy;
 
-    public BlockECRecoveryInfo(ExtendedBlock block, DatanodeInfo[] sources,
-        DatanodeStorageInfo[] targetDnStorageInfo, byte[] liveBlockIndices,
-        ErasureCodingPolicy ecPolicy) {
+    public BlockECReconstructionInfo(ExtendedBlock block,
+        DatanodeInfo[] sources, DatanodeStorageInfo[] targetDnStorageInfo,
+        byte[] liveBlockIndices, ErasureCodingPolicy ecPolicy) {
       this(block, sources, DatanodeStorageInfo
           .toDatanodeInfos(targetDnStorageInfo), DatanodeStorageInfo
           .toStorageIDs(targetDnStorageInfo), DatanodeStorageInfo
           .toStorageTypes(targetDnStorageInfo), liveBlockIndices, ecPolicy);
     }
 
-    public BlockECRecoveryInfo(ExtendedBlock block, DatanodeInfo[] sources,
-        DatanodeInfo[] targets, String[] targetStorageIDs,
-        StorageType[] targetStorageTypes, byte[] liveBlockIndices,
-        ErasureCodingPolicy ecPolicy) {
+    public BlockECReconstructionInfo(ExtendedBlock block,
+        DatanodeInfo[] sources, DatanodeInfo[] targets,
+        String[] targetStorageIDs, StorageType[] targetStorageTypes,
+        byte[] liveBlockIndices, ErasureCodingPolicy ecPolicy) {
       this.block = block;
       this.sources = sources;
       this.targets = targets;
@@ -117,7 +118,7 @@ public class BlockECRecoveryCommand extends DatanodeCommand {
     public String[] getTargetStorageIDs() {
       return targetStorageIDs;
     }
-    
+
     public StorageType[] getTargetStorageTypes() {
       return targetStorageTypes;
     }
@@ -125,14 +126,14 @@ public class BlockECRecoveryCommand extends DatanodeCommand {
     public byte[] getLiveBlockIndices() {
       return liveBlockIndices;
     }
-    
+
     public ErasureCodingPolicy getErasureCodingPolicy() {
       return ecPolicy;
     }
 
     @Override
     public String toString() {
-      return new StringBuilder().append("BlockECRecoveryInfo(\n  ")
+      return new StringBuilder().append("BlockECReconstructionInfo(\n  ")
           .append("Recovering ").append(block).append(" From: ")
           .append(Arrays.asList(sources)).append(" To: [")
           .append(Arrays.asList(targets)).append(")\n")
@@ -141,7 +142,7 @@ public class BlockECRecoveryCommand extends DatanodeCommand {
     }
   }
 
-  public Collection<BlockECRecoveryInfo> getECTasks() {
+  public Collection<BlockECReconstructionInfo> getECTasks() {
     return this.ecTasks;
   }
 }

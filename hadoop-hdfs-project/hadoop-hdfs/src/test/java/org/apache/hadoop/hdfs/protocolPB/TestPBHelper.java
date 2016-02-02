@@ -43,7 +43,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockECRecoveryCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockECReconstructionCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeRegistrationProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
@@ -75,13 +75,13 @@ import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
-import org.apache.hadoop.hdfs.server.protocol.BlockECRecoveryCommand.BlockECRecoveryInfo;
+import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.StripedBlockWithLocations;
-import org.apache.hadoop.hdfs.server.protocol.BlockECRecoveryCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -689,7 +689,7 @@ public class TestPBHelper {
     DatanodeStorageInfo[] targetDnInfos0 = new DatanodeStorageInfo[] {
         targetDnInfos_0, targetDnInfos_1 };
     byte[] liveBlkIndices0 = new byte[2];
-    BlockECRecoveryInfo blkECRecoveryInfo0 = new BlockECRecoveryInfo(
+    BlockECReconstructionInfo blkECRecoveryInfo0 = new BlockECReconstructionInfo(
         new ExtendedBlock("bp1", 1234), dnInfos0, targetDnInfos0,
         liveBlkIndices0, ErasureCodingPolicyManager.getSystemDefaultPolicy());
     DatanodeInfo[] dnInfos1 = new DatanodeInfo[] {
@@ -703,26 +703,26 @@ public class TestPBHelper {
     DatanodeStorageInfo[] targetDnInfos1 = new DatanodeStorageInfo[] {
         targetDnInfos_2, targetDnInfos_3 };
     byte[] liveBlkIndices1 = new byte[2];
-    BlockECRecoveryInfo blkECRecoveryInfo1 = new BlockECRecoveryInfo(
+    BlockECReconstructionInfo blkECRecoveryInfo1 = new BlockECReconstructionInfo(
         new ExtendedBlock("bp2", 3256), dnInfos1, targetDnInfos1,
         liveBlkIndices1, ErasureCodingPolicyManager.getSystemDefaultPolicy());
-    List<BlockECRecoveryInfo> blkRecoveryInfosList = new ArrayList<BlockECRecoveryInfo>();
+    List<BlockECReconstructionInfo> blkRecoveryInfosList = new ArrayList<BlockECReconstructionInfo>();
     blkRecoveryInfosList.add(blkECRecoveryInfo0);
     blkRecoveryInfosList.add(blkECRecoveryInfo1);
-    BlockECRecoveryCommand blkECRecoveryCmd = new BlockECRecoveryCommand(
-        DatanodeProtocol.DNA_ERASURE_CODING_RECOVERY, blkRecoveryInfosList);
-    BlockECRecoveryCommandProto blkECRecoveryCmdProto = PBHelper
-        .convert(blkECRecoveryCmd);
-    blkECRecoveryCmd = PBHelper.convert(blkECRecoveryCmdProto);
-    Iterator<BlockECRecoveryInfo> iterator = blkECRecoveryCmd.getECTasks()
+    BlockECReconstructionCommand blkECReconstructionCmd = new BlockECReconstructionCommand(
+        DatanodeProtocol.DNA_ERASURE_CODING_RECONSTRUCTION, blkRecoveryInfosList);
+    BlockECReconstructionCommandProto blkECRecoveryCmdProto = PBHelper
+        .convert(blkECReconstructionCmd);
+    blkECReconstructionCmd = PBHelper.convert(blkECRecoveryCmdProto);
+    Iterator<BlockECReconstructionInfo> iterator = blkECReconstructionCmd.getECTasks()
         .iterator();
     assertBlockECRecoveryInfoEquals(blkECRecoveryInfo0, iterator.next());
     assertBlockECRecoveryInfoEquals(blkECRecoveryInfo1, iterator.next());
   }
 
   private void assertBlockECRecoveryInfoEquals(
-      BlockECRecoveryInfo blkECRecoveryInfo1,
-      BlockECRecoveryInfo blkECRecoveryInfo2) {
+      BlockECReconstructionInfo blkECRecoveryInfo1,
+      BlockECReconstructionInfo blkECRecoveryInfo2) {
     assertEquals(blkECRecoveryInfo1.getExtendedBlock(),
         blkECRecoveryInfo2.getExtendedBlock());
 

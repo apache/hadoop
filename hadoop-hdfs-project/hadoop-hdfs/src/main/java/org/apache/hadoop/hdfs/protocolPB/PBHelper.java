@@ -36,7 +36,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BalancerBandwidthCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockECRecoveryCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockECReconstructionCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockIdCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeCommandProto;
@@ -48,7 +48,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDele
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.VolumeFailureSummaryProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportContextProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.BlockECRecoveryInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.BlockECReconstructionInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
@@ -82,10 +82,10 @@ import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
-import org.apache.hadoop.hdfs.server.protocol.BlockECRecoveryCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockIdCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
-import org.apache.hadoop.hdfs.server.protocol.BlockECRecoveryCommand.BlockECRecoveryInfo;
+import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringStripedBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
@@ -453,8 +453,8 @@ public class PBHelper {
       return REG_CMD;
     case BlockIdCommand:
       return PBHelper.convert(proto.getBlkIdCmd());
-    case BlockECRecoveryCommand:
-      return PBHelper.convert(proto.getBlkECRecoveryCmd());
+    case BlockECReconstructionCommand:
+      return PBHelper.convert(proto.getBlkECReconstructionCmd());
     default:
       return null;
     }
@@ -584,10 +584,10 @@ public class PBHelper {
       builder.setCmdType(DatanodeCommandProto.Type.BlockIdCommand).
         setBlkIdCmd(PBHelper.convert((BlockIdCommand) datanodeCommand));
       break;
-    case DatanodeProtocol.DNA_ERASURE_CODING_RECOVERY:
-      builder.setCmdType(DatanodeCommandProto.Type.BlockECRecoveryCommand)
-          .setBlkECRecoveryCmd(
-              convert((BlockECRecoveryCommand) datanodeCommand));
+    case DatanodeProtocol.DNA_ERASURE_CODING_RECONSTRUCTION:
+      builder.setCmdType(DatanodeCommandProto.Type.BlockECReconstructionCommand)
+          .setBlkECReconstructionCmd(
+              convert((BlockECReconstructionCommand) datanodeCommand));
       break;
     case DatanodeProtocol.DNA_UNKNOWN: //Not expected
     default:
@@ -873,42 +873,42 @@ public class PBHelper {
     return storageUuids;
   }
 
-  public static BlockECRecoveryInfo convertBlockECRecoveryInfo(
-      BlockECRecoveryInfoProto blockEcRecoveryInfoProto) {
-    ExtendedBlockProto blockProto = blockEcRecoveryInfoProto.getBlock();
+  public static BlockECReconstructionInfo convertBlockECReconstructionInfo(
+      BlockECReconstructionInfoProto blockEcReconstructionInfoProto) {
+    ExtendedBlockProto blockProto = blockEcReconstructionInfoProto.getBlock();
     ExtendedBlock block = PBHelperClient.convert(blockProto);
 
-    DatanodeInfosProto sourceDnInfosProto = blockEcRecoveryInfoProto
+    DatanodeInfosProto sourceDnInfosProto = blockEcReconstructionInfoProto
         .getSourceDnInfos();
     DatanodeInfo[] sourceDnInfos = PBHelperClient.convert(sourceDnInfosProto);
 
-    DatanodeInfosProto targetDnInfosProto = blockEcRecoveryInfoProto
+    DatanodeInfosProto targetDnInfosProto = blockEcReconstructionInfoProto
         .getTargetDnInfos();
     DatanodeInfo[] targetDnInfos = PBHelperClient.convert(targetDnInfosProto);
 
-    HdfsProtos.StorageUuidsProto targetStorageUuidsProto = blockEcRecoveryInfoProto
-        .getTargetStorageUuids();
+    HdfsProtos.StorageUuidsProto targetStorageUuidsProto =
+        blockEcReconstructionInfoProto.getTargetStorageUuids();
     String[] targetStorageUuids = convert(targetStorageUuidsProto);
 
-    StorageTypesProto targetStorageTypesProto = blockEcRecoveryInfoProto
+    StorageTypesProto targetStorageTypesProto = blockEcReconstructionInfoProto
         .getTargetStorageTypes();
     StorageType[] convertStorageTypes = PBHelperClient.convertStorageTypes(
         targetStorageTypesProto.getStorageTypesList(), targetStorageTypesProto
             .getStorageTypesList().size());
 
-    byte[] liveBlkIndices = blockEcRecoveryInfoProto.getLiveBlockIndices()
+    byte[] liveBlkIndices = blockEcReconstructionInfoProto.getLiveBlockIndices()
         .toByteArray();
     ErasureCodingPolicy ecPolicy =
         PBHelperClient.convertErasureCodingPolicy(
-            blockEcRecoveryInfoProto.getEcPolicy());
-    return new BlockECRecoveryInfo(block, sourceDnInfos, targetDnInfos,
+            blockEcReconstructionInfoProto.getEcPolicy());
+    return new BlockECReconstructionInfo(block, sourceDnInfos, targetDnInfos,
         targetStorageUuids, convertStorageTypes, liveBlkIndices, ecPolicy);
   }
 
-  public static BlockECRecoveryInfoProto convertBlockECRecoveryInfo(
-      BlockECRecoveryInfo blockEcRecoveryInfo) {
-    BlockECRecoveryInfoProto.Builder builder = BlockECRecoveryInfoProto
-        .newBuilder();
+  public static BlockECReconstructionInfoProto convertBlockECRecoveryInfo(
+      BlockECReconstructionInfo blockEcRecoveryInfo) {
+    BlockECReconstructionInfoProto.Builder builder =
+        BlockECReconstructionInfoProto.newBuilder();
     builder.setBlock(PBHelperClient.convert(
         blockEcRecoveryInfo.getExtendedBlock()));
 
@@ -934,29 +934,31 @@ public class PBHelper {
     return builder.build();
   }
 
-  public static BlockECRecoveryCommandProto convert(
-      BlockECRecoveryCommand blkECRecoveryCmd) {
-    BlockECRecoveryCommandProto.Builder builder = BlockECRecoveryCommandProto
-        .newBuilder();
-    Collection<BlockECRecoveryInfo> blockECRecoveryInfos = blkECRecoveryCmd
-        .getECTasks();
-    for (BlockECRecoveryInfo blkECRecoveryInfo : blockECRecoveryInfos) {
-      builder
-          .addBlockECRecoveryinfo(convertBlockECRecoveryInfo(blkECRecoveryInfo));
+  public static BlockECReconstructionCommandProto convert(
+      BlockECReconstructionCommand blkECReconstructionCmd) {
+    BlockECReconstructionCommandProto.Builder builder =
+        BlockECReconstructionCommandProto.newBuilder();
+    Collection<BlockECReconstructionInfo> blockECRInfos =
+        blkECReconstructionCmd.getECTasks();
+    for (BlockECReconstructionInfo blkECReconstructInfo : blockECRInfos) {
+      builder.addBlockECReconstructioninfo(
+          convertBlockECRecoveryInfo(blkECReconstructInfo));
     }
     return builder.build();
   }
 
-  public static BlockECRecoveryCommand convert(
-      BlockECRecoveryCommandProto blkECRecoveryCmdProto) {
-    Collection<BlockECRecoveryInfo> blkECRecoveryInfos = new ArrayList<>();
-    List<BlockECRecoveryInfoProto> blockECRecoveryinfoList = blkECRecoveryCmdProto
-        .getBlockECRecoveryinfoList();
-    for (BlockECRecoveryInfoProto blockECRecoveryInfoProto : blockECRecoveryinfoList) {
-      blkECRecoveryInfos
-          .add(convertBlockECRecoveryInfo(blockECRecoveryInfoProto));
+  public static BlockECReconstructionCommand convert(
+      BlockECReconstructionCommandProto blkECReconstructionCmdProto) {
+    Collection<BlockECReconstructionInfo> blkECReconstructionInfos =
+        new ArrayList<>();
+    List<BlockECReconstructionInfoProto> blkECRInfoList =
+        blkECReconstructionCmdProto.getBlockECReconstructioninfoList();
+    for (BlockECReconstructionInfoProto blkECRInfoProto : blkECRInfoList) {
+      blkECReconstructionInfos
+          .add(convertBlockECReconstructionInfo(blkECRInfoProto));
     }
-    return new BlockECRecoveryCommand(DatanodeProtocol.DNA_ERASURE_CODING_RECOVERY,
-        blkECRecoveryInfos);
+    return new BlockECReconstructionCommand(
+        DatanodeProtocol.DNA_ERASURE_CODING_RECONSTRUCTION,
+        blkECReconstructionInfos);
   }
 }

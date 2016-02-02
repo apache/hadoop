@@ -35,7 +35,8 @@ class ErasureCodingWork extends BlockRecoveryWork {
     super(block, bc, srcNodes, containingNodes,
         liveReplicaStorages, additionalReplRequired, priority);
     this.liveBlockIndicies = liveBlockIndicies;
-    BlockManager.LOG.debug("Creating an ErasureCodingWork to recover " + block);
+    BlockManager.LOG.debug("Creating an ErasureCodingWork to {} reconstruct ",
+        block);
   }
 
   byte[] getLiveBlockIndicies() {

@@ -47,9 +47,9 @@ message GetErasureCodingPolicyResponseProto {
 }
 
 /**
- * Block erasure coding recovery info
+ * Block erasure coding reconstruction info
  */
-message BlockECRecoveryInfoProto {
+message BlockECReconstructionInfoProto {
   required ExtendedBlockProto block = 1;
   required DatanodeInfosProto sourceDnInfos = 2;
   required DatanodeInfosProto targetDnInfos = 3;

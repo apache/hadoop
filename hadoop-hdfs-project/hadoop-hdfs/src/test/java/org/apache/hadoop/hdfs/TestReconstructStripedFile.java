@@ -45,7 +45,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
-import org.apache.hadoop.hdfs.server.protocol.BlockECRecoveryCommand.BlockECRecoveryInfo;
+import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
@@ -54,9 +54,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class TestRecoverStripedFile {
-  public static final Log LOG = LogFactory.getLog(TestRecoverStripedFile.class);
-  
+public class TestReconstructStripedFile {
+  public static final Log LOG = LogFactory.getLog(TestReconstructStripedFile.class);
+
   private static final int dataBlkNum = StripedFileTestUtil.NUM_DATA_BLOCKS;
   private static final int parityBlkNum = StripedFileTestUtil.NUM_PARITY_BLOCKS;
   private static final int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
@@ -70,7 +70,7 @@ public class TestRecoverStripedFile {
     GenericTestUtils.setLogLevel(BlockManager.blockLog, Level.ALL);
   }
 
-  enum RecoveryType {
+  enum ReconstructionType {
     DataOnly,
     ParityOnly,
     Any
@@ -86,14 +86,14 @@ public class TestRecoverStripedFile {
   public void setup() throws IOException {
     final Configuration conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
-    conf.setInt(DFSConfigKeys.DFS_DATANODE_STRIPED_READ_BUFFER_SIZE_KEY,
+    conf.setInt(DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_BUFFER_SIZE_KEY,
         cellSize - 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY,
         false);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(dnNum).build();
     cluster.waitActive();
-    
+
     fs = cluster.getFileSystem();
     fs.getClient().setErasureCodingPolicy("/", null);
 
@@ -110,100 +110,100 @@ public class TestRecoverStripedFile {
       cluster = null;
     }
   }
-  
+
   @Test(timeout = 120000)
   public void testRecoverOneParityBlock() throws Exception {
     int fileLen = 10 * blockSize + blockSize/10;
-    assertFileBlocksRecovery("/testRecoverOneParityBlock", fileLen,
-        RecoveryType.ParityOnly, 1);
+    assertFileBlocksReconstruction("/testRecoverOneParityBlock", fileLen,
+        ReconstructionType.ParityOnly, 1);
   }
-  
+
   @Test(timeout = 120000)
   public void testRecoverOneParityBlock1() throws Exception {
     int fileLen = cellSize + cellSize/10;
-    assertFileBlocksRecovery("/testRecoverOneParityBlock1", fileLen,
-        RecoveryType.ParityOnly, 1);
+    assertFileBlocksReconstruction("/testRecoverOneParityBlock1", fileLen,
+        ReconstructionType.ParityOnly, 1);
   }
-  
+
   @Test(timeout = 120000)
   public void testRecoverOneParityBlock2() throws Exception {
     int fileLen = 1;
-    assertFileBlocksRecovery("/testRecoverOneParityBlock2", fileLen,
-        RecoveryType.ParityOnly, 1);
+    assertFileBlocksReconstruction("/testRecoverOneParityBlock2", fileLen,
+        ReconstructionType.ParityOnly, 1);
   }
-  
+
   @Test(timeout = 120000)
   public void testRecoverOneParityBlock3() throws Exception {
     int fileLen = 3 * blockSize + blockSize/10;
-    assertFileBlocksRecovery("/testRecoverOneParityBlock3", fileLen,
-        RecoveryType.ParityOnly, 1);
+    assertFileBlocksReconstruction("/testRecoverOneParityBlock3", fileLen,
+        ReconstructionType.ParityOnly, 1);
   }
-  
+
   @Test(timeout = 120000)
   public void testRecoverThreeParityBlocks() throws Exception {
     int fileLen = 10 * blockSize + blockSize/10;
-    assertFileBlocksRecovery("/testRecoverThreeParityBlocks", fileLen,
-        RecoveryType.ParityOnly, 3);
+    assertFileBlocksReconstruction("/testRecoverThreeParityBlocks", fileLen,
+        ReconstructionType.ParityOnly, 3);
   }
-  
+
   @Test(timeout = 120000)
   public void testRecoverThreeDataBlocks() throws Exception {
     int fileLen = 10 * blockSize + blockSize/10;
-    assertFileBlocksRecovery("/testRecoverThreeDataBlocks", fileLen,
-        RecoveryType.DataOnly, 3);
+    assertFileBlocksReconstruction("/testRecoverThreeDataBlocks", fileLen,
+        ReconstructionType.DataOnly, 3);
   }
-  
+
   @Test(timeout = 120000)
   public void testRecoverThreeDataBlocks1() throws Exception {
     int fileLen = 3 * blockSize + blockSize/10;
-    assertFileBlocksRecovery("/testRecoverThreeDataBlocks1", fileLen,
-        RecoveryType.DataOnly, 3);
+    assertFileBlocksReconstruction("/testRecoverThreeDataBlocks1", fileLen,
+        ReconstructionType.DataOnly, 3);
   }
-  
+
   @Test(timeout = 120000)
   public void testRecoverOneDataBlock() throws Exception {
     int fileLen = 10 * blockSize + blockSize/10;
-    assertFileBlocksRecovery("/testRecoverOneDataBlock", fileLen,
-        RecoveryType.DataOnly, 1);
+    assertFileBlocksReconstruction("/testRecoverOneDataBlock", fileLen,
+        ReconstructionType.DataOnly, 1);
   }
-  
+
   @Test(timeout = 120000)
   public void testRecoverOneDataBlock1() throws Exception {
     int fileLen = cellSize + cellSize/10;
-    assertFileBlocksRecovery("/testRecoverOneDataBlock1", fileLen,
-        RecoveryType.DataOnly, 1);
+    assertFileBlocksReconstruction("/testRecoverOneDataBlock1", fileLen,
+        ReconstructionType.DataOnly, 1);
   }
-  
+
   @Test(timeout = 120000)
   public void testRecoverOneDataBlock2() throws Exception {
     int fileLen = 1;
-    assertFileBlocksRecovery("/testRecoverOneDataBlock2", fileLen,
-        RecoveryType.DataOnly, 1);
+    assertFileBlocksReconstruction("/testRecoverOneDataBlock2", fileLen,
+        ReconstructionType.DataOnly, 1);
   }
-  
+
   @Test(timeout = 120000)
   public void testRecoverAnyBlocks() throws Exception {
     int fileLen = 3 * blockSize + blockSize/10;
-    assertFileBlocksRecovery("/testRecoverAnyBlocks", fileLen,
-        RecoveryType.Any, 2);
+    assertFileBlocksReconstruction("/testRecoverAnyBlocks", fileLen,
+        ReconstructionType.Any, 2);
   }
-  
+
   @Test(timeout = 120000)
   public void testRecoverAnyBlocks1() throws Exception {
     int fileLen = 10 * blockSize + blockSize/10;
-    assertFileBlocksRecovery("/testRecoverAnyBlocks1", fileLen,
-        RecoveryType.Any, 3);
+    assertFileBlocksReconstruction("/testRecoverAnyBlocks1", fileLen,
+        ReconstructionType.Any, 3);
   }
 
-  private int[] generateDeadDnIndices(RecoveryType type, int deadNum,
+  private int[] generateDeadDnIndices(ReconstructionType type, int deadNum,
       byte[] indices) {
     List<Integer> deadList = new ArrayList<>(deadNum);
     while (deadList.size() < deadNum) {
       int dead = random.nextInt(indices.length);
       boolean isOfType = true;
-      if (type == RecoveryType.DataOnly) {
+      if (type == ReconstructionType.DataOnly) {
         isOfType = indices[dead] < dataBlkNum;
-      } else if (type == RecoveryType.ParityOnly) {
+      } else if (type == ReconstructionType.ParityOnly) {
         isOfType = indices[dead] >= dataBlkNum;
       }
       if (isOfType && !deadList.contains(dead)) {
@@ -228,13 +228,13 @@ public class TestRecoverStripedFile {
   }
 
   private int generateErrors(Map<ExtendedBlock, DataNode> corruptTargets,
-      RecoveryType type)
+      ReconstructionType type)
     throws IOException {
     int stoppedDN = 0;
     for (Map.Entry<ExtendedBlock, DataNode> target : corruptTargets.entrySet()) {
-      if (stoppedDN == 0 || type != RecoveryType.DataOnly
+      if (stoppedDN == 0 || type != ReconstructionType.DataOnly
           || random.nextBoolean()) {
-        // stop at least one DN to trigger recovery
+        // stop at least one DN to trigger reconstruction
         LOG.info("Note: stop DataNode " + target.getValue().getDisplayName()
             + " with internal block " + target.getKey());
         shutdownDataNodes(target.getValue());
@@ -249,17 +249,17 @@ public class TestRecoverStripedFile {
   }
 
   /**
-   * Test the file blocks recovery.
-   * 1. Check the replica is recovered in the target datanode, 
+   * Test the file blocks reconstruction.
+   * 1. Check the replica is reconstructed in the target datanode,
    *    and verify the block replica length, generationStamp and content.
-   * 2. Read the file and verify content. 
+   * 2. Read the file and verify content.
    */
-  private void assertFileBlocksRecovery(String fileName, int fileLen,
-      RecoveryType type, int toRecoverBlockNum) throws Exception {
+  private void assertFileBlocksReconstruction(String fileName, int fileLen,
+      ReconstructionType type, int toRecoverBlockNum) throws Exception {
     if (toRecoverBlockNum < 1 || toRecoverBlockNum > parityBlkNum) {
       Assert.fail("toRecoverBlockNum should be between 1 ~ " + parityBlkNum);
     }
-    
+
     Path file = new Path(fileName);
 
     final byte[] data = new byte[fileLen];
@@ -269,13 +269,13 @@ public class TestRecoverStripedFile {
 
     LocatedBlocks locatedBlocks = getLocatedBlocks(file);
     assertEquals(locatedBlocks.getFileLength(), fileLen);
-    
-    LocatedStripedBlock lastBlock = 
+
+    LocatedStripedBlock lastBlock =
         (LocatedStripedBlock)locatedBlocks.getLastLocatedBlock();
-    
+
     DatanodeInfo[] storageInfos = lastBlock.getLocations();
     byte[] indices = lastBlock.getBlockIndices();
-    
+
     BitSet bitset = new BitSet(dnNum);
     for (DatanodeInfo storageInfo : storageInfos) {
       bitset.set(dnMap.get(storageInfo));
@@ -284,7 +284,7 @@ public class TestRecoverStripedFile {
     int[] dead = generateDeadDnIndices(type, toRecoverBlockNum, indices);
     LOG.info("Note: indices == " + Arrays.toString(indices)
         + ". Generate errors on datanodes: " + Arrays.toString(dead));
-    
+
     DatanodeInfo[] dataDNs = new DatanodeInfo[toRecoverBlockNum];
     int[] deadDnIndices = new int[toRecoverBlockNum];
     ExtendedBlock[] blocks = new ExtendedBlock[toRecoverBlockNum];
@@ -303,7 +303,7 @@ public class TestRecoverStripedFile {
       replicas[i] = cluster.getBlockFile(deadDnIndices[i], blocks[i]);
       metadatas[i] = cluster.getBlockMetadataFile(deadDnIndices[i], blocks[i]);
       // the block replica on the datanode should be the same as expected
-      assertEquals(replicas[i].length(), 
+      assertEquals(replicas[i].length(),
           StripedBlockUtil.getInternalBlockLength(
           lastBlock.getBlockSize(), cellSize, dataBlkNum, indices[dead[i]]));
       assertTrue(metadatas[i].getName().
@@ -311,7 +311,7 @@ public class TestRecoverStripedFile {
       LOG.info("replica " + i + " locates in file: " + replicas[i]);
       replicaContents[i] = DFSTestUtil.readFileAsBytes(replicas[i]);
     }
-    
+
     int cellsNum = (fileLen - 1) / cellSize + 1;
     int groupSize = Math.min(cellsNum, dataBlkNum) + parityBlkNum;
 
@@ -331,25 +331,25 @@ public class TestRecoverStripedFile {
         targetDNs[n++] = i;
       }
     }
-    
-    waitForRecoveryFinished(file, groupSize);
+
+    waitForReconstructionFinished(file, groupSize);
 
     targetDNs = sortTargetsByReplicas(blocks, targetDNs);
 
     // Check the replica on the new target node.
     for (int i = 0; i < toRecoverBlockNum; i++) {
-      File replicaAfterRecovery = cluster.getBlockFile(targetDNs[i], blocks[i]);
-      LOG.info("replica after recovery " + replicaAfterRecovery);
-      File metadataAfterRecovery =
+      File replicaAfterReconstruction = cluster.getBlockFile(targetDNs[i], blocks[i]);
+      LOG.info("replica after reconstruction " + replicaAfterReconstruction);
+      File metadataAfterReconstruction =
           cluster.getBlockMetadataFile(targetDNs[i], blocks[i]);
-      assertEquals(replicaAfterRecovery.length(), replicas[i].length());
+      assertEquals(replicaAfterReconstruction.length(), replicas[i].length());
       LOG.info("replica before " + replicas[i]);
-      assertTrue(metadataAfterRecovery.getName().
+      assertTrue(metadataAfterReconstruction.getName().
           endsWith(blocks[i].getGenerationStamp() + ".meta"));
-      byte[] replicaContentAfterRecovery =
-          DFSTestUtil.readFileAsBytes(replicaAfterRecovery);
+      byte[] replicaContentAfterReconstruction =
+          DFSTestUtil.readFileAsBytes(replicaAfterReconstruction);
 
-      Assert.assertArrayEquals(replicaContents[i], replicaContentAfterRecovery);
+      Assert.assertArrayEquals(replicaContents[i], replicaContentAfterReconstruction);
     }
   }
 
@@ -368,18 +368,19 @@ public class TestRecoverStripedFile {
         }
       }
       if (result[i] == -1) {
-        Assert.fail("Failed to recover striped block: " + blocks[i].getBlockId());
+        Assert.fail("Failed to reconstruct striped block: "
+            + blocks[i].getBlockId());
       }
     }
     return result;
   }
 
-  private LocatedBlocks waitForRecoveryFinished(Path file, int groupSize) 
+  private LocatedBlocks waitForReconstructionFinished(Path file, int groupSize)
       throws Exception {
     final int ATTEMPTS = 60;
     for (int i = 0; i < ATTEMPTS; i++) {
       LocatedBlocks locatedBlocks = getLocatedBlocks(file);
-      LocatedStripedBlock lastBlock = 
+      LocatedStripedBlock lastBlock =
           (LocatedStripedBlock)locatedBlocks.getLastLocatedBlock();
       DatanodeInfo[] storageInfos = lastBlock.getLocations();
       if (storageInfos.length >= groupSize) {
@@ -387,9 +388,9 @@ public class TestRecoverStripedFile {
       }
       Thread.sleep(1000);
     }
-    throw new IOException ("Time out waiting for EC block recovery.");
+    throw new IOException ("Time out waiting for EC block reconstruction.");
   }
-  
+
   private LocatedBlocks getLocatedBlocks(Path file) throws IOException {
     return fs.getClient().getLocatedBlocks(file.toString(), 0, Long.MAX_VALUE);
   }
@@ -415,10 +416,10 @@ public class TestRecoverStripedFile {
     DatanodeStorageInfo[] dnStorageInfo = new DatanodeStorageInfo[] {
         targetDnInfos_1 };
 
-    BlockECRecoveryInfo invalidECInfo = new BlockECRecoveryInfo(
+    BlockECReconstructionInfo invalidECInfo = new BlockECReconstructionInfo(
         new ExtendedBlock("bp-id", 123456), dataDNs, dnStorageInfo, liveIndices,
         ErasureCodingPolicyManager.getSystemDefaultPolicy());
-    List<BlockECRecoveryInfo> ecTasks = new ArrayList<>();
+    List<BlockECReconstructionInfo> ecTasks = new ArrayList<>();
     ecTasks.add(invalidECInfo);
     dataNode.getErasureCodingWorker().processErasureCodingTasks(ecTasks);
   }
