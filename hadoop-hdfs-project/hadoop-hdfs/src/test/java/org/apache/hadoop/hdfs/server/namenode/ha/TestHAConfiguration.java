@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -27,11 +29,13 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.util.Collection;
+import java.util.List;
 
 import com.google.common.base.Joiner;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode;
@@ -149,5 +153,24 @@ public class TestHAConfiguration {
       GenericTestUtils.assertExceptionContains(
           "Cannot use SecondaryNameNode in an HA cluster", ioe);
     }
+  }
+
+  @Test
+  public void testGetOtherNNGenericConf() throws IOException {
+    String nsId = "ns1";
+    String host1 = "1.2.3.1";
+    String host2 = "1.2.3.2";
+    Configuration conf = getHAConf(nsId, host1, host2);
+    conf.set(DFSUtil.addKeySuffixes(
+        DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, nsId, "nn1"),
+        host1 + ":54321");
+    conf.set(DFSConfigKeys.DFS_NAMESERVICE_ID, "ns1");
+    NameNode.initializeGenericKeys(conf, "ns1", "nn1");
+    List<Configuration> others = HAUtil.getConfForOtherNodes(conf);
+    Configuration nn2Conf = others.get(0);
+    assertEquals(nn2Conf.get(DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY),"nn2");
+    assertTrue(!conf.get(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY)
+        .equals(nn2Conf.get(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY)));
+    assertNull(nn2Conf.get(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY));
   }
 }

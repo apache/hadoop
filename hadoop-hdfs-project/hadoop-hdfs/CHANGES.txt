@@ -2672,6 +2672,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9701. DN may deadlock when hot-swapping under load. (Xiao Chen via lei)
 
+    HDFS-9718. HAUtil#getConfForOtherNodes should unset independent generic keys
+    before initialize (DENG FEI via vinayakumarb)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
