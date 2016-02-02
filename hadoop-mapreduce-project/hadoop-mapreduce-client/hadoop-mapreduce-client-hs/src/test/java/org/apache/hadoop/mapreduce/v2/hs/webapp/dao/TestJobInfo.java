@@ -22,6 +22,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.HashMap;
 
 import org.junit.Assert;
@@ -135,5 +136,28 @@ public class TestJobInfo {
     JobInfo jobInfo = new JobInfo(job);
   
     Assert.assertEquals(11L, jobInfo.getAvgReduceTime().longValue());
-  }  
+  }
+
+  @Test
+  public void testGetStartTimeStr() {
+    JobReport jobReport = mock(JobReport.class);
+    when(jobReport.getStartTime()).thenReturn(-1L);
+
+    Job job = mock(Job.class);
+    when(job.getReport()).thenReturn(jobReport);
+    when(job.getName()).thenReturn("TestJobInfo");
+    when(job.getState()).thenReturn(JobState.SUCCEEDED);
+
+    JobId  jobId = MRBuilderUtils.newJobId(1L, 1, 1);
+    when(job.getID()).thenReturn(jobId);
+
+    JobInfo jobInfo = new JobInfo(job);
+    Assert.assertEquals("N/A", jobInfo.getStartTimeStr());
+
+    Date date = new Date();
+    when(jobReport.getStartTime()).thenReturn(date.getTime());
+
+    jobInfo = new JobInfo(job);
+    Assert.assertEquals(date.toString(), jobInfo.getStartTimeStr());
+  }
 }

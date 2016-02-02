@@ -79,7 +79,7 @@ public class HsJobsBlock extends HtmlBlock {
       JobInfo job = new JobInfo(j);
       jobsTableData.append("[\"")
       .append(dateFormat.format(new Date(job.getSubmitTime()))).append("\",\"")
-      .append(dateFormat.format(new Date(job.getStartTime()))).append("\",\"")
+      .append(job.getStartTimeStr()).append("\",\"")
       .append(dateFormat.format(new Date(job.getFinishTime()))).append("\",\"")
       .append("<a href='").append(url("job", job.getId())).append("'>")
       .append(job.getId()).append("</a>\",\"")
