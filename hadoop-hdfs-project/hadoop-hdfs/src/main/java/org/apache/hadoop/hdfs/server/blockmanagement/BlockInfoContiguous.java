@@ -35,20 +35,20 @@ public class BlockInfoContiguous extends BlockInfo {
   }
 
   /**
-   * Ensure that there is enough  space to include num more triplets.
-   * @return first free triplet index.
+   * Ensure that there is enough  space to include num more storages.
+   * @return first free storage index.
    */
   private int ensureCapacity(int num) {
-    assert this.triplets != null : "BlockInfo is not initialized";
+    assert this.storages != null : "BlockInfo is not initialized";
     int last = numNodes();
-    if (triplets.length >= (last+num)*3) {
+    if (storages.length >= (last+num)) {
       return last;
     }
     /* Not enough space left. Create a new array. Should normally
      * happen only when replication is manually increased by the user. */
-    Object[] old = triplets;
-    triplets = new Object[(last+num)*3];
-    System.arraycopy(old, 0, triplets, 0, last * 3);
+    DatanodeStorageInfo[] old = storages;
+    storages = new DatanodeStorageInfo[(last+num)];
+    System.arraycopy(old, 0, storages, 0, last);
     return last;
   }
 
@@ -57,8 +57,6 @@ public class BlockInfoContiguous extends BlockInfo {
     // find the last null node
     int lastNode = ensureCapacity(1);
     setStorageInfo(lastNode, storage);
-    setNext(lastNode, null);
-    setPrevious(lastNode, null);
     return true;
   }
 
@@ -68,25 +66,18 @@ public class BlockInfoContiguous extends BlockInfo {
     if (dnIndex < 0) { // the node is not found
       return false;
     }
-    assert getPrevious(dnIndex) == null && getNext(dnIndex) == null :
-        "Block is still in the list and must be removed first.";
     // find the last not null node
     int lastNode = numNodes()-1;
-    // replace current node triplet by the lastNode one
+    // replace current node entry by the lastNode one
     setStorageInfo(dnIndex, getStorageInfo(lastNode));
-    setNext(dnIndex, getNext(lastNode));
-    setPrevious(dnIndex, getPrevious(lastNode));
-    // set the last triplet to null
+    // set the last entry to null
     setStorageInfo(lastNode, null);
-    setNext(lastNode, null);
-    setPrevious(lastNode, null);
     return true;
   }
 
   @Override
   public int numNodes() {
-    assert this.triplets != null : "BlockInfo is not initialized";
-    assert triplets.length % 3 == 0 : "Malformed BlockInfo";
+    assert this.storages != null : "BlockInfo is not initialized";
 
     for (int idx = getCapacity()-1; idx >= 0; idx--) {
       if (getDatanode(idx) != null) {

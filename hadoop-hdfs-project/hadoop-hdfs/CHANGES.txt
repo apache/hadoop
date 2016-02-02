@@ -971,6 +971,9 @@ Release 2.9.0 - UNRELEASED
     HDFS-7764. DirectoryScanner shouldn't abort the scan if one directory had
     an error (Rakesh R via cmccabe)
 
+    HDFS-9260. Improve the performance and GC friendliness of NameNode startup
+    and full block reports (Staffan Friberg via cmccabe)
+
   OPTIMIZATIONS
 
   BUG FIXES

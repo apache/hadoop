@@ -174,12 +174,13 @@ public class DatanodeProtocolClientSideTranslatorPB implements
 
   @Override
   public DatanodeCommand blockReport(DatanodeRegistration registration,
-      String poolId, StorageBlockReport[] reports, BlockReportContext context)
+      String poolId, StorageBlockReport[] reports,
+      BlockReportContext context)
         throws IOException {
     BlockReportRequestProto.Builder builder = BlockReportRequestProto
         .newBuilder().setRegistration(PBHelper.convert(registration))
         .setBlockPoolId(poolId);
-    
+
     boolean useBlocksBuffer = registration.getNamespaceInfo()
         .isCapabilitySupported(Capability.STORAGE_BLOCK_REPORT_BUFFERS);
 

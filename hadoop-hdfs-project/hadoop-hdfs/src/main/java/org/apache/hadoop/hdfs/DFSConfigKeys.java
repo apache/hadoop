@@ -219,6 +219,18 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_NAMENODE_REPLICATION_MAX_STREAMS_DEFAULT = 2;
   public static final String  DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY = "dfs.namenode.replication.max-streams-hard-limit";
   public static final int     DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_DEFAULT = 4;
+  public static final String DFS_NAMENODE_STORAGEINFO_DEFRAGMENT_INTERVAL_MS_KEY
+      = "dfs.namenode.storageinfo.defragment.interval.ms";
+  public static final int
+      DFS_NAMENODE_STORAGEINFO_DEFRAGMENT_INTERVAL_MS_DEFAULT = 10 * 60 * 1000;
+  public static final String DFS_NAMENODE_STORAGEINFO_DEFRAGMENT_TIMEOUT_MS_KEY
+      = "dfs.namenode.storageinfo.defragment.timeout.ms";
+  public static final int
+      DFS_NAMENODE_STORAGEINFO_DEFRAGMENT_TIMEOUT_MS_DEFAULT = 4;
+  public static final String DFS_NAMENODE_STORAGEINFO_DEFRAGMENT_RATIO_KEY
+      = "dfs.namenode.storageinfo.defragment.ratio";
+  public static final double
+      DFS_NAMENODE_STORAGEINFO_DEFRAGMENT_RATIO_DEFAULT = 0.75;
   public static final String  DFS_WEBHDFS_AUTHENTICATION_FILTER_KEY = "dfs.web.authentication.filter";
   /* Phrased as below to avoid javac inlining as a constant, to match the behavior when
      this was AuthFilter.class.getName(). Note that if you change the import for AuthFilter, you

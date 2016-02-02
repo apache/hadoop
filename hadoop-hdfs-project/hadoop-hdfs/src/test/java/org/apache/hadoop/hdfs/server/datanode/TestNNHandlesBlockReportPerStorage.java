@@ -23,7 +23,6 @@ import java.io.IOException;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
-import org.apache.hadoop.util.Time;
 
 
 /**
@@ -40,7 +39,7 @@ public class TestNNHandlesBlockReportPerStorage extends BlockReportTestBase {
       LOG.info("Sending block report for storage " + report.getStorage().getStorageID());
       StorageBlockReport[] singletonReport = { report };
       cluster.getNameNodeRpc().blockReport(dnR, poolId, singletonReport,
-          new BlockReportContext(reports.length, i, System.nanoTime(), 0L));
+          new BlockReportContext(reports.length, i, System.nanoTime(), 0L, true));
       i++;
     }
   }

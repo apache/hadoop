@@ -32,6 +32,7 @@ import static org.mockito.Mockito.verify;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -75,6 +76,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.TestINodeFile;
+import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
@@ -806,7 +808,8 @@ public class TestBlockManager {
     // Make sure it's the first full report
     assertEquals(0, ds.getBlockReportCount());
     bm.processReport(node, new DatanodeStorage(ds.getStorageID()),
-        builder.build(), null, false);
+        builder.build(),
+        new BlockReportContext(1, 0, System.nanoTime(), 0, true), false);
     assertEquals(1, ds.getBlockReportCount());
 
     // verify the storage info is correct
@@ -819,6 +822,70 @@ public class TestBlockManager {
     assertNull(bm.getStoredBlock(new Block(ReceivedDeletedBlockId)));
     assertTrue(bm.getStoredBlock(new Block(existedBlock)).findStorageInfo
         (ds) >= 0);
+  }
+
+  @Test
+  public void testFullBR() throws Exception {
+    doReturn(true).when(fsn).isRunning();
+
+    DatanodeDescriptor node = nodes.get(0);
+    DatanodeStorageInfo ds = node.getStorageInfos()[0];
+    node.setAlive(true);
+    DatanodeRegistration nodeReg =  new DatanodeRegistration(node, null, null, "");
+
+    // register new node
+    bm.getDatanodeManager().registerDatanode(nodeReg);
+    bm.getDatanodeManager().addDatanode(node);
+    assertEquals(node, bm.getDatanodeManager().getDatanode(node));
+    assertEquals(0, ds.getBlockReportCount());
+
+    ArrayList<BlockInfo> blocks = new ArrayList<>();
+    for (int id = 24; id > 0; id--) {
+      blocks.add(addBlockToBM(id));
+    }
+
+    // Make sure it's the first full report
+    assertEquals(0, ds.getBlockReportCount());
+    bm.processReport(node, new DatanodeStorage(ds.getStorageID()),
+                     generateReport(blocks),
+                     new BlockReportContext(1, 0, System.nanoTime(), 0, false),
+                     false);
+    assertEquals(1, ds.getBlockReportCount());
+    // verify the storage info is correct
+    for (BlockInfo block : blocks) {
+      assertTrue(bm.getStoredBlock(block).findStorageInfo(ds) >= 0);
+    }
+
+    // Send unsorted report
+    bm.processReport(node, new DatanodeStorage(ds.getStorageID()),
+                     generateReport(blocks),
+                     new BlockReportContext(1, 0, System.nanoTime(), 0, false),
+                     false);
+    assertEquals(2, ds.getBlockReportCount());
+    // verify the storage info is correct
+    for (BlockInfo block : blocks) {
+      assertTrue(bm.getStoredBlock(block).findStorageInfo(ds) >= 0);
+    }
+
+    // Sort list and send a sorted report
+    Collections.sort(blocks);
+    bm.processReport(node, new DatanodeStorage(ds.getStorageID()),
+                     generateReport(blocks),
+                     new BlockReportContext(1, 0, System.nanoTime(), 0, true),
+                     false);
+    assertEquals(3, ds.getBlockReportCount());
+    // verify the storage info is correct
+    for (BlockInfo block : blocks) {
+      assertTrue(bm.getStoredBlock(block).findStorageInfo(ds) >= 0);
+    }
+  }
+
+  private BlockListAsLongs generateReport(List<BlockInfo> blocks) {
+    BlockListAsLongs.Builder builder = BlockListAsLongs.builder();
+    for (BlockInfo block : blocks) {
+      builder.add(new FinalizedReplica(block, null, null));
+    }
+    return builder.build();
   }
 
   private BlockInfo addBlockToBM(long blkId) {

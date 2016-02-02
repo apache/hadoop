@@ -118,7 +118,7 @@ public class TestDeadDatanode {
         BlockListAsLongs.EMPTY) };
     try {
       dnp.blockReport(reg, poolId, report,
-          new BlockReportContext(1, 0, System.nanoTime(), 0L));
+          new BlockReportContext(1, 0, System.nanoTime(), 0L, true));
       fail("Expected IOException is not thrown");
     } catch (IOException ex) {
       // Expected
