@@ -87,6 +87,7 @@ public class TestOfflineImageViewer {
 
   // namespace as written to dfs, to be compared with viewer's output
   final static HashMap<String, FileStatus> writtenFiles = Maps.newHashMap();
+  static int dirCount = 0;
 
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
@@ -113,7 +114,7 @@ public class TestOfflineImageViewer {
       DistributedFileSystem hdfs = cluster.getFileSystem();
 
       // Create a reasonable namespace
-      for (int i = 0; i < NUM_DIRS; i++) {
+      for (int i = 0; i < NUM_DIRS; i++, dirCount++) {
         Path dir = new Path("/dir" + i);
         hdfs.mkdirs(dir);
         writtenFiles.put(dir.toString(), pathToFileEntry(hdfs, dir.toString()));
@@ -131,11 +132,13 @@ public class TestOfflineImageViewer {
       // Create an empty directory
       Path emptydir = new Path("/emptydir");
       hdfs.mkdirs(emptydir);
+      dirCount++;
       writtenFiles.put(emptydir.toString(), hdfs.getFileStatus(emptydir));
 
       //Create a directory whose name should be escaped in XML
       Path invalidXMLDir = new Path("/dirContainingInvalidXMLChar\u0000here");
       hdfs.mkdirs(invalidXMLDir);
+      dirCount++;
 
       // Get delegation tokens so we log the delegation token op
       Token<?>[] delegationTokens = hdfs
@@ -144,15 +147,24 @@ public class TestOfflineImageViewer {
         LOG.debug("got token " + t);
       }
 
-      final Path snapshot = new Path("/snapshot");
-      hdfs.mkdirs(snapshot);
-      hdfs.allowSnapshot(snapshot);
-      hdfs.mkdirs(new Path("/snapshot/1"));
-      hdfs.delete(snapshot, true);
+      // Create INodeReference
+      final Path src = new Path("/src");
+      hdfs.mkdirs(src);
+      dirCount++;
+      writtenFiles.put(src.toString(), hdfs.getFileStatus(src));
+      final Path orig = new Path("/src/orig");
+      hdfs.mkdirs(orig);
+      hdfs.allowSnapshot(src);
+      hdfs.createSnapshot(src, "snapshot");
+      final Path dst = new Path("/dst");
+      hdfs.rename(orig, dst);
+      dirCount++;
+      writtenFiles.put(dst.toString(), hdfs.getFileStatus(dst));
 
       // Set XAttrs so the fsimage contains XAttr ops
       final Path xattr = new Path("/xattr");
       hdfs.mkdirs(xattr);
+      dirCount++;
       hdfs.setXAttr(xattr, "user.a1", new byte[]{ 0x31, 0x32, 0x33 });
       hdfs.setXAttr(xattr, "user.a2", new byte[]{ 0x37, 0x38, 0x39 });
       // OIV should be able to handle empty value XAttrs
@@ -232,8 +244,8 @@ public class TestOfflineImageViewer {
     matcher = p.matcher(outputString);
     assertTrue(matcher.find() && matcher.groupCount() == 1);
     int totalDirs = Integer.parseInt(matcher.group(1));
-    // totalDirs includes root directory, empty directory, and xattr directory
-    assertEquals(NUM_DIRS + 4, totalDirs);
+    // totalDirs includes root directory
+    assertEquals(dirCount + 1, totalDirs);
 
     FileStatus maxFile = Collections.max(writtenFiles.values(),
         new Comparator<FileStatus>() {
@@ -285,7 +297,7 @@ public class TestOfflineImageViewer {
 
       // verify the number of directories
       FileStatus[] statuses = webhdfs.listStatus(new Path("/"));
-      assertEquals(NUM_DIRS + 3, statuses.length); // contains empty and xattr directory
+      assertEquals(dirCount, statuses.length);
 
       // verify the number of files in the directory
       statuses = webhdfs.listStatus(new Path("/dir0"));
@@ -393,11 +405,15 @@ public class TestOfflineImageViewer {
         BufferedReader reader =
             new BufferedReader(new InputStreamReader(input))) {
       String line;
+      boolean header = true;
       while ((line = reader.readLine()) != null) {
         System.out.println(line);
         String[] fields = line.split(DELIMITER);
         assertEquals(12, fields.length);
-        fileNames.add(fields[0]);
+        if (!header) {
+          fileNames.add(fields[0]);
+        }
+        header = false;
       }
     }
 

@@ -204,7 +204,7 @@ class FSImageLoader {
     return dirs;
   }
 
-  private static ImmutableList<Long> loadINodeReferenceSection(InputStream in)
+  static ImmutableList<Long> loadINodeReferenceSection(InputStream in)
       throws IOException {
     LOG.info("Loading inode references");
     ImmutableList.Builder<Long> builder = ImmutableList.builder();
