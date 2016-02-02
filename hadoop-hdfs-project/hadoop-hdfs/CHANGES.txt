@@ -2699,6 +2699,9 @@ Release 2.7.3 - UNRELEASED
 
     HDFS-9654. Code refactoring for HDFS-8578.  (szetszwo)
 
+    HDFS-9669. TcpPeerServer should respect ipc.server.listen.queue.size
+    (Elliot Clark via cmccabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
