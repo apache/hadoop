@@ -2281,26 +2281,26 @@
   <!-- Distributed Node Labels Configuration -->
   <property>
     <description>
-    When "yarn.node-labels.configuration-type" parameter in RM is configured as
-    "distributed", Administrators can configure in NM, the provider for	the
+    When "yarn.node-labels.configuration-type" is configured with "distributed"
+    in RM, Administrators can configure in NM the provider for the
     node labels by configuring this parameter. Administrators can
-    specify "config", "script" or the class name of the provider. Configured
+    configure "config", "script" or the class name of the provider. Configured
     class needs to extend
     org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider.
-    If "config" is specified then "ConfigurationNodeLabelsProvider" and
-    "script" then "ScriptNodeLabelsProvider" will be used.
+    If "config" is configured, then "ConfigurationNodeLabelsProvider" and if
+    "script" is configured, then "ScriptNodeLabelsProvider" will be used.
     </description>
     <name>yarn.nodemanager.node-labels.provider</name>
   </property>
 
   <property>
     <description>
-    When node labels "yarn.nodemanager.node-labels.provider" is of type
-    "config" or the configured class extends AbstractNodeLabelsProvider then
-    periodically node labels are retrieved from the node labels provider.
-    This configuration is to define the interval. If -1 is configured then
-    node labels are retrieved from. provider only during initialization.
-    Defaults to 10 mins.
+    When "yarn.nodemanager.node-labels.provider" is configured with "config",
+    "Script" or the configured class extends AbstractNodeLabelsProvider, then
+    periodically node labels are retrieved from the node labels provider. This
+    configuration is to define the interval period.
+    If -1 is configured then node labels are retrieved from provider only
+    during initialization. Defaults to 10 mins.
     </description>
     <name>yarn.nodemanager.node-labels.provider.fetch-interval-ms</name>
     <value>600000</value>
@@ -2308,8 +2308,8 @@
 
   <property>
     <description>
-   Interval at which node labels syncs with RM from NM.Will send loaded labels
-   every x intervals configured along with heartbeat from NM to RM.
+   Interval at which NM syncs its node labels with RM. NM will send its loaded
+   labels every x intervals configured, along with heartbeat to RM.
     </description>
     <name>yarn.nodemanager.node-labels.resync-interval-ms</name>
     <value>120000</value>
@@ -2317,19 +2317,18 @@
 
   <property>
     <description>
-    When node labels "yarn.nodemanager.node-labels.provider"
-    is of type "config" then ConfigurationNodeLabelsProvider fetches the
-    partition from this parameter.
+    When "yarn.nodemanager.node-labels.provider" is configured with "config"
+    then ConfigurationNodeLabelsProvider fetches the partition label from this
+    parameter.
     </description>
     <name>yarn.nodemanager.node-labels.provider.configured-node-partition</name>
   </property>
 
   <property>
     <description>
-    When node labels "yarn.nodemanager.node-labels.provider" is a class
-    which extends AbstractNodeLabelsProvider then this configuration provides
-    the timeout period after which it will stop querying the Node labels
-    provider. Defaults to 20 mins.
+    When "yarn.nodemanager.node-labels.provider" is configured with "Script"
+    then this configuration provides the timeout period after which it will
+    interrupt the script which queries the Node labels. Defaults to 20 mins.
     </description>
     <name>yarn.nodemanager.node-labels.provider.fetch-timeout-ms</name>
     <value>1200000</value>
@@ -2351,8 +2350,8 @@
 
   <property>
     <description>
-    When node labels "yarn.node-labels.configuration-type" is of type
-    "delegated-centralized" then periodically node labels are retrieved
+    When "yarn.node-labels.configuration-type" is configured with
+    "delegated-centralized", then periodically node labels are retrieved
     from the node labels provider. This configuration is to define the
     interval. If -1 is configured then node labels are retrieved from
     provider only once for each node after it registers. Defaults to 30 mins.
@@ -2362,9 +2361,10 @@
   </property>
 
   <property>
-    <description>The Node Label script to run. Script output Lines starting with
-     "NODE_PARTITION:" will be considered for Node Labels. In case of multiple
-     lines having the pattern, last one will be considered</description>
+    <description>The Node Label script to run. Script output Line starting with
+     "NODE_PARTITION:" will be considered as Node Label Partition. In case of
+     multiple lines have this pattern, then last one will be considered
+    </description>
     <name>yarn.nodemanager.node-labels.provider.script.path</name>
   </property>
 
