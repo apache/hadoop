@@ -43,6 +43,9 @@ Release 2.6.4 - UNRELEASED
 
     HDFS-4660. Block corruption can happen during pipeline recovery (kihwal)
 
+    HDFS-9178. Slow datanode I/O can cause a wrong node to be marked bad.
+    (Kihwal Lee)
+
 Release 2.6.3 - 2015-12-17
 
   INCOMPATIBLE CHANGES
