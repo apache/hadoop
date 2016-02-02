@@ -1062,7 +1062,7 @@ public class TestLs {
     ls.err = err;
     ls.run("file:///.");
     assertEquals(shouldDisplay, buf.toString().contains(
-        "Warning: fs.defaultFs is not set when running \"ls\" command."));
+        "Warning: fs.defaultFS is not set when running \"ls\" command."));
   }
 
   @Test
