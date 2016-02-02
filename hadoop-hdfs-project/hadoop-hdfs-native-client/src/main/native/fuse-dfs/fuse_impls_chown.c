@@ -61,10 +61,10 @@ int dfs_chown(const char *path, uid_t uid, gid_t gid)
     }
   }
 
-  ret = fuseConnect(user, fuse_get_context(), &conn);
+  ret = fuseConnectAsThreadUid(&conn);
   if (ret) {
-    fprintf(stderr, "fuseConnect: failed to open a libhdfs connection!  "
-            "error %d.\n", ret);
+    fprintf(stderr, "fuseConnectAsThreadUid: failed to open a libhdfs "
+            "connection!  error %d.\n", ret);
     ret = -EIO;
     goto cleanup;
   }

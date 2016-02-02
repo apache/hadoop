@@ -811,6 +811,10 @@ public class FSDirectory implements Closeable {
       long dsDelta, short oldRep, short newRep) {
     EnumCounters<StorageType> typeSpaceDeltas =
         new EnumCounters<StorageType>(StorageType.class);
+    // empty file
+    if(dsDelta == 0){
+      return typeSpaceDeltas;
+    }
     // Storage type and its quota are only available when storage policy is set
     if (storagePolicyID != HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
       BlockStoragePolicy storagePolicy = getBlockManager().getStoragePolicy(storagePolicyID);
@@ -1163,27 +1167,42 @@ public class FSDirectory implements Closeable {
       inodeMap.put(inode);
       if (!inode.isSymlink()) {
         final XAttrFeature xaf = inode.getXAttrFeature();
-        if (xaf != null) {
-          XAttr xattr = xaf.getXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE);
-          if (xattr != null) {
-            try {
-              final HdfsProtos.ZoneEncryptionInfoProto ezProto =
-                  HdfsProtos.ZoneEncryptionInfoProto.parseFrom(
-                      xattr.getValue());
-              ezManager.unprotectedAddEncryptionZone(inode.getId(),
-                  PBHelperClient.convert(ezProto.getSuite()),
-                  PBHelperClient.convert(ezProto.getCryptoProtocolVersion()),
-                  ezProto.getKeyName());
-            } catch (InvalidProtocolBufferException e) {
-              NameNode.LOG.warn("Error parsing protocol buffer of " +
-                  "EZ XAttr " + xattr.getName());
-            }
-          }
-        }
+        addEncryptionZone((INodeWithAdditionalFields) inode, xaf);
       }
     }
   }
+
+  private void addEncryptionZone(INodeWithAdditionalFields inode,
+      XAttrFeature xaf) {
+    if (xaf == null) {
+      return;
+    }
+    XAttr xattr = xaf.getXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE);
+    if (xattr == null) {
+      return;
+    }
+    try {
+      final HdfsProtos.ZoneEncryptionInfoProto ezProto =
+          HdfsProtos.ZoneEncryptionInfoProto.parseFrom(
+              xattr.getValue());
+      ezManager.unprotectedAddEncryptionZone(inode.getId(),
+          PBHelperClient.convert(ezProto.getSuite()),
+          PBHelperClient.convert(ezProto.getCryptoProtocolVersion()),
+          ezProto.getKeyName());
+    } catch (InvalidProtocolBufferException e) {
+      NameNode.LOG.warn("Error parsing protocol buffer of " +
+          "EZ XAttr " + xattr.getName() + " dir:" + inode.getFullPathName());
+    }
+  }
   
+  /**
+   * This is to handle encryption zone for rootDir when loading from
+   * fsimage, and should only be called during NN restart.
+   */
+  public final void addRootDirToEncryptionZone(XAttrFeature xaf) {
+    addEncryptionZone(rootDir, xaf);
+  }
+
   /**
    * This method is always called with writeLock of FSDirectory held.
    */
@@ -1218,13 +1237,7 @@ public class FSDirectory implements Closeable {
   }
 
   long totalInodes() {
-    readLock();
-    try {
-      return rootDir.getDirectoryWithQuotaFeature().getSpaceConsumed()
-          .getNameSpace();
-    } finally {
-      readUnlock();
-    }
+    return getInodeMapSize();
   }
 
   /**
@@ -1656,11 +1669,11 @@ public class FSDirectory implements Closeable {
 
   INodeAttributes getAttributes(String fullPath, byte[] path,
       INode node, int snapshot) {
-    INodeAttributes nodeAttrs = node;
+    INodeAttributes nodeAttrs;
     if (attributeProvider != null) {
       nodeAttrs = node.getSnapshotINode(snapshot);
-      fullPath = fullPath + (fullPath.endsWith(Path.SEPARATOR) ? ""
-                                                               : Path.SEPARATOR)
+      fullPath = fullPath
+          + (fullPath.endsWith(Path.SEPARATOR) ? "" : Path.SEPARATOR)
           + DFSUtil.bytes2String(path);
       nodeAttrs = attributeProvider.getAttributes(fullPath, nodeAttrs);
     } else {

@@ -76,11 +76,11 @@ public class BlockECRecoveryCommand extends DatanodeCommand {
     private DatanodeInfo[] targets;
     private String[] targetStorageIDs;
     private StorageType[] targetStorageTypes;
-    private final short[] liveBlockIndices;
+    private final byte[] liveBlockIndices;
     private final ErasureCodingPolicy ecPolicy;
 
     public BlockECRecoveryInfo(ExtendedBlock block, DatanodeInfo[] sources,
-        DatanodeStorageInfo[] targetDnStorageInfo, short[] liveBlockIndices,
+        DatanodeStorageInfo[] targetDnStorageInfo, byte[] liveBlockIndices,
         ErasureCodingPolicy ecPolicy) {
       this(block, sources, DatanodeStorageInfo
           .toDatanodeInfos(targetDnStorageInfo), DatanodeStorageInfo
@@ -90,14 +90,15 @@ public class BlockECRecoveryCommand extends DatanodeCommand {
 
     public BlockECRecoveryInfo(ExtendedBlock block, DatanodeInfo[] sources,
         DatanodeInfo[] targets, String[] targetStorageIDs,
-        StorageType[] targetStorageTypes, short[] liveBlockIndices,
+        StorageType[] targetStorageTypes, byte[] liveBlockIndices,
         ErasureCodingPolicy ecPolicy) {
       this.block = block;
       this.sources = sources;
       this.targets = targets;
       this.targetStorageIDs = targetStorageIDs;
       this.targetStorageTypes = targetStorageTypes;
-      this.liveBlockIndices = liveBlockIndices;
+      this.liveBlockIndices = liveBlockIndices == null ?
+          new byte[]{} : liveBlockIndices;
       this.ecPolicy = ecPolicy;
     }
 
@@ -121,7 +122,7 @@ public class BlockECRecoveryCommand extends DatanodeCommand {
       return targetStorageTypes;
     }
 
-    public short[] getLiveBlockIndices() {
+    public byte[] getLiveBlockIndices() {
       return liveBlockIndices;
     }
     
@@ -135,7 +136,7 @@ public class BlockECRecoveryCommand extends DatanodeCommand {
           .append("Recovering ").append(block).append(" From: ")
           .append(Arrays.asList(sources)).append(" To: [")
           .append(Arrays.asList(targets)).append(")\n")
-          .append(" Block Indices: ").append(Arrays.asList(liveBlockIndices))
+          .append(" Block Indices: ").append(Arrays.toString(liveBlockIndices))
           .toString();
     }
   }

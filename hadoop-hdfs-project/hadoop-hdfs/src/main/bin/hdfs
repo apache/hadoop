@@ -34,6 +34,7 @@ function hadoop_usage
   hadoop_add_subcommand "debug" "run a Debug Admin to execute HDFS debug commands"
   hadoop_add_subcommand "dfs" "run a filesystem command on the file system"
   hadoop_add_subcommand "dfsadmin" "run a DFS admin client"
+  hadoop_add_subcommand "envvars" "display computed Hadoop environment variables"
   hadoop_add_subcommand "erasurecode" "run a HDFS ErasureCoding CLI"
   hadoop_add_subcommand "fetchdt" "fetch a delegation token from the NameNode"
   hadoop_add_subcommand "fsck" "run a DFS filesystem checking utility"
@@ -60,13 +61,13 @@ function hadoop_usage
 
 # let's locate libexec...
 if [[ -n "${HADOOP_PREFIX}" ]]; then
-  DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
+  HADOOP_DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
 else
   bin=$(cd -P -- "$(dirname -- "${MYNAME}")" >/dev/null && pwd -P)
-  DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
+  HADOOP_DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
 fi
 
-HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}"
+HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$HADOOP_DEFAULT_LIBEXEC_DIR}"
 # shellcheck disable=SC2034
 HADOOP_NEW_CONFIG=true
 if [[ -f "${HADOOP_LIBEXEC_DIR}/hdfs-config.sh" ]]; then
@@ -134,6 +135,15 @@ case ${COMMAND} in
     hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
+  envvars)
+    echo "JAVA_HOME='${JAVA_HOME}'"
+    echo "HADOOP_HDFS_HOME='${HADOOP_HDFS_HOME}'"
+    echo "HDFS_DIR='${HDFS_DIR}'"
+    echo "HDFS_LIB_JARS_DIR='${HDFS_LIB_JARS_DIR}'"
+    echo "HADOOP_CONF_DIR='${HADOOP_CONF_DIR}'"
+    echo "HADOOP_TOOLS_PATH='${HADOOP_TOOLS_PATH}'"
+    exit 0
+  ;;
   erasurecode)
     CLASS=org.apache.hadoop.hdfs.tools.erasurecode.ECCli
     hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
@@ -155,8 +165,7 @@ case ${COMMAND} in
   ;;
   haadmin)
     CLASS=org.apache.hadoop.hdfs.tools.DFSHAAdmin
-    hadoop_debug "Injecting TOOL_PATH into CLASSPATH"
-    hadoop_add_classpath "${TOOL_PATH}"
+    hadoop_add_to_classpath_toolspath
     hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;

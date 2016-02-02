@@ -29,6 +29,7 @@ import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -209,6 +210,9 @@ public class TestYARNTokenIdentifier {
 
     Assert.assertEquals(ContainerType.TASK,
         anotherToken.getContainerType());
+
+    Assert.assertEquals(ExecutionType.GUARANTEED,
+        anotherToken.getExecutionType());
   }
   
   @Test
@@ -384,10 +388,14 @@ public class TestYARNTokenIdentifier {
     Assert.assertEquals(ContainerType.APPLICATION_MASTER,
         anotherToken.getContainerType());
 
+    Assert.assertEquals(ExecutionType.GUARANTEED,
+        anotherToken.getExecutionType());
+
     token =
         new ContainerTokenIdentifier(containerID, hostName, appSubmitter, r,
             expiryTimeStamp, masterKeyId, rmIdentifier, priority, creationTime,
-            null, CommonNodeLabelsManager.NO_LABEL, ContainerType.TASK);
+            null, CommonNodeLabelsManager.NO_LABEL, ContainerType.TASK,
+            ExecutionType.OPPORTUNISTIC);
 
     anotherToken = new ContainerTokenIdentifier();
 
@@ -398,6 +406,9 @@ public class TestYARNTokenIdentifier {
 
     Assert.assertEquals(ContainerType.TASK,
         anotherToken.getContainerType());
+
+    Assert.assertEquals(ExecutionType.OPPORTUNISTIC,
+        anotherToken.getExecutionType());
   }
 
 }

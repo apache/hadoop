@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BalancerBandwidthCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockECRecoveryCommandProto;
@@ -49,13 +50,8 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.VolumeFailur
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportContextProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.BlockECRecoveryInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ECSchemaOptionEntryProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ECSchemaProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ErasureCodingPolicyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockStoragePolicyProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageUuidsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
@@ -91,6 +87,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockIdCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockECRecoveryCommand.BlockECRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringStripedBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
@@ -233,7 +230,7 @@ public class PBHelper {
 
   public static BlockKeyProto convert(BlockKey key) {
     byte[] encodedKey = key.getEncodedKey();
-    ByteString keyBytes = ByteString.copyFrom(encodedKey == null ?
+    ByteString keyBytes = PBHelperClient.getByteString(encodedKey == null ?
         DFSUtilClient.EMPTY_BYTES : encodedKey);
     return BlockKeyProto.newBuilder().setKeyId(key.getKeyId())
         .setKeyBytes(keyBytes).setExpiryDate(key.getExpiryDate()).build();
@@ -363,15 +360,33 @@ public class PBHelper {
     builder.setBlock(lb).setNewGenStamp(b.getNewGenerationStamp());
     if(b.getNewBlock() != null)
       builder.setTruncateBlock(PBHelperClient.convert(b.getNewBlock()));
+    if (b instanceof RecoveringStripedBlock) {
+      RecoveringStripedBlock sb = (RecoveringStripedBlock) b;
+      builder.setEcPolicy(PBHelperClient.convertErasureCodingPolicy(
+          sb.getErasureCodingPolicy()));
+      builder.setBlockIndices(PBHelperClient.getByteString(sb.getBlockIndices()));
+    }
     return builder.build();
   }
 
   public static RecoveringBlock convert(RecoveringBlockProto b) {
-    ExtendedBlock block = PBHelperClient.convert(b.getBlock().getB());
-    DatanodeInfo[] locs = PBHelperClient.convert(b.getBlock().getLocsList());
-    return (b.hasTruncateBlock()) ?
-        new RecoveringBlock(block, locs, PBHelperClient.convert(b.getTruncateBlock())) :
-        new RecoveringBlock(block, locs, b.getNewGenStamp());
+    LocatedBlock lb = PBHelperClient.convertLocatedBlockProto(b.getBlock());
+    RecoveringBlock rBlock;
+    if (b.hasTruncateBlock()) {
+      rBlock = new RecoveringBlock(lb.getBlock(), lb.getLocations(),
+          PBHelperClient.convert(b.getTruncateBlock()));
+    } else {
+      rBlock = new RecoveringBlock(lb.getBlock(), lb.getLocations(),
+          b.getNewGenStamp());
+    }
+
+    if (b.hasEcPolicy()) {
+      assert b.hasBlockIndices();
+      byte[] indices = b.getBlockIndices().toByteArray();
+      rBlock = new RecoveringStripedBlock(rBlock, indices,
+          PBHelperClient.convertErasureCodingPolicy(b.getEcPolicy()));
+    }
+    return rBlock;
   }
 
   public static ReplicaState convert(ReplicaStateProto state) {
@@ -822,14 +837,6 @@ public class PBHelper {
         build();
   }
 
-  private static List<Integer> convertIntArray(short[] liveBlockIndices) {
-    List<Integer> liveBlockIndicesList = new ArrayList<>();
-    for (short s : liveBlockIndices) {
-      liveBlockIndicesList.add((int) s);
-    }
-    return liveBlockIndicesList;
-  }
-
   private static StorageTypesProto convertStorageTypesProto(
       StorageType[] targetStorageTypes) {
     StorageTypesProto.Builder builder = StorageTypesProto.newBuilder();
@@ -888,17 +895,11 @@ public class PBHelper {
         targetStorageTypesProto.getStorageTypesList(), targetStorageTypesProto
             .getStorageTypesList().size());
 
-    List<Integer> liveBlockIndicesList = blockEcRecoveryInfoProto
-        .getLiveBlockIndicesList();
-    short[] liveBlkIndices = new short[liveBlockIndicesList.size()];
-    for (int i = 0; i < liveBlockIndicesList.size(); i++) {
-      liveBlkIndices[i] = liveBlockIndicesList.get(i).shortValue();
-    }
-
+    byte[] liveBlkIndices = blockEcRecoveryInfoProto.getLiveBlockIndices()
+        .toByteArray();
     ErasureCodingPolicy ecPolicy =
         PBHelperClient.convertErasureCodingPolicy(
             blockEcRecoveryInfoProto.getEcPolicy());
-
     return new BlockECRecoveryInfo(block, sourceDnInfos, targetDnInfos,
         targetStorageUuids, convertStorageTypes, liveBlkIndices, ecPolicy);
   }
@@ -923,8 +924,8 @@ public class PBHelper {
         .getTargetStorageTypes();
     builder.setTargetStorageTypes(convertStorageTypesProto(targetStorageTypes));
 
-    short[] liveBlockIndices = blockEcRecoveryInfo.getLiveBlockIndices();
-    builder.addAllLiveBlockIndices(convertIntArray(liveBlockIndices));
+    byte[] liveBlockIndices = blockEcRecoveryInfo.getLiveBlockIndices();
+    builder.setLiveBlockIndices(PBHelperClient.getByteString(liveBlockIndices));
 
     builder.setEcPolicy(PBHelperClient.convertErasureCodingPolicy(
         blockEcRecoveryInfo.getErasureCodingPolicy()));

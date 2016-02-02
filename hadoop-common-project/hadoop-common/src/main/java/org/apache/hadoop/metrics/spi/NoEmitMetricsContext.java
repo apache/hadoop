@@ -28,7 +28,10 @@ import org.apache.hadoop.metrics.MetricsServlet;
  * 
  * This is useful if you want to support {@link MetricsServlet}, but
  * not emit metrics in any other way.
+ *
+ * @deprecated Use org.apache.hadoop.metrics2 package instead.
  */
+@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class NoEmitMetricsContext extends AbstractMetricsContext {

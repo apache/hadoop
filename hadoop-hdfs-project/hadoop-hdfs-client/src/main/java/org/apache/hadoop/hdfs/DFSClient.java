@@ -87,6 +87,7 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttr;
@@ -118,6 +119,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZoneIterator;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -159,10 +161,11 @@ import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.io.retry.LossyRetryInvocationHandler;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.RetriableException;
+import org.apache.hadoop.ipc.RpcNoSuchMethodException;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
@@ -176,16 +179,15 @@ import org.apache.hadoop.util.DataChecksum.Type;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
 import org.apache.htrace.core.TraceScope;
+import org.apache.htrace.core.Tracer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.net.InetAddresses;
-import org.apache.htrace.core.Tracer;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /********************************************************
  * DFSClient can connect to a Hadoop Filesystem and
@@ -722,7 +724,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     static {
       //Ensure that HDFS Configuration files are loaded before trying to use
       // the renewer.
-      HdfsConfigurationLoader.init();
+      HdfsConfiguration.init();
     }
 
     @Override
@@ -1289,15 +1291,47 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
+  /**
+   * Invoke namenode append RPC.
+   * It retries in case of {@link BlockNotYetCompleteException}.
+   */
+  private LastBlockWithStatus callAppend(String src,
+      EnumSetWritable<CreateFlag> flag) throws IOException {
+    final long startTime = Time.monotonicNow();
+    for(;;) {
+      try {
+        return namenode.append(src, clientName, flag);
+      } catch(RemoteException re) {
+        if (Time.monotonicNow() - startTime > 5000
+            || !RetriableException.class.getName().equals(
+                re.getClassName())) {
+          throw re;
+        }
+
+        try { // sleep and retry
+          Thread.sleep(500);
+        } catch (InterruptedException e) {
+          throw DFSUtilClient.toInterruptedIOException("callAppend", e);
+        }
+      }
+    }
+  }
+
   /** Method to get stream returned by append call */
   private DFSOutputStream callAppend(String src, EnumSet<CreateFlag> flag,
       Progressable progress, String[] favoredNodes) throws IOException {
     CreateFlag.validateForAppend(flag);
     try {
-      LastBlockWithStatus blkWithStatus = namenode.append(src, clientName,
+      final LastBlockWithStatus blkWithStatus = callAppend(src,
           new EnumSetWritable<>(flag, CreateFlag.class));
+      HdfsFileStatus status = blkWithStatus.getFileStatus();
+      if (status == null) {
+        LOG.debug("NameNode is on an older version, request file " +
+            "info with additional RPC call for file: {}", src);
+        status = getFileInfo(src);
+      }
       return DFSOutputStream.newStreamForAppend(this, src, flag, progress,
-          blkWithStatus.getLastBlock(), blkWithStatus.getFileStatus(),
+          blkWithStatus.getLastBlock(), status,
           dfsClientConf.createChecksum(null), favoredNodes);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
@@ -1949,10 +1983,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  private long[] callGetStats() throws IOException {
+  private long getStateByIndex(int stateIndex) throws IOException {
     checkOpen();
     try (TraceScope ignored = tracer.newScope("getStats")) {
-      return namenode.getStats();
+      long[] states =  namenode.getStats();
+      return states.length > stateIndex ? states[stateIndex] : -1;
     }
   }
 
@@ -1960,8 +1995,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#getStats()
    */
   public FsStatus getDiskStatus() throws IOException {
-    long rawNums[] = callGetStats();
-    return new FsStatus(rawNums[0], rawNums[1], rawNums[2]);
+    return new FsStatus(getStateByIndex(0),
+        getStateByIndex(1), getStateByIndex(2));
   }
 
   /**
@@ -1970,7 +2005,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @throws IOException
    */
   public long getMissingBlocksCount() throws IOException {
-    return callGetStats()[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX];
+    return getStateByIndex(ClientProtocol.
+        GET_STATS_MISSING_BLOCKS_IDX);
   }
 
   /**
@@ -1979,8 +2015,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @throws IOException
    */
   public long getMissingReplOneBlocksCount() throws IOException {
-    return callGetStats()[ClientProtocol.
-        GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX];
+    return getStateByIndex(ClientProtocol.
+        GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX);
+  }
+
+  /**
+   * Returns count of blocks pending on deletion.
+   * @throws IOException
+   */
+  public long getPendingDeletionBlocksCount() throws IOException {
+    return getStateByIndex(ClientProtocol.
+        GET_STATS_PENDING_DELETION_BLOCKS_IDX);
   }
 
   /**
@@ -1988,7 +2033,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @throws IOException
    */
   public long getUnderReplicatedBlocksCount() throws IOException {
-    return callGetStats()[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX];
+    return getStateByIndex(ClientProtocol.
+        GET_STATS_UNDER_REPLICATED_IDX);
   }
 
   /**
@@ -1996,7 +2042,19 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @throws IOException
    */
   public long getCorruptBlocksCount() throws IOException {
-    return callGetStats()[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX];
+    return getStateByIndex(ClientProtocol.
+        GET_STATS_CORRUPT_BLOCKS_IDX);
+  }
+
+  /**
+   * Returns number of bytes that reside in Blocks with future generation
+   * stamps.
+   * @return Bytes in Blocks with future generation stamps.
+   * @throws IOException
+   */
+  public long getBytesInFutureBlocks() throws IOException {
+    return getStateByIndex(ClientProtocol.
+        GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX);
   }
 
   /**
@@ -2426,6 +2484,31 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
+   * Get {@link QuotaUsage} rooted at the specified directory.
+   * @param src The string representation of the path
+   *
+   * @see ClientProtocol#getQuotaUsage(String)
+   */
+  QuotaUsage getQuotaUsage(String src) throws IOException {
+    checkOpen();
+    try (TraceScope ignored = newPathTraceScope("getQuotaUsage", src)) {
+      return namenode.getQuotaUsage(src);
+    } catch(RemoteException re) {
+      IOException ioe = re.unwrapRemoteException(AccessControlException.class,
+          FileNotFoundException.class,
+          UnresolvedPathException.class,
+          RpcNoSuchMethodException.class);
+      if (ioe instanceof RpcNoSuchMethodException) {
+        LOG.debug("The version of namenode doesn't support getQuotaUsage API." +
+            " Fall back to use getContentSummary API.");
+        return getContentSummary(src);
+      } else {
+        throw ioe;
+      }
+    }
+  }
+
+  /**
    * Sets or resets quotas for a directory.
    * @see ClientProtocol#setQuota(String, long, long, StorageType)
    */
@@ -2655,8 +2738,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     try (TraceScope ignored = newPathTraceScope("getEZForPath", src)) {
       return namenode.getEZForPath(src);
     } catch (RemoteException re) {
-      throw re.unwrapRemoteException(AccessControlException.class,
-          UnresolvedPathException.class);
+      throw re.unwrapRemoteException(FileNotFoundException.class,
+          AccessControlException.class, UnresolvedPathException.class);
     }
   }
 
@@ -2948,6 +3031,25 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       scope.addKVAnnotation("dst", dst);
     }
     return scope;
+  }
+
+  /**
+   * Full detailed tracing for read requests: path, position in the file,
+   * and length.
+   *
+   * @param reqLen requested length
+   */
+  TraceScope newReaderTraceScope(String description, String path, long pos,
+      int reqLen) {
+    TraceScope scope = newPathTraceScope(description, path);
+    scope.addKVAnnotation("pos", Long.toString(pos));
+    scope.addKVAnnotation("reqLen", Integer.toString(reqLen));
+    return scope;
+  }
+
+  /** Add the returned length info to the scope. */
+  void addRetLenToReaderScope(TraceScope scope, int retLen) {
+    scope.addKVAnnotation("retLen", Integer.toString(retLen));
   }
 
   /**

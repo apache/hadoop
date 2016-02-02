@@ -31,7 +31,10 @@ import org.apache.hadoop.net.NetUtils;
 
 /**
  * Static utility methods
+ *
+ * @deprecated Use org.apache.hadoop.metrics2 package instead.
  */
+@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class Util {

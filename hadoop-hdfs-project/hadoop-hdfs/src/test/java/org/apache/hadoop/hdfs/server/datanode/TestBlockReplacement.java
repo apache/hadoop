@@ -198,9 +198,10 @@ public class TestBlockReplacement {
       LOG.info("Testcase 4: invalid del hint " + proxies.get(0) );
       assertTrue(replaceBlock(b, proxies.get(0), proxies.get(1), source));
       // after cluster has time to resolve the over-replication,
-      // block locations should contain two proxies,
-      // and either source or newNode, but not both.
-      checkBlocks(proxies.toArray(new DatanodeInfo[proxies.size()]), 
+      // block locations should contain any 3 of the blocks, since after the
+      // deletion the number of racks is still >=2 for sure.
+      // See HDFS-9314 for details, espacially the comment on 18/Nov/15 14:09.
+      checkBlocks(new DatanodeInfo[]{},
           fileName.toString(), 
           DEFAULT_BLOCK_SIZE, REPLICATION_FACTOR, client);
     } finally {

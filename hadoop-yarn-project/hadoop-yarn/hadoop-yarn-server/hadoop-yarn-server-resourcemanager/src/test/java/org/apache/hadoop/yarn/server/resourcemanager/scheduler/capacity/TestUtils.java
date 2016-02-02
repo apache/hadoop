@@ -221,13 +221,13 @@ public class TestUtils {
     when(container.getPriority()).thenReturn(priority);
     return container;
   }
-  
+
   @SuppressWarnings("unchecked")
-  private static <E> Set<E> toSet(E... elements) {
+  public static <E> Set<E> toSet(E... elements) {
     Set<E> set = Sets.newHashSet(elements);
     return set;
   }
-  
+
   /**
    * Get a queue structure:
    * <pre>

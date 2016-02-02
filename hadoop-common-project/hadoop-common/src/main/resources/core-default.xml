@@ -314,6 +314,11 @@ for ldap providers in the same way as above does.
     an LDAP server with a non-AD schema, this should be replaced with
     (&amp;(objectClass=inetOrgPerson)(uid={0}). {0} is a special string used to
     denote where the username fits into the filter.
+
+    If the LDAP server supports posixGroups, Hadoop can enable the feature by
+    setting the value of this property to "posixAccount" and the value of
+    the hadoop.security.group.mapping.ldap.search.filter.group property to
+    "posixGroup".
   </description>
 </property>
 
@@ -323,7 +328,9 @@ for ldap providers in the same way as above does.
   <description>
     An additional filter to use when searching for LDAP groups. This should be
     changed when resolving groups against a non-Active Directory installation.
-    posixGroups are currently not a supported group class.
+
+    See the description of hadoop.security.group.mapping.ldap.search.filter.user
+    to enable posixGroups support.
   </description>
 </property>
 
@@ -421,7 +428,7 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
-  <name>hadoop.work.around.non.threadsafe.getpwuid</name>
+  <name>hadoop.workaround.non.threadsafe.getpwuid</name>
   <value>false</value>
   <description>Some operating systems or authentication modules are known to
   have broken implementations of getpwuid_r and getpwgid_r, such that these
@@ -457,6 +464,12 @@ for ldap providers in the same way as above does.
   <name>hadoop.security.auth_to_local</name>
   <value></value>
   <description>Maps kerberos principals to local user names</description>
+</property>
+
+<property>
+  <name>hadoop.token.files</name>
+  <value></value>
+  <description>List of token cache files that have delegation tokens for hadoop service</description>
 </property>
 
 <!-- i/o properties -->
@@ -843,15 +856,9 @@ for ldap providers in the same way as above does.
 
 <property>
   <name>fs.s3a.threads.max</name>
-  <value>256</value>
+  <value>10</value>
   <description> Maximum number of concurrent active (part)uploads,
     which each use a thread from the threadpool.</description>
-</property>
-
-<property>
-  <name>fs.s3a.threads.core</name>
-  <value>15</value>
-  <description>Number of core threads in the threadpool.</description>
 </property>
 
 <property>
@@ -863,7 +870,7 @@ for ldap providers in the same way as above does.
 
 <property>
   <name>fs.s3a.max.total.tasks</name>
-  <value>1000</value>
+  <value>5</value>
   <description>Number of (part)uploads allowed to the queue before
     blocking additional uploads.</description>
 </property>
@@ -933,6 +940,12 @@ for ldap providers in the same way as above does.
   <name>fs.s3a.impl</name>
   <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
   <description>The implementation class of the S3A Filesystem</description>
+</property>
+
+<property>
+  <name>fs.AbstractFileSystem.s3a.impl</name>
+  <value>org.apache.hadoop.fs.s3a.S3A</value>
+  <description>The implementation class of the S3A AbstractFileSystem.</description>
 </property>
 
 <property>
@@ -1056,6 +1069,35 @@ for ldap providers in the same way as above does.
   <name>ipc.client.low-latency</name>
   <value>false</value>
   <description>Use low-latency QoS markers for IPC connections.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.ping</name>
+  <value>true</value>
+  <description>Send a ping to the server when timeout on reading the response,
+  if set to true. If no failure is detected, the client retries until at least
+  a byte is read.
+  </description>
+</property>
+
+<property>
+  <name>ipc.ping.interval</name>
+  <value>60000</value>
+  <description>Timeout on waiting response from server, in milliseconds.
+  The client will send ping when the interval is passed without receiving bytes,
+  if ipc.client.ping is set to true.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.rpc-timeout.ms</name>
+  <value>0</value>
+  <description>Timeout on waiting response from server, in milliseconds.
+  Currently this timeout works only when ipc.client.ping is set to true
+  because it uses the same facilities with IPC ping.
+  The timeout overrides the ipc.ping.interval and client will throw exception
+  instead of sending ping when the interval is passed.
   </description>
 </property>
 
@@ -1402,6 +1444,42 @@ for ldap providers in the same way as above does.
     Location of the keytab file with the credentials for the principal.
     Referring to the same keytab file Oozie uses for its Kerberos credentials for Hadoop.
   </description>
+</property>
+
+<!-- HTTP CORS support -->
+<property>
+  <description>Enable/disable the cross-origin (CORS) filter.</description>
+  <name>hadoop.http.cross-origin.enabled</name>
+  <value>false</value>
+</property>
+
+<property>
+  <description>Comma separated list of origins that are allowed for web
+    services needing cross-origin (CORS) support. Wildcards (*) and patterns
+    allowed</description>
+  <name>hadoop.http.cross-origin.allowed-origins</name>
+  <value>*</value>
+</property>
+
+<property>
+  <description>Comma separated list of methods that are allowed for web
+    services needing cross-origin (CORS) support.</description>
+  <name>hadoop.http.cross-origin.allowed-methods</name>
+  <value>GET,POST,HEAD</value>
+</property>
+
+<property>
+  <description>Comma separated list of headers that are allowed for web
+    services needing cross-origin (CORS) support.</description>
+  <name>hadoop.http.cross-origin.allowed-headers</name>
+  <value>X-Requested-With,Content-Type,Accept,Origin</value>
+</property>
+
+<property>
+  <description>The number of seconds a pre-flighted request can be cached
+    for web services needing cross-origin (CORS) support.</description>
+  <name>hadoop.http.cross-origin.max-age</name>
+  <value>1800</value>
 </property>
 
 <property>
@@ -2012,5 +2090,15 @@ for ldap providers in the same way as above does.
     <value></value>
     <description>The class names of the Span Receivers to use for Hadoop.
     </description>
+  </property>
+
+  <property>
+    <description>
+      Enable the "/logs" endpoint on all Hadoop daemons, which serves local
+      logs, but may be considered a security risk due to it listing the contents
+      of a directory.
+    </description>
+    <name>hadoop.http.logs.enabled</name>
+    <value>true</value>
   </property>
 </configuration>

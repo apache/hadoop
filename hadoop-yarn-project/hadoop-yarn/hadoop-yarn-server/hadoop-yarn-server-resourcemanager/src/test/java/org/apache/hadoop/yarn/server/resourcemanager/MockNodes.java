@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
@@ -110,11 +111,14 @@ public class MockNodes {
     private long lastHealthReportTime;
     private NodeState state;
     private Set<String> labels;
+    private ResourceUtilization containersUtilization;
+    private ResourceUtilization nodeUtilization;
 
     public MockRMNodeImpl(NodeId nodeId, String nodeAddr, String httpAddress,
         Resource perNode, String rackName, String healthReport,
         long lastHealthReportTime, int cmdPort, String hostName, NodeState state,
-        Set<String> labels) {
+        Set<String> labels, ResourceUtilization containersUtilization,
+        ResourceUtilization nodeUtilization) {
       this.nodeId = nodeId;
       this.nodeAddr = nodeAddr;
       this.httpAddress = httpAddress;
@@ -126,6 +130,8 @@ public class MockNodes {
       this.hostName = hostName;
       this.state = state;
       this.labels = labels;
+      this.containersUtilization = containersUtilization;
+      this.nodeUtilization = nodeUtilization;
     }
 
     @Override
@@ -244,6 +250,16 @@ public class MockNodes {
     public List<Container> pullNewlyIncreasedContainers() {
       return Collections.emptyList();
     }
+
+    @Override
+    public ResourceUtilization getAggregatedContainersUtilization() {
+      return this.containersUtilization;
+    }
+
+    @Override
+    public ResourceUtilization getNodeUtilization() {
+      return this.nodeUtilization;
+    }
   };
 
   private static RMNode buildRMNode(int rack, final Resource perNode,
@@ -254,18 +270,19 @@ public class MockNodes {
   private static RMNode buildRMNode(int rack, final Resource perNode,
       NodeState state, String httpAddr, Set<String> labels) {
     return buildRMNode(rack, perNode, state, httpAddr, NODE_ID++, null, 123,
-        labels);
+        labels, null, null);
   }
   
   private static RMNode buildRMNode(int rack, final Resource perNode,
       NodeState state, String httpAddr, int hostnum, String hostName, int port) {
     return buildRMNode(rack, perNode, state, httpAddr, hostnum, hostName, port,
-        null);
+        null, null, null);
   }
 
   private static RMNode buildRMNode(int rack, final Resource perNode,
       NodeState state, String httpAddr, int hostnum, String hostName, int port,
-      Set<String> labels) {
+      Set<String> labels, ResourceUtilization containersUtilization,
+      ResourceUtilization nodeUtilization) {
     final String rackName = "rack"+ rack;
     final int nid = hostnum;
     final String nodeAddr = hostName + ":" + nid;
@@ -277,7 +294,8 @@ public class MockNodes {
     final String httpAddress = httpAddr;
     String healthReport = (state == NodeState.UNHEALTHY) ? null : "HealthyMe";
     return new MockRMNodeImpl(nodeID, nodeAddr, httpAddress, perNode,
-        rackName, healthReport, 0, nid, hostName, state, labels);
+        rackName, healthReport, 0, nid, hostName, state, labels,
+        containersUtilization, nodeUtilization);
   }
 
   public static RMNode nodeInfo(int rack, final Resource perNode,

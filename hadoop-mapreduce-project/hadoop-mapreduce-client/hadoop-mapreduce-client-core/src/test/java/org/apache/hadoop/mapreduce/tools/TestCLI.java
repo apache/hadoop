@@ -20,14 +20,19 @@ package org.apache.hadoop.mapreduce.tools;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskReport;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.JobPriority;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.JobStatus.State;
+import org.apache.hadoop.util.Time;
+import org.junit.Assert;
 import org.junit.Test;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -44,7 +49,7 @@ public class TestCLI {
     JobID jobId = JobID.forName(jobIdStr);
     Cluster mockCluster = mock(Cluster.class);
     Job job = mock(Job.class);
-    CLI cli = spy(new CLI());
+    CLI cli = spy(new CLI(new Configuration()));
 
     doReturn(mockCluster).when(cli).createCluster();
     when(job.getTaskReports(TaskType.MAP)).thenReturn(
@@ -112,7 +117,7 @@ public class TestCLI {
   @Test
   public void testJobKIll() throws Exception {
     Cluster mockCluster = mock(Cluster.class);
-    CLI cli = spy(new CLI());
+    CLI cli = spy(new CLI(new Configuration()));
     doReturn(mockCluster).when(cli).createCluster();
     String jobId1 = "job_1234654654_001";
     String jobId2 = "job_1234654654_002";
@@ -148,5 +153,27 @@ public class TestCLI {
         JobPriority.HIGH, null, null, null, null);
     when(mockJob.getStatus()).thenReturn(status);
     return mockJob;
+  }
+
+  @Test
+  public void testGetJob() throws Exception {
+    Configuration conf = new Configuration();
+    long sleepTime = 100;
+    conf.setLong(MRJobConfig.MR_CLIENT_JOB_RETRY_INTERVAL, sleepTime);
+    Cluster mockCluster = mock(Cluster.class);
+    JobID jobId1 = JobID.forName("job_1234654654_001");
+    when(mockCluster.getJob(jobId1)).thenReturn(null);
+
+    for (int i = 0; i < 2; ++i) {
+      conf.setInt(MRJobConfig.MR_CLIENT_JOB_MAX_RETRIES, i);
+      CLI cli = spy(new CLI(conf));
+      cli.cluster = mockCluster;
+      doReturn(mockCluster).when(cli).createCluster();
+      long start = Time.monotonicNow();
+      cli.getJob(jobId1);
+      long end = Time.monotonicNow();
+      Assert.assertTrue(end - start > (i * sleepTime));
+      Assert.assertTrue(end - start < ((i + 1) * sleepTime));
+    }
   }
 }

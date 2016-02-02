@@ -19,6 +19,8 @@
 package org.apache.hadoop.fs.azure;
 
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,7 +32,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.EnumSet;
-import java.util.Iterator;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.TreeSet;
@@ -40,7 +41,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -49,6 +49,7 @@ import org.apache.hadoop.fs.BufferedFSInputStream;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -58,11 +59,8 @@ import org.apache.hadoop.fs.azure.metrics.AzureFileSystemMetricsSystem;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.fs.azure.AzureException;
-import org.apache.hadoop.fs.azure.StorageInterface.CloudBlobWrapper;
-import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.codehaus.jackson.JsonNode;
@@ -72,11 +70,10 @@ import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.microsoft.azure.storage.AccessCondition;
-import com.microsoft.azure.storage.OperationContext;
 import com.microsoft.azure.storage.StorageException;
-import com.microsoft.azure.storage.blob.CloudBlob;
-import com.microsoft.azure.storage.core.*;
+
+
+import org.apache.hadoop.io.IOUtils;
 
 /**
  * A {@link FileSystem} for reading and writing files stored on <a
@@ -88,7 +85,6 @@ import com.microsoft.azure.storage.core.*;
 @InterfaceStability.Stable
 public class NativeAzureFileSystem extends FileSystem {
   private static final int USER_WX_PERMISION = 0300;
-
   /**
    * A description of a folder rename operation, including the source and
    * destination keys, and descriptions of the files in the source folder.
@@ -141,9 +137,15 @@ public class NativeAzureFileSystem extends FileSystem {
       FSDataInputStream input = fs.open(f);
       byte[] bytes = new byte[MAX_RENAME_PENDING_FILE_SIZE];
       int l = input.read(bytes);
-      if (l < 0) {
-        throw new IOException(
-            "Error reading pending rename file contents -- no data available");
+      if (l <= 0) {
+        // Jira HADOOP-12678 -Handle empty rename pending metadata file during
+        // atomic rename in redo path. If during renamepending file is created
+        // but not written yet, then this means that rename operation
+        // has not started yet. So we should delete rename pending metadata file.
+        LOG.error("Deleting empty rename pending file "
+            + redoFile + " -- no data available");
+        deleteRenamePendingFile(fs, redoFile);
+        return;
       }
       if (l == MAX_RENAME_PENDING_FILE_SIZE) {
         throw new IOException(
@@ -168,7 +170,7 @@ public class NativeAzureFileSystem extends FileSystem {
       } catch (JsonParseException e) {
         this.committed = false;
       } catch (IOException e) {
-        this.committed = false;  
+        this.committed = false;
       }
       
       if (!this.committed) {
@@ -176,7 +178,7 @@ public class NativeAzureFileSystem extends FileSystem {
             redoFile, contents);
 
         // delete the -RenamePending.json file
-        fs.delete(redoFile, false);
+        deleteRenamePendingFile(fs, redoFile);
         return;
       }
 
@@ -190,11 +192,11 @@ public class NativeAzureFileSystem extends FileSystem {
         this.srcKey = oldFolderName.getTextValue();
         this.dstKey = newFolderName.getTextValue();
         if (this.srcKey == null || this.dstKey == null) {
-          this.committed = false;    	  
+          this.committed = false;
         } else {
           JsonNode fileList = json.get("FileList");
           if (fileList == null) {
-            this.committed = false;	
+            this.committed = false;
           } else {
             for (int i = 0; i < fileList.size(); i++) {
               fileStrList.add(fileList.get(i).getTextValue());
@@ -211,6 +213,30 @@ public class NativeAzureFileSystem extends FileSystem {
 
     public SelfRenewingLease getFolderLease() {
       return folderLease;
+    }
+
+    /**
+     * Deletes rename pending metadata file
+     * @param fs -- the file system
+     * @param redoFile - rename pending metadata file path
+     * @throws IOException - If deletion fails
+     */
+    @VisibleForTesting
+    void deleteRenamePendingFile(FileSystem fs, Path redoFile)
+        throws IOException {
+      try {
+        fs.delete(redoFile, false);
+      } catch (IOException e) {
+        // If the rename metadata was not found then somebody probably
+        // raced with us and finished the delete first
+        Throwable t = e.getCause();
+        if (t != null && t instanceof StorageException
+            && "BlobNotFound".equals(((StorageException) t).getErrorCode())) {
+          LOG.warn("rename pending file " + redoFile + " is already deleted");
+        } else {
+          throw e;
+        }
+      }
     }
 
     /**
@@ -255,7 +281,7 @@ public class NativeAzureFileSystem extends FileSystem {
         throw new IOException("Unable to write RenamePending file for folder rename from "
             + srcKey + " to " + dstKey, e);
       } finally {
-        NativeAzureFileSystem.cleanup(LOG, output);
+        NativeAzureFileSystemHelper.cleanup(LOG, output);
       }
     }
 
@@ -534,45 +560,13 @@ public class NativeAzureFileSystem extends FileSystem {
       Path dstFile = fullPath(dstKey, fileName);
       boolean srcExists = fs.exists(srcFile);
       boolean dstExists = fs.exists(dstFile);
-      if (srcExists && !dstExists) {
-
+      if(srcExists) {
         // Rename gets exclusive access (via a lease) for HBase write-ahead log
         // (WAL) file processing correctness.  See the rename code for details.
         String srcName = fs.pathToKey(srcFile);
         String dstName = fs.pathToKey(dstFile);
         fs.getStoreInterface().rename(srcName, dstName, true, null);
-      } else if (srcExists && dstExists) {
-
-        // Get a lease on source to block write access.
-        String srcName = fs.pathToKey(srcFile);
-        SelfRenewingLease lease = null;
-        try {
-          lease = fs.acquireLease(srcFile);
-          // Delete the file. This will free the lease too.
-          fs.getStoreInterface().delete(srcName, lease);
-        } catch(AzureException e) {
-            String errorCode = "";
-            try {
-              StorageException e2 = (StorageException) e.getCause();
-              errorCode = e2.getErrorCode();
-            } catch(Exception e3) {
-              // do nothing if cast fails
-            }
-            // If the rename already finished do nothing
-            if(!errorCode.equals("BlobNotFound")){
-              throw e;
-            }
-        } finally {
-          try {
-            if(lease != null){
-              lease.free();
-            }
-          } catch(StorageException e) {
-            LOG.warn("Unable to free lease because: " + e.getMessage());
-          }
-        }
       } else if (!srcExists && dstExists) {
-
         // The rename already finished, so do nothing.
         ;
       } else {
@@ -662,6 +656,11 @@ public class NativeAzureFileSystem extends FileSystem {
 
   public static final String SKIP_AZURE_METRICS_PROPERTY_NAME = "fs.azure.skip.metrics";
 
+  /*
+   * Property to enable Append API.
+   */
+  public static final String APPEND_SUPPORT_ENABLE_PROPERTY_NAME = "fs.azure.enable.append.support";
+
   private class NativeAzureFsInputStream extends FSInputStream {
     private InputStream in;
     private final String key;
@@ -712,7 +711,7 @@ public class NativeAzureFileSystem extends FileSystem {
      * @returns int An integer corresponding to the byte read.
      */
     @Override
-    public synchronized int read() throws IOException {
+    public synchronized int read() throws FileNotFoundException, IOException {
       try {
         int result = 0;
         result = in.read();
@@ -726,13 +725,21 @@ public class NativeAzureFileSystem extends FileSystem {
       //
         return result;
       } catch(IOException e) {
-        if (e.getCause() instanceof StorageException) {
-          StorageException storageExcp  = (StorageException) e.getCause();
+
+        Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
+
+        if (innerException instanceof StorageException) {
+
           LOG.error("Encountered Storage Exception for read on Blob : {}"
               + " Exception details: {} Error Code : {}",
-              key, e.getMessage(), storageExcp.getErrorCode());
+              key, e, ((StorageException) innerException).getErrorCode());
+
+          if (NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+            throw new FileNotFoundException(String.format("%s is not found", key));
+          }
         }
-        throw e;
+
+       throw e;
       }
     }
 
@@ -757,7 +764,7 @@ public class NativeAzureFileSystem extends FileSystem {
      * there is no more data because the end of stream is reached.
      */
     @Override
-    public synchronized int read(byte[] b, int off, int len) throws IOException {
+    public synchronized int read(byte[] b, int off, int len) throws FileNotFoundException, IOException {
       try {
         int result = 0;
         result = in.read(b, off, len);
@@ -772,29 +779,56 @@ public class NativeAzureFileSystem extends FileSystem {
         // Return to the caller with the result.
         return result;
       } catch(IOException e) {
-        if (e.getCause() instanceof StorageException) {
-          StorageException storageExcp  = (StorageException) e.getCause();
+
+        Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
+
+        if (innerException instanceof StorageException) {
+
           LOG.error("Encountered Storage Exception for read on Blob : {}"
               + " Exception details: {} Error Code : {}",
-              key, e.getMessage(), storageExcp.getErrorCode());
+              key, e, ((StorageException) innerException).getErrorCode());
+
+          if (NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+            throw new FileNotFoundException(String.format("%s is not found", key));
+          }
         }
-        throw e;
+
+       throw e;
       }
     }
 
     @Override
-    public void close() throws IOException {
-      in.close();
-      closed = true;
+    public synchronized void close() throws IOException {
+      if (!closed) {
+        closed = true;
+        IOUtils.closeStream(in);
+        in = null;
+      }
     }
 
     @Override
-    public synchronized void seek(long pos) throws IOException {
-     in.close();
-     in = store.retrieve(key);
-     this.pos = in.skip(pos);
-     LOG.debug("Seek to position {}. Bytes skipped {}", pos,
-         this.pos);
+    public synchronized void seek(long pos) throws FileNotFoundException, EOFException, IOException {
+      try {
+        checkNotClosed();
+        if (pos < 0) {
+          throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK);
+        }
+        IOUtils.closeStream(in);
+        in = store.retrieve(key);
+        this.pos = in.skip(pos);
+        LOG.debug("Seek to position {}. Bytes skipped {}", pos,
+          this.pos);
+      } catch(IOException e) {
+
+        Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
+
+        if (innerException instanceof StorageException
+            && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+          throw new FileNotFoundException(String.format("%s is not found", key));
+        }
+
+        throw e;
+      }
     }
 
     @Override
@@ -805,6 +839,16 @@ public class NativeAzureFileSystem extends FileSystem {
     @Override
     public boolean seekToNewSource(long targetPos) throws IOException {
       return false;
+    }
+
+
+    /*
+     * Helper method to check if a stream is closed.
+     */
+    private void checkNotClosed() throws IOException {
+      if (closed) {
+        throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
+      }
     }
   }
 
@@ -995,7 +1039,7 @@ public class NativeAzureFileSystem extends FileSystem {
   private static boolean suppressRetryPolicy = false;
   // A counter to create unique (within-process) names for my metrics sources.
   private static AtomicInteger metricsSourceNameCounter = new AtomicInteger();
-
+  private boolean appendSupportEnabled = false;
   
   public NativeAzureFileSystem() {
     // set store in initialize()
@@ -1118,7 +1162,7 @@ public class NativeAzureFileSystem extends FileSystem {
     this.blockSize = conf.getLong(AZURE_BLOCK_SIZE_PROPERTY_NAME,
         MAX_AZURE_BLOCK_SIZE);
 
-
+    this.appendSupportEnabled = conf.getBoolean(APPEND_SUPPORT_ENABLE_PROPERTY_NAME, false);
     LOG.debug("NativeAzureFileSystem. Initializing.");
     LOG.debug("  blockSize  = {}",
         conf.getLong(AZURE_BLOCK_SIZE_PROPERTY_NAME, MAX_AZURE_BLOCK_SIZE));
@@ -1248,7 +1292,61 @@ public class NativeAzureFileSystem extends FileSystem {
   @Override
   public FSDataOutputStream append(Path f, int bufferSize, Progressable progress)
       throws IOException {
-    throw new IOException("Not supported");
+
+    if (!appendSupportEnabled) {
+      throw new UnsupportedOperationException("Append Support not enabled");
+    }
+
+    LOG.debug("Opening file: {} for append", f);
+
+    Path absolutePath = makeAbsolute(f);
+    String key = pathToKey(absolutePath);
+    FileMetadata meta = null;
+    try {
+      meta = store.retrieveMetadata(key);
+    } catch(Exception ex) {
+
+      Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
+
+      if (innerException instanceof StorageException
+          && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+
+        throw new FileNotFoundException(String.format("%s is not found", key));
+      } else {
+        throw ex;
+      }
+    }
+
+    if (meta == null) {
+      throw new FileNotFoundException(f.toString());
+    }
+
+    if (meta.isDir()) {
+      throw new FileNotFoundException(f.toString()
+          + " is a directory not a file.");
+    }
+
+    if (store.isPageBlobKey(key)) {
+      throw new IOException("Append not supported for Page Blobs");
+    }
+
+    DataOutputStream appendStream = null;
+
+    try {
+      appendStream = store.retrieveAppendStream(key, bufferSize);
+    } catch (Exception ex) {
+
+      Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
+
+      if (innerException instanceof StorageException
+          && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+        throw new FileNotFoundException(String.format("%s is not found", key));
+      } else {
+        throw ex;
+      }
+    }
+
+    return new FSDataOutputStream(appendStream, statistics);
   }
 
   @Override
@@ -1333,7 +1431,7 @@ public class NativeAzureFileSystem extends FileSystem {
           lease.free();
         }
       } catch (Exception e) {
-        NativeAzureFileSystem.cleanup(LOG, out);
+        NativeAzureFileSystemHelper.cleanup(LOG, out);
         String msg = "Unable to free lease on " + parent.toUri();
         LOG.error(msg);
         throw new IOException(msg, e);
@@ -1526,7 +1624,20 @@ public class NativeAzureFileSystem extends FileSystem {
 
     // Capture the metadata for the path.
     //
-    FileMetadata metaFile = store.retrieveMetadata(key);
+    FileMetadata metaFile = null;
+    try {
+      metaFile = store.retrieveMetadata(key);
+    } catch (IOException e) {
+
+      Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
+
+      if (innerException instanceof StorageException
+          && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+
+        return false;
+      }
+      throw e;
+    }
 
     if (null == metaFile) {
       // The path to be deleted does not exist.
@@ -1546,12 +1657,44 @@ public class NativeAzureFileSystem extends FileSystem {
       Path parentPath = absolutePath.getParent();
       if (parentPath.getParent() != null) {// Not root
         String parentKey = pathToKey(parentPath);
-        FileMetadata parentMetadata = store.retrieveMetadata(parentKey);
+
+        FileMetadata parentMetadata = null;
+        try {
+          parentMetadata = store.retrieveMetadata(parentKey);
+        } catch (IOException e) {
+
+          Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
+
+          if (innerException instanceof StorageException) {
+            // Invalid State.
+            // A FileNotFoundException is not thrown here as the API returns false
+            // if the file not present. But not retrieving metadata here is an
+            // unrecoverable state and can only happen if there is a race condition
+            // hence throwing a IOException
+            if (NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+              throw new IOException("File " + f + " has a parent directory "
+                  + parentPath + " whose metadata cannot be retrieved. Can't resolve");
+            }
+          }
+          throw e;
+        }
+
+        // Invalid State.
+        // A FileNotFoundException is not thrown here as the API returns false
+        // if the file not present. But not retrieving metadata here is an
+        // unrecoverable state and can only happen if there is a race condition
+        // hence throwing a IOException
+        if (parentMetadata == null) {
+          throw new IOException("File " + f + " has a parent directory "
+              + parentPath + " whose metadata cannot be retrieved. Can't resolve");
+        }
+
         if (!parentMetadata.isDir()) {
           // Invalid state: the parent path is actually a file. Throw.
           throw new AzureException("File " + f + " has a parent directory "
               + parentPath + " which is also a file. Can't resolve.");
         }
+
         if (parentMetadata.getBlobMaterialization() == BlobMaterialization.Implicit) {
           LOG.debug("Found an implicit parent directory while trying to"
               + " delete the file {}. Creating the directory blob for"
@@ -1565,8 +1708,21 @@ public class NativeAzureFileSystem extends FileSystem {
           }
         }
       }
-      store.delete(key);
-      instrumentation.fileDeleted();
+
+      try {
+        store.delete(key);
+        instrumentation.fileDeleted();
+      } catch(IOException e) {
+
+        Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
+
+        if (innerException instanceof StorageException
+            && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+          return false;
+        }
+
+       throw e;
+      }
     } else {
       // The path specifies a folder. Recursively delete all entries under the
       // folder.
@@ -1574,7 +1730,37 @@ public class NativeAzureFileSystem extends FileSystem {
       Path parentPath = absolutePath.getParent();
       if (parentPath.getParent() != null) {
         String parentKey = pathToKey(parentPath);
-        FileMetadata parentMetadata = store.retrieveMetadata(parentKey);
+        FileMetadata parentMetadata = null;
+
+        try {
+          parentMetadata = store.retrieveMetadata(parentKey);
+        } catch (IOException e) {
+
+          Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
+
+          if (innerException instanceof StorageException) {
+            // Invalid State.
+            // A FileNotFoundException is not thrown here as the API returns false
+            // if the file not present. But not retrieving metadata here is an
+            // unrecoverable state and can only happen if there is a race condition
+            // hence throwing a IOException
+            if (NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+              throw new IOException("File " + f + " has a parent directory "
+                  + parentPath + " whose metadata cannot be retrieved. Can't resolve");
+            }
+          }
+          throw e;
+        }
+
+        // Invalid State.
+        // A FileNotFoundException is not thrown here as the API returns false
+        // if the file not present. But not retrieving metadata here is an
+        // unrecoverable state and can only happen if there is a race condition
+        // hence throwing a IOException
+        if (parentMetadata == null) {
+          throw new IOException("File " + f + " has a parent directory "
+              + parentPath + " whose metadata cannot be retrieved. Can't resolve");
+        }
 
         if (parentMetadata.getBlobMaterialization() == BlobMaterialization.Implicit) {
           LOG.debug("Found an implicit parent directory while trying to"
@@ -1588,8 +1774,26 @@ public class NativeAzureFileSystem extends FileSystem {
 
       // List all the blobs in the current folder.
       String priorLastKey = null;
-      PartialListing listing = store.listAll(key, AZURE_LIST_ALL, 1,
-          priorLastKey);
+      PartialListing listing = null;
+      try {
+        listing = store.listAll(key, AZURE_LIST_ALL, 1,
+            priorLastKey);
+      } catch(IOException e) {
+
+        Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
+
+        if (innerException instanceof StorageException
+            && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+          return false;
+        }
+
+        throw e;
+      }
+
+      if (listing == null) {
+        return false;
+      }
+
       FileMetadata[] contents = listing.getFiles();
       if (!recursive && contents.length > 0) {
         // The folder is non-empty and recursive delete was not specified.
@@ -1606,8 +1810,20 @@ public class NativeAzureFileSystem extends FileSystem {
         String suffix = p.getKey().substring(
             p.getKey().lastIndexOf(PATH_DELIMITER));
         if (!p.isDir()) {
-          store.delete(key + suffix);
-          instrumentation.fileDeleted();
+          try {
+            store.delete(key + suffix);
+            instrumentation.fileDeleted();
+          } catch(IOException e) {
+
+            Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
+
+            if (innerException instanceof StorageException
+                && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+              return false;
+            }
+
+            throw e;
+          }
         } else {
           // Recursively delete contents of the sub-folders. Notice this also
           // deletes the blob for the directory.
@@ -1616,7 +1832,20 @@ public class NativeAzureFileSystem extends FileSystem {
           }
         }
       }
-      store.delete(key);
+
+      try {
+        store.delete(key);
+      } catch(IOException e) {
+
+        Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
+
+        if (innerException instanceof StorageException
+            && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+          return false;
+        }
+
+        throw e;
+      }
 
       // Update parent directory last modified time
       Path parent = absolutePath.getParent();
@@ -1634,7 +1863,7 @@ public class NativeAzureFileSystem extends FileSystem {
   }
 
   @Override
-  public FileStatus getFileStatus(Path f) throws IOException {
+  public FileStatus getFileStatus(Path f) throws FileNotFoundException, IOException {
 
     LOG.debug("Getting the file status for {}", f.toString());
 
@@ -1647,7 +1876,22 @@ public class NativeAzureFileSystem extends FileSystem {
 
     // The path is either a folder or a file. Retrieve metadata to
     // determine if it is a directory or file.
-    FileMetadata meta = store.retrieveMetadata(key);
+    FileMetadata meta = null;
+    try {
+      meta = store.retrieveMetadata(key);
+    } catch(Exception ex) {
+
+      Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
+
+      if (innerException instanceof StorageException
+          && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+
+          throw new FileNotFoundException(String.format("%s is not found", key));
+       }
+
+      throw ex;
+    }
+
     if (meta != null) {
       if (meta.isDir()) {
         // The path is a folder with files in it.
@@ -1718,14 +1962,28 @@ public class NativeAzureFileSystem extends FileSystem {
    * contained files if it is a directory.
    */
   @Override
-  public FileStatus[] listStatus(Path f) throws IOException {
+  public FileStatus[] listStatus(Path f) throws FileNotFoundException, IOException {
 
     LOG.debug("Listing status for {}", f.toString());
 
     Path absolutePath = makeAbsolute(f);
     String key = pathToKey(absolutePath);
     Set<FileStatus> status = new TreeSet<FileStatus>();
-    FileMetadata meta = store.retrieveMetadata(key);
+    FileMetadata meta = null;
+    try {
+      meta = store.retrieveMetadata(key);
+    } catch (IOException ex) {
+
+      Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
+
+      if (innerException instanceof StorageException
+          && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+
+        throw new FileNotFoundException(String.format("%s is not found", f));
+      }
+
+      throw ex;
+    }
 
     if (meta != null) {
       if (!meta.isDir()) {
@@ -1734,8 +1992,26 @@ public class NativeAzureFileSystem extends FileSystem {
 
         return new FileStatus[] { newFile(meta, absolutePath) };
       }
+
       String partialKey = null;
-      PartialListing listing = store.list(key, AZURE_LIST_ALL, 1, partialKey);
+      PartialListing listing = null;
+
+      try {
+        listing  = store.list(key, AZURE_LIST_ALL, 1, partialKey);
+      } catch (IOException ex) {
+
+        Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
+
+        if (innerException instanceof StorageException
+            && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+
+            throw new FileNotFoundException(String.format("%s is not found", key));
+        }
+
+        throw ex;
+      }
+      // NOTE: We don't check for Null condition as the Store API should return
+      // an empty list if there are not listing.
 
       // For any -RenamePending.json files in the listing,
       // push the rename forward.
@@ -1744,8 +2020,24 @@ public class NativeAzureFileSystem extends FileSystem {
       // If any renames were redone, get another listing,
       // since the current one may have changed due to the redo.
       if (renamed) {
-        listing = store.list(key, AZURE_LIST_ALL, 1, partialKey);
+       listing = null;
+       try {
+         listing = store.list(key, AZURE_LIST_ALL, 1, partialKey);
+       } catch (IOException ex) {
+         Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
+
+         if (innerException instanceof StorageException
+             && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+
+           throw new FileNotFoundException(String.format("%s is not found", key));
+         }
+
+         throw ex;
+       }
       }
+
+      // NOTE: We don't check for Null condition as the Store API should return
+      // and empty list if there are not listing.
 
       for (FileMetadata fileMetadata : listing.getFiles()) {
         Path subpath = keyToPath(fileMetadata.getKey());
@@ -1870,8 +2162,9 @@ public class NativeAzureFileSystem extends FileSystem {
    * @throws IOException
    *           If login fails in getCurrentUser
    */
-  private PermissionStatus createPermissionStatus(FsPermission permission)
-      throws IOException {
+  @VisibleForTesting
+  PermissionStatus createPermissionStatus(FsPermission permission)
+    throws IOException {
     // Create the permission status for this file based on current user
     return new PermissionStatus(
         UserGroupInformation.getCurrentUser().getShortUserName(),
@@ -1944,13 +2237,28 @@ public class NativeAzureFileSystem extends FileSystem {
   }
 
   @Override
-  public FSDataInputStream open(Path f, int bufferSize) throws IOException {
+  public FSDataInputStream open(Path f, int bufferSize) throws FileNotFoundException, IOException {
 
     LOG.debug("Opening file: {}", f.toString());
 
     Path absolutePath = makeAbsolute(f);
     String key = pathToKey(absolutePath);
-    FileMetadata meta = store.retrieveMetadata(key);
+    FileMetadata meta = null;
+    try {
+      meta = store.retrieveMetadata(key);
+    } catch(Exception ex) {
+
+      Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
+
+      if (innerException instanceof StorageException
+          && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+
+        throw new FileNotFoundException(String.format("%s is not found", key));
+      }
+
+      throw ex;
+    }
+
     if (meta == null) {
       throw new FileNotFoundException(f.toString());
     }
@@ -1959,12 +2267,27 @@ public class NativeAzureFileSystem extends FileSystem {
           + " is a directory not a file.");
     }
 
+    DataInputStream inputStream = null;
+    try {
+      inputStream = store.retrieve(key);
+    } catch(Exception ex) {
+      Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
+
+      if (innerException instanceof StorageException
+          && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+
+        throw new FileNotFoundException(String.format("%s is not found", key));
+      }
+
+      throw ex;
+    }
+
     return new FSDataInputStream(new BufferedFSInputStream(
-        new NativeAzureFsInputStream(store.retrieve(key), key, meta.getLength()), bufferSize));
+        new NativeAzureFsInputStream(inputStream, key, meta.getLength()), bufferSize));
   }
 
   @Override
-  public boolean rename(Path src, Path dst) throws IOException {
+  public boolean rename(Path src, Path dst) throws FileNotFoundException, IOException {
 
     FolderRenamePending renamePending = null;
 
@@ -1985,7 +2308,27 @@ public class NativeAzureFileSystem extends FileSystem {
     // Figure out the final destination
     Path absoluteDst = makeAbsolute(dst);
     String dstKey = pathToKey(absoluteDst);
-    FileMetadata dstMetadata = store.retrieveMetadata(dstKey);
+    FileMetadata dstMetadata = null;
+    try {
+      dstMetadata = store.retrieveMetadata(dstKey);
+    } catch (IOException ex) {
+
+      Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
+
+      // A BlobNotFound storage exception in only thrown from retrieveMetdata API when
+      // there is a race condition. If there is another thread which deletes the destination
+      // file or folder, then this thread calling rename should be able to continue with
+      // rename gracefully. Hence the StorageException is swallowed here.
+      if (innerException instanceof StorageException) {
+        if (NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+          LOG.debug("BlobNotFound exception encountered for Destination key : {}. "
+              + "Swallowin the exception to handle race condition gracefully", dstKey);
+        }
+      } else {
+        throw ex;
+      }
+    }
+
     if (dstMetadata != null && dstMetadata.isDir()) {
       // It's an existing directory.
       dstKey = pathToKey(makeAbsolute(new Path(dst, src.getName())));
@@ -1998,8 +2341,23 @@ public class NativeAzureFileSystem extends FileSystem {
       return false;
     } else {
       // Check that the parent directory exists.
-      FileMetadata parentOfDestMetadata =
-          store.retrieveMetadata(pathToKey(absoluteDst.getParent()));
+      FileMetadata parentOfDestMetadata = null;
+      try {
+        parentOfDestMetadata = store.retrieveMetadata(pathToKey(absoluteDst.getParent()));
+      } catch (IOException ex) {
+
+        Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
+
+        if (innerException instanceof StorageException
+            && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+
+          LOG.debug("Parent of destination {} doesn't exists. Failing rename", dst);
+          return false;
+        }
+
+        throw ex;
+      }
+
       if (parentOfDestMetadata == null) {
         LOG.debug("Parent of the destination {}"
             + " doesn't exist, failing the rename.", dst);
@@ -2010,14 +2368,43 @@ public class NativeAzureFileSystem extends FileSystem {
         return false;
       }
     }
-    FileMetadata srcMetadata = store.retrieveMetadata(srcKey);
+    FileMetadata srcMetadata = null;
+    try {
+      srcMetadata = store.retrieveMetadata(srcKey);
+    } catch (IOException ex) {
+      Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
+
+      if (innerException instanceof StorageException
+          && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+
+        LOG.debug("Source {} doesn't exists. Failing rename", src);
+        return false;
+      }
+
+      throw ex;
+    }
+
     if (srcMetadata == null) {
       // Source doesn't exist
       LOG.debug("Source {} doesn't exist, failing the rename.", src);
       return false;
     } else if (!srcMetadata.isDir()) {
       LOG.debug("Source {} found as a file, renaming.", src);
-      store.rename(srcKey, dstKey);
+      try {
+        store.rename(srcKey, dstKey);
+      } catch(IOException ex) {
+
+        Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
+
+        if (innerException instanceof StorageException
+            && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+
+          LOG.debug("BlobNotFoundException encountered. Failing rename", src);
+          return false;
+        }
+
+        throw ex;
+      }
     } else {
 
       // Prepare for, execute and clean up after of all files in folder, and
@@ -2210,10 +2597,24 @@ public class NativeAzureFileSystem extends FileSystem {
   }
 
   @Override
-  public void setPermission(Path p, FsPermission permission) throws IOException {
+  public void setPermission(Path p, FsPermission permission) throws FileNotFoundException, IOException {
     Path absolutePath = makeAbsolute(p);
     String key = pathToKey(absolutePath);
-    FileMetadata metadata = store.retrieveMetadata(key);
+    FileMetadata metadata = null;
+    try {
+      metadata = store.retrieveMetadata(key);
+    } catch (IOException ex) {
+      Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
+
+      if (innerException instanceof StorageException
+          && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+
+        throw new FileNotFoundException(String.format("File %s doesn't exists.", p));
+      }
+
+      throw ex;
+    }
+
     if (metadata == null) {
       throw new FileNotFoundException("File doesn't exist: " + p);
     }
@@ -2237,10 +2638,26 @@ public class NativeAzureFileSystem extends FileSystem {
       throws IOException {
     Path absolutePath = makeAbsolute(p);
     String key = pathToKey(absolutePath);
-    FileMetadata metadata = store.retrieveMetadata(key);
+    FileMetadata metadata = null;
+
+    try {
+      metadata = store.retrieveMetadata(key);
+    } catch (IOException ex) {
+      Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
+
+      if (innerException instanceof StorageException
+          && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+
+        throw new FileNotFoundException(String.format("File %s doesn't exists.", p));
+      }
+
+      throw ex;
+    }
+
     if (metadata == null) {
       throw new FileNotFoundException("File doesn't exist: " + p);
     }
+
     PermissionStatus newPermissionStatus = new PermissionStatus(
         username == null ?
             metadata.getPermissionStatus().getUserName() : username,
@@ -2451,17 +2868,5 @@ public class NativeAzureFileSystem extends FileSystem {
 
     // Return to the caller with the randomized key.
     return randomizedKey;
-  }
-
-  private static void cleanup(Logger log, java.io.Closeable closeable) {
-    if (closeable != null) {
-      try {
-        closeable.close();
-      } catch(IOException e) {
-        if (log != null) {
-          log.debug("Exception in closing {}", closeable, e);
-        }
-      }
-    }
   }
 }

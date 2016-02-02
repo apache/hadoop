@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.util.Time.monotonicNow;
+
 import java.util.AbstractList;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -26,13 +29,9 @@ import java.util.Queue;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -44,8 +43,9 @@ import org.apache.hadoop.util.ChunkedArrayList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static org.apache.hadoop.util.Time.monotonicNow;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Manages datanode decommissioning. A background monitor thread 
@@ -243,8 +243,9 @@ public class DecommissionManager {
       NumberReplicas numberReplicas) {
     final int numExpected = blockManager.getExpectedReplicaNum(block);
     final int numLive = numberReplicas.liveReplicas();
-    if (!blockManager.isNeededReplication(block, numLive)) {
-      // Block doesn't need replication. Skip.
+    if (numLive >= numExpected
+        && blockManager.isPlacementPolicySatisfied(block)) {
+      // Block has enough replica, skip
       LOG.trace("Block {} does not need replication.", block);
       return true;
     }
@@ -441,17 +442,10 @@ public class DecommissionManager {
             LOG.debug("Node {} is sufficiently replicated and healthy, "
                 + "marked as decommissioned.", dn);
           } else {
-            if (LOG.isDebugEnabled()) {
-              StringBuilder b = new StringBuilder("Node {} ");
-              if (isHealthy) {
-                b.append("is ");
-              } else {
-                b.append("isn't ");
-              }
-              b.append("healthy and still needs to replicate {} more blocks," +
-                  " decommissioning is still in progress.");
-              LOG.debug(b.toString(), dn, blocks.size());
-            }
+            LOG.debug("Node {} {} healthy."
+                + " It needs to replicate {} more blocks."
+                + " Decommissioning is still in progress.",
+                dn, isHealthy? "is": "isn't", blocks.size());
           }
         } else {
           LOG.debug("Node {} still has {} blocks to replicate "
@@ -533,7 +527,7 @@ public class DecommissionManager {
           continue;
         }
 
-        BlockCollection bc = namesystem.getBlockCollection(bcId);
+        final BlockCollection bc = blockManager.getBlockCollection(block);
         final NumberReplicas num = blockManager.countNodes(block);
         final int liveReplicas = num.liveReplicas();
 
@@ -587,8 +581,7 @@ public class DecommissionManager {
   }
 
   @VisibleForTesting
-  void runMonitor() throws ExecutionException, InterruptedException {
-    Future f = executor.submit(monitor);
-    f.get();
+  void runMonitorForTest() throws ExecutionException, InterruptedException {
+    executor.submit(monitor).get();
   }
 }

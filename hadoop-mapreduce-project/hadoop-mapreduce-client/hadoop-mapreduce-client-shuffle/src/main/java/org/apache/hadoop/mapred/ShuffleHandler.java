@@ -356,7 +356,7 @@ public class ShuffleHandler extends AuxiliaryService {
   }
 
   ShuffleHandler(MetricsSystem ms) {
-    super("httpshuffle");
+    super(MAPREDUCE_SHUFFLE_SERVICEID);
     metrics = ms.register(new ShuffleMetrics());
   }
 

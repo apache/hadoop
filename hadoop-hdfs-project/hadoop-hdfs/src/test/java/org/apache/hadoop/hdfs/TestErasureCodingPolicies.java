@@ -21,16 +21,19 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collection;
 
@@ -57,10 +60,70 @@ public class TestErasureCodingPolicies {
 
   @After
   public void shutdownCluster() throws IOException {
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 
-  @Test
+  /**
+   * for pre-existing files (with replicated blocks) in an EC dir, getListing
+   * should report them as non-ec.
+   */
+  @Test(timeout=60000)
+  public void testReplicatedFileUnderECDir() throws IOException {
+    final Path dir = new Path("/ec");
+    final Path replicatedFile = new Path(dir, "replicatedFile");
+    // create a file with replicated blocks
+    DFSTestUtil.createFile(fs, replicatedFile, 0, (short) 3, 0L);
+
+    // set ec policy on dir
+    fs.setErasureCodingPolicy(dir, null);
+    // create a file which should be using ec
+    final Path ecSubDir = new Path(dir, "ecSubDir");
+    final Path ecFile = new Path(ecSubDir, "ecFile");
+    DFSTestUtil.createFile(fs, ecFile, 0, (short) 1, 0L);
+
+    assertNull(fs.getClient().getFileInfo(replicatedFile.toString())
+        .getErasureCodingPolicy());
+    assertNotNull(fs.getClient().getFileInfo(ecFile.toString())
+        .getErasureCodingPolicy());
+
+    // list "/ec"
+    DirectoryListing listing = fs.getClient().listPaths(dir.toString(),
+        new byte[0], false);
+    HdfsFileStatus[] files = listing.getPartialListing();
+    assertEquals(2, files.length);
+    // the listing is always sorted according to the local name
+    assertEquals(ecSubDir.getName(), files[0].getLocalName());
+    assertNotNull(files[0].getErasureCodingPolicy()); // ecSubDir
+    assertEquals(replicatedFile.getName(), files[1].getLocalName());
+    assertNull(files[1].getErasureCodingPolicy()); // replicatedFile
+
+    // list "/ec/ecSubDir"
+    files = fs.getClient().listPaths(ecSubDir.toString(),
+        new byte[0], false).getPartialListing();
+    assertEquals(1, files.length);
+    assertEquals(ecFile.getName(), files[0].getLocalName());
+    assertNotNull(files[0].getErasureCodingPolicy()); // ecFile
+
+    // list "/"
+    files = fs.getClient().listPaths("/", new byte[0], false).getPartialListing();
+    assertEquals(1, files.length);
+    assertEquals(dir.getName(), files[0].getLocalName()); // ec
+    assertNotNull(files[0].getErasureCodingPolicy());
+
+    // rename "/ec/ecSubDir/ecFile" to "/ecFile"
+    assertTrue(fs.rename(ecFile, new Path("/ecFile")));
+    files = fs.getClient().listPaths("/", new byte[0], false).getPartialListing();
+    assertEquals(2, files.length);
+    assertEquals(dir.getName(), files[0].getLocalName()); // ec
+    assertNotNull(files[0].getErasureCodingPolicy());
+    assertEquals(ecFile.getName(), files[1].getLocalName());
+    assertNotNull(files[1].getErasureCodingPolicy());
+  }
+
+  @Test(timeout = 60000)
   public void testBasicSetECPolicy()
       throws IOException, InterruptedException {
     final Path testDir = new Path("/ec");
@@ -115,7 +178,7 @@ public class TestErasureCodingPolicies {
     }
   }
 
-  @Test
+  @Test(timeout = 60000)
   public void testMoveValidity() throws IOException, InterruptedException {
     final Path srcECDir = new Path("/srcEC");
     final Path dstECDir = new Path("/dstEC");
@@ -152,7 +215,7 @@ public class TestErasureCodingPolicies {
     fs.rename(nonECFile, dstECDir);
   }
 
-  @Test
+  @Test(timeout = 60000)
   public void testReplication() throws IOException {
     final Path testDir = new Path("/ec");
     fs.mkdir(testDir, FsPermission.getDirDefault());
@@ -166,7 +229,7 @@ public class TestErasureCodingPolicies {
     fs.setReplication(fooFile, (short) 3);
   }
 
-  @Test
+  @Test(timeout = 60000)
   public void testGetErasureCodingPolicyWithSystemDefaultECPolicy() throws Exception {
     String src = "/ec";
     final Path ecDir = new Path(src);
@@ -182,7 +245,7 @@ public class TestErasureCodingPolicies {
     verifyErasureCodingInfo(src + "/child1", sysDefaultECPolicy);
   }
 
-  @Test
+  @Test(timeout = 60000)
   public void testGetErasureCodingPolicy() throws Exception {
     ErasureCodingPolicy[] sysECPolicies = ErasureCodingPolicyManager.getSystemPolices();
     assertTrue("System ecPolicies should be of only 1 for now",
@@ -211,7 +274,7 @@ public class TestErasureCodingPolicies {
         usingECPolicy, ecPolicy);
   }
 
-  @Test
+  @Test(timeout = 60000)
   public void testCreationErasureCodingZoneWithInvalidPolicy()
       throws IOException {
     ECSchema rsSchema = new ECSchema("rs", 4, 2);
@@ -219,7 +282,7 @@ public class TestErasureCodingPolicies {
     int cellSize = 128 * 1024;
     ErasureCodingPolicy ecPolicy=
         new ErasureCodingPolicy(policyName,rsSchema,cellSize);
-    String src = "/ecZone4-2";
+    String src = "/ecDir4-2";
     final Path ecDir = new Path(src);
     try {
       fs.mkdir(ecDir, FsPermission.getDirDefault());
@@ -232,7 +295,7 @@ public class TestErasureCodingPolicies {
     }
   }
 
-  @Test
+  @Test(timeout = 60000)
   public void testGetAllErasureCodingPolicies() throws Exception {
     ErasureCodingPolicy[] sysECPolicies = ErasureCodingPolicyManager
         .getSystemPolices();
@@ -245,5 +308,25 @@ public class TestErasureCodingPolicies {
         allECPolicies.size() == 1);
     assertEquals("Erasure coding policy mismatches",
         sysECPolicies[0], allECPolicies.iterator().next());
+  }
+
+  @Test(timeout = 60000)
+  public void testGetErasureCodingPolicyOnANonExistentFile() throws Exception {
+    Path path = new Path("/ecDir");
+    try {
+      fs.getErasureCodingPolicy(path);
+      fail("FileNotFoundException should be thrown for a non-existent"
+          + " file path");
+    } catch (FileNotFoundException e) {
+      assertExceptionContains("Path not found: " + path, e);
+    }
+    HdfsAdmin dfsAdmin = new HdfsAdmin(cluster.getURI(), conf);
+    try {
+      dfsAdmin.getErasureCodingPolicy(path);
+      fail("FileNotFoundException should be thrown for a non-existent"
+          + " file path");
+    } catch (FileNotFoundException e) {
+      assertExceptionContains("Path not found: " + path, e);
+    }
   }
 }

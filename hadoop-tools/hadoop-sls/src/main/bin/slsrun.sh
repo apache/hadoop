@@ -68,9 +68,9 @@ function parse_args()
   fi
 }
 
-function calculate_classpath() {
-  hadoop_debug "Injecting TOOL_PATH into CLASSPATH"
-  hadoop_add_classpath "${TOOL_PATH}"
+function calculate_classpath
+{
+  hadoop_add_to_classpath_toolspath
   hadoop_debug "Injecting ${HADOOP_PREFIX}/share/hadoop/tools/sls/html into CLASSPATH"
   hadoop_add_classpath "${HADOOP_PREFIX}/share/hadoop/tools/sls/html"
 }
@@ -106,14 +106,14 @@ function run_simulation() {
 
 # let's locate libexec...
 if [[ -n "${HADOOP_PREFIX}" ]]; then
-  DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
+  HADOOP_DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
 else
   this="${BASH_SOURCE-$0}"
   bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
-  DEFAULT_LIBEXEC_DIR="${bin}/../../../../../libexec"
+  HADOOP_DEFAULT_LIBEXEC_DIR="${bin}/../../../../../libexec"
 fi
 
-HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}"
+HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$HADOOP_DEFAULT_LIBEXEC_DIR}"
 # shellcheck disable=SC2034
 HADOOP_NEW_CONFIG=true
 if [[ -f "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]]; then

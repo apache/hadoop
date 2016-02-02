@@ -20,13 +20,18 @@ package org.apache.hadoop.hdfs.web;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -37,34 +42,54 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSClientRetries;
 import org.apache.hadoop.hdfs.TestFileCreation;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem.WebHdfsInputStream;
 import org.apache.hadoop.hdfs.web.resources.LengthParam;
 import org.apache.hadoop.hdfs.web.resources.OffsetParam;
 import org.apache.hadoop.hdfs.web.resources.Param;
+import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
+import org.apache.hadoop.io.retry.RetryPolicy.RetryAction.RetryDecision;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.internal.util.reflection.Whitebox;
+
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /** Test WebHDFS */
 public class TestWebHDFS {
@@ -339,6 +364,60 @@ public class TestWebHDFS {
   }
 
   /**
+   * Test allow and disallow snapshot through WebHdfs. Verifying webhdfs with
+   * Distributed filesystem methods.
+   */
+  @Test
+  public void testWebHdfsAllowandDisallowSnapshots() throws Exception {
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final WebHdfsFileSystem webHdfs = WebHdfsTestUtil
+          .getWebHdfsFileSystem(conf, WebHdfsConstants.WEBHDFS_SCHEME);
+
+      final Path bar = new Path("/bar");
+      dfs.mkdirs(bar);
+
+      // allow snapshots on /bar using webhdfs
+      webHdfs.allowSnapshot(bar);
+      webHdfs.createSnapshot(bar, "s1");
+      final Path s1path = SnapshotTestHelper.getSnapshotRoot(bar, "s1");
+      Assert.assertTrue(webHdfs.exists(s1path));
+      SnapshottableDirectoryStatus[] snapshottableDirs =
+          dfs.getSnapshottableDirListing();
+      assertEquals(1, snapshottableDirs.length);
+      assertEquals(bar, snapshottableDirs[0].getFullPath());
+      dfs.deleteSnapshot(bar, "s1");
+      dfs.disallowSnapshot(bar);
+      snapshottableDirs = dfs.getSnapshottableDirListing();
+      assertNull(snapshottableDirs);
+
+      // disallow snapshots on /bar using webhdfs
+      dfs.allowSnapshot(bar);
+      snapshottableDirs = dfs.getSnapshottableDirListing();
+      assertEquals(1, snapshottableDirs.length);
+      assertEquals(bar, snapshottableDirs[0].getFullPath());
+      webHdfs.disallowSnapshot(bar);
+      snapshottableDirs = dfs.getSnapshottableDirListing();
+      assertNull(snapshottableDirs);
+      try {
+        webHdfs.createSnapshot(bar);
+        fail("Cannot create snapshot on a non-snapshottable directory");
+      } catch (Exception e) {
+        GenericTestUtils.assertExceptionContains(
+            "Directory is not a snapshottable directory", e);
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
    * Test snapshot creation through WebHdfs
    */
   @Test
@@ -587,6 +666,28 @@ public class TestWebHDFS {
   }
 
   @Test
+  public void testContentSummary() throws Exception {
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    final Path path = new Path("/QuotaDir");
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      final WebHdfsFileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(
+          conf, WebHdfsConstants.WEBHDFS_SCHEME);
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      dfs.mkdirs(path);
+      dfs.setQuotaByStorageType(path, StorageType.DISK, 100000);
+      ContentSummary contentSummary = webHdfs.getContentSummary(path);
+      Assert.assertTrue((contentSummary.getTypeQuota(
+          StorageType.DISK) == 100000));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
   public void testWebHdfsPread() throws Exception {
     final Configuration conf = WebHdfsTestUtil.createConf();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
@@ -665,6 +766,36 @@ public class TestWebHDFS {
     }
   }
 
+  @Test
+  public void testWebHdfsGetBlockLocationsWithStorageType() throws Exception{
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    final int OFFSET = 42;
+    final int LENGTH = 512;
+    final Path PATH = new Path("/foo");
+    byte[] CONTENTS = new byte[1024];
+    RANDOM.nextBytes(CONTENTS);
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      final WebHdfsFileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+          WebHdfsConstants.WEBHDFS_SCHEME);
+      try (OutputStream os = fs.create(PATH)) {
+        os.write(CONTENTS);
+      }
+      BlockLocation[] locations = fs.getFileBlockLocations(PATH, OFFSET,
+          LENGTH);
+      for (BlockLocation location: locations) {
+        StorageType[] storageTypes = location.getStorageTypes();
+        Assert.assertTrue(storageTypes != null && storageTypes.length > 0 &&
+            storageTypes[0] == StorageType.DISK);
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   private WebHdfsFileSystem createWebHDFSAsTestUser(final Configuration conf,
       final URI uri, final String userName) throws Exception {
 
@@ -679,5 +810,143 @@ public class TestWebHDFS {
         return webhdfs;
       }
     });
+  }
+
+  @Test(timeout=90000)
+  public void testWebHdfsReadRetries() throws Exception {
+    // ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    final Path dir = new Path("/testWebHdfsReadRetries");
+
+    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_RETRY_POLICY_ENABLED_KEY, true);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024*512);
+    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
+
+    final short numDatanodes = 1;
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(numDatanodes)
+        .build();
+    try {
+      cluster.waitActive();
+      final FileSystem fs = WebHdfsTestUtil
+                .getWebHdfsFileSystem(conf, WebHdfsConstants.WEBHDFS_SCHEME);
+
+      //create a file
+      final long length = 1L << 20;
+      final Path file1 = new Path(dir, "testFile");
+
+      DFSTestUtil.createFile(fs, file1, length, numDatanodes, 20120406L);
+
+      //get file status and check that it was written properly.
+      final FileStatus s1 = fs.getFileStatus(file1);
+      assertEquals("Write failed for file " + file1, length, s1.getLen());
+
+      // Ensure file can be read through WebHdfsInputStream
+      FSDataInputStream in = fs.open(file1);
+      assertTrue("Input stream is not an instance of class WebHdfsInputStream",
+          in.getWrappedStream() instanceof WebHdfsInputStream);
+      int count = 0;
+      for(; in.read() != -1; count++);
+      assertEquals("Read failed for file " + file1, s1.getLen(), count);
+      assertEquals("Sghould not be able to read beyond end of file",
+          in.read(), -1);
+      in.close();
+      try {
+        in.read();
+        fail("Read after close should have failed");
+      } catch(IOException ioe) { }
+
+      WebHdfsFileSystem wfs = (WebHdfsFileSystem)fs;
+      // Read should not be retried if AccessControlException is encountered.
+      String msg = "ReadRetries: Test Access Control Exception";
+      testReadRetryExceptionHelper(wfs, file1,
+                          new AccessControlException(msg), msg, false, 1);
+
+      // Retry policy should be invoked if IOExceptions are thrown.
+      msg = "ReadRetries: Test SocketTimeoutException";
+      testReadRetryExceptionHelper(wfs, file1,
+                          new SocketTimeoutException(msg), msg, true, 5);
+      msg = "ReadRetries: Test SocketException";
+      testReadRetryExceptionHelper(wfs, file1,
+                          new SocketException(msg), msg, true, 5);
+      msg = "ReadRetries: Test EOFException";
+      testReadRetryExceptionHelper(wfs, file1,
+                          new EOFException(msg), msg, true, 5);
+      msg = "ReadRetries: Test Generic IO Exception";
+      testReadRetryExceptionHelper(wfs, file1,
+                          new IOException(msg), msg, true, 5);
+
+      // If InvalidToken exception occurs, WebHdfs only retries if the
+      // delegation token was replaced. Do that twice, then verify by checking
+      // the number of times it tried.
+      WebHdfsFileSystem spyfs = spy(wfs);
+      when(spyfs.replaceExpiredDelegationToken()).thenReturn(true, true, false);
+      msg = "ReadRetries: Test Invalid Token Exception";
+      testReadRetryExceptionHelper(spyfs, file1,
+                          new InvalidToken(msg), msg, false, 3);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  public boolean attemptedRetry;
+  private void testReadRetryExceptionHelper(WebHdfsFileSystem fs, Path fn,
+      final IOException ex, String msg, boolean shouldAttemptRetry,
+      int numTimesTried)
+      throws Exception {
+    // Ovverride WebHdfsInputStream#getInputStream so that it returns
+    // an input stream that throws the specified exception when read
+    // is called.
+    FSDataInputStream in = fs.open(fn);
+    in.read(); // Connection is made only when the first read() occurs.
+    final WebHdfsInputStream webIn =
+        (WebHdfsInputStream)(in.getWrappedStream());
+
+    final InputStream spyInputStream =
+        spy(webIn.getReadRunner().getInputStream());
+    doThrow(ex).when(spyInputStream).read((byte[])any(), anyInt(), anyInt());
+    final WebHdfsFileSystem.ReadRunner rr = spy(webIn.getReadRunner());
+    doReturn(spyInputStream)
+        .when(rr).initializeInputStream((HttpURLConnection) any());
+    rr.setInputStream(spyInputStream);
+    webIn.setReadRunner(rr);
+
+    // Override filesystem's retry policy in order to verify that
+    // WebHdfsInputStream is calling shouldRetry for the appropriate
+    // exceptions.
+    final RetryAction retryAction = new RetryAction(RetryDecision.RETRY);
+    final RetryAction failAction = new RetryAction(RetryDecision.FAIL);
+    RetryPolicy rp = new RetryPolicy() {
+      @Override
+      public RetryAction shouldRetry(Exception e, int retries, int failovers,
+          boolean isIdempotentOrAtMostOnce) throws Exception {
+        attemptedRetry = true;
+       if (retries > 3) {
+          return failAction;
+        } else {
+          return retryAction;
+        }
+      }
+    };
+    fs.setRetryPolicy(rp);
+
+    // If the retry logic is exercised, attemptedRetry will be true. Some
+    // exceptions should exercise the retry logic and others should not.
+    // Either way, the value of attemptedRetry should match shouldAttemptRetry.
+    attemptedRetry = false;
+    try {
+      webIn.read();
+      fail(msg + ": Read should have thrown exception.");
+    } catch (Exception e) {
+      assertTrue(e.getMessage().contains(msg));
+    }
+    assertEquals(msg + ": Read should " + (shouldAttemptRetry ? "" : "not ")
+                + "have called shouldRetry. ",
+        attemptedRetry, shouldAttemptRetry);
+
+    verify(rr, times(numTimesTried)).getResponse((HttpURLConnection) any());
+    webIn.close();
+    in.close();
   }
 }

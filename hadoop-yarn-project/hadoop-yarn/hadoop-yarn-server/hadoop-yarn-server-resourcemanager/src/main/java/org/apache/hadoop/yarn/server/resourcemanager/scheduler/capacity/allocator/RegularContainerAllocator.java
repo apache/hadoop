@@ -28,12 +28,12 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAMContainerLaunchDiagnosticsConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAssignment;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -79,6 +79,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       FiCaSchedulerNode node, SchedulingMode schedulingMode,
       ResourceLimits resourceLimits, Priority priority) {
     if (SchedulerAppUtils.isBlacklisted(application, node, LOG)) {
+      application.updateAppSkipNodeDiagnostics(
+          CSAMContainerLaunchDiagnosticsConstants.SKIP_AM_ALLOCATION_IN_BLACK_LISTED_NODE);
       return ContainerAllocation.APP_SKIPPED;
     }
 
@@ -99,16 +101,14 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     // AM container allocation doesn't support non-exclusive allocation to
     // avoid painful of preempt an AM container
     if (schedulingMode == SchedulingMode.IGNORE_PARTITION_EXCLUSIVITY) {
-      RMAppAttempt rmAppAttempt =
-          rmContext.getRMApps().get(application.getApplicationId())
-              .getCurrentAppAttempt();
-      if (rmAppAttempt.getSubmissionContext().getUnmanagedAM() == false
-          && null == rmAppAttempt.getMasterContainer()) {
+      if (application.isWaitingForAMContainer()) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Skip allocating AM container to app_attempt="
               + application.getApplicationAttemptId()
               + ", don't allow to allocate AM container in non-exclusive mode");
         }
+        application.updateAppSkipNodeDiagnostics(
+            "Skipping assigning to Node in Ignore Exclusivity mode. ");
         return ContainerAllocation.APP_SKIPPED;
       }
     }
@@ -246,8 +246,11 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       float localityWaitFactor =
           getLocalityWaitFactor(priority, rmContext.getScheduler()
               .getNumClusterNodes());
-
-      return ((requiredContainers * localityWaitFactor) < missedOpportunities);
+      // Cap the delay by the number of nodes in the cluster. Under most conditions
+      // this means we will consider each node in the cluster before
+      // accepting an off-switch assignment.
+      return (Math.min(rmContext.getScheduler().getNumClusterNodes(),
+          (requiredContainers * localityWaitFactor)) < missedOpportunities);
     }
 
     // Check if we need containers on this rack
@@ -315,6 +318,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
           schedulingMode, currentResoureLimits);
     }
 
+    application.updateAppSkipNodeDiagnostics(
+        CSAMContainerLaunchDiagnosticsConstants.SKIP_AM_ALLOCATION_DUE_TO_LOCALITY);
     return ContainerAllocation.APP_SKIPPED;
   }
 
@@ -618,6 +623,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
 
     // something went wrong getting/creating the container
     if (container == null) {
+      application
+          .updateAppSkipNodeDiagnostics("Scheduling of container failed. ");
       LOG.warn("Couldn't get container for allocation!");
       return ContainerAllocation.APP_SKIPPED;
     }
@@ -643,9 +650,15 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Resetting scheduling opportunities");
         }
-        application.resetSchedulingOpportunities(priority);
+        // Only reset scheduling opportunities for RACK_LOCAL if configured
+        // to do so. Not resetting means we will continue to schedule
+        // RACK_LOCAL without delay.
+        if (allocationResult.containerNodeType == NodeType.NODE_LOCAL
+            || application.getCSLeafQueue().getRackLocalityFullReset()) {
+          application.resetSchedulingOpportunities(priority);
+        }
       }
-      
+
       // Non-exclusive scheduling opportunity is different: we need reset
       // it every time to make sure non-labeled resource request will be
       // most likely allocated on non-labeled nodes first.

@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -58,6 +59,10 @@ public abstract class SchedulerNode {
   private Resource totalResourceCapability;
   private RMContainer reservedContainer;
   private volatile int numContainers;
+  private volatile ResourceUtilization containersUtilization =
+      ResourceUtilization.newInstance(0, 0, 0f);
+  private volatile ResourceUtilization nodeUtilization =
+      ResourceUtilization.newInstance(0, 0, 0f);
 
 
   /* set of containers that are allocated containers */
@@ -338,5 +343,38 @@ public abstract class SchedulerNode {
     } else {
       return this.labels.iterator().next();
     }
+  }
+
+  /**
+   * Set the resource utilization of the containers in the node.
+   * @param containersUtilization Resource utilization of the containers.
+   */
+  public void setAggregatedContainersUtilization(
+      ResourceUtilization containersUtilization) {
+    this.containersUtilization = containersUtilization;
+  }
+
+  /**
+   * Get the resource utilization of the containers in the node.
+   * @return Resource utilization of the containers.
+   */
+  public ResourceUtilization getAggregatedContainersUtilization() {
+    return this.containersUtilization;
+  }
+
+  /**
+   * Set the resource utilization of the node. This includes the containers.
+   * @param nodeUtilization Resource utilization of the node.
+   */
+  public void setNodeUtilization(ResourceUtilization nodeUtilization) {
+    this.nodeUtilization = nodeUtilization;
+  }
+
+  /**
+   * Get the resource utilization of the node.
+   * @return Resource utilization of the node.
+   */
+  public ResourceUtilization getNodeUtilization() {
+    return this.nodeUtilization;
   }
 }

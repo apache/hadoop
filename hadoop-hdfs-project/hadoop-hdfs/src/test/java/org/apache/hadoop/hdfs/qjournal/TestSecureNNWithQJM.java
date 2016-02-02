@@ -154,9 +154,11 @@ public class TestSecureNNWithQJM {
     IOUtils.cleanup(null, fs);
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
     if (mjc != null) {
       mjc.shutdown();
+      mjc = null;
     }
   }
 
@@ -212,6 +214,7 @@ public class TestSecureNNWithQJM {
   private void startCluster() throws IOException {
     mjc = new MiniJournalCluster.Builder(conf)
       .build();
+    mjc.waitActive();
     conf.set(DFS_NAMENODE_EDITS_DIR_KEY,
       mjc.getQuorumJournalURI("myjournal").toString());
     cluster = new MiniDFSCluster.Builder(conf)

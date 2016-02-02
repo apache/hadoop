@@ -25,6 +25,7 @@ import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -38,9 +39,6 @@ import org.junit.Test;
 /**
  * Test if live nodes count per node is correct 
  * so NN makes right decision for under/over-replicated blocks
- * 
- * Two of the "while" loops below use "busy wait"
- * because they are detecting transient states.
  */
 public class TestNodeCount {
   final short REPLICATION_FACTOR = (short)2;
@@ -50,10 +48,19 @@ public class TestNodeCount {
   Block lastBlock = null;
   NumberReplicas lastNum = null;
 
-  @Test
+  @Test(timeout = 60000)
   public void testNodeCount() throws Exception {
-    // start a mini dfs cluster of 2 nodes
     final Configuration conf = new HdfsConfiguration();
+
+    // avoid invalidation by startup delay in order to make test non-transient
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_KEY,
+        60);
+
+    // reduce intervals to make test execution time shorter
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+
+    // start a mini dfs cluster of 2 nodes
     final MiniDFSCluster cluster = 
       new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION_FACTOR).build();
     try {
@@ -90,7 +97,7 @@ public class TestNodeCount {
       cluster.restartDataNode(dnprop);
       cluster.waitActive();
       
-      // check if excessive replica is detected (transient)
+      // check if excessive replica is detected
       initializeTimeout(TIMEOUT);
       while (countNodes(block.getLocalBlock(), namesystem).excessReplicas() == 0) {
         checkTimeout("excess replicas not detected");
@@ -124,7 +131,7 @@ public class TestNodeCount {
       cluster.restartDataNode(dnprop);
       cluster.waitActive();
 
-      // check if excessive replica is detected (transient)
+      // check if excessive replica is detected
       initializeTimeout(TIMEOUT);
       while (countNodes(block.getLocalBlock(), namesystem).excessReplicas() != 2) {
         checkTimeout("excess replica count not equal to 2");
@@ -141,9 +148,8 @@ public class TestNodeCount {
         + ((timeout <= 0) ? Long.MAX_VALUE : timeout);
   }
   
-  /* busy wait on transient conditions */
   void checkTimeout(String testLabel) throws TimeoutException {
-    checkTimeout(testLabel, 0);
+    checkTimeout(testLabel, 10);
   }
   
   /* check for timeout, then wait for cycleTime msec */

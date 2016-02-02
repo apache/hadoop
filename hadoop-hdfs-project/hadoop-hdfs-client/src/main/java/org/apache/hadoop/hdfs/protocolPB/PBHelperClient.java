@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
@@ -139,6 +140,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.HdfsFileStatusProto.File
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto.Builder;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlocksProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.QuotaUsageProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RollingUpgradeStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotDiffReportEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotDiffReportProto;
@@ -162,13 +164,13 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.ShmId;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.SlotId;
-import org.apache.hadoop.hdfs.util.ExactSizeInputStream;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.LimitInputStream;
 
 /**
  * Utilities for converting protobuf classes to and from hdfs-client side
@@ -194,7 +196,8 @@ public class PBHelperClient {
   }
 
   public static ByteString getByteString(byte[] bytes) {
-    return ByteString.copyFrom(bytes);
+    // return singleton to reduce object allocation
+    return (bytes.length == 0) ? ByteString.EMPTY : ByteString.copyFrom(bytes);
   }
 
   public static ShmId convert(ShortCircuitShmIdProto shmId) {
@@ -221,8 +224,8 @@ public class PBHelperClient {
 
   public static TokenProto convert(Token<?> tok) {
     return TokenProto.newBuilder().
-        setIdentifier(ByteString.copyFrom(tok.getIdentifier())).
-        setPassword(ByteString.copyFrom(tok.getPassword())).
+        setIdentifier(getByteString(tok.getIdentifier())).
+        setPassword(getByteString(tok.getPassword())).
         setKind(tok.getKind().toString()).
         setService(tok.getService().toString()).build();
   }
@@ -401,7 +404,7 @@ public class PBHelperClient {
 
     int size = CodedInputStream.readRawVarint32(firstByte, input);
     assert size >= 0;
-    return new ExactSizeInputStream(input, size);
+    return new LimitInputStream(input, size);
   }
 
   public static CipherOption convert(HdfsProtos.CipherOptionProto proto) {
@@ -451,16 +454,16 @@ public class PBHelperClient {
         builder.setSuite(convert(option.getCipherSuite()));
       }
       if (option.getInKey() != null) {
-        builder.setInKey(ByteString.copyFrom(option.getInKey()));
+        builder.setInKey(getByteString(option.getInKey()));
       }
       if (option.getInIv() != null) {
-        builder.setInIv(ByteString.copyFrom(option.getInIv()));
+        builder.setInIv(getByteString(option.getInIv()));
       }
       if (option.getOutKey() != null) {
-        builder.setOutKey(ByteString.copyFrom(option.getOutKey()));
+        builder.setOutKey(getByteString(option.getOutKey()));
       }
       if (option.getOutIv() != null) {
-        builder.setOutIv(ByteString.copyFrom(option.getOutIv()));
+        builder.setOutIv(getByteString(option.getOutIv()));
       }
       return builder.build();
     }
@@ -525,13 +528,9 @@ public class PBHelperClient {
           .toArray(new String[storageIDsCount]);
     }
 
-    int[] indices = null;
-    final int indexCount = proto.getBlockIndexCount();
-    if (indexCount > 0) {
-      indices = new int[indexCount];
-      for (int i = 0; i < indexCount; i++) {
-        indices[i] = proto.getBlockIndex(i);
-      }
+    byte[] indices = null;
+    if (proto.hasBlockIndices()) {
+      indices = proto.getBlockIndices().toByteArray();
     }
 
     // Set values from the isCached list, re-using references from loc
@@ -813,10 +812,10 @@ public class PBHelperClient {
     }
     if (b instanceof LocatedStripedBlock) {
       LocatedStripedBlock sb = (LocatedStripedBlock) b;
-      int[] indices = sb.getBlockIndices();
+      byte[] indices = sb.getBlockIndices();
+      builder.setBlockIndices(PBHelperClient.getByteString(indices));
       Token<BlockTokenIdentifier>[] blockTokens = sb.getBlockTokens();
       for (int i = 0; i < indices.length; i++) {
-        builder.addBlockIndex(indices[i]);
         builder.addBlockTokens(PBHelperClient.convert(blockTokens[i]));
       }
     }
@@ -1420,12 +1419,37 @@ public class PBHelperClient {
         spaceConsumed(cs.getSpaceConsumed()).
         spaceQuota(cs.getSpaceQuota());
     if (cs.hasTypeQuotaInfos()) {
-      for (HdfsProtos.StorageTypeQuotaInfoProto info :
-          cs.getTypeQuotaInfos().getTypeQuotaInfoList()) {
-        StorageType type = convertStorageType(info.getType());
-        builder.typeConsumed(type, info.getConsumed());
-        builder.typeQuota(type, info.getQuota());
-      }
+      addStorageTypes(cs.getTypeQuotaInfos(), builder);
+    }
+    return builder.build();
+  }
+
+  public static QuotaUsage convert(QuotaUsageProto qu) {
+    if (qu == null) {
+      return null;
+    }
+    QuotaUsage.Builder builder = new QuotaUsage.Builder();
+    builder.fileAndDirectoryCount(qu.getFileAndDirectoryCount()).
+        quota(qu.getQuota()).
+        spaceConsumed(qu.getSpaceConsumed()).
+        spaceQuota(qu.getSpaceQuota());
+    if (qu.hasTypeQuotaInfos()) {
+      addStorageTypes(qu.getTypeQuotaInfos(), builder);
+    }
+    return builder.build();
+  }
+
+  public static QuotaUsageProto convert(QuotaUsage qu) {
+    if (qu == null) {
+      return null;
+    }
+    QuotaUsageProto.Builder builder = QuotaUsageProto.newBuilder();
+    builder.setFileAndDirectoryCount(qu.getFileAndDirectoryCount()).
+        setQuota(qu.getQuota()).
+        setSpaceConsumed(qu.getSpaceConsumed()).
+        setSpaceQuota(qu.getSpaceQuota());
+    if (qu.isTypeQuotaSet() || qu.isTypeConsumedAvailable()) {
+      builder.setTypeQuotaInfos(getBuilder(qu));
     }
     return builder.build();
   }
@@ -1508,6 +1532,8 @@ public class PBHelperClient {
       return SafeModeActionProto.SAFEMODE_ENTER;
     case SAFEMODE_GET:
       return SafeModeActionProto.SAFEMODE_GET;
+    case SAFEMODE_FORCE_EXIT:
+      return  SafeModeActionProto.SAFEMODE_FORCE_EXIT;
     default:
       throw new IllegalArgumentException("Unexpected SafeModeAction :" + a);
     }
@@ -1522,7 +1548,7 @@ public class PBHelperClient {
   }
 
   public static long[] convert(GetFsStatsResponseProto res) {
-    long[] result = new long[7];
+    long[] result = new long[ClientProtocol.STATS_ARRAY_LENGTH];
     result[ClientProtocol.GET_STATS_CAPACITY_IDX] = res.getCapacity();
     result[ClientProtocol.GET_STATS_USED_IDX] = res.getUsed();
     result[ClientProtocol.GET_STATS_REMAINING_IDX] = res.getRemaining();
@@ -1534,6 +1560,10 @@ public class PBHelperClient {
         res.getMissingBlocks();
     result[ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX] =
         res.getMissingReplOneBlocks();
+    result[ClientProtocol.GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX] =
+        res.hasBlocksInFuture() ? res.getBlocksInFuture() : 0;
+    result[ClientProtocol.GET_STATS_PENDING_DELETION_BLOCKS_IDX] =
+        res.getPendingDeletionBlocks();
     return result;
   }
 
@@ -1734,8 +1764,8 @@ public class PBHelperClient {
     DataEncryptionKeyProto.Builder b = DataEncryptionKeyProto.newBuilder()
         .setKeyId(bet.keyId)
         .setBlockPoolId(bet.blockPoolId)
-        .setNonce(ByteString.copyFrom(bet.nonce))
-        .setEncryptionKey(ByteString.copyFrom(bet.encryptionKey))
+        .setNonce(getByteString(bet.nonce))
+        .setEncryptionKey(getByteString(bet.encryptionKey))
         .setExpiryDate(bet.expiryDate);
     if (bet.encryptionAlgorithm != null) {
       b.setEncryptionAlgorithm(bet.encryptionAlgorithm);
@@ -1812,10 +1842,10 @@ public class PBHelperClient {
             setGroup(fs.getGroup()).
             setFileId(fs.getFileId()).
             setChildrenNum(fs.getChildrenNum()).
-            setPath(ByteString.copyFrom(fs.getLocalNameInBytes())).
+            setPath(getByteString(fs.getLocalNameInBytes())).
             setStoragePolicy(fs.getStoragePolicy());
     if (fs.isSymlink())  {
-      builder.setSymlink(ByteString.copyFrom(fs.getSymlinkInBytes()));
+      builder.setSymlink(getByteString(fs.getSymlinkInBytes()));
     }
     if (fs.getFileEncryptionInfo() != null) {
       builder.setFileEncryptionInfo(convert(fs.getFileEncryptionInfo()));
@@ -1842,7 +1872,7 @@ public class PBHelperClient {
     int snapshotNumber = status.getSnapshotNumber();
     int snapshotQuota = status.getSnapshotQuota();
     byte[] parentFullPath = status.getParentFullPath();
-    ByteString parentFullPathBytes = ByteString.copyFrom(
+    ByteString parentFullPathBytes = getByteString(
         parentFullPath == null ? DFSUtilClient.EMPTY_BYTES : parentFullPath);
     HdfsFileStatusProto fs = convert(status.getDirStatus());
     SnapshottableDirectoryStatusProto.Builder builder =
@@ -1897,6 +1927,17 @@ public class PBHelperClient {
         ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX + 1)
       result.setMissingReplOneBlocks(
           fsStats[ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX]);
+
+    if (fsStats.length >=
+        ClientProtocol.GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX + 1) {
+      result.setBlocksInFuture(
+          fsStats[ClientProtocol.GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX]);
+    }
+    if (fsStats.length >=
+        ClientProtocol.GET_STATS_PENDING_DELETION_BLOCKS_IDX + 1) {
+      result.setPendingDeletionBlocks(
+          fsStats[ClientProtocol.GET_STATS_PENDING_DELETION_BLOCKS_IDX]);
+    }
     return result.build();
   }
 
@@ -1920,6 +1961,8 @@ public class PBHelperClient {
       return SafeModeAction.SAFEMODE_ENTER;
     case SAFEMODE_GET:
       return SafeModeAction.SAFEMODE_GET;
+    case SAFEMODE_FORCE_EXIT:
+      return  SafeModeAction.SAFEMODE_FORCE_EXIT;
     default:
       throw new IllegalArgumentException("Unexpected SafeModeAction :" + a);
     }
@@ -1980,20 +2023,36 @@ public class PBHelperClient {
         setSpaceQuota(cs.getSpaceQuota());
 
     if (cs.isTypeQuotaSet() || cs.isTypeConsumedAvailable()) {
-      HdfsProtos.StorageTypeQuotaInfosProto.Builder isb =
-          HdfsProtos.StorageTypeQuotaInfosProto.newBuilder();
-      for (StorageType t: StorageType.getTypesSupportingQuota()) {
-        HdfsProtos.StorageTypeQuotaInfoProto info =
-            HdfsProtos.StorageTypeQuotaInfoProto.newBuilder().
-                setType(convertStorageType(t)).
-                setConsumed(cs.getTypeConsumed(t)).
-                setQuota(cs.getTypeQuota(t)).
-                build();
-        isb.addTypeQuotaInfo(info);
-      }
-      builder.setTypeQuotaInfos(isb);
+      builder.setTypeQuotaInfos(getBuilder(cs));
     }
     return builder.build();
+  }
+
+  private static void addStorageTypes(
+      HdfsProtos.StorageTypeQuotaInfosProto typeQuotaInfos,
+      QuotaUsage.Builder builder) {
+    for (HdfsProtos.StorageTypeQuotaInfoProto info :
+        typeQuotaInfos.getTypeQuotaInfoList()) {
+      StorageType type = convertStorageType(info.getType());
+      builder.typeConsumed(type, info.getConsumed());
+      builder.typeQuota(type, info.getQuota());
+    }
+  }
+
+  private static HdfsProtos.StorageTypeQuotaInfosProto.Builder getBuilder(
+      QuotaUsage qu) {
+    HdfsProtos.StorageTypeQuotaInfosProto.Builder isb =
+            HdfsProtos.StorageTypeQuotaInfosProto.newBuilder();
+    for (StorageType t: StorageType.getTypesSupportingQuota()) {
+      HdfsProtos.StorageTypeQuotaInfoProto info =
+          HdfsProtos.StorageTypeQuotaInfoProto.newBuilder().
+              setType(convertStorageType(t)).
+              setConsumed(qu.getTypeConsumed(t)).
+              setQuota(qu.getTypeQuota(t)).
+              build();
+      isb.addTypeQuotaInfo(info);
+    }
+    return isb;
   }
 
   public static DatanodeStorageProto convert(DatanodeStorage s) {
@@ -2049,7 +2108,7 @@ public class PBHelperClient {
     if (entry == null) {
       return null;
     }
-    ByteString sourcePath = ByteString.copyFrom(entry.getSourcePath() == null ?
+    ByteString sourcePath = getByteString(entry.getSourcePath() == null ?
         DFSUtilClient.EMPTY_BYTES : entry.getSourcePath());
     String modification = entry.getType().getLabel();
     SnapshotDiffReportEntryProto.Builder builder = SnapshotDiffReportEntryProto
@@ -2057,7 +2116,7 @@ public class PBHelperClient {
         .setModificationLabel(modification);
     if (entry.getType() == DiffType.RENAME) {
       ByteString targetPath =
-          ByteString.copyFrom(entry.getTargetPath() == null ?
+          getByteString(entry.getTargetPath() == null ?
               DFSUtilClient.EMPTY_BYTES : entry.getTargetPath());
       builder.setTargetPath(targetPath);
     }

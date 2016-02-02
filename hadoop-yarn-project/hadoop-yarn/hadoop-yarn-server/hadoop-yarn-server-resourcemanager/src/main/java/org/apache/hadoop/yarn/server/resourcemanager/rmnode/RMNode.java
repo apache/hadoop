@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 
 /**
@@ -98,7 +99,19 @@ public interface RMNode {
    * @return the total available resource.
    */
   public Resource getTotalCapability();
-  
+
+  /**
+   * the aggregated resource utilization of the containers.
+   * @return the aggregated resource utilization of the containers.
+   */
+  public ResourceUtilization getAggregatedContainersUtilization();
+
+  /**
+   * the total resource utilization of the node.
+   * @return the total resource utilization of the node.
+   */
+  public ResourceUtilization getNodeUtilization();
+
   /**
    * The rack name for this node manager.
    * @return the rack name.

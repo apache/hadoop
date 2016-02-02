@@ -389,6 +389,9 @@ public class SLSRunner {
                   new ArrayList<ContainerSimulator>();
           // map tasks
           for(LoggedTask mapTask : job.getMapTasks()) {
+            if (mapTask.getAttempts().size() == 0) {
+              continue;
+            }
             LoggedTaskAttempt taskAttempt = mapTask.getAttempts()
                     .get(mapTask.getAttempts().size() - 1);
             String hostname = taskAttempt.getHostName().getValue();
@@ -400,6 +403,9 @@ public class SLSRunner {
 
           // reduce tasks
           for(LoggedTask reduceTask : job.getReduceTasks()) {
+            if (reduceTask.getAttempts().size() == 0) {
+              continue;
+            }
             LoggedTaskAttempt taskAttempt = reduceTask.getAttempts()
                     .get(reduceTask.getAttempts().size() - 1);
             String hostname = taskAttempt.getHostName().getValue();

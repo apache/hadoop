@@ -67,6 +67,7 @@ public class TestSnapshottableDirListing {
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
   

@@ -77,6 +77,7 @@ public class TestFailoverWithBlockTokensEnabled {
   public void shutDownCluster() {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

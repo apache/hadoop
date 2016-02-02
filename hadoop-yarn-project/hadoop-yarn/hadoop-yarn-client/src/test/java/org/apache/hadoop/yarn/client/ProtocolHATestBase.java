@@ -551,7 +551,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
 
       @Override
       public SubmitApplicationResponse submitApplication(
-          SubmitApplicationRequest request) throws YarnException {
+          SubmitApplicationRequest request) throws YarnException, IOException {
         resetStartFailoverFlag(true);
 
         // make sure failover has been triggered
@@ -665,7 +665,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
 
     public QueueInfo createFakeQueueInfo() {
       return QueueInfo.newInstance("root", 100f, 100f, 50f, null,
-          createFakeAppReports(), QueueState.RUNNING, null, null, null);
+          createFakeAppReports(), QueueState.RUNNING, null, null, null, false);
     }
 
     public List<QueueUserACLInfo> createFakeQueueUserACLInfoList() {

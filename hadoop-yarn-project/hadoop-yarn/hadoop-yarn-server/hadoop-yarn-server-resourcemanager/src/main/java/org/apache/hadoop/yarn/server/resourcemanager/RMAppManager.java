@@ -17,15 +17,12 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.LinkedList;
-import java.util.Map;
-
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputByteBuffer;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
@@ -33,12 +30,15 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
+import org.apache.hadoop.yarn.security.AccessRequest;
+import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
@@ -55,10 +55,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.LinkedList;
+import java.util.Map;
 
 /**
  * This class manages the list of applications for the resource manager. 
@@ -78,6 +82,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   private final YarnScheduler scheduler;
   private final ApplicationACLsManager applicationACLsManager;
   private Configuration conf;
+  private YarnAuthorizationProvider authorizer;
 
   public RMAppManager(RMContext context,
       YarnScheduler scheduler, ApplicationMasterService masterService,
@@ -97,6 +102,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     if (this.maxCompletedAppsInStateStore > this.maxCompletedAppsInMemory) {
       this.maxCompletedAppsInStateStore = this.maxCompletedAppsInMemory;
     }
+    this.authorizer = YarnAuthorizationProvider.getInstance(conf);
   }
 
   /**
@@ -276,19 +282,19 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   @SuppressWarnings("unchecked")
   protected void submitApplication(
       ApplicationSubmissionContext submissionContext, long submitTime,
-      String user) throws YarnException {
+      String user) throws YarnException, AccessControlException {
     ApplicationId applicationId = submissionContext.getApplicationId();
 
     RMAppImpl application =
         createAndPopulateNewRMApp(submissionContext, submitTime, user, false);
-    ApplicationId appId = submissionContext.getApplicationId();
     Credentials credentials = null;
     try {
       credentials = parseCredentials(submissionContext);
       if (UserGroupInformation.isSecurityEnabled()) {
-        this.rmContext.getDelegationTokenRenewer().addApplicationAsync(appId,
-            credentials, submissionContext.getCancelTokensWhenComplete(),
-            application.getUser());
+        this.rmContext.getDelegationTokenRenewer()
+            .addApplicationAsync(applicationId, credentials,
+                submissionContext.getCancelTokensWhenComplete(),
+                application.getUser());
       } else {
         // Dispatcher is not yet started at this time, so these START events
         // enqueued should be guaranteed to be first processed when dispatcher
@@ -325,7 +331,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
   private RMAppImpl createAndPopulateNewRMApp(
       ApplicationSubmissionContext submissionContext, long submitTime,
-      String user, boolean isRecovery) throws YarnException {
+      String user, boolean isRecovery)
+      throws YarnException, AccessControlException {
     // Do queue mapping
     if (!isRecovery) {
       if (rmContext.getQueuePlacementManager() != null) {
@@ -345,6 +352,31 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         .checkAndGetApplicationPriority(submissionContext.getPriority(), user,
             submissionContext.getQueue(), applicationId);
     submissionContext.setPriority(appPriority);
+
+    UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(user);
+    // Since FairScheduler queue mapping is done inside scheduler,
+    // if FairScheduler is used and the queue doesn't exist, we should not
+    // fail here because queue will be created inside FS. Ideally, FS queue
+    // mapping should be done outside scheduler too like CS.
+    // For now, exclude FS for the acl check.
+    if (!isRecovery && YarnConfiguration.isAclEnabled(conf)
+        && scheduler instanceof CapacityScheduler &&
+        !authorizer.checkPermission(new AccessRequest(
+            ((CapacityScheduler) scheduler)
+                .getQueue(submissionContext.getQueue()).getPrivilegedEntity(),
+            userUgi, SchedulerUtils.toAccessType(QueueACL.SUBMIT_APPLICATIONS),
+            submissionContext.getApplicationId().toString(),
+            submissionContext.getApplicationName())) &&
+        !authorizer.checkPermission(new AccessRequest(
+            ((CapacityScheduler) scheduler)
+                .getQueue(submissionContext.getQueue()).getPrivilegedEntity(),
+            userUgi, SchedulerUtils.toAccessType(QueueACL.ADMINISTER_QUEUE),
+            submissionContext.getApplicationId().toString(),
+            submissionContext.getApplicationName()))) {
+      throw new AccessControlException(
+          "User " + user + " does not have permission to submit "
+              + applicationId + " to queue " + submissionContext.getQueue());
+    }
 
     // Create RMApp
     RMAppImpl application = new RMAppImpl(applicationId, rmContext, this.conf,

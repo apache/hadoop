@@ -18,8 +18,11 @@
 
 package org.apache.hadoop.io;
 
-import org.apache.hadoop.io.TestWritable;
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -27,8 +30,7 @@ import java.security.MessageDigest;
 import java.util.Random;
 
 /** Unit tests for MD5Hash. */
-public class TestMD5Hash extends TestCase {
-  public TestMD5Hash(String name) { super(name); }
+public class TestMD5Hash {
 
   private static final Random RANDOM = new Random();
 
@@ -42,7 +44,8 @@ public class TestMD5Hash extends TestCase {
 
   protected static byte[] D00 = new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   protected static byte[] DFF = new byte[] {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}; 
-  
+
+  @Test
   public void testMD5Hash() throws Exception {
     MD5Hash md5Hash = getTestHash();
 
@@ -116,6 +119,7 @@ public class TestMD5Hash extends TestCase {
     t2.join();
   }
 
+  @Test
   public void testFactoryReturnsClearedHashes() throws IOException {
     // A stream that will throw an IOE after reading some bytes
     ByteArrayInputStream failingStream = new ByteArrayInputStream(

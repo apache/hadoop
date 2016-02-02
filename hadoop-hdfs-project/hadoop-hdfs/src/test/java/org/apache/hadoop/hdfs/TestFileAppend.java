@@ -27,10 +27,12 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.HardLink;
@@ -41,10 +43,12 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -53,6 +57,8 @@ import org.junit.Test;
  * support HDFS appends.
  */
 public class TestFileAppend{
+  private static final long RANDOM_TEST_RUNTIME = 10000;
+
   final boolean simulatedStorage = false;
 
   private static byte[] fileContents = null;
@@ -107,6 +113,70 @@ public class TestFileAppend{
     AppendTestUtil.checkFullFile(fileSys, name,
         AppendTestUtil.NUM_BLOCKS * AppendTestUtil.BLOCK_SIZE,
         expected, "Read 1", false);
+  }
+
+  @Test
+  public void testBreakHardlinksIfNeeded() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    if (simulatedStorage) {
+      SimulatedFSDataset.setFactory(conf);
+    }
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    FileSystem fs = cluster.getFileSystem();
+    InetSocketAddress addr = new InetSocketAddress("localhost",
+                                                   cluster.getNameNodePort());
+    DFSClient client = new DFSClient(addr, conf);
+    try {
+      // create a new file, write to it and close it.
+      Path file1 = new Path("/filestatus.dat");
+      FSDataOutputStream stm = AppendTestUtil.createFile(fs, file1, 1);
+      writeFile(stm);
+      stm.close();
+
+      // Get a handle to the datanode
+      DataNode[] dn = cluster.listDataNodes();
+      assertTrue("There should be only one datanode but found " + dn.length,
+                  dn.length == 1);
+
+      LocatedBlocks locations = client.getNamenode().getBlockLocations(
+                                  file1.toString(), 0, Long.MAX_VALUE);
+      List<LocatedBlock> blocks = locations.getLocatedBlocks();
+      final FsDatasetSpi<?> fsd = dn[0].getFSDataset();
+
+      //
+      // Create hard links for a few of the blocks
+      //
+      for (int i = 0; i < blocks.size(); i = i + 2) {
+        ExtendedBlock b = blocks.get(i).getBlock();
+        final File f = FsDatasetTestUtil.getBlockFile(
+            fsd, b.getBlockPoolId(), b.getLocalBlock());
+        File link = new File(f.toString() + ".link");
+        System.out.println("Creating hardlink for File " + f + " to " + link);
+        HardLink.createHardLink(f, link);
+      }
+
+      // Detach all blocks. This should remove hardlinks (if any)
+      for (int i = 0; i < blocks.size(); i++) {
+        ExtendedBlock b = blocks.get(i).getBlock();
+        System.out.println("breakHardlinksIfNeeded detaching block " + b);
+        assertTrue("breakHardlinksIfNeeded(" + b + ") should have returned true",
+            FsDatasetTestUtil.breakHardlinksIfNeeded(fsd, b));
+      }
+
+      // Since the blocks were already detached earlier, these calls should
+      // return false
+      for (int i = 0; i < blocks.size(); i++) {
+        ExtendedBlock b = blocks.get(i).getBlock();
+        System.out.println("breakHardlinksIfNeeded re-attempting to " +
+                "detach block " + b);
+        assertTrue("breakHardlinksIfNeeded(" + b + ") should have returned false",
+            FsDatasetTestUtil.breakHardlinksIfNeeded(fsd, b));
+      }
+    } finally {
+      client.close();
+      fs.close();
+      cluster.shutdown();
+    }
   }
 
   /**
@@ -311,6 +381,56 @@ public class TestFileAppend{
     } finally {
       fs2.close();
       fs1.close();
+      cluster.shutdown();
+    }
+  }
+
+
+  @Test
+  public void testMultipleAppends() throws Exception {
+    final long startTime = Time.monotonicNow();
+    final Configuration conf = new HdfsConfiguration();
+    conf.setInt(
+        DFSConfigKeys.DFS_NAMENODE_FILE_CLOSE_NUM_COMMITTED_ALLOWED_KEY, 1);
+
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(4).build();
+    final DistributedFileSystem fs = cluster.getFileSystem();
+    try {
+      final Path p = new Path("/testMultipleAppend/foo");
+      final int blockSize = 1 << 16;
+      final byte[] data = AppendTestUtil.initBuffer(blockSize);
+
+      // create an empty file.
+      fs.create(p, true, 4096, (short)3, blockSize).close();
+
+      int fileLen = 0;
+      for(int i = 0;
+          i < 10 || Time.monotonicNow() - startTime < RANDOM_TEST_RUNTIME;
+          i++) {
+        int appendLen = ThreadLocalRandom.current().nextInt(100) + 1;
+        if (fileLen + appendLen > data.length) {
+          break;
+        }
+
+        AppendTestUtil.LOG.info(i + ") fileLen="  + fileLen
+            + ", appendLen=" + appendLen);
+        final FSDataOutputStream out = fs.append(p);
+        out.write(data, fileLen, appendLen);
+        out.close();
+        fileLen += appendLen;
+      }
+
+      Assert.assertEquals(fileLen, fs.getFileStatus(p).getLen());
+      final byte[] actual = new byte[fileLen];
+      final FSDataInputStream in = fs.open(p);
+      in.readFully(actual);
+      in.close();
+      for(int i = 0; i < fileLen; i++) {
+        Assert.assertEquals(data[i], actual[i]);
+      }
+    } finally {
+      fs.close();
       cluster.shutdown();
     }
   }

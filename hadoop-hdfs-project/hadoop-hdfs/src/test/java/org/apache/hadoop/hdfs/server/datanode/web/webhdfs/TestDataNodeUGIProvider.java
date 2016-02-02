@@ -42,14 +42,16 @@ import org.apache.hadoop.hdfs.web.resources.OffsetParam;
 import org.apache.hadoop.hdfs.web.resources.Param;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 public class TestDataNodeUGIProvider {
@@ -58,15 +60,18 @@ public class TestDataNodeUGIProvider {
   private final String PATH = "/foo";
   private final int OFFSET = 42;
   private final int LENGTH = 512;
-  private final int EXPIRE_AFTER_ACCESS = 5*1000;
+  private final static int EXPIRE_AFTER_ACCESS = 5*1000;
+  private Configuration conf;
+  @Before
+  public void setUp(){
+    conf = WebHdfsTestUtil.createConf();
+    conf.setInt(DFSConfigKeys.DFS_WEBHDFS_UGI_EXPIRE_AFTER_ACCESS_KEY,
+        EXPIRE_AFTER_ACCESS);
+    DataNodeUGIProvider.init(conf);
+  }
 
   @Test
   public void testUGICacheSecure() throws Exception {
-
-    final Configuration conf = WebHdfsTestUtil.createConf();
-    conf.setInt(DFSConfigKeys.DFS_WEBHDFS_UGI_EXPIRE_AFTER_ACCESS_KEY,
-        EXPIRE_AFTER_ACCESS);
-
     // fake turning on security so api thinks it should use tokens
     SecurityUtil.setAuthenticationMethod(KERBEROS, conf);
     UserGroupInformation.setConfiguration(conf);
@@ -95,8 +100,7 @@ public class TestDataNodeUGIProvider {
             new DelegationParam(tokens.get(1).encodeToUrlString()));
 
     DataNodeUGIProvider ugiProvider1 = new DataNodeUGIProvider(
-        new ParameterParser(new QueryStringDecoder(URI.create(uri1)), conf),
-        conf);
+        new ParameterParser(new QueryStringDecoder(URI.create(uri1)), conf));
     UserGroupInformation ugi11 = ugiProvider1.ugi();
     UserGroupInformation ugi12 = ugiProvider1.ugi();
 
@@ -105,8 +109,7 @@ public class TestDataNodeUGIProvider {
         ugi11, ugi12);
 
     DataNodeUGIProvider ugiProvider2 = new DataNodeUGIProvider(
-        new ParameterParser(new QueryStringDecoder(URI.create(uri2)), conf),
-        conf);
+        new ParameterParser(new QueryStringDecoder(URI.create(uri2)), conf));
     UserGroupInformation url21 = ugiProvider2.ugi();
     UserGroupInformation url22 = ugiProvider2.ugi();
 
@@ -118,19 +121,14 @@ public class TestDataNodeUGIProvider {
         "With UGI cache, two UGIs for the different token should not be same",
         ugi11, url22);
 
-    Thread.sleep(EXPIRE_AFTER_ACCESS);
+    awaitCacheEmptyDueToExpiration();
     ugi12 = ugiProvider1.ugi();
     url22 = ugiProvider2.ugi();
 
-    Assert
-        .assertNotEquals(
-            "With cache eviction, two UGIs returned by the same token should not be same",
-            ugi11, ugi12);
-
-    Assert
-        .assertNotEquals(
-            "With cache eviction, two UGIs returned by the same token should not be same",
-            url21, url22);
+    String msg = "With cache eviction, two UGIs returned" +
+    " by the same token should not be same";
+    Assert.assertNotEquals(msg, ugi11, ugi12);
+    Assert.assertNotEquals(msg, url21, url22);
 
     Assert.assertNotEquals(
         "With UGI cache, two UGIs for the different token should not be same",
@@ -139,11 +137,6 @@ public class TestDataNodeUGIProvider {
 
   @Test
   public void testUGICacheInSecure() throws Exception {
-
-    final Configuration conf = WebHdfsTestUtil.createConf();
-    conf.setInt(DFSConfigKeys.DFS_WEBHDFS_UGI_EXPIRE_AFTER_ACCESS_KEY,
-        EXPIRE_AFTER_ACCESS);
-
     String uri1 = WebHdfsFileSystem.PATH_PREFIX
         + PATH
         + "?op=OPEN"
@@ -157,8 +150,7 @@ public class TestDataNodeUGIProvider {
             new LengthParam((long) LENGTH), new UserParam("hdfs"));
 
     DataNodeUGIProvider ugiProvider1 = new DataNodeUGIProvider(
-        new ParameterParser(new QueryStringDecoder(URI.create(uri1)), conf),
-        conf);
+        new ParameterParser(new QueryStringDecoder(URI.create(uri1)), conf));
     UserGroupInformation ugi11 = ugiProvider1.ugi();
     UserGroupInformation ugi12 = ugiProvider1.ugi();
 
@@ -167,8 +159,7 @@ public class TestDataNodeUGIProvider {
         ugi12);
 
     DataNodeUGIProvider ugiProvider2 = new DataNodeUGIProvider(
-        new ParameterParser(new QueryStringDecoder(URI.create(uri2)), conf),
-        conf);
+        new ParameterParser(new QueryStringDecoder(URI.create(uri2)), conf));
     UserGroupInformation url21 = ugiProvider2.ugi();
     UserGroupInformation url22 = ugiProvider2.ugi();
 
@@ -180,23 +171,36 @@ public class TestDataNodeUGIProvider {
         "With UGI cache, two UGIs for the different user should not be same",
         ugi11, url22);
 
-    Thread.sleep(EXPIRE_AFTER_ACCESS);
+    awaitCacheEmptyDueToExpiration();
     ugi12 = ugiProvider1.ugi();
     url22 = ugiProvider2.ugi();
 
-    Assert
-        .assertNotEquals(
-            "With cache eviction, two UGIs returned by the same user should not be same",
-            ugi11, ugi12);
-
-    Assert
-        .assertNotEquals(
-            "With cache eviction, two UGIs returned by the same user should not be same",
-            url21, url22);
+    String msg = "With cache eviction, two UGIs returned by" +
+    " the same user should not be same";
+    Assert.assertNotEquals(msg, ugi11, ugi12);
+    Assert.assertNotEquals(msg, url21, url22);
 
     Assert.assertNotEquals(
         "With UGI cache, two UGIs for the different user should not be same",
         ugi11, url22);
+  }
+
+  /**
+   * Wait for expiration of entries from the UGI cache.  We need to be careful
+   * not to touch the entries in the cache while we're waiting for expiration.
+   * If we did, then that would reset the clock on expiration for those entries.
+   * Instead, we trigger internal clean-up of the cache and check for size 0.
+   *
+   * @throws Exception if there is any error
+   */
+  private void awaitCacheEmptyDueToExpiration() throws Exception {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          DataNodeUGIProvider.ugiCache.cleanUp();
+          return DataNodeUGIProvider.ugiCache.size() == 0;
+        }
+      }, EXPIRE_AFTER_ACCESS, 10 * EXPIRE_AFTER_ACCESS);
   }
 
   private WebHdfsFileSystem getWebHdfsFileSystem(UserGroupInformation ugi,

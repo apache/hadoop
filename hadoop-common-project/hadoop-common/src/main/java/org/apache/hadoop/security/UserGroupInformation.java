@@ -20,6 +20,7 @@ package org.apache.hadoop.security;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_TOKEN_FILES;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 import java.io.File;
@@ -70,6 +71,7 @@ import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -821,6 +823,26 @@ public class UserGroupInformation {
       }
       loginUser = proxyUser == null ? realUser : createProxyUser(proxyUser, realUser);
 
+      String tokenFileLocation = System.getProperty(HADOOP_TOKEN_FILES);
+      if (tokenFileLocation == null) {
+        tokenFileLocation = conf.get(HADOOP_TOKEN_FILES);
+      }
+      if (tokenFileLocation != null) {
+        for (String tokenFileName:
+             StringUtils.getTrimmedStrings(tokenFileLocation)) {
+          if (tokenFileName.length() > 0) {
+            File tokenFile = new File(tokenFileName);
+            if (tokenFile.exists() && tokenFile.isFile()) {
+              Credentials cred = Credentials.readTokenStorageFile(
+                  tokenFile, conf);
+              loginUser.addCredentials(cred);
+            } else {
+              LOG.info("tokenFile("+tokenFileName+") does not exist");
+            }
+          }
+        }
+      }
+
       String fileLocation = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
       if (fileLocation != null) {
         // Load the token storage file and put all of the tokens into the
@@ -973,6 +995,42 @@ public class UserGroupInformation {
                             path+ ": " + le, le);
     }
     LOG.info("Login successful for user " + keytabPrincipal
+        + " using keytab file " + keytabFile);
+  }
+
+  /**
+   * Log the current user out who previously logged in using keytab.
+   * This method assumes that the user logged in by calling
+   * {@link #loginUserFromKeytab(String, String)}.
+   *
+   * @throws IOException if a failure occurred in logout, or if the user did
+   * not log in by invoking loginUserFromKeyTab() before.
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public void logoutUserFromKeytab() throws IOException {
+    if (!isSecurityEnabled() ||
+        user.getAuthenticationMethod() != AuthenticationMethod.KERBEROS) {
+      return;
+    }
+    LoginContext login = getLogin();
+    if (login == null || keytabFile == null) {
+      throw new IOException("loginUserFromKeytab must be done first");
+    }
+
+    try {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Initiating logout for " + getUserName());
+      }
+      synchronized (UserGroupInformation.class) {
+        login.logout();
+      }
+    } catch (LoginException le) {
+      throw new IOException("Logout failure for " + user + " from keytab " +
+          keytabFile, le);
+    }
+
+    LOG.info("Logout successful for user " + keytabPrincipal
         + " using keytab file " + keytabFile);
   }
   

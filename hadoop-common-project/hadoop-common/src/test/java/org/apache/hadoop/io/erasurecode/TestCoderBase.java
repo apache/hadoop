@@ -40,7 +40,7 @@ public abstract class TestCoderBase {
   private Configuration conf;
   protected int numDataUnits;
   protected int numParityUnits;
-  protected int baseChunkSize = 513;
+  protected int baseChunkSize = 1024;
   private int chunkSize = baseChunkSize;
   private BufferAllocator allocator;
 
@@ -64,6 +64,8 @@ public abstract class TestCoderBase {
   private static int FIXED_DATA_GENERATOR = 0;
   protected byte[][] fixedData;
 
+  protected boolean allowChangeInputs;
+
   protected int getChunkSize() {
     return chunkSize;
   }
@@ -71,6 +73,10 @@ public abstract class TestCoderBase {
   protected void setChunkSize(int chunkSize) {
     this.chunkSize = chunkSize;
     this.zeroChunkBytes = new byte[chunkSize]; // With ZERO by default
+  }
+
+  protected byte[] getZeroChunkBytes() {
+    return zeroChunkBytes;
   }
 
   protected void prepareBufferAllocator(boolean usingSlicedBuffer) {
@@ -165,7 +171,9 @@ public abstract class TestCoderBase {
     byte[][] erased = toArrays(erasedChunks);
     byte[][] recovered = toArrays(recoveredChunks);
     boolean result = Arrays.deepEquals(erased, recovered);
-    assertTrue("Decoding and comparing failed.", result);
+    if (!result) {
+      assertTrue("Decoding and comparing failed.", result);
+    }
   }
 
   /**
@@ -175,39 +183,41 @@ public abstract class TestCoderBase {
    */
   protected int[] getErasedIndexesForDecoding() {
     int[] erasedIndexesForDecoding =
-        new int[erasedParityIndexes.length + erasedDataIndexes.length];
+        new int[erasedDataIndexes.length + erasedParityIndexes.length];
 
     int idx = 0;
 
-    for (int i = 0; i < erasedParityIndexes.length; i++) {
-      erasedIndexesForDecoding[idx ++] = erasedParityIndexes[i];
+    for (int i = 0; i < erasedDataIndexes.length; i++) {
+      erasedIndexesForDecoding[idx ++] = erasedDataIndexes[i];
     }
 
-    for (int i = 0; i < erasedDataIndexes.length; i++) {
-      erasedIndexesForDecoding[idx ++] = erasedDataIndexes[i] + numParityUnits;
+    for (int i = 0; i < erasedParityIndexes.length; i++) {
+      erasedIndexesForDecoding[idx ++] = erasedParityIndexes[i] + numDataUnits;
     }
 
     return erasedIndexesForDecoding;
   }
 
   /**
-   * Return input chunks for decoding, which is parityChunks + dataChunks.
+   * Return input chunks for decoding, which is dataChunks + parityChunks.
    * @param dataChunks
    * @param parityChunks
    * @return
    */
   protected ECChunk[] prepareInputChunksForDecoding(ECChunk[] dataChunks,
                                                   ECChunk[] parityChunks) {
-    ECChunk[] inputChunks = new ECChunk[numParityUnits + numDataUnits];
+    ECChunk[] inputChunks = new ECChunk[numDataUnits + numParityUnits];
     
     int idx = 0;
-    for (int i = 0; i < numParityUnits; i++) {
-      inputChunks[idx ++] = parityChunks[i];
-    }
+
     for (int i = 0; i < numDataUnits; i++) {
       inputChunks[idx ++] = dataChunks[i];
     }
-    
+
+    for (int i = 0; i < numParityUnits; i++) {
+      inputChunks[idx ++] = parityChunks[i];
+    }
+
     return inputChunks;
   }
 
@@ -221,19 +231,19 @@ public abstract class TestCoderBase {
    */
   protected ECChunk[] backupAndEraseChunks(ECChunk[] dataChunks,
                                       ECChunk[] parityChunks) {
-    ECChunk[] toEraseChunks = new ECChunk[erasedParityIndexes.length +
-        erasedDataIndexes.length];
+    ECChunk[] toEraseChunks = new ECChunk[erasedDataIndexes.length +
+        erasedParityIndexes.length];
 
     int idx = 0;
-
-    for (int i = 0; i < erasedParityIndexes.length; i++) {
-      toEraseChunks[idx ++] = parityChunks[erasedParityIndexes[i]];
-      parityChunks[erasedParityIndexes[i]] = null;
-    }
 
     for (int i = 0; i < erasedDataIndexes.length; i++) {
       toEraseChunks[idx ++] = dataChunks[erasedDataIndexes[i]];
       dataChunks[erasedDataIndexes[i]] = null;
+    }
+
+    for (int i = 0; i < erasedParityIndexes.length; i++) {
+      toEraseChunks[idx ++] = parityChunks[erasedParityIndexes[i]];
+      parityChunks[erasedParityIndexes[i]] = null;
     }
 
     return toEraseChunks;
@@ -246,6 +256,22 @@ public abstract class TestCoderBase {
   protected void eraseDataFromChunks(ECChunk[] chunks) {
     for (int i = 0; i < chunks.length; i++) {
       chunks[i] = null;
+    }
+  }
+
+  protected void markChunks(ECChunk[] chunks) {
+    for (int i = 0; i < chunks.length; i++) {
+      if (chunks[i] != null) {
+        chunks[i].getBuffer().mark();
+      }
+    }
+  }
+
+  protected void restoreChunksFromMark(ECChunk[] chunks) {
+    for (int i = 0; i < chunks.length; i++) {
+      if (chunks[i] != null) {
+        chunks[i].getBuffer().reset();
+      }
     }
   }
 
@@ -273,6 +299,10 @@ public abstract class TestCoderBase {
    * @return a new chunk
    */
   protected ECChunk cloneChunkWithData(ECChunk chunk) {
+    if (chunk == null) {
+      return null;
+    }
+
     ByteBuffer srcBuffer = chunk.getBuffer();
 
     byte[] bytesArr = new byte[srcBuffer.remaining()];
@@ -449,14 +479,16 @@ public abstract class TestCoderBase {
     byte[][] bytesArr = new byte[chunks.length][];
 
     for (int i = 0; i < chunks.length; i++) {
-      bytesArr[i] = chunks[i].toBytesArray();
+      if (chunks[i] != null) {
+        bytesArr[i] = chunks[i].toBytesArray();
+      }
     }
 
     return bytesArr;
   }
 
   /**
-   * Dump all the settings used in the test case if allowDump is enabled.
+   * Dump all the settings used in the test case if isAllowingVerboseDump is enabled.
    */
   protected void dumpSetting() {
     if (allowDump) {
@@ -469,14 +501,16 @@ public abstract class TestCoderBase {
               append(Arrays.toString(erasedDataIndexes));
       sb.append(" erasedParityIndexes=").
               append(Arrays.toString(erasedParityIndexes));
-      sb.append(" usingDirectBuffer=").append(usingDirectBuffer).append("\n");
+      sb.append(" usingDirectBuffer=").append(usingDirectBuffer);
+      sb.append(" isAllowingChangeInputs=").append(allowChangeInputs);
+      sb.append("\n");
 
       System.out.println(sb.toString());
     }
   }
 
   /**
-   * Dump chunks prefixed with a header if allowDump is enabled.
+   * Dump chunks prefixed with a header if isAllowingVerboseDump is enabled.
    * @param header
    * @param chunks
    */

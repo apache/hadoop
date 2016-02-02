@@ -41,7 +41,7 @@ basicinitsetup () {
         HADOOP_YARN_HOME"
 
   for j in ${testvars}; do
-    unset ${!j}
+    unset ${j}
   done
 
   HADOOP_PREFIX=${TMP}

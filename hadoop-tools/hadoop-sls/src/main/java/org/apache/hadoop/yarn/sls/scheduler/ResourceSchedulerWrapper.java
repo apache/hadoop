@@ -70,10 +70,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnSched
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -819,6 +819,14 @@ final public class ResourceSchedulerWrapper
     ((AbstractYarnScheduler<SchedulerApplicationAttempt, SchedulerNode>)
         scheduler).init(conf);
     super.serviceInit(conf);
+    initScheduler(conf);
+  }
+
+  private synchronized void initScheduler(Configuration configuration) throws
+  IOException {
+    this.applications =
+        new ConcurrentHashMap<ApplicationId,
+        SchedulerApplication<SchedulerApplicationAttempt>>();
   }
 
   @SuppressWarnings("unchecked")
@@ -932,7 +940,7 @@ final public class ResourceSchedulerWrapper
   @LimitedPrivate("yarn")
   @Unstable
   public Resource getClusterResource() {
-    return null;
+    return super.getClusterResource();
   }
 
   @Override
@@ -949,7 +957,7 @@ final public class ResourceSchedulerWrapper
   }
 
   @Override
-  protected void completedContainer(RMContainer rmContainer,
+  protected void completedContainerInternal(RMContainer rmContainer,
       ContainerStatus containerStatus, RMContainerEventType event) {
     // do nothing
   }

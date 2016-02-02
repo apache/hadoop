@@ -393,8 +393,8 @@ public abstract class BlockInfo extends Block
     List<ReplicaUnderConstruction> staleReplicas = uc.getStaleReplicas(genStamp);
     for (ReplicaUnderConstruction r : staleReplicas) {
       r.getExpectedStorageLocation().removeBlock(this);
-      NameNode.blockStateChangeLog.debug("BLOCK* Removing stale replica "
-          + "from location: {}", r.getExpectedStorageLocation());
+      NameNode.blockStateChangeLog.debug("BLOCK* Removing stale replica {}"
+          + " of {}", r, Block.toString(r));
     }
   }
 
@@ -411,7 +411,7 @@ public abstract class BlockInfo extends Block
     }
     Preconditions.checkState(!isComplete());
     uc.commit();
-    this.set(getBlockId(), block.getNumBytes(), block.getGenerationStamp());
+    this.setNumBytes(block.getNumBytes());
     // Sort out invalid replicas.
     setGenerationStampAndVerifyReplicas(block.getGenerationStamp());
   }

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -38,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.security.AccessRequest;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.security.PrivilegedEntity;
 import org.apache.hadoop.yarn.security.PrivilegedEntity.EntityType;
@@ -46,7 +48,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -135,7 +136,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   @Override
-  public synchronized float getAbsoluteUsedCapacity() {
+  public float getAbsoluteUsedCapacity() {
     return queueCapacities.getAbsoluteUsedCapacity();
   }
 
@@ -145,7 +146,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   @Override
-  public synchronized float getUsedCapacity() {
+  public float getUsedCapacity() {
     return queueCapacities.getUsedCapacity();
   }
 
@@ -154,7 +155,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     return queueUsage.getUsed();
   }
 
-  public synchronized int getNumContainers() {
+  public int getNumContainers() {
     return numContainers;
   }
 
@@ -173,6 +174,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     return queueName;
   }
 
+  @Override
   public PrivilegedEntity getPrivilegedEntity() {
     return queueEntity;
   }
@@ -193,17 +195,18 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   @Override
   public boolean hasAccess(QueueACL acl, UserGroupInformation user) {
-    return authorizer.checkPermission(SchedulerUtils.toAccessType(acl),
-      queueEntity, user);
+    return authorizer.checkPermission(
+        new AccessRequest(queueEntity, user, SchedulerUtils.toAccessType(acl),
+            null, null));
   }
 
   @Override
-  public synchronized void setUsedCapacity(float usedCapacity) {
+  public void setUsedCapacity(float usedCapacity) {
     queueCapacities.setUsedCapacity(usedCapacity);
   }
   
   @Override
-  public synchronized void setAbsoluteUsedCapacity(float absUsedCapacity) {
+  public void setAbsoluteUsedCapacity(float absUsedCapacity) {
     queueCapacities.setAbsoluteUsedCapacity(absUsedCapacity);
   }
 
@@ -303,6 +306,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     queueInfo.setDefaultNodeLabelExpression(defaultLabelExpression);
     queueInfo.setCurrentCapacity(getUsedCapacity());
     queueInfo.setQueueStatistics(getQueueStatistics());
+    queueInfo.setPreemptionDisabled(preemptionDisabled);
     return queueInfo;
   }
 
@@ -608,5 +612,28 @@ public abstract class AbstractCSQueue implements CSQueue {
   public Priority getDefaultApplicationPriority() {
     // TODO add dummy implementation
     return null;
+  }
+
+  @Override
+  public Set<String> getNodeLabelsForQueue() {
+    // if queue's label is *, queue can access any labels. Instead of
+    // considering all labels in cluster, only those labels which are
+    // use some resource of this queue can be considered.
+    Set<String> nodeLabels = new HashSet<String>();
+    if (this.getAccessibleNodeLabels() != null
+        && this.getAccessibleNodeLabels().contains(RMNodeLabelsManager.ANY)) {
+      nodeLabels.addAll(Sets.union(this.getQueueCapacities()
+          .getNodePartitionsSet(), this.getQueueResourceUsage()
+          .getNodePartitionsSet()));
+    } else {
+      nodeLabels.addAll(this.getAccessibleNodeLabels());
+    }
+
+    // Add NO_LABEL also to this list as NO_LABEL also can be granted with
+    // resource in many general cases.
+    if (!nodeLabels.contains(RMNodeLabelsManager.NO_LABEL)) {
+      nodeLabels.add(RMNodeLabelsManager.NO_LABEL);
+    }
+    return nodeLabels;
   }
 }

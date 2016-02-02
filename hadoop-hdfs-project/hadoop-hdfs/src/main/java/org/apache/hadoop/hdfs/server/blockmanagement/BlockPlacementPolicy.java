@@ -23,8 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
@@ -33,13 +32,17 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /** 
  * This interface is used for choosing the desired number of targets
  * for placing block replicas.
  */
 @InterfaceAudience.Private
 public abstract class BlockPlacementPolicy {
-  static final Log LOG = LogFactory.getLog(BlockPlacementPolicy.class);
+  static final Logger LOG = LoggerFactory.getLogger(
+      BlockPlacementPolicy.class);
 
   @InterfaceAudience.Private
   public static class NotEnoughReplicasException extends Exception {
@@ -139,6 +142,17 @@ public abstract class BlockPlacementPolicy {
                                      Host2NodesMap host2datanodeMap);
 
   /**
+   * Check if the move is allowed. Used by balancer and other tools.
+   * @
+   *
+   * @param candidates all replicas including source and target
+   * @param source source replica of the move
+   * @param target target replica of the move
+   */
+  abstract public boolean isMovable(Collection<DatanodeInfo> candidates,
+      DatanodeInfo source, DatanodeInfo target);
+
+  /**
    * Adjust rackmap, moreThanOne, and exactlyOne after removing replica on cur.
    *
    * @param rackMap a map from rack to replica
@@ -170,6 +184,20 @@ public abstract class BlockPlacementPolicy {
     }
   }
 
+  protected <T> DatanodeInfo getDatanodeInfo(T datanode) {
+    Preconditions.checkArgument(
+        datanode instanceof DatanodeInfo ||
+        datanode instanceof DatanodeStorageInfo,
+        "class " + datanode.getClass().getName() + " not allowed");
+    if (datanode instanceof DatanodeInfo) {
+      return ((DatanodeInfo)datanode);
+    } else if (datanode instanceof DatanodeStorageInfo) {
+      return ((DatanodeStorageInfo)datanode).getDatanodeDescriptor();
+    } else {
+      return null;
+    }
+  }
+
   /**
    * Get rack string from a data node
    * @return rack of data node
@@ -177,33 +205,33 @@ public abstract class BlockPlacementPolicy {
   protected String getRack(final DatanodeInfo datanode) {
     return datanode.getNetworkLocation();
   }
-  
+
   /**
    * Split data nodes into two sets, one set includes nodes on rack with
    * more than one  replica, the other set contains the remaining nodes.
    * 
-   * @param dataNodes datanodes to be split into two sets
+   * @param storagesOrDataNodes DatanodeStorageInfo/DatanodeInfo to be split
+   *        into two sets
    * @param rackMap a map from rack to datanodes
    * @param moreThanOne contains nodes on rack with more than one replica
    * @param exactlyOne remains contains the remaining nodes
    */
-  public void splitNodesWithRack(
-      final Iterable<DatanodeStorageInfo> storages,
-      final Map<String, List<DatanodeStorageInfo>> rackMap,
-      final List<DatanodeStorageInfo> moreThanOne,
-      final List<DatanodeStorageInfo> exactlyOne) {
-    for(DatanodeStorageInfo s: storages) {
-      final String rackName = getRack(s.getDatanodeDescriptor());
-      List<DatanodeStorageInfo> storageList = rackMap.get(rackName);
+  public <T> void splitNodesWithRack(
+      final Iterable<T> storagesOrDataNodes,
+      final Map<String, List<T>> rackMap,
+      final List<T> moreThanOne,
+      final List<T> exactlyOne) {
+    for(T s: storagesOrDataNodes) {
+      final String rackName = getRack(getDatanodeInfo(s));
+      List<T> storageList = rackMap.get(rackName);
       if (storageList == null) {
-        storageList = new ArrayList<DatanodeStorageInfo>();
+        storageList = new ArrayList<T>();
         rackMap.put(rackName, storageList);
       }
       storageList.add(s);
     }
-    
     // split nodes into two sets
-    for(List<DatanodeStorageInfo> storageList : rackMap.values()) {
+    for(List<T> storageList : rackMap.values()) {
       if (storageList.size() == 1) {
         // exactlyOne contains nodes on rack with only one replica
         exactlyOne.add(storageList.get(0));
@@ -213,5 +241,4 @@ public abstract class BlockPlacementPolicy {
       }
     }
   }
-
 }

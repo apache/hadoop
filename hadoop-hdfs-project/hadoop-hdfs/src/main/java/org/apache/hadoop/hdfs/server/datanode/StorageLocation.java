@@ -87,7 +87,7 @@ public class StorageLocation {
 
     if (matcher.matches()) {
       String classString = matcher.group(1);
-      location = matcher.group(2);
+      location = matcher.group(2).trim();
       if (!classString.isEmpty()) {
         storageType =
             StorageType.valueOf(StringUtils.toUpperCase(classString));
@@ -100,5 +100,20 @@ public class StorageLocation {
   @Override
   public String toString() {
     return "[" + storageType + "]" + file.toURI();
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == this) {
+      return true;
+    } else if (obj == null || !(obj instanceof StorageLocation)) {
+      return false;
+    }
+    return toString().equals(obj.toString());
+  }
+
+  @Override
+  public int hashCode() {
+    return toString().hashCode();
   }
 }

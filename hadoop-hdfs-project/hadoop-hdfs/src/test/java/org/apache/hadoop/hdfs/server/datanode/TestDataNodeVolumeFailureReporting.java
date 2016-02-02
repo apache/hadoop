@@ -89,6 +89,7 @@ public class TestDataNodeVolumeFailureReporting {
     IOUtils.cleanup(LOG, fs);
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

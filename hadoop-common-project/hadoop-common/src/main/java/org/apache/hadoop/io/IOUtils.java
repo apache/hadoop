@@ -55,7 +55,8 @@ public class IOUtils {
    * @param close whether or not close the InputStream and 
    * OutputStream at the end. The streams are closed in the finally clause.  
    */
-  public static void copyBytes(InputStream in, OutputStream out, int buffSize, boolean close) 
+  public static void copyBytes(InputStream in, OutputStream out,
+                               int buffSize, boolean close)
     throws IOException {
     try {
       copyBytes(in, out, buffSize);
@@ -194,7 +195,7 @@ public class IOUtils {
    * @throws IOException if it could not read requested number of bytes 
    * for any reason (including EOF)
    */
-  public static void readFully(InputStream in, byte buf[],
+  public static void readFully(InputStream in, byte[] buf,
       int off, int len) throws IOException {
     int toRead = len;
     while (toRead > 0) {

@@ -735,6 +735,16 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     client().addFilter(new LoggingFilter(System.out));
     String lrKey = "example";
     String queueName = "testqueue";
+
+    // create the queue
+    String[] queues = { "default", "testqueue" };
+    CapacitySchedulerConfiguration csconf =
+        new CapacitySchedulerConfiguration();
+    csconf.setQueues("root", queues);
+    csconf.setCapacity("root.default", 50.0f);
+    csconf.setCapacity("root.testqueue", 50.0f);
+    rm.getResourceScheduler().reinitialize(csconf, rm.getRMContext());
+
     String appName = "test";
     String appType = "test-type";
     String urlPath = "apps";

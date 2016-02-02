@@ -108,6 +108,7 @@ public class TestFSDirectory {
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

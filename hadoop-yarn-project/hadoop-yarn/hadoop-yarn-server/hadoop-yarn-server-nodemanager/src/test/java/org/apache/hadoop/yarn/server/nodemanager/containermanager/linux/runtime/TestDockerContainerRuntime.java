@@ -31,6 +31,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRunCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
@@ -62,6 +64,7 @@ public class TestDockerContainerRuntime {
       .getLog(TestDockerContainerRuntime.class);
   private Configuration conf;
   PrivilegedOperationExecutor mockExecutor;
+  CGroupsHandler mockCGroupsHandler;
   String containerId;
   Container container;
   ContainerId cId;
@@ -78,6 +81,8 @@ public class TestDockerContainerRuntime {
   Path pidFilePath;
   List<String> localDirs;
   List<String> logDirs;
+  List<String> containerLocalDirs;
+  List<String> containerLogDirs;
   String resourcesOptions;
   ContainerRuntimeContext.Builder builder;
   String submittingUser = "anakin";
@@ -94,6 +99,7 @@ public class TestDockerContainerRuntime {
 
     mockExecutor = Mockito
         .mock(PrivilegedOperationExecutor.class);
+    mockCGroupsHandler = Mockito.mock(CGroupsHandler.class);
     containerId = "container_id";
     container = mock(Container.class);
     cId = mock(ContainerId.class);
@@ -118,10 +124,14 @@ public class TestDockerContainerRuntime {
     pidFilePath = new Path("/test_pid_file_path");
     localDirs = new ArrayList<>();
     logDirs = new ArrayList<>();
-    resourcesOptions = "cgroups:none";
+    resourcesOptions = "cgroups=none";
+    containerLocalDirs = new ArrayList<>();
+    containerLogDirs = new ArrayList<>();
 
     localDirs.add("/test_local_dir");
     logDirs.add("/test_log_dir");
+    containerLocalDirs.add("/test_container_local_dir");
+    containerLogDirs.add("/test_container_log_dir");
 
     builder = new ContainerRuntimeContext
         .Builder(container);
@@ -137,6 +147,8 @@ public class TestDockerContainerRuntime {
         .setExecutionAttribute(PID_FILE_PATH, pidFilePath)
         .setExecutionAttribute(LOCAL_DIRS, localDirs)
         .setExecutionAttribute(LOG_DIRS, logDirs)
+        .setExecutionAttribute(CONTAINER_LOCAL_DIRS, containerLocalDirs)
+        .setExecutionAttribute(CONTAINER_LOG_DIRS, containerLogDirs)
         .setExecutionAttribute(RESOURCES_OPTIONS, resourcesOptions);
   }
 
@@ -204,7 +216,7 @@ public class TestDockerContainerRuntime {
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
-        mockExecutor);
+        mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf);
 
     String[] testCapabilities = {"NET_BIND_SERVICE", "SYS_CHROOT"};
@@ -241,8 +253,8 @@ public class TestDockerContainerRuntime {
         .append("bash %8$s/launch_container.sh");
 
     String expectedCommand = String.format(expectedCommandTemplate.toString(),
-        containerId, runAsUser, containerWorkDir, localDirs.get(0),
-        containerWorkDir, logDirs.get(0), image, containerWorkDir);
+        containerId, runAsUser, containerWorkDir, containerLocalDirs.get(0),
+        containerWorkDir, containerLogDirs.get(0), image, containerWorkDir);
 
     List<String> dockerCommands = Files.readAllLines(Paths.get
             (dockerCommandFile), Charset.forName("UTF-8"));
@@ -256,7 +268,7 @@ public class TestDockerContainerRuntime {
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException{
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
-        mockExecutor);
+        mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf);
 
     env.put("YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER",
@@ -284,7 +296,7 @@ public class TestDockerContainerRuntime {
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException{
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
-        mockExecutor);
+        mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf);
 
     env.put("YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER",
@@ -307,7 +319,7 @@ public class TestDockerContainerRuntime {
         true);
 
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
-        mockExecutor);
+        mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf);
 
     env.put("YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER",
@@ -338,7 +350,7 @@ public class TestDockerContainerRuntime {
         whitelistedUser);
 
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
-        mockExecutor);
+        mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf);
 
     env.put("YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER",
@@ -365,7 +377,7 @@ public class TestDockerContainerRuntime {
         submittingUser);
 
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
-        mockExecutor);
+        mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf);
 
     env.put("YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER",
@@ -388,4 +400,34 @@ public class TestDockerContainerRuntime {
         + ": " + command, command.contains("--privileged"));
   }
 
+  @Test
+  public void testCGroupParent() throws ContainerExecutionException {
+    String hierarchy = "hadoop-yarn-test";
+    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_HIERARCHY,
+        hierarchy);
+
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime
+        (mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf);
+
+    String resourceOptionsNone = "cgroups=none";
+    DockerRunCommand command = Mockito.mock(DockerRunCommand.class);
+
+    Mockito.when(mockCGroupsHandler.getRelativePathForCGroup(containerId))
+        .thenReturn(hierarchy + "/" + containerIdStr);
+    runtime.addCGroupParentIfRequired(resourceOptionsNone, containerIdStr,
+        command);
+
+    //no --cgroup-parent should be added here
+    Mockito.verifyZeroInteractions(command);
+
+    String resourceOptionsCpu = "/sys/fs/cgroup/cpu/" + hierarchy +
+        containerIdStr;
+    runtime.addCGroupParentIfRequired(resourceOptionsCpu, containerIdStr,
+        command);
+
+    //--cgroup-parent should be added for the containerId in question
+    String expectedPath = "/" + hierarchy + "/" + containerIdStr;
+    Mockito.verify(command).setCGroupParent(expectedPath);
+  }
 }

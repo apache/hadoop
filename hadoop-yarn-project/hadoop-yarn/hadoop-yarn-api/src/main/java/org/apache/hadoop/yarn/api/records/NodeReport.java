@@ -196,4 +196,29 @@ public abstract class NodeReport {
   @Private
   @Unstable
   public abstract void setNodeLabels(Set<String> nodeLabels);
+
+  /**
+   * Get containers aggregated resource utilization in a node
+   * @return containers resource utilization
+   */
+  @Public
+  @Stable
+  public abstract ResourceUtilization getAggregatedContainersUtilization();
+
+  @Private
+  @Unstable
+  public abstract void setAggregatedContainersUtilization(ResourceUtilization
+      containersUtilization);
+
+  /**
+   * Get node resource utilization
+   * @return node resource utilization
+   */
+  @Public
+  @Stable
+  public abstract ResourceUtilization getNodeUtilization();
+
+  @Private
+  @Unstable
+  public abstract void setNodeUtilization(ResourceUtilization nodeUtilization);
 }

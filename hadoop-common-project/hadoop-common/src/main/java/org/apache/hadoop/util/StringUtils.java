@@ -287,6 +287,41 @@ public class StringUtils {
     buf.append("sec");
     return buf.toString(); 
   }
+
+  /**
+   *
+   * Given the time in long milliseconds, returns a String in the sortable
+   * format Xhrs, Ymins, Zsec. X, Y, and Z are always two-digit. If the time is
+   * more than 100 hours ,it is displayed as 99hrs, 59mins, 59sec.
+   *
+   * @param timeDiff The time difference to format
+   */
+  public static String formatTimeSortable(long timeDiff) {
+    StringBuilder buf = new StringBuilder();
+    long hours = timeDiff / (60 * 60 * 1000);
+    long rem = (timeDiff % (60 * 60 * 1000));
+    long minutes = rem / (60 * 1000);
+    rem = rem % (60 * 1000);
+    long seconds = rem / 1000;
+
+    // if hours is more than 99 hours, it will be set a max value format
+    if (hours > 99) {
+      hours = 99;
+      minutes = 59;
+      seconds = 59;
+    }
+
+    buf.append(String.format("%02d", hours));
+    buf.append("hrs, ");
+
+    buf.append(String.format("%02d", minutes));
+    buf.append("mins, ");
+
+    buf.append(String.format("%02d", seconds));
+    buf.append("sec");
+    return buf.toString();
+  }
+
   /**
    * Formats time in ms and appends difference (finishTime - startTime) 
    * as returned by formatTimeDiff().
@@ -364,10 +399,12 @@ public class StringUtils {
   }
 
   /**
-   * Splits a comma separated value <code>String</code>, trimming leading and trailing whitespace on each value.
-   * Duplicate and empty values are removed.
-   * @param str a comma separated <String> with values
-   * @return a <code>Collection</code> of <code>String</code> values
+   * Splits a comma separated value <code>String</code>, trimming leading and
+   * trailing whitespace on each value. Duplicate and empty values are removed.
+   *
+   * @param str a comma separated <String> with values, may be null
+   * @return a <code>Collection</code> of <code>String</code> values, empty
+   *         Collection if null String input
    */
   public static Collection<String> getTrimmedStringCollection(String str){
     Set<String> set = new LinkedHashSet<String>(
@@ -377,9 +414,12 @@ public class StringUtils {
   }
   
   /**
-   * Splits a comma separated value <code>String</code>, trimming leading and trailing whitespace on each value.
-   * @param str a comma separated <String> with values
-   * @return an array of <code>String</code> values
+   * Splits a comma separated value <code>String</code>, trimming leading and
+   * trailing whitespace on each value.
+   *
+   * @param str a comma separated <code>String</code> with values, may be null
+   * @return an array of <code>String</code> values, empty array if null String
+   *         input
    */
   public static String[] getTrimmedStrings(String str){
     if (null == str || str.trim().isEmpty()) {

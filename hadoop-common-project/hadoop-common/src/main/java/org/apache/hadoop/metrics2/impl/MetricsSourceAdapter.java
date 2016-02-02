@@ -60,6 +60,7 @@ class MetricsSourceAdapter implements DynamicMBean {
   private final Iterable<MetricsTag> injectedTags;
 
   private Iterable<MetricsRecordImpl> lastRecs;
+  private boolean lastRecsCleared;
   private long jmxCacheTS = 0;
   private long jmxCacheTTL;
   private MBeanInfo infoCache;
@@ -80,6 +81,9 @@ class MetricsSourceAdapter implements DynamicMBean {
     this.metricFilter = metricFilter;
     this.jmxCacheTTL = checkArg(jmxCacheTTL, jmxCacheTTL > 0, "jmxCacheTTL");
     this.startMBeans = startMBeans;
+    // Initialize to true so we always trigger update MBeanInfo cache the first
+    // time calling updateJmxCache
+    this.lastRecsCleared = true;
   }
 
   MetricsSourceAdapter(String prefix, String name, String description,
@@ -154,28 +158,36 @@ class MetricsSourceAdapter implements DynamicMBean {
 
   private void updateJmxCache() {
     boolean getAllMetrics = false;
-    synchronized (this) {
+    synchronized(this) {
       if (Time.now() - jmxCacheTS >= jmxCacheTTL) {
         // temporarilly advance the expiry while updating the cache
         jmxCacheTS = Time.now() + jmxCacheTTL;
-        if (lastRecs == null) {
+        // lastRecs might have been set to an object already by another thread.
+        // Track the fact that lastRecs has been reset once to make sure refresh
+        // is correctly triggered.
+        if (lastRecsCleared) {
           getAllMetrics = true;
+          lastRecsCleared = false;
         }
-      } else {
+      }
+      else {
         return;
       }
+    }
 
-      if (getAllMetrics) {
-        MetricsCollectorImpl builder = new MetricsCollectorImpl();
-        getMetrics(builder, true);
-      }
+    if (getAllMetrics) {
+      MetricsCollectorImpl builder = new MetricsCollectorImpl();
+      getMetrics(builder, true);
+    }
 
+    synchronized(this) {
       updateAttrCache();
       if (getAllMetrics) {
         updateInfoCache();
       }
       jmxCacheTS = Time.now();
-      lastRecs = null; // in case regular interval update is not running
+      lastRecs = null;  // in case regular interval update is not running
+      lastRecsCleared = true;
     }
   }
 

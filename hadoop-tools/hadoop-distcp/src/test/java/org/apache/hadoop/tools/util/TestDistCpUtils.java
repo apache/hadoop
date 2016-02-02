@@ -104,6 +104,7 @@ public class TestDistCpUtils {
     Assert.assertEquals(DistCpUtils.packAttributes(attributes), "RBUGPCT");
   }
 
+  @Test
   public void testUnpackAttributes() {
     EnumSet<FileAttribute> attributes = EnumSet.allOf(FileAttribute.class);
     Assert.assertEquals(attributes, DistCpUtils.unpackAttributes("RCBUGPAXT"));

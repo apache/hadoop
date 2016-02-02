@@ -223,13 +223,13 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
 
   @Override
   public void testSetTimesSymlinkToFile() throws IOException {
-    assumeTrue(!Path.WINDOWS);
+    assumeTrue(!Shell.WINDOWS && !Shell.SOLARIS);
     super.testSetTimesSymlinkToFile();
   }
 
   @Override
   public void testSetTimesSymlinkToDir() throws IOException {
-    assumeTrue(!Path.WINDOWS);
+    assumeTrue(!Path.WINDOWS && !Shell.SOLARIS);
     super.testSetTimesSymlinkToDir();
   }
 

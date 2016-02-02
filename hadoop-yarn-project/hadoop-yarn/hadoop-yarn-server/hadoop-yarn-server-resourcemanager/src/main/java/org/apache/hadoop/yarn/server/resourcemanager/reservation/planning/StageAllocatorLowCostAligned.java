@@ -22,6 +22,7 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.TreeSet;
 
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
@@ -60,7 +61,8 @@ public class StageAllocatorLowCostAligned implements StageAllocator {
   public Map<ReservationInterval, Resource> computeStageAllocation(
       Plan plan, Map<Long, Resource> planLoads,
       RLESparseResourceAllocation planModifications, ReservationRequest rr,
-      long stageEarliestStart, long stageDeadline) {
+      long stageEarliestStart, long stageDeadline, String user,
+      ReservationId oldId) {
 
     // Initialize
     ResourceCalculator resCalc = plan.getResourceCalculator();
@@ -69,8 +71,7 @@ public class StageAllocatorLowCostAligned implements StageAllocator {
 
     // Create allocationRequestsearlies
     RLESparseResourceAllocation allocationRequests =
-        new RLESparseResourceAllocation(plan.getResourceCalculator(),
-            plan.getMinimumAllocation());
+        new RLESparseResourceAllocation(plan.getResourceCalculator());
 
     // Initialize parameters
     long duration = stepRoundUp(rr.getDuration(), step);
@@ -137,7 +138,9 @@ public class StageAllocatorLowCostAligned implements StageAllocator {
       DurationInterval bestDurationInterval =
           durationIntervalsSortedByCost.first();
       int numGangsToAllocate = Math.min(maxGangsPerUnit, remainingGangs);
-
+      numGangsToAllocate =
+          Math.min(numGangsToAllocate,
+              bestDurationInterval.numCanFit(gang, capacity, resCalc));
       // Add it
       remainingGangs -= numGangsToAllocate;
 
@@ -356,5 +359,11 @@ public class StageAllocatorLowCostAligned implements StageAllocator {
       this.cost = value;
     }
 
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append(" start: " + startTime).append(" end: " + endTime)
+          .append(" cost: " + cost).append(" maxLoad: " + maxLoad);
+      return sb.toString();
+    }
   }
 }

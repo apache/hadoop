@@ -65,6 +65,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.ConfigurationNodeLabelsProvider;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
+import org.apache.hadoop.yarn.server.nodemanager.nodelabels.ScriptBasedNodeLabelsProvider;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMLeveldbStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
@@ -137,18 +138,21 @@ public class NodeManager extends CompositeService
     case YarnConfiguration.CONFIG_NODE_LABELS_PROVIDER:
       provider = new ConfigurationNodeLabelsProvider();
       break;
+    case YarnConfiguration.SCRIPT_NODE_LABELS_PROVIDER:
+      provider = new ScriptBasedNodeLabelsProvider();
+      break;
     default:
       try {
         Class<? extends NodeLabelsProvider> labelsProviderClass =
-            conf.getClass(YarnConfiguration.NM_NODE_LABELS_PROVIDER_CONFIG, null,
-                NodeLabelsProvider.class);
+            conf.getClass(YarnConfiguration.NM_NODE_LABELS_PROVIDER_CONFIG,
+                null, NodeLabelsProvider.class);
         provider = labelsProviderClass.newInstance();
       } catch (InstantiationException | IllegalAccessException
           | RuntimeException e) {
         LOG.error("Failed to create NodeLabelsProvider based on Configuration",
             e);
-        throw new IOException("Failed to create NodeLabelsProvider : "
-            + e.getMessage(), e);
+        throw new IOException(
+            "Failed to create NodeLabelsProvider : " + e.getMessage(), e);
       }
     }
     if (LOG.isDebugEnabled()) {
@@ -315,7 +319,7 @@ public class NodeManager extends CompositeService
       nodeStatusUpdater =
           createNodeStatusUpdater(context, dispatcher, nodeHealthChecker);
     } else {
-      addService(nodeLabelsProvider);
+      addIfService(nodeLabelsProvider);
       nodeStatusUpdater =
           createNodeStatusUpdater(context, dispatcher, nodeHealthChecker,
               nodeLabelsProvider);
@@ -340,7 +344,8 @@ public class NodeManager extends CompositeService
     dispatcher.register(NodeManagerEventType.class, this);
     addService(dispatcher);
 
-    pauseMonitor = new JvmPauseMonitor(conf);
+    pauseMonitor = new JvmPauseMonitor();
+    addService(pauseMonitor);
     metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
 
     DefaultMetricsSystem.initialize("NodeManager");
@@ -360,7 +365,6 @@ public class NodeManager extends CompositeService
     } catch (IOException e) {
       throw new YarnRuntimeException("Failed NodeManager login", e);
     }
-    pauseMonitor.start();
     super.serviceStart();
   }
 
@@ -372,9 +376,6 @@ public class NodeManager extends CompositeService
     try {
       super.serviceStop();
       DefaultMetricsSystem.shutdown();
-      if (pauseMonitor != null) {
-        pauseMonitor.stop();
-      }
     } finally {
       // YARN-3641: NM's services stop get failed shouldn't block the
       // release of NMLevelDBStore.

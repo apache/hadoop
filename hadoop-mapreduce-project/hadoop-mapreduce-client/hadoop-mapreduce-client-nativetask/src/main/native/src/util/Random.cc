@@ -179,7 +179,7 @@ char * Words[] = {"diurnalness", "Homoiousian", "spiranthic", "tetragynian", "si
     "lithotresis", "minniebush", "zanyism", "eucalypteol", "sterilely", "unrealize", "unpatched",
     "hypochondriacism", "critically", "cheesecutter", };
 
-static size_t WordsCount = sizeof(Words) / sizeof(char *);
+static uint32_t WordsCount = sizeof(Words) / sizeof(char *);
 
 Random::Random() {
   setSeed(time(NULL) + clock() + RandomInitializeID++);
@@ -249,7 +249,7 @@ uint64_t Random::nextLog2(uint64_t range) {
 }
 
 uint64_t Random::nextLog10(uint64_t range) {
-  double range_r = log10(range);
+  double range_r = log10((double)range);
   double v = nextDouble() * range_r;
   return (uint64_t)pow(10, v);
 }

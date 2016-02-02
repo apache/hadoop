@@ -178,31 +178,42 @@
                       overwrite="true">
                       <fileset dir="${basedir}/src/main/native/testData" />
                     </copy>
-                    <exec executable="cmake" dir="${project.build.directory}/native"
-                      failonerror="true">
-                      <arg line="${basedir}/src/ -DGENERATED_JAVAH=${project.build.directory}/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model} -DREQUIRE_SNAPPY=${require.snappy} -DCUSTOM_SNAPPY_PREFIX=${snappy.prefix} -DCUSTOM_SNAPPY_LIB=${snappy.lib} -DCUSTOM_SNAPPY_INCLUDE=${snappy.include}" />
-                    </exec>
-                    <exec executable="make" dir="${project.build.directory}/native" failonerror="true">
-                      <arg line="VERBOSE=1" />
-                    </exec>
-                    <!-- The second make is a workaround for HADOOP-9215. It can be 
-                      removed when version 2.6 of cmake is no longer supported . -->
-                    <exec executable="make" dir="${project.build.directory}/native" failonerror="true"></exec>
                   </target>
                 </configuration>
               </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-maven-plugins</artifactId>
+            <executions>
               <execution>
-                <id>native_tests</id>
-                <phase>test</phase>
-                <goals><goal>run</goal></goals>
+                <id>cmake-compile</id>
+                <phase>compile</phase>
+                <goals><goal>cmake-compile</goal></goals>
                 <configuration>
-                  <target>
-                    <exec executable="${shell-executable}" failonerror="true" dir="${project.build.directory}/native/test">
-                      <arg value="-c"/>
-                      <arg value="[ x$SKIPTESTS = xtrue ] || sh test.sh"/>
-                      <env key="SKIPTESTS" value="${skipTests}"/>
-                    </exec>
-                  </target>
+                  <source>${basedir}/src</source>
+                  <vars>
+                    <GENERATED_JAVAH>${project.build.directory}/native/javah</GENERATED_JAVAH>
+                    <JVM_ARCH_DATA_MODEL>${sun.arch.data.model}</JVM_ARCH_DATA_MODEL>
+                    <REQUIRE_SNAPPY>${require.snappy}</REQUIRE_SNAPPY>
+                    <CUSTOM_SNAPPY_PREFIX>${snappy.prefix}</CUSTOM_SNAPPY_PREFIX>
+                    <CUSTOM_SNAPPY_LIB>${snappy.lib}</CUSTOM_SNAPPY_LIB>
+                    <CUSTOM_SNAPPY_INCLUDE>${snappy.include}</CUSTOM_SNAPPY_INCLUDE>
+                  </vars>
+                </configuration>
+              </execution>
+              <execution>
+                <id>nttest</id>
+                <phase>test</phase>
+                <goals><goal>cmake-test</goal></goals>
+                <configuration>
+                  <testName>test-native-task</testName>
+                  <workingDirectory>${project.build.directory}/native/test</workingDirectory>
+                  <source>${basedir}/src</source>
+                  <binary>${project.build.directory}/native/test/nttest</binary>
+                  <args><arg>--gtest_filter=-Perf.</arg></args>
+                  <results>${project.build.directory}/native/test/native-results</results>
                 </configuration>
               </execution>
             </executions>

@@ -261,7 +261,7 @@ public class TestWebApp {
   }
 
   // This is to test the GuiceFilter should only be applied to webAppContext,
-  // not to staticContext  and logContext;
+  // not to logContext;
   @Test public void testYARNWebAppContext() throws Exception {
     // setting up the log context
     System.setProperty("hadoop.log.dir", "/Not/Existing/dir");
@@ -272,8 +272,6 @@ public class TestWebApp {
     });
     String baseUrl = baseUrl(app);
     try {
-      // should not redirect to foo
-      assertFalse("foo".equals(getContent(baseUrl +"static").trim()));
       // Not able to access a non-existing dir, should not redirect to foo.
       assertEquals(404, getResponseCode(baseUrl +"logs"));
       // should be able to redirect to foo.

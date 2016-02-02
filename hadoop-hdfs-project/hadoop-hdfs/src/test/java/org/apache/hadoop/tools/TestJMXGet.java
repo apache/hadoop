@@ -73,13 +73,16 @@ public class TestJMXGet {
    */
   @After
   public void tearDown() throws Exception {
-    if(cluster.isClusterUp())
-      cluster.shutdown();
-
-    File data_dir = new File(cluster.getDataDirectory());
-    if(data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
-      throw new IOException("Could not delete hdfs directory in tearDown '"
-          + data_dir + "'");
+    if (cluster != null) {
+      if (cluster.isClusterUp()) {
+        cluster.shutdown();
+      }
+      File data_dir = new File(cluster.getDataDirectory());
+      if (data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
+        throw new IOException(
+            "Could not delete hdfs directory in tearDown '" + data_dir + "'");
+      }
+      cluster = null;
     }
   }
 
@@ -125,14 +128,19 @@ public class TestJMXGet {
     String pattern = "List of all the available keys:";
     PipedOutputStream pipeOut = new PipedOutputStream();
     PipedInputStream pipeIn = new PipedInputStream(pipeOut);
+    PrintStream oldErr = System.err;
     System.setErr(new PrintStream(pipeOut));
-    jmx.printAllValues();
-    if ((size = pipeIn.available()) != 0) {
-      bytes = new byte[size];
-      pipeIn.read(bytes, 0, bytes.length);            
+    try {
+      jmx.printAllValues();
+      if ((size = pipeIn.available()) != 0) {
+        bytes = new byte[size];
+        pipeIn.read(bytes, 0, bytes.length);
+      }
+      pipeOut.close();
+      pipeIn.close();
+    } finally {
+      System.setErr(oldErr);
     }
-    pipeOut.close();
-    pipeIn.close();
     return bytes != null ? new String(bytes).contains(pattern) : false;
   }
   

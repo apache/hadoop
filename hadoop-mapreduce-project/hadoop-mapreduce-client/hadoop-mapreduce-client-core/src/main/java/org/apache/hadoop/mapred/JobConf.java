@@ -1559,25 +1559,105 @@ public class JobConf extends Configuration {
   
   /**
    * Set {@link JobPriority} for this job.
-   * 
+   *
    * @param prio the {@link JobPriority} for this job.
    */
   public void setJobPriority(JobPriority prio) {
     set(JobContext.PRIORITY, prio.toString());
   }
-  
+
+  /**
+   * Set {@link JobPriority} for this job.
+   *
+   * @param prio the {@link JobPriority} for this job.
+   */
+  public void setJobPriorityAsInteger(int prio) {
+    set(JobContext.PRIORITY, Integer.toString(prio));
+  }
+
   /**
    * Get the {@link JobPriority} for this job.
-   * 
+   *
    * @return the {@link JobPriority} for this job.
    */
   public JobPriority getJobPriority() {
     String prio = get(JobContext.PRIORITY);
-    if(prio == null) {
-      return JobPriority.NORMAL;
+    if (prio == null) {
+      return JobPriority.DEFAULT;
     }
-    
-    return JobPriority.valueOf(prio);
+
+    JobPriority priority = JobPriority.DEFAULT;
+    try {
+      priority = JobPriority.valueOf(prio);
+    } catch (IllegalArgumentException e) {
+      return convertToJobPriority(Integer.parseInt(prio));
+    }
+    return priority;
+  }
+
+  /**
+   * Get the priority for this job.
+   *
+   * @return the priority for this job.
+   */
+  public int getJobPriorityAsInteger() {
+    String priority = get(JobContext.PRIORITY);
+    if (priority == null) {
+      return 0;
+    }
+
+    int jobPriority = 0;
+    try {
+      jobPriority = convertPriorityToInteger(priority);
+    } catch (IllegalArgumentException e) {
+      return Integer.parseInt(priority);
+    }
+    return jobPriority;
+  }
+
+  private int convertPriorityToInteger(String priority) {
+    JobPriority jobPriority = JobPriority.valueOf(priority);
+    switch (jobPriority) {
+    case VERY_HIGH :
+      return 5;
+    case HIGH :
+      return 4;
+    case NORMAL :
+      return 3;
+    case LOW :
+      return 2;
+    case VERY_LOW :
+      return 1;
+    case DEFAULT :
+      return 0;
+    default:
+      break;
+    }
+
+    // If a user sets the priority as "UNDEFINED_PRIORITY", we can return
+    // 0 which is also default value.
+    return 0;
+  }
+
+  private JobPriority convertToJobPriority(int priority) {
+    switch (priority) {
+    case 5 :
+      return JobPriority.VERY_HIGH;
+    case 4 :
+      return JobPriority.HIGH;
+    case 3 :
+      return JobPriority.NORMAL;
+    case 2 :
+      return JobPriority.LOW;
+    case 1 :
+      return JobPriority.VERY_LOW;
+    case 0 :
+      return JobPriority.DEFAULT;
+    default:
+      break;
+    }
+
+    return JobPriority.UNDEFINED_PRIORITY;
   }
 
   /**

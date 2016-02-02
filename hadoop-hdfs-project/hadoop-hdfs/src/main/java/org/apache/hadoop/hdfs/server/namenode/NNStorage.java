@@ -29,6 +29,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -52,6 +53,7 @@ import org.apache.hadoop.hdfs.util.PersistentLongFile;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.Time;
+import org.mortbay.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -149,6 +151,11 @@ public class NNStorage extends Storage implements Closeable,
   private HashMap<String, String> deprecatedProperties;
 
   /**
+   * Name directories size for metric.
+   */
+  private Map<String, Long> nameDirSizeMap = new HashMap<>();
+
+  /**
    * Construct the NNStorage.
    * @param conf Namenode configuration.
    * @param imageDirs Directories the image can be stored in.
@@ -166,6 +173,8 @@ public class NNStorage extends Storage implements Closeable,
     setStorageDirectories(imageDirs, 
                           Lists.newArrayList(editsDirs),
                           FSNamesystem.getSharedEditsDirs(conf));
+    //Update NameDirSize metric value after NN start
+    updateNameDirSize();
   }
 
   @Override // Storage
@@ -473,8 +482,24 @@ public class NNStorage extends Storage implements Closeable,
    * @param txid the txid that has been reached
    */
   public void writeTransactionIdFileToStorage(long txid) {
+    writeTransactionIdFileToStorage(txid, null);
+  }
+
+  /**
+   * Write a small file in all available storage directories that
+   * indicates that the namespace has reached some given transaction ID.
+   *
+   * This is used when the image is loaded to avoid accidental rollbacks
+   * in the case where an edit log is fully deleted but there is no
+   * checkpoint. See TestNameEditsConfigs.testNameEditsConfigsFailure()
+   * @param txid the txid that has been reached
+   * @param type the type of directory
+   */
+  public void writeTransactionIdFileToStorage(long txid,
+      NameNodeDirType type) {
     // Write txid marker in all storage directories
-    for (StorageDirectory sd : storageDirs) {
+    for (Iterator<StorageDirectory> it = dirIterator(type); it.hasNext();) {
+      StorageDirectory sd = it.next();
       try {
         writeTransactionIdFile(sd, txid);
       } catch(IOException e) {
@@ -1074,5 +1099,21 @@ public class NNStorage extends Storage implements Closeable,
         getClusterID(),
         getBlockPoolID(),
         getCTime());
+  }
+
+  public String getNNDirectorySize() {
+    return JSON.toString(nameDirSizeMap);
+  }
+
+  public void updateNameDirSize() {
+    Map<String, Long> nnDirSizeMap = new HashMap<>();
+    for (Iterator<StorageDirectory> it = dirIterator(); it.hasNext();) {
+      StorageDirectory sd = it.next();
+      if (!sd.isShared()) {
+        nnDirSizeMap.put(sd.getRoot().getAbsolutePath(), sd.getDirecorySize());
+      }
+    }
+    nameDirSizeMap.clear();
+    nameDirSizeMap.putAll(nnDirSizeMap);
   }
 }

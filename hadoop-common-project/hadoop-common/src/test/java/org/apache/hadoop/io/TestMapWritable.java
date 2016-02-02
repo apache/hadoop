@@ -17,20 +17,25 @@
  */
 package org.apache.hadoop.io;
 
+import org.junit.Test;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.util.Map;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 /**
  * Tests MapWritable
  */
-public class TestMapWritable extends TestCase {
+public class TestMapWritable {
   /** the test */
   @SuppressWarnings("unchecked")
+  @Test
   public void testMapWritable() {
     Text[] keys = {
         new Text("key1"),
@@ -91,6 +96,7 @@ public class TestMapWritable extends TestCase {
    * Test that number of "unknown" classes is propagated across multiple copies.
    */
   @SuppressWarnings("deprecation")
+  @Test
   public void testForeignClass() {
     MapWritable inMap = new MapWritable();
     inMap.put(new Text("key"), new UTF8("value"));
@@ -105,10 +111,11 @@ public class TestMapWritable extends TestCase {
    * @throws Exception
    * @see <a href="https://issues.apache.org/jira/browse/HADOOP-2244">HADOOP-2244</a>
    */
+  @Test
   public void testMultipleCallsToReadFieldsAreSafe() throws Exception {
     // Create an instance and add a key/value.
     MapWritable m = new MapWritable();
-    final Text t = new Text(getName());
+    final Text t = new Text("testMultipleCallsToReadFieldsAreSafe");
     m.put(t, t);
     // Get current size of map.  Key values are 't'.
     int count = m.size();
@@ -130,6 +137,7 @@ public class TestMapWritable extends TestCase {
     dis.close();
   }
 
+  @Test
   public void testEquality() {
     MapWritable map1 = new MapWritable();
     MapWritable map2 = new MapWritable();
@@ -151,6 +159,7 @@ public class TestMapWritable extends TestCase {
   }
 
   /** Verify text command outputs a useful representation for MapWritable. */
+  @Test
   public void testToString() {
     MapWritable map = new MapWritable();
     final IntWritable key = new IntWritable(5);

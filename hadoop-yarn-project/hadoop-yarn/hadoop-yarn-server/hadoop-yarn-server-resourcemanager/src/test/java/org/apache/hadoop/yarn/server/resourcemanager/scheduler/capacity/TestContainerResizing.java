@@ -21,8 +21,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -47,8 +50,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerStat
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler
+    .SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica
+    .FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -57,11 +64,47 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestContainerResizing {
+  private static final Log LOG = LogFactory.getLog(TestContainerResizing.class);
   private final int GB = 1024;
 
   private YarnConfiguration conf;
 
   RMNodeLabelsManager mgr;
+
+  class MyScheduler extends CapacityScheduler {
+    /*
+     * A Mock Scheduler to simulate the potential effect of deadlock between:
+     * 1. The AbstractYarnScheduler.decreaseContainers() call (from
+     *    ApplicationMasterService thread)
+     * 2. The CapacityScheduler.allocateContainersToNode() call (from the
+     *    scheduler thread)
+     */
+    MyScheduler() {
+      super();
+    }
+
+    @Override
+    protected void decreaseContainers(
+        List<ContainerResourceChangeRequest> decreaseRequests,
+        SchedulerApplicationAttempt attempt) {
+      try {
+        Thread.sleep(1000);
+      } catch(InterruptedException e) {
+        LOG.debug("Thread interrupted.");
+      }
+      super.decreaseContainers(decreaseRequests, attempt);
+    }
+
+    @Override
+    public synchronized void allocateContainersToNode(FiCaSchedulerNode node) {
+      try {
+        Thread.sleep(1000);
+      } catch(InterruptedException e) {
+        LOG.debug("Thread interrupted.");
+      }
+      super.allocateContainersToNode(node);
+    }
+  }
 
   @Before
   public void setUp() throws Exception {
@@ -956,6 +999,50 @@ public class TestContainerResizing {
         app.getAppAttemptResourceUsage().getUsed().getMemory());
 
     rm1.close();
+  }
+
+  @Test (timeout = 60000)
+  public void testDecreaseContainerWillNotDeadlockContainerAllocation()
+      throws Exception {
+    // create and start MockRM with our MyScheduler
+    MockRM rm = new MockRM() {
+      @Override
+      public ResourceScheduler createScheduler() {
+        CapacityScheduler cs = new MyScheduler();
+        cs.setConf(conf);
+        return cs;
+      }
+    };
+    rm.start();
+    // register a node
+    MockNM nm = rm.registerNode("h1:1234", 20 * GB);
+    // submit an application -> app1
+    RMApp app1 = rm.submitApp(3 * GB, "app", "user", null, "default");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm);
+    // making sure resource is allocated
+    checkUsedResource(rm, "default", 3 * GB, null);
+    FiCaSchedulerApp app = getFiCaSchedulerApp(rm, app1.getApplicationId());
+    Assert.assertEquals(3 * GB,
+        app.getAppAttemptResourceUsage().getUsed().getMemory());
+    // making sure container is launched
+    ContainerId containerId1 =
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 1);
+    sentRMContainerLaunched(rm, containerId1);
+    // submit allocation request for a new container
+    am1.allocate(Collections.singletonList(ResourceRequest.newInstance(
+        Priority.newInstance(1), "*", Resources.createResource(2 * GB), 1)),
+        null);
+    // nm reports status update and triggers container allocation
+    nm.nodeHeartbeat(true);
+    // *In the mean time*, am1 asks to decrease its AM container resource from
+    // 3GB to 1GB
+    AllocateResponse response = am1.sendContainerResizingRequest(null,
+        Collections.singletonList(ContainerResourceChangeRequest
+            .newInstance(containerId1, Resources.createResource(GB))));
+    // verify that the containe resource is decreased
+    verifyContainerDecreased(response, containerId1, GB);
+
+    rm.close();
   }
 
   private void checkPendingResource(MockRM rm, String queueName, int memory,

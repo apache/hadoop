@@ -160,6 +160,13 @@ public class LeaseManager {
     return lease;
   }
 
+  synchronized void removeLease(long inodeId) {
+    final Lease lease = leasesById.get(inodeId);
+    if (lease != null) {
+      removeLease(lease, inodeId);
+    }
+  }
+
   /**
    * Remove the specified lease and src.
    */
@@ -295,16 +302,6 @@ public class LeaseManager {
     @VisibleForTesting
     long getLastUpdate() {
       return lastUpdate;
-    }
-  }
-
-  @VisibleForTesting
-  synchronized void removeLeases(Collection<Long> inodes) {
-    for (long inode : inodes) {
-      Lease lease = leasesById.get(inode);
-      if (lease != null) {
-        removeLease(lease, inode);
-      }
     }
   }
 

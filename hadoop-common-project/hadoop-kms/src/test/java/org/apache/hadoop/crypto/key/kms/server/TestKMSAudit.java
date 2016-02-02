@@ -19,11 +19,15 @@ package org.apache.hadoop.crypto.key.kms.server;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FilterOutputStream;
+import java.io.InputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 
 import org.apache.hadoop.crypto.key.kms.server.KMS.KMSOp;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ThreadUtil;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.PropertyConfigurator;
 import org.junit.After;
@@ -52,15 +56,17 @@ public class TestKMSAudit {
   }
 
   @Before
-  public void setUp() {
+  public void setUp() throws IOException {
     originalOut = System.err;
     memOut = new ByteArrayOutputStream();
     filterOut = new FilterOut(memOut);
     capturedOut = new PrintStream(filterOut);
     System.setErr(capturedOut);
-    PropertyConfigurator.configure(Thread.currentThread().
-        getContextClassLoader()
-        .getResourceAsStream("log4j-kmsaudit.properties"));
+    InputStream is =
+        ThreadUtil.getResourceAsStream("log4j-kmsaudit.properties");
+    PropertyConfigurator.configure(is);
+    IOUtils.closeStream(is);
+
     this.kmsAudit = new KMSAudit(1000);
   }
 

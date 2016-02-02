@@ -20,11 +20,13 @@ package org.apache.hadoop.hdfs.web;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.ContentSummary.Builder;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.MD5MD5CRC32CastagnoliFileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32GzipFileChecksum;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -266,6 +268,23 @@ class JsonUtilClient {
     }
   }
 
+  /** Convert an Object[] to a StorageType[]. */
+  static StorageType[] toStorageTypeArray(final List<?> objects)
+      throws IOException {
+    if (objects == null) {
+      return null;
+    } else if (objects.isEmpty()) {
+      return StorageType.EMPTY_ARRAY;
+    } else {
+      final StorageType[] array = new StorageType[objects.size()];
+      int i = 0;
+      for (Object object : objects) {
+        array[i++] = StorageType.parseStorageType(object.toString());
+      }
+      return array;
+    }
+  }
+
   /** Convert a Json map to LocatedBlock. */
   static LocatedBlock toLocatedBlock(final Map<?, ?> m) throws IOException {
     if (m == null) {
@@ -280,8 +299,10 @@ class JsonUtilClient {
     final DatanodeInfo[] cachedLocations = toDatanodeInfoArray(
         getList(m, "cachedLocations"));
 
+    final StorageType[] storageTypes = toStorageTypeArray(
+        getList(m, "storageTypes"));
     final LocatedBlock locatedblock = new LocatedBlock(b, locations,
-        null, null, startOffset, isCorrupt, cachedLocations);
+        null, storageTypes, startOffset, isCorrupt, cachedLocations);
     locatedblock.setBlockToken(toBlockToken((Map<?, ?>)m.get("blockToken")));
     return locatedblock;
   }
@@ -316,14 +337,22 @@ class JsonUtilClient {
     final long quota = ((Number) m.get("quota")).longValue();
     final long spaceConsumed = ((Number) m.get("spaceConsumed")).longValue();
     final long spaceQuota = ((Number) m.get("spaceQuota")).longValue();
+    final Map<?, ?> typem = (Map<?, ?>) m.get("typeQuota");
 
-    return new ContentSummary.Builder()
-        .length(length)
-        .fileCount(fileCount)
-        .directoryCount(directoryCount)
-        .quota(quota)
-        .spaceConsumed(spaceConsumed)
-        .spaceQuota(spaceQuota).build();
+    Builder contentSummaryBuilder = new ContentSummary.Builder().length(length)
+        .fileCount(fileCount).directoryCount(directoryCount).quota(quota)
+        .spaceConsumed(spaceConsumed).spaceQuota(spaceQuota);
+    if (typem != null) {
+      for (StorageType t : StorageType.getTypesSupportingQuota()) {
+        Map<?, ?> type = (Map<?, ?>) typem.get(t.toString());
+        if (type != null) {
+          contentSummaryBuilder = contentSummaryBuilder.typeQuota(t,
+              ((Number) type.get("quota")).longValue()).typeConsumed(t,
+              ((Number) type.get("consumed")).longValue());
+        }
+      }
+    }
+    return contentSummaryBuilder.build();
   }
 
   /** Convert a Json map to a MD5MD5CRC32FileChecksum. */

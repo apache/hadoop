@@ -25,6 +25,7 @@ package hadoop.yarn;
 import "yarn_server_common_protos.proto";
 import "yarn_protos.proto";
 import "yarn_security_token.proto";
+import "RpcHeader.proto";
 
 ////////////////////////////////////////////////////////////////////////
 ////// RM recovery related records /////////////////////////////////////
@@ -67,6 +68,7 @@ message ApplicationStateDataProto {
     optional RMAppStateProto application_state = 5;
     optional string diagnostics = 6 [default = "N/A"];
     optional int64 finish_time = 7;
+    optional hadoop.common.RPCCallerContextProto caller_context = 8;
 }
 
 message ApplicationAttemptStateDataProto {
@@ -96,20 +98,4 @@ message AMRMTokenSecretManagerStateProto {
 message RMDelegationTokenIdentifierDataProto {
   optional YARNDelegationTokenIdentifierProto token_identifier = 1;
   optional int64 renewDate = 2;
-}
-
-message ResourceAllocationRequestProto {
-  optional int64 start_time = 1;
-  optional int64 end_time = 2;
-  optional ResourceProto resource = 3;
-}
-
-message ReservationAllocationStateProto {
-  optional ReservationDefinitionProto reservation_definition = 1;
-  repeated ResourceAllocationRequestProto allocation_requests = 2;
-  optional int64 start_time = 3;
-  optional int64 end_time = 4;
-  optional string user = 5;
-  optional bool contains_gangs = 6;
-  optional int64 acceptance_timestamp = 7;
 }

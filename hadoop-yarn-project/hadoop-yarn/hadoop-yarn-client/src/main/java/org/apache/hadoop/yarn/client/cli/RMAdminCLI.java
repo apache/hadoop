@@ -241,7 +241,7 @@ public class RMAdminCLI extends HAAdmin {
                   + "label2(exclusive=false),label3\">]" +
       " [-removeFromClusterNodeLabels <label1,label2,label3>]" +
       " [-replaceLabelsOnNode <\"node1[:port]=label1,label2 node2[:port]=label1\">]" +
-      " [-directlyAccessNodeLabelStore]]" +
+      " [-directlyAccessNodeLabelStore]" +
       " [-updateNodeResource [NodeID] [MemSize] [vCores] ([OvercommitTimeout])");
     if (isHAEnabled) {
       appendHAUsage(summary);
@@ -415,21 +415,33 @@ public class RMAdminCLI extends HAAdmin {
     adminProtocol.refreshClusterMaxPriority(request);
     return 0;
   }
-  
+
   private int updateNodeResource(String nodeIdStr, int memSize,
       int cores, int overCommitTimeout) throws IOException, YarnException {
+    // check resource value first
+    if (invalidResourceValue(memSize, cores)) {
+      throw new IllegalArgumentException("Invalid resource value: " + "(" +
+          memSize + "," + cores + ") for updateNodeResource.");
+    }
     // Refresh the nodes
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     UpdateNodeResourceRequest request =
       recordFactory.newRecordInstance(UpdateNodeResourceRequest.class);
     NodeId nodeId = ConverterUtils.toNodeId(nodeIdStr);
+    
     Resource resource = Resources.createResource(memSize, cores);
     Map<NodeId, ResourceOption> resourceMap =
         new HashMap<NodeId, ResourceOption>();
     resourceMap.put(
         nodeId, ResourceOption.newInstance(resource, overCommitTimeout));
+    request.setNodeResourceMap(resourceMap);
     adminProtocol.updateNodeResource(request);
     return 0;
+  }
+
+  // complain negative value for cpu or memory.
+  private boolean invalidResourceValue(int memValue, int coreValue) {
+    return (memValue < 0) || (coreValue < 0);
   }
 
   private int getGroups(String[] usernames) throws IOException {

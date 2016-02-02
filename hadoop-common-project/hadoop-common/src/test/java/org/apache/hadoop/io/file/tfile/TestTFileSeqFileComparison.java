@@ -23,7 +23,10 @@ import java.text.SimpleDateFormat;
 import java.util.Random;
 import java.util.StringTokenizer;
 
-import junit.framework.TestCase;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -33,7 +36,6 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -45,7 +47,7 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.file.tfile.TFile.Reader.Scanner.Entry;
 import org.apache.hadoop.util.Time;
 
-public class TestTFileSeqFileComparison extends TestCase {
+public class TestTFileSeqFileComparison {
   MyOptions options;
 
   private FileSystem fs;
@@ -55,7 +57,7 @@ public class TestTFileSeqFileComparison extends TestCase {
   private DateFormat formatter;
   byte[][] dictionary;
 
-  @Override
+  @Before
   public void setUp() throws IOException {
     if (options == null) {
       options = new MyOptions(new String[0]);
@@ -82,7 +84,7 @@ public class TestTFileSeqFileComparison extends TestCase {
     }
   }
 
-  @Override
+  @After
   public void tearDown() throws IOException {
     // do nothing
   }
@@ -151,8 +153,8 @@ public class TestTFileSeqFileComparison extends TestCase {
     @Override
     public void append(BytesWritable key, BytesWritable value)
         throws IOException {
-      writer.append(key.get(), 0, key.getSize(), value.get(), 0, value
-          .getSize());
+      writer.append(key.getBytes(), 0, key.getLength(), value.getBytes(), 0,
+          value.getLength());
     }
 
     @Override
@@ -301,22 +303,22 @@ public class TestTFileSeqFileComparison extends TestCase {
 
     @Override
     public byte[] getKey() {
-      return key.get();
+      return key.getBytes();
     }
 
     @Override
     public int getKeyLength() {
-      return key.getSize();
+      return key.getLength();
     }
 
     @Override
     public byte[] getValue() {
-      return value.get();
+      return value.getBytes();
     }
 
     @Override
     public int getValueLength() {
-      return value.getSize();
+      return value.getLength();
     }
 
     @Override
@@ -479,6 +481,7 @@ public class TestTFileSeqFileComparison extends TestCase {
     readSeqFile(parameters, true);
   }
 
+  @Test
   public void testRunComparisons() throws IOException {
     String[] compresses = new String[] { "none", "lzo", "gz" };
     for (String compress : compresses) {

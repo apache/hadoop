@@ -75,12 +75,15 @@ import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -102,6 +105,7 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
+import org.apache.hadoop.yarn.api.records.ReservationRequests;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -208,6 +212,7 @@ public class TestClientRMService {
 
     // Now make the node unhealthy.
     node.nodeHeartbeat(false);
+    rm.NMwaitForState(node.getNodeId(), NodeState.UNHEALTHY);
 
     // Call again
     nodeReports = client.getClusterNodes(request).getNodeReports();
@@ -466,7 +471,8 @@ public class TestClientRMService {
     QueueACLsManager mockQueueACLsManager = mock(QueueACLsManager.class);
     when(
         mockQueueACLsManager.checkAccess(any(UserGroupInformation.class),
-            any(QueueACL.class), anyString())).thenReturn(true);
+            any(QueueACL.class), anyString(), any(ApplicationId.class),
+            anyString())).thenReturn(true);
     return new ClientRMService(rmContext, yarnScheduler, appManager,
         mockAclsManager, mockQueueACLsManager, null);
   }
@@ -567,7 +573,8 @@ public class TestClientRMService {
     ApplicationACLsManager mockAclsManager = mock(ApplicationACLsManager.class);
     QueueACLsManager mockQueueACLsManager = mock(QueueACLsManager.class);
     when(mockQueueACLsManager.checkAccess(any(UserGroupInformation.class),
-        any(QueueACL.class), anyString())).thenReturn(true);
+        any(QueueACL.class), anyString(), any(ApplicationId.class),
+        anyString())).thenReturn(true);
     when(mockAclsManager.checkAccess(any(UserGroupInformation.class),
         any(ApplicationAccessType.class), anyString(),
         any(ApplicationId.class))).thenReturn(true);
@@ -593,7 +600,8 @@ public class TestClientRMService {
     QueueACLsManager mockQueueACLsManager1 =
         mock(QueueACLsManager.class);
     when(mockQueueACLsManager1.checkAccess(any(UserGroupInformation.class),
-        any(QueueACL.class), anyString())).thenReturn(false);
+        any(QueueACL.class), anyString(), any(ApplicationId.class),
+        anyString())).thenReturn(false);
     when(mockAclsManager1.checkAccess(any(UserGroupInformation.class),
         any(ApplicationAccessType.class), anyString(),
         any(ApplicationId.class))).thenReturn(false);
@@ -632,7 +640,8 @@ public class TestClientRMService {
 
     QueueACLsManager mockQueueACLsManager = mock(QueueACLsManager.class);
     when(mockQueueACLsManager.checkAccess(any(UserGroupInformation.class),
-            any(QueueACL.class), anyString())).thenReturn(true);
+        any(QueueACL.class), anyString(), any(ApplicationId.class),
+        anyString())).thenReturn(true);
     ClientRMService rmService =
         new ClientRMService(rmContext, yarnScheduler, appManager,
             mockAclsManager, mockQueueACLsManager, null);
@@ -720,7 +729,8 @@ public class TestClientRMService {
     ApplicationACLsManager mockAclsManager = mock(ApplicationACLsManager.class);
     QueueACLsManager mockQueueACLsManager = mock(QueueACLsManager.class);
     when(mockQueueACLsManager.checkAccess(any(UserGroupInformation.class),
-        any(QueueACL.class), anyString())).thenReturn(true);
+        any(QueueACL.class), anyString(), any(ApplicationId.class),
+        anyString())).thenReturn(true);
     ClientRMService rmService =
         new ClientRMService(rmContext, yarnScheduler, appManager,
             mockAclsManager, mockQueueACLsManager, null);
@@ -892,7 +902,7 @@ public class TestClientRMService {
       public void run() {
         try {
           rmService.submitApplication(submitRequest1);
-        } catch (YarnException e) {}
+        } catch (YarnException | IOException e) {}
       }
     };
     t.start();
@@ -1147,6 +1157,168 @@ public class TestClientRMService {
     Assert.assertNotNull(sResponse);
     LOG.info("Update reservation response: " + uResponse);
 
+    // List reservations, search by reservation ID
+    ReservationListRequest request =
+            ReservationListRequest.newInstance(
+                    ReservationSystemTestUtil.reservationQ,
+                    reservationID.toString(), -1, -1, false);
+
+    ReservationListResponse response = null;
+    try {
+      response = clientService.listReservations(request);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+    Assert.assertNotNull(response);
+    Assert.assertEquals(response.getReservationAllocationState().size(), 1);
+    Assert.assertEquals(response.getReservationAllocationState().get(0)
+            .getReservationId().getId(), reservationID.getId());
+    Assert.assertEquals(response.getReservationAllocationState().get(0)
+            .getResourceAllocationRequests().size(), 0);
+
+    // List reservations, search by time within reservation interval.
+    request = ReservationListRequest.newInstance(
+            ReservationSystemTestUtil.reservationQ, "", 1, Long.MAX_VALUE,
+            true);
+
+    response = null;
+    try {
+      response = clientService.listReservations(request);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+    Assert.assertNotNull(response);
+    Assert.assertEquals(1, response.getReservationAllocationState().size());
+    Assert.assertEquals(response.getReservationAllocationState().get(0)
+            .getReservationId().getId(), reservationID.getId());
+
+    // List reservations, search by invalid end time == -1.
+    request = ReservationListRequest.newInstance(
+            ReservationSystemTestUtil.reservationQ, "", 1, -1,
+            true);
+
+    response = null;
+    try {
+      response = clientService.listReservations(request);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+    Assert.assertNotNull(response);
+    Assert.assertEquals(1, response.getReservationAllocationState().size());
+    Assert.assertEquals(response.getReservationAllocationState().get(0)
+            .getReservationId().getId(), reservationID.getId());
+
+    // List reservations, search by invalid end time < -1.
+    request = ReservationListRequest.newInstance(
+            ReservationSystemTestUtil.reservationQ, "", 1, -10,
+            true);
+
+    response = null;
+    try {
+      response = clientService.listReservations(request);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+    Assert.assertNotNull(response);
+    Assert.assertEquals(1, response.getReservationAllocationState().size());
+    Assert.assertEquals(response.getReservationAllocationState().get(0)
+            .getReservationId().getId(), reservationID.getId());
+
+    // List reservations, search by time interval.
+    request = ReservationListRequest.newInstance(
+            ReservationSystemTestUtil.reservationQ, "", arrival +
+                    duration/2, arrival + duration/2, true);
+
+    response = null;
+    try {
+      response = clientService.listReservations(request);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+    Assert.assertNotNull(response);
+    Assert.assertEquals(1, response.getReservationAllocationState().size());
+    Assert.assertEquals(response.getReservationAllocationState().get(0)
+            .getReservationId().getId(), reservationID.getId());
+
+    // Verify that the full resource allocations exist.
+    Assert.assertTrue(response.getReservationAllocationState().get(0)
+            .getResourceAllocationRequests().size() > 0);
+
+    // Verify that the full RDL is returned.
+    ReservationRequests reservationRequests = response
+            .getReservationAllocationState().get(0).getReservationDefinition()
+            .getReservationRequests();
+    Assert.assertTrue(reservationRequests.getInterpreter().toString()
+            .equals("R_ALL"));
+    Assert.assertTrue(reservationRequests.getReservationResources().get(0)
+            .getDuration() == duration);
+
+      // List reservations, search by a very large start time.
+    request = ReservationListRequest.newInstance(
+            ReservationSystemTestUtil.reservationQ, "", Long.MAX_VALUE,
+            -1, false);
+
+    response = null;
+    try {
+      response = clientService.listReservations(request);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+
+    // Ensure all reservations are filtered out.
+    Assert.assertNotNull(response);
+    Assert.assertEquals(0, response.getReservationAllocationState().size());
+
+    // List reservations, search by start time after the reservation
+    // end time.
+    request = ReservationListRequest.newInstance(
+            ReservationSystemTestUtil.reservationQ, "", deadline + duration,
+            deadline + 2 * duration, false);
+
+    response = null;
+    try {
+      response = clientService.listReservations(request);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+
+    // Ensure all reservations are filtered out.
+    Assert.assertNotNull(response);
+    Assert.assertEquals(response.getReservationAllocationState().size(), 0);
+
+    // List reservations, search by  end time before the reservation start
+    // time.
+    request = ReservationListRequest.newInstance(
+            ReservationSystemTestUtil.reservationQ, "", 0, arrival -
+                    duration, false);
+
+    response = null;
+    try {
+      response = clientService.listReservations(request);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+
+    // Ensure all reservations are filtered out.
+    Assert.assertNotNull(response);
+    Assert.assertEquals(response.getReservationAllocationState().size(), 0);
+
+    // List reservations, search by a very small end time.
+    request = ReservationListRequest.newInstance(
+            ReservationSystemTestUtil.reservationQ, "", 0, 1,
+            false);
+
+    response = null;
+    try {
+      response = clientService.listReservations(request);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+
+    // Ensure all reservations are filtered out.
+    Assert.assertNotNull(response);
+    Assert.assertEquals(response.getReservationAllocationState().size(), 0);
+
     // Delete the reservation
     ReservationDeleteRequest dRequest =
         ReservationDeleteRequest.newInstance(reservationID);
@@ -1158,6 +1330,20 @@ public class TestClientRMService {
     }
     Assert.assertNotNull(sResponse);
     LOG.info("Delete reservation response: " + dResponse);
+
+    // List reservations, search by non-existent reservationID
+    request = ReservationListRequest.newInstance(
+            ReservationSystemTestUtil.reservationQ, reservationID.toString(),
+            -1, -1, false);
+
+    response = null;
+    try {
+      response = clientService.listReservations(request);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+    Assert.assertNotNull(response);
+    Assert.assertEquals(0, response.getReservationAllocationState().size());
 
     // clean-up
     rm.stop();
@@ -1330,49 +1516,54 @@ public class TestClientRMService {
         appPriority, app1.getApplicationSubmissionContext().getPriority()
             .getPriority());
 
-    appPriority = 9;
+    appPriority = 11;
     ClientRMService rmService = rm.getClientRMService();
-    UpdateApplicationPriorityRequest updateRequest =
-        UpdateApplicationPriorityRequest.newInstance(app1.getApplicationId(),
-            Priority.newInstance(appPriority));
+    testApplicationPriorityUpdation(rmService, app1, appPriority, maxPriority);
 
-    rmService.updateApplicationPriority(updateRequest);
-
-    Assert.assertEquals("Incorrect priority has been set to application",
-        appPriority, app1.getApplicationSubmissionContext().getPriority()
-            .getPriority());
+    appPriority = 9;
+    testApplicationPriorityUpdation(rmService, app1, appPriority, appPriority);
 
     rm.killApp(app1.getApplicationId());
     rm.waitForState(app1.getApplicationId(), RMAppState.KILLED);
 
-    appPriority = 8;
-    UpdateApplicationPriorityRequest updateRequestNew =
-        UpdateApplicationPriorityRequest.newInstance(app1.getApplicationId(),
-            Priority.newInstance(appPriority));
-    // Update priority request for application in KILLED state
-    rmService.updateApplicationPriority(updateRequestNew);
-
-    // Hence new priority should not be updated
-    Assert.assertNotEquals("Priority should not be updated as app is in KILLED state",
-        appPriority, app1.getApplicationSubmissionContext().getPriority()
-            .getPriority());
-    Assert.assertEquals("Priority should be same as old one before update",
-        9, app1.getApplicationSubmissionContext().getPriority()
-            .getPriority());
 
     // Update priority request for invalid application id.
     ApplicationId invalidAppId = ApplicationId.newInstance(123456789L, 3);
-    updateRequest =
+    UpdateApplicationPriorityRequest updateRequest =
         UpdateApplicationPriorityRequest.newInstance(invalidAppId,
             Priority.newInstance(appPriority));
     try {
       rmService.updateApplicationPriority(updateRequest);
-      Assert
-          .fail("ApplicationNotFoundException should be thrown for invalid application id");
+      Assert.fail("ApplicationNotFoundException should be thrown "
+          + "for invalid application id");
     } catch (ApplicationNotFoundException e) {
       // Expected
     }
 
+    updateRequest =
+        UpdateApplicationPriorityRequest.newInstance(app1.getApplicationId(),
+            Priority.newInstance(11));
+    Assert.assertEquals("Incorrect priority has been set to application",
+        appPriority, rmService.updateApplicationPriority(updateRequest)
+            .getApplicationPriority().getPriority());
+
     rm.stop();
+  }
+
+  private void testApplicationPriorityUpdation(ClientRMService rmService,
+      RMApp app1, int tobeUpdatedPriority, int expected) throws YarnException,
+      IOException {
+    UpdateApplicationPriorityRequest updateRequest =
+        UpdateApplicationPriorityRequest.newInstance(app1.getApplicationId(),
+            Priority.newInstance(tobeUpdatedPriority));
+
+    UpdateApplicationPriorityResponse updateApplicationPriority =
+        rmService.updateApplicationPriority(updateRequest);
+
+    Assert.assertEquals("Incorrect priority has been set to application",
+        expected, app1.getApplicationSubmissionContext().getPriority()
+            .getPriority());
+    Assert.assertEquals("Incorrect priority has been returned", expected,
+        updateApplicationPriority.getApplicationPriority().getPriority());
   }
 }

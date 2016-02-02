@@ -207,6 +207,8 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
       IOUtils.cleanup(LOG, j);
     }
 
+    DefaultMetricsSystem.shutdown();
+
     if (journalNodeInfoBeanName != null) {
       MBeans.unregister(journalNodeInfoBeanName);
       journalNodeInfoBeanName = null;

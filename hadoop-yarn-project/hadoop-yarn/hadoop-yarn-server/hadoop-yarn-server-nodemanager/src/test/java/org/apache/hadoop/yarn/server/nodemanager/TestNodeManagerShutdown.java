@@ -33,12 +33,12 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.Assert;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
@@ -142,9 +142,10 @@ public class TestNodeManagerShutdown {
   public void testKillContainersOnShutdown() throws IOException,
       YarnException {
     nm = new TestNodeManager();
-    nm.init(createNMConfig());
+    int port = ServerSocketUtil.getPort(49157, 10);
+    nm.init(createNMConfig(port));
     nm.start();
-    startContainer(nm, cId, localFS, tmpDir, processStartFile);
+    startContainer(nm, cId, localFS, tmpDir, processStartFile, port);
     
     final int MAX_TRIES=20;
     int numTries = 0;
@@ -186,7 +187,8 @@ public class TestNodeManagerShutdown {
   }
 
   public static void startContainer(NodeManager nm, ContainerId cId,
-      FileContext localFS, File scriptFileDir, File processStartFile)
+      FileContext localFS, File scriptFileDir, File processStartFile,
+      final int port)
           throws IOException, YarnException {
     File scriptFile =
         createUnhaltingScriptFile(cId, scriptFileDir, processStartFile);
@@ -195,7 +197,7 @@ public class TestNodeManagerShutdown {
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
 
     NodeId nodeId = BuilderUtils.newNodeId(InetAddress.getByName("localhost")
-        .getCanonicalHostName(), 12345);
+        .getCanonicalHostName(), port);
     
     URL localResourceUri =
         ConverterUtils.getYarnUrlFromPath(localFS
@@ -215,7 +217,7 @@ public class TestNodeManagerShutdown {
     List<String> commands = Arrays.asList(Shell.getRunScriptCommand(scriptFile));
     containerLaunchContext.setCommands(commands);
     final InetSocketAddress containerManagerBindAddress =
-        NetUtils.createSocketAddrForHost("127.0.0.1", 12345);
+        NetUtils.createSocketAddrForHost("127.0.0.1", port);
     UserGroupInformation currentUser = UserGroupInformation
         .createRemoteUser(cId.toString());
     org.apache.hadoop.security.token.Token<NMTokenIdentifier> nmToken =
@@ -232,7 +234,7 @@ public class TestNodeManagerShutdown {
             Configuration conf = new Configuration();
             YarnRPC rpc = YarnRPC.create(conf);
             InetSocketAddress containerManagerBindAddress =
-                NetUtils.createSocketAddrForHost("127.0.0.1", 12345);
+                NetUtils.createSocketAddrForHost("127.0.0.1", port);
             return (ContainerManagementProtocol) rpc.getProxy(ContainerManagementProtocol.class,
               containerManagerBindAddress, conf);
           }
@@ -264,11 +266,15 @@ public class TestNodeManagerShutdown {
     return containerId;
   }
   
-  private YarnConfiguration createNMConfig() {
+  private YarnConfiguration createNMConfig(int port) throws IOException {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.NM_PMEM_MB, 5*1024); // 5GB
-    conf.set(YarnConfiguration.NM_ADDRESS, "127.0.0.1:12345");
-    conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, "127.0.0.1:12346");
+    conf.set(YarnConfiguration.NM_ADDRESS, "127.0.0.1:" + port);
+    conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, "127.0.0.1:"
+        + ServerSocketUtil.getPort(49158, 10));
+    conf.set(YarnConfiguration.NM_WEBAPP_ADDRESS,
+        "127.0.0.1:" + ServerSocketUtil
+            .getPort(YarnConfiguration.DEFAULT_NM_WEBAPP_PORT, 10));
     conf.set(YarnConfiguration.NM_LOG_DIRS, logsDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogsDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, nmLocalDir.getAbsolutePath());
@@ -276,6 +282,10 @@ public class TestNodeManagerShutdown {
     return conf;
   }
   
+  private YarnConfiguration createNMConfig() throws IOException {
+    return createNMConfig(ServerSocketUtil.getPort(49157, 10));
+  }
+
   /**
    * Creates a script to run a container that will run forever unless
    * stopped by external means.

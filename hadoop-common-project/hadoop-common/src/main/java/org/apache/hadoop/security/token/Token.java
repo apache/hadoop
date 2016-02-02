@@ -31,7 +31,6 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import java.io.*;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.ServiceLoader;

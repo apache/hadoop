@@ -231,7 +231,6 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `MillisSinceLastLoadedEdits` | (HA-only) Time in milliseconds since the last time standby NameNode load edit log. In active NameNode, set to 0 |
 | `BlockCapacity` | Current number of block capacity |
 | `StaleDataNodes` | Current number of DataNodes marked stale due to delayed heartbeat |
-| `TotalFiles` | Current number of files and directories (same as FilesTotal) |
 | `MissingReplOneBlocks` | Current number of missing blocks with replication factor 1 |
 | `NumFilesUnderConstruction` | Current number of files under construction |
 | `NumActiveClients` | Current number of active clients holding lease |
@@ -240,6 +239,7 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `LockQueueLength` | Number of threads waiting to acquire FSNameSystem lock |
 | `TotalSyncCount` | Total number of sync operations performed by edit log |
 | `TotalSyncTimes` | Total number of milliseconds spent by various edit logs in sync operation|
+| `NameDirSize` | NameNode name directories size in bytes |
 
 JournalNode
 -----------

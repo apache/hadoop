@@ -79,6 +79,33 @@
 </property>
 
 <property>
+  <name>dfs.namenode.lifeline.rpc-address</name>
+  <value></value>
+  <description>
+    NameNode RPC lifeline address.  This is an optional separate RPC address
+    that can be used to isolate health checks and liveness to protect against
+    resource exhaustion in the main RPC handler pool.  In the case of
+    HA/Federation where multiple NameNodes exist, the name service ID is added
+    to the name e.g. dfs.namenode.lifeline.rpc-address.ns1.  The value of this
+    property will take the form of nn-host1:rpc-port.  If this property is not
+    defined, then the NameNode will not start a lifeline RPC server.  By
+    default, the property is not defined.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.lifeline.rpc-bind-host</name>
+  <value></value>
+  <description>
+    The actual address the lifeline RPC server will bind to.  If this optional
+    address is set, it overrides only the hostname portion of
+    dfs.namenode.lifeline.rpc-address.  It can also be specified per name node
+    or name service for HA/Federation.  This is useful for making the name node
+    listen on all interfaces by setting it to 0.0.0.0.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.secondary.http-address</name>
   <value>0.0.0.0:50090</value>
   <description>
@@ -274,6 +301,15 @@
   <description>Decide if chooseTarget considers the target's load or not
   </description>
 </property>
+
+  <property>
+    <name>dfs.namenode.replication.considerLoad.factor</name>
+    <value>2.0</value>
+    <description>The factor by which a node's load can exceed the average
+      before being rejected for writes, only if considerLoad is true.
+    </description>
+  </property>
+
 <property>
   <name>dfs.default.chunk.view.size</name>
   <value>32768</value>
@@ -378,17 +414,24 @@
 <property>
   <name>dfs.permissions.superusergroup</name>
   <value>supergroup</value>
-  <description>The name of the group of super-users.</description>
+  <description>The name of the group of super-users.
+    The value should be a single group name.
+  </description>
 </property>
-<!--
+
 <property>
    <name>dfs.cluster.administrators</name>
-   <value>ACL for the admins</value>
-   <description>This configuration is used to control who can access the
-                default servlets in the namenode, etc.
+   <value></value>
+   <description>ACL for the admins, this configuration is used to control
+     who can access the default servlets in the namenode, etc. The value
+     should be a comma separated list of users and groups. The user list
+     comes first and is separated by a space followed by the group list,
+     e.g. "user1,user2 group1,group2". Both users and groups are optional,
+     so "user1", " group1", "", "user1 group1", "user1,user2 group1,group2"
+     are all valid (note the leading space in " group1"). '*' grants access
+     to all users and groups, e.g. '*', '* ' and ' *' are all valid.
    </description>
 </property>
--->
 
 <property>
   <name>dfs.namenode.acls.enabled</name>
@@ -678,6 +721,18 @@
   requests from DataNodes and from all other non-client nodes.
   dfs.namenode.service.handler.count will be valid only if
   dfs.namenode.servicerpc-address is configured.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.lifeline.handler.count</name>
+  <value>1</value>
+  <description>
+    Sets number of RPC server threads the NameNode runs for handling the
+    lifeline RPC server.  The default value is 1, because this RPC server
+    handles only HA health check requests from ZKFC.  These are lightweight
+    requests that run single-threaded from the ZKFC client side.  This property
+    has no effect if dfs.namenode.lifeline.rpc-address is not defined.
   </description>
 </property>
 
@@ -1073,14 +1128,30 @@
   <name>dfs.image.transfer.bandwidthPerSec</name>
   <value>0</value>
   <description>
-        Maximum bandwidth used for image transfer in bytes per second.
+        Maximum bandwidth used for regular image transfers (instead of
+        bootstrapping the standby namenode), in bytes per second.
         This can help keep normal namenode operations responsive during
         checkpointing. The maximum bandwidth and timeout in
         dfs.image.transfer.timeout should be set such that normal image
         transfers can complete successfully.
-        A default value of 0 indicates that throttling is disabled. 
+        A default value of 0 indicates that throttling is disabled.
+        The maximum bandwidth used for bootstrapping standby namenode is
+        configured with dfs.image.transfer-bootstrap-standby.bandwidthPerSec.
   </description>
 </property>
+
+  <property>
+    <name>dfs.image.transfer-bootstrap-standby.bandwidthPerSec</name>
+    <value>0</value>
+    <description>
+      Maximum bandwidth used for transferring image to bootstrap standby
+      namenode, in bytes per second.
+      A default value of 0 indicates that throttling is disabled. This default
+      value should be used in most cases, to ensure timely HA operations.
+      The maximum bandwidth used for regular image transfers is configured
+      with dfs.image.transfer.bandwidthPerSec.
+    </description>
+  </property>
 
 <property>
   <name>dfs.image.transfer.chunksize</name>
@@ -1413,13 +1484,137 @@
 </property>
 
 <property>
+  <name>dfs.namenode.kerberos.principal</name>
+  <value></value>
+  <description>
+    The NameNode service principal. This is typically set to
+    nn/_HOST@REALM.TLD. Each NameNode will subsitute _HOST with its
+    own fully qualified hostname at startup. The _HOST placeholder
+    allows using the same configuration setting on both NameNodes
+    in an HA setup.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.keytab.file</name>
+  <value></value>
+  <description>
+    The keytab file used by each NameNode daemon to login as its
+    service principal. The principal name is configured with
+    dfs.namenode.kerberos.principal.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.kerberos.principal</name>
+  <value></value>
+  <description>
+    The DataNode service principal. This is typically set to
+    dn/_HOST@REALM.TLD. Each DataNode will subsitute _HOST with its
+    own fully qualified hostname at startup. The _HOST placeholder
+    allows using the same configuration setting on all DataNodes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.keytab.file</name>
+  <value></value>
+  <description>
+    The keytab file used by each DataNode daemon to login as its
+    service principal. The principal name is configured with
+    dfs.datanode.kerberos.principal.
+  </description>
+</property>
+
+<property>
+  <name>dfs.journalnode.kerberos.principal</name>
+  <value></value>
+  <description>
+    The JournalNode service principal. This is typically set to
+    jn/_HOST@REALM.TLD. Each JournalNode will subsitute _HOST with its
+    own fully qualified hostname at startup. The _HOST placeholder
+    allows using the same configuration setting on all JournalNodes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.journalnode.keytab.file</name>
+  <value></value>
+  <description>
+    The keytab file used by each JournalNode daemon to login as its
+    service principal. The principal name is configured with
+    dfs.journalnode.kerberos.principal.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.kerberos.internal.spnego.principal</name>
   <value>${dfs.web.authentication.kerberos.principal}</value>
+  <description>
+    The server principal used by the NameNode for web UI SPNEGO
+    authentication when Kerberos security is enabled. This is
+    typically set to HTTP/_HOST@REALM.TLD The SPNEGO server principal
+    begins with the prefix HTTP/ by convention.
+
+    If the value is '*', the web server will attempt to login with
+    every principal specified in the keytab file
+    dfs.web.authentication.kerberos.keytab.
+</description>
+</property>
+
+<property>
+  <name>dfs.journalnode.kerberos.internal.spnego.principal</name>
+  <value></value>
+  <description>
+    The server principal used by the JournalNode HTTP Server for
+    SPNEGO authentication when Kerberos security is enabled. This is
+    typically set to HTTP/_HOST@REALM.TLD. The SPNEGO server principal
+    begins with the prefix HTTP/ by convention.
+
+    If the value is '*', the web server will attempt to login with
+    every principal specified in the keytab file
+    dfs.web.authentication.kerberos.keytab.
+
+    For most deployments this can be set to ${dfs.web.authentication.kerberos.principal}
+    i.e use the value of dfs.web.authentication.kerberos.principal.
+  </description>
 </property>
 
 <property>
   <name>dfs.secondary.namenode.kerberos.internal.spnego.principal</name>
   <value>${dfs.web.authentication.kerberos.principal}</value>
+  <description>
+    The server principal used by the Secondary NameNode for web UI SPNEGO
+    authentication when Kerberos security is enabled. Like all other
+    Secondary NameNode settings, it is ignored in an HA setup.
+
+    If the value is '*', the web server will attempt to login with
+    every principal specified in the keytab file
+    dfs.web.authentication.kerberos.keytab.
+  </description>
+</property>
+
+<property>
+  <name>dfs.web.authentication.kerberos.principal</name>
+  <value></value>
+  <description>
+    The server principal used by the NameNode for WebHDFS SPNEGO
+    authentication.
+
+    Required when WebHDFS and security are enabled. In most secure clusters this
+    setting is also used to specify the values for
+    dfs.namenode.kerberos.internal.spnego.principal and
+    dfs.journalnode.kerberos.internal.spnego.principal.
+  </description>
+</property>
+
+<property>
+  <name>dfs.web.authentication.kerberos.keytab</name>
+  <value></value>
+  <description>
+    The keytab file for the principal corresponding to
+    dfs.web.authentication.kerberos.principal.
+  </description>
 </property>
 
 <property>
@@ -2126,6 +2321,18 @@
 </property>
 
 <property>
+  <name>dfs.client.socket.send.buffer.size</name>
+  <value>131072</value>
+  <description>
+    Socket send buffer size for a write pipeline in DFSClient side.
+    This may affect TCP connection throughput.
+    If it is set to zero or negative value,
+    no buffer size will be set explicitly,
+    thus enable tcp auto-tuning on some system.
+  </description>
+</property>
+
+<property>
   <name>dfs.domain.socket.path</name>
   <value></value>
   <description>
@@ -2510,6 +2717,37 @@
     ensures each replica has an unique upgrade domain. When the number of
     replicas is greater than this value, the policy ensures the number of
     unique domains is at least this value.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.zkfc.port</name>
+  <value>8019</value>
+  <description>
+    RPC port for Zookeeper Failover Controller.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.bp-ready.timeout</name>
+  <value>20</value>
+  <description>
+    The maximum wait time for datanode to be ready before failing the
+    received request. Setting this to 0 fails requests right away if the
+    datanode is not yet registered with the namenode. This wait time
+    reduces initial request failures after datanode restart.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.cached-dfsused.check.interval.ms</name>
+  <value>600000</value>
+  <description>
+    The interval check time of loading DU_CACHE_FILE in each volume.
+    When the cluster doing the rolling upgrade operations, it will
+    usually lead dfsUsed cache file of each volume expired and redo the
+    du operations in datanode and that makes datanode start slowly. Adjust
+    this property can make cache file be available for the time as you want.
   </description>
 </property>
 

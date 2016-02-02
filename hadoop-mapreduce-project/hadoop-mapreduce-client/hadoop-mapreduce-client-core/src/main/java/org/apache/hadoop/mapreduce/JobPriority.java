@@ -22,7 +22,12 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Used to describe the priority of the running job. 
- *
+ * DEFAULT : While submitting a job, if the user is not specifying priority,
+ * YARN has the capability to pick the default priority as per its config.
+ * Hence MapReduce can indicate such cases with this new enum.
+ * UNDEFINED_PRIORITY : YARN supports priority as an integer. Hence other than
+ * the five defined enums, YARN can consider other integers also. To generalize
+ * such cases, this specific enum is used.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -31,5 +36,7 @@ public enum JobPriority {
   HIGH,
   NORMAL,
   LOW,
-  VERY_LOW;
+  VERY_LOW,
+  DEFAULT,
+  UNDEFINED_PRIORITY;
 }

@@ -191,7 +191,7 @@ final class FSDirTruncateOp {
     }
     assert onBlockBoundary == (truncateBlock == null) :
       "truncateBlock is null iff on block boundary: " + truncateBlock;
-    fsn.removeBlocksAndUpdateSafemodeTotal(collectedBlocks);
+    fsn.getBlockManager().removeBlocksAndUpdateSafemodeTotal(collectedBlocks);
   }
 
   /**
@@ -228,7 +228,7 @@ final class FSDirTruncateOp {
     if (newBlock == null) {
       newBlock = (shouldCopyOnTruncate) ? fsn.createNewBlock(false)
           : new Block(oldBlock.getBlockId(), oldBlock.getNumBytes(),
-          fsn.nextGenerationStamp(fsn.getBlockIdManager().isLegacyBlock(
+          fsn.nextGenerationStamp(fsn.getBlockManager().isLegacyBlock(
               oldBlock)));
     }
 

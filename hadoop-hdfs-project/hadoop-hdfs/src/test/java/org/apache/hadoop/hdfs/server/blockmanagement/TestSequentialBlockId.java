@@ -116,8 +116,8 @@ public class TestSequentialBlockId {
 
       // Rewind the block ID counter in the name system object. This will result
       // in block ID collisions when we try to allocate new blocks.
-      SequentialBlockIdGenerator blockIdGenerator = fsn.getBlockIdManager()
-        .getBlockIdGenerator();
+      SequentialBlockIdGenerator blockIdGenerator = fsn.getBlockManager()
+          .getBlockIdManager().getBlockIdGenerator();
       blockIdGenerator.setCurrentValue(blockIdGenerator.getCurrentValue() - 5);
 
       // Trigger collisions by creating a new file.
@@ -151,7 +151,7 @@ public class TestSequentialBlockId {
     BlockIdManager bid = mock(BlockIdManager.class);
     final long maxGenStampForLegacyBlocks = 10000;
 
-    when(bid.getGenerationStampV1Limit())
+    when(bid.getLegacyGenerationStampLimit())
         .thenReturn(maxGenStampForLegacyBlocks);
 
     Block legacyBlock = spy(new Block());
@@ -180,18 +180,18 @@ public class TestSequentialBlockId {
     // Setup a mock object and stub out a few routines to
     // retrieve the generation stamp counters.
     BlockIdManager bid = mock(BlockIdManager.class);
-    final long nextGenerationStampV1 = 5000;
-    final long nextGenerationStampV2 = 20000;
+    final long nextLegacyGenerationStamp = 5000;
+    final long nextGenerationStamp = 20000;
 
-    when(bid.getNextGenerationStampV1())
-        .thenReturn(nextGenerationStampV1);
-    when(bid.getNextGenerationStampV2())
-        .thenReturn(nextGenerationStampV2);
+    when(bid.getNextLegacyGenerationStamp())
+        .thenReturn(nextLegacyGenerationStamp);
+    when(bid.getNextGenerationStamp())
+        .thenReturn(nextGenerationStamp);
 
     // Make sure that the generation stamp is set correctly for both
     // kinds of blocks.
     when(bid.nextGenerationStamp(anyBoolean())).thenCallRealMethod();
-    assertThat(bid.nextGenerationStamp(true), is(nextGenerationStampV1));
-    assertThat(bid.nextGenerationStamp(false), is(nextGenerationStampV2));
+    assertThat(bid.nextGenerationStamp(true), is(nextLegacyGenerationStamp));
+    assertThat(bid.nextGenerationStamp(false), is(nextGenerationStamp));
   }
 }

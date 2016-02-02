@@ -127,7 +127,7 @@ public class TestCommitterEventHandler {
     TestingJobEventHandler jeh = new TestingJobEventHandler();
     dispatcher.register(JobEventType.class, jeh);
 
-    SystemClock clock = new SystemClock();
+    SystemClock clock = SystemClock.getInstance();
     AppContext appContext = mock(AppContext.class);
     ApplicationAttemptId attemptid = 
       ConverterUtils.toApplicationAttemptId("appattempt_1234567890000_0001_0");

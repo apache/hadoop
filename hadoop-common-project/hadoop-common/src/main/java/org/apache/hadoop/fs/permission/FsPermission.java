@@ -215,9 +215,6 @@ public class FsPermission implements Writable {
         otheraction.and(umask.otheraction.not()));
   }
 
-  /** umask property label deprecated key and code in getUMask method
-   *  to accommodate it may be removed in version .23 */
-  public static final String DEPRECATED_UMASK_LABEL = "dfs.umask"; 
   public static final String UMASK_LABEL = 
                   CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY;
   public static final int DEFAULT_UMASK = 
@@ -236,8 +233,6 @@ public class FsPermission implements Writable {
    * '-' sets bits in the mask.
    * 
    * Octal umask, the specified bits are set in the file mode creation mask.
-   * 
-   * {@code DEPRECATED_UMASK_LABEL} config param has umask value set to decimal.
    */
   public static FsPermission getUMask(Configuration conf) {
     int umask = DEFAULT_UMASK;
@@ -246,7 +241,6 @@ public class FsPermission implements Writable {
     // If the deprecated key is not present then check for the new key
     if(conf != null) {
       String confUmask = conf.get(UMASK_LABEL);
-      int oldUmask = conf.getInt(DEPRECATED_UMASK_LABEL, Integer.MIN_VALUE);
       try {
         if(confUmask != null) {
           umask = new UmaskParser(confUmask).getUMask();
@@ -258,22 +252,8 @@ public class FsPermission implements Writable {
         String error = "Unable to parse configuration " + UMASK_LABEL
             + " with value " + confUmask + " as " + type + " umask.";
         LOG.warn(error);
-        
-        // If oldUmask is not set, then throw the exception
-        if (oldUmask == Integer.MIN_VALUE) {
-          throw new IllegalArgumentException(error);
-        }
-      }
-        
-      if(oldUmask != Integer.MIN_VALUE) { // Property was set with old key
-        if (umask != oldUmask) {
-          LOG.warn(DEPRECATED_UMASK_LABEL
-              + " configuration key is deprecated. " + "Convert to "
-              + UMASK_LABEL + ", using octal or symbolic umask "
-              + "specifications.");
-          // Old and new umask values do not match - Use old umask
-          umask = oldUmask;
-        }
+
+        throw new IllegalArgumentException(error);
       }
     }
     
@@ -304,7 +284,6 @@ public class FsPermission implements Writable {
   /** Set the user file creation mask (umask) */
   public static void setUMask(Configuration conf, FsPermission umask) {
     conf.set(UMASK_LABEL, String.format("%1$03o", umask.toShort()));
-    conf.setInt(DEPRECATED_UMASK_LABEL, umask.toShort());
   }
 
   /**

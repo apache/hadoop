@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.io;
 
-import junit.framework.TestCase;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -28,11 +27,14 @@ import java.util.Random;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 /** Unit tests for UTF8. */
 @SuppressWarnings("deprecation")
-public class TestUTF8 extends TestCase {
-  public TestUTF8(String name) { super(name); }
+public class TestUTF8 {
 
   private static final Random RANDOM = new Random();
 
@@ -45,12 +47,14 @@ public class TestUTF8 extends TestCase {
     return buffer.toString();
   }
 
+  @Test
   public void testWritable() throws Exception {
     for (int i = 0; i < 10000; i++) {
       TestWritable.testWritable(new UTF8(getTestString()));
     }
   }
 
+  @Test
   public void testGetBytes() throws Exception {
     for (int i = 0; i < 10000; i++) {
 
@@ -73,6 +77,7 @@ public class TestUTF8 extends TestCase {
     return dis.readUTF();
   }
 
+  @Test
   public void testIO() throws Exception {
     DataOutputBuffer out = new DataOutputBuffer();
     DataInputBuffer in = new DataInputBuffer();
@@ -98,6 +103,7 @@ public class TestUTF8 extends TestCase {
 
   }
 
+  @Test
   public void testNullEncoding() throws Exception {
     String s = new String(new char[] { 0 });
 
@@ -112,6 +118,7 @@ public class TestUTF8 extends TestCase {
    *
    * This is a regression test for HADOOP-9103.
    */
+  @Test
   public void testNonBasicMultilingualPlane() throws Exception {
     // Test using the "CAT FACE" character (U+1F431)
     // See http://www.fileformat.info/info/unicode/char/1f431/index.htm
@@ -130,6 +137,7 @@ public class TestUTF8 extends TestCase {
   /**
    * Test that decoding invalid UTF8 throws an appropriate error message.
    */
+  @Test
   public void testInvalidUTF8() throws Exception {
     byte[] invalid = new byte[] {
         0x01, 0x02, (byte)0xff, (byte)0xff, 0x01, 0x02, 0x03, 0x04, 0x05 };
@@ -145,6 +153,7 @@ public class TestUTF8 extends TestCase {
   /**
    * Test for a 5-byte UTF8 sequence, which is now considered illegal.
    */
+  @Test
   public void test5ByteUtf8Sequence() throws Exception {
     byte[] invalid = new byte[] {
         0x01, 0x02, (byte)0xf8, (byte)0x88, (byte)0x80,
@@ -162,6 +171,7 @@ public class TestUTF8 extends TestCase {
    * Test that decoding invalid UTF8 due to truncation yields the correct
    * exception type.
    */
+  @Test
   public void testInvalidUTF8Truncated() throws Exception {
     // Truncated CAT FACE character -- this is a 4-byte sequence, but we
     // only have the first three bytes.

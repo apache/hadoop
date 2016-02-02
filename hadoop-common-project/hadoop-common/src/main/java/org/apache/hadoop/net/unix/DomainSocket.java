@@ -63,7 +63,8 @@ public class DomainSocket implements Closeable {
   static Log LOG = LogFactory.getLog(DomainSocket.class);
 
   /**
-   * True only if we should validate the paths used in {@link DomainSocket#bind()}
+   * True only if we should validate the paths used in
+   * {@link DomainSocket#bindAndListen(String)}
    */
   private static boolean validateBindPaths = true;
 
@@ -220,11 +221,11 @@ public class DomainSocket implements Closeable {
    *
    * This method can only be used on sockets that were bound with bind().
    *
-   * @return                              The new connection.
-   * @throws IOException                  If there was an I/O error
-   *                                      performing the accept-- such as the
-   *                                      socket being closed from under us.
-   * @throws SocketTimeoutException       If the accept timed out.
+   * @return                The new connection.
+   * @throws IOException    If there was an I/O error performing the accept--
+   *                        such as the socket being closed from under us.
+   *                        Particularly when the accept is timed out, it throws
+   *                        SocketTimeoutException.
    */
   public DomainSocket accept() throws IOException {
     refCount.reference();
@@ -238,13 +239,15 @@ public class DomainSocket implements Closeable {
     }
   }
 
-  private static native int connect0(String path);
+  private static native int connect0(String path) throws IOException;
 
   /**
    * Create a new DomainSocket connected to the given path.
    *
-   * @param path         The path to connect to.
-   * @return             The new DomainSocket.
+   * @param path              The path to connect to.
+   * @throws IOException      If there was an I/O error performing the connect.
+   *
+   * @return                  The new DomainSocket.
    */
   public static DomainSocket connect(String path) throws IOException {
     if (loadingFailureReason != null) {
@@ -425,47 +428,11 @@ public class DomainSocket implements Closeable {
 
   private static native int receiveFileDescriptors0(int fd,
       FileDescriptor[] descriptors,
-      byte jbuf[], int offset, int length) throws IOException;
-
-  /**
-   * Receive some FileDescriptor objects from the process on the other side of
-   * this socket.
-   *
-   * @param descriptors       (output parameter) Array of FileDescriptors.
-   *                          We will fill as many slots as possible with file
-   *                          descriptors passed from the remote process.  The
-   *                          other slots will contain NULL.
-   * @param jbuf              (output parameter) Buffer to read into.
-   *                          The UNIX domain sockets API requires you to read
-   *                          at least one byte from the remote process, even
-   *                          if all you care about is the file descriptors
-   *                          you will receive.
-   * @param offset            Offset into the byte buffer to load data
-   * @param length            Length of the byte buffer to use for data
-   *
-   * @return                  The number of bytes read.  This will be -1 if we
-   *                          reached EOF (similar to SocketInputStream);
-   *                          otherwise, it will be positive.
-   * @throws                  IOException if there was an I/O error.
-   */
-  public int receiveFileDescriptors(FileDescriptor[] descriptors,
-      byte jbuf[], int offset, int length) throws IOException {
-    refCount.reference();
-    boolean exc = true;
-    try {
-      int nBytes = receiveFileDescriptors0(fd, descriptors, jbuf, offset, length);
-      exc = false;
-      return nBytes;
-    } finally {
-      unreference(exc);
-    }
-  }
+      byte[] buf, int offset, int length) throws IOException;
 
   /**
    * Receive some FileDescriptor objects from the process on the other side of
    * this socket, and wrap them in FileInputStream objects.
-   *
-   * See {@link DomainSocket#recvFileInputStreams(ByteBuffer)}
    */
   public int recvFileInputStreams(FileInputStream[] streams, byte buf[],
         int offset, int length) throws IOException {

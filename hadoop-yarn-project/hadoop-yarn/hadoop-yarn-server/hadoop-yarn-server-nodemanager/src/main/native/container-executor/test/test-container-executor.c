@@ -410,6 +410,17 @@ void test_delete_user() {
     exit(1);
   }
 
+  sprintf(buffer, "%s", app_dir);
+  char missing_dir[20];
+  strcpy(missing_dir, "/some/missing/dir");
+  char * dirs_with_missing[] = {missing_dir, buffer, 0};
+  ret = delete_as_user(yarn_username, "" , dirs_with_missing);
+  printf("%d" , ret);
+  if (access(buffer, R_OK) == 0) {
+    printf("FAIL: directory not deleted\n");
+    exit(1);
+  }
+
   sprintf(buffer, "%s/local-1/usercache/%s", TEST_ROOT, yarn_username);
   if (access(buffer, R_OK) != 0) {
     printf("FAIL: directory missing before test\n");
@@ -459,6 +470,13 @@ void run_test_in_child(const char* test_name, void (*func)()) {
 }
 
 void test_signal_container() {
+  sigset_t set;
+
+  // unblock SIGQUIT
+  sigemptyset(&set);
+  sigaddset(&set, SIGQUIT);
+  sigprocmask(SIG_UNBLOCK, &set, NULL);
+
   printf("\nTesting signal_container\n");
   fflush(stdout);
   fflush(stderr);

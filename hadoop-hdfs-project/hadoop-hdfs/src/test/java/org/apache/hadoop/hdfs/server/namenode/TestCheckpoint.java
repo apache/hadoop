@@ -1608,7 +1608,7 @@ public class TestCheckpoint {
       FSNamesystem fsns = cluster.getNamesystem();
       fsns.enterSafeMode(false);
       fsns.saveNamespace(0, 0);
-      fsns.leaveSafeMode();
+      fsns.leaveSafeMode(false);
       
       secondary = startSecondaryNameNode(conf);
 
@@ -2002,7 +2002,7 @@ public class TestCheckpoint {
         .when(dstImage).toColonSeparatedString();
 
       try {
-        TransferFsImage.downloadImageToStorage(fsName, 0, dstImage, false);
+        TransferFsImage.downloadImageToStorage(fsName, 0, dstImage, false, false);
         fail("Storage info was not verified");
       } catch (IOException ioe) {
         String msg = StringUtils.stringifyException(ioe);

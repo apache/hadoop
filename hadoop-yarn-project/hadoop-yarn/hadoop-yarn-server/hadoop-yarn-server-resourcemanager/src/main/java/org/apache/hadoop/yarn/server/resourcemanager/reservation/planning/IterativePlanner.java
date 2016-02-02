@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResour
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationAllocation;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationInterval;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.ContractValidationException;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -80,8 +81,8 @@ public class IterativePlanner extends PlanningAlgorithm {
 
   @Override
   public RLESparseResourceAllocation computeJobAllocation(Plan plan,
-      ReservationId reservationId, ReservationDefinition reservation)
-      throws ContractValidationException {
+      ReservationId reservationId, ReservationDefinition reservation,
+      String user) throws PlanningException {
 
     // Initialize
     initialize(plan, reservation);
@@ -95,8 +96,7 @@ public class IterativePlanner extends PlanningAlgorithm {
 
     // Create the allocations data structure
     RLESparseResourceAllocation allocations =
-        new RLESparseResourceAllocation(plan.getResourceCalculator(),
-            plan.getMinimumAllocation());
+        new RLESparseResourceAllocation(plan.getResourceCalculator());
 
     // Get a reverse iterator for the set of stages
     ListIterator<ReservationRequest> li =
@@ -143,7 +143,7 @@ public class IterativePlanner extends PlanningAlgorithm {
       // Compute the allocation of a single stage
       Map<ReservationInterval, Resource> curAlloc =
           computeStageAllocation(plan, currentReservationStage,
-              stageArrivalTime, stageDeadline);
+              stageArrivalTime, stageDeadline, user, reservationId);
 
       // If we did not find an allocation, return NULL
       // (unless it's an ANY job, then we simply continue).
@@ -160,8 +160,8 @@ public class IterativePlanner extends PlanningAlgorithm {
       }
 
       // Get the start & end time of the current allocation
-      Long stageStartTime = findEarliestTime(curAlloc.keySet());
-      Long stageEndTime = findLatestTime(curAlloc.keySet());
+      Long stageStartTime = findEarliestTime(curAlloc);
+      Long stageEndTime = findLatestTime(curAlloc);
 
       // If we did find an allocation for the stage, add it
       for (Entry<ReservationInterval, Resource> entry : curAlloc.entrySet()) {
@@ -219,8 +219,7 @@ public class IterativePlanner extends PlanningAlgorithm {
 
     // Initialize the plan modifications
     planModifications =
-        new RLESparseResourceAllocation(plan.getResourceCalculator(),
-            plan.getMinimumAllocation());
+        new RLESparseResourceAllocation(plan.getResourceCalculator());
 
   }
 
@@ -312,10 +311,11 @@ public class IterativePlanner extends PlanningAlgorithm {
   // Call algStageAllocator
   protected Map<ReservationInterval, Resource> computeStageAllocation(
       Plan plan, ReservationRequest rr, long stageArrivalTime,
-      long stageDeadline) {
+      long stageDeadline, String user, ReservationId oldId)
+      throws PlanningException {
 
     return algStageAllocator.computeStageAllocation(plan, planLoads,
-        planModifications, rr, stageArrivalTime, stageDeadline);
+        planModifications, rr, stageArrivalTime, stageDeadline, user, oldId);
 
   }
 

@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -171,9 +172,20 @@ public class RMNodeWrapper implements RMNode {
     // TODO Auto-generated method stub
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public List<Container> pullNewlyIncreasedContainers() {
     // TODO Auto-generated method stub
-    return null;
+    return Collections.EMPTY_LIST;
+  }
+
+  @Override
+  public ResourceUtilization getAggregatedContainersUtilization() {
+    return node.getAggregatedContainersUtilization();
+  }
+
+  @Override
+  public ResourceUtilization getNodeUtilization() {
+    return node.getNodeUtilization();
   }
 }

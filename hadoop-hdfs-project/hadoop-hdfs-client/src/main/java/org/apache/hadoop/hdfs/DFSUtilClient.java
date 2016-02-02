@@ -38,9 +38,11 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.ReconfigurationProtocol;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataEncryptionKeyFactory;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferClient;
 import org.apache.hadoop.hdfs.protocolPB.ClientDatanodeProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.ReconfigurationProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.util.IOUtilsClient;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
@@ -496,6 +498,12 @@ public class DFSUtilClient {
     return new ClientDatanodeProtocolTranslatorPB(addr, ticket, conf, factory);
   }
 
+  public static ReconfigurationProtocol createReconfigurationProtocolProxy(
+      InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
+      SocketFactory factory) throws IOException {
+    return new ReconfigurationProtocolTranslatorPB(addr, ticket, conf, factory);
+  }
+
   /**
    * Creates a new KeyProvider from the given Configuration.
    *
@@ -615,7 +623,7 @@ public class DFSUtilClient {
 
   public static InetSocketAddress getNNAddress(Configuration conf) {
     URI filesystemURI = FileSystem.getDefaultUri(conf);
-    return getNNAddress(filesystemURI);
+    return getNNAddressCheckLogical(conf, filesystemURI);
   }
 
   /**
@@ -636,6 +644,26 @@ public class DFSUtilClient {
           filesystemURI.toString(), HdfsConstants.HDFS_URI_SCHEME));
     }
     return getNNAddress(authority);
+  }
+
+  /**
+   * Get the NN address from the URI. If the uri is logical, default address is
+   * returned. Otherwise return the DNS-resolved address of the URI.
+   *
+   * @param conf configuration
+   * @param filesystemURI URI of the file system
+   * @return address of file system
+   */
+  public static InetSocketAddress getNNAddressCheckLogical(Configuration conf,
+      URI filesystemURI) {
+    InetSocketAddress retAddr;
+    if (HAUtilClient.isLogicalUri(conf, filesystemURI)) {
+      retAddr = InetSocketAddress.createUnresolved(filesystemURI.getAuthority(),
+          HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
+    } else {
+      retAddr = getNNAddress(filesystemURI);
+    }
+    return retAddr;
   }
 
   public static URI getNNUri(InetSocketAddress namenode) {

@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.collect.Lists;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -29,14 +30,23 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.top.TopAuditLogger;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.authorize.ProxyServers;
 import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.log4j.Level;
+
 import org.junit.Before;
 import org.junit.Test;
+
 import org.mockito.Mockito;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -45,11 +55,15 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.NNTOP_ENABLED_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doThrow;
@@ -58,6 +72,11 @@ import static org.mockito.Mockito.doThrow;
  * Tests for the {@link AuditLogger} custom audit logging interface.
  */
 public class TestAuditLogger {
+  private static final Logger LOG = LoggerFactory.getLogger(
+      TestAuditLogger.class);
+  static {
+    GenericTestUtils.setLogLevel(LOG, Level.ALL);
+  }
 
   private static final short TEST_PERMISSION = (short) 0654;
 
@@ -194,6 +213,178 @@ public class TestAuditLogger {
       fs.setPermission(p, new FsPermission(TEST_PERMISSION));
       assertEquals(TEST_PERMISSION, DummyAuditLogger.foundPermission);
       assertEquals(2, DummyAuditLogger.logCount);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * Verify that the audit logger is aware of the call context
+   */
+  @Test
+  public void testAuditLoggerWithCallContext() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY, true);
+    conf.setInt(HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY, 128);
+    conf.setInt(HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY, 40);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    LogCapturer auditlog = LogCapturer.captureLogs(FSNamesystem.auditLog);
+
+    try {
+      cluster.waitClusterUp();
+      final FileSystem fs = cluster.getFileSystem();
+      final long time = System.currentTimeMillis();
+      final Path p = new Path("/");
+
+      assertNull(CallerContext.getCurrent());
+
+      // context-only
+      CallerContext context = new CallerContext.Builder("setTimes").build();
+      CallerContext.setCurrent(context);
+      LOG.info("Set current caller context as {}", CallerContext.getCurrent());
+      fs.setTimes(p, time, time);
+      assertTrue(auditlog.getOutput().endsWith(
+          String.format("callerContext=setTimes%n")));
+      auditlog.clearOutput();
+
+      // context with signature
+      context = new CallerContext.Builder("setTimes")
+          .setSignature("L".getBytes(CallerContext.SIGNATURE_ENCODING))
+          .build();
+      CallerContext.setCurrent(context);
+      LOG.info("Set current caller context as {}", CallerContext.getCurrent());
+      fs.setTimes(p, time, time);
+      assertTrue(auditlog.getOutput().endsWith(
+          String.format("callerContext=setTimes:L%n")));
+      auditlog.clearOutput();
+
+      // long context is truncated
+      final String longContext = StringUtils.repeat("foo", 100);
+      context = new CallerContext.Builder(longContext)
+          .setSignature("L".getBytes(CallerContext.SIGNATURE_ENCODING))
+          .build();
+      CallerContext.setCurrent(context);
+      LOG.info("Set current caller context as {}", CallerContext.getCurrent());
+      fs.setTimes(p, time, time);
+      assertTrue(auditlog.getOutput().endsWith(
+          String.format("callerContext=%s:L%n", longContext.substring(0, 128))));
+      auditlog.clearOutput();
+
+      // empty context is ignored
+      context = new CallerContext.Builder("")
+          .setSignature("L".getBytes(CallerContext.SIGNATURE_ENCODING))
+          .build();
+      CallerContext.setCurrent(context);
+      LOG.info("Set empty caller context");
+      fs.setTimes(p, time, time);
+      assertFalse(auditlog.getOutput().contains("callerContext="));
+      auditlog.clearOutput();
+
+      // caller context is inherited in child thread
+      context = new CallerContext.Builder("setTimes")
+          .setSignature("L".getBytes(CallerContext.SIGNATURE_ENCODING))
+          .build();
+      CallerContext.setCurrent(context);
+      LOG.info("Set current caller context as {}", CallerContext.getCurrent());
+      Thread child = new Thread(new Runnable()
+      {
+        @Override
+        public void run() {
+          try {
+            fs.setTimes(p, time, time);
+          } catch (IOException e) {
+            fail("Unexpected exception found." + e);
+          }
+        }
+      });
+      child.start();
+      try {
+        child.join();
+      } catch (InterruptedException ignored) {
+        // Ignore
+      }
+      assertTrue(auditlog.getOutput().endsWith(
+          String.format("callerContext=setTimes:L%n")));
+      auditlog.clearOutput();
+
+      // caller context is overridden in child thread
+      final CallerContext childContext =
+          new CallerContext.Builder("setPermission")
+              .setSignature("L".getBytes(CallerContext.SIGNATURE_ENCODING))
+              .build();
+      LOG.info("Set current caller context as {}", CallerContext.getCurrent());
+      child = new Thread(new Runnable()
+      {
+        @Override
+        public void run() {
+          try {
+            CallerContext.setCurrent(childContext);
+            fs.setPermission(p, new FsPermission((short)777));
+          } catch (IOException e) {
+            fail("Unexpected exception found." + e);
+          }
+        }
+      });
+      child.start();
+      try {
+        child.join();
+      } catch (InterruptedException ignored) {
+        // Ignore
+      }
+      assertTrue(auditlog.getOutput().endsWith(
+          String.format("callerContext=setPermission:L%n")));
+      auditlog.clearOutput();
+
+      // reuse the current context's signature
+       context = new CallerContext.Builder("mkdirs")
+           .setSignature(CallerContext.getCurrent().getSignature()).build();
+      CallerContext.setCurrent(context);
+      LOG.info("Set current caller context as {}", CallerContext.getCurrent());
+      fs.mkdirs(new Path("/reuse-context-signature"));
+      assertTrue(auditlog.getOutput().endsWith(
+          String.format("callerContext=mkdirs:L%n")));
+      auditlog.clearOutput();
+
+      // too long signature is ignored
+      context = new CallerContext.Builder("setTimes")
+          .setSignature(new byte[41])
+          .build();
+      CallerContext.setCurrent(context);
+      LOG.info("Set current caller context as {}", CallerContext.getCurrent());
+      fs.setTimes(p, time, time);
+      assertTrue(auditlog.getOutput().endsWith(
+          String.format("callerContext=setTimes%n")));
+      auditlog.clearOutput();
+
+      // null signature is ignored
+      context = new CallerContext.Builder("setTimes").setSignature(null)
+          .build();
+      CallerContext.setCurrent(context);
+      LOG.info("Set current caller context as {}", CallerContext.getCurrent());
+      fs.setTimes(p, time, time);
+      assertTrue(auditlog.getOutput().endsWith(
+          String.format("callerContext=setTimes%n")));
+      auditlog.clearOutput();
+
+      // empty signature is ignored
+      context = new CallerContext.Builder("mkdirs")
+          .setSignature("".getBytes(CallerContext.SIGNATURE_ENCODING))
+          .build();
+      CallerContext.setCurrent(context);
+      LOG.info("Set current caller context as {}", CallerContext.getCurrent());
+      fs.mkdirs(new Path("/empty-signature"));
+      assertTrue(auditlog.getOutput().endsWith(
+          String.format("callerContext=mkdirs%n")));
+      auditlog.clearOutput();
+
+      // invalid context is not passed to the rpc
+      context = new CallerContext.Builder(null).build();
+      CallerContext.setCurrent(context);
+      LOG.info("Set current caller context as {}", CallerContext.getCurrent());
+      fs.mkdirs(new Path("/empty-signature"));
+      assertFalse(auditlog.getOutput().contains("callerContext="));
+      auditlog.clearOutput();
+
     } finally {
       cluster.shutdown();
     }

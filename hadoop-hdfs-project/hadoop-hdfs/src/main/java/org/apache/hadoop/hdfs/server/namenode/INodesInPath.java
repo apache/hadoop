@@ -254,7 +254,7 @@ public class INodesInPath {
    */
   public static INodesInPath append(INodesInPath iip, INode child,
       byte[] childName) {
-    Preconditions.checkArgument(!iip.isSnapshot && iip.length() > 0);
+    Preconditions.checkArgument(iip.length() > 0);
     Preconditions.checkArgument(iip.getLastINode() != null && iip
         .getLastINode().isDirectory());
     INode[] inodes = new INode[iip.length() + 1];
@@ -263,7 +263,7 @@ public class INodesInPath {
     byte[][] path = new byte[iip.path.length + 1][];
     System.arraycopy(iip.path, 0, path, 0, path.length - 1);
     path[path.length - 1] = childName;
-    return new INodesInPath(inodes, path, false, iip.snapshotId);
+    return new INodesInPath(inodes, path, iip.isSnapshot, iip.snapshotId);
   }
 
   private final byte[][] path;

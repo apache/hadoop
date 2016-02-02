@@ -33,13 +33,11 @@ import java.net.URLEncoder;
 import java.security.InvalidKeyException;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -64,6 +62,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.mortbay.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.OperationContext;
@@ -1503,10 +1502,23 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       storePermissionStatus(blob, permissionStatus);
       storeFolderAttribute(blob);
       openOutputStream(blob).close();
-    } catch (Exception e) {
+    } catch (StorageException e) {
       // Caught exception while attempting upload. Re-throw as an Azure
       // storage exception.
       throw new AzureException(e);
+    } catch (URISyntaxException e) {
+      throw new AzureException(e);
+    } catch (IOException e) {
+      Throwable t = e.getCause();
+      if (t != null && t instanceof StorageException) {
+        StorageException se = (StorageException) t;
+        // If we got this exception, the blob should have already been created
+        if (!se.getErrorCode().equals("LeaseIdMissing")) {
+          throw new AzureException(e);
+        }
+      } else {
+        throw new AzureException(e);
+      }
     }
   }
 
@@ -2357,7 +2369,37 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
   @Override
   public void delete(String key) throws IOException {
-    delete(key, null);
+    try {
+      delete(key, null);
+    } catch (IOException e) {
+      Throwable t = e.getCause();
+      if(t != null && t instanceof StorageException) {
+        StorageException se = (StorageException) t;
+        if(se.getErrorCode().equals(("LeaseIdMissing"))){
+          SelfRenewingLease lease = null;
+          try {
+            lease = acquireLease(key);
+            delete(key, lease);
+          } catch (AzureException e3) {
+            LOG.warn("Got unexpected exception trying to acquire lease on "
+                + key + "." + e3.getMessage());
+            throw e3;
+          } finally {
+            try {
+              if(lease != null){
+                lease.free();
+              }
+            } catch (Exception e4){
+              LOG.error("Unable to free lease on " + key, e4);
+            }
+          }
+        } else {
+          throw e;
+        }
+      } else {
+        throw e;
+      }
+    }
   }
 
   @Override
@@ -2636,5 +2678,25 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     LOG.debug("finalize() called");
     close();
     super.finalize();
+  }
+
+  @Override
+  public DataOutputStream retrieveAppendStream(String key, int bufferSize) throws IOException {
+
+    try {
+
+      if (isPageBlobKey(key)) {
+        throw new UnsupportedOperationException("Append not supported for Page Blobs");
+      }
+
+      CloudBlobWrapper blob =  this.container.getBlockBlobReference(key);
+
+      BlockBlobAppendStream appendStream = new BlockBlobAppendStream((CloudBlockBlobWrapper) blob, key, bufferSize, getInstrumentedContext());
+      appendStream.initialize();
+
+      return new DataOutputStream(appendStream);
+    } catch(Exception ex) {
+      throw new AzureException(ex);
+    }
   }
 }

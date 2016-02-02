@@ -538,40 +538,39 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     // Active/Deactive a node directly assigned label, should not remove from
     // node->label map
     mgr.activateNode(toNodeId("n1:1"), SMALL_RESOURCE);
-    assertCollectionEquals(mgr.getNodeLabels().get(toNodeId("n1:1")),
-        toSet("p1"));
+    assertCollectionEquals(toSet("p1"),
+        mgr.getNodeLabels().get(toNodeId("n1:1")));
     mgr.deactivateNode(toNodeId("n1:1"));
-    assertCollectionEquals(mgr.getNodeLabels().get(toNodeId("n1:1")),
-        toSet("p1"));
+    assertCollectionEquals(toSet("p1"),
+        mgr.getNodeLabels().get(toNodeId("n1:1")));
     // Host will not affected
-    assertCollectionEquals(mgr.getNodeLabels().get(toNodeId("n1")),
-        toSet("p2"));
-    
+    assertCollectionEquals(toSet("p2"),
+        mgr.getNodeLabels().get(toNodeId("n1")));
+
     // Active/Deactive a node doesn't directly assigned label, should remove
     // from node->label map
     mgr.activateNode(toNodeId("n1:2"), SMALL_RESOURCE);
-    assertCollectionEquals(mgr.getNodeLabels().get(toNodeId("n1:2")),
-        toSet("p2"));
+    assertCollectionEquals(toSet("p2"),
+        mgr.getNodeLabels().get(toNodeId("n1:2")));
     mgr.deactivateNode(toNodeId("n1:2"));
     Assert.assertNull(mgr.getNodeLabels().get(toNodeId("n1:2")));
     // Host will not affected too
-    assertCollectionEquals(mgr.getNodeLabels().get(toNodeId("n1")),
-        toSet("p2"));
-    
+    assertCollectionEquals(toSet("p2"),
+        mgr.getNodeLabels().get(toNodeId("n1")));
+
     // When we change label on the host after active a node without directly
     // assigned label, such node will still be removed after deactive
     // Active/Deactive a node doesn't directly assigned label, should remove
     // from node->label map
     mgr.activateNode(toNodeId("n1:2"), SMALL_RESOURCE);
     mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), toSet("p3")));
-    assertCollectionEquals(mgr.getNodeLabels().get(toNodeId("n1:2")),
-        toSet("p3"));
+    assertCollectionEquals(toSet("p3"),
+        mgr.getNodeLabels().get(toNodeId("n1:2")));
     mgr.deactivateNode(toNodeId("n1:2"));
     Assert.assertNull(mgr.getNodeLabels().get(toNodeId("n1:2")));
     // Host will not affected too
-    assertCollectionEquals(mgr.getNodeLabels().get(toNodeId("n1")),
-        toSet("p3"));
-    
+    assertCollectionEquals(toSet("p3"),
+        mgr.getNodeLabels().get(toNodeId("n1")));
   }
   
   private void checkNodeLabelInfo(List<RMNodeLabel> infos, String labelName, int activeNMs, int memory) {
@@ -674,5 +673,4 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     assertLabelsToNodesEquals(
         mgr.getLabelsToNodes(), transposeNodeToLabels(mgr.getNodeLabels()));
   }
-
 }

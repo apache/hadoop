@@ -62,7 +62,9 @@ public class TestFSImageWithXAttr {
 
   @AfterClass
   public static void tearDown() {
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+    }
   }
 
   private void testXAttr(boolean persistNamespace) throws IOException {

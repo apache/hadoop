@@ -37,6 +37,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_K
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY;
@@ -191,6 +192,8 @@ public class MiniDFSCluster {
     
     public Builder(Configuration conf) {
       this.conf = conf;
+      this.storagesPerDatanode =
+          FsDatasetTestUtils.Factory.getFactory(conf).getDefaultNumOfDataDirs();
     }
     
     /**
@@ -908,23 +911,20 @@ public class MiniDFSCluster {
       nameserviceId, nnId);
     destConf.set(key, srcConf.get(key));
 
-    key = DFSUtil.addKeySuffixes(DFS_NAMENODE_HTTP_ADDRESS_KEY,
-        nameserviceId, nnId);
+    copyKey(srcConf, destConf, nameserviceId, nnId,
+        DFS_NAMENODE_HTTP_ADDRESS_KEY);
+    copyKey(srcConf, destConf, nameserviceId, nnId,
+        DFS_NAMENODE_HTTPS_ADDRESS_KEY);
+    copyKey(srcConf, destConf, nameserviceId, nnId,
+        DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY);
+    copyKey(srcConf, destConf, nameserviceId, nnId,
+        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY);
+  }
+
+  private static void copyKey(Configuration srcConf, Configuration destConf,
+      String nameserviceId, String nnId, String baseKey) {
+    String key = DFSUtil.addKeySuffixes(baseKey, nameserviceId, nnId);
     String val = srcConf.get(key);
-    if (val != null) {
-      destConf.set(key, srcConf.get(key));
-    }
-
-    key = DFSUtil.addKeySuffixes(DFS_NAMENODE_HTTPS_ADDRESS_KEY,
-        nameserviceId, nnId);
-    val = srcConf.get(key);
-    if (val != null) {
-      destConf.set(key, srcConf.get(key));
-    }
-
-    key = DFSUtil.addKeySuffixes(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
-        nameserviceId, nnId);
-    val = srcConf.get(key);
     if (val != null) {
       destConf.set(key, srcConf.get(key));
     }
@@ -1908,12 +1908,7 @@ public class MiniDFSCluster {
     shutdownDataNodes();
     for (NameNodeInfo nnInfo : namenodes.values()) {
       if (nnInfo == null) continue;
-      NameNode nameNode = nnInfo.nameNode;
-      if (nameNode != null) {
-        nameNode.stop();
-        nameNode.join();
-        nameNode = null;
-      }
+      stopAndJoinNameNode(nnInfo.nameNode);
     }
     ShutdownHookManager.get().clearShutdownHooks();
     if (base_dir != null) {
@@ -1953,17 +1948,25 @@ public class MiniDFSCluster {
    */
   public synchronized void shutdownNameNode(int nnIndex) {
     NameNodeInfo info = getNN(nnIndex);
-    NameNode nn = info.nameNode;
-    if (nn != null) {
-      LOG.info("Shutting down the namenode");
-      nn.stop();
-      nn.join();
-      info.nnId = null;
-      info.nameNode = null;
-      info.nameserviceId = null;
-    }
+    stopAndJoinNameNode(info.nameNode);
+    info.nnId = null;
+    info.nameNode = null;
+    info.nameserviceId = null;
   }
-  
+
+  /**
+   * Fully stop the NameNode by stop and join.
+   */
+  private void stopAndJoinNameNode(NameNode nn) {
+    if (nn == null) {
+      return;
+    }
+    LOG.info("Shutting down the namenode");
+    nn.stop();
+    nn.join();
+    nn.joinHttpServer();
+  }
+
   /**
    * Restart all namenodes.
    */
@@ -2119,12 +2122,32 @@ public class MiniDFSCluster {
     getMaterializedReplica(i, blk).corruptMeta();
   }
 
-  public boolean changeGenStampOfBlock(int dnIndex, ExtendedBlock blk,
+  /**
+   * Corrupt the metadata of a block by deleting it.
+   * @param i index of the datanode
+   * @param blk name of the block.
+   */
+  public void deleteMeta(int i, ExtendedBlock blk)
+      throws IOException {
+    getMaterializedReplica(i, blk).deleteMeta();
+  }
+
+  /**
+   * Corrupt the metadata of a block by truncating it to a new size.
+   * @param i index of the datanode.
+   * @param blk name of the block.
+   * @param newSize the new size of the metadata file.
+   * @throws IOException if any I/O errors.
+   */
+  public void truncateMeta(int i, ExtendedBlock blk, int newSize)
+      throws IOException {
+    getMaterializedReplica(i, blk).truncateMeta(newSize);
+  }
+
+  public void changeGenStampOfBlock(int dnIndex, ExtendedBlock blk,
       long newGenStamp) throws IOException {
-    File blockFile = getBlockFile(dnIndex, blk);
-    File metaFile = FsDatasetUtil.findMetaFile(blockFile);
-    return metaFile.renameTo(new File(DatanodeUtil.getMetaName(
-        blockFile.getAbsolutePath(), newGenStamp)));
+    getFsDatasetTestUtils(dnIndex)
+        .changeStoredGenerationStamp(blk, newGenStamp);
   }
 
   /*

@@ -26,12 +26,16 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.top.TopConf;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.NoMlockCacheManipulator;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.util.VersionInfo;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.Test;
@@ -40,6 +44,7 @@ import org.mortbay.util.ajax.JSON;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.io.File;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.URI;
 import java.util.Collection;
@@ -131,7 +136,7 @@ public class TestNameNodeMXBean {
       assertTrue(liveNodes.size() == 2);
       for (Map<String, Object> liveNode : liveNodes.values()) {
         assertTrue(liveNode.containsKey("nonDfsUsedSpace"));
-        assertTrue(((Long)liveNode.get("nonDfsUsedSpace")) > 0);
+        assertTrue(((Long)liveNode.get("nonDfsUsedSpace")) >= 0);
         assertTrue(liveNode.containsKey("capacity"));
         assertTrue(((Long)liveNode.get("capacity")) > 0);
         assertTrue(liveNode.containsKey("numBlocks"));
@@ -186,7 +191,7 @@ public class TestNameNodeMXBean {
       }
       assertEquals(2, statusMap.get("active").size());
       assertEquals(0, statusMap.get("failed").size());
-      
+
       // This will cause the first dir to fail.
       File failedNameDir = new File(nameDirUris.iterator().next());
       assertEquals(0, FileUtil.chmod(
@@ -410,6 +415,61 @@ public class TestNameNodeMXBean {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  @Test(timeout = 120000)
+  public void testNNDirectorySize() throws Exception{
+    Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    // Have to specify IPC ports so the NNs can talk to each other.
+    MiniDFSNNTopology topology = new MiniDFSNNTopology()
+        .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
+            .addNN(new MiniDFSNNTopology.NNConf("nn1")
+                .setIpcPort(ServerSocketUtil.getPort(0, 100)))
+            .addNN(new MiniDFSNNTopology.NNConf("nn2")
+                .setIpcPort(ServerSocketUtil.getPort(0, 100))));
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(topology).numDataNodes(0)
+        .build();
+    FileSystem fs = null;
+    try {
+      cluster.waitActive();
+
+      FSNamesystem nn0 = cluster.getNamesystem(0);
+      FSNamesystem nn1 = cluster.getNamesystem(1);
+      checkNNDirSize(cluster.getNameDirs(0), nn0.getNameDirSize());
+      checkNNDirSize(cluster.getNameDirs(1), nn1.getNameDirSize());
+      cluster.transitionToActive(0);
+      fs = cluster.getFileSystem(0);
+      DFSTestUtil.createFile(fs, new Path("/file"), 0, (short) 1, 0L);
+
+      //rollEditLog
+      HATestUtil.waitForStandbyToCatchUp(cluster.getNameNode(0),
+          cluster.getNameNode(1));
+      checkNNDirSize(cluster.getNameDirs(0), nn0.getNameDirSize());
+      checkNNDirSize(cluster.getNameDirs(1), nn1.getNameDirSize());
+
+      //Test metric after call saveNamespace
+      DFSTestUtil.createFile(fs, new Path("/file"), 0, (short) 1, 0L);
+      nn0.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      nn0.saveNamespace(0, 0);
+      checkNNDirSize(cluster.getNameDirs(0), nn0.getNameDirSize());
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void checkNNDirSize(Collection<URI> nameDirUris, String metric){
+    Map<String, Long> nnDirMap =
+        (Map<String, Long>) JSON.parse(metric);
+    assertEquals(nameDirUris.size(), nnDirMap.size());
+    for (URI dirUrl : nameDirUris) {
+      File dir = new File(dirUrl);
+      assertEquals(nnDirMap.get(dir.getAbsolutePath()).longValue(),
+          FileUtils.sizeOfDirectory(dir));
     }
   }
 }

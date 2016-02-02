@@ -39,7 +39,6 @@ public class XORRawDecoder extends AbstractRawErasureDecoder {
   protected void doDecode(ByteBuffer[] inputs, int[] erasedIndexes,
                           ByteBuffer[] outputs) {
     ByteBuffer output = outputs[0];
-    resetBuffer(output);
 
     int erasedIdx = erasedIndexes[0];
 

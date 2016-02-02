@@ -62,6 +62,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStatistics;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.log4j.Level;
@@ -125,6 +126,7 @@ public class TestDecommission {
     cleanupFile(localFileSys, dir);
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
   
@@ -350,14 +352,13 @@ public class TestDecommission {
     for (int i = 0; i < 10; i++) {
       long[] newStats = namenode.getRpcServer().getStats();
 
-      // For decommissioning nodes, ensure capacity of the DN is no longer
-      // counted. Only used space of the DN is counted in cluster capacity
+      // For decommissioning nodes, ensure capacity of the DN and dfsUsed
+      //  is no longer counted towards total
       assertEquals(newStats[0],
-          decommissioning ? info.getDfsUsed() : info.getCapacity());
+          decommissioning ? 0 : info.getCapacity());
 
-      // Ensure cluster used capacity is counted for both normal and
-      // decommissioning nodes
-      assertEquals(newStats[1], info.getDfsUsed());
+      // Ensure cluster used capacity is counted for normal nodes only
+      assertEquals(newStats[1], decommissioning ? 0 : info.getDfsUsed());
 
       // For decommissioning nodes, remaining space from the DN is not counted
       assertEquals(newStats[2], decommissioning ? 0 : info.getRemaining());
@@ -924,6 +925,41 @@ public class TestDecommission {
   }
 
   /**
+   * Tests dead node count after restart of namenode
+   **/
+  @Test(timeout=360000)
+  public void testDeadNodeCountAfterNamenodeRestart()throws Exception {
+    LOG.info("Starting test testDeadNodeCountAfterNamenodeRestart");
+    int numNamenodes = 1;
+    int numDatanodes = 2;
+
+    startCluster(numNamenodes, numDatanodes, conf);
+
+    DFSClient client = getDfsClient(cluster.getNameNode(), conf);
+    DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
+    DatanodeInfo excludedDatanode = info[0];
+    String excludedDatanodeName = info[0].getXferAddr();
+
+    writeConfigFile(hostsFile, new ArrayList<String>(Arrays.asList(
+        excludedDatanodeName, info[1].getXferAddr())));
+    decommissionNode(0, excludedDatanode.getDatanodeUuid(), null,
+        AdminStates.DECOMMISSIONED);
+
+    cluster.stopDataNode(excludedDatanodeName);
+    DFSTestUtil.waitForDatanodeState(
+        cluster, excludedDatanode.getDatanodeUuid(), false, 20000);
+
+    //Restart the namenode
+    cluster.restartNameNode();
+
+    assertEquals("There should be one node alive", 1,
+        client.datanodeReport(DatanodeReportType.LIVE).length);
+    assertEquals("There should be one node dead", 1,
+        client.datanodeReport(DatanodeReportType.DEAD).length);
+    cluster.shutdown();
+  }
+
+  /**
    * Test using a "registration name" in a host include file.
    *
    * Registration names are DataNode names specified in the configuration by
@@ -1263,5 +1299,40 @@ public class TestDecommission {
       cleanupFile(fileSys, file1);
       cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testUsedCapacity() throws Exception {
+    int numNamenodes = 1;
+    int numDatanodes = 2;
+
+    startCluster(numNamenodes,numDatanodes,conf);
+    cluster.waitActive();
+    FSNamesystem ns = cluster.getNamesystem(0);
+    BlockManager blockManager = ns.getBlockManager();
+    DatanodeStatistics datanodeStatistics = blockManager.getDatanodeManager()
+        .getDatanodeStatistics();
+
+    long initialUsedCapacity = datanodeStatistics.getCapacityUsed();
+    long initialTotalCapacity = datanodeStatistics.getCapacityTotal();
+    long initialBlockPoolUsed = datanodeStatistics.getBlockPoolUsed();
+    ArrayList<ArrayList<DatanodeInfo>> namenodeDecomList =
+        new ArrayList<ArrayList<DatanodeInfo>>(numNamenodes);
+    namenodeDecomList.add(0, new ArrayList<DatanodeInfo>(numDatanodes));
+    ArrayList<DatanodeInfo> decommissionedNodes = namenodeDecomList.get(0);
+    //decommission one node
+    DatanodeInfo decomNode = decommissionNode(0, null, decommissionedNodes,
+        AdminStates.DECOMMISSIONED);
+    decommissionedNodes.add(decomNode);
+    long newUsedCapacity = datanodeStatistics.getCapacityUsed();
+    long newTotalCapacity = datanodeStatistics.getCapacityTotal();
+    long newBlockPoolUsed = datanodeStatistics.getBlockPoolUsed();
+
+    assertTrue("DfsUsedCapacity should not be the same after a node has " +
+        "been decommissioned!", initialUsedCapacity != newUsedCapacity);
+    assertTrue("TotalCapacity should not be the same after a node has " +
+        "been decommissioned!", initialTotalCapacity != newTotalCapacity);
+    assertTrue("BlockPoolUsed should not be the same after a node has " +
+        "been decommissioned!",initialBlockPoolUsed != newBlockPoolUsed);
   }
 }

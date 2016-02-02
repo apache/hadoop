@@ -65,6 +65,7 @@ public class TestApplicationHistoryClientService {
     TimelineStore store =
         TestApplicationHistoryManagerOnTimelineStore.createStore(MAX_APPS);
     TimelineACLsManager aclsManager = new TimelineACLsManager(conf);
+    aclsManager.setTimelineStore(store);
     dataManager =
         new TimelineDataManager(store, aclsManager);
     dataManager.init(conf);

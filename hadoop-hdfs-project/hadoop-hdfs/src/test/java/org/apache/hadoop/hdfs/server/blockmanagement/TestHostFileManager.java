@@ -151,7 +151,7 @@ public class TestHostFileManager {
     Assert.assertEquals(1, dm.getDatanodeListForReport(HdfsConstants
             .DatanodeReportType.DEAD).size());
     excludedNodes.add(entry("127.0.0.3"));
-    Assert.assertEquals(0, dm.getDatanodeListForReport(HdfsConstants
+    Assert.assertEquals(1, dm.getDatanodeListForReport(HdfsConstants
             .DatanodeReportType.DEAD).size());
   }
 }

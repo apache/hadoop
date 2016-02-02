@@ -18,10 +18,14 @@
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
 import java.util.Date;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation.RLEOperator;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.MismatchedUserException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningQuotaException;
@@ -104,14 +108,17 @@ public class CapacityOverTimePolicy implements SharingPolicy {
     IntegralResource maxAllowed = new IntegralResource(maxAvgRes);
     maxAllowed.multiplyBy(validWindow / step);
 
+    RLESparseResourceAllocation userCons =
+        plan.getConsumptionForUserOverTime(reservation.getUser(), startTime
+            - validWindow, endTime + validWindow);
+
     // check that the resources offered to the user during any window of length
     // "validWindow" overlapping this allocation are within maxAllowed
     // also enforce instantaneous and physical constraints during this pass
     for (long t = startTime - validWindow; t < endTime + validWindow; t += step) {
 
       Resource currExistingAllocTot = plan.getTotalCommittedResources(t);
-      Resource currExistingAllocForUser =
-          plan.getConsumptionForUser(reservation.getUser(), t);
+      Resource currExistingAllocForUser = userCons.getCapacityAtTime(t);
       Resource currNewAlloc = reservation.getResourcesAtTime(t);
       Resource currOldAlloc = Resources.none();
       if (oldReservation != null) {
@@ -163,8 +170,7 @@ public class CapacityOverTimePolicy implements SharingPolicy {
 
       // expire contributions from instant in time before (t - validWindow)
       if (t > startTime) {
-        Resource pastOldAlloc =
-            plan.getConsumptionForUser(reservation.getUser(), t - validWindow);
+        Resource pastOldAlloc = userCons.getCapacityAtTime(t - validWindow);
         Resource pastNewAlloc = reservation.getResourcesAtTime(t - validWindow);
 
         // runningTot = runningTot - pastExistingAlloc - pastNewAlloc;
@@ -189,6 +195,39 @@ public class CapacityOverTimePolicy implements SharingPolicy {
   }
 
   @Override
+  public RLESparseResourceAllocation availableResources(
+      RLESparseResourceAllocation available, Plan plan, String user,
+      ReservationId oldId, long start, long end) throws PlanningException {
+
+    // this only propagates the instantaneous maxInst properties, while
+    // the time-varying one depends on the current allocation as well
+    // and are not easily captured here
+    Resource planTotalCapacity = plan.getTotalCapacity();
+    Resource maxInsRes = Resources.multiply(planTotalCapacity, maxInst);
+    NavigableMap<Long, Resource> instQuota = new TreeMap<Long, Resource>();
+    instQuota.put(start, maxInsRes);
+
+    RLESparseResourceAllocation instRLEQuota =
+        new RLESparseResourceAllocation(instQuota,
+            plan.getResourceCalculator());
+
+    RLESparseResourceAllocation used =
+        plan.getConsumptionForUserOverTime(user, start, end);
+
+    instRLEQuota =
+        RLESparseResourceAllocation.merge(plan.getResourceCalculator(),
+            planTotalCapacity, instRLEQuota, used, RLEOperator.subtract, start,
+            end);
+
+    instRLEQuota =
+        RLESparseResourceAllocation.merge(plan.getResourceCalculator(),
+            planTotalCapacity, available, instRLEQuota, RLEOperator.min, start,
+            end);
+
+    return instRLEQuota;
+  }
+
+  @Override
   public long getValidWindow() {
     return validWindow;
   }
@@ -198,7 +237,7 @@ public class CapacityOverTimePolicy implements SharingPolicy {
    * long(s), as using Resource to store the "integral" of the allocation over
    * time leads to integer overflows for large allocations/clusters. (Evolving
    * Resource to use long is too disruptive at this point.)
-   * 
+   *
    * The comparison/multiplication behaviors of IntegralResource are consistent
    * with the DefaultResourceCalculator.
    */
@@ -244,4 +283,7 @@ public class CapacityOverTimePolicy implements SharingPolicy {
       return "<memory:" + memory + ", vCores:" + vcores + ">";
     }
   }
+
+
+
 }

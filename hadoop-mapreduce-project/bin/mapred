@@ -23,6 +23,7 @@ function hadoop_usage
   hadoop_add_subcommand "archive-logs" "combine aggregated logs into hadoop archives"
   hadoop_add_subcommand "classpath" "prints the class path needed for running mapreduce subcommands"
   hadoop_add_subcommand "distcp" "copy file or directories recursively"
+  hadoop_add_subcommand "envvars" "display computed Hadoop environment variables"
   hadoop_add_subcommand "historyserver" "run job history servers as a standalone daemon"
   hadoop_add_subcommand "hsadmin" "job history server admin interface"
   hadoop_add_subcommand "job" "manipulate MapReduce jobs"
@@ -37,12 +38,12 @@ bin=$(cd -P -- "$(dirname -- "${MYNAME}")" >/dev/null && pwd -P)
 
 # let's locate libexec...
 if [[ -n "${HADOOP_PREFIX}" ]]; then
-  DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
+  HADOOP_DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
 else
-  DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
+  HADOOP_DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
 fi
 
-HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}"
+HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$HADOOP_DEFAULT_LIBEXEC_DIR}"
 # shellcheck disable=SC2034
 HADOOP_NEW_CONFIG=true
 if [[ -f "${HADOOP_LIBEXEC_DIR}/mapred-config.sh" ]]; then
@@ -68,15 +69,13 @@ case ${COMMAND} in
   ;;
   archive)
     CLASS=org.apache.hadoop.tools.HadoopArchives
-    hadoop_debug "Injecting TOOL_PATH into CLASSPATH"
-    hadoop_add_classpath "${TOOL_PATH}"
+    hadoop_add_to_classpath_toolspath
     hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
   archive-logs)
     CLASS=org.apache.hadoop.tools.HadoopArchiveLogs
-    hadoop_debug "Injecting TOOL_PATH into CLASSPATH"
-    hadoop_add_classpath "${TOOL_PATH}"
+    hadoop_add_to_classpath_toolspath
     hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
@@ -85,10 +84,18 @@ case ${COMMAND} in
   ;;
   distcp)
     CLASS=org.apache.hadoop.tools.DistCp
-    hadoop_debug "Injecting TOOL_PATH into CLASSPATH"
-    hadoop_add_classpath "${TOOL_PATH}"
+    hadoop_add_to_classpath_toolspath
     hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+  ;;
+  envvars)
+    echo "JAVA_HOME='${JAVA_HOME}'"
+    echo "HADOOP_MAPRED_HOME='${HADOOP_MAPRED_HOME}'"
+    echo "MAPRED_DIR='${MAPRED_DIR}'"
+    echo "MAPRED_LIB_JARS_DIR='${MAPRED_LIB_JARS_DIR}'"
+    echo "HADOOP_CONF_DIR='${HADOOP_CONF_DIR}'"
+    echo "HADOOP_TOOLS_PATH='${HADOOP_TOOLS_PATH}'"
+    exit 0
   ;;
   historyserver)
     supportdaemonization="true"

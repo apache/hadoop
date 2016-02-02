@@ -591,7 +591,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
     switch (resp.getStatus()) {
     case SUCCESS:
       byte buf[] = new byte[1];
-      FileInputStream fis[] = new FileInputStream[2];
+      FileInputStream[] fis = new FileInputStream[2];
       sock.recvFileInputStreams(fis, buf, 0, buf.length);
       ShortCircuitReplica replica = null;
       try {

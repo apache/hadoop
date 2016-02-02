@@ -190,6 +190,32 @@ public abstract class OutputCommitter {
   }
 
   /**
+   * Returns true if an in-progress job commit can be retried. If the MR AM is
+   * re-run then it will check this value to determine if it can retry an
+   * in-progress commit that was started by a previous version.
+   * Note that in rare scenarios, the previous AM version might still be running
+   * at that time, due to system anomalies. Hence if this method returns true
+   * then the retry commit operation should be able to run concurrently with
+   * the previous operation.
+   *
+   * If repeatable job commit is supported, job restart can tolerate previous
+   * AM failures during job commit.
+   *
+   * By default, it is not supported. Extended classes (like:
+   * FileOutputCommitter) should explicitly override it if provide support.
+   *
+   * @param jobContext
+   *          Context of the job whose output is being written.
+   * @return <code>true</code> repeatable job commit is supported,
+   *         <code>false</code> otherwise
+   * @throws IOException
+   */
+  public boolean isCommitJobRepeatable(JobContext jobContext)
+      throws IOException {
+    return false;
+  }
+
+  /**
    * Is task output recovery supported for restarting jobs?
    * 
    * If task output recovery is supported, job restart can be done more

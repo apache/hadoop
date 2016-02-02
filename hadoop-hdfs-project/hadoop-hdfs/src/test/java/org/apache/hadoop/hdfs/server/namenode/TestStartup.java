@@ -444,6 +444,7 @@ public class TestStartup {
     nnRpc.saveNamespace(0, 0);
     namenode.stop();
     namenode.join();
+    namenode.joinHttpServer();
 
     // compress image using default codec
     LOG.info("Read an uncomressed image and store it compressed using default codec.");
@@ -474,6 +475,7 @@ public class TestStartup {
     nnRpc.saveNamespace(0, 0);
     namenode.stop();
     namenode.join();
+    namenode.joinHttpServer();
   }
   
   @Test
@@ -526,7 +528,7 @@ public class TestStartup {
           fail("Should not have successfully started with corrupt image");
         } catch (IOException ioe) {
           GenericTestUtils.assertExceptionContains(
-              "Failed to load an FSImage file!", ioe);
+              "Failed to load FSImage file", ioe);
           int md5failures = appender.countExceptionsWithMessage(
               " is corrupt with MD5 checksum of ");
           // Two namedirs, so should have seen two failures

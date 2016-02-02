@@ -1305,6 +1305,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
           WebServicesTestUtils.getXmlInt(element, "allocatedMB"),
           WebServicesTestUtils.getXmlInt(element, "allocatedVCores"),
           WebServicesTestUtils.getXmlInt(element, "runningContainers"),
+          WebServicesTestUtils.getXmlFloat(element, "queueUsagePercentage"),
+          WebServicesTestUtils.getXmlFloat(element, "clusterUsagePercentage"),
           WebServicesTestUtils.getXmlInt(element, "preemptedResourceMB"),
           WebServicesTestUtils.getXmlInt(element, "preemptedResourceVCores"),
           WebServicesTestUtils.getXmlInt(element, "numNonAMContainerPreempted"),
@@ -1319,7 +1321,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
   public void verifyAppInfo(JSONObject info, RMApp app) throws JSONException,
       Exception {
 
-    int expectedNumberOfElements = 30;
+    int expectedNumberOfElements = 32;
     String appNodeLabelExpression = null;
     String amNodeLabelExpression = null;
     if (app.getApplicationSubmissionContext()
@@ -1344,6 +1346,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
         info.getLong("elapsedTime"), info.getString("amHostHttpAddress"),
         info.getString("amContainerLogs"), info.getInt("allocatedMB"),
         info.getInt("allocatedVCores"), info.getInt("runningContainers"),
+        (float) info.getDouble("queueUsagePercentage"),
+        (float) info.getDouble("clusterUsagePercentage"),
         info.getInt("preemptedResourceMB"),
         info.getInt("preemptedResourceVCores"),
         info.getInt("numNonAMContainerPreempted"),
@@ -1360,6 +1364,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       String diagnostics, long clusterId, long startedTime, long finishedTime,
       long elapsedTime, String amHostHttpAddress, String amContainerLogs,
       int allocatedMB, int allocatedVCores, int numContainers,
+      float queueUsagePerc, float clusterUsagePerc,
       int preemptedResourceMB, int preemptedResourceVCores,
       int numNonAMContainerPreempted, int numAMContainerPreempted,
       String logAggregationStatus, boolean unmanagedApplication,
@@ -1382,8 +1387,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals("progress doesn't match", 0, progress, 0.0);
     WebServicesTestUtils.checkStringMatch("trackingUI", "UNASSIGNED",
         trackingUI);
-    WebServicesTestUtils.checkStringMatch("diagnostics", app.getDiagnostics()
-        .toString(), diagnostics);
+    WebServicesTestUtils.checkStringEqual("diagnostics",
+        app.getDiagnostics().toString(), diagnostics);
     assertEquals("clusterId doesn't match",
         ResourceManager.getClusterTimeStamp(), clusterId);
     assertEquals("startedTime doesn't match", app.getStartTime(), startedTime);
@@ -1399,6 +1404,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
         amContainerLogs.endsWith("/" + app.getUser()));
     assertEquals("allocatedMB doesn't match", 1024, allocatedMB);
     assertEquals("allocatedVCores doesn't match", 1, allocatedVCores);
+    assertEquals("queueUsagePerc doesn't match", 50.0f, queueUsagePerc, 0.01f);
+    assertEquals("clusterUsagePerc doesn't match", 50.0f, clusterUsagePerc, 0.01f);
     assertEquals("numContainers doesn't match", 1, numContainers);
     assertEquals("preemptedResourceMB doesn't match", app
         .getRMAppMetrics().getResourcePreempted().getMemory(),
@@ -1636,7 +1643,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       String user)
       throws JSONException, Exception {
 
-    assertEquals("incorrect number of elements", 7, info.length());
+    assertEquals("incorrect number of elements", 9, info.length());
 
     verifyAppAttemptInfoGeneric(appAttempt, info.getInt("id"),
         info.getLong("startTime"), info.getString("containerId"),

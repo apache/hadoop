@@ -44,7 +44,7 @@ public class TestTaskHeartbeatHandler {
   @Test
   public void testTimeout() throws InterruptedException {
     EventHandler mockHandler = mock(EventHandler.class);
-    Clock clock = new SystemClock();
+    Clock clock = SystemClock.getInstance();
     TaskHeartbeatHandler hb = new TaskHeartbeatHandler(mockHandler, clock, 1);
     
     

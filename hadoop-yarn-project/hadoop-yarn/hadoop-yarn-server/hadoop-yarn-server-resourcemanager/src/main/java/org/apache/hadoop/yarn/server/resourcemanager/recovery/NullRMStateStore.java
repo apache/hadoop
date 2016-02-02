@@ -24,7 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.ReservationAllocationStateProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ReservationAllocationStateProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenSecretManagerState;
@@ -116,13 +116,6 @@ public class NullRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected void updateReservationState(
-      ReservationAllocationStateProto reservationAllocation, String planName,
-      String reservationIdName) throws Exception {
-      // Do nothing
-  }
-
-  @Override
   public void removeRMDTMasterKeyState(DelegationKey delegationKey) throws Exception {
     // Do nothing
   }
@@ -136,6 +129,12 @@ public class NullRMStateStore extends RMStateStore {
   @Override
   protected void updateApplicationAttemptStateInternal(ApplicationAttemptId attemptId,
       ApplicationAttemptStateData attemptStateData) throws Exception {
+  }
+
+  @Override
+  public synchronized void removeApplicationAttemptInternal(
+      ApplicationAttemptId attemptId) throws Exception {
+    // Do nothing
   }
 
   @Override
@@ -175,7 +174,4 @@ public class NullRMStateStore extends RMStateStore {
   public void removeApplication(ApplicationId removeAppId) throws Exception {
     // Do nothing
   }
-
-
-
 }

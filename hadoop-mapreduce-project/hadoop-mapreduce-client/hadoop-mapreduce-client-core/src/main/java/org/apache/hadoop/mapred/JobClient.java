@@ -137,7 +137,7 @@ import org.apache.hadoop.util.ToolRunner;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class JobClient extends CLI {
+public class JobClient extends CLI implements AutoCloseable {
 
   @InterfaceAudience.Private
   public static final String MAPREDUCE_CLIENT_RETRY_POLICY_ENABLED_KEY =
@@ -499,6 +499,7 @@ public class JobClient extends CLI {
   /**
    * Close the <code>JobClient</code>.
    */
+  @Override
   public synchronized void close() throws IOException {
     cluster.close();
   }

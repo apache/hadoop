@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
@@ -32,6 +33,8 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
+import org.apache.hadoop.yarn.security.PrivilegedEntity;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
@@ -73,7 +76,9 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @return the full name of the queue
    */
   public String getQueuePath();
-  
+
+  public PrivilegedEntity getPrivilegedEntity();
+
   /**
    * Get the configured <em>capacity</em> of the queue.
    * @return configured queue capacity
@@ -328,5 +333,11 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    */
   public void decreaseContainer(Resource clusterResource,
       SchedContainerChangeRequest decreaseRequest,
-      FiCaSchedulerApp app);
+      FiCaSchedulerApp app) throws InvalidResourceRequestException;
+
+  /**
+   * Get valid Node Labels for this queue
+   * @return valid node labels
+   */
+  public Set<String> getNodeLabelsForQueue();
 }

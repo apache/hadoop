@@ -261,27 +261,38 @@ public class CommitterEventHandler extends AbstractService
       }
     }
 
-    private void touchz(Path p) throws IOException {
-      fs.create(p, false).close();
+    // If job commit is repeatable, then we should allow
+    // startCommitFile/endCommitSuccessFile/endCommitFailureFile to be written
+    // by other AM before.
+    private void touchz(Path p, boolean overwrite) throws IOException {
+      fs.create(p, overwrite).close();
     }
-    
+
     @SuppressWarnings("unchecked")
     protected void handleJobCommit(CommitterJobCommitEvent event) {
+      boolean commitJobIsRepeatable = false;
       try {
-        touchz(startCommitFile);
+        commitJobIsRepeatable = committer.isCommitJobRepeatable(
+            event.getJobContext());
+      } catch (IOException e) {
+        LOG.warn("Exception in committer.isCommitJobRepeatable():", e);
+      }
+
+      try {
+        touchz(startCommitFile, commitJobIsRepeatable);
         jobCommitStarted();
         waitForValidCommitWindow();
         committer.commitJob(event.getJobContext());
-        touchz(endCommitSuccessFile);
+        touchz(endCommitSuccessFile, commitJobIsRepeatable);
         context.getEventHandler().handle(
             new JobCommitCompletedEvent(event.getJobID()));
       } catch (Exception e) {
+        LOG.error("Could not commit job", e);
         try {
-          touchz(endCommitFailureFile);
+          touchz(endCommitFailureFile, commitJobIsRepeatable);
         } catch (Exception e2) {
           LOG.error("could not create failure file.", e2);
         }
-        LOG.error("Could not commit job", e);
         context.getEventHandler().handle(
             new JobCommitFailedEvent(event.getJobID(),
                 StringUtils.stringifyException(e)));

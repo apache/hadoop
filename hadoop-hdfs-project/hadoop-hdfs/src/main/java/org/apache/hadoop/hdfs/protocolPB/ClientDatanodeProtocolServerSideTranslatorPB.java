@@ -18,12 +18,8 @@
 package org.apache.hadoop.hdfs.protocolPB;
 
 import java.io.IOException;
-import java.util.Map;
 
-import com.google.common.base.Optional;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.ReconfigurationTaskStatus;
-import org.apache.hadoop.conf.ReconfigurationUtil.PropertyChange;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
@@ -35,19 +31,18 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetBlo
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetBlockLocalPathInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetDatanodeInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetDatanodeInfoResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReconfigurationStatusConfigChangeProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReconfigurationStatusRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReconfigurationStatusResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.GetReconfigurationStatusRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.GetReconfigurationStatusResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReplicaVisibleLengthRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReplicaVisibleLengthResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.ListReconfigurablePropertiesRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.ListReconfigurablePropertiesResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.ListReconfigurablePropertiesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.ListReconfigurablePropertiesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.RefreshNamenodesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.RefreshNamenodesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.ShutdownDatanodeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.ShutdownDatanodeResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.StartReconfigurationRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.StartReconfigurationResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.StartReconfigurationRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.StartReconfigurationResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.TriggerBlockReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.TriggerBlockReportResponseProto;
 
@@ -162,7 +157,7 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
   @Override
   public StartReconfigurationResponseProto startReconfiguration(
       RpcController unused, StartReconfigurationRequestProto request)
-    throws ServiceException {
+      throws ServiceException {
     try {
       impl.startReconfiguration();
     } catch (IOException e) {
@@ -173,54 +168,27 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
 
   @Override
   public ListReconfigurablePropertiesResponseProto listReconfigurableProperties(
-        RpcController controller,
-        ListReconfigurablePropertiesRequestProto request)
+      RpcController controller,
+      ListReconfigurablePropertiesRequestProto request)
       throws ServiceException {
-    ListReconfigurablePropertiesResponseProto.Builder builder =
-        ListReconfigurablePropertiesResponseProto.newBuilder();
     try {
-      for (String name : impl.listReconfigurableProperties()) {
-        builder.addName(name);
-      }
+      return ReconfigurationProtocolServerSideUtils
+          .listReconfigurableProperties(impl.listReconfigurableProperties());
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    return builder.build();
   }
 
   @Override
   public GetReconfigurationStatusResponseProto getReconfigurationStatus(
       RpcController unused, GetReconfigurationStatusRequestProto request)
       throws ServiceException {
-    GetReconfigurationStatusResponseProto.Builder builder =
-        GetReconfigurationStatusResponseProto.newBuilder();
     try {
-      ReconfigurationTaskStatus status = impl.getReconfigurationStatus();
-      builder.setStartTime(status.getStartTime());
-      if (status.stopped()) {
-        builder.setEndTime(status.getEndTime());
-        assert status.getStatus() != null;
-        for (Map.Entry<PropertyChange, Optional<String>> result :
-            status.getStatus().entrySet()) {
-          GetReconfigurationStatusConfigChangeProto.Builder changeBuilder =
-              GetReconfigurationStatusConfigChangeProto.newBuilder();
-          PropertyChange change = result.getKey();
-          changeBuilder.setName(change.prop);
-          changeBuilder.setOldValue(change.oldVal != null ? change.oldVal : "");
-          if (change.newVal != null) {
-            changeBuilder.setNewValue(change.newVal);
-          }
-          if (result.getValue().isPresent()) {
-            // Get full stack trace.
-            changeBuilder.setErrorMessage(result.getValue().get());
-          }
-          builder.addChanges(changeBuilder);
-        }
-      }
+      return ReconfigurationProtocolServerSideUtils
+          .getReconfigurationStatus(impl.getReconfigurationStatus());
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    return builder.build();
   }
 
   @Override

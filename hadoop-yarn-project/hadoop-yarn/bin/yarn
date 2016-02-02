@@ -32,6 +32,7 @@ function hadoop_usage
   hadoop_add_subcommand "cluster" "prints cluster information"
   hadoop_add_subcommand "container" "prints container(s) report"
   hadoop_add_subcommand "daemonlog" "get/set the log level for each daemon"
+  hadoop_add_subcommand "envvars" "display computed Hadoop environment variables"
   hadoop_add_subcommand "jar <jar>" "run a jar file"
   hadoop_add_subcommand "logs" "dump container logs"
   hadoop_add_subcommand "node" "prints node report(s)"
@@ -51,13 +52,13 @@ function hadoop_usage
 
 # let's locate libexec...
 if [[ -n "${HADOOP_PREFIX}" ]]; then
-  DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
+  HADOOP_DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
 else
   bin=$(cd -P -- "$(dirname -- "${MYNAME}")" >/dev/null && pwd -P)
-  DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
+  HADOOP_DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
 fi
 
-HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}"
+HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$HADOOP_DEFAULT_LIBEXEC_DIR}"
 # shellcheck disable=SC2034
 HADOOP_NEW_CONFIG=true
 if [[ -f "${HADOOP_LIBEXEC_DIR}/yarn-config.sh" ]]; then
@@ -95,6 +96,15 @@ case "${COMMAND}" in
     CLASS=org.apache.hadoop.log.LogLevel
     hadoop_debug "Append YARN_CLIENT_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${YARN_CLIENT_OPTS}"
+  ;;
+  envvars)
+    echo "JAVA_HOME='${JAVA_HOME}'"
+    echo "HADOOP_YARN_HOME='${HADOOP_YARN_HOME}'"
+    echo "YARN_DIR='${YARN_DIR}'"
+    echo "YARN_LIB_JARS_DIR='${YARN_LIB_JARS_DIR}'"
+    echo "HADOOP_CONF_DIR='${HADOOP_CONF_DIR}'"
+    echo "HADOOP_TOOLS_PATH='${HADOOP_TOOLS_PATH}'"
+    exit 0
   ;;
   jar)
     CLASS=org.apache.hadoop.util.RunJar

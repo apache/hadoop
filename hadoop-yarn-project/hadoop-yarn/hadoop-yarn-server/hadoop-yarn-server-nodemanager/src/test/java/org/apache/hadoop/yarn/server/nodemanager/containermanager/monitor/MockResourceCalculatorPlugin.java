@@ -63,7 +63,7 @@ public class MockResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   }
 
   @Override
-  public float getCpuUsage() {
+  public float getCpuUsagePercentage() {
     return 0;
   }
 }

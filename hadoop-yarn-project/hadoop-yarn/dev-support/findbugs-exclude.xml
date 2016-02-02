@@ -109,6 +109,11 @@
     <Method name="handle" />
     <Bug pattern="BC_UNCONFIRMED_CAST" />
   </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncher" />
+    <Method name="handle" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
 
 
   <!-- Ignore intentional switch fallthroughs -->
@@ -151,6 +156,14 @@
   </Match>
     <Match>
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.CompoundComparator" />
+    <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.PriorityComparator" />
+    <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.RecoveryComparator" />
     <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
   </Match>
   <Match>
@@ -200,6 +213,8 @@
       <Field name="userLimitFactor" />
       <Field name="maxAMResourcePerQueuePercent" />
       <Field name="lastClusterResource" />
+      <Field name="pendingOrderingPolicy" />
+      <Field name="pendingOPForRecoveredApps" />
     </Or>
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
@@ -258,6 +273,11 @@
   <Match>
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore" />
     <Field name="numRetries" />
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore" />
+    <Field name="resourceManager"/>
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
   <Match>
@@ -494,5 +514,10 @@
       <Field name="timestampSeconds" />
     </Or>
     <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD" />
+  </Match>
+
+  <Match>
+    <Package name="org.apache.hadoop.yarn.api.records.impl.pb" />
+    <Bug pattern="NP_BOOLEAN_RETURN_NULL" />
   </Match>
 </FindBugsFilter>

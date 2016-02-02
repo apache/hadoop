@@ -102,6 +102,7 @@ public class TestApplicationACLs {
     AccessControlList adminACL = new AccessControlList("");
     adminACL.addGroup(SUPER_GROUP);
     conf.set(YarnConfiguration.YARN_ADMIN_ACL, adminACL.getAclString());
+
     resourceManager = new MockRM(conf) {
 
       @Override
@@ -110,7 +111,8 @@ public class TestApplicationACLs {
           Configuration conf) {
         QueueACLsManager mockQueueACLsManager = mock(QueueACLsManager.class);
         when(mockQueueACLsManager.checkAccess(any(UserGroupInformation.class),
-            any(QueueACL.class), anyString())).thenAnswer(new Answer() {
+            any(QueueACL.class), anyString(), any(ApplicationId.class),
+            anyString())).thenAnswer(new Answer() {
           public Object answer(InvocationOnMock invocation) {
             return isQueueUser;
           }

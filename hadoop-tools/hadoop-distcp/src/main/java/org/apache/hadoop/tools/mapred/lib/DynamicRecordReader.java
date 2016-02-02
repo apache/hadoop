@@ -49,8 +49,13 @@ public class DynamicRecordReader<K, V> extends RecordReader<K, V> {
   private int numRecordsProcessedByThisMap = 0;
   private long timeOfLastChunkDirScan = 0;
   private boolean isChunkDirAlreadyScanned = false;
+  private DynamicInputChunkContext<K, V> chunkContext;
 
   private static long TIME_THRESHOLD_FOR_DIR_SCANS = TimeUnit.MINUTES.toMillis(5);
+
+  DynamicRecordReader(DynamicInputChunkContext<K, V> chunkContext) {
+    this.chunkContext = chunkContext;
+  }
 
   /**
    * Implementation for RecordReader::initialize(). Initializes the internal
@@ -69,7 +74,7 @@ public class DynamicRecordReader<K, V> extends RecordReader<K, V> {
     this.taskAttemptContext = taskAttemptContext;
     configuration = taskAttemptContext.getConfiguration();
     taskId = taskAttemptContext.getTaskAttemptID().getTaskID();
-    chunk = DynamicInputChunk.acquire(this.taskAttemptContext);
+    chunk = chunkContext.acquire(this.taskAttemptContext);
     timeOfLastChunkDirScan = System.currentTimeMillis();
     isChunkDirAlreadyScanned = false;
 
@@ -114,7 +119,7 @@ public class DynamicRecordReader<K, V> extends RecordReader<K, V> {
     timeOfLastChunkDirScan = System.currentTimeMillis();
     isChunkDirAlreadyScanned = false;
     
-    chunk = DynamicInputChunk.acquire(taskAttemptContext);
+    chunk = chunkContext.acquire(taskAttemptContext);
 
     if (chunk == null) return false;
 
@@ -182,12 +187,12 @@ public class DynamicRecordReader<K, V> extends RecordReader<K, V> {
             || (!isChunkDirAlreadyScanned &&
                     numRecordsProcessedByThisMap%numRecordsPerChunk
                               > numRecordsPerChunk/2)) {
-      DynamicInputChunk.getListOfChunkFiles();
+      chunkContext.getListOfChunkFiles();
       isChunkDirAlreadyScanned = true;
       timeOfLastChunkDirScan = now;
     }
 
-    return DynamicInputChunk.getNumChunksLeft();
+    return chunkContext.getNumChunksLeft();
   }
   /**
    * Implementation of RecordReader::close().

@@ -142,12 +142,31 @@ public abstract class GenericTestUtils {
         Joiner.on(",").join(expectedSet),
         Joiner.on(",").join(found));
   }
-  
+
+  static final String E_NULL_THROWABLE = "Null Throwable";
+  static final String E_NULL_THROWABLE_STRING =
+      "Null Throwable.toString() value";
+  static final String E_UNEXPECTED_EXCEPTION = "but got unexpected exception";
+
+  /**
+   * Assert that an exception's <code>toString()</code> value
+   * contained the expected text.
+   * @param string expected string
+   * @param t thrown exception
+   * @throws AssertionError if the expected string is not found
+   */
   public static void assertExceptionContains(String string, Throwable t) {
-    String msg = t.getMessage();
-    Assert.assertTrue(
-        "Expected to find '" + string + "' but got unexpected exception:"
-        + StringUtils.stringifyException(t), msg.contains(string));
+    Assert.assertNotNull(E_NULL_THROWABLE, t);
+    String msg = t.toString();
+    if (msg == null) {
+      throw new AssertionError(E_NULL_THROWABLE_STRING, t);
+    }
+    if (!msg.contains(string)) {
+      throw new AssertionError("Expected to find '" + string + "' "
+          + E_UNEXPECTED_EXCEPTION + ":"
+          + StringUtils.stringifyException(t),
+          t);
+    }
   }  
 
   public static void waitFor(Supplier<Boolean> check,
@@ -399,23 +418,59 @@ public abstract class GenericTestUtils {
   }
 
   /**
+   * Determine if there are any threads whose name matches the regex.
+   * @param pattern a Pattern object used to match thread names
+   * @return true if there is any thread that matches the pattern
+   */
+  public static boolean anyThreadMatching(Pattern pattern) {
+    ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+
+    ThreadInfo[] infos =
+        threadBean.getThreadInfo(threadBean.getAllThreadIds(), 20);
+    for (ThreadInfo info : infos) {
+      if (info == null)
+        continue;
+      if (pattern.matcher(info.getThreadName()).matches()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Assert that there are no threads running whose name matches the
    * given regular expression.
    * @param regex the regex to match against
    */
   public static void assertNoThreadsMatching(String regex) {
     Pattern pattern = Pattern.compile(regex);
-    ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
-    
-    ThreadInfo[] infos = threadBean.getThreadInfo(threadBean.getAllThreadIds(), 20);
-    for (ThreadInfo info : infos) {
-      if (info == null) continue;
-      if (pattern.matcher(info.getThreadName()).matches()) {
-        Assert.fail("Leaked thread: " + info + "\n" +
-            Joiner.on("\n").join(info.getStackTrace()));
-      }
+    if (anyThreadMatching(pattern)) {
+      Assert.fail("Leaked thread matches " + regex);
     }
   }
+
+  /**
+   * Periodically check and wait for any threads whose name match the
+   * given regular expression.
+   *
+   * @param regex the regex to match against.
+   * @param checkEveryMillis time (in milliseconds) between checks.
+   * @param waitForMillis total time (in milliseconds) to wait before throwing
+   *                      a time out exception.
+   * @throws TimeoutException
+   * @throws InterruptedException
+   */
+  public static void waitForThreadTermination(String regex,
+      int checkEveryMillis, final int waitForMillis) throws TimeoutException,
+      InterruptedException {
+    final Pattern pattern = Pattern.compile(regex);
+    waitFor(new Supplier<Boolean>() {
+      @Override public Boolean get() {
+        return !anyThreadMatching(pattern);
+      }
+    }, checkEveryMillis, waitForMillis);
+  }
+
 
   /**
    * Skip test if native build profile of Maven is not activated.
@@ -424,6 +479,6 @@ public abstract class GenericTestUtils {
    */
   public static void assumeInNativeProfile() {
     Assume.assumeTrue(
-        Boolean.valueOf(System.getProperty("runningWithNative", "false")));
+        Boolean.parseBoolean(System.getProperty("runningWithNative", "false")));
   }
 }

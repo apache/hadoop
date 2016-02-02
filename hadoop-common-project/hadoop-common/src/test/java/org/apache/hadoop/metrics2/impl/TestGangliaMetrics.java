@@ -29,7 +29,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.metrics2.AbstractMetric;
@@ -145,7 +147,7 @@ public class TestGangliaMetrics {
   private void checkMetrics(List<byte[]> bytearrlist, int expectedCount) {
     boolean[] foundMetrics = new boolean[expectedMetrics.length];
     for (byte[] bytes : bytearrlist) {
-      String binaryStr = new String(bytes);
+      String binaryStr = new String(bytes, Charsets.UTF_8);
       for (int index = 0; index < expectedMetrics.length; index++) {
         if (binaryStr.indexOf(expectedMetrics[index]) >= 0) {
           foundMetrics[index] = true;
@@ -188,13 +190,13 @@ public class TestGangliaMetrics {
    * hence all the captured byte arrays were pointing to one instance.
    */
   private class MockDatagramSocket extends DatagramSocket {
-    private ArrayList<byte[]> capture;
+    private List<byte[]> capture;
 
     /**
      * @throws SocketException
      */
     public MockDatagramSocket() throws SocketException {
-      capture = new  ArrayList<byte[]>();
+      capture = new CopyOnWriteArrayList<byte[]>();
     }
 
     /* (non-Javadoc)
@@ -211,7 +213,7 @@ public class TestGangliaMetrics {
     /**
      * @return the captured byte arrays
      */
-    ArrayList<byte[]> getCapturedSend() {
+    List<byte[]> getCapturedSend() {
       return capture;
     }
   }

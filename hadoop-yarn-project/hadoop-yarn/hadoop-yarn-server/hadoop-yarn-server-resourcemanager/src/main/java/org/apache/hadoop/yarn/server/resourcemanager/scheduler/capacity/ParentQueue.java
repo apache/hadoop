@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AccessType;
@@ -656,7 +657,8 @@ public class ParentQueue extends AbstractCSQueue {
   
   @Override
   public void decreaseContainer(Resource clusterResource,
-      SchedContainerChangeRequest decreaseRequest, FiCaSchedulerApp app) {
+      SchedContainerChangeRequest decreaseRequest, FiCaSchedulerApp app)
+      throws InvalidResourceRequestException {
     // delta capacity is negative when it's a decrease request
     Resource absDeltaCapacity =
         Resources.negate(decreaseRequest.getDeltaCapacity());

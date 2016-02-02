@@ -1169,8 +1169,8 @@ namespace HadoopPipes {
       if (outStream != NULL) {
         //fclose(outStream);
       } 
-      delete bufin;
-      delete bufout;
+      delete[] bufin;
+      delete[] bufout;
       return true;
     } catch (Error& err) {
       fprintf(stderr, "Hadoop Pipes Exception: %s\n", 

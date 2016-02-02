@@ -172,7 +172,7 @@ public class CommonJobTest {
         assertTrue("Gridmix job name is not in the expected format.",
                 jobName.equals(GridmixJob.JOB_NAME_PREFIX + jobSeqNum));
         final FileStatus stat = GridmixTestUtils.dfs.getFileStatus(new Path(
-                GridmixTestUtils.DEST, "" + Integer.valueOf(jobSeqNum)));
+                GridmixTestUtils.DEST, "" + Integer.parseInt(jobSeqNum)));
         assertEquals("Wrong owner for " + jobName, spec.getUser(),
                 stat.getOwner());
         final int nMaps = spec.getNumberMaps();

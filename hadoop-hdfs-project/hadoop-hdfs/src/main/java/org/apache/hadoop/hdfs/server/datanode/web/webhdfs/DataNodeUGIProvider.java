@@ -19,11 +19,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
-import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
@@ -39,25 +39,25 @@ import java.util.concurrent.TimeUnit;
  * the DN does not authenticate the UGI -- the NN will authenticate them in
  * subsequent operations.
  */
-class DataNodeUGIProvider {
+public class DataNodeUGIProvider {
   private final ParameterParser params;
-  private static Cache<String, UserGroupInformation> ugiCache;
+  @VisibleForTesting
+  static Cache<String, UserGroupInformation> ugiCache;
   public static final Log LOG = LogFactory.getLog(Client.class);
 
-  DataNodeUGIProvider(ParameterParser params, Configuration conf) {
+  DataNodeUGIProvider(ParameterParser params) {
     this.params = params;
+  }
+
+  public static synchronized void init(Configuration conf) {
     if (ugiCache == null) {
-      synchronized (DataNodeUGIProvider.class) {
-        if (ugiCache == null) {
-          ugiCache = CacheBuilder
-              .newBuilder()
-              .expireAfterAccess(
-                  conf.getInt(
-                      DFSConfigKeys.DFS_WEBHDFS_UGI_EXPIRE_AFTER_ACCESS_KEY,
-                      DFSConfigKeys.DFS_WEBHDFS_UGI_EXPIRE_AFTER_ACCESS_DEFAULT),
-                  TimeUnit.MILLISECONDS).build();
-        }
-      }
+      ugiCache = CacheBuilder
+          .newBuilder()
+          .expireAfterAccess(
+              conf.getInt(
+                  DFSConfigKeys.DFS_WEBHDFS_UGI_EXPIRE_AFTER_ACCESS_KEY,
+                  DFSConfigKeys.DFS_WEBHDFS_UGI_EXPIRE_AFTER_ACCESS_DEFAULT),
+              TimeUnit.MILLISECONDS).build();
     }
   }
 

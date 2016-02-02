@@ -162,6 +162,16 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     return cluster.isOnSameNodeGroup(left, right.getDatanodeDescriptor());
   }
 
+  private DatanodeStorageInfo[] chooseTarget(
+      int numOfReplicas,
+      DatanodeDescriptor writer,
+      Set<Node> excludedNodes,
+      List<DatanodeDescriptor> favoredNodes) {
+    return replicator.chooseTarget(filename, numOfReplicas, writer,
+      excludedNodes, BLOCK_SIZE, favoredNodes,
+      TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
+  }
+
   /**
    * In this testcase, client is dataNodes[0]. So the 1st replica should be
    * placed on dataNodes[0], the 2nd replica should be placed on 
@@ -534,7 +544,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     List<StorageType> excessTypes = new ArrayList<>();
     excessTypes.add(StorageType.DEFAULT);
     DatanodeStorageInfo chosen = ((BlockPlacementPolicyDefault) replicator)
-        .chooseReplicaToDelete((short) 3, first, second, excessTypes);
+        .chooseReplicaToDelete(first, second, excessTypes, rackMap);
     // Within first set {dataNodes[0], dataNodes[1], dataNodes[2]}, 
     // dataNodes[0] and dataNodes[1] are in the same nodegroup, 
     // but dataNodes[1] is chosen as less free space
@@ -547,7 +557,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     // as less free space
     excessTypes.add(StorageType.DEFAULT);
     chosen = ((BlockPlacementPolicyDefault) replicator).chooseReplicaToDelete(
-        (short) 2, first, second, excessTypes);
+        first, second, excessTypes, rackMap);
     assertEquals(chosen, storages[2]);
 
     replicator.adjustSetsWithChosenReplica(rackMap, first, second, chosen);
@@ -556,7 +566,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     // Within second set, dataNodes[5] with less free space
     excessTypes.add(StorageType.DEFAULT);
     chosen = ((BlockPlacementPolicyDefault) replicator).chooseReplicaToDelete(
-        (short) 1, first, second, excessTypes);
+        first, second, excessTypes, rackMap);
     assertEquals(chosen, storages[5]);
   }
   
@@ -721,6 +731,86 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     assertEquals(excludedNodes.size(), dataNodesForDependencies.length);
     for(int i=0; i<dataNodesForDependencies.length; i++) {
       assertTrue(excludedNodes.contains(dataNodesForDependencies[i]));
+    }
+  }
+
+  /**
+   * In this testcase, favored node is dataNodes[6].
+   * 1st replica should be placed on favored node.
+   * @throws Exception
+   */
+  @Test
+  public void testChooseTargetAsFavouredNodes() throws Exception {
+    DatanodeStorageInfo[] targets;
+    List<DatanodeDescriptor> favoredNodes =
+        new ArrayList<DatanodeDescriptor>();
+    favoredNodes.add(dataNodes[6]);
+    favoredNodes.add(dataNodes[0]);
+    favoredNodes.add(dataNodes[1]);
+    targets = chooseTarget(1, dataNodes[7], null, favoredNodes);
+    assertEquals(targets.length, 1);
+    assertTrue(favoredNodes.contains(targets[0].getDatanodeDescriptor()));
+  }
+
+  /**
+   * In this testcase, passed 2 favored nodes
+   * dataNodes[0](Good Node), dataNodes[3](Bad node).
+   * 1st replica should be placed on good favored node dataNodes[0].
+   * 2nd replica should be on bad favored node's nodegroup dataNodes[4].
+   * @throws Exception
+   */
+  @Test
+  public void testChooseFavoredNodesNodeGroup() throws Exception {
+    updateHeartbeatWithUsage(dataNodes[3],
+        2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
+        (HdfsServerConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L,
+        0L, 0L, 0, 0); // no space
+
+    DatanodeStorageInfo[] targets;
+    List<DatanodeDescriptor> expectedTargets =
+        new ArrayList<DatanodeDescriptor>();
+    expectedTargets.add(dataNodes[0]);
+    expectedTargets.add(dataNodes[4]);
+    List<DatanodeDescriptor> favouredNodes =
+        new ArrayList<DatanodeDescriptor>();
+    favouredNodes.add(dataNodes[3]);
+    favouredNodes.add(dataNodes[0]);
+    targets = chooseTarget(2, dataNodes[7], null, favouredNodes);
+    assertTrue("1st Replica is incorrect",
+      expectedTargets.contains(targets[0].getDatanodeDescriptor()));
+    assertTrue("2nd Replica is incorrect",
+      expectedTargets.contains(targets[1].getDatanodeDescriptor()));
+  }
+
+  /**
+   * In this testcase, passed 3 favored nodes
+   * dataNodes[0],dataNodes[1],dataNodes[2]
+   *
+   * Favored nodes on different nodegroup should be selected. Remaining replica
+   * should go through BlockPlacementPolicy.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testChooseRemainingReplicasApartFromFavoredNodes()
+      throws Exception {
+    DatanodeStorageInfo[] targets;
+    List<DatanodeDescriptor> expectedTargets =
+        new ArrayList<DatanodeDescriptor>();
+    expectedTargets.add(dataNodes[0]);
+    expectedTargets.add(dataNodes[2]);
+    expectedTargets.add(dataNodes[3]);
+    expectedTargets.add(dataNodes[6]);
+    expectedTargets.add(dataNodes[7]);
+    List<DatanodeDescriptor> favouredNodes =
+        new ArrayList<DatanodeDescriptor>();
+    favouredNodes.add(dataNodes[0]);
+    favouredNodes.add(dataNodes[1]);
+    favouredNodes.add(dataNodes[2]);
+    targets = chooseTarget(3, dataNodes[3], null, favouredNodes);
+    for (int i = 0; i < targets.length; i++) {
+      assertTrue("Target should be a part of Expected Targets",
+          expectedTargets.contains(targets[i].getDatanodeDescriptor()));
     }
   }
 }

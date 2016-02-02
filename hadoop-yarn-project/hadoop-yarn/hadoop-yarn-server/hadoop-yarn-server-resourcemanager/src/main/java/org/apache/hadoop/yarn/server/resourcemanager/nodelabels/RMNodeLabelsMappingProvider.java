@@ -26,7 +26,8 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 
 /**
- * Interface which is responsible for providing the node -> labels map.
+ * Interface which is responsible for providing
+ * the node {@literal ->} labels map.
  */
 public abstract class RMNodeLabelsMappingProvider extends AbstractService {
 

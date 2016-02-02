@@ -66,6 +66,14 @@ message RPCTraceInfoProto {
 
 }
 
+/**
+ * Used to pass through the call context entry after an RPC is made.
+ */
+message RPCCallerContextProto {
+  required string context = 1;
+  optional bytes signature = 2;
+}
+
 message RpcRequestHeaderProto { // the header for the RpcRequest
   enum OperationProto {
     RPC_FINAL_PACKET        = 0; // The final RPC Packet
@@ -81,6 +89,7 @@ message RpcRequestHeaderProto { // the header for the RpcRequest
   // retry count, 1 means this is the first retry
   optional sint32 retryCount = 5 [default = -1];
   optional RPCTraceInfoProto traceInfo = 6; // tracing info
+  optional RPCCallerContextProto callerContext = 7; // call context
 }
 
 

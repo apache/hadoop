@@ -46,8 +46,8 @@ public class TestSafeModeWithStripedFile {
   static final int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
   static final int blockSize = cellSize * 2;
 
-  static MiniDFSCluster cluster;
-  static Configuration conf;
+  private MiniDFSCluster cluster;
+  private Configuration conf;
 
   @Before
   public void setup() throws IOException {
@@ -57,13 +57,13 @@ public class TestSafeModeWithStripedFile {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.getFileSystem().getClient().setErasureCodingPolicy("/", null);
     cluster.waitActive();
-
   }
 
   @After
   public void tearDown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

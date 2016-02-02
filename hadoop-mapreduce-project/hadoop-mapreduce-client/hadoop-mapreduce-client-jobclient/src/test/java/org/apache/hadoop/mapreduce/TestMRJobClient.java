@@ -527,8 +527,9 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     exitCode = runTool(conf, createJobClient(), new String[] { "-set-priority",
         jobId, "VERY_LOW" }, new ByteArrayOutputStream());
     assertEquals("Exit code", 0, exitCode);
-    // because this method does not implemented still.
-    verifyJobPriority(jobId, "NORMAL", conf, createJobClient());
+    // set-priority is fired after job is completed in YARN, hence need not
+    // have to update the priority.
+    verifyJobPriority(jobId, "DEFAULT", conf, createJobClient());
   }
 
   /**

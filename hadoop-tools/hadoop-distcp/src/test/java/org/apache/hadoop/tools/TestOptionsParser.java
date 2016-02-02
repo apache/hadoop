@@ -503,7 +503,7 @@ public class TestOptionsParser {
     Assert.assertFalse(options.shouldPreserve(FileAttribute.XATTR));
 
     options = OptionsParser.parse(new String[] {
-        "-pbrgupcax",
+        "-pbrgupcaxt",
         "-f",
         "hdfs://localhost:8020/source/first",
         "hdfs://localhost:8020/target/"});
@@ -515,6 +515,7 @@ public class TestOptionsParser {
     Assert.assertTrue(options.shouldPreserve(FileAttribute.CHECKSUMTYPE));
     Assert.assertTrue(options.shouldPreserve(FileAttribute.ACL));
     Assert.assertTrue(options.shouldPreserve(FileAttribute.XATTR));
+    Assert.assertTrue(options.shouldPreserve(FileAttribute.TIMES));
 
     options = OptionsParser.parse(new String[] {
         "-pc",

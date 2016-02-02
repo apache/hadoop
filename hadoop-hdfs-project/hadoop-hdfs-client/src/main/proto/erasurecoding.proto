@@ -55,6 +55,6 @@ message BlockECRecoveryInfoProto {
   required DatanodeInfosProto targetDnInfos = 3;
   required StorageUuidsProto targetStorageUuids = 4;
   required StorageTypesProto targetStorageTypes = 5;
-  repeated uint32 liveBlockIndices = 6;
+  required bytes liveBlockIndices = 6;
   required ErasureCodingPolicyProto ecPolicy = 7;
 }

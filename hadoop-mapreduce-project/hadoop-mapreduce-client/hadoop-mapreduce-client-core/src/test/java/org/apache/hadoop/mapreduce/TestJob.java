@@ -41,7 +41,7 @@ public class TestJob {
     when(cluster.getClient()).thenReturn(client);
     JobID jobid = new JobID("1014873536921", 6);
     JobStatus status = new JobStatus(jobid, 0.0f, 0.0f, 0.0f, 0.0f,
-        State.FAILED, JobPriority.NORMAL, "root", "TestJobToString",
+        State.FAILED, JobPriority.DEFAULT, "root", "TestJobToString",
         "job file", "tracking url");
     when(client.getJobStatus(jobid)).thenReturn(status);
     when(client.getTaskReports(jobid, TaskType.MAP)).thenReturn(

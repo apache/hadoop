@@ -32,7 +32,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.base.Joiner;
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
@@ -65,6 +64,7 @@ import org.apache.hadoop.util.VersionUtil;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
+import org.slf4j.Logger;
 
 /**
  * A thread per active or standby namenode to perform:
@@ -78,7 +78,7 @@ import com.google.common.collect.Maps;
 @InterfaceAudience.Private
 class BPServiceActor implements Runnable {
   
-  static final Log LOG = DataNode.LOG;
+  static final Logger LOG = DataNode.LOG;
   final InetSocketAddress nnAddr;
   HAServiceState state;
 
@@ -125,6 +125,10 @@ class BPServiceActor implements Runnable {
     this.dnConf = dn.getDnConf();
     prevBlockReportId = ThreadLocalRandom.current().nextLong();
     scheduler = new Scheduler(dnConf.heartBeatInterval, dnConf.blockReportInterval);
+  }
+
+  public DatanodeRegistration getBpRegistration() {
+    return bpRegistration;
   }
 
   boolean isAlive() {
@@ -538,6 +542,7 @@ class BPServiceActor implements Runnable {
   
   HeartbeatResponse sendHeartBeat(boolean requestBlockReportLease)
       throws IOException {
+    scheduler.scheduleNextHeartbeat();
     StorageReport[] reports =
         dn.getFSDataset().getStorageReports(bpos.getBlockPoolId());
     if (LOG.isDebugEnabled()) {
@@ -599,7 +604,7 @@ class BPServiceActor implements Runnable {
   private synchronized void cleanUp() {
     
     shouldServiceRun = false;
-    IOUtils.cleanup(LOG, bpNamenode);
+    IOUtils.cleanup(null, bpNamenode);
     bpos.shutdownActor(this);
   }
 
@@ -651,7 +656,6 @@ class BPServiceActor implements Runnable {
           //
           boolean requestBlockReportLease = (fullBlockReportLeaseId == 0) &&
                   scheduler.isBlockReportDue(startTime);
-          scheduler.scheduleNextHeartbeat();
           if (!dn.areHeartbeatsDisabledForTests()) {
             resp = sendHeartBeat(requestBlockReportLease);
             assert resp != null;
@@ -834,7 +838,7 @@ class BPServiceActor implements Runnable {
             sleepAndLogInterrupts(5000, "initializing");
           } else {
             runningState = RunningState.FAILED;
-            LOG.fatal("Initialization failed for " + this + ". Exiting. ", ioe);
+            LOG.error("Initialization failed for " + this + ". Exiting. ", ioe);
             return;
           }
         }
@@ -1064,7 +1068,7 @@ class BPServiceActor implements Runnable {
 
     long scheduleNextHeartbeat() {
       // Numerical overflow is possible here and is okay.
-      nextHeartbeatTime += heartbeatIntervalMs;
+      nextHeartbeatTime = monotonicNow() + heartbeatIntervalMs;
       return nextHeartbeatTime;
     }
 

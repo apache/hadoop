@@ -64,7 +64,9 @@ public class TestViewFsAtHdfsRoot extends ViewFsBaseTest {
       
   @AfterClass
   public static void ClusterShutdownAtEnd() throws Exception {
-    cluster.shutdown();   
+    if (cluster != null) {
+      cluster.shutdown();
+    }
   }
 
   @Override

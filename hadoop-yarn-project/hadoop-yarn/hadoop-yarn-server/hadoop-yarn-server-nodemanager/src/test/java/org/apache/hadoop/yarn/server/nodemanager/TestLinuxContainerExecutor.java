@@ -629,7 +629,16 @@ public class TestLinuxContainerExecutor {
     } catch (IOException e) {
       // expected if LCE isn't setup right, but not necessary for this test
     }
+
+    Container container = mock(Container.class);
+    ContainerLaunchContext context = mock(ContainerLaunchContext.class);
+    HashMap<String, String> env = new HashMap<>();
+
+    when(container.getLaunchContext()).thenReturn(context);
+    when(context.getEnvironment()).thenReturn(env);
+
     lce.reacquireContainer(new ContainerReacquisitionContext.Builder()
+        .setContainer(container)
         .setUser("foouser")
         .setContainerId(cid)
         .build());

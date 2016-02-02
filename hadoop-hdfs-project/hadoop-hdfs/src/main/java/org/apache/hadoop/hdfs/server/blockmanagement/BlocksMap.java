@@ -21,12 +21,8 @@ import java.util.Iterator;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.LightWeightGSet;
-
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 
 /**
  * This class maintains the map from a block to its metadata.
@@ -147,22 +143,6 @@ class BlocksMap {
    */
   Iterable<DatanodeStorageInfo> getStorages(Block b) {
     return getStorages(blocks.get(b));
-  }
-
-  /**
-   * Searches for the block in the BlocksMap and 
-   * returns {@link Iterable} of the storages the block belongs to
-   * <i>that are of the given {@link DatanodeStorage.State state}</i>.
-   * 
-   * @param state DatanodeStorage state by which to filter the returned Iterable
-   */
-  Iterable<DatanodeStorageInfo> getStorages(Block b, final DatanodeStorage.State state) {
-    return Iterables.filter(getStorages(blocks.get(b)), new Predicate<DatanodeStorageInfo>() {
-      @Override
-      public boolean apply(DatanodeStorageInfo storage) {
-        return storage.getState() == state;
-      }
-    });
   }
 
   /**

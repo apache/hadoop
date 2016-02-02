@@ -32,7 +32,9 @@ import org.apache.hadoop.classification.InterfaceStability;
  * @see org.apache.hadoop.metrics.MetricsRecord
  * @see org.apache.hadoop.metrics.MetricsContext
  * @see org.apache.hadoop.metrics.ContextFactory
+ * @deprecated Use org.apache.hadoop.metrics2 package instead.
  */
+@Deprecated
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class MetricsUtil {

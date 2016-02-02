@@ -82,6 +82,7 @@ public class TestAddStripedBlocks {
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 
@@ -208,7 +209,7 @@ public class TestAddStripedBlocks {
       BlockInfoStriped lastBlk = (BlockInfoStriped) fileNode.getLastBlock();
       DatanodeInfo[] expectedDNs = DatanodeStorageInfo.toDatanodeInfos(
           lastBlk.getUnderConstructionFeature().getExpectedStorageLocations());
-      int[] indices = lastBlk.getUnderConstructionFeature().getBlockIndices();
+      byte[] indices = lastBlk.getUnderConstructionFeature().getBlockIndices();
 
       LocatedBlocks blks = dfs.getClient().getLocatedBlocks(file.toString(), 0L);
       Assert.assertEquals(1, blks.locatedBlockCount());
@@ -216,7 +217,7 @@ public class TestAddStripedBlocks {
 
       Assert.assertTrue(lblk instanceof LocatedStripedBlock);
       DatanodeInfo[] datanodes = lblk.getLocations();
-      int[] blockIndices = ((LocatedStripedBlock) lblk).getBlockIndices();
+      byte[] blockIndices = ((LocatedStripedBlock) lblk).getBlockIndices();
       Assert.assertEquals(GROUP_SIZE, datanodes.length);
       Assert.assertEquals(GROUP_SIZE, blockIndices.length);
       Assert.assertArrayEquals(indices, blockIndices);
@@ -248,7 +249,7 @@ public class TestAddStripedBlocks {
 
       DatanodeStorageInfo[] locs = lastBlock.getUnderConstructionFeature()
           .getExpectedStorageLocations();
-      int[] indices = lastBlock.getUnderConstructionFeature().getBlockIndices();
+      byte[] indices = lastBlock.getUnderConstructionFeature().getBlockIndices();
       Assert.assertEquals(GROUP_SIZE, locs.length);
       Assert.assertEquals(GROUP_SIZE, indices.length);
 
@@ -307,7 +308,7 @@ public class TestAddStripedBlocks {
 
     DatanodeStorageInfo[] locs = lastBlock.getUnderConstructionFeature()
         .getExpectedStorageLocations();
-    int[] indices = lastBlock.getUnderConstructionFeature().getBlockIndices();
+    byte[] indices = lastBlock.getUnderConstructionFeature().getBlockIndices();
     Assert.assertEquals(GROUP_SIZE, locs.length);
     Assert.assertEquals(GROUP_SIZE, indices.length);
     for (i = 0; i < GROUP_SIZE; i++) {

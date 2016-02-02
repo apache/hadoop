@@ -24,7 +24,7 @@ freetheclasses () {
         HADOOP_COMMON_HOME \
         HADOOP_COMMON_LIB_JARS_DIR \
         HADOOP_ENABLE_BUILD_PATHS ; do
-      unset ${!j}
+      unset ${j}
   done
 }
 

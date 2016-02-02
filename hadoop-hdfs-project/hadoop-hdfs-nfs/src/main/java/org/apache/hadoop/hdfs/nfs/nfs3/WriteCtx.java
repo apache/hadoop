@@ -98,7 +98,7 @@ class WriteCtx {
    */
   private int trimDelta;
 
-  public int getOriginalCount() {
+  public synchronized int getOriginalCount() {
     return originalCount;
   }
 
@@ -158,7 +158,7 @@ class WriteCtx {
     }
 
     // Resized write should not allow dump
-    Preconditions.checkState(originalCount == INVALID_ORIGINAL_COUNT);
+    Preconditions.checkState(getOriginalCount() == INVALID_ORIGINAL_COUNT);
 
     this.raf = raf;
     dumpFileOffset = dumpOut.getChannel().position();
@@ -191,6 +191,13 @@ class WriteCtx {
       // See comment "Overlapping Write Request Handling" above
       return offset + trimDelta;
     }
+  }
+
+  /**
+   * @return the offset field
+   */
+  private synchronized long getPlainOffset() {
+    return offset;
   }
 
   int getCount() {
@@ -253,8 +260,8 @@ class WriteCtx {
     try {
       dataBuffer = getData();
     } catch (Exception e1) {
-      LOG.error("Failed to get request data offset:" + offset + " count:"
-          + count + " error:" + e1);
+      LOG.error("Failed to get request data offset:" + getPlainOffset() + " " +
+          "count:" + count + " error:" + e1);
       throw new IOException("Can't get WriteCtx.data");
     }
 
@@ -311,8 +318,9 @@ class WriteCtx {
   
   @Override
   public String toString() {
-    return "Id:" + handle.getFileId() + " offset:" + offset + " count:" + count
-        + " originalCount:" + originalCount + " stableHow:" + stableHow
-        + " replied:" + replied + " dataState:" + dataState + " xid:" + xid;
+    return "Id:" + handle.getFileId() + " offset:" + getPlainOffset() + " " +
+        "count:" + count + " originalCount:" + getOriginalCount() +
+        " stableHow:" + stableHow + " replied:" + replied + " dataState:" +
+        dataState + " xid:" + xid;
   }
 }

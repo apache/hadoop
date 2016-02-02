@@ -49,14 +49,11 @@ class FSDirConcatOp {
 
   static HdfsFileStatus concat(FSDirectory fsd, String target, String[] srcs,
     boolean logRetryCache) throws IOException {
-    Preconditions.checkArgument(!target.isEmpty(), "Target file name is empty");
-    Preconditions.checkArgument(srcs != null && srcs.length > 0,
-      "No sources given");
+    validatePath(target, srcs);
     assert srcs != null;
     if (FSDirectory.LOG.isDebugEnabled()) {
       FSDirectory.LOG.debug("concat {} to {}", Arrays.toString(srcs), target);
     }
-
     final INodesInPath targetIIP = fsd.getINodesInPath4Write(target);
     // write permission for the target
     FSPermissionChecker pc = null;
@@ -84,6 +81,25 @@ class FSDirConcatOp {
     }
     fsd.getEditLog().logConcat(target, srcs, timestamp, logRetryCache);
     return fsd.getAuditFileInfo(targetIIP);
+  }
+
+  private static void validatePath(String target, String[] srcs)
+      throws IOException {
+    Preconditions.checkArgument(!target.isEmpty(), "Target file name is empty");
+    Preconditions.checkArgument(srcs != null && srcs.length > 0,
+        "No sources given");
+    if (FSDirectory.isReservedRawName(target)
+        || FSDirectory.isReservedInodesName(target)) {
+      throw new IOException("Concat operation doesn't support "
+          + FSDirectory.DOT_RESERVED_STRING + " relative path : " + target);
+    }
+    for (String srcPath : srcs) {
+      if (FSDirectory.isReservedRawName(srcPath)
+          || FSDirectory.isReservedInodesName(srcPath)) {
+        throw new IOException("Concat operation doesn't support "
+            + FSDirectory.DOT_RESERVED_STRING + " relative path : " + srcPath);
+      }
+    }
   }
 
   private static void verifyTargetFile(FSDirectory fsd, final String target,

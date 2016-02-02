@@ -72,6 +72,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobFinishEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobSetupCompletedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobStartEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskAttemptCompletedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskEvent;
@@ -92,6 +93,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
@@ -721,7 +723,7 @@ public class TestJobImpl {
         .newRecord(ApplicationAttemptId.class), new Configuration(),
         mock(EventHandler.class),
         null, mock(JobTokenSecretManager.class), null,
-        new SystemClock(), null,
+        SystemClock.getInstance(), null,
         mrAppMetrics, null, true, null, 0, null, mockContext, null, null);
     job.handle(diagUpdateEvent);
     String diagnostics = job.getReport().getDiagnostics();
@@ -732,7 +734,7 @@ public class TestJobImpl {
         .newRecord(ApplicationAttemptId.class), new Configuration(),
         mock(EventHandler.class),
         null, mock(JobTokenSecretManager.class), null,
-        new SystemClock(), null,
+        SystemClock.getInstance(), null,
         mrAppMetrics, null, true, null, 0, null, mockContext, null, null);
     job.handle(new JobEvent(jobId, JobEventType.JOB_KILL));
     job.handle(diagUpdateEvent);
@@ -889,9 +891,42 @@ public class TestJobImpl {
                       job.getDiagnostics().toString().contains(EXCEPTIONMSG));
   }
 
+  @Test
+  public void testJobPriorityUpdate() throws Exception {
+    Configuration conf = new Configuration();
+    AsyncDispatcher dispatcher = new AsyncDispatcher();
+    Priority submittedPriority = Priority.newInstance(5);
+
+    AppContext mockContext = mock(AppContext.class);
+    when(mockContext.hasSuccessfullyUnregistered()).thenReturn(false);
+    JobImpl job = createStubbedJob(conf, dispatcher, 2, mockContext);
+
+    JobId jobId = job.getID();
+    job.handle(new JobEvent(jobId, JobEventType.JOB_INIT));
+    assertJobState(job, JobStateInternal.INITED);
+    job.handle(new JobStartEvent(jobId));
+    assertJobState(job, JobStateInternal.SETUP);
+    // Update priority of job to 5, and it will be updated
+    job.setJobPriority(submittedPriority);
+    Assert.assertEquals(submittedPriority, job.getReport().getJobPriority());
+
+    job.handle(new JobSetupCompletedEvent(jobId));
+    assertJobState(job, JobStateInternal.RUNNING);
+
+    // Update priority of job to 8, and see whether its updated
+    Priority updatedPriority = Priority.newInstance(8);
+    job.setJobPriority(updatedPriority);
+    assertJobState(job, JobStateInternal.RUNNING);
+    Priority jobPriority = job.getReport().getJobPriority();
+    Assert.assertNotNull(jobPriority);
+
+    // Verify whether changed priority is same as what is set in Job.
+    Assert.assertEquals(updatedPriority, jobPriority);
+  }
+
   private static CommitterEventHandler createCommitterEventHandler(
       Dispatcher dispatcher, OutputCommitter committer) {
-    final SystemClock clock = new SystemClock();
+    final SystemClock clock = SystemClock.getInstance();
     AppContext appContext = mock(AppContext.class);
     when(appContext.getEventHandler()).thenReturn(
         dispatcher.getEventHandler());
@@ -1070,7 +1105,7 @@ public class TestJobImpl {
         String user, int numSplits, AppContext appContext) {
       super(jobId, applicationAttemptId, conf, eventHandler,
           null, new JobTokenSecretManager(), new Credentials(),
-          new SystemClock(), Collections.<TaskId, TaskInfo> emptyMap(),
+          SystemClock.getInstance(), Collections.<TaskId, TaskInfo> emptyMap(),
           MRAppMetrics.create(), null, newApiCommitter, user,
           System.currentTimeMillis(), null, appContext, null, null);
 

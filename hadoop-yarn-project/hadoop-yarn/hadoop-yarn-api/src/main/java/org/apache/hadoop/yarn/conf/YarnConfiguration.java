@@ -92,6 +92,11 @@ public class YarnConfiguration extends Configuration {
   /** Delay before deleting resource to ease debugging of NM issues */
   public static final String DEBUG_NM_DELETE_DELAY_SEC =
     YarnConfiguration.NM_PREFIX + "delete.debug-delay-sec";
+
+  public static final String NM_LOG_CONTAINER_DEBUG_INFO =
+      YarnConfiguration.NM_PREFIX + "log-container-debug-info.enabled";
+
+  public static final boolean DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO = false;
   
   ////////////////////////////////
   // IPC Configs
@@ -273,7 +278,11 @@ public class YarnConfiguration extends Configuration {
   public static final String YARN_ACL_ENABLE = 
     YARN_PREFIX + "acl.enable";
   public static final boolean DEFAULT_YARN_ACL_ENABLE = false;
-  
+
+  public static boolean isAclEnabled(Configuration conf) {
+    return conf.getBoolean(YARN_ACL_ENABLE, DEFAULT_YARN_ACL_ENABLE);
+  }
+
   /** ACL of who can be admin of YARN cluster.*/
   public static final String YARN_ADMIN_ACL = 
     YARN_PREFIX + "admin.acl";
@@ -336,6 +345,11 @@ public class YarnConfiguration extends Configuration {
       + "webapp.delegation-token-auth-filter.enabled";
   public static final boolean DEFAULT_RM_WEBAPP_DELEGATION_TOKEN_AUTH_FILTER =
       true;
+
+  /** Enable cross origin (CORS) support. **/
+  public static final String RM_WEBAPP_ENABLE_CORS_FILTER =
+      RM_PREFIX + "webapp.cross-origin.enabled";
+  public static final boolean DEFAULT_RM_WEBAPP_ENABLE_CORS_FILTER = false;
 
   /** How long to wait until a container is considered dead.*/
   public static final String RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS = 
@@ -534,6 +548,11 @@ public class YarnConfiguration extends Configuration {
   /** number of zookeeper operation retry times in ActiveStandbyElector */
   public static final String RM_HA_FC_ELECTOR_ZK_RETRIES_KEY = RM_HA_PREFIX
       + "failover-controller.active-standby-elector.zk.retries";
+
+  @Private
+  public static final String CURATOR_LEADER_ELECTOR =
+      RM_HA_PREFIX + "curator-leader-elector.enabled";
+  public static final boolean DEFAULT_CURATOR_LEADER_ELECTOR_ENABLED = false;
 
   ////////////////////////////////
   // RM state store configs
@@ -895,6 +914,42 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_NM_ENABLE_HARDWARE_CAPABILITY_DETECTION =
       false;
 
+  @Private
+  public static final String NM_MEMORY_RESOURCE_PREFIX = NM_PREFIX
+      + "resource.memory.";
+
+  @Private
+  public static final String NM_MEMORY_RESOURCE_ENABLED =
+      NM_MEMORY_RESOURCE_PREFIX + "enabled";
+  @Private
+  public static final boolean DEFAULT_NM_MEMORY_RESOURCE_ENABLED = false;
+
+  @Private
+  public static final String NM_MEMORY_RESOURCE_CGROUPS_SWAPPINESS =
+      NM_MEMORY_RESOURCE_PREFIX + "cgroups.swappiness";
+  @Private
+  public static final int DEFAULT_NM_MEMORY_RESOURCE_CGROUPS_SWAPPINESS = 0;
+
+  @Private
+  public static final String NM_MEMORY_RESOURCE_CGROUPS_SOFT_LIMIT_PERCENTAGE =
+      NM_MEMORY_RESOURCE_PREFIX + "cgroups.soft-limit-percentage";
+  @Private
+  public static final float
+      DEFAULT_NM_MEMORY_RESOURCE_CGROUPS_SOFT_LIMIT_PERCENTAGE =
+      90.0f;
+
+  @Private
+  public static final String NM_CPU_RESOURCE_PREFIX = NM_PREFIX
+      + "resource.cpu.";
+
+  /** Enable cpu isolation. */
+  @Private
+  public static final String NM_CPU_RESOURCE_ENABLED =
+      NM_CPU_RESOURCE_PREFIX + "enabled";
+
+  @Private
+  public static final boolean DEFAULT_NM_CPU_RESOURCE_ENABLED = false;
+
   /**
    * Prefix for disk configurations. Work in progress: This configuration
    * parameter may be changed/removed in the future.
@@ -973,6 +1028,11 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_NM_WEBAPP_HTTPS_PORT = 8044;
   public static final String DEFAULT_NM_WEBAPP_HTTPS_ADDRESS = "0.0.0.0:"
       + DEFAULT_NM_WEBAPP_HTTPS_PORT; 
+
+  /** Enable/disable CORS filter. */
+  public static final String NM_WEBAPP_ENABLE_CORS_FILTER =
+      NM_PREFIX + "webapp.cross-origin.enabled";
+  public static final boolean DEFAULT_NM_WEBAPP_ENABLE_CORS_FILTER = false;
 
   /** How often to monitor resource in a node.*/
   public static final String NM_RESOURCE_MON_INTERVAL_MS =
@@ -1293,7 +1353,18 @@ public class YarnConfiguration extends Configuration {
 
   public static final String NM_USER_HOME_DIR =
       NM_PREFIX + "user-home-dir";
-  
+
+  public static final String NM_CONTAINER_STDERR_PATTERN =
+      NM_PREFIX + "container.stderr.pattern";
+
+  public static final String DEFAULT_NM_CONTAINER_STDERR_PATTERN =
+      "{*stderr*,*STDERR*}";
+
+  public static final String NM_CONTAINER_STDERR_BYTES =
+      NM_PREFIX + "container.stderr.tail.bytes";
+
+  public static final long DEFAULT_NM_CONTAINER_STDERR_BYTES = 4 * 1024;
+
   /**The kerberos principal to be used for spnego filter for NM.*/
   public static final String NM_WEBAPP_SPNEGO_USER_NAME_KEY =
       NM_PREFIX + "webapp.spnego-principal";
@@ -1528,6 +1599,10 @@ public class YarnConfiguration extends Configuration {
   public static final String TIMELINE_SERVICE_PREFIX =
       YARN_PREFIX + "timeline-service.";
 
+  public static final String TIMELINE_SERVICE_VERSION = TIMELINE_SERVICE_PREFIX
+      + "version";
+  public static final float DEFAULT_TIMELINE_SERVICE_VERSION = 1.0f;
+
   /**
    * Comma seperated list of names for UIs hosted in the timeline server
    * (For pluggable UIs).
@@ -1539,12 +1614,115 @@ public class YarnConfiguration extends Configuration {
   public static final String TIMELINE_SERVICE_UI_WEB_PATH_PREFIX =
       TIMELINE_SERVICE_PREFIX + "ui-web-path.";
 
+  /** Timeline client settings */
+  public static final String TIMELINE_SERVICE_CLIENT_PREFIX =
+      TIMELINE_SERVICE_PREFIX + "client.";
+
   /**
    * Path to war file or static content directory for this UI
    * (For pluggable UIs).
    */
   public static final String TIMELINE_SERVICE_UI_ON_DISK_PATH_PREFIX =
       TIMELINE_SERVICE_PREFIX + "ui-on-disk-path.";
+
+  /**
+   * The setting for timeline service v1.5
+   */
+  public static final String TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX =
+      TIMELINE_SERVICE_PREFIX + "entity-group-fs-store.";
+
+  public static final String TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_ACTIVE_DIR =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "active-dir";
+
+  public static final String
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_ACTIVE_DIR_DEFAULT =
+      "/tmp/entity-file-history/active";
+
+  public static final String TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_DONE_DIR =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "done-dir";
+  public static final String
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_DONE_DIR_DEFAULT =
+      "/tmp/entity-file-history/done";
+
+  public static final String TIMELINE_SERVICE_ENTITY_GROUP_PLUGIN_CLASSES =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "group-id-plugin-classes";
+
+  public static final String
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_SUMMARY_STORE =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "summary-store";
+
+  public static final String
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_SUMMARY_ENTITY_TYPES =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "summary-entity-types";
+
+  public static final String
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_SCAN_INTERVAL_SECONDS =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "scan-interval-seconds";
+  public static final long
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_SCAN_INTERVAL_SECONDS_DEFAULT = 60;
+
+  public static final String TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_THREADS =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "threads";
+  public static final int
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_THREADS_DEFAULT = 16;
+
+  public static final String
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_APP_CACHE_SIZE
+      = TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "app-cache-size";
+  public static final int
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_APP_CACHE_SIZE_DEFAULT = 10;
+
+  public static final String
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_CLEANER_INTERVAL_SECONDS =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "cleaner-interval-seconds";
+  public static final int
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_CLEANER_INTERVAL_SECONDS_DEFAULT =
+        60 * 60;
+
+  public static final String
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_RETAIN_SECONDS
+      = TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "retain-seconds";
+  public static final int
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_RETAIN_SECONDS_DEFAULT =
+        7 * 24 * 60 * 60;
+
+  // how old the most recent log of an UNKNOWN app needs to be in the active
+  // directory before we treat it as COMPLETED
+  public static final String
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_UNKNOWN_ACTIVE_SECONDS =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "unknown-active-seconds";
+  public static final int
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_UNKNOWN_ACTIVE_SECONDS_DEFAULT
+      = 24 * 60 * 60;
+
+  public static final String
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_RETRY_POLICY_SPEC =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "retry-policy-spec";
+  public static final String
+      DEFAULT_TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_RETRY_POLICY_SPEC =
+      "2000, 500";
+
+  public static final String TIMELINE_SERVICE_LEVELDB_CACHE_READ_CACHE_SIZE =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX
+          + "leveldb-cache-read-cache-size";
+
+  public static final long
+      DEFAULT_TIMELINE_SERVICE_LEVELDB_CACHE_READ_CACHE_SIZE = 10 * 1024 * 1024;
+
+  public static final String TIMELINE_SERVICE_CLIENT_FD_FLUSH_INTERVAL_SECS =
+      TIMELINE_SERVICE_CLIENT_PREFIX + "fd-flush-interval-secs";
+  public static final long
+      TIMELINE_SERVICE_CLIENT_FD_FLUSH_INTERVAL_SECS_DEFAULT = 10;
+
+  public static final String TIMELINE_SERVICE_CLIENT_FD_CLEAN_INTERVAL_SECS =
+      TIMELINE_SERVICE_CLIENT_PREFIX + "fd-clean-interval-secs";
+  public static final long
+      TIMELINE_SERVICE_CLIENT_FD_CLEAN_INTERVAL_SECS_DEFAULT = 60;
+
+  public static final String TIMELINE_SERVICE_CLIENT_FD_RETAIN_SECS =
+      TIMELINE_SERVICE_CLIENT_PREFIX + "fd-retain-secs";
+  public static final long TIMELINE_SERVICE_CLIENT_FD_RETAIN_SECS_DEFAULT =
+      5*60;
 
   // mark app-history related configs @Private as application history is going
   // to be integrated into the timeline service
@@ -1586,8 +1764,8 @@ public class YarnConfiguration extends Configuration {
   public static final String FS_APPLICATION_HISTORY_STORE_COMPRESSION_TYPE =
       APPLICATION_HISTORY_PREFIX + "fs-history-store.compression-type";
   @Private
-  public static final String DEFAULT_FS_APPLICATION_HISTORY_STORE_COMPRESSION_TYPE =
-      "none";
+  public static final String
+      DEFAULT_FS_APPLICATION_HISTORY_STORE_COMPRESSION_TYPE = "none";
 
   /** The setting that controls whether timeline service is enabled or not. */
   public static final String TIMELINE_SERVICE_ENABLED =
@@ -1636,7 +1814,7 @@ public class YarnConfiguration extends Configuration {
       APPLICATION_HISTORY_PREFIX + "max-applications";
   public static final long DEFAULT_APPLICATION_HISTORY_MAX_APPS = 10000;
 
-  /** Timeline service store class */
+  /** Timeline service store class. */
   public static final String TIMELINE_SERVICE_STORE =
       TIMELINE_SERVICE_PREFIX + "store-class";
 
@@ -1748,10 +1926,6 @@ public class YarnConfiguration extends Configuration {
   /** Default value for cross origin support for timeline server.*/
   public static final boolean
       TIMELINE_SERVICE_HTTP_CROSS_ORIGIN_ENABLED_DEFAULT = false;
-
-  /** Timeline client settings */
-  public static final String TIMELINE_SERVICE_CLIENT_PREFIX =
-      TIMELINE_SERVICE_PREFIX + "client.";
 
   /** Timeline client call, max retries (-1 means no limit) */
   public static final String TIMELINE_SERVICE_CLIENT_MAX_RETRIES =
@@ -2040,11 +2214,33 @@ public class YarnConfiguration extends Configuration {
   public static final String YARN_HTTP_POLICY_KEY = YARN_PREFIX + "http.policy";
   public static final String YARN_HTTP_POLICY_DEFAULT = HttpConfig.Policy.HTTP_ONLY
       .name();
-  
+
+  /**
+   * Max time to wait for NM to connection to RM.
+   * When not set, proxy will fall back to use value of
+   * RESOURCEMANAGER_CONNECT_MAX_WAIT_MS.
+   */
+  public static final String NM_RESOURCEMANAGER_CONNECT_MAX_WAIT_MS =
+      YARN_PREFIX + "nodemanager.resourcemanager.connect.max-wait.ms";
+
+  /**
+   * Time interval between each NM attempt to connection to RM.
+   * When not set, proxy will fall back to use value of
+   * RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS.
+   */
+  public static final String NM_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS =
+      YARN_PREFIX + "nodemanager.resourcemanager.connect.retry-interval.ms";
+
   /**
    * Node-labels configurations
    */
   public static final String NODE_LABELS_PREFIX = YARN_PREFIX + "node-labels.";
+  
+  /** Node label store implementation class */
+  public static final String FS_NODE_LABELS_STORE_IMPL_CLASS = NODE_LABELS_PREFIX
+      + "fs-store.impl.class";
+  public static final String DEFAULT_FS_NODE_LABELS_STORE_IMPL_CLASS =
+      "org.apache.hadoop.yarn.nodelabels.FileSystemNodeLabelsStore";
   
   /** URI for NodeLabelManager */
   public static final String FS_NODE_LABELS_STORE_ROOT_DIR = NODE_LABELS_PREFIX
@@ -2102,6 +2298,12 @@ public class YarnConfiguration extends Configuration {
         NODELABEL_CONFIGURATION_TYPE, DEFAULT_NODELABEL_CONFIGURATION_TYPE));
   }
 
+  @Private
+  public static boolean areNodeLabelsEnabled(
+      Configuration conf) {
+    return conf.getBoolean(NODE_LABELS_ENABLED, DEFAULT_NODE_LABELS_ENABLED);
+  }
+
   private static final String NM_NODE_LABELS_PREFIX = NM_PREFIX
       + "node-labels.";
 
@@ -2110,6 +2312,7 @@ public class YarnConfiguration extends Configuration {
 
   // whitelist names for the yarn.nodemanager.node-labels.provider
   public static final String CONFIG_NODE_LABELS_PROVIDER = "config";
+  public static final String SCRIPT_NODE_LABELS_PROVIDER = "script";
 
   private static final String NM_NODE_LABELS_PROVIDER_PREFIX =
       NM_NODE_LABELS_PREFIX + "provider.";
@@ -2135,8 +2338,8 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_NM_NODE_LABELS_PROVIDER_FETCH_TIMEOUT_MS =
       DEFAULT_NM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS * 2;
 
-  public static final String NM_PROVIDER_CONFIGURED_NODE_LABELS =
-      NM_NODE_LABELS_PROVIDER_PREFIX + "configured-node-labels";
+  public static final String NM_PROVIDER_CONFIGURED_NODE_PARTITION =
+      NM_NODE_LABELS_PROVIDER_PREFIX + "configured-node-partition";
 
   private static final String RM_NODE_LABELS_PREFIX = RM_PREFIX
       + "node-labels.";
@@ -2163,6 +2366,15 @@ public class YarnConfiguration extends Configuration {
       YARN_PREFIX + "am.blacklisting.disable-failure-threshold";
   public static final float DEFAULT_AM_BLACKLISTING_DISABLE_THRESHOLD = 0.8f;
 
+
+  private static final String NM_SCRIPT_BASED_NODE_LABELS_PROVIDER_PREFIX =
+      NM_NODE_LABELS_PROVIDER_PREFIX + "script.";
+
+  public static final String NM_SCRIPT_BASED_NODE_LABELS_PROVIDER_PATH =
+      NM_SCRIPT_BASED_NODE_LABELS_PROVIDER_PREFIX + "path";
+
+  public static final String NM_SCRIPT_BASED_NODE_LABELS_PROVIDER_SCRIPT_OPTS =
+      NM_SCRIPT_BASED_NODE_LABELS_PROVIDER_PREFIX + "opts";
 
   public YarnConfiguration() {
     super();

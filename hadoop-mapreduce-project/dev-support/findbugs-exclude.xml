@@ -159,6 +159,7 @@
        <Method name="commitJob" />
        <Method name="recoverTask" />
        <Method name="isRecoverySupported" />
+       <Method name="isCommitJobRepeatable" />
        </Or>
        <Bug pattern="NM_WRONG_PACKAGE" />
      </Match>
@@ -170,6 +171,7 @@
        <Method name="cleanupJob" />
        <Method name="recoverTask" />
        <Method name="isRecoverySupported" />
+       <Method name="isCommitJobRepeatable" />
        </Or>
        <Bug pattern="NM_WRONG_PACKAGE_INTENTIONAL" />
      </Match>

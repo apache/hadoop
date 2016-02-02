@@ -899,6 +899,56 @@ public class TestLocalResourcesTrackerImpl {
     }
   }
 
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testReleaseWhileDownloading() throws Exception {
+    String user = "testuser";
+    DrainDispatcher dispatcher = null;
+    try {
+      Configuration conf = new Configuration();
+      dispatcher = createDispatcher(conf);
+      EventHandler<LocalizerEvent> localizerEventHandler =
+          mock(EventHandler.class);
+      EventHandler<LocalizerEvent> containerEventHandler =
+          mock(EventHandler.class);
+      dispatcher.register(LocalizerEventType.class, localizerEventHandler);
+      dispatcher.register(ContainerEventType.class, containerEventHandler);
+
+      ContainerId cId = BuilderUtils.newContainerId(1, 1, 1, 1);
+      LocalizerContext lc = new LocalizerContext(user, cId, null);
+
+      LocalResourceRequest req =
+          createLocalResourceRequest(user, 1, 1, LocalResourceVisibility.PUBLIC);
+      LocalizedResource lr = createLocalizedResource(req, dispatcher);
+      ConcurrentMap<LocalResourceRequest, LocalizedResource> localrsrc =
+          new ConcurrentHashMap<LocalResourceRequest, LocalizedResource>();
+      localrsrc.put(req, lr);
+      LocalResourcesTracker tracker =
+          new LocalResourcesTrackerImpl(user, null, dispatcher, localrsrc,
+              false, conf, new NMNullStateStoreService(), null);
+
+      // request the resource
+      ResourceEvent reqEvent =
+          new ResourceRequestEvent(req, LocalResourceVisibility.PUBLIC, lc);
+      tracker.handle(reqEvent);
+
+      // release the resource
+      ResourceEvent relEvent = new ResourceReleaseEvent(req, cId);
+      tracker.handle(relEvent);
+
+      // download completing after release
+      ResourceLocalizedEvent rle =
+          new ResourceLocalizedEvent(req, new Path("file:///tmp/r1"), 1);
+      tracker.handle(rle);
+
+      dispatcher.await();
+    } finally {
+      if (dispatcher != null) {
+        dispatcher.stop();
+      }
+    }
+  }
+
   private boolean createdummylocalizefile(Path path) {
     boolean ret = false;
     File file = new File(path.toUri().getRawPath().toString());

@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.AclUtil;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.viewfs.InodeTree.INode;
 import org.apache.hadoop.fs.viewfs.InodeTree.INodeLink;
 import org.apache.hadoop.security.AccessControlException;
@@ -689,9 +690,16 @@ public class ViewFileSystem extends FileSystem {
 
   @Override
   public ContentSummary getContentSummary(Path f) throws IOException {
-    InodeTree.ResolveResult<FileSystem> res = 
+    InodeTree.ResolveResult<FileSystem> res =
       fsState.resolve(getUriPath(f), true);
     return res.targetFileSystem.getContentSummary(res.remainingPath);
+  }
+
+  @Override
+  public QuotaUsage getQuotaUsage(Path f) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res =
+        fsState.resolve(getUriPath(f), true);
+    return res.targetFileSystem.getQuotaUsage(res.remainingPath);
   }
 
   @Override
@@ -1065,6 +1073,11 @@ public class ViewFileSystem extends FileSystem {
         throws IOException {
       checkPathIsSlash(path);
       throw readOnlyMountTable("deleteSnapshot", path);
+    }
+
+    @Override
+    public QuotaUsage getQuotaUsage(Path f) throws IOException {
+      throw new NotInMountpointException(f, "getQuotaUsage");
     }
   }
 }

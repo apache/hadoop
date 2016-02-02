@@ -173,7 +173,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
       return object.getDataInputStream();
     } catch (S3ServiceException e) {
       if ("NoSuchKey".equals(e.getS3ErrorCode())) {
-        throw new IOException(key + " doesn't exist");
+        return null;
       }
       if (e.getCause() instanceof IOException) {
         throw (IOException) e.getCause();
@@ -241,7 +241,11 @@ class Jets3tFileSystemStore implements FileSystemStore {
     OutputStream out = null;
     try {
       fileBlock = newBackupFile();
-      in = get(blockToKey(block), byteRangeStart);
+      String blockId = blockToKey(block);
+      in = get(blockId, byteRangeStart);
+      if (in == null) {
+        throw new IOException("Block missing from S3 store: " + blockId);
+      }
       out = new BufferedOutputStream(new FileOutputStream(fileBlock));
       byte[] buf = new byte[bufferSize];
       int numRead;

@@ -51,8 +51,11 @@ public class TestConfigurationNodeLabelsProvider extends NodeLabelTestBase {
 
   private ConfigurationNodeLabelsProvider nodeLabelsProvider;
 
+  private static ClassLoader classContextClassLoader;
+
   @BeforeClass
   public static void create() {
+    classContextClassLoader = Thread.currentThread().getContextClassLoader();
     loader =
         new XMLPathClassLoader(
             TestConfigurationNodeLabelsProvider.class.getClassLoader());
@@ -75,9 +78,14 @@ public class TestConfigurationNodeLabelsProvider extends NodeLabelTestBase {
 
   @AfterClass
   public static void remove() throws Exception {
+    if (classContextClassLoader != null) {
+      // testcases will fail after testcases present in this class, as
+      // yarn-site.xml will be deleted
+      Thread.currentThread().setContextClassLoader(classContextClassLoader);
+    }
     if (testRootDir.exists()) {
-      FileContext.getLocalFSFileContext().delete(
-          new Path(testRootDir.getAbsolutePath()), true);
+      FileContext.getLocalFSFileContext()
+          .delete(new Path(testRootDir.getAbsolutePath()), true);
     }
   }
 
@@ -85,25 +93,25 @@ public class TestConfigurationNodeLabelsProvider extends NodeLabelTestBase {
   public void testNodeLabelsFromConfig() throws IOException,
       InterruptedException {
     Configuration conf = new Configuration();
-    modifyConf("A,B,CX");
+    modifyConf("A");
     nodeLabelsProvider.init(conf);
     // test for ensuring labels are set during initialization of the class
     nodeLabelsProvider.start();
-    assertNLCollectionEquals(toNodeLabelSet("A", "B", "CX"),
+    assertNLCollectionEquals(toNodeLabelSet("A"),
         nodeLabelsProvider.getNodeLabels());
 
     // test for valid Modification
     TimerTask timerTask = nodeLabelsProvider.getTimerTask();
-    modifyConf("X,y,Z");
+    modifyConf("X");
     timerTask.run();
-    assertNLCollectionEquals(toNodeLabelSet("X", "y", "Z"),
+    assertNLCollectionEquals(toNodeLabelSet("X"),
         nodeLabelsProvider.getNodeLabels());
   }
 
   @Test
   public void testConfigForNoTimer() throws Exception {
     Configuration conf = new Configuration();
-    modifyConf("A,B,CX");
+    modifyConf("A");
     conf.setLong(YarnConfiguration.NM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS,
         AbstractNodeLabelsProvider.DISABLE_NODE_LABELS_PROVIDER_FETCH_TIMER);
     nodeLabelsProvider.init(conf);
@@ -114,14 +122,14 @@ public class TestConfigurationNodeLabelsProvider extends NodeLabelTestBase {
             nodeLabelsProvider.nodeLabelsScheduler);
     // Ensure that even though timer is not run, node labels are fetched at least once so
     // that NM registers/updates Labels with RM
-    assertNLCollectionEquals(toNodeLabelSet("A", "B", "CX"),
+    assertNLCollectionEquals(toNodeLabelSet("A"),
         nodeLabelsProvider.getNodeLabels());
   }
 
   @Test
   public void testConfigTimer() throws Exception {
     Configuration conf = new Configuration();
-    modifyConf("A,B,CX");
+    modifyConf("A");
     conf.setLong(YarnConfiguration.NM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS,
         1000);
     nodeLabelsProvider.init(conf);
@@ -129,11 +137,11 @@ public class TestConfigurationNodeLabelsProvider extends NodeLabelTestBase {
     // Ensure that even though timer is not run, node labels are fetched at
     // least once so
     // that NM registers/updates Labels with RM
-    assertNLCollectionEquals(toNodeLabelSet("A", "B", "CX"),
+    assertNLCollectionEquals(toNodeLabelSet("A"),
         nodeLabelsProvider.getNodeLabels());
-    modifyConf("X,y,Z");
+    modifyConf("X");
     Thread.sleep(1500);
-    assertNLCollectionEquals(toNodeLabelSet("X", "y", "Z"),
+    assertNLCollectionEquals(toNodeLabelSet("X"),
         nodeLabelsProvider.getNodeLabels());
 
   }
@@ -141,7 +149,7 @@ public class TestConfigurationNodeLabelsProvider extends NodeLabelTestBase {
   private static void modifyConf(String nodeLabels)
       throws FileNotFoundException, IOException {
     Configuration conf = new Configuration();
-    conf.set(YarnConfiguration.NM_PROVIDER_CONFIGURED_NODE_LABELS, nodeLabels);
+    conf.set(YarnConfiguration.NM_PROVIDER_CONFIGURED_NODE_PARTITION, nodeLabels);
     FileOutputStream confStream = new FileOutputStream(nodeLabelsConfigFile);
     conf.writeXml(confStream);
     IOUtils.closeQuietly(confStream);

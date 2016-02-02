@@ -117,7 +117,7 @@
     {.}<br/>
     {/CorruptFiles}
   </div>
-  <p>Please check the logs or run fsck in order to identify the missing blocks. See the Hadoop FAQ for common causes and potential solutions.</p>
+  <p>Please check the logs or run fsck in order to identify the missing blocks.{@if cond="{NumberOfSnapshottableDirs} > 0"} Please run fsck with -includeSnapshots in order to see detailed reports about snapshots.{/if} See the Hadoop FAQ for common causes and potential solutions.</p>
 </div>
 {/if}
 {/nn}
@@ -285,8 +285,8 @@
   <ul class="dfshealth-node-legend">
     <li class="dfshealth-node-icon dfshealth-node-alive">In service</li>
     <li class="dfshealth-node-icon dfshealth-node-down">Down</li>
-    <li class="dfshealth-node-icon dfshealth-node-decommisioned">Decommisioned</li>
-    <li class="dfshealth-node-icon dfshealth-node-down-decommisioned">Decommissioned &amp; dead</li>
+    <li class="dfshealth-node-icon dfshealth-node-decommissioned">Decommissioned</li>
+    <li class="dfshealth-node-icon dfshealth-node-down-decommissioned">Decommissioned &amp; dead</li>
   </ul>
 </div>
 <div class="page-header"><h1><small>In operation</small></h1></div>
@@ -339,7 +339,6 @@
   <thead>
     <tr>
       <th>Node</th>
-      <th>Last contact</th>
       <th>Under replicated blocks</th>
       <th>Blocks with no live replicas</th>
       <th>Under Replicated Blocks <br/>In files under construction</th>
@@ -348,7 +347,6 @@
   {#DecomNodes}
   <tr>
     <td>{name} ({xferaddr})</td>
-    <td>{lastContact}</td>
     <td>{underReplicatedBlocks}</td>
     <td>{decommissionOnlyReplicas}</td>
     <td>{underReplicateInOpenFiles}</td>

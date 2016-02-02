@@ -201,11 +201,13 @@ public class RetriableFileCopyCommand extends RetriableCommand {
         targetFS, target)) {
       StringBuilder errorMessage = new StringBuilder("Check-sum mismatch between ")
           .append(source).append(" and ").append(target).append(".");
-      if (sourceFS.getFileStatus(source).getBlockSize() != targetFS.getFileStatus(target).getBlockSize()) {
+      if (sourceFS.getFileStatus(source).getBlockSize() !=
+          targetFS.getFileStatus(target).getBlockSize()) {
         errorMessage.append(" Source and target differ in block-size.")
             .append(" Use -pb to preserve block-sizes during copy.")
             .append(" Alternatively, skip checksum-checks altogether, using -skipCrc.")
-						.append(" (NOTE: By skipping checksums, one runs the risk of masking data-corruption during file-transfer.)");
+            .append(" (NOTE: By skipping checksums, one runs the risk of " +
+                "masking data-corruption during file-transfer.)");
       }
       throw new IOException(errorMessage.toString());
     }

@@ -92,12 +92,17 @@ public class TimelineDataManagerMetrics {
         getDomainsOps.value();
   }
 
+  private static TimelineDataManagerMetrics instance = null;
+
   TimelineDataManagerMetrics() {
   }
 
-  public static TimelineDataManagerMetrics create() {
-    MetricsSystem ms = DefaultMetricsSystem.instance();
-    return ms.register(new TimelineDataManagerMetrics());
+  public static synchronized TimelineDataManagerMetrics create() {
+    if (instance == null) {
+      MetricsSystem ms = DefaultMetricsSystem.instance();
+      instance = ms.register(new TimelineDataManagerMetrics());
+    }
+    return instance;
   }
 
   public void incrGetEntitiesOps() {

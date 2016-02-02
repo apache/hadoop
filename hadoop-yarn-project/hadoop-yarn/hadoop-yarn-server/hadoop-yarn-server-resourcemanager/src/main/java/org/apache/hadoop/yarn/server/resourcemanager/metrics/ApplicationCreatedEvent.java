@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.metrics;
 
 import java.util.Set;
 
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
 
@@ -37,6 +38,8 @@ public class ApplicationCreatedEvent extends
   private Priority applicationPriority;
   private String appNodeLabelsExpression;
   private String amNodeLabelsExpression;
+  private final CallerContext callerContext;
+
 
   public ApplicationCreatedEvent(ApplicationId appId,
       String name,
@@ -49,7 +52,8 @@ public class ApplicationCreatedEvent extends
       boolean unmanagedApplication,
       Priority applicationPriority,
       String appNodeLabelsExpression,
-      String amNodeLabelsExpression) {
+      String amNodeLabelsExpression,
+      CallerContext callerContext) {
     super(SystemMetricsEventType.APP_CREATED, createdTime);
     this.appId = appId;
     this.name = name;
@@ -62,6 +66,7 @@ public class ApplicationCreatedEvent extends
     this.applicationPriority = applicationPriority;
     this.appNodeLabelsExpression = appNodeLabelsExpression;
     this.amNodeLabelsExpression = amNodeLabelsExpression;
+    this.callerContext = callerContext;
   }
 
   @Override
@@ -111,5 +116,9 @@ public class ApplicationCreatedEvent extends
 
   public String getAmNodeLabelsExpression() {
     return amNodeLabelsExpression;
+  }
+  
+  public CallerContext getCallerContext() {
+    return callerContext;
   }
 }

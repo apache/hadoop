@@ -62,6 +62,7 @@ public class TestTimelineDataManager extends TimelineStoreTestUtils {
 
     conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, false);
     aclsManager = new TimelineACLsManager(conf);
+    aclsManager.setTimelineStore(store);
     dataManaer = new TimelineDataManager(store, aclsManager);
     conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
     conf.set(YarnConfiguration.YARN_ADMIN_ACL, "admin");

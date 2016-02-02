@@ -32,9 +32,9 @@ public class TestClassUtil {
     Assert.assertNotNull("Containing jar not found for Logger", 
         containingJar);
     File jarFile = new File(containingJar);
-    Assert.assertTrue("Containing jar does not exist on file system", 
+    Assert.assertTrue("Containing jar does not exist on file system ",
         jarFile.exists());
-    Assert.assertTrue("Incorrect jar file" + containingJar,  
-        jarFile.getName().matches("log4j.+[.]jar"));
+    Assert.assertTrue("Incorrect jar file " + containingJar,
+        jarFile.getName().matches("log4j.*[.]jar"));
   }
 }

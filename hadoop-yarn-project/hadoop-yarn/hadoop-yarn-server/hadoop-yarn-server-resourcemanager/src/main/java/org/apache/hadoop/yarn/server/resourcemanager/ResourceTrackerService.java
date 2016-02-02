@@ -149,10 +149,12 @@ public class ResourceTrackerService extends AbstractService implements
         YarnConfiguration.RM_NODEMANAGER_MINIMUM_VERSION,
         YarnConfiguration.DEFAULT_RM_NODEMANAGER_MINIMUM_VERSION);
 
-    isDistributedNodeLabelsConf =
-        YarnConfiguration.isDistributedNodeLabelConfiguration(conf);
-    isDelegatedCentralizedNodeLabelsConf = YarnConfiguration
-        .isDelegatedCentralizedNodeLabelConfiguration(conf);
+    if (YarnConfiguration.areNodeLabelsEnabled(conf)) {
+      isDistributedNodeLabelsConf =
+          YarnConfiguration.isDistributedNodeLabelConfiguration(conf);
+      isDelegatedCentralizedNodeLabelsConf =
+          YarnConfiguration.isDelegatedCentralizedNodeLabelConfiguration(conf);
+    }
 
     super.serviceInit(conf);
   }
@@ -228,6 +230,11 @@ public class ResourceTrackerService extends AbstractService implements
     }
 
     RMAppAttempt rmAppAttempt = rmApp.getRMAppAttempt(appAttemptId);
+    if (rmAppAttempt == null) {
+      LOG.info("Ignoring not found attempt " + appAttemptId);
+      return;
+    }
+
     Container masterContainer = rmAppAttempt.getMasterContainer();
     if (masterContainer.getId().equals(containerStatus.getContainerId())
         && containerStatus.getContainerState() == ContainerState.COMPLETE) {
@@ -459,10 +466,7 @@ public class ResourceTrackerService extends AbstractService implements
 
     // 4. Send status to RMNode, saving the latest response.
     RMNodeStatusEvent nodeStatusEvent =
-        new RMNodeStatusEvent(nodeId, remoteNodeStatus.getNodeHealthStatus(),
-            remoteNodeStatus.getContainersStatuses(),
-            remoteNodeStatus.getKeepAliveApplications(), nodeHeartBeatResponse,
-            remoteNodeStatus.getIncreasedContainers());
+        new RMNodeStatusEvent(nodeId, remoteNodeStatus, nodeHeartBeatResponse);
     if (request.getLogAggregationReportsForApps() != null
         && !request.getLogAggregationReportsForApps().isEmpty()) {
       nodeStatusEvent.setLogAggregationReportsForApps(request

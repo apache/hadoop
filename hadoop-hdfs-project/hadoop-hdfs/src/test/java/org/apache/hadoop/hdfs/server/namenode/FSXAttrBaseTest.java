@@ -1234,7 +1234,7 @@ public class FSXAttrBaseTest {
       throws Exception {
     // Test that a file with the xattr can or can't be opened.
     try {
-      userFs.open(filePath);
+      userFs.open(filePath).read();
       assertFalse("open succeeded but expected it to fail", expectOpenFailure);
     } catch (AccessControlException e) {
       assertTrue("open failed but expected it to succeed", expectOpenFailure);

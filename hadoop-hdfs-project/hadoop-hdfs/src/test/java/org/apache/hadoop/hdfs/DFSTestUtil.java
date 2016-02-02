@@ -1156,7 +1156,7 @@ public class DFSTestUtil {
       final StorageType type = (types != null && i < types.length) ? types[i]
           : StorageType.DEFAULT;
       storages[i] = createDatanodeStorageInfo(storageID, ip, rack, hostname,
-          type);
+          type, null);
     }
     return storages;
   }
@@ -1164,16 +1164,19 @@ public class DFSTestUtil {
   public static DatanodeStorageInfo createDatanodeStorageInfo(
       String storageID, String ip, String rack, String hostname) {
     return createDatanodeStorageInfo(storageID, ip, rack, hostname,
-        StorageType.DEFAULT);
+        StorageType.DEFAULT, null);
   }
 
   public static DatanodeStorageInfo createDatanodeStorageInfo(
       String storageID, String ip, String rack, String hostname,
-      StorageType type) {
+      StorageType type, String upgradeDomain) {
     final DatanodeStorage storage = new DatanodeStorage(storageID,
         DatanodeStorage.State.NORMAL, type);
     final DatanodeDescriptor dn = BlockManagerTestUtil.getDatanodeDescriptor(
         ip, rack, storage, hostname);
+    if (upgradeDomain != null) {
+      dn.setUpgradeDomain(upgradeDomain);
+    }
     return BlockManagerTestUtil.newDatanodeStorageInfo(dn, storage);
   }
 
@@ -1917,9 +1920,9 @@ public class DFSTestUtil {
 
       ExtendedBlock previous = null;
       for (int i = 0; i < numBlocks; i++) {
-        Block newBlock = addStripedBlockToFile(cluster.getDataNodes(), dfs, ns,
+        Block newBlock = addBlockToFile(true, cluster.getDataNodes(), dfs, ns,
             file.toString(), fileNode, dfs.getClient().getClientName(),
-            previous, numStripesPerBlk);
+            previous, numStripesPerBlk, 0);
         previous = new ExtendedBlock(ns.getBlockPoolId(), newBlock);
       }
 
@@ -1931,18 +1934,22 @@ public class DFSTestUtil {
   }
 
   /**
-   * Adds a striped block group to a file. This method only manipulates NameNode
+   * Adds a block or a striped block group to a file.
+   * This method only manipulates NameNode
    * states of the file and the block without injecting data to DataNode.
    * It does mimic block reports.
    * You should disable periodical heartbeat before use this.
+   * @param isStripedBlock a boolean tell if the block added a striped block
    * @param dataNodes List DataNodes to host the striped block group
    * @param previous Previous block in the file
    * @param numStripes Number of stripes in each block group
-   * @return The added block group
+   * @param len block size for a non striped block added
+   * @return The added block or block group
    */
-  public static Block addStripedBlockToFile(List<DataNode> dataNodes,
-      DistributedFileSystem fs, FSNamesystem ns, String file, INodeFile fileNode,
-      String clientName, ExtendedBlock previous, int numStripes)
+  public static Block addBlockToFile(boolean isStripedBlock,
+      List<DataNode> dataNodes, DistributedFileSystem fs, FSNamesystem ns,
+      String file, INodeFile fileNode,
+      String clientName, ExtendedBlock previous, int numStripes, int len)
       throws Exception {
     fs.getClient().namenode.addBlock(file, clientName, previous, null,
         fileNode.getId(), null);
@@ -1965,10 +1972,12 @@ public class DFSTestUtil {
     }
 
     // 2. RECEIVED_BLOCK IBR
+    long blockSize = isStripedBlock ?
+        numStripes * BLOCK_STRIPED_CELL_SIZE : len;
     for (int i = 0; i < groupSize; i++) {
       DataNode dn = dataNodes.get(i);
       final Block block = new Block(lastBlock.getBlockId() + i,
-          numStripes * BLOCK_STRIPED_CELL_SIZE, lastBlock.getGenerationStamp());
+          blockSize, lastBlock.getGenerationStamp());
       DatanodeStorage storage = new DatanodeStorage(UUID.randomUUID().toString());
       StorageReceivedDeletedBlocks[] reports = DFSTestUtil
           .makeReportForReceivedBlock(block,
@@ -1977,8 +1986,9 @@ public class DFSTestUtil {
         ns.processIncrementalBlockReport(dn.getDatanodeId(), report);
       }
     }
-
-    lastBlock.setNumBytes(numStripes * BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS);
+    long bytes = isStripedBlock ?
+        numStripes * BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS : len;
+    lastBlock.setNumBytes(bytes);
     return lastBlock;
   }
 

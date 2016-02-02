@@ -145,7 +145,7 @@ public class FSImage implements Closeable {
   }
  
   void format(FSNamesystem fsn, String clusterId) throws IOException {
-    long fileCount = fsn.getTotalFiles();
+    long fileCount = fsn.getFilesTotal();
     // Expect 1 file, which is the root inode
     Preconditions.checkState(fileCount == 1,
         "FSImage.format should be called with an uninitialized namesystem, has " +
@@ -665,14 +665,19 @@ public class FSImage implements Closeable {
       LOG.info("No edit log streams selected.");
     }
     
+    Exception le = null;
     FSImageFile imageFile = null;
     for (int i = 0; i < imageFiles.size(); i++) {
       try {
         imageFile = imageFiles.get(i);
         loadFSImageFile(target, recovery, imageFile, startOpt);
         break;
-      } catch (IOException ioe) {
-        LOG.error("Failed to load image from " + imageFile, ioe);
+      } catch (IllegalReservedPathException ie) {
+        throw new IOException("Failed to load image from " + imageFile,
+            ie);
+      } catch (Exception e) {
+        le = e;
+        LOG.error("Failed to load image from " + imageFile, e);
         target.clear();
         imageFile = null;
       }
@@ -680,7 +685,8 @@ public class FSImage implements Closeable {
     // Failed to load any images, error out
     if (imageFile == null) {
       FSEditLog.closeAllStreams(editStreams);
-      throw new IOException("Failed to load an FSImage file!");
+      throw new IOException("Failed to load FSImage file, see error(s) " +
+          "above for more info.");
     }
     prog.endPhase(Phase.LOADING_FSIMAGE);
     
@@ -721,7 +727,7 @@ public class FSImage implements Closeable {
 
   void loadFSImageFile(FSNamesystem target, MetaRecoveryContext recovery,
       FSImageFile imageFile, StartupOption startupOption) throws IOException {
-    LOG.debug("Planning to load image :\n" + imageFile);
+    LOG.info("Planning to load image: " + imageFile);
     StorageDirectory sdForProperties = imageFile.sd;
     storage.readProperties(sdForProperties, startupOption);
 
@@ -1064,6 +1070,8 @@ public class FSImage implements Closeable {
     } finally {
       removeFromCheckpointing(imageTxId);
     }
+    //Update NameDirSize Metric
+    getStorage().updateNameDirSize();
   }
 
   /**
@@ -1244,6 +1252,8 @@ public class FSImage implements Closeable {
     // we won't miss this log segment on a restart if the edits directories
     // go missing.
     storage.writeTransactionIdFileToStorage(getEditLog().getCurSegmentTxId());
+    //Update NameDirSize Metric
+    getStorage().updateNameDirSize();
     return new CheckpointSignature(this);
   }
 

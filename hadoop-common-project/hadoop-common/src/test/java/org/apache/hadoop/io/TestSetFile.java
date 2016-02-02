@@ -22,24 +22,28 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
-import junit.framework.TestCase;
 
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.junit.Test;
+
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 /** Support for flat files of binary key/value pairs. */
-public class TestSetFile extends TestCase {
+public class TestSetFile {
   private static final Log LOG = LogFactory.getLog(TestSetFile.class);
   private static String FILE =
     System.getProperty("test.build.data",".") + "/test.set";
 
   private static Configuration conf = new Configuration();
-  
-  public TestSetFile(String name) { super(name); }
 
+  @Test
   public void testSetFile() throws Exception {
     FileSystem fs = FileSystem.getLocal(conf);
     try {
@@ -58,8 +62,9 @@ public class TestSetFile extends TestCase {
    * test {@code SetFile.Reader} methods 
    * next(), get() in combination 
    */
-  public void testSetFileAccessMethods() {    
-    try {             
+  @Test
+  public void testSetFileAccessMethods() {
+    try {
       FileSystem fs = FileSystem.getLocal(conf);
       int size = 10;
       writeData(fs, size);

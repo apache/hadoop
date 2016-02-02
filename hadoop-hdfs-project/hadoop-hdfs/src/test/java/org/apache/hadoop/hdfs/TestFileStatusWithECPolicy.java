@@ -50,6 +50,7 @@ public class TestFileStatusWithECPolicy {
   public void after() {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

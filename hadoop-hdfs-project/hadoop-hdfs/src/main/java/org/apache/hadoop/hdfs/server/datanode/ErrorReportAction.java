@@ -49,7 +49,7 @@ public class ErrorReportAction implements BPServiceActorAction {
           + "errorMessage: " + errorMessage + "  errorCode: " + errorCode, re);
     } catch(IOException e) {
       throw new BPServiceActorActionException("Error reporting "
-          + "an error to namenode: ");
+          + "an error to namenode.", e);
     }
   }
 

@@ -270,7 +270,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-count \[-q\] \[-h\] \[-v\] \[-t \[&lt;storage type&gt;\]\] &lt;path&gt; \.\.\. :( )*</expected-output>
+          <expected-output>^-count \[-q\] \[-h\] \[-v\] \[-t \[&lt;storage type&gt;\]\] \[-u\] &lt;path&gt; \.\.\. :( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -601,7 +601,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-getmerge \[-nl\] &lt;src&gt; &lt;localdst&gt; :\s*</expected-output>
+          <expected-output>^-getmerge \[-nl\] \[-skip-empty-file\] &lt;src&gt; &lt;localdst&gt; :\s*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -615,6 +615,11 @@
           <type>RegexpComparator</type>
           <expected-output>^( |\t)*-nl\s+Add a newline character at the end of each file.( )*</expected-output>
         </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*-skip-empty-file\s+Do not add new line character for empty file.( )*</expected-output>
+        </comparator>
+
       </comparators>
     </test>
 

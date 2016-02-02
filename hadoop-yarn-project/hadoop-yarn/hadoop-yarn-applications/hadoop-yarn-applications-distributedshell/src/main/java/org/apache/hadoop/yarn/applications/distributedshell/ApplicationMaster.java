@@ -556,7 +556,8 @@ public class ApplicationMaster {
     appSubmitterUgi.addCredentials(credentials);
 
 
-    AMRMClientAsync.CallbackHandler allocListener = new RMCallbackHandler();
+    AMRMClientAsync.AbstractCallbackHandler allocListener =
+        new RMCallbackHandler();
     amRMClient = AMRMClientAsync.createAMRMClientAsync(1000, allocListener);
     amRMClient.init(conf);
     amRMClient.start();
@@ -731,7 +732,7 @@ public class ApplicationMaster {
   }
 
   @VisibleForTesting
-  class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
+  class RMCallbackHandler extends AMRMClientAsync.AbstractCallbackHandler {
     @SuppressWarnings("unchecked")
     @Override
     public void onContainersCompleted(List<ContainerStatus> completedContainers) {
@@ -835,6 +836,9 @@ public class ApplicationMaster {
     }
 
     @Override
+    public void onContainersResourceChanged(List<Container> containers) {}
+
+    @Override
     public void onShutdownRequest() {
       done = true;
     }
@@ -858,8 +862,7 @@ public class ApplicationMaster {
   }
 
   @VisibleForTesting
-  static class NMCallbackHandler
-    implements NMClientAsync.CallbackHandler {
+  static class NMCallbackHandler extends NMClientAsync.AbstractCallbackHandler {
 
     private ConcurrentMap<ContainerId, Container> containers =
         new ConcurrentHashMap<ContainerId, Container>();
@@ -908,6 +911,10 @@ public class ApplicationMaster {
     }
 
     @Override
+    public void onContainerResourceIncreased(
+        ContainerId containerId, Resource resource) {}
+
+    @Override
     public void onStartContainerError(ContainerId containerId, Throwable t) {
       LOG.error("Failed to start Container " + containerId);
       containers.remove(containerId);
@@ -926,6 +933,11 @@ public class ApplicationMaster {
       LOG.error("Failed to stop Container " + containerId);
       containers.remove(containerId);
     }
+
+    @Override
+    public void onIncreaseContainerResourceError(
+        ContainerId containerId, Throwable t) {}
+
   }
 
   /**
@@ -1128,7 +1140,8 @@ public class ApplicationMaster {
       ugi.doAs(new PrivilegedExceptionAction<TimelinePutResponse>() {
         @Override
         public TimelinePutResponse run() throws Exception {
-          return timelineClient.putEntities(entity);
+          return processTimelineResponseErrors(
+              timelineClient.putEntities(entity));
         }
       });
     } catch (Exception e) {
@@ -1153,7 +1166,8 @@ public class ApplicationMaster {
     event.addEventInfo("Exit Status", container.getExitStatus());
     entity.addEvent(event);
     try {
-      timelineClient.putEntities(entity);
+      TimelinePutResponse response = timelineClient.putEntities(entity);
+      processTimelineResponseErrors(response);
     } catch (YarnException | IOException e) {
       LOG.error("Container end event could not be published for "
           + container.getContainerId().toString(), e);
@@ -1173,13 +1187,30 @@ public class ApplicationMaster {
     event.setTimestamp(System.currentTimeMillis());
     entity.addEvent(event);
     try {
-      timelineClient.putEntities(entity);
+      TimelinePutResponse response = timelineClient.putEntities(entity);
+      processTimelineResponseErrors(response);
     } catch (YarnException | IOException e) {
       LOG.error("App Attempt "
           + (appEvent.equals(DSEvent.DS_APP_ATTEMPT_START) ? "start" : "end")
           + " event could not be published for "
           + appAttemptId.toString(), e);
     }
+  }
+
+  private static TimelinePutResponse processTimelineResponseErrors(
+      TimelinePutResponse response) {
+    List<TimelinePutResponse.TimelinePutError> errors = response.getErrors();
+    if (errors.size() == 0) {
+      LOG.debug("Timeline entities are successfully put");
+    } else {
+      for (TimelinePutResponse.TimelinePutError error : errors) {
+        LOG.error(
+            "Error when publishing entity [" + error.getEntityType() + ","
+                + error.getEntityId() + "], server side error code: "
+                + error.getErrorCode());
+      }
+    }
+    return response;
   }
 
   RMCallbackHandler getRMCallbackHandler() {

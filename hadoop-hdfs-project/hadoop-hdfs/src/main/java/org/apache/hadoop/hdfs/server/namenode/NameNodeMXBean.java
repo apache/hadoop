@@ -139,13 +139,6 @@ public interface NameNodeMXBean {
   public long getTotalBlocks();
   
   /**
-   * Gets the total number of files on the cluster
-   * 
-   * @return the total number of files on the cluster
-   */
-  public long getTotalFiles();
-  
-  /**
    * Gets the total number of missing blocks on the cluster
    * 
    * @return the total number of missing blocks on the cluster
@@ -160,6 +153,13 @@ public interface NameNodeMXBean {
    * replication factor 1
    */
   public long getNumberOfMissingBlocksWithReplicationFactorOne();
+
+  /**
+   * Gets the total number of snapshottable dirs in the system.
+   *
+   * @return the total number of snapshottable dirs in the system
+   */
+  public long getNumberOfSnapshottableDirs();
 
   /**
    * Gets the number of threads.
@@ -265,4 +265,9 @@ public interface NameNodeMXBean {
    */
   public Map<String, Integer> getDistinctVersions();
   
+  /**
+   * Get namenode directory size.
+   */
+  String getNameDirSize();
+
 }

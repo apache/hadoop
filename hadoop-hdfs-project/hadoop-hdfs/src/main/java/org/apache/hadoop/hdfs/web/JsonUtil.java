@@ -190,6 +190,21 @@ public class JsonUtil {
     }
   }
 
+  /** Convert a StorageType[] to a Json array. */
+  private static Object[] toJsonArray(final StorageType[] array) {
+    if (array == null) {
+      return null;
+    } else if (array.length == 0) {
+      return EMPTY_OBJECT_ARRAY;
+    } else {
+      final Object[] a = new Object[array.length];
+      for(int i = 0; i < array.length; i++) {
+        a[i] = array[i];
+      }
+      return a;
+    }
+  }
+
   /** Convert a LocatedBlock to a Json map. */
   private static Map<String, Object> toJsonMap(final LocatedBlock locatedblock
       ) throws IOException {
@@ -202,6 +217,7 @@ public class JsonUtil {
     m.put("isCorrupt", locatedblock.isCorrupt());
     m.put("startOffset", locatedblock.getStartOffset());
     m.put("block", toJsonMap(locatedblock.getBlock()));
+    m.put("storageTypes", toJsonArray(locatedblock.getStorageTypes()));
     m.put("locations", toJsonArray(locatedblock.getLocations()));
     m.put("cachedLocations", toJsonArray(locatedblock.getCachedLocations()));
     return m;
@@ -253,6 +269,21 @@ public class JsonUtil {
     m.put("quota", contentsummary.getQuota());
     m.put("spaceConsumed", contentsummary.getSpaceConsumed());
     m.put("spaceQuota", contentsummary.getSpaceQuota());
+    final Map<String, Map<String, Long>> typeQuota =
+        new TreeMap<String, Map<String, Long>>();
+    for (StorageType t : StorageType.getTypesSupportingQuota()) {
+      long tQuota = contentsummary.getTypeQuota(t);
+      if (tQuota != HdfsConstants.QUOTA_RESET) {
+        Map<String, Long> type = typeQuota.get(t.toString());
+        if (type == null) {
+          type = new TreeMap<String, Long>();
+          typeQuota.put(t.toString(), type);
+        }
+        type.put("quota", contentsummary.getTypeQuota(t));
+        type.put("consumed", contentsummary.getTypeConsumed(t));
+      }
+    }
+    m.put("typeQuota", typeQuota);
     return toJsonString(ContentSummary.class, m);
   }
 

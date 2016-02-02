@@ -122,7 +122,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
     new HashMap<String, ProcessInfo>();
 
   public ProcfsBasedProcessTree(String pid) {
-    this(pid, PROCFS, new SystemClock());
+    this(pid, PROCFS, SystemClock.getInstance());
   }
 
   @Override
@@ -136,7 +136,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
   }
 
   public ProcfsBasedProcessTree(String pid, String procfsDir) {
-    this(pid, procfsDir, new SystemClock());
+    this(pid, procfsDir, SystemClock.getInstance());
   }
 
   /**

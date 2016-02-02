@@ -23,6 +23,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.Charset;
 import java.text.DecimalFormat;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -103,7 +104,6 @@ public class ApplicationCLI extends YarnCLI {
           + "Supports optional use of -appTypes to filter applications "
           + "based on application type, "
           + "and -appStates to filter applications based on application state.");
-      opts.addOption(KILL_CMD, true, "Kills the application.");
       opts.addOption(MOVE_TO_QUEUE_CMD, true, "Moves the application to a "
           + "different queue.");
       opts.addOption(QUEUE_CMD, true, "Works with the movetoqueue command to"
@@ -127,7 +127,12 @@ public class ApplicationCLI extends YarnCLI {
       opts.addOption(UPDATE_PRIORITY, true,
           "update priority of an application. ApplicationId can be"
               + " passed using 'appId' option.");
-      opts.getOption(KILL_CMD).setArgName("Application ID");
+      Option killOpt = new Option(KILL_CMD, true, "Kills the application. "
+          + "Set of applications can be provided separated with space");
+      killOpt.setValueSeparator(' ');
+      killOpt.setArgs(Option.UNLIMITED_VALUES);
+      killOpt.setArgName("Application ID");
+      opts.addOption(killOpt);
       opts.getOption(MOVE_TO_QUEUE_CMD).setArgName("Application ID");
       opts.getOption(QUEUE_CMD).setArgName("Queue Name");
       opts.getOption(STATUS_CMD).setArgName("Application ID");
@@ -138,7 +143,7 @@ public class ApplicationCLI extends YarnCLI {
       opts.addOption(STATUS_CMD, true,
           "Prints the status of the application attempt.");
       opts.addOption(LIST_CMD, true,
-          "List application attempts for aplication.");
+          "List application attempts for application.");
       opts.addOption(FAIL_CMD, true, "Fails application attempt.");
       opts.addOption(HELP_CMD, false, "Displays help for all commands.");
       opts.getOption(STATUS_CMD).setArgName("Application Attempt ID");
@@ -239,15 +244,11 @@ public class ApplicationCLI extends YarnCLI {
         listContainers(cliParser.getOptionValue(LIST_CMD));
       }
     } else if (cliParser.hasOption(KILL_CMD)) {
-      if (args.length != 3) {
+      if (args.length < 3 || hasAnyOtherCLIOptions(cliParser, opts, KILL_CMD)) {
         printUsage(title, opts);
         return exitCode;
       }
-      try{
-        killApplication(cliParser.getOptionValue(KILL_CMD));
-      } catch (ApplicationNotFoundException e) {
-        return exitCode;
-      }
+      return killApplication(cliParser.getOptionValues(KILL_CMD));
     } else if (cliParser.hasOption(MOVE_TO_QUEUE_CMD)) {
       if (!cliParser.hasOption(QUEUE_CMD)) {
         printUsage(title, opts);
@@ -349,8 +350,9 @@ public class ApplicationCLI extends YarnCLI {
       appAttemptReportStr.println(appAttemptReport
           .getYarnApplicationAttemptState());
       appAttemptReportStr.print("\tAMContainer : ");
-      appAttemptReportStr.println(appAttemptReport.getAMContainerId()
-          .toString());
+      appAttemptReportStr
+          .println(appAttemptReport.getAMContainerId() == null ? "N/A"
+              : appAttemptReport.getAMContainerId().toString());
       appAttemptReportStr.print("\tTracking-URL : ");
       appAttemptReportStr.println(appAttemptReport.getTrackingUrl());
       appAttemptReportStr.print("\tRPC Port : ");
@@ -478,6 +480,30 @@ public class ApplicationCLI extends YarnCLI {
               .getOriginalTrackingUrl());
     }
     writer.flush();
+  }
+
+  /**
+   * Kills applications with the application id as appId
+   *
+   * @param Array of applicationIds
+   * @return errorCode
+   * @throws YarnException
+   * @throws IOException
+   */
+  private int killApplication(String[] applicationIds) throws YarnException,
+      IOException {
+    int returnCode = -1;
+    for (String applicationId : applicationIds) {
+      try {
+        killApplication(applicationId);
+        returnCode = 0;
+      } catch (ApplicationNotFoundException e) {
+        // Suppress all ApplicationNotFoundException for now.
+        continue;
+      }
+    }
+
+    return returnCode;
   }
 
   /**
@@ -667,6 +693,7 @@ public class ApplicationCLI extends YarnCLI {
       writer.printf(APPLICATION_ATTEMPTS_PATTERN, appAttemptReport
           .getApplicationAttemptId(), appAttemptReport
           .getYarnApplicationAttemptState(), appAttemptReport
+          .getAMContainerId() == null ? "N/A" : appAttemptReport
           .getAMContainerId().toString(), appAttemptReport.getTrackingUrl());
     }
     writer.flush();
@@ -710,9 +737,34 @@ public class ApplicationCLI extends YarnCLI {
       throws YarnException, IOException {
     ApplicationId appId = ConverterUtils.toApplicationId(applicationId);
     Priority newAppPriority = Priority.newInstance(Integer.parseInt(priority));
-    sysout.println("Updating priority of an aplication " + applicationId);
-    client.updateApplicationPriority(appId, newAppPriority);
-    sysout.println("Successfully updated the application with id "
-        + applicationId + " with priority '" + priority + "'");
+    sysout.println("Updating priority of an application " + applicationId);
+    Priority updateApplicationPriority =
+        client.updateApplicationPriority(appId, newAppPriority);
+    if (newAppPriority.equals(updateApplicationPriority)) {
+      sysout.println("Successfully updated the application "
+          + applicationId + " with priority '" + priority + "'");
+    } else {
+      sysout
+          .println("Updated priority of an application  "
+              + applicationId
+          + " to cluster max priority OR keeping old priority"
+          + " as application is in final states");
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private boolean hasAnyOtherCLIOptions(CommandLine cliParser, Options opts,
+      String excludeOption) {
+    Collection<Option> ops = opts.getOptions();
+    for (Option op : ops) {
+      // Skip exclude option from the option list
+      if (op.getOpt().equals(excludeOption)) {
+        continue;
+      }
+      if (cliParser.hasOption(op.getOpt())) {
+        return true;
+      }
+    }
+    return false;
   }
 }

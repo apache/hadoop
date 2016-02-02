@@ -25,7 +25,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceUsageInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourcesInfo;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -36,7 +36,7 @@ public class UserInfo {
   protected int numActiveApplications;
   protected ResourceInfo AMResourceUsed;
   protected ResourceInfo userResourceLimit;
-  protected ResourceUsageInfo resources;
+  protected ResourcesInfo resources;
 
   UserInfo() {}
 
@@ -48,7 +48,7 @@ public class UserInfo {
     this.numPendingApplications = pendingApps;
     this.AMResourceUsed = new ResourceInfo(amResUsed);
     this.userResourceLimit = new ResourceInfo(resourceLimit);
-    this.resources = new ResourceUsageInfo(resourceUsage);
+    this.resources = new ResourcesInfo(resourceUsage);
   }
 
   public String getUsername() {
@@ -75,7 +75,7 @@ public class UserInfo {
     return userResourceLimit;
   }
 
-  public ResourceUsageInfo getResourceUsageInfo() {
+  public ResourcesInfo getResourceUsageInfo() {
     return resources;
   }
 }

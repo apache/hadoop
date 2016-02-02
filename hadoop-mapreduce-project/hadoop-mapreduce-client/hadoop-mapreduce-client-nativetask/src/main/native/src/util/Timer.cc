@@ -40,7 +40,7 @@ static uint64_t clock_get() {
 
 static uint64_t clock_get() {
   timespec ts;
-  clock_gettime(_POSIX_CPUTIME, &ts);
+  clock_gettime(CLOCK_REALTIME, &ts);
   return 1000000000 * ts.tv_sec + ts.tv_nsec;
 }
 

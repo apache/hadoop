@@ -54,6 +54,7 @@ public class NodeCLI extends YarnCLI {
 
   private static final String NODE_STATE_CMD = "states";
   private static final String NODE_ALL = "all";
+  private static final String NODE_SHOW_DETAILS = "showDetails";
 
   public static void main(String[] args) throws Exception {
     NodeCLI cli = new NodeCLI();
@@ -72,7 +73,8 @@ public class NodeCLI extends YarnCLI {
     opts.addOption(STATUS_CMD, true, "Prints the status report of the node.");
     opts.addOption(LIST_CMD, false, "List all running nodes. " +
         "Supports optional use of -states to filter nodes " +
-        "based on node state, all -all to list all nodes.");
+        "based on node state, all -all to list all nodes, " +
+        "-showDetails to display more details about each node.");
     Option nodeStateOpt = new Option(NODE_STATE_CMD, true,
         "Works with -list to filter nodes based on input comma-separated list of node states.");
     nodeStateOpt.setValueSeparator(',');
@@ -82,6 +84,9 @@ public class NodeCLI extends YarnCLI {
     Option allOpt = new Option(NODE_ALL, false,
         "Works with -list to list all nodes.");
     opts.addOption(allOpt);
+    Option showDetailsOpt = new Option(NODE_SHOW_DETAILS, false,
+        "Works with -list to show more details about each node.");
+    opts.addOption(showDetailsOpt);
     opts.getOption(STATUS_CMD).setArgName("NodeId");
 
     int exitCode = -1;
@@ -119,7 +124,13 @@ public class NodeCLI extends YarnCLI {
       } else {
         nodeStates.add(NodeState.RUNNING);
       }
-      listClusterNodes(nodeStates);
+
+      // List all node details with more information.
+      if (cliParser.hasOption(NODE_SHOW_DETAILS)) {
+        listDetailedClusterNodes(nodeStates);
+      } else {
+        listClusterNodes(nodeStates);
+      }
     } else if (cliParser.hasOption(HELP_CMD)) {
       printUsage(opts);
       return 0;
@@ -159,6 +170,67 @@ public class NodeCLI extends YarnCLI {
       writer.printf(NODES_PATTERN, nodeReport.getNodeId(), nodeReport
           .getNodeState(), nodeReport.getHttpAddress(), nodeReport
           .getNumContainers());
+    }
+    writer.flush();
+  }
+
+  /**
+   * Lists the nodes which are matching the given node states along with
+   * detailed node informations such as resource usage etc.
+   *
+   * @param nodeStates
+   * @throws YarnException
+   * @throws IOException
+   */
+  private void listDetailedClusterNodes(Set<NodeState> nodeStates)
+      throws YarnException, IOException {
+    PrintWriter writer = new PrintWriter(new OutputStreamWriter(sysout,
+        Charset.forName("UTF-8")));
+    List<NodeReport> nodesReport = client.getNodeReports(nodeStates
+        .toArray(new NodeState[0]));
+    writer.println("Total Nodes:" + nodesReport.size());
+    writer.printf(NODES_PATTERN, "Node-Id", "Node-State", "Node-Http-Address",
+        "Number-of-Running-Containers");
+    for (NodeReport nodeReport : nodesReport) {
+      writer.printf(NODES_PATTERN, nodeReport.getNodeId(),
+          nodeReport.getNodeState(), nodeReport.getHttpAddress(),
+          nodeReport.getNumContainers());
+      writer.println("Detailed Node Information :");
+      writer.print("\tConfigured Resources : ");
+      writer.println(nodeReport.getCapability());
+      writer.print("\tAllocated Resources : ");
+      if (nodeReport.getUsed() != null) {
+        writer.print(nodeReport.getUsed());
+      }
+      writer.println();
+
+      writer.print("\tResource Utilization by Node : ");
+      if (nodeReport.getNodeUtilization() != null) {
+        writer.print("PMem:"
+            + nodeReport.getNodeUtilization().getPhysicalMemory()
+            + " MB, VMem:" + nodeReport.getNodeUtilization().getVirtualMemory()
+            + " MB, VCores:" + nodeReport.getNodeUtilization().getCPU());
+      }
+      writer.println();
+
+      writer.print("\tResource Utilization by Containers : ");
+      if (nodeReport.getAggregatedContainersUtilization() != null) {
+        writer.print("PMem:"
+            + nodeReport.getAggregatedContainersUtilization()
+                .getPhysicalMemory()
+            + " MB, VMem:"
+            + nodeReport.getAggregatedContainersUtilization()
+                .getVirtualMemory() + " MB, VCores:"
+            + nodeReport.getAggregatedContainersUtilization().getCPU());
+      }
+      writer.println();
+
+      writer.print("\tNode-Labels : ");
+      // Create a List for node labels since we need it get sorted
+      List<String> nodeLabelsList = new ArrayList<String>(
+          nodeReport.getNodeLabels());
+      Collections.sort(nodeLabelsList);
+      writer.println(StringUtils.join(nodeLabelsList.iterator(), ','));
     }
     writer.flush();
   }
@@ -218,6 +290,27 @@ public class NodeCLI extends YarnCLI {
           new ArrayList<String>(report.getNodeLabels());
       Collections.sort(nodeLabelsList);
       nodeReportStr.println(StringUtils.join(nodeLabelsList.iterator(), ','));
+
+      nodeReportStr.print("\tResource Utilization by Node : ");
+      if (nodeReport.getNodeUtilization() != null) {
+        nodeReportStr.print("PMem:"
+            + nodeReport.getNodeUtilization().getPhysicalMemory()
+            + " MB, VMem:" + nodeReport.getNodeUtilization().getVirtualMemory()
+            + " MB, VCores:" + nodeReport.getNodeUtilization().getCPU());
+      }
+      nodeReportStr.println();
+
+      nodeReportStr.print("\tResource Utilization by Containers : ");
+      if (nodeReport.getAggregatedContainersUtilization() != null) {
+        nodeReportStr.print("PMem:"
+            + nodeReport.getAggregatedContainersUtilization()
+                .getPhysicalMemory()
+            + " MB, VMem:"
+            + nodeReport.getAggregatedContainersUtilization()
+                .getVirtualMemory() + " MB, VCores:"
+            + nodeReport.getAggregatedContainersUtilization().getCPU());
+      }
+      nodeReportStr.println();
     }
 
     if (nodeReport == null) {

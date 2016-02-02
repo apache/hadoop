@@ -30,7 +30,10 @@ import org.apache.hadoop.metrics.spi.OutputRecord;
 
 /**
  * The main interface to the metrics package. 
+ *
+ * @deprecated Use org.apache.hadoop.metrics2 package instead.
  */
+@Deprecated
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public interface MetricsContext {

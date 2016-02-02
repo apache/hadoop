@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
@@ -50,37 +51,24 @@ public class ReservationInputValidator {
 
   private Plan validateReservation(ReservationSystem reservationSystem,
       ReservationId reservationId, String auditConstant) throws YarnException {
-    String message = "";
     // check if the reservation id is valid
     if (reservationId == null) {
-      message =
+      String message =
           "Missing reservation id."
               + " Please try again by specifying a reservation id.";
       RMAuditLogger.logFailure("UNKNOWN", auditConstant,
           "validate reservation input", "ClientRMService", message);
       throw RPCUtil.getRemoteException(message);
     }
-    String queueName = reservationSystem.getQueueForReservation(reservationId);
-    if (queueName == null) {
-      message =
-          "The specified reservation with ID: " + reservationId
-              + " is unknown. Please try again with a valid reservation.";
-      RMAuditLogger.logFailure("UNKNOWN", auditConstant,
-          "validate reservation input", "ClientRMService", message);
-      throw RPCUtil.getRemoteException(message);
-    }
-    // check if the associated plan is valid
-    Plan plan = reservationSystem.getPlan(queueName);
-    if (plan == null) {
-      message =
-          "The specified reservation: " + reservationId
-              + " is not associated with any valid plan."
-              + " Please try again with a valid reservation.";
-      RMAuditLogger.logFailure("UNKNOWN", auditConstant,
-          "validate reservation input", "ClientRMService", message);
-      throw RPCUtil.getRemoteException(message);
-    }
-    return plan;
+    String queue = reservationSystem.getQueueForReservation(reservationId);
+    String nullQueueErrorMessage =
+            "The specified reservation with ID: " + reservationId
+                    + " is unknown. Please try again with a valid reservation.";
+    String nullPlanErrorMessage = "The specified reservation: " + reservationId
+                            + " is not associated with any valid plan."
+                            + " Please try again with a valid reservation.";
+    return getPlanFromQueue(reservationSystem, queue, auditConstant,
+            nullQueueErrorMessage, nullPlanErrorMessage);
   }
 
   private void validateReservationDefinition(ReservationId reservationId,
@@ -169,6 +157,37 @@ public class ReservationInputValidator {
     }
   }
 
+  private Plan getPlanFromQueue(ReservationSystem reservationSystem, String
+          queue, String auditConstant) throws YarnException {
+    String nullQueueErrorMessage = "The queue is not specified."
+            + " Please try again with a valid reservable queue.";
+    String nullPlanErrorMessage = "The specified queue: " + queue
+            + " is not managed by reservation system."
+            + " Please try again with a valid reservable queue.";
+    return getPlanFromQueue(reservationSystem, queue, auditConstant,
+            nullQueueErrorMessage, nullPlanErrorMessage);
+  }
+
+  private Plan getPlanFromQueue(ReservationSystem reservationSystem, String
+          queue, String auditConstant, String nullQueueErrorMessage,
+          String nullPlanErrorMessage) throws YarnException {
+    if (queue == null || queue.isEmpty()) {
+      RMAuditLogger.logFailure("UNKNOWN", auditConstant,
+              "validate reservation input", "ClientRMService",
+              nullQueueErrorMessage);
+      throw RPCUtil.getRemoteException(nullQueueErrorMessage);
+    }
+    // check if the associated plan is valid
+    Plan plan = reservationSystem.getPlan(queue);
+    if (plan == null) {
+      RMAuditLogger.logFailure("UNKNOWN", auditConstant,
+              "validate reservation input", "ClientRMService",
+              nullPlanErrorMessage);
+      throw RPCUtil.getRemoteException(nullPlanErrorMessage);
+    }
+    return plan;
+  }
+
   /**
    * Quick validation on the input to check some obvious fail conditions (fail
    * fast) the input and returns the appropriate {@link Plan} associated with
@@ -188,27 +207,9 @@ public class ReservationInputValidator {
       ReservationSubmissionRequest request, ReservationId reservationId)
       throws YarnException {
     // Check if it is a managed queue
-    String queueName = request.getQueue();
-    if (queueName == null || queueName.isEmpty()) {
-      String errMsg =
-          "The queue to submit is not specified."
-              + " Please try again with a valid reservable queue.";
-      RMAuditLogger.logFailure("UNKNOWN",
-          AuditConstants.SUBMIT_RESERVATION_REQUEST,
-          "validate reservation input", "ClientRMService", errMsg);
-      throw RPCUtil.getRemoteException(errMsg);
-    }
-    Plan plan = reservationSystem.getPlan(queueName);
-    if (plan == null) {
-      String errMsg =
-          "The specified queue: " + queueName
-              + " is not managed by reservation system."
-              + " Please try again with a valid reservable queue.";
-      RMAuditLogger.logFailure("UNKNOWN",
-          AuditConstants.SUBMIT_RESERVATION_REQUEST,
-          "validate reservation input", "ClientRMService", errMsg);
-      throw RPCUtil.getRemoteException(errMsg);
-    }
+    String queue = request.getQueue();
+    Plan plan = getPlanFromQueue(reservationSystem, queue,
+            AuditConstants.SUBMIT_RESERVATION_REQUEST);
     validateReservationDefinition(reservationId,
         request.getReservationDefinition(), plan,
         AuditConstants.SUBMIT_RESERVATION_REQUEST);
@@ -244,6 +245,38 @@ public class ReservationInputValidator {
    * Quick validation on the input to check some obvious fail conditions (fail
    * fast) the input and returns the appropriate {@link Plan} associated with
    * the specified {@link Queue} or throws an exception message illustrating the
+   * details of any validation check failures.
+   *
+   * @param reservationSystem the {@link ReservationSystem} to validate against
+   * @param request the {@link ReservationListRequest} defining search
+   *                parameters for reservations in the {@link ReservationSystem}
+   *                that is being validated against.
+   * @return the {@link Plan} to list reservations of.
+   * @throws YarnException
+   */
+  public Plan validateReservationListRequest(
+      ReservationSystem reservationSystem,
+      ReservationListRequest request)
+      throws YarnException {
+    String queue = request.getQueue();
+    if (request.getEndTime() < request.getStartTime()) {
+      String errorMessage = "The specified end time must be greater than " +
+              "the specified start time.";
+      RMAuditLogger.logFailure("UNKNOWN",
+              AuditConstants.LIST_RESERVATION_REQUEST,
+              "validate list reservation input", "ClientRMService",
+              errorMessage);
+      throw RPCUtil.getRemoteException(errorMessage);
+    }
+    // Check if it is a managed queue
+    return getPlanFromQueue(reservationSystem, queue,
+            AuditConstants.LIST_RESERVATION_REQUEST);
+  }
+
+  /**
+   * Quick validation on the input to check some obvious fail conditions (fail
+   * fast) the input and returns the appropriate {@link Plan} associated with
+   * the specified {@link Queue} or throws an exception message illustrating the
    * details of any validation check failures
    * 
    * @param reservationSystem the {@link ReservationSystem} to validate against
@@ -258,5 +291,4 @@ public class ReservationInputValidator {
     return validateReservation(reservationSystem, request.getReservationId(),
         AuditConstants.DELETE_RESERVATION_REQUEST);
   }
-
 }

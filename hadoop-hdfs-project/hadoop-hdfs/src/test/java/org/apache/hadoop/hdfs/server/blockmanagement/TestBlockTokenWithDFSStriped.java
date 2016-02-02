@@ -36,8 +36,8 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
   private final static int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
   private final static int stripesPerBlock = 4;
   private final static int numDNs = dataBlocks + parityBlocks + 2;
-  private static MiniDFSCluster cluster;
-  private static Configuration conf;
+  private MiniDFSCluster cluster;
+  private Configuration conf;
 
   {
     BLOCK_SIZE = cellSize * stripesPerBlock;

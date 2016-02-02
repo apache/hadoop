@@ -312,7 +312,8 @@ class FSDirRenameOp {
     unprotectedRenameTo(fsd, src, dst, srcIIP, dstIIP, timestamp,
         collectedBlocks, options);
     if (!collectedBlocks.getToDeleteList().isEmpty()) {
-      fsd.getFSNamesystem().removeBlocksAndUpdateSafemodeTotal(collectedBlocks);
+      fsd.getFSNamesystem().getBlockManager()
+          .removeBlocksAndUpdateSafemodeTotal(collectedBlocks);
     }
   }
 

@@ -32,6 +32,7 @@ import org.apache.hadoop.metrics.spi.AbstractMetricsContext;
 
 import java.net.MulticastSocket;
 
+@Deprecated
 public class TestGangliaContext {
   @Test
   public void testShouldCreateDatagramSocketByDefault() throws Exception {

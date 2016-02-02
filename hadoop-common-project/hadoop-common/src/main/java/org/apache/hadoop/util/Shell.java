@@ -185,8 +185,23 @@ public abstract class Shell {
     //'groups username' command return is inconsistent across different unixes
     return WINDOWS ?
       new String[]
-          { getWinUtilsPath(), "groups", "-F", "\"" + user + "\"" }
-      : new String [] {"bash", "-c", "id -gn " + user + "&& id -Gn " + user};
+          {getWinUtilsPath(), "groups", "-F", "\"" + user + "\""}
+      : new String[] {"bash", "-c", "id -gn " + user + "; id -Gn " + user};
+  }
+
+  /**
+   * A command to get a given user's group id list.
+   * The command will get the user's primary group
+   * first and finally get the groups list which includes the primary group.
+   * i.e. the user's primary group will be included twice.
+   * This command does not support Windows and will only return group names.
+   */
+  public static String[] getGroupsIDForUserCommand(final String user) {
+    //'groups username' command return is inconsistent across different unixes
+    return WINDOWS ?
+        new String[]
+            {getWinUtilsPath(), "groups", "-F", "\"" + user + "\""}
+        : new String[] {"bash", "-c", "id -g " + user + "; id -G " + user};
   }
 
   /** A command to get a given netgroup's user list. */

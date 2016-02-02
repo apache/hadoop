@@ -41,7 +41,7 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
    * at all for simple.
    */
   protected static class TestBlock extends ECBlock {
-    private ECChunk[] chunks;
+    protected ECChunk[] chunks;
 
     // For simple, just assume the block have the chunks already ready.
     // In practice we need to read/write chunks from/to the block via file IO.
@@ -101,7 +101,7 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
    * This is typically how a coding step should be performed.
    * @param codingStep
    */
-  private void performCodingStep(ErasureCodingStep codingStep) {
+  protected void performCodingStep(ErasureCodingStep codingStep) {
     // Pretend that we're opening these input blocks and output blocks.
     ECBlock[] inputBlocks = codingStep.getInputBlocks();
     ECBlock[] outputBlocks = codingStep.getOutputBlocks();
@@ -235,14 +235,14 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
     int idx = 0;
     TestBlock block;
 
-    for (int i = 0; i < erasedParityIndexes.length; i++) {
-      block = parityBlocks[erasedParityIndexes[i]];
+    for (int i = 0; i < erasedDataIndexes.length; i++) {
+      block = dataBlocks[erasedDataIndexes[i]];
       toEraseBlocks[idx ++] = cloneBlockWithData(block);
       eraseDataFromBlock(block);
     }
 
-    for (int i = 0; i < erasedDataIndexes.length; i++) {
-      block = dataBlocks[erasedDataIndexes[i]];
+    for (int i = 0; i < erasedParityIndexes.length; i++) {
+      block = parityBlocks[erasedParityIndexes[i]];
       toEraseBlocks[idx ++] = cloneBlockWithData(block);
       eraseDataFromBlock(block);
     }

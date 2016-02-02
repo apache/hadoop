@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 /**
  * A Number that is either an absolute or an incremental amount.
  */
+@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class MetricValue {

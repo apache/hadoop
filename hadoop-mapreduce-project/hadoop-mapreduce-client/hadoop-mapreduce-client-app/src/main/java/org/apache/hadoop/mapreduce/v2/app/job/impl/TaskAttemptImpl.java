@@ -1198,9 +1198,16 @@ public abstract class TaskAttemptImpl implements
             JobEventType.INTERNAL_ERROR));
       }
       if (oldState != getInternalState()) {
-          LOG.info(attemptId + " TaskAttempt Transitioned from " 
-           + oldState + " to "
-           + getInternalState());
+        if (getInternalState() == TaskAttemptStateInternal.FAILED) {
+          String nodeId = null == this.container ? "Not-assigned"
+              : this.container.getNodeId().toString();
+          LOG.info(attemptId + " transitioned from state " + oldState + " to "
+              + getInternalState() + ", event type is " + event.getType()
+              + " and nodeId=" + nodeId);
+        } else {
+          LOG.info(attemptId + " TaskAttempt Transitioned from " + oldState
+              + " to " + getInternalState());
+        }
       }
     } finally {
       writeLock.unlock();

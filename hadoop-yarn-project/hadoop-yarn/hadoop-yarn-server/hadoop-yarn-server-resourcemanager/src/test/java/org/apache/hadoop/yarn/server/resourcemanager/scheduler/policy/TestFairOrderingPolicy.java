@@ -20,6 +20,18 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy;
 
 import java.util.*;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -136,6 +148,48 @@ public class TestFairOrderingPolicy {
     schedOrder.containerAllocated(msp2, null);
     checkIds(schedOrder.getAssignmentIterator(), new String[]{"3", "1", "2"});
     checkIds(schedOrder.getPreemptionIterator(), new String[]{"2", "1", "3"});
+  }
+
+  @Test
+  public void testSizeBasedWeightNotAffectAppActivation() throws Exception {
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration();
+
+    // Define top-level queues
+    String queuePath = CapacitySchedulerConfiguration.ROOT + ".default";
+    csConf.setOrderingPolicy(queuePath, CapacitySchedulerConfiguration.FAIR_ORDERING_POLICY);
+    csConf.setOrderingPolicyParameter(queuePath,
+        FairOrderingPolicy.ENABLE_SIZE_BASED_WEIGHT, "true");
+    csConf.setMaximumApplicationMasterResourcePerQueuePercent(queuePath, 0.1f);
+
+    // inject node label manager
+    MockRM rm = new MockRM(csConf);
+    rm.start();
+
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+
+    // Get LeafQueue
+    LeafQueue lq = (LeafQueue) cs.getQueue("default");
+    OrderingPolicy<FiCaSchedulerApp> policy = lq.getOrderingPolicy();
+    Assert.assertTrue(policy instanceof FairOrderingPolicy);
+    Assert.assertTrue(((FairOrderingPolicy<FiCaSchedulerApp>)policy).getSizeBasedWeight());
+
+    rm.registerNode("h1:1234", 10 * GB);
+
+    // Submit 4 apps
+    rm.submitApp(1 * GB, "app", "user", null, "default");
+    rm.submitApp(1 * GB, "app", "user", null, "default");
+    rm.submitApp(1 * GB, "app", "user", null, "default");
+    rm.submitApp(1 * GB, "app", "user", null, "default");
+
+    Assert.assertEquals(1, lq.getNumActiveApplications());
+    Assert.assertEquals(3, lq.getNumPendingApplications());
+
+    // Try allocate once, #active-apps and #pending-apps should be still correct
+    cs.handle(new NodeUpdateSchedulerEvent(
+        rm.getRMContext().getRMNodes().get(NodeId.newInstance("h1", 1234))));
+    Assert.assertEquals(1, lq.getNumActiveApplications());
+    Assert.assertEquals(3, lq.getNumPendingApplications());
   }
 
   public void checkIds(Iterator<MockSchedulableEntity> si,

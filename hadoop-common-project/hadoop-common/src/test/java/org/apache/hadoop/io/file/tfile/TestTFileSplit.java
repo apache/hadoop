@@ -19,8 +19,10 @@ package org.apache.hadoop.io.file.tfile;
 import java.io.IOException;
 import java.util.Random;
 
-import org.junit.Assert;
-import junit.framework.TestCase;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -31,7 +33,7 @@ import org.apache.hadoop.io.file.tfile.TFile.Reader;
 import org.apache.hadoop.io.file.tfile.TFile.Writer;
 import org.apache.hadoop.io.file.tfile.TFile.Reader.Scanner;
 
-public class TestTFileSplit extends TestCase {
+public class TestTFileSplit {
   private static String ROOT =
       System.getProperty("test.build.data", "/tmp/tfile-test");
 
@@ -86,10 +88,10 @@ public class TestTFileSplit extends TestCase {
         scanner.advance();
       }
       scanner.close();
-      Assert.assertTrue(count > 0);
+      assertTrue(count > 0);
       rowCount += count;
     }
-    Assert.assertEquals(rowCount, reader.getEntryCount());
+    assertEquals(rowCount, reader.getEntryCount());
     reader.close();
   }
 
@@ -122,11 +124,11 @@ public class TestTFileSplit extends TestCase {
         ++x;
       }
       scanner.close();
-      Assert.assertTrue(count == (endRec - startRec));
+      assertTrue(count == (endRec - startRec));
     }
     // make sure specifying range at the end gives zero records.
     Scanner scanner = reader.createScannerByRecordNum(totalRecords, -1);
-    Assert.assertTrue(scanner.atEnd());
+    assertTrue(scanner.atEnd());
   }
   
   static String composeSortedKey(String prefix, int total, int value) {
@@ -175,7 +177,8 @@ public class TestTFileSplit extends TestCase {
           .getRecordNumByLocation(reader.getLocationByRecordNum(x)));
     }
   }
-  
+
+  @Test
   public void testSplit() throws IOException {
     System.out.println("testSplit");
     createFile(100000, Compression.Algorithm.NONE.getName());

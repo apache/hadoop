@@ -120,7 +120,7 @@ public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
   /** {@inheritDoc} */
   @Override
-  public float getCpuUsage() {
+  public float getCpuUsagePercentage() {
     return getConf().getFloat(CPU_USAGE, -1);
   }
 

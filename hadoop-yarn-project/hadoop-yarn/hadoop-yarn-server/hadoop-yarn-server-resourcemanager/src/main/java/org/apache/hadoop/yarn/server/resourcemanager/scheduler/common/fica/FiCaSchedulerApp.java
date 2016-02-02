@@ -34,9 +34,11 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -53,13 +55,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAMContainerLaunchDiagnosticsConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAssignment;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityHeadroomProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.ContainerAllocator;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.AbstractContainerAllocator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.ContainerAllocator;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -86,32 +90,46 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
   
   private AbstractContainerAllocator containerAllocator;
 
+  /**
+   * to hold the message if its app doesn't not get container from a node
+   */
+  private String appSkipNodeDiagnostics;
+
   public FiCaSchedulerApp(ApplicationAttemptId applicationAttemptId, 
       String user, Queue queue, ActiveUsersManager activeUsersManager,
       RMContext rmContext) {
     this(applicationAttemptId, user, queue, activeUsersManager, rmContext,
-        Priority.newInstance(0));
+        Priority.newInstance(0), false);
   }
 
   public FiCaSchedulerApp(ApplicationAttemptId applicationAttemptId,
       String user, Queue queue, ActiveUsersManager activeUsersManager,
-      RMContext rmContext, Priority appPriority) {
+      RMContext rmContext, Priority appPriority, boolean isAttemptRecovering) {
     super(applicationAttemptId, user, queue, activeUsersManager, rmContext);
     
     RMApp rmApp = rmContext.getRMApps().get(getApplicationId());
-    
+
     Resource amResource;
+    String partition;
+
     if (rmApp == null || rmApp.getAMResourceRequest() == null) {
-      //the rmApp may be undefined (the resource manager checks for this too)
-      //and unmanaged applications do not provide an amResource request
-      //in these cases, provide a default using the scheduler
+      // the rmApp may be undefined (the resource manager checks for this too)
+      // and unmanaged applications do not provide an amResource request
+      // in these cases, provide a default using the scheduler
       amResource = rmContext.getScheduler().getMinimumResourceCapability();
+      partition = CommonNodeLabelsManager.NO_LABEL;
     } else {
       amResource = rmApp.getAMResourceRequest().getCapability();
+      partition =
+          (rmApp.getAMResourceRequest().getNodeLabelExpression() == null)
+          ? CommonNodeLabelsManager.NO_LABEL
+          : rmApp.getAMResourceRequest().getNodeLabelExpression();
     }
-    
-    setAMResource(amResource);
+
+    setAppAMNodePartitionName(partition);
+    setAMResource(partition, amResource);
     setPriority(appPriority);
+    setAttemptRecovering(isAttemptRecovering);
 
     scheduler = rmContext.getScheduler();
 
@@ -143,8 +161,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
     containersToPreempt.remove(rmContainer.getContainerId());
 
-    RMAuditLogger.logSuccess(getUser(), 
-        AuditConstants.RELEASE_CONTAINER, "SchedulerApp", 
+    RMAuditLogger.logSuccess(getUser(),
+        AuditConstants.RELEASE_CONTAINER, "SchedulerApp",
         getApplicationId(), containerId);
     
     // Update usage metrics 
@@ -178,6 +196,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
             node.getNodeID(), appSchedulingInfo.getUser(), this.rmContext,
             request.getNodeLabelExpression());
 
+    updateAMContainerDiagnostics(AMState.ASSIGNED, null);
+
     // Add it to allContainers list.
     newlyAllocatedContainers.add(rmContainer);
     liveContainers.put(container.getId(), rmContainer);    
@@ -185,10 +205,10 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     // Update consumption and track allocations
     List<ResourceRequest> resourceRequestList = appSchedulingInfo.allocate(
         type, node, priority, request, container);
-    attemptResourceUsage.incUsed(node.getPartition(),
-        container.getResource());
-    
-    // Update resource requests related to "request" and store in RMContainer 
+
+    attemptResourceUsage.incUsed(node.getPartition(), container.getResource());
+
+    // Update resource requests related to "request" and store in RMContainer
     ((RMContainerImpl)rmContainer).setResourceRequests(resourceRequestList);
 
     // Inform the container
@@ -201,8 +221,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
           + " container=" + container.getId() + " host="
           + container.getNodeId().getHost() + " type=" + type);
     }
-    RMAuditLogger.logSuccess(getUser(), 
-        AuditConstants.ALLOC_CONTAINER, "SchedulerApp", 
+    RMAuditLogger.logSuccess(getUser(),
+        AuditConstants.ALLOC_CONTAINER, "SchedulerApp",
         getApplicationId(), container.getId());
     
     return rmContainer;
@@ -281,7 +301,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     return ret;
   }
 
-  public synchronized void addPreemptContainer(ContainerId cont) {
+  public synchronized void markContainerForPreemption(ContainerId cont) {
     // ignore already completed containers
     if (liveContainers.containsKey(cont)) {
       containersToPreempt.add(cont);
@@ -483,5 +503,95 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     this.attemptResourceUsage.incUsed(newPartition, containerResource);
     getCSLeafQueue().decUsedResource(oldPartition, containerResource, this);
     getCSLeafQueue().incUsedResource(newPartition, containerResource, this);
+
+    // Update new partition name if container is AM and also update AM resource
+    if (rmContainer.isAMContainer()) {
+      setAppAMNodePartitionName(newPartition);
+      this.attemptResourceUsage.decAMUsed(oldPartition, containerResource);
+      this.attemptResourceUsage.incAMUsed(newPartition, containerResource);
+      getCSLeafQueue().decAMUsedResource(oldPartition, containerResource, this);
+      getCSLeafQueue().incAMUsedResource(newPartition, containerResource, this);
+    }
+  }
+
+  protected void getPendingAppDiagnosticMessage(
+      StringBuilder diagnosticMessage) {
+    LeafQueue queue = getCSLeafQueue();
+    diagnosticMessage.append(" Details : AM Partition = ");
+    diagnosticMessage.append(appAMNodePartitionName.isEmpty()
+        ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION : appAMNodePartitionName);
+    diagnosticMessage.append("; ");
+    diagnosticMessage.append("AM Resource Request = ");
+    diagnosticMessage.append(getAMResource(appAMNodePartitionName));
+    diagnosticMessage.append("; ");
+    diagnosticMessage.append("Queue Resource Limit for AM = ");
+    diagnosticMessage
+        .append(queue.getAMResourceLimitPerPartition(appAMNodePartitionName));
+    diagnosticMessage.append("; ");
+    diagnosticMessage.append("User AM Resource Limit of the queue = ");
+    diagnosticMessage.append(
+        queue.getUserAMResourceLimitPerPartition(appAMNodePartitionName));
+    diagnosticMessage.append("; ");
+    diagnosticMessage.append("Queue AM Resource Usage = ");
+    diagnosticMessage.append(
+        queue.getQueueResourceUsage().getAMUsed(appAMNodePartitionName));
+    diagnosticMessage.append("; ");
+  }
+
+  protected void getActivedAppDiagnosticMessage(
+      StringBuilder diagnosticMessage) {
+    LeafQueue queue = getCSLeafQueue();
+    QueueCapacities queueCapacities = queue.getQueueCapacities();
+    diagnosticMessage.append(" Details : AM Partition = ");
+    diagnosticMessage.append(appAMNodePartitionName.isEmpty()
+        ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION : appAMNodePartitionName);
+    diagnosticMessage.append(" ; ");
+    diagnosticMessage.append("Partition Resource = ");
+    diagnosticMessage.append(rmContext.getNodeLabelManager()
+        .getResourceByLabel(appAMNodePartitionName, Resources.none()));
+    diagnosticMessage.append(" ; ");
+    diagnosticMessage.append("Queue's Absolute capacity = ");
+    diagnosticMessage.append(
+        queueCapacities.getAbsoluteCapacity(appAMNodePartitionName) * 100);
+    diagnosticMessage.append(" % ; ");
+    diagnosticMessage.append("Queue's Absolute used capacity = ");
+    diagnosticMessage.append(
+        queueCapacities.getAbsoluteUsedCapacity(appAMNodePartitionName) * 100);
+    diagnosticMessage.append(" % ; ");
+    diagnosticMessage.append("Queue's Absolute max capacity = ");
+    diagnosticMessage.append(
+        queueCapacities.getAbsoluteMaximumCapacity(appAMNodePartitionName)
+            * 100);
+    diagnosticMessage.append(" % ; ");
+  }
+
+  /**
+   * Set the message temporarily if the reason is known for why scheduling did
+   * not happen for a given node, if not message will be over written
+   * @param message
+   */
+  public void updateAppSkipNodeDiagnostics(String message) {
+    this.appSkipNodeDiagnostics = message;
+  }
+
+  public void updateNodeInfoForAMDiagnostics(FiCaSchedulerNode node) {
+    if (isWaitingForAMContainer()) {
+      StringBuilder diagnosticMessageBldr = new StringBuilder();
+      if (appSkipNodeDiagnostics != null) {
+        diagnosticMessageBldr.append(appSkipNodeDiagnostics);
+        appSkipNodeDiagnostics = null;
+      }
+      diagnosticMessageBldr.append(
+          CSAMContainerLaunchDiagnosticsConstants.LAST_NODE_PROCESSED_MSG);
+      diagnosticMessageBldr.append(node.getNodeID());
+      diagnosticMessageBldr.append(" ( Partition : ");
+      diagnosticMessageBldr.append(node.getLabels());
+      diagnosticMessageBldr.append(", Total resource : ");
+      diagnosticMessageBldr.append(node.getTotalResource());
+      diagnosticMessageBldr.append(", Available resource : ");
+      diagnosticMessageBldr.append(node.getAvailableResource());
+      diagnosticMessageBldr.append(" ).");
+      updateAMContainerDiagnostics(AMState.ACTIVATED, diagnosticMessageBldr.toString());
+    }
   }
 }

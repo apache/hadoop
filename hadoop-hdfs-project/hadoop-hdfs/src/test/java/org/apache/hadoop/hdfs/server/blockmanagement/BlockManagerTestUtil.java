@@ -27,6 +27,7 @@ import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerSafeMode.BMSafeModeStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -35,6 +36,7 @@ import org.apache.hadoop.util.Daemon;
 import org.junit.Assert;
 
 import com.google.common.base.Preconditions;
+import org.mockito.internal.util.reflection.Whitebox;
 
 public class BlockManagerTestUtil {
   public static void setNodeReplicationLimit(final BlockManager blockManager,
@@ -304,7 +306,7 @@ public class BlockManagerTestUtil {
    */
   public static void recheckDecommissionState(DatanodeManager dm)
       throws ExecutionException, InterruptedException {
-    dm.getDecomManager().runMonitor();
+    dm.getDecomManager().runMonitorForTest();
   }
 
   /**
@@ -313,5 +315,25 @@ public class BlockManagerTestUtil {
   public static void addBlockToBeReplicated(DatanodeDescriptor node,
       Block block, DatanodeStorageInfo[] targets) {
     node.addBlockToBeReplicated(block, targets);
+  }
+
+  public static void setStartupSafeModeForTest(BlockManager bm) {
+    BlockManagerSafeMode bmSafeMode = (BlockManagerSafeMode)Whitebox
+        .getInternalState(bm, "bmSafeMode");
+    Whitebox.setInternalState(bmSafeMode, "extension", Integer.MAX_VALUE);
+    Whitebox.setInternalState(bmSafeMode, "status", BMSafeModeStatus.EXTENSION);
+  }
+
+  /**
+   * Check if a given Datanode (specified by uuid) is removed. Removed means the
+   * Datanode is no longer present in HeartbeatManager and NetworkTopology.
+   * @param nn Namenode
+   * @param dnUuid Datanode UUID
+   * @return true if datanode is removed.
+   */
+  public static boolean isDatanodeRemoved(NameNode nn, String dnUuid){
+      final DatanodeManager dnm =
+          nn.getNamesystem().getBlockManager().getDatanodeManager();
+      return !dnm.getNetworkTopology().contains(dnm.getDatanode(dnUuid));
   }
 }

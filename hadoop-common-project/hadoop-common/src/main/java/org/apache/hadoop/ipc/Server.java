@@ -416,7 +416,7 @@ public abstract class Server {
    * if this request took too much time relative to other requests
    * we consider that as a slow RPC. 3 is a magic number that comes
    * from 3 sigma deviation. A very simple explanation can be found
-   * by searching for 68–95–99.7 rule. We flag an RPC as slow RPC
+   * by searching for 68-95-99.7 rule. We flag an RPC as slow RPC
    * if and only if it falls above 99.7% of requests. We start this logic
    * only once we have enough sample size.
    */
@@ -583,10 +583,11 @@ public abstract class Server {
     private final RPC.RpcKind rpcKind;
     private final byte[] clientId;
     private final TraceScope traceScope; // the HTrace scope on the server side
+    private final CallerContext callerContext; // the call context
 
     private Call(Call call) {
       this(call.callId, call.retryCount, call.rpcRequest, call.connection,
-          call.rpcKind, call.clientId, call.traceScope);
+          call.rpcKind, call.clientId, call.traceScope, call.callerContext);
     }
 
     public Call(int id, int retryCount, Writable param, 
@@ -597,11 +598,12 @@ public abstract class Server {
 
     public Call(int id, int retryCount, Writable param, Connection connection,
         RPC.RpcKind kind, byte[] clientId) {
-      this(id, retryCount, param, connection, kind, clientId, null);
+      this(id, retryCount, param, connection, kind, clientId, null, null);
     }
 
     public Call(int id, int retryCount, Writable param, Connection connection,
-        RPC.RpcKind kind, byte[] clientId, TraceScope traceScope) {
+        RPC.RpcKind kind, byte[] clientId, TraceScope traceScope,
+        CallerContext callerContext) {
       this.callId = id;
       this.retryCount = retryCount;
       this.rpcRequest = param;
@@ -611,6 +613,7 @@ public abstract class Server {
       this.rpcKind = kind;
       this.clientId = clientId;
       this.traceScope = traceScope;
+      this.callerContext = callerContext;
     }
     
     @Override
@@ -2080,9 +2083,18 @@ public abstract class Server {
         }
       }
 
+      CallerContext callerContext = null;
+      if (header.hasCallerContext()) {
+        callerContext =
+            new CallerContext.Builder(header.getCallerContext().getContext())
+                .setSignature(header.getCallerContext().getSignature()
+                    .toByteArray())
+                .build();
+      }
+
       Call call = new Call(header.getCallId(), header.getRetryCount(),
           rpcRequest, this, ProtoUtil.convert(header.getRpcKind()),
-          header.getClientId().toByteArray(), traceScope);
+          header.getClientId().toByteArray(), traceScope, callerContext);
 
       if (callQueue.isClientBackoffEnabled()) {
         // if RPC queue is full, we will ask the RPC client to back off by
@@ -2274,6 +2286,8 @@ public abstract class Server {
             traceScope = call.traceScope;
             traceScope.getSpan().addTimelineAnnotation("called");
           }
+          // always update the current call context
+          CallerContext.setCurrent(call.callerContext);
 
           try {
             // Make the call as the user via Subject.doAs, thus associating

@@ -137,8 +137,14 @@ public class TestAuditLogs {
   @After
   public void teardownCluster() throws Exception {
     util.cleanup(fs, "/srcdat");
-    fs.close();
-    cluster.shutdown();
+    if (fs != null) {
+      fs.close();
+      fs = null;
+    }
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 
   /** test that allowed operation puts proper entry in audit log */
@@ -254,7 +260,7 @@ public class TestAuditLogs {
     setupAuditLogs();
 
     WebHdfsFileSystem webfs = WebHdfsTestUtil.getWebHdfsFileSystemAs(userGroupInfo, conf, WebHdfsConstants.WEBHDFS_SCHEME);
-    webfs.open(file);
+    webfs.open(file).read();
 
     verifyAuditLogsCheckPattern(true, 3, webOpenPattern);
   }

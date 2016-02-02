@@ -35,7 +35,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.MkdirOp;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.SafeModeInfo;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.ha.EditLogTailer;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -97,7 +96,7 @@ public class NameNodeAdapter {
   }
   
   public static void leaveSafeMode(NameNode namenode) {
-    namenode.getNamesystem().leaveSafeMode();
+    namenode.getNamesystem().leaveSafeMode(false);
   }
   
   public static void abortEditLogs(NameNode nn) {
@@ -236,12 +235,13 @@ public class NameNodeAdapter {
    * @return the number of blocks marked safe by safemode, or -1
    * if safemode is not running.
    */
-  public static int getSafeModeSafeBlocks(NameNode nn) {
-    SafeModeInfo smi = nn.getNamesystem().getSafeModeInfoForTests();
-    if (smi == null) {
+  public static long getSafeModeSafeBlocks(NameNode nn) {
+    if (!nn.getNamesystem().isInSafeMode()) {
       return -1;
     }
-    return smi.blockSafe;
+    Object bmSafeMode = Whitebox.getInternalState(
+        nn.getNamesystem().getBlockManager(), "bmSafeMode");
+    return (long)Whitebox.getInternalState(bmSafeMode, "blockSafe");
   }
   
   /**

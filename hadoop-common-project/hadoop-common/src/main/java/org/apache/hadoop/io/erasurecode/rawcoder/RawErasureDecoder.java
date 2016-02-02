@@ -35,8 +35,8 @@ public interface RawErasureDecoder extends RawErasureCoder {
   /**
    * Decode with inputs and erasedIndexes, generates outputs.
    * How to prepare for inputs:
-   * 1. Create an array containing parity units + data units. Please note the
-   *    parity units should be first or before the data units.
+   * 1. Create an array containing data units + parity units. Please note the
+   *    data units should be first or before the parity units.
    * 2. Set null in the array locations specified via erasedIndexes to indicate
    *    they're erased and no data are to read from;
    * 3. Set null in the array locations for extra redundant items, as they're
@@ -47,31 +47,35 @@ public interface RawErasureDecoder extends RawErasureCoder {
    * For an example using RS (6, 3), assuming sources (d0, d1, d2, d3, d4, d5)
    * and parities (p0, p1, p2), d2 being erased. We can and may want to use only
    * 6 units like (d1, d3, d4, d5, p0, p2) to recover d2. We will have:
-   *     inputs = [p0, null(p1), p2, null(d0), d1, null(d2), d3, d4, d5]
-   *     erasedIndexes = [5] // index of d2 into inputs array
+   *     inputs = [null(d0), d1, null(d2), d3, d4, d5, p0, null(p1), p2]
+   *     erasedIndexes = [2] // index of d2 into inputs array
    *     outputs = [a-writable-buffer]
    *
    * Note, for both inputs and outputs, no mixing of on-heap buffers and direct
    * buffers are allowed.
    *
-   * @param inputs inputs to read data from, contents may change after the call
+   * If the coder option ALLOW_CHANGE_INPUTS is set true (false by default), the
+   * content of input buffers may change after the call, subject to concrete
+   * implementation.
+   *
+   * @param inputs input buffers to read data from. The buffers' remaining will
+   *               be 0 after decoding
    * @param erasedIndexes indexes of erased units in the inputs array
-   * @param outputs outputs to write into for data generated according to
-   *                erasedIndexes, ready for reading the result data from after
-   *                the call
+   * @param outputs output buffers to put decoded data into according to
+   *                erasedIndexes, ready for read after the call
    */
-  public void decode(ByteBuffer[] inputs, int[] erasedIndexes,
+  void decode(ByteBuffer[] inputs, int[] erasedIndexes,
                      ByteBuffer[] outputs);
 
   /**
    * Decode with inputs and erasedIndexes, generates outputs. More see above.
-   * @param inputs inputs to read data from, contents may change after the call
+   *
+   * @param inputs input buffers to read data from
    * @param erasedIndexes indexes of erased units in the inputs array
-   * @param outputs outputs to write into for data generated according to
-   *                erasedIndexes, ready for reading the result data from after
-   *                the call
+   * @param outputs output buffers to put decoded data into according to
+   *                erasedIndexes, ready for read after the call
    */
-  public void decode(byte[][] inputs, int[] erasedIndexes, byte[][] outputs);
+  void decode(byte[][] inputs, int[] erasedIndexes, byte[][] outputs);
 
   /**
    * Decode with inputs and erasedIndexes, generates outputs. More see above.
@@ -79,12 +83,11 @@ public interface RawErasureDecoder extends RawErasureCoder {
    * Note, for both input and output ECChunks, no mixing of on-heap buffers and
    * direct buffers are allowed.
    *
-   * @param inputs inputs to read data from, contents may change after the call
+   * @param inputs input buffers to read data from
    * @param erasedIndexes indexes of erased units in the inputs array
-   * @param outputs outputs to write into for data generated according to
-   *                erasedIndexes, ready for reading the result data from after
-   *                the call
+   * @param outputs output buffers to put decoded data into according to
+   *                erasedIndexes, ready for read after the call
    */
-  public void decode(ECChunk[] inputs, int[] erasedIndexes, ECChunk[] outputs);
+  void decode(ECChunk[] inputs, int[] erasedIndexes, ECChunk[] outputs);
 
 }

@@ -73,7 +73,6 @@ public class TestApplicationHistoryServer {
       historyServer = new ApplicationHistoryServer();
       historyServer.init(config);
       assertEquals(STATE.INITED, historyServer.getServiceState());
-      assertEquals(5, historyServer.getServices().size());
       ApplicationHistoryClientService historyService =
           historyServer.getClientService();
       assertNotNull(historyServer.getClientService());

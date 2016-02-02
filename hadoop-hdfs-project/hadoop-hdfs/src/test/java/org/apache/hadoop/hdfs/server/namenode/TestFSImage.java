@@ -509,7 +509,7 @@ public class TestFSImage {
       INodeFile file = (INodeFile)fns.getFSDirectory().getINode(testFilePath);
       file.toUnderConstruction(clientName, clientMachine);
       file.addBlock(cBlk);
-      file.toCompleteFile(System.currentTimeMillis());
+      TestINodeFile.toCompleteFile(file);
       fns.enterSafeMode(false);
       fns.saveNamespace(0, 0);
       cluster.restartNameNodes();
@@ -617,7 +617,7 @@ public class TestFSImage {
       INodeFile file = (INodeFile)fns.getFSDirectory().getINode(testFilePath);
       file.toUnderConstruction(clientName, clientMachine);
       file.addBlock(cBlk);
-      file.toCompleteFile(System.currentTimeMillis());
+      TestINodeFile.toCompleteFile(file);
 
       fs.createSnapshot(d,"testHasNonEcBlockUsingStripeID");
       fs.truncate(p,0);

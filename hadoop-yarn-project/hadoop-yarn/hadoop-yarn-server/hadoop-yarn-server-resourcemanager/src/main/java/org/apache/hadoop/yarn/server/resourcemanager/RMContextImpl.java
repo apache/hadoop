@@ -72,6 +72,7 @@ public class RMContextImpl implements RMContext {
 
   private RMApplicationHistoryWriter rmApplicationHistoryWriter;
   private SystemMetricsPublisher systemMetricsPublisher;
+  private LeaderElectorService elector;
 
   /**
    * Default constructor. To be used in conjunction with setter methods for
@@ -131,6 +132,16 @@ public class RMContextImpl implements RMContext {
   @Override
   public Dispatcher getDispatcher() {
     return this.rmDispatcher;
+  }
+
+  @Override
+  public void setLeaderElectorService(LeaderElectorService elector) {
+    this.elector = elector;
+  }
+
+  @Override
+  public LeaderElectorService getLeaderElectorService() {
+    return this.elector;
   }
 
   @Override

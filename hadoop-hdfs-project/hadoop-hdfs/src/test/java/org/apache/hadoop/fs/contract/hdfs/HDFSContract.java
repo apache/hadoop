@@ -62,6 +62,7 @@ public class HDFSContract extends AbstractFSContract {
   public static void destroyCluster() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

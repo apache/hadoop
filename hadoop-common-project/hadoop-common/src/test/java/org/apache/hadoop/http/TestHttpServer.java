@@ -534,9 +534,6 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         assertTrue(boundPort != 0); // ephemeral should now return bound port
       } else if (findPort) {
         assertTrue(boundPort > port);
-        // allow a little wiggle room to prevent random test failures if
-        // some consecutive ports are already in use
-        assertTrue(boundPort - port < 8);
       }
     } catch (Exception e) {
       server.stop();

@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
 
 /**
@@ -50,11 +51,14 @@ public class Count extends FsCommand {
   private static final String OPTION_HUMAN = "h";
   private static final String OPTION_HEADER = "v";
   private static final String OPTION_TYPE = "t";
+  //return the quota, namespace count and disk space usage.
+  private static final String OPTION_QUOTA_AND_USAGE = "u";
 
   public static final String NAME = "count";
   public static final String USAGE =
       "[-" + OPTION_QUOTA + "] [-" + OPTION_HUMAN + "] [-" + OPTION_HEADER
-          + "] [-" + OPTION_TYPE + " [<storage type>]] <path> ...";
+          + "] [-" + OPTION_TYPE + " [<storage type>]] [-" +
+          OPTION_QUOTA_AND_USAGE + "] <path> ...";
   public static final String DESCRIPTION =
       "Count the number of directories, files and bytes under the paths\n" +
           "that match the specified file pattern.  The output columns are:\n" +
@@ -74,12 +78,15 @@ public class Count extends FsCommand {
           OPTION_TYPE + " option, \n" +
           "it displays the quota and usage for the specified types. \n" +
           "Otherwise, it displays the quota and usage for all the storage \n" +
-          "types that support quota";
+          "types that support quota \n" +
+          "The -" + OPTION_QUOTA_AND_USAGE + " option shows the quota and \n" +
+          "the usage against the quota without the detailed content summary.";
 
   private boolean showQuotas;
   private boolean humanReadable;
   private boolean showQuotabyType;
   private List<StorageType> storageTypes = null;
+  private boolean showQuotasAndUsageOnly;
 
   /** Constructor */
   public Count() {}
@@ -99,7 +106,7 @@ public class Count extends FsCommand {
   @Override
   protected void processOptions(LinkedList<String> args) {
     CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE,
-        OPTION_QUOTA, OPTION_HUMAN, OPTION_HEADER);
+        OPTION_QUOTA, OPTION_HUMAN, OPTION_HEADER, OPTION_QUOTA_AND_USAGE);
     cf.addOptionWithValue(OPTION_TYPE);
     cf.parse(args);
     if (args.isEmpty()) { // default path is the current working directory
@@ -107,8 +114,9 @@ public class Count extends FsCommand {
     }
     showQuotas = cf.getOpt(OPTION_QUOTA);
     humanReadable = cf.getOpt(OPTION_HUMAN);
+    showQuotasAndUsageOnly = cf.getOpt(OPTION_QUOTA_AND_USAGE);
 
-    if (showQuotas) {
+    if (showQuotas || showQuotasAndUsageOnly) {
       String types = cf.getOptValue(OPTION_TYPE);
 
       if (null != types) {
@@ -121,9 +129,13 @@ public class Count extends FsCommand {
 
     if (cf.getOpt(OPTION_HEADER)) {
       if (showQuotabyType) {
-        out.println(ContentSummary.getStorageTypeHeader(storageTypes) + "PATHNAME");
+        out.println(QuotaUsage.getStorageTypeHeader(storageTypes) + "PATHNAME");
       } else {
-        out.println(ContentSummary.getHeader(showQuotas) + "PATHNAME");
+        if (showQuotasAndUsageOnly) {
+          out.println(QuotaUsage.getHeader() + "PATHNAME");
+        } else {
+          out.println(ContentSummary.getHeader(showQuotas) + "PATHNAME");
+        }
       }
     }
   }
@@ -145,11 +157,16 @@ public class Count extends FsCommand {
 
   @Override
   protected void processPath(PathData src) throws IOException {
-    ContentSummary summary = src.fs.getContentSummary(src.path);
-    out.println(summary.toString(showQuotas, isHumanReadable(),
-        showQuotabyType, storageTypes) + src);
+    if (showQuotasAndUsageOnly || showQuotabyType) {
+      QuotaUsage usage = src.fs.getQuotaUsage(src.path);
+      out.println(usage.toString(isHumanReadable(), showQuotabyType,
+          storageTypes) + src);
+    } else {
+      ContentSummary summary = src.fs.getContentSummary(src.path);
+      out.println(summary.toString(showQuotas, isHumanReadable()) + src);
+    }
   }
-  
+
   /**
    * Should quotas get shown as part of the report?
    * @return if quotas should be shown then true otherwise false

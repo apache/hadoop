@@ -18,18 +18,10 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 
 /** SafeMode related operations. */
 @InterfaceAudience.Private
 public interface SafeMode {
-  /**
-   * Check safe mode conditions.
-   * If the corresponding conditions are satisfied,
-   * trigger the system to enter/leave safe mode.
-   */
-  public void checkSafeMode();
-
   /** Is the system in safe mode? */
   public boolean isInSafeMode();
 
@@ -38,14 +30,4 @@ public interface SafeMode {
    * safe mode turned on automatically?
    */
   public boolean isInStartupSafeMode();
-
-  /**
-   * Increment number of blocks that reached minimal replication.
-   * @param replication current replication
-   * @param storedBlock current stored Block
-   */
-  public void incrementSafeBlockCount(int replication, BlockInfo storedBlock);
-
-  /** Decrement number of blocks that reached minimal replication. */
-  public void decrementSafeBlockCount(BlockInfo b);
 }

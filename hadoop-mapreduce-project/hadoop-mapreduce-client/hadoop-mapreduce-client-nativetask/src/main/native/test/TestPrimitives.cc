@@ -141,7 +141,7 @@ inline char * memchrbrf4(char * p, char ch, size_t len) {
       return p + i + 2;
     }
   }
-  for (; i < len; i++) {
+  for (; i < (ssize_t)len; i++) {
     if (p[i] == ch) {
       return p + i;
     }

@@ -58,6 +58,12 @@ message ResourceProto {
   optional int32 virtual_cores = 2;
 }
 
+message ResourceUtilizationProto {
+  optional int32 pmem = 1;
+  optional int32 vmem = 2;
+  optional float cpu = 3;
+}
+
 message ResourceOptionProto {
   optional ResourceProto resource = 1;
   optional int32 over_commit_timeout = 2;
@@ -131,6 +137,7 @@ enum FinalApplicationStatusProto {
   APP_SUCCEEDED = 1;
   APP_FAILED = 2;
   APP_KILLED = 3;
+  APP_ENDED = 4;
 }
 
 message URLProto {
@@ -171,6 +178,8 @@ message ApplicationResourceUsageReportProto {
   optional ResourceProto needed_resources = 5;
   optional int64 memory_seconds = 6;
   optional int64 vcore_seconds = 7;
+  optional float queue_usage_percentage = 8;
+  optional float cluster_usage_percentage = 9;
 }
 
 message ApplicationReportProto {
@@ -251,6 +260,8 @@ message NodeReportProto {
   optional string health_report = 8;
   optional int64 last_health_report_time = 9;
   repeated string node_labels = 10;
+  optional ResourceUtilizationProto containers_utilization = 11;
+  optional ResourceUtilizationProto node_utilization = 12;
 }
 
 message NodeIdToLabelsInfoProto {
@@ -273,6 +284,15 @@ enum ContainerTypeProto {
   TASK = 2;
 }
 
+enum ExecutionTypeProto {
+  GUARANTEED = 1;
+  OPPORTUNISTIC = 2;
+}
+
+message AMBlackListingRequestProto {
+  optional bool blacklisting_enabled = 1 [default = false];
+  optional float blacklisting_failure_threshold = 2;
+}
 ////////////////////////////////////////////////////////////////////////
 ////// From AM_RM_Protocol /////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
@@ -338,6 +358,7 @@ message ApplicationSubmissionContextProto {
   optional ReservationIdProto reservation_id = 15;
   optional string node_label_expression = 16;
   optional ResourceRequestProto am_container_resource_request = 17;
+  optional AMBlackListingRequestProto am_blacklisting_request = 18;
 }
 
 message LogAggregationContextProto {
@@ -405,6 +426,7 @@ message QueueInfoProto {
   repeated string accessibleNodeLabels = 8;
   optional string defaultNodeLabelExpression = 9;
   optional QueueStatisticsProto queueStatistics = 10;
+  optional bool preemptionDisabled = 11;
 }
 
 enum QueueACLProto {
@@ -452,6 +474,23 @@ message ReservationDefinitionProto {
   optional string reservation_name = 4;
 }
 
+message ResourceAllocationRequestProto {
+  optional int64 start_time = 1;
+  optional int64 end_time = 2;
+  optional ResourceProto resource = 3;
+}
+
+message ReservationAllocationStateProto {
+  optional ReservationDefinitionProto reservation_definition = 1;
+  repeated ResourceAllocationRequestProto allocation_requests = 2;
+  optional int64 start_time = 3;
+  optional int64 end_time = 4;
+  optional string user = 5;
+  optional bool contains_gangs = 6;
+  optional int64 acceptance_time = 7;
+  optional ReservationIdProto reservation_id = 8;
+}
+
 enum ReservationRequestInterpreterProto {
   R_ANY = 0;
   R_ALL = 1;
@@ -478,6 +517,7 @@ message ContainerStatusProto {
   optional string diagnostics = 3 [default = "N/A"];
   optional int32 exit_status = 4 [default = -1000];
   optional ResourceProto capability = 5;
+  optional ExecutionTypeProto executionType = 6 [default = GUARANTEED];
 }
 
 enum ContainerExitStatusProto {

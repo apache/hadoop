@@ -83,9 +83,10 @@ public class RecoveredContainerLaunch extends ContainerLaunch {
         exec.activateContainer(containerId, pidFilePath);
         retCode = exec.reacquireContainer(
             new ContainerReacquisitionContext.Builder()
-            .setUser(container.getUser())
-            .setContainerId(containerId)
-            .build());
+                .setContainer(container)
+                .setUser(container.getUser())
+                .setContainerId(containerId)
+                .build());
       } else {
         LOG.warn("Unable to locate pid file for container " + containerIdStr);
       }

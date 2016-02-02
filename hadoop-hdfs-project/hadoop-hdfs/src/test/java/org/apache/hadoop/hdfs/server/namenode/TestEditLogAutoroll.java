@@ -97,9 +97,11 @@ public class TestEditLogAutoroll {
   public void tearDown() throws Exception {
     if (fs != null) {
       fs.close();
+      fs = null;
     }
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 

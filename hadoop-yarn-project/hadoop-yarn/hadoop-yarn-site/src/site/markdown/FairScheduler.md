@@ -128,6 +128,8 @@ The allocation file must be in XML format. The format contains five types of ele
 
 * **A queueMaxAppsDefault element**: which sets the default running app limit for queues; overriden by maxRunningApps element in each queue.
 
+* **A queueMaxResourcesDefault element**: which sets the default max resource limit for queue; overriden by maxResources element in each queue.
+
 * **A queueMaxAMShareDefault element**: which sets the default AM resource limit for queue; overriden by maxAMShare element in each queue.
 
 * **A defaultQueueSchedulingPolicy element**: which sets the default scheduling policy for queues; overriden by the schedulingPolicy element in each queue if specified. Defaults to "fair".
@@ -167,6 +169,7 @@ The allocation file must be in XML format. The format contains five types of ele
   </queue>
 
   <queueMaxAMShareDefault>0.5</queueMaxAMShareDefault>
+  <queueMaxResourcesDefault>40000 mb,0vcores</queueMaxResourcesDefault>
 
   <!-- Queue 'secondary_group_queue' is a parent queue and may have
        user queues under it -->

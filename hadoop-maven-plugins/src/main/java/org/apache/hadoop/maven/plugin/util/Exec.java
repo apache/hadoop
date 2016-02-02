@@ -22,6 +22,7 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Exec is a helper class for executing an external process from a mojo.
@@ -93,7 +94,7 @@ public class Exec {
    * OutputBufferThread is a background thread for consuming and storing output
    * of the external process.
    */
-  private static class OutputBufferThread extends Thread {
+  public static class OutputBufferThread extends Thread {
     private List<String> output;
     private BufferedReader reader;
 
@@ -126,12 +127,57 @@ public class Exec {
     }
 
     /**
-     * Returns every line consumed from the input.
+     * Get every line consumed from the input.
      * 
-     * @return List<String> every line consumed from the input
+     * @return  Every line consumed from the input
      */
     public List<String> getOutput() {
       return output;
     }
+  }
+
+  /**
+   * Add environment variables to a ProcessBuilder.
+   *
+   * @param pb      The ProcessBuilder
+   * @param env     A map of environment variable names to values.
+   */
+  public static void addEnvironment(ProcessBuilder pb,
+        Map<String, String> env) {
+    if (env == null) {
+      return;
+    }
+    Map<String, String> processEnv = pb.environment();
+    for (Map.Entry<String, String> entry : env.entrySet()) {
+      String val = entry.getValue();
+      if (val == null) {
+        val = "";
+      }
+      processEnv.put(entry.getKey(), val);
+    }
+  }
+
+  /**
+   * Pretty-print the environment to a StringBuilder.
+   *
+   * @param env     A map of environment variable names to values to print.
+   *
+   * @return        The pretty-printed string.
+   */
+  public static String envToString(Map<String, String> env) {
+    StringBuilder bld = new StringBuilder();
+    bld.append("{");
+    if (env != null) {
+      for (Map.Entry<String, String> entry : env.entrySet()) {
+        String val = entry.getValue();
+        if (val == null) {
+          val = "";
+        }
+        bld.append("\n  ").append(entry.getKey()).
+              append(" = '").append(val).append("'\n");
+      }
+    }
+    bld.append("}");
+    return bld.toString();
   }
 }

@@ -23,10 +23,24 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 /**
  * Implementation of {@link Clock} that gives the current time from the system
  * clock in milliseconds.
+ * 
+ * NOTE: Do not use this to calculate a duration of expire or interval to sleep,
+ * because it will be broken by settimeofday. Please use {@link MonotonicClock}
+ * instead.
  */
 @Public
 @Stable
-public class SystemClock implements Clock {
+public final class SystemClock implements Clock {
+
+  private static final SystemClock INSTANCE = new SystemClock();
+
+  public static SystemClock getInstance() {
+    return INSTANCE;
+  }
+
+  private SystemClock() {
+    // do nothing
+  }
 
   public long getTime() {
     return System.currentTimeMillis();

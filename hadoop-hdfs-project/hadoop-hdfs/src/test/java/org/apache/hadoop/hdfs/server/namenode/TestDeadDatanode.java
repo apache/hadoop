@@ -62,7 +62,10 @@ public class TestDeadDatanode {
 
   @After
   public void cleanup() {
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 
   /**
@@ -100,14 +103,14 @@ public class TestDeadDatanode {
         null) };
     StorageReceivedDeletedBlocks[] storageBlocks = { 
         new StorageReceivedDeletedBlocks(reg.getDatanodeUuid(), blocks) };
-    
-    // Ensure blockReceived call from dead datanode is rejected with IOException
-    try {
-      dnp.blockReceivedAndDeleted(reg, poolId, storageBlocks);
-      fail("Expected IOException is not thrown");
-    } catch (IOException ex) {
-      // Expected
-    }
+
+    // Ensure blockReceived call from dead datanode is not rejected with
+    // IOException, since it's async, but the node remains unregistered.
+    dnp.blockReceivedAndDeleted(reg, poolId, storageBlocks);
+    BlockManager bm = cluster.getNamesystem().getBlockManager();
+    // IBRs are async, make sure the NN processes all of them.
+    bm.flushBlockOps();
+    assertFalse(bm.getDatanodeManager().getDatanode(reg).isRegistered());
 
     // Ensure blockReport from dead datanode is rejected with IOException
     StorageBlockReport[] report = { new StorageBlockReport(

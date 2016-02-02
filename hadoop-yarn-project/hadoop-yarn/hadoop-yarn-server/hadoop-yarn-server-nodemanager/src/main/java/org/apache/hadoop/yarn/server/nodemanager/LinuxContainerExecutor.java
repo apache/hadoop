@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
+import org.apache.hadoop.yarn.server.nodemanager.util.CgroupsLCEResourcesHandler;
 import org.apache.hadoop.yarn.server.nodemanager.util.DefaultLCEResourcesHandler;
 import org.apache.hadoop.yarn.server.nodemanager.util.LCEResourcesHandler;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -95,10 +96,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   public void setConf(Configuration conf) {
     super.setConf(conf);
 
-    resourcesHandler = ReflectionUtils.newInstance(
-        conf.getClass(YarnConfiguration.NM_LINUX_CONTAINER_RESOURCES_HANDLER,
-            DefaultLCEResourcesHandler.class, LCEResourcesHandler.class), conf);
-    resourcesHandler.setConf(conf);
+    resourcesHandler = getResourcesHandler(conf);
 
     if (conf.get(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY)
         != null) {
@@ -120,6 +118,23 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       LOG.warn(YarnConfiguration.NM_NONSECURE_MODE_LIMIT_USERS +
           ": impersonation without authentication enabled");
     }
+  }
+
+  private LCEResourcesHandler getResourcesHandler(Configuration conf) {
+    LCEResourcesHandler handler = ReflectionUtils.newInstance(
+        conf.getClass(YarnConfiguration.NM_LINUX_CONTAINER_RESOURCES_HANDLER,
+            DefaultLCEResourcesHandler.class, LCEResourcesHandler.class), conf);
+
+    // Stop using CgroupsLCEResourcesHandler
+    // use the resource handler chain instead
+    // ResourceHandlerModule will create the cgroup cpu module if
+    // CgroupsLCEResourcesHandler is set
+    if (handler instanceof CgroupsLCEResourcesHandler) {
+      handler =
+          ReflectionUtils.newInstance(DefaultLCEResourcesHandler.class, conf);
+    }
+    handler.setConf(conf);
+    return handler;
   }
 
   void verifyUsernamePattern(String user) {
@@ -184,7 +199,12 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     try {
       resourceHandlerChain = ResourceHandlerModule
           .getConfiguredResourceHandlerChain(conf);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Resource handler chain enabled = " + (resourceHandlerChain
+            == null));
+      }
       if (resourceHandlerChain != null) {
+        LOG.debug("Bootstrapping resource handler chain");
         resourceHandlerChain.bootstrap(conf);
       }
     } catch (ResourceHandlerException e) {
@@ -291,6 +311,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     Path containerWorkDir = ctx.getContainerWorkDir();
     List<String> localDirs = ctx.getLocalDirs();
     List<String> logDirs = ctx.getLogDirs();
+    List<String> containerLocalDirs = ctx.getContainerLocalDirs();
+    List<String> containerLogDirs = ctx.getContainerLogDirs();
     Map<Path, List<String>> localizedResources = ctx.getLocalizedResources();
 
     verifyUsernamePattern(user);
@@ -375,6 +397,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
             .setExecutionAttribute(PID_FILE_PATH, pidFilePath)
             .setExecutionAttribute(LOCAL_DIRS, localDirs)
             .setExecutionAttribute(LOG_DIRS, logDirs)
+            .setExecutionAttribute(CONTAINER_LOCAL_DIRS, containerLocalDirs)
+            .setExecutionAttribute(CONTAINER_LOG_DIRS, containerLogDirs)
             .setExecutionAttribute(RESOURCES_OPTIONS, resourcesOptions);
 
         if (tcCommandFile != null) {

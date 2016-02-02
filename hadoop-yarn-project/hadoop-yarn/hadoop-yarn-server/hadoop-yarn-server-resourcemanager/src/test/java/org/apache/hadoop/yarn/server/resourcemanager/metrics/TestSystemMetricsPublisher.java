@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -205,6 +206,8 @@ public class TestSystemMetricsPublisher {
             Long.parseLong(entity.getOtherInfo()
                 .get(ApplicationMetricsConstants.APP_CPU_METRICS).toString()));
       }
+      Assert.assertEquals("context", entity.getOtherInfo()
+          .get(ApplicationMetricsConstants.YARN_APP_CALLER_CONTEXT));
       boolean hasCreatedEvent = false;
       boolean hasUpdatedEvent = false;
       boolean hasFinishedEvent = false;
@@ -254,10 +257,30 @@ public class TestSystemMetricsPublisher {
   }
 
   @Test(timeout = 10000)
+  public void testPublishAppAttemptMetricsForUnmanagedAM() throws Exception {
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1);
+    RMAppAttempt appAttempt = createRMAppAttempt(appAttemptId,true);
+    metricsPublisher.appAttemptRegistered(appAttempt, Integer.MAX_VALUE + 1L);
+    RMApp app = mock(RMApp.class);
+    when(app.getFinalApplicationStatus()).thenReturn(FinalApplicationStatus.UNDEFINED);
+    metricsPublisher.appAttemptFinished(appAttempt, RMAppAttemptState.FINISHED, app,
+        Integer.MAX_VALUE + 2L);
+    TimelineEntity entity = null;
+    do {
+      entity =
+          store.getEntity(appAttemptId.toString(),
+              AppAttemptMetricsConstants.ENTITY_TYPE,
+              EnumSet.allOf(Field.class));
+      // ensure two events are both published before leaving the loop
+    } while (entity == null || entity.getEvents().size() < 2);
+  }
+
+  @Test(timeout = 10000)
   public void testPublishAppAttemptMetrics() throws Exception {
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1);
-    RMAppAttempt appAttempt = createRMAppAttempt(appAttemptId);
+    RMAppAttempt appAttempt = createRMAppAttempt(appAttemptId, false);
     metricsPublisher.appAttemptRegistered(appAttempt, Integer.MAX_VALUE + 1L);
     RMApp app = mock(RMApp.class);
     when(app.getFinalApplicationStatus()).thenReturn(FinalApplicationStatus.UNDEFINED);
@@ -426,19 +449,23 @@ public class TestSystemMetricsPublisher {
     when(amReq.getNodeLabelExpression()).thenReturn("high-mem");
     when(app.getAMResourceRequest()).thenReturn(amReq);
     when(app.getAmNodeLabelExpression()).thenCallRealMethod();
+    when(app.getCallerContext())
+        .thenReturn(new CallerContext.Builder("context").build());
     return app;
   }
 
   private static RMAppAttempt createRMAppAttempt(
-      ApplicationAttemptId appAttemptId) {
+      ApplicationAttemptId appAttemptId, boolean unmanagedAMAttempt) {
     RMAppAttempt appAttempt = mock(RMAppAttempt.class);
     when(appAttempt.getAppAttemptId()).thenReturn(appAttemptId);
     when(appAttempt.getHost()).thenReturn("test host");
     when(appAttempt.getRpcPort()).thenReturn(-100);
-    Container container = mock(Container.class);
-    when(container.getId())
-        .thenReturn(ContainerId.newContainerId(appAttemptId, 1));
-    when(appAttempt.getMasterContainer()).thenReturn(container);
+    if (!unmanagedAMAttempt) {
+      Container container = mock(Container.class);
+      when(container.getId())
+          .thenReturn(ContainerId.newContainerId(appAttemptId, 1));
+      when(appAttempt.getMasterContainer()).thenReturn(container);
+    }
     when(appAttempt.getDiagnostics()).thenReturn("test diagnostics info");
     when(appAttempt.getTrackingUrl()).thenReturn("test tracking url");
     when(appAttempt.getOriginalTrackingUrl()).thenReturn(

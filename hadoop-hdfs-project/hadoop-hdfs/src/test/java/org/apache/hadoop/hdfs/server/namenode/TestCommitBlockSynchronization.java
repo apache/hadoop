@@ -80,8 +80,8 @@ public class TestCommitBlockSynchronization {
 
     doReturn(blockInfo).when(namesystemSpy).getStoredBlock(any(Block.class));
     doReturn(blockInfo).when(file).getLastBlock();
-    doReturn("").when(namesystemSpy).closeFileCommitBlocks(
-        any(INodeFile.class), any(BlockInfo.class));
+    doNothing().when(namesystemSpy).closeFileCommitBlocks(
+        any(String.class), any(INodeFile.class), any(BlockInfo.class));
     doReturn(mock(FSEditLog.class)).when(namesystemSpy).getEditLog();
 
     return namesystemSpy;
@@ -199,14 +199,15 @@ public class TestCommitBlockSynchronization {
     FSNamesystem namesystemSpy = makeNameSystemSpy(block, file);
     DatanodeID[] newTargets = new DatanodeID[]{
         new DatanodeID("0.0.0.0", "nonexistantHost", "1", 0, 0, 0, 0)};
+    String[] storageIDs = new String[]{"fake-storage-ID"};
 
     ExtendedBlock lastBlock = new ExtendedBlock();
     namesystemSpy.commitBlockSynchronization(
         lastBlock, genStamp, length, true,
-        false, newTargets, null);
+        false, newTargets, storageIDs);
 
     // Repeat the call to make sure it returns true
     namesystemSpy.commitBlockSynchronization(
-        lastBlock, genStamp, length, true, false, newTargets, null);
+        lastBlock, genStamp, length, true, false, newTargets, storageIDs);
   }
 }

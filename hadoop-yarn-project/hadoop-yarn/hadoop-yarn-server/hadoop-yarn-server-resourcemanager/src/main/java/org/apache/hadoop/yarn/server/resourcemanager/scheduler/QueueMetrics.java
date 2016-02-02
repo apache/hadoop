@@ -44,7 +44,6 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,6 +63,12 @@ public class QueueMetrics implements MetricsSource {
   @Metric("Allocated CPU in virtual cores") MutableGaugeInt allocatedVCores;
   @Metric("# of allocated containers") MutableGaugeInt allocatedContainers;
   @Metric("Aggregate # of allocated containers") MutableCounterLong aggregateContainersAllocated;
+  @Metric("Aggregate # of allocated node-local containers")
+    MutableCounterLong aggregateNodeLocalContainersAllocated;
+  @Metric("Aggregate # of allocated rack-local containers")
+    MutableCounterLong aggregateRackLocalContainersAllocated;
+  @Metric("Aggregate # of allocated off-switch containers")
+    MutableCounterLong aggregateOffSwitchContainersAllocated;
   @Metric("Aggregate # of released containers") MutableCounterLong aggregateContainersReleased;
   @Metric("Available memory in MB") MutableGaugeInt availableMB;
   @Metric("Available CPU in virtual cores") MutableGaugeInt availableVCores;
@@ -373,20 +378,37 @@ public class QueueMetrics implements MetricsSource {
   }
 
   private void _decrPendingResources(int containers, Resource res) {
-    // if #container = 0, means change container resource
     pendingContainers.decr(containers);
-    pendingMB.decr(res.getMemory() * Math.max(containers, 1));
-    pendingVCores.decr(res.getVirtualCores() * Math.max(containers, 1));
+    pendingMB.decr(res.getMemory() * containers);
+    pendingVCores.decr(res.getVirtualCores() * containers);
+  }
+
+  public void incrNodeTypeAggregations(String user, NodeType type) {
+    if (type == NodeType.NODE_LOCAL) {
+      aggregateNodeLocalContainersAllocated.incr();
+    } else if (type == NodeType.RACK_LOCAL) {
+      aggregateRackLocalContainersAllocated.incr();
+    } else if (type == NodeType.OFF_SWITCH) {
+      aggregateOffSwitchContainersAllocated.incr();
+    } else {
+      return;
+    }
+    QueueMetrics userMetrics = getUserMetrics(user);
+    if (userMetrics != null) {
+      userMetrics.incrNodeTypeAggregations(user, type);
+    }
+    if (parent != null) {
+      parent.incrNodeTypeAggregations(user, type);
+    }
   }
 
   public void allocateResources(String user, int containers, Resource res,
       boolean decrPending) {
-    // if #containers = 0, means change container resource
     allocatedContainers.incr(containers);
     aggregateContainersAllocated.incr(containers);
 
-    allocatedMB.incr(res.getMemory() * Math.max(containers, 1));
-    allocatedVCores.incr(res.getVirtualCores() * Math.max(containers, 1));
+    allocatedMB.incr(res.getMemory() * containers);
+    allocatedVCores.incr(res.getVirtualCores() * containers);
     if (decrPending) {
       _decrPendingResources(containers, res);
     }
@@ -399,18 +421,57 @@ public class QueueMetrics implements MetricsSource {
     }
   }
 
+  /**
+   * Allocate Resource for container size change.
+   *
+   * @param user
+   * @param res
+   */
+  public void allocateResources(String user, Resource res) {
+    allocatedMB.incr(res.getMemory());
+    allocatedVCores.incr(res.getVirtualCores());
+
+    pendingMB.decr(res.getMemory());
+    pendingVCores.decr(res.getVirtualCores());
+
+    QueueMetrics userMetrics = getUserMetrics(user);
+    if (userMetrics != null) {
+      userMetrics.allocateResources(user, res);
+    }
+    if (parent != null) {
+      parent.allocateResources(user, res);
+    }
+  }
+
   public void releaseResources(String user, int containers, Resource res) {
-    // if #container = 0, means change container resource.
     allocatedContainers.decr(containers);
     aggregateContainersReleased.incr(containers);
-    allocatedMB.decr(res.getMemory() * Math.max(containers, 1));
-    allocatedVCores.decr(res.getVirtualCores() * Math.max(containers, 1));
+    allocatedMB.decr(res.getMemory() * containers);
+    allocatedVCores.decr(res.getVirtualCores() * containers);
     QueueMetrics userMetrics = getUserMetrics(user);
     if (userMetrics != null) {
       userMetrics.releaseResources(user, containers, res);
     }
     if (parent != null) {
       parent.releaseResources(user, containers, res);
+    }
+  }
+
+  /**
+   * Release Resource for container size change.
+   *
+   * @param user
+   * @param res
+   */
+  public void releaseResources(String user, Resource res) {
+    allocatedMB.decr(res.getMemory());
+    allocatedVCores.decr(res.getVirtualCores());
+    QueueMetrics userMetrics = getUserMetrics(user);
+    if (userMetrics != null) {
+      userMetrics.releaseResources(user, res);
+    }
+    if (parent != null) {
+      parent.releaseResources(user, res);
     }
   }
 
@@ -560,6 +621,18 @@ public class QueueMetrics implements MetricsSource {
 
   public long getAggregateAllocatedContainers() {
     return aggregateContainersAllocated.value();
+  }
+
+  public long getAggregateNodeLocalContainersAllocated() {
+    return aggregateNodeLocalContainersAllocated.value();
+  }
+
+  public long getAggregateRackLocalContainersAllocated() {
+    return aggregateRackLocalContainersAllocated.value();
+  }
+
+  public long getAggregateOffSwitchContainersAllocated() {
+    return aggregateOffSwitchContainersAllocated.value();
   }
 
   public long getAggegatedReleasedContainers() {

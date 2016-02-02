@@ -1,4 +1,4 @@
-%<!---
+<!---
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
   You may obtain a copy of the License at
@@ -96,8 +96,8 @@ The Hadoop streaming command options are listed here:
 |:---- |:---- |:---- |
 | -input directoryname or filename | Required | Input location for mapper |
 | -output directoryname | Required | Output location for reducer |
-| -mapper executable or JavaClassName | Required | Mapper executable |
-| -reducer executable or JavaClassName | Required | Reducer executable |
+| -mapper executable or JavaClassName | Optional | Mapper executable. If not specified, IdentityMapper is used as the default |
+| -reducer executable or JavaClassName | Optional | Reducer executable. If not specified, IdentityReducer is used as the default |
 | -file filename | Optional | Make the mapper, reducer, or combiner executable available locally on the compute nodes |
 | -inputformat JavaClassName | Optional | Class you supply should return key/value pairs of Text class. If not specified, TextInputFormat is used as the default |
 | -outputformat JavaClassName | Optional | Class you supply should take key/value pairs of Text class. If not specified, TextOutputformat is used as the default |

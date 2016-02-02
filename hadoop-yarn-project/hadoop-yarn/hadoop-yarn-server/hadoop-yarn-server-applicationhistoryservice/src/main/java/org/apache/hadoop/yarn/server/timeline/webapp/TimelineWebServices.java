@@ -229,6 +229,8 @@ public class TimelineWebServices {
     }
     try {
       return timelineDataManager.postEntities(entities, callerUGI);
+    } catch (BadRequestException bre) {
+      throw bre;
     } catch (Exception e) {
       LOG.error("Error putting entities", e);
       throw new WebApplicationException(e,

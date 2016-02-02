@@ -47,10 +47,14 @@ recursive file-by-file operations. They take time at least proportional to
 the number of files, during which time partial updates may be visible. If
 the operations are interrupted, the filesystem is left in an intermediate state.
 
+## Warning #2: Because Object stores don't track modification times of directories,
+features of Hadoop relying on this can have unexpected behaviour. E.g. the
+AggregatedLogDeletionService of YARN will not remove the appropriate logfiles.
+
 For further discussion on these topics, please consult
 [The Hadoop FileSystem API Definition](../../../hadoop-project-dist/hadoop-common/filesystem/index.html).
 
-## Warning #2: your AWS credentials are valuable
+## Warning #3: your AWS credentials are valuable
 
 Your AWS credentials not only pay for services, they offer read and write
 access to the data. Anyone with the credentials can not only read your datasets
@@ -231,15 +235,9 @@ If you do any of these: change your credentials immediately!
 
     <property>
       <name>fs.s3a.threads.max</name>
-      <value>256</value>
+      <value>10</value>
       <description> Maximum number of concurrent active (part)uploads,
       which each use a thread from the threadpool.</description>
-    </property>
-
-    <property>
-      <name>fs.s3a.threads.core</name>
-      <value>15</value>
-      <description>Number of core threads in the threadpool.</description>
     </property>
 
     <property>
@@ -251,7 +249,7 @@ If you do any of these: change your credentials immediately!
 
     <property>
       <name>fs.s3a.max.total.tasks</name>
-      <value>1000</value>
+      <value>5</value>
       <description>Number of (part)uploads allowed to the queue before
       blocking additional uploads.</description>
     </property>
@@ -305,6 +303,12 @@ If you do any of these: change your credentials immediately!
       <name>fs.s3a.impl</name>
       <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
       <description>The implementation class of the S3A Filesystem</description>
+    </property>
+
+    <property>
+      <name>fs.AbstractFileSystem.s3a.impl</name>
+      <value>org.apache.hadoop.fs.s3a.S3A</value>
+      <description>The implementation class of the S3A AbstractFileSystem.</description>
     </property>
 
 ### S3AFastOutputStream

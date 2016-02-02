@@ -27,13 +27,22 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.CreateFlag;
@@ -221,9 +230,6 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     private void clear() {
       for (int i = 0; i< numAllBlocks; i++) {
         buffers[i].clear();
-        if (i >= numDataBlocks) {
-          Arrays.fill(buffers[i].array(), (byte) 0);
-        }
       }
     }
 
@@ -246,13 +252,17 @@ public class DFSStripedOutputStream extends DFSOutputStream {
   private final List<StripedDataStreamer> streamers;
   private final DFSPacket[] currentPackets; // current Packet of each streamer
 
-  /** Size of each striping cell, must be a multiple of bytesPerChecksum */
+  // Size of each striping cell, must be a multiple of bytesPerChecksum.
   private final int cellSize;
   private final int numAllBlocks;
   private final int numDataBlocks;
   private ExtendedBlock currentBlockGroup;
   private final String[] favoredNodes;
   private final List<StripedDataStreamer> failedStreamers;
+  private final Map<Integer, Integer> corruptBlockCountMap;
+  private ExecutorService flushAllExecutor;
+  private CompletionService<Void> flushAllExecutorCompletionService;
+  private int blockGroupIndex;
 
   /** Construct a new output stream for creating a file. */
   DFSStripedOutputStream(DFSClient dfsClient, String src, HdfsFileStatus stat,
@@ -271,6 +281,10 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     numAllBlocks = numDataBlocks + numParityBlocks;
     this.favoredNodes = favoredNodes;
     failedStreamers = new ArrayList<>();
+    corruptBlockCountMap = new LinkedHashMap<>();
+    flushAllExecutor = Executors.newFixedThreadPool(numAllBlocks);
+    flushAllExecutorCompletionService = new
+        ExecutorCompletionService<>(flushAllExecutor);
 
     encoder = CodecUtil.createRSRawEncoder(dfsClient.getConfiguration(),
         numDataBlocks, numParityBlocks);
@@ -366,13 +380,19 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     return newFailed;
   }
 
-  private void handleStreamerFailure(String err, Exception e)
+  private void handleCurrentStreamerFailure(String err, Exception e)
       throws IOException {
-    LOG.warn("Failed: " + err + ", " + this, e);
-    getCurrentStreamer().getErrorState().setInternalError();
-    getCurrentStreamer().close(true);
-    checkStreamers();
     currentPacket = null;
+    handleStreamerFailure(err, e, getCurrentStreamer());
+  }
+
+  private void handleStreamerFailure(String err, Exception e,
+      StripedDataStreamer streamer) throws IOException {
+    LOG.warn("Failed: " + err + ", " + this, e);
+    streamer.getErrorState().setInternalError();
+    streamer.close(true);
+    checkStreamers();
+    currentPackets[streamer.getIndex()] = null;
   }
 
   private void replaceFailedStreamers() {
@@ -447,6 +467,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     }
     // assign the new block to the current block group
     currentBlockGroup = lb.getBlock();
+    blockGroupIndex++;
 
     final LocatedBlock[] blocks = StripedBlockUtil.parseStripedBlockGroup(
         (LocatedStripedBlock) lb, cellSize, numDataBlocks,
@@ -492,7 +513,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
       try {
         super.writeChunk(bytes, offset, len, checksum, ckoff, cklen);
       } catch(Exception e) {
-        handleStreamerFailure("offset=" + offset + ", length=" + len, e);
+        handleCurrentStreamerFailure("offset=" + offset + ", length=" + len, e);
       }
     }
 
@@ -593,6 +614,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     while (newFailed.size() > 0) {
       failedStreamers.addAll(newFailed);
       coordinator.clearFailureStates();
+      corruptBlockCountMap.put(blockGroupIndex, failedStreamers.size());
 
       // mark all the healthy streamers as external error
       Set<StripedDataStreamer> healthySet = markExternalErrorOnStreamers();
@@ -760,16 +782,19 @@ public class DFSStripedOutputStream extends DFSOutputStream {
   }
 
   @Override
-  synchronized void abort() throws IOException {
-    if (isClosed()) {
-      return;
+  void abort() throws IOException {
+    synchronized (this) {
+      if (isClosed()) {
+        return;
+      }
+      for (StripedDataStreamer streamer : streamers) {
+        streamer.getLastException().set(
+            new IOException("Lease timeout of "
+                + (dfsClient.getConf().getHdfsTimeout() / 1000)
+                + " seconds expired."));
+      }
+      closeThreads(true);
     }
-    for (StripedDataStreamer streamer : streamers) {
-      streamer.getLastException().set(new IOException("Lease timeout of "
-          + (dfsClient.getConf().getHdfsTimeout()/1000) +
-          " seconds expired."));
-    }
-    closeThreads(true);
     dfsClient.endFileLease(fileId);
   }
 
@@ -797,7 +822,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
           streamer.closeSocket();
         } catch (Exception e) {
           try {
-            handleStreamerFailure("force=" + force, e);
+            handleCurrentStreamerFailure("force=" + force, e);
           } catch (IOException ioe) {
             b.add(ioe);
           }
@@ -844,12 +869,30 @@ public class DFSStripedOutputStream extends DFSOutputStream {
 
   void writeParityCells() throws IOException {
     final ByteBuffer[] buffers = cellBuffers.getBuffers();
+    // Skips encoding and writing parity cells if there are no healthy parity
+    // data streamers
+    if (!checkAnyParityStreamerIsHealthy()) {
+      return;
+    }
     //encode the data cells
     encode(encoder, numDataBlocks, buffers);
     for (int i = numDataBlocks; i < numAllBlocks; i++) {
       writeParity(i, buffers[i], cellBuffers.getChecksumArray(i));
     }
     cellBuffers.clear();
+  }
+
+  private boolean checkAnyParityStreamerIsHealthy() {
+    for (int i = numDataBlocks; i < numAllBlocks; i++) {
+      if (streamers.get(i).isHealthy()) {
+        return true;
+      }
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Skips encoding and writing parity cells as there are "
+          + "no healthy parity data streamers: " + streamers);
+    }
+    return false;
   }
 
   void writeParity(int index, ByteBuffer buffer, byte[] checksumBuf)
@@ -869,7 +912,8 @@ public class DFSStripedOutputStream extends DFSOutputStream {
               getChecksumSize());
         }
       } catch(Exception e) {
-        handleStreamerFailure("oldBytes=" + oldBytes + ", len=" + len, e);
+        handleCurrentStreamerFailure("oldBytes=" + oldBytes + ", len=" + len,
+            e);
       }
     }
   }
@@ -939,14 +983,17 @@ public class DFSStripedOutputStream extends DFSOutputStream {
                dfsClient.getTracer().newScope("completeFile")) {
         completeFile(currentBlockGroup);
       }
-      dfsClient.endFileLease(fileId);
+      logCorruptBlocks();
     } catch (ClosedChannelException ignored) {
     } finally {
       setClosed();
+      // shutdown executor of flushAll tasks
+      flushAllExecutor.shutdownNow();
     }
   }
 
-  private void enqueueAllCurrentPackets() throws IOException {
+  @VisibleForTesting
+  void enqueueAllCurrentPackets() throws IOException {
     int idx = streamers.indexOf(getCurrentStreamer());
     for(int i = 0; i < streamers.size(); i++) {
       final StripedDataStreamer si = setCurrentStreamer(i);
@@ -954,7 +1001,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
         try {
           enqueueCurrentPacket();
         } catch (IOException e) {
-          handleStreamerFailure("enqueueAllCurrentPackets, i=" + i, e);
+          handleCurrentStreamerFailure("enqueueAllCurrentPackets, i=" + i, e);
         }
       }
     }
@@ -962,6 +1009,8 @@ public class DFSStripedOutputStream extends DFSOutputStream {
   }
 
   void flushAllInternals() throws IOException {
+    Map<Future<Void>, Integer> flushAllFuturesMap = new HashMap<>();
+    Future<Void> future = null;
     int current = getCurrentIndex();
 
     for (int i = 0; i < numAllBlocks; i++) {
@@ -969,13 +1018,37 @@ public class DFSStripedOutputStream extends DFSOutputStream {
       if (s.isHealthy()) {
         try {
           // flush all data to Datanode
-          flushInternal();
-        } catch(Exception e) {
-          handleStreamerFailure("flushInternal " + s, e);
+          final long toWaitFor = flushInternalWithoutWaitingAck();
+          future = flushAllExecutorCompletionService.submit(
+              new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                  s.waitForAckedSeqno(toWaitFor);
+                  return null;
+                }
+              });
+          flushAllFuturesMap.put(future, i);
+        } catch (Exception e) {
+          handleCurrentStreamerFailure("flushInternal " + s, e);
         }
       }
     }
     setCurrentStreamer(current);
+    for (int i = 0; i < flushAllFuturesMap.size(); i++) {
+      try {
+        future = flushAllExecutorCompletionService.take();
+        future.get();
+      } catch (InterruptedException ie) {
+        throw DFSUtilClient.toInterruptedIOException(
+            "Interrupted during waiting all streamer flush, ", ie);
+      } catch (ExecutionException ee) {
+        LOG.warn(
+            "Caught ExecutionException while waiting all streamer flush, ", ee);
+        StripedDataStreamer s = streamers.get(flushAllFuturesMap.get(future));
+        handleStreamerFailure("flushInternal " + s,
+            (Exception) ee.getCause(), s);
+      }
+    }
   }
 
   static void sleep(long ms, String op) throws InterruptedIOException {
@@ -984,6 +1057,20 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     } catch(InterruptedException ie) {
       throw DFSUtilClient.toInterruptedIOException(
           "Sleep interrupted during " + op, ie);
+    }
+  }
+
+  private void logCorruptBlocks() {
+    for (Map.Entry<Integer, Integer> entry : corruptBlockCountMap.entrySet()) {
+      int bgIndex = entry.getKey();
+      int corruptBlockCount = entry.getValue();
+      StringBuilder sb = new StringBuilder();
+      sb.append("Block group <").append(bgIndex).append("> has ")
+          .append(corruptBlockCount).append(" corrupt blocks.");
+      if (corruptBlockCount == numAllBlocks - numDataBlocks) {
+        sb.append(" It's at high risk of losing data.");
+      }
+      LOG.warn(sb.toString());
     }
   }
 

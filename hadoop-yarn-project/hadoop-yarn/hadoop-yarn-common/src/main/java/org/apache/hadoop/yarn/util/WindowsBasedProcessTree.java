@@ -19,12 +19,14 @@
 package org.apache.hadoop.yarn.util;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.util.CpuTimeTracker;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
@@ -48,7 +50,12 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
   private long cpuTimeMs = UNAVAILABLE;
   private Map<String, ProcessInfo> processTree =
       new HashMap<String, ProcessInfo>();
-    
+
+  /** Track CPU utilization. */
+  private final CpuTimeTracker cpuTimeTracker;
+  /** Clock to account for CPU utilization. */
+  private Clock clock;
+
   public static boolean isAvailable() {
     if (Shell.WINDOWS) {
       if (!Shell.hasWinutilsPath()) {
@@ -71,9 +78,25 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
     return false;
   }
 
-  public WindowsBasedProcessTree(String pid) {
+  /**
+   * Create a monitor for a Windows process tree.
+   * @param pid Identifier of the job object.
+   */
+  public WindowsBasedProcessTree(final String pid) {
+    this(pid, SystemClock.getInstance());
+  }
+
+  /**
+   * Create a monitor for a Windows process tree.
+   * @param pid Identifier of the job object.
+   * @param pClock Clock to keep track of time for CPU utilization.
+   */
+  public WindowsBasedProcessTree(final String pid, final Clock pClock) {
     super(pid);
-    taskProcessId = pid;
+    this.taskProcessId = pid;
+    this.clock = pClock;
+    // Instead of jiffies, Windows uses milliseconds directly; 1ms = 1 jiffy
+    this.cpuTimeTracker = new CpuTimeTracker(1L);
   }
 
   // helper method to override while testing
@@ -213,7 +236,7 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
     }
     return total;
   }
-  
+
   @Override
   @SuppressWarnings("deprecation")
   public long getCumulativeRssmem(int olderThanAge) {
@@ -231,9 +254,27 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
     return cpuTimeMs;
   }
 
+  /**
+   * Get the number of used ms for all the processes under the monitored job
+   * object.
+   * @return Total consumed milliseconds by all processes in the job object.
+   */
+  private BigInteger getTotalProcessMs() {
+    long totalMs = 0;
+    for (ProcessInfo p : processTree.values()) {
+      if (p != null) {
+        totalMs += p.cpuTimeMs;
+      }
+    }
+    return BigInteger.valueOf(totalMs);
+  }
+
   @Override
   public float getCpuUsagePercent() {
-    return UNAVAILABLE;
+    BigInteger processTotalMs = getTotalProcessMs();
+    cpuTimeTracker.updateElapsedJiffies(processTotalMs, clock.getTime());
+
+    return cpuTimeTracker.getCpuTrackerUsagePercent();
   }
 
 }

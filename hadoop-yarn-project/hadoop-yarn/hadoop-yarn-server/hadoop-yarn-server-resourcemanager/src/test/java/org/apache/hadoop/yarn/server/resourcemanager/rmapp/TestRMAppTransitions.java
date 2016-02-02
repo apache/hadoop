@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.doReturn;
@@ -43,6 +42,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.yarn.MockApps;
+import org.apache.hadoop.yarn.api.records.AMBlackListingRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -64,6 +64,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWri
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
@@ -274,7 +275,7 @@ public class TestRMAppTransitions {
   // Test expected newly created app state
   private static void testAppStartState(ApplicationId applicationId, 
       String user, String name, String queue, RMApp application) {
-    Assert.assertTrue("application start time is not greater then 0", 
+    Assert.assertTrue("application start time is not greater than 0",
         application.getStartTime() > 0);
     Assert.assertTrue("application start time is before currentTime", 
         application.getStartTime() <= System.currentTimeMillis());
@@ -299,7 +300,7 @@ public class TestRMAppTransitions {
 
   // test to make sure times are set when app finishes
   private static void assertStartTimeSet(RMApp application) {
-    Assert.assertTrue("application start time is not greater then 0", 
+    Assert.assertTrue("application start time is not greater than 0",
         application.getStartTime() > 0);
     Assert.assertTrue("application start time is before currentTime", 
         application.getStartTime() <= System.currentTimeMillis());
@@ -318,9 +319,9 @@ public class TestRMAppTransitions {
   // test to make sure times are set when app finishes
   private void assertTimesAtFinish(RMApp application) {
     assertStartTimeSet(application);
-    Assert.assertTrue("application finish time is not greater then 0",
+    Assert.assertTrue("application finish time is not greater than 0",
         (application.getFinishTime() > 0));
-    Assert.assertTrue("application finish time is not >= then start time",
+    Assert.assertTrue("application finish time is not >= than start time",
         (application.getFinishTime() >= application.getStartTime()));
   }
 
@@ -363,13 +364,12 @@ public class TestRMAppTransitions {
     application.getCurrentAppAttempt().handle(
         new RMAppAttemptEvent(application.getCurrentAppAttempt().getAppAttemptId(),
             RMAppAttemptEventType.ATTEMPT_UPDATE_SAVED));
+    rmDispatcher.await();
   }
 
   protected RMApp testCreateAppNewSaving(
       ApplicationSubmissionContext submissionContext) throws IOException {
   RMApp application = createNewTestApp(submissionContext);
-    verify(writer).applicationStarted(any(RMApp.class));
-    verify(publisher).appCreated(any(RMApp.class), anyLong());
     // NEW => NEW_SAVING event RMAppEventType.START
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), RMAppEventType.START);
@@ -397,7 +397,7 @@ public class TestRMAppTransitions {
     // NEW => SUBMITTED event RMAppEventType.RECOVER
     RMState state = new RMState();
     ApplicationStateData appState =
-        ApplicationStateData.newInstance(123, 123, null, "user");
+        ApplicationStateData.newInstance(123, 123, null, "user", null);
     state.getApplicationState().put(application.getApplicationId(), appState);
     RMAppEvent event =
         new RMAppRecoverEvent(application.getApplicationId(), state);
@@ -1011,7 +1011,7 @@ public class TestRMAppTransitions {
     ApplicationStateData appState =
         ApplicationStateData.newInstance(app.getSubmitTime(), app.getStartTime(),
             app.getUser(), app.getApplicationSubmissionContext(), rmAppState,
-            null, app.getFinishTime());
+            null, app.getFinishTime(), null);
     applicationState.put(app.getApplicationId(), appState);
   }
   
@@ -1027,6 +1027,63 @@ public class TestRMAppTransitions {
     Assert.assertTrue("bad proxy url for app",
         report.getTrackingUrl().endsWith("/proxy/" + app.getApplicationId()
             + "/"));
+  }
+
+  @Test
+  public void testAMBlackListConfigFromApp() {
+    // Scenario 1: Application enables AM blacklisting
+    float disableThreshold = 0.9f;
+    conf.setBoolean(YarnConfiguration.AM_BLACKLISTING_ENABLED, false);
+    ApplicationSubmissionContext submissionContext =
+        new ApplicationSubmissionContextPBImpl();
+    submissionContext.setAMBlackListRequest(AMBlackListingRequest.newInstance(
+        true, disableThreshold));
+    RMAppImpl application = (RMAppImpl) createNewTestApp(submissionContext);
+
+    Assert.assertTrue(application.isAmBlacklistingEnabled());
+    Assert.assertEquals(disableThreshold,
+        application.getAmBlacklistingDisableThreshold(), 1e-8);
+
+    // Scenario 2: Application disables AM blacklisting
+    float globalThreshold = 0.9f;
+    conf.setBoolean(YarnConfiguration.AM_BLACKLISTING_ENABLED, true);
+    conf.setFloat(YarnConfiguration.AM_BLACKLISTING_DISABLE_THRESHOLD,
+        globalThreshold);
+    ApplicationSubmissionContext submissionContext2 =
+        new ApplicationSubmissionContextPBImpl();
+    submissionContext2.setAMBlackListRequest(AMBlackListingRequest.newInstance(
+        false, disableThreshold));
+    RMAppImpl application2 = (RMAppImpl) createNewTestApp(submissionContext2);
+
+    // Am blacklisting will be disabled eventhough its enabled in RM.
+    Assert.assertFalse(application2.isAmBlacklistingEnabled());
+
+    // Scenario 3: Application updates invalid AM threshold
+    float invalidDisableThreshold = -0.5f;
+    conf.setBoolean(YarnConfiguration.AM_BLACKLISTING_ENABLED, true);
+    conf.setFloat(YarnConfiguration.AM_BLACKLISTING_DISABLE_THRESHOLD,
+        globalThreshold);
+    ApplicationSubmissionContext submissionContext3 =
+        new ApplicationSubmissionContextPBImpl();
+    submissionContext3.setAMBlackListRequest(AMBlackListingRequest.newInstance(
+        true, invalidDisableThreshold));
+    RMAppImpl application3 = (RMAppImpl) createNewTestApp(submissionContext3);
+
+    Assert.assertTrue(application3.isAmBlacklistingEnabled());
+    Assert.assertEquals(globalThreshold,
+        application3.getAmBlacklistingDisableThreshold(), 1e-8);
+
+    // Scenario 4: Empty AMBlackListingRequest in Submission Context
+    conf.setBoolean(YarnConfiguration.AM_BLACKLISTING_ENABLED, true);
+    conf.setFloat(YarnConfiguration.AM_BLACKLISTING_DISABLE_THRESHOLD,
+        globalThreshold);
+    ApplicationSubmissionContext submissionContext4 =
+        new ApplicationSubmissionContextPBImpl();
+    RMAppImpl application4 = (RMAppImpl) createNewTestApp(submissionContext4);
+
+    Assert.assertTrue(application4.isAmBlacklistingEnabled());
+    Assert.assertEquals(globalThreshold,
+        application4.getAmBlacklistingDisableThreshold(), 1e-8);
   }
 
   private void verifyApplicationFinished(RMAppState state) {

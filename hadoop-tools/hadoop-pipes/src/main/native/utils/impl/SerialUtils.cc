@@ -252,6 +252,13 @@ namespace HadoopUtils {
     stream.write(buf, sizeof(float));
   }
 
+  float deserializeFloat(InStream& stream)
+  {
+    float f;
+    deserializeFloat(f, stream);
+    return f;
+  }
+
   void deserializeFloat(float& t, InStream& stream)
   {
     char buf[sizeof(float)];

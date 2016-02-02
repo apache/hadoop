@@ -186,6 +186,7 @@ public class TestINodeAttributeProvider {
     CALLED.clear();
     if (miniDFS != null) {
       miniDFS.shutdown();
+      miniDFS = null;
     }
     Assert.assertTrue(CALLED.contains("stop"));
   }

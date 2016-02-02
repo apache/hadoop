@@ -217,7 +217,9 @@ public class BackupNode extends NameNode {
 
     // Abort current log segment - otherwise the NN shutdown code
     // will close it gracefully, which is incorrect.
-    getFSImage().getEditLog().abortCurrentLogSegment();
+    if (namesystem != null) {
+      getFSImage().getEditLog().abortCurrentLogSegment();
+    }
 
     // Stop name-node threads
     super.stop();

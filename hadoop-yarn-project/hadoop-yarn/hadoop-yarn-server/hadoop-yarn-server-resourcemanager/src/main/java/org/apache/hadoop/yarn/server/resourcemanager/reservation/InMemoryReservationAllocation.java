@@ -67,7 +67,7 @@ public class InMemoryReservationAllocation implements ReservationAllocation {
     this.allocationRequests = allocations;
     this.planName = planName;
     this.hasGang = hasGang;
-    resourcesOverTime = new RLESparseResourceAllocation(calculator, minAlloc);
+    resourcesOverTime = new RLESparseResourceAllocation(calculator);
     for (Map.Entry<ReservationInterval, Resource> r : allocations
         .entrySet()) {
       resourcesOverTime.addInterval(r.getKey(), r.getValue());
@@ -133,11 +133,16 @@ public class InMemoryReservationAllocation implements ReservationAllocation {
   }
 
   @Override
+  public RLESparseResourceAllocation getResourcesOverTime(){
+    return resourcesOverTime;
+  }
+
+  @Override
   public String toString() {
     StringBuilder sBuf = new StringBuilder();
     sBuf.append(getReservationId()).append(" user:").append(getUser())
         .append(" startTime: ").append(getStartTime()).append(" endTime: ")
-        .append(getEndTime()).append(" alloc:[")
+        .append(getEndTime()).append(" alloc:\n[")
         .append(resourcesOverTime.toString()).append("] ");
     return sBuf.toString();
   }
@@ -149,6 +154,12 @@ public class InMemoryReservationAllocation implements ReservationAllocation {
       return -1;
     }
     if (this.getAcceptanceTime() < other.getAcceptanceTime()) {
+      return 1;
+    }
+    if (this.getReservationId().getId() > other.getReservationId().getId()) {
+      return -1;
+    }
+    if (this.getReservationId().getId() < other.getReservationId().getId()) {
       return 1;
     }
     return 0;

@@ -38,6 +38,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -94,6 +95,7 @@ public class TestQuorumJournalManager {
     
     cluster = new MiniJournalCluster.Builder(conf)
       .build();
+    cluster.waitActive();
     
     qjm = createSpyingQJM();
     spies = qjm.getLoggerSetForTests().getLoggersForTests();
@@ -102,20 +104,23 @@ public class TestQuorumJournalManager {
     qjm.recoverUnfinalizedSegments();
     assertEquals(1, qjm.getLoggerSetForTests().getEpoch());
   }
-  
+
   @After
-  public void shutdown() throws IOException {
+  public void shutdown() throws IOException, InterruptedException,
+      TimeoutException {
     IOUtils.cleanup(LOG, toClose.toArray(new Closeable[0]));
-    
+
     // Should not leak clients between tests -- this can cause flaky tests.
     // (See HDFS-4643)
-    GenericTestUtils.assertNoThreadsMatching(".*IPC Client.*");
+    // Wait for IPC clients to terminate to avoid flaky tests
+    GenericTestUtils.waitForThreadTermination(".*IPC Client.*", 100, 1000);
     
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
-  
+
   /**
    * Enqueue a QJM for closing during shutdown. This makes the code a little
    * easier to follow, with fewer try..finally clauses necessary.

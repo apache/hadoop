@@ -21,7 +21,11 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.StringTokenizer;
 
-import junit.framework.TestCase;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -46,7 +50,7 @@ import org.apache.hadoop.io.file.tfile.TFile.Reader.Scanner;
  * test the performance for seek.
  *
  */
-public class TestTFileSeek extends TestCase { 
+public class TestTFileSeek {
   private MyOptions options;
   private Configuration conf;
   private Path path;
@@ -56,7 +60,7 @@ public class TestTFileSeek extends TestCase {
   private DiscreteRNG keyLenGen;
   private KVGenerator kvGen;
 
-  @Override
+  @Before
   public void setUp() throws IOException {
     if (options == null) {
       options = new MyOptions(new String[0]);
@@ -83,7 +87,7 @@ public class TestTFileSeek extends TestCase {
             options.dictSize);
   }
   
-  @Override
+  @After
   public void tearDown() throws IOException {
     fs.delete(path, true);
   }
@@ -115,10 +119,10 @@ public class TestTFileSeek extends TestCase {
             }
           }
           kvGen.next(key, val, false);
-          writer.append(key.get(), 0, key.getSize(), val.get(), 0, val
-              .getSize());
-          totalBytes += key.getSize();
-          totalBytes += val.getSize();
+          writer.append(key.getBytes(), 0, key.getLength(), val.getBytes(), 0,
+              val.getLength());
+          totalBytes += key.getLength();
+          totalBytes += val.getLength();
         }
         timer.stop();
       }
@@ -156,11 +160,11 @@ public class TestTFileSeek extends TestCase {
     timer.start();
     for (int i = 0; i < options.seekCount; ++i) {
       kSampler.next(key);
-      scanner.lowerBound(key.get(), 0, key.getSize());
+      scanner.lowerBound(key.getBytes(), 0, key.getLength());
       if (!scanner.atEnd()) {
         scanner.entry().get(key, val);
-        totalBytes += key.getSize();
-        totalBytes += val.getSize();
+        totalBytes += key.getLength();
+        totalBytes += val.getLength();
       }
       else {
         ++miss;
@@ -175,7 +179,8 @@ public class TestTFileSeek extends TestCase {
         (double) totalBytes / 1024 / (options.seekCount - miss));
 
   }
-  
+
+  @Test
   public void testSeeks() throws IOException {
     String[] supported = TFile.getSupportedCompressionAlgorithms();
     boolean proceed = false;

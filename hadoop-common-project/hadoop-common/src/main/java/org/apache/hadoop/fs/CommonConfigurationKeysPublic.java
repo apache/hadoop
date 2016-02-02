@@ -183,6 +183,17 @@ public class CommonConfigurationKeysPublic {
   /** Default value for TFILE_FS_OUTPUT_BUFFER_SIZE_KEY */
   public static final int     TFILE_FS_OUTPUT_BUFFER_SIZE_DEFAULT = 256*1024;
 
+  public static final String  HADOOP_CALLER_CONTEXT_ENABLED_KEY =
+      "hadoop.caller.context.enabled";
+  public static final boolean HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT = false;
+  public static final String  HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY =
+      "hadoop.caller.context.max.size";
+  public static final int     HADOOP_CALLER_CONTEXT_MAX_SIZE_DEFAULT = 128;
+  public static final String  HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY =
+      "hadoop.caller.context.signature.max.size";
+  public static final int     HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_DEFAULT =
+      40;
+
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY =
     "ipc.client.connection.maxidletime";
@@ -300,6 +311,9 @@ public class CommonConfigurationKeysPublic {
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String HADOOP_SECURITY_DNS_NAMESERVER_KEY =
     "hadoop.security.dns.nameserver";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_TOKEN_FILES =
+      "hadoop.token.files";
 
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN =
@@ -393,5 +407,11 @@ public class CommonConfigurationKeysPublic {
       "hadoop.shell.safely.delete.limit.num.files";
   public static final long HADOOP_SHELL_SAFELY_DELETE_LIMIT_NUM_FILES_DEFAULT =
       100;
+
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_HTTP_LOGS_ENABLED =
+      "hadoop.http.logs.enabled";
+  /** Defalt value for HADOOP_HTTP_LOGS_ENABLED */
+  public static final boolean HADOOP_HTTP_LOGS_ENABLED_DEFAULT = true;
 }
 

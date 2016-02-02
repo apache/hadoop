@@ -46,8 +46,10 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -154,6 +156,10 @@ public class TestApplicationLimits {
     doReturn(user).when(application).getUser();
     doReturn(amResource).when(application).getAMResource();
     doReturn(Priority.newInstance(0)).when(application).getPriority();
+    doReturn(CommonNodeLabelsManager.NO_LABEL).when(application)
+        .getAppAMNodePartitionName();
+    doReturn(amResource).when(application).getAMResource(
+        CommonNodeLabelsManager.NO_LABEL);
     when(application.compareInputOrderTo(any(FiCaSchedulerApp.class))).thenCallRealMethod();
     return application;
   }
@@ -175,7 +181,8 @@ public class TestApplicationLimits {
     ActiveUsersManager activeUsersManager = mock(ActiveUsersManager.class);
     when(queue.getActiveUsersManager()).thenReturn(activeUsersManager);
 
-    assertEquals(Resource.newInstance(8 * GB, 1), queue.getAMResourceLimit());
+    assertEquals(Resource.newInstance(8 * GB, 1),
+        queue.calculateAndGetAMResourceLimit());
     assertEquals(Resource.newInstance(4 * GB, 1),
       queue.getUserAMResourceLimit());
     
@@ -276,8 +283,7 @@ public class TestApplicationLimits {
     		queue.getUserAMResourceLimit());
     
     Resource amResourceLimit = Resource.newInstance(160 * GB, 1);
-    assertEquals(queue.getAMResourceLimit(), amResourceLimit);
-    assertEquals(queue.getAMResourceLimit(), amResourceLimit);
+    assertEquals(queue.calculateAndGetAMResourceLimit(), amResourceLimit);
     assertEquals(queue.getUserAMResourceLimit(), 
       Resource.newInstance(80*GB, 1));
     
@@ -297,7 +303,8 @@ public class TestApplicationLimits {
     root.updateClusterResource(clusterResource, new ResourceLimits(
         clusterResource));
     
-    assertEquals(queue.getAMResourceLimit(), Resource.newInstance(192*GB, 1));
+    assertEquals(queue.calculateAndGetAMResourceLimit(),
+        Resource.newInstance(192 * GB, 1));
     assertEquals(queue.getUserAMResourceLimit(), 
       Resource.newInstance(96*GB, 1));
     
@@ -347,7 +354,8 @@ public class TestApplicationLimits {
           queue.getQueuePath())
         );
     
-    assertEquals(queue.getAMResourceLimit(), Resource.newInstance(800*GB, 1));
+    assertEquals(queue.calculateAndGetAMResourceLimit(),
+        Resource.newInstance(800 * GB, 1));
     assertEquals(queue.getUserAMResourceLimit(), 
       Resource.newInstance(400*GB, 1));
 
@@ -377,7 +385,8 @@ public class TestApplicationLimits {
     final String user_1 = "user_1";
     final String user_2 = "user_2";
     
-    assertEquals(Resource.newInstance(16 * GB, 1), queue.getAMResourceLimit());
+    assertEquals(Resource.newInstance(16 * GB, 1),
+        queue.calculateAndGetAMResourceLimit());
     assertEquals(Resource.newInstance(8 * GB, 1),
       queue.getUserAMResourceLimit());
     
@@ -597,7 +606,13 @@ public class TestApplicationLimits {
     when(rmApp.getAMResourceRequest()).thenReturn(amResourceRequest);
     Mockito.doReturn(rmApp).when(spyApps).get((ApplicationId)Matchers.any());
     when(spyRMContext.getRMApps()).thenReturn(spyApps);
-    
+    RMAppAttempt rmAppAttempt = mock(RMAppAttempt.class);
+    when(rmApp.getRMAppAttempt((ApplicationAttemptId) Matchers.any()))
+        .thenReturn(rmAppAttempt);
+    when(rmApp.getCurrentAppAttempt()).thenReturn(rmAppAttempt);
+    Mockito.doReturn(rmApp).when(spyApps).get((ApplicationId) Matchers.any());
+    Mockito.doReturn(true).when(spyApps)
+        .containsKey((ApplicationId) Matchers.any());
 
     Priority priority_1 = TestUtils.createMockPriority(1);
 

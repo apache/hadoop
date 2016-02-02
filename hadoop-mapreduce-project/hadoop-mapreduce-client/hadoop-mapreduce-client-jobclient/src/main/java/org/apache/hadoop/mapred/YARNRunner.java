@@ -472,13 +472,14 @@ public class YARNRunner implements ClientProtocol {
         conf.get(MRJobConfig.MAPRED_ADMIN_USER_SHELL,
             MRJobConfig.DEFAULT_SHELL));
 
-    // Add the container working directory at the front of LD_LIBRARY_PATH
+    // Add the container working directory in front of LD_LIBRARY_PATH
     MRApps.addToEnvironment(environment, Environment.LD_LIBRARY_PATH.name(),
         MRApps.crossPlatformifyMREnv(conf, Environment.PWD), conf);
 
     // Setup the environment variables for Admin first
     MRApps.setEnvFromInputString(environment, 
-        conf.get(MRJobConfig.MR_AM_ADMIN_USER_ENV), conf);
+        conf.get(MRJobConfig.MR_AM_ADMIN_USER_ENV,
+            MRJobConfig.DEFAULT_MR_AM_ADMIN_USER_ENV), conf);
     // Setup the environment variables (LD_LIBRARY_PATH, etc)
     MRApps.setEnvFromInputString(environment, 
         conf.get(MRJobConfig.MR_AM_ENV), conf);
@@ -562,13 +563,30 @@ public class YARNRunner implements ClientProtocol {
       appContext.setApplicationTags(new HashSet<String>(tagsFromConf));
     }
 
+    String jobPriority = jobConf.get(MRJobConfig.PRIORITY);
+    if (jobPriority != null) {
+      int iPriority;
+      try {
+        iPriority = TypeConverter.toYarnApplicationPriority(jobPriority);
+      } catch (IllegalArgumentException e) {
+        iPriority = Integer.parseInt(jobPriority);
+      }
+      appContext.setPriority(Priority.newInstance(iPriority));
+    }
+
     return appContext;
   }
 
   @Override
   public void setJobPriority(JobID arg0, String arg1) throws IOException,
       InterruptedException {
-    resMgrDelegate.setJobPriority(arg0, arg1);
+    ApplicationId appId = TypeConverter.toYarn(arg0).getAppId();
+    try {
+      resMgrDelegate.updateApplicationPriority(appId,
+          Priority.newInstance(Integer.parseInt(arg1)));
+    } catch (YarnException e) {
+      throw new IOException(e);
+    }
   }
 
   @Override
@@ -736,6 +754,17 @@ public class YARNRunner implements ClientProtocol {
                "are used. These values should be set as part of the " +
                "LD_LIBRARY_PATH in the " + component + " JVM env using " +
                envConf + " config settings.");
+    }
+  }
+
+  public void close() throws IOException {
+    if (resMgrDelegate != null) {
+      resMgrDelegate.close();
+      resMgrDelegate = null;
+    }
+    if (clientCache != null) {
+      clientCache.close();
+      clientCache = null;
     }
   }
 }

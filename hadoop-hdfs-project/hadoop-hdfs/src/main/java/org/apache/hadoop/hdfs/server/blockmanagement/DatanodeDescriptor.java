@@ -190,7 +190,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
   // This is an optimization, because contains takes O(n) time on Arraylist
   private boolean isAlive = false;
   private boolean needKeyUpdate = false;
-  
+  private boolean forceRegistration = false;
+
   // A system administrator can tune the balancer bandwidth parameter
   // (dfs.balance.bandwidthPerSec) dynamically by calling
   // "dfsadmin -setBalanacerBandwidth <newbandwidth>", at which point the
@@ -290,11 +291,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.isAlive = isAlive;
   }
 
-  public boolean needKeyUpdate() {
+  public synchronized boolean needKeyUpdate() {
     return needKeyUpdate;
   }
 
-  public void setNeedKeyUpdate(boolean needKeyUpdate) {
+  public synchronized void setNeedKeyUpdate(boolean needKeyUpdate) {
     this.needKeyUpdate = needKeyUpdate;
   }
 
@@ -602,7 +603,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   void addBlockToBeErasureCoded(ExtendedBlock block,
       DatanodeDescriptor[] sources, DatanodeStorageInfo[] targets,
-      short[] liveBlockIndices, ErasureCodingPolicy ecPolicy) {
+      byte[] liveBlockIndices, ErasureCodingPolicy ecPolicy) {
     assert (block != null && sources != null && sources.length > 0);
     BlockECRecoveryInfo task = new BlockECRecoveryInfo(block, sources, targets,
         liveBlockIndices, ecPolicy);
@@ -863,19 +864,20 @@ public class DatanodeDescriptor extends DatanodeInfo {
       storage.setBlockReportCount(0);
     }
     heartbeatedSinceRegistration = false;
+    forceRegistration = false;
   }
 
   /**
    * @return balancer bandwidth in bytes per second for this datanode
    */
-  public long getBalancerBandwidth() {
+  public synchronized long getBalancerBandwidth() {
     return this.bandwidth;
   }
 
   /**
    * @param bandwidth balancer bandwidth in bytes per second for this datanode
    */
-  public void setBalancerBandwidth(long bandwidth) {
+  public synchronized void setBalancerBandwidth(long bandwidth) {
     this.bandwidth = bandwidth;
   }
 
@@ -949,6 +951,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
         return false;
     }
     return true;
- }
+  }
+
+  public void setForceRegistration(boolean force) {
+    forceRegistration = force;
+  }
+
+  public boolean isRegistered() {
+    return isAlive() && !forceRegistration;
+  }
 }
 

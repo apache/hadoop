@@ -146,7 +146,7 @@ public class BlockInfoStriped extends BlockInfo {
     return -1;
   }
 
-  int getStorageBlockIndex(DatanodeStorageInfo storage) {
+  byte getStorageBlockIndex(DatanodeStorageInfo storage) {
     int i = this.findStorageInfo(storage);
     return i == -1 ? -1 : indices[i];
   }

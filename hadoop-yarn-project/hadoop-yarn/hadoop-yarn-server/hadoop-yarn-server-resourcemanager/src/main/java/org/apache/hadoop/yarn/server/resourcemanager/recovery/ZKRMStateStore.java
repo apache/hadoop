@@ -18,26 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.nio.charset.Charset;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.curator.framework.AuthInfo;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.api.transaction.CuratorTransaction;
 import org.apache.curator.framework.api.transaction.CuratorTransactionFinal;
-import org.apache.curator.retry.RetryNTimes;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -55,7 +42,7 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.AMRM
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.ApplicationAttemptStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.ApplicationStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.EpochProto;
-import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.ReservationAllocationStateProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ReservationAllocationStateProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
@@ -77,7 +64,15 @@ import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 /**
  * {@link RMStateStore} implementation backed by ZooKeeper.
@@ -140,12 +135,6 @@ public class ZKRMStateStore extends RMStateStore {
   private static final String RM_DT_MASTER_KEYS_ROOT_ZNODE_NAME =
       "RMDTMasterKeysRoot";
 
-  private String zkHostPort = null;
-  private int numRetries;
-  private int zkSessionTimeout;
-  @VisibleForTesting
-  int zkRetryInterval;
-
   /** Znode paths */
   private String zkRootNodePath;
   private String rmAppRoot;
@@ -160,17 +149,15 @@ public class ZKRMStateStore extends RMStateStore {
 
   /** Fencing related variables */
   private static final String FENCING_LOCK = "RM_ZK_FENCING_LOCK";
-  private boolean useDefaultFencingScheme = false;
   private String fencingNodePath;
   private Thread verifyActiveStatusThread;
+  private int zkSessionTimeout;
 
   /** ACL and auth info */
   private List<ACL> zkAcl;
-  private List<ZKUtil.ZKAuthInfo> zkAuths;
   @VisibleForTesting
   List<ACL> zkRootNodeAcl;
   private String zkRootNodeUsername;
-  private final String zkRootNodePassword = Long.toString(random.nextLong());
   public static final int CREATE_DELETE_PERMS =
       ZooDefs.Perms.CREATE | ZooDefs.Perms.DELETE;
   private final String zkRootNodeAuthScheme =
@@ -204,45 +191,25 @@ public class ZKRMStateStore extends RMStateStore {
         YarnConfiguration.DEFAULT_RM_ADDRESS, conf);
     Id rmId = new Id(zkRootNodeAuthScheme,
         DigestAuthenticationProvider.generateDigest(
-            zkRootNodeUsername + ":" + zkRootNodePassword));
+            zkRootNodeUsername + ":" + resourceManager.getZkRootNodePassword()));
     zkRootNodeAcl.add(new ACL(CREATE_DELETE_PERMS, rmId));
     return zkRootNodeAcl;
   }
 
   @Override
   public synchronized void initInternal(Configuration conf) throws Exception {
-    zkHostPort = conf.get(YarnConfiguration.RM_ZK_ADDRESS);
-    if (zkHostPort == null) {
-      throw new YarnRuntimeException("No server address specified for " +
-          "zookeeper state store for Resource Manager recovery. " +
-          YarnConfiguration.RM_ZK_ADDRESS + " is not configured.");
-    }
-    numRetries =
-        conf.getInt(YarnConfiguration.RM_ZK_NUM_RETRIES,
-            YarnConfiguration.DEFAULT_ZK_RM_NUM_RETRIES);
+
+    /* Initialize fencing related paths, acls, and ops */
     znodeWorkingPath =
         conf.get(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH,
             YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_PARENT_PATH);
-    zkSessionTimeout =
-        conf.getInt(YarnConfiguration.RM_ZK_TIMEOUT_MS,
-            YarnConfiguration.DEFAULT_RM_ZK_TIMEOUT_MS);
-
-    if (HAUtil.isHAEnabled(conf)) {
-      zkRetryInterval = zkSessionTimeout / numRetries;
-    } else {
-      zkRetryInterval =
-          conf.getInt(YarnConfiguration.RM_ZK_RETRY_INTERVAL_MS,
-              YarnConfiguration.DEFAULT_RM_ZK_RETRY_INTERVAL_MS);
-    }
+    zkRootNodePath = getNodePath(znodeWorkingPath, ROOT_ZNODE_NAME);
+    fencingNodePath = getNodePath(zkRootNodePath, FENCING_LOCK);
+    rmAppRoot = getNodePath(zkRootNodePath, RM_APP_ROOT);
+    zkSessionTimeout = conf.getInt(YarnConfiguration.RM_ZK_TIMEOUT_MS,
+        YarnConfiguration.DEFAULT_RM_ZK_TIMEOUT_MS);
 
     zkAcl = RMZKUtils.getZKAcls(conf);
-    zkAuths = RMZKUtils.getZKAuths(conf);
-
-    zkRootNodePath = getNodePath(znodeWorkingPath, ROOT_ZNODE_NAME);
-    rmAppRoot = getNodePath(zkRootNodePath, RM_APP_ROOT);
-
-    /* Initialize fencing related paths, acls, and ops */
-    fencingNodePath = getNodePath(zkRootNodePath, FENCING_LOCK);
     if (HAUtil.isHAEnabled(conf)) {
       String zkRootNodeAclConf = HAUtil.getConfValueForRMInstance
           (YarnConfiguration.ZK_RM_STATE_STORE_ROOT_NODE_ACL, conf);
@@ -256,7 +223,6 @@ public class ZKRMStateStore extends RMStateStore {
           throw bafe;
         }
       } else {
-        useDefaultFencingScheme = true;
         zkRootNodeAcl = constructZkRootNodeACL(conf, zkAcl);
       }
     }
@@ -272,18 +238,22 @@ public class ZKRMStateStore extends RMStateStore {
     amrmTokenSecretManagerRoot =
         getNodePath(zkRootNodePath, AMRMTOKEN_SECRET_MANAGER_ROOT);
     reservationRoot = getNodePath(zkRootNodePath, RESERVATION_SYSTEM_ROOT);
+    curatorFramework = resourceManager.getCurator();
+    if (curatorFramework == null) {
+      curatorFramework = resourceManager.createAndStartCurator(conf);
+    }
   }
 
   @Override
   public synchronized void startInternal() throws Exception {
-    // createConnection for future API calls
-    createConnection();
 
     // ensure root dirs exist
     createRootDirRecursively(znodeWorkingPath);
     create(zkRootNodePath);
-    if (HAUtil.isHAEnabled(getConfig())){
-      fence();
+    setRootNodeAcls();
+    delete(fencingNodePath);
+    if (HAUtil.isHAEnabled(getConfig()) && !HAUtil
+        .isAutomaticFailoverEnabled(getConfig())) {
       verifyActiveStatusThread = new VerifyActiveStatusThread();
       verifyActiveStatusThread.start();
     }
@@ -309,16 +279,19 @@ public class ZKRMStateStore extends RMStateStore {
     LOG.debug(builder.toString());
   }
 
-  private synchronized void fence() throws Exception {
-    if (LOG.isTraceEnabled()) {
-      logRootNodeAcls("Before fencing\n");
+  private void setRootNodeAcls() throws Exception {
+    if (LOG.isDebugEnabled()) {
+      logRootNodeAcls("Before setting ACLs'\n");
     }
 
-    curatorFramework.setACL().withACL(zkRootNodeAcl).forPath(zkRootNodePath);
-    delete(fencingNodePath);
+    if (HAUtil.isHAEnabled(getConfig())) {
+      curatorFramework.setACL().withACL(zkRootNodeAcl).forPath(zkRootNodePath);
+    } else {
+      curatorFramework.setACL().withACL(zkAcl).forPath(zkRootNodePath);
+    }
 
-    if (LOG.isTraceEnabled()) {
-      logRootNodeAcls("After fencing\n");
+    if (LOG.isDebugEnabled()) {
+      logRootNodeAcls("After setting ACLs'\n");
     }
   }
 
@@ -328,7 +301,9 @@ public class ZKRMStateStore extends RMStateStore {
       verifyActiveStatusThread.interrupt();
       verifyActiveStatusThread.join(1000);
     }
-    IOUtils.closeStream(curatorFramework);
+    if (!HAUtil.isHAEnabled(getConfig())) {
+      IOUtils.closeStream(curatorFramework);
+    }
   }
 
   @Override
@@ -655,6 +630,22 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   @Override
+  public synchronized void removeApplicationAttemptInternal(
+      ApplicationAttemptId appAttemptId)
+      throws Exception {
+    String appId = appAttemptId.getApplicationId().toString();
+    String appIdRemovePath = getNodePath(rmAppRoot, appId);
+    String attemptIdRemovePath = getNodePath(appIdRemovePath,
+        appAttemptId.toString());
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Removing info for attempt: " + appAttemptId + " at: "
+          + attemptIdRemovePath);
+    }
+    safeDelete(attemptIdRemovePath);
+  }
+
+  @Override
   public synchronized void removeApplicationStateInternal(
       ApplicationStateData  appState)
       throws Exception {
@@ -841,17 +832,6 @@ public class ZKRMStateStore extends RMStateStore {
     trx.commit();
   }
 
-  @Override
-  protected synchronized void updateReservationState(
-      ReservationAllocationStateProto reservationAllocation, String planName,
-      String reservationIdName)
-      throws Exception {
-    SafeTransaction trx = new SafeTransaction();
-    addOrUpdateReservationState(
-        reservationAllocation, planName, reservationIdName, trx, true);
-    trx.commit();
-  }
-
   private void addOrUpdateReservationState(
       ReservationAllocationStateProto reservationAllocation, String planName,
       String reservationIdName, SafeTransaction trx, boolean isUpdate)
@@ -900,40 +880,13 @@ public class ZKRMStateStore extends RMStateStore {
     }
   }
 
-  /*
-   * ZK operations using curator
-   */
-  private void createConnection() throws Exception {
-    // Curator connection
-    CuratorFrameworkFactory.Builder builder = CuratorFrameworkFactory.builder();
-    builder = builder.connectString(zkHostPort)
-        .connectionTimeoutMs(zkSessionTimeout)
-        .retryPolicy(new RetryNTimes(numRetries, zkRetryInterval));
-
-    // Set up authorization based on fencing scheme
-    List<AuthInfo> authInfos = new ArrayList<>();
-    for (ZKUtil.ZKAuthInfo zkAuth : zkAuths) {
-      authInfos.add(new AuthInfo(zkAuth.getScheme(), zkAuth.getAuth()));
-    }
-    if (useDefaultFencingScheme) {
-      byte[] defaultFencingAuth =
-          (zkRootNodeUsername + ":" + zkRootNodePassword).getBytes(
-              Charset.forName("UTF-8"));
-      authInfos.add(new AuthInfo(zkRootNodeAuthScheme, defaultFencingAuth));
-    }
-    builder = builder.authorization(authInfos);
-
-    // Connect to ZK
-    curatorFramework = builder.build();
-    curatorFramework.start();
-  }
-
   @VisibleForTesting
   byte[] getData(final String path) throws Exception {
     return curatorFramework.getData().forPath(path);
   }
 
-  private List<ACL> getACL(final String path) throws Exception {
+  @VisibleForTesting
+  List<ACL> getACL(final String path) throws Exception {
     return curatorFramework.getACL().forPath(path);
   }
 

@@ -38,6 +38,20 @@ import org.apache.hadoop.conf.Configurable;
 public interface RawErasureCoder extends Configurable {
 
   /**
+   * Get a coder option value.
+   * @param option
+   * @return
+   */
+  public Object getCoderOption(CoderOption option);
+
+  /**
+   * Set a coder option value.
+   * @param option
+   * @param value
+   */
+  public void setCoderOption(CoderOption option, Object value);
+
+  /**
    * The number of data input units for the coding. A unit can be a byte,
    * chunk or buffer or even a block.
    * @return count of data input units
@@ -50,15 +64,6 @@ public interface RawErasureCoder extends Configurable {
    * @return count of parity output units
    */
   public int getNumParityUnits();
-
-  /**
-   * Tell if direct buffer is preferred or not. It's for callers to
-   * decide how to allocate coding chunk buffers, using DirectByteBuffer or
-   * bytes array. It will return false by default.
-   * @return true if native buffer is preferred for performance consideration,
-   * otherwise false.
-   */
-  public boolean preferDirectBuffer();
 
   /**
    * Should be called when release this coder. Good chance to release encoding

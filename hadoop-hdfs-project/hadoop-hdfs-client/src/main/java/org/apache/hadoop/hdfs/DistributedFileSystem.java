@@ -25,6 +25,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +53,7 @@ import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
@@ -112,7 +114,7 @@ public class DistributedFileSystem extends FileSystem {
   private boolean verifyChecksum = true;
 
   static{
-    HdfsConfigurationLoader.init();
+    HdfsConfiguration.init();
   }
 
   public DistributedFileSystem() {
@@ -537,6 +539,17 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
+   * Returns number of bytes within blocks with future generation stamp. These
+   * are bytes that will be potentially deleted if we forceExit from safe mode.
+   *
+   * @return number of bytes.
+   */
+  public long getBytesWithFutureGenerationStamps() throws IOException {
+    statistics.incrementReadOps(1);
+    return dfs.getBytesInFutureBlocks();
+  }
+
+  /**
    * Deprecated. Prefer {@link FileSystem#getAllStoragePolicies()}
    * @throws IOException
    */
@@ -570,7 +583,7 @@ public class DistributedFileSystem extends FileSystem {
       for (int i=0; i<psrcs.length; i++) {
         srcsStr[i] = getPathName(srcs[i]);
       }
-      dfs.concat(getPathName(trg), srcsStr);
+      dfs.concat(getPathName(absF), srcsStr);
     } catch (UnresolvedLinkException e) {
       // Exception could be from trg or any src.
       // Fully resolve trg and srcs. Fail if any of them are a symlink.
@@ -707,6 +720,24 @@ public class DistributedFileSystem extends FileSystem {
       public ContentSummary next(final FileSystem fs, final Path p)
           throws IOException {
         return fs.getContentSummary(p);
+      }
+    }.resolve(this, absF);
+  }
+
+  @Override
+  public QuotaUsage getQuotaUsage(Path f) throws IOException {
+    statistics.incrementReadOps(1);
+    Path absF = fixRelativePart(f);
+    return new FileSystemLinkResolver<QuotaUsage>() {
+      @Override
+      public QuotaUsage doCall(final Path p)
+              throws IOException, UnresolvedLinkException {
+        return dfs.getQuotaUsage(getPathName(p));
+      }
+      @Override
+      public QuotaUsage next(final FileSystem fs, final Path p)
+              throws IOException {
+        return fs.getQuotaUsage(p);
       }
     }.resolve(this, absF);
   }
@@ -1081,6 +1112,15 @@ public class DistributedFileSystem extends FileSystem {
    */
   public long getMissingBlocksCount() throws IOException {
     return dfs.getMissingBlocksCount();
+  }
+
+  /**
+   * Returns count of blocks pending on deletion.
+   *
+   * @throws IOException
+   */
+  public long getPendingDeletionBlocksCount() throws IOException {
+    return dfs.getPendingDeletionBlocksCount();
   }
 
   /**
@@ -2293,5 +2333,66 @@ public class DistributedFileSystem extends FileSystem {
   public Collection<ErasureCodingPolicy> getAllErasureCodingPolicies()
       throws IOException {
     return Arrays.asList(dfs.getErasureCodingPolicies());
+  }
+
+  /**
+   * Get the root directory of Trash for a path in HDFS.
+   * 1. File in encryption zone returns /ez1/.Trash/username
+   * 2. File not in encryption zone returns /users/username/.Trash
+   * Caller appends either Current or checkpoint timestamp for trash destination
+   * @param path the trash root of the path to be determined.
+   * @return trash root
+   * @throws IOException
+   */
+  @Override
+  public Path getTrashRoot(Path path) throws IOException {
+    if ((path == null) || !dfs.isHDFSEncryptionEnabled()) {
+      return super.getTrashRoot(path);
+    }
+
+    String absSrc = path.toUri().getPath();
+    EncryptionZone ez = dfs.getEZForPath(absSrc);
+    if ((ez != null) && !ez.getPath().equals(absSrc)) {
+      return this.makeQualified(
+          new Path(ez.getPath() + "/" + FileSystem.TRASH_PREFIX +
+              dfs.ugi.getShortUserName()));
+    } else {
+      return super.getTrashRoot(path);
+    }
+  }
+
+  /**
+   * Get all the trash roots of HDFS for current user or for all the users.
+   * 1. File deleted from non-encryption zone /user/username/.Trash
+   * 2. File deleted from encryption zones
+   *    e.g., ez1 rooted at /ez1 has its trash root at /ez1/.Trash/$USER
+   * @allUsers return trashRoots of all users if true, used by emptier
+   * @return trash roots of HDFS
+   * @throws IOException
+   */
+  @Override
+  public Collection<FileStatus> getTrashRoots(boolean allUsers) throws IOException {
+    List<FileStatus> ret = new ArrayList<FileStatus>();
+    // Get normal trash roots
+    ret.addAll(super.getTrashRoots(allUsers));
+
+    // Get EZ Trash roots
+    final RemoteIterator<EncryptionZone> it = dfs.listEncryptionZones();
+    while (it.hasNext()) {
+      Path ezTrashRoot = new Path(it.next().getPath(), FileSystem.TRASH_PREFIX);
+      if (allUsers) {
+        for (FileStatus candidate : listStatus(ezTrashRoot)) {
+          if (exists(candidate.getPath())) {
+            ret.add(candidate);
+          }
+        }
+      } else {
+        Path userTrash = new Path(ezTrashRoot, System.getProperty("user.name"));
+        if (exists(userTrash)) {
+          ret.add(getFileStatus(userTrash));
+        }
+      }
+    }
+    return ret;
   }
 }

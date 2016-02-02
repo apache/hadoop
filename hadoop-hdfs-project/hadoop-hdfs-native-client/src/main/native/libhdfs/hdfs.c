@@ -836,8 +836,94 @@ static jthrowable getDefaultBlockSize(JNIEnv *env, jobject jFS,
     return NULL;
 }
 
-hdfsFile hdfsOpenFile(hdfsFS fs, const char *path, int flags, 
+hdfsFile hdfsOpenFile(hdfsFS fs, const char *path, int flags,
                       int bufferSize, short replication, tSize blockSize)
+{
+    struct hdfsStreamBuilder *bld = hdfsStreamBuilderAlloc(fs, path, flags);
+    if (bufferSize != 0) {
+      hdfsStreamBuilderSetBufferSize(bld, bufferSize);
+    }
+    if (replication != 0) {
+      hdfsStreamBuilderSetReplication(bld, replication);
+    }
+    if (blockSize != 0) {
+      hdfsStreamBuilderSetDefaultBlockSize(bld, blockSize);
+    }
+    return hdfsStreamBuilderBuild(bld);
+}
+
+struct hdfsStreamBuilder {
+    hdfsFS fs;
+    int flags;
+    int32_t bufferSize;
+    int16_t replication;
+    int64_t defaultBlockSize;
+    char path[1];
+};
+
+struct hdfsStreamBuilder *hdfsStreamBuilderAlloc(hdfsFS fs,
+                                            const char *path, int flags)
+{
+    int path_len = strlen(path);
+    struct hdfsStreamBuilder *bld;
+
+    // sizeof(hdfsStreamBuilder->path) includes one byte for the string
+    // terminator
+    bld = malloc(sizeof(struct hdfsStreamBuilder) + path_len);
+    if (!bld) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    bld->fs = fs;
+    bld->flags = flags;
+    bld->bufferSize = 0;
+    bld->replication = 0;
+    bld->defaultBlockSize = 0;
+    memcpy(bld->path, path, path_len);
+    bld->path[path_len] = '\0';
+    return bld;
+}
+
+void hdfsStreamBuilderFree(struct hdfsStreamBuilder *bld)
+{
+    free(bld);
+}
+
+int hdfsStreamBuilderSetBufferSize(struct hdfsStreamBuilder *bld,
+                                   int32_t bufferSize)
+{
+    if ((bld->flags & O_ACCMODE) != O_WRONLY) {
+        errno = EINVAL;
+        return -1;
+    }
+    bld->bufferSize = bufferSize;
+    return 0;
+}
+
+int hdfsStreamBuilderSetReplication(struct hdfsStreamBuilder *bld,
+                                    int16_t replication)
+{
+    if ((bld->flags & O_ACCMODE) != O_WRONLY) {
+        errno = EINVAL;
+        return -1;
+    }
+    bld->replication = replication;
+    return 0;
+}
+
+int hdfsStreamBuilderSetDefaultBlockSize(struct hdfsStreamBuilder *bld,
+                                         int64_t defaultBlockSize)
+{
+    if ((bld->flags & O_ACCMODE) != O_WRONLY) {
+        errno = EINVAL;
+        return -1;
+    }
+    bld->defaultBlockSize = defaultBlockSize;
+    return 0;
+}
+
+static hdfsFile hdfsOpenFileImpl(hdfsFS fs, const char *path, int flags,
+                  int32_t bufferSize, int16_t replication, int64_t blockSize)
 {
     /*
       JAVA EQUIVALENT:
@@ -1034,6 +1120,16 @@ done:
         errno = ret;
         return NULL;
     }
+    return file;
+}
+
+hdfsFile hdfsStreamBuilderBuild(struct hdfsStreamBuilder *bld)
+{
+    hdfsFile file = hdfsOpenFileImpl(bld->fs, bld->path, bld->flags,
+                  bld->bufferSize, bld->replication, bld->defaultBlockSize);
+    int prevErrno = errno;
+    hdfsStreamBuilderFree(bld);
+    errno = prevErrno;
     return file;
 }
 

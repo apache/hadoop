@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -30,8 +31,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
-
-import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -67,14 +66,14 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.junit.After;
-import org.junit.AfterClass;
-import static org.junit.Assert.assertFalse;
-import org.junit.BeforeClass;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -489,9 +488,6 @@ public class TestJobHistoryEventHandler {
     TestParams t = new TestParams(false);
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
-    conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_EMIT_TIMELINE_DATA, true);
-    JHEvenHandlerForTest jheh = new JHEvenHandlerForTest(t.mockAppContext, 0);
-    jheh.init(conf);
     MiniYARNCluster yarnCluster = null;
     long currentTime = System.currentTimeMillis();
     try {
@@ -499,6 +495,13 @@ public class TestJobHistoryEventHandler {
             TestJobHistoryEventHandler.class.getSimpleName(), 1, 1, 1, 1);
       yarnCluster.init(conf);
       yarnCluster.start();
+      Configuration confJHEH = new YarnConfiguration(conf);
+      confJHEH.setBoolean(MRJobConfig.MAPREDUCE_JOB_EMIT_TIMELINE_DATA, true);
+      confJHEH.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+          MiniYARNCluster.getHostname() + ":" +
+          yarnCluster.getApplicationHistoryServer().getPort());
+      JHEvenHandlerForTest jheh = new JHEvenHandlerForTest(t.mockAppContext, 0);
+      jheh.init(confJHEH);
       jheh.start();
       TimelineStore ts = yarnCluster.getApplicationHistoryServer()
               .getTimelineStore();
@@ -850,6 +853,9 @@ class JHEvenHandlerForTest extends JobHistoryEventHandler {
 
   @Override
   protected void serviceStart() {
+    if (timelineClient != null) {
+      timelineClient.start();
+    }
   }
 
   @Override

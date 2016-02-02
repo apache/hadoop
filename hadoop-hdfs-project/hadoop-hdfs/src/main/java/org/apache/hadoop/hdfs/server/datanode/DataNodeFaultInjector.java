@@ -49,4 +49,6 @@ public class DataNodeFaultInjector {
   public boolean dropHeartbeatPacket() {
     return false;
   }
+
+  public void noRegistration() throws IOException { }
 }

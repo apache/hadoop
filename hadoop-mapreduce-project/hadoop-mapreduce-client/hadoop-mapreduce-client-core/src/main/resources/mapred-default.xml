@@ -27,7 +27,7 @@
   <name>mapreduce.job.committer.setup.cleanup.needed</name>
   <value>true</value>
   <description> true, if job needs job-setup and job-cleanup.
-                false, otherwise  
+                false, otherwise
   </description>
 </property>
 <!-- i/o properties -->
@@ -42,7 +42,7 @@
 <property>
   <name>mapreduce.task.io.sort.mb</name>
   <value>100</value>
-  <description>The total amount of buffer memory to use while sorting 
+  <description>The total amount of buffer memory to use while sorting
   files, in megabytes.  By default, gives each merge stream 1MB, which
   should minimize seeks.</description>
 </property>
@@ -69,7 +69,7 @@
   <name>mapreduce.job.reduces</name>
   <value>1</value>
   <description>The default number of reduce tasks per job. Typically set to 99%
-  of the cluster's reduce capacity, so that if a node fails the reduces can 
+  of the cluster's reduce capacity, so that if a node fails the reduces can
   still be executed in a single wave.
   Ignored when mapreduce.framework.name is "local".
   </description>
@@ -115,7 +115,7 @@
   <property>
     <name>mapreduce.job.max.split.locations</name>
     <value>10</value>
-    <description>The max number of block locations to store for each split for 
+    <description>The max number of block locations to store for each split for
     locality calculation.
     </description>
 </property>
@@ -123,7 +123,7 @@
 <property>
   <name>mapreduce.job.split.metainfo.maxsize</name>
   <value>10000000</value>
-  <description>The maximum permissible size of the split metainfo file. 
+  <description>The maximum permissible size of the split metainfo file.
   The MapReduce ApplicationMaster won't attempt to read submitted split metainfo
   files bigger than this configured value.
   No limits if set to -1.
@@ -157,7 +157,7 @@
 <property>
   <name>mapreduce.reduce.shuffle.fetch.retry.interval-ms</name>
   <value>1000</value>
-  <description>Time of interval that fetcher retry to fetch again when some 
+  <description>Time of interval that fetcher retry to fetch again when some
   non-fatal failure happens because of some events like NM restart.
   </description>
 </property>
@@ -165,7 +165,7 @@
 <property>
   <name>mapreduce.reduce.shuffle.fetch.retry.timeout-ms</name>
   <value>30000</value>
-  <description>Timeout value for fetcher to retry to fetch again when some 
+  <description>Timeout value for fetcher to retry to fetch again when some
   non-fatal failure happens because of some events like NM restart.</description>
 </property>
 
@@ -266,15 +266,15 @@
   <name>mapred.child.java.opts</name>
   <value></value>
   <description>Java opts for the task processes.
-  The following symbol, if present, will be interpolated: @taskid@ is replaced 
+  The following symbol, if present, will be interpolated: @taskid@ is replaced
   by current TaskID. Any other occurrences of '@' will go unchanged.
   For example, to enable verbose gc logging to a file named for the taskid in
   /tmp and to set the heap maximum to be a gigabyte, pass a 'value' of:
         -Xmx1024m -verbose:gc -Xloggc:/tmp/@taskid@.gc
-  
+
   Usage of -Djava.library.path can cause programs to no longer function if
-  hadoop native libraries are used. These values should instead be set as part 
-  of LD_LIBRARY_PATH in the map / reduce JVM env using the mapreduce.map.env and 
+  hadoop native libraries are used. These values should instead be set as part
+  of LD_LIBRARY_PATH in the map / reduce JVM env using the mapreduce.map.env and
   mapreduce.reduce.env config settings.
 
   If -Xmx is not set, it is inferred from mapreduce.{map|reduce}.memory.mb and
@@ -339,12 +339,12 @@
   <name>mapreduce.admin.user.env</name>
   <value></value>
   <description>
-  Expert: Additional execution environment entries for 
+  Expert: Additional execution environment entries for
   map and reduce task processes. This is not an additive property.
   You must preserve the original value if you want your map and
-  reduce tasks to have access to native libraries (compression, etc). 
-  When this value is empty, the command to set execution 
-  envrionment will be OS dependent: 
+  reduce tasks to have access to native libraries (compression, etc).
+  When this value is empty, the command to set execution
+  envrionment will be OS dependent:
   For linux, use LD_LIBRARY_PATH=$HADOOP_COMMON_HOME/lib/native.
   For windows, use PATH = %PATH%;%HADOOP_COMMON_HOME%\\bin.
   </description>
@@ -389,7 +389,7 @@
 <property>
   <name>mapreduce.reduce.merge.inmem.threshold</name>
   <value>1000</value>
-  <description>The threshold, in terms of the number of files 
+  <description>The threshold, in terms of the number of files
   for the in-memory merge process. When we accumulate threshold number of files
   we initiate the in-memory merge and spill to disk. A value of 0 or less than
   0 indicates we want to DON'T have any threshold and instead depend only on
@@ -468,12 +468,12 @@
 <property>
   <name>mapreduce.shuffle.transferTo.allowed</name>
   <value></value>
-  <description>This option can enable/disable using nio transferTo method in 
-  the shuffle phase. NIO transferTo does not perform well on windows in the 
-  shuffle phase. Thus, with this configuration property it is possible to 
-  disable it, in which case custom transfer method will be used. Recommended 
-  value is false when running Hadoop on Windows. For Linux, it is recommended 
-  to set it to true. If nothing is set then the default value is false for 
+  <description>This option can enable/disable using nio transferTo method in
+  the shuffle phase. NIO transferTo does not perform well on windows in the
+  shuffle phase. Thus, with this configuration property it is possible to
+  disable it, in which case custom transfer method will be used. Recommended
+  value is false when running Hadoop on Windows. For Linux, it is recommended
+  to set it to true. If nothing is set then the default value is false for
   Windows, and true for Linux.
   </description>
 </property>
@@ -481,8 +481,8 @@
 <property>
   <name>mapreduce.shuffle.transfer.buffer.size</name>
   <value>131072</value>
-  <description>This property is used only if 
-  mapreduce.shuffle.transferTo.allowed is set to false. In that case, 
+  <description>This property is used only if
+  mapreduce.shuffle.transferTo.allowed is set to false. In that case,
   this property defines the size of the buffer used in the buffer copy code
   for the shuffle phase. The size of this buffer determines the size of the IO
   requests.
@@ -500,14 +500,14 @@
 <property>
   <name>mapreduce.map.speculative</name>
   <value>true</value>
-  <description>If true, then multiple instances of some map tasks 
+  <description>If true, then multiple instances of some map tasks
                may be executed in parallel.</description>
 </property>
 
 <property>
   <name>mapreduce.reduce.speculative</name>
   <value>true</value>
-  <description>If true, then multiple instances of some reduce tasks 
+  <description>If true, then multiple instances of some reduce tasks
                may be executed in parallel.</description>
 </property>
 
@@ -555,7 +555,7 @@
     of the collectors in turn. The first to successfully initialize will be used.
   </description>
 </property>
- 
+
 <property>
   <name>mapreduce.job.speculative.slowtaskthreshold</name>
   <value>1.0</value>
@@ -654,14 +654,14 @@
 <property>
   <name>mapreduce.task.files.preserve.failedtasks</name>
   <value>false</value>
-  <description>Should the files for failed tasks be kept. This should only be 
+  <description>Should the files for failed tasks be kept. This should only be
                used on jobs that are failing, because the storage is never
                reclaimed. It also prevents the map outputs from being erased
                from the reduce directory as they are consumed.</description>
 </property>
 
 
-<!-- 
+<!--
   <property>
   <name>mapreduce.task.files.preserve.filepattern</name>
   <value>.*_m_123456_0</value>
@@ -703,7 +703,7 @@
 <property>
   <name>mapreduce.map.output.compress.codec</name>
   <value>org.apache.hadoop.io.compress.DefaultCodec</value>
-  <description>If the map outputs are compressed, how should they be 
+  <description>If the map outputs are compressed, how should they be
                compressed?
   </description>
 </property>
@@ -786,7 +786,7 @@
 <property>
   <name>mapreduce.job.maxtaskfailures.per.tracker</name>
   <value>3</value>
-  <description>The number of task-failures on a node manager of a given job 
+  <description>The number of task-failures on a node manager of a given job
                after which new tasks of that job aren't assigned to it. It
                MUST be less than mapreduce.map.maxattempts and
                mapreduce.reduce.maxattempts otherwise the failed task will
@@ -798,8 +798,8 @@
   <name>mapreduce.client.output.filter</name>
   <value>FAILED</value>
   <description>The filter for controlling the output of the task's userlogs sent
-               to the console of the JobClient. 
-               The permissible options are: NONE, KILLED, FAILED, SUCCEEDED and 
+               to the console of the JobClient.
+               The permissible options are: NONE, KILLED, FAILED, SUCCEEDED and
                ALL.
   </description>
 </property>
@@ -878,51 +878,75 @@
   <property>
     <name>mapreduce.task.skip.start.attempts</name>
     <value>2</value>
-    <description> The number of Task attempts AFTER which skip mode 
-    will be kicked off. When skip mode is kicked off, the 
-    tasks reports the range of records which it will process 
+    <description> The number of Task attempts AFTER which skip mode
+    will be kicked off. When skip mode is kicked off, the
+    tasks reports the range of records which it will process
     next, to the MR ApplicationMaster. So that on failures, the MR AM
     knows which ones are possibly the bad records. On further executions,
     those are skipped.
     </description>
   </property>
-  
+
   <property>
     <name>mapreduce.job.skip.outdir</name>
     <value></value>
-    <description> If no value is specified here, the skipped records are 
+    <description> If no value is specified here, the skipped records are
     written to the output directory at _logs/skip.
-    User can stop writing skipped records by giving the value "none". 
+    User can stop writing skipped records by giving the value "none".
     </description>
   </property>
 
   <property>
     <name>mapreduce.map.skip.maxrecords</name>
     <value>0</value>
-    <description> The number of acceptable skip records surrounding the bad 
+    <description> The number of acceptable skip records surrounding the bad
     record PER bad record in mapper. The number includes the bad record as well.
-    To turn the feature of detection/skipping of bad records off, set the 
+    To turn the feature of detection/skipping of bad records off, set the
     value to 0.
-    The framework tries to narrow down the skipped range by retrying  
-    until this threshold is met OR all attempts get exhausted for this task. 
-    Set the value to Long.MAX_VALUE to indicate that framework need not try to 
-    narrow down. Whatever records(depends on application) get skipped are 
+    The framework tries to narrow down the skipped range by retrying
+    until this threshold is met OR all attempts get exhausted for this task.
+    Set the value to Long.MAX_VALUE to indicate that framework need not try to
+    narrow down. Whatever records(depends on application) get skipped are
     acceptable.
     </description>
   </property>
-  
+
+  <property>
+    <name>mapreduce.map.skip.proc-count.auto-incr</name>
+    <value>true</value>
+    <description>The flag which if set to true,
+    SkipBadRecords.COUNTER_MAP_PROCESSED_RECORDS is incremented by
+    MapRunner after invoking the map function. This value must be set
+    to false for applications which process the records asynchronously
+    or buffer the input records. For example streaming. In such cases
+    applications should increment this counter on their own.
+    </description>
+  </property>
+
   <property>
     <name>mapreduce.reduce.skip.maxgroups</name>
     <value>0</value>
-    <description> The number of acceptable skip groups surrounding the bad 
+    <description> The number of acceptable skip groups surrounding the bad
     group PER bad group in reducer. The number includes the bad group as well.
-    To turn the feature of detection/skipping of bad groups off, set the 
+    To turn the feature of detection/skipping of bad groups off, set the
     value to 0.
-    The framework tries to narrow down the skipped range by retrying  
-    until this threshold is met OR all attempts get exhausted for this task. 
-    Set the value to Long.MAX_VALUE to indicate that framework need not try to 
-    narrow down. Whatever groups(depends on application) get skipped are 
+    The framework tries to narrow down the skipped range by retrying
+    until this threshold is met OR all attempts get exhausted for this task.
+    Set the value to Long.MAX_VALUE to indicate that framework need not try to
+    narrow down. Whatever groups(depends on application) get skipped are
     acceptable.
+    </description>
+  </property>
+
+  <property>
+    <name>mapreduce.reduce.skip.proc-count.auto-incr</name>
+    <value>true</value>
+    <description>The flag which if set to true.
+    SkipBadRecords.COUNTER_REDUCE_PROCESSED_GROUPS is incremented by framework
+    after invoking the reduce function. This value must be set to false for
+    applications which process the records asynchronously or buffer the input
+    records. For example streaming. In such cases applications should increment
+    this counter on their own.
     </description>
   </property>
 
@@ -939,14 +963,14 @@
     <description>Configuration key to set the IFile readahead length in bytes.
     </description>
   </property>
-  
+
 <property>
   <name>mapreduce.job.queuename</name>
   <value>default</value>
   <description> Queue to which a job is submitted. This must match one of the
     queues defined in mapred-queues.xml for the system. Also, the ACL setup
     for the queue must allow the current user to submit a job to the queue.
-    Before specifying a queue, ensure that the system is configured with 
+    Before specifying a queue, ensure that the system is configured with
     the queue, and access is allowed for submitting jobs to the queue.
   </description>
 </property>
@@ -954,7 +978,7 @@
   <property>
     <name>mapreduce.job.tags</name>
     <value></value>
-    <description> Tags for the job that will be passed to YARN at submission 
+    <description> Tags for the job that will be passed to YARN at submission
       time. Queries to YARN for applications can filter on these tags.
     </description>
   </property>
@@ -1089,15 +1113,15 @@
 <property>
   <name>mapreduce.job.reduce.slowstart.completedmaps</name>
   <value>0.05</value>
-  <description>Fraction of the number of maps in the job which should be 
-  complete before reduces are scheduled for the job. 
+  <description>Fraction of the number of maps in the job which should be
+  complete before reduces are scheduled for the job.
   </description>
 </property>
 
 <property>
 <name>mapreduce.job.complete.cancel.delegation.tokens</name>
   <value>true</value>
-  <description> if false - do not unregister/cancel delegation tokens from 
+  <description> if false - do not unregister/cancel delegation tokens from
     renewal, because same tokens may be used by spawned jobs
   </description>
 </property>
@@ -1105,8 +1129,8 @@
 <property>
   <name>mapreduce.shuffle.port</name>
   <value>13562</value>
-  <description>Default port that the ShuffleHandler will run on. ShuffleHandler 
-   is a service run at the NodeManager to facilitate transfers of intermediate 
+  <description>Default port that the ShuffleHandler will run on. ShuffleHandler
+   is a service run at the NodeManager to facilitate transfers of intermediate
    Map outputs to requesting Reducers.
   </description>
 </property>
@@ -1114,8 +1138,8 @@
 <property>
   <name>mapreduce.job.reduce.shuffle.consumer.plugin.class</name>
   <value>org.apache.hadoop.mapreduce.task.reduce.Shuffle</value>
-  <description> 
-  Name of the class whose instance will be used 
+  <description>
+  Name of the class whose instance will be used
   to send shuffle requests by reducetasks of this job.
   The class must be an instance of org.apache.hadoop.mapred.ShuffleConsumerPlugin.
   </description>
@@ -1252,38 +1276,38 @@
 <property>
   <name>yarn.app.mapreduce.am.env</name>
   <value></value>
-  <description>User added environment variables for the MR App Master 
+  <description>User added environment variables for the MR App Master
   processes. Example :
   1) A=foo  This will set the env variable A to foo
-  2) B=$B:c This is inherit tasktracker's B env variable.  
+  2) B=$B:c This is inherit tasktracker's B env variable.
   </description>
 </property>
 
 <property>
   <name>yarn.app.mapreduce.am.admin.user.env</name>
   <value></value>
-  <description> Environment variables for the MR App Master 
-  processes for admin purposes. These values are set first and can be 
+  <description> Environment variables for the MR App Master
+  processes for admin purposes. These values are set first and can be
   overridden by the user env (yarn.app.mapreduce.am.env) Example :
   1) A=foo  This will set the env variable A to foo
-  2) B=$B:c This is inherit app master's B env variable.  
+  2) B=$B:c This is inherit app master's B env variable.
   </description>
 </property>
 
 <property>
   <name>yarn.app.mapreduce.am.command-opts</name>
   <value>-Xmx1024m</value>
-  <description>Java opts for the MR App Master processes.  
-  The following symbol, if present, will be interpolated: @taskid@ is replaced 
+  <description>Java opts for the MR App Master processes.
+  The following symbol, if present, will be interpolated: @taskid@ is replaced
   by current TaskID. Any other occurrences of '@' will go unchanged.
   For example, to enable verbose gc logging to a file named for the taskid in
   /tmp and to set the heap maximum to be a gigabyte, pass a 'value' of:
         -Xmx1024m -verbose:gc -Xloggc:/tmp/@taskid@.gc
-  
+
   Usage of -Djava.library.path can cause programs to no longer function if
-  hadoop native libraries are used. These values should instead be set as part 
-  of LD_LIBRARY_PATH in the map / reduce JVM env using the mapreduce.map.env and 
-  mapreduce.reduce.env config settings. 
+  hadoop native libraries are used. These values should instead be set as part
+  of LD_LIBRARY_PATH in the map / reduce JVM env using the mapreduce.map.env and
+  mapreduce.reduce.env config settings.
   </description>
 </property>
 
@@ -1292,19 +1316,19 @@
   <value></value>
   <description>Java opts for the MR App Master processes for admin purposes.
   It will appears before the opts set by yarn.app.mapreduce.am.command-opts and
-  thus its options can be overridden user. 
-  
+  thus its options can be overridden user.
+
   Usage of -Djava.library.path can cause programs to no longer function if
-  hadoop native libraries are used. These values should instead be set as part 
-  of LD_LIBRARY_PATH in the map / reduce JVM env using the mapreduce.map.env and 
-  mapreduce.reduce.env config settings. 
+  hadoop native libraries are used. These values should instead be set as part
+  of LD_LIBRARY_PATH in the map / reduce JVM env using the mapreduce.map.env and
+  mapreduce.reduce.env config settings.
   </description>
 </property>
 
 <property>
   <name>yarn.app.mapreduce.am.job.task.listener.thread-count</name>
   <value>30</value>
-  <description>The number of threads used to handle RPC calls in the 
+  <description>The number of threads used to handle RPC calls in the
     MR AppMaster from remote tasks</description>
 </property>
 
@@ -1312,7 +1336,7 @@
   <name>yarn.app.mapreduce.am.job.client.port-range</name>
   <value></value>
   <description>Range of ports that the MapReduce AM can use when binding.
-    Leave blank if you want all possible ports.  
+    Leave blank if you want all possible ports.
     For example 50000-50050,50100-50200</description>
 </property>
 
@@ -1596,7 +1620,7 @@
 <property>
   <name>mapreduce.jobhistory.cleaner.interval-ms</name>
   <value>86400000</value>
-  <description> How often the job history cleaner checks for files to delete, 
+  <description> How often the job history cleaner checks for files to delete,
   in milliseconds. Defaults to 86400000 (one day). Files are only deleted if
   they are older than mapreduce.jobhistory.max-age-ms.
   </description>

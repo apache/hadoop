@@ -39,11 +39,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import com.google.common.annotations.VisibleForTesting;
 
 /**
- * Update nodes labels map for Resource Manager periodically. It collects
+ * Update nodes labels map for ResourceManager periodically. It collects
  * nodes labels from {@link RMNodeLabelsMappingProvider} and updates the
- * nodes -> labels map via {@link RMNodeLabelsManager}. This service is
- * enabled when configuration "yarn.node-labels.configuration-type" is
- * set to "delegated-centralized".
+ * nodes {@literal ->} labels map via {@link RMNodeLabelsManager}.
+ * This service is enabled when configuration
+ * "yarn.node-labels.configuration-type" is set to "delegated-centralized".
  */
 public class RMDelegatedNodeLabelsUpdater extends CompositeService {
 

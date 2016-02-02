@@ -45,7 +45,7 @@ public class TestSortedMapWritable {
         new BytesWritable("value3".getBytes())
     };
 
-    SortedMapWritable inMap = new SortedMapWritable();
+    SortedMapWritable<Text> inMap = new SortedMapWritable<Text>();
     for (int i = 0; i < keys.length; i++) {
       inMap.put(keys[i], values[i]);
     }
@@ -53,13 +53,14 @@ public class TestSortedMapWritable {
     assertEquals(0, inMap.firstKey().compareTo(keys[0]));
     assertEquals(0, inMap.lastKey().compareTo(keys[2]));
 
-    SortedMapWritable outMap = new SortedMapWritable(inMap);
+    SortedMapWritable<Text> outMap = new SortedMapWritable<Text>(inMap);
     assertEquals(inMap.size(), outMap.size());
     
-    for (Map.Entry<WritableComparable, Writable> e: inMap.entrySet()) {
+    for (Map.Entry<Text, Writable> e: inMap.entrySet()) {
       assertTrue(outMap.containsKey(e.getKey()));
-      assertEquals(0, ((WritableComparable) outMap.get(e.getKey())).compareTo(
-          e.getValue()));
+      WritableComparable<WritableComparable<?>> aValue = (WritableComparable<WritableComparable<?>>) outMap.get(e.getKey());
+      WritableComparable<WritableComparable<?>> bValue = (WritableComparable<WritableComparable<?>>) e.getValue();
+      assertEquals(0, aValue.compareTo(bValue));
     }
     
     // Now for something a little harder...
@@ -69,24 +70,24 @@ public class TestSortedMapWritable {
         new Text("map2")
     };
     
-    SortedMapWritable mapOfMaps = new SortedMapWritable();
+    SortedMapWritable<Text> mapOfMaps = new SortedMapWritable<Text>();
     mapOfMaps.put(maps[0], inMap);
     mapOfMaps.put(maps[1], outMap);
     
-    SortedMapWritable copyOfMapOfMaps = new SortedMapWritable(mapOfMaps);
+    SortedMapWritable<Text> copyOfMapOfMaps = new SortedMapWritable<Text>(mapOfMaps);
     for (int i = 0; i < maps.length; i++) {
       assertTrue(copyOfMapOfMaps.containsKey(maps[i]));
 
-      SortedMapWritable a = (SortedMapWritable) mapOfMaps.get(maps[i]);
-      SortedMapWritable b = (SortedMapWritable) copyOfMapOfMaps.get(maps[i]);
+      SortedMapWritable<Text> a = (SortedMapWritable<Text>) mapOfMaps.get(maps[i]);
+      SortedMapWritable<Text> b = (SortedMapWritable<Text>) copyOfMapOfMaps.get(maps[i]);
       assertEquals(a.size(), b.size());
       for (Writable key: a.keySet()) {
         assertTrue(b.containsKey(key));
         
         // This will work because we know what we put into each set
         
-        WritableComparable aValue = (WritableComparable) a.get(key);
-        WritableComparable bValue = (WritableComparable) b.get(key);
+        WritableComparable<WritableComparable<?>> aValue = (WritableComparable<WritableComparable<?>>) a.get(key);
+        WritableComparable<WritableComparable<?>> bValue = (WritableComparable<WritableComparable<?>>) b.get(key);
         assertEquals(0, aValue.compareTo(bValue));
       }
     }
@@ -98,11 +99,11 @@ public class TestSortedMapWritable {
   @Test
   @SuppressWarnings("deprecation")
   public void testForeignClass() {
-    SortedMapWritable inMap = new SortedMapWritable();
+    SortedMapWritable<Text> inMap = new SortedMapWritable<Text>();
     inMap.put(new Text("key"), new UTF8("value"));
     inMap.put(new Text("key2"), new UTF8("value2"));
-    SortedMapWritable outMap = new SortedMapWritable(inMap);
-    SortedMapWritable copyOfCopy = new SortedMapWritable(outMap);
+    SortedMapWritable<Text> outMap = new SortedMapWritable<Text>(inMap);
+    SortedMapWritable<Text> copyOfCopy = new SortedMapWritable<Text>(outMap);
     assertEquals(1, copyOfCopy.getNewClasses());
   }
   
@@ -112,8 +113,8 @@ public class TestSortedMapWritable {
   @Test
   public void testEqualsAndHashCode() {
     String failureReason;
-    SortedMapWritable mapA = new SortedMapWritable();
-    SortedMapWritable mapB = new SortedMapWritable();
+    SortedMapWritable<Text> mapA = new SortedMapWritable<Text>();
+    SortedMapWritable<Text> mapB = new SortedMapWritable<Text>();
     
     // Sanity checks
     failureReason = "SortedMapWritable couldn't be initialized. Got null reference";
@@ -167,8 +168,8 @@ public class TestSortedMapWritable {
 
   @Test(timeout = 1000)
   public void testPutAll() {
-    SortedMapWritable map1 = new SortedMapWritable();
-    SortedMapWritable map2 = new SortedMapWritable();
+    SortedMapWritable<Text> map1 = new SortedMapWritable<Text>();
+    SortedMapWritable<Text> map2 = new SortedMapWritable<Text>();
     map1.put(new Text("key"), new Text("value"));
     map2.putAll(map1);
 

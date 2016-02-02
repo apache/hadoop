@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Progressable;
@@ -388,7 +389,11 @@ class ChRootedFileSystem extends FilterFileSystem {
   public ContentSummary getContentSummary(Path f) throws IOException {
     return fs.getContentSummary(fullPath(f));
   }
-  
+
+  @Override
+  public QuotaUsage getQuotaUsage(Path f) throws IOException {
+    return fs.getQuotaUsage(fullPath(f));
+  }
 
   private static Path rootPath = new Path(Path.SEPARATOR);
 

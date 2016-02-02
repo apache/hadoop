@@ -17,7 +17,7 @@
    limitations under the License.
 -->
 
-<Project DefaultTargets="CheckRequireSnappy;Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="CheckRequireSnappy;CheckRequireIsal;Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Release|Win32">
       <Configuration>Release</Configuration>
@@ -79,10 +79,21 @@
     <IncludePath Condition="'$(SnappyEnabled)' == 'true'">$(SnappyInclude);$(IncludePath)</IncludePath>
     <IncludePath Condition="Exists('$(ZLIB_HOME)')">$(ZLIB_HOME);$(IncludePath)</IncludePath>
   </PropertyGroup>
+  <PropertyGroup>
+    <IsalLib Condition="Exists('$(CustomIsalPrefix)\isa-l.dll')">$(CustomIsalPrefix)</IsalLib>
+    <IsalLib Condition="Exists('$(CustomIsalPrefix)\lib\isa-l.dll') And '$(IsalLib)' == ''">$(CustomIsalPrefix)\lib</IsalLib>
+    <IsalLib Condition="Exists('$(CustomIsalLib)') And '$(IsalLib)' == ''">$(CustomIsalLib)</IsalLib>
+    <IsalEnabled Condition="'$(IsalLib)' != ''">true</IsalEnabled>
+  </PropertyGroup>
   <Target Name="CheckRequireSnappy">
     <Error
       Text="Required snappy library could not be found.  SnappyLibrary=$(SnappyLibrary), SnappyInclude=$(SnappyInclude), CustomSnappyLib=$(CustomSnappyLib), CustomSnappyInclude=$(CustomSnappyInclude), CustomSnappyPrefix=$(CustomSnappyPrefix)"
       Condition="'$(RequireSnappy)' == 'true' And '$(SnappyEnabled)' != 'true'" />
+  </Target>
+  <Target Name="CheckRequireIsal">
+    <Error
+      Text="Required ISA-L library could not be found. CustomIsalLib=$(CustomIsalLib), CustomIsalPrefix=$(CustomIsalPrefix)"
+      Condition="'$(RequireIsal)' == 'true' And '$(IsalEnabled)' != 'true'" />
   </Target>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -92,7 +103,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;NATIVE_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\winutils\include;..\..\..\target\native\javah;%JAVA_HOME%\include;%JAVA_HOME%\include\win32;.\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\winutils\include;..\native\src\org\apache\hadoop\io\erasurecode\include;..\..\..\target\native\javah;%JAVA_HOME%\include;%JAVA_HOME%\include\win32;.\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAs>CompileAsC</CompileAs>
       <DisableSpecificWarnings>4244</DisableSpecificWarnings>
     </ClCompile>
@@ -113,7 +124,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;NATIVE_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\winutils\include;..\..\..\target\native\javah;%JAVA_HOME%\include;%JAVA_HOME%\include\win32;.\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\winutils\include;..\native\src\org\apache\hadoop\io\erasurecode\include;..\..\..\target\native\javah;%JAVA_HOME%\include;%JAVA_HOME%\include\win32;.\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAs>CompileAsC</CompileAs>
       <DisableSpecificWarnings>4244</DisableSpecificWarnings>
     </ClCompile>
@@ -145,11 +156,16 @@
     <ClCompile Include="src\org\apache\hadoop\util\bulk_crc32.c" />
     <ClCompile Include="src\org\apache\hadoop\util\NativeCodeLoader.c">
       <AdditionalOptions Condition="'$(SnappyEnabled)' == 'true'">/D HADOOP_SNAPPY_LIBRARY=L\"snappy.dll\"</AdditionalOptions>
+      <AdditionalOptions Condition="'$(IsalEnabled)' == 'true'">/D HADOOP_ISAL_LIBRARY=\"isa-l.dll\"</AdditionalOptions>
     </ClCompile>
     <ClCompile Include="src\org\apache\hadoop\util\NativeCrc32.c" />
     <ClCompile Include="src\org\apache\hadoop\yarn\server\nodemanager\windows_secure_container_executor.c">
       <AdditionalIncludeDirectories>src\org\apache\hadoop\io\nativeio;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+    <ClCompile Include="src\org\apache\hadoop\io\erasurecode\erasure_code.c" Condition="'$(IsalEnabled)' == 'true'">
+      <AdditionalOptions>/D HADOOP_ISAL_LIBRARY=\"isa-l.dll\"</AdditionalOptions>
+    </ClCompile>
+    <ClCompile Include="src\org\apache\hadoop\io\erasurecode\coder\erasure_code_native.c" Condition="'$(IsalEnabled)' == 'true'"/>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\org\apache\hadoop\util\crc32c_tables.h" />

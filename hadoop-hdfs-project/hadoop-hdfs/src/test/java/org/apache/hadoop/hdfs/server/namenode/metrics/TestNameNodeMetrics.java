@@ -124,7 +124,10 @@ public class TestNameNodeMetrics {
       MetricsRecordBuilder rb = getMetrics(source);
       assertQuantileGauges("GetGroups1s", rb);
     }
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
   
   /** create a file with a length of <code>fileLen</code> */

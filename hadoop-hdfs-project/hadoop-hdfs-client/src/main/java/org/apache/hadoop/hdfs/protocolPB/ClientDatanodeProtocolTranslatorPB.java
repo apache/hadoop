@@ -21,17 +21,13 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.Map;
 
 import javax.net.SocketFactory;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.Maps;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationTaskStatus;
-import org.apache.hadoop.conf.ReconfigurationUtil.PropertyChange;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
@@ -48,14 +44,12 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetBlo
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetDatanodeInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetDatanodeInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReplicaVisibleLengthRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.ListReconfigurablePropertiesRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.ListReconfigurablePropertiesResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.ListReconfigurablePropertiesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.ListReconfigurablePropertiesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.RefreshNamenodesRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReconfigurationStatusRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReconfigurationStatusResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReconfigurationStatusConfigChangeProto;
+import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.GetReconfigurationStatusRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.ShutdownDatanodeRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.StartReconfigurationRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.StartReconfigurationRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.TriggerBlockReportRequestProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.ipc.ProtobufHelper;
@@ -273,39 +267,19 @@ public class ClientDatanodeProtocolTranslatorPB implements
   @Override
   public ReconfigurationTaskStatus getReconfigurationStatus()
       throws IOException {
-    GetReconfigurationStatusResponseProto response;
-    Map<PropertyChange, Optional<String>> statusMap = null;
-    long startTime;
-    long endTime = 0;
     try {
-      response = rpcProxy.getReconfigurationStatus(NULL_CONTROLLER,
-          VOID_GET_RECONFIG_STATUS);
-      startTime = response.getStartTime();
-      if (response.hasEndTime()) {
-        endTime = response.getEndTime();
-      }
-      if (response.getChangesCount() > 0) {
-        statusMap = Maps.newHashMap();
-        for (GetReconfigurationStatusConfigChangeProto change :
-            response.getChangesList()) {
-          PropertyChange pc = new PropertyChange(
-              change.getName(), change.getNewValue(), change.getOldValue());
-          String errorMessage = null;
-          if (change.hasErrorMessage()) {
-            errorMessage = change.getErrorMessage();
-          }
-          statusMap.put(pc, Optional.fromNullable(errorMessage));
-        }
-      }
+      return ReconfigurationProtocolUtils.getReconfigurationStatus(
+          rpcProxy
+          .getReconfigurationStatus(
+              NULL_CONTROLLER,
+              VOID_GET_RECONFIG_STATUS));
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
-    return new ReconfigurationTaskStatus(startTime, endTime, statusMap);
   }
 
   @Override
-  public List<String> listReconfigurableProperties()
-      throws IOException {
+  public List<String> listReconfigurableProperties() throws IOException {
     ListReconfigurablePropertiesResponseProto response;
     try {
       response = rpcProxy.listReconfigurableProperties(NULL_CONTROLLER,

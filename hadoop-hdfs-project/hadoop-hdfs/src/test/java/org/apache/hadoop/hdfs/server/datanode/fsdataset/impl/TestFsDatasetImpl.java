@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import com.google.common.collect.Lists;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaHandler;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
+import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
@@ -47,6 +49,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DiskChecker;
+import org.apache.hadoop.util.FakeTimer;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -56,13 +59,19 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.concurrent.CountDownLatch;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DN_CACHED_DFSUSED_CHECK_INTERVAL_MS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -82,8 +91,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestFsDatasetImpl {
+  Logger LOG = LoggerFactory.getLogger(TestFsDatasetImpl.class);
   private static final String BASE_DIR =
       new FileSystemTestHelper().getTestRootDir();
   private static final int NUM_INIT_VOLUMES = 2;
@@ -103,7 +115,7 @@ public class TestFsDatasetImpl {
 
   private static Storage.StorageDirectory createStorageDirectory(File root) {
     Storage.StorageDirectory sd = new Storage.StorageDirectory(root);
-    dsForStorageUuid.createStorageID(sd, false);
+    DataStorage.createStorageID(sd, false);
     return sd;
   }
 
@@ -112,6 +124,7 @@ public class TestFsDatasetImpl {
     List<Storage.StorageDirectory> dirs =
         new ArrayList<Storage.StorageDirectory>();
     List<String> dirStrings = new ArrayList<String>();
+    FileUtils.deleteDirectory(new File(BASE_DIR));
     for (int i = 0; i < numDirs; i++) {
       File loc = new File(BASE_DIR + "/data" + i);
       dirStrings.add(new Path(loc.toString()).toUri().toString());
@@ -147,6 +160,9 @@ public class TestFsDatasetImpl {
     when(datanode.getDnConf()).thenReturn(dnConf);
     final BlockScanner disabledBlockScanner = new BlockScanner(datanode, conf);
     when(datanode.getBlockScanner()).thenReturn(disabledBlockScanner);
+    final ShortCircuitRegistry shortCircuitRegistry =
+        new ShortCircuitRegistry(conf);
+    when(datanode.getShortCircuitRegistry()).thenReturn(shortCircuitRegistry);
 
     createStorageDirs(storage, conf, NUM_INIT_VOLUMES);
     dataset = new FsDatasetImpl(datanode, storage, conf);
@@ -286,6 +302,7 @@ public class TestFsDatasetImpl {
       FsVolumeImpl volume = mock(FsVolumeImpl.class);
       oldVolumes.add(volume);
       when(volume.getBasePath()).thenReturn("data" + i);
+      when(volume.checkClosed()).thenReturn(true);
       FsVolumeReference ref = mock(FsVolumeReference.class);
       when(ref.getVolume()).thenReturn(volume);
       volumeList.addVolume(ref);
@@ -439,5 +456,144 @@ public class TestFsDatasetImpl {
         BlockPoolSlice.selectReplicaToDelete(replicaOtherOlder, replica));
     assertSame(replica,
         BlockPoolSlice.selectReplicaToDelete(replicaOtherNewer, replica));
+  }
+
+  @Test
+  public void testLoadingDfsUsedForVolumes() throws IOException,
+      InterruptedException {
+    long waitIntervalTime = 5000;
+    // Initialize the cachedDfsUsedIntervalTime larger than waitIntervalTime
+    // to avoid cache-dfsused time expired
+    long cachedDfsUsedIntervalTime = waitIntervalTime + 1000;
+    conf.setLong(DFS_DN_CACHED_DFSUSED_CHECK_INTERVAL_MS,
+        cachedDfsUsedIntervalTime);
+
+    long cacheDfsUsed = 1024;
+    long dfsUsed = getDfsUsedValueOfNewVolume(cacheDfsUsed, waitIntervalTime);
+
+    assertEquals(cacheDfsUsed, dfsUsed);
+  }
+
+  @Test
+  public void testLoadingDfsUsedForVolumesExpired() throws IOException,
+      InterruptedException {
+    long waitIntervalTime = 5000;
+    // Initialize the cachedDfsUsedIntervalTime smaller than waitIntervalTime
+    // to make cache-dfsused time expired
+    long cachedDfsUsedIntervalTime = waitIntervalTime - 1000;
+    conf.setLong(DFS_DN_CACHED_DFSUSED_CHECK_INTERVAL_MS,
+        cachedDfsUsedIntervalTime);
+
+    long cacheDfsUsed = 1024;
+    long dfsUsed = getDfsUsedValueOfNewVolume(cacheDfsUsed, waitIntervalTime);
+
+    // Because the cache-dfsused expired and the dfsUsed will be recalculated
+    assertTrue(cacheDfsUsed != dfsUsed);
+  }
+
+  private long getDfsUsedValueOfNewVolume(long cacheDfsUsed,
+      long waitIntervalTime) throws IOException, InterruptedException {
+    List<NamespaceInfo> nsInfos = Lists.newArrayList();
+    nsInfos.add(new NamespaceInfo(0, CLUSTER_ID, BLOCK_POOL_IDS[0], 1));
+
+    String CURRENT_DIR = "current";
+    String DU_CACHE_FILE = BlockPoolSlice.DU_CACHE_FILE;
+    String path = BASE_DIR + "/newData0";
+    String pathUri = new Path(path).toUri().toString();
+    StorageLocation loc = StorageLocation.parse(pathUri);
+    Storage.StorageDirectory sd = createStorageDirectory(new File(path));
+    DataStorage.VolumeBuilder builder =
+        new DataStorage.VolumeBuilder(storage, sd);
+    when(
+        storage.prepareVolume(eq(datanode), eq(loc.getFile()),
+            anyListOf(NamespaceInfo.class))).thenReturn(builder);
+
+    String cacheFilePath =
+        String.format("%s/%s/%s/%s/%s", path, CURRENT_DIR, BLOCK_POOL_IDS[0],
+            CURRENT_DIR, DU_CACHE_FILE);
+    File outFile = new File(cacheFilePath);
+
+    if (!outFile.getParentFile().exists()) {
+      outFile.getParentFile().mkdirs();
+    }
+
+    if (outFile.exists()) {
+      outFile.delete();
+    }
+
+    FakeTimer timer = new FakeTimer();
+    try {
+      try (Writer out =
+          new OutputStreamWriter(new FileOutputStream(outFile),
+              StandardCharsets.UTF_8)) {
+        // Write the dfsUsed value and the time to cache file
+        out.write(Long.toString(cacheDfsUsed) + " "
+            + Long.toString(timer.now()));
+        out.flush();
+      }
+    } catch (IOException ioe) {
+    }
+
+    dataset.setTimer(timer);
+    timer.advance(waitIntervalTime);
+    dataset.addVolume(loc, nsInfos);
+
+    // Get the last volume which was just added before
+    FsVolumeImpl newVolume;
+    try (FsDatasetSpi.FsVolumeReferences volumes =
+        dataset.getFsVolumeReferences()) {
+      newVolume = (FsVolumeImpl) volumes.get(volumes.size() - 1);
+    }
+    long dfsUsed = newVolume.getDfsUsed();
+
+    return dfsUsed;
+  }
+
+  @Test(timeout = 30000)
+  public void testRemoveVolumeBeingWritten() throws Exception {
+    // Will write and remove on dn0.
+    final ExtendedBlock eb = new ExtendedBlock(BLOCK_POOL_IDS[0], 0);
+    final CountDownLatch startFinalizeLatch = new CountDownLatch(1);
+    final CountDownLatch brReceivedLatch = new CountDownLatch(1);
+    class BlockReportThread extends Thread {
+      public void run() {
+        LOG.info("Getting block report");
+        dataset.getBlockReports(eb.getBlockPoolId());
+        LOG.info("Successfully received block report");
+        brReceivedLatch.countDown();
+      }
+    }
+
+    final BlockReportThread brt = new BlockReportThread();
+    class ResponderThread extends Thread {
+      public void run() {
+        try (ReplicaHandler replica = dataset
+            .createRbw(StorageType.DEFAULT, eb, false)) {
+          LOG.info("createRbw finished");
+          startFinalizeLatch.countDown();
+
+          // Slow down while we're holding the reference to the volume
+          Thread.sleep(1000);
+          dataset.finalizeBlock(eb);
+          LOG.info("finalizeBlock finished");
+        } catch (Exception e) {
+          LOG.warn("Exception caught. This should not affect the test", e);
+        }
+      }
+    }
+
+    ResponderThread res = new ResponderThread();
+    res.start();
+    startFinalizeLatch.await();
+
+    Set<File> volumesToRemove = new HashSet<>();
+    volumesToRemove.add(
+        StorageLocation.parse(dataset.getVolume(eb).getBasePath()).getFile());
+    LOG.info("Removing volume " + volumesToRemove);
+    // Verify block report can be received during this
+    brt.start();
+    dataset.removeVolumes(volumesToRemove, true);
+    LOG.info("Volumes removed");
+    brReceivedLatch.await();
   }
 }

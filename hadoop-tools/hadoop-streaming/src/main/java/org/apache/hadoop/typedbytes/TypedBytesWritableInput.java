@@ -330,22 +330,25 @@ public class TypedBytesWritableInput implements Configurable {
     return readMap(null);
   }
 
-  public SortedMapWritable readSortedMap(SortedMapWritable mw)
+  public <K extends WritableComparable<? super K>>
+    SortedMapWritable<K> readSortedMap(SortedMapWritable<K> mw)
     throws IOException {
     if (mw == null) {
-      mw = new SortedMapWritable();
+      mw = new SortedMapWritable<K>();
     }
     int length = in.readMapHeader();
     for (int i = 0; i < length; i++) {
-      WritableComparable key = (WritableComparable) read();
+      @SuppressWarnings("unchecked")
+      K key = (K) read();
       Writable value = read();
       mw.put(key, value);
     }
     return mw;
   }
 
-  public SortedMapWritable readSortedMap() throws IOException {
-    return readSortedMap(null);
+  public <K extends WritableComparable<? super K>> SortedMapWritable<K>
+    readSortedMap() throws IOException {
+    return readSortedMap((SortedMapWritable<K>)null);
   }
   
   public Writable readWritable(Writable writable) throws IOException {

@@ -29,6 +29,7 @@ public class TestXORRawCoder extends TestRawCoderBase {
   public void setup() {
     this.encoderClass = XORRawEncoder.class;
     this.decoderClass = XORRawDecoder.class;
+    setAllowDump(false);
   }
 
   @Test

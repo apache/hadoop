@@ -21,11 +21,14 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation.planning;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationInterval;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation.RLEOperator;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -40,7 +43,8 @@ public class StageAllocatorGreedy implements StageAllocator {
   public Map<ReservationInterval, Resource> computeStageAllocation(Plan plan,
       Map<Long, Resource> planLoads,
       RLESparseResourceAllocation planModifications, ReservationRequest rr,
-      long stageEarliestStart, long stageDeadline) {
+      long stageEarliestStart, long stageDeadline, String user,
+      ReservationId oldId) throws PlanningException {
 
     Resource totalCapacity = plan.getTotalCapacity();
 
@@ -63,6 +67,15 @@ public class StageAllocatorGreedy implements StageAllocator {
 
     int maxGang = 0;
 
+    RLESparseResourceAllocation netAvailable =
+        plan.getAvailableResourceOverTime(user, oldId, stageEarliestStart,
+            stageDeadline);
+
+    netAvailable =
+        RLESparseResourceAllocation.merge(plan.getResourceCalculator(),
+            plan.getTotalCapacity(), netAvailable, planModifications,
+            RLEOperator.subtract, stageEarliestStart, stageDeadline);
+
     // loop trying to place until we are done, or we are considering
     // an invalid range of times
     while (gangsToPlace > 0 && stageDeadline - dur >= stageEarliestStart) {
@@ -79,13 +92,7 @@ public class StageAllocatorGreedy implements StageAllocator {
       for (long t = stageDeadline - plan.getStep(); t >= stageDeadline - dur
           && maxGang > 0; t = t - plan.getStep()) {
 
-        // compute net available resources
-        Resource netAvailableRes = Resources.clone(totalCapacity);
-        // Resources.addTo(netAvailableRes, oldResCap);
-        Resources.subtractFrom(netAvailableRes,
-            plan.getTotalCommittedResources(t));
-        Resources.subtractFrom(netAvailableRes,
-            planModifications.getCapacityAtTime(t));
+        Resource netAvailableRes = netAvailable.getCapacityAtTime(t);
 
         // compute maximum number of gangs we could fit
         curMaxGang =

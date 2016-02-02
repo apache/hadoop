@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
@@ -198,14 +199,12 @@ public class TestFileAppend4 {
       t.join();
       LOG.info("Close finished.");
  
-      // We expect that close will get a "File is not open"
-      // error.
+      // We expect that close will get a "File is not open" error.
       Throwable thrownByClose = err.get();
       assertNotNull(thrownByClose);
-      assertTrue(thrownByClose instanceof IOException);
-      if (!thrownByClose.getMessage().contains(
-            "No lease on /testRecoverFinalized"))
-        throw thrownByClose;
+      assertTrue(thrownByClose instanceof LeaseExpiredException);
+      GenericTestUtils.assertExceptionContains("File is not open for writing",
+          thrownByClose);
     } finally {
       cluster.shutdown();
     }
@@ -281,10 +280,9 @@ public class TestFileAppend4 {
       // error.
       Throwable thrownByClose = err.get();
       assertNotNull(thrownByClose);
-      assertTrue(thrownByClose instanceof IOException);
-      if (!thrownByClose.getMessage().contains(
-            "Lease mismatch"))
-        throw thrownByClose;
+      assertTrue(thrownByClose instanceof LeaseExpiredException);
+      GenericTestUtils.assertExceptionContains("not the lease owner",
+          thrownByClose);
       
       // The appender should be able to close properly
       appenderStream.close();

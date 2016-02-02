@@ -95,12 +95,24 @@ public class TestCapacitySchedulerNodeLabelUpdate {
   private void checkUsedResource(MockRM rm, String queueName, int memory) {
     checkUsedResource(rm, queueName, memory, RMNodeLabelsManager.NO_LABEL);
   }
-  
+
+  private void checkAMUsedResource(MockRM rm, String queueName, int memory) {
+    checkAMUsedResource(rm, queueName, memory, RMNodeLabelsManager.NO_LABEL);
+  }
+
   private void checkUsedResource(MockRM rm, String queueName, int memory,
       String label) {
     CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
     CSQueue queue = scheduler.getQueue(queueName);
     Assert.assertEquals(memory, queue.getQueueResourceUsage().getUsed(label)
+        .getMemory());
+  }
+
+  private void checkAMUsedResource(MockRM rm, String queueName, int memory,
+      String label) {
+    CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
+    CSQueue queue = scheduler.getQueue(queueName);
+    Assert.assertEquals(memory, queue.getQueueResourceUsage().getAMUsed(label)
         .getMemory());
   }
 
@@ -421,6 +433,95 @@ public class TestCapacitySchedulerNodeLabelUpdate {
         application2.getAppAttemptResourceUsage().getUsed("z").getMemory());
     Assert.assertEquals(1 * GB,
         application2.getAppAttemptResourceUsage().getUsed("").getMemory());
+
+    rm.close();
+  }
+
+  @Test (timeout = 60000)
+  public void testAMResourceUsageWhenNodeUpdatesPartition()
+      throws Exception {
+    // set node -> label
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y", "z"));
+
+    // set mapping:
+    // h1 -> x
+    // h2 -> y
+    mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x")));
+    mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h2", 0), toSet("y")));
+
+    // inject node label manager
+    MockRM rm = new MockRM(getConfigurationWithQueueLabels(conf)) {
+      @Override
+      public RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+
+    rm.getRMContext().setNodeLabelManager(mgr);
+    rm.start();
+    MockNM nm1 = rm.registerNode("h1:1234", 8000);
+    rm.registerNode("h2:1234", 8000);
+    rm.registerNode("h3:1234", 8000);
+
+    ContainerId containerId2;
+
+    // launch an app to queue a1 (label = x), and check all container will
+    // be allocated in h1
+    RMApp app1 = rm.submitApp(GB, "app", "user", null, "a", "x");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+
+    // request a container.
+    am1.allocate("*", GB, 1, new ArrayList<ContainerId>(), "x");
+    ContainerId.newContainerId(am1.getApplicationAttemptId(), 1);
+    containerId2 = ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
+    Assert.assertTrue(rm.waitForState(nm1, containerId2,
+        RMContainerState.ALLOCATED, 10 * 1000));
+
+    // check used resource:
+    // queue-a used x=2G
+    checkUsedResource(rm, "a", 2048, "x");
+    checkAMUsedResource(rm, "a", 1024, "x");
+
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    FiCaSchedulerApp app = cs.getApplicationAttempt(am1.getApplicationAttemptId());
+
+    // change h1's label to z
+    cs.handle(new NodeLabelsUpdateSchedulerEvent(ImmutableMap.of(nm1.getNodeId(),
+        toSet("z"))));
+
+    // Now the resources also should change from x to z. Verify AM and normal
+    // used resource are successfully changed.
+    checkUsedResource(rm, "a", 0, "x");
+    checkUsedResource(rm, "a", 2048, "z");
+    checkAMUsedResource(rm, "a", 0, "x");
+    checkAMUsedResource(rm, "a", 1024, "z");
+    checkUserUsedResource(rm, "a", "user", "x", 0);
+    checkUserUsedResource(rm, "a", "user", "z", 2048);
+    Assert.assertEquals(0,
+        app.getAppAttemptResourceUsage().getAMUsed("x").getMemory());
+    Assert.assertEquals(1024,
+        app.getAppAttemptResourceUsage().getAMUsed("z").getMemory());
+
+    // change h1's label to no label
+    Set<String> emptyLabels = new HashSet<>();
+    Map<NodeId,Set<String>> map = ImmutableMap.of(nm1.getNodeId(),
+        emptyLabels);
+    cs.handle(new NodeLabelsUpdateSchedulerEvent(map));
+    checkUsedResource(rm, "a", 0, "x");
+    checkUsedResource(rm, "a", 0, "z");
+    checkUsedResource(rm, "a", 2048);
+    checkAMUsedResource(rm, "a", 0, "x");
+    checkAMUsedResource(rm, "a", 0, "z");
+    checkAMUsedResource(rm, "a", 1024);
+    checkUserUsedResource(rm, "a", "user", "x", 0);
+    checkUserUsedResource(rm, "a", "user", "z", 0);
+    checkUserUsedResource(rm, "a", "user", "", 2048);
+    Assert.assertEquals(0,
+        app.getAppAttemptResourceUsage().getAMUsed("x").getMemory());
+    Assert.assertEquals(0,
+        app.getAppAttemptResourceUsage().getAMUsed("z").getMemory());
+    Assert.assertEquals(1024,
+        app.getAppAttemptResourceUsage().getAMUsed("").getMemory());
 
     rm.close();
   }

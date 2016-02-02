@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.util.Comparator;
 
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+
 public class PartitionedQueueComparator implements Comparator<CSQueue> {
   private String partitionToLookAt = null;
   
@@ -35,15 +37,17 @@ public class PartitionedQueueComparator implements Comparator<CSQueue> {
      * the other not, accessible queue goes first.
      */
     boolean q1Accessible =
-        q1.getAccessibleNodeLabels().contains(partitionToLookAt);
+        q1.getAccessibleNodeLabels().contains(partitionToLookAt)
+            || q1.getAccessibleNodeLabels().contains(RMNodeLabelsManager.ANY);
     boolean q2Accessible =
-        q2.getAccessibleNodeLabels().contains(partitionToLookAt);
+        q2.getAccessibleNodeLabels().contains(partitionToLookAt)
+            || q2.getAccessibleNodeLabels().contains(RMNodeLabelsManager.ANY);
     if (q1Accessible && !q2Accessible) {
       return -1;
     } else if (!q1Accessible && q2Accessible) {
       return 1;
     }
-    
+
     /*
      * 
      * 2. When two queue has same accessibility, check who will go first:

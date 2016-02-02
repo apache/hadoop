@@ -19,6 +19,7 @@ HDFS Permissions Guide
     * [Overview](#Overview)
     * [User Identity](#User_Identity)
     * [Group Mapping](#Group_Mapping)
+    * [Permission Checks](#Permission_Checks)
     * [Understanding the Implementation](#Understanding_the_Implementation)
     * [Changes to the File System API](#Changes_to_the_File_System_API)
     * [Changes to the Application Shell](#Changes_to_the_Application_Shell)
@@ -34,7 +35,7 @@ Overview
 
 The Hadoop Distributed File System (HDFS) implements a permissions model for files and directories that shares much of the POSIX model. Each file and directory is associated with an owner and a group. The file or directory has separate permissions for the user that is the owner, for other users that are members of the group, and for all other users. For files, the r permission is required to read the file, and the w permission is required to write or append to the file. For directories, the r permission is required to list the contents of the directory, the w permission is required to create or delete files or directories, and the x permission is required to access a child of the directory.
 
-In contrast to the POSIX model, there are no setuid or setgid bits for files as there is no notion of executable files. For directories, there are no setuid or setgid bits directory as a simplification. The Sticky bit can be set on directories, preventing anyone except the superuser, directory owner or file owner from deleting or moving the files within the directory. Setting the sticky bit for a file has no effect. Collectively, the permissions of a file or directory are its mode. In general, Unix customs for representing and displaying modes will be used, including the use of octal numbers in this description. When a file or directory is created, its owner is the user identity of the client process, and its group is the group of the parent directory (the BSD rule).
+In contrast to the POSIX model, there are no setuid or setgid bits for files as there is no notion of executable files. For directories, there are no setuid or setgid bits directory as a simplification. The sticky bit can be set on directories, preventing anyone except the superuser, directory owner or file owner from deleting or moving the files within the directory. Setting the sticky bit for a file has no effect. Collectively, the permissions of a file or directory are its mode. In general, Unix customs for representing and displaying modes will be used, including the use of octal numbers in this description. When a file or directory is created, its owner is the user identity of the client process, and its group is the group of the parent directory (the BSD rule).
 
 HDFS also provides optional support for POSIX ACLs (Access Control Lists) to augment file permissions with finer-grained rules for specific named users or named groups. ACLs are discussed in greater detail later in this document.
 
@@ -61,7 +62,7 @@ As of Hadoop 0.22, Hadoop supports two different modes of operation to determine
 
     In Kerberized operation, the identity of a client process is
     determined by its Kerberos credentials. For example, in a
-    Kerberized environment, a user may use the kinit utility to
+    Kerberized environment, a user may use the `kinit` utility to
     obtain a Kerberos ticket-granting-ticket (TGT) and use klist to
     determine their current principal. When mapping a Kerberos
     principal to an HDFS username, all components except for the
@@ -81,10 +82,67 @@ For HDFS, the mapping of users to groups is performed on the NameNode. Thus, the
 
 Note that HDFS stores the user and group of a file or directory as strings; there is no conversion from user and group identity numbers as is conventional in Unix.
 
+Permission Checks
+-----------------
+
+Each HDFS operation demands that the user has specific permissions (some combination of READ, WRITE and EXECUTE), granted through file ownership, group membership or the other permissions.  An operation may perform permission checks at multiple components of the path, not only the final component.  Additionally, some operations depend on a check of the owner of a path.
+
+All operations require traversal access.  Traversal access demands the EXECUTE permission on all existing components of the path, except for the final path component.  For example, for any operation accessing `/foo/bar/baz`, the caller must have EXECUTE permission on `/`, `/foo` and `/foo/bar`.
+
+The following table describes the permission checks performed by HDFS for each component of the path.
+
+* **Ownership:** Whether or not to check if the caller is the owner of the path.  Typically, operations that change the ownership or permission metadata demand that the caller is the owner.
+* **Parent:** The parent directory of the requested path.  For example, for the path `/foo/bar/baz`, the parent is `/foo/bar`.
+* **Ancestor:** The last **existing** component of the requested path.  For example, for the path `/foo/bar/baz`, the ancestor path is `/foo/bar` if `/foo/bar` exists.  The ancestor path is `/foo` if `/foo` exists but `/foo/bar` does not exist.
+* **Final:** The final component of the requested path.  For example, for the path `/foo/bar/baz`, the final path component is `/foo/bar/baz`.
+* **Sub-tree:** For a path that is a directory, the directory itself and all of its child sub-directories, recursively.  For example, for the path `/foo/bar/baz`, which has 2 sub-directories named `buz` and `boo`, the sub-tree is `/foo/bar/baz`, `/foo/bar/baz/buz` and `/foo/bar/baz/boo`.
+
+Operation             | Ownership | Parent          | Ancestor            | Final                               | Sub-tree
+--------------------- | --------- | --------------  | ------------------- | ----------------------------------- | --------
+append                | NO        | N/A             | N/A                 | WRITE                               | N/A
+concat                | NO [2]    | WRITE (sources) | N/A                 | READ (sources), WRITE (destination) | N/A
+create                | NO        | N/A             | WRITE               | WRITE [1]                           | N/A
+createSnapshot        | YES       | N/A             | N/A                 | N/A                                 | N/A
+delete                | NO [2]    | WRITE           | N/A                 | N/A                                 | READ, WRITE, EXECUTE
+deleteSnapshot        | YES       | N/A             | N/A                 | N/A                                 | N/A
+getAclStatus          | NO        | N/A             | N/A                 | N/A                                 | N/A
+getBlockLocations     | NO        | N/A             | N/A                 | READ                                | N/A
+getContentSummary     | NO        | N/A             | N/A                 | N/A                                 | READ, EXECUTE
+getFileInfo           | NO        | N/A             | N/A                 | N/A                                 | N/A
+getFileLinkInfo       | NO        | N/A             | N/A                 | N/A                                 | N/A
+getLinkTarget         | NO        | N/A             | N/A                 | N/A                                 | N/A
+getListing            | NO        | N/A             | N/A                 | READ, EXECUTE                       | N/A
+getSnapshotDiffReport | NO        | N/A             | N/A                 | READ                                | READ
+getStoragePolicy      | NO        | N/A             | N/A                 | READ                                | N/A
+getXAttrs             | NO        | N/A             | N/A                 | READ                                | N/A
+listXAttrs            | NO        | EXECUTE         | N/A                 | N/A                                 | N/A
+mkdirs                | NO        | N/A             | WRITE               | N/A                                 | N/A
+modifyAclEntries      | YES       | N/A             | N/A                 | N/A                                 | N/A
+removeAcl             | YES       | N/A             | N/A                 | N/A                                 | N/A
+removeAclEntries      | YES       | N/A             | N/A                 | N/A                                 | N/A
+removeDefaultAcl      | YES       | N/A             | N/A                 | N/A                                 | N/A
+removeXAttr           | NO [2]    | N/A             | N/A                 | WRITE                               | N/A
+rename                | NO [2]    | WRITE (source)  | WRITE (destination) | N/A                                 | N/A
+renameSnapshot        | YES       | N/A             | N/A                 | N/A                                 | N/A
+setAcl                | YES       | N/A             | N/A                 | N/A                                 | N/A
+setOwner              | YES [3]   | N/A             | N/A                 | N/A                                 | N/A
+setPermission         | YES       | N/A             | N/A                 | N/A                                 | N/A
+setReplication        | NO        | N/A             | N/A                 | WRITE                               | N/A
+setStoragePolicy      | NO        | N/A             | N/A                 | WRITE                               | N/A
+setTimes              | NO        | N/A             | N/A                 | WRITE                               | N/A
+setXAttr              | NO [2]    | N/A             | N/A                 | WRITE                               | N/A
+truncate              | NO        | N/A             | N/A                 | WRITE                               | N/A
+
+[1] WRITE access on the final path component during `create` is only required if the call uses the overwrite option and there is an existing file at the path.
+
+[2] Any operation that checks WRITE permission on the parent directory also checks ownership if the [sticky bit](#Overview) is set.
+
+[3] Calling `setOwner` to change the user that owns a file requires [HDFS super-user](#The_Super-User) access.  HDFS super-user access is not required to change the group, but the caller must be a member of the specified group.
+
 Understanding the Implementation
 --------------------------------
 
-Each file or directory operation passes the full path name to the name node, and the permissions checks are applied along the path for each operation. The client framework will implicitly associate the user identity with the connection to the name node, reducing the need for changes to the existing client API. It has always been the case that when one operation on a file succeeds, the operation might fail when repeated because the file, or some directory on the path, no longer exists. For instance, when the client first begins reading a file, it makes a first request to the name node to discover the location of the first blocks of the file. A second request made to find additional blocks may fail. On the other hand, deleting a file does not revoke access by a client that already knows the blocks of the file. With the addition of permissions, a client's access to a file may be withdrawn between requests. Again, changing permissions does not revoke the access of a client that already knows the file's blocks.
+Each file or directory operation passes the full path name to the NameNode, and the permissions checks are applied along the path for each operation. The client framework will implicitly associate the user identity with the connection to the NameNode, reducing the need for changes to the existing client API. It has always been the case that when one operation on a file succeeds, the operation might fail when repeated because the file, or some directory on the path, no longer exists. For instance, when the client first begins reading a file, it makes a first request to the NameNode to discover the location of the first blocks of the file. A second request made to find additional blocks may fail. On the other hand, deleting a file does not revoke access by a client that already knows the blocks of the file. With the addition of permissions, a client's access to a file may be withdrawn between requests. Again, changing permissions does not revoke the access of a client that already knows the file's blocks.
 
 Changes to the File System API
 ------------------------------
@@ -100,7 +158,7 @@ New methods:
 * `public void setOwner(Path p, String username, String groupname) throws IOException;`
 * `public FileStatus getFileStatus(Path f) throws IOException;`will additionally return the user, group and mode associated with the path.
 
-The mode of a new file or directory is restricted my the umask set as a configuration parameter. When the existing `create(path, …)` method (without the permission parameter) is used, the mode of the new file is `0666 & ^umask`. When the new `create(path, permission, …)` method (with the permission parameter P) is used, the mode of the new file is `P & ^umask & 0666`. When a new directory is created with the existing `mkdirs(path)` method (without the permission parameter), the mode of the new directory is `0777 & ^umask`. When the new `mkdirs(path, permission)` method (with the permission parameter P) is used, the mode of new directory is `P & ^umask & 0777`.
+The mode of a new file or directory is restricted by the umask set as a configuration parameter. When the existing `create(path, …)` method (without the permission parameter) is used, the mode of the new file is `0666 & ^umask`. When the new `create(path, permission, …)` method (with the permission parameter P) is used, the mode of the new file is `P & ^umask & 0666`. When a new directory is created with the existing `mkdirs(path)` method (without the permission parameter), the mode of the new directory is `0777 & ^umask`. When the new `mkdirs(path, permission)` method (with the permission parameter P) is used, the mode of new directory is `P & ^umask & 0777`.
 
 Changes to the Application Shell
 --------------------------------
@@ -129,14 +187,14 @@ New operations:
 The Super-User
 --------------
 
-The super-user is the user with the same identity as name node process itself. Loosely, if you started the name node, then you are the super-user. The super-user can do anything in that permissions checks never fail for the super-user. There is no persistent notion of who was the super-user; when the name node is started the process identity determines who is the super-user for now. The HDFS super-user does not have to be the super-user of the name node host, nor is it necessary that all clusters have the same super-user. Also, an experimenter running HDFS on a personal workstation, conveniently becomes that installation's super-user without any configuration.
+The super-user is the user with the same identity as the NameNode process itself. Loosely, if you started the NameNode, then you are the super-user. The super-user can do anything in that permissions checks never fail for the super-user. There is no persistent notion of who was the super-user; when the NameNode is started the process identity determines who is the super-user for now. The HDFS super-user does not have to be the super-user of the NameNode host, nor is it necessary that all clusters have the same super-user. Also, an experimenter running HDFS on a personal workstation, conveniently becomes that installation's super-user without any configuration.
 
-In addition, the administrator my identify a distinguished group using a configuration parameter. If set, members of this group are also super-users.
+In addition, the administrator may identify a distinguished group using a configuration parameter. If set, members of this group are also super-users.
 
 The Web Server
 --------------
 
-By default, the identity of the web server is a configuration parameter. That is, the name node has no notion of the identity of the real user, but the web server behaves as if it has the identity (user and groups) of a user chosen by the administrator. Unless the chosen identity matches the super-user, parts of the name space may be inaccessible to the web server.
+By default, the identity of the web server is a configuration parameter. That is, the NameNode has no notion of the identity of the real user, but the web server behaves as if it has the identity (user and groups) of a user chosen by the administrator. Unless the chosen identity matches the super-user, parts of the name space may be inaccessible to the web server.
 
 ACLs (Access Control Lists)
 ---------------------------

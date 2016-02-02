@@ -66,6 +66,7 @@ import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobCounter;
+import org.apache.hadoop.mapreduce.JobPriority;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -159,6 +160,7 @@ public class TestMRJobs {
       Configuration conf = new Configuration();
       conf.set("fs.defaultFS", remoteFs.getUri().toString());   // use HDFS
       conf.set(MRJobConfig.MR_AM_STAGING_DIR, "/apps_staging_dir");
+      conf.setInt("yarn.cluster.max-application-priority", 10);
       mrCluster.init(conf);
       mrCluster.start();
     }
@@ -240,6 +242,67 @@ public class TestMRJobs {
     
     // TODO later:  add explicit "isUber()" checks of some sort (extend
     // JobStatus?)--compare against MRJobConfig.JOB_UBERTASK_ENABLE value
+  }
+
+  @Test(timeout = 3000000)
+  public void testJobWithChangePriority() throws Exception {
+
+    if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
+      LOG.info("MRAppJar " + MiniMRYarnCluster.APPJAR
+          + " not found. Not running test.");
+      return;
+    }
+
+    Configuration sleepConf = new Configuration(mrCluster.getConfig());
+    // set master address to local to test that local mode applied if framework
+    // equals local
+    sleepConf.set(MRConfig.MASTER_ADDRESS, "local");
+    sleepConf
+        .setInt("yarn.app.mapreduce.am.scheduler.heartbeat.interval-ms", 5);
+
+    SleepJob sleepJob = new SleepJob();
+    sleepJob.setConf(sleepConf);
+    Job job = sleepJob.createJob(1, 1, 1000, 20, 50, 1);
+
+    job.addFileToClassPath(APP_JAR); // The AppMaster jar itself.
+    job.setJarByClass(SleepJob.class);
+    job.setMaxMapAttempts(1); // speed up failures
+    job.submit();
+
+    // Set the priority to HIGH
+    job.setPriority(JobPriority.HIGH);
+    waitForPriorityToUpdate(job, JobPriority.HIGH);
+    // Verify the priority from job itself
+    Assert.assertEquals(job.getPriority(), JobPriority.HIGH);
+
+    // Change priority to NORMAL (3) with new api
+    job.setPriorityAsInteger(3); // Verify the priority from job itself
+    waitForPriorityToUpdate(job, JobPriority.NORMAL);
+    Assert.assertEquals(job.getPriority(), JobPriority.NORMAL);
+
+    // Change priority to a high integer value with new api
+    job.setPriorityAsInteger(89); // Verify the priority from job itself
+    waitForPriorityToUpdate(job, JobPriority.UNDEFINED_PRIORITY);
+    Assert.assertEquals(job.getPriority(), JobPriority.UNDEFINED_PRIORITY);
+
+    boolean succeeded = job.waitForCompletion(true);
+    Assert.assertTrue(succeeded);
+    Assert.assertEquals(JobStatus.State.SUCCEEDED, job.getJobState());
+  }
+
+  private void waitForPriorityToUpdate(Job job, JobPriority expectedStatus)
+      throws IOException, InterruptedException {
+    // Max wait time to get the priority update can be kept as 20sec (100 *
+    // 100ms)
+    int waitCnt = 200;
+    while (waitCnt-- > 0) {
+      if (job.getPriority().equals(expectedStatus)) {
+        // Stop waiting as priority is updated.
+        break;
+      } else {
+        Thread.sleep(100);
+      }
+    }
   }
 
   @Test(timeout = 300000)

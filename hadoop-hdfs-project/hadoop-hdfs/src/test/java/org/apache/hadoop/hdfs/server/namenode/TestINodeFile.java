@@ -22,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
@@ -88,6 +87,15 @@ public class TestINodeFile {
       "userName", null, FsPermission.getDefault());
   private short replication;
   private long preferredBlockSize = 1024;
+
+  static public INodeFile createINodeFile(long id) {
+    return new INodeFile(id, ("file" + id).getBytes(), perm, 0L, 0L, null,
+        (short)3, 1024L);
+  }
+
+  static void toCompleteFile(INodeFile file) {
+    file.toCompleteFile(Time.now(), 0, (short)1);
+  }
 
   INodeFile createINodeFile(short replication, long preferredBlockSize) {
     return new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
@@ -485,7 +493,7 @@ public class TestINodeFile {
       // Apply editlogs to fsimage, ensure inodeUnderConstruction is handled
       fsn.enterSafeMode(false);
       fsn.saveNamespace(0, 0);
-      fsn.leaveSafeMode();
+      fsn.leaveSafeMode(false);
 
       outStream.close();
 
@@ -1125,7 +1133,7 @@ public class TestINodeFile {
     assertEquals(clientName, uc.getClientName());
     assertEquals(clientMachine, uc.getClientMachine());
 
-    file.toCompleteFile(Time.now());
+    toCompleteFile(file);
     assertFalse(file.isUnderConstruction());
   }
 
@@ -1152,6 +1160,6 @@ public class TestINodeFile {
     INodeFile toBeCleared = createINodeFiles(1, "toBeCleared")[0];
     assertEquals(1, toBeCleared.getBlocks().length);
     toBeCleared.clearBlocks();
-    assertNull(toBeCleared.getBlocks());
+    assertTrue(toBeCleared.getBlocks().length == 0);
   }
 }

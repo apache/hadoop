@@ -76,6 +76,7 @@ public class TestQuotaWithStripedBlocks {
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
+      cluster = null;
     }
   }
 
@@ -90,9 +91,9 @@ public class TestQuotaWithStripedBlocks {
       INodeFile fileNode = dir.getINode4Write(file.toString()).asFile();
       ExtendedBlock previous = null;
       // Create striped blocks which have a cell in each block.
-      Block newBlock = DFSTestUtil.addStripedBlockToFile(cluster.getDataNodes(),
+      Block newBlock = DFSTestUtil.addBlockToFile(true, cluster.getDataNodes(),
           dfs, cluster.getNamesystem(), file.toString(), fileNode,
-          dfs.getClient().getClientName(), previous, 1);
+          dfs.getClient().getClientName(), previous, 1, 0);
       previous = new ExtendedBlock(cluster.getNamesystem().getBlockPoolId(),
           newBlock);
 

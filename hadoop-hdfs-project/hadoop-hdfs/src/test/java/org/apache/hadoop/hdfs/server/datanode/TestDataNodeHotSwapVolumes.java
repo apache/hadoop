@@ -51,10 +51,12 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -288,15 +290,27 @@ public class TestDataNodeHotSwapVolumes {
     String[] effectiveDataDirs = conf.get(DFS_DATANODE_DATA_DIR_KEY).split(",");
     String[] expectDataDirs = newDataDir.split(",");
     assertEquals(expectDataDirs.length, effectiveDataDirs.length);
+    List<StorageLocation> expectedStorageLocations = new ArrayList<>();
+    List<StorageLocation> effectiveStorageLocations = new ArrayList<>();
     for (int i = 0; i < expectDataDirs.length; i++) {
       StorageLocation expectLocation = StorageLocation.parse(expectDataDirs[i]);
-      StorageLocation effectiveLocation =
-          StorageLocation.parse(effectiveDataDirs[i]);
-      assertEquals(expectLocation.getStorageType(),
-          effectiveLocation.getStorageType());
-      assertEquals(expectLocation.getFile().getCanonicalFile(),
-          effectiveLocation.getFile().getCanonicalFile());
+      StorageLocation effectiveLocation = StorageLocation
+          .parse(effectiveDataDirs[i]);
+      expectedStorageLocations.add(expectLocation);
+      effectiveStorageLocations.add(effectiveLocation);
     }
+    Comparator<StorageLocation> comparator = new Comparator<StorageLocation>() {
+
+      @Override
+      public int compare(StorageLocation o1, StorageLocation o2) {
+        return o1.toString().compareTo(o2.toString());
+      }
+
+    };
+    Collections.sort(expectedStorageLocations, comparator);
+    Collections.sort(effectiveStorageLocations, comparator);
+    assertEquals("Effective volumes doesnt match expected",
+        expectedStorageLocations, effectiveStorageLocations);
 
     // Check that all newly created volumes are appropriately formatted.
     for (File volumeDir : newVolumeDirs) {
@@ -473,11 +487,27 @@ public class TestDataNodeHotSwapVolumes {
 
     DataNode dn = cluster.getDataNodes().get(0);
     Collection<String> oldDirs = getDataDirs(dn);
-    String newDirs = oldDirs.iterator().next();  // Keep the first volume.
+    // Findout the storage with block and remove it
+    ExtendedBlock block =
+        DFSTestUtil.getAllBlocks(fs, testFile).get(1).getBlock();
+    FsVolumeSpi volumeWithBlock = dn.getFSDataset().getVolume(block);
+    String basePath = volumeWithBlock.getBasePath();
+    File storageDir = new File(basePath);
+    URI fileUri = storageDir.toURI();
+    String dirWithBlock =
+        "[" + volumeWithBlock.getStorageType() + "]" + fileUri;
+    String newDirs = dirWithBlock;
+    for (String dir : oldDirs) {
+      if (dirWithBlock.startsWith(dir)) {
+        continue;
+      }
+      newDirs = dir;
+      break;
+    }
     dn.reconfigurePropertyImpl(
         DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, newDirs);
-    assertFileLocksReleased(
-        new ArrayList<String>(oldDirs).subList(1, oldDirs.size()));
+    oldDirs.remove(newDirs);
+    assertFileLocksReleased(oldDirs);
 
     triggerDeleteReport(dn);
 

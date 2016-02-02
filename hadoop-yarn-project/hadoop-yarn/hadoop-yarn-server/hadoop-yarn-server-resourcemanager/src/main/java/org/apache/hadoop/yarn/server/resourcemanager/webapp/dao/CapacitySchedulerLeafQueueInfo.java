@@ -17,13 +17,18 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
+import java.util.ArrayList;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UserInfo;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -62,16 +67,30 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
     userLimitFactor = q.getUserLimitFactor();
     AMResourceLimit = new ResourceInfo(q.getAMResourceLimit());
     usedAMResource = new ResourceInfo(q.getQueueResourceUsage().getAMUsed());
-    userAMResourceLimit = new ResourceInfo(q.getUserAMResourceLimit());
     preemptionDisabled = q.getPreemptionDisabled();
     orderingPolicyInfo = q.getOrderingPolicy().getInfo();
     defaultNodeLabelExpression = q.getDefaultNodeLabelExpression();
     defaultPriority = q.getDefaultApplicationPriority().getPriority();
+    ArrayList<UserInfo> usersList = users.getUsersList();
+    if (usersList.isEmpty()) {
+      // If no users are present, consider AM Limit for that queue.
+      userAMResourceLimit = resources.getPartitionResourceUsageInfo(
+          RMNodeLabelsManager.NO_LABEL).getAMLimit();
+    } else {
+      userAMResourceLimit = usersList.get(0).getResourceUsageInfo()
+          .getPartitionResourceUsageInfo(RMNodeLabelsManager.NO_LABEL)
+          .getAMLimit();
+    }
   }
 
   @Override
   protected void populateQueueResourceUsage(ResourceUsage queueResourceUsage) {
-    resources = new ResourceUsageInfo(queueResourceUsage);
+    resources = new ResourcesInfo(queueResourceUsage);
+  }
+
+  @Override
+  protected void populateQueueCapacities(QueueCapacities qCapacities) {
+    capacities = new QueueCapacitiesInfo(qCapacities);
   }
 
   public int getNumActiveApplications() {

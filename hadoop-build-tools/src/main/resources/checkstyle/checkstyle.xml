@@ -61,7 +61,8 @@
     <!-- See http://checkstyle.sf.net/config_misc.html#Translation -->
     <module name="Translation"/>
 
-    <module name="FileLength"/>
+    <!-- We have many existing long files, this check ends up being spurious -->
+    <!--<module name="FileLength">-->
     <module name="FileTabCharacter"/>
 
     <module name="TreeWalker">
@@ -130,13 +131,14 @@
         <module name="ParenPad"/>
         <module name="TypecastParenPad"/>
         <module name="WhitespaceAfter">
-	    	<property name="tokens" value="COMMA, SEMI"/>
-		</module>
+          <property name="tokens" value="COMMA, SEMI"/>
+        </module>
 
 
         <!-- Modifier Checks                                    -->
         <!-- See http://checkstyle.sf.net/config_modifiers.html -->
-        <module name="ModifierOrder"/>
+        <!-- This one is nitty, disable -->
+        <!-- <module name="ModifierOrder"/> -->
         <module name="RedundantModifier"/>
 
 
@@ -178,7 +180,7 @@
             <property name="basicOffset" value="2" />
             <property name="caseIndent" value="0" />
         </module> 
-        <module name="TodoComment"/>
+        <!--<module name="TodoComment"/>-->
         <module name="UpperEll"/>
 
     </module>

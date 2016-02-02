@@ -29,9 +29,11 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ReservationDeleteRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ReservationListRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ReservationSubmissionRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ReservationUpdateRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
@@ -105,7 +107,7 @@ public class TestReservationInputValidator {
   }
 
   @Test
-  public void testSubmitReservationDoesnotExist() {
+  public void testSubmitReservationDoesNotExist() {
     ReservationSubmissionRequest request =
         new ReservationSubmissionRequestPBImpl();
     Plan plan = null;
@@ -119,7 +121,7 @@ public class TestReservationInputValidator {
       String message = e.getMessage();
       Assert
           .assertTrue(message
-              .equals("The queue to submit is not specified. Please try again with a valid reservable queue."));
+              .equals("The queue is not specified. Please try again with a valid reservable queue."));
       LOG.info(message);
     }
   }
@@ -519,6 +521,103 @@ public class TestReservationInputValidator {
       Assert
           .assertTrue(message
               .endsWith(" is not associated with any valid plan. Please try again with a valid reservation."));
+      LOG.info(message);
+    }
+  }
+
+  @Test
+  public void testListReservationsNormal() {
+    ReservationListRequest request = new ReservationListRequestPBImpl();
+    request.setQueue(ReservationSystemTestUtil.reservationQ);
+    request.setEndTime(1000);
+    request.setStartTime(0);
+    when(rSystem.getPlan(ReservationSystemTestUtil.reservationQ)).thenReturn
+            (this.plan);
+    Plan plan = null;
+    try {
+      plan = rrValidator.validateReservationListRequest(rSystem, request);
+    } catch (YarnException e) {
+      Assert.fail(e.getMessage());
+    }
+    Assert.assertNotNull(plan);
+  }
+
+  @Test
+  public void testListReservationsInvalidTimeIntervalDefaults() {
+    ReservationListRequest request = new ReservationListRequestPBImpl();
+    request.setQueue(ReservationSystemTestUtil.reservationQ);
+    // Negative time gets converted to default values for Start Time and End
+    // Time which are 0 and Long.MAX_VALUE respectively.
+    request.setEndTime(-2);
+    request.setStartTime(-1);
+    when(rSystem.getPlan(ReservationSystemTestUtil.reservationQ)).thenReturn
+            (this.plan);
+    Plan plan = null;
+    try {
+      plan = rrValidator.validateReservationListRequest(rSystem, request);
+    } catch (YarnException e) {
+      Assert.fail(e.getMessage());
+    }
+    Assert.assertNotNull(plan);
+  }
+
+  @Test
+  public void testListReservationsInvalidTimeInterval() {
+    ReservationListRequest request = new ReservationListRequestPBImpl();
+    request.setQueue(ReservationSystemTestUtil.reservationQ);
+    request.setEndTime(1000);
+    request.setStartTime(2000);
+    when(rSystem.getPlan(ReservationSystemTestUtil.reservationQ)).thenReturn
+            (this.plan);
+    Plan plan = null;
+    try {
+      plan = rrValidator.validateReservationListRequest(rSystem, request);
+      Assert.fail();
+    } catch (YarnException e) {
+      Assert.assertNull(plan);
+      String message = e.getMessage();
+      Assert.assertTrue(message.equals("The specified end time must be " +
+              "greater than the specified start time."));
+      LOG.info(message);
+    }
+  }
+
+  @Test
+  public void testListReservationsEmptyQueue() {
+    ReservationListRequest request = new ReservationListRequestPBImpl();
+    request.setQueue("");
+    Plan plan = null;
+    try {
+      plan = rrValidator.validateReservationListRequest(rSystem, request);
+      Assert.fail();
+    } catch (YarnException e) {
+      Assert.assertNull(plan);
+      String message = e.getMessage();
+      Assert.assertTrue(message.equals(
+          "The queue is not specified. Please try again with a valid " +
+                                      "reservable queue."));
+      LOG.info(message);
+    }
+  }
+
+  @Test
+  public void testListReservationsNullPlan() {
+    ReservationListRequest request = new ReservationListRequestPBImpl();
+    request.setQueue(ReservationSystemTestUtil.reservationQ);
+    when(rSystem.getPlan(ReservationSystemTestUtil.reservationQ)).thenReturn
+            (null);
+    Plan plan = null;
+    try {
+      plan = rrValidator.validateReservationListRequest(rSystem, request);
+      Assert.fail();
+    } catch (YarnException e) {
+      Assert.assertNull(plan);
+      String message = e.getMessage();
+      Assert.assertTrue(message.equals(
+              "The specified queue: " + ReservationSystemTestUtil.reservationQ
+            + " is not managed by reservation system."
+            + " Please try again with a valid reservable queue."
+      ));
       LOG.info(message);
     }
   }

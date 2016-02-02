@@ -30,6 +30,7 @@ import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
+import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.Service;
@@ -102,7 +103,8 @@ public class ApplicationHistoryServer extends CompositeService {
 
     DefaultMetricsSystem.initialize("ApplicationHistoryServer");
     JvmMetrics jm = JvmMetrics.initSingleton("ApplicationHistoryServer", null);
-    pauseMonitor = new JvmPauseMonitor(conf);
+    pauseMonitor = new JvmPauseMonitor();
+    addService(pauseMonitor);
     jm.setPauseMonitor(pauseMonitor);
     super.serviceInit(conf);
   }
@@ -115,9 +117,6 @@ public class ApplicationHistoryServer extends CompositeService {
       throw new YarnRuntimeException("Failed to login", ie);
     }
 
-    if (pauseMonitor != null) {
-      pauseMonitor.start();
-    }
     super.serviceStart();
     startWebApp();
   }
@@ -126,9 +125,6 @@ public class ApplicationHistoryServer extends CompositeService {
   protected void serviceStop() throws Exception {
     if (webApp != null) {
       webApp.stop();
-    }
-    if (pauseMonitor != null) {
-      pauseMonitor.stop();
     }
     DefaultMetricsSystem.shutdown();
     super.serviceStop();
@@ -140,10 +136,14 @@ public class ApplicationHistoryServer extends CompositeService {
     return this.ahsClientService;
   }
 
+  private InetSocketAddress getListenerAddress() {
+    return this.webApp.httpServer().getConnectorAddress(0);
+  }
+
   @Private
   @VisibleForTesting
-  int getPort() {
-    return this.webApp.httpServer().getConnectorAddress(0).getPort();
+  public int getPort() {
+    return this.getListenerAddress().getPort();
   }
 
   /**
@@ -228,8 +228,9 @@ public class ApplicationHistoryServer extends CompositeService {
   }
 
   private TimelineDataManager createTimelineDataManager(Configuration conf) {
-    return new TimelineDataManager(
-        timelineStore, new TimelineACLsManager(conf));
+    TimelineACLsManager aclsMgr = new TimelineACLsManager(conf);
+    aclsMgr.setTimelineStore(timelineStore);
+    return new TimelineDataManager(timelineStore, aclsMgr);
   }
 
   @SuppressWarnings("unchecked")
@@ -252,10 +253,17 @@ public class ApplicationHistoryServer extends CompositeService {
       if(conf.getBoolean(YarnConfiguration
           .TIMELINE_SERVICE_HTTP_CROSS_ORIGIN_ENABLED, YarnConfiguration
               .TIMELINE_SERVICE_HTTP_CROSS_ORIGIN_ENABLED_DEFAULT)) {
-        if (initializers.length() != 0) {
-          initializers += ",";
+        if (initializers.contains(HttpCrossOriginFilterInitializer.class.getName())) {
+          initializers =
+            initializers.replaceAll(HttpCrossOriginFilterInitializer.class.getName(),
+              CrossOriginFilterInitializer.class.getName());
         }
-        initializers += CrossOriginFilterInitializer.class.getName();
+        else {
+          if (initializers.length() != 0) {
+            initializers += ",";
+          }
+          initializers += CrossOriginFilterInitializer.class.getName();
+        }
         modifiedInitializers = true;
       }
     }
@@ -323,6 +331,10 @@ public class ApplicationHistoryServer extends CompositeService {
          httpServer.addContext(uiWebAppContext, true);
        }
        httpServer.start();
+       conf.updateConnectAddr(YarnConfiguration.TIMELINE_SERVICE_BIND_HOST,
+         YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS,
+         this.getListenerAddress());
        LOG.info("Instantiating AHSWebApp at " + getPort());
     } catch (Exception e) {
       String msg = "AHSWebApp failed to start.";

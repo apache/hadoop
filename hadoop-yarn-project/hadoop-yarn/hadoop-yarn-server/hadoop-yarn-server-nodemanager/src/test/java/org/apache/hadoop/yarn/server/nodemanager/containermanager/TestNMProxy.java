@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.io.retry.UnreliableInterface;
 import org.apache.hadoop.security.SecurityUtil;
@@ -127,7 +129,7 @@ public class TestNMProxy extends BaseContainerManagerTest {
      StartContainersRequest allRequests =
          Records.newRecord(StartContainersRequest.class);
 
-    ContainerManagementProtocol proxy = getNMProxy();
+    ContainerManagementProtocol proxy = getNMProxy(conf);
 
     retryCount = 0;
     shouldThrowNMNotYetReadyException = false;
@@ -158,14 +160,40 @@ public class TestNMProxy extends BaseContainerManagerTest {
     StartContainersRequest allRequests =
         Records.newRecord(StartContainersRequest.class);
 
-    ContainerManagementProtocol proxy = getNMProxy();
+    ContainerManagementProtocol proxy = getNMProxy(conf);
 
     shouldThrowNMNotYetReadyException = false;
     retryCount = 0;
     proxy.startContainers(allRequests);
   }
 
-  private ContainerManagementProtocol getNMProxy() {
+  @Test(timeout = 20000)
+  public void testNMProxyRPCRetry() throws Exception {
+    conf.setLong(YarnConfiguration.CLIENT_NM_CONNECT_MAX_WAIT_MS, 1000);
+    conf.setLong(YarnConfiguration.CLIENT_NM_CONNECT_RETRY_INTERVAL_MS, 100);
+    StartContainersRequest allRequests =
+        Records.newRecord(StartContainersRequest.class);
+    Configuration newConf = new YarnConfiguration(conf);
+    newConf.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 100);
+
+    newConf.setInt(CommonConfigurationKeysPublic.
+        IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY, 100);
+    // connect to some dummy address so that it can trigger
+    // connection failure and RPC level retires.
+    newConf.set(YarnConfiguration.NM_ADDRESS, "1234");
+    ContainerManagementProtocol proxy = getNMProxy(newConf);
+    try {
+      proxy.startContainers(allRequests);
+      Assert.fail("should get socket exception");
+    } catch (IOException e) {
+      // socket exception should be thrown immediately, without RPC retries.
+      Assert.assertTrue(e.toString().
+          contains("Failed on local exception: java.net.SocketException"));
+    }
+  }
+
+  private ContainerManagementProtocol getNMProxy(Configuration conf) {
     ApplicationId appId = ApplicationId.newInstance(1, 1);
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId, 1);
 

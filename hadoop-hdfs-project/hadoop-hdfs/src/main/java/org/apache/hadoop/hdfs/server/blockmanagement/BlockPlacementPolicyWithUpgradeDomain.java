@@ -30,6 +30,7 @@ import java.util.Set;
 
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.net.NetworkTopology;
@@ -117,13 +118,13 @@ public class BlockPlacementPolicyWithUpgradeDomain extends
     return upgradeDomains;
   }
 
-  private Map<String, List<DatanodeStorageInfo>> getUpgradeDomainMap(
-      DatanodeStorageInfo[] storageInfos) {
-    Map<String, List<DatanodeStorageInfo>> upgradeDomainMap = new HashMap<>();
-    for(DatanodeStorageInfo storage : storageInfos) {
+  private <T> Map<String, List<T>> getUpgradeDomainMap(
+      Collection<T> storagesOrDataNodes) {
+    Map<String, List<T>> upgradeDomainMap = new HashMap<>();
+    for(T storage : storagesOrDataNodes) {
       String upgradeDomain = getUpgradeDomainWithDefaultValue(
-          storage.getDatanodeDescriptor());
-      List<DatanodeStorageInfo> storages = upgradeDomainMap.get(upgradeDomain);
+          getDatanodeInfo(storage));
+      List<T> storages = upgradeDomainMap.get(upgradeDomain);
       if (storages == null) {
         storages = new ArrayList<>();
         upgradeDomainMap.put(upgradeDomain, storages);
@@ -154,6 +155,19 @@ public class BlockPlacementPolicyWithUpgradeDomain extends
       }
     }
     return getShareUDSet;
+  }
+
+  private Collection<DatanodeStorageInfo> combine(
+      Collection<DatanodeStorageInfo> moreThanOne,
+      Collection<DatanodeStorageInfo> exactlyOne) {
+    List<DatanodeStorageInfo> all = new ArrayList<>();
+    if (moreThanOne != null) {
+      all.addAll(moreThanOne);
+    }
+    if (exactlyOne != null) {
+      all.addAll(exactlyOne);
+    }
+    return all;
   }
 
   /*
@@ -192,18 +206,18 @@ public class BlockPlacementPolicyWithUpgradeDomain extends
    *       shareRackNotUDSet} >= 3. Removing a node from shareUDNotRackSet
    *       will reduce the # of racks by 1 and won't change # of upgrade
    *       domains.
-   *         Note that this is different from BlockPlacementPolicyDefault which
-   *       will keep the # of racks after deletion. With upgrade domain policy,
-   *       given # of racks is still >= 2 after deletion, the data availability
-   *       model remains the same as BlockPlacementPolicyDefault (only supports
-   *       one rack failure).
+   *         Note that this is similar to BlockPlacementPolicyDefault which
+   *       will at most reduce the # of racks by 1, and never reduce it to < 2.
+   *       With upgrade domain policy, given # of racks is still >= 2 after
+   *       deletion, the data availability model remains the same as
+   *       BlockPlacementPolicyDefault (only supports one rack failure).
    *         For example, assume we have 4 replicas: d1(rack1, ud1),
    *       d2(rack2, ud1), d3(rack3, ud3), d4(rack3, ud4). Thus we have
    *       shareUDNotRackSet: {d1, d2} and shareRackNotUDSet: {d3, d4}.
    *       With upgrade domain policy, the remaining replicas after deletion
    *       are {d1(or d2), d3, d4} which has 2 racks.
-   *       With BlockPlacementPolicyDefault policy, the remaining replicas
-   *       after deletion are {d1, d2, d3(or d4)} which has 3 racks.
+   *       With BlockPlacementPolicyDefault policy, any of the 4 with the worst
+   *       condition will be deleted, which in worst case has 2 racks remain.
    *    3. shareUDNotRackSet isn't empty and shareRackNotUDSet is empty. This
    *       implies all replicas are on unique racks. Removing a node from
    *       shareUDNotRackSet will reduce # of racks (no different from
@@ -230,27 +244,19 @@ public class BlockPlacementPolicyWithUpgradeDomain extends
   @Override
   protected Collection<DatanodeStorageInfo> pickupReplicaSet(
       Collection<DatanodeStorageInfo> moreThanOne,
-      Collection<DatanodeStorageInfo> exactlyOne) {
-    List<DatanodeStorageInfo> all = new ArrayList<>();
-    if (moreThanOne != null) {
-      all.addAll(moreThanOne);
-    }
-    if (exactlyOne != null) {
-      all.addAll(exactlyOne);
-    }
-
-    Map<String, List<DatanodeStorageInfo>> upgradeDomains =
-        getUpgradeDomainMap(all.toArray(new DatanodeStorageInfo[all.size()]));
-
+      Collection<DatanodeStorageInfo> exactlyOne,
+      Map<String, List<DatanodeStorageInfo>> rackMap) {
     // shareUDSet includes DatanodeStorageInfo that share same upgrade
     // domain with another DatanodeStorageInfo.
-    List<DatanodeStorageInfo> shareUDSet = getShareUDSet(upgradeDomains);
+    Collection<DatanodeStorageInfo> all = combine(moreThanOne, exactlyOne);
+    List<DatanodeStorageInfo> shareUDSet = getShareUDSet(
+        getUpgradeDomainMap(all));
     // shareRackAndUDSet contains those DatanodeStorageInfo that
     // share rack and upgrade domain with another DatanodeStorageInfo.
     List<DatanodeStorageInfo> shareRackAndUDSet = new ArrayList<>();
     if (shareUDSet.size() == 0) {
       // All upgrade domains are unique, use the parent set.
-      return super.pickupReplicaSet(moreThanOne, exactlyOne);
+      return super.pickupReplicaSet(moreThanOne, exactlyOne, rackMap);
     } else if (moreThanOne != null) {
       for (DatanodeStorageInfo storage : shareUDSet) {
         if (moreThanOne.contains(storage)) {
@@ -259,5 +265,48 @@ public class BlockPlacementPolicyWithUpgradeDomain extends
       }
     }
     return (shareRackAndUDSet.size() > 0) ? shareRackAndUDSet : shareUDSet;
+  }
+
+  @Override
+  boolean useDelHint(DatanodeStorageInfo delHint,
+      DatanodeStorageInfo added, List<DatanodeStorageInfo> moreThanOne,
+      Collection<DatanodeStorageInfo> exactlyOne,
+      List<StorageType> excessTypes) {
+    if (!super.useDelHint(delHint, added, moreThanOne, exactlyOne,
+        excessTypes)) {
+      // If BlockPlacementPolicyDefault doesn't allow useDelHint, there is no
+      // point checking with upgrade domain policy.
+      return false;
+    }
+    return isMovableBasedOnUpgradeDomain(combine(moreThanOne, exactlyOne),
+        delHint, added);
+  }
+
+  // Check if moving from source to target will preserve the upgrade domain
+  // policy.
+  private <T> boolean isMovableBasedOnUpgradeDomain(Collection<T> all,
+      T source, T target) {
+    Map<String, List<T>> udMap = getUpgradeDomainMap(all);
+    // shareUDSet includes datanodes that share same upgrade
+    // domain with another datanode.
+    List<T> shareUDSet = getShareUDSet(udMap);
+    // check if removing source reduces the number of upgrade domains
+    if (notReduceNumOfGroups(shareUDSet, source, target)) {
+      return true;
+    } else if (udMap.size() > upgradeDomainFactor) {
+      return true; // existing number of upgrade domain exceeds the limit.
+    } else {
+      return false; // removing source reduces the number of UDs.
+    }
+  }
+
+  @Override
+  public boolean isMovable(Collection<DatanodeInfo> locs,
+      DatanodeInfo source, DatanodeInfo target) {
+    if (super.isMovable(locs, source, target)) {
+      return isMovableBasedOnUpgradeDomain(locs, source, target);
+    } else {
+      return false;
+    }
   }
 }

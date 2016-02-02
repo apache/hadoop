@@ -150,6 +150,8 @@ public class TestDFSOutputStream {
 
   @AfterClass
   public static void tearDown() {
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+    }
   }
 }

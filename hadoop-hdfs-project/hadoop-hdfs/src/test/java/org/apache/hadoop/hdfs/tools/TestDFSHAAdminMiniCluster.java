@@ -82,7 +82,10 @@ public class TestDFSHAAdminMiniCluster {
 
   @After
   public void shutdown() throws Exception {
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
   
   @Test

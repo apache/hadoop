@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.web.webhdfs.DataNodeUGIProvider;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
@@ -74,7 +75,6 @@ public class DatanodeHttpServer implements Closeable {
   private final Configuration confForCreate;
   private InetSocketAddress httpAddress;
   private InetSocketAddress httpsAddress;
-
   static final Log LOG = LogFactory.getLog(DatanodeHttpServer.class);
 
   public DatanodeHttpServer(final Configuration conf,
@@ -99,7 +99,7 @@ public class DatanodeHttpServer implements Closeable {
     this.infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
     this.infoServer.addServlet(null, "/blockScannerReport",
                                BlockScanner.Servlet.class);
-
+    DataNodeUGIProvider.init(conf);
     this.infoServer.start();
     final InetSocketAddress jettyAddr = infoServer.getConnectorAddress(0);
 

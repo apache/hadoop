@@ -97,7 +97,7 @@ public class RMActiveServiceContext {
   private RMNodeLabelsManager nodeLabelManager;
   private RMDelegatedNodeLabelsUpdater rmDelegatedNodeLabelsUpdater;
   private long epoch;
-  private Clock systemClock = new SystemClock();
+  private Clock systemClock = SystemClock.getInstance();
   private long schedulerRecoveryStartTime = 0;
   private long schedulerRecoveryWaitTime = 0;
   private boolean printLog = true;

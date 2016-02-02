@@ -41,7 +41,6 @@ import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -317,7 +316,7 @@ public class DFSck extends Configured implements Tool {
       namenodeAddress = getCurrentNamenodeAddress(dirpath);
     } catch (IOException ioe) {
       System.err.println("FileSystem is inaccessible due to:\n"
-          + StringUtils.stringifyException(ioe));
+          + ioe.toString());
     }
 
     if (namenodeAddress == null) {

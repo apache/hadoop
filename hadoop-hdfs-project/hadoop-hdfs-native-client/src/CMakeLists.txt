@@ -18,6 +18,8 @@
 
 cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 
+enable_testing()
+
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/../../../hadoop-common-project/hadoop-common)
 include(HadoopCommon)
 
@@ -66,7 +68,7 @@ endif()
 # Configure JNI.
 include(HadoopJNI)
 
-function(add_libhdfs_test NAME LIBRARY)
+function(build_libhdfs_test NAME LIBRARY)
     set(FILES)
     foreach(FIL ${ARGN})
         if (IS_ABSOLUTE ${FIL})
@@ -78,17 +80,16 @@ function(add_libhdfs_test NAME LIBRARY)
     add_executable("${NAME}_${LIBRARY}" ${FILES})
 endfunction()
 
+function(add_libhdfs_test NAME LIBRARY)
+    add_test("test_${NAME}_${LIBRARY}" "${NAME}_${LIBRARY}")
+endfunction()
+
 function(link_libhdfs_test NAME LIBRARY)
 target_link_libraries("${NAME}_${LIBRARY}" ${LIBRARY} ${ARGN})
 endfunction()
 
 add_subdirectory(main/native/libhdfs)
 add_subdirectory(main/native/libhdfs-tests)
-
-
-if(REQUIRE_LIBWEBHDFS)
-    add_subdirectory(contrib/libwebhdfs)
-endif()
 
 # Find Linux FUSE
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
