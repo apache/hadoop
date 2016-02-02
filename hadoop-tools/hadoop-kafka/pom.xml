@@ -70,8 +70,6 @@
         <configuration>
           <findbugsXmlOutput>true</findbugsXmlOutput>
           <xmlOutput>true</xmlOutput>
-          <excludeFilterFile>${basedir}/dev-support/findbugs-exclude.xml
-          </excludeFilterFile>
           <effort>Max</effort>
         </configuration>
       </plugin>
