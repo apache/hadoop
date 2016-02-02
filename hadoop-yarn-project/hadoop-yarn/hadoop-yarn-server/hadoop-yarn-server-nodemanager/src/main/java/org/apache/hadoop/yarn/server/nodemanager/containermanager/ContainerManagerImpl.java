@@ -286,18 +286,32 @@ public class ContainerManagerImpl extends CompositeService implements
       RecoveredApplicationsState appsState = stateStore.loadApplicationsState();
       for (ContainerManagerApplicationProto proto :
            appsState.getApplications()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Recovering application with state: " + proto.toString());
+        }
         recoverApplication(proto);
       }
 
       for (RecoveredContainerState rcs : stateStore.loadContainersState()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Recovering container with state: " + rcs);
+        }
+
         recoverContainer(rcs);
       }
 
       String diagnostic = "Application marked finished during recovery";
       for (ApplicationId appId : appsState.getFinishedApplications()) {
+
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Application marked finished during recovery: " + appId);
+        }
+
         dispatcher.getEventHandler().handle(
             new ApplicationFinishEvent(appId, diagnostic));
       }
+    } else {
+      LOG.info("Not a recoverable state store. Nothing to recover.");
     }
   }
 
