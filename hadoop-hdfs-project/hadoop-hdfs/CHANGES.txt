@@ -1884,6 +1884,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9721. Allow Delimited PB OIV tool to run upon fsimage that contains
     INodeReference. (Xiao Chen via lei)
 
+    HDFS-9503. Use generic option -fs for NNThroughputBenchmark instead of
+    -namenode. (Mingliang Liu via shv)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
