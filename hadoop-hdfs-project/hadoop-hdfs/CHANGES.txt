@@ -111,6 +111,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-9421. NNThroughputBenchmark replication test NPE with -namenode option.
     (Mingliang Liu via xyao)
 
+    HDFS-9503. Use generic option -fs for NNThroughputBenchmark instead of
+    -namenode. (Mingliang Liu via shv)
+
   OPTIMIZATIONS
 
     HDFS-10896. Move lock logging logic from FSNamesystem into FSNamesystemLock.
