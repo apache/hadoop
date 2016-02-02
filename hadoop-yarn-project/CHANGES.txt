@@ -115,6 +115,9 @@ Release 2.9.0 - UNRELEASED
 
     YARN-4647. Make RegisterNodeManagerRequestPBImpl thread-safe. (kasha)
 
+    YARN-4649. Add additional logging to some NM state store operations.
+    (Sidharta Seethana via vvasudev)
+
   OPTIMIZATIONS
 
   BUG FIXES
