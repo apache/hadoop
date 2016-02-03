@@ -374,6 +374,31 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     return volumeFailureInfos;
   }
 
+  /**
+   * Activate a volume to serve requests.
+   * @throws IOException if the storage UUID already exists.
+   */
+  private synchronized void activateVolume(
+      ReplicaMap replicaMap,
+      Storage.StorageDirectory sd, StorageType storageType,
+      FsVolumeReference ref) throws IOException {
+    DatanodeStorage dnStorage = storageMap.get(sd.getStorageUuid());
+    if (dnStorage != null) {
+      final String errorMsg = String.format(
+          "Found duplicated storage UUID: %s in %s.",
+          sd.getStorageUuid(), sd.getVersionFile());
+      LOG.error(errorMsg);
+      throw new IOException(errorMsg);
+    }
+    volumeMap.addAll(replicaMap);
+    storageMap.put(sd.getStorageUuid(),
+        new DatanodeStorage(sd.getStorageUuid(),
+            DatanodeStorage.State.NORMAL,
+            storageType));
+    asyncDiskService.addVolume(sd.getCurrentDir());
+    volumes.addVolume(ref);
+  }
+
   private void addVolume(Collection<StorageLocation> dataLocations,
       Storage.StorageDirectory sd) throws IOException {
     final File dir = sd.getCurrentDir();
@@ -389,16 +414,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     ReplicaMap tempVolumeMap = new ReplicaMap(this);
     fsVolume.getVolumeMap(tempVolumeMap, ramDiskReplicaTracker);
 
-    synchronized (this) {
-      volumeMap.addAll(tempVolumeMap);
-      storageMap.put(sd.getStorageUuid(),
-          new DatanodeStorage(sd.getStorageUuid(),
-              DatanodeStorage.State.NORMAL,
-              storageType));
-      asyncDiskService.addVolume(sd.getCurrentDir());
-      volumes.addVolume(ref);
-    }
-
+    activateVolume(tempVolumeMap, sd, storageType, ref);
     LOG.info("Added volume - " + dir + ", StorageType: " + storageType);
   }
 
@@ -456,15 +472,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     setupAsyncLazyPersistThread(fsVolume);
 
     builder.build();
-    synchronized (this) {
-      volumeMap.addAll(tempVolumeMap);
-      storageMap.put(sd.getStorageUuid(),
-          new DatanodeStorage(sd.getStorageUuid(),
-              DatanodeStorage.State.NORMAL,
-              storageType));
-      asyncDiskService.addVolume(sd.getCurrentDir());
-      volumes.addVolume(ref);
-    }
+    activateVolume(tempVolumeMap, sd, storageType, ref);
     LOG.info("Added volume - " + dir + ", StorageType: " + storageType);
   }
 
