@@ -1212,6 +1212,18 @@ Release 2.7.0 - 2015-04-20
       HDFS-7824. GetContentSummary API and its namenode implementation for
       Storage Type Quota/Usage. (Xiaoyu Yao via Arpit Agarwal)
 
+Release 2.6.5 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 2.6.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
