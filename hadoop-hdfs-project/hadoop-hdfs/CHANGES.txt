@@ -918,6 +918,9 @@ Trunk (Unreleased)
       HDFS-9403. Erasure coding: some EC tests are missing timeout.
       (Gao Rui via zhz)
 
+      HDFS-9658. Erasure Coding: allow to use multiple EC policies in striping
+      related tests. (Rui Li via zhz)
+
 Release 2.9.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

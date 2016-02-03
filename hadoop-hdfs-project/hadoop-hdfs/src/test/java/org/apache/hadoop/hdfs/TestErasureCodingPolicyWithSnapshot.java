@@ -39,11 +39,11 @@ public class TestErasureCodingPolicyWithSnapshot {
   private DistributedFileSystem fs;
   private Configuration conf;
 
-  private final static short GROUP_SIZE = StripedFileTestUtil.NUM_DATA_BLOCKS
-      + StripedFileTestUtil.NUM_PARITY_BLOCKS;
+  private final static short GROUP_SIZE = (short) (StripedFileTestUtil.
+      NUM_DATA_BLOCKS + StripedFileTestUtil.NUM_PARITY_BLOCKS);
   private final static int SUCCESS = 0;
-  private final ErasureCodingPolicy sysDefaultPolicy = ErasureCodingPolicyManager
-      .getSystemDefaultPolicy();
+  private final ErasureCodingPolicy sysDefaultPolicy =
+      StripedFileTestUtil.TEST_EC_POLICY;
 
   @Before
   public void setupCluster() throws IOException {

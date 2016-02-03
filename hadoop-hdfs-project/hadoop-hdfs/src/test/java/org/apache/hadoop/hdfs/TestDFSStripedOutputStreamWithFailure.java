@@ -17,16 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
-import java.util.concurrent.atomic.AtomicInteger;
-
+import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -52,7 +43,18 @@ import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.google.common.base.Preconditions;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Random;
+import java.util.Stack;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 
 public class TestDFSStripedOutputStreamWithFailure {
@@ -73,8 +75,8 @@ public class TestDFSStripedOutputStreamWithFailure {
   private static final int BLOCK_SIZE = CELL_SIZE * STRIPES_PER_BLOCK;
   private static final int BLOCK_GROUP_SIZE = BLOCK_SIZE * NUM_DATA_BLOCKS;
 
-  private static final int FLUSH_POS
-      = 9*DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT + 1;
+  private static final int FLUSH_POS =
+      9 * DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT + 1;
 
   static {
     System.out.println("NUM_DATA_BLOCKS  = " + NUM_DATA_BLOCKS);
@@ -103,23 +105,60 @@ public class TestDFSStripedOutputStreamWithFailure {
     return lengths;
   }
 
-  private static final int[][] dnIndexSuite = {
-      {0, 1},
-      {0, 5},
-      {0, 6},
-      {0, 8},
-      {1, 5},
-      {1, 6},
-      {6, 8},
-      {0, 1, 2},
-      {3, 4, 5},
-      {0, 1, 6},
-      {0, 5, 6},
-      {0, 5, 8},
-      {0, 6, 7},
-      {5, 6, 7},
-      {6, 7, 8},
-  };
+  private static final int[][] dnIndexSuite = getDnIndexSuite();
+
+  private static int[][] getDnIndexSuite() {
+    final int maxNumLevel = 2;
+    final int maxPerLevel = 8;
+    List<List<Integer>> allLists = new ArrayList<>();
+    int numIndex = NUM_PARITY_BLOCKS;
+    for (int i = 0; i < maxNumLevel && numIndex > 1; i++) {
+      List<List<Integer>> lists =
+          combinations(NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS, numIndex);
+      if (lists.size() > maxPerLevel) {
+        Collections.shuffle(lists);
+        lists = lists.subList(0, maxPerLevel);
+      }
+      allLists.addAll(lists);
+      numIndex--;
+    }
+    int[][] dnIndexSuite = new int[allLists.size()][];
+    for (int i = 0; i < dnIndexSuite.length; i++) {
+      int[] list = new int[allLists.get(i).size()];
+      for (int j = 0; j < list.length; j++) {
+        list[j] = allLists.get(i).get(j);
+      }
+      dnIndexSuite[i] = list;
+    }
+    return dnIndexSuite;
+  }
+
+  // get all combinations of k integers from {0,...,n-1}
+  private static List<List<Integer>> combinations(int n, int k) {
+    List<List<Integer>> res = new LinkedList<List<Integer>>();
+    if (k >= 1 && n >= k) {
+      getComb(n, k, new Stack<Integer>(), res);
+    }
+    return res;
+  }
+
+  private static void getComb(int n, int k, Stack<Integer> stack,
+      List<List<Integer>> res) {
+    if (stack.size() == k) {
+      List<Integer> list = new ArrayList<Integer>(stack);
+      res.add(list);
+    } else {
+      int next = stack.empty() ? 0 : stack.peek() + 1;
+      while (next < n) {
+        stack.push(next);
+        getComb(n, k, stack, res);
+        next++;
+      }
+    }
+    if (!stack.empty()) {
+      stack.pop();
+    }
+  }
 
   private int[] getKillPositions(int fileLen, int num) {
     int[] positions = new int[num];
@@ -193,10 +232,10 @@ public class TestDFSStripedOutputStreamWithFailure {
     conf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
     // Set short retry timeouts so this test runs faster
     conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
-    for (int dn = 0; dn < 9; dn += 2) {
+    for (int dn = 0; dn < NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS; dn += 2) {
       try {
         setup(conf);
-        runTest(length, new int[]{length/2}, new int[]{dn}, true);
+        runTest(length, new int[]{length / 2}, new int[]{dn}, true);
       } catch (Exception e) {
         LOG.error("failed, dn=" + dn + ", length=" + length);
         throw e;
@@ -216,10 +255,10 @@ public class TestDFSStripedOutputStreamWithFailure {
       ArrayList<DataNode> dataNodes = cluster.getDataNodes();
       // shutdown few datanodes to avoid getting sufficient data blocks number
       // of datanodes
-      int killDns = dataNodes.size() / 2;
-      int numDatanodes = dataNodes.size() - killDns;
-      for (int i = 0; i < killDns; i++) {
-        cluster.stopDataNode(i);
+      int numDatanodes = dataNodes.size();
+      while (numDatanodes >= NUM_DATA_BLOCKS) {
+        cluster.stopDataNode(0);
+        numDatanodes--;
       }
       cluster.restartNameNodes();
       cluster.triggerHeartbeats();
@@ -235,8 +274,10 @@ public class TestDFSStripedOutputStreamWithFailure {
         Assert.fail("Failed to validate available dns against blkGroupSize");
       } catch (IOException ioe) {
         // expected
-        GenericTestUtils.assertExceptionContains("Failed to get 6 nodes from" +
-            " namenode: blockGroupSize= 9, blocks.length= 5", ioe);
+        GenericTestUtils.assertExceptionContains("Failed to get " +
+            NUM_DATA_BLOCKS + " nodes from namenode: blockGroupSize= " +
+            (NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS) + ", blocks.length= " +
+            numDatanodes, ioe);
       }
     } finally {
       tearDown();
@@ -274,7 +315,7 @@ public class TestDFSStripedOutputStreamWithFailure {
 
   void runTest(final int length) {
     final HdfsConfiguration conf = newHdfsConfiguration();
-    for (int dn = 0; dn < 9; dn++) {
+    for (int dn = 0; dn < NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS; dn++) {
       try {
         LOG.info("runTest: dn=" + dn + ", length=" + length);
         setup(conf);

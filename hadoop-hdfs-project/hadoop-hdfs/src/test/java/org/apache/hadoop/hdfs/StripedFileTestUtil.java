@@ -26,10 +26,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem.WebHdfsInputStream;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
@@ -56,9 +58,14 @@ public class StripedFileTestUtil {
    * These values correspond to the values used by the system default erasure
    * coding policy.
    */
-  public static final short NUM_DATA_BLOCKS = (short) 6;
-  public static final short NUM_PARITY_BLOCKS = (short) 3;
-  public static final int BLOCK_STRIPED_CELL_SIZE = 64 * 1024;
+  public static final ErasureCodingPolicy TEST_EC_POLICY =
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+  public static final short NUM_DATA_BLOCKS =
+      (short) TEST_EC_POLICY.getNumDataUnits();
+  public static final short NUM_PARITY_BLOCKS =
+      (short) TEST_EC_POLICY.getNumParityUnits();
+  public static final int BLOCK_STRIPED_CELL_SIZE =
+      TEST_EC_POLICY.getCellSize();
 
   static int stripesPerBlock = 4;
   public static int blockSize = BLOCK_STRIPED_CELL_SIZE * stripesPerBlock;
