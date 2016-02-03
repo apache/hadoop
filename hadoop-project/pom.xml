@@ -961,6 +961,7 @@
           <configuration>
             <source>${javac.version}</source>
             <target>${javac.version}</target>
+            <useIncrementalCompilation>false</useIncrementalCompilation>
           </configuration>
         </plugin>
         <plugin>
