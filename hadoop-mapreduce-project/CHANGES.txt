@@ -1,6 +1,6 @@
 Hadoop MapReduce Change Log
 
-Release 2.6.4 - UNRELEASED
+Release 2.6.4 - 2016-02-02
 
   INCOMPATIBLE CHANGES
 
