@@ -34,6 +34,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -313,21 +315,24 @@ public abstract class FSImageTestUtil {
         fileList.add(f);
       }
     }
-    
+
+    Set<String> ignoredProperties = new HashSet<>();
+    ignoredProperties.add("storageID");
     for (List<File> sameNameList : groupedByName.values()) {
       if (sameNameList.get(0).isDirectory()) {
         // recurse
         assertParallelFilesAreIdentical(sameNameList, ignoredFileNames);
       } else {
         if ("VERSION".equals(sameNameList.get(0).getName())) {
-          assertPropertiesFilesSame(sameNameList.toArray(new File[0]));
+          assertPropertiesFilesSame(sameNameList.toArray(new File[0]),
+              ignoredProperties);
         } else {
           assertFileContentsSame(sameNameList.toArray(new File[0]));
         }
       }
     }  
   }
-  
+
   /**
    * Assert that a set of properties files all contain the same data.
    * We cannot simply check the md5sums here, since Properties files
@@ -339,6 +344,20 @@ public abstract class FSImageTestUtil {
    */
   public static void assertPropertiesFilesSame(File[] propFiles)
       throws IOException {
+    assertPropertiesFilesSame(propFiles, null);
+  }
+
+  /**
+   * Assert that a set of properties files all contain the same data.
+   *
+   * @param propFiles the files to compare.
+   * @param ignoredProperties the property names to be ignored during
+   *                          comparison.
+   * @throws IOException if the files cannot be opened or read
+   * @throws AssertionError if the files differ
+   */
+  public static void assertPropertiesFilesSame(
+      File[] propFiles, Set<String> ignoredProperties) throws IOException {
     Set<Map.Entry<Object, Object>> prevProps = null;
     
     for (File f : propFiles) {
@@ -355,7 +374,13 @@ public abstract class FSImageTestUtil {
       } else {
         Set<Entry<Object,Object>> diff =
           Sets.symmetricDifference(prevProps, props.entrySet());
-        if (!diff.isEmpty()) {
+        Iterator<Entry<Object, Object>> it = diff.iterator();
+        while (it.hasNext()) {
+          Entry<Object, Object> entry = it.next();
+          if (ignoredProperties != null &&
+              ignoredProperties.contains(entry.getKey())) {
+            continue;
+          }
           fail("Properties file " + f + " differs from " + propFiles[0]);
         }
       }
