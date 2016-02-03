@@ -984,9 +984,6 @@ Release 2.9.0 - UNRELEASED
 
   BUG FIXES
 
-    HDFS-9601. NNThroughputBenchmark.BlockReportStats should handle
-    NotReplicatedYetException on adding block (iwasakims)
-
     HDFS-9618. Fix mismatch between log level and guard in
     BlockManager#computeRecoveryWorkForBlocks (iwasakims)
 
@@ -2695,6 +2692,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9748. Avoid duplication in pendingReplications when
     addExpectedReplicasToPending is called twice. (Walter Su via jing9)
+
+    HDFS-9601. NNThroughputBenchmark.BlockReportStats should handle
+    NotReplicatedYetException on adding block (iwasakims)
 
 Release 2.7.3 - UNRELEASED
 
