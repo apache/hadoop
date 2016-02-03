@@ -1,5 +1,5 @@
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Hadoop  2.6.1 Release Notes</title>
+<title>Hadoop  2.6.4 Release Notes</title>
 <STYLE type="text/css">
 	H1 {font-family: sans-serif}
 	H2 {font-family: sans-serif; margin-left: 7mm}
@@ -7,632 +7,194 @@
 </STYLE>
 </head>
 <body>
-<h1>Hadoop  2.6.1 Release Notes</h1>
+<h1>Hadoop  2.6.4 Release Notes</h1>
 These release notes include new developer and user-facing incompatibilities, features, and major improvements. 
 <a name="changes"/>
-<h2>Changes since Hadoop 2.6.0</h2>
+<h2>Changes since Hadoop 2.6.3</h2>
 <ul>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-4047">YARN-4047</a>.
-     Major bug reported by Jason Lowe and fixed by Jason Lowe (resourcemanager)<br>
-     <b>ClientRMService getApplications has high scheduler lock contention</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3999">YARN-3999</a>.
-     Major bug reported by Jian He and fixed by Jian He <br>
-     <b>RM hangs on draining events</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3990">YARN-3990</a>.
-     Critical bug reported by Rohith Sharma K S and fixed by Bibin A Chundatt (resourcemanager)<br>
-     <b>AsyncDispatcher may overloaded with RMAppNodeUpdateEvent when Node is connected/disconnected</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3978">YARN-3978</a>.
-     Major improvement reported by Eric Payne and fixed by Eric Payne (timelineserver , yarn)<br>
-     <b>Configurably turn off the saving of container info in Generic AHS</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3850">YARN-3850</a>.
-     Blocker bug reported by Varun Saxena and fixed by Varun Saxena (log-aggregation , nodemanager)<br>
-     <b>NM fails to read files from full disks which can lead to container logs being lost and other issues</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3832">YARN-3832</a>.
-     Critical bug reported by Ranga Swamy and fixed by Brahma Reddy Battula (nodemanager)<br>
-     <b>Resource Localization fails on a cluster due to existing cache directories</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3733">YARN-3733</a>.
-     Blocker bug reported by Bibin A Chundatt and fixed by Rohith Sharma K S (resourcemanager)<br>
-     <b>Fix DominantRC#compare() does not work as expected if cluster resource is empty</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3725">YARN-3725</a>.
-     Blocker bug reported by Zhijie Shen and fixed by Zhijie Shen (resourcemanager , timelineserver)<br>
-     <b>App submission via REST API is broken in secure mode due to Timeline DT service address is empty</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3700">YARN-3700</a>.
-     Major sub-task reported by Xuan Gong and fixed by Xuan Gong (resourcemanager , webapp , yarn)<br>
-     <b>ATS Web Performance issue at load time when large number of jobs</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3585">YARN-3585</a>.
-     Critical bug reported by Peng Zhang and fixed by Rohith Sharma K S <br>
-     <b>NodeManager cannot exit on SHUTDOWN event triggered and NM recovery is enabled</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3526">YARN-3526</a>.
-     Major bug reported by Weiwei Yang and fixed by Weiwei Yang (resourcemanager , webapp)<br>
-     <b>ApplicationMaster tracking URL is incorrectly redirected on a QJM cluster</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3493">YARN-3493</a>.
-     Critical bug reported by Sumana Sathish and fixed by Jian He (yarn)<br>
-     <b>RM fails to come up with error "Failed to load/recover state" when  mem settings are changed</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3487">YARN-3487</a>.
-     Critical sub-task reported by Jason Lowe and fixed by Jason Lowe (capacityscheduler)<br>
-     <b>CapacityScheduler scheduler lock obtained unnecessarily when calling getQueue</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3464">YARN-3464</a>.
-     Critical bug reported by zhihai xu and fixed by zhihai xu (nodemanager)<br>
-     <b>Race condition in LocalizerRunner kills localizer before localizing all resources</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3393">YARN-3393</a>.
-     Critical bug reported by Zhijie Shen and fixed by Zhijie Shen (timelineserver)<br>
-     <b>Getting application(s) goes wrong when app finishes before starting the attempt</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3369">YARN-3369</a>.
-     Blocker bug reported by Giovanni Matteo Fumarola and fixed by Brahma Reddy Battula (resourcemanager)<br>
-     <b>Missing NullPointer check in AppSchedulingInfo causes RM to die </b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3287">YARN-3287</a>.
-     Major bug reported by Jonathan Eagles and fixed by Daryn Sharp <br>
-     <b>TimelineClient kerberos authentication failure uses wrong login context.</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3267">YARN-3267</a>.
-     Major bug reported by Prakash Ramachandran and fixed by Chang Li <br>
-     <b>Timelineserver applies the ACL rules after applying the limit on the number of records</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3251">YARN-3251</a>.
-     Blocker bug reported by Jason Lowe and fixed by Craig Welch <br>
-     <b>Fix CapacityScheduler deadlock when computing absolute max avail capacity (short term fix for 2.6.1)</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3249">YARN-3249</a>.
-     Minor improvement reported by Ryu Kobayashi and fixed by Ryu Kobayashi (resourcemanager)<br>
-     <b>Add a "kill application" button to Resource Manager's Web UI</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3242">YARN-3242</a>.
-     Critical bug reported by zhihai xu and fixed by zhihai xu (resourcemanager)<br>
-     <b>Asynchrony in ZK-close can lead to ZKRMStateStore watcher receiving events for old client</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3239">YARN-3239</a>.
-     Major bug reported by Hitesh Shah and fixed by Jian He <br>
-     <b>WebAppProxy does not support a final tracking url which has query fragments and params </b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3238">YARN-3238</a>.
-     Blocker bug reported by Jason Lowe and fixed by Jason Lowe <br>
-     <b>Connection timeouts to nodemanagers are retried at multiple levels</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3231">YARN-3231</a>.
-     Critical bug reported by Siqi Li and fixed by Siqi Li <br>
-     <b>FairScheduler: Changing queueMaxRunningApps interferes with pending jobs</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3230">YARN-3230</a>.
-     Major improvement reported by Jian He and fixed by Jian He <br>
-     <b>Clarify application states on the web UI</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3227">YARN-3227</a>.
-     Critical bug reported by Jonathan Eagles and fixed by Zhijie Shen <br>
-     <b>Timeline renew delegation token fails when RM user's TGT is expired</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3222">YARN-3222</a>.
-     Critical bug reported by Rohith Sharma K S and fixed by Rohith Sharma K S (resourcemanager)<br>
-     <b>RMNodeImpl#ReconnectNodeTransition should send scheduler events in sequential order</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3207">YARN-3207</a>.
-     Major bug reported by Prakash Ramachandran and fixed by Zhijie Shen (timelineserver)<br>
-     <b>secondary filter matches entites which do not have the key being filtered for.</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3124">YARN-3124</a>.
-     Major sub-task reported by Wangda Tan and fixed by Wangda Tan (api , client , resourcemanager)<br>
-     <b>Capacity Scheduler LeafQueue/ParentQueue should use QueueCapacities to track capacities-by-label</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3103">YARN-3103</a>.
-     Blocker bug reported by Jason Lowe and fixed by Jason Lowe (client)<br>
-     <b>AMRMClientImpl does not update AMRM token properly</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3099">YARN-3099</a>.
-     Major sub-task reported by Wangda Tan and fixed by Wangda Tan (api , client , resourcemanager)<br>
-     <b>Capacity Scheduler LeafQueue/ParentQueue should use ResourceUsage to track used-resources-by-label.</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3098">YARN-3098</a>.
-     Major sub-task reported by Wangda Tan and fixed by Wangda Tan (capacityscheduler)<br>
-     <b>Create common QueueCapacities class in Capacity Scheduler to track capacities-by-labels of queues</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3094">YARN-3094</a>.
-     Major bug reported by Jun Gong and fixed by Jun Gong (resourcemanager)<br>
-     <b>reset timer for liveness monitors after RM recovery</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3092">YARN-3092</a>.
-     Major sub-task reported by Wangda Tan and fixed by Wangda Tan (api , client , resourcemanager)<br>
-     <b>Create common ResourceUsage class to track labeled resource usages in Capacity Scheduler</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3055">YARN-3055</a>.
-     Blocker bug reported by Yi Liu and fixed by Daryn Sharp (security)<br>
-     <b>The token is not renewed properly if it's shared by jobs (oozie) in DelegationTokenRenewer</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3024">YARN-3024</a>.
-     Major bug reported by Chengbing Liu and fixed by Chengbing Liu (nodemanager)<br>
-     <b>LocalizerRunner should give DIE action when all resources are localized</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3011">YARN-3011</a>.
-     Major sub-task reported by Wang Hao and fixed by Varun Saxena (nodemanager)<br>
-     <b>NM dies because of the failure of resource localization</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2997">YARN-2997</a>.
-     Major bug reported by Chengbing Liu and fixed by Chengbing Liu (nodemanager)<br>
-     <b>NM keeps sending already-sent completed containers to RM until containers are removed from context</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2992">YARN-2992</a>.
-     Blocker bug reported by Karthik Kambatla and fixed by Karthik Kambatla (resourcemanager)<br>
-     <b>ZKRMStateStore crashes due to session expiry</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2978">YARN-2978</a>.
-     Critical bug reported by Jason Tufo and fixed by Varun Saxena <br>
-     <b>ResourceManager crashes with NPE while getting queue info</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2964">YARN-2964</a>.
-     Blocker bug reported by Daryn Sharp and fixed by Jian He (resourcemanager)<br>
-     <b>RM prematurely cancels tokens for jobs that submit jobs (oozie)</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2952">YARN-2952</a>.
-     Major bug reported by Jian He and fixed by Rohith Sharma K S <br>
-     <b>Incorrect version check in RMStateStore</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2922">YARN-2922</a>.
-     Major bug reported by Jason Tufo and fixed by Rohith Sharma K S (capacityscheduler , resourcemanager , scheduler)<br>
-     <b>ConcurrentModificationException in CapacityScheduler's LeafQueue</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2920">YARN-2920</a>.
-     Major sub-task reported by Wangda Tan and fixed by Wangda Tan <br>
-     <b>CapacityScheduler should be notified when labels on nodes changed</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2918">YARN-2918</a>.
-     Major sub-task reported by Rohith Sharma K S and fixed by Wangda Tan (resourcemanager)<br>
-     <b>Don't fail RM if queue's configured labels are not existed in cluster-node-labels</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2917">YARN-2917</a>.
-     Critical bug reported by Rohith Sharma K S and fixed by Rohith Sharma K S (resourcemanager)<br>
-     <b>Potential deadlock in AsyncDispatcher when system.exit called in AsyncDispatcher#dispatch and AsyscDispatcher#serviceStop from shutdown hook</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2910">YARN-2910</a>.
-     Major bug reported by Wilfred Spiegelenburg and fixed by Wilfred Spiegelenburg (fairscheduler)<br>
-     <b>FSLeafQueue can throw ConcurrentModificationException</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2906">YARN-2906</a>.
-     Major bug reported by Jason Lowe and fixed by Jason Lowe (capacityscheduler)<br>
-     <b>CapacitySchedulerPage shows HTML tags for a queue's Active Users</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2905">YARN-2905</a>.
-     Blocker bug reported by Jason Lowe and fixed by Varun Saxena <br>
-     <b>AggregatedLogsBlock page can infinitely loop if the aggregated log file is corrupted</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2900">YARN-2900</a>.
-     Major sub-task reported by Jonathan Eagles and fixed by Mit Desai (timelineserver)<br>
-     <b>Application (Attempt and Container) Not Found in AHS results in Internal Server Error (500)</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2894">YARN-2894</a>.
-     Major bug reported by Rohith Sharma K S and fixed by Rohith Sharma K S (resourcemanager)<br>
-     <b>When ACL's are enabled, if RM switches then application can not be viewed from web.</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2890">YARN-2890</a>.
-     Major bug reported by Mit Desai and fixed by Mit Desai <br>
-     <b>MiniYarnCluster should turn on timeline service if configured to do so</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2874">YARN-2874</a>.
-     Blocker bug reported by Naganarasimha G R and fixed by Naganarasimha G R (resourcemanager)<br>
-     <b>Dead lock in "DelegationTokenRenewer" which blocks RM to execute any further apps</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2865">YARN-2865</a>.
-     Critical bug reported by Rohith Sharma K S and fixed by Rohith Sharma K S (resourcemanager)<br>
-     <b>Application recovery continuously fails with "Application with id already present. Cannot duplicate"</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2856">YARN-2856</a>.
-     Critical bug reported by Rohith Sharma K S and fixed by Rohith Sharma K S (resourcemanager)<br>
-     <b>Application recovery throw InvalidStateTransitonException: Invalid event: ATTEMPT_KILLED at ACCEPTED</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2816">YARN-2816</a>.
-     Major bug reported by zhihai xu and fixed by zhihai xu (nodemanager)<br>
-     <b>NM fail to start with NPE during container recovery</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2766">YARN-2766</a>.
-     Major sub-task reported by Robert Kanter and fixed by Robert Kanter (timelineserver)<br>
-     <b> ApplicationHistoryManager is expected to return a sorted list of apps/attempts/containers</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2694">YARN-2694</a>.
-     Major sub-task reported by Wangda Tan and fixed by Wangda Tan (capacityscheduler , resourcemanager)<br>
-     <b>Ensure only single node labels specified in resource request / host, and node label expression only specified when resourceName=ANY</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2637">YARN-2637</a>.
-     Critical bug reported by Wangda Tan and fixed by Craig Welch (resourcemanager)<br>
-     <b>maximum-am-resource-percent could be respected for both LeafQueue/User when trying to activate applications.</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2414">YARN-2414</a>.
-     Major bug reported by Zhijie Shen and fixed by Wangda Tan (webapp)<br>
-     <b>RM web UI: app page will crash if app is failed before any attempt has been created</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2340">YARN-2340</a>.
-     Critical bug reported by Nishan Shetty and fixed by Rohith Sharma K S (resourcemanager , scheduler)<br>
-     <b>NPE thrown when RM restart after queue is STOPPED. There after RM can not recovery application's and remain in standby</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2301">YARN-2301</a>.
-     Major improvement reported by Jian He and fixed by Naganarasimha G R <br>
-     <b>Improve yarn container command</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-2246">YARN-2246</a>.
-     Major bug reported by Devaraj K and fixed by Devaraj K (webapp)<br>
-     <b>Job History Link in RM UI is redirecting to the URL which contains Job Id twice</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-1984">YARN-1984</a>.
-     Major sub-task reported by Jason Lowe and fixed by Varun Saxena <br>
-     <b>LeveldbTimelineStore does not handle db exceptions properly</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-1809">YARN-1809</a>.
-     Major sub-task reported by Zhijie Shen and fixed by Xuan Gong <br>
-     <b>Synchronize RM and Generic History Service Web-UIs</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6361">MAPREDUCE-6361</a>.
-     Critical bug reported by Junping Du and fixed by Junping Du <br>
-     <b>NPE issue in shuffle caused by concurrent issue between copySucceeded() in one thread and copyFailed() in another thread on the same host</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6324">MAPREDUCE-6324</a>.
-     Blocker bug reported by Jason Lowe and fixed by Jason Lowe (mr-am)<br>
-     <b>Uber jobs fail to update AMRM token when it rolls over</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6303">MAPREDUCE-6303</a>.
-     Blocker bug reported by Jason Lowe and fixed by Jason Lowe <br>
-     <b>Read timeout when retrying a fetch error can be fatal to a reducer</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6300">MAPREDUCE-6300</a>.
-     Minor bug reported by Siqi Li and fixed by Siqi Li <br>
-     <b>Task list sort by task id broken</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6267">MAPREDUCE-6267</a>.
-     Minor improvement reported by Chris Trezzo and fixed by Chris Trezzo <br>
-     <b>Refactor JobSubmitter#copyAndConfigureFiles into it's own class</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6238">MAPREDUCE-6238</a>.
-     Critical bug reported by zhihai xu and fixed by zhihai xu (mrv2)<br>
-     <b>MR2 can't run local jobs with -libjars command options which is a regression from MR1</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6237">MAPREDUCE-6237</a>.
-     Major bug reported by Kannan Rajah and fixed by Kannan Rajah (mrv2)<br>
-     <b>Multiple mappers with DBInputFormat don't work because of reusing conections</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6230">MAPREDUCE-6230</a>.
-     Blocker bug reported by Jason Lowe and fixed by Jason Lowe (mr-am)<br>
-     <b>MR AM does not survive RM restart if RM activated a new AMRM secret key</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6166">MAPREDUCE-6166</a>.
-     Major bug reported by Eric Payne and fixed by Eric Payne (mrv2)<br>
-     <b>Reducers do not validate checksum of map outputs when fetching directly to disk</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5649">MAPREDUCE-5649</a>.
-     Major bug reported by stanley shi and fixed by Gera Shegalov (mrv2)<br>
-     <b>Reduce cannot use more than 2G memory  for the final merge</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-8863">HDFS-8863</a>.
-     Critical bug reported by Kihwal Lee and fixed by Kihwal Lee <br>
-     <b>The remaining space check in BlockPlacementPolicyDefault is flawed</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-8846">HDFS-8846</a>.
-     Major bug reported by Zhe Zhang and fixed by Zhe Zhang (namenode)<br>
-     <b>Add a unit test for INotify functionality across a layout version upgrade</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-8486">HDFS-8486</a>.
-     Blocker bug reported by Daryn Sharp and fixed by Daryn Sharp (datanode)<br>
-     <b>DN startup may cause severe data loss</b><br>
-     <blockquote>Public service notice:
-- Every restart of a 2.6.x or 2.7.0 DN incurs a risk of unwanted block deletion.
-- Apply this patch if you are running a pre-2.7.1 release.</blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-8480">HDFS-8480</a>.
-     Critical bug reported by Zhe Zhang and fixed by Zhe Zhang <br>
-     <b>Fix performance and timeout issues in HDFS-7929 by using hard-links to preserve old edit logs instead of copying them</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-8431">HDFS-8431</a>.
-     Critical bug reported by Sumana Sathish and fixed by Anu Engineer (HDFS)<br>
-     <b>hdfs crypto class not found in Windows</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-8404">HDFS-8404</a>.
-     Major bug reported by Nathan Roberts and fixed by Nathan Roberts (namenode)<br>
-     <b>Pending block replication can get stuck using older genstamp</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-8384">HDFS-8384</a>.
-     Minor improvement reported by Tsz Wo Nicholas Sze and fixed by Jing Zhao (namenode)<br>
-     <b>Allow NN to startup if there are files having a lease but are not under construction</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-8270">HDFS-8270</a>.
-     Major bug reported by Andrey Stepachev and fixed by J.Andreina (hdfs-client)<br>
-     <b>create() always retried with hardcoded timeout when file already exists with open lease</b><br>
-     <blockquote>Proxy level retries will not be done on AlreadyBeingCreatedExeption for create() op.</blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-8245">HDFS-8245</a>.
-     Major bug reported by Rushabh S Shah and fixed by Rushabh S Shah <br>
-     <b>Standby namenode doesn't process DELETED_BLOCK if the add block request is in edit log.</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-8219">HDFS-8219</a>.
-     Major bug reported by Peter Shi and fixed by Surendra Singh Lilhore <br>
-     <b>setStoragePolicy with folder behavior is different after cluster restart</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-8127">HDFS-8127</a>.
-     Blocker bug reported by Jing Zhao and fixed by Jing Zhao (ha)<br>
-     <b>NameNode Failover during HA upgrade can cause DataNode to finalize upgrade</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-8072">HDFS-8072</a>.
-     Major bug reported by Arpit Agarwal and fixed by Arpit Agarwal (datanode)<br>
-     <b>Reserved RBW space is not released if client terminates while writing block</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-8070">HDFS-8070</a>.
-     Blocker bug reported by Gopal V and fixed by Colin Patrick McCabe (caching)<br>
-     <b>Pre-HDFS-7915 DFSClient cannot use short circuit on post-HDFS-7915 DataNode</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-8046">HDFS-8046</a>.
+<li> <a href="https://issues.apache.org/jira/browse/YARN-4598">YARN-4598</a>.
+     Major bug reported by tangshangwen and fixed by tangshangwen (nodemanager)<br>
+     <b>Invalid event: RESOURCE_FAILED at CONTAINER_CLEANEDUP_AFTER_KILL</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-4581">YARN-4581</a>.
+     Major bug reported by sandflee and fixed by sandflee (resourcemanager)<br>
+     <b>AHS writer thread leak makes RM crash while RM is recovering</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-4546">YARN-4546</a>.
+     Critical bug reported by Jason Lowe and fixed by Jason Lowe (resourcemanager)<br>
+     <b>ResourceManager crash due to scheduling opportunity overflow</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-4452">YARN-4452</a>.
+     Critical bug reported by Naganarasimha G R and fixed by Naganarasimha G R <br>
+     <b>NPE when submit Unmanaged application</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-4414">YARN-4414</a>.
+     Major bug reported by Jason Lowe and fixed by Chang Li (nodemanager)<br>
+     <b>Nodemanager connection errors are retried at multiple levels</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-4380">YARN-4380</a>.
+     Major bug reported by Tsuyoshi Ozawa and fixed by Varun Saxena (test)<br>
+     <b>TestResourceLocalizationService.testDownloadingResourcesOnContainerKill fails intermittently</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-4354">YARN-4354</a>.
+     Blocker bug reported by Jason Lowe and fixed by Jason Lowe (nodemanager)<br>
+     <b>Public resource localization fails with NPE</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-4180">YARN-4180</a>.
+     Critical bug reported by Anubhav Dhoot and fixed by Anubhav Dhoot (resourcemanager)<br>
+     <b>AMLauncher does not retry on failures when talking to NM </b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-3893">YARN-3893</a>.
+     Critical sub-task reported by Bibin A Chundatt and fixed by Bibin A Chundatt (resourcemanager)<br>
+     <b>Both RM in active state when Admin#transitionToActive failure from refeshAll()</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-3857">YARN-3857</a>.
+     Critical bug reported by mujunchao and fixed by mujunchao (resourcemanager)<br>
+     <b>Memory leak in ResourceManager with SIMPLE mode</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-3849">YARN-3849</a>.
+     Critical bug reported by Sunil G and fixed by Sunil G (capacityscheduler)<br>
+     <b>Too much of preemption activity causing continuos killing of containers across queues</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-3842">YARN-3842</a>.
+     Critical bug reported by Karthik Kambatla and fixed by Robert Kanter <br>
+     <b>NMProxy should retry on NMNotYetReadyException</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-3697">YARN-3697</a>.
+     Critical bug reported by zhihai xu and fixed by zhihai xu (fairscheduler)<br>
+     <b>FairScheduler: ContinuousSchedulingThread can fail to shutdown</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-3695">YARN-3695</a>.
+     Major bug reported by Junping Du and fixed by Raju Bairishetti <br>
+     <b>ServerProxy (NMProxy, etc.) shouldn't retry forever for non network exception.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-3535">YARN-3535</a>.
+     Critical bug reported by Peng Zhang and fixed by Peng Zhang (capacityscheduler , fairscheduler , resourcemanager)<br>
+     <b>Scheduler must re-request container resources when RMContainer transitions from ALLOCATED to KILLED</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-3154">YARN-3154</a>.
+     Blocker sub-task reported by Xuan Gong and fixed by Xuan Gong (nodemanager , resourcemanager)<br>
+     <b>Should not upload partial logs for MR jobs or other "short-running' applications </b><br>
+     <blockquote>Applications which made use of the LogAggregationContext in their application will need to revisit this code in order to make sure that their logs continue to get rolled out.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-2975">YARN-2975</a>.
+     Blocker bug reported by Karthik Kambatla and fixed by Karthik Kambatla <br>
+     <b>FSLeafQueue app lists are accessed without required locks</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-2902">YARN-2902</a>.
+     Major sub-task reported by Jason Lowe and fixed by Varun Saxena (nodemanager)<br>
+     <b>Killing a container that is localizing can orphan resources in the DOWNLOADING state</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6621">MAPREDUCE-6621</a>.
+     Major bug reported by Xuan Gong and fixed by Xuan Gong <br>
+     <b>Memory Leak in JobClient#submitJobInternal()</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6619">MAPREDUCE-6619</a>.
+     Major bug reported by shanyu zhao and fixed by Junping Du (mrv2)<br>
+     <b>HADOOP_CLASSPATH is overwritten in MR container</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6618">MAPREDUCE-6618</a>.
+     Major bug reported by Xuan Gong and fixed by Xuan Gong <br>
+     <b>YarnClientProtocolProvider leaking the YarnClient thread. </b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6577">MAPREDUCE-6577</a>.
+     Critical bug reported by Sangjin Lee and fixed by Sangjin Lee (mr-am)<br>
+     <b>MR AM unable to load native library without MR_AM_ADMIN_USER_ENV set</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6554">MAPREDUCE-6554</a>.
+     Critical bug reported by Bibin A Chundatt and fixed by Bibin A Chundatt <br>
+     <b>MRAppMaster servicestart failing  with NPE in MRAppMaster#parsePreviousJobHistory</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6492">MAPREDUCE-6492</a>.
+     Critical bug reported by Bibin A Chundatt and fixed by Bibin A Chundatt <br>
+     <b>AsyncDispatcher exit with NPE on TaskAttemptImpl#sendJHStartEventForAssignedFailTask</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6436">MAPREDUCE-6436</a>.
+     Blocker improvement reported by Ryu Kobayashi and fixed by Kai Sasaki <br>
+     <b>JobHistory cache issue</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6363">MAPREDUCE-6363</a>.
+     Critical bug reported by Brahma Reddy Battula and fixed by Bibin A Chundatt (benchmarks)<br>
+     <b>[NNBench] Lease mismatch error when running with multiple mappers</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5982">MAPREDUCE-5982</a>.
+     Major bug reported by Jason Lowe and fixed by Chang Li (mr-am)<br>
+     <b>Task attempts that fail from the ASSIGNED state can disappear</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-9600">HDFS-9600</a>.
+     Critical bug reported by Phil Yang and fixed by Phil Yang <br>
+     <b>do not check replication if the block is under construction</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-9574">HDFS-9574</a>.
      Major bug reported by Kihwal Lee and fixed by Kihwal Lee <br>
-     <b>Allow better control of getContentSummary</b><br>
+     <b>Reduce client failures during datanode restart</b><br>
      <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7999">HDFS-7999</a>.
-     Major bug reported by zhouyingchao and fixed by zhouyingchao <br>
-     <b>FsDatasetImpl#createTemporary sometimes holds the FSDatasetImpl lock for a very long time</b><br>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-9445">HDFS-9445</a>.
+     Blocker bug reported by Kihwal Lee and fixed by Walter Su <br>
+     <b>Datanode may deadlock while handling a bad volume</b><br>
      <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7980">HDFS-7980</a>.
-     Major bug reported by Hui Zheng and fixed by Walter Su <br>
-     <b>Incremental BlockReport will dramatically slow down the startup of  a namenode</b><br>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-9415">HDFS-9415</a>.
+     Major improvement reported by Arpit Agarwal and fixed by Xiaobing Zhou (documentation)<br>
+     <b>Document dfs.cluster.administrators and dfs.permissions.superusergroup</b><br>
      <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7960">HDFS-7960</a>.
-     Critical bug reported by Lei (Eddy) Xu and fixed by Colin Patrick McCabe <br>
-     <b>The full block report should prune zombie storages even if they're not empty</b><br>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-9314">HDFS-9314</a>.
+     Major improvement reported by Ming Ma and fixed by Xiao Chen <br>
+     <b>Improve BlockPlacementPolicyDefault's picking of excess replicas</b><br>
      <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7930">HDFS-7930</a>.
-     Blocker bug reported by Konstantin Shvachko and fixed by Yi Liu (namenode)<br>
-     <b>commitBlockSynchronization() does not remove locations</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7929">HDFS-7929</a>.
-     Major bug reported by Zhe Zhang and fixed by Zhe Zhang <br>
-     <b>inotify unable fetch pre-upgrade edit log segments once upgrade starts</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7915">HDFS-7915</a>.
-     Major bug reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe <br>
-     <b>The DataNode can sometimes allocate a ShortCircuitShm slot and fail to tell the DFSClient about it because of a network error</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7894">HDFS-7894</a>.
-     Critical bug reported by Kihwal Lee and fixed by Brahma Reddy Battula <br>
-     <b>Rolling upgrade readiness is not updated in jmx until query command is issued.</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7885">HDFS-7885</a>.
-     Critical bug reported by vitthal (Suhas) Gogate and fixed by Tsz Wo Nicholas Sze (datanode)<br>
-     <b>Datanode should not trust the generation stamp provided by client</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7884">HDFS-7884</a>.
-     Blocker bug reported by Tsz Wo Nicholas Sze and fixed by Brahma Reddy Battula (datanode)<br>
-     <b>NullPointerException in BlockSender</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7871">HDFS-7871</a>.
-     Critical bug reported by Jing Zhao and fixed by Jing Zhao <br>
-     <b>NameNodeEditLogRoller can keep printing "Swallowing exception" message</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7830">HDFS-7830</a>.
-     Major bug reported by Lei (Eddy) Xu and fixed by Lei (Eddy) Xu (datanode)<br>
-     <b>DataNode does not release the volume lock when adding a volume fails.</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7788">HDFS-7788</a>.
-     Blocker bug reported by Kihwal Lee and fixed by Rushabh S Shah <br>
-     <b>Post-2.6 namenode may not start up with an image containing inodes created with an old release.</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7763">HDFS-7763</a>.
-     Major bug reported by Liang Xie and fixed by Liang Xie (ha)<br>
-     <b>fix zkfc hung issue due to not catching exception in a corner case</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7742">HDFS-7742</a>.
-     Major bug reported by Nathan Roberts and fixed by Nathan Roberts (namenode)<br>
-     <b>favoring decommissioning node for replication can cause a block to stay underreplicated for long periods</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7733">HDFS-7733</a>.
-     Major bug reported by Arpit Agarwal and fixed by Arpit Agarwal (nfs)<br>
-     <b>NFS: readdir/readdirplus return null directory attribute on failure</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7714">HDFS-7714</a>.
-     Major bug reported by Chris Nauroth and fixed by Vinayakumar B (datanode)<br>
-     <b>Simultaneous restart of HA NameNodes and DataNode can cause DataNode to register successfully with only one NameNode.</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7707">HDFS-7707</a>.
-     Major bug reported by Yongjun Zhang and fixed by Yongjun Zhang (namenode)<br>
-     <b>Edit log corruption due to delayed block removal again</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7610">HDFS-7610</a>.
-     Major bug reported by Lei (Eddy) Xu and fixed by Lei (Eddy) Xu (datanode)<br>
-     <b>Fix removal of dynamically added DN volumes</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7609">HDFS-7609</a>.
-     Critical bug reported by Carrey Zhan and fixed by Ming Ma (namenode)<br>
-     <b>Avoid retry cache collision when Standby NameNode loading edits</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7596">HDFS-7596</a>.
-     Major bug reported by Arpit Agarwal and fixed by Arpit Agarwal (namenode)<br>
-     <b>NameNode should prune dead storages from storageMap</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7587">HDFS-7587</a>.
-     Blocker bug reported by Kihwal Lee and fixed by Jing Zhao (namenode)<br>
-     <b>Edit log corruption can happen if append fails with a quota violation</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7579">HDFS-7579</a>.
-     Minor improvement reported by Charles Lamb and fixed by Charles Lamb (datanode)<br>
-     <b>Improve log reporting during block report rpc failure</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7575">HDFS-7575</a>.
-     Critical bug reported by Lars Francke and fixed by Arpit Agarwal <br>
-     <b>Upgrade should generate a unique storage ID for each volume</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7552">HDFS-7552</a>.
-     Major bug reported by Liang Xie and fixed by Liang Xie (datanode , test)<br>
-     <b>change FsVolumeList toString() to fix TestDataNodeVolumeFailureToleration </b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7533">HDFS-7533</a>.
-     Major bug reported by Kihwal Lee and fixed by Eric Payne <br>
-     <b>Datanode sometimes does not shutdown on receiving upgrade shutdown command</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7531">HDFS-7531</a>.
-     Major improvement reported by Lei (Eddy) Xu and fixed by Lei (Eddy) Xu (datanode)<br>
-     <b>Improve the concurrent access on FsVolumeList</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7503">HDFS-7503</a>.
-     Major bug reported by Arpit Agarwal and fixed by Arpit Agarwal (namenode)<br>
-     <b>Namenode restart after large deletions can cause slow processReport (due to logging)</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7489">HDFS-7489</a>.
-     Critical bug reported by Noah Lorang and fixed by Noah Lorang (datanode)<br>
-     <b>Incorrect locking in FsVolumeList#checkDirs can hang datanodes</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7470">HDFS-7470</a>.
-     Major bug reported by zhaoyunjiong and fixed by zhaoyunjiong (namenode)<br>
-     <b>SecondaryNameNode need twice memory when calling reloadFromImageFile</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7446">HDFS-7446</a>.
-     Major improvement reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (hdfs-client)<br>
-     <b>HDFS inotify should have the ability to determine what txid it has read up to</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7443">HDFS-7443</a>.
-     Blocker bug reported by Kihwal Lee and fixed by Colin Patrick McCabe <br>
-     <b>Datanode upgrade to BLOCKID_BASED_LAYOUT fails if duplicate block files are present in the same volume</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7425">HDFS-7425</a>.
-     Minor bug reported by Chris Nauroth and fixed by Chris Nauroth (namenode)<br>
-     <b>NameNode block deletion logging uses incorrect appender.</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7314">HDFS-7314</a>.
-     Major improvement reported by Ming Ma and fixed by Ming Ma <br>
-     <b>When the DFSClient lease cannot be renewed, abort open-for-write files rather than the entire DFSClient</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7278">HDFS-7278</a>.
-     Major improvement reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (datanode)<br>
-     <b>Add a command that allows sysadmins to manually trigger full block reports from a DN</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7263">HDFS-7263</a>.
-     Major bug reported by Konstantin Shvachko and fixed by Tao Luo (hdfs-client)<br>
-     <b>Snapshot read can reveal future bytes for appended files.</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7235">HDFS-7235</a>.
-     Major bug reported by Yongjun Zhang and fixed by Yongjun Zhang (datanode , namenode)<br>
-     <b>DataNode#transferBlock should report blocks that don't exist using reportBadBlock</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7225">HDFS-7225</a>.
-     Major bug reported by Zhe Zhang and fixed by Zhe Zhang (namenode)<br>
-     <b>Remove stale block invalidation work when DN re-registers with different UUID</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7213">HDFS-7213</a>.
-     Critical bug reported by Daryn Sharp and fixed by Eric Payne (namenode)<br>
-     <b>processIncrementalBlockReport performance degradation</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7182">HDFS-7182</a>.
-     Major improvement reported by Ming Ma and fixed by Ming Ma <br>
-     <b>JMX metrics aren't accessible when NN is busy</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7035">HDFS-7035</a>.
-     Major sub-task reported by Lei (Eddy) Xu and fixed by Lei (Eddy) Xu (datanode)<br>
-     <b>Make adding a new data directory to the DataNode an atomic operation and improve error handling</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7009">HDFS-7009</a>.
-     Major bug reported by Ming Ma and fixed by Ming Ma (datanode)<br>
-     <b>Active NN and standby NN have different live nodes</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-4882">HDFS-4882</a>.
-     Critical bug reported by Zesheng Wu and fixed by Ravi Prakash (hdfs-client , namenode)<br>
-     <b>Prevent the Namenode's LeaseManager from looping forever in checkLeases</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-3443">HDFS-3443</a>.
-     Major bug reported by suja s and fixed by Vinayakumar B (auto-failover , ha)<br>
-     <b>Fix NPE when namenode transition to active during startup by adding checkNNStartup() in NameNodeRpcServer</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-12280">HADOOP-12280</a>.
-     Minor improvement reported by Masatake Iwasaki and fixed by Masatake Iwasaki (test)<br>
-     <b>Skip unit tests based on maven profile rather than NativeCodeLoader.isNativeCodeLoaded</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11934">HADOOP-11934</a>.
-     Blocker bug reported by Mike Yoder and fixed by Larry McCay (security)<br>
-     <b>Use of JavaKeyStoreProvider in LdapGroupsMapping causes infinite loop</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11932">HADOOP-11932</a>.
-     Critical bug reported by Jian He and fixed by Brahma Reddy Battula <br>
-     <b> MetricsSinkAdapter hangs when being stopped</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11812">HADOOP-11812</a>.
-     Blocker improvement reported by Gera Shegalov and fixed by Gera Shegalov (fs)<br>
-     <b>Implement listLocatedStatus for ViewFileSystem to speed up split calculation</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11802">HADOOP-11802</a>.
-     Major bug reported by Eric Payne and fixed by Colin Patrick McCabe <br>
-     <b>DomainSocketWatcher thread terminates sometimes after there is an I/O error during requestShortCircuitShm</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11730">HADOOP-11730</a>.
-     Major bug reported by Takenori Sato and fixed by Takenori Sato (fs/s3)<br>
-     <b>Regression: s3n read failure recovery broken</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11710">HADOOP-11710</a>.
-     Critical sub-task reported by Sean Busbey and fixed by Sean Busbey (fs)<br>
-     <b>Make CryptoOutputStream behave like DFSOutputStream wrt synchronization</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11674">HADOOP-11674</a>.
-     Critical bug reported by Sean Busbey and fixed by Sean Busbey (io)<br>
-     <b>oneByteBuf in CryptoInputStream and CryptoOutputStream should be non static</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11604">HADOOP-11604</a>.
-     Critical bug reported by Liang Xie and fixed by Chris Nauroth (net)<br>
-     <b>Prevent ConcurrentModificationException while closing domain sockets during shutdown of DomainSocketWatcher thread.</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11506">HADOOP-11506</a>.
-     Major improvement reported by Dmitriy V. Ryaboy and fixed by Gera Shegalov (conf)<br>
-     <b>Configuration variable expansion regex expensive for long values</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11491">HADOOP-11491</a>.
-     Critical bug reported by Gera Shegalov and fixed by Brahma Reddy Battula (fs)<br>
-     <b>HarFs incorrectly declared as requiring an authority</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11482">HADOOP-11482</a>.
-     Major bug reported by Arun Suresh and fixed by Arun Suresh <br>
-     <b>Use correct UGI when KMSClientProvider is called by a proxy user</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11466">HADOOP-11466</a>.
-     Minor improvement reported by Suman Somasundar and fixed by Suman Somasundar (io , performance , util)<br>
-     <b>FastByteComparisons: do not use UNSAFE_COMPARER on the SPARC architecture because it is slower there</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11368">HADOOP-11368</a>.
-     Major bug reported by Arun Suresh and fixed by Arun Suresh (kms)<br>
-     <b>Fix SSLFactory truststore reloader thread leak in KMSClientProvider</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11350">HADOOP-11350</a>.
-     Major bug reported by Benoy Antony and fixed by Benoy Antony (security)<br>
-     <b>The size of header buffer of HttpServer is too small when HTTPS is enabled</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11343">HADOOP-11343</a>.
-     Blocker bug reported by Jerry Chen and fixed by Jerry Chen (security)<br>
-     <b>Overflow is not properly handled in caclulating final iv for AES CTR</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11333">HADOOP-11333</a>.
-     Major bug reported by zhaoyunjiong and fixed by zhaoyunjiong <br>
-     <b>Fix deadlock in DomainSocketWatcher when the notification pipe is full</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11316">HADOOP-11316</a>.
-     Blocker bug reported by Tsuyoshi Ozawa and fixed by Tsuyoshi Ozawa <br>
-     <b>"mvn package -Pdist,docs -DskipTests -Dtar" fails because of non-ascii characters</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11295">HADOOP-11295</a>.
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-9313">HDFS-9313</a>.
      Major bug reported by Ming Ma and fixed by Ming Ma <br>
-     <b>RPC Server Reader thread can't shutdown if RPCCallQueue is full</b><br>
+     <b>Possible NullPointerException in BlockManager if no excess replica can be chosen</b><br>
      <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11238">HADOOP-11238</a>.
-     Minor bug reported by Chris Li and fixed by Chris Li <br>
-     <b>Update the NameNode's Group Cache in the background when possible</b><br>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-9294">HDFS-9294</a>.
+     Blocker bug reported by DENG FEI and fixed by Brahma Reddy Battula (hdfs-client)<br>
+     <b>DFSClient  deadlock when close file and failed to renew lease</b><br>
      <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10786">HADOOP-10786</a>.
-     Major bug reported by Tobi Vollebregt and fixed by Stephen Chu (security)<br>
-     <b>Fix UGI#reloginFromKeytab on Java 8</b><br>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-9220">HDFS-9220</a>.
+     Blocker bug reported by Bogdan Raducanu and fixed by Jing Zhao <br>
+     <b>Reading small file (&lt; 512 bytes) that is open for append fails due to incorrect checksum</b><br>
      <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8151">HADOOP-8151</a>.
-     Major bug reported by Todd Lipcon and fixed by Matt Foley (io , native)<br>
-     <b>Error handling in snappy decompressor throws invalid exceptions</b><br>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-9178">HDFS-9178</a>.
+     Critical bug reported by Kihwal Lee and fixed by Kihwal Lee <br>
+     <b>Slow datanode I/O can cause a wrong node to be marked bad</b><br>
      <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7139">HADOOP-7139</a>.
-     Major improvement reported by Stephen Rose and fixed by Kanaka Kumar Avvaru (io)<br>
-     <b>Allow appending to existing SequenceFiles</b><br>
-     <blockquote>Existing sequence files can be appended.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-8767">HDFS-8767</a>.
+     Critical bug reported by Haohui Mai and fixed by Kanaka Kumar Avvaru <br>
+     <b>RawLocalFileSystem.listStatus() returns null for UNIX pipefile</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-8722">HDFS-8722</a>.
+     Critical improvement reported by Kihwal Lee and fixed by Kihwal Lee <br>
+     <b>Optimize datanode writes for small writes and flushes</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-8647">HDFS-8647</a>.
+     Major improvement reported by Ming Ma and fixed by Brahma Reddy Battula <br>
+     <b>Abstract BlockManager's rack policy into BlockPlacementPolicy</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-7694">HDFS-7694</a>.
+     Major improvement reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe <br>
+     <b>FSDataInputStream should support "unbuffer"</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6945">HDFS-6945</a>.
+     Critical bug reported by Akira AJISAKA and fixed by Akira AJISAKA (namenode)<br>
+     <b>BlockManager should remove a block from excessReplicateMap and decrement ExcessBlocks metric when the block is removed</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4660">HDFS-4660</a>.
+     Blocker bug reported by Peng Zhang and fixed by Kihwal Lee (datanode)<br>
+     <b>Block corruption can happen during pipeline recovery</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-12736">HADOOP-12736</a>.
+     Major test reported by Xiao Chen and fixed by Xiao Chen <br>
+     <b>TestTimedOutTestsListener#testThreadDumpAndDeadlocks sometimes times out</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-12706">HADOOP-12706</a>.
+     Major bug reported by Jason Lowe and fixed by Sangjin Lee (test)<br>
+     <b>TestLocalFsFCStatistics#testStatisticsThreadLocalDataCleanUp times out occasionally</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-12107">HADOOP-12107</a>.
+     Critical bug reported by Sangjin Lee and fixed by Sangjin Lee (fs)<br>
+     <b>long running apps may have a huge number of StatisticsData instances under FileSystem</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11252">HADOOP-11252</a>.
+     Critical bug reported by Wilfred Spiegelenburg and fixed by Masatake Iwasaki (ipc)<br>
+     <b>RPC client does not time out by default</b><br>
+     <blockquote></blockquote></li>
 </ul>
 </body></html>
