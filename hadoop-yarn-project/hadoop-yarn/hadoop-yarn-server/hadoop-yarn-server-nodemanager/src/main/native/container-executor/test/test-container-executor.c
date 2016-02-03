@@ -248,8 +248,9 @@ void test_check_user(int expectedFailure) {
 
 void test_resolve_config_path() {
   printf("\nTesting resolve_config_path\n");
-  if (strcmp(resolve_config_path("/bin/ls", NULL), "/bin/ls") != 0) {
-    printf("FAIL: failed to resolve config_name on an absolute path name: /bin/ls\n");
+  if (strcmp(resolve_config_path(TEST_ROOT, NULL), TEST_ROOT) != 0) {
+    printf("FAIL: failed to resolve config_name on an absolute path name: "
+           TEST_ROOT "\n");
     exit(1);
   }
   if (strcmp(resolve_config_path(RELTMPDIR TEST_ROOT, TEST_ROOT), TEST_ROOT) != 0) {

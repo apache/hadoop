@@ -27,7 +27,6 @@
 #include <sys/param.h>
 #define NAME_MAX MAXNAMELEN
 #endif
-#include <ftw.h>
 #include <errno.h>
 #include <grp.h>
 #include <unistd.h>
@@ -1809,75 +1808,138 @@ static int rmdir_as_nm(const char* path) {
   return ret;
 }
 
-/**
- * nftw callback and associated TLS.
- */
+static int open_helper(int dirfd, const char *name) {
+  int fd;
+  if (dirfd >= 0) {
+    fd = openat(dirfd, name, O_RDONLY);
+  } else {
+    fd = open(name, O_RDONLY);
+  }
+  if (fd >= 0) {
+    return fd;
+  }
+  return -errno;
+}
 
-typedef struct {
-  int errnum;
-  int chmods;
-} nftw_state_t;
-
-static __thread nftw_state_t nftws;
-
-static int nftw_cb(const char *path,
-                   const struct stat *stat,
-                   int type,
-                   struct FTW *ftw) {
-
-  /* Leave the top-level directory to be deleted by the caller. */
-  if (ftw->level == 0) {
+static int chmod_helper(int dirfd, const char *name, mode_t val) {
+  int ret;
+  if (dirfd >= 0) {
+    ret = fchmodat(dirfd, name, val, 0);
+  } else {
+    ret = chmod(name, val);
+  }
+  if (ret >= 0) {
     return 0;
   }
+  return errno;
+}
 
-  switch (type) {
-    /* Directory, post-order. Should be empty so remove the directory. */
-    case FTW_DP:
-      if (rmdir(path) != 0) {
-        /* Record the first errno. */
-        if (errno != ENOENT && nftws.errnum == 0) {
-          nftws.errnum = errno;
-        }
-        fprintf(LOGFILE, "Couldn't delete directory %s - %s\n", path, strerror(errno));
-        /* Read-only filesystem, no point in continuing. */
-        if (errno == EROFS) {
-          return -1;
-        }
-      }
-      break;
-    /* File or symlink. Remove. */
-    case FTW_F:
-    case FTW_SL:
-      if (unlink(path) != 0) {
-        /* Record the first errno. */
-        if (errno != ENOENT && nftws.errnum == 0) {
-          nftws.errnum = errno;
-        }
-        fprintf(LOGFILE, "Couldn't delete file %s - %s\n", path, strerror(errno));
-        /* Read-only filesystem, no point in continuing. */
-        if (errno == EROFS) {
-          return -1;
-        }
-      }
-      break;
-    /* Unreadable file or directory. Attempt to chmod. */
-    case FTW_DNR:
-      if (chmod(path, 0700) == 0) {
-        nftws.chmods++;
-      } else {
-        /* Record the first errno. */
-        if (errno != ENOENT && nftws.errnum == 0) {
-          nftws.errnum = errno;
-        }
-        fprintf(LOGFILE, "Couldn't chmod %s - %s.\n", path, strerror(errno));
-      }
-      break;
-    /* Should never happen. */
-    default:
-      fprintf(LOGFILE, "Internal error deleting %s\n", path);
-      return -1;
+static int unlink_helper(int dirfd, const char *name, int flags) {
+  int ret;
+  if (dirfd >= 0) {
+    ret = unlinkat(dirfd, name, flags);
+  } else {
+    ret = unlink(name);
   }
-  return 0;
+  if (ret >= 0) {
+    return 0;
+  }
+  return errno;
+}
+
+static int recursive_unlink_helper(int dirfd, const char *name,
+                                   const char* fullpath)
+{
+  int fd = -1, ret = 0;
+  DIR *dfd = NULL;
+  struct stat stat;
+
+  fd = open_helper(dirfd, name);
+  if (fd == -EACCES) {
+    ret = chmod_helper(dirfd, name, 0700);
+    if (ret) {
+      fprintf(LOGFILE, "chmod(%s) failed: %s\n", fullpath, strerror(ret));
+      goto done;
+    }
+    fd = open_helper(dirfd, name);
+  }
+  if (fd < 0) {
+    ret = -fd;
+    fprintf(LOGFILE, "error opening %s: %s\n", fullpath, strerror(ret));
+    goto done;
+  }
+  if (fstat(fd, &stat) < 0) {
+    ret = errno;
+    fprintf(LOGFILE, "failed to stat %s: %s\n", fullpath, strerror(ret));
+    goto done;
+  }
+  if (!(S_ISDIR(stat.st_mode))) {
+    ret = unlink_helper(dirfd, name, 0);
+    if (ret) {
+      fprintf(LOGFILE, "failed to unlink %s: %s\n", fullpath, strerror(ret));
+      goto done;
+    }
+  } else {
+    dfd = fdopendir(fd);
+    if (!dfd) {
+      ret = errno;
+      fprintf(LOGFILE, "fopendir(%s) failed: %s\n", fullpath, strerror(ret));
+      goto done;
+    }
+    while (1) {
+      struct dirent *de;
+      char *new_fullpath = NULL;
+
+      errno = 0;
+      de = readdir(dfd);
+      if (!de) {
+        ret = errno;
+        if (ret) {
+          fprintf(LOGFILE, "readdir(%s) failed: %s\n", fullpath, strerror(ret));
+          goto done;
+        }
+        break;
+      }
+      if (!strcmp(de->d_name, ".")) {
+        continue;
+      }
+      if (!strcmp(de->d_name, "..")) {
+        continue;
+      }
+      if (asprintf(&new_fullpath, "%s/%s", fullpath, de->d_name) < 0) {
+        fprintf(LOGFILE, "Failed to allocate string for %s/%s.\n",
+                fullpath, de->d_name);
+        ret = ENOMEM;
+        goto done;
+      }
+      ret = recursive_unlink_helper(fd, de->d_name, new_fullpath);
+      free(new_fullpath);
+      if (ret) {
+        goto done;
+      }
+    }
+    if (dirfd != -1) {
+      ret = unlink_helper(dirfd, name, AT_REMOVEDIR);
+      if (ret) {
+        fprintf(LOGFILE, "failed to rmdir %s: %s\n", name, strerror(ret));
+        goto done;
+      }
+    }
+  }
+  ret = 0;
+done:
+  if (fd >= 0) {
+    close(fd);
+  }
+  if (dfd) {
+    closedir(dfd);
+  }
+  return ret;
+}
+
+int recursive_unlink_children(const char *name)
+{
+  return recursive_unlink_helper(-1, name, name);
 }
 
 /**
@@ -1887,29 +1949,22 @@ static int nftw_cb(const char *path,
  */
 static int delete_path(const char *full_path,
                        int needs_tt_user) {
+  int ret;
 
   /* Return an error if the path is null. */
   if (full_path == NULL) {
     fprintf(LOGFILE, "Path is null\n");
     return UNABLE_TO_BUILD_PATH;
   }
-  /* If the path doesn't exist there is nothing to do, so return success. */
-  if (access(full_path, F_OK) != 0) {
-    if (errno == ENOENT) {
-        return 0;
-    }
+  ret = recursive_unlink_children(full_path);
+  if (ret == ENOENT) {
+    return 0;
   }
-
-  /* Recursively delete the tree with nftw. */
-  nftws.errnum = 0;
-  int ret = 0;
-  do {
-    nftws.chmods = 0;
-    ret = nftw(full_path, &nftw_cb, 20, FTW_PHYS | FTW_MOUNT | FTW_DEPTH);
-    if (ret != 0) {
-      fprintf(LOGFILE, "Error in nftw while deleting %s\n", full_path);
-    }
-  } while (nftws.chmods != 0);
+  if (ret != 0) {
+    fprintf(LOGFILE, "Error while deleting %s: %d (%s)\n",
+            full_path, ret, strerror(ret));
+    return -1;
+  }
 
   /*
    * If required, do the final rmdir as root on the top level.
@@ -1917,24 +1972,18 @@ static int delete_path(const char *full_path,
    * owned by the node manager.
    */
   if (needs_tt_user) {
-    ret = rmdir_as_nm(full_path);
+    return rmdir_as_nm(full_path);
+  }
   /* Otherwise rmdir the top level as the current user. */
-  } else {
-    if (rmdir(full_path) != 0) {
-      /* Record the first errno. */
-      if (errno != ENOENT && nftws.errnum == 0) {
-        nftws.errnum = errno;
-      }
-      fprintf(LOGFILE, "Couldn't delete directory %s - %s\n", full_path, strerror(errno));
+  if (rmdir(full_path) != 0) {
+    ret = errno;
+    if (ret != ENOENT) {
+      fprintf(LOGFILE, "Couldn't delete directory %s - %s\n",
+              full_path, strerror(ret));
+      return -1;
     }
   }
-
-  /* If there was an error, set errno to the first observed value. */
-  errno = nftws.errnum;
-  if (nftws.errnum != 0) {
-    ret = -1;
-  }
-  return ret;
+  return 0;
 }
 
 /**
