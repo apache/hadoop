@@ -86,6 +86,7 @@ struct hdfsBuilder {
 
   std::string overrideHost;
   tPort       overridePort; // 0 --> use default
+  std::string user;
 
   static constexpr tPort kUseDefaultPort = 0;
   static constexpr tPort kDefaultPort = 8020;
@@ -124,6 +125,12 @@ static int Error(const Status &stat) {
     case Status::Code::kOperationCanceled:
       ReportError(EINTR, "Operation canceled");
       break;
+    case Status::Code::kPermissionDenied:
+      if (!stat.ToString().empty())
+        ReportError(EACCES, stat.ToString().c_str());
+      else
+        ReportError(EACCES, "Permission denied");
+      break;
     default:
       ReportError(ENOSYS, "Error: unrecognised code");
   }
@@ -156,9 +163,18 @@ int hdfsFileIsOpenForRead(hdfsFile file) {
 }
 
 hdfsFS hdfsConnect(const char *nn, tPort port) {
+  return hdfsConnectAsUser(nn, port, "");
+}
+
+hdfsFS hdfsConnectAsUser(const char* nn, tPort port, const char *user) {
   std::string port_as_string = std::to_string(port);
   IoService * io_service = IoService::New();
-  FileSystem *fs = FileSystem::New(io_service, Options());
+  std::string user_name;
+  if (user) {
+    user_name = user;
+  }
+
+  FileSystem *fs = FileSystem::New(io_service, user_name, Options());
   if (!fs) {
     return nullptr;
   }
@@ -323,6 +339,16 @@ void hdfsBuilderSetNameNodePort(struct hdfsBuilder *bld, tPort port)
   bld->overridePort = port;
 }
 
+void hdfsBuilderSetUserName(struct hdfsBuilder *bld, const char *userName)
+{
+  if (userName) {
+    bld->user = userName;
+  } else {
+    bld->user = "";
+  }
+}
+
+
 void hdfsFreeBuilder(struct hdfsBuilder *bld)
 {
   delete bld;
@@ -358,7 +384,10 @@ hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld) {
     {
       port = hdfsBuilder::kDefaultPort;
     }
-    return hdfsConnect(bld->overrideHost.c_str(), port);
+    if (bld->user.empty())
+      return hdfsConnect(bld->overrideHost.c_str(), port);
+    else
+      return hdfsConnectAsUser(bld->overrideHost.c_str(), port, bld->user.c_str());
   }
   else
   {

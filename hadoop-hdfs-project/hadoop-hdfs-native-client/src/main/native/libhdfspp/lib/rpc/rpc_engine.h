@@ -206,6 +206,7 @@ public:
   virtual int NextCallId() = 0;
 
   virtual const std::string &client_name() const = 0;
+  virtual const std::string &user_name() const = 0;
   virtual const std::string &protocol_name() const = 0;
   virtual int protocol_version() const = 0;
   virtual ::asio::io_service &io_service() = 0;
@@ -230,8 +231,8 @@ class RpcEngine : public LockFreeRpcEngine {
   };
 
   RpcEngine(::asio::io_service *io_service, const Options &options,
-            const std::string &client_name, const char *protocol_name,
-            int protocol_version);
+            const std::string &client_name, const std::string &user_name,
+            const char *protocol_name, int protocol_version);
 
   void Connect(const std::vector<::asio::ip::tcp::endpoint> &server, RpcCallback &handler);
 
@@ -265,6 +266,7 @@ class RpcEngine : public LockFreeRpcEngine {
   void TEST_SetRpcConnection(std::shared_ptr<RpcConnection> conn);
 
   const std::string &client_name() const override { return client_name_; }
+  const std::string &user_name() const override { return user_name_; }
   const std::string &protocol_name() const override { return protocol_name_; }
   int protocol_version() const override { return protocol_version_; }
   ::asio::io_service &io_service() override { return *io_service_; }
@@ -281,6 +283,7 @@ private:
   ::asio::io_service * const io_service_;
   const Options options_;
   const std::string client_name_;
+  const std::string user_name_;
   const std::string protocol_name_;
   const int protocol_version_;
   const std::unique_ptr<const RetryPolicy> retry_policy_; //null --> no retry

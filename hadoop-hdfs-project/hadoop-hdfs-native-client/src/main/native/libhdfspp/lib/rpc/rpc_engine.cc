@@ -28,11 +28,12 @@ template <class T>
 using optional = std::experimental::optional<T>;
 
 RpcEngine::RpcEngine(::asio::io_service *io_service, const Options &options,
-                     const std::string &client_name, const char *protocol_name,
-                     int protocol_version)
+                     const std::string &client_name, const std::string &user_name,
+                     const char *protocol_name, int protocol_version)
     : io_service_(io_service),
       options_(options),
       client_name_(client_name),
+      user_name_(user_name),
       protocol_name_(protocol_name),
       protocol_version_(protocol_version),
       retry_policy_(std::move(MakeRetryPolicy(options))),

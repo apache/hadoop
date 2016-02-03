@@ -20,8 +20,11 @@
 
 #include <cassert>
 #include <sstream>
+#include <cstring>
 
 namespace hdfs {
+
+const char * kStatusAccessControlException = "org.apache.hadoop.security.AccessControlException";
 
 Status::Status(int code, const char *msg1) : code_(code) {
   if(msg1) {
@@ -58,7 +61,10 @@ Status Status::Unimplemented() {
 }
 
 Status Status::Exception(const char *exception_class_name, const char *error_message) {
-  return Status(kException, exception_class_name, error_message);
+  if (exception_class_name && (strcmp(exception_class_name, kStatusAccessControlException) == 0) )
+    return Status(kPermissionDenied, error_message);
+  else
+    return Status(kException, exception_class_name, error_message);
 }
 
 Status Status::Error(const char *error_message) {
