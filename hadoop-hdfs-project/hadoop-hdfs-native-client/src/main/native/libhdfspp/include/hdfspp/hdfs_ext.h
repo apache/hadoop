@@ -50,7 +50,9 @@
  * Keep C bindings that are libhdfs++ specific in here.
  **/
 
+#ifdef __cplusplus
 extern "C" {
+#endif
 /**
  *  Reads the last error, if any, that happened in this thread
  *  into the user supplied buffer.
@@ -108,5 +110,8 @@ int hdfsBuilderConfGetStr(struct hdfsBuilder *bld, const char *key,
      */
 int hdfsBuilderConfGetInt(struct hdfsBuilder *bld, const char *key, int32_t *val);
 
+#ifdef __cplusplus
 } /* end extern "C" */
+#endif
+
 #endif

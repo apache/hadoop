@@ -124,6 +124,7 @@ include_directories( SYSTEM
 add_subdirectory(third_party/gmock-1.7.0)
 add_subdirectory(lib)
 add_subdirectory(tests)
+add_subdirectory(examples)
 
 # create an empty file; hadoop_add_dual_library wraps add_library which
 # requires at least one file as an argument
@@ -170,3 +171,9 @@ install(FILES ${LIBHDFS_HEADER_FILES} DESTINATION /include/hdfs)
 
 install(TARGETS hdfspp_static ARCHIVE DESTINATION /lib)
 install(TARGETS hdfspp LIBRARY DESTINATION /lib)
+
+add_custom_target(
+    InstallToBuildDirectory
+    COMMAND "${CMAKE_MAKE_PROGRAM}" install DESTDIR=${PROJECT_BINARY_DIR}/output
+)
+set(LIBHDFSPP_DIR ${PROJECT_BINARY_DIR}/output)
