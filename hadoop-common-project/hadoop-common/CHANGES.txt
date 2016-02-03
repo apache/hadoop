@@ -647,6 +647,9 @@ Trunk (Unreleased)
       HADOOP-12757. Findbug compilation fails for 'Kafka Library support'.
       (aajisaka)
 
+      HADOOP-12041. Implement another Reed-Solomon coder in pure Java.
+      (Kai Zheng via zhz)
+
 Release 2.9.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

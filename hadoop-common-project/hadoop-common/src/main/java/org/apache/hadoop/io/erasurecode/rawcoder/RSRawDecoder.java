@@ -19,6 +19,7 @@ package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.io.erasurecode.rawcoder.util.CoderUtil;
 import org.apache.hadoop.io.erasurecode.rawcoder.util.RSUtil;
 
 import java.nio.ByteBuffer;
@@ -103,7 +104,7 @@ public class RSRawDecoder extends AbstractRawErasureDecoder {
 
   private void doDecodeImpl(ByteBuffer[] inputs, int[] erasedIndexes,
                           ByteBuffer[] outputs) {
-    ByteBuffer valid = findFirstValidInput(inputs);
+    ByteBuffer valid = CoderUtil.findFirstValidInput(inputs);
     int dataLen = valid.remaining();
     for (int i = 0; i < erasedIndexes.length; i++) {
       errSignature[i] = primitivePower[erasedIndexes[i]];
@@ -136,7 +137,8 @@ public class RSRawDecoder extends AbstractRawErasureDecoder {
      * implementations, so we have to adjust them before calling doDecodeImpl.
      */
 
-    int[] erasedOrNotToReadIndexes = getErasedOrNotToReadIndexes(inputs);
+    int[] erasedOrNotToReadIndexes =
+        CoderUtil.getErasedOrNotToReadIndexes(inputs);
 
     // Prepare for adjustedOutputsParameter
 
@@ -181,7 +183,7 @@ public class RSRawDecoder extends AbstractRawErasureDecoder {
   @Override
   protected void doDecode(ByteBuffer[] inputs, int[] erasedIndexes,
                           ByteBuffer[] outputs) {
-    ByteBuffer validInput = findFirstValidInput(inputs);
+    ByteBuffer validInput = CoderUtil.findFirstValidInput(inputs);
     int dataLen = validInput.remaining();
 
     /**
@@ -189,7 +191,8 @@ public class RSRawDecoder extends AbstractRawErasureDecoder {
      * implementations, so we have to adjust them before calling doDecodeImpl.
      */
 
-    int[] erasedOrNotToReadIndexes = getErasedOrNotToReadIndexes(inputs);
+    int[] erasedOrNotToReadIndexes =
+        CoderUtil.getErasedOrNotToReadIndexes(inputs);
 
     // Prepare for adjustedDirectBufferOutputsParameter
 

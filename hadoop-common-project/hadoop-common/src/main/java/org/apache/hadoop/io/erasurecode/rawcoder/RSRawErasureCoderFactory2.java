@@ -17,18 +17,21 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
- * Test raw Reed-solomon coder implemented in Java.
+ * A raw coder factory for raw Reed-Solomon coder in Java.
  */
-public class TestRSRawCoder extends TestRSRawCoderBase {
+@InterfaceAudience.Private
+public class RSRawErasureCoderFactory2 implements RawErasureCoderFactory {
 
-  @Before
-  public void setup() {
-    this.encoderClass = RSRawEncoder.class;
-    this.decoderClass = RSRawDecoder.class;
-    setAllowDump(false); // Change to true to allow verbose dump for debugging
+  @Override
+  public RawErasureEncoder createEncoder(int numDataUnits, int numParityUnits) {
+    return new RSRawEncoder2(numDataUnits, numParityUnits);
+  }
+
+  @Override
+  public RawErasureDecoder createDecoder(int numDataUnits, int numParityUnits) {
+    return new RSRawDecoder2(numDataUnits, numParityUnits);
   }
 }

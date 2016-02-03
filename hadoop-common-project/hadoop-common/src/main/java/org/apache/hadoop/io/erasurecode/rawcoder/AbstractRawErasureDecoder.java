@@ -20,9 +20,9 @@ package org.apache.hadoop.io.erasurecode.rawcoder;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ECChunk;
+import org.apache.hadoop.io.erasurecode.rawcoder.util.CoderUtil;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 /**
  * An abstract raw erasure decoder that's to be inherited by new decoders.
@@ -42,7 +42,7 @@ public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
                      ByteBuffer[] outputs) {
     checkParameters(inputs, erasedIndexes, outputs);
 
-    ByteBuffer validInput = findFirstValidInput(inputs);
+    ByteBuffer validInput = CoderUtil.findFirstValidInput(inputs);
     boolean usingDirectBuffer = validInput.isDirect();
     int dataLen = validInput.remaining();
     if (dataLen == 0) {
@@ -106,7 +106,7 @@ public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
   public void decode(byte[][] inputs, int[] erasedIndexes, byte[][] outputs) {
     checkParameters(inputs, erasedIndexes, outputs);
 
-    byte[] validInput = findFirstValidInput(inputs);
+    byte[] validInput = CoderUtil.findFirstValidInput(inputs);
     int dataLen = validInput.length;
     if (dataLen == 0) {
       return;
@@ -177,38 +177,5 @@ public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
       throw new HadoopIllegalArgumentException(
           "No enough valid inputs are provided, not recoverable");
     }
-  }
-
-  /**
-   * Get indexes into inputs array for items marked as null, either erased or
-   * not to read.
-   * @return indexes into inputs array
-   */
-  protected <T> int[] getErasedOrNotToReadIndexes(T[] inputs) {
-    int[] invalidIndexes = new int[inputs.length];
-    int idx = 0;
-    for (int i = 0; i < inputs.length; i++) {
-      if (inputs[i] == null) {
-        invalidIndexes[idx++] = i;
-      }
-    }
-
-    return Arrays.copyOf(invalidIndexes, idx);
-  }
-
-  /**
-   * Find the valid input from all the inputs.
-   * @param inputs input buffers to look for valid input
-   * @return the first valid input
-   */
-  protected static <T> T findFirstValidInput(T[] inputs) {
-    for (T input : inputs) {
-      if (input != null) {
-        return input;
-      }
-    }
-
-    throw new HadoopIllegalArgumentException(
-        "Invalid inputs are found, all being null");
   }
 }

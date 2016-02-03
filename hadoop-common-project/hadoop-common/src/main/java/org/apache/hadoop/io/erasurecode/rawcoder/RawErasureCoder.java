@@ -40,7 +40,7 @@ public interface RawErasureCoder extends Configurable {
   /**
    * Get a coder option value.
    * @param option
-   * @return
+   * @return option value
    */
   public Object getCoderOption(CoderOption option);
 
