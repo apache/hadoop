@@ -81,6 +81,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9406. FSImage may get corrupted after deleting snapshot.
     (Contributed by Jing Zhao, Stanislav Antic, Vinayakumar B, Yongjun Zhang)
 
+    HDFS-9740. Use a reasonable limit in DFSTestUtil.waitForMetric()
+    (Chang Li via vinayakumarb)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
