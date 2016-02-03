@@ -93,6 +93,7 @@ public class DatanodeStorage {
     try {
       // Attempt to parse the UUID.
       if (storageID != null && storageID.indexOf(STORAGE_ID_PREFIX) == 0) {
+        UUID.fromString(storageID.substring(STORAGE_ID_PREFIX.length()));
         return true;
       }
     } catch (IllegalArgumentException ignored) {
