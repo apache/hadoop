@@ -2690,6 +2690,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9718. HAUtil#getConfForOtherNodes should unset independent generic keys
     before initialize (DENG FEI via vinayakumarb)
 
+    HDFS-9739. DatanodeStorage.isValidStorageId() is broken
+    (Mingliang Liu via vinayakumarb)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
