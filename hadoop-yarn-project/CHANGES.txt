@@ -118,6 +118,10 @@ Release 2.9.0 - UNRELEASED
     YARN-4649. Add additional logging to some NM state store operations.
     (Sidharta Seethana via vvasudev)
 
+    YARN-4625. Make ApplicationSubmissionContext and
+    ApplicationSubmissionContextInfo more consistent.
+    (Xuan Gong via vvasudev)
+
   OPTIMIZATIONS
 
   BUG FIXES
