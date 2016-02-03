@@ -44,18 +44,23 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import com.sun.jersey.api.client.config.DefaultClientConfig;
+
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
+import org.apache.hadoop.yarn.api.records.AMBlackListingRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -67,10 +72,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CredentialsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LocalResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.*;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -792,6 +793,47 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     appInfo.getResource().setvCores(1);
     appInfo.setApplicationTags(tags);
 
+    // Set LogAggregationContextInfo
+    String includePattern = "file1";
+    String excludePattern = "file2";
+    String rolledLogsIncludePattern = "file3";
+    String rolledLogsExcludePattern = "file4";
+    String className = "policy_class";
+    String parameters = "policy_parameter";
+
+    LogAggregationContextInfo logAggregationContextInfo
+        = new LogAggregationContextInfo();
+    logAggregationContextInfo.setIncludePattern(includePattern);
+    logAggregationContextInfo.setExcludePattern(excludePattern);
+    logAggregationContextInfo.setRolledLogsIncludePattern(
+        rolledLogsIncludePattern);
+    logAggregationContextInfo.setRolledLogsExcludePattern(
+        rolledLogsExcludePattern);
+    logAggregationContextInfo.setLogAggregationPolicyClassName(className);
+    logAggregationContextInfo.setLogAggregationPolicyParameters(parameters);
+    appInfo.setLogAggregationContextInfo(logAggregationContextInfo);
+
+    // Set attemptFailuresValidityInterval
+    long attemptFailuresValidityInterval = 5000;
+    appInfo.setAttemptFailuresValidityInterval(
+        attemptFailuresValidityInterval);
+
+    // Set ReservationId
+    String reservationId = ReservationId.newInstance(
+        System.currentTimeMillis(), 1).toString();
+    appInfo.setReservationId(reservationId);
+
+    // Set AMBlackListingRequestInfo
+    boolean isAMBlackListingEnabled = true;
+    float disableFailureThreshold = 0.01f;
+    AMBlackListingRequestInfo amBlackListingRequestInfo
+        = new AMBlackListingRequestInfo();
+    amBlackListingRequestInfo.setAMBlackListingEnabled(
+        isAMBlackListingEnabled);
+    amBlackListingRequestInfo.setBlackListingDisableFailureThreshold(
+        disableFailureThreshold);
+    appInfo.setAMBlackListingRequestInfo(amBlackListingRequestInfo);
+
     ClientResponse response =
         this.constructWebResource(urlPath).accept(acceptMedia)
           .entity(appInfo, contentMedia).post(ClientResponse.class);
@@ -848,6 +890,30 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     assertTrue("Secrets missing from credentials object", cs
         .getAllSecretKeys().contains(key));
     assertEquals("mysecret", new String(cs.getSecretKey(key), "UTF-8"));
+
+    // Check LogAggregationContext
+    ApplicationSubmissionContext asc = app.getApplicationSubmissionContext();
+    LogAggregationContext lac = asc.getLogAggregationContext();
+    assertEquals(includePattern, lac.getIncludePattern());
+    assertEquals(excludePattern, lac.getExcludePattern());
+    assertEquals(rolledLogsIncludePattern, lac.getRolledLogsIncludePattern());
+    assertEquals(rolledLogsExcludePattern, lac.getRolledLogsExcludePattern());
+    assertEquals(className, lac.getLogAggregationPolicyClassName());
+    assertEquals(parameters, lac.getLogAggregationPolicyParameters());
+
+    // Check attemptFailuresValidityInterval
+    assertEquals(attemptFailuresValidityInterval,
+        asc.getAttemptFailuresValidityInterval());
+
+    // Check ReservationId
+    assertEquals(reservationId, app.getReservationId().toString());
+
+    // Check AMBlackListingRequestInfo
+    AMBlackListingRequest amBlackListingRequest = asc.getAMBlackListRequest();
+    assertEquals(isAMBlackListingEnabled,
+        amBlackListingRequest.isAMBlackListingEnabled());
+    assertTrue(disableFailureThreshold == amBlackListingRequest
+        .getBlackListingDisableFailureThreshold());
 
     response =
         this.constructWebResource("apps", appId).accept(acceptMedia)
