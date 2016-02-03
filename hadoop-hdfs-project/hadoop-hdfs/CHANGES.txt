@@ -81,6 +81,8 @@ Release 2.7.3 - UNRELEASED
     HDFS-9406. FSImage may get corrupted after deleting snapshot.
     (Contributed by Jing Zhao, Stanislav Antic, Vinayakumar B, Yongjun Zhang)
 
+    HDFS-9743. Fix TestLazyPersistFiles#testFallbackToDiskFull (kihwal)
+
     HDFS-9740. Use a reasonable limit in DFSTestUtil.waitForMetric()
     (Chang Li via vinayakumarb)
 

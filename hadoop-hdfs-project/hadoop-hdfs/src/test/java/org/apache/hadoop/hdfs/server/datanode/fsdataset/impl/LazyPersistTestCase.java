@@ -47,6 +47,7 @@ import org.junit.rules.Timeout;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.concurrent.TimeoutException;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.HashSet;
@@ -401,6 +402,7 @@ public abstract class LazyPersistTestCase {
 
   protected final void verifyRamDiskJMXMetric(String metricName,
       long expectedValue) throws Exception {
+    waitForMetric(metricName, (int)expectedValue);
     assertEquals(expectedValue, Integer.parseInt(jmx.getValue(metricName)));
   }
 
@@ -427,5 +429,10 @@ public abstract class LazyPersistTestCase {
     } catch (Exception e) {
       e.printStackTrace();
     }
+  }
+
+  protected void waitForMetric(final String metricName, final int expectedValue)
+      throws TimeoutException, InterruptedException {
+    DFSTestUtil.waitForMetric(jmx, metricName, expectedValue);
   }
 }
