@@ -61,7 +61,7 @@ thread_local std::string errstr;
 
 /* Fetch last error that happened in this thread */
 void hdfsGetLastError(char *buf, int len) {
-  if(nullptr == buf || len < 1 || errstr.empty()) {
+  if(nullptr == buf || len < 1) {
     return;
   }
 
@@ -93,7 +93,7 @@ struct hdfsBuilder {
 };
 
 /* Error handling with optional debug to stderr */
-static void ReportError(int errnum, std::string msg) {
+static void ReportError(int errnum, const std::string & msg) {
   errno = errnum;
   errstr = msg;
 #ifdef LIBHDFSPP_C_API_ENABLE_DEBUG
@@ -106,24 +106,32 @@ static void ReportError(int errnum, std::string msg) {
 
 /* Convert Status wrapped error into appropriate errno and return code */
 static int Error(const Status &stat) {
+  const char * default_message;
+  int errnum;
+
   int code = stat.code();
   switch (code) {
     case Status::Code::kOk:
       return 0;
     case Status::Code::kInvalidArgument:
-      ReportError(EINVAL, "Invalid argument");
+      errnum = EINVAL;
+      default_message = "Invalid argument";
       break;
     case Status::Code::kResourceUnavailable:
-      ReportError(EAGAIN, "Resource temporarily unavailable");
+      errnum = EAGAIN;
+      default_message = "Resource temporarily unavailable";
       break;
     case Status::Code::kUnimplemented:
-      ReportError(ENOSYS, "Function not implemented");
+      errnum = ENOSYS;
+      default_message = "Function not implemented";
       break;
     case Status::Code::kException:
-      ReportError(EINTR, "Exception raised");
+      errnum = EINTR;
+      default_message = "Exception raised";
       break;
     case Status::Code::kOperationCanceled:
-      ReportError(EINTR, "Operation canceled");
+      errnum = EINTR;
+      default_message = "Operation canceled";
       break;
     case Status::Code::kPermissionDenied:
       if (!stat.ToString().empty())
@@ -132,8 +140,13 @@ static int Error(const Status &stat) {
         ReportError(EACCES, "Permission denied");
       break;
     default:
-      ReportError(ENOSYS, "Error: unrecognised code");
+      errnum = ENOSYS;
+      default_message = "Error: unrecognised code";
   }
+  if (stat.ToString().empty())
+    ReportError(errnum, default_message);
+  else
+    ReportError(errnum, stat.ToString());
   return -1;
 }
 
@@ -176,6 +189,7 @@ hdfsFS hdfsConnectAsUser(const char* nn, tPort port, const char *user) {
 
   FileSystem *fs = FileSystem::New(io_service, user_name, Options());
   if (!fs) {
+    ReportError(ENODEV, "Could not create FileSystem object");
     return nullptr;
   }
 
@@ -217,6 +231,7 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char *path, int flags, int bufferSize,
   FileHandle *f = nullptr;
   Status stat = fs->get_impl()->Open(path, &f);
   if (!stat.ok()) {
+    Error(stat);
     return nullptr;
   }
   return new hdfsFile_internal(f);
@@ -365,6 +380,7 @@ int hdfsBuilderConfSetStr(struct hdfsBuilder *bld, const char *key,
   }
   else
   {
+    ReportError(EINVAL, "Could not change Builder value");
     return 1;
   }
 }
@@ -454,5 +470,6 @@ int hdfsBuilderConfGetInt(struct hdfsBuilder *bld, const char *key, int32_t *val
     *val = *value;
   }
   // If not found, don't change val
+  ReportError(EINVAL, "Could not get Builder value");
   return 0;
 }
