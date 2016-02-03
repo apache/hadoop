@@ -282,8 +282,10 @@ void RpcConnectionImpl<NextLayer>::Disconnect() {
   assert(lock_held(connection_state_lock_));  // Must be holding lock before calling
 
   request_over_the_wire_.reset();
-  next_layer_.cancel();
-  next_layer_.close();
+  if (connected_) {
+    next_layer_.cancel();
+    next_layer_.close();
+  }
   connected_ = false;
 }
 }
