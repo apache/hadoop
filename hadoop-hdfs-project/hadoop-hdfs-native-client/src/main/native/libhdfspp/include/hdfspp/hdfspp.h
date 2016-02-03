@@ -120,9 +120,11 @@ class FileSystem {
    * Create a new instance of the FileSystem object. The call
    * initializes the RPC connections to the NameNode and returns an
    * FileSystem object.
+   *
+   * If user_name is blank, the current user will be used for a default.
    **/
   static FileSystem * New(
-      IoService *&io_service, const Options &options);
+      IoService *&io_service, const std::string &user_name, const Options &options);
 
   virtual void Connect(const std::string &server,
       const std::string &service,

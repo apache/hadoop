@@ -47,10 +47,10 @@ namespace hdfs {
 class NameNodeOperations {
 public:
   NameNodeOperations(::asio::io_service *io_service, const Options &options,
-            const std::string &client_name, const char *protocol_name,
-            int protocol_version) :
+            const std::string &client_name, const std::string &user_name,
+            const char *protocol_name, int protocol_version) :
   io_service_(io_service),
-  engine_(io_service, options, client_name, protocol_name, protocol_version),
+  engine_(io_service, options, client_name, user_name, protocol_name, protocol_version),
   namenode_(& engine_) {}
 
   void Connect(const std::string &server,
@@ -80,7 +80,7 @@ private:
  */
 class FileSystemImpl : public FileSystem {
 public:
-  FileSystemImpl(IoService *&io_service, const Options &options);
+  FileSystemImpl(IoService *&io_service, const std::string& user_name, const Options &options);
   ~FileSystemImpl() override;
 
   /* attempt to connect to namenode, return bad status on failure */

@@ -27,6 +27,7 @@
 #include <future>
 #include <tuple>
 #include <iostream>
+#include <pwd.h>
 
 namespace hdfs {
 
@@ -108,18 +109,48 @@ void NameNodeOperations::GetBlockLocations(const std::string & path,
  ****************************************************************************/
 
 FileSystem * FileSystem::New(
-    IoService *&io_service, const Options &options) {
-  return new FileSystemImpl(io_service, options);
+    IoService *&io_service, const std::string &user_name, const Options &options) {
+  return new FileSystemImpl(io_service, user_name, options);
 }
 
 /*****************************************************************************
  *                    FILESYSTEM IMPLEMENTATION
  ****************************************************************************/
 
-FileSystemImpl::FileSystemImpl(IoService *&io_service, const Options &options)
+const std::string get_effective_user_name(const std::string &user_name) {
+  if (!user_name.empty())
+    return user_name;
+
+  // If no user name was provided, try the HADOOP_USER_NAME and USER environment
+  //    variables
+  const char * env = getenv("HADOOP_USER_NAME");
+  if (env) {
+    return env;
+  }
+
+  env = getenv("USER");
+  if (env) {
+    return env;
+  }
+
+  // If running on POSIX, use the currently logged in user
+#if defined(_POSIX_VERSION)
+  uid_t uid = geteuid();
+  struct passwd *pw = getpwuid(uid);
+  if (pw && pw->pw_name)
+  {
+    return pw->pw_name;
+  }
+#endif
+
+  return "unknown_user";
+}
+
+FileSystemImpl::FileSystemImpl(IoService *&io_service, const std::string &user_name,
+                               const Options &options)
   :   io_service_(static_cast<IoServiceImpl *>(io_service)),
       nn_(&io_service_->io_service(), options,
-      GetRandomClientName(), kNamenodeProtocol,
+      GetRandomClientName(), get_effective_user_name(user_name), kNamenodeProtocol,
       kNamenodeProtocolVersion), client_name_(GetRandomClientName()),
       bad_node_tracker_(std::make_shared<BadDataNodeTracker>())
 {

@@ -54,6 +54,7 @@ class Status {
     kResourceUnavailable = static_cast<unsigned>(std::errc::resource_unavailable_try_again),
     kUnimplemented = static_cast<unsigned>(std::errc::function_not_supported),
     kOperationCanceled = static_cast<unsigned>(std::errc::operation_canceled),
+    kPermissionDenied = static_cast<unsigned>(std::errc::permission_denied),
     kException = 255,
   };
 

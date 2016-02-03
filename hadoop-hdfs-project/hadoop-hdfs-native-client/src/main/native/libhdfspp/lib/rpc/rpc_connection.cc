@@ -227,6 +227,21 @@ void RpcConnection::HandleRpcTimeout(std::shared_ptr<Request> req,
 std::shared_ptr<std::string> RpcConnection::PrepareHandshakePacket() {
   assert(lock_held(connection_state_lock_));  // Must be holding lock before calling
 
+  /**   From Client.java:
+   *
+   * Write the connection header - this is sent when connection is established
+   * +----------------------------------+
+   * |  "hrpc" 4 bytes                  |
+   * +----------------------------------+
+   * |  Version (1 byte)                |
+   * +----------------------------------+
+   * |  Service Class (1 byte)          |
+   * +----------------------------------+
+   * |  AuthProtocol (1 byte)           |
+   * +----------------------------------+
+   *
+   * AuthProtocol: 0->none, -33->SASL
+   */
   static const char kHandshakeHeader[] = {'h', 'r', 'p', 'c',
                                           RpcEngine::kRpcVersion, 0, 0};
   auto res =
@@ -240,6 +255,10 @@ std::shared_ptr<std::string> RpcConnection::PrepareHandshakePacket() {
 
   IpcConnectionContextProto handshake;
   handshake.set_protocol(engine_->protocol_name());
+  const std::string & user_name = engine()->user_name();
+  if (!user_name.empty()) {
+    *handshake.mutable_userinfo()->mutable_effectiveuser() = user_name;
+  }
   AddHeadersToPacket(res.get(), {&h, &handshake}, nullptr);
   return res;
 }

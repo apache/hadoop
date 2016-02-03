@@ -105,7 +105,7 @@ using namespace hdfs;
 TEST(RpcEngineTest, TestRoundTrip) {
   ::asio::io_service io_service;
   Options options;
-  RpcEngine engine(&io_service, options, "foo", "protocol", 1);
+  RpcEngine engine(&io_service, options, "foo", "", "protocol", 1);
   RpcConnectionImpl<MockRPCConnection> *conn =
       new RpcConnectionImpl<MockRPCConnection>(&engine);
   conn->TEST_set_connected(true);
@@ -141,7 +141,7 @@ TEST(RpcEngineTest, TestRoundTrip) {
 TEST(RpcEngineTest, TestConnectionResetAndFail) {
   ::asio::io_service io_service;
   Options options;
-  RpcEngine engine(&io_service, options, "foo", "protocol", 1);
+  RpcEngine engine(&io_service, options, "foo", "", "protocol", 1);
   RpcConnectionImpl<MockRPCConnection> *conn =
       new RpcConnectionImpl<MockRPCConnection>(&engine);
   conn->TEST_set_connected(true);
@@ -178,7 +178,7 @@ TEST(RpcEngineTest, TestConnectionResetAndRecover) {
   Options options;
   options.max_rpc_retries = 1;
   options.rpc_retry_delay_ms = 0;
-  SharedConnectionEngine engine(&io_service, options, "foo", "protocol", 1);
+  SharedConnectionEngine engine(&io_service, options, "foo", "", "protocol", 1);
 
   EchoResponseProto server_resp;
   server_resp.set_message("foo");
@@ -213,7 +213,7 @@ TEST(RpcEngineTest, TestConnectionResetAndRecoverWithDelay) {
   Options options;
   options.max_rpc_retries = 1;
   options.rpc_retry_delay_ms = 1;
-  SharedConnectionEngine engine(&io_service, options, "foo", "protocol", 1);
+  SharedConnectionEngine engine(&io_service, options, "foo", "", "protocol", 1);
 
   EchoResponseProto server_resp;
   server_resp.set_message("foo");
@@ -262,7 +262,7 @@ TEST(RpcEngineTest, TestConnectionFailure)
   Options options;
   options.max_rpc_retries = 0;
   options.rpc_retry_delay_ms = 0;
-  SharedConnectionEngine engine(&io_service, options, "foo", "protocol", 1);
+  SharedConnectionEngine engine(&io_service, options, "foo", "", "protocol", 1);
   EXPECT_CALL(*producer, Produce())
       .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")));
 
@@ -288,7 +288,7 @@ TEST(RpcEngineTest, TestConnectionFailureRetryAndFailure)
   Options options;
   options.max_rpc_retries = 2;
   options.rpc_retry_delay_ms = 0;
-  SharedConnectionEngine engine(&io_service, options, "foo", "protocol", 1);
+  SharedConnectionEngine engine(&io_service, options, "foo", "", "protocol", 1);
   EXPECT_CALL(*producer, Produce())
       .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")))
       .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")))
@@ -316,7 +316,7 @@ TEST(RpcEngineTest, TestConnectionFailureAndRecover)
   Options options;
   options.max_rpc_retries = 1;
   options.rpc_retry_delay_ms = 0;
-  SharedConnectionEngine engine(&io_service, options, "foo", "protocol", 1);
+  SharedConnectionEngine engine(&io_service, options, "foo", "", "protocol", 1);
   EXPECT_CALL(*producer, Produce())
       .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")))
       .WillOnce(Return(std::make_pair(::asio::error_code(), "")))
@@ -345,7 +345,7 @@ TEST(RpcEngineTest, TestConnectionFailureAndAsyncRecover)
   Options options;
   options.max_rpc_retries = 1;
   options.rpc_retry_delay_ms = 1;
-  SharedConnectionEngine engine(&io_service, options, "foo", "protocol", 1);
+  SharedConnectionEngine engine(&io_service, options, "foo", "", "protocol", 1);
   EXPECT_CALL(*producer, Produce())
       .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")))
       .WillOnce(Return(std::make_pair(::asio::error_code(), "")))
@@ -369,7 +369,7 @@ TEST(RpcEngineTest, TestTimeout) {
   ::asio::io_service io_service;
   Options options;
   options.rpc_timeout = 1;
-  RpcEngine engine(&io_service, options, "foo", "protocol", 1);
+  RpcEngine engine(&io_service, options, "foo", "", "protocol", 1);
   RpcConnectionImpl<MockRPCConnection> *conn =
       new RpcConnectionImpl<MockRPCConnection>(&engine);
   conn->TEST_set_connected(true);
