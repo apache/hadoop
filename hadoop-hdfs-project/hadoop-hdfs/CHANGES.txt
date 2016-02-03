@@ -959,6 +959,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8999. Allow a file to be closed with COMMITTED but not yet COMPLETE
     blocks.  (szetszwo)
 
+    HDFS-9715. Check storage ID uniqueness on datanode startup
+    (Lei (Eddy) Xu via vinayakumarb)
+
   BUG FIXES
 
     HDFS-8091: ACLStatus and XAttributes should be presented to
