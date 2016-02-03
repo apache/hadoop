@@ -23,7 +23,6 @@ import java.io.PrintWriter;
 import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -77,7 +76,7 @@ class PendingReplicationBlocks {
    * @param block The corresponding block
    * @param targets The DataNodes where replicas of the block should be placed
    */
-  void increment(BlockInfo block, DatanodeDescriptor[] targets) {
+  void increment(BlockInfo block, DatanodeDescriptor... targets) {
     synchronized (pendingReplications) {
       PendingBlockInfo found = pendingReplications.get(block);
       if (found == null) {
@@ -193,7 +192,11 @@ class PendingReplicationBlocks {
 
     void incrementReplicas(DatanodeDescriptor... newTargets) {
       if (newTargets != null) {
-        Collections.addAll(targets, newTargets);
+        for (DatanodeDescriptor newTarget : newTargets) {
+          if (!targets.contains(newTarget)) {
+            targets.add(newTarget);
+          }
+        }
       }
     }
 

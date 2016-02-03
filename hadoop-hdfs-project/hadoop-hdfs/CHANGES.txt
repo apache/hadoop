@@ -2693,6 +2693,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9739. DatanodeStorage.isValidStorageId() is broken
     (Mingliang Liu via vinayakumarb)
 
+    HDFS-9748. Avoid duplication in pendingReplications when
+    addExpectedReplicasToPending is called twice. (Walter Su via jing9)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
