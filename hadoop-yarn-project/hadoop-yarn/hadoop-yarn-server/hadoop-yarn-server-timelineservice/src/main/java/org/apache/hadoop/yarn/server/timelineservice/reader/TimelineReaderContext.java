@@ -18,11 +18,15 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.server.timelineservice.TimelineContext;
 
 /**
  * Encapsulates fields necessary to make a query in timeline reader.
  */
+@Private
+@Unstable
 public class TimelineReaderContext extends TimelineContext {
 
   private String entityType;
@@ -32,6 +36,12 @@ public class TimelineReaderContext extends TimelineContext {
     super(clusterId, userId, flowName, flowRunId, appId);
     this.entityType = entityType;
     this.entityId = entityId;
+  }
+
+  public TimelineReaderContext(TimelineReaderContext other) {
+    this(other.getClusterId(), other.getUserId(), other.getFlowName(),
+        other.getFlowRunId(), other.getAppId(), other.getEntityType(),
+        other.getEntityId());
   }
 
   @Override

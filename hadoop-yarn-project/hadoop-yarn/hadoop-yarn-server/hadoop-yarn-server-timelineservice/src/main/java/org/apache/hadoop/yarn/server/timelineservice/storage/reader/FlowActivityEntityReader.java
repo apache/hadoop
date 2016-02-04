@@ -18,9 +18,7 @@
 package org.apache.hadoop.yarn.server.timelineservice.storage.reader;
 
 import java.io.IOException;
-import java.util.EnumSet;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
@@ -32,8 +30,9 @@ import org.apache.hadoop.hbase.filter.PageFilter;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
-import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
-import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityRowKey;
@@ -49,24 +48,14 @@ class FlowActivityEntityReader extends TimelineEntityReader {
   private static final FlowActivityTable FLOW_ACTIVITY_TABLE =
       new FlowActivityTable();
 
-  public FlowActivityEntityReader(String userId, String clusterId,
-      String flowName, Long flowRunId, String appId, String entityType,
-      Long limit, Long createdTimeBegin, Long createdTimeEnd,
-      Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
-      Map<String, Object> infoFilters, Map<String, String> configFilters,
-      Set<String> metricFilters, Set<String> eventFilters,
-      EnumSet<Field> fieldsToRetrieve) {
-    super(userId, clusterId, flowName, flowRunId, appId, entityType, limit,
-        createdTimeBegin, createdTimeEnd, relatesTo, isRelatedTo, infoFilters,
-        configFilters, metricFilters, eventFilters, null, null,
-        fieldsToRetrieve, true);
+  public FlowActivityEntityReader(TimelineReaderContext ctxt,
+      TimelineEntityFilters entityFilters, TimelineDataToRetrieve toRetrieve) {
+    super(ctxt, entityFilters, toRetrieve, true);
   }
 
-  public FlowActivityEntityReader(String userId, String clusterId,
-      String flowName, Long flowRunId, String appId, String entityType,
-      String entityId, EnumSet<Field> fieldsToRetrieve) {
-    super(userId, clusterId, flowName, flowRunId, appId, entityType, entityId,
-        null, null, fieldsToRetrieve);
+  public FlowActivityEntityReader(TimelineReaderContext ctxt,
+      TimelineDataToRetrieve toRetrieve) {
+    super(ctxt, toRetrieve);
   }
 
   /**
@@ -79,21 +68,13 @@ class FlowActivityEntityReader extends TimelineEntityReader {
 
   @Override
   protected void validateParams() {
-    Preconditions.checkNotNull(clusterId, "clusterId shouldn't be null");
+    Preconditions.checkNotNull(getContext().getClusterId(),
+        "clusterId shouldn't be null");
   }
 
   @Override
   protected void augmentParams(Configuration hbaseConf, Connection conn)
       throws IOException {
-    if (limit == null || limit < 0) {
-      limit = TimelineReader.DEFAULT_LIMIT;
-    }
-    if (createdTimeBegin == null) {
-      createdTimeBegin = DEFAULT_BEGIN_TIME;
-    }
-    if (createdTimeEnd == null) {
-      createdTimeEnd = DEFAULT_END_TIME;
-    }
   }
 
   @Override
@@ -112,20 +93,24 @@ class FlowActivityEntityReader extends TimelineEntityReader {
   protected ResultScanner getResults(Configuration hbaseConf,
       Connection conn, FilterList filterList) throws IOException {
     Scan scan = new Scan();
-    if (createdTimeBegin == DEFAULT_BEGIN_TIME &&
-        createdTimeEnd == DEFAULT_END_TIME) {
+    String clusterId = getContext().getClusterId();
+    if (getFilters().getCreatedTimeBegin() == 0L &&
+        getFilters().getCreatedTimeEnd() == Long.MAX_VALUE) {
+       // All records have to be chosen.
       scan.setRowPrefixFilter(FlowActivityRowKey.getRowKeyPrefix(clusterId));
     } else {
       scan.setStartRow(
-          FlowActivityRowKey.getRowKeyPrefix(clusterId, createdTimeEnd));
+          FlowActivityRowKey.getRowKeyPrefix(clusterId,
+              getFilters().getCreatedTimeEnd()));
       scan.setStopRow(
           FlowActivityRowKey.getRowKeyPrefix(clusterId,
-              (createdTimeBegin <= 0 ? 0: (createdTimeBegin - 1))));
+              (getFilters().getCreatedTimeBegin() <= 0 ? 0 :
+              (getFilters().getCreatedTimeBegin() - 1))));
     }
     // use the page filter to limit the result to the page size
     // the scanner may still return more than the limit; therefore we need to
     // read the right number as we iterate
-    scan.setFilter(new PageFilter(limit));
+    scan.setFilter(new PageFilter(getFilters().getLimit()));
     return table.getResultScanner(hbaseConf, conn, scan);
   }
 
@@ -137,8 +122,8 @@ class FlowActivityEntityReader extends TimelineEntityReader {
     String user = rowKey.getUserId();
     String flowName = rowKey.getFlowName();
 
-    FlowActivityEntity flowActivity =
-        new FlowActivityEntity(clusterId, time, user, flowName);
+    FlowActivityEntity flowActivity = new FlowActivityEntity(
+        getContext().getClusterId(), time, user, flowName);
     // set the id
     flowActivity.setId(flowActivity.getId());
     // get the list of run ids along with the version that are associated with

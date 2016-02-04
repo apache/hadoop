@@ -20,27 +20,19 @@ package org.apache.hadoop.yarn.server.timelineservice.storage;
 
 import java.io.IOException;
 
-import java.util.EnumSet;
-import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.service.Service;
-import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
-import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
-import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
-import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelinePrefixFilter;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
 
 /** ATSv2 reader interface. */
 @Private
 @Unstable
 public interface TimelineReader extends Service {
-
-  /**
-   * Default limit for {@link #getEntities}.
-   */
-  long DEFAULT_LIMIT = 100;
 
   /**
    * Possible fields to retrieve for {@link #getEntities} and
@@ -57,55 +49,61 @@ public interface TimelineReader extends Service {
   }
 
   /**
-   * <p>The API to fetch the single entity given the entity identifier in the
-   * scope of the given context.</p>
-   *
-   * @param userId
-   *    Context user Id(optional).
-   * @param clusterId
-   *    Context cluster Id(mandatory).
-   * @param flowName
-   *    Context flow Id (optional).
-   * @param flowRunId
-   *    Context flow run Id (optional).
-   * @param appId
-   *    Context app Id (mandatory)
-   * @param entityType
-   *    Entity type (mandatory)
-   * @param entityId
-   *    Entity Id (mandatory)
-   * @param confsToRetrieve
-   *    Used for deciding which configs to return in response. This is
-   *    represented as a {@link TimelineFilterList} object containing
-   *    {@link TimelinePrefixFilter} objects. These can either be exact config
-   *    keys' or prefixes which are then compared against config keys' to decide
-   *    configs to return in response.
-   * @param metricsToRetrieve
-   *    Used for deciding which metrics to return in response. This is
-   *    represented as a {@link TimelineFilterList} object containing
-   *    {@link TimelinePrefixFilter} objects. These can either be exact metric
-   *    ids' or prefixes which are then compared against metric ids' to decide
-   *    metrics to return in response.
-   * @param fieldsToRetrieve
-   *    Specifies which fields of the entity object to retrieve(optional), see
-   *    {@link Field}. If null, retrieves 4 fields namely entity id,
-   *    entity type and entity created time. All fields will be returned if
-   *    {@link Field#ALL} is specified.
-   * @return a {@link TimelineEntity} instance or null. The entity will
-   *    contain the metadata plus the given fields to retrieve.
+   * <p>The API to fetch the single entity given the identifier(depending on
+   * the entity type) in the scope of the given context.</p>
+   * @param context Context which defines the scope in which query has to be
+   *    made. Use getters of {@link TimelineReaderContext} to fetch context
+   *    fields. Context contains the following :<br>
+   *    <ul>
+   *    <li><b>entityType</b> - Entity type(mandatory).</li>
+   *    <li><b>clusterId</b> - Identifies the cluster(mandatory).</li>
+   *    <li><b>userId</b> - Identifies the user.</li>
+   *    <li><b>flowName</b> - Context flow name.</li>
+   *    <li><b>flowRunId</b> - Context flow run id.</li>
+   *    <li><b>appId</b> - Context app id.</li>
+   *    <li><b>entityId</b> - Entity id.</li>
+   *    </ul>
+   *    Fields in context which are mandatory depends on entity type. Entity
+   *    type is always mandatory. In addition to entity type, below is the list
+   *    of context fields which are mandatory, based on entity type.<br>
+   *    <ul>
+   *    <li>If entity type is YARN_FLOW_RUN (i.e. query to fetch a specific flow
+   *    run), clusterId, userId, flowName and flowRunId are mandatory.</li>
+   *    <li>If entity type is YARN_APPLICATION (i.e. query to fetch a specific
+   *    app), query is within the scope of clusterId, userId, flowName,
+   *    flowRunId and appId. But out of this, only clusterId and appId are
+   *    mandatory. If only clusterId and appId are supplied, backend storage
+   *    must fetch the flow context information i.e. userId, flowName and
+   *    flowRunId first and based on that, fetch the app. If flow context
+   *    information is also given, app can be directly fetched.
+   *    </li>
+   *    <li>For other entity types (i.e. query to fetch generic entity), query
+   *    is within the scope of clusterId, userId, flowName, flowRunId, appId,
+   *    entityType and entityId. But out of this, only clusterId, appId,
+   *    entityType and entityId are mandatory. If flow context information is
+   *    not supplied, backend storage must fetch the flow context information
+   *    i.e. userId, flowName and flowRunId first and based on that, fetch the
+   *    entity. If flow context information is also given, entity can be
+   *    directly queried.
+   *    </li>
+   *    </ul>
+   * @param dataToRetrieve Specifies which data to retrieve for the entity. Use
+   *    getters of TimelineDataToRetrieve class to fetch dataToRetrieve
+   *    fields. All the dataToRetrieve fields are optional. Refer to
+   *    {@link TimelineDataToRetrieve} for details.
+   * @return A <cite>TimelineEntity</cite> instance or null. The entity will
+   *    contain the metadata plus the given fields to retrieve.<br>
    *    If entityType is YARN_FLOW_RUN, entity returned is of type
-   *    {@link FlowRunEntity}.
+   *    <cite>FlowRunEntity</cite>.<br>
    *    For all other entity types, entity returned is of type
-   *    {@link TimelineEntity}.
+   *    <cite>TimelineEntity</cite>.
    * @throws IOException
    */
-  TimelineEntity getEntity(String userId, String clusterId, String flowName,
-      Long flowRunId, String appId, String entityType, String entityId,
-      TimelineFilterList confsToRetrieve, TimelineFilterList metricsToRetrieve,
-      EnumSet<Field> fieldsToRetrieve) throws IOException;
+  TimelineEntity getEntity(TimelineReaderContext context,
+      TimelineDataToRetrieve dataToRetrieve) throws IOException;
 
   /**
-   * <p>The API to search for a set of entities of the given the entity type in
+   * <p>The API to search for a set of entities of the given entity type in
    * the scope of the given context which matches the given predicates. The
    * predicates include the created time window, limit to number of entities to
    * be returned, and the entities can be filtered by checking whether they
@@ -115,84 +113,66 @@ public interface TimelineReader extends Service {
    * related to other entities. For those parameters which have multiple
    * entries, the qualified entity needs to meet all or them.</p>
    *
-   * @param userId
-   *    Context user Id(optional).
-   * @param clusterId
-   *    Context cluster Id(mandatory).
-   * @param flowName
-   *    Context flow Id (optional).
-   * @param flowRunId
-   *    Context flow run Id (optional).
-   * @param appId
-   *    Context app Id (mandatory)
-   * @param entityType
-   *    Entity type (mandatory)
-   * @param limit
-   *    A limit on the number of entities to return (optional). If null or <=0,
-   *    defaults to {@link #DEFAULT_LIMIT}.
-   * @param createdTimeBegin
-   *    Matched entities should not be created before this timestamp (optional).
-   *    If null or <=0, defaults to 0.
-   * @param createdTimeEnd
-   *    Matched entities should not be created after this timestamp (optional).
-   *    If null or <=0, defaults to {@link Long#MAX_VALUE}.
-   * @param relatesTo
-   *    Matched entities should relate to given entities (optional).
-   * @param isRelatedTo
-   *    Matched entities should be related to given entities (optional).
-   * @param infoFilters
-   *    Matched entities should have exact matches to the given info represented
-   *    as key-value pairs (optional). If null or empty, the filter is not
-   *    applied.
-   * @param configFilters
-   *    Matched entities should have exact matches to the given configs
-   *    represented as key-value pairs (optional). If null or empty, the filter
-   *    is not applied.
-   * @param metricFilters
-   *    Matched entities should contain the given metrics (optional). If null
-   *    or empty, the filter is not applied.
-   * @param eventFilters
-   *    Matched entities should contain the given events (optional). If null
-   *    or empty, the filter is not applied.
-   * @param confsToRetrieve
-   *    Used for deciding which configs to return in response. This is
-   *    represented as a {@link TimelineFilterList} object containing
-   *    {@link TimelinePrefixFilter} objects. These can either be exact config
-   *    keys' or prefixes which are then compared against config keys' to decide
-   *    configs(inside entities) to return in response. This should not be
-   *    confused with configFilters which is used to decide which entities to
-   *    return instead.
-   * @param metricsToRetrieve
-   *    Used for deciding which metrics to return in response. This is
-   *    represented as a {@link TimelineFilterList} object containing
-   *    {@link TimelinePrefixFilter} objects. These can either be exact metric
-   *    ids' or prefixes which are then compared against metric ids' to decide
-   *    metrics(inside entities) to return in response. This should not be
-   *    confused with metricFilters which is used to decide which entities to
-   *    return instead.
-   * @param fieldsToRetrieve
-   *    Specifies which fields of the entity object to retrieve(optional), see
-   *    {@link Field}. If null, retrieves 4 fields namely entity id,
-   *    entity type and entity created time. All fields will be returned if
-   *    {@link Field#ALL} is specified.
-   * @return A set of {@link TimelineEntity} instances of the given entity type
-   *    in the given context scope which matches the given predicates
+   * @param context Context which defines the scope in which query has to be
+   *    made. Use getters of {@link TimelineReaderContext} to fetch context
+   *    fields. Context contains the following :<br>
+   *    <ul>
+   *    <li><b>entityType</b> - Entity type(mandatory).</li>
+   *    <li><b>clusterId</b> - Identifies the cluster(mandatory).</li>
+   *    <li><b>userId</b> - Identifies the user.</li>
+   *    <li><b>flowName</b> - Context flow name.</li>
+   *    <li><b>flowRunId</b> - Context flow run id.</li>
+   *    <li><b>appId</b> - Context app id.</li>
+   *    </ul>
+   *    Although entityId is also part of context, it has no meaning for
+   *    getEntities.<br>
+   *    Fields in context which are mandatory depends on entity type. Entity
+   *    type is always mandatory. In addition to entity type, below is the list
+   *    of context fields which are mandatory, based on entity type.<br>
+   *    <ul>
+   *    <li>If entity type is YARN_FLOW_ACTIVITY (i.e. query to fetch flows),
+   *    only clusterId is mandatory.
+   *    </li>
+   *    <li>If entity type is YARN_FLOW_RUN (i.e. query to fetch flow runs),
+   *    clusterId, userId and flowName are mandatory.</li>
+   *    <li>If entity type is YARN_APPLICATION (i.e. query to fetch apps), we
+   *    can either get all apps within the context of flow name or within the
+   *    context of flow run. If apps are queried within the scope of flow name,
+   *    clusterId, userId and flowName are supplied. If they are queried within
+   *    the scope of flow run, clusterId, userId, flowName and flowRunId are
+   *    supplied.</li>
+   *    <li>For other entity types (i.e. query to fetch generic entities), query
+   *    is within the scope of clusterId, userId, flowName, flowRunId, appId and
+   *    entityType. But out of this, only clusterId, appId and entityType are
+   *    mandatory. If flow context information is not supplied, backend storage
+   *    must fetch the flow context information i.e. userId, flowName and
+   *    flowRunId first and based on that, fetch the entities. If flow context
+   *    information is also given, entities can be directly queried.
+   *    </li>
+   *    </ul>
+   * @param filters Specifies filters which restrict the number of entities
+   *    to return. Use getters of TimelineEntityFilters class to fetch
+   *    various filters. All the filters are optional. Refer to
+   *    {@link TimelineEntityFilters} for details.
+   * @param dataToRetrieve Specifies which data to retrieve for each entity. Use
+   *    getters of TimelineDataToRetrieve class to fetch dataToRetrieve
+   *    fields. All the dataToRetrieve fields are optional. Refer to
+   *    {@link TimelineDataToRetrieve} for details.
+   * @return A set of <cite>TimelineEntity</cite> instances of the given entity
+   *    type in the given context scope which matches the given predicates
    *    ordered by created time, descending. Each entity will only contain the
    *    metadata(id, type and created time) plus the given fields to retrieve.
+   *    <br>
    *    If entityType is YARN_FLOW_ACTIVITY, entities returned are of type
-   *    {@link FlowActivityEntity}.
+   *    <cite>FlowActivityEntity</cite>.<br>
    *    If entityType is YARN_FLOW_RUN, entities returned are of type
-   *    {@link FlowRunEntity}.
+   *    <cite>FlowRunEntity</cite>.<br>
    *    For all other entity types, entities returned are of type
-   *    {@link TimelineEntity}.
+   *    <cite>TimelineEntity</cite>.
    * @throws IOException
    */
-  Set<TimelineEntity> getEntities(String userId, String clusterId,
-      String flowName, Long flowRunId, String appId, String entityType,
-      Long limit, Long createdTimeBegin, Long createdTimeEnd,
-      Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
-      Map<String, Object> infoFilters, Map<String, String> configFilters,
-      Set<String>  metricFilters, Set<String> eventFilters,
-      TimelineFilterList confsToRetrieve, TimelineFilterList metricsToRetrieve,
-      EnumSet<Field> fieldsToRetrieve) throws IOException;
+  Set<TimelineEntity> getEntities(
+      TimelineReaderContext context,
+      TimelineEntityFilters filters,
+      TimelineDataToRetrieve dataToRetrieve) throws IOException;
 }

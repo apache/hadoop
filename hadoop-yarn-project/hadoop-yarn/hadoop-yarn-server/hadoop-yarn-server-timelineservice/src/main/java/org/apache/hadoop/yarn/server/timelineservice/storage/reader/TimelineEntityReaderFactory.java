@@ -17,13 +17,10 @@
  */
 package org.apache.hadoop.yarn.server.timelineservice.storage.reader;
 
-import java.util.EnumSet;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
-import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
-import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
 
 /**
  * Factory methods for instantiating a timeline entity reader.
@@ -33,25 +30,21 @@ public class TimelineEntityReaderFactory {
    * Creates a timeline entity reader instance for reading a single entity with
    * the specified input.
    */
-  public static TimelineEntityReader createSingleEntityReader(String userId,
-      String clusterId, String flowName, Long flowRunId, String appId,
-      String entityType, String entityId, TimelineFilterList confs,
-      TimelineFilterList metrics, EnumSet<Field> fieldsToRetrieve) {
+  public static TimelineEntityReader createSingleEntityReader(
+      TimelineReaderContext context, TimelineDataToRetrieve dataToRetrieve) {
     // currently the types that are handled separate from the generic entity
     // table are application, flow run, and flow activity entities
-    if (TimelineEntityType.YARN_APPLICATION.matches(entityType)) {
-      return new ApplicationEntityReader(userId, clusterId, flowName, flowRunId,
-          appId, entityType, entityId, confs, metrics, fieldsToRetrieve);
-    } else if (TimelineEntityType.YARN_FLOW_RUN.matches(entityType)) {
-      return new FlowRunEntityReader(userId, clusterId, flowName, flowRunId,
-          appId, entityType, entityId, confs, metrics, fieldsToRetrieve);
-    } else if (TimelineEntityType.YARN_FLOW_ACTIVITY.matches(entityType)) {
-      return new FlowActivityEntityReader(userId, clusterId, flowName, flowRunId,
-          appId, entityType, entityId, fieldsToRetrieve);
+    if (TimelineEntityType.YARN_APPLICATION.matches(context.getEntityType())) {
+      return new ApplicationEntityReader(context, dataToRetrieve);
+    } else if (TimelineEntityType.
+        YARN_FLOW_RUN.matches(context.getEntityType())) {
+      return new FlowRunEntityReader(context, dataToRetrieve);
+    } else if (TimelineEntityType.
+        YARN_FLOW_ACTIVITY.matches(context.getEntityType())) {
+      return new FlowActivityEntityReader(context, dataToRetrieve);
     } else {
       // assume we're dealing with a generic entity read
-      return new GenericEntityReader(userId, clusterId, flowName, flowRunId,
-        appId, entityType, entityId, confs, metrics, fieldsToRetrieve);
+      return new GenericEntityReader(context, dataToRetrieve);
     }
   }
 
@@ -59,37 +52,22 @@ public class TimelineEntityReaderFactory {
    * Creates a timeline entity reader instance for reading set of entities with
    * the specified input and predicates.
    */
-  public static TimelineEntityReader createMultipleEntitiesReader(String userId,
-      String clusterId, String flowName, Long flowRunId, String appId,
-      String entityType, Long limit, Long createdTimeBegin, Long createdTimeEnd,
-      Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
-      Map<String, Object> infoFilters, Map<String, String> configFilters,
-      Set<String> metricFilters, Set<String> eventFilters,
-      TimelineFilterList confs, TimelineFilterList metrics,
-      EnumSet<Field> fieldsToRetrieve) {
+  public static TimelineEntityReader createMultipleEntitiesReader(
+      TimelineReaderContext context, TimelineEntityFilters filters,
+      TimelineDataToRetrieve dataToRetrieve) {
     // currently the types that are handled separate from the generic entity
     // table are application, flow run, and flow activity entities
-    if (TimelineEntityType.YARN_APPLICATION.matches(entityType)) {
-      return new ApplicationEntityReader(userId, clusterId, flowName, flowRunId,
-          appId, entityType, limit, createdTimeBegin, createdTimeEnd, relatesTo,
-          isRelatedTo, infoFilters, configFilters, metricFilters, eventFilters,
-          confs, metrics, fieldsToRetrieve);
-    } else if (TimelineEntityType.YARN_FLOW_ACTIVITY.matches(entityType)) {
-      return new FlowActivityEntityReader(userId, clusterId, flowName, flowRunId,
-          appId, entityType, limit, createdTimeBegin, createdTimeEnd, relatesTo,
-          isRelatedTo, infoFilters, configFilters, metricFilters, eventFilters,
-          fieldsToRetrieve);
-    } else if (TimelineEntityType.YARN_FLOW_RUN.matches(entityType)) {
-      return new FlowRunEntityReader(userId, clusterId, flowName, flowRunId,
-          appId, entityType, limit, createdTimeBegin, createdTimeEnd, relatesTo,
-          isRelatedTo, infoFilters, configFilters, metricFilters, eventFilters,
-          confs, metrics, fieldsToRetrieve);
+    if (TimelineEntityType.YARN_APPLICATION.matches(context.getEntityType())) {
+      return new ApplicationEntityReader(context, filters, dataToRetrieve);
+    } else if (TimelineEntityType.
+        YARN_FLOW_ACTIVITY.matches(context.getEntityType())) {
+      return new FlowActivityEntityReader(context, filters, dataToRetrieve);
+    } else if (TimelineEntityType.
+        YARN_FLOW_RUN.matches(context.getEntityType())) {
+      return new FlowRunEntityReader(context, filters, dataToRetrieve);
     } else {
       // assume we're dealing with a generic entity read
-      return new GenericEntityReader(userId, clusterId, flowName, flowRunId,
-          appId, entityType, limit, createdTimeBegin, createdTimeEnd, relatesTo,
-          isRelatedTo, infoFilters, configFilters, metricFilters, eventFilters,
-          confs, metrics, fieldsToRetrieve, false);
+      return new GenericEntityReader(context, filters, dataToRetrieve, false);
     }
   }
 }

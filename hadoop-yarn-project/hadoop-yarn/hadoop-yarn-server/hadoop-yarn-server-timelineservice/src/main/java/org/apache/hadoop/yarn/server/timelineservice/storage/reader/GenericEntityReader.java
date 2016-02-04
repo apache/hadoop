@@ -42,9 +42,10 @@ import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
-import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterUtils;
-import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationTable;
@@ -77,26 +78,15 @@ class GenericEntityReader extends TimelineEntityReader {
    */
   private final AppToFlowTable appToFlowTable = new AppToFlowTable();
 
-  public GenericEntityReader(String userId, String clusterId,
-      String flowName, Long flowRunId, String appId, String entityType,
-      Long limit, Long createdTimeBegin, Long createdTimeEnd,
-      Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
-      Map<String, Object> infoFilters, Map<String, String> configFilters,
-      Set<String> metricFilters, Set<String> eventFilters,
-      TimelineFilterList confsToRetrieve, TimelineFilterList metricsToRetrieve,
-      EnumSet<Field> fieldsToRetrieve, boolean sortedKeys) {
-    super(userId, clusterId, flowName, flowRunId, appId, entityType, limit,
-        createdTimeBegin, createdTimeEnd, relatesTo, isRelatedTo, infoFilters,
-        configFilters, metricFilters, eventFilters, confsToRetrieve,
-        metricsToRetrieve, fieldsToRetrieve, sortedKeys);
+  public GenericEntityReader(TimelineReaderContext ctxt,
+      TimelineEntityFilters entityFilters, TimelineDataToRetrieve toRetrieve,
+      boolean sortedKeys) {
+    super(ctxt, entityFilters, toRetrieve, sortedKeys);
   }
 
-  public GenericEntityReader(String userId, String clusterId,
-      String flowName, Long flowRunId, String appId, String entityType,
-      String entityId, TimelineFilterList confsToRetrieve,
-      TimelineFilterList metricsToRetrieve, EnumSet<Field> fieldsToRetrieve) {
-    super(userId, clusterId, flowName, flowRunId, appId, entityType, entityId,
-        confsToRetrieve, metricsToRetrieve, fieldsToRetrieve);
+  public GenericEntityReader(TimelineReaderContext ctxt,
+      TimelineDataToRetrieve toRetrieve) {
+    super(ctxt, toRetrieve);
   }
 
   /**
@@ -109,12 +99,13 @@ class GenericEntityReader extends TimelineEntityReader {
   @Override
   protected FilterList constructFilterListBasedOnFields() {
     FilterList list = new FilterList(Operator.MUST_PASS_ONE);
+    TimelineDataToRetrieve dataToRetrieve = getDataToRetrieve();
     // Fetch all the columns.
-    if (fieldsToRetrieve.contains(Field.ALL) &&
-        (confsToRetrieve == null ||
-        confsToRetrieve.getFilterList().isEmpty()) &&
-        (metricsToRetrieve == null ||
-        metricsToRetrieve.getFilterList().isEmpty())) {
+    if (dataToRetrieve.getFieldsToRetrieve().contains(Field.ALL) &&
+        (dataToRetrieve.getConfsToRetrieve() == null ||
+        dataToRetrieve.getConfsToRetrieve().getFilterList().isEmpty()) &&
+        (dataToRetrieve.getMetricsToRetrieve() == null ||
+        dataToRetrieve.getMetricsToRetrieve().getFilterList().isEmpty())) {
       return list;
     }
     FilterList infoColFamilyList = new FilterList();
@@ -123,62 +114,69 @@ class GenericEntityReader extends TimelineEntityReader {
         new FamilyFilter(CompareOp.EQUAL,
            new BinaryComparator(EntityColumnFamily.INFO.getBytes()));
     infoColFamilyList.addFilter(infoColumnFamily);
+    TimelineEntityFilters filters = getFilters();
     // Events not required.
-    if (!fieldsToRetrieve.contains(Field.EVENTS) &&
-        !fieldsToRetrieve.contains(Field.ALL) && eventFilters == null) {
+    if (!dataToRetrieve.getFieldsToRetrieve().contains(Field.EVENTS) &&
+        !dataToRetrieve.getFieldsToRetrieve().contains(Field.ALL) &&
+        (singleEntityRead || filters.getEventFilters() == null)) {
       infoColFamilyList.addFilter(
           new QualifierFilter(CompareOp.NOT_EQUAL,
           new BinaryPrefixComparator(
           EntityColumnPrefix.EVENT.getColumnPrefixBytes(""))));
     }
     // info not required.
-    if (!fieldsToRetrieve.contains(Field.INFO) &&
-        !fieldsToRetrieve.contains(Field.ALL) && infoFilters == null) {
+    if (!dataToRetrieve.getFieldsToRetrieve().contains(Field.INFO) &&
+        !dataToRetrieve.getFieldsToRetrieve().contains(Field.ALL) &&
+        (singleEntityRead || filters.getInfoFilters() == null)) {
       infoColFamilyList.addFilter(
           new QualifierFilter(CompareOp.NOT_EQUAL,
           new BinaryPrefixComparator(
               EntityColumnPrefix.INFO.getColumnPrefixBytes(""))));
     }
     // is related to not required.
-    if (!fieldsToRetrieve.contains(Field.IS_RELATED_TO) &&
-        !fieldsToRetrieve.contains(Field.ALL) && isRelatedTo == null) {
+    if (!dataToRetrieve.getFieldsToRetrieve().contains(Field.IS_RELATED_TO) &&
+        !dataToRetrieve.getFieldsToRetrieve().contains(Field.ALL) &&
+        (singleEntityRead || filters.getIsRelatedTo() == null)) {
       infoColFamilyList.addFilter(
           new QualifierFilter(CompareOp.NOT_EQUAL,
           new BinaryPrefixComparator(
               EntityColumnPrefix.IS_RELATED_TO.getColumnPrefixBytes(""))));
     }
     // relates to not required.
-    if (!fieldsToRetrieve.contains(Field.RELATES_TO) &&
-        !fieldsToRetrieve.contains(Field.ALL) && relatesTo == null) {
+    if (!dataToRetrieve.getFieldsToRetrieve().contains(Field.RELATES_TO) &&
+        !dataToRetrieve.getFieldsToRetrieve().contains(Field.ALL) &&
+        (singleEntityRead || filters.getRelatesTo() == null)) {
       infoColFamilyList.addFilter(
           new QualifierFilter(CompareOp.NOT_EQUAL,
           new BinaryPrefixComparator(
               EntityColumnPrefix.RELATES_TO.getColumnPrefixBytes(""))));
     }
     list.addFilter(infoColFamilyList);
-    if ((fieldsToRetrieve.contains(Field.CONFIGS) || configFilters != null) ||
-        (confsToRetrieve != null &&
-        !confsToRetrieve.getFilterList().isEmpty())) {
+    if ((dataToRetrieve.getFieldsToRetrieve().contains(Field.CONFIGS) ||
+        (!singleEntityRead && filters.getConfigFilters() != null)) ||
+        (dataToRetrieve.getConfsToRetrieve() != null &&
+        !dataToRetrieve.getConfsToRetrieve().getFilterList().isEmpty())) {
       FilterList filterCfg =
           new FilterList(new FamilyFilter(CompareOp.EQUAL,
               new BinaryComparator(EntityColumnFamily.CONFIGS.getBytes())));
-      if (confsToRetrieve != null &&
-          !confsToRetrieve.getFilterList().isEmpty()) {
+      if (dataToRetrieve.getConfsToRetrieve() != null &&
+          !dataToRetrieve.getConfsToRetrieve().getFilterList().isEmpty()) {
         filterCfg.addFilter(TimelineFilterUtils.createHBaseFilterList(
-            EntityColumnPrefix.CONFIG, confsToRetrieve));
+            EntityColumnPrefix.CONFIG, dataToRetrieve.getConfsToRetrieve()));
       }
       list.addFilter(filterCfg);
     }
-    if ((fieldsToRetrieve.contains(Field.METRICS) || metricFilters != null) ||
-        (metricsToRetrieve != null &&
-        !metricsToRetrieve.getFilterList().isEmpty())) {
+    if ((dataToRetrieve.getFieldsToRetrieve().contains(Field.METRICS) ||
+        (!singleEntityRead && filters.getMetricFilters() != null)) ||
+        (dataToRetrieve.getMetricsToRetrieve() != null &&
+        !dataToRetrieve.getMetricsToRetrieve().getFilterList().isEmpty())) {
       FilterList filterMetrics =
           new FilterList(new FamilyFilter(CompareOp.EQUAL,
               new BinaryComparator(EntityColumnFamily.METRICS.getBytes())));
-      if (metricsToRetrieve != null &&
-          !metricsToRetrieve.getFilterList().isEmpty()) {
+      if (dataToRetrieve.getMetricsToRetrieve() != null &&
+          !dataToRetrieve.getMetricsToRetrieve().getFilterList().isEmpty()) {
         filterMetrics.addFilter(TimelineFilterUtils.createHBaseFilterList(
-            EntityColumnPrefix.METRIC, metricsToRetrieve));
+            EntityColumnPrefix.METRIC, dataToRetrieve.getMetricsToRetrieve()));
       }
       list.addFilter(filterMetrics);
     }
@@ -215,56 +213,42 @@ class GenericEntityReader extends TimelineEntityReader {
 
   @Override
   protected void validateParams() {
-    Preconditions.checkNotNull(clusterId, "clusterId shouldn't be null");
-    Preconditions.checkNotNull(appId, "appId shouldn't be null");
-    Preconditions.checkNotNull(entityType, "entityType shouldn't be null");
+    Preconditions.checkNotNull(getContext().getClusterId(),
+        "clusterId shouldn't be null");
+    Preconditions.checkNotNull(getContext().getAppId(),
+        "appId shouldn't be null");
+    Preconditions.checkNotNull(getContext().getEntityType(),
+        "entityType shouldn't be null");
     if (singleEntityRead) {
-      Preconditions.checkNotNull(entityId, "entityId shouldn't be null");
+      Preconditions.checkNotNull(getContext().getEntityId(),
+          "entityId shouldn't be null");
     }
   }
 
   @Override
   protected void augmentParams(Configuration hbaseConf, Connection conn)
       throws IOException {
+    TimelineReaderContext context = getContext();
     // In reality all three should be null or neither should be null
-    if (flowName == null || flowRunId == null || userId == null) {
-      FlowContext context =
-          lookupFlowContext(clusterId, appId, hbaseConf, conn);
-      flowName = context.flowName;
-      flowRunId = context.flowRunId;
-      userId = context.userId;
+    if (context.getFlowName() == null || context.getFlowRunId() == null ||
+        context.getUserId() == null) {
+      FlowContext flowContext = lookupFlowContext(
+          context.getClusterId(), context.getAppId(), hbaseConf, conn);
+      context.setFlowName(flowContext.flowName);
+      context.setFlowRunId(flowContext.flowRunId);
+      context.setUserId(flowContext.userId);
     }
-    if (fieldsToRetrieve == null) {
-      fieldsToRetrieve = EnumSet.noneOf(Field.class);
-    }
-    if (!fieldsToRetrieve.contains(Field.CONFIGS) &&
-        confsToRetrieve != null && !confsToRetrieve.getFilterList().isEmpty()) {
-      fieldsToRetrieve.add(Field.CONFIGS);
-    }
-    if (!fieldsToRetrieve.contains(Field.METRICS) &&
-        metricsToRetrieve != null &&
-        !metricsToRetrieve.getFilterList().isEmpty()) {
-      fieldsToRetrieve.add(Field.METRICS);
-    }
-    if (!singleEntityRead) {
-      if (limit == null || limit < 0) {
-        limit = TimelineReader.DEFAULT_LIMIT;
-      }
-      if (createdTimeBegin == null) {
-        createdTimeBegin = DEFAULT_BEGIN_TIME;
-      }
-      if (createdTimeEnd == null) {
-        createdTimeEnd = DEFAULT_END_TIME;
-      }
-    }
+    getDataToRetrieve().addFieldsBasedOnConfsAndMetricsToRetrieve();
   }
 
   @Override
   protected Result getResult(Configuration hbaseConf, Connection conn,
       FilterList filterList) throws IOException {
+    TimelineReaderContext context = getContext();
     byte[] rowKey =
-        EntityRowKey.getRowKey(clusterId, userId, flowName, flowRunId, appId,
-            entityType, entityId);
+        EntityRowKey.getRowKey(context.getClusterId(), context.getUserId(),
+            context.getFlowName(), context.getFlowRunId(), context.getAppId(),
+            context.getEntityType(), context.getEntityId());
     Get get = new Get(rowKey);
     get.setMaxVersions(Integer.MAX_VALUE);
     if (filterList != null && !filterList.getFilters().isEmpty()) {
@@ -279,8 +263,10 @@ class GenericEntityReader extends TimelineEntityReader {
     // Scan through part of the table to find the entities belong to one app
     // and one type
     Scan scan = new Scan();
+    TimelineReaderContext context = getContext();
     scan.setRowPrefixFilter(EntityRowKey.getRowKeyPrefix(
-        clusterId, userId, flowName, flowRunId, appId, entityType));
+        context.getClusterId(), context.getUserId(), context.getFlowName(),
+        context.getFlowRunId(), context.getAppId(), context.getEntityType()));
     scan.setMaxVersions(Integer.MAX_VALUE);
     if (filterList != null && !filterList.getFilters().isEmpty()) {
       scan.setFilter(filterList);
@@ -299,21 +285,25 @@ class GenericEntityReader extends TimelineEntityReader {
     String entityId = EntityColumn.ID.readResult(result).toString();
     entity.setId(entityId);
 
+    TimelineEntityFilters filters = getFilters();
     // fetch created time
     Number createdTime = (Number)EntityColumn.CREATED_TIME.readResult(result);
     entity.setCreatedTime(createdTime.longValue());
-    if (!singleEntityRead && (entity.getCreatedTime() < createdTimeBegin ||
-        entity.getCreatedTime() > createdTimeEnd)) {
+    if (!singleEntityRead &&
+        (entity.getCreatedTime() < filters.getCreatedTimeBegin() ||
+        entity.getCreatedTime() > filters.getCreatedTimeEnd())) {
       return null;
     }
-
+    EnumSet<Field> fieldsToRetrieve = getDataToRetrieve().getFieldsToRetrieve();
     // fetch is related to entities
-    boolean checkIsRelatedTo = isRelatedTo != null && isRelatedTo.size() > 0;
+    boolean checkIsRelatedTo =
+        filters != null && filters.getIsRelatedTo() != null &&
+        filters.getIsRelatedTo().size() > 0;
     if (fieldsToRetrieve.contains(Field.ALL) ||
         fieldsToRetrieve.contains(Field.IS_RELATED_TO) || checkIsRelatedTo) {
       readRelationship(entity, result, EntityColumnPrefix.IS_RELATED_TO, true);
       if (checkIsRelatedTo && !TimelineStorageUtils.matchRelations(
-          entity.getIsRelatedToEntities(), isRelatedTo)) {
+          entity.getIsRelatedToEntities(), filters.getIsRelatedTo())) {
         return null;
       }
       if (!fieldsToRetrieve.contains(Field.ALL) &&
@@ -323,12 +313,14 @@ class GenericEntityReader extends TimelineEntityReader {
     }
 
     // fetch relates to entities
-    boolean checkRelatesTo = relatesTo != null && relatesTo.size() > 0;
+    boolean checkRelatesTo =
+        filters != null && filters.getRelatesTo() != null &&
+        filters.getRelatesTo().size() > 0;
     if (fieldsToRetrieve.contains(Field.ALL) ||
         fieldsToRetrieve.contains(Field.RELATES_TO) || checkRelatesTo) {
       readRelationship(entity, result, EntityColumnPrefix.RELATES_TO, false);
       if (checkRelatesTo && !TimelineStorageUtils.matchRelations(
-          entity.getRelatesToEntities(), relatesTo)) {
+          entity.getRelatesToEntities(), filters.getRelatesTo())) {
         return null;
       }
       if (!fieldsToRetrieve.contains(Field.ALL) &&
@@ -338,12 +330,14 @@ class GenericEntityReader extends TimelineEntityReader {
     }
 
     // fetch info
-    boolean checkInfo = infoFilters != null && infoFilters.size() > 0;
+    boolean checkInfo = filters != null && filters.getInfoFilters() != null &&
+        filters.getInfoFilters().size() > 0;
     if (fieldsToRetrieve.contains(Field.ALL) ||
         fieldsToRetrieve.contains(Field.INFO) || checkInfo) {
       readKeyValuePairs(entity, result, EntityColumnPrefix.INFO, false);
       if (checkInfo &&
-          !TimelineStorageUtils.matchFilters(entity.getInfo(), infoFilters)) {
+          !TimelineStorageUtils.matchFilters(
+          entity.getInfo(), filters.getInfoFilters())) {
         return null;
       }
       if (!fieldsToRetrieve.contains(Field.ALL) &&
@@ -353,12 +347,14 @@ class GenericEntityReader extends TimelineEntityReader {
     }
 
     // fetch configs
-    boolean checkConfigs = configFilters != null && configFilters.size() > 0;
+    boolean checkConfigs =
+        filters != null && filters.getConfigFilters() != null &&
+        filters.getConfigFilters().size() > 0;
     if (fieldsToRetrieve.contains(Field.ALL) ||
         fieldsToRetrieve.contains(Field.CONFIGS) || checkConfigs) {
       readKeyValuePairs(entity, result, EntityColumnPrefix.CONFIG, true);
       if (checkConfigs && !TimelineStorageUtils.matchFilters(
-          entity.getConfigs(), configFilters)) {
+          entity.getConfigs(), filters.getConfigFilters())) {
         return null;
       }
       if (!fieldsToRetrieve.contains(Field.ALL) &&
@@ -368,12 +364,14 @@ class GenericEntityReader extends TimelineEntityReader {
     }
 
     // fetch events
-    boolean checkEvents = eventFilters != null && eventFilters.size() > 0;
+    boolean checkEvents =
+        filters != null && filters.getEventFilters() != null &&
+        filters.getEventFilters().size() > 0;
     if (fieldsToRetrieve.contains(Field.ALL) ||
         fieldsToRetrieve.contains(Field.EVENTS) || checkEvents) {
       readEvents(entity, result, false);
       if (checkEvents && !TimelineStorageUtils.matchEventFilters(
-          entity.getEvents(), eventFilters)) {
+          entity.getEvents(), filters.getEventFilters())) {
         return null;
       }
       if (!fieldsToRetrieve.contains(Field.ALL) &&
@@ -383,12 +381,14 @@ class GenericEntityReader extends TimelineEntityReader {
     }
 
     // fetch metrics
-    boolean checkMetrics = metricFilters != null && metricFilters.size() > 0;
+    boolean checkMetrics =
+        filters != null && filters.getMetricFilters() != null &&
+        filters.getMetricFilters().size() > 0;
     if (fieldsToRetrieve.contains(Field.ALL) ||
         fieldsToRetrieve.contains(Field.METRICS) || checkMetrics) {
       readMetrics(entity, result, EntityColumnPrefix.METRIC);
       if (checkMetrics && !TimelineStorageUtils.matchMetricFilters(
-          entity.getMetrics(), metricFilters)) {
+          entity.getMetrics(), filters.getMetricFilters())) {
         return null;
       }
       if (!fieldsToRetrieve.contains(Field.ALL) &&
