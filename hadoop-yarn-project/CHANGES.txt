@@ -788,6 +788,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4100. Add Documentation for Distributed and Delegated-Centralized
     Node Labels feature. (Naganarasimha G R via devaraj)
 
+    YARN-4662. Document some newly added metrics. (Jian He via xgong)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
