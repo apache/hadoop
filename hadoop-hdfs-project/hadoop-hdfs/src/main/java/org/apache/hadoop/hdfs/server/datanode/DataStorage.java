@@ -518,11 +518,7 @@ public class DataStorage extends Storage {
     this.cTime = 0;
     setDatanodeUuid(datanodeUuid);
 
-    if (sd.getStorageUuid() == null) {
-      // Assign a new Storage UUID.
-      sd.setStorageUuid(DatanodeStorage.generateUuid());
-    }
-
+    createStorageID(sd, false);
     writeProperties(sd);
   }
 
@@ -696,7 +692,13 @@ public class DataStorage extends Storage {
 
     // do upgrade
     if (this.layoutVersion > HdfsServerConstants.DATANODE_LAYOUT_VERSION) {
-      doUpgrade(sd, nsInfo, conf);  // upgrade
+      if (federationSupported) {
+        // If the existing on-disk layout version supports federation,
+        // simply update the properties.
+        upgradeProperties(sd);
+      } else {
+        doUpgradePreFederation(sd, nsInfo, conf);
+      }
       return true; // doUgrade already has written properties
     }
     
@@ -710,7 +712,8 @@ public class DataStorage extends Storage {
   }
 
   /**
-   * Upgrade -- Move current storage into a backup directory,
+   * Upgrade from a pre-federation layout.
+   * Move current storage into a backup directory,
    * and hardlink all its blocks into the new current directory.
    * 
    * Upgrade from pre-0.22 to 0.22 or later release e.g. 0.19/0.20/ => 0.22/0.23
@@ -729,25 +732,9 @@ public class DataStorage extends Storage {
    * There should be only ONE namenode in the cluster for first 
    * time upgrade to 0.22
    * @param sd  storage directory
-   * @throws IOException on error
    */
-  void doUpgrade(final StorageDirectory sd, final NamespaceInfo nsInfo,
-      final Configuration conf) throws IOException {
-    // If the existing on-disk layout version supportes federation, simply
-    // update its layout version.
-    if (DataNodeLayoutVersion.supports(
-        LayoutVersion.Feature.FEDERATION, layoutVersion)) {
-      // The VERSION file is already read in. Override the layoutVersion 
-      // field and overwrite the file. The upgrade work is handled by
-      // {@link BlockPoolSliceStorage#doUpgrade}
-      LOG.info("Updating layout version from " + layoutVersion + " to "
-          + HdfsServerConstants.DATANODE_LAYOUT_VERSION + " for storage "
-          + sd.getRoot());
-      layoutVersion = HdfsServerConstants.DATANODE_LAYOUT_VERSION;
-      writeProperties(sd);
-      return;
-    }
-    
+  void doUpgradePreFederation(final StorageDirectory sd,
+      final NamespaceInfo nsInfo, final Configuration conf) throws IOException {
     final int oldLV = getLayoutVersion();
     LOG.info("Upgrading storage directory " + sd.getRoot()
              + ".\n   old LV = " + oldLV
@@ -791,15 +778,21 @@ public class DataStorage extends Storage {
     linkAllBlocks(tmpDir, bbwDir, toDir, oldLV, conf);
 
     // 4. Write version file under <SD>/current
-    layoutVersion = HdfsServerConstants.DATANODE_LAYOUT_VERSION;
     clusterID = nsInfo.getClusterID();
-    writeProperties(sd);
+    upgradeProperties(sd);
     
     // 5. Rename <SD>/previous.tmp to <SD>/previous
     rename(tmpDir, prevDir);
     LOG.info("Upgrade of " + sd.getRoot()+ " is complete");
+  }
 
+  void upgradeProperties(StorageDirectory sd) throws IOException {
     createStorageID(sd, layoutVersion);
+    LOG.info("Updating layout version from " + layoutVersion
+        + " to " + HdfsServerConstants.DATANODE_LAYOUT_VERSION
+        + " for storage " + sd.getRoot());
+    layoutVersion = HdfsServerConstants.DATANODE_LAYOUT_VERSION;
+    writeProperties(sd);
   }
 
   /**
