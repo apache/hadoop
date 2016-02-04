@@ -50,6 +50,12 @@ public class JsonUtil {
   private static final Object[] EMPTY_OBJECT_ARRAY = {};
   private static final DatanodeInfo[] EMPTY_DATANODE_INFO_ARRAY = {};
 
+  // Reuse ObjectMapper instance for improving performance.
+  // ObjectMapper is thread safe as long as we always configure instance
+  // before use. We don't have a re-entrant call pattern in WebHDFS,
+  // so we just need to worry about thread-safety.
+  private static final ObjectMapper MAPPER = new ObjectMapper();
+
   /** Convert a token object to a Json string. */
   public static String toJsonString(final Token<? extends TokenIdentifier> token
       ) throws IOException {
@@ -120,9 +126,8 @@ public class JsonUtil {
   public static String toJsonString(final String key, final Object value) {
     final Map<String, Object> m = new TreeMap<String, Object>();
     m.put(key, value);
-    ObjectMapper mapper = new ObjectMapper();
     try {
-      return mapper.writeValueAsString(m);
+      return MAPPER.writeValueAsString(m);
     } catch (IOException ignored) {
     }
     return null;
@@ -185,10 +190,9 @@ public class JsonUtil {
     m.put("fileId", status.getFileId());
     m.put("childrenNum", status.getChildrenNum());
     m.put("storagePolicy", status.getStoragePolicy());
-    ObjectMapper mapper = new ObjectMapper();
     try {
       return includeType ?
-          toJsonString(FileStatus.class, m) : mapper.writeValueAsString(m);
+          toJsonString(FileStatus.class, m) : MAPPER.writeValueAsString(m);
     } catch (IOException ignored) {
     }
     return null;
@@ -644,9 +648,8 @@ public class JsonUtil {
         new TreeMap<String, Map<String, Object>>();
     finalMap.put(AclStatus.class.getSimpleName(), m);
 
-    ObjectMapper mapper = new ObjectMapper();
     try {
-      return mapper.writeValueAsString(finalMap);
+      return MAPPER.writeValueAsString(finalMap);
     } catch (IOException ignored) {
     }
     return null;
@@ -713,8 +716,7 @@ public class JsonUtil {
       final XAttrCodec encoding) throws IOException {
     final Map<String, Object> finalMap = new TreeMap<String, Object>();
     finalMap.put("XAttrs", toJsonArray(xAttrs, encoding));
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.writeValueAsString(finalMap);
+    return MAPPER.writeValueAsString(finalMap);
   }
   
   public static String toJsonString(final List<XAttr> xAttrs)
@@ -723,11 +725,10 @@ public class JsonUtil {
     for (XAttr xAttr : xAttrs) {
       names.add(XAttrHelper.getPrefixName(xAttr));
     }
-    ObjectMapper mapper = new ObjectMapper();
-    String ret = mapper.writeValueAsString(names);
+    String ret = MAPPER.writeValueAsString(names);
     final Map<String, Object> finalMap = new TreeMap<String, Object>();
     finalMap.put("XAttrNames", ret);
-    return mapper.writeValueAsString(finalMap);
+    return MAPPER.writeValueAsString(finalMap);
   }
   
   public static byte[] getXAttr(final Map<?, ?> json, final String name) 
