@@ -1225,6 +1225,9 @@ Release 2.6.5 - UNRELEASED
 
   IMPROVEMENTS
 
+     HDFS-9629. Update the footer of Web UI to show year 2016
+     (Xiao Chen and Vinayakumar B via vinayakumarb)
+
   OPTIMIZATIONS
 
   BUG FIXES
