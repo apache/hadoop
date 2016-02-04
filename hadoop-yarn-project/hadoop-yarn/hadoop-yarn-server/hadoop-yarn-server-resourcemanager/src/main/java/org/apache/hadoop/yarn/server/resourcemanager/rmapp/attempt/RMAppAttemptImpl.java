@@ -28,6 +28,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -91,7 +92,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeFinishedContainersPulledByAMEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt.AMState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
@@ -2141,5 +2144,19 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
   public void setRecoveredFinalState(RMAppAttemptState finalState) {
     this.recoveredFinalState = finalState;
+  }
+
+  @Override
+  public Set<String> getBlacklistedNodes() {
+    if (scheduler instanceof AbstractYarnScheduler) {
+      AbstractYarnScheduler ayScheduler =
+          (AbstractYarnScheduler) scheduler;
+      SchedulerApplicationAttempt attempt =
+          ayScheduler.getApplicationAttempt(applicationAttemptId);
+      if (attempt != null) {
+        return attempt.getBlacklistedNodes();
+      }
+    }
+    return Collections.EMPTY_SET;
   }
 }

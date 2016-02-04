@@ -95,8 +95,9 @@ public class RMAppsBlock extends AppsBlock {
       }
 
       String blacklistedNodesCount = "N/A";
-      Set<String> nodes =
-          RMAppAttemptBlock.getBlacklistedNodes(rm, appAttemptId);
+      Set<String> nodes = rm.getRMContext().getRMApps()
+          .get(appAttemptId.getApplicationId()).getAppAttempts()
+          .get(appAttemptId).getBlacklistedNodes();
       if (nodes != null) {
         blacklistedNodesCount = String.valueOf(nodes.size());
       }
