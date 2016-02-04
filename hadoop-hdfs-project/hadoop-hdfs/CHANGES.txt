@@ -2772,6 +2772,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9740. Use a reasonable limit in DFSTestUtil.waitForMetric()
     (Chang Li via vinayakumarb)
 
+    HDFS-9730. Storage ID update does not happen when there is a layout change
+    (Tsz Wo Nicholas Sze via kihwal)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
