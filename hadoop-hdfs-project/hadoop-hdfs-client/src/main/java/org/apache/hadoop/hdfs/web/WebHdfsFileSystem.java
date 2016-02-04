@@ -87,6 +87,7 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelect
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.ObjectReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -128,6 +129,8 @@ public class WebHdfsFileSystem extends FileSystem
   private InetSocketAddress nnAddrs[];
   private int currentNNAddrIndex;
   private boolean disallowFallbackToInsecureCluster;
+  private static final ObjectReader READER =
+      new ObjectMapper().reader(Map.class);
 
   /**
    * Return the protocol scheme for the FileSystem.
@@ -368,8 +371,7 @@ public class WebHdfsFileSystem extends FileSystem
               + "\" (parsed=\"" + parsed + "\")");
         }
       }
-      ObjectMapper mapper = new ObjectMapper();
-      return mapper.reader(Map.class).readValue(in);
+      return READER.readValue(in);
     } finally {
       in.close();
     }
