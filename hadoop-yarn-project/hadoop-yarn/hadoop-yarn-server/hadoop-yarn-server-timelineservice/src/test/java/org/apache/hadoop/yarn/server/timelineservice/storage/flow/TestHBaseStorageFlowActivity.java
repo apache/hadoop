@@ -45,6 +45,9 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator;
@@ -179,10 +182,12 @@ public class TestHBaseStorageFlowActivity {
       hbr.init(c1);
       hbr.start();
       // get the flow activity entity
-      Set<TimelineEntity> entities =
-          hbr.getEntities(null, cluster, null, null, null,
-              TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), 10L, null, null,
-              null, null, null, null, null, null, null, null, null);
+      Set<TimelineEntity> entities = hbr.getEntities(
+          new TimelineReaderContext(cluster, null, null, null, null,
+          TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), null),
+          new TimelineEntityFilters(10L, null, null, null, null, null,
+          null, null, null),
+          new TimelineDataToRetrieve());
       assertEquals(1, entities.size());
       for (TimelineEntity e : entities) {
         FlowActivityEntity flowActivity = (FlowActivityEntity)e;
@@ -235,10 +240,12 @@ public class TestHBaseStorageFlowActivity {
       hbr.init(c1);
       hbr.start();
 
-      Set<TimelineEntity> entities =
-          hbr.getEntities(user, cluster, flow, null, null,
-              TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), 10L, null, null,
-              null, null, null, null, null, null, null, null, null);
+      Set<TimelineEntity> entities = hbr.getEntities(
+          new TimelineReaderContext(cluster, user, flow, null, null,
+          TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), null),
+          new TimelineEntityFilters(10L, null, null, null, null, null,
+          null, null, null),
+          new TimelineDataToRetrieve());
       assertEquals(1, entities.size());
       for (TimelineEntity e : entities) {
         FlowActivityEntity entity = (FlowActivityEntity)e;
@@ -350,10 +357,12 @@ public class TestHBaseStorageFlowActivity {
       hbr.init(c1);
       hbr.start();
 
-      Set<TimelineEntity> entities =
-          hbr.getEntities(null, cluster, null, null, null,
-              TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), 10L, null, null,
-              null, null, null, null, null, null, null, null, null);
+      Set<TimelineEntity> entities = hbr.getEntities(
+          new TimelineReaderContext(cluster, null, null, null, null,
+          TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), null),
+          new TimelineEntityFilters(10L, null, null, null, null, null,
+          null, null, null),
+          new TimelineDataToRetrieve());
       assertEquals(1, entities.size());
       for (TimelineEntity e : entities) {
         FlowActivityEntity flowActivity = (FlowActivityEntity)e;

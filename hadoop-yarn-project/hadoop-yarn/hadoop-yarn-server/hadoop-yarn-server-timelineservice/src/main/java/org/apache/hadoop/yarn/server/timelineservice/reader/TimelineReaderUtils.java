@@ -90,7 +90,7 @@ final class TimelineReaderUtils {
         // String needs to be split here. Copy remaining chars and add the
         // string to list.
         builder.append(str.substring(startOffset, offset));
-        list.add(builder.toString());
+        list.add(builder.toString().trim());
         // Reset the start offset as a delimiter has been encountered.
         startOffset = ++offset;
         builder = new StringBuilder(len - offset);
@@ -103,7 +103,7 @@ final class TimelineReaderUtils {
       builder.append(str.substring(startOffset));
     }
     // Add the last part of delimited string to list.
-    list.add(builder.toString());
+    list.add(builder.toString().trim());
     return list;
   }
 

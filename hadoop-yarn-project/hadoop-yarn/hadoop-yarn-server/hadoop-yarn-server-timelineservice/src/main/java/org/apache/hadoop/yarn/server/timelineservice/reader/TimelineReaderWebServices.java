@@ -46,8 +46,6 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
-import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
@@ -70,8 +68,6 @@ public class TimelineReaderWebServices {
 
   @Context private ServletContext ctxt;
 
-  private static final String COMMA_DELIMITER = ",";
-  private static final String COLON_DELIMITER = ":";
   private static final String QUERY_STRING_SEP = "?";
   private static final String RANGE_DELIMITER = "-";
   private static final String DATE_PATTERN = "yyyyMMdd";
@@ -243,15 +239,15 @@ public class TimelineReaderWebServices {
    *     events. This is represented as eventfilters=eventid1, eventid2...
    * @param fields Specifies which fields of the entity object to retrieve, see
    *     {@link Field}. All fields will be retrieved if fields=ALL. If not
-   *     specified, 4 fields i.e. entity type, id and created time is returned
+   *     specified, 3 fields i.e. entity type, id and created time is returned
    *     (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
-   *     a set of {@link TimelineEntity} instances of the given entity type is
-   *     returned.
-   *     On failures,
+   *     a set of <cite>TimelineEntity</cite> instances of the given entity type
+   *     is returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request or UID is incorrect,
-   *     HTTP 400(Bad Request) is returned.
+   *     HTTP 400(Bad Request) is returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
@@ -290,30 +286,14 @@ public class TimelineReaderWebServices {
       if (context == null) {
         throw new BadRequestException("Incorrect UID " +  uId);
       }
-      entities = timelineReaderManager.getEntities(
-          TimelineReaderWebServicesUtils.parseStr(context.getUserId()),
-          TimelineReaderWebServicesUtils.parseStr(context.getClusterId()),
-          TimelineReaderWebServicesUtils.parseStr(context.getFlowName()),
-          context.getFlowRunId(),
-          TimelineReaderWebServicesUtils.parseStr(context.getAppId()),
-          TimelineReaderWebServicesUtils.parseStr(entityType),
-          TimelineReaderWebServicesUtils.parseLongStr(limit),
-          TimelineReaderWebServicesUtils.parseLongStr(createdTimeStart),
-          TimelineReaderWebServicesUtils.parseLongStr(createdTimeEnd),
-          TimelineReaderWebServicesUtils.parseKeyStrValuesStr(
-          relatesTo, COMMA_DELIMITER, COLON_DELIMITER),
-          TimelineReaderWebServicesUtils.parseKeyStrValuesStr(
-          isRelatedTo, COMMA_DELIMITER, COLON_DELIMITER),
-          TimelineReaderWebServicesUtils.parseKeyStrValueObj(
-          infofilters, COMMA_DELIMITER, COLON_DELIMITER),
-          TimelineReaderWebServicesUtils.parseKeyStrValueStr(
-          conffilters, COMMA_DELIMITER, COLON_DELIMITER),
-          TimelineReaderWebServicesUtils.parseValuesStr(
-           metricfilters, COMMA_DELIMITER),
-          TimelineReaderWebServicesUtils.parseValuesStr(
-          eventfilters, COMMA_DELIMITER),
-          TimelineReaderWebServicesUtils.parseFieldsStr(
-          fields, COMMA_DELIMITER));
+      context.setEntityType(
+          TimelineReaderWebServicesUtils.parseStr(entityType));
+      entities = timelineReaderManager.getEntities(context,
+          TimelineReaderWebServicesUtils.createTimelineEntityFilters(
+          limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
+          infofilters, conffilters, metricfilters, eventfilters),
+          TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
+          null, null, fields));
     } catch (Exception e) {
       handleException(e, url, startTime,
           "createdTime start/end or limit or flowrunid");
@@ -374,17 +354,17 @@ public class TimelineReaderWebServices {
    *     events. This is represented as eventfilters=eventid1, eventid2...
    * @param fields Specifies which fields of the entity object to retrieve, see
    *     {@link Field}. All fields will be retrieved if fields=ALL. If not
-   *     specified, 4 fields i.e. entity type, id, created time is returned
+   *     specified, 3 fields i.e. entity type, id, created time is returned
    *     (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
-   *     a set of {@link TimelineEntity} instances of the given entity type is
-   *     returned.
-   *     On failures,
+   *     a set of <cite>TimelineEntity</cite> instances of the given entity type
+   *     is returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
-   *     returned.
+   *     returned.<br>
    *     If flow context information cannot be retrieved, HTTP 404(Not Found)
-   *     is returned.
+   *     is returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
@@ -463,17 +443,17 @@ public class TimelineReaderWebServices {
    *     events. This is represented as eventfilters=eventid1, eventid2...
    * @param fields Specifies which fields of the entity object to retrieve, see
    *     {@link Field}. All fields will be retrieved if fields=ALL. If not
-   *     specified, 4 fields i.e. entity type, id, created time is returned
+   *     specified, 3 fields i.e. entity type, id, created time is returned
    *     (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
-   *     a set of {@link TimelineEntity} instances of the given entity type is
-   *     returned.
-   *     On failures,
+   *     a set of <cite>TimelineEntity</cite> instances of the given entity type
+   *     is returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
-   *     returned.
+   *     returned.<br>
    *     If flow context information cannot be retrieved, HTTP 404(Not Found)
-   *     is returned.
+   *     is returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
@@ -512,29 +492,14 @@ public class TimelineReaderWebServices {
     Set<TimelineEntity> entities = null;
     try {
       entities = timelineReaderManager.getEntities(
-          TimelineReaderWebServicesUtils.parseStr(userId),
-          TimelineReaderWebServicesUtils.parseStr(clusterId),
-          TimelineReaderWebServicesUtils.parseStr(flowName),
-          TimelineReaderWebServicesUtils.parseLongStr(flowRunId),
-          TimelineReaderWebServicesUtils.parseStr(appId),
-          TimelineReaderWebServicesUtils.parseStr(entityType),
-          TimelineReaderWebServicesUtils.parseLongStr(limit),
-          TimelineReaderWebServicesUtils.parseLongStr(createdTimeStart),
-          TimelineReaderWebServicesUtils.parseLongStr(createdTimeEnd),
-          TimelineReaderWebServicesUtils.parseKeyStrValuesStr(
-          relatesTo, COMMA_DELIMITER, COLON_DELIMITER),
-          TimelineReaderWebServicesUtils.parseKeyStrValuesStr(
-          isRelatedTo, COMMA_DELIMITER, COLON_DELIMITER),
-          TimelineReaderWebServicesUtils.parseKeyStrValueObj(
-          infofilters, COMMA_DELIMITER, COLON_DELIMITER),
-          TimelineReaderWebServicesUtils.parseKeyStrValueStr(
-          conffilters, COMMA_DELIMITER, COLON_DELIMITER),
-          TimelineReaderWebServicesUtils.parseValuesStr(
-          metricfilters, COMMA_DELIMITER),
-          TimelineReaderWebServicesUtils.parseValuesStr(
-          eventfilters, COMMA_DELIMITER),
-          TimelineReaderWebServicesUtils.parseFieldsStr(
-          fields, COMMA_DELIMITER));
+          TimelineReaderWebServicesUtils.createTimelineReaderContext(
+          clusterId, userId, flowName, flowRunId, appId, entityType, null),
+
+          TimelineReaderWebServicesUtils.createTimelineEntityFilters(
+          limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
+          infofilters, conffilters, metricfilters, eventfilters),
+          TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
+          null, null, fields));
     } catch (Exception e) {
       handleException(e, url, startTime,
           "createdTime start/end or limit or flowrunid");
@@ -559,16 +524,16 @@ public class TimelineReaderWebServices {
    *     UID and then used to query backend(Mandatory path param).
    * @param fields Specifies which fields of the entity object to retrieve, see
    *     {@link Field}. All fields will be retrieved if fields=ALL. If not
-   *     specified, 4 fields i.e. entity type, id, created time is returned
+   *     specified, 3 fields i.e. entity type, id, created time is returned
    *     (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
-   *     {@link TimelineEntity} instance is returned.
-   *     On failures,
+   *     <cite>TimelineEntity</cite> instance is returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request or UID is incorrect,
-   *     HTTP 400(Bad Request) is returned.
+   *     HTTP 400(Bad Request) is returned.<br>
    *     If entity for the given entity id cannot be found, HTTP 404(Not Found)
-   *     is returned.
+   *     is returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
@@ -597,11 +562,9 @@ public class TimelineReaderWebServices {
       if (context == null) {
         throw new BadRequestException("Incorrect UID " +  uId);
       }
-      entity = timelineReaderManager.getEntity(context.getUserId(),
-          context.getClusterId(), context.getFlowName(), context.getFlowRunId(),
-          context.getAppId(), context.getEntityType(), context.getEntityId(),
-          TimelineReaderWebServicesUtils.parseFieldsStr(
-          fields, COMMA_DELIMITER));
+      entity = timelineReaderManager.getEntity(context,
+          TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
+          null, null, fields));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -638,16 +601,16 @@ public class TimelineReaderWebServices {
    *     param).
    * @param fields Specifies which fields of the entity object to retrieve, see
    *     {@link Field}. All fields will be retrieved if fields=ALL. If not
-   *     specified, 4 fields i.e. entity type, id, created time is returned
+   *     specified, 3 fields i.e. entity type, id, created time is returned
    *     (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
-   *     {@link TimelineEntity} instance is returned.
-   *     On failures,
+   *     <cite>TimelineEntity</cite> instance is returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
-   *     returned.
+   *     returned.<br>
    *     If flow context information cannot be retrieved or entity for the given
-   *     entity id cannot be found, HTTP 404(Not Found) is returned.
+   *     entity id cannot be found, HTTP 404(Not Found) is returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
@@ -690,16 +653,16 @@ public class TimelineReaderWebServices {
    *     param).
    * @param fields Specifies which fields of the entity object to retrieve, see
    *     {@link Field}. All fields will be retrieved if fields=ALL. If not
-   *     specified, 4 fields i.e. entity type, id and created time is returned
+   *     specified, 3 fields i.e. entity type, id and created time is returned
    *     (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
-   *     {@link TimelineEntity} instance is returned.
-   *     On failures,
+   *     <cite>TimelineEntity</cite> instance is returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
-   *     returned.
+   *     returned.<br>
    *     If flow context information cannot be retrieved or entity for the given
-   *     entity id cannot be found, HTTP 404(Not Found) is returned.
+   *     entity id cannot be found, HTTP 404(Not Found) is returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
@@ -728,17 +691,12 @@ public class TimelineReaderWebServices {
     init(res);
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
     TimelineEntity entity = null;
-    String type = TimelineReaderWebServicesUtils.parseStr(entityType);
-    String id = TimelineReaderWebServicesUtils.parseStr(entityId);
     try {
       entity = timelineReaderManager.getEntity(
-          TimelineReaderWebServicesUtils.parseStr(userId),
-          TimelineReaderWebServicesUtils.parseStr(clusterId),
-          TimelineReaderWebServicesUtils.parseStr(flowName),
-          TimelineReaderWebServicesUtils.parseLongStr(flowRunId),
-          TimelineReaderWebServicesUtils.parseStr(appId), type, id,
-          TimelineReaderWebServicesUtils.parseFieldsStr(
-          fields, COMMA_DELIMITER));
+          TimelineReaderWebServicesUtils.createTimelineReaderContext(
+          clusterId, userId, flowName, flowRunId, appId, entityType, entityId),
+          TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
+          null, null, fields));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -746,8 +704,8 @@ public class TimelineReaderWebServices {
     if (entity == null) {
       LOG.info("Processed URL " + url + " but entity not found" + " (Took " +
           (endTime - startTime) + " ms.)");
-      throw new NotFoundException("Timeline entity {id: " + id + ", type: " +
-          type + " } is not found");
+      throw new NotFoundException("Timeline entity {id: " + entityId +
+          ", type: " + entityType + " } is not found");
     }
     LOG.info("Processed URL " + url +
         " (Took " + (endTime - startTime) + " ms.)");
@@ -765,13 +723,13 @@ public class TimelineReaderWebServices {
    *     (Mandatory path param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
-   *     {@link FlowRunEntity} instance is returned. By default, all metrics for
-   *     the flow run will be returned.
-   *     On failures,
+   *     <cite>FlowRunEntity</cite> instance is returned. By default, all
+   *     metrics for the flow run will be returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request or UID is incorrect,
-   *     HTTP 400(Bad Request) is returned.
+   *     HTTP 400(Bad Request) is returned.<br>
    *     If flow run for the given flow run id cannot be found, HTTP 404
-   *     (Not Found) is returned.
+   *     (Not Found) is returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
@@ -799,9 +757,9 @@ public class TimelineReaderWebServices {
       if (context == null) {
         throw new BadRequestException("Incorrect UID " +  uId);
       }
-      entity = timelineReaderManager.getEntity(context.getUserId(),
-          context.getClusterId(), context.getFlowName(), context.getFlowRunId(),
-          null, TimelineEntityType.YARN_FLOW_RUN.toString(), null, null);
+      context.setEntityType(TimelineEntityType.YARN_FLOW_RUN.toString());
+      entity = timelineReaderManager.getEntity(context,
+          new TimelineDataToRetrieve());
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -829,13 +787,13 @@ public class TimelineReaderWebServices {
    * @param flowRunId Id of the flow run to be queried(Mandatory path param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
-   *     {@link FlowRunEntity} instance is returned. By default, all metrics for
-   *     the flow run will be returned.
-   *     On failures,
+   *     <cite>FlowRunEntity</cite> instance is returned. By default, all
+   *     metrics for the flow run will be returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
-   *     returned.
+   *     returned.<br>
    *     If flow run for the given flow run id cannot be found, HTTP 404
-   *     (Not Found) is returned.
+   *     (Not Found) is returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
@@ -865,13 +823,13 @@ public class TimelineReaderWebServices {
    * @param flowRunId Id of the flow run to be queried(Mandatory path param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
-   *     {@link FlowRunEntity} instance is returned. By default, all metrics for
-   *     the flow run will be returned.
-   *     On failures,
+   *     <cite>FlowRunEntity</cite> instance is returned. By default, all
+   *     metrics for the flow run will be returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
-   *     returned.
+   *     returned.<br>
    *     If flow run for the given flow run id cannot be found, HTTP 404
-   *     (Not Found) is returned.
+   *     (Not Found) is returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
@@ -899,11 +857,10 @@ public class TimelineReaderWebServices {
     TimelineEntity entity = null;
     try {
       entity = timelineReaderManager.getEntity(
-          TimelineReaderWebServicesUtils.parseStr(userId),
-          TimelineReaderWebServicesUtils.parseStr(clusterId),
-          TimelineReaderWebServicesUtils.parseStr(flowName),
-          TimelineReaderWebServicesUtils.parseLongStr(flowRunId),
-          null, TimelineEntityType.YARN_FLOW_RUN.toString(), null, null);
+          TimelineReaderWebServicesUtils.createTimelineReaderContext(
+          clusterId, userId, flowName, flowRunId, null,
+          TimelineEntityType.YARN_FLOW_RUN.toString(), null),
+          new TimelineDataToRetrieve());
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -930,8 +887,6 @@ public class TimelineReaderWebServices {
    * @param uId a delimited string containing clusterid, userid, and flow name
    *     which are extracted from UID and then used to query backend(Mandatory
    *     path param).
-   * @param flowName Flow name to which the flow runs to be queried belongs to(
-   *     Mandatory path param).
    * @param limit Number of flow runs to return(Optional query param).
    * @param createdTimeStart If specified, matched flow runs should not be
    *     created before this timestamp(Optional query param).
@@ -943,10 +898,11 @@ public class TimelineReaderWebServices {
    *     other than metrics are returned(Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
-   *     set of {@link FlowRunEntity} instances for the given flow are returned.
-   *     On failures,
+   *     set of <cite>FlowRunEntity</cite> instances for the given flow are
+   *     returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request or UID is incorrect,
-   *     HTTP 400(Bad Request) is returned.
+   *     HTTP 400(Bad Request) is returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
@@ -978,14 +934,13 @@ public class TimelineReaderWebServices {
       if (context == null) {
         throw new BadRequestException("Incorrect UID " +  uId);
       }
-      entities = timelineReaderManager.getEntities(context.getUserId(),
-          context.getClusterId(), context.getFlowName(), null, null,
-          TimelineEntityType.YARN_FLOW_RUN.toString(),
-          TimelineReaderWebServicesUtils.parseLongStr(limit),
-          TimelineReaderWebServicesUtils.parseLongStr(createdTimeStart),
-          TimelineReaderWebServicesUtils.parseLongStr(createdTimeEnd),
-          null, null, null, null, null, null, TimelineReaderWebServicesUtils.
-          parseFieldsStr(fields, COMMA_DELIMITER));
+      context.setEntityType(TimelineEntityType.YARN_FLOW_RUN.toString());
+      entities = timelineReaderManager.getEntities(context,
+          TimelineReaderWebServicesUtils.createTimelineEntityFilters(
+          limit, createdTimeStart, createdTimeEnd, null, null, null,
+          null, null, null),
+          TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
+          null, null, fields));
     } catch (Exception e) {
       handleException(e, url, startTime, "createdTime start/end or limit");
     }
@@ -1019,10 +974,11 @@ public class TimelineReaderWebServices {
    *     other than metrics are returned(Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
-   *     set of {@link FlowRunEntity} instances for the given flow are returned.
-   *     On failures,
+   *     set of <cite>FlowRunEntity</cite> instances for the given flow are
+   *     returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
-   *     returned.
+   *     returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
@@ -1064,10 +1020,11 @@ public class TimelineReaderWebServices {
    *     other than metrics are returned(Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
-   *     set of {@link FlowRunEntity} instances for the given flow are returned.
-   *     On failures,
+   *     set of <cite>FlowRunEntity</cite> instances for the given flow are
+   *     returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
-   *     returned.
+   *     returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
@@ -1097,15 +1054,14 @@ public class TimelineReaderWebServices {
     Set<TimelineEntity> entities = null;
     try {
       entities = timelineReaderManager.getEntities(
-          TimelineReaderWebServicesUtils.parseStr(userId),
-          TimelineReaderWebServicesUtils.parseStr(clusterId),
-          TimelineReaderWebServicesUtils.parseStr(flowName), null, null,
-          TimelineEntityType.YARN_FLOW_RUN.toString(),
-          TimelineReaderWebServicesUtils.parseLongStr(limit),
-          TimelineReaderWebServicesUtils.parseLongStr(createdTimeStart),
-          TimelineReaderWebServicesUtils.parseLongStr(createdTimeEnd),
-          null, null, null, null, null, null, TimelineReaderWebServicesUtils.
-          parseFieldsStr(fields, COMMA_DELIMITER));
+          TimelineReaderWebServicesUtils.createTimelineReaderContext(
+          clusterId, userId, flowName, null, null,
+          TimelineEntityType.YARN_FLOW_RUN.toString(), null),
+          TimelineReaderWebServicesUtils.createTimelineEntityFilters(
+          limit, createdTimeStart, createdTimeEnd, null, null, null,
+          null, null, null),
+          TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
+          null, null, fields));
     } catch (Exception e) {
       handleException(e, url, startTime, "createdTime start/end or limit");
     }
@@ -1142,12 +1098,12 @@ public class TimelineReaderWebServices {
    *     "daterange=-20150711" returns flows active on and before 20150711.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
-   *     set of {@link FlowActivityEntity} instances are returned.
-   *     On failures,
+   *     set of <cite>FlowActivityEntity</cite> instances are returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
-   *     returned.
+   *     returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
-   *     Error) is returned.
+   *     Error) is returned.<br>
    */
   @GET
   @Path("/flows/")
@@ -1185,10 +1141,10 @@ public class TimelineReaderWebServices {
    *     "daterange=-20150711" returns flows active on and before 20150711.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
-   *     set of {@link FlowActivityEntity} instances are returned.
-   *     On failures,
+   *     set of <cite>FlowActivityEntity</cite> instances are returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
-   *     returned.
+   *     returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
@@ -1214,11 +1170,17 @@ public class TimelineReaderWebServices {
     Set<TimelineEntity> entities = null;
     try {
       DateRange range = parseDateRange(dateRange);
+      TimelineEntityFilters entityFilters =
+          TimelineReaderWebServicesUtils.createTimelineEntityFilters(
+          limit, null, null, null, null, null, null, null, null);
+      entityFilters.setCreatedTimeBegin(range.dateStart);
+      entityFilters.setCreatedTimeEnd(range.dateEnd);
       entities = timelineReaderManager.getEntities(
-          null, TimelineReaderWebServicesUtils.parseStr(clusterId), null, null,
-          null, TimelineEntityType.YARN_FLOW_ACTIVITY.toString(),
-          TimelineReaderWebServicesUtils.parseLongStr(limit), range.dateStart,
-          range.dateEnd, null, null, null, null, null, null, null);
+          TimelineReaderWebServicesUtils.createTimelineReaderContext(
+          clusterId, null, null, null, null,
+          TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), null),
+          entityFilters, TimelineReaderWebServicesUtils.
+          createTimelineDataToRetrieve(null, null, null));
     } catch (Exception e) {
       handleException(e, url, startTime, "limit");
     }
@@ -1242,16 +1204,16 @@ public class TimelineReaderWebServices {
    *     backend(Mandatory path param).
    * @param fields Specifies which fields of the app entity object to retrieve,
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
-   *     specified, 4 fields i.e. entity type(equivalent to YARN_APPLICATION),
+   *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
    *     app id and app created time is returned(Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
-   *     {@link TimelineEntity} instance is returned.
-   *     On failures,
+   *     <cite>TimelineEntity</cite> instance is returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request or UID is incorrect,
-   *     HTTP 400(Bad Request) is returned.
+   *     HTTP 400(Bad Request) is returned.<br>
    *     If app for the given app id cannot be found, HTTP 404(Not Found) is
-   *     returned.
+   *     returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
@@ -1280,11 +1242,10 @@ public class TimelineReaderWebServices {
       if (context == null) {
         throw new BadRequestException("Incorrect UID " +  uId);
       }
-      entity = timelineReaderManager.getEntity(context.getUserId(),
-          context.getClusterId(), context.getFlowName(), context.getFlowRunId(),
-          context.getAppId(), TimelineEntityType.YARN_APPLICATION.toString(),
-          null, TimelineReaderWebServicesUtils.parseFieldsStr(
-          fields, COMMA_DELIMITER));
+      context.setEntityType(TimelineEntityType.YARN_APPLICATION.toString());
+      entity = timelineReaderManager.getEntity(context,
+          TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
+          null, null, fields));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -1316,16 +1277,16 @@ public class TimelineReaderWebServices {
    * @param userId User id which should match for the app(Optional query param).
    * @param fields Specifies which fields of the app entity object to retrieve,
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
-   *     specified, 4 fields i.e. entity type(equivalent to YARN_APPLICATION),
+   *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
    *     app id and app created time is returned(Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
-   *     {@link TimelineEntity} instance is returned.
-   *     On failures,
+   *     <cite>TimelineEntity</cite> instance is returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
-   *     returned.
+   *     returned.<br>
    *     If flow context information cannot be retrieved or app for the given
-   *     app id cannot be found, HTTP 404(Not Found) is returned.
+   *     app id cannot be found, HTTP 404(Not Found) is returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
@@ -1361,16 +1322,16 @@ public class TimelineReaderWebServices {
    * @param userId User id which should match for the app(Optional query param).
    * @param fields Specifies which fields of the app entity object to retrieve,
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
-   *     specified, 4 fields i.e. entity type(equivalent to YARN_APPLICATION),
+   *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
    *     app id and app created time is returned(Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
-   *     {@link TimelineEntity} instance is returned.
-   *     On failures,
+   *     <cite>TimelineEntity</cite> instance is returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
-   *     returned.
+   *     returned.<br>
    *     If flow context information cannot be retrieved or app for the given
-   *     app id cannot be found, HTTP 404(Not Found) is returned.
+   *     app id cannot be found, HTTP 404(Not Found) is returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
@@ -1399,14 +1360,11 @@ public class TimelineReaderWebServices {
     TimelineEntity entity = null;
     try {
       entity = timelineReaderManager.getEntity(
-          TimelineReaderWebServicesUtils.parseStr(userId),
-          TimelineReaderWebServicesUtils.parseStr(clusterId),
-          TimelineReaderWebServicesUtils.parseStr(flowName),
-          TimelineReaderWebServicesUtils.parseLongStr(flowRunId),
-          TimelineReaderWebServicesUtils.parseStr(appId),
-          TimelineEntityType.YARN_APPLICATION.toString(), null,
-          TimelineReaderWebServicesUtils.parseFieldsStr(
-          fields, COMMA_DELIMITER));
+          TimelineReaderWebServicesUtils.createTimelineReaderContext(
+          clusterId, userId, flowName, flowRunId, appId,
+          TimelineEntityType.YARN_APPLICATION.toString(), null),
+          TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
+          null, null, fields));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -1459,15 +1417,15 @@ public class TimelineReaderWebServices {
    *     events. This is represented as eventfilters=eventid1, eventid2...
    * @param fields Specifies which fields of the app entity object to retrieve,
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
-   *     specified, 4 fields i.e. entity type(equivalent to YARN_APPLICATION),
+   *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
    *     app id and app created time is returned(Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
-   *     a set of {@link TimelineEntity} instances representing apps is
-   *     returned.
-   *     On failures,
+   *     a set of <cite>TimelineEntity</cite> instances representing apps is
+   *     returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request or UID is incorrect,
-   *     HTTP 400(Bad Request) is returned.
+   *     HTTP 400(Bad Request) is returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
@@ -1505,30 +1463,13 @@ public class TimelineReaderWebServices {
       if (context == null) {
         throw new BadRequestException("Incorrect UID " +  uId);
       }
-      entities = timelineReaderManager.getEntities(
-          TimelineReaderWebServicesUtils.parseStr(context.getUserId()),
-          TimelineReaderWebServicesUtils.parseStr(context.getClusterId()),
-          TimelineReaderWebServicesUtils.parseStr(context.getFlowName()),
-          context.getFlowRunId(),
-          TimelineReaderWebServicesUtils.parseStr(context.getAppId()),
-          TimelineEntityType.YARN_APPLICATION.toString(),
-          TimelineReaderWebServicesUtils.parseLongStr(limit),
-          TimelineReaderWebServicesUtils.parseLongStr(createdTimeStart),
-          TimelineReaderWebServicesUtils.parseLongStr(createdTimeEnd),
-          TimelineReaderWebServicesUtils.parseKeyStrValuesStr(
-          relatesTo, COMMA_DELIMITER, COLON_DELIMITER),
-          TimelineReaderWebServicesUtils.parseKeyStrValuesStr(
-          isRelatedTo, COMMA_DELIMITER, COLON_DELIMITER),
-          TimelineReaderWebServicesUtils.parseKeyStrValueObj(
-          infofilters, COMMA_DELIMITER, COLON_DELIMITER),
-          TimelineReaderWebServicesUtils.parseKeyStrValueStr(
-          conffilters, COMMA_DELIMITER, COLON_DELIMITER),
-          TimelineReaderWebServicesUtils.parseValuesStr(
-          metricfilters, COMMA_DELIMITER),
-          TimelineReaderWebServicesUtils.parseValuesStr(
-          eventfilters, COMMA_DELIMITER),
-          TimelineReaderWebServicesUtils.parseFieldsStr(
-          fields, COMMA_DELIMITER));
+      context.setEntityType(TimelineEntityType.YARN_APPLICATION.toString());
+      entities = timelineReaderManager.getEntities(context,
+          TimelineReaderWebServicesUtils.createTimelineEntityFilters(
+          limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
+          infofilters, conffilters, metricfilters, eventfilters),
+          TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
+          null, null, fields));
     } catch (Exception e) {
       handleException(e, url, startTime,
           "createdTime start/end or limit or flowrunid");
@@ -1582,15 +1523,15 @@ public class TimelineReaderWebServices {
    *     events. This is represented as eventfilters=eventid1, eventid2...
    * @param fields Specifies which fields of the app entity object to retrieve,
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
-   *     specified, 4 fields i.e. entity type(equivalent to YARN_APPLICATION),
+   *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
    *     app id and app created time is returned(Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
-   *     a set of {@link TimelineEntity} instances representing apps is
-   *     returned.
-   *     On failures,
+   *     a set of <cite>TimelineEntity</cite> instances representing apps is
+   *     returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
-   *     returned.
+   *     returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
@@ -1661,15 +1602,15 @@ public class TimelineReaderWebServices {
    *     events. This is represented as eventfilters=eventid1, eventid2...
    * @param fields Specifies which fields of the app entity object to retrieve,
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
-   *     specified, 4 fields i.e. entity type(equivalent to YARN_APPLICATION),
+   *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
    *     app id and app created time is returned(Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
-   *     a set of {@link TimelineEntity} instances representing apps is
-   *     returned.
-   *     On failures,
+   *     a set of <cite>TimelineEntity</cite> instances representing apps is
+   *     returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
-   *     returned.
+   *     returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
@@ -1739,15 +1680,15 @@ public class TimelineReaderWebServices {
    *     events. This is represented as eventfilters=eventid1, eventid2...
    * @param fields Specifies which fields of the app entity object to retrieve,
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
-   *     specified, 4 fields i.e. entity type(equivalent to YARN_APPLICATION),
+   *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
    *     app id and app created time is returned(Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
-   *     a set of {@link TimelineEntity} instances representing apps is
-   *     returned.
-   *     On failures,
+   *     a set of <cite>TimelineEntity</cite> instances representing apps is
+   *     returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
-   *     returned.
+   *     returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
@@ -1815,15 +1756,15 @@ public class TimelineReaderWebServices {
    *     events. This is represented as eventfilters=eventid1, eventid2...
    * @param fields Specifies which fields of the app entity object to retrieve,
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
-   *     specified, 4 fields i.e. entity type(equivalent to YARN_APPLICATION),
+   *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
    *     app id and app created time is returned(Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
-   *     a set of {@link TimelineEntity} instances representing apps is
-   *     returned.
-   *     On failures,
+   *     a set of <cite>TimelineEntity</cite> instances representing apps is
+   *     returned.<br>
+   *     On failures,<br>
    *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
-   *     returned.
+   *     returned.<br>
    *     For all other errors while retrieving data, HTTP 500(Internal Server
    *     Error) is returned.
    */
