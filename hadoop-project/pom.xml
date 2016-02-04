@@ -30,6 +30,9 @@
   <packaging>pom</packaging>
 
   <properties>
+    <!-- Set the Release year during release -->
+    <release-year>2016</release-year>
+
     <failIfNoTests>false</failIfNoTests>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
     <jetty.version>6.1.26</jetty.version>
