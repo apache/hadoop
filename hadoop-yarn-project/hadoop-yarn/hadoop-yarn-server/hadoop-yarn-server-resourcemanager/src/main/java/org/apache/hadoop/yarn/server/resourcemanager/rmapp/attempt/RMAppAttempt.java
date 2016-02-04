@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 import javax.crypto.SecretKey;
@@ -252,4 +253,9 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    * @param amLaunchDiagnostics
    */
   void updateAMLaunchDiagnostics(String amLaunchDiagnostics);
+
+  /**
+   * @return Set of nodes which are blacklisted by the application
+   */
+  Set<String> getBlacklistedNodes();
 }
