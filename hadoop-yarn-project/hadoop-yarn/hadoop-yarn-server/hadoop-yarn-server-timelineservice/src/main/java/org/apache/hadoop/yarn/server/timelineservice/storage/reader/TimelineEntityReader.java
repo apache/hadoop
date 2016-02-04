@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.timelineservice.storage.reader;
 
 import java.io.IOException;
-import java.util.EnumSet;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
@@ -34,8 +33,9 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
-import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
-import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix;
 
@@ -46,32 +46,12 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix
  */
 public abstract class TimelineEntityReader {
   private static final Log LOG = LogFactory.getLog(TimelineEntityReader.class);
-  protected static final long DEFAULT_BEGIN_TIME = 0L;
-  protected static final long DEFAULT_END_TIME = Long.MAX_VALUE;
 
   protected final boolean singleEntityRead;
-
-  protected String userId;
-  protected String clusterId;
-  protected String flowName;
-  protected Long flowRunId;
-  protected String appId;
-  protected String entityType;
-  protected EnumSet<Field> fieldsToRetrieve;
-  // used only for a single entity read mode
-  protected String entityId;
+  private TimelineReaderContext context;
+  private TimelineDataToRetrieve dataToRetrieve;
   // used only for multiple entity read mode
-  protected Long limit;
-  protected Long createdTimeBegin;
-  protected Long createdTimeEnd;
-  protected Map<String, Set<String>> relatesTo;
-  protected Map<String, Set<String>> isRelatedTo;
-  protected Map<String, Object> infoFilters;
-  protected Map<String, String> configFilters;
-  protected Set<String> metricFilters;
-  protected Set<String> eventFilters;
-  protected TimelineFilterList confsToRetrieve;
-  protected TimelineFilterList metricsToRetrieve;
+  private TimelineEntityFilters filters;
 
   /**
    * Main table the entity reader uses.
@@ -89,34 +69,14 @@ public abstract class TimelineEntityReader {
   /**
    * Instantiates a reader for multiple-entity reads.
    */
-  protected TimelineEntityReader(String userId, String clusterId,
-      String flowName, Long flowRunId, String appId, String entityType,
-      Long limit, Long createdTimeBegin, Long createdTimeEnd,
-      Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
-      Map<String, Object> infoFilters, Map<String, String> configFilters,
-      Set<String> metricFilters, Set<String> eventFilters,
-      TimelineFilterList confsToRetrieve, TimelineFilterList metricsToRetrieve,
-      EnumSet<Field> fieldsToRetrieve, boolean sortedKeys) {
+  protected TimelineEntityReader(TimelineReaderContext ctxt,
+      TimelineEntityFilters entityFilters, TimelineDataToRetrieve toRetrieve,
+      boolean sortedKeys) {
     this.singleEntityRead = false;
     this.sortedKeys = sortedKeys;
-    this.userId = userId;
-    this.clusterId = clusterId;
-    this.flowName = flowName;
-    this.flowRunId = flowRunId;
-    this.appId = appId;
-    this.entityType = entityType;
-    this.fieldsToRetrieve = fieldsToRetrieve;
-    this.limit = limit;
-    this.createdTimeBegin = createdTimeBegin;
-    this.createdTimeEnd = createdTimeEnd;
-    this.relatesTo = relatesTo;
-    this.isRelatedTo = isRelatedTo;
-    this.infoFilters = infoFilters;
-    this.configFilters = configFilters;
-    this.metricFilters = metricFilters;
-    this.eventFilters = eventFilters;
-    this.confsToRetrieve = confsToRetrieve;
-    this.metricsToRetrieve = metricsToRetrieve;
+    this.context = ctxt;
+    this.dataToRetrieve = toRetrieve;
+    this.filters = entityFilters;
 
     this.table = getTable();
   }
@@ -124,21 +84,11 @@ public abstract class TimelineEntityReader {
   /**
    * Instantiates a reader for single-entity reads.
    */
-  protected TimelineEntityReader(String userId, String clusterId,
-      String flowName, Long flowRunId, String appId, String entityType,
-      String entityId, TimelineFilterList confsToRetrieve,
-      TimelineFilterList metricsToRetrieve, EnumSet<Field> fieldsToRetrieve) {
+  protected TimelineEntityReader(TimelineReaderContext ctxt,
+      TimelineDataToRetrieve toRetrieve) {
     this.singleEntityRead = true;
-    this.userId = userId;
-    this.clusterId = clusterId;
-    this.flowName = flowName;
-    this.flowRunId = flowRunId;
-    this.appId = appId;
-    this.entityType = entityType;
-    this.fieldsToRetrieve = fieldsToRetrieve;
-    this.entityId = entityId;
-    this.confsToRetrieve = confsToRetrieve;
-    this.metricsToRetrieve = metricsToRetrieve;
+    this.context = ctxt;
+    this.dataToRetrieve = toRetrieve;
 
     this.table = getTable();
   }
@@ -150,6 +100,18 @@ public abstract class TimelineEntityReader {
    * @return a {@link FilterList} object.
    */
   protected abstract FilterList constructFilterListBasedOnFields();
+
+  protected TimelineReaderContext getContext() {
+    return context;
+  }
+
+  protected TimelineDataToRetrieve getDataToRetrieve() {
+    return dataToRetrieve;
+  }
+
+  protected TimelineEntityFilters getFilters() {
+    return filters;
+  }
 
   /**
    * Reads and deserializes a single timeline entity from the HBase storage.
@@ -163,7 +125,8 @@ public abstract class TimelineEntityReader {
     Result result = getResult(hbaseConf, conn, filterList);
     if (result == null || result.isEmpty()) {
       // Could not find a matching row.
-      LOG.info("Cannot find matching entity of type " + entityType);
+      LOG.info("Cannot find matching entity of type " +
+          context.getEntityType());
       return null;
     }
     return parseEntity(result);
@@ -190,11 +153,11 @@ public abstract class TimelineEntityReader {
         }
         entities.add(entity);
         if (!sortedKeys) {
-          if (entities.size() > limit) {
+          if (entities.size() > filters.getLimit()) {
             entities.pollLast();
           }
         } else {
-          if (entities.size() == limit) {
+          if (entities.size() == filters.getLimit()) {
             break;
           }
         }

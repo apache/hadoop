@@ -35,7 +35,75 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Fiel
  * Set of utility methods to be used by timeline reader web services.
  */
 final class TimelineReaderWebServicesUtils {
+  private static final String COMMA_DELIMITER = ",";
+  private static final String COLON_DELIMITER = ":";
+
   private TimelineReaderWebServicesUtils() {
+  }
+
+  /**
+   * Parse the passed context information represented as strings and convert
+   * into a {@link TimelineReaderContext} object.
+   * @param clusterId
+   * @param userId
+   * @param flowName
+   * @param flowRunId
+   * @param appId
+   * @param entityType
+   * @param entityId
+   * @return a {@link TimelineReaderContext} object.
+   * @throws Exception
+   */
+  static TimelineReaderContext createTimelineReaderContext(String clusterId,
+      String userId, String flowName, String flowRunId, String appId,
+      String entityType, String entityId) throws Exception {
+    return new TimelineReaderContext(parseStr(clusterId), parseStr(userId),
+        parseStr(flowName), parseLongStr(flowRunId), parseStr(appId),
+        parseStr(entityType), parseStr(entityId));
+  }
+
+  /**
+   * Parse the passed filters represented as strings and convert them into a
+   * {@link TimelineEntityFilters} object.
+   * @param limit
+   * @param createdTimeStart
+   * @param createdTimeEnd
+   * @param relatesTo
+   * @param isRelatedTo
+   * @param infofilters
+   * @param conffilters
+   * @param metricfilters
+   * @param eventfilters
+   * @return a {@link TimelineEntityFilters} object.
+   * @throws Exception
+   */
+  static TimelineEntityFilters createTimelineEntityFilters(String limit,
+      String createdTimeStart, String createdTimeEnd, String relatesTo,
+      String isRelatedTo, String infofilters, String conffilters,
+      String metricfilters, String eventfilters) throws Exception {
+    return new TimelineEntityFilters(parseLongStr(limit),
+        parseLongStr(createdTimeStart), parseLongStr(createdTimeEnd),
+        parseKeyStrValuesStr(relatesTo, COMMA_DELIMITER, COLON_DELIMITER),
+        parseKeyStrValuesStr(isRelatedTo, COMMA_DELIMITER, COLON_DELIMITER),
+        parseKeyStrValueObj(infofilters, COMMA_DELIMITER, COLON_DELIMITER),
+        parseKeyStrValueStr(conffilters, COMMA_DELIMITER, COLON_DELIMITER),
+        parseValuesStr(metricfilters, COMMA_DELIMITER),
+        parseValuesStr(eventfilters, COMMA_DELIMITER));
+  }
+
+  /**
+   * Parse the passed fields represented as strings and convert them into a
+   * {@link TimelineDataToRetrieve} object.
+   * @param confs
+   * @param metrics
+   * @param fields
+   * @return a {@link TimelineDataToRetrieve} object.
+   * @throws Exception
+   */
+  static TimelineDataToRetrieve createTimelineDataToRetrieve(String confs,
+      String metrics, String fields) throws Exception {
+    return new TimelineDataToRetrieve(
+        null, null, parseFieldsStr(fields, COMMA_DELIMITER));
   }
 
   /**
