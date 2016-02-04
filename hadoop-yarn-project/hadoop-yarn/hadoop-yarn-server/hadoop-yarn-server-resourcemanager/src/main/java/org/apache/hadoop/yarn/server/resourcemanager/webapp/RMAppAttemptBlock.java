@@ -23,9 +23,11 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI._INFO_WRAP;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._ODD;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
 
+import java.util.Collection;
+import java.util.List;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
@@ -36,8 +38,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.webapp.AppAttemptBlock;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
@@ -48,11 +48,8 @@ import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
-import com.google.inject.Inject;
-import java.util.List;
 
-import java.util.Collection;
-import java.util.Set;
+import com.google.inject.Inject;
 
 public class RMAppAttemptBlock extends AppAttemptBlock{
 
@@ -207,14 +204,13 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
       Collection<ContainerReport> containers, AppAttemptInfo appAttempt,
       String node) {
 
-    String blacklistedNodes = "-";
-    Set<String> nodes =
-        getBlacklistedNodes(rm, getRMAppAttempt().getAppAttemptId());
-    if (nodes != null) {
-      if (!nodes.isEmpty()) {
-        blacklistedNodes = StringUtils.join(nodes, ", ");
-      }
-    }
+    RMAppAttempt rmAppAttempt = getRMAppAttempt();
+    // nodes which are blacklisted by the application
+    String appBlacklistedNodes =
+        getNodeString(rmAppAttempt.getBlacklistedNodes());
+    // nodes which are blacklisted by the RM for AM launches
+    String rmBlackListedNodes = getNodeString(
+        rmAppAttempt.getAMBlacklist().getBlacklistUpdates().getAdditions());
 
     info("Application Attempt Overview")
       ._(
@@ -248,21 +244,17 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
       ._(
         "Diagnostics Info:",
         appAttempt.getDiagnosticsInfo() == null ? "" : appAttempt
-          .getDiagnosticsInfo())._("Blacklisted Nodes:", blacklistedNodes);
+          .getDiagnosticsInfo())
+      ._("Application Blacklisted Nodes:", appBlacklistedNodes)
+      ._("RM Blacklisted Nodes(for AM launches)", rmBlackListedNodes);
   }
 
-  public static Set<String> getBlacklistedNodes(ResourceManager rm,
-      ApplicationAttemptId appid) {
-    if (rm.getResourceScheduler() instanceof AbstractYarnScheduler) {
-      AbstractYarnScheduler ayScheduler =
-          (AbstractYarnScheduler) rm.getResourceScheduler();
-      SchedulerApplicationAttempt attempt =
-          ayScheduler.getApplicationAttempt(appid);
-      if (attempt != null) {
-        return attempt.getBlacklistedNodes();
-      }
+  private String getNodeString(Collection<String> nodes) {
+    String concatinatedString = "-";
+    if (null != nodes && !nodes.isEmpty()) {
+      concatinatedString = StringUtils.join(nodes, ", ");
     }
-    return null;
+    return concatinatedString;
   }
 
   @Override

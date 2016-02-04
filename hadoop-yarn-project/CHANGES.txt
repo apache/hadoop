@@ -122,6 +122,9 @@ Release 2.9.0 - UNRELEASED
     ApplicationSubmissionContextInfo more consistent.
     (Xuan Gong via vvasudev)
 
+    YARN-4307. Display blacklisted nodes for AM container in the RM web UI.
+    (Naganarasimha G R via vvasudev)
+
   OPTIMIZATIONS
 
   BUG FIXES

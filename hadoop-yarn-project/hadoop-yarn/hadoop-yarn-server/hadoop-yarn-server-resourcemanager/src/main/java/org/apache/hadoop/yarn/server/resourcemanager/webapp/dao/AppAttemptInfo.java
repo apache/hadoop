@@ -42,6 +42,7 @@ public class AppAttemptInfo {
   protected String nodeId;
   protected String logsLink;
   protected String blacklistedNodes;
+  protected String rmBlacklistedNodesForAMLaunches;
   protected String appAttemptId;
 
   public AppAttemptInfo() {
@@ -67,6 +68,10 @@ public class AppAttemptInfo {
         this.logsLink = WebAppUtils.getRunningLogURL(schemePrefix
             + masterContainer.getNodeHttpAddress(),
             ConverterUtils.toString(masterContainer.getId()), user);
+
+        rmBlacklistedNodesForAMLaunches = StringUtils.join(
+            attempt.getAMBlacklist().getBlacklistUpdates().getAdditions(),
+            ", ");
         if (rm.getResourceScheduler() instanceof AbstractYarnScheduler) {
           AbstractYarnScheduler ayScheduler =
               (AbstractYarnScheduler) rm.getResourceScheduler();
