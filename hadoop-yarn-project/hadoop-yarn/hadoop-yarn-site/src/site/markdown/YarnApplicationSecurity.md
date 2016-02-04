@@ -75,29 +75,81 @@ all of these credentials down to the launched containers.
 The delegation tokens which a YARN application needs must be acquired
 from a program executing as an authenticated user. For a YARN application,
 this means the user launching the application. It is the client-side part
-of the YARN application which must do this
+of the YARN application which must do this:
 
 1. Log in via `UserGroupInformation`.
 1. Identify all tokens which must be acquired.
-1. Request the specific tokens desired.
+1. Request these tokens from the specific Hadoop services.
 1. Marshall all tokens into a byte buffer.
 1. Add them to the `ContainerLaunchContext` within the `ApplicationSubmissionContext`.
 
-Which tokens are required? By default: HDFS.
+Which tokens are required? Normally, a token to access HDFS.
+
+An application must request a delegation token from every filesystem with
+which it intends to interact —including the cluster's main FS.
+`FileSystem.addDelegationTokens(renewer, credentials)` can be used to collected these;
+it is a no-op on those filesystems which are not 
 
 Applications talking to other services, such as Apache HBase and Apache Hive,
 should request tokens from these services, using the libraries of these
 services to acquire delegation tokens. All tokens can be added to the same
 set of credentials, then saved to a byte buffer for submission.
 
+The Application Timeline Server also needs a delegation token. This is covered
+below
+
 ### Extracting tokens within the AM
 
 When the application master is launched and any of the UGI/Hadoop operations
-which trigger a user login invoked, the UGI class will load in all tokens
+which trigger a user login invoked, the UGI class will automaticlaly load in all tokens
 saved in the file named by the environment variable `HADOOP_TOKEN_FILE_LOCATION`.
-The logged in ("real") user's credentials will be 
+
+This happens on an insecure cluster along with a secure one, and on a secure
+cluster even if a keytab is used by the application. Why? Because the 
+AM/RM token needed to authenticate the application with the YARN RM is always
+supplied this way.
+
+This means you have a relative similar workflow across secure and insecure clusters.
+
+1. Suring AM startup, log in to Kerberos.
+A call to `UserGroupInformation.isSecurityEnabled()` will perform the operation
+
+1. Enumerate the current user's credentials, through a call of 
+`UserGroupInformation.getCurrentUser().getCredentials()`.
+
+1. Filter out the AMRM token, resulting in a new set of credentials. In an
+insecure cluster, the list of credentials will now be empty; in a secure cluster
+they will contain
+
+1. Set the credentials of all containers to be launched to this (possibly empty)
+list of credentials.
+
+1. Save the list of tokens to renew
+
+### Token Renewal
+
+Tokens *expire*: they have a limited lifespan. An application wishing to
+use a token past this expiry date must *renew* the token before the token
+expires.
+
+Hadoop automatically sets up a delegation token renewal thread when needed,
+the `DelegationTokenRenewer`
+
+It is the responsibility of the application to renew all tokens other
+than the AMRM and timeline tokens.
+
+Here are the different strategies
+
+1. Don't. Rely on the lifespan of the application being so short that token
+renewal is not needed. For applications whose life can always be measured
+in minutes or tens of minutes, this is a viable strategy.
+
+1. Start a background thread/Executor to renew the tokens at a regular interval.
+This what all YARN applications with longer lifespans —but no keytabs— must
+do.
 
 ## Other Aspects of YARN Security
+
 
 ### AM/RM Token Refresh
 
@@ -116,14 +168,6 @@ How is this problem addressed? The YARN Resource Manager handles it, by
 renewing the tokens on behalf of the user. It does this immediately on
 job submission, and again, before tokens expire. Thus the tokens are kept up
 to date.
-
-### Timeline Server integration
-
-The [Application Timeline Server](TimelineServer.html) can be deployed as a secure service
-—in which case the application will need the relevant token to authenticate with
-it. This process is handled automatically in `YarnClientImpl` if ATS is
-enabled in a secure cluster. Similarly, the AM-side `TimelineClient` YARN service
-class manages token renewal automatically via the ATS's SPNEGO-authenticated REST API.
 
 ### Unmanaged Application Masters
 
@@ -180,15 +224,51 @@ in the named file *instead of acquiring any tokens of its own*.
 
 Loading in the token file is automatic: UGI does it during user login.
 
-What is not automatic is propagation of these credentials to the AM —the
-client must do that, *instead of trying to acquire any tokens of its own*.
+The client is then responsible for passing the same credentials into the 
+AM launch context. This can be done simply by passing down the current
+credentials.
 
+```java
+credentials = new Credentials(
+    UserGroupInformation.getCurrentUser().getCredentials());
+```
+
+### Timeline Server integration
+
+The [Application Timeline Server](TimelineServer.html) can be deployed as a secure service
+—in which case the application will need the relevant token to authenticate with
+it. This process is handled automatically in `YarnClientImpl` if ATS is
+enabled in a secure cluster. Similarly, the AM-side `TimelineClient` YARN service
+class manages token renewal automatically via the ATS's SPNEGO-authenticated REST API.
+
+If you need to prepare a set of delegation tokens for a YARN application launch
+via Oozie, this can be done via the timeline client API.
+
+```java
+try(TimelineClient timelineClient = TimelineClient.createTimelineClient()) {
+  timelineClient.init(conf);
+  timelineClient.start();
+  Token<TimelineDelegationTokenIdentifier> token =
+      timelineClient.getDelegationToken(rmprincipal));
+  credentials.addToken(token.getService(), token);
+}
+```
+
+### Cancelling Tokens
+
+Applications *may* wish to cancel tokens they hold when terminating their AM.
+This ensures that the tokens are no-longer valid.
+
+This is not mandatory, and as a clean shutdown of a YARN application cannot
+be guaranteed, it is not possible to guarantee that the tokens will always
+be during application termination. However, it does reduce the window of
+vulnerability to stolen tokens.
 
 ## Securing Long-lived YARN Services
 
 There is a time limit on all token renewals, after which tokens won't renew,
-and the application will stop working. This is somewhere between 72 hours and
-7 days.
+causing the application to stop working. This is somewhere between seventy-two
+hours and seven days.
 
 Any YARN service intended to run for an extended period of time *must* have
 a strategy for renewing credentials.
@@ -223,7 +303,7 @@ the AM's container.
 1. The Application Master is configured with the relative path to the keytab,
 and logs in with `UserGroupInformation.loginUserFromKeytab()`.
 
-1. When the AM launches the container, it list the HDFS path to the keytab
+1. When the AM launches the container, it lists the HDFS path to the keytab
 as a resource to localize.
 
 1. It adds the HDFS delegation token to the container launch context, so
@@ -283,18 +363,20 @@ used for launching the AM. While the AM could delete that keytab on launch,
 doing so would stop YARN being able to successfully relaunch the AM after any
 failure.
 
-### Client-side push of renewed Delegation Tokens
+### Client-side Token Push
 
 This strategy may be the sole one acceptable to a strict operations team: a client process
-running on an account holding a kerberos TGT negotiates with all needed cluster services
-for delegation tokens, tokens which are then pushed out to the Application Master via
+running on an account holding a Kerberos TGT negotiates with all needed cluster services
+for new delegation tokens, tokens which are then pushed out to the Application Master via
 some RPC interface.
 
 This does require the client process to be re-executed on a regular basis; a cron or Oozie job
 can do this. The AM will need to implement an IPC API over which renewed
-tokens can be provided.
+tokens can be provided. (Note that as Oozie can collect the tokens itself,
+all the updater application needs to do whenever executed is set up an IPC
+connection with the AM and pass up the current user's credentials)
 
-### AM-initiated reboot
+### AM-initiated Reboot
 
 Because the RM refreshes tokens on AM restart, a YARN service configured
 to preserve containers over AM restarts could just consider restarting the AM
@@ -308,7 +390,8 @@ failing at the frequency
 ## Securing YARN Application Web UIs and REST APIs
 
 YARN provides a straightforward way of giving every YARN application SPNEGO authenticated
-web pages: it implements SPNEGO authentication in the Resource Manager Proxy. 
+web pages: it implements SPNEGO authentication in the Resource Manager Proxy.
+
 YARN web UI are expected to load the AM proxy filter when setting up its web UI; this filter
 will redirect all HTTP Requests coming from any host other than the RM Proxy hosts to an
 RM proxy, to which the client app/browser must re-issue the request. The client will authenticate
@@ -347,14 +430,14 @@ to successfully launch in a YARN cluster.
 
 In a secure cluster
 
-`[ ]` Client checks for environment variable `HADOOP_TOKEN_FILE_LOCATION`. 
-If set, loads the tokens from it.
+`[ ]` If `HADOOP_TOKEN_FILE_LOCATION` is unset, client acquires delegation tokens
+ for the local filesystems, with the RM principal set as the renewer.
 
 `[ ]` If `HADOOP_TOKEN_FILE_LOCATION` is unset, client acquires delegation tokens
- for the local filesystems, with the rm principal set as the renewer.
+for all other services to be used in the YARN application.
 
-`[ ]` If `HADOOP_TOKEN_FILE_LOCATION` is unset, client acquires delegation tokens
-for all services to be used in the YARN application.
+`[ ]` If `HADOOP_TOKEN_FILE_LOCATION` is set, client uses the current user's credentials
+as the source of all tokens to be added to the container launch context.
 
 `[ ]` Client sets all tokens on AM `ContainerLaunchContext.setTokens()`.
 
@@ -372,12 +455,16 @@ In an insecure cluster
 `[ ]` In a secure cluster, AM retrieves security tokens from `HADOOP_TOKEN_FILE_LOCATION`
 environment variable (automatically done by UGI).
 
-`[ ]` AM/RM token is extracted to build a credential set without this token —for
-container launch.
+`[ ]` A copy the token set is filtered to remove the AM/RM token and any timeline
+token.
+
+`[ ]` A thread or executor is started to renew threads on a regular basis.
+ 
+`[ ]` Recommended: AM cancels tokens when application completes.
 
 ### Container Launch by AM
 
-`[ ]` Tokens to be passed to containers are passed set via 
+`[ ]` Tokens to be passed to containers are passed via 
 `ContainerLaunchContext.setTokens()`.
 
 `[ ]` In an insecure cluster, propagate the `HADOOP_USER_NAME` environment variable.
