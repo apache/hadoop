@@ -194,6 +194,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4594. container-executor fails to remove directory tree when chmod
     required (Colin Patrick McCabe via jlowe)
 
+    YARN-4669. Fix logging statements in resource manager's Application class.
+    (Seethana Sidharta via vvasudev)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
