@@ -1718,6 +1718,9 @@ Release 2.7.3 - UNRELEASED
 
     HADOOP-12761. incremental maven build is not really incremental (sjlee)
 
+    HADOOP-12772. NetworkTopologyWithNodeGroup.getNodeGroup() can loop
+    infinitely for invalid 'loc' values (Kuhu Shukla via kihwal)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
