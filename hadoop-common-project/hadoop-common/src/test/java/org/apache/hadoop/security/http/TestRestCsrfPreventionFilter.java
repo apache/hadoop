@@ -34,8 +34,12 @@ import org.mockito.Mockito;
 
 public class TestRestCsrfPreventionFilter {
 
+  private static final String NON_BROWSER = "java";
+  private static final String BROWSER_AGENT =
+      "Mozilla/5.0 (compatible; U; ABrowse 0.6; Syllable)" +
+      " AppleWebKit/420+ (KHTML, like Gecko)";
   private static final String EXPECTED_MESSAGE =
-      "Missing Required Header for Vulnerability Protection";
+      "Missing Required Header for CSRF Vulnerability Protection";
   private static final String X_CUSTOM_HEADER = "X-CUSTOM_HEADER";
 
   @Test
@@ -52,7 +56,9 @@ public class TestRestCsrfPreventionFilter {
     // CSRF has not been sent
     HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_DEFAULT)).
-      thenReturn(null);
+    thenReturn(null);
+    Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_USER_AGENT)).
+      thenReturn(BROWSER_AGENT);
 
     // Objects to verify interactions based on request
     HttpServletResponse mockRes = Mockito.mock(HttpServletResponse.class);
@@ -66,6 +72,71 @@ public class TestRestCsrfPreventionFilter {
     verify(mockRes, atLeastOnce()).sendError(
         HttpServletResponse.SC_BAD_REQUEST, EXPECTED_MESSAGE);
     Mockito.verifyZeroInteractions(mockChain);
+  }
+
+  @Test
+  public void testNoHeaderCustomAgentConfig_badRequest()
+      throws ServletException, IOException {
+    // Setup the configuration settings of the server
+    FilterConfig filterConfig = Mockito.mock(FilterConfig.class);
+    Mockito.when(filterConfig.getInitParameter(
+      RestCsrfPreventionFilter.CUSTOM_HEADER_PARAM)).thenReturn(null);
+    Mockito.when(filterConfig.getInitParameter(
+      RestCsrfPreventionFilter.CUSTOM_METHODS_TO_IGNORE_PARAM)).
+      thenReturn(null);
+    Mockito.when(filterConfig.getInitParameter(
+        RestCsrfPreventionFilter.BROWSER_USER_AGENT_PARAM)).
+        thenReturn("^Mozilla.*,^Opera.*,curl");
+
+    // CSRF has not been sent
+    HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_DEFAULT)).
+    thenReturn(null);
+    Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_USER_AGENT)).
+      thenReturn("curl");
+
+    // Objects to verify interactions based on request
+    HttpServletResponse mockRes = Mockito.mock(HttpServletResponse.class);
+    FilterChain mockChain = Mockito.mock(FilterChain.class);
+
+    // Object under test
+    RestCsrfPreventionFilter filter = new RestCsrfPreventionFilter();
+    filter.init(filterConfig);
+    filter.doFilter(mockReq, mockRes, mockChain);
+
+    verify(mockRes, atLeastOnce()).sendError(
+        HttpServletResponse.SC_BAD_REQUEST, EXPECTED_MESSAGE);
+    Mockito.verifyZeroInteractions(mockChain);
+  }
+
+  @Test
+  public void testNoHeaderDefaultConfigNonBrowser_goodRequest()
+      throws ServletException, IOException {
+    // Setup the configuration settings of the server
+    FilterConfig filterConfig = Mockito.mock(FilterConfig.class);
+    Mockito.when(filterConfig.getInitParameter(
+      RestCsrfPreventionFilter.CUSTOM_HEADER_PARAM)).thenReturn(null);
+    Mockito.when(filterConfig.getInitParameter(
+      RestCsrfPreventionFilter.CUSTOM_METHODS_TO_IGNORE_PARAM)).
+      thenReturn(null);
+
+    // CSRF has not been sent
+    HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_DEFAULT)).
+    thenReturn(null);
+    Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_USER_AGENT)).
+      thenReturn(NON_BROWSER);
+
+    // Objects to verify interactions based on request
+    HttpServletResponse mockRes = Mockito.mock(HttpServletResponse.class);
+    FilterChain mockChain = Mockito.mock(FilterChain.class);
+
+    // Object under test
+    RestCsrfPreventionFilter filter = new RestCsrfPreventionFilter();
+    filter.init(filterConfig);
+    filter.doFilter(mockReq, mockRes, mockChain);
+
+    Mockito.verify(mockChain).doFilter(mockReq, mockRes);
   }
 
   @Test
@@ -136,9 +207,11 @@ public class TestRestCsrfPreventionFilter {
     Mockito.when(filterConfig.getInitParameter(
       RestCsrfPreventionFilter.CUSTOM_METHODS_TO_IGNORE_PARAM)).
       thenReturn(null);
+    HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_USER_AGENT)).
+    thenReturn(BROWSER_AGENT);
 
     // CSRF has not been sent
-    HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_DEFAULT)).
       thenReturn(null);
 
@@ -164,9 +237,11 @@ public class TestRestCsrfPreventionFilter {
     Mockito.when(filterConfig.getInitParameter(
       RestCsrfPreventionFilter.CUSTOM_METHODS_TO_IGNORE_PARAM)).
       thenReturn("");
+    HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_USER_AGENT)).
+    thenReturn(BROWSER_AGENT);
 
     // CSRF has not been sent
-    HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_DEFAULT)).
       thenReturn(null);
     Mockito.when(mockReq.getMethod()).
@@ -194,9 +269,11 @@ public class TestRestCsrfPreventionFilter {
     Mockito.when(filterConfig.getInitParameter(
       RestCsrfPreventionFilter.CUSTOM_METHODS_TO_IGNORE_PARAM)).
       thenReturn("GET");
+    HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_USER_AGENT)).
+    thenReturn(BROWSER_AGENT);
 
     // CSRF has not been sent
-    HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_DEFAULT)).
       thenReturn(null);
     Mockito.when(mockReq.getMethod()).
@@ -224,9 +301,11 @@ public class TestRestCsrfPreventionFilter {
     Mockito.when(filterConfig.getInitParameter(
       RestCsrfPreventionFilter.CUSTOM_METHODS_TO_IGNORE_PARAM)).
       thenReturn("GET,OPTIONS");
+    HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_USER_AGENT)).
+    thenReturn(BROWSER_AGENT);
 
     // CSRF has not been sent
-    HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_DEFAULT)).
       thenReturn(null);
     Mockito.when(mockReq.getMethod()).
@@ -254,9 +333,11 @@ public class TestRestCsrfPreventionFilter {
     Mockito.when(filterConfig.getInitParameter(
       RestCsrfPreventionFilter.CUSTOM_METHODS_TO_IGNORE_PARAM)).
       thenReturn("GET,OPTIONS");
+    HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_USER_AGENT)).
+    thenReturn(BROWSER_AGENT);
 
     // CSRF has not been sent
-    HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_DEFAULT)).
       thenReturn(null);
     Mockito.when(mockReq.getMethod()).
