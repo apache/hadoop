@@ -1664,6 +1664,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12735. core-default.xml misspells
     hadoop.workaround.non.threadsafe.getpwuid (Ray Chiang via cmccabe)
 
+    HADOOP-12771. Fix typo in JvmPauseMonitor#getNumGcWarnThreadholdExceeded.
+    (Xiaobing Zhou via xyao)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
