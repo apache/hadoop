@@ -106,7 +106,7 @@ public class JvmPauseMonitor extends AbstractService {
     return monitorThread != null;
   }
 
-  public long getNumGcWarnThreadholdExceeded() {
+  public long getNumGcWarnThresholdExceeded() {
     return numGcWarnThresholdExceeded;
   }
   
