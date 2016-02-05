@@ -2704,6 +2704,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9601. NNThroughputBenchmark.BlockReportStats should handle
     NotReplicatedYetException on adding block (iwasakims)
 
+    HDFS-9761. Rebalancer sleeps too long between iterations
+    (Mingliang Liu via cnauroth)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

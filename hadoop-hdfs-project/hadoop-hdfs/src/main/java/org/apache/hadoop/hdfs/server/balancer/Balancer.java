@@ -674,13 +674,12 @@ public class Balancer {
               // must be an error statue, return.
               return r.exitStatus.getExitCode();
             }
-
-            if (!done) {
-              Thread.sleep(sleeptime);
-            }
           } else {
             LOG.info("Skipping blockpool " + nnc.getBlockpoolID());
           }
+        }
+        if (!done) {
+          Thread.sleep(sleeptime);
         }
       }
     } finally {
