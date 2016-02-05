@@ -1667,6 +1667,10 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12771. Fix typo in JvmPauseMonitor#getNumGcWarnThreadholdExceeded.
     (Xiaobing Zhou via xyao)
 
+    HADOOP-12766. The default value of
+    "hadoop.workaround.non.threadsafe.getpwuid" is different between
+    core-default.xml and NativeIO.java (Akira AJISAKA via cmccabe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

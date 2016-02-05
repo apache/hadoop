@@ -429,7 +429,7 @@ for ldap providers in the same way as above does.
 
 <property>
   <name>hadoop.workaround.non.threadsafe.getpwuid</name>
-  <value>false</value>
+  <value>true</value>
   <description>Some operating systems or authentication modules are known to
   have broken implementations of getpwuid_r and getpwgid_r, such that these
   calls are not thread-safe. Symptoms of this problem include JVM crashes
