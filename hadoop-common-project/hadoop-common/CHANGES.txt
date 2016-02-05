@@ -757,6 +757,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12635. Adding Append API support for WASB. (Dushyanth via cnauroth)
 
+    HADOOP-12426. Add Entry point for Kerberos health check
+    (Steve Loughran via cnauroth)
+
   IMPROVEMENTS
 
     HADOOP-12458. Retries is typoed to spell Retires in parts of
