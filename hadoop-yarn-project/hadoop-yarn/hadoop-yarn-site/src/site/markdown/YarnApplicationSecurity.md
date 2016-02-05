@@ -83,25 +83,26 @@ of the YARN application which must do this:
 1. Marshall all tokens into a byte buffer.
 1. Add them to the `ContainerLaunchContext` within the `ApplicationSubmissionContext`.
 
-Which tokens are required? Normally, a token to access HDFS.
+Which tokens are required? Normally, at least a token to access HDFS.
 
 An application must request a delegation token from every filesystem with
 which it intends to interact —including the cluster's main FS.
-`FileSystem.addDelegationTokens(renewer, credentials)` can be used to collected these;
-it is a no-op on those filesystems which are not 
+`FileSystem.addDelegationTokens(renewer, credentials)` can be used to collect these;
+it is a no-op on those filesystems which do not issue tokens (including
+non-kerberized HDFS clusters).
 
 Applications talking to other services, such as Apache HBase and Apache Hive,
-should request tokens from these services, using the libraries of these
+must request tokens from these services, using the libraries of these
 services to acquire delegation tokens. All tokens can be added to the same
 set of credentials, then saved to a byte buffer for submission.
 
-The Application Timeline Server also needs a delegation token. This is covered
-below
+The Application Timeline Server also needs a delegation token. This is handled
+automatically on AM launch.
 
 ### Extracting tokens within the AM
 
-When the application master is launched and any of the UGI/Hadoop operations
-which trigger a user login invoked, the UGI class will automaticlaly load in all tokens
+When the Application Master is launched and any of the UGI/Hadoop operations
+which trigger a user login invoked, the UGI class will automatically load in all tokens
 saved in the file named by the environment variable `HADOOP_TOKEN_FILE_LOCATION`.
 
 This happens on an insecure cluster along with a secure one, and on a secure
@@ -112,9 +113,9 @@ supplied this way.
 This means you have a relative similar workflow across secure and insecure clusters.
 
 1. Suring AM startup, log in to Kerberos.
-A call to `UserGroupInformation.isSecurityEnabled()` will perform the operation
+A call to `UserGroupInformation.isSecurityEnabled()` will trigger this operation.
 
-1. Enumerate the current user's credentials, through a call of 
+1. Enumerate the current user's credentials, through a call of
 `UserGroupInformation.getCurrentUser().getCredentials()`.
 
 1. Filter out the AMRM token, resulting in a new set of credentials. In an
@@ -124,7 +125,8 @@ they will contain
 1. Set the credentials of all containers to be launched to this (possibly empty)
 list of credentials.
 
-1. Save the list of tokens to renew
+1. If the filtered list of tokens to renew, is non-empty start up a thread
+to renew them.
 
 ### Token Renewal
 
@@ -133,7 +135,7 @@ use a token past this expiry date must *renew* the token before the token
 expires.
 
 Hadoop automatically sets up a delegation token renewal thread when needed,
-the `DelegationTokenRenewer`
+the `DelegationTokenRenewer`.
 
 It is the responsibility of the application to renew all tokens other
 than the AMRM and timeline tokens.
@@ -165,7 +167,7 @@ restarted, it gets restarted from that original
 may fail, even before the issue of credentials to talk to other services.
 
 How is this problem addressed? The YARN Resource Manager handles it, by
-renewing the tokens on behalf of the user. It does this immediately on
+renewing the tokens in the container launch context. It does this immediately on
 job submission, and again, before tokens expire. Thus the tokens are kept up
 to date.
 
@@ -216,11 +218,11 @@ all relevant credentials, saving them to a file in the local filesystem,
 then setting the path to this file in the environment variable
 `HADOOP_TOKEN_FILE_LOCATION`. This is of course the same environment variable
 passed down by YARN in launched containers, as is similar content: a byte
-array with credentials. 
+array with credentials.
 
 Here, however, the environment variable is set in the environment
 executing the YARN client. This client must use the token information saved
-in the named file *instead of acquiring any tokens of its own*. 
+in the named file *instead of acquiring any tokens of its own*.
 
 Loading in the token file is automatic: UGI does it during user login.
 
@@ -310,7 +312,11 @@ as a resource to localize.
 that the keytab and other application files can be localized.
 
 1. Launched containers must themselves log in via
-  `UserGroupInformation.loginUserFromKeytab()`.
+  `UserGroupInformation.loginUserFromKeytab()`. UGI handles the login, and
+  schedules a background thread to relogin the user periodically.
+
+1. Token creation is handled automatically in the Hadoop IPC and REST APIs,
+the containers stay logged in via kerberos for their entire duration.
 
 This avoids the administration task of installing keytabs for specific services
 across the entire cluster.
@@ -326,7 +332,7 @@ expire or are revoked.
 
 This is the strategy implemented by Apache Slider (incubating).
 
-### AM keytab distributed via YARN, AM generated and renewed delegation
+### AM keytab distributed via YARN; AM regenerates delegation
 tokens for containers.
 
 1. A keytab is uploaded to HDFS by the client.
@@ -340,7 +346,7 @@ codepath will still automatically load the file references by
 `$HADOOP_TOKEN_FILE_LOCATION`, which is how the AMRM token is picked up.
 
 1. When the AM launches a container, it acquires all the delegation tokens
-needed by that container, and adds them to the container container launch context.
+needed by that container, and adds them to the container's container launch context.
 
 1. Launched containers must load the delegation tokens from `$HADOOP_TOKEN_FILE_LOCATION`,
 and use them (including renewals) until they can no longer be renewed.
@@ -351,6 +357,14 @@ and ideally wire encryption.
 
 1. Before a delegation token is due to expire, the processes running in the containers
 must request new tokens from the Application Master, over the IPC channel.
+
+1. The AM, logged in with a keytab, is capable of asking the cluster's services
+for new tokens. It must do this when requested by the containers.
+
+(Note there is an alternative direction for refresh operations: from AM
+ to the containers, again over whatever IPC channel is implemented between
+ AM and containers). The rest of the algorithm: AM regenerated tokens passed
+ to containers over IPC.
 
 This is the strategy used by Apache Spark 1.5+.
 
@@ -374,18 +388,7 @@ This does require the client process to be re-executed on a regular basis; a cro
 can do this. The AM will need to implement an IPC API over which renewed
 tokens can be provided. (Note that as Oozie can collect the tokens itself,
 all the updater application needs to do whenever executed is set up an IPC
-connection with the AM and pass up the current user's credentials)
-
-### AM-initiated Reboot
-
-Because the RM refreshes tokens on AM restart, a YARN service configured
-to preserve containers over AM restarts could just consider restarting the AM
-every 24-48 hours, pick up the refreshed tokens and then (somehow) propagate
-them to the containers.
-
-There is no documented application which does this; we are aware that it is
-possible. Note that the YARN cluster must be configured to tolerate applications
-failing at the frequency
+connection with the AM and pass up the current user's credentials).
 
 ## Securing YARN Application Web UIs and REST APIs
 
@@ -401,7 +404,7 @@ request forwared.
 As a result, all client interactions are SPNEGO-authenticated, without the YARN application
 itself needing any kerberos principal for the clients to authenticate against.
 
-Known weaknesses in this approach are
+Known weaknesses in this approach are:
 
 1. As calls coming from the proxy hosts are not redirected, any application running
 on those hosts has unrestricted access to the YARN applications. This is why in a secure cluster
@@ -409,6 +412,7 @@ the proxy hosts must run on cluster nodes which do not run end user code (i.e. n
 NodeManagers and hence schedule YARN containers, nor support logins by end users).
 
 1. The HTTP requests between proxy and YARN RM Server are not currently encrypted.
+That is: HTTPS is not supported.
 
 ## Securing YARN Application REST APIs
 
@@ -417,7 +421,6 @@ automatically authenticated via SPNEGO authentication in the RM proxy.
  
 Any REST endpoint (and equally, any web UI) brought up on a different port does not
 support SPNEGO authentication unless implemented in the YARN application itself.
-
 
 ## Checklist for YARN Applications
 
@@ -428,7 +431,7 @@ to successfully launch in a YARN cluster.
 
 `[ ]` Client checks for security being enabled via `UserGroupInformation.isSecurityEnabled()`
 
-In a secure cluster
+In a secure cluster:
 
 `[ ]` If `HADOOP_TOKEN_FILE_LOCATION` is unset, client acquires delegation tokens
  for the local filesystems, with the RM principal set as the renewer.
@@ -445,7 +448,7 @@ as the source of all tokens to be added to the container launch context.
 client sets the environment variable `HADOOP_JAAS_DEBUG=true`
 in the Container launch context of the AM.
 
-In an insecure cluster
+In an insecure cluster:
 
 `[ ]` Propagate local username to YARN AM, hence HDFS identity via the
 `HADOOP_USER_NAME` environment variable.
@@ -476,6 +479,8 @@ in the Container launch context if it is set in the AM's environment.
 
 `[ ]` Call `UserGroupInformation.isSecurityEnabled()` to trigger security setup.
 
+`[ ]` A thread or executor is started to renew threads on a regular basis.
+
 ### YARN service
 
 `[ ]` Application developers have chosen and implemented a token renewal strategy:
@@ -485,7 +490,8 @@ shared keytab, AM keytab or client-side token refresh.
 or it is in the local FS of the client, in which case it must be uploaded and added to
 the list of resources to localize.
 
-[ ] If stored in HDFS, permissions should be checked; if readable by other
+`[ ]` If stored in HDFS, keytab permissions should be checked. If the keytab
+is readable by other
 the current user, warn, and consider actually failing the launch similar to
 the `ssh` client application.
 
@@ -543,3 +549,5 @@ it won't work.*
 And without those tests: *your users will be the ones to find out
 that your application doesn't work in a secure cluster.*
 
+Bear that in mind when considering how much development effort to put into
+Kerberos support.
