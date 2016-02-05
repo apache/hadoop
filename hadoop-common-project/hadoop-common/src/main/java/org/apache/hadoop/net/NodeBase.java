@@ -127,7 +127,14 @@ public class NodeBase implements Node {
    * is not {@link #PATH_SEPARATOR}
    */
   public static String normalize(String path) {
-    if (path == null || path.length() == 0) return ROOT;
+    if (path == null) {
+      throw new IllegalArgumentException(
+          "Network Location is null ");
+    }
+
+    if (path.length() == 0) {
+      return ROOT;
+    }
     
     if (path.charAt(0) != PATH_SEPARATOR) {
       throw new IllegalArgumentException(
