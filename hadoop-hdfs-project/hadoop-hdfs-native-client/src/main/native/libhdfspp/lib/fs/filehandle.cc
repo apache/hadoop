@@ -191,7 +191,7 @@ void FileHandleImpl::AsyncPreadSome(
 
   // This is where we will put the logic for re-using a DN connection; we can
   //    steal the FileHandle's dn and put it back when we're done
-  std::shared_ptr<DataNodeConnection> dn = CreateDataNodeConnection(io_service_, chosen_dn, nullptr /*token*/);
+  std::shared_ptr<DataNodeConnection> dn = CreateDataNodeConnection(io_service_, chosen_dn, &block->blocktoken());
   std::string dn_id = dn->uuid_;
   std::string client_name = client_name_;
 
