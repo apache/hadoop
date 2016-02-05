@@ -19,6 +19,8 @@ package org.apache.hadoop.security.http;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.Set;
 
 import javax.servlet.Filter;
@@ -38,13 +40,18 @@ import javax.servlet.http.HttpServletResponse;
  * attempt as a bad request.
  */
 public class RestCsrfPreventionFilter implements Filter {
+  public static final String HEADER_USER_AGENT = "User-Agent";
+  public static final String BROWSER_USER_AGENT_PARAM =
+      "browser-useragents-regex";
   public static final String CUSTOM_HEADER_PARAM = "custom-header";
   public static final String CUSTOM_METHODS_TO_IGNORE_PARAM =
       "methods-to-ignore";
+  static final String  BROWSER_USER_AGENTS_DEFAULT = "^Mozilla.*,^Opera.*";
   static final String HEADER_DEFAULT = "X-XSRF-HEADER";
   static final String  METHODS_TO_IGNORE_DEFAULT = "GET,OPTIONS,HEAD,TRACE";
   private String  headerName = HEADER_DEFAULT;
   private Set<String> methodsToIgnore = null;
+  private Set<Pattern> browserUserAgents;
 
   @Override
   public void init(FilterConfig filterConfig) throws ServletException {
@@ -59,6 +66,20 @@ public class RestCsrfPreventionFilter implements Filter {
     } else {
       parseMethodsToIgnore(METHODS_TO_IGNORE_DEFAULT);
     }
+
+    String agents = filterConfig.getInitParameter(BROWSER_USER_AGENT_PARAM);
+    if (agents == null) {
+      agents = BROWSER_USER_AGENTS_DEFAULT;
+    }
+    parseBrowserUserAgents(agents);
+  }
+
+  void parseBrowserUserAgents(String userAgents) {
+    String[] agentsArray =  userAgents.split(",");
+    browserUserAgents = new HashSet<Pattern>();
+    for (String patternString : agentsArray) {
+      browserUserAgents.add(Pattern.compile(patternString));
+    }
   }
 
   void parseMethodsToIgnore(String mti) {
@@ -69,17 +90,46 @@ public class RestCsrfPreventionFilter implements Filter {
     }
   }
 
+  /**
+   * This method interrogates the User-Agent String and returns whether it
+   * refers to a browser.  If its not a browser, then the requirement for the
+   * CSRF header will not be enforced; if it is a browser, the requirement will
+   * be enforced.
+   * <p>
+   * A User-Agent String is considered to be a browser if it matches
+   * any of the regex patterns from browser-useragent-regex; the default
+   * behavior is to consider everything a browser that matches the following:
+   * "^Mozilla.*,^Opera.*".  Subclasses can optionally override
+   * this method to use different behavior.
+   *
+   * @param userAgent The User-Agent String, or null if there isn't one
+   * @return true if the User-Agent String refers to a browser, false if not
+   */
+  protected boolean isBrowser(String userAgent) {
+    if (userAgent == null) {
+      return false;
+    }
+    for (Pattern pattern : browserUserAgents) {
+      Matcher matcher = pattern.matcher(userAgent);
+      if (matcher.matches()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   @Override
   public void doFilter(ServletRequest request, ServletResponse response,
       FilterChain chain) throws IOException, ServletException {
     HttpServletRequest httpRequest = (HttpServletRequest)request;
-    if (methodsToIgnore.contains(httpRequest.getMethod()) ||
+    if (!isBrowser(httpRequest.getHeader(HEADER_USER_AGENT)) ||
+        methodsToIgnore.contains(httpRequest.getMethod()) ||
         httpRequest.getHeader(headerName) != null) {
       chain.doFilter(request, response);
     } else {
       ((HttpServletResponse)response).sendError(
           HttpServletResponse.SC_BAD_REQUEST,
-          "Missing Required Header for Vulnerability Protection");
+          "Missing Required Header for CSRF Vulnerability Protection");
     }
   }
 
