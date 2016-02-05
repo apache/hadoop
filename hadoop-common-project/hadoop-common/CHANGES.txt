@@ -425,6 +425,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12450. UserGroupInformation should not log at WARN level if no groups
     are found. (Elliott Clark via stevel)
 
+    HADOOP-12758. Extend CSRF Filter with UserAgent Checks
+    (Larry McCay via cnauroth)
+
   BUG FIXES
 
     HADOOP-12617. SPNEGO authentication request to non-default realm gets
