@@ -1952,6 +1952,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-9715. Check storage ID uniqueness on datanode startup
     (Lei (Eddy) Xu via vinayakumarb)
 
+    HDFS-9726. Refactor IBR code to a new class.  (szetszwo)
+
   BUG FIXES
 
     HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.

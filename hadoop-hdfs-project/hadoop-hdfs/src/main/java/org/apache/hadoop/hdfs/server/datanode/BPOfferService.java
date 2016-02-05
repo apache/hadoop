@@ -235,14 +235,27 @@ class BPOfferService {
    */
   void notifyNamenodeReceivedBlock(
       ExtendedBlock block, String delHint, String storageUuid) {
+    notifyNamenodeBlock(block, BlockStatus.RECEIVED_BLOCK, delHint,
+        storageUuid);
+  }
+
+  void notifyNamenodeReceivingBlock(ExtendedBlock block, String storageUuid) {
+    notifyNamenodeBlock(block, BlockStatus.RECEIVING_BLOCK, null, storageUuid);
+  }
+
+  void notifyNamenodeDeletedBlock(ExtendedBlock block, String storageUuid) {
+    notifyNamenodeBlock(block, BlockStatus.DELETED_BLOCK, null, storageUuid);
+  }
+
+  private void notifyNamenodeBlock(ExtendedBlock block, BlockStatus status,
+      String delHint, String storageUuid) {
     checkBlock(block);
-    ReceivedDeletedBlockInfo bInfo = new ReceivedDeletedBlockInfo(
-        block.getLocalBlock(),
-        ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK,
-        delHint);
+    final ReceivedDeletedBlockInfo info = new ReceivedDeletedBlockInfo(
+        block.getLocalBlock(), status, delHint);
+    final DatanodeStorage storage = dn.getFSDataset().getStorage(storageUuid);
 
     for (BPServiceActor actor : bpServices) {
-      actor.notifyNamenodeBlock(bInfo, storageUuid, true);
+      actor.getIbrManager().notifyNamenodeBlock(info, storage);
     }
   }
 
@@ -252,26 +265,6 @@ class BPOfferService {
     Preconditions.checkArgument(block.getBlockPoolId().equals(getBlockPoolId()),
         "block belongs to BP %s instead of BP %s",
         block.getBlockPoolId(), getBlockPoolId());
-  }
-  
-  void notifyNamenodeDeletedBlock(ExtendedBlock block, String storageUuid) {
-    checkBlock(block);
-    ReceivedDeletedBlockInfo bInfo = new ReceivedDeletedBlockInfo(
-       block.getLocalBlock(), BlockStatus.DELETED_BLOCK, null);
-    
-    for (BPServiceActor actor : bpServices) {
-      actor.notifyNamenodeDeletedBlock(bInfo, storageUuid);
-    }
-  }
-  
-  void notifyNamenodeReceivingBlock(ExtendedBlock block, String storageUuid) {
-    checkBlock(block);
-    ReceivedDeletedBlockInfo bInfo = new ReceivedDeletedBlockInfo(
-       block.getLocalBlock(), BlockStatus.RECEIVING_BLOCK, null);
-    
-    for (BPServiceActor actor : bpServices) {
-      actor.notifyNamenodeBlock(bInfo, storageUuid, false);
-    }
   }
 
   //This must be called only by blockPoolManager
@@ -578,7 +571,7 @@ class BPOfferService {
   @VisibleForTesting
   void triggerDeletionReportForTests() throws IOException {
     for (BPServiceActor actor : bpServices) {
-      actor.triggerDeletionReportForTests();
+      actor.getIbrManager().triggerDeletionReportForTests();
     }
   }
 
