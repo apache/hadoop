@@ -178,7 +178,20 @@ public class TestNetworkTopologyWithNodeGroup {
       assertTrue(frequency.get(key) > 0 || key == dataNodes[0]);
     }
   }
-  
+
+  @Test
+  public void testNodeGroup() throws Exception {
+    String res = cluster.getNodeGroup("");
+    assertTrue("NodeGroup should be NodeBase.ROOT for empty location",
+        res.equals(NodeBase.ROOT));
+    try {
+      cluster.getNodeGroup(null);
+    } catch (IllegalArgumentException e) {
+      assertTrue("Null Network Location should throw exception!",
+          e.getMessage().contains("Network Location is null"));
+    }
+  }
+
   /**
    * This test checks that adding a node with invalid topology will be failed 
    * with an exception to show topology is invalid.
