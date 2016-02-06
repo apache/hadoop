@@ -36,13 +36,21 @@ import static org.junit.Assume.assumeTrue;
 
 /**
  * Base class for scale tests; here is where the common scale configuration
- * keys are defined
+ * keys are defined.
  */
 public class S3AScaleTestBase {
 
   public static final String SCALE_TEST = "scale.test.";
+
+  /**
+   * The number of operations to perform: {@value}
+   */
   public static final String KEY_OPERATION_COUNT =
       SCALE_TEST + "operation.count";
+
+  /**
+   * The default number of operations to perform: {@value}
+   */
   public static final long DEFAULT_OPERATION_COUNT = 2005;
 
   protected S3AFileSystem fs;
@@ -71,6 +79,7 @@ public class S3AScaleTestBase {
   @Before
   public void setUp() throws Exception {
     conf = createConfiguration();
+    LOG.info("Scale test operation count = {}", getOperationCount());
     fs = S3ATestUtils.createTestFileSystem(conf);
   }
 
