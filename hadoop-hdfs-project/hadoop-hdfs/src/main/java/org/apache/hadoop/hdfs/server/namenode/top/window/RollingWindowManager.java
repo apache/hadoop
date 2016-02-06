@@ -173,7 +173,8 @@ public class RollingWindowManager {
    * @param user the user that updated the metric
    * @param delta the amount of change in the metric, e.g., +1
    */
-  public void recordMetric(long time, String command, String user, long delta) {
+  public void recordMetric(long time, String command,
+      String user, long delta) {
     RollingWindow window = getRollingWindow(command, user);
     window.incAt(time, delta);
   }
@@ -208,7 +209,7 @@ public class RollingWindowManager {
       }
       for (int i = 0; i < size; i++) {
         NameValuePair userEntry = reverse.pop();
-        User user = new User(userEntry.name, Long.valueOf(userEntry.value));
+        User user = new User(userEntry.name, userEntry.value);
         op.addUser(user);
       }
     }
@@ -243,7 +244,8 @@ public class RollingWindowManager {
           metricName, userName, windowSum);
       topN.offer(new NameValuePair(userName, windowSum));
     }
-    LOG.debug("topN users size for command {} is: {}", metricName, topN.size());
+    LOG.debug("topN users size for command {} is: {}",
+        metricName, topN.size());
     return topN;
   }
 

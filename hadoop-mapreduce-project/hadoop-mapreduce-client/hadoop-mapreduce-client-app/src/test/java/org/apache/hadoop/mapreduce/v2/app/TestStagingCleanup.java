@@ -245,6 +245,63 @@ import org.junit.Test;
      verify(fs).delete(stagingJobPath, true);
    }
 
+  @Test
+  public void testByPreserveFailedStaging() throws IOException {
+    conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, stagingJobDir);
+    // Failed task's staging files should be kept
+    conf.setBoolean(MRJobConfig.PRESERVE_FAILED_TASK_FILES, true);
+    fs = mock(FileSystem.class);
+    when(fs.delete(any(Path.class), anyBoolean())).thenReturn(true);
+    //Staging Dir exists
+    String user = UserGroupInformation.getCurrentUser().getShortUserName();
+    Path stagingDir = MRApps.getStagingAreaDir(conf, user);
+    when(fs.exists(stagingDir)).thenReturn(true);
+    ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(),
+            0);
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId, 1);
+    JobId jobid = recordFactory.newRecordInstance(JobId.class);
+    jobid.setAppId(appId);
+    ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
+    Assert.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
+    MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
+            JobStateInternal.FAILED, MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
+    appMaster.init(conf);
+    appMaster.start();
+    appMaster.shutDownJob();
+    //test whether notifyIsLastAMRetry called
+    Assert.assertEquals(true, ((TestMRApp)appMaster).getTestIsLastAMRetry());
+    verify(fs, times(0)).delete(stagingJobPath, true);
+  }
+
+  @Test
+  public void testPreservePatternMatchedStaging() throws IOException {
+    conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, stagingJobDir);
+    // The staging files that are matched to the pattern
+    // should not be deleted
+    conf.set(MRJobConfig.PRESERVE_FILES_PATTERN, "JobDir");
+    fs = mock(FileSystem.class);
+    when(fs.delete(any(Path.class), anyBoolean())).thenReturn(true);
+    //Staging Dir exists
+    String user = UserGroupInformation.getCurrentUser().getShortUserName();
+    Path stagingDir = MRApps.getStagingAreaDir(conf, user);
+    when(fs.exists(stagingDir)).thenReturn(true);
+    ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(),
+            0);
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId, 1);
+    JobId jobid = recordFactory.newRecordInstance(JobId.class);
+    jobid.setAppId(appId);
+    ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
+    Assert.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
+    MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
+            JobStateInternal.RUNNING, MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
+    appMaster.init(conf);
+    appMaster.start();
+    appMaster.shutDownJob();
+    //test whether notifyIsLastAMRetry called
+    Assert.assertEquals(true, ((TestMRApp)appMaster).getTestIsLastAMRetry());
+    verify(fs, times(0)).delete(stagingJobPath, true);
+  }
+
    private class TestMRApp extends MRAppMaster {
      ContainerAllocator allocator;
      boolean testIsLastAMRetry = false;
