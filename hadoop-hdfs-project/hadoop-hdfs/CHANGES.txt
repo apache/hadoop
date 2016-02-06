@@ -1954,6 +1954,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9726. Refactor IBR code to a new class.  (szetszwo)
 
+    HDFS-9686. Remove useless boxing/unboxing code.
+    (Kousuke Saruta via aajisaka)
+
   BUG FIXES
 
     HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.
