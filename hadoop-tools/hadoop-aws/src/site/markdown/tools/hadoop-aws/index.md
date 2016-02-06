@@ -267,6 +267,15 @@ If you do any of these: change your credentials immediately!
     </property>
 
     <property>
+      <name>fs.s3a.multiobjectdelete.enable</name>
+      <value>false</value>
+      <description>When enabled, multiple single-object delete requests are replaced by
+        a single 'delete multiple objects'-request, reducing the number of requests.
+        Beware: legacy S3-compatible object stores might not support this request.
+      </description>
+    </property>
+
+    <property>
       <name>fs.s3a.acl.default</name>
       <description>Set a canned ACL for newly created and copied objects. Value may be private,
          public-read, public-read-write, authenticated-read, log-delivery-write,

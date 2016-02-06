@@ -265,6 +265,9 @@ Trunk (Unreleased)
     HADOOP-11828. Implement the Hitchhiker erasure coding algorithm.
     (Jack Liuquan via zhz)
 
+    HADOOP-12292. Make use of DeleteObjects optional.
+    (Thomas Demoor via stevel)
+
   BUG FIXES
 
     HADOOP-12617. SPNEGO authentication request to non-default realm gets
