@@ -265,9 +265,6 @@ Trunk (Unreleased)
     HADOOP-11828. Implement the Hitchhiker erasure coding algorithm.
     (Jack Liuquan via zhz)
 
-    HADOOP-12292. Make use of DeleteObjects optional.
-    (Thomas Demoor via stevel)
-
   BUG FIXES
 
     HADOOP-12617. SPNEGO authentication request to non-default realm gets
@@ -1101,6 +1098,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12696. Add tests for S3Filesystem Contract (Matt Paduano via raviprak)
 
     HADOOP-12755. Fix typo in defaultFS warning message. (wang)
+
+    HADOOP-12292. Make use of DeleteObjects optional.
+    (Thomas Demoor via stevel)
 
   OPTIMIZATIONS
 
