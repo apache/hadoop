@@ -61,7 +61,7 @@ public class TestS3ADeleteManyFiles extends S3AScaleTestBase {
     // use Executor to speed up file creation
     ExecutorService exec = Executors.newFixedThreadPool(16);
     final ExecutorCompletionService<Boolean> completionService =
-        new ExecutorCompletionService<Boolean>(exec);
+        new ExecutorCompletionService<>(exec);
     try {
       final byte[] data = ContractTestUtils.dataset(testBufferSize, 'a', 'z');
 
