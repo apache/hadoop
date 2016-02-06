@@ -285,7 +285,10 @@ public class TestDataNodeHotSwapVolumes {
     }
 
     String newDataDir = newDataDirBuf.toString();
-    dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, newDataDir);
+    assertThat(
+        "DN did not update its own config",
+        dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, newDataDir),
+        is(conf.get(DFS_DATANODE_DATA_DIR_KEY)));
 
     // Verify the configuration value is appropriately set.
     String[] effectiveDataDirs = conf.get(DFS_DATANODE_DATA_DIR_KEY).split(",");
@@ -448,8 +451,11 @@ public class TestDataNodeHotSwapVolumes {
     DataNode dn = cluster.getDataNodes().get(0);
     Collection<String> oldDirs = getDataDirs(dn);
     String newDirs = oldDirs.iterator().next();  // Keep the first volume.
-    dn.reconfigurePropertyImpl(
-        DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, newDirs);
+    assertThat(
+        "DN did not update its own config",
+        dn.reconfigurePropertyImpl(
+            DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, newDirs),
+        is(dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY)));
     assertFileLocksReleased(
       new ArrayList<String>(oldDirs).subList(1, oldDirs.size()));
     dn.scheduleAllBlockReport(0);
@@ -505,8 +511,11 @@ public class TestDataNodeHotSwapVolumes {
       newDirs = dir;
       break;
     }
-    dn.reconfigurePropertyImpl(
-        DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, newDirs);
+    assertThat(
+        "DN did not update its own config",
+        dn.reconfigurePropertyImpl(
+            DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, newDirs),
+        is(dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY)));
     oldDirs.remove(newDirs);
     assertFileLocksReleased(oldDirs);
 
@@ -652,8 +661,10 @@ public class TestDataNodeHotSwapVolumes {
       public void run() {
         try {
           barrier.await();
-          dn.reconfigurePropertyImpl(
-              DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, newDirs);
+          assertThat(
+              "DN did not update its own config",
+              dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, newDirs),
+              is(dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY)));
         } catch (ReconfigurationException |
             InterruptedException |
             BrokenBarrierException e) {
@@ -701,7 +712,10 @@ public class TestDataNodeHotSwapVolumes {
     String keepDataDir = oldDataDir.split(",")[0];
     String removeDataDir = oldDataDir.split(",")[1];
 
-    dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, keepDataDir);
+    assertThat(
+        "DN did not update its own config",
+        dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, keepDataDir),
+        is(dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY)));
     for (int i = 0; i < cluster.getNumNameNodes(); i++) {
       String bpid = cluster.getNamesystem(i).getBlockPoolId();
       BlockPoolSliceStorage bpsStorage =
@@ -718,7 +732,10 @@ public class TestDataNodeHotSwapVolumes {
 
     // Bring the removed directory back. It only successes if all metadata about
     // this directory were removed from the previous step.
-    dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, oldDataDir);
+    assertThat(
+        "DN did not update its own config",
+        dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, oldDataDir),
+        is(dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY)));
   }
 
   /** Get the FsVolume on the given basePath */
@@ -772,7 +789,10 @@ public class TestDataNodeHotSwapVolumes {
     assertEquals(used, failedVolume.getDfsUsed());
 
     DataNodeTestUtils.restoreDataDirFromFailure(dirToFail);
-    dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, oldDataDir);
+    assertThat(
+        "DN did not update its own config",
+        dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, oldDataDir),
+        is(dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY)));
 
     createFile(new Path("/test2"), 32, (short)2);
     FsVolumeImpl restoredVolume = getVolume(dn, dirToFail);
@@ -806,7 +826,11 @@ public class TestDataNodeHotSwapVolumes {
 
     // Remove a data dir from datanode
     File dataDirToKeep = new File(cluster.getDataDirectory(), "data1");
-    dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, dataDirToKeep.toString());
+    assertThat(
+        "DN did not update its own config",
+        dn.reconfigurePropertyImpl(
+            DFS_DATANODE_DATA_DIR_KEY, dataDirToKeep.toString()),
+        is(dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY)));
 
     // We should get 1 full report
     Mockito.verify(spy, timeout(60000).times(1)).blockReport(

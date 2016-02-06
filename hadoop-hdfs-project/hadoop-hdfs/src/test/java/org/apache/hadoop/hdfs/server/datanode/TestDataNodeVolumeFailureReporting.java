@@ -19,9 +19,11 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
@@ -591,8 +593,11 @@ public class TestDataNodeVolumeFailureReporting {
       dnNewDataDirs.append(newVol.getAbsolutePath());
     }
     try {
-      dn.reconfigurePropertyImpl(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
-          dnNewDataDirs.toString());
+      assertThat(
+          dn.reconfigurePropertyImpl(
+              DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
+              dnNewDataDirs.toString()),
+          is(dn.getConf().get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY)));
     } catch (ReconfigurationException e) {
       // This can be thrown if reconfiguration tries to use a failed volume.
       // We need to swallow the exception, because some of our tests want to
