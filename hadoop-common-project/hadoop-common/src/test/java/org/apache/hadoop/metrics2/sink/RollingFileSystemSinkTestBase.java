@@ -25,6 +25,7 @@ import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -214,8 +215,7 @@ public class RollingFileSystemSinkTestBase {
   protected String readLogFile(String path, String then, int count)
       throws IOException, URISyntaxException {
     final String now = DATE_FORMAT.format(new Date());
-    final String logFile =
-        "testsrc-" + InetAddress.getLocalHost().getHostName() + ".log";
+    final String logFile = getLogFilename();
     FileSystem fs = FileSystem.get(new URI(path), new Configuration());
     StringBuilder metrics = new StringBuilder();
     boolean found = false;
@@ -258,7 +258,10 @@ public class RollingFileSystemSinkTestBase {
   }
 
   /**
-   * Return the path to the log file to use, based on the target path.
+   * Return the path to the log file to use, based on the initial path. The
+   * initial path must be a valid log file path. This method will find the
+   * most recent version of the file.
+   *
    * @param fs the target FileSystem
    * @param initial the path from which to start
    * @return the path to use
@@ -275,7 +278,17 @@ public class RollingFileSystemSinkTestBase {
       nextLogFile = new Path(initial.toString() + "." + id);
       id += 1;
     } while (fs.exists(nextLogFile));
+
     return logFile;
+  }
+
+  /**
+   * Return the name of the log file for this host.
+   *
+   * @return the name of the log file for this host
+   */
+  protected static String getLogFilename() throws UnknownHostException {
+    return "testsrc-" + InetAddress.getLocalHost().getHostName() + ".log";
   }
 
   /**
@@ -392,8 +405,7 @@ public class RollingFileSystemSinkTestBase {
 
     fs.mkdirs(dir);
 
-    Path file = new Path(dir,
-        "testsrc-" + InetAddress.getLocalHost().getHostName() + ".log");
+    Path file = new Path(dir, getLogFilename());
 
     // Create the log file to force the sink to append
     try (FSDataOutputStream out = fs.create(file)) {
@@ -405,8 +417,7 @@ public class RollingFileSystemSinkTestBase {
       int count = 1;
 
       while (count < numFiles) {
-        file = new Path(dir, "testsrc-"
-            + InetAddress.getLocalHost().getHostName() + ".log." + count);
+        file = new Path(dir, getLogFilename() + "." + count);
 
         // Create the log file to force the sink to append
         try (FSDataOutputStream out = fs.create(file)) {
@@ -482,7 +493,7 @@ public class RollingFileSystemSinkTestBase {
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
       try {
         super.close();
       } catch (MetricsException ex) {
