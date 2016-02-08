@@ -685,9 +685,6 @@ Release 2.9.0 - UNRELEASED
     HADOOP-12662. The build should fail if a -Dbundle option fails (Kai Zheng
     via cmccabe)
 
-    HADOOP-12749. Create a threadpoolexecutor that overrides afterExecute to
-    log uncaught exceptions/errors. (Sidharta Seethana via vvasudev)
-
   BUG FIXES
 
     HADOOP-12605. Fix intermittent failure of TestIPC.testIpcWithReaderQueuing
