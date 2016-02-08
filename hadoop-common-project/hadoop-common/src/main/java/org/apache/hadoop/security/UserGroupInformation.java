@@ -21,6 +21,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_MET
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.AccessControlContext;
@@ -51,8 +52,6 @@ import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import javax.security.auth.spi.LoginModule;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -71,6 +70,8 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * User and group information for Hadoop.
@@ -81,7 +82,9 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce", "HBase", "Hive", "Oozie"})
 @InterfaceStability.Evolving
 public class UserGroupInformation {
-  private static final Log LOG =  LogFactory.getLog(UserGroupInformation.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+      UserGroupInformation.class);
+
   /**
    * Percentage of the ticket window to use before we renew ticket.
    */
@@ -814,8 +817,19 @@ public class UserGroupInformation {
         // Load the token storage file and put all of the tokens into the
         // user. Don't use the FileSystem API for reading since it has a lock
         // cycle (HADOOP-9212).
+        File source = new File(fileLocation);
+        LOG.debug("Reading credentials from location set in {}: {}",
+            HADOOP_TOKEN_FILE_LOCATION,
+            source.getCanonicalPath());
+        if (!source.isFile()) {
+          throw new FileNotFoundException("Source file "
+              + source.getCanonicalPath() + " from "
+              + HADOOP_TOKEN_FILE_LOCATION
+              + " not found");
+        }
         Credentials cred = Credentials.readTokenStorageFile(
-            new File(fileLocation), conf);
+            source, conf);
+        LOG.debug("Loaded {} tokens", cred.numberOfTokens());
         loginUser.addCredentials(cred);
       }
       loginUser.spawnAutoRenewalThreadForUserCreds();
