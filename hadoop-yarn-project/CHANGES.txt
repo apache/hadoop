@@ -1391,6 +1391,9 @@ Release 2.8.0 - UNRELEASED
     policy instead of using same as active applications ordering policy.
     (Rohith Sharma K S via jianhe)
 
+    YARN-4667. RM Admin CLI for refreshNodesResources throws NPE when nothing
+    is configured. (Naganarasimha G R via devaraj)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
