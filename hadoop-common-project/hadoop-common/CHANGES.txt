@@ -2530,6 +2530,9 @@ Release 2.6.5 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-12773. HBase classes fail to load with client/job classloader
+    enabled (sjlee)
+
 Release 2.6.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
