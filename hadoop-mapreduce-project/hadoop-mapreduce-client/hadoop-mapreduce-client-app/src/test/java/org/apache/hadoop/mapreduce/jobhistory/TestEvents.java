@@ -405,7 +405,7 @@ public class TestEvents {
     public void setDatum(Object datum) {
       this.datum = datum;
     }
-    
+
     @Override
     public TimelineEvent toTimelineEvent() {
       return null;

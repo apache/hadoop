@@ -24,11 +24,13 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * contains the constants used in the context of schema accesses for
  * {@link org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity}
- * information
+ * information.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class TimelineHBaseSchemaConstants {
+public final class TimelineHBaseSchemaConstants {
+  private TimelineHBaseSchemaConstants() {
+  }
 
   /**
    * Used to create a pre-split for tables starting with a username in the
@@ -36,27 +38,28 @@ public class TimelineHBaseSchemaConstants {
    * separators) so that different installations can presplit based on their own
    * commonly occurring names.
    */
-  private final static byte[][] USERNAME_SPLITS = { Bytes.toBytes("a"),
-      Bytes.toBytes("ad"), Bytes.toBytes("an"), Bytes.toBytes("b"),
-      Bytes.toBytes("ca"), Bytes.toBytes("cl"), Bytes.toBytes("d"),
-      Bytes.toBytes("e"), Bytes.toBytes("f"), Bytes.toBytes("g"),
-      Bytes.toBytes("h"), Bytes.toBytes("i"), Bytes.toBytes("j"),
-      Bytes.toBytes("k"), Bytes.toBytes("l"), Bytes.toBytes("m"),
-      Bytes.toBytes("n"), Bytes.toBytes("o"), Bytes.toBytes("q"),
-      Bytes.toBytes("r"), Bytes.toBytes("s"), Bytes.toBytes("se"),
-      Bytes.toBytes("t"), Bytes.toBytes("u"), Bytes.toBytes("v"),
-      Bytes.toBytes("w"), Bytes.toBytes("x"), Bytes.toBytes("y"),
-      Bytes.toBytes("z") };
+  private final static byte[][] USERNAME_SPLITS = {
+      Bytes.toBytes("a"), Bytes.toBytes("ad"), Bytes.toBytes("an"),
+      Bytes.toBytes("b"), Bytes.toBytes("ca"), Bytes.toBytes("cl"),
+      Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
+      Bytes.toBytes("g"), Bytes.toBytes("h"), Bytes.toBytes("i"),
+      Bytes.toBytes("j"), Bytes.toBytes("k"), Bytes.toBytes("l"),
+      Bytes.toBytes("m"), Bytes.toBytes("n"), Bytes.toBytes("o"),
+      Bytes.toBytes("q"), Bytes.toBytes("r"), Bytes.toBytes("s"),
+      Bytes.toBytes("se"), Bytes.toBytes("t"), Bytes.toBytes("u"),
+      Bytes.toBytes("v"), Bytes.toBytes("w"), Bytes.toBytes("x"),
+      Bytes.toBytes("y"), Bytes.toBytes("z")
+  };
 
   /**
-   * The length at which keys auto-split
+   * The length at which keys auto-split.
    */
   public static final String USERNAME_SPLIT_KEY_PREFIX_LENGTH = "4";
 
   /**
    * @return splits for splits where a user is a prefix.
    */
-  public final static byte[][] getUsernameSplits() {
+  public static byte[][] getUsernameSplits() {
     byte[][] kloon = USERNAME_SPLITS.clone();
     // Deep copy.
     for (int row = 0; row < USERNAME_SPLITS.length; row++) {

@@ -54,7 +54,7 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
   INFO(ApplicationColumnFamily.INFO, "i"),
 
   /**
-   * Lifecycle events for an application
+   * Lifecycle events for an application.
    */
   EVENT(ApplicationColumnFamily.INFO, "e"),
 
@@ -214,7 +214,7 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
    *         is to facilitate returning byte arrays of values that were not
    *         Strings. If they can be treated as Strings, you should use
    *         {@link #readResults(Result)} instead.
-   * @throws IOException
+   * @throws IOException if any problem occurs while reading results.
    */
   public Map<?, Object> readResultsHavingCompoundColumnQualifiers(Result result)
       throws IOException {
@@ -276,8 +276,8 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
     for (ApplicationColumnPrefix acp : ApplicationColumnPrefix.values()) {
       // Find a match based column family and on name.
       if (acp.columnFamily.equals(columnFamily)
-          && (((columnPrefix == null) && (acp.getColumnPrefix() == null)) || (acp
-              .getColumnPrefix().equals(columnPrefix)))) {
+          && (((columnPrefix == null) && (acp.getColumnPrefix() == null)) ||
+          (acp.getColumnPrefix().equals(columnPrefix)))) {
         return acp;
       }
     }

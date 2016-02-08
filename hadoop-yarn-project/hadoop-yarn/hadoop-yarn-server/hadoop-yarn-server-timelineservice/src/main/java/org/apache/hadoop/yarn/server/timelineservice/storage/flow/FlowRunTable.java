@@ -84,19 +84,19 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
  * </pre>
  */
 public class FlowRunTable extends BaseTable<FlowRunTable> {
-  /** entity prefix */
+  /** entity prefix. */
   private static final String PREFIX =
       YarnConfiguration.TIMELINE_SERVICE_PREFIX + ".flowrun";
 
-  /** config param name that specifies the flowrun table name */
+  /** config param name that specifies the flowrun table name. */
   public static final String TABLE_NAME_CONF_NAME = PREFIX + ".table.name";
 
-  /** default value for flowrun table name */
+  /** default value for flowrun table name. */
   public static final String DEFAULT_TABLE_NAME = "timelineservice.flowrun";
 
   private static final Log LOG = LogFactory.getLog(FlowRunTable.class);
 
-  /** default max number of versions */
+  /** default max number of versions. */
   public static final int DEFAULT_METRICS_MAX_VERSIONS = Integer.MAX_VALUE;
 
   public FlowRunTable() {

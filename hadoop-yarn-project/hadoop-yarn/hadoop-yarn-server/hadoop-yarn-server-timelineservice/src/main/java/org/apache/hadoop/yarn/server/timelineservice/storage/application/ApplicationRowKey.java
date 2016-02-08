@@ -62,11 +62,11 @@ public class ApplicationRowKey {
 
   /**
    * Constructs a row key prefix for the application table as follows:
-   * {@code clusterId!userName!flowName!}
+   * {@code clusterId!userName!flowName!}.
    *
-   * @param clusterId
-   * @param userId
-   * @param flowName
+   * @param clusterId Cluster Id.
+   * @param userId User Id.
+   * @param flowName Flow Name.
    * @return byte array with the row key prefix
    */
   public static byte[] getRowKeyPrefix(String clusterId, String userId,
@@ -78,12 +78,12 @@ public class ApplicationRowKey {
 
   /**
    * Constructs a row key prefix for the application table as follows:
-   * {@code clusterId!userName!flowName!flowRunId!}
+   * {@code clusterId!userName!flowName!flowRunId!}.
    *
-   * @param clusterId
-   * @param userId
-   * @param flowName
-   * @param flowRunId
+   * @param clusterId Cluster Id.
+   * @param userId User Id.
+   * @param flowName Flow Name.
+   * @param flowRunId Run Id for the flow.
    * @return byte array with the row key prefix
    */
   public static byte[] getRowKeyPrefix(String clusterId, String userId,
@@ -96,13 +96,13 @@ public class ApplicationRowKey {
 
   /**
    * Constructs a row key for the application table as follows:
-   * {@code clusterId!userName!flowName!flowRunId!AppId}
+   * {@code clusterId!userName!flowName!flowRunId!AppId}.
    *
-   * @param clusterId
-   * @param userId
-   * @param flowName
-   * @param flowRunId
-   * @param appId
+   * @param clusterId Cluster Id.
+   * @param userId User Id.
+   * @param flowName Flow Name.
+   * @param flowRunId Run Id for the flow.
+   * @param appId App Id.
    * @return byte array with the row key
    */
   public static byte[] getRowKey(String clusterId, String userId,
@@ -119,6 +119,9 @@ public class ApplicationRowKey {
 
   /**
    * Given the raw row key as bytes, returns the row key as an object.
+   *
+   * @param rowKey Byte representation  of row key.
+   * @return An <cite>ApplicationRowKey</cite> object.
    */
   public static ApplicationRowKey parseRowKey(byte[] rowKey) {
     byte[][] rowKeyComponents = Separator.QUALIFIERS.split(rowKey);

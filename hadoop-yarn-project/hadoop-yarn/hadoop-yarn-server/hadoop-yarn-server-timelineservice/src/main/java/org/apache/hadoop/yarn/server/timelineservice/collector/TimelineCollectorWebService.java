@@ -74,6 +74,9 @@ public class TimelineCollectorWebService {
 
   private @Context ServletContext context;
 
+  /**
+   * Gives information about timeline collector.
+   */
   @XmlRootElement(name = "about")
   @XmlAccessorType(XmlAccessType.NONE)
   @Public
@@ -86,8 +89,8 @@ public class TimelineCollectorWebService {
 
     }
 
-    public AboutInfo(String about) {
-      this.about = about;
+    public AboutInfo(String abt) {
+      this.about = abt;
     }
 
     @XmlElement(name = "About")
@@ -95,14 +98,18 @@ public class TimelineCollectorWebService {
       return about;
     }
 
-    public void setAbout(String about) {
-      this.about = about;
+    public void setAbout(String abt) {
+      this.about = abt;
     }
 
   }
 
   /**
    * Return the description of the timeline web services.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @return description of timeline web service.
    */
   @GET
   @Produces({ MediaType.APPLICATION_JSON /* , MediaType.APPLICATION_XML */})
@@ -117,6 +124,15 @@ public class TimelineCollectorWebService {
    * Accepts writes to the collector, and returns a response. It simply routes
    * the request to the app level collector. It expects an application as a
    * context.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param async flag indicating whether its an async put or not. "true"
+   *     indicates, its an async call. If null, its considered false.
+   * @param appId Application Id to which the entities to be put belong to. If
+   *     appId is not there or it cannot be parsed, HTTP 400 will be sent back.
+   * @param entities timeline entities to be put.
+   * @return a Response with appropriate HTTP status.
    */
   @PUT
   @Path("/entities")
@@ -202,29 +218,29 @@ public class TimelineCollectorWebService {
       }
       if (type != null) {
         switch (type) {
-          case YARN_CLUSTER:
-            entitiesToReturn.addEntity(new ClusterEntity(entity));
-            break;
-          case YARN_FLOW_RUN:
-            entitiesToReturn.addEntity(new FlowRunEntity(entity));
-            break;
-          case YARN_APPLICATION:
-            entitiesToReturn.addEntity(new ApplicationEntity(entity));
-            break;
-          case YARN_APPLICATION_ATTEMPT:
-            entitiesToReturn.addEntity(new ApplicationAttemptEntity(entity));
-            break;
-          case YARN_CONTAINER:
-            entitiesToReturn.addEntity(new ContainerEntity(entity));
-            break;
-          case YARN_QUEUE:
-            entitiesToReturn.addEntity(new QueueEntity(entity));
-            break;
-          case YARN_USER:
-            entitiesToReturn.addEntity(new UserEntity(entity));
-            break;
-          default:
-            break;
+        case YARN_CLUSTER:
+          entitiesToReturn.addEntity(new ClusterEntity(entity));
+          break;
+        case YARN_FLOW_RUN:
+          entitiesToReturn.addEntity(new FlowRunEntity(entity));
+          break;
+        case YARN_APPLICATION:
+          entitiesToReturn.addEntity(new ApplicationEntity(entity));
+          break;
+        case YARN_APPLICATION_ATTEMPT:
+          entitiesToReturn.addEntity(new ApplicationAttemptEntity(entity));
+          break;
+        case YARN_CONTAINER:
+          entitiesToReturn.addEntity(new ContainerEntity(entity));
+          break;
+        case YARN_QUEUE:
+          entitiesToReturn.addEntity(new QueueEntity(entity));
+          break;
+        case YARN_USER:
+          entitiesToReturn.addEntity(new UserEntity(entity));
+          break;
+        default:
+          break;
         }
       } else {
         entitiesToReturn.addEntity(entity);

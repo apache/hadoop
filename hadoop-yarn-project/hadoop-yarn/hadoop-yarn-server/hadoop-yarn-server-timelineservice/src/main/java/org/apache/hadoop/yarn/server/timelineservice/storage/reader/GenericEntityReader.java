@@ -47,8 +47,8 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilter
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
-import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowColumn;
 import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowTable;
@@ -118,7 +118,7 @@ class GenericEntityReader extends TimelineEntityReader {
     // Events not required.
     if (!dataToRetrieve.getFieldsToRetrieve().contains(Field.EVENTS) &&
         !dataToRetrieve.getFieldsToRetrieve().contains(Field.ALL) &&
-        (singleEntityRead || filters.getEventFilters() == null)) {
+        (isSingleEntityRead() || filters.getEventFilters() == null)) {
       infoColFamilyList.addFilter(
           new QualifierFilter(CompareOp.NOT_EQUAL,
           new BinaryPrefixComparator(
@@ -127,7 +127,7 @@ class GenericEntityReader extends TimelineEntityReader {
     // info not required.
     if (!dataToRetrieve.getFieldsToRetrieve().contains(Field.INFO) &&
         !dataToRetrieve.getFieldsToRetrieve().contains(Field.ALL) &&
-        (singleEntityRead || filters.getInfoFilters() == null)) {
+        (isSingleEntityRead() || filters.getInfoFilters() == null)) {
       infoColFamilyList.addFilter(
           new QualifierFilter(CompareOp.NOT_EQUAL,
           new BinaryPrefixComparator(
@@ -136,7 +136,7 @@ class GenericEntityReader extends TimelineEntityReader {
     // is related to not required.
     if (!dataToRetrieve.getFieldsToRetrieve().contains(Field.IS_RELATED_TO) &&
         !dataToRetrieve.getFieldsToRetrieve().contains(Field.ALL) &&
-        (singleEntityRead || filters.getIsRelatedTo() == null)) {
+        (isSingleEntityRead() || filters.getIsRelatedTo() == null)) {
       infoColFamilyList.addFilter(
           new QualifierFilter(CompareOp.NOT_EQUAL,
           new BinaryPrefixComparator(
@@ -145,7 +145,7 @@ class GenericEntityReader extends TimelineEntityReader {
     // relates to not required.
     if (!dataToRetrieve.getFieldsToRetrieve().contains(Field.RELATES_TO) &&
         !dataToRetrieve.getFieldsToRetrieve().contains(Field.ALL) &&
-        (singleEntityRead || filters.getRelatesTo() == null)) {
+        (isSingleEntityRead() || filters.getRelatesTo() == null)) {
       infoColFamilyList.addFilter(
           new QualifierFilter(CompareOp.NOT_EQUAL,
           new BinaryPrefixComparator(
@@ -153,7 +153,7 @@ class GenericEntityReader extends TimelineEntityReader {
     }
     list.addFilter(infoColFamilyList);
     if ((dataToRetrieve.getFieldsToRetrieve().contains(Field.CONFIGS) ||
-        (!singleEntityRead && filters.getConfigFilters() != null)) ||
+        (!isSingleEntityRead() && filters.getConfigFilters() != null)) ||
         (dataToRetrieve.getConfsToRetrieve() != null &&
         !dataToRetrieve.getConfsToRetrieve().getFilterList().isEmpty())) {
       FilterList filterCfg =
@@ -167,7 +167,7 @@ class GenericEntityReader extends TimelineEntityReader {
       list.addFilter(filterCfg);
     }
     if ((dataToRetrieve.getFieldsToRetrieve().contains(Field.METRICS) ||
-        (!singleEntityRead && filters.getMetricFilters() != null)) ||
+        (!isSingleEntityRead() && filters.getMetricFilters() != null)) ||
         (dataToRetrieve.getMetricsToRetrieve() != null &&
         !dataToRetrieve.getMetricsToRetrieve().getFilterList().isEmpty())) {
       FilterList filterMetrics =
@@ -201,13 +201,22 @@ class GenericEntityReader extends TimelineEntityReader {
   }
 
   protected static class FlowContext {
-    protected final String userId;
-    protected final String flowName;
-    protected final Long flowRunId;
+    private final String userId;
+    private final String flowName;
+    private final Long flowRunId;
     public FlowContext(String user, String flowName, Long flowRunId) {
       this.userId = user;
       this.flowName = flowName;
       this.flowRunId = flowRunId;
+    }
+    protected String getUserId() {
+      return userId;
+    }
+    protected String getFlowName() {
+      return flowName;
+    }
+    protected Long getFlowRunId() {
+      return flowRunId;
     }
   }
 
@@ -219,7 +228,7 @@ class GenericEntityReader extends TimelineEntityReader {
         "appId shouldn't be null");
     Preconditions.checkNotNull(getContext().getEntityType(),
         "entityType shouldn't be null");
-    if (singleEntityRead) {
+    if (isSingleEntityRead()) {
       Preconditions.checkNotNull(getContext().getEntityId(),
           "entityId shouldn't be null");
     }
@@ -254,7 +263,7 @@ class GenericEntityReader extends TimelineEntityReader {
     if (filterList != null && !filterList.getFilters().isEmpty()) {
       get.setFilter(filterList);
     }
-    return table.getResult(hbaseConf, conn, get);
+    return getTable().getResult(hbaseConf, conn, get);
   }
 
   @Override
@@ -271,7 +280,7 @@ class GenericEntityReader extends TimelineEntityReader {
     if (filterList != null && !filterList.getFilters().isEmpty()) {
       scan.setFilter(filterList);
     }
-    return table.getResultScanner(hbaseConf, conn, scan);
+    return getTable().getResultScanner(hbaseConf, conn, scan);
   }
 
   @Override
@@ -289,7 +298,7 @@ class GenericEntityReader extends TimelineEntityReader {
     // fetch created time
     Number createdTime = (Number)EntityColumn.CREATED_TIME.readResult(result);
     entity.setCreatedTime(createdTime.longValue());
-    if (!singleEntityRead &&
+    if (!isSingleEntityRead() &&
         (entity.getCreatedTime() < filters.getCreatedTimeBegin() ||
         entity.getCreatedTime() > filters.getCreatedTimeEnd())) {
       return null;
@@ -401,6 +410,14 @@ class GenericEntityReader extends TimelineEntityReader {
 
   /**
    * Helper method for reading relationship.
+   *
+   * @param <T> Describes the type of column prefix.
+   * @param entity entity to fill.
+   * @param result result from HBase.
+   * @param prefix column prefix.
+   * @param isRelatedTo if true, means relationship is to be added to
+   *     isRelatedTo, otherwise its added to relatesTo.
+   * @throws IOException if any problem is encountered while reading result.
    */
   protected <T> void readRelationship(
       TimelineEntity entity, Result result, ColumnPrefix<T> prefix,
@@ -421,6 +438,13 @@ class GenericEntityReader extends TimelineEntityReader {
 
   /**
    * Helper method for reading key-value pairs for either info or config.
+   *
+   * @param <T> Describes the type of column prefix.
+   * @param entity entity to fill.
+   * @param result result from HBase.
+   * @param prefix column prefix.
+   * @param isConfig if true, means we are reading configs, otherwise info.
+   * @throws IOException if any problem is encountered while reading result.
    */
   protected <T> void readKeyValuePairs(
       TimelineEntity entity, Result result, ColumnPrefix<T> prefix,
@@ -440,6 +464,12 @@ class GenericEntityReader extends TimelineEntityReader {
    * Read events from the entity table or the application table. The column name
    * is of the form "eventId=timestamp=infoKey" where "infoKey" may be omitted
    * if there is no info associated with the event.
+   *
+   * @param entity entity to fill.
+   * @param result HBase Result.
+   * @param isApplication if true, event read is for application table,
+   *     otherwise its being read for entity table.
+   * @throws IOException if any problem is encountered while reading result.
    *
    * See {@link EntityTable} and {@link ApplicationTable} for a more detailed
    * schema description.

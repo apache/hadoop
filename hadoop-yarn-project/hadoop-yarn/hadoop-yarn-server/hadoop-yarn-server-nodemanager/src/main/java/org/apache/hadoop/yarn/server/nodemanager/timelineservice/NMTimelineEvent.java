@@ -20,6 +20,10 @@ package org.apache.hadoop.yarn.server.nodemanager.timelineservice;
 
 import org.apache.hadoop.yarn.event.AbstractEvent;
 
+/**
+ * Event posted to NMTimelinePublisher which in turn publishes it to
+ * timelineservice v2.
+ */
 public class NMTimelineEvent extends AbstractEvent<NMTimelineEventType> {
   public NMTimelineEvent(NMTimelineEventType type) {
     super(type);

@@ -68,28 +68,28 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineHBas
  * </pre>
  */
 public class ApplicationTable extends BaseTable<ApplicationTable> {
-  /** application prefix */
+  /** application prefix. */
   private static final String PREFIX =
       YarnConfiguration.TIMELINE_SERVICE_PREFIX + ".application";
 
-  /** config param name that specifies the application table name */
+  /** config param name that specifies the application table name. */
   public static final String TABLE_NAME_CONF_NAME = PREFIX + ".table.name";
 
   /**
    * config param name that specifies the TTL for metrics column family in
-   * application table
+   * application table.
    */
   private static final String METRICS_TTL_CONF_NAME = PREFIX
       + ".table.metrics.ttl";
 
-  /** default value for application table name */
+  /** default value for application table name. */
   private static final String DEFAULT_TABLE_NAME =
       "timelineservice.application";
 
-  /** default TTL is 30 days for metrics timeseries */
+  /** default TTL is 30 days for metrics timeseries. */
   private static final int DEFAULT_METRICS_TTL = 2592000;
 
-  /** default max number of versions */
+  /** default max number of versions. */
   private static final int DEFAULT_METRICS_MAX_VERSIONS = 1000;
 
   private static final Log LOG = LogFactory.getLog(ApplicationTable.class);
@@ -139,8 +139,8 @@ public class ApplicationTable extends BaseTable<ApplicationTable> {
     metricsCF.setMaxVersions(DEFAULT_METRICS_MAX_VERSIONS);
     metricsCF.setTimeToLive(hbaseConf.getInt(METRICS_TTL_CONF_NAME,
         DEFAULT_METRICS_TTL));
-    applicationTableDescp
-        .setRegionSplitPolicyClassName("org.apache.hadoop.hbase.regionserver.KeyPrefixRegionSplitPolicy");
+    applicationTableDescp.setRegionSplitPolicyClassName(
+        "org.apache.hadoop.hbase.regionserver.KeyPrefixRegionSplitPolicy");
     applicationTableDescp.setValue("KeyPrefixRegionSplitPolicy.prefix_length",
         TimelineHBaseSchemaConstants.USERNAME_SPLIT_KEY_PREFIX_LENGTH);
     admin.createTable(applicationTableDescp,

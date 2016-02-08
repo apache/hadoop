@@ -31,12 +31,13 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStor
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TypedBufferedMutator;
 
 /**
- * Identifies partially qualified columns for the {@link FlowActivityTable}
+ * Identifies partially qualified columns for the {@link FlowActivityTable}.
  */
-public enum FlowActivityColumnPrefix implements ColumnPrefix<FlowActivityTable> {
+public enum FlowActivityColumnPrefix
+    implements ColumnPrefix<FlowActivityTable> {
 
   /**
-   * To store run ids of the flows
+   * To store run ids of the flows.
    */
   RUN_ID(FlowActivityColumnFamily.INFO, "r", null);
 
@@ -162,8 +163,8 @@ public enum FlowActivityColumnPrefix implements ColumnPrefix<FlowActivityTable> 
    * org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix
    * #readResultsWithTimestamps(org.apache.hadoop.hbase.client.Result)
    */
-  public <T> NavigableMap<String, NavigableMap<Long, T>> readResultsWithTimestamps(
-      Result result) throws IOException {
+  public <T> NavigableMap<String, NavigableMap<Long, T>>
+      readResultsWithTimestamps(Result result) throws IOException {
     return column.readResultsWithTimestamps(result, columnPrefixBytes);
   }
 
@@ -179,8 +180,8 @@ public enum FlowActivityColumnPrefix implements ColumnPrefix<FlowActivityTable> 
   public static final FlowActivityColumnPrefix columnFor(String columnPrefix) {
 
     // Match column based on value, assume column family matches.
-    for (FlowActivityColumnPrefix flowActivityColPrefix : FlowActivityColumnPrefix
-        .values()) {
+    for (FlowActivityColumnPrefix flowActivityColPrefix :
+        FlowActivityColumnPrefix.values()) {
       // Find a match based only on name.
       if (flowActivityColPrefix.getColumnPrefix().equals(columnPrefix)) {
         return flowActivityColPrefix;
@@ -209,8 +210,8 @@ public enum FlowActivityColumnPrefix implements ColumnPrefix<FlowActivityTable> 
     // TODO: needs unit test to confirm and need to update javadoc to explain
     // null prefix case.
 
-    for (FlowActivityColumnPrefix flowActivityColumnPrefix : FlowActivityColumnPrefix
-        .values()) {
+    for (FlowActivityColumnPrefix flowActivityColumnPrefix :
+        FlowActivityColumnPrefix.values()) {
       // Find a match based column family and on name.
       if (flowActivityColumnPrefix.columnFamily.equals(columnFamily)
           && (((columnPrefix == null) && (flowActivityColumnPrefix

@@ -53,7 +53,9 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class TimelineSchemaCreator {
+public final class TimelineSchemaCreator {
+  private TimelineSchemaCreator() {
+  }
 
   final static String NAME = TimelineSchemaCreator.class.getSimpleName();
   private static final Log LOG = LogFactory.getLog(TimelineSchemaCreator.class);

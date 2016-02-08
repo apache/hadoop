@@ -111,7 +111,7 @@ class FlowActivityEntityReader extends TimelineEntityReader {
     // the scanner may still return more than the limit; therefore we need to
     // read the right number as we iterate
     scan.setFilter(new PageFilter(getFilters().getLimit()));
-    return table.getResultScanner(hbaseConf, conn, scan);
+    return getTable().getResultScanner(hbaseConf, conn, scan);
   }
 
   @Override

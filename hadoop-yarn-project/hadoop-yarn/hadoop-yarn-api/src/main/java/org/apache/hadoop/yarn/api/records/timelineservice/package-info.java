@@ -15,7 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@InterfaceAudience.Public package org.apache.hadoop.yarn.api.records.timelineservice;
+
+/**
+ * Package org.apache.hadoop.yarn.api.records.timelineservice contains classes
+ * which define the data model for ATSv2.
+ */
+@InterfaceAudience.Public
+package org.apache.hadoop.yarn.api.records.timelineservice;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 

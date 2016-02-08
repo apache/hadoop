@@ -15,27 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.api.records.timelineservice;
+
+/**
+ * Package org.apache.hadoop.yarn.server.nodemanager.timelineservice contains
+ * classes related to publishing container events and other NM lifecycle events
+ * to ATSv2.
+ */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+package org.apache.hadoop.yarn.server.nodemanager.timelineservice;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-
-/**
- * This entity represents an application attempt.
- */
-@InterfaceAudience.Public
-@InterfaceStability.Unstable
-public class ApplicationAttemptEntity extends HierarchicalTimelineEntity {
-  public ApplicationAttemptEntity() {
-    super(TimelineEntityType.YARN_APPLICATION_ATTEMPT.toString());
-  }
-
-  public ApplicationAttemptEntity(TimelineEntity entity) {
-    super(entity);
-    if (!entity.getType().equals(
-        TimelineEntityType.YARN_APPLICATION_ATTEMPT.toString())) {
-      throw new IllegalArgumentException("Incompatible entity type: "
-          + getId());
-    }
-  }
-}

@@ -45,8 +45,10 @@ import org.codehaus.jackson.map.ObjectMapper;
 public class TimelineUtils {
 
   public static final String FLOW_NAME_TAG_PREFIX = "TIMELINE_FLOW_NAME_TAG";
-  public static final String FLOW_VERSION_TAG_PREFIX = "TIMELINE_FLOW_VERSION_TAG";
-  public static final String FLOW_RUN_ID_TAG_PREFIX = "TIMELINE_FLOW_RUN_ID_TAG";
+  public static final String FLOW_VERSION_TAG_PREFIX =
+      "TIMELINE_FLOW_VERSION_TAG";
+  public static final String FLOW_RUN_ID_TAG_PREFIX =
+      "TIMELINE_FLOW_RUN_ID_TAG";
 
   private static ObjectMapper mapper;
 
@@ -160,38 +162,39 @@ public class TimelineUtils {
     return SecurityUtil.buildTokenService(timelineServiceAddr);
   }
 
-  public static String generateDefaultFlowNameBasedOnAppId(ApplicationId appId) {
+  public static String generateDefaultFlowNameBasedOnAppId(
+      ApplicationId appId) {
     return "flow_" + appId.getClusterTimestamp() + "_" + appId.getId();
   }
 
   /**
-   * Generate flow name tag
+   * Generate flow name tag.
    *
    * @param flowName flow name that identifies a distinct flow application which
    *                 can be run repeatedly over time
-   * @return
+   * @return flow name tag.
    */
   public static String generateFlowNameTag(String flowName) {
     return FLOW_NAME_TAG_PREFIX + ":" + flowName;
   }
 
   /**
-   * Generate flow version tag
+   * Generate flow version tag.
    *
    * @param flowVersion flow version that keeps track of the changes made to the
    *                    flow
-   * @return
+   * @return flow version tag.
    */
   public static String generateFlowVersionTag(String flowVersion) {
     return FLOW_VERSION_TAG_PREFIX + ":" + flowVersion;
   }
 
   /**
-   * Generate flow run ID tag
+   * Generate flow run ID tag.
    *
    * @param flowRunId flow run ID that identifies one instance (or specific
    *                  execution) of that flow
-   * @return
+   * @return flow run id tag.
    */
   public static String generateFlowRunIdTag(long flowRunId) {
     return FLOW_RUN_ID_TAG_PREFIX + ":" + flowRunId;

@@ -46,6 +46,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimestampGenerator;
 
+/**
+ * Coprocessor for flow run table.
+ */
 public class FlowRunCoprocessor extends BaseRegionObserver {
 
   @SuppressWarnings("unused")
@@ -53,9 +56,10 @@ public class FlowRunCoprocessor extends BaseRegionObserver {
 
   private HRegion region;
   /**
-   * generate a timestamp that is unique per row in a region this is per region
+   * generate a timestamp that is unique per row in a region this is per region.
    */
-  private final TimestampGenerator timestampGenerator = new TimestampGenerator();
+  private final TimestampGenerator timestampGenerator =
+      new TimestampGenerator();
 
   @Override
   public void start(CoprocessorEnvironment e) throws IOException {

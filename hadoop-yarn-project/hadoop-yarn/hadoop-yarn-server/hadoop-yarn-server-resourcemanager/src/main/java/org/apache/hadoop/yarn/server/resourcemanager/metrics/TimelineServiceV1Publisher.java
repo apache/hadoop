@@ -44,6 +44,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
+/**
+ * This class is responsible for posting application, appattempt &amp; Container
+ * lifecycle related events to timeline service v1.
+ */
 public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
 
   private static final Log LOG =
@@ -138,8 +142,8 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
 
     entity.addEvent(tEvent);
     // sync sending of finish event to avoid possibility of saving application
-    // finished state in RMStateStore save without publishing in ATS
-    putEntity(entity);// sync event so that ATS update is done without fail
+    // finished state in RMStateStore save without publishing in ATS.
+    putEntity(entity); // sync event so that ATS update is done without fail.
   }
 
   @SuppressWarnings("unchecked")

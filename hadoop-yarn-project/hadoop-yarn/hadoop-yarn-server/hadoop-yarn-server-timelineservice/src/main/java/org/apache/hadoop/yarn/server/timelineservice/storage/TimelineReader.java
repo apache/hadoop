@@ -97,7 +97,8 @@ public interface TimelineReader extends Service {
    *    <cite>FlowRunEntity</cite>.<br>
    *    For all other entity types, entity returned is of type
    *    <cite>TimelineEntity</cite>.
-   * @throws IOException
+   * @throws IOException if there is an exception encountered while fetching
+   *    entity from backend storage.
    */
   TimelineEntity getEntity(TimelineReaderContext context,
       TimelineDataToRetrieve dataToRetrieve) throws IOException;
@@ -169,7 +170,8 @@ public interface TimelineReader extends Service {
    *    <cite>FlowRunEntity</cite>.<br>
    *    For all other entity types, entities returned are of type
    *    <cite>TimelineEntity</cite>.
-   * @throws IOException
+   * @throws IOException if there is an exception encountered while fetching
+   *    entity from backend storage.
    */
   Set<TimelineEntity> getEntities(
       TimelineReaderContext context,

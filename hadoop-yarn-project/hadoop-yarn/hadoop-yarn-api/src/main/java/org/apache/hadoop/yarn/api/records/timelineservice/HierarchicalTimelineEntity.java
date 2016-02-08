@@ -17,17 +17,18 @@
  */
 package org.apache.hadoop.yarn.api.records.timelineservice;
 
-import com.google.common.base.Joiner;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
+/**
+ * This class extends timeline entity and defines parent-child relationships
+ * with other entities.
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public abstract class HierarchicalTimelineEntity extends TimelineEntity {
@@ -66,6 +67,7 @@ public abstract class HierarchicalTimelineEntity extends TimelineEntity {
     setParent(new Identifier(type, id));
   }
 
+  @SuppressWarnings("unchecked")
   public Set<Identifier> getChildren() {
     Object identifiers = getInfo().get(CHILDREN_INFO_KEY);
     if (identifiers == null) {

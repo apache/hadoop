@@ -125,7 +125,8 @@ class TimelineEntityConverter {
     }
   }
 
-  private Set<TimelineEntity> createTaskAndTaskAttemptEntities(JobInfo jobInfo) {
+  private Set<TimelineEntity> createTaskAndTaskAttemptEntities(
+      JobInfo jobInfo) {
     Set<TimelineEntity> entities = new HashSet<>();
     Map<TaskID,TaskInfo> taskInfoMap = jobInfo.getAllTasks();
     LOG.info("job " + jobInfo.getJobId()+ " has " + taskInfoMap.size() +
@@ -175,7 +176,8 @@ class TimelineEntityConverter {
     return taskAttempts;
   }
 
-  private TimelineEntity createTaskAttemptEntity(TaskAttemptInfo taskAttemptInfo) {
+  private TimelineEntity createTaskAttemptEntity(
+      TaskAttemptInfo taskAttemptInfo) {
     TimelineEntity taskAttempt = new TimelineEntity();
     taskAttempt.setType(TASK_ATTEMPT);
     taskAttempt.setId(taskAttemptInfo.getAttemptId().toString());

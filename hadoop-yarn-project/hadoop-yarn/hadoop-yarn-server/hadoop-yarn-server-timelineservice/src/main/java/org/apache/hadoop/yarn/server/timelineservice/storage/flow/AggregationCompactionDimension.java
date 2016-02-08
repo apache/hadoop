@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public enum AggregationCompactionDimension {
 
   /**
-   * the application id
+   * the application id.
    */
   APPLICATION_ID((byte) 101);
 
@@ -50,8 +50,8 @@ public enum AggregationCompactionDimension {
     return this.inBytes.clone();
   }
 
-  public static AggregationCompactionDimension getAggregationCompactionDimension(
-      String aggCompactDimStr) {
+  public static AggregationCompactionDimension
+      getAggregationCompactionDimension(String aggCompactDimStr) {
     for (AggregationCompactionDimension aggDim : AggregationCompactionDimension
         .values()) {
       if (aggDim.name().equals(aggCompactDimStr)) {

@@ -15,6 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * Package org.apache.hadoop.yarn.server.timelineservice.storage.reader
+ * contains classes used to read entities from backend based on query type.
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 package org.apache.hadoop.yarn.server.timelineservice.storage.reader;

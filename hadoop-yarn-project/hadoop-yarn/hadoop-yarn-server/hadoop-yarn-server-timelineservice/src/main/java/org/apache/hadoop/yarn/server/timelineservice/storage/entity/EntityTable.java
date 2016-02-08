@@ -69,27 +69,27 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineHBas
  * </pre>
  */
 public class EntityTable extends BaseTable<EntityTable> {
-  /** entity prefix */
+  /** entity prefix. */
   private static final String PREFIX =
       YarnConfiguration.TIMELINE_SERVICE_PREFIX + "entity";
 
-  /** config param name that specifies the entity table name */
+  /** config param name that specifies the entity table name. */
   public static final String TABLE_NAME_CONF_NAME = PREFIX + ".table.name";
 
   /**
    * config param name that specifies the TTL for metrics column family in
-   * entity table
+   * entity table.
    */
   private static final String METRICS_TTL_CONF_NAME = PREFIX
       + ".table.metrics.ttl";
 
-  /** default value for entity table name */
+  /** default value for entity table name. */
   private static final String DEFAULT_TABLE_NAME = "timelineservice.entity";
 
-  /** default TTL is 30 days for metrics timeseries */
+  /** default TTL is 30 days for metrics timeseries. */
   private static final int DEFAULT_METRICS_TTL = 2592000;
 
-  /** default max number of versions */
+  /** default max number of versions. */
   private static final int DEFAULT_METRICS_MAX_VERSIONS = 1000;
 
   private static final Log LOG = LogFactory.getLog(EntityTable.class);
@@ -139,8 +139,8 @@ public class EntityTable extends BaseTable<EntityTable> {
     metricsCF.setMaxVersions(DEFAULT_METRICS_MAX_VERSIONS);
     metricsCF.setTimeToLive(hbaseConf.getInt(METRICS_TTL_CONF_NAME,
         DEFAULT_METRICS_TTL));
-    entityTableDescp
-        .setRegionSplitPolicyClassName("org.apache.hadoop.hbase.regionserver.KeyPrefixRegionSplitPolicy");
+    entityTableDescp.setRegionSplitPolicyClassName(
+        "org.apache.hadoop.hbase.regionserver.KeyPrefixRegionSplitPolicy");
     entityTableDescp.setValue("KeyPrefixRegionSplitPolicy.prefix_length",
         TimelineHBaseSchemaConstants.USERNAME_SPLIT_KEY_PREFIX_LENGTH);
     admin.createTable(entityTableDescp,

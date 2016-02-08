@@ -47,7 +47,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix
 public abstract class TimelineEntityReader {
   private static final Log LOG = LogFactory.getLog(TimelineEntityReader.class);
 
-  protected final boolean singleEntityRead;
+  private final boolean singleEntityRead;
   private TimelineReaderContext context;
   private TimelineDataToRetrieve dataToRetrieve;
   // used only for multiple entity read mode
@@ -56,7 +56,7 @@ public abstract class TimelineEntityReader {
   /**
    * Main table the entity reader uses.
    */
-  protected BaseTable<?> table;
+  private BaseTable<?> table;
 
   /**
    * Specifies whether keys for this table are sorted in a manner where entities
@@ -68,6 +68,13 @@ public abstract class TimelineEntityReader {
 
   /**
    * Instantiates a reader for multiple-entity reads.
+   *
+   * @param ctxt Reader context which defines the scope in which query has to be
+   *     made.
+   * @param entityFilters Filters which limit the entities returned.
+   * @param toRetrieve Data to retrieve for each entity.
+   * @param sortedKeys Specifies whether key for this table are sorted or not.
+   *     If sorted, entities can be retrieved by created time.
    */
   protected TimelineEntityReader(TimelineReaderContext ctxt,
       TimelineEntityFilters entityFilters, TimelineDataToRetrieve toRetrieve,
@@ -78,11 +85,15 @@ public abstract class TimelineEntityReader {
     this.dataToRetrieve = toRetrieve;
     this.filters = entityFilters;
 
-    this.table = getTable();
+    this.setTable(getTable());
   }
 
   /**
    * Instantiates a reader for single-entity reads.
+   *
+   * @param ctxt Reader context which defines the scope in which query has to be
+   *     made.
+   * @param toRetrieve Data to retrieve for each entity.
    */
   protected TimelineEntityReader(TimelineReaderContext ctxt,
       TimelineDataToRetrieve toRetrieve) {
@@ -90,13 +101,14 @@ public abstract class TimelineEntityReader {
     this.context = ctxt;
     this.dataToRetrieve = toRetrieve;
 
-    this.table = getTable();
+    this.setTable(getTable());
   }
 
   /**
    * Creates a {@link FilterList} based on fields, confs and metrics to
    * retrieve. This filter list will be set in Scan/Get objects to trim down
    * results fetched from HBase back-end storage.
+   *
    * @return a {@link FilterList} object.
    */
   protected abstract FilterList constructFilterListBasedOnFields();
@@ -115,6 +127,12 @@ public abstract class TimelineEntityReader {
 
   /**
    * Reads and deserializes a single timeline entity from the HBase storage.
+   *
+   * @param hbaseConf HBase Configuration.
+   * @param conn HBase Connection.
+   * @return A <cite>TimelineEntity</cite> object.
+   * @throws IOException if there is any exception encountered while reading
+   *     entity.
    */
   public TimelineEntity readEntity(Configuration hbaseConf, Connection conn)
       throws IOException {
@@ -136,6 +154,11 @@ public abstract class TimelineEntityReader {
    * Reads and deserializes a set of timeline entities from the HBase storage.
    * It goes through all the results available, and returns the number of
    * entries as specified in the limit in the entity's natural sort order.
+   *
+   * @param hbaseConf HBase Configuration.
+   * @param conn HBase Connection.
+   * @return a set of <cite>TimelineEntity</cite> objects.
+   * @throws IOException if any exception is encountered while reading entities.
    */
   public Set<TimelineEntity> readEntities(Configuration hbaseConf,
       Connection conn) throws IOException {
@@ -170,8 +193,12 @@ public abstract class TimelineEntityReader {
 
   /**
    * Returns the main table to be used by the entity reader.
+   *
+   * @return A reference to the table.
    */
-  protected abstract BaseTable<?> getTable();
+  protected BaseTable<?> getTable() {
+    return table;
+  }
 
   /**
    * Validates the required parameters to read the entities.
@@ -180,6 +207,10 @@ public abstract class TimelineEntityReader {
 
   /**
    * Sets certain parameters to defaults if the values are not provided.
+   *
+   * @param hbaseConf HBase Configuration.
+   * @param conn HBase Connection.
+   * @throws IOException if any exception is encountered while setting params.
    */
   protected abstract void augmentParams(Configuration hbaseConf,
       Connection conn) throws IOException;
@@ -187,23 +218,35 @@ public abstract class TimelineEntityReader {
   /**
    * Fetches a {@link Result} instance for a single-entity read.
    *
+   * @param hbaseConf HBase Configuration.
+   * @param conn HBase Connection.
+   * @param filterList filter list which will be applied to HBase Get.
    * @return the {@link Result} instance or null if no such record is found.
+   * @throws IOException if any exception is encountered while getting result.
    */
   protected abstract Result getResult(Configuration hbaseConf, Connection conn,
       FilterList filterList) throws IOException;
 
   /**
    * Fetches a {@link ResultScanner} for a multi-entity read.
+   *
+   * @param hbaseConf HBase Configuration.
+   * @param conn HBase Connection.
+   * @param filterList filter list which will be applied to HBase Scan.
+   * @return the {@link ResultScanner} instance.
+   * @throws IOException if any exception is encountered while getting results.
    */
   protected abstract ResultScanner getResults(Configuration hbaseConf,
       Connection conn, FilterList filterList) throws IOException;
 
   /**
-   * Given a {@link Result} instance, deserializes and creates a
-   * {@link TimelineEntity}.
+   * Parses the result retrieved from HBase backend and convert it into a
+   * {@link TimelineEntity} object.
    *
-   * @return the {@link TimelineEntity} instance, or null if the {@link Result}
-   * is null or empty.
+   * @param result Single row result of a Get/Scan.
+   * @return the <cite>TimelineEntity</cite> instance or null if the entity is
+   *     filtered.
+   * @throws IOException if any exception is encountered while parsing entity.
    */
   protected abstract TimelineEntity parseEntity(Result result)
       throws IOException;
@@ -212,6 +255,11 @@ public abstract class TimelineEntityReader {
    * Helper method for reading and deserializing {@link TimelineMetric} objects
    * using the specified column prefix. The timeline metrics then are added to
    * the given timeline entity.
+   *
+   * @param entity {@link TimelineEntity} object.
+   * @param result {@link Result} object retrieved from backend.
+   * @param columnPrefix Metric column prefix
+   * @throws IOException if any exception is encountered while reading metrics.
    */
   protected void readMetrics(TimelineEntity entity, Result result,
       ColumnPrefix<?> columnPrefix) throws IOException {
@@ -228,5 +276,19 @@ public abstract class TimelineEntityReader {
       metric.addValues(metricResult.getValue());
       entity.addMetric(metric);
     }
+  }
+
+  /**
+   * Checks whether the reader has been created to fetch single entity or
+   * multiple entities.
+   *
+   * @return true, if query is for single entity, false otherwise.
+   */
+  public boolean isSingleEntityRead() {
+    return singleEntityRead;
+  }
+
+  protected void setTable(BaseTable<?> baseTable) {
+    this.table = baseTable;
   }
 }

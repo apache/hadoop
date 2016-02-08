@@ -127,7 +127,8 @@ public class NMTimelinePublisher extends CompositeService {
         memoryMetric.addValue(currentTimeMillis, pmemUsage);
         entity.addMetric(memoryMetric);
       }
-      if (cpuUsageTotalCoresPercentage != ResourceCalculatorProcessTree.UNAVAILABLE) {
+      if (cpuUsageTotalCoresPercentage !=
+          ResourceCalculatorProcessTree.UNAVAILABLE) {
         TimelineMetric cpuMetric = new TimelineMetric();
         cpuMetric.setId(ContainerMetric.CPU.toString() + pId);
         cpuMetric.addValue(currentTimeMillis, cpuUsageTotalCoresPercentage);
@@ -189,7 +190,8 @@ public class NMTimelinePublisher extends CompositeService {
     putEntity(entity, containerId.getApplicationAttemptId().getApplicationId());
   }
 
-  private static ContainerEntity createContainerEntity(ContainerId containerId) {
+  private static ContainerEntity createContainerEntity(
+      ContainerId containerId) {
     ContainerEntity entity = new ContainerEntity();
     entity.setId(containerId.toString());
     Identifier parentIdentifier = new Identifier();
@@ -214,6 +216,7 @@ public class NMTimelinePublisher extends CompositeService {
     }
   }
 
+  @SuppressWarnings("unchecked")
   public void publishApplicationEvent(ApplicationEvent event) {
     // publish only when the desired event is received
     switch (event.getType()) {
@@ -226,14 +229,14 @@ public class NMTimelinePublisher extends CompositeService {
 
     default:
       if (LOG.isDebugEnabled()) {
-        LOG.debug(event.getType()
-            + " is not a desired ApplicationEvent which needs to be published by"
-            + " NMTimelinePublisher");
+        LOG.debug(event.getType() + " is not a desired ApplicationEvent which"
+            + " needs to be published by NMTimelinePublisher");
       }
       break;
     }
   }
 
+  @SuppressWarnings("unchecked")
   public void publishContainerEvent(ContainerEvent event) {
     // publish only when the desired event is received
     switch (event.getType()) {
@@ -251,6 +254,7 @@ public class NMTimelinePublisher extends CompositeService {
     }
   }
 
+  @SuppressWarnings("unchecked")
   public void publishLocalizationEvent(LocalizationEvent event) {
     // publish only when the desired event is received
     switch (event.getType()) {

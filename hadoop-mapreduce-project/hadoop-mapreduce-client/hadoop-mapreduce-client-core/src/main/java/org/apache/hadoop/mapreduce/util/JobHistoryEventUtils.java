@@ -26,7 +26,12 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
 
-public class JobHistoryEventUtils {
+/**
+ * Class containing utility methods to be used by JobHistoryEventHandler.
+ */
+public final class JobHistoryEventUtils {
+  private JobHistoryEventUtils() {
+  }
 
   public static JsonNode countersToJSON(Counters counters) {
     ObjectMapper mapper = new ObjectMapper();

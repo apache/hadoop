@@ -388,15 +388,15 @@ public class RMActiveServiceContext {
   @Private
   @Unstable
   public void setRMTimelineCollectorManager(
-      RMTimelineCollectorManager timelineCollectorManager) {
-    this.timelineCollectorManager = timelineCollectorManager;
+      RMTimelineCollectorManager collectorManager) {
+    this.timelineCollectorManager = collectorManager;
   }
 
   @Private
   @Unstable
   public void setSystemMetricsPublisher(
-      SystemMetricsPublisher systemMetricsPublisher) {
-    this.systemMetricsPublisher = systemMetricsPublisher;
+      SystemMetricsPublisher metricsPublisher) {
+    this.systemMetricsPublisher = metricsPublisher;
   }
 
   @Private

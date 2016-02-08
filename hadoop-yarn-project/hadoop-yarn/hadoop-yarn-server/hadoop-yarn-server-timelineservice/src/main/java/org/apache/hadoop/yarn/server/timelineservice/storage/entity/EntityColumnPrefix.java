@@ -54,7 +54,7 @@ public enum EntityColumnPrefix implements ColumnPrefix<EntityTable> {
   INFO(EntityColumnFamily.INFO, "i"),
 
   /**
-   * Lifecycle events for an entity
+   * Lifecycle events for an entity.
    */
   EVENT(EntityColumnFamily.INFO, "e"),
 
@@ -215,7 +215,8 @@ public enum EntityColumnPrefix implements ColumnPrefix<EntityTable> {
    *         is to facilitate returning byte arrays of values that were not
    *         Strings. If they can be treated as Strings, you should use
    *         {@link #readResults(Result)} instead.
-   * @throws IOException
+   * @throws IOException if there is any exception encountered while reading
+   *     result.
    */
   public Map<?, Object> readResultsHavingCompoundColumnQualifiers(Result result)
           throws IOException {
@@ -277,8 +278,8 @@ public enum EntityColumnPrefix implements ColumnPrefix<EntityTable> {
     for (EntityColumnPrefix ecp : EntityColumnPrefix.values()) {
       // Find a match based column family and on name.
       if (ecp.columnFamily.equals(columnFamily)
-          && (((columnPrefix == null) && (ecp.getColumnPrefix() == null)) || (ecp
-              .getColumnPrefix().equals(columnPrefix)))) {
+          && (((columnPrefix == null) && (ecp.getColumnPrefix() == null)) ||
+          (ecp.getColumnPrefix().equals(columnPrefix)))) {
         return ecp;
       }
     }

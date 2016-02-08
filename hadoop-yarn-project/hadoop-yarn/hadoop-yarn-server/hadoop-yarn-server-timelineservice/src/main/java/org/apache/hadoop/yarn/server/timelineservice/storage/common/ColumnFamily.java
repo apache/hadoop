@@ -29,6 +29,6 @@ public interface ColumnFamily<T> {
    *
    * @return a clone of the byte representation of the column family.
    */
-  public byte[] getBytes();
+  byte[] getBytes();
 
 }

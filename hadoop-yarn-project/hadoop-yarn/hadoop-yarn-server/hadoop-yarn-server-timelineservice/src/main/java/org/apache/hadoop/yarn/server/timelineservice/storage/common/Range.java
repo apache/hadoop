@@ -20,6 +20,9 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+/**
+ * Encapsulates a range with start and end indices.
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class Range {

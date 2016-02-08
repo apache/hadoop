@@ -98,7 +98,7 @@ class ApplicationEntityReader extends GenericEntityReader {
     TimelineEntityFilters filters = getFilters();
     if (!dataToRetrieve.getFieldsToRetrieve().contains(Field.EVENTS) &&
         !dataToRetrieve.getFieldsToRetrieve().contains(Field.ALL) &&
-        (singleEntityRead || filters.getEventFilters() == null)) {
+        (isSingleEntityRead() || filters.getEventFilters() == null)) {
       infoColFamilyList.addFilter(
           new QualifierFilter(CompareOp.NOT_EQUAL,
           new BinaryPrefixComparator(
@@ -107,7 +107,7 @@ class ApplicationEntityReader extends GenericEntityReader {
     // info not required.
     if (!dataToRetrieve.getFieldsToRetrieve().contains(Field.INFO) &&
         !dataToRetrieve.getFieldsToRetrieve().contains(Field.ALL) &&
-        (singleEntityRead || filters.getInfoFilters() == null)) {
+        (isSingleEntityRead() || filters.getInfoFilters() == null)) {
       infoColFamilyList.addFilter(
           new QualifierFilter(CompareOp.NOT_EQUAL,
           new BinaryPrefixComparator(
@@ -116,7 +116,7 @@ class ApplicationEntityReader extends GenericEntityReader {
     // is releated to not required.
     if (!dataToRetrieve.getFieldsToRetrieve().contains(Field.IS_RELATED_TO) &&
         !dataToRetrieve.getFieldsToRetrieve().contains(Field.ALL) &&
-        (singleEntityRead || filters.getIsRelatedTo() == null)) {
+        (isSingleEntityRead() || filters.getIsRelatedTo() == null)) {
       infoColFamilyList.addFilter(
           new QualifierFilter(CompareOp.NOT_EQUAL,
           new BinaryPrefixComparator(
@@ -125,7 +125,7 @@ class ApplicationEntityReader extends GenericEntityReader {
     // relates to not required.
     if (!dataToRetrieve.getFieldsToRetrieve().contains(Field.RELATES_TO) &&
         !dataToRetrieve.getFieldsToRetrieve().contains(Field.ALL) &&
-        (singleEntityRead || filters.getRelatesTo() == null)) {
+        (isSingleEntityRead() || filters.getRelatesTo() == null)) {
       infoColFamilyList.addFilter(
           new QualifierFilter(CompareOp.NOT_EQUAL,
           new BinaryPrefixComparator(
@@ -133,7 +133,7 @@ class ApplicationEntityReader extends GenericEntityReader {
     }
     list.addFilter(infoColFamilyList);
     if ((dataToRetrieve.getFieldsToRetrieve().contains(Field.CONFIGS) ||
-        (!singleEntityRead && filters.getConfigFilters() != null)) ||
+        (!isSingleEntityRead() && filters.getConfigFilters() != null)) ||
         (dataToRetrieve.getConfsToRetrieve() != null &&
         !dataToRetrieve.getConfsToRetrieve().getFilterList().isEmpty())) {
       FilterList filterCfg =
@@ -148,7 +148,7 @@ class ApplicationEntityReader extends GenericEntityReader {
       list.addFilter(filterCfg);
     }
     if ((dataToRetrieve.getFieldsToRetrieve().contains(Field.METRICS) ||
-        (!singleEntityRead && filters.getMetricFilters() != null)) ||
+        (!isSingleEntityRead() && filters.getMetricFilters() != null)) ||
         (dataToRetrieve.getMetricsToRetrieve() != null &&
         !dataToRetrieve.getMetricsToRetrieve().getFilterList().isEmpty())) {
       FilterList filterMetrics =
@@ -177,7 +177,7 @@ class ApplicationEntityReader extends GenericEntityReader {
     if (filterList != null && !filterList.getFilters().isEmpty()) {
       get.setFilter(filterList);
     }
-    return table.getResult(hbaseConf, conn, get);
+    return getTable().getResult(hbaseConf, conn, get);
   }
 
   @Override
@@ -186,7 +186,7 @@ class ApplicationEntityReader extends GenericEntityReader {
         "clusterId shouldn't be null");
     Preconditions.checkNotNull(getContext().getEntityType(),
         "entityType shouldn't be null");
-    if (singleEntityRead) {
+    if (isSingleEntityRead()) {
       Preconditions.checkNotNull(getContext().getAppId(),
           "appId shouldn't be null");
     } else {
@@ -201,14 +201,14 @@ class ApplicationEntityReader extends GenericEntityReader {
   protected void augmentParams(Configuration hbaseConf, Connection conn)
       throws IOException {
     TimelineReaderContext context = getContext();
-    if (singleEntityRead) {
+    if (isSingleEntityRead()) {
       if (context.getFlowName() == null || context.getFlowRunId() == null ||
           context.getUserId() == null) {
         FlowContext flowContext = lookupFlowContext(
             context.getClusterId(), context.getAppId(), hbaseConf, conn);
-        context.setFlowName(flowContext.flowName);
-        context.setFlowRunId(flowContext.flowRunId);
-        context.setUserId(flowContext.userId);
+        context.setFlowName(flowContext.getFlowName());
+        context.setFlowRunId(flowContext.getFlowRunId());
+        context.setUserId(flowContext.getUserId());
       }
     }
     getDataToRetrieve().addFieldsBasedOnConfsAndMetricsToRetrieve();
@@ -234,7 +234,7 @@ class ApplicationEntityReader extends GenericEntityReader {
       newList.addFilter(filterList);
     }
     scan.setFilter(newList);
-    return table.getResultScanner(hbaseConf, conn, scan);
+    return getTable().getResultScanner(hbaseConf, conn, scan);
   }
 
   @Override
@@ -252,7 +252,7 @@ class ApplicationEntityReader extends GenericEntityReader {
     Number createdTime =
         (Number)ApplicationColumn.CREATED_TIME.readResult(result);
     entity.setCreatedTime(createdTime.longValue());
-    if (!singleEntityRead &&
+    if (!isSingleEntityRead() &&
         (entity.getCreatedTime() < filters.getCreatedTimeBegin() ||
         entity.getCreatedTime() > filters.getCreatedTimeEnd())) {
       return null;

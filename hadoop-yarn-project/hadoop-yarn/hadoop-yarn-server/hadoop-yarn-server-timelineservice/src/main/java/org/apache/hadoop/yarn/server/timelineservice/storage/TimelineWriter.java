@@ -42,12 +42,13 @@ public interface TimelineWriter extends Service {
    * @param userId context user ID
    * @param flowName context flow name
    * @param flowVersion context flow version
-   * @param flowRunId
-   * @param appId context app ID
+   * @param flowRunId run id for the flow.
+   * @param appId context app ID.
    * @param data
    *          a {@link TimelineEntities} object.
    * @return a {@link TimelineWriteResponse} object.
-   * @throws IOException
+   * @throws IOException if there is any exception encountered while storing
+   *     or writing entities to the backend storage.
    */
   TimelineWriteResponse write(String clusterId, String userId,
       String flowName, String flowVersion, long flowRunId, String appId,
@@ -65,8 +66,11 @@ public interface TimelineWriter extends Service {
    *          a {@link TimelineEntity} object
    *          a {@link TimelineAggregationTrack} enum
    *          value.
+   * @param track Specifies the track or dimension along which aggregation would
+   *     occur. Includes USER, FLOW, QUEUE, etc.
    * @return a {@link TimelineWriteResponse} object.
-   * @throws IOException
+   * @throws IOException if there is any exception encountered while aggregating
+   *     entities to the backend storage.
    */
   TimelineWriteResponse aggregate(TimelineEntity data,
       TimelineAggregationTrack track) throws IOException;
@@ -76,7 +80,8 @@ public interface TimelineWriter extends Service {
    * written to the storage when the method returns. This may be a potentially
    * time-consuming operation, and should be used judiciously.
    *
-   * @throws IOException
+   * @throws IOException if there is any exception encountered while flushing
+   *     entities to the backend storage.
    */
   void flush() throws IOException;
 }

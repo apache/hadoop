@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public enum Separator {
 
   /**
-   * separator in key or column qualifier fields
+   * separator in key or column qualifier fields.
    */
   QUALIFIERS("!", "%0$"),
 
@@ -53,7 +53,7 @@ public enum Separator {
   private final String value;
 
   /**
-   * The URLEncoded version of this separator
+   * The URLEncoded version of this separator.
    */
   private final String encodedValue;
 
@@ -63,7 +63,7 @@ public enum Separator {
   private final byte[] bytes;
 
   /**
-   * The value quoted so that it can be used as a safe regex
+   * The value quoted so that it can be used as a safe regex.
    */
   private final String quotedValue;
 
@@ -99,7 +99,7 @@ public enum Separator {
   /**
    * Used to make token safe to be used with this separator without collisions.
    *
-   * @param token
+   * @param token Token to be encoded.
    * @return the token with any occurrences of this separator URLEncoded.
    */
   public String encode(String token) {
@@ -111,7 +111,9 @@ public enum Separator {
   }
 
   /**
-   * @param token
+   * Decode the token encoded using {@link #encode}.
+   *
+   * @param token Token to be decoded.
    * @return the token with any occurrences of the encoded separator replaced by
    *         the separator itself.
    */
@@ -193,7 +195,7 @@ public enum Separator {
    * Returns a single byte array containing all of the individual arrays
    * components separated by this separator.
    *
-   * @param components
+   * @param components Byte array components to be joined together.
    * @return byte array after joining the components
    */
   public byte[] join(byte[]... components) {
@@ -287,8 +289,8 @@ public enum Separator {
   public Collection<String> splitEncoded(String compoundValue) {
     List<String> result = new ArrayList<String>();
     if (compoundValue != null) {
-      for (String value : compoundValue.split(quotedValue)) {
-        result.add(decode(value));
+      for (String val : compoundValue.split(quotedValue)) {
+        result.add(decode(val));
       }
     }
     return result;
@@ -298,6 +300,7 @@ public enum Separator {
    * Splits the source array into multiple array segments using this separator,
    * up to a maximum of count items. This will naturally produce copied byte
    * arrays for each of the split segments.
+   *
    * @param source to be split
    * @param limit on how many segments are supposed to be returned. A
    *          non-positive value indicates no limit on number of segments.
@@ -311,6 +314,7 @@ public enum Separator {
    * Splits the source array into multiple array segments using this separator,
    * as many times as splits are found. This will naturally produce copied byte
    * arrays for each of the split segments.
+   *
    * @param source to be split
    * @return source split by this separator.
    */

@@ -35,6 +35,9 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContex
 import org.apache.hadoop.yarn.server.timelineservice.storage.reader.TimelineEntityReader;
 import org.apache.hadoop.yarn.server.timelineservice.storage.reader.TimelineEntityReaderFactory;
 
+/**
+ * HBase based implementation for {@link TimelineReader}.
+ */
 public class HBaseTimelineReaderImpl
     extends AbstractService implements TimelineReader {
 

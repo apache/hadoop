@@ -22,6 +22,9 @@ import javax.xml.bind.annotation.XmlElement;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+/**
+ * This entity represents a flow run.
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class FlowRunEntity extends HierarchicalTimelineEntity {
@@ -44,8 +47,10 @@ public class FlowRunEntity extends HierarchicalTimelineEntity {
 
   public FlowRunEntity(TimelineEntity entity) {
     super(entity);
-    if (!entity.getType().equals(TimelineEntityType.YARN_FLOW_RUN.toString())) {
-      throw new IllegalArgumentException("Incompatible entity type: " + getId());
+    if (!entity.getType().equals(
+        TimelineEntityType.YARN_FLOW_RUN.toString())) {
+      throw new IllegalArgumentException("Incompatible entity type: "
+          + getId());
     }
     // set config to null
     setConfigs(null);

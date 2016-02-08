@@ -34,7 +34,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
 public enum ApplicationColumn implements Column<ApplicationTable> {
 
   /**
-   * App id
+   * App id.
    */
   ID(ApplicationColumnFamily.INFO, "id"),
 
@@ -84,7 +84,7 @@ public enum ApplicationColumn implements Column<ApplicationTable> {
   /**
    * Retrieve an {@link ApplicationColumn} given a name, or null if there is no
    * match. The following holds true: {@code columnFor(x) == columnFor(y)} if
-   * and only if {@code x.equals(y)} or {@code (x == y == null)}
+   * and only if {@code x.equals(y)} or {@code (x == y == null)}.
    *
    * @param columnQualifier Name of the column to retrieve
    * @return the corresponding {@link ApplicationColumn} or null

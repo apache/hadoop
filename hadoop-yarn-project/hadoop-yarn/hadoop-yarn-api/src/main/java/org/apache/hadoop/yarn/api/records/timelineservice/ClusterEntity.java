@@ -20,6 +20,9 @@ package org.apache.hadoop.yarn.api.records.timelineservice;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+/**
+ * This entity represents a YARN cluster.
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class ClusterEntity extends HierarchicalTimelineEntity {
@@ -30,7 +33,8 @@ public class ClusterEntity extends HierarchicalTimelineEntity {
   public ClusterEntity(TimelineEntity entity) {
     super(entity);
     if (!entity.getType().equals(TimelineEntityType.YARN_CLUSTER.toString())) {
-      throw new IllegalArgumentException("Incompatible entity type: " + getId());
+      throw new IllegalArgumentException("Incompatible entity type: "
+          + getId());
     }
   }
 }

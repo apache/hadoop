@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.timelineservice.storage;
 
 /**
  * specifies the tracks along which an entity
- * info is to be aggregated on
+ * info is to be aggregated on.
  *
  */
 public enum TimelineAggregationTrack {

@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Mutation;
 
 /**
- * To be used to wrap an actual {@link BufferedMutator} in a type safe manner
+ * To be used to wrap an actual {@link BufferedMutator} in a type safe manner.
  *
  * @param <T> The class referring to the table to be written to.
  */

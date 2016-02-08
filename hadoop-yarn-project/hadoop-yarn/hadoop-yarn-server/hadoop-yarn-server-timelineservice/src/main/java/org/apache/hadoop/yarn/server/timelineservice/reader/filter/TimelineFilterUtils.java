@@ -93,9 +93,11 @@ public final class TimelineFilterUtils {
    * Creates equivalent HBase {@link FilterList} from {@link TimelineFilterList}
    * while converting different timeline filters(of type {@link TimelineFilter})
    * into their equivalent HBase filters.
-   * @param colPrefix
-   * @param filterList
-   * @return a {@link FilterList} object
+   *
+   * @param <T> Describes the type of column prefix.
+   * @param colPrefix column prefix which will be used for conversion.
+   * @param filterList timeline filter list which has to be converted.
+   * @return A {@link FilterList} object.
    */
   public static <T> FilterList createHBaseFilterList(ColumnPrefix<T> colPrefix,
       TimelineFilterList filterList) {

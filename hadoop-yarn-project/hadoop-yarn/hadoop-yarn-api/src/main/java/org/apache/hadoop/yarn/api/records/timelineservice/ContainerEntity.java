@@ -20,6 +20,9 @@ package org.apache.hadoop.yarn.api.records.timelineservice;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+/**
+ * This entity represents a container belonging to an application attempt.
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class ContainerEntity extends HierarchicalTimelineEntity {
@@ -29,8 +32,10 @@ public class ContainerEntity extends HierarchicalTimelineEntity {
 
   public ContainerEntity(TimelineEntity entity) {
     super(entity);
-    if (!entity.getType().equals(TimelineEntityType.YARN_CONTAINER.toString())) {
-      throw new IllegalArgumentException("Incompatible entity type: " + getId());
+    if (!entity.getType().equals(
+        TimelineEntityType.YARN_CONTAINER.toString())) {
+      throw new IllegalArgumentException("Incompatible entity type: "
+          + getId());
     }
   }
 }

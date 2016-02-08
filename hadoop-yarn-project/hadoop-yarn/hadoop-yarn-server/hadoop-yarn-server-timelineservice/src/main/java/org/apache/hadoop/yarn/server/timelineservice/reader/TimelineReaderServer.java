@@ -49,7 +49,7 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
-/** Main class for Timeline Reader */
+/** Main class for Timeline Reader. */
 @Private
 @Unstable
 public class TimelineReaderServer extends CompositeService {

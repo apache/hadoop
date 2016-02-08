@@ -55,7 +55,8 @@ public class AppLevelTimelineCollector extends TimelineCollector {
     // Current user usually is not the app user, but keep this field non-null
     context.setUserId(UserGroupInformation.getCurrentUser().getShortUserName());
     // Use app ID to generate a default flow name for orphan app
-    context.setFlowName(TimelineUtils.generateDefaultFlowNameBasedOnAppId(appId));
+    context.setFlowName(
+        TimelineUtils.generateDefaultFlowNameBasedOnAppId(appId));
     // Set the flow version to string 1 if it's an orphan app
     context.setFlowVersion("1");
     // Set the flow run ID to 1 if it's an orphan app

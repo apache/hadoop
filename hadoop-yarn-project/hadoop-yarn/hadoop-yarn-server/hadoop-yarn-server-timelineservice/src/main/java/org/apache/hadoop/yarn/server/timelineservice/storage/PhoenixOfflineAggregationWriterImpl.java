@@ -102,18 +102,18 @@ public class PhoenixOfflineAggregationWriterImpl
   private static final String PHOENIX_COL_FAMILY_PLACE_HOLDER
       = "timeline_cf_placeholder";
 
-  /** Default Phoenix JDBC driver name */
+  /** Default Phoenix JDBC driver name. */
   private static final String DRIVER_CLASS_NAME
       = "org.apache.phoenix.jdbc.PhoenixDriver";
 
-  /** Default Phoenix timeline config column family */
+  /** Default Phoenix timeline config column family. */
   private static final String METRIC_COLUMN_FAMILY = "m.";
-  /** Default Phoenix timeline info column family */
+  /** Default Phoenix timeline info column family. */
   private static final String INFO_COLUMN_FAMILY = "i.";
-  /** Default separator for Phoenix storage */
+  /** Default separator for Phoenix storage. */
   private static final String AGGREGATION_STORAGE_SEPARATOR = ";";
 
-  /** Connection string to the deployed Phoenix cluster */
+  /** Connection string to the deployed Phoenix cluster. */
   private String connString = null;
   private Properties connProperties = new Properties();
 
@@ -162,7 +162,8 @@ public class PhoenixOfflineAggregationWriterImpl
         }
         int idx = info.setStringsForPrimaryKey(ps, context, null, 1);
         ps.setLong(idx++, entity.getCreatedTime());
-        ps.setString(idx++, StringUtils.join(formattedMetrics.keySet().toArray(),
+        ps.setString(idx++,
+            StringUtils.join(formattedMetrics.keySet().toArray(),
             AGGREGATION_STORAGE_SEPARATOR));
         ps.execute();
 
@@ -185,7 +186,7 @@ public class PhoenixOfflineAggregationWriterImpl
    * Create Phoenix tables for offline aggregation storage if the tables do not
    * exist.
    *
-   * @throws IOException
+   * @throws IOException if any problem happens while creating Phoenix tables.
    */
   public void createPhoenixTables() throws IOException {
     // Create tables if necessary
@@ -197,7 +198,8 @@ public class PhoenixOfflineAggregationWriterImpl
           + "(user VARCHAR NOT NULL, cluster VARCHAR NOT NULL, "
           + "flow_name VARCHAR NOT NULL, "
           + "created_time UNSIGNED_LONG, "
-          + METRIC_COLUMN_FAMILY + PHOENIX_COL_FAMILY_PLACE_HOLDER + " VARBINARY, "
+          + METRIC_COLUMN_FAMILY + PHOENIX_COL_FAMILY_PLACE_HOLDER
+          + " VARBINARY, "
           + "metric_names VARCHAR, info_keys VARCHAR "
           + "CONSTRAINT pk PRIMARY KEY("
           + "user, cluster, flow_name))";
@@ -206,7 +208,8 @@ public class PhoenixOfflineAggregationWriterImpl
           + OfflineAggregationInfo.USER_AGGREGATION_TABLE_NAME
           + "(user VARCHAR NOT NULL, cluster VARCHAR NOT NULL, "
           + "created_time UNSIGNED_LONG, "
-          + METRIC_COLUMN_FAMILY + PHOENIX_COL_FAMILY_PLACE_HOLDER + " VARBINARY, "
+          + METRIC_COLUMN_FAMILY + PHOENIX_COL_FAMILY_PLACE_HOLDER
+          + " VARBINARY, "
           + "metric_names VARCHAR, info_keys VARCHAR "
           + "CONSTRAINT pk PRIMARY KEY(user, cluster))";
       stmt.executeUpdate(sql);
@@ -251,9 +254,9 @@ public class PhoenixOfflineAggregationWriterImpl
   private static class DynamicColumns<K> {
     static final String COLUMN_FAMILY_TYPE_BYTES = " VARBINARY";
     static final String COLUMN_FAMILY_TYPE_STRING = " VARCHAR";
-    String columnFamilyPrefix;
-    String type;
-    Set<K> columns;
+    private String columnFamilyPrefix;
+    private String type;
+    private Set<K> columns;
 
     public DynamicColumns(String columnFamilyPrefix, String type,
         Set<K> keyValues) {
