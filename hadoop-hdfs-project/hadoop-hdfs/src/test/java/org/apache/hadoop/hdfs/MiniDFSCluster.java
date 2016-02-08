@@ -2187,6 +2187,28 @@ public class MiniDFSCluster {
     return stopDataNode(node);
   }
 
+  /*
+   * Shutdown a particular datanode
+   * @param i node index
+   * @return null if the node index is out of range, else the properties of the
+   * removed node
+   */
+  public synchronized DataNodeProperties stopDataNodeForUpgrade(int i)
+      throws IOException {
+    if (i < 0 || i >= dataNodes.size()) {
+      return null;
+    }
+    DataNodeProperties dnprop = dataNodes.remove(i);
+    DataNode dn = dnprop.datanode;
+    LOG.info("MiniDFSCluster Stopping DataNode " +
+        dn.getDisplayName() +
+        " from a total of " + (dataNodes.size() + 1) +
+        " datanodes.");
+    dn.shutdownDatanode(true);
+    numDataNodes--;
+    return dnprop;
+  }
+
   /**
    * Restart a datanode
    * @param dnprop datanode's property

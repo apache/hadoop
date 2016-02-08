@@ -2921,7 +2921,7 @@ public class DataNode extends ReconfigurableBase
 
     // Asynchronously start the shutdown process so that the rpc response can be
     // sent back.
-    Thread shutdownThread = new Thread() {
+    Thread shutdownThread = new Thread("Async datanode shutdown thread") {
       @Override public void run() {
         if (!shutdownForUpgrade) {
           // Delay the shutdown a bit if not doing for restart.

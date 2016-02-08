@@ -2789,6 +2789,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9724. Degraded performance in WebHDFS listing as it does not reuse
     ObjectMapper. (Akira AJISAKA via wheat9)
 
+    HDFS-9752. Permanent write failures may happen to slow writers during
+    datanode rolling upgrades (Walter Su via kihwal)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
