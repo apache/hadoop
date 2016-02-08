@@ -995,6 +995,7 @@ class DataXceiver extends Receiver implements Runnable {
           "to " + peer.getRemoteAddressString() + " because it's pinned ";
       LOG.info(msg);
       sendResponse(ERROR, msg);
+      return;
     }
     
     if (!dataXceiverServer.balanceThrottler.acquire()) { // not able to start
