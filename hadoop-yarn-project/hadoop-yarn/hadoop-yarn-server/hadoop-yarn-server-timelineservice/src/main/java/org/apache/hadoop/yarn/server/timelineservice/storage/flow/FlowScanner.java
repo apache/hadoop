@@ -90,8 +90,8 @@ class FlowScanner implements RegionScanner, Closeable {
   }
 
   @Override
-  public boolean nextRaw(List<Cell> cells, int limit) throws IOException {
-    return nextInternal(cells, limit);
+  public boolean nextRaw(List<Cell> cells, int cellLimit) throws IOException {
+    return nextInternal(cells, cellLimit);
   }
 
   @Override
@@ -100,8 +100,8 @@ class FlowScanner implements RegionScanner, Closeable {
   }
 
   @Override
-  public boolean next(List<Cell> cells, int limit) throws IOException {
-    return nextInternal(cells, limit);
+  public boolean next(List<Cell> cells, int cellLimit) throws IOException {
+    return nextInternal(cells, cellLimit);
   }
 
   private String getAggregationCompactionDimension(List<Tag> tags) {
@@ -161,11 +161,12 @@ class FlowScanner implements RegionScanner, Closeable {
    * column or returns the cell as is.
    *
    * @param cells
-   * @param limit
+   * @param cellLimit
    * @return true if next row is available for the scanner, false otherwise
    * @throws IOException
    */
-  private boolean nextInternal(List<Cell> cells, int limit) throws IOException {
+  private boolean nextInternal(List<Cell> cells, int cellLimit)
+      throws IOException {
     Cell cell = null;
     startNext();
     // Loop through all the cells in this row
@@ -183,8 +184,8 @@ class FlowScanner implements RegionScanner, Closeable {
     Set<String> alreadySeenAggDim = new HashSet<>();
     int addedCnt = 0;
     ValueConverter converter = null;
-    while (((cell = peekAtNextCell(limit)) != null)
-        && (limit <= 0 || addedCnt < limit)) {
+    while (((cell = peekAtNextCell(cellLimit)) != null)
+        && (cellLimit <= 0 || addedCnt < cellLimit)) {
       byte[] newColumnQualifier = CellUtil.cloneQualifier(cell);
       if (comp.compare(currentColumnQualifier, newColumnQualifier) != 0) {
         if (converter != null && isNumericConverter(converter)) {
@@ -198,12 +199,12 @@ class FlowScanner implements RegionScanner, Closeable {
       }
       // No operation needs to be performed on non numeric converters.
       if (!isNumericConverter(converter)) {
-        nextCell(limit);
+        nextCell(cellLimit);
         continue;
       }
       collectCells(currentColumnCells, currentAggOp, cell, alreadySeenAggDim,
           (NumericValueConverter)converter);
-      nextCell(limit);
+      nextCell(cellLimit);
     }
     if (!currentColumnCells.isEmpty()) {
       emitCells(cells, currentColumnCells, currentAggOp,
@@ -220,7 +221,7 @@ class FlowScanner implements RegionScanner, Closeable {
   }
 
   /**
-   * resets the parameters to an intialized state for next loop iteration
+   * resets the parameters to an intialized state for next loop iteration.
    *
    * @param cell
    * @param currentAggOp
@@ -278,14 +279,12 @@ class FlowScanner implements RegionScanner, Closeable {
       List<Tag> tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(),
           cell.getTagsLength());
       String aggDim = getAggregationCompactionDimension(tags);
-      if (alreadySeenAggDim.contains(aggDim)) {
-        // if this agg dimension has already been seen,
-        // since they show up in sorted order
-        // we drop the rest which are older
-        // in other words, this cell is older than previously seen cells
-        // for that agg dim
-      } else {
-        // not seen this agg dim, hence consider this cell in our working set
+
+      // If this agg dimension has already been seen, since they show up in
+      // sorted order, we drop the rest which are older. In other words, this
+      // cell is older than previously seen cells for that agg dim.
+      if (!alreadySeenAggDim.contains(aggDim)) {
+        // Not seen this agg dim, hence consider this cell in our working set
         currentColumnCells.add(cell);
         alreadySeenAggDim.add(aggDim);
       }
@@ -424,6 +423,8 @@ class FlowScanner implements RegionScanner, Closeable {
 
   /**
    * Returns whether or not the underlying scanner has more rows.
+   *
+   * @return true, if there are more cells to return, false otherwise.
    */
   public boolean hasMore() {
     return currentIndex < availableCells.size() ? true : hasMore;
@@ -434,15 +435,16 @@ class FlowScanner implements RegionScanner, Closeable {
    * pointer to the next cell. This method can be called multiple times in a row
    * to advance through all the available cells.
    *
-   * @param limit
+   * @param cellLimit
    *          the limit of number of cells to return if the next batch must be
    *          fetched by the wrapped scanner
    * @return the next available cell or null if no more cells are available for
    *         the current row
-   * @throws IOException
+   * @throws IOException if any problem is encountered while grabbing the next
+   *     cell.
    */
-  public Cell nextCell(int limit) throws IOException {
-    Cell cell = peekAtNextCell(limit);
+  public Cell nextCell(int cellLimit) throws IOException {
+    Cell cell = peekAtNextCell(cellLimit);
     if (cell != null) {
       currentIndex++;
     }
@@ -454,19 +456,20 @@ class FlowScanner implements RegionScanner, Closeable {
    * pointer. Calling this method multiple times in a row will continue to
    * return the same cell.
    *
-   * @param limit
+   * @param cellLimit
    *          the limit of number of cells to return if the next batch must be
    *          fetched by the wrapped scanner
    * @return the next available cell or null if no more cells are available for
    *         the current row
-   * @throws IOException
+   * @throws IOException if any problem is encountered while grabbing the next
+   *     cell.
    */
-  public Cell peekAtNextCell(int limit) throws IOException {
+  public Cell peekAtNextCell(int cellLimit) throws IOException {
     if (currentIndex >= availableCells.size()) {
       // done with current batch
       availableCells.clear();
       currentIndex = 0;
-      hasMore = flowRunScanner.next(availableCells, limit);
+      hasMore = flowRunScanner.next(availableCells, cellLimit);
     }
     Cell cell = null;
     if (currentIndex < availableCells.size()) {

@@ -24,7 +24,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 /**
  * Represents the flow run table column families.
  */
-public enum FlowActivityColumnFamily implements ColumnFamily<FlowActivityTable> {
+public enum FlowActivityColumnFamily
+    implements ColumnFamily<FlowActivityTable> {
 
   /**
    * Info column family houses known columns, specifically ones included in

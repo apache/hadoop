@@ -34,6 +34,11 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
 
 import com.google.common.annotations.VisibleForTesting;
 
+/**
+ * This class wraps over the timeline reader store implementation. It does some
+ * non trivial manipulation of the timeline data before or after getting
+ * it from the backend store.
+ */
 @Private
 @Unstable
 public class TimelineReaderManager extends AbstractService {
@@ -114,9 +119,19 @@ public class TimelineReaderManager extends AbstractService {
   }
 
   /**
-   * Get a set of entities matching given predicates. The meaning of each
-   * argument has been documented with {@link TimelineReader#getEntities}.
+   * Get a set of entities matching given predicates by making a call to
+   * backend storage implementation. The meaning of each argument has been
+   * documented in detail with {@link TimelineReader#getEntities}.If cluster ID
+   * has not been supplied by the client, fills the cluster id from config
+   * before making a call to backend storage. After fetching entities from
+   * backend, fills the appropriate UID based on entity type for each entity.
    *
+   * @param context Timeline context within the scope of which entities have to
+   *     be fetched.
+   * @param filters Filters which limit the number of entities to be returned.
+   * @param dataToRetrieve Data to carry in each entity fetched.
+   * @return a set of <cite>TimelineEntity</cite> objects.
+   * @throws IOException if any problem occurs while getting entities.
    * @see TimelineReader#getEntities
    */
   public Set<TimelineEntity> getEntities(TimelineReaderContext context,
@@ -135,9 +150,18 @@ public class TimelineReaderManager extends AbstractService {
   }
 
   /**
-   * Get single timeline entity. The meaning of each argument has been
-   * documented with {@link TimelineReader#getEntity}.
+   * Get single timeline entity by making a call to backend storage
+   * implementation. The meaning of each argument in detail has been
+   * documented with {@link TimelineReader#getEntity}. If cluster ID has not
+   * been supplied by the client, fills the cluster id from config before making
+   * a call to backend storage. After fetching entity from backend, fills the
+   * appropriate UID based on entity type.
    *
+   * @param context Timeline context within the scope of which entity has to be
+   *     fetched.
+   * @param dataToRetrieve Data to carry in the entity fetched.
+   * @return A <cite>TimelineEntity</cite> object if found, null otherwise.
+   * @throws IOException  if any problem occurs while getting entity.
    * @see TimelineReader#getEntity
    */
   public TimelineEntity getEntity(TimelineReaderContext context,

@@ -45,15 +45,17 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
  */
 @Public
 @Unstable
-public class TimelineStorageUtils {
+public final class TimelineStorageUtils {
+  private TimelineStorageUtils() {
+  }
 
-  /** empty bytes */
+  /** empty bytes. */
   public static final byte[] EMPTY_BYTES = new byte[0];
 
-  /** indicator for no limits for splitting */
+  /** indicator for no limits for splitting. */
   public static final int NO_LIMIT_SPLIT = -1;
 
-  /** milliseconds in one day */
+  /** milliseconds in one day. */
   public static final long MILLIS_ONE_DAY = 86400000L;
 
   /**
@@ -62,9 +64,9 @@ public class TimelineStorageUtils {
    * copied byte arrays for each of the split segments. To identify the split
    * ranges without the array copies, see {@link #splitRanges(byte[], byte[])}.
    *
-   * @param source
-   * @param separator
-   * @return byte[] array after splitting the source
+   * @param source Source array.
+   * @param separator Separator represented as a byte array.
+   * @return byte[][] after splitting the source
    */
   public static byte[][] split(byte[] source, byte[] separator) {
     return split(source, separator, NO_LIMIT_SPLIT);
@@ -76,10 +78,10 @@ public class TimelineStorageUtils {
    * copied byte arrays for each of the split segments. To identify the split
    * ranges without the array copies, see {@link #splitRanges(byte[], byte[])}.
    *
-   * @param source
-   * @param separator
+   * @param source Source array.
+   * @param separator Separator represented as a byte array.
    * @param limit a non-positive value indicates no limit on number of segments.
-   * @return byte[][] after splitting the input source
+   * @return byte[][] after splitting the input source.
    */
   public static byte[][] split(byte[] source, byte[] separator, int limit) {
     List<Range> segments = splitRanges(source, separator, limit);
@@ -100,6 +102,10 @@ public class TimelineStorageUtils {
    * Returns a list of ranges identifying [start, end) -- closed, open --
    * positions within the source byte array that would be split using the
    * separator byte array.
+   *
+   * @param source Source array.
+   * @param separator Separator represented as a byte array.
+   * @return a list of ranges.
    */
   public static List<Range> splitRanges(byte[] source, byte[] separator) {
     return splitRanges(source, separator, NO_LIMIT_SPLIT);
@@ -113,6 +119,7 @@ public class TimelineStorageUtils {
    * @param source the source data
    * @param separator the separator pattern to look for
    * @param limit the maximum number of splits to identify in the source
+   * @return a list of ranges.
    */
   public static List<Range> splitRanges(byte[] source, byte[] separator,
       int limit) {
@@ -132,7 +139,7 @@ public class TimelineStorageUtils {
         // everything else goes in one final segment
         break;
       }
-	      segments.add(new Range(start, i));
+      segments.add(new Range(start, i));
       start = i + separator.length;
       // i will be incremented again in outer for loop
       i += separator.length - 1;
@@ -219,9 +226,9 @@ public class TimelineStorageUtils {
 
   /**
    * returns the timestamp of that day's start (which is midnight 00:00:00 AM)
-   * for a given input timestamp
+   * for a given input timestamp.
    *
-   * @param ts
+   * @param ts Timestamp.
    * @return timestamp of that day's beginning (midnight)
    */
   public static long getTopOfTheDayTimestamp(long ts) {
@@ -233,9 +240,9 @@ public class TimelineStorageUtils {
    * Combines the input array of attributes and the input aggregation operation
    * into a new array of attributes.
    *
-   * @param attributes
-   * @param aggOp
-   * @return array of combined attributes
+   * @param attributes Attributes to be combined.
+   * @param aggOp Aggregation operation.
+   * @return array of combined attributes.
    */
   public static Attribute[] combineAttributes(Attribute[] attributes,
       AggregationOperation aggOp) {
@@ -257,8 +264,8 @@ public class TimelineStorageUtils {
    * Returns a number for the new array size. The new array is the combination
    * of input array of attributes and the input aggregation operation.
    *
-   * @param attributes
-   * @param aggOp
+   * @param attributes Attributes.
+   * @param aggOp Aggregation operation.
    * @return the size for the new array
    */
   private static int getNewLengthCombinedAttributes(Attribute[] attributes,
@@ -283,16 +290,17 @@ public class TimelineStorageUtils {
   }
 
   /**
-   * checks if an application has finished
+   * checks if an application has finished.
    *
-   * @param te
+   * @param te TimlineEntity object.
    * @return true if application has finished else false
    */
   public static boolean isApplicationFinished(TimelineEntity te) {
     SortedSet<TimelineEvent> allEvents = te.getEvents();
     if ((allEvents != null) && (allEvents.size() > 0)) {
       TimelineEvent event = allEvents.last();
-      if (event.getId().equals(ApplicationMetricsConstants.FINISHED_EVENT_TYPE)) {
+      if (event.getId().equals(
+          ApplicationMetricsConstants.FINISHED_EVENT_TYPE)) {
         return true;
       }
     }
@@ -300,26 +308,27 @@ public class TimelineStorageUtils {
   }
 
   /**
-   * get the time at which an app finished
+   * get the time at which an app finished.
    *
-   * @param te
+   * @param te TimelineEntity object.
    * @return true if application has finished else false
    */
   public static long getApplicationFinishedTime(TimelineEntity te) {
     SortedSet<TimelineEvent> allEvents = te.getEvents();
     if ((allEvents != null) && (allEvents.size() > 0)) {
       TimelineEvent event = allEvents.last();
-      if (event.getId().equals(ApplicationMetricsConstants.FINISHED_EVENT_TYPE)) {
+      if (event.getId().equals(
+          ApplicationMetricsConstants.FINISHED_EVENT_TYPE)) {
         return event.getTimestamp();
       }
     }
-    return 0l;
+    return 0L;
   }
 
   /**
    * Checks if the input TimelineEntity object is an ApplicationEntity.
    *
-   * @param te
+   * @param te TimelineEntity object.
    * @return true if input is an ApplicationEntity, false otherwise
    */
   public static boolean isApplicationEntity(TimelineEntity te) {
@@ -329,7 +338,7 @@ public class TimelineStorageUtils {
   /**
    * Checks for the APPLICATION_CREATED event.
    *
-   * @param te
+   * @param te TimelineEntity object.
    * @return true is application event exists, false otherwise
    */
   public static boolean isApplicationCreated(TimelineEntity te) {
@@ -346,9 +355,9 @@ public class TimelineStorageUtils {
 
   /**
    * Returns the first seen aggregation operation as seen in the list of input
-   * tags or null otherwise
+   * tags or null otherwise.
    *
-   * @param tags
+   * @param tags list of HBase tags.
    * @return AggregationOperation
    */
   public static AggregationOperation getAggregationOperationFromTagsList(
@@ -366,8 +375,8 @@ public class TimelineStorageUtils {
   /**
    * Creates a {@link Tag} from the input attribute.
    *
-   * @param attribute
-   * @return Tag
+   * @param attribute Attribute from which tag has to be fetched.
+   * @return a HBase Tag.
    */
   public static Tag getTagFromAttribute(Entry<String, byte[]> attribute) {
     // attribute could be either an Aggregation Operation or
@@ -380,8 +389,9 @@ public class TimelineStorageUtils {
       return t;
     }
 
-    AggregationCompactionDimension aggCompactDim = AggregationCompactionDimension
-        .getAggregationCompactionDimension(attribute.getKey());
+    AggregationCompactionDimension aggCompactDim =
+        AggregationCompactionDimension.getAggregationCompactionDimension(
+            attribute.getKey());
     if (aggCompactDim != null) {
       Tag t = new Tag(aggCompactDim.getTagType(), attribute.getValue());
       return t;
@@ -475,7 +485,8 @@ public class TimelineStorageUtils {
 
   /**
    * Checks if passed object is of integral type(Short/Integer/Long).
-   * @param obj
+   *
+   * @param obj Object to be checked.
    * @return true if object passed is of type Short or Integer or Long, false
    * otherwise.
    */

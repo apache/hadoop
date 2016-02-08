@@ -383,8 +383,8 @@ public class RMContextImpl implements RMContext {
   
   @Override
   public void setSystemMetricsPublisher(
-      SystemMetricsPublisher systemMetricsPublisher) {
-    this.systemMetricsPublisher = systemMetricsPublisher;
+      SystemMetricsPublisher metricsPublisher) {
+    this.systemMetricsPublisher = metricsPublisher;
   }
 
   @Override

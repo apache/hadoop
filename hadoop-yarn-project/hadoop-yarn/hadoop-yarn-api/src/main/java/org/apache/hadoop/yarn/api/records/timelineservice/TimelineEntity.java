@@ -54,6 +54,9 @@ import java.util.TreeSet;
 public class TimelineEntity implements Comparable<TimelineEntity> {
   protected final static String SYSTEM_INFO_KEY_PREFIX = "SYSTEM_INFO_";
 
+  /**
+   * Identifier of timeline entity(entity id + entity type).
+   */
   @XmlRootElement(name = "identifier")
   @XmlAccessorType(XmlAccessType.NONE)
   public static class Identifier {
@@ -74,8 +77,8 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
       return type;
     }
 
-    public void setType(String type) {
-      this.type = type;
+    public void setType(String entityType) {
+      this.type = entityType;
     }
 
     @XmlElement(name = "id")
@@ -83,8 +86,8 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
       return id;
     }
 
-    public void setId(String id) {
-      this.id = id;
+    public void setId(String entityId) {
+      this.id = entityId;
     }
 
     @Override
@@ -106,8 +109,9 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
 
     @Override
     public boolean equals(Object obj) {
-      if (this == obj)
+      if (this == obj) {
         return true;
+      }
       if (!(obj instanceof Identifier)) {
         return false;
       }
@@ -208,11 +212,11 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
     }
   }
 
-  public void setIdentifier(Identifier identifier) {
+  public void setIdentifier(Identifier entityIdentifier) {
     if (real == null) {
-      this.identifier = identifier;
+      this.identifier = entityIdentifier;
     } else {
-      real.setIdentifier(identifier);
+      real.setIdentifier(entityIdentifier);
     }
   }
 
@@ -235,19 +239,19 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
     }
   }
 
-  public void setInfo(Map<String, Object> info) {
+  public void setInfo(Map<String, Object> entityInfos) {
     if (real == null) {
-      this.info = TimelineServiceHelper.mapCastToHashMap(info);
+      this.info = TimelineServiceHelper.mapCastToHashMap(entityInfos);
     } else {
-      real.setInfo(info);
+      real.setInfo(entityInfos);
     }
   }
 
-  public void addInfo(Map<String, Object> info) {
+  public void addInfo(Map<String, Object> entityInfos) {
     if (real == null) {
-      this.info.putAll(info);
+      this.info.putAll(entityInfos);
     } else {
-      real.addInfo(info);
+      real.addInfo(entityInfos);
     }
   }
 
@@ -278,19 +282,19 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
     }
   }
 
-  public void setConfigs(Map<String, String> configs) {
+  public void setConfigs(Map<String, String> entityConfigs) {
     if (real == null) {
-      this.configs = TimelineServiceHelper.mapCastToHashMap(configs);
+      this.configs = TimelineServiceHelper.mapCastToHashMap(entityConfigs);
     } else {
-      real.setConfigs(configs);
+      real.setConfigs(entityConfigs);
     }
   }
 
-  public void addConfigs(Map<String, String> configs) {
+  public void addConfigs(Map<String, String> entityConfigs) {
     if (real == null) {
-      this.configs.putAll(configs);
+      this.configs.putAll(entityConfigs);
     } else {
-      real.addConfigs(configs);
+      real.addConfigs(entityConfigs);
     }
   }
 
@@ -311,19 +315,19 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
     }
   }
 
-  public void setMetrics(Set<TimelineMetric> metrics) {
+  public void setMetrics(Set<TimelineMetric> entityMetrics) {
     if (real == null) {
-      this.metrics = metrics;
+      this.metrics = entityMetrics;
     } else {
-      real.setMetrics(metrics);
+      real.setMetrics(entityMetrics);
     }
   }
 
-  public void addMetrics(Set<TimelineMetric> metrics) {
+  public void addMetrics(Set<TimelineMetric> entityMetrics) {
     if (real == null) {
-      this.metrics.addAll(metrics);
+      this.metrics.addAll(entityMetrics);
     } else {
-      real.addMetrics(metrics);
+      real.addMetrics(entityMetrics);
     }
   }
 
@@ -344,19 +348,19 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
     }
   }
 
-  public void setEvents(NavigableSet<TimelineEvent> events) {
+  public void setEvents(NavigableSet<TimelineEvent> entityEvents) {
     if (real == null) {
-      this.events = events;
+      this.events = entityEvents;
     } else {
-      real.setEvents(events);
+      real.setEvents(entityEvents);
     }
   }
 
-  public void addEvents(Set<TimelineEvent> events) {
+  public void addEvents(Set<TimelineEvent> entityEvents) {
     if (real == null) {
-      this.events.addAll(events);
+      this.events.addAll(entityEvents);
     } else {
-      real.addEvents(events);
+      real.addEvents(entityEvents);
     }
   }
 
@@ -389,20 +393,19 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
 
   @JsonSetter("isrelatedto")
   public void setIsRelatedToEntities(
-      Map<String, Set<String>> isRelatedToEntities) {
+      Map<String, Set<String>> isRelatedTo) {
     if (real == null) {
       this.isRelatedToEntities =
-          TimelineServiceHelper.mapCastToHashMap(isRelatedToEntities);
+          TimelineServiceHelper.mapCastToHashMap(isRelatedTo);
     } else {
-      real.setIsRelatedToEntities(isRelatedToEntities);
+      real.setIsRelatedToEntities(isRelatedTo);
     }
   }
 
   public void addIsRelatedToEntities(
-      Map<String, Set<String>> isRelatedToEntities) {
+      Map<String, Set<String>> isRelatedTo) {
     if (real == null) {
-      for (Map.Entry<String, Set<String>> entry : isRelatedToEntities
-          .entrySet()) {
+      for (Map.Entry<String, Set<String>> entry : isRelatedTo.entrySet()) {
         Set<String> ids = this.isRelatedToEntities.get(entry.getKey());
         if (ids == null) {
           ids = new HashSet<>();
@@ -411,7 +414,7 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
         ids.addAll(entry.getValue());
       }
     } else {
-      real.addIsRelatedToEntities(isRelatedToEntities);
+      real.addIsRelatedToEntities(isRelatedTo);
     }
   }
 
@@ -447,10 +450,9 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
     }
   }
 
-  public void addRelatesToEntities(Map<String, Set<String>> relatesToEntities) {
+  public void addRelatesToEntities(Map<String, Set<String>> relatesTo) {
     if (real == null) {
-      for (Map.Entry<String, Set<String>> entry : relatesToEntities
-          .entrySet()) {
+      for (Map.Entry<String, Set<String>> entry : relatesTo.entrySet()) {
         Set<String> ids = this.relatesToEntities.get(entry.getKey());
         if (ids == null) {
           ids = new HashSet<>();
@@ -459,7 +461,7 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
         ids.addAll(entry.getValue());
       }
     } else {
-      real.addRelatesToEntities(relatesToEntities);
+      real.addRelatesToEntities(relatesTo);
     }
   }
 
@@ -477,12 +479,12 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
   }
 
   @JsonSetter("relatesto")
-  public void setRelatesToEntities(Map<String, Set<String>> relatesToEntities) {
+  public void setRelatesToEntities(Map<String, Set<String>> relatesTo) {
     if (real == null) {
       this.relatesToEntities =
-          TimelineServiceHelper.mapCastToHashMap(relatesToEntities);
+          TimelineServiceHelper.mapCastToHashMap(relatesTo);
     } else {
-      real.setRelatesToEntities(relatesToEntities);
+      real.setRelatesToEntities(relatesTo);
     }
   }
 
@@ -496,11 +498,11 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
   }
 
   @JsonSetter("createdtime")
-  public void setCreatedTime(long createdTime) {
+  public void setCreatedTime(long createdTs) {
     if (real == null) {
-      this.createdTime = createdTime;
+      this.createdTime = createdTs;
     } else {
-      real.setCreatedTime(createdTime);
+      real.setCreatedTime(createdTs);
     }
   }
 
@@ -530,10 +532,12 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
 
   @Override
   public boolean equals(Object obj) {
-    if (this == obj)
+    if (this == obj) {
       return true;
-    if (!(obj instanceof TimelineEntity))
+    }
+    if (!(obj instanceof TimelineEntity)) {
       return false;
+    }
     TimelineEntity other = (TimelineEntity) obj;
     return getIdentifier().equals(other.getIdentifier());
   }

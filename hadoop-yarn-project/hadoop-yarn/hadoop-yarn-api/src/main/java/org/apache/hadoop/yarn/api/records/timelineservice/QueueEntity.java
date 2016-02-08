@@ -20,6 +20,9 @@ package org.apache.hadoop.yarn.api.records.timelineservice;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+/**
+ * This entity represents a queue.
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class QueueEntity extends HierarchicalTimelineEntity {
@@ -30,7 +33,8 @@ public class QueueEntity extends HierarchicalTimelineEntity {
   public QueueEntity(TimelineEntity entity) {
     super(entity);
     if (!entity.getType().equals(TimelineEntityType.YARN_QUEUE.toString())) {
-      throw new IllegalArgumentException("Incompatible entity type: " + getId());
+      throw new IllegalArgumentException("Incompatible entity type: "
+          + getId());
     }
   }
 }

@@ -26,7 +26,6 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -82,7 +81,9 @@ public class ColumnHelper<T> {
    * @param inputValue
    *          the value to write to the rowKey and column qualifier. Nothing
    *          gets written when null.
-   * @throws IOException
+   * @param attributes Attributes to be set for HBase Put.
+   * @throws IOException if any problem occurs during store operation(sending
+   *          mutation to table).
    */
   public void store(byte[] rowKey, TypedBufferedMutator<?> tableMutator,
       byte[] columnQualifier, Long timestamp, Object inputValue,
@@ -140,13 +141,13 @@ public class ColumnHelper<T> {
 
   /**
    * Get the latest version of this specified column. Note: this call clones the
-   * value content of the hosting {@link Cell}.
+   * value content of the hosting {@link org.apache.hadoop.hbase.Cell Cell}.
    *
    * @param result from which to read the value. Cannot be null
    * @param columnQualifierBytes referring to the column to be read.
    * @return latest version of the specified column of whichever object was
    *         written.
-   * @throws IOException
+   * @throws IOException if any problem occurs while reading result.
    */
   public Object readResult(Result result, byte[] columnQualifierBytes)
       throws IOException {
@@ -167,9 +168,9 @@ public class ColumnHelper<T> {
    *          columns are returned.
    * @param <V> the type of the values. The values will be cast into that type.
    * @return the cell values at each respective time in for form
-   *         {idA={timestamp1->value1}, idA={timestamp2->value2},
-   *         idB={timestamp3->value3}, idC={timestamp1->value4}}
-   * @throws IOException
+   *         {@literal {idA={timestamp1->value1}, idA={timestamp2->value2},
+   *         idB={timestamp3->value3}, idC={timestamp1->value4}}}
+   * @throws IOException if any problem occurs while reading results.
    */
   @SuppressWarnings("unchecked")
   public <V> NavigableMap<String, NavigableMap<Long, V>>
@@ -180,8 +181,9 @@ public class ColumnHelper<T> {
         new TreeMap<String, NavigableMap<Long, V>>();
 
     if (result != null) {
-      NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> resultMap =
-          result.getMap();
+      NavigableMap<
+          byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> resultMap =
+              result.getMap();
 
       NavigableMap<byte[], NavigableMap<Long, byte[]>> columnCellMap =
           resultMap.get(columnFamilyBytes);
@@ -240,7 +242,7 @@ public class ColumnHelper<T> {
    *         back and forth from Strings, you should use
    *         {@link #readResultsHavingCompoundColumnQualifiers(Result, byte[])}
    *         instead.
-   * @throws IOException
+   * @throws IOException if any problem occurs while reading results.
    */
   public Map<String, Object> readResults(Result result,
       byte[] columnPrefixBytes) throws IOException {
@@ -294,7 +296,7 @@ public class ColumnHelper<T> {
    *         non-null column prefix bytes, the column qualifier is returned as
    *         a list of parts, each part a byte[]. This is to facilitate
    *         returning byte arrays of values that were not Strings.
-   * @throws IOException
+   * @throws IOException if any problem occurs while reading results.
    */
   public Map<?, Object> readResultsHavingCompoundColumnQualifiers(Result result,
       byte[] columnPrefixBytes) throws IOException {

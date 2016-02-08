@@ -36,17 +36,17 @@ public enum AggregationOperation {
   MAX((byte) 73),
 
   /**
-   * The metrics of the flow
+   * The metrics of the flow.
    */
   SUM((byte) 79),
 
   /**
-   * application running
+   * application running.
    */
   SUM_FINAL((byte) 83),
 
   /**
-   * compact
+   * compact.
    */
   COMPACT((byte) 89);
 
@@ -71,8 +71,8 @@ public enum AggregationOperation {
   }
 
   /**
-   * returns the AggregationOperation enum that represents that string
-   * @param aggOpStr
+   * returns the AggregationOperation enum that represents that string.
+   * @param aggOpStr Aggregation operation.
    * @return the AggregationOperation enum that represents that string
    */
   public static AggregationOperation getAggregationOperation(String aggOpStr) {

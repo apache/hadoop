@@ -16,6 +16,10 @@
  * limitations under the License.
  */
 
+/**
+ * Package org.apache.hadoop.yarn.server.timelineservice.storage.application
+ * contains classes related to implementation for application table.
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 package org.apache.hadoop.yarn.server.timelineservice.storage.application;

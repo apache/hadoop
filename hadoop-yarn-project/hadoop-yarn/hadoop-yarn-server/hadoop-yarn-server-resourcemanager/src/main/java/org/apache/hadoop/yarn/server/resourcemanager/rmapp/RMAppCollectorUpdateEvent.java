@@ -20,6 +20,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 
+/**
+ * Event used for updating collector address in RMApp on node heartbeat.
+ */
 public class RMAppCollectorUpdateEvent extends RMAppEvent {
 
   private final String appCollectorAddr;

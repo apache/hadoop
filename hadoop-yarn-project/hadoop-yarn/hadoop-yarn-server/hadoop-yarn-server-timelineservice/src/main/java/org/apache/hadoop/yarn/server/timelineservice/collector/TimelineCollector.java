@@ -80,6 +80,8 @@ public abstract class TimelineCollector extends CompositeService {
    * @param entities entities to post
    * @param callerUgi the caller UGI
    * @return the response that contains the result of the post.
+   * @throws IOException if there is any exception encountered while putting
+   *     entities.
    */
   public TimelineWriteResponse putEntities(TimelineEntities entities,
       UserGroupInformation callerUgi) throws IOException {

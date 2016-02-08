@@ -56,11 +56,11 @@ public class FlowRunRowKey {
 
   /**
    * Constructs a row key prefix for the flow run table as follows: {
-   * clusterId!userI!flowName!}
+   * clusterId!userI!flowName!}.
    *
-   * @param clusterId
-   * @param userId
-   * @param flowName
+   * @param clusterId Cluster Id.
+   * @param userId User Id.
+   * @param flowName Flow Name.
    * @return byte array with the row key prefix
    */
   public static byte[] getRowKeyPrefix(String clusterId, String userId,
@@ -71,12 +71,12 @@ public class FlowRunRowKey {
 
   /**
    * Constructs a row key for the entity table as follows: {
-   * clusterId!userI!flowName!Inverted Flow Run Id}
+   * clusterId!userI!flowName!Inverted Flow Run Id}.
    *
-   * @param clusterId
-   * @param userId
-   * @param flowName
-   * @param flowRunId
+   * @param clusterId Cluster Id.
+   * @param userId User Id.
+   * @param flowName Flow Name.
+   * @param flowRunId Run Id for the flow name.
    * @return byte array with the row key
    */
   public static byte[] getRowKey(String clusterId, String userId,
@@ -91,6 +91,9 @@ public class FlowRunRowKey {
 
   /**
    * Given the raw row key as bytes, returns the row key as an object.
+   *
+   * @param rowKey Byte representation of row key.
+   * @return A <cite>FlowRunRowKey</cite> object.
    */
   public static FlowRunRowKey parseRowKey(byte[] rowKey) {
     byte[][] rowKeyComponents = Separator.QUALIFIERS.split(rowKey);

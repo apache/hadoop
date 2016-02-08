@@ -43,10 +43,10 @@ public class AppToFlowRowKey {
 
   /**
    * Constructs a row key prefix for the app_flow table as follows:
-   * {@code clusterId!AppId}
+   * {@code clusterId!AppId}.
    *
-   * @param clusterId
-   * @param appId
+   * @param clusterId Cluster Id.
+   * @param appId Application Id.
    * @return byte array with the row key
    */
   public static byte[] getRowKey(String clusterId, String appId) {
@@ -57,6 +57,9 @@ public class AppToFlowRowKey {
 
   /**
    * Given the raw row key as bytes, returns the row key as an object.
+   *
+   * @param rowKey a rowkey represented as a byte array.
+   * @return an <cite>AppToFlowRowKey</cite> object.
    */
   public static AppToFlowRowKey parseRowKey(byte[] rowKey) {
     byte[][] rowKeyComponents = Separator.QUALIFIERS.split(rowKey);

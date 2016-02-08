@@ -82,7 +82,7 @@ class FlowRunEntityReader extends TimelineEntityReader {
         "userId shouldn't be null");
     Preconditions.checkNotNull(getContext().getFlowName(),
         "flowName shouldn't be null");
-    if (singleEntityRead) {
+    if (isSingleEntityRead()) {
       Preconditions.checkNotNull(getContext().getFlowRunId(),
           "flowRunId shouldn't be null");
     }
@@ -103,7 +103,7 @@ class FlowRunEntityReader extends TimelineEntityReader {
            new BinaryComparator(FlowRunColumnFamily.INFO.getBytes()));
     TimelineDataToRetrieve dataToRetrieve = getDataToRetrieve();
     // Metrics not required.
-    if (!singleEntityRead &&
+    if (!isSingleEntityRead() &&
         !dataToRetrieve.getFieldsToRetrieve().contains(Field.METRICS) &&
         !dataToRetrieve.getFieldsToRetrieve().contains(Field.ALL)) {
       FilterList infoColFamilyList = new FilterList(Operator.MUST_PASS_ONE);
@@ -137,7 +137,7 @@ class FlowRunEntityReader extends TimelineEntityReader {
     if (filterList != null && !filterList.getFilters().isEmpty()) {
       get.setFilter(filterList);
     }
-    return table.getResult(hbaseConf, conn, get);
+    return getTable().getResult(hbaseConf, conn, get);
   }
 
   @Override
@@ -154,7 +154,7 @@ class FlowRunEntityReader extends TimelineEntityReader {
       newList.addFilter(filterList);
     }
     scan.setFilter(newList);
-    return table.getResultScanner(hbaseConf, conn, scan);
+    return getTable().getResultScanner(hbaseConf, conn, scan);
   }
 
   @Override
@@ -163,7 +163,7 @@ class FlowRunEntityReader extends TimelineEntityReader {
     FlowRunEntity flowRun = new FlowRunEntity();
     flowRun.setUser(context.getUserId());
     flowRun.setName(context.getFlowName());
-    if (singleEntityRead) {
+    if (isSingleEntityRead()) {
       flowRun.setRunId(context.getFlowRunId());
     } else {
       FlowRunRowKey rowKey = FlowRunRowKey.parseRowKey(result.getRow());
@@ -175,7 +175,7 @@ class FlowRunEntityReader extends TimelineEntityReader {
     if (startTime != null) {
       flowRun.setStartTime(startTime.longValue());
     }
-    if (!singleEntityRead &&
+    if (!isSingleEntityRead() &&
         (flowRun.getStartTime() < getFilters().getCreatedTimeBegin() ||
         flowRun.getStartTime() > getFilters().getCreatedTimeEnd())) {
       return null;
@@ -194,7 +194,7 @@ class FlowRunEntityReader extends TimelineEntityReader {
     }
 
     // read metrics
-    if (singleEntityRead ||
+    if (isSingleEntityRead() ||
         getDataToRetrieve().getFieldsToRetrieve().contains(Field.METRICS)) {
       readMetrics(flowRun, result, FlowRunColumnPrefix.METRIC);
     }

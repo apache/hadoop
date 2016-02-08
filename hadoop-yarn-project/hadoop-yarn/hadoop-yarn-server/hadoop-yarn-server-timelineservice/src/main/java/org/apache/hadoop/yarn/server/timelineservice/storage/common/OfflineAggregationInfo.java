@@ -33,21 +33,24 @@ import java.sql.SQLException;
  */
 public final class OfflineAggregationInfo {
   /**
-   * Default flow level aggregation table name
+   * Default flow level aggregation table name.
    */
   @VisibleForTesting
   public static final String FLOW_AGGREGATION_TABLE_NAME
       = "yarn_timeline_flow_aggregation";
   /**
-   * Default user level aggregation table name
+   * Default user level aggregation table name.
    */
   public static final String USER_AGGREGATION_TABLE_NAME
       = "yarn_timeline_user_aggregation";
 
   // These lists are not taking effects in table creations.
-  private static final String[] FLOW_AGGREGATION_PK_LIST =
-      { "user", "cluster", "flow_name" };
-  private static final String[] USER_AGGREGATION_PK_LIST = { "user", "cluster"};
+  private static final String[] FLOW_AGGREGATION_PK_LIST = {
+      "user", "cluster", "flow_name"
+  };
+  private static final String[] USER_AGGREGATION_PK_LIST = {
+      "user", "cluster"
+  };
 
   private final String tableName;
   private final String[] primaryKeyList;
@@ -81,30 +84,32 @@ public final class OfflineAggregationInfo {
 
   public static final OfflineAggregationInfo FLOW_AGGREGATION =
       new OfflineAggregationInfo(FLOW_AGGREGATION_TABLE_NAME,
-          FLOW_AGGREGATION_PK_LIST, new PrimaryKeyStringSetter() {
-        @Override
-        public int setValues(PreparedStatement ps,
-            TimelineCollectorContext context, String[] extraInfo, int startPos)
-            throws SQLException {
-          int idx = startPos;
-          ps.setString(idx++, context.getUserId());
-          ps.setString(idx++, context.getClusterId());
-          ps.setString(idx++, context.getFlowName());
-          return idx;
-        }
-      });
+          FLOW_AGGREGATION_PK_LIST,
+          new PrimaryKeyStringSetter() {
+          @Override
+          public int setValues(PreparedStatement ps,
+              TimelineCollectorContext context, String[] extraInfo,
+              int startPos) throws SQLException {
+            int idx = startPos;
+            ps.setString(idx++, context.getUserId());
+            ps.setString(idx++, context.getClusterId());
+            ps.setString(idx++, context.getFlowName());
+            return idx;
+          }
+        });
 
   public static final OfflineAggregationInfo USER_AGGREGATION =
       new OfflineAggregationInfo(USER_AGGREGATION_TABLE_NAME,
-          USER_AGGREGATION_PK_LIST, new PrimaryKeyStringSetter() {
-        @Override
-        public int setValues(PreparedStatement ps,
-            TimelineCollectorContext context, String[] extraInfo, int startPos)
-            throws SQLException {
-          int idx = startPos;
-          ps.setString(idx++, context.getUserId());
-          ps.setString(idx++, context.getClusterId());
-          return idx;
-        }
-      });
+          USER_AGGREGATION_PK_LIST,
+          new PrimaryKeyStringSetter() {
+          @Override
+          public int setValues(PreparedStatement ps,
+              TimelineCollectorContext context, String[] extraInfo,
+              int startPos) throws SQLException {
+            int idx = startPos;
+            ps.setString(idx++, context.getUserId());
+            ps.setString(idx++, context.getClusterId());
+            return idx;
+          }
+        });
 }

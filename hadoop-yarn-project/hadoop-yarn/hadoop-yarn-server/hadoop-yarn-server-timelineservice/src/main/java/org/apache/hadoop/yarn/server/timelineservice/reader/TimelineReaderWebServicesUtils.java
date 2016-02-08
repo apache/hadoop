@@ -44,15 +44,15 @@ final class TimelineReaderWebServicesUtils {
   /**
    * Parse the passed context information represented as strings and convert
    * into a {@link TimelineReaderContext} object.
-   * @param clusterId
-   * @param userId
-   * @param flowName
-   * @param flowRunId
-   * @param appId
-   * @param entityType
-   * @param entityId
+   * @param clusterId Cluster Id.
+   * @param userId User Id.
+   * @param flowName Flow Name.
+   * @param flowRunId Run id for the flow.
+   * @param appId App Id.
+   * @param entityType Entity Type.
+   * @param entityId Entity Id.
    * @return a {@link TimelineReaderContext} object.
-   * @throws Exception
+   * @throws Exception if any problem occurs during parsing.
    */
   static TimelineReaderContext createTimelineReaderContext(String clusterId,
       String userId, String flowName, String flowRunId, String appId,
@@ -65,17 +65,17 @@ final class TimelineReaderWebServicesUtils {
   /**
    * Parse the passed filters represented as strings and convert them into a
    * {@link TimelineEntityFilters} object.
-   * @param limit
-   * @param createdTimeStart
-   * @param createdTimeEnd
-   * @param relatesTo
-   * @param isRelatedTo
-   * @param infofilters
-   * @param conffilters
-   * @param metricfilters
-   * @param eventfilters
+   * @param limit Limit to number of entities to return.
+   * @param createdTimeStart Created time start for the entities to return.
+   * @param createdTimeEnd Created time end for the entities to return.
+   * @param relatesTo Entities to return must match relatesTo.
+   * @param isRelatedTo Entities to return must match isRelatedTo.
+   * @param infofilters Entities to return must match these info filters.
+   * @param conffilters Entities to return must match these metric filters.
+   * @param metricfilters Entities to return must match these metric filters.
+   * @param eventfilters Entities to return must match these event filters.
    * @return a {@link TimelineEntityFilters} object.
-   * @throws Exception
+   * @throws Exception if any problem occurs during parsing.
    */
   static TimelineEntityFilters createTimelineEntityFilters(String limit,
       String createdTimeStart, String createdTimeEnd, String relatesTo,
@@ -94,11 +94,11 @@ final class TimelineReaderWebServicesUtils {
   /**
    * Parse the passed fields represented as strings and convert them into a
    * {@link TimelineDataToRetrieve} object.
-   * @param confs
-   * @param metrics
-   * @param fields
+   * @param confs confs to retrieve.
+   * @param metrics metrics to retrieve.
+   * @param fields fields to retrieve.
    * @return a {@link TimelineDataToRetrieve} object.
-   * @throws Exception
+   * @throws Exception if any problem occurs during parsing.
    */
   static TimelineDataToRetrieve createTimelineDataToRetrieve(String confs,
       String metrics, String fields) throws Exception {
@@ -192,7 +192,7 @@ final class TimelineReaderWebServicesUtils {
    * should be represented as "key1:value1,key2:value2,key3:value3".
    * @param str delimited string represented as key-value pairs.
    * @param pairsDelim key-value pairs are delimited by this delimiter.
-   * @param keyValuesDelim key and value are delimited by this delimiter.
+   * @param keyValDelim key and value are delimited by this delimiter.
    * @return a map of key-value pairs with both key and value being strings.
    */
   static Map<String, String> parseKeyStrValueStr(String str,
@@ -212,8 +212,8 @@ final class TimelineReaderWebServicesUtils {
    * should be represented as "key1:value1,key2:value2,key3:value3".
    * @param str delimited string represented as key-value pairs.
    * @param pairsDelim key-value pairs are delimited by this delimiter.
-   * @param keyValuesDelim key and value are delimited by this delimiter.
-   * @return a map of key-value pairs with key being a string and value amy
+   * @param keyValDelim key and value are delimited by this delimiter.
+   * @return a map of key-value pairs with key being a string and value, any
    *     object.
    */
   static Map<String, Object> parseKeyStrValueObj(String str,

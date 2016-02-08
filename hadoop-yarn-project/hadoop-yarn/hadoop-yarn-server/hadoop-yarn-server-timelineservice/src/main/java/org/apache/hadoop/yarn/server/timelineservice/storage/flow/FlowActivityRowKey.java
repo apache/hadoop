@@ -57,9 +57,9 @@ public class FlowActivityRowKey {
 
   /**
    * Constructs a row key prefix for the flow activity table as follows:
-   * {@code clusterId!}
+   * {@code clusterId!}.
    *
-   * @param clusterId
+   * @param clusterId Cluster Id.
    * @return byte array with the row key prefix
    */
   public static byte[] getRowKeyPrefix(String clusterId) {
@@ -68,10 +68,10 @@ public class FlowActivityRowKey {
 
   /**
    * Constructs a row key prefix for the flow activity table as follows:
-   * {@code clusterId!dayTimestamp!}
+   * {@code clusterId!dayTimestamp!}.
    *
-   * @param clusterId
-   * @param dayTs
+   * @param clusterId Cluster Id.
+   * @param dayTs Start of the day timestamp.
    * @return byte array with the row key prefix
    */
   public static byte[] getRowKeyPrefix(String clusterId, long dayTs) {
@@ -82,12 +82,13 @@ public class FlowActivityRowKey {
 
   /**
    * Constructs a row key for the flow activity table as follows:
-   * {@code clusterId!dayTimestamp!user!flowName}
+   * {@code clusterId!dayTimestamp!user!flowName}.
+   * Will insert into current day's record in the table. Uses current time to
+   * store top of the day timestamp.
    *
-   * Will insert into current day's record in the table
-   * @param clusterId
-   * @param userId
-   * @param flowName
+   * @param clusterId Cluster Id.
+   * @param userId User Id.
+   * @param flowName Flow Name.
    * @return byte array with the row key prefix
    */
   public static byte[] getRowKey(String clusterId, String userId,
@@ -99,12 +100,12 @@ public class FlowActivityRowKey {
 
   /**
    * Constructs a row key for the flow activity table as follows:
-   * {@code clusterId!dayTimestamp!user!flowName}
+   * {@code clusterId!dayTimestamp!user!flowName}.
    *
-   * @param clusterId
-   * @param dayTs
-   * @param userId
-   * @param flowName
+   * @param clusterId Cluster Id.
+   * @param dayTs Top of the day timestamp.
+   * @param userId User Id.
+   * @param flowName Flow Name.
    * @return byte array for the row key
    */
   public static byte[] getRowKey(String clusterId, long dayTs, String userId,
@@ -118,6 +119,9 @@ public class FlowActivityRowKey {
 
   /**
    * Given the raw row key as bytes, returns the row key as an object.
+   *
+   * @param rowKey Byte representation of row key.
+   * @return A <cite>FlowActivityRowKey</cite> object.
    */
   public static FlowActivityRowKey parseRowKey(byte[] rowKey) {
     byte[][] rowKeyComponents = Separator.QUALIFIERS.split(rowKey);

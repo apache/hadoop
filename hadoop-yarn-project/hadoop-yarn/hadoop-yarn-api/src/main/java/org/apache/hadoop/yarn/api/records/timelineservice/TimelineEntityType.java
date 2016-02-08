@@ -20,6 +20,9 @@ package org.apache.hadoop.yarn.api.records.timelineservice;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+/**
+ * Defines type of entity.
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public enum TimelineEntityType {
@@ -34,51 +37,63 @@ public enum TimelineEntityType {
 
   /**
    * Whether the input type can be a parent of this entity.
+   *
+   * @param type entity type.
+   * @return true, if this entity type is parent of passed entity type, false
+   *     otherwise.
    */
   public boolean isParent(TimelineEntityType type) {
     switch (this) {
-      case YARN_CLUSTER:
-        return false;
-      case YARN_FLOW_RUN:
-        return YARN_FLOW_RUN == type || YARN_CLUSTER == type;
-      case YARN_APPLICATION:
-        return YARN_FLOW_RUN == type || YARN_CLUSTER == type;
-      case YARN_APPLICATION_ATTEMPT:
-        return YARN_APPLICATION == type;
-      case YARN_CONTAINER:
-        return YARN_APPLICATION_ATTEMPT == type;
-      case YARN_QUEUE:
-        return YARN_QUEUE == type;
-      default:
-        return false;
+    case YARN_CLUSTER:
+      return false;
+    case YARN_FLOW_RUN:
+      return YARN_FLOW_RUN == type || YARN_CLUSTER == type;
+    case YARN_APPLICATION:
+      return YARN_FLOW_RUN == type || YARN_CLUSTER == type;
+    case YARN_APPLICATION_ATTEMPT:
+      return YARN_APPLICATION == type;
+    case YARN_CONTAINER:
+      return YARN_APPLICATION_ATTEMPT == type;
+    case YARN_QUEUE:
+      return YARN_QUEUE == type;
+    default:
+      return false;
     }
   }
 
   /**
    * Whether the input type can be a child of this entity.
+   *
+   * @param type entity type.
+   * @return true, if this entity type is child of passed entity type, false
+   *     otherwise.
    */
   public boolean isChild(TimelineEntityType type) {
     switch (this) {
-      case YARN_CLUSTER:
-        return YARN_FLOW_RUN == type || YARN_APPLICATION == type;
-      case YARN_FLOW_RUN:
-        return YARN_FLOW_RUN == type || YARN_APPLICATION == type;
-      case YARN_APPLICATION:
-        return YARN_APPLICATION_ATTEMPT == type;
-      case YARN_APPLICATION_ATTEMPT:
-        return YARN_CONTAINER == type;
-      case YARN_CONTAINER:
-        return false;
-      case YARN_QUEUE:
-        return YARN_QUEUE == type;
-      default:
-        return false;
+    case YARN_CLUSTER:
+      return YARN_FLOW_RUN == type || YARN_APPLICATION == type;
+    case YARN_FLOW_RUN:
+      return YARN_FLOW_RUN == type || YARN_APPLICATION == type;
+    case YARN_APPLICATION:
+      return YARN_APPLICATION_ATTEMPT == type;
+    case YARN_APPLICATION_ATTEMPT:
+      return YARN_CONTAINER == type;
+    case YARN_CONTAINER:
+      return false;
+    case YARN_QUEUE:
+      return YARN_QUEUE == type;
+    default:
+      return false;
     }
   }
 
   /**
    * Whether the type of this entity matches the type indicated by the input
    * argument.
+   *
+   * @param typeString entity type represented as a string.
+   * @return true, if string representation of this entity type matches the
+   *     entity type passed.
    */
   public boolean matches(String typeString) {
     return toString().equals(typeString);

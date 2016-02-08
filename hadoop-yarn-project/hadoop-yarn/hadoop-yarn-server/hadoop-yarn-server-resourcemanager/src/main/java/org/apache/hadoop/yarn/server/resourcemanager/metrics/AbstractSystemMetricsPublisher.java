@@ -30,6 +30,10 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 
+/**
+ * Abstract implementation of SystemMetricsPublisher which is then extended by
+ * metrics publisher implementations depending on timeline service version.
+ */
 public abstract class AbstractSystemMetricsPublisher extends CompositeService
     implements SystemMetricsPublisher {
   private MultiThreadedDispatcher dispatcher;
@@ -45,14 +49,19 @@ public abstract class AbstractSystemMetricsPublisher extends CompositeService
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     dispatcher =
-      new MultiThreadedDispatcher(getConfig().getInt(
-        YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE,
-        YarnConfiguration.DEFAULT_RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE));
+    new MultiThreadedDispatcher(getConfig().getInt(
+        YarnConfiguration.
+        RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE,
+        YarnConfiguration.
+        DEFAULT_RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE));
     dispatcher.setDrainEventsOnStop();
     addIfService(dispatcher);
     super.serviceInit(conf);
   }
 
+  /**
+   * Dispatches ATS related events using multiple threads.
+   */
   @SuppressWarnings({ "rawtypes", "unchecked" })
   public static class MultiThreadedDispatcher extends CompositeService
       implements Dispatcher {
@@ -107,7 +116,7 @@ public abstract class AbstractSystemMetricsPublisher extends CompositeService
   }
 
   /**
-   * EventType which is used while publishing the events
+   * EventType which is used while publishing the events.
    */
   protected static enum SystemMetricsEventType {
     PUBLISH_ENTITY, PUBLISH_APPLICATION_FINISHED_ENTITY
@@ -158,9 +167,10 @@ public abstract class AbstractSystemMetricsPublisher extends CompositeService
         if (other.getType() != null) {
           return false;
         }
-      } else
+      } else {
         if (!appId.equals(other.appId) || !getType().equals(other.getType())) {
-        return false;
+          return false;
+        }
       }
       return true;
     }

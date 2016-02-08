@@ -105,15 +105,16 @@ public class FileSystemTimelineReaderImpl extends AbstractService
 
   /**
    * Deserialize a POJO object from a JSON string.
-   * @param clazz
-   *      class to be desirialized
    *
-   * @param jsonString
-   *    json string to deserialize
-   * @return TimelineEntity object
-   * @throws IOException
-   * @throws JsonMappingException
-   * @throws JsonGenerationException
+   * @param <T> Describes the type of class to be returned.
+   * @param clazz class to be deserialized.
+   * @param jsonString JSON string to deserialize.
+   * @return An object based on class type. Used typically for
+   *     <cite>TimelineEntity</cite> object.
+   * @throws IOException if the underlying input source has problems during
+   *     parsing.
+   * @throws JsonMappingException  if parser has problems parsing content.
+   * @throws JsonGenerationException if there is a problem in JSON writing.
    */
   public static <T> T getTimelineRecordFromJSON(
       String jsonString, Class<T> clazz)
@@ -128,33 +129,32 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     }
     for (Field field : fields) {
       switch(field) {
-        case CONFIGS:
-          finalEntity.setConfigs(real.getConfigs());
-          break;
-        case METRICS:
-          finalEntity.setMetrics(real.getMetrics());
-          break;
-        case INFO:
-          finalEntity.setInfo(real.getInfo());
-          break;
-        case IS_RELATED_TO:
-          finalEntity.setIsRelatedToEntities(real.getIsRelatedToEntities());
-          break;
-        case RELATES_TO:
-          finalEntity.setIsRelatedToEntities(real.getIsRelatedToEntities());
-          break;
-        case EVENTS:
-          finalEntity.setEvents(real.getEvents());
-          break;
-        default:
-          continue;
+      case CONFIGS:
+        finalEntity.setConfigs(real.getConfigs());
+        break;
+      case METRICS:
+        finalEntity.setMetrics(real.getMetrics());
+        break;
+      case INFO:
+        finalEntity.setInfo(real.getInfo());
+        break;
+      case IS_RELATED_TO:
+        finalEntity.setIsRelatedToEntities(real.getIsRelatedToEntities());
+        break;
+      case RELATES_TO:
+        finalEntity.setIsRelatedToEntities(real.getIsRelatedToEntities());
+        break;
+      case EVENTS:
+        finalEntity.setEvents(real.getEvents());
+        break;
+      default:
+        continue;
       }
     }
   }
 
-  private String getFlowRunPath(String userId, String clusterId, String flowName,
-      Long flowRunId, String appId)
-      throws IOException {
+  private String getFlowRunPath(String userId, String clusterId,
+      String flowName, Long flowRunId, String appId) throws IOException {
     if (userId != null && flowName != null && flowRunId != null) {
       return userId + "/" + flowName + "/" + flowRunId;
     }
@@ -272,11 +272,11 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     Map<Long, Set<TimelineEntity>> sortedEntities =
         new TreeMap<>(
             new Comparator<Long>() {
-              @Override
-              public int compare(Long l1, Long l2) {
-                return l2.compareTo(l1);
-              }
+            @Override
+            public int compare(Long l1, Long l2) {
+              return l2.compareTo(l1);
             }
+          }
         );
     for (File entityFile : dir.listFiles()) {
       if (!entityFile.getName().contains(TIMELINE_SERVICE_STORAGE_EXTENSION)) {

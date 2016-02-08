@@ -29,7 +29,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.OfflineAggre
 import java.io.IOException;
 
 /**
- * YARN timeline service v2 offline aggregation storage interface
+ * YARN timeline service v2 offline aggregation storage interface.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -46,8 +46,8 @@ public abstract class OfflineAggregationWriter extends AbstractService {
 
   /**
    * Persist aggregated timeline entities to the offline store based on which
-   * track this entity is to be rolled up to. The tracks along which aggregations
-   * are to be done are given by {@link OfflineAggregationInfo}.
+   * track this entity is to be rolled up to. The tracks along which
+   * aggregations are to be done are given by {@link OfflineAggregationInfo}.
    *
    * @param context a {@link TimelineCollectorContext} object that describes the
    *                context information of the aggregated data. Depends on the
@@ -58,9 +58,10 @@ public abstract class OfflineAggregationWriter extends AbstractService {
    *             detail of the aggregation. Current supported option is
    *             {@link OfflineAggregationInfo#FLOW_AGGREGATION}.
    * @return a {@link TimelineWriteResponse} object.
-   * @throws IOException
+   * @throws IOException if any problem occurs while writing aggregated
+   *     entities.
    */
   abstract TimelineWriteResponse writeAggregatedEntity(
-      TimelineCollectorContext context,
-      TimelineEntities entities, OfflineAggregationInfo info) throws IOException;
+      TimelineCollectorContext context, TimelineEntities entities,
+      OfflineAggregationInfo info) throws IOException;
 }

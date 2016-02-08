@@ -35,17 +35,17 @@ import java.io.IOException;
 public enum AppToFlowColumn implements Column<AppToFlowTable> {
 
   /**
-   * The flow ID
+   * The flow ID.
    */
   FLOW_ID(AppToFlowColumnFamily.MAPPING, "flow_id"),
 
   /**
-   * The flow run ID
+   * The flow run ID.
    */
   FLOW_RUN_ID(AppToFlowColumnFamily.MAPPING, "flow_run_id"),
 
   /**
-   * The user
+   * The user.
    */
   USER_ID(AppToFlowColumnFamily.MAPPING, "user_id");
 

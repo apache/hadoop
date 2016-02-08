@@ -40,6 +40,8 @@ public class TimestampGenerator {
   /**
    * Returns the current wall clock time in milliseconds, multiplied by the
    * required precision.
+   *
+   * @return current timestamp.
    */
   public long currentTime() {
     // We want to align cell timestamps with current time.
@@ -58,6 +60,8 @@ public class TimestampGenerator {
    * sustained rate of more than 1M hbase writes per second AND if region fails
    * over within that time range of timestamps being generated then there may be
    * collisions writing to a cell version of the same column.
+   *
+   * @return unique timestamp.
    */
   public long getUniqueTimestamp() {
     long lastTs;
@@ -78,8 +82,8 @@ public class TimestampGenerator {
    * column at the same time, then say appId of 1001 will overlap with appId of
    * 001 and there may be collisions for that flow run's specific column.
    *
-   * @param incomingTS
-   * @param appId
+   * @param incomingTS Timestamp to be converted.
+   * @param appId Application Id.
    * @return a timestamp multiplied with TS_MULTIPLIER and last few digits of
    *         application id
    */
@@ -101,9 +105,9 @@ public class TimestampGenerator {
 
   /**
    * truncates the last few digits of the timestamp which were supplemented by
-   * the TimestampGenerator#getSupplementedTimestamp function
+   * the TimestampGenerator#getSupplementedTimestamp function.
    *
-   * @param incomingTS
+   * @param incomingTS Timestamp to be truncated.
    * @return a truncated timestamp value
    */
   public static long getTruncatedTimestamp(long incomingTS) {

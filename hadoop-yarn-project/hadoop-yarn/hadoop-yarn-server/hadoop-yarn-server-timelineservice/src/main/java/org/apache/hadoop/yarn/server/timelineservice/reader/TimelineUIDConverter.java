@@ -204,7 +204,7 @@ enum TimelineUIDConverter {
 
   /**
    * Split UID using {@link #UID_DELIMITER_CHAR} and {@link #UID_ESCAPE_CHAR}.
-   * @param uid
+   * @param uid UID to be splitted.
    * @return a list of different parts of UID split across delimiter.
    * @throws IllegalArgumentException if UID is not properly escaped.
    */
@@ -229,17 +229,19 @@ enum TimelineUIDConverter {
 
   /**
    * Encodes UID depending on UID implementation.
-   * @param context
+   *
+   * @param context Reader context.
    * @return UID represented as a string.
    */
   abstract String encodeUID(TimelineReaderContext context);
 
   /**
    * Decodes UID depending on UID implementation.
-   * @param uId
+   *
+   * @param uId UID to be decoded.
    * @return a {@link TimelineReaderContext} object if UID passed can be
    * decoded, null otherwise.
-   * @throws Exception
+   * @throws Exception if any problem occurs while decoding.
    */
   abstract TimelineReaderContext decodeUID(String uId) throws Exception;
 }

@@ -108,6 +108,7 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
    * The collector is also initialized and started. If the service already
    * exists, no new service is created.
    *
+   * @param appId Application Id to be added.
    * @return whether it was added successfully
    */
   public boolean addApplication(ApplicationId appId) {
@@ -122,6 +123,7 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
    * collector is also stopped as a result. If the collector does not exist, no
    * change is made.
    *
+   * @param appId Application Id to be removed.
    * @return whether it was removed successfully
    */
   public boolean removeApplication(ApplicationId appId) {

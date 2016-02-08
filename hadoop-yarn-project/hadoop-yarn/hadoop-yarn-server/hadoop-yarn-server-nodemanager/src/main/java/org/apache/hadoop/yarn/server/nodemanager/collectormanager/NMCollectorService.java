@@ -52,12 +52,11 @@ public class NMCollectorService extends CompositeService implements
 
   private static final Log LOG = LogFactory.getLog(NMCollectorService.class);
 
-  final Context context;
+  private final Context context;
 
   private Server server;
 
   public NMCollectorService(Context context) {
-
     super(NMCollectorService.class.getName());
     this.context = context;
   }
@@ -123,7 +122,8 @@ public class NMCollectorService extends CompositeService implements
           client.setTimelineServiceAddress(collectorAddr);
         }
       }
-      ((NodeManager.NMContext)context).addRegisteredCollectors(newCollectorsMap);
+      ((NodeManager.NMContext)context).addRegisteredCollectors(
+          newCollectorsMap);
     }
 
     return ReportNewCollectorInfoResponse.newInstance();
@@ -139,6 +139,7 @@ public class NMCollectorService extends CompositeService implements
           " doesn't exist on NM.");
     }
     return GetTimelineCollectorContextResponse.newInstance(
-        app.getUser(), app.getFlowName(), app.getFlowVersion(), app.getFlowRunId());
+        app.getUser(), app.getFlowName(), app.getFlowVersion(),
+        app.getFlowRunId());
   }
 }

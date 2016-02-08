@@ -194,8 +194,8 @@ public enum FlowRunColumnPrefix implements ColumnPrefix<FlowRunTable> {
    * org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix
    * #readResultsWithTimestamps(org.apache.hadoop.hbase.client.Result)
    */
-  public <T> NavigableMap<String, NavigableMap<Long, T>> readResultsWithTimestamps(
-      Result result) throws IOException {
+  public <T> NavigableMap<String, NavigableMap<Long, T>>
+      readResultsWithTimestamps(Result result) throws IOException {
     return column.readResultsWithTimestamps(result, columnPrefixBytes);
   }
 
@@ -248,8 +248,8 @@ public enum FlowRunColumnPrefix implements ColumnPrefix<FlowRunTable> {
     for (FlowRunColumnPrefix frcp : FlowRunColumnPrefix.values()) {
       // Find a match based column family and on name.
       if (frcp.columnFamily.equals(columnFamily)
-          && (((columnPrefix == null) && (frcp.getColumnPrefix() == null)) || (frcp
-              .getColumnPrefix().equals(columnPrefix)))) {
+          && (((columnPrefix == null) && (frcp.getColumnPrefix() == null)) ||
+          (frcp.getColumnPrefix().equals(columnPrefix)))) {
         return frcp;
       }
     }

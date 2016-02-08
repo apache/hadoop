@@ -28,6 +28,11 @@ import javax.xml.bind.annotation.XmlRootElement;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * This class contains the information of an event that belongs to an entity.
+ * Users are free to define what the event means, such as starting an
+ * application, container being allocated, etc.
+ */
 @XmlRootElement(name = "event")
 @XmlAccessorType(XmlAccessType.NONE)
 @InterfaceAudience.Public
@@ -48,8 +53,8 @@ public class TimelineEvent implements Comparable<TimelineEvent> {
     return id;
   }
 
-  public void setId(String id) {
-    this.id = id;
+  public void setId(String eventId) {
+    this.id = eventId;
   }
 
   // required by JAXB
@@ -63,12 +68,12 @@ public class TimelineEvent implements Comparable<TimelineEvent> {
     return info;
   }
 
-  public void setInfo(Map<String, Object> info) {
-    this.info = TimelineServiceHelper.mapCastToHashMap(info);
+  public void setInfo(Map<String, Object> infos) {
+    this.info = TimelineServiceHelper.mapCastToHashMap(infos);
   }
 
-  public void addInfo(Map<String, Object> info) {
-    this.info.putAll(info);
+  public void addInfo(Map<String, Object> infos) {
+    this.info.putAll(infos);
   }
 
   public void addInfo(String key, Object value) {
@@ -80,8 +85,8 @@ public class TimelineEvent implements Comparable<TimelineEvent> {
     return timestamp;
   }
 
-  public void setTimestamp(long timestamp) {
-    this.timestamp = timestamp;
+  public void setTimestamp(long ts) {
+    this.timestamp = ts;
   }
 
   public boolean isValid() {
@@ -97,15 +102,18 @@ public class TimelineEvent implements Comparable<TimelineEvent> {
 
   @Override
   public boolean equals(Object o) {
-    if (this == o)
+    if (this == o) {
       return true;
-    if (!(o instanceof TimelineEvent))
+    }
+    if (!(o instanceof TimelineEvent)) {
       return false;
+    }
 
     TimelineEvent event = (TimelineEvent) o;
 
-    if (timestamp != event.timestamp)
+    if (timestamp != event.timestamp) {
       return false;
+    }
     if (!id.equals(event.id)) {
       return false;
     }

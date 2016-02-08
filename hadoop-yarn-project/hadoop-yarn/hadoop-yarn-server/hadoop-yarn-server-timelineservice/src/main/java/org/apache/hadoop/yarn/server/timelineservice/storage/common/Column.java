@@ -19,7 +19,6 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
 
@@ -39,25 +38,26 @@ public interface Column<T> {
    *          column.
    * @param timestamp version timestamp. When null the server timestamp will be
    *          used.
-   * @param attributes Map of attributes for this mutation. used in the coprocessor
-   *          to set/read the cell tags. Can be null.
+   * @param attributes Map of attributes for this mutation. used in the
+   *     coprocessor to set/read the cell tags. Can be null.
    * @param inputValue the value to write to the rowKey and column qualifier.
    *          Nothing gets written when null.
-   * @throws IOException
+   * @throws IOException if there is any exception encountered during store.
    */
-  public void store(byte[] rowKey, TypedBufferedMutator<T> tableMutator,
+  void store(byte[] rowKey, TypedBufferedMutator<T> tableMutator,
       Long timestamp, Object inputValue, Attribute... attributes)
       throws IOException;
 
   /**
    * Get the latest version of this specified column. Note: this call clones the
-   * value content of the hosting {@link Cell}.
+   * value content of the hosting {@link org.apache.hadoop.hbase.Cell Cell}.
    *
    * @param result Cannot be null
    * @return result object (can be cast to whatever object was written to), or
    *         null when result doesn't contain this column.
-   * @throws IOException
+   * @throws IOException if there is any exception encountered while reading
+   *     result.
    */
-  public Object readResult(Result result) throws IOException;
+  Object readResult(Result result) throws IOException;
 
 }
