@@ -372,7 +372,7 @@ public class DFSAdmin extends FsShell {
       final RollingUpgradeAction action = RollingUpgradeAction.fromString(
           argv.length >= 2? argv[1]: "");
       if (action == null) {
-        throw new IllegalArgumentException("Failed to covert \"" + argv[1]
+        throw new IllegalArgumentException("Failed to convert \"" + argv[1]
             +"\" to " + RollingUpgradeAction.class.getSimpleName());
       }
 
