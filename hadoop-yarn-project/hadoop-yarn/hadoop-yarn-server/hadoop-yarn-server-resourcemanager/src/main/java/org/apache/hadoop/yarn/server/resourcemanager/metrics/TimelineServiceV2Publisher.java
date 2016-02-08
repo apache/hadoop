@@ -61,14 +61,14 @@ import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class is responsible for posting application, appattempt &amp; Container
- * lifecycle related events to timeline service V2
+ * lifecycle related events to timeline service v2.
  */
 @Private
 @Unstable
 public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
   private static final Log LOG =
       LogFactory.getLog(TimelineServiceV2Publisher.class);
-  protected RMTimelineCollectorManager rmTimelineCollectorManager;
+  private RMTimelineCollectorManager rmTimelineCollectorManager;
   private boolean publishContainerMetrics;
 
   public TimelineServiceV2Publisher(RMContext rmContext) {
@@ -362,7 +362,8 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
     }
   }
 
-  private static ContainerEntity createContainerEntity(ContainerId containerId) {
+  private static ContainerEntity createContainerEntity(
+      ContainerId containerId) {
     ContainerEntity entity = new ContainerEntity();
     entity.setId(containerId.toString());
     entity.setParent(new Identifier(TimelineEntityType.YARN_APPLICATION_ATTEMPT

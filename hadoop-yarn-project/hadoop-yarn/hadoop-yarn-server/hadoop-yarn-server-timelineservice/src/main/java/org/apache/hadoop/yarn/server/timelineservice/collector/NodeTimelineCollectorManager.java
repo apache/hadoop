@@ -48,13 +48,17 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
+/**
+ * Class on the NodeManager side that manages adding and removing collectors and
+ * their lifecycle. Also instantiates the per-node collector webapp.
+ */
 @Private
 @Unstable
 public class NodeTimelineCollectorManager extends TimelineCollectorManager {
   private static final Log LOG =
       LogFactory.getLog(NodeTimelineCollectorManager.class);
 
-  // REST server for this collector manager
+  // REST server for this collector manager.
   private HttpServer2 timelineRestServer;
 
   private String timelineRestServerBindAddress;
@@ -97,7 +101,7 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
   }
 
   /**
-   * Launch the REST web server for this collector manager
+   * Launch the REST web server for this collector manager.
    */
   private void startWebApp() {
     Configuration conf = getConfig();

@@ -76,9 +76,10 @@ public class FileSystemTimelineWriterImpl extends AbstractService
     return response;
   }
 
-  private synchronized void write(String clusterId, String userId, String flowName,
-      String flowVersion, long flowRun, String appId, TimelineEntity entity,
-      TimelineWriteResponse response) throws IOException {
+  private synchronized void write(String clusterId, String userId,
+      String flowName, String flowVersion, long flowRun, String appId,
+      TimelineEntity entity, TimelineWriteResponse response)
+      throws IOException {
     PrintWriter out = null;
     try {
       String dir = mkdirs(outputRoot, ENTITIES_DIR, clusterId, userId,

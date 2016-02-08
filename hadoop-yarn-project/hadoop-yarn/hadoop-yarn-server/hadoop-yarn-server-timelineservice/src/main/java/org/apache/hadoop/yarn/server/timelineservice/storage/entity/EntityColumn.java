@@ -39,7 +39,7 @@ public enum EntityColumn implements Column<EntityTable> {
   ID(EntityColumnFamily.INFO, "id"),
 
   /**
-   * The type of entity
+   * The type of entity.
    */
   TYPE(EntityColumnFamily.INFO, "type"),
 

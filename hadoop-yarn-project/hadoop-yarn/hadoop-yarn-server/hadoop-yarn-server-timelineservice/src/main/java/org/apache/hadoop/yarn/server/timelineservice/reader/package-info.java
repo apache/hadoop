@@ -15,6 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * Package org.apache.hadoop.yarn.server.timelineservice.reader contains classes
+ * which can be used across reader. This package contains classes which are
+ * not related to storage implementations.
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 package org.apache.hadoop.yarn.server.timelineservice.reader;

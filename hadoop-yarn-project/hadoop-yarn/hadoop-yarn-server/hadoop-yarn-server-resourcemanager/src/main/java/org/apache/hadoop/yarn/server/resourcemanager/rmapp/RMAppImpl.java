@@ -98,7 +98,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.timelineservice.collector.AppLevelTimelineCollector;
-import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollector;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
@@ -597,8 +596,8 @@ public class RMAppImpl implements RMApp, Recoverable {
   }
 
   @Override
-  public void setCollectorAddr(String collectorAddr) {
-    this.collectorAddr = collectorAddr;
+  public void setCollectorAddr(String collectorAddress) {
+    this.collectorAddr = collectorAddress;
   }
 
   @Override

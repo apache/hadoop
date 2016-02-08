@@ -38,7 +38,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
  *
  * Example flow activity table record:
  *
- * </pre>
+ * <pre>
  * |-------------------------------------------|
  * |  Row key   | Column Family                |
  * |            | info                         |
@@ -52,19 +52,20 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
  * </pre>
  */
 public class FlowActivityTable extends BaseTable<FlowActivityTable> {
-  /** flow activity table prefix */
+  /** flow activity table prefix. */
   private static final String PREFIX =
       YarnConfiguration.TIMELINE_SERVICE_PREFIX + ".flowactivity";
 
-  /** config param name that specifies the flowactivity table name */
+  /** config param name that specifies the flowactivity table name. */
   public static final String TABLE_NAME_CONF_NAME = PREFIX + ".table.name";
 
-  /** default value for flowactivity table name */
-  public static final String DEFAULT_TABLE_NAME = "timelineservice.flowactivity";
+  /** default value for flowactivity table name. */
+  public static final String DEFAULT_TABLE_NAME =
+      "timelineservice.flowactivity";
 
   private static final Log LOG = LogFactory.getLog(FlowActivityTable.class);
 
-  /** default max number of versions */
+  /** default max number of versions. */
   public static final int DEFAULT_METRICS_MAX_VERSIONS = Integer.MAX_VALUE;
 
   public FlowActivityTable() {
@@ -91,16 +92,16 @@ public class FlowActivityTable extends BaseTable<FlowActivityTable> {
           + " already exists.");
     }
 
-    HTableDescriptor FlowActivityTableDescp = new HTableDescriptor(table);
+    HTableDescriptor flowActivityTableDescp = new HTableDescriptor(table);
     HColumnDescriptor infoCF =
         new HColumnDescriptor(FlowActivityColumnFamily.INFO.getBytes());
     infoCF.setBloomFilterType(BloomType.ROWCOL);
-    FlowActivityTableDescp.addFamily(infoCF);
+    flowActivityTableDescp.addFamily(infoCF);
     infoCF.setMinVersions(1);
     infoCF.setMaxVersions(DEFAULT_METRICS_MAX_VERSIONS);
 
     // TODO: figure the split policy before running in production
-    admin.createTable(FlowActivityTableDescp);
+    admin.createTable(flowActivityTableDescp);
     LOG.info("Status of table creation for " + table.getNameAsString() + "="
         + admin.tableExists(table));
   }

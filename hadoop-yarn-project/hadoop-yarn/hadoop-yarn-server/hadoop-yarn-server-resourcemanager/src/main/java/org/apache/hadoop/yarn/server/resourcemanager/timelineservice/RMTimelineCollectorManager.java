@@ -28,7 +28,10 @@ import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollector
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorManager;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
-
+/**
+ * This class extends TimelineCollectorManager to provide RM specific
+ * implementations.
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class RMTimelineCollectorManager extends TimelineCollectorManager {
@@ -44,8 +47,8 @@ public class RMTimelineCollectorManager extends TimelineCollectorManager {
     RMApp app = rmContext.getRMApps().get(appId);
     if (app == null) {
       throw new YarnRuntimeException(
-          "Unable to get the timeline collector context info for a non-existing app " +
-              appId);
+          "Unable to get the timeline collector context info for a " +
+          "non-existing app " + appId);
     }
     String userId = app.getUser();
     if (userId != null && !userId.isEmpty()) {
@@ -57,18 +60,18 @@ public class RMTimelineCollectorManager extends TimelineCollectorManager {
         continue;
       }
       switch (parts[0].toUpperCase()) {
-        case TimelineUtils.FLOW_NAME_TAG_PREFIX:
-          collector.getTimelineEntityContext().setFlowName(parts[1]);
-          break;
-        case TimelineUtils.FLOW_VERSION_TAG_PREFIX:
-          collector.getTimelineEntityContext().setFlowVersion(parts[1]);
-          break;
-        case TimelineUtils.FLOW_RUN_ID_TAG_PREFIX:
-          collector.getTimelineEntityContext().setFlowRunId(
-              Long.parseLong(parts[1]));
-          break;
-        default:
-          break;
+      case TimelineUtils.FLOW_NAME_TAG_PREFIX:
+        collector.getTimelineEntityContext().setFlowName(parts[1]);
+        break;
+      case TimelineUtils.FLOW_VERSION_TAG_PREFIX:
+        collector.getTimelineEntityContext().setFlowVersion(parts[1]);
+        break;
+      case TimelineUtils.FLOW_RUN_ID_TAG_PREFIX:
+        collector.getTimelineEntityContext().setFlowRunId(
+            Long.parseLong(parts[1]));
+        break;
+      default:
+        break;
       }
     }
   }

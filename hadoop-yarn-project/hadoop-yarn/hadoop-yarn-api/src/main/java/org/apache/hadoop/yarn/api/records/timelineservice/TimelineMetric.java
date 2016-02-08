@@ -28,12 +28,19 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.TreeMap;
 
+/**
+ * This class contains the information of a metric that is related to some
+ * entity. Metric can either be a time series or single value.
+ */
 @XmlRootElement(name = "metric")
 @XmlAccessorType(XmlAccessType.NONE)
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class TimelineMetric {
 
+  /**
+   * Type of metric.
+   */
   public static enum Type {
     SINGLE_VALUE,
     TIME_SERIES
@@ -63,8 +70,8 @@ public class TimelineMetric {
     return type;
   }
 
-  public void setType(Type type) {
-    this.type = type;
+  public void setType(Type metricType) {
+    this.type = metricType;
   }
 
   @XmlElement(name = "id")
@@ -72,8 +79,8 @@ public class TimelineMetric {
     return id;
   }
 
-  public void setId(String id) {
-    this.id = id;
+  public void setId(String metricId) {
+    this.id = metricId;
   }
 
   // required by JAXB
@@ -87,24 +94,24 @@ public class TimelineMetric {
     return values;
   }
 
-  public void setValues(Map<Long, Number> values) {
+  public void setValues(Map<Long, Number> vals) {
     if (type == Type.SINGLE_VALUE) {
-      overwrite(values);
+      overwrite(vals);
     } else {
       if (values != null) {
         this.values = new TreeMap<Long, Number>(reverseComparator);
-        this.values.putAll(values);
+        this.values.putAll(vals);
       } else {
         this.values = null;
       }
     }
   }
 
-  public void addValues(Map<Long, Number> values) {
+  public void addValues(Map<Long, Number> vals) {
     if (type == Type.SINGLE_VALUE) {
-      overwrite(values);
+      overwrite(vals);
     } else {
-      this.values.putAll(values);
+      this.values.putAll(vals);
     }
   }
 
@@ -115,14 +122,14 @@ public class TimelineMetric {
     values.put(timestamp, value);
   }
 
-  private void overwrite(Map<Long, Number> values) {
-    if (values.size() > 1) {
+  private void overwrite(Map<Long, Number> vals) {
+    if (vals.size() > 1) {
       throw new IllegalArgumentException(
           "Values cannot contain more than one point in " +
               Type.SINGLE_VALUE + " mode");
     }
     this.values.clear();
-    this.values.putAll(values);
+    this.values.putAll(vals);
   }
 
   public boolean isValid() {
@@ -139,10 +146,12 @@ public class TimelineMetric {
   // Only check if type and id are equal
   @Override
   public boolean equals(Object o) {
-    if (this == o)
+    if (this == o) {
       return true;
-    if (!(o instanceof TimelineMetric))
+    }
+    if (!(o instanceof TimelineMetric)) {
       return false;
+    }
 
     TimelineMetric m = (TimelineMetric) o;
 

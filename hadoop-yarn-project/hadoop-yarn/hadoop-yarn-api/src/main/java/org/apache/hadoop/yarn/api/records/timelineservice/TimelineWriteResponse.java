@@ -29,9 +29,9 @@ import java.util.List;
 
 /**
  * A class that holds a list of put errors. This is the response returned when a
- * list of {@link TimelineEntity} objects is added to the timeline. If there are errors
- * in storing individual entity objects, they will be indicated in the list of
- * errors.
+ * list of {@link TimelineEntity} objects is added to the timeline. If there are
+ * errors in storing individual entity objects, they will be indicated in the
+ * list of errors.
  */
 @XmlRootElement(name = "response")
 @XmlAccessorType(XmlAccessType.NONE)
@@ -46,7 +46,7 @@ public class TimelineWriteResponse {
   }
 
   /**
-   * Get a list of {@link TimelineWriteError} instances
+   * Get a list of {@link TimelineWriteError} instances.
    *
    * @return a list of {@link TimelineWriteError} instances
    */
@@ -56,7 +56,7 @@ public class TimelineWriteResponse {
   }
 
   /**
-   * Add a single {@link TimelineWriteError} instance into the existing list
+   * Add a single {@link TimelineWriteError} instance into the existing list.
    *
    * @param error
    *          a single {@link TimelineWriteError} instance
@@ -66,24 +66,24 @@ public class TimelineWriteResponse {
   }
 
   /**
-   * Add a list of {@link TimelineWriteError} instances into the existing list
+   * Add a list of {@link TimelineWriteError} instances into the existing list.
    *
-   * @param errors
+   * @param writeErrors
    *          a list of {@link TimelineWriteError} instances
    */
-  public void addErrors(List<TimelineWriteError> errors) {
-    this.errors.addAll(errors);
+  public void addErrors(List<TimelineWriteError> writeErrors) {
+    this.errors.addAll(writeErrors);
   }
 
   /**
-   * Set the list to the given list of {@link TimelineWriteError} instances
+   * Set the list to the given list of {@link TimelineWriteError} instances.
    *
-   * @param errors
+   * @param writeErrors
    *          a list of {@link TimelineWriteError} instances
    */
-  public void setErrors(List<TimelineWriteError> errors) {
+  public void setErrors(List<TimelineWriteError> writeErrors) {
     this.errors.clear();
-    this.errors.addAll(errors);
+    this.errors.addAll(writeErrors);
   }
 
   /**
@@ -106,7 +106,7 @@ public class TimelineWriteResponse {
     private int errorCode;
 
     /**
-     * Get the entity Id
+     * Get the entity Id.
      *
      * @return the entity Id
      */
@@ -116,17 +116,16 @@ public class TimelineWriteResponse {
     }
 
     /**
-     * Set the entity Id
+     * Set the entity Id.
      *
-     * @param entityId
-     *          the entity Id
+     * @param id the entity Id.
      */
-    public void setEntityId(String entityId) {
-      this.entityId = entityId;
+    public void setEntityId(String id) {
+      this.entityId = id;
     }
 
     /**
-     * Get the entity type
+     * Get the entity type.
      *
      * @return the entity type
      */
@@ -136,17 +135,16 @@ public class TimelineWriteResponse {
     }
 
     /**
-     * Set the entity type
+     * Set the entity type.
      *
-     * @param entityType
-     *          the entity type
+     * @param type the entity type.
      */
-    public void setEntityType(String entityType) {
-      this.entityType = entityType;
+    public void setEntityType(String type) {
+      this.entityType = type;
     }
 
     /**
-     * Get the error code
+     * Get the error code.
      *
      * @return an error code
      */
@@ -156,13 +154,12 @@ public class TimelineWriteResponse {
     }
 
     /**
-     * Set the error code to the given error code
+     * Set the error code to the given error code.
      *
-     * @param errorCode
-     *          an error code
+     * @param code an error code.
      */
-    public void setErrorCode(int errorCode) {
-      this.errorCode = errorCode;
+    public void setErrorCode(int code) {
+      this.errorCode = code;
     }
 
   }

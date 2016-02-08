@@ -93,7 +93,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
   }
 
   /**
-   * initializes the hbase connection to write to the entity table
+   * initializes the hbase connection to write to the entity table.
    */
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
@@ -104,7 +104,8 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
     appToFlowTable = new AppToFlowTable().getTableMutator(hbaseConf, conn);
     applicationTable = new ApplicationTable().getTableMutator(hbaseConf, conn);
     flowRunTable = new FlowRunTable().getTableMutator(hbaseConf, conn);
-    flowActivityTable = new FlowActivityTable().getTableMutator(hbaseConf, conn);
+    flowActivityTable =
+        new FlowActivityTable().getTableMutator(hbaseConf, conn);
   }
 
   /**
@@ -289,7 +290,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
   }
 
   /**
-   * Stores the Relations from the {@linkplain TimelineEntity} object
+   * Stores the Relations from the {@linkplain TimelineEntity} object.
    */
   private <T> void storeRelations(byte[] rowKey,
       Map<String, Set<String>> connectedEntities,
@@ -306,7 +307,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
   }
 
   /**
-   * Stores information from the {@linkplain TimelineEntity} object
+   * Stores information from the {@linkplain TimelineEntity} object.
    */
   private void storeInfo(byte[] rowKey, TimelineEntity te, String flowVersion,
       boolean isApplication) throws IOException {
@@ -341,7 +342,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
   }
 
   /**
-   * stores the config information from {@linkplain TimelineEntity}
+   * stores the config information from {@linkplain TimelineEntity}.
    */
   private void storeConfig(byte[] rowKey, Map<String, String> config,
       boolean isApplication) throws IOException {
@@ -351,17 +352,17 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
     for (Map.Entry<String, String> entry : config.entrySet()) {
       if (isApplication) {
         ApplicationColumnPrefix.CONFIG.store(rowKey, applicationTable,
-          entry.getKey(), null, entry.getValue());
+            entry.getKey(), null, entry.getValue());
       } else {
         EntityColumnPrefix.CONFIG.store(rowKey, entityTable, entry.getKey(),
-          null, entry.getValue());
+            null, entry.getValue());
       }
     }
   }
 
   /**
    * stores the {@linkplain TimelineMetric} information from the
-   * {@linkplain TimelineEvent} object
+   * {@linkplain TimelineEvent} object.
    */
   private void storeMetrics(byte[] rowKey, Set<TimelineMetric> metrics,
       boolean isApplication) throws IOException {
@@ -373,10 +374,10 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
           Long timestamp = timeseriesEntry.getKey();
           if (isApplication) {
             ApplicationColumnPrefix.METRIC.store(rowKey, applicationTable,
-              metricColumnQualifier, timestamp, timeseriesEntry.getValue());
+                metricColumnQualifier, timestamp, timeseriesEntry.getValue());
           } else {
             EntityColumnPrefix.METRIC.store(rowKey, entityTable,
-              metricColumnQualifier, timestamp, timeseriesEntry.getValue());
+                metricColumnQualifier, timestamp, timeseriesEntry.getValue());
           }
         }
       }
@@ -384,7 +385,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
   }
 
   /**
-   * Stores the events from the {@linkplain TimelineEvent} object
+   * Stores the events from the {@linkplain TimelineEvent} object.
    */
   private void storeEvents(byte[] rowKey, Set<TimelineEvent> events,
       boolean isApplication) throws IOException {
@@ -428,10 +429,10 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
                         Bytes.toBytes(info.getKey()));
                 if (isApplication) {
                   ApplicationColumnPrefix.EVENT.store(rowKey, applicationTable,
-                    compoundColumnQualifierBytes, null, info.getValue());
+                      compoundColumnQualifierBytes, null, info.getValue());
                 } else {
                   EntityColumnPrefix.EVENT.store(rowKey, entityTable,
-                    compoundColumnQualifierBytes, null, info.getValue());
+                      compoundColumnQualifierBytes, null, info.getValue());
                 }
               } // for info: eventInfo
             }
@@ -459,7 +460,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
 
   /**
    * close the hbase connections The close APIs perform flushing and release any
-   * resources held
+   * resources held.
    */
   @Override
   protected void serviceStop() throws Exception {

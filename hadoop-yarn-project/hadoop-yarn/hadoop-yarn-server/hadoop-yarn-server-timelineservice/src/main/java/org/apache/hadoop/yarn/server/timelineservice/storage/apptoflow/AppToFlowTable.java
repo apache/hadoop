@@ -58,14 +58,14 @@ import java.io.IOException;
  * </pre>
  */
 public class AppToFlowTable extends BaseTable<AppToFlowTable> {
-  /** app_flow prefix */
+  /** app_flow prefix. */
   private static final String PREFIX =
       YarnConfiguration.TIMELINE_SERVICE_PREFIX + "app-flow";
 
-  /** config param name that specifies the app_flow table name */
+  /** config param name that specifies the app_flow table name. */
   public static final String TABLE_NAME_CONF_NAME = PREFIX + ".table.name";
 
-  /** default value for app_flow table name */
+  /** default value for app_flow table name. */
   private static final String DEFAULT_TABLE_NAME = "timelineservice.app_flow";
 
   private static final Log LOG = LogFactory.getLog(AppToFlowTable.class);

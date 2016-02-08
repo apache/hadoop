@@ -27,6 +27,9 @@ import javax.xml.bind.annotation.XmlRootElement;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * This class hosts a set of timeline entities.
+ */
 @XmlRootElement(name = "entities")
 @XmlAccessorType(XmlAccessType.NONE)
 @InterfaceAudience.Public
@@ -44,12 +47,12 @@ public class TimelineEntities {
     return entities;
   }
 
-  public void setEntities(Set<TimelineEntity> entities) {
-    this.entities = entities;
+  public void setEntities(Set<TimelineEntity> timelineEntities) {
+    this.entities = timelineEntities;
   }
 
-  public void addEntities(Set<TimelineEntity> entities) {
-    this.entities.addAll(entities);
+  public void addEntities(Set<TimelineEntity> timelineEntities) {
+    this.entities.addAll(timelineEntities);
   }
 
   public void addEntity(TimelineEntity entity) {

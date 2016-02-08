@@ -74,14 +74,14 @@ public class EntityRowKey {
 
   /**
    * Constructs a row key prefix for the entity table as follows:
-   * {@code userName!clusterId!flowName!flowRunId!AppId}
+   * {@code userName!clusterId!flowName!flowRunId!AppId}.
    *
-   * @param clusterId
-   * @param userId
-   * @param flowName
-   * @param flowRunId
-   * @param appId
-   * @return byte array with the row key prefix
+   * @param clusterId Context cluster id.
+   * @param userId User name.
+   * @param flowName Flow name.
+   * @param flowRunId Run Id for the flow.
+   * @param appId Application Id.
+   * @return byte array with the row key prefix.
    */
   public static byte[] getRowKeyPrefix(String clusterId, String userId,
       String flowName, Long flowRunId, String appId) {
@@ -97,15 +97,17 @@ public class EntityRowKey {
 
   /**
    * Constructs a row key prefix for the entity table as follows:
-   * {@code userName!clusterId!flowName!flowRunId!AppId!entityType!}
+   * {@code userName!clusterId!flowName!flowRunId!AppId!entityType!}.
+   * Typically used while querying multiple entities of a particular entity
+   * type.
    *
-   * @param clusterId
-   * @param userId
-   * @param flowName
-   * @param flowRunId
-   * @param appId
-   * @param entityType
-   * @return byte array with the row key prefix
+   * @param clusterId Context cluster id.
+   * @param userId User name.
+   * @param flowName Flow name.
+   * @param flowRunId Run Id for the flow.
+   * @param appId Application Id.
+   * @param entityType Entity type.
+   * @return byte array with the row key prefix.
    */
   public static byte[] getRowKeyPrefix(String clusterId, String userId,
       String flowName, Long flowRunId, String appId, String entityType) {
@@ -123,16 +125,17 @@ public class EntityRowKey {
 
   /**
    * Constructs a row key for the entity table as follows:
-   * {@code userName!clusterId!flowName!flowRunId!AppId!entityType!entityId}
+   * {@code userName!clusterId!flowName!flowRunId!AppId!entityType!entityId}.
+   * Typically used while querying a specific entity.
    *
-   * @param clusterId
-   * @param userId
-   * @param flowName
-   * @param flowRunId
-   * @param appId
-   * @param entityType
-   * @param entityId
-   * @return byte array with the row key
+   * @param clusterId Context cluster id.
+   * @param userId User name.
+   * @param flowName Flow name.
+   * @param flowRunId Run Id for the flow.
+   * @param appId Application Id.
+   * @param entityType Entity type.
+   * @param entityId Entity Id.
+   * @return byte array with the row key.
    */
   public static byte[] getRowKey(String clusterId, String userId,
       String flowName, Long flowRunId, String appId, String entityType,
@@ -151,6 +154,9 @@ public class EntityRowKey {
 
   /**
    * Given the raw row key as bytes, returns the row key as an object.
+   *
+   * @param rowKey byte representation of row key.
+   * @return An <cite>EntityRowKey</cite> object.
    */
   public static EntityRowKey parseRowKey(byte[] rowKey) {
     byte[][] rowKeyComponents = Separator.QUALIFIERS.split(rowKey);

@@ -29,9 +29,10 @@ public interface NumericValueConverter extends ValueConverter,
   /**
    * Adds two or more numbers. If either of the numbers are null, it is taken as
    * 0.
-   * @param num1
-   * @param num2
-   * @param numbers
+   *
+   * @param num1 the first number to add.
+   * @param num2 the second number to add.
+   * @param numbers Rest of the numbers to be added.
    * @return result after adding up the numbers.
    */
   Number add(Number num1, Number num2, Number...numbers);

@@ -20,6 +20,9 @@ package org.apache.hadoop.yarn.api.records.timelineservice;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+/**
+ * This entity represents a user.
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class UserEntity extends TimelineEntity {
@@ -30,7 +33,8 @@ public class UserEntity extends TimelineEntity {
   public UserEntity(TimelineEntity entity) {
     super(entity);
     if (!entity.getType().equals(TimelineEntityType.YARN_USER.toString())) {
-      throw new IllegalArgumentException("Incompatible entity type: " + getId());
+      throw new IllegalArgumentException("Incompatible entity type: "
+          + getId());
     }
   }
 }

@@ -68,8 +68,10 @@ public class TimelineCollectorManager extends AbstractService {
     // basis
     writerFlusher = Executors.newSingleThreadScheduledExecutor();
     flushInterval = conf.getInt(
-        YarnConfiguration.TIMELINE_SERVICE_WRITER_FLUSH_INTERVAL_SECONDS,
-        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WRITER_FLUSH_INTERVAL_SECONDS);
+        YarnConfiguration.
+        TIMELINE_SERVICE_WRITER_FLUSH_INTERVAL_SECONDS,
+        YarnConfiguration.
+        DEFAULT_TIMELINE_SERVICE_WRITER_FLUSH_INTERVAL_SECONDS);
     super.serviceInit(conf);
   }
 
@@ -102,6 +104,8 @@ public class TimelineCollectorManager extends AbstractService {
    * Put the collector into the collection if an collector mapped by id does
    * not exist.
    *
+   * @param appId Application Id for which collector needs to be put.
+   * @param collector timeline collector to be put.
    * @throws YarnRuntimeException if there  was any exception in initializing
    *                              and starting the app level service
    * @return the collector associated with id after the potential put.
@@ -140,6 +144,7 @@ public class TimelineCollectorManager extends AbstractService {
    * Removes the collector for the specified id. The collector is also stopped
    * as a result. If the collector does not exist, no change is made.
    *
+   * @param appId Application Id to remove.
    * @return whether it was removed successfully
    */
   public boolean remove(ApplicationId appId) {
@@ -162,6 +167,7 @@ public class TimelineCollectorManager extends AbstractService {
   /**
    * Returns the collector for the specified id.
    *
+   * @param appId Application Id for which we need to get the collector.
    * @return the collector or null if it does not exist
    */
   public TimelineCollector get(ApplicationId appId) {
@@ -171,6 +177,8 @@ public class TimelineCollectorManager extends AbstractService {
   /**
    * Returns whether the collector for the specified id exists in this
    * collection.
+   * @param appId Application Id.
+   * @return true if collector for the app id is found, false otherwise.
    */
   public boolean containsTimelineCollector(ApplicationId appId) {
     return collectors.containsKey(appId);

@@ -73,24 +73,25 @@ public class TimelineReaderWebServices {
   private static final String DATE_PATTERN = "yyyyMMdd";
 
   @VisibleForTesting
-  static ThreadLocal<DateFormat> DATE_FORMAT = new ThreadLocal<DateFormat>() {
-    @Override
-    protected DateFormat initialValue() {
-      SimpleDateFormat format =
-          new SimpleDateFormat(DATE_PATTERN, Locale.ENGLISH);
-      format.setTimeZone(TimeZone.getTimeZone("GMT"));
-      format.setLenient(false);
-      return format;
-    }
-  };
+  static final ThreadLocal<DateFormat> DATE_FORMAT =
+      new ThreadLocal<DateFormat>() {
+      @Override
+      protected DateFormat initialValue() {
+        SimpleDateFormat format =
+            new SimpleDateFormat(DATE_PATTERN, Locale.ENGLISH);
+        format.setTimeZone(TimeZone.getTimeZone("GMT"));
+        format.setLenient(false);
+        return format;
+      }
+    };
 
   private void init(HttpServletResponse response) {
     response.setContentType(null);
   }
 
-  private static class DateRange {
-    Long dateStart;
-    Long dateEnd;
+  private static final class DateRange {
+    private Long dateStart;
+    private Long dateEnd;
     private DateRange(Long start, Long end) {
       this.dateStart = start;
       this.dateEnd = end;
@@ -212,6 +213,7 @@ public class TimelineReaderWebServices {
    * @param uId a delimited string containing clusterid, userid, flow name,
    *     flowrun id and app id which are extracted from UID and then used to
    *     query backend(Mandatory path param).
+   * @param entityType Type of entities(Mandatory path param).
    * @param limit Number of entities to return(Optional query param).
    * @param createdTimeStart If specified, matched entities should not be
    *     created before this timestamp(Optional query param).

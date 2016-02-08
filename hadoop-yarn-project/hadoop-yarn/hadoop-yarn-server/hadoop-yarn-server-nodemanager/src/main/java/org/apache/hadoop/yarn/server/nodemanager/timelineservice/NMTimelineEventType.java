@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.timelineservice;
 
+/**
+ * Type of {@link NMTimelineEvent}.
+ */
 public enum NMTimelineEventType {
   // Publish the NM Timeline entity
   TIMELINE_ENTITY_PUBLISH,

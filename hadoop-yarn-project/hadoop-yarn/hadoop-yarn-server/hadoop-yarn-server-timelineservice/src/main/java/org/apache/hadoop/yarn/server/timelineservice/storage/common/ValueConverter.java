@@ -28,18 +28,20 @@ public interface ValueConverter {
 
   /**
    * Encode an object as a byte array depending on the converter implementation.
-   * @param value
+   *
+   * @param value Value to be encoded.
    * @return a byte array
-   * @throws IOException
+   * @throws IOException if any problem is encountered while encoding.
    */
   byte[] encodeValue(Object value) throws IOException;
 
   /**
    * Decode a byte array and convert it into an object depending on the
    * converter implementation.
-   * @param bytes
+   *
+   * @param bytes Byte array to be decoded.
    * @return an object
-   * @throws IOException
+   * @throws IOException if any problem is encountered while decoding.
    */
   Object decodeValue(byte[] bytes) throws IOException;
 }
