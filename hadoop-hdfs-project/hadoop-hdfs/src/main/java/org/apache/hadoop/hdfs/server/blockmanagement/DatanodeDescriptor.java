@@ -608,7 +608,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     BlockECReconstructionInfo task = new BlockECReconstructionInfo(block,
         sources, targets, liveBlockIndices, ecPolicy);
     erasurecodeBlocks.offer(task);
-    BlockManager.LOG.debug("Adding block recovery task " + task + "to "
+    BlockManager.LOG.debug("Adding block reconstruction task " + task + "to "
         + getName() + ", current queue size is " + erasurecodeBlocks.size());
   }
 

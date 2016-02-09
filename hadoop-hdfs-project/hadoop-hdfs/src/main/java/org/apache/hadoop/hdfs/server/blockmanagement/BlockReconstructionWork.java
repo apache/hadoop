@@ -25,17 +25,17 @@ import java.util.Set;
 
 /**
  * This class is used internally by
- * {@link BlockManager#computeRecoveryWorkForBlocks} to represent a task to
- * recover a block through replication or erasure coding. Recovery is done by
- * transferring data from srcNodes to targets
+ * {@link BlockManager#computeReconstructionWorkForBlocks} to represent a
+ * task to reconstruct a block through replication or erasure coding.
+ * Reconstruction is done by transferring data from srcNodes to targets
  */
-abstract class BlockRecoveryWork {
+abstract class BlockReconstructionWork {
   private final BlockInfo block;
 
   private final BlockCollection bc;
 
   /**
-   * An erasure coding recovery task has multiple source nodes.
+   * An erasure coding reconstruction task has multiple source nodes.
    * A replication task only has 1 source node, stored on top of the array
    */
   private final DatanodeDescriptor[] srcNodes;
@@ -48,7 +48,7 @@ abstract class BlockRecoveryWork {
   private DatanodeStorageInfo[] targets;
   private final int priority;
 
-  public BlockRecoveryWork(BlockInfo block,
+  public BlockReconstructionWork(BlockInfo block,
       BlockCollection bc,
       DatanodeDescriptor[] srcNodes,
       List<DatanodeDescriptor> containingNodes,
