@@ -73,6 +73,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.JsonNodeFactory;
 import org.codehaus.jackson.node.ObjectNode;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -84,6 +85,8 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class JobHistoryEventHandler extends AbstractService
     implements EventHandler<JobHistoryEvent> {
+  private static final JsonNodeFactory FACTORY =
+      new ObjectMapper().getNodeFactory();
 
   private final AppContext context;
   private final int startCount;
@@ -1040,8 +1043,7 @@ public class JobHistoryEventHandler extends AbstractService
 
   @Private
   public JsonNode countersToJSON(Counters counters) {
-    ObjectMapper mapper = new ObjectMapper();
-    ArrayNode nodes = mapper.createArrayNode();
+    ArrayNode nodes = FACTORY.arrayNode();
     if (counters != null) {
       for (CounterGroup counterGroup : counters) {
         ObjectNode groupNode = nodes.addObject();
