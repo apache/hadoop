@@ -2715,6 +2715,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9713. DataXceiver#copyBlock should return if block is pinned.
     (umamahesh)
 
+    HDFS-9760. WebHDFS AuthFilter cannot be configured with custom AltKerberos
+    auth handler (Ryan Sasson via aw)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
