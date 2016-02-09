@@ -1987,6 +1987,12 @@ public class YarnConfiguration extends Configuration {
 
   public static final int DEFAULT_ATS_APP_COLLECTOR_LINGER_PERIOD_IN_MS = 1000;
 
+  public static final String NUMBER_OF_ASYNC_ENTITIES_TO_MERGE =
+      TIMELINE_SERVICE_PREFIX
+          + "timeline-client.number-of-async-entities-to-merge";
+
+  public static final int DEFAULT_NUMBER_OF_ASYNC_ENTITIES_TO_MERGE = 10;
+
   // mark app-history related configs @Private as application history is going
   // to be integrated into the timeline service
   @Private

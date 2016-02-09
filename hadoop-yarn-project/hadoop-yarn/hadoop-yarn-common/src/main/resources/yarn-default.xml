@@ -2220,6 +2220,13 @@
     <value>1000</value>
   </property>
 
+  <property>
+    <description>Time line V2 client tries to merge these many number of
+    async entities (if available) and then call the REST ATS V2 API to submit.
+    </description>
+    <name>yarn.timeline-service.timeline-client.number-of-async-entities-to-merge</name>
+    <value>10</value>
+  </property>
   <!--  Shared Cache Configuration -->
 
   <property>
