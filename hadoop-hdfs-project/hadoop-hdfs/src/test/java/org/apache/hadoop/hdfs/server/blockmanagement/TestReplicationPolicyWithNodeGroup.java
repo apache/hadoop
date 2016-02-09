@@ -101,7 +101,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
   };
 
   private final static DatanodeDescriptor NODE = 
-      new DatanodeDescriptor(DFSTestUtil.getDatanodeDescriptor("9.9.9.9", "/d2/r4/n7"));
+      DFSTestUtil.getDatanodeDescriptor("9.9.9.9", "/d2/r4/n7");
   
   private static final DatanodeStorageInfo[] storagesForDependencies;
   private static final DatanodeDescriptor[]  dataNodesForDependencies;
