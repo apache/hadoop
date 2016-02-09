@@ -191,7 +191,11 @@ public class TestResourceLocalizationService {
   @After
   public void cleanup() throws IOException {
     conf = null;
-    FileUtils.deleteDirectory(new File(basedir.toString()));
+    try {
+      FileUtils.deleteDirectory(new File(basedir.toString()));
+    } catch (IOException e) {
+      // ignore
+    }
   }
   
   @Test
