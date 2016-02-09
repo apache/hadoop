@@ -2346,13 +2346,13 @@ public class DistributedFileSystem extends FileSystem {
    */
   @Override
   public Path getTrashRoot(Path path) throws IOException {
-    if ((path == null) || !dfs.isHDFSEncryptionEnabled()) {
+    if ((path == null) || path.isRoot() || !dfs.isHDFSEncryptionEnabled()) {
       return super.getTrashRoot(path);
     }
 
-    String absSrc = path.toUri().getPath();
-    EncryptionZone ez = dfs.getEZForPath(absSrc);
-    if ((ez != null) && !ez.getPath().equals(absSrc)) {
+    String parentSrc = path.getParent().toUri().getPath();
+    EncryptionZone ez = dfs.getEZForPath(parentSrc);
+    if ((ez != null)) {
       return this.makeQualified(
           new Path(ez.getPath() + "/" + FileSystem.TRASH_PREFIX +
               dfs.ugi.getShortUserName()));

@@ -63,7 +63,7 @@
     </test>
 
     <test>
-      <description>Test failure of create ez on an existing ez</description>
+      <description>Test failure of creating EZ on an existing EZ</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /foo</command>
         <command>-fs NAMENODE -ls /</command>-
@@ -76,13 +76,13 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Directory /foo is already in an encryption zone</expected-output>
+          <expected-output>Directory /foo is already an encryption zone</expected-output>
         </comparator>
       </comparators>
     </test>
 
     <test>
-      <description>Test failure of Create EZ operation in an existing EZ.</description>
+      <description>Test success of creating an EZ as a subdir of an existing EZ.</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /foo</command>
         <command>-fs NAMENODE -ls /</command>-
@@ -97,7 +97,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Directory /foo/bar is already in an encryption zone. (/foo)</expected-output>
+          <expected-output>Added encryption zone /foo/bar</expected-output>
         </comparator>
       </comparators>
     </test>

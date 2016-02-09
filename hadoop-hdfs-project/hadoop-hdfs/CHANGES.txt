@@ -1008,6 +1008,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-9184. Logging HDFS operation's caller context into audit logs.
     (Mingliang Liu via jitendra)
 
+    HDFS-9244. Support nested encryption zones. (zhz)
+
   IMPROVEMENTS
 
     HDFS-9257. improve error message for "Absolute path required" in INode.java
