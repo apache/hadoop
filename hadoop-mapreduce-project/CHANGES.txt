@@ -12,6 +12,9 @@ Release 2.6.5 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-6413. TestLocalJobSubmission is failing with unknown host
+    (zhihai xu via jlowe)
+
 Release 2.6.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
