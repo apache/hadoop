@@ -239,17 +239,7 @@ public class TestEncryptionZones {
     try {
       dfsAdmin.createEncryptionZone(zone1, TEST_KEY);
     } catch (IOException e) {
-      assertExceptionContains("already in an encryption zone", e);
-    }
-
-    /* Test failure of create EZ operation in an existing EZ. */
-    final Path zone1Child = new Path(zone1, "child");
-    fsWrapper.mkdir(zone1Child, FsPermission.getDirDefault(), false);
-    try {
-      dfsAdmin.createEncryptionZone(zone1Child, TEST_KEY);
-      fail("EZ in an EZ");
-    } catch (IOException e) {
-      assertExceptionContains("already in an encryption zone", e);
+      assertExceptionContains("is already an encryption zone", e);
     }
 
     /* create EZ on parent of an EZ should fail */
@@ -392,15 +382,6 @@ public class TestEncryptionZones {
     assertNumZones(++numZones);
     assertZonePresent(null, rootDir.toString());
 
-    /* create EZ on child of rootDir which is already an EZ should fail */
-    fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
-    try {
-      dfsAdmin.createEncryptionZone(zone1, TEST_KEY);
-      fail("EZ over an EZ");
-    } catch (IOException e) {
-      assertExceptionContains("already in an encryption zone", e);
-    }
-
     // Verify rootDir ez is present after restarting the NameNode
     // and saving/loading from fsimage.
     fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
@@ -409,14 +390,6 @@ public class TestEncryptionZones {
     cluster.restartNameNode(true);
     assertNumZones(numZones);
     assertZonePresent(null, rootDir.toString());
-
-    /* create EZ on child of rootDir which is already an EZ should fail */
-    try {
-      dfsAdmin.createEncryptionZone(zone1, TEST_KEY);
-      fail("EZ over an EZ");
-    } catch (IOException e) {
-      assertExceptionContains("already in an encryption zone", e);
-    }
   }
 
   /**
@@ -1436,6 +1409,23 @@ public class TestEncryptionZones {
     // Delete encryption zone from the shell with trash enabled
     // Verify the zone is moved to appropriate trash location in user's home dir
     verifyShellDeleteWithTrash(shell, zone1);
+
+    final Path topEZ = new Path("/topEZ");
+    fs.mkdirs(topEZ);
+    dfsAdmin.createEncryptionZone(topEZ, TEST_KEY);
+    final String NESTED_EZ_TEST_KEY = "nested_ez_test_key";
+    DFSTestUtil.createKey(NESTED_EZ_TEST_KEY, cluster, conf);
+    final Path nestedEZ = new Path(topEZ, "nestedEZ");
+    fs.mkdirs(nestedEZ);
+    dfsAdmin.createEncryptionZone(nestedEZ, NESTED_EZ_TEST_KEY);
+    final Path topEZFile = new Path(topEZ, "file");
+    final Path nestedEZFile = new Path(nestedEZ, "file");
+    DFSTestUtil.createFile(fs, topEZFile, len, (short) 1, 0xFEED);
+    DFSTestUtil.createFile(fs, nestedEZFile, len, (short) 1, 0xFEED);
+    verifyShellDeleteWithTrash(shell, topEZFile);
+    verifyShellDeleteWithTrash(shell, nestedEZFile);
+    verifyShellDeleteWithTrash(shell, nestedEZ);
+    verifyShellDeleteWithTrash(shell, topEZ);
   }
 
   private void verifyShellDeleteWithTrash(FsShell shell, Path path)
