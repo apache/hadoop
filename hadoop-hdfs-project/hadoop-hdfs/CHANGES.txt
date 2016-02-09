@@ -2721,6 +2721,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9760. WebHDFS AuthFilter cannot be configured with custom AltKerberos
     auth handler (Ryan Sasson via aw)
 
+    HDFS-9779 . TestReplicationPolicyWithNodeGroup NODE variable picks wrong rack value
+    (Kuhu Shukla via umamahesh)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
