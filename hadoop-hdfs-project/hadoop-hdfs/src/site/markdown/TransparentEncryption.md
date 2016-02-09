@@ -182,11 +182,11 @@ Example usage
 These instructions assume that you are running as the normal user or HDFS superuser as is appropriate. Use `sudo` as needed for your environment.
 
     # As the normal user, create a new encryption key
-    hadoop key create myKey
+    hadoop key create mykey
 
     # As the super user, create a new empty directory and make it an encryption zone
     hadoop fs -mkdir /zone
-    hdfs crypto -createZone -keyName myKey -path /zone
+    hdfs crypto -createZone -keyName mykey -path /zone
 
     # chown it to the normal user
     hadoop fs -chown myuser:myuser /zone
