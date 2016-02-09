@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -340,7 +341,8 @@ public class TestRollingUpgrade {
       Assert.assertEquals(0, dfsadmin.run(args2));
 
       // the datanode should be down.
-      Thread.sleep(2000);
+      GenericTestUtils.waitForThreadTermination(
+          "Async datanode shutdown thread", 100, 10000);
       Assert.assertFalse("DataNode should exit", dn.isDatanodeUp());
 
       // ping should fail.

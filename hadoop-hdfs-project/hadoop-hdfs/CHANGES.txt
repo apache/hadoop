@@ -70,6 +70,9 @@ Release 2.6.4 - UNRELEASED
     HDFS-9220. Reading small file (< 512 bytes) that is open for append fails
     due to incorrect checksum (Jing Zhao via kihwal)
 
+    HDFS-9752. Permanent write failures may happen to slow writers during
+    datanode rolling upgrades. (Walter Su via kihwal)
+
 Release 2.6.3 - 2015-12-17
 
   INCOMPATIBLE CHANGES
