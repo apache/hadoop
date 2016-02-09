@@ -21,7 +21,9 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.servlet.ServletContext;
 
@@ -33,6 +35,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationUtilsClient;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
+import org.apache.hadoop.hdfs.web.AuthFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.Param;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
@@ -159,6 +162,14 @@ public class NameNodeHttpServer {
   private Map<String, String> getAuthFilterParams(Configuration conf)
       throws IOException {
     Map<String, String> params = new HashMap<String, String>();
+    // Select configs beginning with 'dfs.web.authentication.'
+    Iterator<Map.Entry<String, String>> iterator = conf.iterator();
+    while (iterator.hasNext()) {
+      Entry<String, String> kvPair = iterator.next();
+      if (kvPair.getKey().startsWith(AuthFilter.CONF_PREFIX)) {
+        params.put(kvPair.getKey(), kvPair.getValue());
+      }
+    }
     String principalInConf = conf
         .get(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY);
     if (principalInConf != null && !principalInConf.isEmpty()) {

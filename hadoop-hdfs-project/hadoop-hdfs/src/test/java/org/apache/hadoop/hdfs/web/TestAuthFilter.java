@@ -98,4 +98,19 @@ public class TestAuthFilter {
     Assert.assertEquals("true",
         p.getProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED));
   }
+
+  @Test
+  public void testGetCustomAuthConfiguration() throws ServletException {
+    AuthFilter filter = new AuthFilter();
+    Map<String, String> m = new HashMap<String,String>();
+
+    m.put(AuthFilter.CONF_PREFIX + AuthFilter.AUTH_TYPE, "com.yourclass");
+    m.put(AuthFilter.CONF_PREFIX + "alt-kerberos.param", "value");
+    FilterConfig config = new DummyFilterConfig(m);
+
+    Properties p = filter.getConfiguration(AuthFilter.CONF_PREFIX, config);
+    Assert.assertEquals("com.yourclass", p.getProperty(AuthFilter.AUTH_TYPE));
+    Assert.assertEquals("value", p.getProperty("alt-kerberos.param"));
+  }
+
 }
