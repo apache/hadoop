@@ -962,7 +962,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         Map<ApplicationId, String> knownCollectorsMap =
             response.getAppCollectorsMap();
         if (knownCollectorsMap == null) {
-          LOG.warn("the collectors map is null");
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("No collectors to update RM");
+          }
         } else {
           Set<Map.Entry<ApplicationId, String>> rmKnownCollectors =
               knownCollectorsMap.entrySet();

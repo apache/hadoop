@@ -40,9 +40,6 @@ import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.cli.CommandLine;
@@ -111,7 +108,6 @@ import org.apache.log4j.LogManager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.api.client.ClientHandlerException;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * An ApplicationMaster for executing shell commands on a set of launched
@@ -225,10 +221,6 @@ public class ApplicationMaster {
 
   private boolean timelineServiceV2 = false;
 
-  // For posting entities in new timeline service in a non-blocking way
-  // TODO replace with event loop in TimelineClient.
-  private ExecutorService threadPool;
-
   // App Master configuration
   // No. of containers to run shell command on
   @VisibleForTesting
@@ -328,10 +320,6 @@ public class ApplicationMaster {
       }
       appMaster.run();
       result = appMaster.finish();
-
-      if (appMaster.threadPool != null) {
-        appMaster.shutdownAndAwaitTermination();
-      }
     } catch (Throwable t) {
       LOG.fatal("Error running ApplicationMaster", t);
       LogManager.shutdown();
@@ -343,29 +331,6 @@ public class ApplicationMaster {
     } else {
       LOG.info("Application Master failed. exiting");
       System.exit(2);
-    }
-  }
-
-  //TODO remove threadPool after adding non-blocking call in TimelineClient
-  private ExecutorService createThreadPool() {
-    return Executors.newCachedThreadPool(
-        new ThreadFactoryBuilder().setNameFormat("TimelineService #%d")
-        .build());
-  }
-
-  private void shutdownAndAwaitTermination() {
-    threadPool.shutdown();
-    try {
-      // Wait a while for existing tasks to terminate
-      if (!threadPool.awaitTermination(60, TimeUnit.SECONDS)) {
-        threadPool.shutdownNow();
-        if (!threadPool.awaitTermination(60, TimeUnit.SECONDS))
-          LOG.error("ThreadPool did not terminate");
-      }
-    } catch (InterruptedException ie) {
-      threadPool.shutdownNow();
-      // Preserve interrupt status
-      Thread.currentThread().interrupt();
     }
   }
 
@@ -591,11 +556,7 @@ public class ApplicationMaster {
         "container_retry_interval", "0"));
 
     if (YarnConfiguration.timelineServiceEnabled(conf)) {
-      timelineServiceV2 =
-          YarnConfiguration.timelineServiceV2Enabled(conf);
-      if (timelineServiceV2) {
-        threadPool = createThreadPool();
-      }
+      timelineServiceV2 = YarnConfiguration.timelineServiceV2Enabled(conf);
     } else {
       timelineClient = null;
       LOG.warn("Timeline service is not enabled");
@@ -746,8 +707,10 @@ public class ApplicationMaster {
             if (timelineServiceV2) {
               timelineClient = TimelineClient.createTimelineClient(
                   appAttemptID.getApplicationId());
+              LOG.info("Timeline service V2 client is enabled");
             } else {
               timelineClient = TimelineClient.createTimelineClient();
+              LOG.info("Timeline service V1 client is enabled");
             }
             timelineClient.init(conf);
             timelineClient.start();
@@ -1384,18 +1347,8 @@ public class ApplicationMaster {
             shellId);
     return new Thread(runnableLaunchContainer);
   }
-  
-  private void publishContainerStartEventOnTimelineServiceV2(
-      final Container container) {
-    Runnable publishWrapper = new Runnable() {
-      public void run() {
-        publishContainerStartEventOnTimelineServiceV2Base(container);
-      }
-    };
-    threadPool.execute(publishWrapper);
-  }
 
-  private void publishContainerStartEventOnTimelineServiceV2Base(
+  private void publishContainerStartEventOnTimelineServiceV2(
       Container container) {
     final org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity =
         new org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity();
@@ -1429,16 +1382,6 @@ public class ApplicationMaster {
 
   private void publishContainerEndEventOnTimelineServiceV2(
       final ContainerStatus container) {
-    Runnable publishWrapper = new Runnable() {
-      public void run() {
-          publishContainerEndEventOnTimelineServiceV2Base(container);
-      }
-    };
-    threadPool.execute(publishWrapper);
-  }
-
-  private void publishContainerEndEventOnTimelineServiceV2Base(
-      final ContainerStatus container) {
     final org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity =
         new org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity();
     entity.setId(container.getContainerId().toString());
@@ -1469,17 +1412,6 @@ public class ApplicationMaster {
   }
 
   private void publishApplicationAttemptEventOnTimelineServiceV2(
-      final DSEvent appEvent) {
-
-    Runnable publishWrapper = new Runnable() {
-      public void run() {
-        publishApplicationAttemptEventOnTimelineServiceV2Base(appEvent);
-      }
-    };
-    threadPool.execute(publishWrapper);
-  }
-
-  private void publishApplicationAttemptEventOnTimelineServiceV2Base(
       DSEvent appEvent) {
     final org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity =
         new org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity();
@@ -1497,7 +1429,7 @@ public class ApplicationMaster {
       appSubmitterUgi.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
         public TimelinePutResponse run() throws Exception {
-          timelineClient.putEntities(entity);
+          timelineClient.putEntitiesAsync(entity);
           return null;
         }
       });

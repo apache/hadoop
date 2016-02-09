@@ -17,15 +17,16 @@
  */
 package org.apache.hadoop.yarn.api.records.timelineservice;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import java.util.HashSet;
-import java.util.Set;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * This class hosts a set of timeline entities.
@@ -36,22 +37,22 @@ import java.util.Set;
 @InterfaceStability.Unstable
 public class TimelineEntities {
 
-  private Set<TimelineEntity> entities = new HashSet<>();
+  private List<TimelineEntity> entities = new ArrayList<>();
 
   public TimelineEntities() {
 
   }
 
   @XmlElement(name = "entities")
-  public Set<TimelineEntity> getEntities() {
+  public List<TimelineEntity> getEntities() {
     return entities;
   }
 
-  public void setEntities(Set<TimelineEntity> timelineEntities) {
+  public void setEntities(List<TimelineEntity> timelineEntities) {
     this.entities = timelineEntities;
   }
 
-  public void addEntities(Set<TimelineEntity> timelineEntities) {
+  public void addEntities(List<TimelineEntity> timelineEntities) {
     this.entities.addAll(timelineEntities);
   }
 
