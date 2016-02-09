@@ -2650,9 +2650,6 @@ Release 2.8.0 - UNRELEASED
     replicas should go through BlockPlacementPolicy
     (J.Andreina via vinayakumarb)
 
-    HDFS-9347. Invariant assumption in TestQuorumJournalManager.shutdown()
-    is wrong. (Wei-Chiu Chuang via zhz)
-
     HDFS-9589. Block files which have been hardlinked should be duplicated
     before the DataNode appends to the them (cmccabe)
 
@@ -3918,6 +3915,8 @@ Release 2.6.5 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-9347. Invariant assumption in TestQuorumJournalManager.shutdown()
+    is wrong. (Wei-Chiu Chuang via zhz)
 
 Release 2.6.4 - UNRELEASED
 
