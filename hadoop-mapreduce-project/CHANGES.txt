@@ -40,6 +40,9 @@ Release 2.7.3 - UNRELEASED
     MAPREDUCE-6621. Memory Leak in JobClient#submitJobInternal() (Xuan Gong
     via jlowe)
 
+    MAPREDUCE-6413. TestLocalJobSubmission is failing with unknown host
+    (zhihai xu via jlowe)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
