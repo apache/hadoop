@@ -46,7 +46,7 @@ import org.apache.hadoop.util.StringUtils;
  * obtains Hadoop-Auth configuration for webhdfs.
  */
 public class AuthFilter extends AuthenticationFilter {
-  private static final String CONF_PREFIX = "dfs.web.authentication.";
+  public static final String CONF_PREFIX = "dfs.web.authentication.";
 
   /**
    * Returns the filter configuration properties,
@@ -62,9 +62,11 @@ public class AuthFilter extends AuthenticationFilter {
   protected Properties getConfiguration(String prefix, FilterConfig config)
       throws ServletException {
     final Properties p = super.getConfiguration(CONF_PREFIX, config);
-    // set authentication type
-    p.setProperty(AUTH_TYPE, UserGroupInformation.isSecurityEnabled()?
-        KerberosAuthenticationHandler.TYPE: PseudoAuthenticationHandler.TYPE);
+    // if not set, configure based on security enabled
+    if (p.getProperty(AUTH_TYPE) == null) {
+      p.setProperty(AUTH_TYPE, UserGroupInformation.isSecurityEnabled()?
+          KerberosAuthenticationHandler.TYPE: PseudoAuthenticationHandler.TYPE);
+    }
     // if not set, enable anonymous for pseudo authentication
     if (p.getProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED) == null) {
       p.setProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED, "true");
