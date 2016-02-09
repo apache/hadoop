@@ -1476,6 +1476,9 @@ Release 2.7.3 - UNRELEASED
     YARN-3102. Decommisioned Nodes not listed in Web UI (Kuhu Shukla via
     jlowe)
 
+    YARN-3602. TestResourceLocalizationService.testPublicResourceInitializesLocalDir
+    fails Intermittently due to IOException from cleanup. (zhihai xu via xgong)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
