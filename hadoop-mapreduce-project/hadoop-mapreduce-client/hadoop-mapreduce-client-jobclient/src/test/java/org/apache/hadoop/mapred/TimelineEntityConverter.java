@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.mapred;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -57,16 +59,16 @@ class TimelineEntityConverter {
    * Note that we also do not add info to the YARN application entity, which
    * would be needed for aggregation.
    */
-  public Set<TimelineEntity> createTimelineEntities(JobInfo jobInfo,
+  public List<TimelineEntity> createTimelineEntities(JobInfo jobInfo,
       Configuration conf) {
-    Set<TimelineEntity> entities = new HashSet<>();
+    List<TimelineEntity> entities = new ArrayList<>();
 
     // create the job entity
     TimelineEntity job = createJobEntity(jobInfo, conf);
     entities.add(job);
 
     // create the task and task attempt entities
-    Set<TimelineEntity> tasksAndAttempts =
+    List<TimelineEntity> tasksAndAttempts =
         createTaskAndTaskAttemptEntities(jobInfo);
     entities.addAll(tasksAndAttempts);
 
@@ -125,9 +127,9 @@ class TimelineEntityConverter {
     }
   }
 
-  private Set<TimelineEntity> createTaskAndTaskAttemptEntities(
+  private List<TimelineEntity> createTaskAndTaskAttemptEntities(
       JobInfo jobInfo) {
-    Set<TimelineEntity> entities = new HashSet<>();
+    List<TimelineEntity> entities = new ArrayList<>();
     Map<TaskID,TaskInfo> taskInfoMap = jobInfo.getAllTasks();
     LOG.info("job " + jobInfo.getJobId()+ " has " + taskInfoMap.size() +
         " tasks");

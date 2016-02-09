@@ -21,8 +21,8 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -176,7 +176,7 @@ class JobHistoryFileReplayMapper extends EntityWriter {
 
         // create entities from job history and write them
         long totalTime = 0;
-        Set<TimelineEntity> entitySet =
+        List<TimelineEntity> entitySet =
             converter.createTimelineEntities(jobInfo, jobConf);
         LOG.info("converted them into timeline entities for job " + jobIdStr);
         // use the current user for this purpose
@@ -215,7 +215,7 @@ class JobHistoryFileReplayMapper extends EntityWriter {
   }
 
   private void writeAllEntities(AppLevelTimelineCollector collector,
-      Set<TimelineEntity> entitySet, UserGroupInformation ugi)
+      List<TimelineEntity> entitySet, UserGroupInformation ugi)
       throws IOException {
     TimelineEntities entities = new TimelineEntities();
     entities.setEntities(entitySet);
@@ -223,7 +223,7 @@ class JobHistoryFileReplayMapper extends EntityWriter {
   }
 
   private void writePerEntity(AppLevelTimelineCollector collector,
-      Set<TimelineEntity> entitySet, UserGroupInformation ugi)
+      List<TimelineEntity> entitySet, UserGroupInformation ugi)
       throws IOException {
     for (TimelineEntity entity : entitySet) {
       TimelineEntities entities = new TimelineEntities();
