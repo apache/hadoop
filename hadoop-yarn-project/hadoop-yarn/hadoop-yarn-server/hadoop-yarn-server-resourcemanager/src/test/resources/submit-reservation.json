@@ -1,9 +1,9 @@
 {
   "queue" : "dedicated",
   "reservation-definition" : {
-     "arrival" : 1765541532000,
-     "deadline" : 1765542252000,
-     "reservation-name" : "res_1",
+     "arrival" : %s,
+     "deadline" : %s,
+     "reservation-name" : "%s",
      "reservation-requests" : {
         "reservation-request-interpreter" : 0,
         "reservation-request" : [

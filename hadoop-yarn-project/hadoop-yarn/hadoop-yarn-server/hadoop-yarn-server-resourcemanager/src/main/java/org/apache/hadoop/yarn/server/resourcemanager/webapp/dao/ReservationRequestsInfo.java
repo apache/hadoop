@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
+import org.apache.hadoop.yarn.api.records.ReservationRequest;
+import org.apache.hadoop.yarn.api.records.ReservationRequests;
+
 import java.util.ArrayList;
 
 import javax.xml.bind.annotation.XmlAccessType;
@@ -40,6 +43,14 @@ public class ReservationRequestsInfo {
 
   public ReservationRequestsInfo() {
 
+  }
+
+  public ReservationRequestsInfo(ReservationRequests requests) {
+    reservationRequest = new ArrayList<>();
+    for (ReservationRequest request : requests.getReservationResources()) {
+      reservationRequest.add(new ReservationRequestInfo(request));
+    }
+    reservationRequestsInterpreter = requests.getInterpreter().ordinal();
   }
 
   public int getReservationRequestsInterpreter() {

@@ -39,6 +39,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -82,6 +83,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
@@ -156,6 +159,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteResponseInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationListInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionResponseInfo;
@@ -2166,6 +2170,58 @@ public class RMWebServices extends WebServices {
             .parseReservationId(resContext.getReservationId()));
 
     return request;
+  }
+
+  /**
+   * Function to retrieve a list of all the reservations.
+   */
+  @GET
+  @Path("/reservation/list")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public Response listReservation(
+          @QueryParam("queue") @DefaultValue("default") String queue,
+          @QueryParam("reservation-id") @DefaultValue("") String reservationId,
+          @QueryParam("start-time") @DefaultValue("0") long startTime,
+          @QueryParam("end-time") @DefaultValue("-1") long endTime,
+          @QueryParam("include-resource-allocations") @DefaultValue("false")
+          boolean includeResourceAllocations, @Context HttpServletRequest hsr)
+          throws Exception {
+    init();
+
+    final ReservationListRequest request = ReservationListRequest.newInstance(
+          queue, reservationId, startTime, endTime, includeResourceAllocations);
+
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    if (callerUGI == null) {
+      throw new AuthorizationException("Unable to obtain user name, "
+              + "user not authenticated");
+    }
+    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
+      String msg = "The default static user cannot carry out this operation.";
+      return Response.status(Status.FORBIDDEN).entity(msg).build();
+    }
+
+    ReservationListResponse resRespInfo;
+    try {
+      resRespInfo = callerUGI.doAs(
+          new PrivilegedExceptionAction<ReservationListResponse>() {
+            @Override
+            public ReservationListResponse run() throws IOException,
+                    YarnException {
+              return rm.getClientRMService().listReservations(request);
+            }
+          });
+    } catch (UndeclaredThrowableException ue) {
+      if (ue.getCause() instanceof YarnException) {
+        throw new BadRequestException(ue.getCause().getMessage());
+      }
+      LOG.info("List reservation request failed", ue);
+      throw ue;
+    }
+
+    ReservationListInfo resResponse = new ReservationListInfo(resRespInfo,
+            includeResourceAllocations);
+    return Response.status(Status.OK).entity(resResponse).build();
   }
 
 }

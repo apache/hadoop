@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
+import org.apache.hadoop.yarn.api.records.ReservationDefinition;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
@@ -44,6 +46,14 @@ public class ReservationDefinitionInfo {
 
   public ReservationDefinitionInfo() {
 
+  }
+
+  public ReservationDefinitionInfo(ReservationDefinition definition) {
+    arrival = definition.getArrival();
+    deadline = definition.getDeadline();
+    reservationName = definition.getReservationName();
+    reservationRequests = new ReservationRequestsInfo(definition
+            .getReservationRequests());
   }
 
   public long getArrival() {
