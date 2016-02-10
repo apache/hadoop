@@ -69,7 +69,8 @@ import java.util.concurrent.TimeUnit;
  * For example, if the user wants to test reading 1024MB data with 10 clients,
  * he/she should firstly generate 1024MB data with 10 (or more) clients.
  */
-public class ErasureCodeBenchmarkThroughput extends Configured implements Tool {
+public class ErasureCodeBenchmarkThroughput
+       extends Configured implements Tool {
 
   private static final int BUFFER_SIZE_MB = 128;
   private static final String DFS_TMP_DIR = System.getProperty(
@@ -114,13 +115,15 @@ public class ErasureCodeBenchmarkThroughput extends Configured implements Tool {
       System.out.println(msg);
     }
     System.err.println("Usage: ErasureCodeBenchmarkThroughput " +
-        "<read|write|gen|clean> <size in MB> <ec|rep> [num clients] [stf|pos]\n"
-        + "Stateful and positional option is only available for read.");
+        "<read|write|gen|clean> <size in MB> " +
+        "<ec|rep> [num clients] [stf|pos]\n" +
+        "Stateful and positional option is only available for read.");
     System.exit(1);
   }
 
-  private List<Long> doBenchmark(boolean isRead, int dataSizeMB, int numClients,
-      boolean isEc, boolean statefulRead, boolean isGen) throws Exception {
+  private List<Long> doBenchmark(boolean isRead, int dataSizeMB,
+      int numClients, boolean isEc, boolean statefulRead, boolean isGen)
+      throws Exception {
     CompletionService<Long> cs = new ExecutorCompletionService<Long>(
         Executors.newFixedThreadPool(numClients));
     for (int i = 0; i < numClients; i++) {
@@ -217,7 +220,7 @@ public class ErasureCodeBenchmarkThroughput extends Configured implements Tool {
         printUsage("Unknown operation: " + args[0]);
       }
       try {
-        dataSizeMB = Integer.valueOf(args[1]);
+        dataSizeMB = Integer.parseInt(args[1]);
         if (dataSizeMB <= 0) {
           printUsage("Invalid data size: " + dataSizeMB);
         }
@@ -233,7 +236,7 @@ public class ErasureCodeBenchmarkThroughput extends Configured implements Tool {
     }
     if (args.length >= 4 && type != OpType.CLEAN) {
       try {
-        numClients = Integer.valueOf(args[3]);
+        numClients = Integer.parseInt(args[3]);
         if (numClients <= 0) {
           printUsage("Invalid num of clients: " + numClients);
         }
