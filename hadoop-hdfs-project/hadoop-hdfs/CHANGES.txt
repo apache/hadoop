@@ -986,6 +986,8 @@ Release 2.9.0 - UNRELEASED
     HDFS-7764. DirectoryScanner shouldn't abort the scan if one directory had
     an error (Rakesh R via cmccabe)
 
+    HDFS-9637. Tests for RollingFileSystemSink. (Daniel Templeton via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
