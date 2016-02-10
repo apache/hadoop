@@ -197,6 +197,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4669. Fix logging statements in resource manager's Application class.
     (Seethana Sidharta via vvasudev)
 
+    YARN-4629. Distributed shell breaks under strong security.
+    (Daniel Templeton via stevel)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
