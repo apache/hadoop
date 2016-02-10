@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
+import org.apache.hadoop.yarn.api.records.ReservationRequest;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
@@ -41,6 +43,13 @@ public class ReservationRequestInfo {
 
   public ReservationRequestInfo() {
 
+  }
+
+  public ReservationRequestInfo(ReservationRequest request) {
+    capability = new ResourceInfo(request.getCapability());
+    minConcurrency = request.getConcurrency();
+    duration = request.getDuration();
+    numContainers = request.getNumContainers();
   }
 
   public ResourceInfo getCapability() {
