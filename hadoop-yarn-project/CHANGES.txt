@@ -799,6 +799,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4662. Document some newly added metrics. (Jian He via xgong)
 
+    YARN-4360. Improve GreedyReservationAgent to support "early" allocations,
+    and performance improvements (curino via asuresh)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
