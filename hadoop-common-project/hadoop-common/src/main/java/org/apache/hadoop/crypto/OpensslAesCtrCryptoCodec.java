@@ -61,6 +61,9 @@ public class OpensslAesCtrCryptoCodec extends AesCtrCryptoCodec {
         Random.class);
     try {
       random = ReflectionUtils.newInstance(klass, conf);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Using " + klass.getName() + " as random number generator.");
+      }
     } catch (Exception e) {
       LOG.info("Unable to use " + klass.getName() + ".  Falling back to " +
           "Java SecureRandom.", e);
