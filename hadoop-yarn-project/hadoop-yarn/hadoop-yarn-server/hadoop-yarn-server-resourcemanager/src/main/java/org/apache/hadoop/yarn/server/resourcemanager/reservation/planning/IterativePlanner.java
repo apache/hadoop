@@ -19,9 +19,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager.reservation.planning;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -32,6 +34,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationAllocation;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationInterval;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation.RLEOperator;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.ContractValidationException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -69,11 +72,13 @@ public class IterativePlanner extends PlanningAlgorithm {
   // Phase algorithms
   private StageEarliestStart algStageEarliestStart = null;
   private StageAllocator algStageAllocator = null;
+  private final boolean allocateLeft;
 
   // Constructor
   public IterativePlanner(StageEarliestStart algEarliestStartTime,
-      StageAllocator algStageAllocator) {
+      StageAllocator algStageAllocator, boolean allocateLeft) {
 
+    this.allocateLeft = allocateLeft;
     setAlgStageEarliestStart(algEarliestStartTime);
     setAlgStageAllocator(algStageAllocator);
 
@@ -85,61 +90,49 @@ public class IterativePlanner extends PlanningAlgorithm {
       String user) throws PlanningException {
 
     // Initialize
-    initialize(plan, reservation);
-
-    // If the job has been previously reserved, logically remove its allocation
-    ReservationAllocation oldReservation =
-        plan.getReservationById(reservationId);
-    if (oldReservation != null) {
-      ignoreOldAllocation(oldReservation);
-    }
+    initialize(plan, reservationId, reservation);
 
     // Create the allocations data structure
     RLESparseResourceAllocation allocations =
         new RLESparseResourceAllocation(plan.getResourceCalculator());
 
-    // Get a reverse iterator for the set of stages
-    ListIterator<ReservationRequest> li =
-        reservation
-            .getReservationRequests()
-            .getReservationResources()
-            .listIterator(
-                reservation.getReservationRequests().getReservationResources()
-                    .size());
+    StageProvider stageProvider = new StageProvider(allocateLeft, reservation);
 
     // Current stage
     ReservationRequest currentReservationStage;
 
-    // Index, points on the current node
-    int index =
-        reservation.getReservationRequests().getReservationResources().size();
-
     // Stage deadlines
     long stageDeadline = stepRoundDown(reservation.getDeadline(), step);
     long successorStartingTime = -1;
+    long predecessorEndTime = stepRoundDown(reservation.getArrival(), step);
+    long stageArrivalTime = -1;
 
     // Iterate the stages in reverse order
-    while (li.hasPrevious()) {
+    while (stageProvider.hasNext()) {
 
       // Get current stage
-      currentReservationStage = li.previous();
-      index -= 1;
+      currentReservationStage = stageProvider.next();
 
       // Validate that the ReservationRequest respects basic constraints
       validateInputStage(plan, currentReservationStage);
 
       // Compute an adjusted earliestStart for this resource
       // (we need this to provision some space for the ORDER contracts)
-      long stageArrivalTime = reservation.getArrival();
-      if (jobType == ReservationRequestInterpreter.R_ORDER
-          || jobType == ReservationRequestInterpreter.R_ORDER_NO_GAP) {
-        stageArrivalTime =
-            computeEarliestStartingTime(plan, reservation, index,
-                currentReservationStage, stageDeadline);
-      }
-      stageArrivalTime = stepRoundUp(stageArrivalTime, step);
-      stageArrivalTime = Math.max(stageArrivalTime, reservation.getArrival());
 
+      if (allocateLeft) {
+        stageArrivalTime = predecessorEndTime;
+      } else {
+        stageArrivalTime = reservation.getArrival();
+        if (jobType == ReservationRequestInterpreter.R_ORDER
+            || jobType == ReservationRequestInterpreter.R_ORDER_NO_GAP) {
+          stageArrivalTime =
+              computeEarliestStartingTime(plan, reservation,
+                  stageProvider.getCurrentIndex(), currentReservationStage,
+                  stageDeadline);
+        }
+        stageArrivalTime = stepRoundUp(stageArrivalTime, step);
+        stageArrivalTime = Math.max(stageArrivalTime, reservation.getArrival());
+      }
       // Compute the allocation of a single stage
       Map<ReservationInterval, Resource> curAlloc =
           computeStageAllocation(plan, currentReservationStage,
@@ -155,7 +148,7 @@ public class IterativePlanner extends PlanningAlgorithm {
         }
 
         // Otherwise, the job cannot be allocated
-        return null;
+        throw new PlanningException("The request cannot be satisfied");
 
       }
 
@@ -177,33 +170,41 @@ public class IterativePlanner extends PlanningAlgorithm {
       if (jobType == ReservationRequestInterpreter.R_ORDER
           || jobType == ReservationRequestInterpreter.R_ORDER_NO_GAP) {
 
+        // CHECK ORDER_NO_GAP
         // Verify that there is no gap, in case the job is ORDER_NO_GAP
+        // note that the test is different left-to-right and right-to-left
         if (jobType == ReservationRequestInterpreter.R_ORDER_NO_GAP
             && successorStartingTime != -1
-            && successorStartingTime > stageEndTime) {
-
-          return null;
-
+            && ((allocateLeft && predecessorEndTime < stageStartTime) ||
+                (!allocateLeft && (stageEndTime < successorStartingTime))
+               )
+            || (!isNonPreemptiveAllocation(curAlloc))) {
+          throw new PlanningException(
+              "The allocation found does not respect ORDER_NO_GAP");
         }
 
-        // Store the stageStartTime and set the new stageDeadline
-        successorStartingTime = stageStartTime;
-        stageDeadline = stageStartTime;
-
+        if (allocateLeft) {
+          // Store the stageStartTime and set the new stageDeadline
+          predecessorEndTime = stageEndTime;
+        } else {
+          // Store the stageStartTime and set the new stageDeadline
+          successorStartingTime = stageStartTime;
+          stageDeadline = stageStartTime;
+        }
       }
-
     }
 
     // If the allocation is empty, return an error
     if (allocations.isEmpty()) {
-      return null;
+      throw new PlanningException("The request cannot be satisfied");
     }
 
     return allocations;
 
   }
 
-  protected void initialize(Plan plan, ReservationDefinition reservation) {
+  protected void initialize(Plan plan, ReservationId reservationId,
+      ReservationDefinition reservation) throws PlanningException {
 
     // Get plan step & capacity
     capacity = plan.getTotalCapacity();
@@ -214,12 +215,25 @@ public class IterativePlanner extends PlanningAlgorithm {
     jobArrival = stepRoundUp(reservation.getArrival(), step);
     jobDeadline = stepRoundDown(reservation.getDeadline(), step);
 
-    // Dirty read of plan load
-    planLoads = getAllLoadsInInterval(plan, jobArrival, jobDeadline);
-
     // Initialize the plan modifications
     planModifications =
         new RLESparseResourceAllocation(plan.getResourceCalculator());
+
+    // Dirty read of plan load
+
+    // planLoads are not used by other StageAllocators... and don't deal
+    // well with huge reservation ranges
+    if (this.algStageAllocator instanceof StageAllocatorLowCostAligned) {
+      planLoads = getAllLoadsInInterval(plan, jobArrival, jobDeadline);
+      ReservationAllocation oldRes = plan.getReservationById(reservationId);
+      if (oldRes != null) {
+        planModifications =
+            RLESparseResourceAllocation.merge(plan.getResourceCalculator(),
+                plan.getTotalCapacity(), planModifications,
+                oldRes.getResourcesOverTime(), RLEOperator.subtract,
+                jobArrival, jobDeadline);
+      }
+    }
 
   }
 
@@ -237,32 +251,6 @@ public class IterativePlanner extends PlanningAlgorithm {
 
     // Return map
     return loads;
-
-  }
-
-  private void ignoreOldAllocation(ReservationAllocation oldReservation) {
-
-    // If there is no old reservation, return
-    if (oldReservation == null) {
-      return;
-    }
-
-    // Subtract each allocation interval from the planModifications
-    for (Entry<ReservationInterval, Resource> entry : oldReservation
-        .getAllocationRequests().entrySet()) {
-
-      // Read the entry
-      ReservationInterval interval = entry.getKey();
-      Resource resource = entry.getValue();
-
-      // Find the actual request
-      Resource negativeResource = Resources.multiply(resource, -1);
-
-      // Insert it into planModifications as a 'negative' request, to
-      // represent available resources
-      planModifications.addInterval(interval, negativeResource);
-
-    }
 
   }
 
@@ -291,10 +279,53 @@ public class IterativePlanner extends PlanningAlgorithm {
         rr.getCapability(), plan.getMaximumAllocation())) {
 
       throw new ContractValidationException(
-          "Individual capability requests should not exceed cluster's " +
-          "maxAlloc");
+          "Individual capability requests should not exceed cluster's "
+              + "maxAlloc");
 
     }
+
+  }
+
+  private boolean isNonPreemptiveAllocation(
+      Map<ReservationInterval, Resource> curAlloc) {
+
+    // Checks whether a stage allocation is non preemptive or not.
+    // Assumption: the intervals are non-intersecting (as returned by
+    // computeStageAllocation()).
+    // For a non-preemptive allocation, only two end points appear exactly once
+
+    Set<Long> endPoints = new HashSet<Long>(2 * curAlloc.size());
+    for (Entry<ReservationInterval, Resource> entry : curAlloc.entrySet()) {
+
+      ReservationInterval interval = entry.getKey();
+      Resource resource = entry.getValue();
+
+      // Ignore intervals with no allocation
+      if (Resources.equals(resource, Resource.newInstance(0, 0))) {
+        continue;
+      }
+
+      // Get endpoints
+      Long left = interval.getStartTime();
+      Long right = interval.getEndTime();
+
+      // Add left endpoint if we haven't seen it before, remove otherwise
+      if (!endPoints.contains(left)) {
+        endPoints.add(left);
+      } else {
+        endPoints.remove(left);
+      }
+
+      // Add right endpoint if we haven't seen it before, remove otherwise
+      if (!endPoints.contains(right)) {
+        endPoints.add(right);
+      } else {
+        endPoints.remove(right);
+      }
+    }
+
+    // Non-preemptive only if endPoints is of size 2
+    return (endPoints.size() == 2);
 
   }
 
@@ -332,6 +363,62 @@ public class IterativePlanner extends PlanningAlgorithm {
 
     this.algStageAllocator = alg;
     return this; // To allow concatenation of setAlg() functions
+
+  }
+
+  /**
+   * Helper class that provide a list of ReservationRequests and iterates
+   * forward or backward depending whether we are allocating left-to-right or
+   * right-to-left.
+   */
+  public static class StageProvider {
+
+    private final boolean allocateLeft;
+
+    private ListIterator<ReservationRequest> li;
+
+    public StageProvider(boolean allocateLeft,
+        ReservationDefinition reservation) {
+
+      this.allocateLeft = allocateLeft;
+      int startingIndex;
+      if (allocateLeft) {
+        startingIndex = 0;
+      } else {
+        startingIndex =
+            reservation.getReservationRequests().getReservationResources()
+                .size();
+      }
+      // Get a reverse iterator for the set of stages
+      li =
+          reservation.getReservationRequests().getReservationResources()
+              .listIterator(startingIndex);
+
+    }
+
+    public boolean hasNext() {
+      if (allocateLeft) {
+        return li.hasNext();
+      } else {
+        return li.hasPrevious();
+      }
+    }
+
+    public ReservationRequest next() {
+      if (allocateLeft) {
+        return li.next();
+      } else {
+        return li.previous();
+      }
+    }
+
+    public int getCurrentIndex() {
+      if (allocateLeft) {
+        return li.nextIndex() - 1;
+      } else {
+        return li.previousIndex() + 1;
+      }
+    }
 
   }
 

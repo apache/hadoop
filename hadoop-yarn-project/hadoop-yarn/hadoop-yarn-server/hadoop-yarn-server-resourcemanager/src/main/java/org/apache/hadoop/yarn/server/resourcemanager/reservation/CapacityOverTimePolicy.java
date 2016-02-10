@@ -214,6 +214,15 @@ public class CapacityOverTimePolicy implements SharingPolicy {
     RLESparseResourceAllocation used =
         plan.getConsumptionForUserOverTime(user, start, end);
 
+    // add back in old reservation used resources if any
+    ReservationAllocation old = plan.getReservationById(oldId);
+    if (old != null) {
+      used =
+          RLESparseResourceAllocation.merge(plan.getResourceCalculator(),
+              Resources.clone(plan.getTotalCapacity()), used,
+              old.getResourcesOverTime(), RLEOperator.subtract, start, end);
+    }
+
     instRLEQuota =
         RLESparseResourceAllocation.merge(plan.getResourceCalculator(),
             planTotalCapacity, instRLEQuota, used, RLEOperator.subtract, start,
