@@ -36,7 +36,9 @@ import java.text.MessageFormat;
  * and uses its lifecycle to start and stop the server.
  */
 @InterfaceAudience.Private
-public abstract class ServerWebApp extends Server implements ServletContextListener {
+public abstract class ServerWebApp
+       extends Server
+       implements ServletContextListener {
 
   private static final String HOME_DIR = ".home.dir";
   private static final String CONFIG_DIR = ".config.dir";
@@ -61,8 +63,8 @@ public abstract class ServerWebApp extends Server implements ServletContextListe
   /**
    * Constructor for testing purposes.
    */
-  protected ServerWebApp(String name, String homeDir, String configDir, String logDir, String tempDir,
-                         Configuration config) {
+  protected ServerWebApp(String name, String homeDir, String configDir,
+                         String logDir, String tempDir, Configuration config) {
     super(name, homeDir, configDir, logDir, tempDir, config);
   }
 
@@ -120,7 +122,8 @@ public abstract class ServerWebApp extends Server implements ServletContextListe
       String sysProp = name + HOME_DIR;
       homeDir = System.getProperty(sysProp);
       if (homeDir == null) {
-        throw new IllegalArgumentException(MessageFormat.format("System property [{0}] not defined", sysProp));
+        throw new IllegalArgumentException(MessageFormat.format(
+            "System property [{0}] not defined", sysProp));
       }
     }
     return homeDir;
@@ -160,7 +163,8 @@ public abstract class ServerWebApp extends Server implements ServletContextListe
   }
 
   /**
-   * Resolves the host and port InetSocketAddress the web server is listening to.
+   * Resolves the host and port InetSocketAddress the
+   * web server is listening to.
    * <p>
    * This implementation looks for the following 2 properties:
    * <ul>
@@ -168,8 +172,10 @@ public abstract class ServerWebApp extends Server implements ServletContextListe
    *   <li>#SERVER_NAME#.http.port</li>
    * </ul>
    *
-   * @return the host and port InetSocketAddress the web server is listening to.
-   * @throws ServerException thrown if any of the above 2 properties is not defined.
+   * @return the host and port InetSocketAddress the
+   *         web server is listening to.
+   * @throws ServerException thrown
+   *         if any of the above 2 properties is not defined.
    */
   protected InetSocketAddress resolveAuthority() throws ServerException {
     String hostnameKey = getName() + HTTP_HOSTNAME;
@@ -233,6 +239,7 @@ public abstract class ServerWebApp extends Server implements ServletContextListe
    *
    */
   public boolean isSslEnabled() {
-    return Boolean.valueOf(System.getProperty(getName() + SSL_ENABLED, "false"));
+    return Boolean.parseBoolean(
+      System.getProperty(getName() + SSL_ENABLED, "false"));
   }
 }
