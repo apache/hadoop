@@ -221,7 +221,7 @@ public class TestUserGroupInformation {
     // get the groups
     pp = Runtime.getRuntime().exec(Shell.WINDOWS ?
       Shell.getWinUtilsPath() + " groups -F"
-      : "id -Gn");
+      : "id -Gn " + userName);
     br = new BufferedReader(new InputStreamReader(pp.getInputStream()));
     String line = br.readLine();
 
