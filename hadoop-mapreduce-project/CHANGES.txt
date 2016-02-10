@@ -123,9 +123,6 @@ Trunk (Unreleased)
 
   BUG FIXES
 
-    MAPREDUCE-6191. Improve clearing stale state of Java serialization
-                    testcase.  (Sam Liu via Eric Yang)
-
     MAPREDUCE-5714. Removed forceful JVM exit in shutDownJob.  
                      (Jinghui Wang via Eric Yang)
 
@@ -751,6 +748,9 @@ Release 2.7.3 - UNRELEASED
     MAPREDUCE-6413. TestLocalJobSubmission is failing with unknown host
     (zhihai xu via jlowe)
 
+    MAPREDUCE-6191. Improve clearing stale state of Java serialization
+                    testcase.  (Sam Liu via Eric Yang)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
@@ -1040,6 +1040,9 @@ Release 2.6.5 - UNRELEASED
 
     MAPREDUCE-6413. TestLocalJobSubmission is failing with unknown host
     (zhihai xu via jlowe)
+
+    MAPREDUCE-6191. Improve clearing stale state of Java serialization
+                    testcase.  (Sam Liu via Eric Yang)
 
 Release 2.6.4 - UNRELEASED
 
