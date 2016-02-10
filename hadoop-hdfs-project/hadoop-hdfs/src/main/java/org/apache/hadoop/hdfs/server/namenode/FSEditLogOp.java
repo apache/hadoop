@@ -416,9 +416,7 @@ public abstract class FSEditLogOp {
   }
 
   @SuppressWarnings("unchecked")
-  static abstract class AddCloseOp
-         extends FSEditLogOp
-          implements BlockListUpdatingOp {
+  static abstract class AddCloseOp extends FSEditLogOp implements BlockListUpdatingOp {
     int length;
     long inodeId;
     String path;
@@ -639,8 +637,7 @@ public abstract class FSEditLogOp {
             NameNodeLayoutVersion.Feature.BLOCK_STORAGE_POLICY, logVersion)) {
           this.storagePolicyId = FSImageSerialization.readByte(in);
         } else {
-          this.storagePolicyId =
-              HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
+          this.storagePolicyId = HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
         }
         // read clientId and callId
         readRpcIds(in, logVersion);
@@ -720,7 +717,7 @@ public abstract class FSEditLogOp {
           Long.toString(inodeId));
       XMLUtils.addSaxString(contentHandler, "PATH", path);
       XMLUtils.addSaxString(contentHandler, "REPLICATION",
-          Short.toString(replication));
+          Short.valueOf(replication).toString());
       XMLUtils.addSaxString(contentHandler, "MTIME",
           Long.toString(mtime));
       XMLUtils.addSaxString(contentHandler, "ATIME",
@@ -748,7 +745,7 @@ public abstract class FSEditLogOp {
       this.length = Integer.parseInt(st.getValue("LENGTH"));
       this.inodeId = Long.parseLong(st.getValue("INODEID"));
       this.path = st.getValue("PATH");
-      this.replication = Short.parseShort(st.getValue("REPLICATION"));
+      this.replication = Short.valueOf(st.getValue("REPLICATION"));
       this.mtime = Long.parseLong(st.getValue("MTIME"));
       this.atime = Long.parseLong(st.getValue("ATIME"));
       this.blockSize = Long.parseLong(st.getValue("BLOCKSIZE"));
@@ -1189,12 +1186,12 @@ public abstract class FSEditLogOp {
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       XMLUtils.addSaxString(contentHandler, "PATH", path);
       XMLUtils.addSaxString(contentHandler, "REPLICATION",
-          Short.toString(replication));
+          Short.valueOf(replication).toString());
     }
     
     @Override void fromXml(Stanza st) throws InvalidXmlException {
       this.path = st.getValue("PATH");
-      this.replication = Short.parseShort(st.getValue("REPLICATION"));
+      this.replication = Short.valueOf(st.getValue("REPLICATION"));
     }
   }
 
@@ -1982,13 +1979,13 @@ public abstract class FSEditLogOp {
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       XMLUtils.addSaxString(contentHandler, "SRC", src);
       XMLUtils.addSaxString(contentHandler, "MODE",
-          Short.toString(permissions.toShort()));
+          Short.valueOf(permissions.toShort()).toString());
     }
     
     @Override void fromXml(Stanza st) throws InvalidXmlException {
       this.src = st.getValue("SRC");
       this.permissions = new FsPermission(
-          Short.parseShort(st.getValue("MODE")));
+          Short.valueOf(st.getValue("MODE")));
     }
   }
 
@@ -4472,13 +4469,13 @@ public abstract class FSEditLogOp {
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       XMLUtils.addSaxString(contentHandler, "PATH", path);
       XMLUtils.addSaxString(contentHandler, "POLICYID",
-          Byte.toString(policyId));
+          Byte.valueOf(policyId).toString());
     }
 
     @Override
     void fromXml(Stanza st) throws InvalidXmlException {
       this.path = st.getValue("PATH");
-      this.policyId = Byte.parseByte(st.getValue("POLICYID"));
+      this.policyId = Byte.valueOf(st.getValue("POLICYID"));
     }
   }  
 
@@ -4955,8 +4952,7 @@ public abstract class FSEditLogOp {
 
   public static void delegationTokenToXml(ContentHandler contentHandler,
       DelegationTokenIdentifier token) throws SAXException {
-    contentHandler.startElement(
-        "", "", "DELEGATION_TOKEN_IDENTIFIER", new AttributesImpl());
+    contentHandler.startElement("", "", "DELEGATION_TOKEN_IDENTIFIER", new AttributesImpl());
     XMLUtils.addSaxString(contentHandler, "KIND", token.getKind().toString());
     XMLUtils.addSaxString(contentHandler, "SEQUENCE_NUMBER",
         Integer.toString(token.getSequenceNumber()));
@@ -5002,8 +4998,7 @@ public abstract class FSEditLogOp {
 
   public static void delegationKeyToXml(ContentHandler contentHandler,
       DelegationKey key) throws SAXException {
-    contentHandler.startElement(
-        "", "", "DELEGATION_KEY", new AttributesImpl());
+    contentHandler.startElement("", "", "DELEGATION_KEY", new AttributesImpl());
     XMLUtils.addSaxString(contentHandler, "KEY_ID",
         Integer.toString(key.getKeyId()));
     XMLUtils.addSaxString(contentHandler, "EXPIRY_DATE",
@@ -5031,8 +5026,7 @@ public abstract class FSEditLogOp {
 
   public static void permissionStatusToXml(ContentHandler contentHandler,
       PermissionStatus perm) throws SAXException {
-    contentHandler.startElement(
-        "", "", "PERMISSION_STATUS", new AttributesImpl());
+    contentHandler.startElement("", "", "PERMISSION_STATUS", new AttributesImpl());
     XMLUtils.addSaxString(contentHandler, "USERNAME", perm.getUserName());
     XMLUtils.addSaxString(contentHandler, "GROUPNAME", perm.getGroupName());
     fsPermissionToXml(contentHandler, perm.getPermission());
@@ -5050,13 +5044,13 @@ public abstract class FSEditLogOp {
 
   public static void fsPermissionToXml(ContentHandler contentHandler,
       FsPermission mode) throws SAXException {
-    XMLUtils.addSaxString(contentHandler, "MODE",
-        Short.toString(mode.toShort()));
+    XMLUtils.addSaxString(contentHandler, "MODE", Short.valueOf(mode.toShort())
+        .toString());
   }
 
   public static FsPermission fsPermissionFromXml(Stanza st)
       throws InvalidXmlException {
-    short mode = Short.parseShort(st.getValue("MODE"));
+    short mode = Short.valueOf(st.getValue("MODE"));
     return new FsPermission(mode);
   }
 
@@ -5065,8 +5059,7 @@ public abstract class FSEditLogOp {
     XMLUtils.addSaxString(contentHandler, "PERM", v.SYMBOL);
   }
 
-  private static FsAction fsActionFromXml(Stanza st)
-      throws InvalidXmlException {
+  private static FsAction fsActionFromXml(Stanza st) throws InvalidXmlException {
     FsAction v = FSACTION_SYMBOL_MAP.get(st.getValue("PERM"));
     if (v == null)
       throw new InvalidXmlException("Invalid value for FsAction");
