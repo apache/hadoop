@@ -802,6 +802,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4360. Improve GreedyReservationAgent to support "early" allocations,
     and performance improvements (curino via asuresh)
 
+    YARN-4420. Add REST API for List Reservations. (Sean Po via curino)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
