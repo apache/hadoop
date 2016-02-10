@@ -74,6 +74,7 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
+import org.apache.hadoop.yarn.client.util.YarnClientUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -669,7 +670,7 @@ public class Client {
     if (UserGroupInformation.isSecurityEnabled()) {
       // Note: Credentials class is marked as LimitedPrivate for HDFS and MapReduce
       Credentials credentials = new Credentials();
-      String tokenRenewer = conf.get(YarnConfiguration.RM_PRINCIPAL);
+      String tokenRenewer = YarnClientUtils.getRmPrincipal(conf);
       if (tokenRenewer == null || tokenRenewer.length() == 0) {
         throw new IOException(
           "Can't get Master Kerberos principal for the RM to use as renewer");
