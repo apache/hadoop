@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.reservation.planning;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
@@ -45,9 +46,44 @@ public class GreedyReservationAgent implements ReservationAgent {
       .getLogger(GreedyReservationAgent.class);
 
   // Greedy planner
-  private final ReservationAgent planner = new IterativePlanner(
-      new StageEarliestStartByJobArrival(), new StageAllocatorGreedy());
+  private final ReservationAgent planner;
 
+  public final static String GREEDY_FAVOR_EARLY_ALLOCATION =
+      "yarn.resourcemanager.reservation-system.favor-early-allocation";
+
+  public final static boolean DEFAULT_GREEDY_FAVOR_EARLY_ALLOCATION = true;
+
+  private final boolean allocateLeft;
+
+  public GreedyReservationAgent() {
+    this(new Configuration());
+  }
+
+  public GreedyReservationAgent(Configuration yarnConfiguration) {
+
+    allocateLeft =
+        yarnConfiguration.getBoolean(GREEDY_FAVOR_EARLY_ALLOCATION,
+            DEFAULT_GREEDY_FAVOR_EARLY_ALLOCATION);
+
+    if (allocateLeft) {
+      LOG.info("Initializing the GreedyReservationAgent to favor \"early\""
+          + " (left) allocations (controlled by parameter: "
+          + GREEDY_FAVOR_EARLY_ALLOCATION + ")");
+    } else {
+      LOG.info("Initializing the GreedyReservationAgent to favor \"late\""
+          + " (right) allocations (controlled by parameter: "
+          + GREEDY_FAVOR_EARLY_ALLOCATION + ")");
+    }
+
+    planner =
+        new IterativePlanner(new StageEarliestStartByJobArrival(),
+            new StageAllocatorGreedyRLE(allocateLeft), allocateLeft);
+
+  }
+
+  public boolean isAllocateLeft(){
+    return allocateLeft;
+  }
   @Override
   public boolean createReservation(ReservationId reservationId, String user,
       Plan plan, ReservationDefinition contract) throws PlanningException {

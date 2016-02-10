@@ -26,6 +26,8 @@ import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -55,8 +57,12 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 import org.mortbay.log.Log;
 
+@RunWith(Parameterized.class)
 public class TestGreedyReservationAgent {
 
   ReservationAgent agent;
@@ -66,6 +72,17 @@ public class TestGreedyReservationAgent {
   Resource maxAlloc = Resource.newInstance(1024 * 8, 8);
   Random rand = new Random();
   long step;
+  boolean allocateLeft;
+
+  public TestGreedyReservationAgent(Boolean b){
+    this.allocateLeft = b;
+  }
+
+  @Parameters
+  public static Collection<Object[]> data() {
+      return Arrays.asList(new Object[][] {
+               {true}, {false}});
+  }
 
   @Before
   public void setup() throws Exception {
@@ -90,7 +107,11 @@ public class TestGreedyReservationAgent {
     CapacityOverTimePolicy policy = new CapacityOverTimePolicy();
     policy.init(reservationQ, conf);
 
-    agent = new GreedyReservationAgent();
+    // setting conf to
+    conf.setBoolean(GreedyReservationAgent.GREEDY_FAVOR_EARLY_ALLOCATION,
+        allocateLeft);
+
+    agent = new GreedyReservationAgent(conf);
 
     QueueMetrics queueMetrics = mock(QueueMetrics.class);
     RMContext context = ReservationSystemTestUtil.createMockRMContext();
@@ -130,13 +151,21 @@ public class TestGreedyReservationAgent {
     System.out.println(plan.toString());
     System.out.println(plan.toCumulativeString());
 
-    for (long i = 10 * step; i < 20 * step; i++) {
-      assertTrue(
-          "Agent-based allocation unexpected",
-          Resources.equals(cs.getResourcesAtTime(i),
-              Resource.newInstance(2048 * 10, 2 * 10)));
+    if(allocateLeft){
+      for (long i = 5 * step; i < 15 * step; i++) {
+        assertTrue(
+            "Agent-based allocation unexpected",
+            Resources.equals(cs.getResourcesAtTime(i),
+                Resource.newInstance(2048 * 10, 2 * 10)));
+      }
+    } else {
+      for (long i = 10 * step; i < 20 * step; i++) {
+        assertTrue(
+            "Agent-based allocation unexpected",
+            Resources.equals(cs.getResourcesAtTime(i),
+                Resource.newInstance(2048 * 10, 2 * 10)));
+      }
     }
-
   }
 
   @SuppressWarnings("javadoc")
@@ -212,18 +241,33 @@ public class TestGreedyReservationAgent {
     System.out.println(plan.toString());
     System.out.println(plan.toCumulativeString());
 
-    for (long i = 90 * step; i < 100 * step; i++) {
-      assertTrue(
-          "Agent-based allocation unexpected",
-          Resources.equals(cs.getResourcesAtTime(i),
-              Resource.newInstance(2048 * 20, 2 * 20)));
-    }
-    // RR2 is pushed out by the presence of RR
-    for (long i = 80 * step; i < 90 * step; i++) {
-      assertTrue(
-          "Agent-based allocation unexpected",
-          Resources.equals(cs2.getResourcesAtTime(i),
-              Resource.newInstance(2048 * 20, 2 * 20)));
+    if (allocateLeft) {
+      for (long i = 5 * step; i < 15 * step; i++) {
+        assertTrue(
+            "Agent-based allocation unexpected",
+            Resources.equals(cs.getResourcesAtTime(i),
+                Resource.newInstance(2048 * 20, 2 * 20)));
+      }
+      for (long i = 15 * step; i < 25 * step; i++) {
+        // RR2 is pushed out by the presence of RR
+        assertTrue(
+            "Agent-based allocation unexpected",
+            Resources.equals(cs2.getResourcesAtTime(i),
+                Resource.newInstance(2048 * 20, 2 * 20)));
+      }
+    } else {
+      for (long i = 90 * step; i < 100 * step; i++) {
+        assertTrue(
+            "Agent-based allocation unexpected",
+            Resources.equals(cs.getResourcesAtTime(i),
+                Resource.newInstance(2048 * 20, 2 * 20)));
+      }
+      for (long i = 80 * step; i < 90 * step; i++) {
+        assertTrue(
+            "Agent-based allocation unexpected",
+            Resources.equals(cs2.getResourcesAtTime(i),
+                Resource.newInstance(2048 * 20, 2 * 20)));
+      }
     }
   }
 
@@ -274,10 +318,18 @@ public class TestGreedyReservationAgent {
 
     ReservationAllocation cs = plan.getReservationById(reservationID);
 
-    assertTrue(cs.toString(), check(cs, 0 * step, 10 * step, 20, 1024, 1));
-    assertTrue(cs.toString(), check(cs, 10 * step, 30 * step, 10, 1024, 1));
-    assertTrue(cs.toString(), check(cs, 40 * step, 50 * step, 20, 1024, 1));
-    assertTrue(cs.toString(), check(cs, 50 * step, 70 * step, 10, 1024, 1));
+    if (allocateLeft) {
+      assertTrue(cs.toString(), check(cs, 0 * step, 10 * step, 20, 1024, 1));
+      assertTrue(cs.toString(), check(cs, 10 * step, 30 * step, 10, 1024, 1));
+      assertTrue(cs.toString(), check(cs, 32 * step, 42 * step, 20, 1024, 1));
+      assertTrue(cs.toString(), check(cs, 42 * step, 62 * step, 10, 1024, 1));
+
+    } else {
+      assertTrue(cs.toString(), check(cs, 0 * step, 10 * step, 20, 1024, 1));
+      assertTrue(cs.toString(), check(cs, 10 * step, 30 * step, 10, 1024, 1));
+      assertTrue(cs.toString(), check(cs, 40 * step, 50 * step, 20, 1024, 1));
+      assertTrue(cs.toString(), check(cs, 50 * step, 70 * step, 10, 1024, 1));
+    }
     System.out.println("--------AFTER ORDER ALLOCATION (queue: "
         + reservationID + ")----------");
     System.out.println(plan.toString());
@@ -466,7 +518,12 @@ public class TestGreedyReservationAgent {
 
     ReservationAllocation cs = plan.getReservationById(reservationID);
 
-    assertTrue(cs.toString(), check(cs, 110 * step, 120 * step, 20, 1024, 1));
+    if (allocateLeft) {
+      assertTrue(cs.toString(), check(cs, 100 * step, 110 * step, 5, 1024, 1));
+    } else {
+      assertTrue(cs.toString(), check(cs, 110 * step, 120 * step, 20, 1024, 1));
+    }
+
     System.out.println("--------AFTER ANY ALLOCATION (queue: " + reservationID
         + ")----------");
     System.out.println(plan.toString());
@@ -551,8 +608,13 @@ public class TestGreedyReservationAgent {
 
     ReservationAllocation cs = plan.getReservationById(reservationID);
 
-    assertTrue(cs.toString(), check(cs, 100 * step, 110 * step, 20, 1024, 1));
-    assertTrue(cs.toString(), check(cs, 110 * step, 120 * step, 25, 1024, 1));
+    if (allocateLeft) {
+      assertTrue(cs.toString(), check(cs, 100 * step, 110 * step, 25, 1024, 1));
+      assertTrue(cs.toString(), check(cs, 110 * step, 120 * step, 20, 1024, 1));
+    } else {
+      assertTrue(cs.toString(), check(cs, 100 * step, 110 * step, 20, 1024, 1));
+      assertTrue(cs.toString(), check(cs, 110 * step, 120 * step, 25, 1024, 1));
+    }
 
     System.out.println("--------AFTER ALL ALLOCATION (queue: " + reservationID
         + ")----------");
@@ -695,14 +757,18 @@ public class TestGreedyReservationAgent {
 
   public static void main(String[] arg) {
 
+    boolean left = false;
     // run a stress test with by default 1000 random jobs
     int numJobs = 1000;
     if (arg.length > 0) {
       numJobs = Integer.parseInt(arg[0]);
     }
+    if (arg.length > 1) {
+      left = Boolean.parseBoolean(arg[1]);
+    }
 
     try {
-      TestGreedyReservationAgent test = new TestGreedyReservationAgent();
+      TestGreedyReservationAgent test = new TestGreedyReservationAgent(left);
       test.setup();
       test.testStress(numJobs);
     } catch (Exception e) {

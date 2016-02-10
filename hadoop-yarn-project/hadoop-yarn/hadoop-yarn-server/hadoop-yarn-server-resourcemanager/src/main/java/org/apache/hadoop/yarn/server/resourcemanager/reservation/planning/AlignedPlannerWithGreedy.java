@@ -58,13 +58,13 @@ public class AlignedPlannerWithGreedy implements ReservationAgent {
     // LowCostAligned planning algorithm
     ReservationAgent algAligned =
         new IterativePlanner(new StageEarliestStartByDemand(),
-            new StageAllocatorLowCostAligned(smoothnessFactor));
+            new StageAllocatorLowCostAligned(smoothnessFactor), false);
     listAlg.add(algAligned);
 
     // Greedy planning algorithm
     ReservationAgent algGreedy =
         new IterativePlanner(new StageEarliestStartByJobArrival(),
-            new StageAllocatorGreedy());
+            new StageAllocatorGreedy(), false);
     listAlg.add(algGreedy);
 
     // Set planner:
