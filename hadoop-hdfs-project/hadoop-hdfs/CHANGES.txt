@@ -2726,6 +2726,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-9779 . TestReplicationPolicyWithNodeGroup NODE variable picks wrong rack value
     (Kuhu Shukla via umamahesh)
 
+    HDFS-9788. Incompatible tag renumbering in HeartbeatResponseProto. (wang)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
