@@ -46,6 +46,9 @@ Release 2.7.3 - UNRELEASED
     MAPREDUCE-6191. Improve clearing stale state of Java serialization
                     testcase.  (Sam Liu via Eric Yang)
 
+    MAPREDUCE-6460. TestRMContainerAllocator.
+    testAttemptNotFoundCausesRMCommunicatorException fails. (Zhihai Xu)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
