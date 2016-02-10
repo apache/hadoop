@@ -34,6 +34,10 @@
 #
 # export KMS_MAX_THREADS=1000
 
+# The maximum size of Tomcat HTTP header
+#
+# export KMS_MAX_HTTP_HEADER_SIZE=65536
+
 # The location of the SSL keystore if using SSL
 #
 # export KMS_SSL_KEYSTORE_FILE=${HOME}/.keystore

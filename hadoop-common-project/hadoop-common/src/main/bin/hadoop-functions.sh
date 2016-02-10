@@ -1221,6 +1221,7 @@ function hadoop_finalize_catalina_opts
   hadoop_add_param CATALINA_OPTS "${prefix}.admin.port" "-D${prefix}.admin.port=${HADOOP_CATALINA_ADMIN_PORT}"
   hadoop_add_param CATALINA_OPTS "${prefix}.http.port" "-D${prefix}.http.port=${HADOOP_CATALINA_HTTP_PORT}"
   hadoop_add_param CATALINA_OPTS "${prefix}.max.threads" "-D${prefix}.max.threads=${HADOOP_CATALINA_MAX_THREADS}"
+  hadoop_add_param CATALINA_OPTS "${prefix}.max.http.header.size" "-D${prefix}.max.http.header.size=${HADOOP_CATALINA_MAX_HTTP_HEADER_SIZE}"
   hadoop_add_param CATALINA_OPTS "${prefix}.ssl.keystore.file" "-D${prefix}.ssl.keystore.file=${HADOOP_CATALINA_SSL_KEYSTORE_FILE}"
 }
 

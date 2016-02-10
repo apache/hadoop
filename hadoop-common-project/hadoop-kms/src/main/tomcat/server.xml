@@ -75,7 +75,8 @@
     <Connector port="${kms.http.port}" protocol="HTTP/1.1"
                maxThreads="${kms.max.threads}"
                connectionTimeout="20000"
-               redirectPort="8443"/>
+               redirectPort="8443"
+               maxHttpHeaderSize="${kms.max.http.header.size}"/>
     <!-- A "Connector" using the shared thread pool-->
     <!--
     <Connector executor="tomcatThreadPool"
