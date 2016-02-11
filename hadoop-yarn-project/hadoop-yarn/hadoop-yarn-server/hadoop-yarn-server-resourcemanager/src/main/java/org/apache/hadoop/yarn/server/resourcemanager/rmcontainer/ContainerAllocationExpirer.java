@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -28,7 +27,7 @@ import org.apache.hadoop.yarn.util.AbstractLivelinessMonitor;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class ContainerAllocationExpirer extends
-    AbstractLivelinessMonitor<ContainerId> {
+    AbstractLivelinessMonitor<AllocationExpirationInfo> {
 
   private EventHandler dispatcher;
 
@@ -47,7 +46,9 @@ public class ContainerAllocationExpirer extends
   }
 
   @Override
-  protected void expire(ContainerId containerId) {
-    dispatcher.handle(new ContainerExpiredSchedulerEvent(containerId));
+  protected void expire(AllocationExpirationInfo allocationExpirationInfo) {
+    dispatcher.handle(new ContainerExpiredSchedulerEvent(
+        allocationExpirationInfo.getContainerId(),
+            allocationExpirationInfo.isIncrease()));
   }
 }

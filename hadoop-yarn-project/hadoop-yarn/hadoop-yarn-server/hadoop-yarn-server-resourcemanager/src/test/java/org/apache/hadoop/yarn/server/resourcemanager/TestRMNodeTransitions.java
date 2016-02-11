@@ -47,6 +47,8 @@ import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer
+    .AllocationExpirationInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanAppEvent;
@@ -949,10 +951,14 @@ public class TestRMNodeTransitions {
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 1L);
     ContainerId containerId2 = ContainerId.newContainerId(appAttemptId, 2L);
-    mockExpirer.register(containerId1);
-    mockExpirer.register(containerId2);
-    verify(mockExpirer).register(containerId1);
-    verify(mockExpirer).register(containerId2);
+    AllocationExpirationInfo expirationInfo1 =
+        new AllocationExpirationInfo(containerId1);
+    AllocationExpirationInfo expirationInfo2 =
+        new AllocationExpirationInfo(containerId2);
+    mockExpirer.register(expirationInfo1);
+    mockExpirer.register(expirationInfo2);
+    verify(mockExpirer).register(expirationInfo1);
+    verify(mockExpirer).register(expirationInfo2);
     ((RMContextImpl) rmContext).setContainerAllocationExpirer(mockExpirer);
     RMNodeImpl rmNode = getRunningNode();
     ContainerStatus status1 =
@@ -966,7 +972,7 @@ public class TestRMNodeTransitions {
     statusList.add(status2);
     RMNodeStatusEvent statusEvent = getMockRMNodeStatusEvent(statusList);
     rmNode.handle(statusEvent);
-    verify(mockExpirer).unregister(containerId1);
-    verify(mockExpirer).unregister(containerId2);
+    verify(mockExpirer).unregister(expirationInfo1);
+    verify(mockExpirer).unregister(expirationInfo2);
   }
 }

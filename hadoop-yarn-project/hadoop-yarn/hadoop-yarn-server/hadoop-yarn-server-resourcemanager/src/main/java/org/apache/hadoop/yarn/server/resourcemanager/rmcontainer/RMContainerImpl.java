@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
 
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -49,12 +50,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode
+    .RMNodeDecreaseContainerEvent;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
@@ -119,9 +123,6 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
         RMContainerEventType.RELEASED, new KillTransition())
     .addTransition(RMContainerState.RUNNING, RMContainerState.RUNNING,
         RMContainerEventType.RESERVED, new ContainerReservedTransition())
-    .addTransition(RMContainerState.RUNNING, RMContainerState.EXPIRED,
-        RMContainerEventType.EXPIRE,
-        new ContainerExpiredWhileRunningTransition())
     .addTransition(RMContainerState.RUNNING, RMContainerState.RUNNING,
         RMContainerEventType.CHANGE_RESOURCE, new ChangeResourceTransition())
     .addTransition(RMContainerState.RUNNING, RMContainerState.RUNNING,
@@ -177,7 +178,10 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
   private List<ResourceRequest> resourceRequests;
 
   private volatile boolean hasIncreaseReservation = false;
-  
+  // Only used for container resource increase and decrease. This is the
+  // resource to rollback to should container resource increase token expires.
+  private Resource lastConfirmedResource;
+
   public RMContainerImpl(Container container,
       ApplicationAttemptId appAttemptId, NodeId nodeId, String user,
       RMContext rmContext) {
@@ -210,6 +214,7 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
     this.isAMContainer = false;
     this.resourceRequests = null;
     this.nodeLabelExpression = nodeLabelExpression;
+    this.lastConfirmedResource = container.getResource();
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
@@ -278,6 +283,16 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
     try {
       readLock.lock();
       return container.getResource();
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Override
+  public Resource getLastConfirmedResource() {
+    try {
+      readLock.lock();
+      return this.lastConfirmedResource;
     } finally {
       readLock.unlock();
     }
@@ -525,7 +540,8 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
       container.setResourceRequests(null);
       
       // Register with containerAllocationExpirer.
-      container.containerAllocationExpirer.register(container.getContainerId());
+      container.containerAllocationExpirer.register(
+          new AllocationExpirationInfo(container.getContainerId()));
 
       // Tell the app
       container.eventHandler.handle(new RMAppRunningOnNodeEvent(container
@@ -543,7 +559,8 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
       if (acquiredEvent.isIncreasedContainer()) {
         // If container is increased but not acquired by AM, we will start
         // containerAllocationExpirer for this container in this transition. 
-        container.containerAllocationExpirer.register(event.getContainerId());
+        container.containerAllocationExpirer.register(
+            new AllocationExpirationInfo(event.getContainerId(), true));
       }
     }
   }
@@ -553,22 +570,65 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
 
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
-      // Unregister the allocation expirer, it is already increased..
-      container.containerAllocationExpirer.unregister(event.getContainerId());
-    }
-  }
-  
-  private static final class ContainerExpiredWhileRunningTransition extends
-      BaseTransition {
+      RMContainerNMDoneChangeResourceEvent nmDoneChangeResourceEvent =
+          (RMContainerNMDoneChangeResourceEvent)event;
+      Resource rmContainerResource = container.getAllocatedResource();
+      Resource nmContainerResource =
+          nmDoneChangeResourceEvent.getNMContainerResource();
 
-    @Override
-    public void transition(RMContainerImpl container, RMContainerEvent event) {
-      // When the container expired, and it has a pending increased request, we
-      // will kill the container.
-      // TODO, we can do better for this: roll back container resource to the
-      // resource before increase, and notify scheduler about this decrease as
-      // well. Will do that in a separated JIRA.
-      new KillTransition().transition(container, event);
+      if (Resources.equals(rmContainerResource, nmContainerResource)) {
+        // If rmContainerResource == nmContainerResource, the resource
+        // increase is confirmed.
+        // In this case:
+        //    - Set the lastConfirmedResource as nmContainerResource
+        //    - Unregister the allocation expirer
+        container.lastConfirmedResource = nmContainerResource;
+        container.containerAllocationExpirer.unregister(
+            new AllocationExpirationInfo(event.getContainerId()));
+      } else if (Resources.fitsIn(rmContainerResource, nmContainerResource)) {
+        // If rmContainerResource < nmContainerResource, this is caused by the
+        // following sequence:
+        //   1. AM asks for increase from 1G to 5G, and RM approves it
+        //   2. AM acquires the increase token and increases on NM
+        //   3. Before NM reports 5G to RM to confirm the increase, AM sends
+        //      a decrease request to 4G, and RM approves it
+        //   4. When NM reports 5G to RM, RM now sees its own allocation as 4G
+        // In this cases:
+        //    - Set the lastConfirmedResource as rmContainerResource
+        //    - Unregister the allocation expirer
+        //    - Notify NM to reduce its resource to rmContainerResource
+        container.lastConfirmedResource = rmContainerResource;
+        container.containerAllocationExpirer.unregister(
+            new AllocationExpirationInfo(event.getContainerId()));
+        container.eventHandler.handle(new RMNodeDecreaseContainerEvent(
+            container.nodeId,
+            Collections.singletonList(container.getContainer())));
+      } else if (Resources.fitsIn(nmContainerResource, rmContainerResource)) {
+        // If nmContainerResource < rmContainerResource, this is caused by the
+        // following sequence:
+        //    1. AM asks for increase from 1G to 2G, and RM approves it
+        //    2. AM asks for increase from 2G to 4G, and RM approves it
+        //    3. AM only uses the 2G token to increase on NM, but never uses the
+        //       4G token
+        //    4. NM reports 2G to RM, but RM sees its own allocation as 4G
+        // In this case:
+        //    - Set the lastConfirmedResource as the maximum of
+        //      nmContainerResource and lastConfirmedResource
+        //    - Do NOT unregister the allocation expirer
+        // When the increase allocation expires, resource will be rolled back to
+        // the last confirmed resource.
+        container.lastConfirmedResource = Resources.componentwiseMax(
+            nmContainerResource, container.lastConfirmedResource);
+      } else {
+        // Something wrong happened, kill the container
+        LOG.warn("Something wrong happened, container size reported by NM"
+            + " is not expected, ContainerID=" + container.containerId
+            + " rm-size-resource:" + rmContainerResource + " nm-size-reosurce:"
+            + nmContainerResource);
+        container.eventHandler.handle(new RMNodeCleanContainerEvent(
+            container.nodeId, container.containerId));
+
+      }
     }
   }
   
@@ -577,20 +637,22 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
       RMContainerChangeResourceEvent changeEvent = (RMContainerChangeResourceEvent)event;
-      
-      // Register with containerAllocationExpirer.
-      // For now, we assume timeout for increase is as same as container
-      // allocation.
+
+      Resource targetResource = changeEvent.getTargetResource();
+      Resource lastConfirmedResource = container.lastConfirmedResource;
+
       if (!changeEvent.isIncrease()) {
-        // if this is a decrease request, if container was increased but not
-        // told to NM, we can consider previous increase is cancelled,
-        // unregister from the containerAllocationExpirer
-        container.containerAllocationExpirer.unregister(container
-            .getContainerId());
+        // Only unregister from the containerAllocationExpirer when target
+        // resource is less than or equal to the last confirmed resource.
+        if (Resources.fitsIn(targetResource, lastConfirmedResource)) {
+          container.lastConfirmedResource = targetResource;
+          container.containerAllocationExpirer.unregister(
+              new AllocationExpirationInfo(event.getContainerId()));
+        }
       }
-      
-      container.container.setResource(changeEvent.getTargetResource());
-      
+
+      container.container.setResource(targetResource);
+
       // We reach here means we either allocated increase reservation OR
       // decreased container, reservation will be cancelled anyway. 
       container.hasIncreaseReservation = false;
@@ -662,8 +724,8 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
     public void transition(RMContainerImpl container, RMContainerEvent event) {
 
       // Unregister from containerAllocationExpirer.
-      container.containerAllocationExpirer.unregister(container
-          .getContainerId());
+      container.containerAllocationExpirer.unregister(
+          new AllocationExpirationInfo(container.getContainerId()));
 
       // Inform node
       container.eventHandler.handle(new RMNodeCleanContainerEvent(

@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
@@ -91,10 +92,10 @@ public class TestUtils {
       }
     };
     
-    // No op 
-    ContainerAllocationExpirer cae = 
+    // No op
+    ContainerAllocationExpirer cae =
         new ContainerAllocationExpirer(nullDispatcher);
-    
+
     Configuration conf = new Configuration();
     RMApplicationHistoryWriter writer =  mock(RMApplicationHistoryWriter.class);
     RMContextImpl rmContext =
@@ -122,7 +123,7 @@ public class TestUtils {
             return (Resource) args[1];
           }
         });
-    
+
     rmContext.setNodeLabelManager(nlm);
     rmContext.setSystemMetricsPublisher(mock(SystemMetricsPublisher.class));
     rmContext.setRMApplicationHistoryWriter(mock(RMApplicationHistoryWriter.class));
@@ -348,5 +349,11 @@ public class TestUtils {
     conf.setDefaultNodeLabelExpression(A, "x");
     conf.setDefaultNodeLabelExpression(B, "y");
     return conf;
+  }
+
+  public static FiCaSchedulerApp getFiCaSchedulerApp(MockRM rm,
+      ApplicationId appId) {
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    return cs.getSchedulerApplications().get(appId).getCurrentAppAttempt();
   }
 }

@@ -68,6 +68,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRunningOnNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.AllocationExpirationInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeResourceUpdateSchedulerEvent;
@@ -1306,14 +1307,16 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
           launchedContainers.add(containerId);
           newlyLaunchedContainers.add(remoteContainer);
           // Unregister from containerAllocationExpirer.
-          containerAllocationExpirer.unregister(containerId);
+          containerAllocationExpirer.unregister(
+              new AllocationExpirationInfo(containerId));
         }
       } else {
         // A finished container
         launchedContainers.remove(containerId);
         completedContainers.add(remoteContainer);
         // Unregister from containerAllocationExpirer.
-        containerAllocationExpirer.unregister(containerId);
+        containerAllocationExpirer.unregister(
+            new AllocationExpirationInfo(containerId));
       }
     }
     if (newlyLaunchedContainers.size() != 0 || completedContainers.size() != 0) {
