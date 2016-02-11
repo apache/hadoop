@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.MultiException;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
@@ -40,7 +41,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 /**
@@ -137,7 +137,7 @@ public class RequestHedgingRMFailoverProxyProvider<T>
       try {
         Map<Future<Object>, ProxyInfo<T>> proxyMap = new HashMap<>();
         int numAttempts = 0;
-        executor = Executors.newFixedThreadPool(allProxies.size());
+        executor = HadoopExecutors.newFixedThreadPool(allProxies.size());
         completionService = new ExecutorCompletionService<>(executor);
         for (final ProxyInfo<T> pInfo : allProxies.values()) {
           Callable<Object> c = new Callable<Object>() {

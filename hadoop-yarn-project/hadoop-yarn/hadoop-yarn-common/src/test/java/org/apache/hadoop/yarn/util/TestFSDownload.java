@@ -41,7 +41,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -53,6 +52,7 @@ import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.junit.Assert;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
@@ -273,7 +273,7 @@ public class TestFSDownload {
 
     Map<LocalResource,Future<Path>> pending =
       new HashMap<LocalResource,Future<Path>>();
-    ExecutorService exec = Executors.newSingleThreadExecutor();
+    ExecutorService exec = HadoopExecutors.newSingleThreadExecutor();
     LocalDirAllocator dirs =
       new LocalDirAllocator(TestFSDownload.class.getName());
     int size = 512;
@@ -362,7 +362,7 @@ public class TestFSDownload {
       });
     }
 
-    ExecutorService exec = Executors.newFixedThreadPool(fileCount);
+    ExecutorService exec = HadoopExecutors.newFixedThreadPool(fileCount);
     try {
       List<Future<Boolean>> futures = exec.invokeAll(tasks);
       // files should be public
@@ -399,7 +399,7 @@ public class TestFSDownload {
 
     Map<LocalResource,Future<Path>> pending =
       new HashMap<LocalResource,Future<Path>>();
-    ExecutorService exec = Executors.newSingleThreadExecutor();
+    ExecutorService exec = HadoopExecutors.newSingleThreadExecutor();
     LocalDirAllocator dirs =
       new LocalDirAllocator(TestFSDownload.class.getName());
     int[] sizes = new int[10];
@@ -468,7 +468,7 @@ public class TestFSDownload {
     System.out.println("SEED: " + sharedSeed);
 
     Map<LocalResource, Future<Path>> pending = new HashMap<LocalResource, Future<Path>>();
-    ExecutorService exec = Executors.newSingleThreadExecutor();
+    ExecutorService exec = HadoopExecutors.newSingleThreadExecutor();
     LocalDirAllocator dirs = new LocalDirAllocator(
         TestFSDownload.class.getName());
 
@@ -619,7 +619,7 @@ public class TestFSDownload {
 
     Map<LocalResource,Future<Path>> pending =
       new HashMap<LocalResource,Future<Path>>();
-    ExecutorService exec = Executors.newSingleThreadExecutor();
+    ExecutorService exec = HadoopExecutors.newSingleThreadExecutor();
     LocalDirAllocator dirs =
       new LocalDirAllocator(TestFSDownload.class.getName());
     for (int i = 0; i < 5; ++i) {
@@ -674,7 +674,8 @@ public class TestFSDownload {
     files.mkdir(basedir, null, true);
     conf.setStrings(TestFSDownload.class.getName(), basedir.toString());
 
-    ExecutorService singleThreadedExec = Executors.newSingleThreadExecutor();
+    ExecutorService singleThreadedExec = HadoopExecutors
+        .newSingleThreadExecutor();
 
     LocalDirAllocator dirs =
         new LocalDirAllocator(TestFSDownload.class.getName());

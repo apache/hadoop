@@ -34,7 +34,6 @@ import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -52,6 +51,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.DiskChecker;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.SerializedException;
@@ -187,7 +187,7 @@ public class ContainerLocalizer {
   }
 
   ExecutorService createDownloadThreadPool() {
-    return Executors.newSingleThreadExecutor(new ThreadFactoryBuilder()
+    return HadoopExecutors.newSingleThreadExecutor(new ThreadFactoryBuilder()
       .setNameFormat("ContainerLocalizer Downloader").build());
   }
 

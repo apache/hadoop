@@ -34,9 +34,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -339,7 +339,7 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
 
     final List<Throwable> exceptions = Collections.synchronizedList(
         new ArrayList<Throwable>());
-    final ExecutorService threadPool = Executors.newFixedThreadPool(
+    final ExecutorService threadPool = HadoopExecutors.newFixedThreadPool(
         testThreads);
 
     try {

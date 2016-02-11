@@ -36,6 +36,7 @@ import org.apache.hadoop.registry.client.impl.zk.RegistryOperationsService;
 import org.apache.hadoop.registry.client.impl.zk.RegistrySecurity;
 import org.apache.hadoop.registry.client.types.RegistryPathStatus;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
@@ -53,7 +54,6 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -109,7 +109,7 @@ public class RegistryAdminService extends RegistryOperationsService {
   public RegistryAdminService(String name,
       RegistryBindingSource bindingSource) {
     super(name, bindingSource);
-    executor = Executors.newCachedThreadPool(
+    executor = HadoopExecutors.newCachedThreadPool(
         new ThreadFactory() {
           private AtomicInteger counter = new AtomicInteger(1);
 

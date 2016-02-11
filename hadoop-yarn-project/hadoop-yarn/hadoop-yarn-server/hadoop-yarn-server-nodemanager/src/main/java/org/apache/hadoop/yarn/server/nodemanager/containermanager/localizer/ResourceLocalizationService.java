@@ -43,11 +43,9 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
@@ -75,6 +73,8 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.concurrent.HadoopScheduledThreadPoolExecutor;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -194,7 +194,7 @@ public class ResourceLocalizationService extends CompositeService
     this.delService = delService;
     this.dirsHandler = dirsHandler;
 
-    this.cacheCleanup = new ScheduledThreadPoolExecutor(1,
+    this.cacheCleanup = new HadoopScheduledThreadPoolExecutor(1,
         new ThreadFactoryBuilder()
           .setNameFormat("ResourceLocalizationService Cache Cleanup")
           .build());
@@ -784,7 +784,7 @@ public class ResourceLocalizationService extends CompositeService
     ThreadFactory tf = new ThreadFactoryBuilder()
       .setNameFormat("PublicLocalizer #%d")
       .build();
-    return Executors.newFixedThreadPool(nThreads, tf);
+    return HadoopExecutors.newFixedThreadPool(nThreads, tf);
   }
 
 
