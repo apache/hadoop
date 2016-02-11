@@ -296,6 +296,48 @@ public class YarnConfiguration extends Configuration {
   /** ACL used in case none is found. Allows nothing. */
   public static final String DEFAULT_YARN_APP_ACL = " ";
 
+  /** Is Distributed Scheduling Enabled. */
+  public static String DIST_SCHEDULING_ENABLED =
+      YARN_PREFIX + "distributed-scheduling.enabled";
+  public static final boolean DIST_SCHEDULING_ENABLED_DEFAULT = false;
+
+  /** Mininum allocatable container memory for Distributed Scheduling. */
+  public static String DIST_SCHEDULING_MIN_MEMORY =
+      YARN_PREFIX + "distributed-scheduling.min-memory";
+  public static final int DIST_SCHEDULING_MIN_MEMORY_DEFAULT = 512;
+
+  /** Mininum allocatable container vcores for Distributed Scheduling. */
+  public static String DIST_SCHEDULING_MIN_VCORES =
+      YARN_PREFIX + "distributed-scheduling.min-vcores";
+  public static final int DIST_SCHEDULING_MIN_VCORES_DEFAULT = 1;
+
+  /** Maximum allocatable container memory for Distributed Scheduling. */
+  public static String DIST_SCHEDULING_MAX_MEMORY =
+      YARN_PREFIX + "distributed-scheduling.max-memory";
+  public static final int DIST_SCHEDULING_MAX_MEMORY_DEFAULT = 2048;
+
+  /** Maximum allocatable container vcores for Distributed Scheduling. */
+  public static String DIST_SCHEDULING_MAX_VCORES =
+      YARN_PREFIX + "distributed-scheduling.max-vcores";
+  public static final int DIST_SCHEDULING_MAX_VCORES_DEFAULT = 4;
+
+  /** Incremental allocatable container memory for Distributed Scheduling. */
+  public static String DIST_SCHEDULING_INCR_MEMORY =
+      YARN_PREFIX + "distributed-scheduling.incr-memory";
+  public static final int DIST_SCHEDULING_INCR_MEMORY_DEFAULT = 512;
+
+  /** Incremental allocatable container vcores for Distributed Scheduling. */
+  public static String DIST_SCHEDULING_INCR_VCORES =
+      YARN_PREFIX + "distributed-scheduling.incr-vcores";
+  public static final int DIST_SCHEDULING_INCR_VCORES_DEFAULT = 1;
+
+  /** Container token expiry for container allocated via Distributed
+   * Scheduling. */
+  public static String DIST_SCHEDULING_CONTAINER_TOKEN_EXPIRY_MS =
+      YARN_PREFIX + "distributed-scheduling.container-token-expiry";
+  public static final int DIST_SCHEDULING_CONTAINER_TOKEN_EXPIRY_MS_DEFAULT =
+      600000;
+
   /**
    * Enable/disable intermediate-data encryption at YARN level. For now, this
    * only is used by the FileSystemRMStateStore to setup right file-system

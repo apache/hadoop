@@ -134,6 +134,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
    */
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
+  /**
+   * Used for generation of various ids.
+   */
+  public static final int EPOCH_BIT_SHIFT = 40;
+
   private static final Log LOG = LogFactory.getLog(ResourceManager.class);
   private static long clusterTimeStamp = System.currentTimeMillis();
 
@@ -1226,6 +1231,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected ApplicationMasterService createApplicationMasterService() {
+    if (this.rmContext.getYarnConfiguration().getBoolean(
+        YarnConfiguration.DIST_SCHEDULING_ENABLED,
+        YarnConfiguration.DIST_SCHEDULING_ENABLED_DEFAULT)) {
+      return new DistributedSchedulingService(this.rmContext, scheduler);
+    }
     return new ApplicationMasterService(this.rmContext, scheduler);
   }
 

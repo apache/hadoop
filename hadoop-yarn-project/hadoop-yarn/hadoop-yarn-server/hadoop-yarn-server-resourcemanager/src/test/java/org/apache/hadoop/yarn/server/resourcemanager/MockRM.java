@@ -93,6 +93,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+
+
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.log4j.Level;
@@ -740,6 +742,21 @@ public class MockRM extends ResourceManager {
 
   @Override
   protected ApplicationMasterService createApplicationMasterService() {
+    if (this.rmContext.getYarnConfiguration().getBoolean(
+        YarnConfiguration.DIST_SCHEDULING_ENABLED,
+        YarnConfiguration.DIST_SCHEDULING_ENABLED_DEFAULT)) {
+      return new DistributedSchedulingService(getRMContext(), scheduler) {
+        @Override
+        protected void serviceStart() {
+          // override to not start rpc handler
+        }
+
+        @Override
+        protected void serviceStop() {
+          // don't do anything
+        }
+      };
+    }
     return new ApplicationMasterService(getRMContext(), scheduler) {
       @Override
       protected void serviceStart() {

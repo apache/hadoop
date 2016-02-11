@@ -13,3 +13,6 @@ yarn-2877 distributed scheduling (Unreleased)
     YARN-4335. Allow ResourceRequests to specify ExecutionType of a request
     ask (kkaranasos via asuresh)
 
+    YARN-2885. Create AMRMProxy request interceptor and ContainerAllocator
+    to distribute OPPORTUNISTIC containers to appropriate Nodes (asuresh)
+

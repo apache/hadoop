@@ -67,6 +67,7 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.scheduler.OpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
@@ -686,6 +687,15 @@ public abstract class BaseAMRMProxyTest {
 
     @Override
     public QueuingContext getQueuingContext() {
+      return null;
+    }
+
+    public boolean isDistributedSchedulingEnabled() {
+      return false;
+    }
+
+    @Override
+    public OpportunisticContainerAllocator getContainerAllocator() {
       return null;
     }
   }
