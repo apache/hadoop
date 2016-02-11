@@ -396,6 +396,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12788. OpensslAesCtrCryptoCodec should log which random number generator is used.
     (Wei-Chiu Chuang via umamahesh)
 
+    HADOOP-12764. Increase default value of KMS maxHttpHeaderSize and make it
+    configurable. (zhz)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
