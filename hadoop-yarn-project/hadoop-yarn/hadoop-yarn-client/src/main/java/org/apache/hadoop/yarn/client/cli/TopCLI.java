@@ -55,6 +55,7 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueStatistics;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -141,7 +142,9 @@ public class TopCLI extends YarnCLI {
       displayStringsMap.put(Columns.NAME, name);
       queue = appReport.getQueue();
       displayStringsMap.put(Columns.QUEUE, queue);
-      priority = 0;
+      Priority appPriority = appReport.getPriority();
+      priority = null != appPriority ? appPriority.getPriority() : 0;
+      displayStringsMap.put(Columns.PRIORITY, String.valueOf(priority));
       usedContainers =
           appReport.getApplicationResourceUsageReport().getNumUsedContainers();
       displayStringsMap.put(Columns.CONT, String.valueOf(usedContainers));
@@ -303,6 +306,14 @@ public class TopCLI extends YarnCLI {
         public int
             compare(ApplicationInformation a1, ApplicationInformation a2) {
           return a1.name.compareTo(a2.name);
+        }
+      };
+  public static final Comparator<ApplicationInformation> AppPriorityComparator =
+      new Comparator<ApplicationInformation>() {
+        @Override
+        public int compare(ApplicationInformation a1,
+            ApplicationInformation a2) {
+          return a1.priority - a2.priority;
         }
       };
 
@@ -620,6 +631,8 @@ public class TopCLI extends YarnCLI {
       "%10s", true, "Application type", "t"));
     columnInformationEnumMap.put(Columns.QUEUE, new ColumnInformation("QUEUE",
       "%10s", true, "Application queue", "q"));
+    columnInformationEnumMap.put(Columns.PRIORITY, new ColumnInformation(
+        "PRIOR", "%5s", true, "Application priority", "l"));
     columnInformationEnumMap.put(Columns.CONT, new ColumnInformation("#CONT",
       "%7s", true, "Number of containers", "c"));
     columnInformationEnumMap.put(Columns.RCONT, new ColumnInformation("#RCONT",
@@ -1009,6 +1022,9 @@ public class TopCLI extends YarnCLI {
       break;
     case "n":
       comparator = AppNameComparator;
+      break;
+    case "l":
+      comparator = AppPriorityComparator;
       break;
     default:
       // it wasn't a sort key

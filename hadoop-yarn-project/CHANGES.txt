@@ -125,6 +125,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4307. Display blacklisted nodes for AM container in the RM web UI.
     (Naganarasimha G R via vvasudev)
 
+    YARN-4628. Display application priority in yarn top.
+    (Bibin A Chundatt via vvasudev)
+
   OPTIMIZATIONS
 
   BUG FIXES
