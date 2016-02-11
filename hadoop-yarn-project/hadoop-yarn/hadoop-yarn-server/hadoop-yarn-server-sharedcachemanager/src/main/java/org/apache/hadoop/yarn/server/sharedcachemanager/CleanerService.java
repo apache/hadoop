@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.sharedcachemanager;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -37,6 +36,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.CleanerMetrics;
@@ -80,7 +80,7 @@ public class CleanerService extends CompositeService {
     // back-to-back runs
     ThreadFactory tf =
         new ThreadFactoryBuilder().setNameFormat("Shared cache cleaner").build();
-    scheduledExecutor = Executors.newScheduledThreadPool(2, tf);
+    scheduledExecutor = HadoopExecutors.newScheduledThreadPool(2, tf);
     super.serviceInit(conf);
   }
 

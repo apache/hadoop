@@ -28,7 +28,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -43,6 +42,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringInterner;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -116,7 +116,7 @@ public class InMemorySCMStore extends SCMStore {
     ThreadFactory tf =
         new ThreadFactoryBuilder().setNameFormat("InMemorySCMStore")
             .build();
-    scheduler = Executors.newSingleThreadScheduledExecutor(tf);
+    scheduler = HadoopExecutors.newSingleThreadScheduledExecutor(tf);
 
     super.serviceInit(conf);
   }

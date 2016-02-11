@@ -128,6 +128,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4628. Display application priority in yarn top.
     (Bibin A Chundatt via vvasudev)
 
+    YARN-4655. Log uncaught exceptions/errors in various thread pools in YARN.
+    (Sidharta Seethana via vvasudev)
+
   OPTIMIZATIONS
 
   BUG FIXES

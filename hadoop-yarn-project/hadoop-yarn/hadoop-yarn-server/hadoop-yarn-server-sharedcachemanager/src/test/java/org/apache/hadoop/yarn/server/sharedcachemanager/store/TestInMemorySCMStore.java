@@ -45,6 +45,7 @@ import java.util.concurrent.Future;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.sharedcachemanager.AppChecker;
 import org.apache.hadoop.yarn.server.sharedcachemanager.DummyAppChecker;
@@ -121,7 +122,7 @@ public class TestInMemorySCMStore extends SCMStoreBaseTest {
     startEmptyStore();
     final String key = "key1";
     int count = 5;
-    ExecutorService exec = Executors.newFixedThreadPool(count);
+    ExecutorService exec = HadoopExecutors.newFixedThreadPool(count);
     List<Future<String>> futures = new ArrayList<Future<String>>(count);
     final CountDownLatch start = new CountDownLatch(1);
     for (int i = 0; i < count; i++) {
@@ -197,7 +198,7 @@ public class TestInMemorySCMStore extends SCMStoreBaseTest {
 
     // make concurrent addResourceRef calls (clients)
     int count = 5;
-    ExecutorService exec = Executors.newFixedThreadPool(count);
+    ExecutorService exec = HadoopExecutors.newFixedThreadPool(count);
     List<Future<String>> futures = new ArrayList<Future<String>>(count);
     final CountDownLatch start = new CountDownLatch(1);
     for (int i = 0; i < count; i++) {
@@ -235,7 +236,7 @@ public class TestInMemorySCMStore extends SCMStoreBaseTest {
     final String user = "user";
     final ApplicationId id = createAppId(1, 1L);
     // add the resource and add the resource ref at the same time
-    ExecutorService exec = Executors.newFixedThreadPool(2);
+    ExecutorService exec = HadoopExecutors.newFixedThreadPool(2);
     final CountDownLatch start = new CountDownLatch(1);
     Callable<String> addKeyTask = new Callable<String>() {
       public String call() throws Exception {
