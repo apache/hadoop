@@ -37,8 +37,10 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.hadoop.yarn.proto.YarnProtos.AMCommandProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAccessTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportProto;
@@ -293,5 +295,18 @@ public class ProtoUtils {
   }
   public static ExecutionType convertFromProtoFormat(ExecutionTypeProto e) {
     return ExecutionType.valueOf(e.name());
+  }
+
+  /*
+   * Resource
+   */
+  public static synchronized YarnProtos.ResourceProto convertToProtoFormat(
+      Resource r) {
+    return ((ResourcePBImpl) r).getProto();
+  }
+
+  public static Resource convertFromProtoFormat(
+      YarnProtos.ResourceProto resource) {
+    return new ResourcePBImpl(resource);
   }
 }

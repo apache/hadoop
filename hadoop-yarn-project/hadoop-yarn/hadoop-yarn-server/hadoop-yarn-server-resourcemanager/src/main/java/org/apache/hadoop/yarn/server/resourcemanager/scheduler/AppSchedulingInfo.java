@@ -93,7 +93,8 @@ public class AppSchedulingInfo {
     this.queue = queue;
     this.user = user;
     this.activeUsersManager = activeUsersManager;
-    this.containerIdCounter = new AtomicLong(epoch << EPOCH_BIT_SHIFT);
+    this.containerIdCounter =
+        new AtomicLong(epoch << EPOCH_BIT_SHIFT);
     this.appResourceUsage = appResourceUsage;
   }
 

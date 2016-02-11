@@ -48,6 +48,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
+
+
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -89,6 +91,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security
+    .AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -104,19 +108,25 @@ public class ApplicationMasterService extends AbstractService implements
   private static final Log LOG = LogFactory.getLog(ApplicationMasterService.class);
   private final AMLivelinessMonitor amLivelinessMonitor;
   private YarnScheduler rScheduler;
-  private InetSocketAddress masterServiceAddress;
-  private Server server;
-  private final RecordFactory recordFactory =
+  protected InetSocketAddress masterServiceAddress;
+  protected Server server;
+  protected final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
   private final ConcurrentMap<ApplicationAttemptId, AllocateResponseLock> responseMap =
       new ConcurrentHashMap<ApplicationAttemptId, AllocateResponseLock>();
-  private final RMContext rmContext;
+  protected final RMContext rmContext;
 
-  public ApplicationMasterService(RMContext rmContext, YarnScheduler scheduler) {
-    super(ApplicationMasterService.class.getName());
+  public ApplicationMasterService(String name, RMContext rmContext,
+      YarnScheduler scheduler) {
+    super(name);
     this.amLivelinessMonitor = rmContext.getAMLivelinessMonitor();
     this.rScheduler = scheduler;
     this.rmContext = rmContext;
+  }
+
+  public ApplicationMasterService(RMContext rmContext,
+      YarnScheduler scheduler) {
+    this(ApplicationMasterService.class.getName(), rmContext, scheduler);
   }
 
   @Override
@@ -139,11 +149,8 @@ public class ApplicationMasterService extends AbstractService implements
     serverConf.set(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         SaslRpcServer.AuthMethod.TOKEN.toString());
-    this.server =
-      rpc.getServer(ApplicationMasterProtocol.class, this, masterServiceAddress,
-          serverConf, this.rmContext.getAMRMTokenSecretManager(),
-          serverConf.getInt(YarnConfiguration.RM_SCHEDULER_CLIENT_THREAD_COUNT, 
-              YarnConfiguration.DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT));
+    this.server = getServer(rpc, serverConf, masterServiceAddress,
+        this.rmContext.getAMRMTokenSecretManager());
     
     // Enable service authorization?
     if (conf.getBoolean(
@@ -158,7 +165,7 @@ public class ApplicationMasterService extends AbstractService implements
       }
       refreshServiceAcls(conf, RMPolicyProvider.getInstance());
     }
-    
+
     this.server.start();
     this.masterServiceAddress =
         conf.updateConnectAddr(YarnConfiguration.RM_BIND_HOST,
@@ -166,6 +173,14 @@ public class ApplicationMasterService extends AbstractService implements
                                YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
                                server.getListenerAddress());
     super.serviceStart();
+  }
+
+  protected Server getServer(YarnRPC rpc, Configuration serverConf,
+      InetSocketAddress addr, AMRMTokenSecretManager secretManager) {
+    return rpc.getServer(ApplicationMasterProtocol.class, this, addr,
+        serverConf, secretManager,
+        serverConf.getInt(YarnConfiguration.RM_SCHEDULER_CLIENT_THREAD_COUNT,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT));
   }
 
   @Private

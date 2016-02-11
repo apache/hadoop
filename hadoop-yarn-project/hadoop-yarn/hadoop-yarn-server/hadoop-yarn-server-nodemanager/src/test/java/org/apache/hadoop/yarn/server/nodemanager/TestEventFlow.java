@@ -80,7 +80,7 @@ public class TestEventFlow {
     
     Context context = new NMContext(new NMContainerTokenSecretManager(conf),
         new NMTokenSecretManagerInNM(), null, null,
-        new NMNullStateStoreService()) {
+        new NMNullStateStoreService(), false) {
       @Override
       public int getHttpPort() {
         return 1234;

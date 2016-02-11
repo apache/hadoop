@@ -19,14 +19,14 @@
 package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 
 import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
+import org.apache.hadoop.yarn.server.api.DistributedSchedulerProtocol;
 
 /**
  * Defines the contract to be implemented by the request intercepter classes,
  * that can be used to intercept and inspect messages sent from the application
  * master to the resource manager.
  */
-public interface RequestInterceptor extends ApplicationMasterProtocol,
+public interface RequestInterceptor extends DistributedSchedulerProtocol,
     Configurable {
   /**
    * This method is called for initializing the intercepter. This is guaranteed
