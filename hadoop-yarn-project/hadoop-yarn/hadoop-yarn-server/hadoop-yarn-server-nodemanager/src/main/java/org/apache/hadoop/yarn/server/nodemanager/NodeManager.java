@@ -71,6 +71,7 @@ import org.apache.hadoop.yarn.server.nodemanager.nodelabels.ScriptBasedNodeLabel
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMLeveldbStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.scheduler.OpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer;
@@ -195,9 +196,9 @@ public class NodeManager extends CompositeService
   protected NMContext createNMContext(
       NMContainerTokenSecretManager containerTokenSecretManager,
       NMTokenSecretManagerInNM nmTokenSecretManager,
-      NMStateStoreService stateStore) {
+      NMStateStoreService stateStore, boolean isDistSchedulerEnabled) {
     return new NMContext(containerTokenSecretManager, nmTokenSecretManager,
-        dirsHandler, aclsManager, stateStore);
+        dirsHandler, aclsManager, stateStore, isDistSchedulerEnabled);
   }
 
   protected void doSecureLogin() throws IOException {
@@ -318,8 +319,12 @@ public class NodeManager extends CompositeService
             getNodeHealthScriptRunner(conf), dirsHandler);
     addService(nodeHealthChecker);
 
+    boolean isDistSchedulingEnabled =
+        conf.getBoolean(YarnConfiguration.DIST_SCHEDULING_ENABLED,
+            YarnConfiguration.DIST_SCHEDULING_ENABLED_DEFAULT);
+
     this.context = createNMContext(containerTokenSecretManager,
-        nmTokenSecretManager, nmStore);
+        nmTokenSecretManager, nmStore, isDistSchedulingEnabled);
 
     nodeLabelsProvider = createNodeLabelsProvider(conf);
 
@@ -347,6 +352,10 @@ public class NodeManager extends CompositeService
         .getContainersMonitor(), this.aclsManager, dirsHandler);
     addService(webServer);
     ((NMContext) context).setWebServer(webServer);
+
+    ((NMContext) context).setQueueableContainerAllocator(
+        new OpportunisticContainerAllocator(nodeStatusUpdater, context,
+            webServer.getPort()));
 
     dispatcher.register(ContainerManagerEventType.class, containerManager);
     dispatcher.register(NodeManagerEventType.class, this);
@@ -468,13 +477,16 @@ public class NodeManager extends CompositeService
     private final ConcurrentLinkedQueue<LogAggregationReport>
         logAggregationReportForApps;
     private NodeStatusUpdater nodeStatusUpdater;
+    private final boolean isDistSchedulingEnabled;
+
+    private OpportunisticContainerAllocator containerAllocator;
 
     private final QueuingContext queuingContext;
 
     public NMContext(NMContainerTokenSecretManager containerTokenSecretManager,
         NMTokenSecretManagerInNM nmTokenSecretManager,
         LocalDirsHandlerService dirsHandler, ApplicationACLsManager aclsManager,
-        NMStateStoreService stateStore) {
+        NMStateStoreService stateStore, boolean isDistSchedulingEnabled) {
       this.containerTokenSecretManager = containerTokenSecretManager;
       this.nmTokenSecretManager = nmTokenSecretManager;
       this.dirsHandler = dirsHandler;
@@ -486,6 +498,7 @@ public class NodeManager extends CompositeService
       this.logAggregationReportForApps = new ConcurrentLinkedQueue<
           LogAggregationReport>();
       this.queuingContext = new QueuingNMContext();
+      this.isDistSchedulingEnabled = isDistSchedulingEnabled;
     }
 
     /**
@@ -610,6 +623,20 @@ public class NodeManager extends CompositeService
     @Override
     public QueuingContext getQueuingContext() {
       return this.queuingContext;
+    }
+
+    public boolean isDistributedSchedulingEnabled() {
+      return isDistSchedulingEnabled;
+    }
+
+    public void setQueueableContainerAllocator(
+        OpportunisticContainerAllocator containerAllocator) {
+      this.containerAllocator = containerAllocator;
+    }
+
+    @Override
+    public OpportunisticContainerAllocator getContainerAllocator() {
+      return containerAllocator;
     }
   }
 

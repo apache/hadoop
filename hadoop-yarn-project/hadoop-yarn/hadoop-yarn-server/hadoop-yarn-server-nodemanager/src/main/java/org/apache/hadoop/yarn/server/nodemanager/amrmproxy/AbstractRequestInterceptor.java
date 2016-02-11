@@ -21,6 +21,14 @@ package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 import org.apache.hadoop.conf.Configuration;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords
+    .RegisterApplicationMasterRequest;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedRegisterResponse;
+
+import java.io.IOException;
 
 /**
  * Implements the RequestInterceptor interface and provides common functionality
@@ -98,5 +106,39 @@ public abstract class AbstractRequestInterceptor implements
    */
   public AMRMProxyApplicationContext getApplicationContext() {
     return this.appContext;
+  }
+
+  /**
+   * Default implementation that invokes the distributed scheduling version
+   * of the register method.
+   *
+   * @param request ApplicationMaster allocate request
+   * @return Distribtued Scheduler Allocate Response
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Override
+  public DistSchedAllocateResponse allocateForDistributedScheduling
+      (AllocateRequest request) throws YarnException, IOException {
+    return (this.nextInterceptor != null) ?
+        this.nextInterceptor.allocateForDistributedScheduling(request) : null;
+  }
+
+  /**
+   * Default implementation that invokes the distributed scheduling version
+   * of the allocate method.
+   *
+   * @param request ApplicationMaster registration request
+   * @return Distributed Scheduler Register Response
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Override
+  public DistSchedRegisterResponse
+  registerApplicationMasterForDistributedScheduling
+      (RegisterApplicationMasterRequest request) throws YarnException,
+      IOException {
+    return (this.nextInterceptor != null) ? this.nextInterceptor
+        .registerApplicationMasterForDistributedScheduling(request) : null;
   }
 }

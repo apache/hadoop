@@ -113,7 +113,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
   private static final String INVALID_JAVA_HOME = "/no/jvm/here";
   protected Context distContext = new NMContext(new NMContainerTokenSecretManager(
     conf), new NMTokenSecretManagerInNM(), null,
-    new ApplicationACLsManager(conf), new NMNullStateStoreService()) {
+    new ApplicationACLsManager(conf), new NMNullStateStoreService(), false) {
     public int getHttpPort() {
       return HTTP_PORT;
     };
