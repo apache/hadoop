@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.cli.UnrecognizedOptionException;
 import org.apache.commons.lang.math.LongRange;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -117,6 +118,7 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
+import org.apache.hadoop.yarn.api.records.ReservationACL;
 import org.apache.hadoop.yarn.api.records.ReservationAllocationState;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -158,6 +160,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeRepo
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ReservationsACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -603,6 +606,12 @@ public class ClientRMService extends AbstractService implements
             YarnConfiguration.APPLICATION_TYPE_LENGTH));
       }
     }
+
+    ReservationId reservationId = request.getApplicationSubmissionContext()
+            .getReservationID();
+
+    checkReservationACLs(submissionContext.getQueue(), AuditConstants
+            .SUBMIT_RESERVATION_REQUEST, reservationId);
 
     try {
       // call RMAppManager to submit application directly
@@ -1222,7 +1231,7 @@ public class ClientRMService extends AbstractService implements
     String queueName = request.getQueue();
     String user =
         checkReservationACLs(queueName,
-            AuditConstants.SUBMIT_RESERVATION_REQUEST);
+            AuditConstants.SUBMIT_RESERVATION_REQUEST, null);
     try {
       // Try to place the reservation using the agent
       boolean result =
@@ -1264,7 +1273,7 @@ public class ClientRMService extends AbstractService implements
     // Check ACLs
     String user =
         checkReservationACLs(queueName,
-            AuditConstants.UPDATE_RESERVATION_REQUEST);
+            AuditConstants.UPDATE_RESERVATION_REQUEST, reservationId);
     // Try to update the reservation using default agent
     try {
       boolean result =
@@ -1303,7 +1312,7 @@ public class ClientRMService extends AbstractService implements
     // Check ACLs
     String user =
         checkReservationACLs(queueName,
-            AuditConstants.DELETE_RESERVATION_REQUEST);
+            AuditConstants.DELETE_RESERVATION_REQUEST, reservationId);
     // Try to update the reservation using default agent
     try {
       boolean result =
@@ -1340,8 +1349,15 @@ public class ClientRMService extends AbstractService implements
     boolean includeResourceAllocations = requestInfo
             .getIncludeResourceAllocations();
 
-    String user = checkReservationACLs(requestInfo.getQueue(),
-            AuditConstants.LIST_RESERVATION_REQUEST);
+    ReservationId reservationId = null;
+    if (requestInfo.getReservationId() != null && !requestInfo
+            .getReservationId().isEmpty()) {
+      reservationId = ReservationId.parseReservationId(
+            requestInfo.getReservationId());
+    }
+
+    checkReservationACLs(requestInfo.getQueue(),
+            AuditConstants.LIST_RESERVATION_REQUEST, reservationId);
 
     ReservationId requestedId = null;
     if (requestInfo.getReservationId() != null
@@ -1354,8 +1370,10 @@ public class ClientRMService extends AbstractService implements
     long endTime = requestInfo.getEndTime() <= -1? Long.MAX_VALUE : requestInfo
             .getEndTime();
 
-    Set<ReservationAllocation> reservations = plan.getReservations(
-        requestedId, new ReservationInterval(startTime, endTime), user);
+    Set<ReservationAllocation> reservations;
+
+    reservations = plan.getReservations(requestedId, new ReservationInterval(
+            startTime, endTime));
 
     List<ReservationAllocationState> info =
             ReservationSystemUtil.convertAllocationsToReservationInfo(
@@ -1419,8 +1437,9 @@ public class ClientRMService extends AbstractService implements
     }
   }
 
-  private String checkReservationACLs(String queueName, String auditConstant)
-      throws YarnException {
+  private String checkReservationACLs(String queueName, String auditConstant,
+                                      ReservationId reservationId)
+      throws YarnException, IOException {
     UserGroupInformation callerUGI;
     try {
       callerUGI = UserGroupInformation.getCurrentUser();
@@ -1429,20 +1448,79 @@ public class ClientRMService extends AbstractService implements
           "ClientRMService", "Error getting UGI");
       throw RPCUtil.getRemoteException(ie);
     }
-    // Check if user has access on the managed queue
-    if (!queueACLsManager.checkAccess(callerUGI, QueueACL.SUBMIT_APPLICATIONS,
-        queueName, null, null)) {
-      RMAuditLogger.logFailure(
-          callerUGI.getShortUserName(),
-          auditConstant,
-          "User doesn't have permissions to "
-              + QueueACL.SUBMIT_APPLICATIONS.toString(), "ClientRMService",
-          AuditConstants.UNAUTHORIZED_USER);
-      throw RPCUtil.getRemoteException(new AccessControlException("User "
-          + callerUGI.getShortUserName() + " cannot perform operation "
-          + QueueACL.SUBMIT_APPLICATIONS.name() + " on queue" + queueName));
+
+    if (reservationSystem == null) {
+      return callerUGI.getShortUserName();
     }
-    return callerUGI.getShortUserName();
+
+    ReservationsACLsManager manager = reservationSystem
+            .getReservationsACLsManager();
+    ReservationACL reservationACL = getReservationACLFromAuditConstant(
+            auditConstant);
+
+    if (manager == null) {
+      return callerUGI.getShortUserName();
+    }
+
+    String reservationCreatorName = "";
+    ReservationAllocation reservation;
+    // Get the user associated with the reservation.
+    Plan plan = reservationSystem.getPlan(queueName);
+    if (reservationId != null && plan != null) {
+      reservation = plan.getReservationById(reservationId);
+      if (reservation != null) {
+        reservationCreatorName = reservation.getUser();
+      }
+    }
+
+    // If the reservation to be altered or listed belongs to the current user,
+    // access will be given.
+    if (reservationCreatorName != null && !reservationCreatorName.isEmpty()
+           && reservationCreatorName.equals(callerUGI.getUserName())) {
+      return callerUGI.getShortUserName();
+    }
+
+    // Check if the user has access to the specific ACL
+    if (manager.checkAccess(callerUGI, reservationACL, queueName)) {
+      return callerUGI.getShortUserName();
+    }
+
+    // If the user has Administer ACL then access is granted
+    if (manager.checkAccess(callerUGI, ReservationACL
+            .ADMINISTER_RESERVATIONS, queueName)) {
+      return callerUGI.getShortUserName();
+    }
+
+    handleNoAccess(callerUGI.getShortUserName(), queueName, auditConstant,
+            reservationACL.toString(), reservationACL.name());
+    throw new IllegalStateException();
+  }
+
+  private ReservationACL getReservationACLFromAuditConstant(
+          String auditConstant) throws YarnException{
+    if (auditConstant.equals(AuditConstants.SUBMIT_RESERVATION_REQUEST)) {
+      return ReservationACL.SUBMIT_RESERVATIONS;
+    } else if (auditConstant.equals(AuditConstants.LIST_RESERVATION_REQUEST)) {
+      return ReservationACL.LIST_RESERVATIONS;
+    } else if (auditConstant.equals(AuditConstants.DELETE_RESERVATION_REQUEST)
+          || auditConstant.equals(AuditConstants.UPDATE_RESERVATION_REQUEST)) {
+      return ReservationACL.ADMINISTER_RESERVATIONS;
+    } else {
+      String error = "Audit Constant " + auditConstant + " is not recognized.";
+      LOG.error(error);
+      throw RPCUtil.getRemoteException(new UnrecognizedOptionException(error));
+    }
+  }
+
+  private void handleNoAccess(String name, String queue, String auditConstant,
+          String acl, String op) throws YarnException {
+    RMAuditLogger.logFailure(
+            name,
+            auditConstant,
+            "User doesn't have permissions to " + acl, "ClientRMService",
+            auditConstant);
+    throw RPCUtil.getRemoteException(new AccessControlException("User "
+            + name + " cannot perform operation " + op + " on queue " + queue));
   }
 
   @Override

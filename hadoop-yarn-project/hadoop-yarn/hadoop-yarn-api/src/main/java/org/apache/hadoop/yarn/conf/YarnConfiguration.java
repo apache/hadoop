@@ -279,6 +279,11 @@ public class YarnConfiguration extends Configuration {
     YARN_PREFIX + "acl.enable";
   public static final boolean DEFAULT_YARN_ACL_ENABLE = false;
 
+  /** Are reservation acls enabled.*/
+  public static final String YARN_RESERVATION_ACL_ENABLE =
+          YARN_PREFIX + "acl.reservation-enable";
+  public static final boolean DEFAULT_YARN_RESERVATION_ACL_ENABLE = false;
+
   public static boolean isAclEnabled(Configuration conf) {
     return conf.getBoolean(YARN_ACL_ENABLE, DEFAULT_YARN_ACL_ENABLE);
   }

@@ -20,7 +20,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.yarn.api.records.ReservationACL;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
+
+import java.util.Map;
 
 public abstract class ReservationSchedulerConfiguration extends Configuration {
 
@@ -66,6 +70,17 @@ public abstract class ReservationSchedulerConfiguration extends Configuration {
    * @return true if the queue participates in reservation based scheduling
    */
   public abstract boolean isReservable(String queue);
+
+  /**
+   * Gets a map containing the {@link AccessControlList} of users for each
+   * {@link ReservationACL} acl on thee specified queue.
+   *
+   * @param queue the queue with which to check a user's permissions.
+   * @return The a Map of {@link ReservationACL} to {@link AccessControlList}
+   * which contains a list of users that have the specified permission level.
+   */
+  public abstract Map<ReservationACL, AccessControlList> getReservationAcls(
+          String queue);
 
   /**
    * Gets the length of time in milliseconds for which the {@link SharingPolicy}

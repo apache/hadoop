@@ -26,7 +26,6 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation.RLEOperator;
-import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.MismatchedUserException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningQuotaException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.ResourceOverCommitException;
@@ -84,14 +83,6 @@ public class CapacityOverTimePolicy implements SharingPolicy {
     // update).
     ReservationAllocation oldReservation =
         plan.getReservationById(reservation.getReservationId());
-
-    // sanity check that the update of a reservation is not changing username
-    if (oldReservation != null
-        && !oldReservation.getUser().equals(reservation.getUser())) {
-      throw new MismatchedUserException(
-          "Updating an existing reservation with mismatched user:"
-              + oldReservation.getUser() + " != " + reservation.getUser());
-    }
 
     long startTime = reservation.getStartTime();
     long endTime = reservation.getEndTime();

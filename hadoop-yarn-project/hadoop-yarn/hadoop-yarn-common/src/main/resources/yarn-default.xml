@@ -191,6 +191,12 @@
   </property>
 
   <property>
+    <description>Are reservation acls enabled.</description>
+    <name>yarn.acl.reservation-enable</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>ACL of who can be admin of the YARN cluster.</description>
     <name>yarn.admin.acl</name>
     <value>*</value>

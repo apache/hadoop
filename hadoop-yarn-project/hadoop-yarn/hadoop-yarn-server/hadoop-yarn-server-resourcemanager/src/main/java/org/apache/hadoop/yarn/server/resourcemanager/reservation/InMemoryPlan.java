@@ -476,7 +476,13 @@ public class InMemoryPlan implements Plan {
   }
 
   @Override
-    public Set<ReservationAllocation> getReservations(ReservationId
+  public Set<ReservationAllocation> getReservations(ReservationId
+                    reservationID, ReservationInterval interval) {
+    return getReservations(reservationID, interval, null);
+  }
+
+  @Override
+  public Set<ReservationAllocation> getReservations(ReservationId
                     reservationID, ReservationInterval interval, String user) {
     if (reservationID != null) {
       ReservationAllocation allocation = getReservationById(reservationID);

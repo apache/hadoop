@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.api.records.ReservationACL;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
@@ -64,6 +65,10 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
 
   // ACL's for each queue. Only specifies non-default ACL's from configuration.
   private final Map<String, Map<QueueACL, AccessControlList>> queueAcls;
+
+  // Reservation ACL's for each queue. Only specifies non-default ACL's from
+  // configuration.
+  private final Map<String, Map<ReservationACL, AccessControlList>> resAcls;
 
   // Min share preemption timeout for each queue in seconds. If a job in the queue
   // waits this long without receiving its guaranteed share, it is allowed to
@@ -113,6 +118,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
       Map<String, Long> fairSharePreemptionTimeouts,
       Map<String, Float> fairSharePreemptionThresholds,
       Map<String, Map<QueueACL, AccessControlList>> queueAcls,
+      Map<String, Map<ReservationACL, AccessControlList>> resAcls,
       QueuePlacementPolicy placementPolicy,
       Map<FSQueueType, Set<String>> configuredQueues,
       ReservationQueueConfiguration globalReservationQueueConfig,
@@ -134,6 +140,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     this.fairSharePreemptionTimeouts = fairSharePreemptionTimeouts;
     this.fairSharePreemptionThresholds = fairSharePreemptionThresholds;
     this.queueAcls = queueAcls;
+    this.resAcls = resAcls;
     this.reservableQueues = reservableQueues;
     this.globalReservationQueueConfig = globalReservationQueueConfig;
     this.placementPolicy = placementPolicy;
@@ -153,6 +160,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     queueMaxResourcesDefault = Resources.unbounded();
     queueMaxAMShareDefault = 0.5f;
     queueAcls = new HashMap<String, Map<QueueACL, AccessControlList>>();
+    resAcls = new HashMap<String, Map<ReservationACL, AccessControlList>>();
     minSharePreemptionTimeouts = new HashMap<String, Long>();
     fairSharePreemptionTimeouts = new HashMap<String, Long>();
     fairSharePreemptionThresholds = new HashMap<String, Float>();
@@ -184,7 +192,17 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     }
     return (queue.equals("root")) ? EVERYBODY_ACL : NOBODY_ACL;
   }
-  
+
+  @Override
+  /**
+   * Get the map of reservation ACLs to {@link AccessControlList} for the
+   * specified queue.
+   */
+  public Map<ReservationACL, AccessControlList> getReservationAcls(String
+        queue) {
+    return this.resAcls.get(queue);
+  }
+
   /**
    * Get a queue's min share preemption timeout configured in the allocation
    * file, in milliseconds. Return -1 if not set.

@@ -813,6 +813,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4138. Roll back container resource allocation after resource
     increase token expires. (Meng Ding via jianhe)
 
+    YARN-2575. Create separate ACLs for Reservation create/update/delete/list
+    ops (Sean Po via asuresh)
 
   OPTIMIZATIONS
 
