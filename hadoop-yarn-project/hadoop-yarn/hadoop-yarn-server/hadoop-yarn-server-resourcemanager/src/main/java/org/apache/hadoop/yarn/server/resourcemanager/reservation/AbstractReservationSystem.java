@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ReservationsACLsManager;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.UTCClock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -97,6 +98,8 @@ public abstract class AbstractReservationSystem extends AbstractService
   protected long planStepSize;
 
   private PlanFollower planFollower;
+
+  private ReservationsACLsManager reservationsACLsManager;
 
   private boolean isRecoveryEnabled = false;
 
@@ -158,6 +161,13 @@ public abstract class AbstractReservationSystem extends AbstractService
     isRecoveryEnabled = conf.getBoolean(
         YarnConfiguration.RECOVERY_ENABLED,
         YarnConfiguration.DEFAULT_RM_RECOVERY_ENABLED);
+
+    if (conf.getBoolean(YarnConfiguration.YARN_RESERVATION_ACL_ENABLE,
+            YarnConfiguration.DEFAULT_YARN_RESERVATION_ACL_ENABLE) &&
+                    conf.getBoolean(YarnConfiguration.YARN_ACL_ENABLE,
+                            YarnConfiguration.DEFAULT_YARN_ACL_ENABLE)) {
+      reservationsACLsManager = new ReservationsACLsManager(scheduler, conf);
+    }
   }
 
   private void loadPlan(String planName,
@@ -473,6 +483,10 @@ public abstract class AbstractReservationSystem extends AbstractService
       throw new YarnRuntimeException("Could not instantiate AdmissionPolicy: "
           + admissionPolicyClassName + " for queue: " + queueName, e);
     }
+  }
+
+  public ReservationsACLsManager getReservationsACLsManager() {
+    return this.reservationsACLsManager;
   }
 
   protected abstract ReservationSchedulerConfiguration
