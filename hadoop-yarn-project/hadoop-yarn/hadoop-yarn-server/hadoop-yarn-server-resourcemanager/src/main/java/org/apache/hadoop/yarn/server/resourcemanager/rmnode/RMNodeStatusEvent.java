@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.QueuedContainersStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 
@@ -79,6 +80,10 @@ public class RMNodeStatusEvent extends RMNodeEvent {
     return this.logAggregationReportsForApps;
   }
 
+  public QueuedContainersStatus getContainerQueueInfo() {
+    return this.nodeStatus.getQueuedContainersStatus();
+  }
+
   public void setLogAggregationReportsForApps(
       List<LogAggregationReport> logAggregationReportsForApps) {
     this.logAggregationReportsForApps = logAggregationReportsForApps;
@@ -89,4 +94,6 @@ public class RMNodeStatusEvent extends RMNodeEvent {
     return this.nodeStatus.getIncreasedContainers() == null ?
         Collections.EMPTY_LIST : this.nodeStatus.getIncreasedContainers();
   }
+
+
 }

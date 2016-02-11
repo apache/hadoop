@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -43,9 +43,13 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt
     .AMLivelinessMonitor;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed
+    .DistributedSchedulingService;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -71,6 +75,11 @@ public class TestDistributedSchedulingService {
       @Override
       public AMLivelinessMonitor getAMLivelinessMonitor() {
         return null;
+      }
+
+      @Override
+      public Configuration getYarnConfiguration() {
+        return new YarnConfiguration();
       }
     };
     DistributedSchedulingService service =

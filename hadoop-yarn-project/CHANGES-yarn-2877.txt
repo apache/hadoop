@@ -16,3 +16,5 @@ yarn-2877 distributed scheduling (Unreleased)
     YARN-2885. Create AMRMProxy request interceptor and ContainerAllocator
     to distribute OPPORTUNISTIC containers to appropriate Nodes (asuresh)
 
+    YARN-4412. Create ClusterMonitor to compute ordered list of preferred
+    NMs for OPPORTUNITIC containers (asuresh)

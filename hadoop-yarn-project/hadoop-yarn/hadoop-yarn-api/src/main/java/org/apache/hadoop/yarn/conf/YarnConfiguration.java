@@ -331,8 +331,21 @@ public class YarnConfiguration extends Configuration {
       YARN_PREFIX + "distributed-scheduling.incr-vcores";
   public static final int DIST_SCHEDULING_INCR_VCORES_DEFAULT = 1;
 
-  /** Container token expiry for container allocated via Distributed
-   * Scheduling. */
+  public static final String DIST_SCHEDULING_TOP_K =
+      YARN_PREFIX + "distributed-scheduling.top-k";
+  public static final int DIST_SCHEDULING_TOP_K_DEFAULT = 10;
+
+  public static final String DIST_SCHEDULING_TOP_K_COMPUTE_INT_MS =
+      YARN_PREFIX + "distributed-scheduling.top-k-compute-interval-ms";
+  public static final long DIST_SCHEDULING_TOP_K_COMPUTE_INT_MS_DEFAULT = 1000;
+
+  public static final String DIST_SCHEDULING_TOP_K_COMPARATOR =
+      YARN_PREFIX + "distributed-scheduling.top-k-comparator";
+  public static final String DIST_SCHEDULING_TOP_K_COMPARATOR_DEFAULT =
+      "WAIT_TIME";
+
+  /** Container token expiry for container allocated via
+   * Distributed Scheduling */
   public static String DIST_SCHEDULING_CONTAINER_TOKEN_EXPIRY_MS =
       YARN_PREFIX + "distributed-scheduling.container-token-expiry";
   public static final int DIST_SCHEDULING_CONTAINER_TOKEN_EXPIRY_MS_DEFAULT =

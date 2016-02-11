@@ -2317,6 +2317,36 @@
     <value>4096</value>
   </property>
 
+  <!-- Distributed Scheduling configuration -->
+  <property>
+    <description>
+      The interval in milliseconds specifying the frequency at which the
+      Distributed Scheduling Cluster Monitor will recomute the top K
+      viable nodes on which OPPORTUNISTIC containers can be scheduled
+    </description>
+    <name>yarn.distributed-scheduling.top-k-compute-interval-ms</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>
+      The Default comparator used by the Distributed Scheduling Cluster
+      Monitor to order the top K nodes on which OPPORTUNISTIC containers can
+      be scheduled. The allowed values are "WAIT_TIME" and "QUEUE_LENGTH"
+    </description>
+    <name>yarn.distributed-scheduling.top-k-comparator</name>
+    <value>WAIT_TIME</value>
+  </property>
+
+  <property>
+    <description>
+      The max number of nodes returned by the Distributed Scheduling Cluster
+      Monitor. (The value of K in top-K)
+    </description>
+    <name>yarn.distributed-scheduling.top-k</name>
+    <value>10</value>
+  </property>
+
   <!-- Node Labels Configuration -->
 
   <property>

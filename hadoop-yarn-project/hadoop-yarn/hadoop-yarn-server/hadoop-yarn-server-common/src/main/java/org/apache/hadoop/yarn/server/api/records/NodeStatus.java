@@ -122,4 +122,13 @@ public abstract class NodeStatus {
   @Unstable
   public abstract void setIncreasedContainers(
       List<Container> increasedContainers);
+
+  @Private
+  @Unstable
+  public abstract QueuedContainersStatus getQueuedContainersStatus();
+
+  @Private
+  @Unstable
+  public abstract void setQueuedContainersStatus(
+      QueuedContainersStatus queuedContainersStatus);
 }
