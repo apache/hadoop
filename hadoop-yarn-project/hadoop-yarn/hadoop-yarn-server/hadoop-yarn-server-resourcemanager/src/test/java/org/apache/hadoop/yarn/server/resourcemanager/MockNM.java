@@ -20,12 +20,14 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -103,6 +105,17 @@ public class MockNM {
     nodeHeartbeat(conts, true);
   }
 
+  public void containerIncreaseStatus(Container container) throws Exception {
+    Map<ApplicationId, List<ContainerStatus>> conts = new HashMap<>();
+    ContainerStatus containerStatus = BuilderUtils.newContainerStatus(
+        container.getId(), ContainerState.RUNNING, "Success", 0,
+            container.getResource());
+    conts.put(container.getId().getApplicationAttemptId().getApplicationId(),
+        Collections.singletonList(containerStatus));
+    List<Container> increasedConts = Collections.singletonList(container);
+    nodeHeartbeat(conts, increasedConts, true, ++responseId);
+  }
+
   public RegisterNodeManagerResponse registerNode() throws Exception {
     return registerNode(null, null);
   }
@@ -159,6 +172,12 @@ public class MockNM {
 
   public NodeHeartbeatResponse nodeHeartbeat(Map<ApplicationId,
       List<ContainerStatus>> conts, boolean isHealthy, int resId) throws Exception {
+    return nodeHeartbeat(conts, new ArrayList<Container>(), isHealthy, resId);
+  }
+
+  public NodeHeartbeatResponse nodeHeartbeat(Map<ApplicationId,
+      List<ContainerStatus>> conts, List<Container> increasedConts,
+          boolean isHealthy, int resId) throws Exception {
     NodeHeartbeatRequest req = Records.newRecord(NodeHeartbeatRequest.class);
     NodeStatus status = Records.newRecord(NodeStatus.class);
     status.setResponseId(resId);
@@ -167,6 +186,7 @@ public class MockNM {
       Log.info("entry.getValue() " + entry.getValue());
       status.setContainersStatuses(entry.getValue());
     }
+    status.setIncreasedContainers(increasedConts);
     NodeHealthStatus healthStatus = Records.newRecord(NodeHealthStatus.class);
     healthStatus.setHealthReport("");
     healthStatus.setIsNodeHealthy(isHealthy);

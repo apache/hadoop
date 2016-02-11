@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
@@ -68,18 +67,18 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMoveEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer
+    .RMContainerNMDoneChangeResourceEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerRecoverEvent;
-
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeDecreaseContainerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.apache.hadoop.yarn.util.resource.Resources;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.SettableFuture;
 
@@ -260,7 +259,7 @@ public abstract class AbstractYarnScheduler
     application.containerLaunchedOnNode(containerId, node.getNodeID());
   }
   
-  protected synchronized void containerIncreasedOnNode(ContainerId containerId,
+  protected void containerIncreasedOnNode(ContainerId containerId,
       SchedulerNode node, Container increasedContainerReportedByNM) {
     // Get the application for the finished container
     SchedulerApplicationAttempt application =
@@ -273,39 +272,18 @@ public abstract class AbstractYarnScheduler
           .handle(new RMNodeCleanContainerEvent(node.getNodeID(), containerId));
       return;
     }
-
-    RMContainer rmContainer = getRMContainer(containerId);
-    Resource rmContainerResource = rmContainer.getAllocatedResource();
-    Resource nmContainerResource = increasedContainerReportedByNM.getResource();
-    
-    
-    if (Resources.equals(nmContainerResource, rmContainerResource)){
-      // NM reported expected container size, tell RMContainer. Which will stop
-      // container expire monitor
-      rmContainer.handle(new RMContainerEvent(containerId,
-          RMContainerEventType.NM_DONE_CHANGE_RESOURCE));
-    } else if (Resources.fitsIn(getResourceCalculator(), clusterResource,
-        nmContainerResource, rmContainerResource)) {
-      // when rmContainerResource >= nmContainerResource, we won't do anything,
-      // it is possible a container increased is issued by RM, but AM hasn't
-      // told NM.
-    } else if (Resources.fitsIn(getResourceCalculator(), clusterResource,
-        rmContainerResource, nmContainerResource)) {
-      // When rmContainerResource <= nmContainerResource, it could happen when a
-      // container decreased by RM before it is increased in NM.
-      
-      // Tell NM to decrease the container
-      this.rmContext.getDispatcher().getEventHandler()
-          .handle(new RMNodeDecreaseContainerEvent(node.getNodeID(),
-              Arrays.asList(rmContainer.getContainer())));
-    } else {
-      // Something wrong happened, kill the container
-      LOG.warn("Something wrong happened, container size reported by NM"
-          + " is not expected, ContainerID=" + containerId
-          + " rm-size-resource:" + rmContainerResource + " nm-size-reosurce:"
-          + nmContainerResource);
-      this.rmContext.getDispatcher().getEventHandler()
-          .handle(new RMNodeCleanContainerEvent(node.getNodeID(), containerId));
+    LeafQueue leafQueue = (LeafQueue) application.getQueue();
+    synchronized (leafQueue) {
+      RMContainer rmContainer = getRMContainer(containerId);
+      if (rmContainer == null) {
+        // Some unknown container sneaked into the system. Kill it.
+        this.rmContext.getDispatcher().getEventHandler()
+            .handle(new RMNodeCleanContainerEvent(
+                node.getNodeID(), containerId));
+        return;
+      }
+      rmContainer.handle(new RMContainerNMDoneChangeResourceEvent(
+          containerId, increasedContainerReportedByNM.getResource()));
     }
   }
 

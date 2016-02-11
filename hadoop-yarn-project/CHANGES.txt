@@ -804,6 +804,10 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4420. Add REST API for List Reservations. (Sean Po via curino)
 
+    YARN-4138. Roll back container resource allocation after resource
+    increase token expires. (Meng Ding via jianhe)
+
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

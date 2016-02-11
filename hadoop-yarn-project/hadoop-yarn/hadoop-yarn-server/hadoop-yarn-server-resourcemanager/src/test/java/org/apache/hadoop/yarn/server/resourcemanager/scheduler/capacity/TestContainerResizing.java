@@ -28,7 +28,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerResourceChangeRequest;
@@ -143,7 +142,8 @@ public class TestContainerResizing {
                 .newInstance(containerId1, Resources.createResource(3 * GB))),
         null);
 
-    FiCaSchedulerApp app = getFiCaSchedulerApp(rm1, app1.getApplicationId());
+    FiCaSchedulerApp app = TestUtils.getFiCaSchedulerApp(
+        rm1, app1.getApplicationId());
 
     checkPendingResource(rm1, "default", 2 * GB, null);
     Assert.assertEquals(2 * GB,
@@ -183,7 +183,8 @@ public class TestContainerResizing {
     // app1 -> a1
     RMApp app1 = rm1.submitApp(3 * GB, "app", "user", null, "default");
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
-    FiCaSchedulerApp app = getFiCaSchedulerApp(rm1, app1.getApplicationId());
+    FiCaSchedulerApp app = TestUtils.getFiCaSchedulerApp(
+        rm1, app1.getApplicationId());
 
     checkUsedResource(rm1, "default", 3 * GB, null);
     Assert.assertEquals(3 * GB,
@@ -242,7 +243,8 @@ public class TestContainerResizing {
     RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "default");
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
-    FiCaSchedulerApp app = getFiCaSchedulerApp(rm1, app1.getApplicationId());
+    FiCaSchedulerApp app = TestUtils.getFiCaSchedulerApp(
+        rm1, app1.getApplicationId());
 
     // Allocate two more containers
     am1.allocate(
@@ -346,7 +348,8 @@ public class TestContainerResizing {
     RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "default");
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
-    FiCaSchedulerApp app = getFiCaSchedulerApp(rm1, app1.getApplicationId());
+    FiCaSchedulerApp app = TestUtils.getFiCaSchedulerApp(
+        rm1, app1.getApplicationId());
 
     // Allocate 1 container
     am1.allocate(
@@ -422,7 +425,8 @@ public class TestContainerResizing {
     RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "default");
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
-    FiCaSchedulerApp app = getFiCaSchedulerApp(rm1, app1.getApplicationId());
+    FiCaSchedulerApp app = TestUtils.getFiCaSchedulerApp(
+        rm1, app1.getApplicationId());
 
     // Allocate two more containers
     am1.allocate(
@@ -532,7 +536,8 @@ public class TestContainerResizing {
     RMApp app1 = rm1.submitApp(2 * GB, "app", "user", null, "default");
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
-    FiCaSchedulerApp app = getFiCaSchedulerApp(rm1, app1.getApplicationId());
+    FiCaSchedulerApp app = TestUtils.getFiCaSchedulerApp(
+        rm1, app1.getApplicationId());
 
     // Allocate two more containers
     am1.allocate(
@@ -593,8 +598,8 @@ public class TestContainerResizing {
     am1.allocate(null, Arrays.asList(containerId2));
     // am1 asks to change its AM container from 2G to 1G (decrease)
     am1.sendContainerResizingRequest(null, Arrays.asList(
-            ContainerResourceChangeRequest
-                .newInstance(containerId1, Resources.createResource(1 * GB))));
+        ContainerResourceChangeRequest
+            .newInstance(containerId1, Resources.createResource(1 * GB))));
     // Trigger a node heartbeat..
     cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
     
@@ -643,7 +648,8 @@ public class TestContainerResizing {
     RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "default");
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
-    FiCaSchedulerApp app = getFiCaSchedulerApp(rm1, app1.getApplicationId());
+    FiCaSchedulerApp app = TestUtils.getFiCaSchedulerApp(
+        rm1, app1.getApplicationId());
 
     // Allocate two more containers
     am1.allocate(
@@ -740,7 +746,8 @@ public class TestContainerResizing {
     RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "default");
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
-    FiCaSchedulerApp app = getFiCaSchedulerApp(rm1, app1.getApplicationId());
+    FiCaSchedulerApp app = TestUtils.getFiCaSchedulerApp(
+        rm1, app1.getApplicationId());
 
     // Allocate two more containers
     am1.allocate(
@@ -862,7 +869,8 @@ public class TestContainerResizing {
     RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "default");
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
-    FiCaSchedulerApp app = getFiCaSchedulerApp(rm1, app1.getApplicationId());
+    FiCaSchedulerApp app = TestUtils.getFiCaSchedulerApp(
+        rm1, app1.getApplicationId());
     ApplicationAttemptId attemptId = am1.getApplicationAttemptId();
 
     // Container 2, 3 (priority=3)
@@ -942,7 +950,8 @@ public class TestContainerResizing {
     RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "default");
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
-    FiCaSchedulerApp app = getFiCaSchedulerApp(rm1, app1.getApplicationId());
+    FiCaSchedulerApp app = TestUtils.getFiCaSchedulerApp(
+        rm1, app1.getApplicationId());
     ApplicationAttemptId attemptId = am1.getApplicationAttemptId();
 
     // Container 2, 3 (priority=3)
@@ -1021,7 +1030,8 @@ public class TestContainerResizing {
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm);
     // making sure resource is allocated
     checkUsedResource(rm, "default", 3 * GB, null);
-    FiCaSchedulerApp app = getFiCaSchedulerApp(rm, app1.getApplicationId());
+    FiCaSchedulerApp app = TestUtils.getFiCaSchedulerApp(
+        rm, app1.getApplicationId());
     Assert.assertEquals(3 * GB,
         app.getAppAttemptResourceUsage().getUsed().getMemory());
     // making sure container is launched
@@ -1112,11 +1122,5 @@ public class TestContainerResizing {
     SchedulerNode node = cs.getNode(nodeId);
     Assert
         .assertEquals(expectedMemory, node.getAvailableResource().getMemory());
-  }
-
-  private FiCaSchedulerApp getFiCaSchedulerApp(MockRM rm,
-      ApplicationId appId) {
-    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
-    return cs.getSchedulerApplications().get(appId).getCurrentAppAttempt();
   }
 }
