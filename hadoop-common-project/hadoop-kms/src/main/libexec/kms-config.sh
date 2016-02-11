@@ -143,6 +143,13 @@ else
   print "Using   KMS_MAX_THREADS:     ${KMS_MAX_THREADS}"
 fi
 
+if [ "${KMS_MAX_HTTP_HEADER_SIZE}" = "" ]; then
+  export KMS_MAX_HTTP_HEADER_SIZE=65536
+  print "Setting KMS_MAX_HTTP_HEADER_SIZE:     ${KMS_MAX_HTTP_HEADER_SIZE}"
+else
+  print "Using   KMS_MAX_HTTP_HEADER_SIZE:     ${KMS_MAX_HTTP_HEADER_SIZE}"
+fi
+
 if [ "${KMS_SSL_KEYSTORE_FILE}" = "" ]; then
   export KMS_SSL_KEYSTORE_FILE=${HOME}/.keystore
   print "Setting KMS_SSL_KEYSTORE_FILE:     ${KMS_SSL_KEYSTORE_FILE}"

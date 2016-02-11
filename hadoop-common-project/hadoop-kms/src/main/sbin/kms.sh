@@ -57,6 +57,7 @@ catalina_opts="${catalina_opts} -Dkms.temp.dir=${KMS_TEMP}";
 catalina_opts="${catalina_opts} -Dkms.admin.port=${KMS_ADMIN_PORT}";
 catalina_opts="${catalina_opts} -Dkms.http.port=${KMS_HTTP_PORT}";
 catalina_opts="${catalina_opts} -Dkms.max.threads=${KMS_MAX_THREADS}";
+catalina_opts="${catalina_opts} -Dkms.max.http.header.size=${KMS_MAX_HTTP_HEADER_SIZE}";
 catalina_opts="${catalina_opts} -Dkms.ssl.keystore.file=${KMS_SSL_KEYSTORE_FILE}";
 catalina_opts="${catalina_opts} -Djava.library.path=${JAVA_LIBRARY_PATH}";
 
