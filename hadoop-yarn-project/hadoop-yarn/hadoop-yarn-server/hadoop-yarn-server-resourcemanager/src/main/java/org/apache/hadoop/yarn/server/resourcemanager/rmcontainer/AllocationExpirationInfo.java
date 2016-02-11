@@ -16,37 +16,60 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
+package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
+
 
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 
-/**
- * The {@link SchedulerEvent} which notifies that a {@link ContainerId}
- * has expired, sent by {@link ContainerAllocationExpirer} 
- *
- */
-public class ContainerExpiredSchedulerEvent extends SchedulerEvent {
+public class AllocationExpirationInfo implements
+    Comparable<AllocationExpirationInfo> {
 
   private final ContainerId containerId;
   private final boolean increase;
 
-  public ContainerExpiredSchedulerEvent(ContainerId containerId) {
+  public AllocationExpirationInfo(ContainerId containerId) {
     this(containerId, false);
   }
 
-  public ContainerExpiredSchedulerEvent(
+  public AllocationExpirationInfo(
       ContainerId containerId, boolean increase) {
-    super(SchedulerEventType.CONTAINER_EXPIRED);
     this.containerId = containerId;
     this.increase = increase;
   }
 
   public ContainerId getContainerId() {
-    return containerId;
+    return this.containerId;
   }
 
   public boolean isIncrease() {
-    return increase;
+    return this.increase;
+  }
+
+  @Override
+  public int hashCode() {
+    return (getContainerId().hashCode() << 16);
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (!(other instanceof AllocationExpirationInfo)) {
+      return false;
+    }
+    return compareTo((AllocationExpirationInfo)other) == 0;
+  }
+
+  @Override
+  public int compareTo(AllocationExpirationInfo other) {
+    if (other == null) {
+      return -1;
+    }
+    // Only need to compare containerId.
+    return getContainerId().compareTo(other.getContainerId());
+  }
+
+  @Override
+  public String toString() {
+    return "<container=" + getContainerId() + ", increase="
+        + isIncrease() + ">";
   }
 }

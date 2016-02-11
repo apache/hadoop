@@ -57,6 +57,8 @@ public interface RMContainer extends EventHandler<RMContainerEvent> {
 
   Resource getAllocatedResource();
 
+  Resource getLastConfirmedResource();
+
   NodeId getAllocatedNode();
 
   Priority getAllocatedPriority();
