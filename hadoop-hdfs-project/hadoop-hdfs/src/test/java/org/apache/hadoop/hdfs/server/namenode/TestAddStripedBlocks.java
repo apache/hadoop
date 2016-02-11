@@ -37,9 +37,11 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -89,6 +91,39 @@ public class TestAddStripedBlocks {
     if (cluster != null) {
       cluster.shutdown();
       cluster = null;
+    }
+  }
+
+  /**
+   * Check if the scheduled block size on each DN storage is correctly updated
+   */
+  @Test
+  public void testBlockScheduledUpdate() throws Exception {
+    final FSNamesystem fsn = cluster.getNamesystem();
+    final Path foo = new Path("/foo");
+    try (FSDataOutputStream out = dfs.create(foo, true)) {
+      DFSStripedOutputStream sout = (DFSStripedOutputStream) out.getWrappedStream();
+      writeAndFlushStripedOutputStream(sout, DFS_BYTES_PER_CHECKSUM_DEFAULT);
+
+      // make sure the scheduled block size has been updated for each DN storage
+      // in NN
+      final List<DatanodeDescriptor> dnList = new ArrayList<>();
+      fsn.getBlockManager().getDatanodeManager().fetchDatanodes(dnList, null, false);
+      for (DatanodeDescriptor dn : dnList) {
+        Assert.assertEquals(1, dn.getBlocksScheduled());
+      }
+    }
+
+    // we have completed the file, force the DN to flush IBR
+    for (DataNode dn : cluster.getDataNodes()) {
+      DataNodeTestUtils.triggerBlockReport(dn);
+    }
+
+    // check the scheduled block size again
+    final List<DatanodeDescriptor> dnList = new ArrayList<>();
+    fsn.getBlockManager().getDatanodeManager().fetchDatanodes(dnList, null, false);
+    for (DatanodeDescriptor dn : dnList) {
+      Assert.assertEquals(0, dn.getBlocksScheduled());
     }
   }
 

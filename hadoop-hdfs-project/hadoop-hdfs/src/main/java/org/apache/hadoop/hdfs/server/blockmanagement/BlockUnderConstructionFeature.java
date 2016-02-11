@@ -124,6 +124,31 @@ public class BlockUnderConstructionFeature {
   }
 
   /**
+   * when committing a striped block whose size is less than a stripe, we need
+   * to decrease the scheduled block size of the DataNodes that do not store
+   * any internal block.
+   */
+  void updateStorageScheduledSize(BlockInfoStriped storedBlock) {
+    assert storedBlock.getUnderConstructionFeature() == this;
+    if (replicas == null) {
+      return;
+    }
+    final int dataBlockNum = storedBlock.getDataBlockNum();
+    final int realDataBlockNum = storedBlock.getRealDataBlockNum();
+    if (realDataBlockNum < dataBlockNum) {
+      for (ReplicaUnderConstruction replica : replicas) {
+        int index = BlockIdManager.getBlockIndex(replica);
+        if (index >= realDataBlockNum && index < dataBlockNum) {
+          final DatanodeStorageInfo storage =
+              replica.getExpectedStorageLocation();
+          storage.getDatanodeDescriptor()
+              .decrementBlocksScheduled(storage.getStorageType());
+        }
+      }
+    }
+  }
+
+  /**
    * Return the state of the block under construction.
    * @see BlockUCState
    */

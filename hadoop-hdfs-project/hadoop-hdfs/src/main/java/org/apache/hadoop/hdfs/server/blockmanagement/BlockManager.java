@@ -734,14 +734,20 @@ public class BlockManager implements BlockStatsMXBean {
     if(lastBlock.isComplete())
       return false; // already completed (e.g. by syncBlock)
     
-    final boolean b = commitBlock(lastBlock, commitBlock);
+    final boolean committed = commitBlock(lastBlock, commitBlock);
+    if (committed && lastBlock.isStriped()) {
+      // update scheduled size for DatanodeStorages that do not store any
+      // internal blocks
+      lastBlock.getUnderConstructionFeature()
+          .updateStorageScheduledSize((BlockInfoStriped) lastBlock);
+    }
     if (hasMinStorage(lastBlock)) {
-      if (b) {
+      if (committed) {
         addExpectedReplicasToPending(lastBlock, bc);
       }
       completeBlock(lastBlock, false);
     }
-    return b;
+    return committed;
   }
 
   /**
