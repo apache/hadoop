@@ -95,6 +95,10 @@ Release 2.7.3 - UNRELEASED
     HDFS-9752. Permanent write failures may happen to slow writers during
     datanode rolling upgrades (Walter Su via kihwal)
 
+    HDFS-9779 . TestReplicationPolicyWithNodeGroup NODE variable picks wrong rack value
+    (Kuhu Shukla via umamahesh)
+
+
     HDFS-9784. Example usage is not correct in Transparent Encryption document.
     (Takashi Ohnishi via aajisaka)
 
