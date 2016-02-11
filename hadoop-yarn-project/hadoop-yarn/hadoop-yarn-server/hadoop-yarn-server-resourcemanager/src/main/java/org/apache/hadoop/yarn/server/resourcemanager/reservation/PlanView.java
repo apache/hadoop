@@ -42,11 +42,25 @@ public interface PlanView extends PlanContext {
    *                 greater than the interval end time, and end time no less
    *                 than the interval start time will be selected.
    * @param user the user to retrieve the reservation allocation from.
-   * @return {@link ReservationAllocation} identified by the user who
+   * @return a set of {@link ReservationAllocation} identified by the user who
    * made the reservation
    */
   Set<ReservationAllocation> getReservations(ReservationId
                     reservationID, ReservationInterval interval, String user);
+
+  /**
+   * Return a set of {@link ReservationAllocation} identified by any user.
+   *
+   * @param reservationID the unqiue id to identify the
+   * {@link ReservationAllocation}
+   * @param interval the time interval used to retrieve the reservation
+   *                 allocations from. Only reservations with start time no
+   *                 greater than the interval end time, and end time no less
+   *                 than the interval start time will be selected.
+   * @return a set of {@link ReservationAllocation} identified by any user
+   */
+  Set<ReservationAllocation> getReservations(ReservationId reservationID,
+                    ReservationInterval interval);
 
   /**
    * Return a {@link ReservationAllocation} identified by its

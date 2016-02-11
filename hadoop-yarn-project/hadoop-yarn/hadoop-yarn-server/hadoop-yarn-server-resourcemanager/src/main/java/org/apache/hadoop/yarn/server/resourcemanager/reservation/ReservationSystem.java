@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ReservationsACLsManager;
 
 import java.util.Map;
 
@@ -123,4 +124,12 @@ public interface ReservationSystem extends Recoverable {
    */
   void setQueueForReservation(ReservationId reservationId, String queueName);
 
+  /**
+   * Get the {@link ReservationsACLsManager} to use to check for the reservation
+   * access on a user.
+   *
+   * @return the reservation ACL manager to use to check reservation ACLs.
+   *
+   */
+  ReservationsACLsManager getReservationsACLsManager();
 }
