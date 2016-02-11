@@ -182,9 +182,6 @@ Release 2.9.0 - UNRELEASED
     YARN-4633. Fix random test failure in TestRMRestart#testRMRestartAfterPreemption
     (Bibin A Chundatt via rohithsharmaks)
 
-    YARN-4519. Potential deadlock of CapacityScheduler between decrease container
-    and assign containers. (Meng Ding via jianhe)
-
     YARN-4543. Fix random test failure in TestNodeStatusUpdater.testStopReentrant
     (Akihiro Suda via rohithsharmaks)
 
@@ -803,6 +800,9 @@ Release 2.8.0 - UNRELEASED
     and performance improvements (curino via asuresh)
 
     YARN-4420. Add REST API for List Reservations. (Sean Po via curino)
+
+    YARN-4519. Potential deadlock of CapacityScheduler between decrease container
+    and assign containers. (Meng Ding via jianhe)
 
     YARN-4138. Roll back container resource allocation after resource
     increase token expires. (Meng Ding via jianhe)
