@@ -23,7 +23,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -79,7 +78,8 @@ public class TestSafeModeWithStripedFile {
 
   @Test
   public void testStripedFile1() throws IOException {
-    doTest(cellSize * 5, 5);
+    int numCell = DATA_BLK_NUM - 1;
+    doTest(cellSize * numCell, numCell);
   }
 
   /**

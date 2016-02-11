@@ -21,18 +21,17 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.Rule;
 import org.junit.rules.Timeout;
 
 import java.io.IOException;
 
+import static org.apache.hadoop.hdfs.StripedFileTestUtil.NUM_PARITY_BLOCKS;
+import static org.apache.hadoop.hdfs.StripedFileTestUtil.TEST_EC_POLICY;
 import static org.apache.hadoop.hdfs.StripedFileTestUtil.blockSize;
 import static org.apache.hadoop.hdfs.StripedFileTestUtil.numDNs;
 
@@ -53,16 +52,15 @@ public class TestReadStripedFileWithMissingBlocks {
   @Rule
   public Timeout globalTimeout = new Timeout(300000);
 
-  @Before
   public void setup() throws IOException {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
-    cluster.getFileSystem().getClient().setErasureCodingPolicy("/", null);
+    cluster.getFileSystem().getClient().setErasureCodingPolicy(
+        "/", TEST_EC_POLICY);
     fs = cluster.getFileSystem();
   }
 
-  @After
   public void tearDown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -71,33 +69,19 @@ public class TestReadStripedFileWithMissingBlocks {
   }
 
   @Test
-  public void testReadFileWithMissingBlocks1() throws Exception {
-    readFileWithMissingBlocks(new Path("/foo"), fileLength, 1, 0);
-  }
-
-  @Test
-  public void testReadFileWithMissingBlocks2() throws Exception {
-    readFileWithMissingBlocks(new Path("/foo"), fileLength, 1, 1);
-  }
-
-  @Test
-  public void testReadFileWithMissingBlocks3() throws Exception {
-    readFileWithMissingBlocks(new Path("/foo"), fileLength, 1, 2);
-  }
-
-  @Test
-  public void testReadFileWithMissingBlocks4() throws Exception {
-    readFileWithMissingBlocks(new Path("/foo"), fileLength, 2, 0);
-  }
-
-  @Test
-  public void testReadFileWithMissingBlocks5() throws Exception {
-    readFileWithMissingBlocks(new Path("/foo"), fileLength, 2, 1);
-  }
-
-  @Test
-  public void testReadFileWithMissingBlocks6() throws Exception {
-    readFileWithMissingBlocks(new Path("/foo"), fileLength, 3, 0);
+  public void testReadFileWithMissingBlocks() throws Exception {
+    for (int missingData = 1; missingData <= NUM_PARITY_BLOCKS; missingData++) {
+      for (int missingParity = 0; missingParity <=
+          NUM_PARITY_BLOCKS - missingData; missingParity++) {
+        try {
+          setup();
+          readFileWithMissingBlocks(new Path("/foo"), fileLength,
+              missingData, missingParity);
+        } finally {
+          tearDown();
+        }
+      }
+    }
   }
 
   private void readFileWithMissingBlocks(Path srcPath, int fileLength,

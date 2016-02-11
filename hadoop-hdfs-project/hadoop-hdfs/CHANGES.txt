@@ -927,6 +927,9 @@ Trunk (Unreleased)
       HDFS-9775. Erasure Coding : Rename BlockRecoveryWork to
       BlockReconstructionWork. (Rakesh R via zhz)
 
+      HDFS-9755. Erasure Coding: allow to use multiple EC policies in striping
+      related tests [Part 2]. (Rui Li via zhz)
+
 Release 2.9.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

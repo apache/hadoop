@@ -72,8 +72,9 @@ public class TestWriteStripedFileWithFailure {
   @Test(timeout = 300000)
   public void testWriteStripedFileWithDNFailure() throws IOException {
     for (int fileLength : fileLengths) {
-      for (int dataDelNum = 1; dataDelNum < 4; dataDelNum++) {
-        for (int parityDelNum = 0; (dataDelNum+parityDelNum) < 4; parityDelNum++) {
+      for (int dataDelNum = 1; dataDelNum <= parityBlocks; dataDelNum++) {
+        for (int parityDelNum = 0; (dataDelNum + parityDelNum) <= parityBlocks;
+             parityDelNum++) {
           try {
             // setup a new cluster with no dead datanode
             setup();
@@ -82,7 +83,7 @@ public class TestWriteStripedFileWithFailure {
             String fileType = fileLength < (blockSize * dataBlocks) ?
                 "smallFile" : "largeFile";
             LOG.error("Failed to write file with DN failure:"
-                + " fileType = "+ fileType
+                + " fileType = " + fileType
                 + ", dataDelNum = " + dataDelNum
                 + ", parityDelNum = " + parityDelNum);
             throw ioe;

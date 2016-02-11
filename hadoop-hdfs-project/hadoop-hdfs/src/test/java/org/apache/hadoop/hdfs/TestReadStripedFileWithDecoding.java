@@ -68,13 +68,21 @@ public class TestReadStripedFileWithDecoding {
 
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
-  private final short dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
-  private final short parityBlocks = StripedFileTestUtil.NUM_PARITY_BLOCKS;
+  private static final short dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
+  private static final short parityBlocks = StripedFileTestUtil.NUM_PARITY_BLOCKS;
   private final int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
   private final int smallFileLength = blockSize * dataBlocks - 123;
   private final int largeFileLength = blockSize * dataBlocks + 123;
   private final int[] fileLengths = {smallFileLength, largeFileLength};
-  private final int[] dnFailureNums = {1, 2, 3};
+  private static final int[] dnFailureNums = getDnFailureNums();
+
+  private static int[] getDnFailureNums() {
+    int[] dnFailureNums = new int[parityBlocks];
+    for (int i = 0; i < dnFailureNums.length; i++) {
+      dnFailureNums[i] = i + 1;
+    }
+    return dnFailureNums;
+  }
 
   @Rule
   public Timeout globalTimeout = new Timeout(300000);
@@ -132,8 +140,9 @@ public class TestReadStripedFileWithDecoding {
   @Test(timeout=300000)
   public void testReadCorruptedData() throws IOException {
     for (int fileLength : fileLengths) {
-      for (int dataDelNum = 1; dataDelNum < 4; dataDelNum++) {
-        for (int parityDelNum = 0; (dataDelNum+parityDelNum) < 4; parityDelNum++) {
+      for (int dataDelNum = 1; dataDelNum <= parityBlocks; dataDelNum++) {
+        for (int parityDelNum = 0; (dataDelNum + parityDelNum) <= parityBlocks;
+             parityDelNum++) {
           String src = "/corrupted_" + dataDelNum + "_" + parityDelNum;
           testReadWithBlockCorrupted(src, fileLength,
               dataDelNum, parityDelNum, false);
@@ -149,8 +158,9 @@ public class TestReadStripedFileWithDecoding {
   @Test(timeout=300000)
   public void testReadCorruptedDataByDeleting() throws IOException {
     for (int fileLength : fileLengths) {
-      for (int dataDelNum = 1; dataDelNum < 4; dataDelNum++) {
-        for (int parityDelNum = 0; (dataDelNum+parityDelNum) < 4; parityDelNum++) {
+      for (int dataDelNum = 1; dataDelNum <= parityBlocks; dataDelNum++) {
+        for (int parityDelNum = 0; (dataDelNum + parityDelNum) <= parityBlocks;
+             parityDelNum++) {
           String src = "/deleted_" + dataDelNum + "_" + parityDelNum;
           testReadWithBlockCorrupted(src, fileLength,
               dataDelNum, parityDelNum, true);
