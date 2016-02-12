@@ -86,12 +86,14 @@ public class KMSExceptionsProvider implements ExceptionMapper<Exception> {
       status = Response.Status.FORBIDDEN;
     } else if (exception instanceof IOException) {
       status = Response.Status.INTERNAL_SERVER_ERROR;
+      log(status, throwable);
     } else if (exception instanceof UnsupportedOperationException) {
       status = Response.Status.BAD_REQUEST;
     } else if (exception instanceof IllegalArgumentException) {
       status = Response.Status.BAD_REQUEST;
     } else {
       status = Response.Status.INTERNAL_SERVER_ERROR;
+      log(status, throwable);
     }
     if (doAudit) {
       KMSWebApp.getKMSAudit().error(KMSMDCFilter.getUgi(),
