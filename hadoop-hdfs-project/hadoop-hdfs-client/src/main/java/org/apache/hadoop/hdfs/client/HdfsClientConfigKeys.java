@@ -160,6 +160,10 @@ public interface HdfsClientConfigKeys {
   String  DFS_USER_HOME_DIR_PREFIX_KEY = "dfs.user.home.dir.prefix";
   String  DFS_USER_HOME_DIR_PREFIX_DEFAULT = "/user";
 
+  String DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_KEY =
+      "dfs.data.transfer.client.tcpnodelay";
+  boolean DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_DEFAULT = true;
+
   /**
    * These are deprecated config keys to client code.
    */

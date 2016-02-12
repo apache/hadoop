@@ -1890,6 +1890,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       String dnAddr = dn.getXferAddr(getConf().isConnectToDnViaHostname());
       LOG.debug("Connecting to datanode {}", dnAddr);
       NetUtils.connect(sock, NetUtils.createSocketAddr(dnAddr), timeout);
+      sock.setTcpNoDelay(dfsClientConf.getDataTransferTcpNoDelay());
       sock.setSoTimeout(timeout);
 
       OutputStream unbufOut = NetUtils.getOutputStream(sock);

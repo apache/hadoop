@@ -131,6 +131,7 @@ class DataStreamer extends Daemon {
     final int timeout = client.getDatanodeReadTimeout(length);
     NetUtils.connect(sock, isa, client.getRandomLocalInterfaceAddr(),
         conf.getSocketTimeout());
+    sock.setTcpNoDelay(conf.getDataTransferTcpNoDelay());
     sock.setSoTimeout(timeout);
     sock.setKeepAlive(true);
     if (conf.getSocketSendBufferSize() > 0) {

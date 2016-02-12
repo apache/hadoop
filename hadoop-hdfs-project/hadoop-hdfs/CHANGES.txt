@@ -1908,6 +1908,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9777. Fix typos in DFSAdmin command line and documentation.
     (Wei-Chiu Chuang via umamahesh)
 
+    HDFS-9700. DFSClient and DFSOutputStream should set TCP_NODELAY on sockets
+    for DataTransferProtocol (Gary Helmling via iwasakims)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
