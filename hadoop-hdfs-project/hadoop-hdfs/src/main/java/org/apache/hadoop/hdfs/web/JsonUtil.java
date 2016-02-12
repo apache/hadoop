@@ -388,4 +388,9 @@ public class JsonUtil {
     finalMap.put("XAttrNames", ret);
     return MAPPER.writeValueAsString(finalMap);
   }
+
+  public static String toJsonString(Object obj) throws IOException {
+    return MAPPER.writeValueAsString(obj);
+  }
+
 }

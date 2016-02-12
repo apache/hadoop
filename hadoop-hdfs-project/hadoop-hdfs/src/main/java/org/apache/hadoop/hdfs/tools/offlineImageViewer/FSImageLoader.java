@@ -54,7 +54,6 @@ import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.hdfs.web.resources.XAttrEncodingParam;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.LimitInputStream;
-import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -263,10 +262,9 @@ class FSImageLoader {
    * @throws IOException if failed to serialize fileStatus to JSON.
    */
   String getFileStatus(String path) throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
     FsImageProto.INodeSection.INode inode = fromINodeId(lookup(path));
     return "{\"FileStatus\":\n"
-        + mapper.writeValueAsString(getFileStatus(inode, false)) + "\n}\n";
+        + JsonUtil.toJsonString(getFileStatus(inode, false)) + "\n}\n";
   }
 
   /**
@@ -277,7 +275,6 @@ class FSImageLoader {
    */
   String listStatus(String path) throws IOException {
     StringBuilder sb = new StringBuilder();
-    ObjectMapper mapper = new ObjectMapper();
     List<Map<String, Object>> fileStatusList = getFileStatusList(path);
     sb.append("{\"FileStatuses\":{\"FileStatus\":[\n");
     int i = 0;
@@ -285,7 +282,7 @@ class FSImageLoader {
       if (i++ != 0) {
         sb.append(',');
       }
-      sb.append(mapper.writeValueAsString(fileStatusMap));
+      sb.append(JsonUtil.toJsonString(fileStatusMap));
     }
     sb.append("\n]}}\n");
     return sb.toString();
@@ -318,9 +315,8 @@ class FSImageLoader {
    * @throws IOException if failed to serialize ContentSummary to JSON.
    */
   String getContentSummary(String path) throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
     return "{\"ContentSummary\":\n"
-        + mapper.writeValueAsString(getContentSummaryMap(path)) + "\n}\n";
+        + JsonUtil.toJsonString(getContentSummaryMap(path)) + "\n}\n";
   }
 
   private Map<String, Object> getContentSummaryMap(String path)
