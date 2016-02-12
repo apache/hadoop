@@ -203,6 +203,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4629. Distributed shell breaks under strong security.
     (Daniel Templeton via stevel)
 
+    YARN-4684. TestYarnCLI#testGetContainers failing in CN locale.
+    (Bibin A Chundatt via vvasudev)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
