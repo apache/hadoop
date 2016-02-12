@@ -31,6 +31,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
@@ -307,7 +308,9 @@ public class TestYarnCLI {
     assertEquals(0, result);
     verify(client).getContainers(attemptId);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    PrintWriter pw = new PrintWriter(baos);
+    OutputStreamWriter stream =
+        new OutputStreamWriter(baos, "UTF-8");
+    PrintWriter pw = new PrintWriter(stream);
     pw.println("Total number of containers :3");
     pw.print("                  Container-Id");
     pw.print("\t          Start Time");
@@ -342,9 +345,9 @@ public class TestYarnCLI {
     Log.info("ExpectedOutput");
     Log.info("["+appReportStr+"]");
     Log.info("OutputFrom command");
-    String actualOutput = sysOutStream.toString();
+    String actualOutput = sysOutStream.toString("UTF-8");
     Log.info("["+actualOutput+"]");
-    Assert.assertEquals(appReportStr, sysOutStream.toString());
+    Assert.assertEquals(appReportStr, actualOutput);
   }
   
   @Test
