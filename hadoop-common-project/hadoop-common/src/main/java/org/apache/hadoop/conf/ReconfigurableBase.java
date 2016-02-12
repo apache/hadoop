@@ -112,14 +112,14 @@ public abstract class ReconfigurableBase
     // See {@link ReconfigurationServlet#applyChanges}
     public void run() {
       LOG.info("Starting reconfiguration task.");
-      Configuration oldConf = this.parent.getConf();
-      Configuration newConf = this.parent.getNewConf();
-      Collection<PropertyChange> changes =
-          this.parent.getChangedProperties(newConf, oldConf);
+      final Configuration oldConf = parent.getConf();
+      final Configuration newConf = parent.getNewConf();
+      final Collection<PropertyChange> changes =
+          parent.getChangedProperties(newConf, oldConf);
       Map<PropertyChange, Optional<String>> results = Maps.newHashMap();
       for (PropertyChange change : changes) {
         String errorMessage = null;
-        if (!this.parent.isPropertyReconfigurable(change.prop)) {
+        if (!parent.isPropertyReconfigurable(change.prop)) {
           LOG.info(String.format(
               "Property %s is not configurable: old value: %s, new value: %s",
               change.prop, change.oldVal, change.newVal));
@@ -130,17 +130,23 @@ public abstract class ReconfigurableBase
             + "\" to \"" + ((change.newVal == null) ? "<default>" : change.newVal)
             + "\".");
         try {
-          this.parent.reconfigurePropertyImpl(change.prop, change.newVal);
+          String effectiveValue =
+              parent.reconfigurePropertyImpl(change.prop, change.newVal);
+          if (change.newVal != null) {
+            oldConf.set(change.prop, effectiveValue);
+          } else {
+            oldConf.unset(change.prop);
+          }
         } catch (ReconfigurationException e) {
           errorMessage = e.getCause().getMessage();
         }
         results.put(change, Optional.fromNullable(errorMessage));
       }
 
-      synchronized (this.parent.reconfigLock) {
-        this.parent.endTime = Time.now();
-        this.parent.status = Collections.unmodifiableMap(results);
-        this.parent.reconfigThread = null;
+      synchronized (parent.reconfigLock) {
+        parent.endTime = Time.now();
+        parent.status = Collections.unmodifiableMap(results);
+        parent.reconfigThread = null;
       }
     }
   }
@@ -203,21 +209,19 @@ public abstract class ReconfigurableBase
    * reconfigureProperty.
    */
   @Override
-  public final String reconfigureProperty(String property, String newVal) 
+  public final void reconfigureProperty(String property, String newVal)
     throws ReconfigurationException {
     if (isPropertyReconfigurable(property)) {
       LOG.info("changing property " + property + " to " + newVal);
-      String oldVal;
       synchronized(getConf()) {
-        oldVal = getConf().get(property);
-        reconfigurePropertyImpl(property, newVal);
+        getConf().get(property);
+        String effectiveValue = reconfigurePropertyImpl(property, newVal);
         if (newVal != null) {
-          getConf().set(property, newVal);
+          getConf().set(property, effectiveValue);
         } else {
           getConf().unset(property);
         }
       }
-      return oldVal;
     } else {
       throw new ReconfigurationException(property, newVal,
                                              getConf().get(property));
@@ -251,8 +255,15 @@ public abstract class ReconfigurableBase
    * that is being changed. If this object owns other Reconfigurable objects
    * reconfigureProperty should be called recursively to make sure that
    * to make sure that the configuration of these objects is updated.
+   *
+   * @param property Name of the property that is being reconfigured.
+   * @param newVal Proposed new value of the property.
+   * @return Effective new value of the property. This may be different from
+   *         newVal.
+   *
+   * @throws ReconfigurationException if there was an error applying newVal.
    */
-  protected abstract void reconfigurePropertyImpl(String property, String newVal) 
-    throws ReconfigurationException;
+  protected abstract String reconfigurePropertyImpl(
+      String property, String newVal) throws ReconfigurationException;
 
 }
