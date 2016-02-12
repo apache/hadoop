@@ -61,6 +61,8 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Time;
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.ObjectReader;
+import org.codehaus.jackson.map.ObjectWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,6 +81,10 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 public class FsVolumeImpl implements FsVolumeSpi {
   public static final Logger LOG =
       LoggerFactory.getLogger(FsVolumeImpl.class);
+  private static final ObjectWriter WRITER =
+      new ObjectMapper().writerWithDefaultPrettyPrinter();
+  private static final ObjectReader READER =
+      new ObjectMapper().reader(BlockIteratorState.class);
 
   private final FsDatasetImpl dataset;
   private final String storageID;
@@ -707,10 +713,9 @@ public class FsVolumeImpl implements FsVolumeSpi {
     public void save() throws IOException {
       state.lastSavedMs = Time.now();
       boolean success = false;
-      ObjectMapper mapper = new ObjectMapper();
       try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
                 new FileOutputStream(getTempSaveFile(), false), "UTF-8"))) {
-        mapper.writerWithDefaultPrettyPrinter().writeValue(writer, state);
+        WRITER.writeValue(writer, state);
         success = true;
       } finally {
         if (!success) {
@@ -724,17 +729,16 @@ public class FsVolumeImpl implements FsVolumeSpi {
           StandardCopyOption.ATOMIC_MOVE);
       if (LOG.isTraceEnabled()) {
         LOG.trace("save({}, {}): saved {}", storageID, bpid,
-            mapper.writerWithDefaultPrettyPrinter().writeValueAsString(state));
+            WRITER.writeValueAsString(state));
       }
     }
 
     public void load() throws IOException {
-      ObjectMapper mapper = new ObjectMapper();
       File file = getSaveFile();
-      this.state = mapper.reader(BlockIteratorState.class).readValue(file);
+      this.state = READER.readValue(file);
       LOG.trace("load({}, {}): loaded iterator {} from {}: {}", storageID,
           bpid, name, file.getAbsoluteFile(),
-          mapper.writerWithDefaultPrettyPrinter().writeValueAsString(state));
+          WRITER.writeValueAsString(state));
     }
 
     File getSaveFile() {
