@@ -223,6 +223,8 @@ Trunk (Unreleased)
     HDFS-9260. Improve the performance and GC friendliness of NameNode startup
     and full block reports (Staffan Friberg via cmccabe)
 
+    HDFS-9795. OIV Delimited should show which files are ACL-enabled (lei)
+
   OPTIMIZATIONS
 
   BUG FIXES

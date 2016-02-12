@@ -17,10 +17,13 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
 import java.io.StringReader;
@@ -225,5 +228,38 @@ public class TestOfflineImageViewerForAcl {
     SAXParser parser = spf.newSAXParser();
     final String xml = output.toString();
     parser.parse(new InputSource(new StringReader(xml)), new DefaultHandler());
+  }
+
+  @Test
+  public void testPBDelimitedWriterForAcl() throws Exception {
+    final String DELIMITER = "\t";
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+    try (PrintStream o = new PrintStream(output)) {
+      PBImageDelimitedTextWriter v =
+          new PBImageDelimitedTextWriter(o, DELIMITER, "");  // run in memory.
+      v.visit(new RandomAccessFile(originalFsimage, "r"));
+    }
+
+    try (
+        ByteArrayInputStream input =
+            new ByteArrayInputStream(output.toByteArray());
+        BufferedReader reader =
+            new BufferedReader(new InputStreamReader(input))) {
+      String line;
+      boolean header = true;
+      while ((line = reader.readLine()) != null) {
+        String[] fields = line.split(DELIMITER);
+        if (!header) {
+          String filePath = fields[0];
+          String permission = fields[9];
+          if (!filePath.equals("/")) {
+            boolean hasAcl = !filePath.toLowerCase().contains("noacl");
+            assertEquals(hasAcl, permission.endsWith("+"));
+          }
+        }
+        header = false;
+      }
+    }
   }
 }
