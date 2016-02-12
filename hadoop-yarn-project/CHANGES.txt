@@ -819,6 +819,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2575. Create separate ACLs for Reservation create/update/delete/list
     ops (Sean Po via asuresh)
 
+    YARN-4682. AMRM client to log when AMRM token updated.
+    (Prabhu Joseph via stevel)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
