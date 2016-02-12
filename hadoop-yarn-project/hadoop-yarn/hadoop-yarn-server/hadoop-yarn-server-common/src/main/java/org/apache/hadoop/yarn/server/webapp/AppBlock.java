@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
@@ -153,8 +154,11 @@ public class AppBlock extends HtmlBlock {
       html.script().$type("text/javascript")._(script.toString())._();
     }
 
+    String schedulerPath = WebAppUtils.getResolvedRMWebAppURLWithScheme(conf) +
+        "/cluster/scheduler?openQueues=" + app.getQueue();
+
     info("Application Overview")
-      ._("User:", app.getUser())
+      ._("User:", schedulerPath, app.getUser())
       ._("Name:", app.getName())
       ._("Application Type:", app.getType())
       ._("Application Tags:",
@@ -163,6 +167,7 @@ public class AppBlock extends HtmlBlock {
         "YarnApplicationState:",
         app.getAppState() == null ? UNAVAILABLE : clarifyAppState(app
           .getAppState()))
+      ._("Queue:", schedulerPath, app.getQueue())
       ._("FinalStatus Reported by AM:",
         clairfyAppFinalStatus(app.getFinalAppStatus()))
       ._("Started:", Times.format(app.getStartedTime()))

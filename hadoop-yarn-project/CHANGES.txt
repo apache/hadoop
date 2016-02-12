@@ -13,6 +13,8 @@ Release 2.7.3 - UNRELEASED
     YARN-4492. Add documentation for preemption supported in Capacity
     scheduler (Naganarasimha G R via jlowe)
 
+    YARN-3404. Display queue name on application page. (Ryu Kobayashi via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
