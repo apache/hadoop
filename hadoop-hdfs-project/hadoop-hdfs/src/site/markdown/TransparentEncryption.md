@@ -19,7 +19,7 @@ Transparent Encryption in HDFS
 * [Background](#Background)
 * [Use Cases](#Use_Cases)
 * [Architecture](#Architecture)
-    * [Overview](#Overview)
+    * [Overview](#Architecture_overview)
     * [Accessing data within an encryption zone](#Accessing_data_within_an_encryption_zone)
     * [Key Management Server, KeyProvider, EDEKs](#Key_Management_Server_KeyProvider_EDEKs)
 * [Configuration](#Configuration)
@@ -33,18 +33,19 @@ Transparent Encryption in HDFS
 * [Distcp considerations](#Distcp_considerations)
     * [Running as the superuser](#Running_as_the_superuser)
     * [Copying between encrypted and unencrypted locations](#Copying_between_encrypted_and_unencrypted_locations)
+* [Rename and Trash considerations](#Rename_and_Trash_considerations)
 * [Attack vectors](#Attack_vectors)
     * [Hardware access exploits](#Hardware_access_exploits)
     * [Root access exploits](#Root_access_exploits)
     * [HDFS admin exploits](#HDFS_admin_exploits)
     * [Rogue user exploits](#Rogue_user_exploits)
 
-Overview
+<a name="Overview"></a>Overview
 --------
 
 HDFS implements *transparent*, *end-to-end* encryption. Once configured, data read from and written to special HDFS directories is *transparently* encrypted and decrypted without requiring changes to user application code. This encryption is also *end-to-end*, which means the data can only be encrypted and decrypted by the client. HDFS never stores or has access to unencrypted data or unencrypted data encryption keys. This satisfies two typical requirements for encryption: *at-rest encryption* (meaning data on persistent media, such as a disk) as well as *in-transit encryption* (e.g. when data is travelling over the network).
 
-Background
+<a name="Background"></a>Background
 ----------
 
 Encryption can be done at different layers in a traditional data management software/hardware stack. Choosing to encrypt at a given layer comes with different advantages and disadvantages.
@@ -61,19 +62,21 @@ HDFS-level encryption fits between database-level and filesystem-level encryptio
 
 HDFS-level encryption also prevents attacks at the filesystem-level and below (so-called "OS-level attacks"). The operating system and disk only interact with encrypted bytes, since the data is already encrypted by HDFS.
 
-Use Cases
+<a name="Use_Cases"></a>Use Cases
 ---------
 
 Data encryption is required by a number of different government, financial, and regulatory entities. For example, the health-care industry has HIPAA regulations, the card payment industry has PCI DSS regulations, and the US government has FISMA regulations. Having transparent encryption built into HDFS makes it easier for organizations to comply with these regulations.
 
 Encryption can also be performed at the application-level, but by integrating it into HDFS, existing applications can operate on encrypted data without changes. This integrated architecture implies stronger encrypted file semantics and better coordination with other HDFS functions.
 
-Architecture
+<a name="Architecture"></a>Architecture
 ------------
 
-### Overview
+### <a name="Architecture_overview"></a>Overview
 
 For transparent encryption, we introduce a new abstraction to HDFS: the *encryption zone*. An encryption zone is a special directory whose contents will be transparently encrypted upon write and transparently decrypted upon read. Each encryption zone is associated with a single *encryption zone key* which is specified when the zone is created. Each file within an encryption zone has its own unique *data encryption key (DEK)*. DEKs are never handled directly by HDFS. Instead, HDFS only ever handles an *encrypted data encryption key (EDEK)*. Clients decrypt an EDEK, and then use the subsequent DEK to read and write data. HDFS datanodes simply see a stream of encrypted bytes.
+
+A very important use case of encryption is to "switch it on" and ensure all files across the entire filesystem are encrypted. To support this strong guarantee without losing the flexibility of using different encryption zone keys in different parts of the filesystem, HDFS allows *nested encryption zones*. After an encryption zone is created (e.g. on the root directory `/`), a user can create more encryption zones on its descendant directories (e.g. `/home/alice`) with different keys. The EDEK of a file will generated using the encryption zone key from the closest ancestor encryption zone.
 
 A new cluster service is required to manage encryption keys: the Hadoop Key Management Server (KMS). In the context of HDFS encryption, the KMS performs three basic responsibilities:
 
@@ -85,7 +88,7 @@ A new cluster service is required to manage encryption keys: the Hadoop Key Mana
 
 The KMS will be described in more detail below.
 
-### Accessing data within an encryption zone
+### <a name="Accessing_data_within_an_encryption_zone"></a>Accessing data within an encryption zone
 
 When creating a new file in an encryption zone, the NameNode asks the KMS to generate a new EDEK encrypted with the encryption zone's key. The EDEK is then stored persistently as part of the file's metadata on the NameNode.
 
@@ -95,7 +98,7 @@ All of the above steps for the read and write path happen automatically through 
 
 Access to encrypted file data and metadata is controlled by normal HDFS filesystem permissions. This means that if HDFS is compromised (for example, by gaining unauthorized access to an HDFS superuser account), a malicious user only gains access to ciphertext and encrypted keys. However, since access to encryption zone keys is controlled by a separate set of permissions on the KMS and key store, this does not pose a security threat.
 
-### Key Management Server, KeyProvider, EDEKs
+### <a name="Key_Management_Server_KeyProvider_EDEKs"></a>Key Management Server, KeyProvider, EDEKs
 
 The KMS is a proxy that interfaces with a backing key store on behalf of HDFS daemons and clients. Both the backing key store and the KMS implement the Hadoop KeyProvider API. See the [KMS documentation](../../hadoop-kms/index.html) for more information.
 
@@ -105,20 +108,20 @@ The KMS implements additional functionality which enables creation and decryptio
 
 In the context of HDFS encryption, EEKs are *encrypted data encryption keys (EDEKs)*, where a *data encryption key (DEK)* is what is used to encrypt and decrypt file data. Typically, the key store is configured to only allow end users access to the keys used to encrypt DEKs. This means that EDEKs can be safely stored and handled by HDFS, since the HDFS user will not have access to unencrypted encryption keys.
 
-Configuration
+<a name="Configuration"></a>Configuration
 -------------
 
 A necessary prerequisite is an instance of the KMS, as well as a backing key store for the KMS. See the [KMS documentation](../../hadoop-kms/index.html) for more information.
 
 Once a KMS has been set up and the NameNode and HDFS clients have been correctly configured, an admin can use the `hadoop key` and `hdfs crypto` command-line tools to create encryption keys and set up new encryption zones. Existing data can be encrypted by copying it into the new encryption zones using tools like distcp.
 
-### Configuring the cluster KeyProvider
+### <a name="Configuring_the_cluster_KeyProvider"></a>Configuring the cluster KeyProvider
 
 #### dfs.encryption.key.provider.uri
 
 The KeyProvider to use when interacting with encryption keys used when reading and writing to an encryption zone.
 
-### Selecting an encryption algorithm and codec
+### <a name="Selecting_an_encryption_algorithm_and_codec"></a>Selecting an encryption algorithm and codec
 
 #### hadoop.security.crypto.codec.classes.EXAMPLECIPHERSUITE
 
@@ -148,7 +151,7 @@ Default: `8192`
 
 The buffer size used by CryptoInputStream and CryptoOutputStream.
 
-### Namenode configuration
+### <a name="Namenode_configuration"></a>Namenode configuration
 
 #### dfs.namenode.list.encryption.zones.num.responses
 
@@ -156,10 +159,10 @@ Default: `100`
 
 When listing encryption zones, the maximum number of zones that will be returned in a batch. Fetching the list incrementally in batches improves namenode performance.
 
-`crypto` command-line interface
+<a name="crypto_command-line_interface"></a>`crypto` command-line interface
 -------------------------------
 
-### createZone
+### <a name="createZone"></a>createZone
 
 Usage: `[-createZone -keyName <keyName> -path <path>]`
 
@@ -170,13 +173,13 @@ Create a new encryption zone.
 | *path* | The path of the encryption zone to create. It must be an empty directory. |
 | *keyName* | Name of the key to use for the encryption zone. |
 
-### listZones
+### <a name="listZones"></a>listZones
 
 Usage: `[-listZones]`
 
 List all encryption zones. Requires superuser permissions.
 
-Example usage
+<a name="Example_usage"></a>Example usage
 -------------
 
 These instructions assume that you are running as the normal user or HDFS superuser as is appropriate. Use `sudo` as needed for your environment.
@@ -195,10 +198,10 @@ These instructions assume that you are running as the normal user or HDFS superu
     hadoop fs -put helloWorld /zone
     hadoop fs -cat /zone/helloWorld
 
-Distcp considerations
+<a name="Distcp_considerations"></a>Distcp considerations
 ---------------------
 
-### Running as the superuser
+### <a name="Running_as_the_superuser"></a>Running as the superuser
 
 One common usecase for distcp is to replicate data between clusters for backup and disaster recovery purposes. This is typically performed by the cluster administrator, who is an HDFS superuser.
 
@@ -206,14 +209,23 @@ To enable this same workflow when using HDFS encryption, we introduced a new vir
 
 When using `/.reserved/raw` to distcp encrypted data, it's important to preserve extended attributes with the [-px](#a-px) flag. This is because encrypted file attributes (such as the EDEK) are exposed through extended attributes within `/.reserved/raw`, and must be preserved to be able to decrypt the file. This means that if the distcp is initiated at or above the encryption zone root, it will automatically create an encryption zone at the destination if it does not already exist. However, it's still recommended that the admin first create identical encryption zones on the destination cluster to avoid any potential mishaps.
 
-### Copying between encrypted and unencrypted locations
+### <a name="Copying_between_encrypted_and_unencrypted_locations"></a>Copying between encrypted and unencrypted locations
 
 By default, distcp compares checksums provided by the filesystem to verify that the data was successfully copied to the destination. When copying between an unencrypted and encrypted location, the filesystem checksums will not match since the underlying block data is different. In this case, specify the [-skipcrccheck](#a-skipcrccheck) and [-update](#a-update) distcp flags to avoid verifying checksums.
 
-Attack vectors
+<a name="Rename_and_Trash_considerations"></a>Rename and Trash considerations
+---------------------
+
+HDFS restricts file and directory renames across encryption zone boundaries. This includes renaming an encrypted file / directory into an unencrypted directory (e.g., `hdfs dfs mv /zone/encryptedFile /home/bob`), renaming an unencrypted file / directory into an encryption zone (e.g., `hdfs dfs mv /home/bob/unEncryptedFile /zone`), and renaming between two different encryption zones (e.g., `hdfs dfs mv /home/alice/zone1/foo /home/alice/zone2`). In these examples, `/zone`, `/home/alice/zone1`, and `/home/alice/zone2` are encryption zones, while `/home/bob` is not. A rename is only allowed if the source and destination paths are in the same encryption zone, or both paths are unencrypted (not in any encryption zone).
+
+This restriction enhances security and eases system management significantly. All file EDEKs under an encryption zone are encrypted with the encryption zone key. Therefore, if the encryption zone key is compromised, it is important to identify all vulnerable files and re-encrypt them. This is fundamentally difficult if a file initially created in an encryption zone can be renamed to an arbitrary location in the filesystem.
+
+To comply with the above rule, each encryption zone has its own `.Trash` directory under the "zone directory". E.g., after `hdfs dfs rm /zone/encryptedFile`, `encryptedFile` will be moved to `/zone/.Trash`, instead of the `.Trash` directory under the user's home directory. When the entire encryption zone is deleted, the "zone directory" will be moved to the `.Trash` directory under the user's home directory.
+
+<a name="Attack_vectors"></a>Attack vectors
 --------------
 
-### Hardware access exploits
+### <a name="Hardware_access_exploits"></a>Hardware access exploits
 
 These exploits assume that attacker has gained physical access to hard drives from cluster machines, i.e. datanodes and namenodes.
 
@@ -227,7 +239,7 @@ These exploits assume that attacker has gained physical access to hard drives fr
 
     * By itself, this does not expose cleartext, as it also requires access to DEKs.
 
-### Root access exploits
+### <a name="Root_access_exploits"></a>Root access exploits
 
 These exploits assume that attacker has gained root shell access to cluster machines, i.e. datanodes and namenodes. Many of these exploits cannot be addressed in HDFS, since a malicious root user has access to the in-memory state of processes holding encryption keys and cleartext. For these exploits, the only mitigation technique is carefully restricting and monitoring root shell access.
 
@@ -251,7 +263,7 @@ These exploits assume that attacker has gained root shell access to cluster mach
 
     * By itself, insufficient to read cleartext without the EDEK's encryption key and encrypted block files.
 
-### HDFS admin exploits
+### <a name="HDFS_admin_exploits"></a>HDFS admin exploits
 
 These exploits assume that the attacker has compromised HDFS, but does not have root or `hdfs` user shell access.
 
@@ -263,6 +275,6 @@ These exploits assume that the attacker has compromised HDFS, but does not have 
 
     * By itself, insufficient to read cleartext without EDEK encryption keys.
 
-### Rogue user exploits
+### <a name="Rogue_user_exploits"></a>Rogue user exploits
 
 A rogue user can collect keys of files they have access to, and use them later to decrypt the encrypted data of those files. As the user had access to those files, they already had access to the file contents. This can be mitigated through periodic key rolling policies.
