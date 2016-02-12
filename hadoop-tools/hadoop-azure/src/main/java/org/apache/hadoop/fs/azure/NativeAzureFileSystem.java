@@ -558,13 +558,13 @@ public class NativeAzureFileSystem extends FileSystem {
         throws IOException {
       Path srcFile = fullPath(srcKey, fileName);
       Path dstFile = fullPath(dstKey, fileName);
-      boolean srcExists = fs.exists(srcFile);
-      boolean dstExists = fs.exists(dstFile);
+      String srcName = fs.pathToKey(srcFile);
+      String dstName = fs.pathToKey(dstFile);
+      boolean srcExists = fs.getStoreInterface().explicitFileExists(srcName);
+      boolean dstExists = fs.getStoreInterface().explicitFileExists(dstName);
       if(srcExists) {
         // Rename gets exclusive access (via a lease) for HBase write-ahead log
         // (WAL) file processing correctness.  See the rename code for details.
-        String srcName = fs.pathToKey(srcFile);
-        String dstName = fs.pathToKey(dstFile);
         fs.getStoreInterface().rename(srcName, dstName, true, null);
       } else if (!srcExists && dstExists) {
         // The rename already finished, so do nothing.
