@@ -1120,6 +1120,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12699. TestKMS#testKMSProvider intermittently fails during
     'test rollover draining'. (Xiao Chen via wang)
 
+    HADOOP-12776. Remove getaclstatus call for non-acl commands in getfacl.
+    (Brahma Reddy Battula via vinayakumarb)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
