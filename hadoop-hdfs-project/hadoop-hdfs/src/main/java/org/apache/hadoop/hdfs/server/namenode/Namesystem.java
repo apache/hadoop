@@ -18,25 +18,15 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
-import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.util.RwLock;
-import org.apache.hadoop.ipc.StandbyException;
-import org.apache.hadoop.security.AccessControlException;
 
 /** Namesystem operations. */
 @InterfaceAudience.Private
 public interface Namesystem extends RwLock, SafeMode {
   /** Is this name system running? */
   boolean isRunning();
-
-  /** Check if the user has superuser privilege. */
-  void checkSuperuserPrivilege() throws AccessControlException;
-
-  /** @return the block pool ID */
-  String getBlockPoolId();
 
   BlockCollection getBlockCollection(long id);
 

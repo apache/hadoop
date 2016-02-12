@@ -114,7 +114,7 @@ class BlocksMap {
     if (blockInfo == null)
       return;
 
-    blockInfo.setBlockCollectionId(INodeId.INVALID_INODE_ID);
+    assert blockInfo.getBlockCollectionId() == INodeId.INVALID_INODE_ID;
     for(int idx = blockInfo.numNodes()-1; idx >= 0; idx--) {
       DatanodeDescriptor dn = blockInfo.getDatanode(idx);
       if (dn != null) {
