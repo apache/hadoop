@@ -2739,6 +2739,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9788. Incompatible tag renumbering in HeartbeatResponseProto. (wang)
 
+    HDFS-9790. HDFS Balancer should exit with a proper message if upgrade is
+    not finalized. (Xiaobing Zhou via Arpit Agarwal)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
