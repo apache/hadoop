@@ -86,9 +86,15 @@ class AclCommands extends FsCommand {
           (perm.getOtherAction().implies(FsAction.EXECUTE) ? "t" : "T"));
       }
 
-      AclStatus aclStatus = item.fs.getAclStatus(item.path);
-      List<AclEntry> entries = perm.getAclBit() ? aclStatus.getEntries()
-          : Collections.<AclEntry> emptyList();
+      AclStatus aclStatus = null;
+      List<AclEntry> entries = null;
+      if (perm.getAclBit()) {
+        aclStatus = item.fs.getAclStatus(item.path);
+        entries = aclStatus.getEntries();
+      } else {
+        aclStatus = null;
+        entries = Collections.<AclEntry> emptyList();
+      }
       ScopedAclEntries scopedEntries = new ScopedAclEntries(
         AclUtil.getAclFromPermAndEntries(perm, entries));
       printAclEntriesForSingleScope(aclStatus, perm,
