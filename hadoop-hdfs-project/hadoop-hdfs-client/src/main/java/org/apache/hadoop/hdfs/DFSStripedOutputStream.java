@@ -822,7 +822,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
           streamer.closeSocket();
         } catch (Exception e) {
           try {
-            handleCurrentStreamerFailure("force=" + force, e);
+            handleStreamerFailure("force=" + force, e, streamer);
           } catch (IOException ioe) {
             b.add(ioe);
           }
@@ -947,38 +947,45 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     }
 
     try {
-      // flush from all upper layers
-      flushBuffer();
-      // if the last stripe is incomplete, generate and write parity cells
-      if (generateParityCellsForLastStripe()) {
-        writeParityCells();
-      }
-      enqueueAllCurrentPackets();
+      try {
+        // flush from all upper layers
+        flushBuffer();
+        // if the last stripe is incomplete, generate and write parity cells
+        if (generateParityCellsForLastStripe()) {
+          writeParityCells();
+        }
+        enqueueAllCurrentPackets();
 
-      // flush all the data packets
-      flushAllInternals();
-      // check failures
-      checkStreamerFailures();
+        // flush all the data packets
+        flushAllInternals();
+        // check failures
+        checkStreamerFailures();
 
-      for (int i = 0; i < numAllBlocks; i++) {
-        final StripedDataStreamer s = setCurrentStreamer(i);
-        if (s.isHealthy()) {
-          try {
-            if (s.getBytesCurBlock() > 0) {
-              setCurrentPacketToEmpty();
+        for (int i = 0; i < numAllBlocks; i++) {
+          final StripedDataStreamer s = setCurrentStreamer(i);
+          if (s.isHealthy()) {
+            try {
+              if (s.getBytesCurBlock() > 0) {
+                setCurrentPacketToEmpty();
+              }
+              // flush the last "close" packet to Datanode
+              flushInternal();
+            } catch (Exception e) {
+              // TODO for both close and endBlock, we currently do not handle
+              // failures when sending the last packet. We actually do not need to
+              // bump GS for this kind of failure. Thus counting the total number
+              // of failures may be good enough.
             }
-            // flush the last "close" packet to Datanode
-            flushInternal();
-          } catch(Exception e) {
-            // TODO for both close and endBlock, we currently do not handle
-            // failures when sending the last packet. We actually do not need to
-            // bump GS for this kind of failure. Thus counting the total number
-            // of failures may be good enough.
           }
         }
+      } finally {
+        // Failures may happen when flushing data/parity data out. Exceptions
+        // may be thrown if more than 3 streamers fail, or updatePipeline RPC
+        // fails. Streamers may keep waiting for the new block/GS information.
+        // Thus need to force closing these threads.
+        closeThreads(true);
       }
 
-      closeThreads(false);
       try (TraceScope ignored =
                dfsClient.getTracer().newScope("completeFile")) {
         completeFile(currentBlockGroup);
