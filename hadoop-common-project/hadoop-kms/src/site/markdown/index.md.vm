@@ -59,15 +59,21 @@ NOTE: You need to restart the KMS for the configuration changes to take effect.
 
 $H3 KMS Cache
 
-KMS caches keys for short period of time to avoid excessive hits to the underlying key provider.
+KMS has two kinds of caching: a CachingKeyProvider for caching the encryption keys, and a KeyProvider for caching the EEKs.
 
-The Cache is enabled by default (can be dissabled by setting the `hadoop.kms.cache.enable` boolean property to false)
+$H4 CachingKeyProvider
 
-The cache is used with the following 3 methods only, `getCurrentKey()` and `getKeyVersion()` and `getMetadata()`.
+KMS caches encryption keys for a short period of time to avoid excessive hits to the underlying KeyProvider.
 
-For the `getCurrentKey()` method, cached entries are kept for a maximum of 30000 millisecond regardless the number of times the key is being access (to avoid stale keys to be considered current).
+This Cache is enabled by default (can be disabled by setting the `hadoop.kms.cache.enable` boolean property to false)
 
-For the `getKeyVersion()` method, cached entries are kept with a default inactivity timeout of 600000 milliseconds (10 mins). This time out is configurable via the following property in the `etc/hadoop/kms-site.xml` configuration file:
+This cache is used with the following 3 methods only, `getCurrentKey()` and `getKeyVersion()` and `getMetadata()`.
+
+For the `getCurrentKey()` method, cached entries are kept for a maximum of 30000 milliseconds regardless the number of times the key is being accessed (to avoid stale keys to be considered current).
+
+For the `getKeyVersion()` method, cached entries are kept with a default inactivity timeout of 600000 milliseconds (10 mins).
+
+These configurations can be changed via the following properties in the `etc/hadoop/kms-site.xml` configuration file:
 
 ```xml
    <property>
@@ -83,6 +89,67 @@ For the `getKeyVersion()` method, cached entries are kept with a default inactiv
    <property>
      <name>hadoop.kms.current.key.cache.timeout.ms</name>
      <value>30000</value>
+   </property>
+```
+
+$H4 KeyProvider
+
+Architecturally, both server-side (e.g. KMS) and client-side (e.g. NameNode) have a cache for EEKs. The following are configurable on the cache:
+
+* The size of the cache. This is the maximum number of EEKs that can be cached under each key name.
+* A low watermark on the cache. For each key name, if after a get call, the number of cached EEKs are less than (size * low watermark), then the cache under this key name will be filled asynchronously. For each key name, only 1 thread could be running for the asynchronous filling.
+* The maximum number of asynchronous threads overall, across key names, allowed to fill the queue in a cache.
+* The cache expiry time, in milliseconds. Internally Guava cache is used as the cache implementation. The expiry approach is [expireAfterAccess](https://code.google.com/p/guava-libraries/wiki/CachesExplained).
+
+Note that due to the asynchronous filling mechanism, it is possible that after rollNewVersion(), the caller still gets the old EEKs. In the worst case, the caller may get up to (server-side cache size + client-side cache size) number of old EEKs, or until both caches expire. This behavior is a trade off to avoid locking on the cache, and is acceptable since the old version EEKs can still be used to decrypt.
+
+Below are the configurations and their default values:
+
+Server-side can be changed via the following properties in the `etc/hadoop/kms-site.xml` configuration file:
+
+```xml
+   <property>
+     <name>hadoop.security.kms.encrypted.key.cache.size</name>
+     <value>500</value>
+   </property>
+
+   <property>
+     <name>hadoop.security.kms.encrypted.key.cache.low.watermark</name>
+     <value>0.3</value>
+   </property>
+
+   <property>
+     <name>hadoop.security.kms.encrypted.key.cache.num.fill.threads</name>
+     <value>2</value>
+   </property>
+
+   <property>
+     <name>hadoop.security.kms.encrypted.key.cache.expiry</name>
+     <value>43200000</value>
+   </property>
+```
+
+Client-side can be changed via the following properties in the `etc/hadoop/core-site.xml` configuration file:
+
+```xml
+   <property>
+     <name>hadoop.security.kms.client.encrypted.key.cache.size</name>
+     <value>500</value>
+   </property>
+
+   <property>
+     <name>hadoop.security.kms.client.encrypted.key.cache.low-watermark</name>
+     <value>0.3</value>
+   </property>
+
+   <property>
+     <name>hadoop.security.kms.client.encrypted.key.cache.num.refill.threads</name>
+     <value>2</value>
+   </property>
+
+   <property>
+     <name>hadoop.security.kms.client.encrypted.key.cache.expiry</name>
+     <value>43200000</value>
    </property>
 ```
 
