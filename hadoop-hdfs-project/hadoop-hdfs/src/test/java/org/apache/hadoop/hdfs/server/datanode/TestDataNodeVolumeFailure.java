@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
@@ -324,13 +326,17 @@ public class TestDataNodeVolumeFailure {
 
     // Hot swap out the failure volume.
     String dataDirs = dn0Vol2.getPath();
-    dn0.reconfigurePropertyImpl(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
-        dataDirs);
+    assertThat(
+        dn0.reconfigurePropertyImpl(
+            DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dataDirs),
+        is(dn0.getConf().get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY)));
 
     // Fix failure volume dn0Vol1 and remount it back.
     DataNodeTestUtils.restoreDataDirFromFailure(dn0Vol1);
-    dn0.reconfigurePropertyImpl(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
-        oldDataDirs);
+    assertThat(
+        dn0.reconfigurePropertyImpl(
+            DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, oldDataDirs),
+        is(dn0.getConf().get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY)));
 
     // Fail dn0Vol2. Now since dn0Vol1 has been fixed, DN0 has sufficient
     // resources, thus it should keep running.
@@ -354,8 +360,11 @@ public class TestDataNodeVolumeFailure {
         DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
 
     // Add a new volume to DN0
-    dn0.reconfigurePropertyImpl(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
-        oldDataDirs + "," + dn0VolNew.getAbsolutePath());
+    assertThat(
+        dn0.reconfigurePropertyImpl(
+            DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
+            oldDataDirs + "," + dn0VolNew.getAbsolutePath()),
+        is(dn0.getConf().get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY)));
 
     // Fail dn0Vol1 first and hot swap it.
     DataNodeTestUtils.injectDataDirFailure(dn0Vol1);
