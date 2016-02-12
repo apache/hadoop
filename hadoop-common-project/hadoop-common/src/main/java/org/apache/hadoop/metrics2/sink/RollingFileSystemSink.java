@@ -47,6 +47,8 @@ import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsSink;
 import org.apache.hadoop.metrics2.MetricsTag;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * <p>This class is a metrics sink that uses
@@ -107,6 +109,14 @@ import org.apache.hadoop.metrics2.MetricsTag;
  * the data is being written successfully. This is a known HDFS limitation that
  * exists because of the performance cost of updating the metadata.  See
  * <a href="https://issues.apache.org/jira/browse/HDFS-5478">HDFS-5478</a>.</p>
+ *
+ * <p>When using this sink in a secure (Kerberos) environment, two additional
+ * properties must be set: <code>keytab-key</code> and
+ * <code>principal-key</code>. <code>keytab-key</code> should contain the key by
+ * which the keytab file can be found in the configuration, for example,
+ * <code>yarn.nodemanager.keytab</code>. <code>principal-key</code> should
+ * contain the key by which the principal can be found in the configuration,
+ * for example, <code>yarn.nodemanager.principal</code>.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -115,6 +125,8 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
   private static final String SOURCE_KEY = "source";
   private static final String IGNORE_ERROR_KEY = "ignore-error";
   private static final String ALLOW_APPEND_KEY = "allow-append";
+  private static final String KEYTAB_PROPERTY_KEY = "keytab-key";
+  private static final String USERNAME_PROPERTY_KEY = "principal-key";
   private static final String SOURCE_DEFAULT = "unknown";
   private static final String BASEPATH_DEFAULT = "/tmp";
   private static final FastDateFormat DATE_FORMAT =
@@ -134,10 +146,21 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
   // We keep this only to be able to call hsynch() on it.
   private FSDataOutputStream currentFSOutStream;
   private Timer flushTimer;
+
+  // This flag is used during testing to make the flusher thread run after only
+  // a short pause instead of waiting for the top of the hour.
   @VisibleForTesting
-  protected static boolean isTest = false;
+  protected static boolean flushQuickly = false;
+  // This flag is used by the flusher thread to indicate that it has run. Used
+  // only for testing purposes.
   @VisibleForTesting
   protected static volatile boolean hasFlushed = false;
+  // Use this configuration instead of loading a new one.
+  @VisibleForTesting
+  protected static Configuration suppliedConf = null;
+  // Use this file system instead of getting a new one.
+  @VisibleForTesting
+  protected static FileSystem suppliedFilesystem = null;
 
   @Override
   public void init(SubsetConfiguration conf) {
@@ -146,15 +169,49 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
     ignoreError = conf.getBoolean(IGNORE_ERROR_KEY, false);
     allowAppend = conf.getBoolean(ALLOW_APPEND_KEY, false);
 
+    Configuration configuration = loadConf();
+
+    UserGroupInformation.setConfiguration(configuration);
+
+    // Don't do secure setup if it's not needed.
+    if (UserGroupInformation.isSecurityEnabled()) {
+      // Validate config so that we don't get an NPE
+      checkForProperty(conf, KEYTAB_PROPERTY_KEY);
+      checkForProperty(conf, USERNAME_PROPERTY_KEY);
+
+
+      try {
+        // Login as whoever we're supposed to be and let the hostname be pulled
+        // from localhost. If security isn't enabled, this does nothing.
+        SecurityUtil.login(configuration, conf.getString(KEYTAB_PROPERTY_KEY),
+            conf.getString(USERNAME_PROPERTY_KEY));
+      } catch (IOException ex) {
+        throw new MetricsException("Error logging in securely: ["
+            + ex.toString() + "]", ex);
+      }
+    }
+
+    fileSystem = getFileSystem(configuration);
+
+    // This step isn't strictly necessary, but it makes debugging issues much
+    // easier. We try to create the base directory eagerly and fail with
+    // copious debug info if it fails.
     try {
-      fileSystem = FileSystem.get(new URI(basePath.toString()),
-          new Configuration());
-    } catch (URISyntaxException ex) {
-      throw new MetricsException("The supplied filesystem base path URI"
-          + " is not a valid URI: " + basePath.toString(), ex);
-    } catch (IOException ex) {
-      throw new MetricsException("Error connecting to file system: "
-          + basePath + " [" + ex.toString() + "]", ex);
+      fileSystem.mkdirs(basePath);
+    } catch (Exception ex) {
+      throw new MetricsException("Failed to create " + basePath + "["
+          + SOURCE_KEY + "=" + source + ", "
+          + IGNORE_ERROR_KEY + "=" + ignoreError + ", "
+          + ALLOW_APPEND_KEY + "=" + allowAppend + ", "
+          + KEYTAB_PROPERTY_KEY + "="
+          + conf.getString(KEYTAB_PROPERTY_KEY) + ", "
+          + conf.getString(KEYTAB_PROPERTY_KEY) + "="
+          + configuration.get(conf.getString(KEYTAB_PROPERTY_KEY)) + ", "
+          + USERNAME_PROPERTY_KEY + "="
+          + conf.getString(USERNAME_PROPERTY_KEY) + ", "
+          + conf.getString(USERNAME_PROPERTY_KEY) + "="
+          + configuration.get(conf.getString(USERNAME_PROPERTY_KEY))
+          + "] -- " + ex.toString(), ex);
     }
 
     // If we're permitted to append, check if we actually can
@@ -163,6 +220,67 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
     }
 
     flushTimer = new Timer("RollingFileSystemSink Flusher", true);
+  }
+
+  /**
+   * Throw a {@link MetricsException} if the given property is not set.
+   *
+   * @param conf the configuration to test
+   * @param key the key to validate
+   */
+  private static void checkForProperty(SubsetConfiguration conf, String key) {
+    if (!conf.containsKey(key)) {
+      throw new MetricsException("Configuration is missing " + key
+          + " property");
+    }
+  }
+
+  /**
+   * Return the supplied configuration for testing or otherwise load a new
+   * configuration.
+   *
+   * @return the configuration to use
+   */
+  private Configuration loadConf() {
+    Configuration conf;
+
+    if (suppliedConf != null) {
+      conf = suppliedConf;
+    } else {
+      // The config we're handed in init() isn't the one we want here, so we
+      // create a new one to pick up the full settings.
+      conf = new Configuration();
+    }
+
+    return conf;
+  }
+
+  /**
+   * Return the supplied file system for testing or otherwise get a new file
+   * system.
+   *
+   * @param conf the configuration
+   * @return the file system to use
+   * @throws MetricsException thrown if the file system could not be retrieved
+   */
+  private FileSystem getFileSystem(Configuration conf) throws MetricsException {
+    FileSystem fs = null;
+
+    if (suppliedFilesystem != null) {
+      fs = suppliedFilesystem;
+    } else {
+      try {
+        fs = FileSystem.get(new URI(basePath.toString()), conf);
+      } catch (URISyntaxException ex) {
+        throw new MetricsException("The supplied filesystem base path URI"
+            + " is not a valid URI: " + basePath.toString(), ex);
+      } catch (IOException ex) {
+        throw new MetricsException("Error connecting to file system: "
+            + basePath + " [" + ex.toString() + "]", ex);
+      }
+    }
+
+    return fs;
   }
 
   /**
@@ -232,7 +350,7 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
 
     next.setTime(now);
 
-    if (isTest) {
+    if (flushQuickly) {
       // If we're running unit tests, flush after a short pause
       next.add(Calendar.MILLISECOND, 400);
     } else {

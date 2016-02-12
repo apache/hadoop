@@ -996,6 +996,9 @@ Release 2.9.0 - UNRELEASED
 
     HDFS-9637. Tests for RollingFileSystemSink. (Daniel Templeton via kasha)
 
+    HDFS-9780. RollingFileSystemSink doesn't work on secure clusters. 
+    (Daniel Templeton via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
