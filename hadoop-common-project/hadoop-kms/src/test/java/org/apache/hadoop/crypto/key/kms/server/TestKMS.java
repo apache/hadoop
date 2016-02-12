@@ -29,6 +29,7 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersi
 import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.apache.hadoop.crypto.key.kms.LoadBalancingKMSClientProvider;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.minikdc.MiniKdc;
@@ -630,10 +631,24 @@ public class TestKMS {
 
         EncryptedKeyVersion ekv1 = kpce.generateEncryptedKey("k6");
         kpce.rollNewVersion("k6");
-        EncryptedKeyVersion ekv2 = kpce.generateEncryptedKey("k6");
-        Assert.assertNotEquals(ekv1.getEncryptionKeyVersionName(),
-            ekv2.getEncryptionKeyVersionName());
 
+        /**
+         * due to the cache on the server side, client may get old keys.
+         * @see EagerKeyGeneratorKeyProviderCryptoExtension#rollNewVersion(String)
+         */
+        boolean rollSucceeded = false;
+        for (int i = 0; i <= EagerKeyGeneratorKeyProviderCryptoExtension
+            .KMS_KEY_CACHE_SIZE_DEFAULT + CommonConfigurationKeysPublic.
+            KMS_CLIENT_ENC_KEY_CACHE_SIZE_DEFAULT; ++i) {
+          EncryptedKeyVersion ekv2 = kpce.generateEncryptedKey("k6");
+          if (!(ekv1.getEncryptionKeyVersionName()
+              .equals(ekv2.getEncryptionKeyVersionName()))) {
+            rollSucceeded = true;
+            break;
+          }
+        }
+        Assert.assertTrue("rollover did not generate a new key even after"
+            + " queue is drained", rollSucceeded);
         return null;
       }
     });
