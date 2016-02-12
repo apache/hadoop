@@ -1695,6 +1695,9 @@ Release 2.8.0 - UNRELEASED
     "hadoop.workaround.non.threadsafe.getpwuid" is different between
     core-default.xml and NativeIO.java (Akira AJISAKA via cmccabe)
 
+    HADOOP-12795. KMS does not log detailed stack trace for unexpected errors.
+    (cnauroth)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
