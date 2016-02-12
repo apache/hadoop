@@ -19,6 +19,7 @@
 package org.apache.hadoop.conf;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
@@ -27,13 +28,13 @@ import org.junit.Test;
 import org.junit.Before;
 
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
@@ -44,6 +45,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeoutException;
 
 public class TestReconfiguration {
   private Configuration conf1;
@@ -129,9 +131,10 @@ public class TestReconfiguration {
     }
 
     @Override
-    public synchronized void reconfigurePropertyImpl(
+    public synchronized String reconfigurePropertyImpl(
         String property, String newVal) throws ReconfigurationException {
       // do nothing
+      return newVal;
     }
     
     /**
@@ -354,13 +357,14 @@ public class TestReconfiguration {
     }
 
     @Override
-    public synchronized void reconfigurePropertyImpl(String property,
+    public synchronized String reconfigurePropertyImpl(String property,
         String newVal) throws ReconfigurationException {
       try {
         latch.await();
       } catch (InterruptedException e) {
         // Ignore
       }
+      return newVal;
     }
   }
 
@@ -395,9 +399,9 @@ public class TestReconfiguration {
     doReturn(false).when(dummy).isPropertyReconfigurable(eq("name2"));
     doReturn(true).when(dummy).isPropertyReconfigurable(eq("name3"));
 
-    doNothing().when(dummy)
+    doReturn("dummy").when(dummy)
         .reconfigurePropertyImpl(eq("name1"), anyString());
-    doNothing().when(dummy)
+    doReturn("dummy").when(dummy)
         .reconfigurePropertyImpl(eq("name2"), anyString());
     doThrow(new ReconfigurationException("NAME3", "NEW3", "OLD3",
         new IOException("io exception")))
@@ -473,5 +477,132 @@ public class TestReconfiguration {
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("The server is stopped", e);
     }
+  }
+
+  /**
+   * Ensure that {@link ReconfigurableBase#reconfigureProperty} updates the
+   * parent's cached configuration on success.
+   * @throws IOException
+   */
+  @Test (timeout=300000)
+  public void testConfIsUpdatedOnSuccess() throws ReconfigurationException {
+    final String property = "FOO";
+    final String value1 = "value1";
+    final String value2 = "value2";
+
+    final Configuration conf = new Configuration();
+    conf.set(property, value1);
+    final Configuration newConf = new Configuration();
+    newConf.set(property, value2);
+
+    final ReconfigurableBase reconfigurable = makeReconfigurable(
+        conf, newConf, Arrays.asList(property));
+
+    reconfigurable.reconfigureProperty(property, value2);
+    assertThat(reconfigurable.getConf().get(property), is(value2));
+  }
+
+  /**
+   * Ensure that {@link ReconfigurableBase#startReconfigurationTask} updates
+   * its parent's cached configuration on success.
+   * @throws IOException
+   */
+  @Test (timeout=300000)
+  public void testConfIsUpdatedOnSuccessAsync() throws ReconfigurationException,
+      TimeoutException, InterruptedException, IOException {
+    final String property = "FOO";
+    final String value1 = "value1";
+    final String value2 = "value2";
+
+    final Configuration conf = new Configuration();
+    conf.set(property, value1);
+    final Configuration newConf = new Configuration();
+    newConf.set(property, value2);
+
+    final ReconfigurableBase reconfigurable = makeReconfigurable(
+        conf, newConf, Arrays.asList(property));
+
+    // Kick off a reconfiguration task and wait until it completes.
+    reconfigurable.startReconfigurationTask();
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return reconfigurable.getReconfigurationTaskStatus().stopped();
+      }
+    }, 100, 60000);
+    assertThat(reconfigurable.getConf().get(property), is(value2));
+  }
+
+  /**
+   * Ensure that {@link ReconfigurableBase#reconfigureProperty} unsets the
+   * property in its parent's configuration when the new value is null.
+   * @throws IOException
+   */
+  @Test (timeout=300000)
+  public void testConfIsUnset() throws ReconfigurationException {
+    final String property = "FOO";
+    final String value1 = "value1";
+
+    final Configuration conf = new Configuration();
+    conf.set(property, value1);
+    final Configuration newConf = new Configuration();
+
+    final ReconfigurableBase reconfigurable = makeReconfigurable(
+        conf, newConf, Arrays.asList(property));
+
+    reconfigurable.reconfigureProperty(property, null);
+    assertNull(reconfigurable.getConf().get(property));
+  }
+
+  /**
+   * Ensure that {@link ReconfigurableBase#startReconfigurationTask} unsets the
+   * property in its parent's configuration when the new value is null.
+   * @throws IOException
+   */
+  @Test (timeout=300000)
+  public void testConfIsUnsetAsync() throws ReconfigurationException,
+      IOException, TimeoutException, InterruptedException {
+    final String property = "FOO";
+    final String value1 = "value1";
+
+    final Configuration conf = new Configuration();
+    conf.set(property, value1);
+    final Configuration newConf = new Configuration();
+
+    final ReconfigurableBase reconfigurable = makeReconfigurable(
+        conf, newConf, Arrays.asList(property));
+
+    // Kick off a reconfiguration task and wait until it completes.
+    reconfigurable.startReconfigurationTask();
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return reconfigurable.getReconfigurationTaskStatus().stopped();
+      }
+    }, 100, 60000);
+    assertNull(reconfigurable.getConf().get(property));
+  }
+
+  private ReconfigurableBase makeReconfigurable(
+      final Configuration oldConf, final Configuration newConf,
+      final Collection<String> reconfigurableProperties) {
+
+    return new ReconfigurableBase(oldConf) {
+      @Override
+      protected Configuration getNewConf() {
+        return newConf;
+      }
+
+      @Override
+      public Collection<String> getReconfigurableProperties() {
+        return reconfigurableProperties;
+      }
+
+      @Override
+      protected String reconfigurePropertyImpl(
+          String property, String newVal) throws ReconfigurationException {
+        return newVal;
+      }
+    };
   }
 }
