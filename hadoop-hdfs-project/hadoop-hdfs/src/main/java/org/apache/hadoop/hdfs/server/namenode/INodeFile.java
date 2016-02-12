@@ -25,6 +25,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -314,12 +315,13 @@ public class INodeFile extends INodeWithAdditionalFields
       return null;
     }
 
-    BlockInfo ucBlock = blocks[size_1];
+    BlockInfo lastBlock = blocks[size_1];
     //copy to a new list
     BlockInfo[] newlist = new BlockInfo[size_1];
     System.arraycopy(blocks, 0, newlist, 0, size_1);
     setBlocks(newlist);
-    return ucBlock;
+    lastBlock.delete();
+    return lastBlock;
   }
 
   /* End of Under-Construction Feature */
@@ -629,7 +631,6 @@ public class INodeFile extends INodeWithAdditionalFields
     if (blocks != null && reclaimContext.collectedBlocks != null) {
       for (BlockInfo blk : blocks) {
         reclaimContext.collectedBlocks.addDeleteBlock(blk);
-        blk.setBlockCollectionId(INodeId.INVALID_INODE_ID);
       }
     }
     clearBlocks();
@@ -905,7 +906,7 @@ public class INodeFile extends INodeWithAdditionalFields
    * @return sum of sizes of the remained blocks
    */
   public long collectBlocksBeyondMax(final long max,
-      final BlocksMapUpdateInfo collectedBlocks) {
+      final BlocksMapUpdateInfo collectedBlocks, Set<BlockInfo> toRetain) {
     final BlockInfo[] oldBlocks = getBlocks();
     if (oldBlocks == null) {
       return 0;
@@ -927,7 +928,10 @@ public class INodeFile extends INodeWithAdditionalFields
     // collect the blocks beyond max
     if (collectedBlocks != null) {
       for(; n < oldBlocks.length; n++) {
-        collectedBlocks.addDeleteBlock(oldBlocks[n]);
+        final BlockInfo del = oldBlocks[n];
+        if (toRetain == null || !toRetain.contains(del)) {
+          collectedBlocks.addDeleteBlock(del);
+        }
       }
     }
     return size;
@@ -1026,22 +1030,18 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   /** Exclude blocks collected for deletion that belong to a snapshot. */
-  void excludeSnapshotBlocks(int snapshotId,
-                             BlocksMapUpdateInfo collectedBlocks) {
-    if(collectedBlocks == null || collectedBlocks.getToDeleteList().isEmpty())
-      return;
+  Set<BlockInfo> getSnapshotBlocksToRetain(int snapshotId) {
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
-    if(sf == null)
-      return;
-    BlockInfo[] snapshotBlocks =
-        getDiffs().findEarlierSnapshotBlocks(snapshotId);
-    if(snapshotBlocks == null)
-      return;
-    List<BlockInfo> toDelete = collectedBlocks.getToDeleteList();
-    for(BlockInfo blk : snapshotBlocks) {
-      if(toDelete.contains(blk))
-        collectedBlocks.removeDeleteBlock(blk);
+    if(sf == null) {
+      return null;
     }
+    BlockInfo[] snapshotBlocks = getDiffs().findEarlierSnapshotBlocks(snapshotId);
+    if(snapshotBlocks == null) {
+      return null;
+    }
+    Set<BlockInfo> toRetain = new HashSet<>(snapshotBlocks.length);
+    Collections.addAll(toRetain, snapshotBlocks);
+    return toRetain;
   }
 
   /**

@@ -220,7 +220,7 @@ public class FileWithSnapshotFeature implements INode.Feature {
     FileDiff last = diffs.getLast();
     BlockInfo[] snapshotBlocks = last == null ? null : last.getBlocks();
     if(snapshotBlocks == null)
-      file.collectBlocksBeyondMax(max, reclaimContext.collectedBlocks());
+      file.collectBlocksBeyondMax(max, reclaimContext.collectedBlocks(), null);
     else
       file.collectBlocksBeyondSnapshot(snapshotBlocks,
                                        reclaimContext.collectedBlocks());

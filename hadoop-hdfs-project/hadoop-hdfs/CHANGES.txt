@@ -1002,6 +1002,9 @@ Release 2.9.0 - UNRELEASED
     HDFS-9780. RollingFileSystemSink doesn't work on secure clusters. 
     (Daniel Templeton via kasha)
 
+    HDFS-9754. Avoid unnecessary getBlockCollection calls in BlockManager.
+    (jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES

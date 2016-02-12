@@ -96,6 +96,10 @@ public abstract class BlockInfo extends Block
     this.bcId = id;
   }
 
+  public void delete() {
+    setBlockCollectionId(INVALID_INODE_ID);
+  }
+
   public boolean isDeleted() {
     return bcId == INVALID_INODE_ID;
   }
@@ -243,6 +247,12 @@ public abstract class BlockInfo extends Block
    */
   public boolean isComplete() {
     return getBlockUCState().equals(BlockUCState.COMPLETE);
+  }
+
+  public final boolean isCompleteOrCommitted() {
+    final BlockUCState state = getBlockUCState();
+    return state.equals(BlockUCState.COMPLETE) ||
+        state.equals(BlockUCState.COMMITTED);
   }
 
   /**

@@ -91,7 +91,7 @@ class BlocksMap {
     if (blockInfo == null)
       return;
 
-    blockInfo.setBlockCollectionId(INodeId.INVALID_INODE_ID);
+    assert blockInfo.getBlockCollectionId() == INodeId.INVALID_INODE_ID;
     final int size = blockInfo.isStriped() ?
         blockInfo.getCapacity() : blockInfo.numNodes();
     for(int idx = size - 1; idx >= 0; idx--) {

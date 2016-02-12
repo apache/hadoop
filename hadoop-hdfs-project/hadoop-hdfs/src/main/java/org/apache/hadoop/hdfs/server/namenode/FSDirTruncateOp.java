@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.util.Set;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
@@ -186,6 +187,7 @@ final class FSDirTruncateOp {
           "Should be the same block.";
       if (oldBlock.getBlockId() != tBlk.getBlockId()
           && !file.isBlockInLatestSnapshot(oldBlock)) {
+        oldBlock.delete();
         fsd.getBlockManager().removeBlockFromMap(oldBlock);
       }
     }
@@ -298,9 +300,9 @@ final class FSDirTruncateOp {
 
     verifyQuotaForTruncate(fsn, iip, file, newLength, delta);
 
-    long remainingLength =
-        file.collectBlocksBeyondMax(newLength, collectedBlocks);
-    file.excludeSnapshotBlocks(latestSnapshot, collectedBlocks);
+    Set<BlockInfo> toRetain = file.getSnapshotBlocksToRetain(latestSnapshot);
+    long remainingLength = file.collectBlocksBeyondMax(newLength,
+        collectedBlocks, toRetain);
     file.setModificationTime(mtime);
     // return whether on a block boundary
     return (remainingLength - newLength) == 0;

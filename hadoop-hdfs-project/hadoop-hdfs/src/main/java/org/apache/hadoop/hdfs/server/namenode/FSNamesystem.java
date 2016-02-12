@@ -3199,7 +3199,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       final BlockInfo b = blocks[i];
       if (b != null && b.getBlockUCState() == BlockUCState.COMMITTED) {
         // b is COMMITTED but not yet COMPLETE, add it to pending replication.
-        blockManager.addExpectedReplicasToPending(b, pendingFile);
+        blockManager.addExpectedReplicasToPending(b);
       }
     }
   }
@@ -4308,9 +4308,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return new PermissionStatus(fsOwner.getShortUserName(), supergroup, permission);
   }
 
-  @Override
-  public void checkSuperuserPrivilege()
-      throws AccessControlException {
+  void checkSuperuserPrivilege() throws AccessControlException {
     if (isPermissionEnabled) {
       FSPermissionChecker pc = getPermissionChecker();
       pc.checkSuperuserPrivilege();
@@ -6573,7 +6571,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      return getErasureCodingPolicyForPath(src);
+      return FSDirErasureCodingOp.getErasureCodingPolicy(this, src);
     } finally {
       readUnlock();
     }
@@ -6835,12 +6833,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     } else {
       return "";
     }
-  }
-
-  @Override
-  public ErasureCodingPolicy getErasureCodingPolicyForPath(String src)
-      throws IOException {
-    return FSDirErasureCodingOp.getErasureCodingPolicy(this, src);
   }
 
   /**

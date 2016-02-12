@@ -1011,12 +1011,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
      */
     public void addDeleteBlock(BlockInfo toDelete) {
       assert toDelete != null : "toDelete is null";
+      toDelete.delete();
       toDeleteList.add(toDelete);
-    }
-
-    public void removeDeleteBlock(BlockInfo block) {
-      assert block != null : "block is null";
-      toDeleteList.remove(block);
     }
 
     public void addUpdateReplicationFactor(BlockInfo block, short targetRepl) {
