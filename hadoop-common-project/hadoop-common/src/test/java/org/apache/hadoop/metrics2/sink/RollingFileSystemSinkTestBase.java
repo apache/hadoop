@@ -32,18 +32,18 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
-import org.apache.commons.io.FileUtils;
+import org.apache.commons.configuration.SubsetConfiguration;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsRecord;
-
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
@@ -66,9 +66,11 @@ import static org.junit.Assert.assertTrue;
  * methods for classes that extend it.
  */
 public class RollingFileSystemSinkTestBase {
+  protected static final String SINK_PRINCIPAL_KEY = "rfssink.principal";
+  protected static final String SINK_KEYTAB_FILE_KEY = "rfssink.keytab";
   protected static final File ROOT_TEST_DIR =
-      new File(System.getProperty("test.build.data", "target/"),
-        "FileSystemSinkTest");
+      new File(System.getProperty("test.build.data", "target/test"),
+        "RollingFileSystemSinkTest");
   protected static final SimpleDateFormat DATE_FORMAT =
       new SimpleDateFormat("yyyyMMddHH");
   protected static File methodDir;
@@ -118,8 +120,9 @@ public class RollingFileSystemSinkTestBase {
    * Set the date format's timezone to GMT.
    */
   @BeforeClass
-  public static void setTZ() {
+  public static void setup() {
     DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("GMT"));
+    FileUtil.fullyDelete(ROOT_TEST_DIR);
   }
 
   /**
@@ -128,7 +131,7 @@ public class RollingFileSystemSinkTestBase {
    */
   @AfterClass
   public static void deleteBaseDir() throws IOException {
-    FileUtils.deleteDirectory(ROOT_TEST_DIR);
+    FileUtil.fullyDelete(ROOT_TEST_DIR);
   }
 
   /**
@@ -139,11 +142,14 @@ public class RollingFileSystemSinkTestBase {
   public void createMethodDir() throws IOException {
     methodDir = new File(ROOT_TEST_DIR, methodName.getMethodName());
 
-    methodDir.mkdirs();
+    assertTrue("Test directory already exists: " + methodDir,
+        methodDir.mkdirs());
   }
 
   /**
-   * Set up the metrics system, start it, and return it.
+   * Set up the metrics system, start it, and return it. The principal and
+   * keytab properties will not be set.
+   *
    * @param path the base path for the sink
    * @param ignoreErrors whether the sink should ignore errors
    * @param allowAppend whether the sink is allowed to append to existing files
@@ -151,18 +157,37 @@ public class RollingFileSystemSinkTestBase {
    */
   protected MetricsSystem initMetricsSystem(String path, boolean ignoreErrors,
       boolean allowAppend) {
+    return initMetricsSystem(path, ignoreErrors, allowAppend, false);
+  }
+
+  /**
+   * Set up the metrics system, start it, and return it.
+   * @param path the base path for the sink
+   * @param ignoreErrors whether the sink should ignore errors
+   * @param allowAppend whether the sink is allowed to append to existing files
+   * @param useSecureParams whether to set the principal and keytab properties
+   * @return the org.apache.hadoop.metrics2.MetricsSystem
+   */
+  protected MetricsSystem initMetricsSystem(String path, boolean ignoreErrors,
+      boolean allowAppend, boolean useSecureParams) {
     // If the prefix is not lower case, the metrics system won't be able to
     // read any of the properties.
-    final String prefix = methodName.getMethodName().toLowerCase();
+    String prefix = methodName.getMethodName().toLowerCase();
 
-    new ConfigBuilder().add("*.period", 10000)
+    ConfigBuilder builder = new ConfigBuilder().add("*.period", 10000)
         .add(prefix + ".sink.mysink0.class", ErrorSink.class.getName())
         .add(prefix + ".sink.mysink0.basepath", path)
         .add(prefix + ".sink.mysink0.source", "testsrc")
         .add(prefix + ".sink.mysink0.context", "test1")
         .add(prefix + ".sink.mysink0.ignore-error", ignoreErrors)
-        .add(prefix + ".sink.mysink0.allow-append", allowAppend)
-        .save(TestMetricsConfig.getTestFilename("hadoop-metrics2-" + prefix));
+        .add(prefix + ".sink.mysink0.allow-append", allowAppend);
+
+    if (useSecureParams) {
+        builder.add(prefix + ".sink.mysink0.keytab-key", SINK_KEYTAB_FILE_KEY)
+        .add(prefix + ".sink.mysink0.principal-key", SINK_PRINCIPAL_KEY);
+    }
+
+    builder.save(TestMetricsConfig.getTestFilename("hadoop-metrics2-" + prefix));
 
     MetricsSystemImpl ms = new MetricsSystemImpl(prefix);
 
@@ -480,6 +505,17 @@ public class RollingFileSystemSinkTestBase {
    */
   public static class ErrorSink extends RollingFileSystemSink {
     public static volatile boolean errored = false;
+
+    @Override
+    public void init(SubsetConfiguration conf) {
+      try {
+        super.init(conf);
+      } catch (MetricsException ex) {
+        errored = true;
+
+        throw new MetricsException(ex);
+      }
+    }
 
     @Override
     public void putMetrics(MetricsRecord record) {

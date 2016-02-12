@@ -20,6 +20,8 @@ package org.apache.hadoop.metrics2.sink;
 
 import java.io.IOException;
 import java.net.URI;
+import org.junit.After;
+import org.junit.Before;
 import java.util.Calendar;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -29,12 +31,10 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.sink.RollingFileSystemSinkTestBase.MyMetrics1;
-import org.junit.After;
 import org.junit.Test;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import org.junit.Before;
 
 /**
  * Test the {@link RollingFileSystemSink} class in the context of HDFS.
@@ -60,7 +60,7 @@ public class TestRollingFileSystemSinkWithHdfs
         new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
 
     // Also clear sink flags
-    RollingFileSystemSink.isTest = false;
+    RollingFileSystemSink.flushQuickly = false;
     RollingFileSystemSink.hasFlushed = false;
   }
 
@@ -256,8 +256,7 @@ public class TestRollingFileSystemSinkWithHdfs
    */
   @Test
   public void testFlushThread() throws Exception {
-    RollingFileSystemSink.isTest = true;
-    RollingFileSystemSink.hasFlushed = false;
+    RollingFileSystemSink.flushQuickly = true;
 
     String path = "hdfs://" + cluster.getNameNode().getHostAndPort() + "/tmp";
     MetricsSystem ms = initMetricsSystem(path, true, false);
