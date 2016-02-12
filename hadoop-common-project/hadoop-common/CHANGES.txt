@@ -1704,6 +1704,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12795. KMS does not log detailed stack trace for unexpected errors.
     (cnauroth)
 
+    HADOOP-12780. During atomic rename handle crash when one directory has been
+    renamed but not file under it. (Madhumita Chakraborty via cnauroth)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

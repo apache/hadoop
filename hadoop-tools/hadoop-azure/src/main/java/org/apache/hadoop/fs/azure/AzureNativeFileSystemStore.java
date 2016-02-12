@@ -2564,6 +2564,36 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   }
 
   /**
+   * Checks whether an explicit file/folder exists.
+   * This is used by redo of atomic rename.
+   * There was a bug(apache jira HADOOP-12780) during atomic rename if
+   * process crashes after an inner directory has been renamed but still
+   * there are file under that directory to be renamed then after the
+   * process comes again it tries to redo the renames. It checks whether
+   * the directory exists or not by calling filesystem.exist.
+   * But filesystem.Exists will treat that directory as implicit directory
+   * and return true as file exists under that directory. So It will try
+   * try to rename that directory and will fail as the corresponding blob
+   * does not exist. So this method explicitly checks for the blob.
+   */
+  @Override
+  public boolean explicitFileExists(String key) throws AzureException {
+    CloudBlobWrapper blob;
+    try {
+      blob = getBlobReference(key);
+      if (null != blob && blob.exists(getInstrumentedContext())) {
+        return true;
+      }
+
+      return false;
+    } catch (StorageException e) {
+      throw new AzureException(e);
+    } catch (URISyntaxException e) {
+      throw new AzureException(e);
+    }
+  }
+
+  /**
    * Changes the permission status on the given key.
    */
   @Override
