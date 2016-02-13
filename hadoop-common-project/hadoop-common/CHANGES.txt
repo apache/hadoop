@@ -2557,7 +2557,7 @@ Release 2.6.5 - UNRELEASED
     HADOOP-12589. Fix intermittent test failure of TestCopyPreserveFlag
     (iwasakims)
 
-Release 2.6.4 - UNRELEASED
+Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
 

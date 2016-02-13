@@ -1044,7 +1044,7 @@ Release 2.6.5 - UNRELEASED
     MAPREDUCE-6191. Improve clearing stale state of Java serialization
                     testcase.  (Sam Liu via Eric Yang)
 
-Release 2.6.4 - UNRELEASED
+Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
 
