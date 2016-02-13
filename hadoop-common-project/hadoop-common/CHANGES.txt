@@ -2554,6 +2554,9 @@ Release 2.6.5 - UNRELEASED
     HADOOP-12773. HBase classes fail to load with client/job classloader
     enabled (sjlee)
 
+    HADOOP-12589. Fix intermittent test failure of TestCopyPreserveFlag
+    (iwasakims)
+
 Release 2.6.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
