@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.contract.localfs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractOptions;
@@ -39,9 +40,8 @@ import java.io.IOException;
 public class LocalFSContract extends AbstractFSContract {
 
   public static final String CONTRACT_XML = "contract/localfs.xml";
-  public static final String SYSPROP_TEST_BUILD_DATA = "test.build.data";
-  public static final String DEFAULT_TEST_BUILD_DATA_DIR = "test/build/data";
   private FileSystem fs;
+  private String testDataDir = new FileSystemTestHelper().getTestRootDir();
 
   public LocalFSContract(Configuration conf) {
     super(conf);
@@ -111,6 +111,6 @@ public class LocalFSContract extends AbstractFSContract {
    * @return the directory for test data
    */
   protected String getTestDataDir() {
-    return System.getProperty(SYSPROP_TEST_BUILD_DATA, DEFAULT_TEST_BUILD_DATA_DIR);
+    return testDataDir;
   }
 }
