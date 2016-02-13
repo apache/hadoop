@@ -1251,7 +1251,7 @@ Release 2.6.5 - UNRELEASED
     HDFS-9347. Invariant assumption in TestQuorumJournalManager.shutdown()
     is wrong. (Wei-Chiu Chuang via zhz)
 
-Release 2.6.4 - UNRELEASED
+Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
 
