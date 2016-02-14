@@ -15,6 +15,9 @@ Release 2.7.3 - UNRELEASED
 
     YARN-3404. Display queue name on application page. (Ryu Kobayashi via jianhe)
 
+    YARN-4653. Document YARN security model from the perspective of
+    Application Developers. (Steve Loughran via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
