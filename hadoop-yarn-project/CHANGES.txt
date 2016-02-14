@@ -1433,6 +1433,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4492. Add documentation for preemption supported in Capacity
     scheduler (Naganarasimha G R via jlowe)
 
+    YARN-4653. Document YARN security model from the perspective of
+    Application Developers. (Steve Loughran via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
