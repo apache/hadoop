@@ -44,8 +44,8 @@ import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
+import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
-import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
@@ -55,9 +55,7 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 import com.google.inject.Guice;
-import com.google.inject.Injector;
 import com.google.inject.Singleton;
-import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
@@ -77,7 +75,8 @@ public class TestAMWebServicesAttempt extends JerseyTest {
   private static AppContext appContext;
   private String webserviceUserName = "testuser";
 
-  private Injector injector = Guice.createInjector(new ServletModule() {
+  private static class WebServletModule extends ServletModule {
+
     @Override
     protected void configureServlets() {
       appContext = new MockAppContext(0, 1, 2, 1);
@@ -90,7 +89,7 @@ public class TestAMWebServicesAttempt extends JerseyTest {
       serve("/*").with(GuiceContainer.class);
       filter("/*").through(TestRMCustomAuthFilter.class);
     }
-  });
+  };
 
   @Singleton
   public static class TestRMCustomAuthFilter extends AuthenticationFilter {
@@ -112,18 +111,17 @@ public class TestAMWebServicesAttempt extends JerseyTest {
     }
   }
 
-
-  public class GuiceServletConfig extends GuiceServletContextListener {
-    @Override
-    protected Injector getInjector() {
-      return injector;
-    }
+  static {
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   public TestAMWebServicesAttempt() {

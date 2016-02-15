@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
+import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
@@ -53,8 +54,6 @@ import org.xml.sax.InputSource;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
@@ -78,10 +77,10 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   private static final ImmutableSet<String> CLUSTER_LABELS =
       ImmutableSet.of(LABEL_LX, LABEL_LY, DEFAULT_PARTITION);
   private static MockRM rm;
-  private CapacitySchedulerConfiguration csConf;
-  private YarnConfiguration conf;
+  static private CapacitySchedulerConfiguration csConf;
+  static private YarnConfiguration conf;
 
-  private Injector injector = Guice.createInjector(new ServletModule() {
+  private static class WebServletModule extends ServletModule {
     @Override
     protected void configureServlets() {
       bind(JAXBContextResolver.class);
@@ -106,76 +105,79 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
       bind(ResourceManager.class).toInstance(rm);
       serve("/*").with(GuiceContainer.class);
     }
-  });
+  };
 
-  public class GuiceServletConfig extends GuiceServletContextListener {
-    @Override
-    protected Injector getInjector() {
-      return injector;
-    }
+  static {
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   private static void setupQueueConfiguration(
-      CapacitySchedulerConfiguration conf, ResourceManager rm) {
+      CapacitySchedulerConfiguration config, ResourceManager resourceManager) {
 
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    config.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[] { QUEUE_A, QUEUE_B, QUEUE_C });
     String interMediateQueueC =
         CapacitySchedulerConfiguration.ROOT + "." + QUEUE_C;
-    conf.setQueues(interMediateQueueC,
+    config.setQueues(interMediateQueueC,
         new String[] { LEAF_QUEUE_C1, LEAF_QUEUE_C2 });
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, LABEL_LX, 100);
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, LABEL_LY, 100);
+    config.setCapacityByLabel(
+        CapacitySchedulerConfiguration.ROOT, LABEL_LX, 100);
+    config.setCapacityByLabel(
+        CapacitySchedulerConfiguration.ROOT, LABEL_LY, 100);
 
     String leafQueueA = CapacitySchedulerConfiguration.ROOT + "." + QUEUE_A;
-    conf.setCapacity(leafQueueA, 30);
-    conf.setMaximumCapacity(leafQueueA, 50);
+    config.setCapacity(leafQueueA, 30);
+    config.setMaximumCapacity(leafQueueA, 50);
 
     String leafQueueB = CapacitySchedulerConfiguration.ROOT + "." + QUEUE_B;
-    conf.setCapacity(leafQueueB, 30);
-    conf.setMaximumCapacity(leafQueueB, 50);
+    config.setCapacity(leafQueueB, 30);
+    config.setMaximumCapacity(leafQueueB, 50);
 
-    conf.setCapacity(interMediateQueueC, 40);
-    conf.setMaximumCapacity(interMediateQueueC, 50);
+    config.setCapacity(interMediateQueueC, 40);
+    config.setMaximumCapacity(interMediateQueueC, 50);
 
     String leafQueueC1 = interMediateQueueC + "." + LEAF_QUEUE_C1;
-    conf.setCapacity(leafQueueC1, 50);
-    conf.setMaximumCapacity(leafQueueC1, 60);
+    config.setCapacity(leafQueueC1, 50);
+    config.setMaximumCapacity(leafQueueC1, 60);
 
     String leafQueueC2 = interMediateQueueC + "." + LEAF_QUEUE_C2;
-    conf.setCapacity(leafQueueC2, 50);
-    conf.setMaximumCapacity(leafQueueC2, 70);
+    config.setCapacity(leafQueueC2, 50);
+    config.setMaximumCapacity(leafQueueC2, 70);
 
     // Define label specific configuration
-    conf.setAccessibleNodeLabels(leafQueueA, ImmutableSet.of(DEFAULT_PARTITION));
-    conf.setAccessibleNodeLabels(leafQueueB, ImmutableSet.of(LABEL_LX));
-    conf.setAccessibleNodeLabels(interMediateQueueC,
+    config.setAccessibleNodeLabels(
+        leafQueueA, ImmutableSet.of(DEFAULT_PARTITION));
+    config.setAccessibleNodeLabels(leafQueueB, ImmutableSet.of(LABEL_LX));
+    config.setAccessibleNodeLabels(interMediateQueueC,
         ImmutableSet.of(LABEL_LX, LABEL_LY));
-    conf.setAccessibleNodeLabels(leafQueueC1,
+    config.setAccessibleNodeLabels(leafQueueC1,
         ImmutableSet.of(LABEL_LX, LABEL_LY));
-    conf.setAccessibleNodeLabels(leafQueueC2,
+    config.setAccessibleNodeLabels(leafQueueC2,
         ImmutableSet.of(LABEL_LX, LABEL_LY));
-    conf.setDefaultNodeLabelExpression(leafQueueB, LABEL_LX);
-    conf.setDefaultNodeLabelExpression(leafQueueC1, LABEL_LX);
-    conf.setDefaultNodeLabelExpression(leafQueueC2, LABEL_LY);
+    config.setDefaultNodeLabelExpression(leafQueueB, LABEL_LX);
+    config.setDefaultNodeLabelExpression(leafQueueC1, LABEL_LX);
+    config.setDefaultNodeLabelExpression(leafQueueC2, LABEL_LY);
 
-    conf.setCapacityByLabel(leafQueueB, LABEL_LX, 30);
-    conf.setCapacityByLabel(interMediateQueueC, LABEL_LX, 70);
-    conf.setCapacityByLabel(leafQueueC1, LABEL_LX, 40);
-    conf.setCapacityByLabel(leafQueueC2, LABEL_LX, 60);
+    config.setCapacityByLabel(leafQueueB, LABEL_LX, 30);
+    config.setCapacityByLabel(interMediateQueueC, LABEL_LX, 70);
+    config.setCapacityByLabel(leafQueueC1, LABEL_LX, 40);
+    config.setCapacityByLabel(leafQueueC2, LABEL_LX, 60);
 
-    conf.setCapacityByLabel(interMediateQueueC, LABEL_LY, 100);
-    conf.setCapacityByLabel(leafQueueC1, LABEL_LY, 50);
-    conf.setCapacityByLabel(leafQueueC2, LABEL_LY, 50);
-    conf.setMaximumCapacityByLabel(leafQueueC1, LABEL_LY, 75);
-    conf.setMaximumCapacityByLabel(leafQueueC2, LABEL_LY, 75);
+    config.setCapacityByLabel(interMediateQueueC, LABEL_LY, 100);
+    config.setCapacityByLabel(leafQueueC1, LABEL_LY, 50);
+    config.setCapacityByLabel(leafQueueC2, LABEL_LY, 50);
+    config.setMaximumCapacityByLabel(leafQueueC1, LABEL_LY, 75);
+    config.setMaximumCapacityByLabel(leafQueueC2, LABEL_LY, 75);
   }
 
   @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   public TestRMWebServicesForCSWithPartitions() {

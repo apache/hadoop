@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -56,6 +57,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdat
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.UTCClock;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
+import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
@@ -70,7 +72,6 @@ import org.junit.runners.Parameterized.Parameters;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Singleton;
-import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.ClientResponse.Status;
@@ -86,10 +87,9 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
 public class TestRMWebServicesReservation extends JerseyTestBase {
 
   private String webserviceUserName = "testuser";
-  private boolean setAuthFilter = false;
+  private static boolean setAuthFilter = false;
 
   private static MockRM rm;
-  private static Injector injector;
 
   private static final int MINIMUM_RESOURCE_DURATION = 1000000;
   private static final Clock clock = new UTCClock();
@@ -102,14 +102,6 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
   private static final String LIST_RESERVATION_PATH = "reservation/list";
   private static final String GET_NEW_RESERVATION_PATH =
       "reservation/new-reservation";
-
-  public static class GuiceServletConfig extends GuiceServletContextListener {
-
-    @Override
-    protected Injector getInjector() {
-      return injector;
-    }
-  }
 
   /*
    * Helper class to allow testing of RM web services which require
@@ -139,7 +131,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
   }
 
-  private abstract class TestServletModule extends ServletModule {
+  private static abstract class TestServletModule extends ServletModule {
     public Configuration conf = new Configuration();
 
     public abstract void configureScheduler();
@@ -175,7 +167,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     }
   }
 
-  private class CapTestServletModule extends TestServletModule {
+  private static class CapTestServletModule extends TestServletModule {
     @Override
     public void configureScheduler() {
       conf.set("yarn.resourcemanager.scheduler.class",
@@ -183,7 +175,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     }
   }
 
-  private class FairTestServletModule extends TestServletModule {
+  private static class FairTestServletModule extends TestServletModule {
     @Override
     public void configureScheduler() {
       try {
@@ -209,52 +201,65 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     }
   }
 
-  private Injector getNoAuthInjectorCap() {
-    return Guice.createInjector(new CapTestServletModule() {
-      @Override
-      protected void configureServlets() {
-        setAuthFilter = false;
-        super.configureServlets();
-      }
-    });
+  private static class NoAuthServletModule extends CapTestServletModule {
+    @Override
+    protected void configureServlets() {
+      setAuthFilter = false;
+      super.configureServlets();
+    }
   }
 
-  private Injector getSimpleAuthInjectorCap() {
-    return Guice.createInjector(new CapTestServletModule() {
-      @Override
-      protected void configureServlets() {
-        setAuthFilter = true;
-        conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
-        // set the admin acls otherwise all users are considered admins
-        // and we can't test authorization
-        conf.setStrings(YarnConfiguration.YARN_ADMIN_ACL, "testuser1");
-        super.configureServlets();
-      }
-    });
+  private static class SimpleAuthServletModule extends CapTestServletModule {
+    @Override
+    protected void configureServlets() {
+      setAuthFilter = true;
+      conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+      // set the admin acls otherwise all users are considered admins
+      // and we can't test authorization
+      conf.setStrings(YarnConfiguration.YARN_ADMIN_ACL, "testuser1");
+      super.configureServlets();
+    }
   }
 
-  private Injector getNoAuthInjectorFair() {
-    return Guice.createInjector(new FairTestServletModule() {
-      @Override
-      protected void configureServlets() {
-        setAuthFilter = false;
-        super.configureServlets();
-      }
-    });
+  private static class FairNoAuthServletModule extends FairTestServletModule {
+    @Override
+    protected void configureServlets() {
+      setAuthFilter = false;
+      super.configureServlets();
+    }
   }
 
-  private Injector getSimpleAuthInjectorFair() {
-    return Guice.createInjector(new FairTestServletModule() {
-      @Override
-      protected void configureServlets() {
-        setAuthFilter = true;
-        conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
-        // set the admin acls otherwise all users are considered admins
-        // and we can't test authorization
-        conf.setStrings(YarnConfiguration.YARN_ADMIN_ACL, "testuser1");
-        super.configureServlets();
-      }
-    });
+  private static class FairSimpleAuthServletModule extends
+      FairTestServletModule {
+    @Override
+    protected void configureServlets() {
+      setAuthFilter = true;
+      conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+      // set the admin acls otherwise all users are considered admins
+      // and we can't test authorization
+      conf.setStrings(YarnConfiguration.YARN_ADMIN_ACL, "testuser1");
+      super.configureServlets();
+    }
+  }
+
+  private Injector initNoAuthInjectorCap() {
+    return GuiceServletConfig.setInjector(
+        Guice.createInjector(new NoAuthServletModule()));
+  }
+
+  private Injector initSimpleAuthInjectorCap() {
+    return GuiceServletConfig.setInjector(
+        Guice.createInjector(new SimpleAuthServletModule()));
+  }
+
+  private Injector initNoAuthInjectorFair() {
+    return GuiceServletConfig.setInjector(
+        Guice.createInjector(new FairNoAuthServletModule()));
+  }
+
+  private Injector initSimpleAuthInjectorFair() {
+    return GuiceServletConfig.setInjector(
+        Guice.createInjector(new FairSimpleAuthServletModule()));
   }
 
   @Parameters
@@ -279,19 +284,19 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     case 0:
     default:
       // No Auth Capacity Scheduler
-      injector = getNoAuthInjectorCap();
+      initNoAuthInjectorCap();
       break;
     case 1:
       // Simple Auth Capacity Scheduler
-      injector = getSimpleAuthInjectorCap();
+      initSimpleAuthInjectorCap();
       break;
     case 2:
       // No Auth Fair Scheduler
-      injector = getNoAuthInjectorFair();
+      initNoAuthInjectorFair();
       break;
     case 3:
       // Simple Auth Fair Scheduler
-      injector = getSimpleAuthInjectorFair();
+      initSimpleAuthInjectorFair();
       break;
     }
   }
@@ -959,7 +964,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
         .post(ClientResponse.class);
 
     if (!this.isAuthenticationEnabled()) {
-      assertEquals(Status.UNAUTHORIZED, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.UNAUTHORIZED, response.getStatusInfo());
       return ReservationId.newInstance(clock.getTime(), fallbackReservationId);
     }
 
@@ -1013,7 +1018,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
             .accept(media).post(ClientResponse.class);
 
     if (!this.isAuthenticationEnabled()) {
-      assertEquals(Status.UNAUTHORIZED, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.UNAUTHORIZED, response.getStatusInfo());
     }
 
     return response;
@@ -1046,13 +1051,13 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
             .accept(media).post(ClientResponse.class);
 
     if (!this.isAuthenticationEnabled()) {
-      assertEquals(Status.UNAUTHORIZED, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.UNAUTHORIZED, response.getStatusInfo());
       return;
     }
 
     System.out.println("RESPONSE:" + response);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    assertEquals(Status.OK, response.getClientResponseStatus());
+    assertResponseStatusCode(Status.OK, response.getStatusInfo());
 
   }
 
@@ -1095,13 +1100,13 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
             .accept(media).post(ClientResponse.class);
 
     if (!this.isAuthenticationEnabled()) {
-      assertEquals(Status.UNAUTHORIZED, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.UNAUTHORIZED, response.getStatusInfo());
       return;
     }
 
     System.out.println("RESPONSE:" + response);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    assertEquals(Status.OK, response.getClientResponseStatus());
+    assertResponseStatusCode(Status.OK, response.getStatusInfo());
   }
 
   private void testRDLHelper(JSONObject json) throws JSONException {
@@ -1126,12 +1131,12 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ClientResponse response = resource.get(ClientResponse.class);
 
     if (!this.isAuthenticationEnabled()) {
-      assertEquals(Status.UNAUTHORIZED, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.UNAUTHORIZED, response.getStatusInfo());
       return null;
     }
 
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    assertEquals(status, response.getClientResponseStatus());
+    assertResponseStatusCode(status, response.getStatusInfo());
 
     return response.getEntity(JSONObject.class);
   }
@@ -1152,7 +1157,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
   }
 
   private boolean isHttpSuccessResponse(ClientResponse response) {
-    return (response.getStatus() / 100) == 2;
+    return (response.getStatusInfo().getStatusCode() / 100) == 2;
   }
 
   private void setupCluster(int nodes) throws Exception {

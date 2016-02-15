@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -46,6 +47,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
+import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
@@ -59,8 +61,6 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.ClientResponse.Status;
@@ -76,7 +76,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
   
   private static final int CONTAINER_MB = 1024;
 
-  private Injector injector = Guice.createInjector(new ServletModule() {
+  private static class WebServletModule extends ServletModule {
     @Override
     protected void configureServlets() {
       bind(JAXBContextResolver.class);
@@ -91,20 +91,19 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       bind(ResourceManager.class).toInstance(rm);
       serve("/*").with(GuiceContainer.class);
     }
-  });
+  }
 
-  public class GuiceServletConfig extends GuiceServletContextListener {
-
-    @Override
-    protected Injector getInjector() {
-      return injector;
-    }
+  static {
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   public TestRMWebServicesApps() {
@@ -350,7 +349,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
-    assertEquals("apps is not null", JSONObject.NULL, json.get("apps"));
+    assertEquals("apps is not empty",
+        new JSONObject().toString(), json.get("apps").toString());
     rm.stop();
   }
 
@@ -369,7 +369,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
-    assertEquals("apps is not null", JSONObject.NULL, json.get("apps"));
+    assertEquals("apps is not empty",
+        new JSONObject().toString(), json.get("apps").toString());
     rm.stop();
   }
 
@@ -388,7 +389,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       fail("should have thrown exception on invalid state query");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -425,7 +426,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       fail("should have thrown exception on invalid state query");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -484,7 +485,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
-    assertEquals("apps is not null", JSONObject.NULL, json.get("apps"));
+    assertEquals("apps is not null",
+        new JSONObject().toString(), json.get("apps").toString());
     rm.stop();
   }
 
@@ -503,7 +505,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       fail("should have thrown exception on invalid state query");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -660,7 +662,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
-    assertEquals("apps is not null", JSONObject.NULL, json.get("apps"));
+    assertEquals("apps is not empty",
+        new JSONObject().toString(), json.get("apps").toString());
     rm.stop();
   }
 
@@ -1070,7 +1073,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
           .path("appstatistics")
           .queryParam("applicationTypes", "MAPREDUCE,OTHER")
           .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       json = response.getEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
@@ -1117,7 +1120,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       response = r.path("ws").path("v1").path("cluster")
           .path("appstatistics").queryParam("states", "wrong_state")
           .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       json = response.getEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
@@ -1185,7 +1188,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
 
-      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -1223,7 +1226,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
 
-      assertEquals(Status.NOT_FOUND, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
 
       JSONObject msg = response.getEntity(JSONObject.class);
@@ -1515,7 +1518,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
 
-      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -1554,7 +1557,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
 
-      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -1592,7 +1595,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
 
-      assertEquals(Status.NOT_FOUND, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
 
       JSONObject msg = response.getEntity(JSONObject.class);

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
+import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -30,6 +31,7 @@ import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -69,8 +71,6 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.ClientResponse.Status;
@@ -95,7 +95,7 @@ public class TestNMWebServices extends JerseyTestBase {
   private static File testLogDir = new File("target",
       TestNMWebServices.class.getSimpleName() + "LogDir");
 
-  private Injector injector = Guice.createInjector(new ServletModule() {
+  private static class WebServletModule extends ServletModule {
 
     @Override
     protected void configureServlets() {
@@ -148,14 +148,11 @@ public class TestNMWebServices extends JerseyTestBase {
 
       serve("/*").with(GuiceContainer.class);
     }
-  });
+  };
 
-  public class GuiceServletConfig extends GuiceServletContextListener {
-
-    @Override
-    protected Injector getInjector() {
-      return injector;
-    }
+  static {
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   @Before
@@ -164,6 +161,8 @@ public class TestNMWebServices extends JerseyTestBase {
     super.setUp();
     testRootDir.mkdirs();
     testLogDir.mkdir();
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   @AfterClass
@@ -190,7 +189,7 @@ public class TestNMWebServices extends JerseyTestBase {
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertEquals(Status.NOT_FOUND, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
       WebServicesTestUtils.checkStringMatch(
           "error string exists and shouldn't", "", responseStr);
     }
@@ -206,8 +205,8 @@ public class TestNMWebServices extends JerseyTestBase {
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertEquals(Status.INTERNAL_SERVER_ERROR,
-          response.getClientResponseStatus());
+      assertResponseStatusCode(Status.INTERNAL_SERVER_ERROR,
+          response.getStatusInfo());
       WebServicesTestUtils.checkStringMatch(
           "error string exists and shouldn't", "", responseStr);
     }
@@ -222,7 +221,7 @@ public class TestNMWebServices extends JerseyTestBase {
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertEquals(Status.NOT_FOUND, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
       WebServicesTestUtils.checkStringMatch(
           "error string exists and shouldn't", "", responseStr);
     }
@@ -418,7 +417,7 @@ public class TestNMWebServices extends JerseyTestBase {
     response = r.path("ws").path("v1").path("node")
         .path("containerlogs").path(containerIdStr).path("uhhh")
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
-    Assert.assertEquals(Status.NOT_FOUND.getStatusCode(), response.getStatus());
+    assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
     responseText = response.getEntity(String.class);
     assertTrue(responseText.contains("Cannot find this log on the local disk."));
     
