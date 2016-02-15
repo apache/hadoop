@@ -188,7 +188,19 @@ Example: `hadoop kerbname user@EXAMPLE.COM`
 
 ### `key`
 
-Manage keys via the KeyProvider.
+Usage: `hadoop key <subcommand> [options]`
+
+| COMMAND\_OPTION | Description |
+|:---- |:---- |
+| create *keyname* [-cipher *cipher*] [-size *size*] [-description *description*] [-attr *attribute=value*] [-provider *provider*] [-help] | Creates a new key for the name specified by the *keyname* argument within the provider specified by the `-provider` argument. You may specify a cipher with the `-cipher` argument. The default cipher is currently "AES/CTR/NoPadding". The default keysize is 128. You may specify the requested key length using the `-size` argument. Arbitrary attribute=value style attributes may be specified using the `-attr` argument. `-attr` may be specified multiple times, once per attribute. |
+| roll *keyname* [-provider *provider*] [-help] | Creates a new version for the specified key within the provider indicated using the `-provider` argument |
+| delete *keyname* [-provider *provider*] [-f] [-help] | Deletes all versions of the key specified by the *keyname* argument from within the provider specified by `-provider`. The command asks for user confirmation unless `-f` is specified. |
+| list [-provider *provider*] [-metadata] [-help] | Displays the keynames contained within a particular provider as configured in core-site.xml or specified with the `-provider` argument. `-metadata` displays the metadata. |
+| -help | Prints usage of this command |
+
+Manage keys via the KeyProvider. For details on KeyProviders, see the [Transparent Encryption Guide](../hadoop-hdfs/TransparentEncryption.html).
+
+NOTE: Some KeyProviders (e.g. org.apache.hadoop.crypto.key.JavaKeyStoreProvider) does not support uppercase key names.
 
 ### `trace`
 

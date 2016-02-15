@@ -372,7 +372,7 @@ public class KeyShell extends Configured implements Tool {
     public static final String DESC =
         "The delete subcommand deletes all versions of the key\n" +
         "specified by the <keyname> argument from within the\n" +
-        "provider specified -provider. The command asks for\n" +
+        "provider specified by -provider. The command asks for\n" +
         "user confirmation unless -f is specified.";
 
     String keyName = null;

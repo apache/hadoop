@@ -1809,6 +1809,9 @@ Release 2.7.2 - 2016-01-25
     HADOOP-12415. Fixed pom files to correctly include compile-time dependency on
     netty. (Tom Zeng via cos)
 
+    HADOOP-12786. "hadoop key" command usage is not documented.
+    (Xiao Chen via aajisaka)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
