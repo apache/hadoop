@@ -61,14 +61,14 @@ import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFil
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
+import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
@@ -81,11 +81,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
   private static TimelineStore store;
   private static TimelineACLsManager timelineACLsManager;
   private static AdminACLsManager adminACLsManager;
-  private long beforeTime;
+  private static long beforeTime;
 
-  private Injector injector = Guice.createInjector(new ServletModule() {
-
-    @SuppressWarnings("unchecked")
+  private static class WebServletModule extends ServletModule {
     @Override
     protected void configureServlets() {
       bind(YarnJacksonJaxbJsonProvider.class);
@@ -129,7 +127,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
       when(filterConfig.getInitParameterNames()).thenReturn(names);
       when(filterConfig.getInitParameter(
           DelegationTokenAuthenticationHandler.TOKEN_KIND)).thenReturn(
-              TimelineDelegationTokenIdentifier.KIND_NAME.toString());
+          TimelineDelegationTokenIdentifier.KIND_NAME.toString());
       try {
         taFilter.init(filterConfig);
       } catch (ServletException e) {
@@ -146,18 +144,19 @@ public class TestTimelineWebServices extends JerseyTestBase {
       }
       filter("/*").through(taFilter);
     }
-
-  });
-
-  public class GuiceServletConfig extends GuiceServletContextListener {
-
-    @Override
-    protected Injector getInjector() {
-      return injector;
-    }
   }
 
-  private TimelineStore mockTimelineStore()
+  static {
+    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
+  }
+
+  @Before
+  public void setUp() throws Exception {
+    super.setUp();
+    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
+  }
+
+  private static TimelineStore mockTimelineStore()
       throws Exception {
     beforeTime = System.currentTimeMillis() - 1;
     TestMemoryTimelineStore store =
@@ -477,8 +476,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
         .type(MediaType.APPLICATION_JSON)
         .post(ClientResponse.class, entities);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    assertEquals(ClientResponse.Status.FORBIDDEN,
-        response.getClientResponseStatus());
+    assertEquals(ClientResponse.Status.FORBIDDEN.getStatusCode(),
+        response.getStatusInfo().getStatusCode());
 
     response = r.path("ws").path("v1").path("timeline")
         .queryParam("user.name", "tester")
@@ -519,8 +518,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
         .queryParam("user.name", "tester").accept(MediaType.APPLICATION_JSON)
          .type(MediaType.APPLICATION_JSON).post(ClientResponse.class, entities);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    assertEquals(ClientResponse.Status.BAD_REQUEST,
-        response.getClientResponseStatus());
+    assertEquals(ClientResponse.Status.BAD_REQUEST.getStatusCode(),
+        response.getStatusInfo().getStatusCode());
   }
 
   @Test
@@ -703,8 +702,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-      assertEquals(ClientResponse.Status.NOT_FOUND,
-          response.getClientResponseStatus());
+      assertEquals(ClientResponse.Status.NOT_FOUND.getStatusCode(),
+          response.getStatusInfo().getStatusCode());
     } finally {
       timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
     }
@@ -869,8 +868,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
       Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-      Assert.assertEquals(ClientResponse.Status.NOT_FOUND,
-          response.getClientResponseStatus());
+      Assert.assertEquals(ClientResponse.Status.NOT_FOUND.getStatusCode(),
+          response.getStatusInfo().getStatusCode());
     } finally {
       timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
     }
@@ -938,8 +937,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
         .type(MediaType.APPLICATION_JSON)
         .put(ClientResponse.class, domain);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    assertEquals(ClientResponse.Status.FORBIDDEN,
-        response.getClientResponseStatus());
+    assertEquals(ClientResponse.Status.FORBIDDEN.getStatusCode(),
+        response.getStatusInfo().getStatusCode());
 
     response = r.path("ws").path("v1")
         .path("timeline").path("domain")

@@ -126,7 +126,8 @@ public abstract class TimelineWriter implements Flushable {
       throw (IOException)new InterruptedIOException().initCause(ie);
     }
     if (resp == null ||
-        resp.getClientResponseStatus() != ClientResponse.Status.OK) {
+        resp.getStatusInfo().getStatusCode()
+            != ClientResponse.Status.OK.getStatusCode()) {
       String msg =
           "Failed to get the response from the timeline server.";
       LOG.error(msg);

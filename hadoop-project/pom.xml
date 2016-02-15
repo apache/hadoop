@@ -65,7 +65,7 @@
     <avro.version>1.7.4</avro.version>
 
     <!-- jersey version -->
-    <jersey.version>1.9</jersey.version>
+    <jersey.version>1.19</jersey.version>
 
     <!-- jackson versions -->
     <jackson.version>1.9.13</jackson.version>
@@ -548,6 +548,11 @@
       </dependency>
       <dependency>
         <groupId>com.sun.jersey</groupId>
+        <artifactId>jersey-servlet</artifactId>
+        <version>${jersey.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sun.jersey</groupId>
         <artifactId>jersey-json</artifactId>
         <version>${jersey.version}</version>
         <exclusions>
@@ -946,7 +951,17 @@
       <dependency>
         <groupId>org.glassfish.grizzly</groupId>
         <artifactId>grizzly-http-servlet</artifactId>
-        <version>2.1.2</version>
+        <version>2.2.21</version>
+      </dependency>
+      <dependency>
+        <groupId>org.glassfish.grizzly</groupId>
+        <artifactId>grizzly-http</artifactId>
+        <version>2.2.21</version>
+      </dependency>
+      <dependency>
+        <groupId>org.glassfish.grizzly</groupId>
+        <artifactId>grizzly-http-server</artifactId>
+        <version>2.2.21</version>
       </dependency>
 
       <dependency>

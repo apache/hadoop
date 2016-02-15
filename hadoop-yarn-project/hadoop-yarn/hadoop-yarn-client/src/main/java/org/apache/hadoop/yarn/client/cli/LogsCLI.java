@@ -342,7 +342,8 @@ public class LogsCLI extends Configured implements Tool {
           webResource.path("ws").path("v1").path("node").path("containers")
               .path(containerIdStr).accept(MediaType.APPLICATION_XML)
               .get(ClientResponse.class);
-      if (response.getClientResponseStatus().equals(ClientResponse.Status.OK)) {
+      if (response.getStatusInfo().getStatusCode() ==
+          ClientResponse.Status.OK.getStatusCode()) {
         try {
           String xml = response.getEntity(String.class);
           DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();

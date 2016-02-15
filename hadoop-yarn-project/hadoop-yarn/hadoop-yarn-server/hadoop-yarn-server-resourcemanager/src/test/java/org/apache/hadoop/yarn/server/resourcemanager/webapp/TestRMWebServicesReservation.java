@@ -1013,7 +1013,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
             .accept(media).post(ClientResponse.class);
 
     if (!this.isAuthenticationEnabled()) {
-      assertEquals(Status.UNAUTHORIZED, response.getClientResponseStatus());
+      assertEquals(Status.UNAUTHORIZED.getStatusCode(),
+          response.getStatusInfo().getStatusCode());
+      return null;
     }
 
     return response;
@@ -1046,13 +1048,15 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
             .accept(media).post(ClientResponse.class);
 
     if (!this.isAuthenticationEnabled()) {
-      assertEquals(Status.UNAUTHORIZED, response.getClientResponseStatus());
+      assertEquals(Status.UNAUTHORIZED.getStatusCode(),
+          response.getStatusInfo().getStatusCode());
       return;
     }
 
     System.out.println("RESPONSE:" + response);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    assertEquals(Status.OK, response.getClientResponseStatus());
+    assertEquals(Status.OK.getStatusCode(),
+        response.getStatusInfo().getStatusCode());
 
   }
 
@@ -1095,13 +1099,15 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
             .accept(media).post(ClientResponse.class);
 
     if (!this.isAuthenticationEnabled()) {
-      assertEquals(Status.UNAUTHORIZED, response.getClientResponseStatus());
+      assertEquals(Status.UNAUTHORIZED.getStatusCode(),
+          response.getStatusInfo().getStatusCode());
       return;
     }
 
     System.out.println("RESPONSE:" + response);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    assertEquals(Status.OK, response.getClientResponseStatus());
+    assertEquals(Status.OK.getStatusCode(),
+        response.getStatusInfo().getStatusCode());
   }
 
   private void testRDLHelper(JSONObject json) throws JSONException {
@@ -1126,12 +1132,13 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ClientResponse response = resource.get(ClientResponse.class);
 
     if (!this.isAuthenticationEnabled()) {
-      assertEquals(Status.UNAUTHORIZED, response.getClientResponseStatus());
+      assertEquals(Status.UNAUTHORIZED.getStatusCode(),
+          response.getStatusInfo().getStatusCode());
       return null;
     }
 
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    assertEquals(status, response.getClientResponseStatus());
+    assertEquals(status, response.getStatusInfo().getStatusCode());
 
     return response.getEntity(JSONObject.class);
   }
