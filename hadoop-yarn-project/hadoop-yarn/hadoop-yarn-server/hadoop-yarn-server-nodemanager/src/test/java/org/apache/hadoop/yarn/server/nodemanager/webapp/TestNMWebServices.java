@@ -30,6 +30,7 @@ import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -95,7 +96,7 @@ public class TestNMWebServices extends JerseyTestBase {
   private static File testLogDir = new File("target",
       TestNMWebServices.class.getSimpleName() + "LogDir");
 
-  private Injector injector = Guice.createInjector(new ServletModule() {
+  private static class WebServletModule extends ServletModule {
 
     @Override
     protected void configureServlets() {
@@ -148,14 +149,10 @@ public class TestNMWebServices extends JerseyTestBase {
 
       serve("/*").with(GuiceContainer.class);
     }
-  });
+  };
 
-  public class GuiceServletConfig extends GuiceServletContextListener {
-
-    @Override
-    protected Injector getInjector() {
-      return injector;
-    }
+  static {
+    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
   }
 
   @Before
@@ -164,6 +161,7 @@ public class TestNMWebServices extends JerseyTestBase {
     super.setUp();
     testRootDir.mkdirs();
     testLogDir.mkdir();
+    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
   }
 
   @AfterClass
