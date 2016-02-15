@@ -43,7 +43,6 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
@@ -67,7 +66,6 @@ public class TestFileAppend4 {
   MiniDFSCluster cluster;
   Path file1;
   FSDataOutputStream stm;
-  final boolean simulatedStorage = false;
 
   {
     DFSTestUtil.setNameNodeLogLevel(Level.ALL);
@@ -78,9 +76,6 @@ public class TestFileAppend4 {
   @Before
   public void setUp() throws Exception {
     this.conf = new Configuration();
-    if (simulatedStorage) {
-      SimulatedFSDataset.setFactory(conf);
-    }
 
     // lower heartbeat interval for fast recognition of DN death
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,

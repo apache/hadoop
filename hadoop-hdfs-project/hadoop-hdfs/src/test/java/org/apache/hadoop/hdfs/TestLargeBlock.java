@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.junit.Test;
 
 /**
@@ -51,7 +50,6 @@ public class TestLargeBlock {
   // should we verify the data read back from the file? (slow)
   static final boolean verifyData = true;
   static final byte[] pattern = { 'D', 'E', 'A', 'D', 'B', 'E', 'E', 'F'};
-  static final boolean simulatedStorage = false;
 
   // creates a file 
   static FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl,
@@ -177,9 +175,6 @@ public class TestLargeBlock {
     final long fileSize = blockSize + 1L;
 
     Configuration conf = new Configuration();
-    if (simulatedStorage) {
-      SimulatedFSDataset.setFactory(conf);
-    }
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = cluster.getFileSystem();
     try {

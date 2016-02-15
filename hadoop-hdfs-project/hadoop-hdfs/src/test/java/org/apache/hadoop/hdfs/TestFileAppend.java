@@ -43,7 +43,6 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
 import org.apache.hadoop.io.IOUtils;
@@ -58,8 +57,6 @@ import org.junit.Test;
  */
 public class TestFileAppend{
   private static final long RANDOM_TEST_RUNTIME = 10000;
-
-  final boolean simulatedStorage = false;
 
   private static byte[] fileContents = null;
 
@@ -101,13 +98,7 @@ public class TestFileAppend{
     }
     byte[] expected = 
         new byte[AppendTestUtil.NUM_BLOCKS * AppendTestUtil.BLOCK_SIZE];
-    if (simulatedStorage) {
-      LocatedBlocks lbs = fileSys.getClient().getLocatedBlocks(name.toString(),
-          0, AppendTestUtil.FILE_SIZE);
-      DFSTestUtil.fillExpectedBuf(lbs, expected);
-    } else {
-      System.arraycopy(fileContents, 0, expected, 0, expected.length);
-    }
+    System.arraycopy(fileContents, 0, expected, 0, expected.length);
     // do a sanity check. Read the file
     // do not check file status since the file is not yet closed.
     AppendTestUtil.checkFullFile(fileSys, name,
@@ -118,9 +109,6 @@ public class TestFileAppend{
   @Test
   public void testBreakHardlinksIfNeeded() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    if (simulatedStorage) {
-      SimulatedFSDataset.setFactory(conf);
-    }
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = cluster.getFileSystem();
     InetSocketAddress addr = new InetSocketAddress("localhost",
@@ -186,9 +174,6 @@ public class TestFileAppend{
   @Test
   public void testSimpleFlush() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    if (simulatedStorage) {
-      SimulatedFSDataset.setFactory(conf);
-    }
     fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     DistributedFileSystem fs = cluster.getFileSystem();
@@ -242,9 +227,6 @@ public class TestFileAppend{
   @Test
   public void testComplexFlush() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    if (simulatedStorage) {
-      SimulatedFSDataset.setFactory(conf);
-    }
     fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     DistributedFileSystem fs = cluster.getFileSystem();
@@ -293,9 +275,6 @@ public class TestFileAppend{
   @Test(expected = FileNotFoundException.class)
   public void testFileNotFound() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    if (simulatedStorage) {
-      SimulatedFSDataset.setFactory(conf);
-    }
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = cluster.getFileSystem();
     try {
