@@ -245,7 +245,7 @@ public class TestBlockScanner {
     testVolumeIteratorImpl(5, 0);
   }
 
-  @Test(timeout=60000)
+  @Test(timeout=300000)
   public void testVolumeIteratorWithCaching() throws Exception {
     testVolumeIteratorImpl(600, 100);
   }
