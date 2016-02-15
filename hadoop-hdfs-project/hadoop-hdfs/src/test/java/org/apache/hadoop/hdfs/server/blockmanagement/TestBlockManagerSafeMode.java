@@ -137,30 +137,30 @@ public class TestBlockManagerSafeMode {
     }
 
     // PENDING_THRESHOLD -> EXTENSION
+    Whitebox.setInternalState(bmSafeMode, "extension", Integer.MAX_VALUE);
     setSafeModeStatus(BMSafeModeStatus.PENDING_THRESHOLD);
     setBlockSafe(BLOCK_THRESHOLD);
     bmSafeMode.checkSafeMode();
     assertEquals(BMSafeModeStatus.EXTENSION, getSafeModeStatus());
-    Whitebox.setInternalState(bmSafeMode, "smmthread", null);
 
     // PENDING_THRESHOLD -> OFF
+    Whitebox.setInternalState(bmSafeMode, "extension", 0);
     setSafeModeStatus(BMSafeModeStatus.PENDING_THRESHOLD);
     setBlockSafe(BLOCK_THRESHOLD);
-    Whitebox.setInternalState(bmSafeMode, "extension", 0);
     bmSafeMode.checkSafeMode();
     assertEquals(BMSafeModeStatus.OFF, getSafeModeStatus());
 
     // stays in EXTENSION
-    setSafeModeStatus(BMSafeModeStatus.EXTENSION);
     setBlockSafe(0);
+    setSafeModeStatus(BMSafeModeStatus.EXTENSION);
     Whitebox.setInternalState(bmSafeMode, "extension", 0);
     bmSafeMode.checkSafeMode();
     assertEquals(BMSafeModeStatus.EXTENSION, getSafeModeStatus());
 
     // stays in EXTENSION: pending extension period
+    Whitebox.setInternalState(bmSafeMode, "extension", Integer.MAX_VALUE);
     setSafeModeStatus(BMSafeModeStatus.EXTENSION);
     setBlockSafe(BLOCK_THRESHOLD);
-    Whitebox.setInternalState(bmSafeMode, "extension", Integer.MAX_VALUE);
     bmSafeMode.checkSafeMode();
     assertEquals(BMSafeModeStatus.EXTENSION, getSafeModeStatus());
   }
