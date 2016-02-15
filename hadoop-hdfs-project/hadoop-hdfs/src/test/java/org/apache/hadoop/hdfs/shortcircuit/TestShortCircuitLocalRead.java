@@ -97,7 +97,6 @@ public class TestShortCircuitLocalRead {
 
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 5120;
-  final boolean simulatedStorage = false;
 
   // creates a file but does not close it
   static FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)
@@ -268,9 +267,6 @@ public class TestShortCircuitLocalRead {
       conf.setBoolean(
           HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL, true);
     }
-    if (simulatedStorage) {
-      SimulatedFSDataset.setFactory(conf);
-    }
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
         .format(true).build();
     FileSystem fs = cluster.getFileSystem();
@@ -399,9 +395,6 @@ public class TestShortCircuitLocalRead {
         new File(sockDir.getDir(),
             "testSkipWithVerifyChecksum._PORT.sock").getAbsolutePath());
     DomainSocket.disableBindPathValidation();
-    if (simulatedStorage) {
-      SimulatedFSDataset.setFactory(conf);
-    }
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
         .format(true).build();
     FileSystem fs = cluster.getFileSystem();
