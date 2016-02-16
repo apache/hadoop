@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntr
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
+import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONException;
@@ -49,8 +50,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.UniformInterfaceException;
@@ -69,13 +68,13 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
       .getLog(TestRMWebServicesNodeLabels.class);
 
   private static MockRM rm;
-  private YarnConfiguration conf;
+  private static YarnConfiguration conf;
 
-  private String userName;
-  private String notUserName;
-  private RMWebServices rmWebService;
+  private static String userName;
+  private static String notUserName;
+  private static RMWebServices rmWebService;
 
-  private Injector injector = Guice.createInjector(new ServletModule() {
+  private static class WebServletModule extends ServletModule {
 
     @Override
     protected void configureServlets() {
@@ -98,14 +97,10 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
           TestRMWebServicesAppsModification.TestRMCustomAuthFilter.class);
       serve("/*").with(GuiceContainer.class);
     }
-  });
+  };
 
-  public class GuiceServletConfig extends GuiceServletContextListener {
-
-    @Override
-    protected Injector getInjector() {
-      return injector;
-    }
+  static {
+    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
   }
 
   public TestRMWebServicesNodeLabels() {
