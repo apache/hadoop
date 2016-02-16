@@ -54,8 +54,6 @@ import org.xml.sax.InputSource;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
@@ -174,6 +172,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
+    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
   }
 
   public TestRMWebServicesForCSWithPartitions() {
