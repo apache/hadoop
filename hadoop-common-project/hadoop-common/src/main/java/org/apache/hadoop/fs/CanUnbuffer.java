@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * FSDataInputStreams implement this interface to indicate that they can clear
  * their buffers on request.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public interface CanUnbuffer {
   /**
