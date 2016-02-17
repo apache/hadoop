@@ -19,6 +19,9 @@ Release 2.6.5 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HDFS-8845. DiskChecker should not traverse the entire tree (Chang Li via
+    Colin P. McCabe)
+
   BUG FIXES
 
     HDFS-9347. Invariant assumption in TestQuorumJournalManager.shutdown()

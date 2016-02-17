@@ -297,7 +297,7 @@ class BlockPoolSlice {
   }
 
   void checkDirs() throws DiskErrorException {
-    DiskChecker.checkDirs(finalizedDir);
+    DiskChecker.checkDir(finalizedDir);
     DiskChecker.checkDir(tmpDir);
     DiskChecker.checkDir(rbwDir);
   }
