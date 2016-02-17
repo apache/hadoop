@@ -34,6 +34,9 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NetworkTopologyWithNodeGroup;
@@ -128,6 +131,103 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     dataNodesForDependencies = DFSTestUtil.toDatanodeDescriptor(storagesForDependencies);
     
   };
+
+  /**
+   * Test block placement verification.
+   * @throws Exception
+   */
+  @Test
+  public void testVerifyBlockPlacement() throws Exception {
+    LocatedBlock locatedBlock;
+    BlockPlacementStatus status;
+    ExtendedBlock b = new ExtendedBlock("fake-pool", new Block(12345L));
+    List<DatanodeStorageInfo> set = new ArrayList<>();
+
+    // 2 node groups (not enough), 2 racks (enough)
+    set.clear();
+    set.add(storages[0]);
+    set.add(storages[1]);
+    set.add(storages[4]);
+    locatedBlock = BlockManager.newLocatedBlock(b,
+        set.toArray(new DatanodeStorageInfo[set.size()]), 0, false);
+    status = replicator.verifyBlockPlacement(locatedBlock.getLocations(),
+        set.size());
+    assertFalse(status.isPlacementPolicySatisfied());
+
+    // 3 node groups (enough), 2 racks (enough)
+    set.clear();
+    set.add(storages[0]);
+    set.add(storages[2]);
+    set.add(storages[5]);
+    locatedBlock = BlockManager.newLocatedBlock(b,
+        set.toArray(new DatanodeStorageInfo[set.size()]), 0, false);
+    status = replicator.verifyBlockPlacement(locatedBlock.getLocations(),
+        set.size());
+    assertTrue(status.isPlacementPolicySatisfied());
+
+    // 2 node groups (not enough), 1 rack (not enough)
+    set.clear();
+    set.add(storages[0]);
+    set.add(storages[1]);
+    set.add(storages[2]);
+    locatedBlock = BlockManager.newLocatedBlock(b,
+        set.toArray(new DatanodeStorageInfo[set.size()]), 0, false);
+    status = replicator.verifyBlockPlacement(locatedBlock.getLocations(),
+        set.size());
+    assertFalse(status.isPlacementPolicySatisfied());
+    assertTrue(status.getErrorDescription().contains("node group"));
+    assertTrue(status.getErrorDescription().contains("more rack(s)"));
+
+    // 3 node groups (enough), 3 racks (enough)
+    set.clear();
+    set.add(storages[0]);
+    set.add(storages[5]);
+    set.add(storages[7]);
+    locatedBlock = BlockManager.newLocatedBlock(b,
+        set.toArray(new DatanodeStorageInfo[set.size()]), 0, false);
+    status = replicator.verifyBlockPlacement(locatedBlock.getLocations(),
+        set.size());
+    assertTrue(status.isPlacementPolicySatisfied());
+
+    // 3 node groups (not enough), 3 racks (enough), 4 replicas
+    set.clear();
+    set.add(storages[0]);
+    set.add(storages[1]);
+    set.add(storages[5]);
+    set.add(storages[7]);
+    locatedBlock = BlockManager.newLocatedBlock(b,
+        set.toArray(new DatanodeStorageInfo[set.size()]), 0, false);
+    status = replicator.verifyBlockPlacement(locatedBlock.getLocations(),
+        set.size());
+    assertFalse(status.isPlacementPolicySatisfied());
+    assertTrue(status.getErrorDescription().contains("node group"));
+    assertFalse(status.getErrorDescription().contains("more rack(s)"));
+
+    // 2 node groups (not enough), 1 rack (not enough)
+    set.clear();
+    set.add(storages[0]);
+    set.add(storages[1]);
+    set.add(storages[2]);
+    locatedBlock = BlockManager.newLocatedBlock(b,
+        set.toArray(new DatanodeStorageInfo[set.size()]), 0, false);
+    status = replicator.verifyBlockPlacement(locatedBlock.getLocations(),
+        set.size());
+    assertFalse(status.isPlacementPolicySatisfied());
+    assertTrue(status.getErrorDescription().contains("node group"));
+    assertTrue(status.getErrorDescription().contains("more rack(s)"));
+
+    // 1 node group (not enough), 1 rack (not enough)
+    set.clear();
+    set.add(storages[0]);
+    set.add(storages[1]);
+    locatedBlock = BlockManager.newLocatedBlock(b,
+        set.toArray(new DatanodeStorageInfo[set.size()]), 0, false);
+    status = replicator.verifyBlockPlacement(locatedBlock.getLocations(),
+        set.size());
+    assertFalse(status.isPlacementPolicySatisfied());
+    assertTrue(status.getErrorDescription().contains("node group"));
+    assertTrue(status.getErrorDescription().contains("more rack(s)"));
+  }
 
   /**
    * Scan the targets list: all targets should be on different NodeGroups.
