@@ -89,7 +89,7 @@ public abstract class TrashPolicy extends Configured {
    * It returns the trash location correctly for the path specified no matter
    * the path is in encryption zone or not.
    */
-  public abstract Path getCurrentTrashDir() throws IOException;
+  public abstract Path getCurrentTrashDir();
 
   /**
    * Get the current trash directory for path specified based on the Trash
