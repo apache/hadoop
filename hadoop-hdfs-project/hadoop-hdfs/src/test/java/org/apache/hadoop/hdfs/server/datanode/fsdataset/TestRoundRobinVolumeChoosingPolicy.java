@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Assert;
@@ -99,6 +100,61 @@ public class TestRoundRobinVolumeChoosingPolicy {
           "Out of space: The volume with the most available space (=" + 600
               + " B) is less than the block size (=" + blockSize + " B).",
           e.getMessage());
+    }
+  }
+
+  // Test Round-Robin choosing algorithm with heterogeneous storage.
+  @Test
+  public void testRRPolicyWithStorageTypes() throws Exception {
+    final RoundRobinVolumeChoosingPolicy<FsVolumeSpi> policy
+            = new RoundRobinVolumeChoosingPolicy<FsVolumeSpi>();
+    testRRPolicyWithStorageTypes(policy);
+  }
+
+  public static void testRRPolicyWithStorageTypes(
+      VolumeChoosingPolicy<FsVolumeSpi> policy) throws Exception {
+    final List<FsVolumeSpi> diskVolumes = new ArrayList<FsVolumeSpi>();
+    final List<FsVolumeSpi> ssdVolumes = new ArrayList<FsVolumeSpi>();
+
+    // Add two DISK volumes to diskVolumes
+    diskVolumes.add(Mockito.mock(FsVolumeSpi.class));
+    Mockito.when(diskVolumes.get(0).getStorageType())
+            .thenReturn(StorageType.DISK);
+    Mockito.when(diskVolumes.get(0).getAvailable()).thenReturn(100L);
+    diskVolumes.add(Mockito.mock(FsVolumeSpi.class));
+    Mockito.when(diskVolumes.get(1).getStorageType())
+            .thenReturn(StorageType.DISK);
+    Mockito.when(diskVolumes.get(1).getAvailable()).thenReturn(100L);
+
+    // Add two SSD volumes to ssdVolumes
+    ssdVolumes.add(Mockito.mock(FsVolumeSpi.class));
+    Mockito.when(ssdVolumes.get(0).getStorageType())
+            .thenReturn(StorageType.SSD);
+    Mockito.when(ssdVolumes.get(0).getAvailable()).thenReturn(200L);
+    ssdVolumes.add(Mockito.mock(FsVolumeSpi.class));
+    Mockito.when(ssdVolumes.get(1).getStorageType())
+            .thenReturn(StorageType.SSD);
+    Mockito.when(ssdVolumes.get(1).getAvailable()).thenReturn(100L);
+
+    Assert.assertEquals(diskVolumes.get(0),
+            policy.chooseVolume(diskVolumes, 0));
+    // Independent Round-Robin for different storage type
+    Assert.assertEquals(ssdVolumes.get(0),
+            policy.chooseVolume(ssdVolumes, 0));
+    // Take block size into consideration
+    Assert.assertEquals(ssdVolumes.get(0),
+            policy.chooseVolume(ssdVolumes, 150L));
+
+    Assert.assertEquals(diskVolumes.get(1),
+            policy.chooseVolume(diskVolumes, 0));
+    Assert.assertEquals(diskVolumes.get(0),
+            policy.chooseVolume(diskVolumes, 50L));
+
+    try {
+      policy.chooseVolume(diskVolumes, 200L);
+      Assert.fail("Should throw an DiskOutOfSpaceException before this!");
+    } catch (DiskOutOfSpaceException e) {
+      // Pass.
     }
   }
 

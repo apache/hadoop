@@ -1021,6 +1021,9 @@ Release 2.9.0 - UNRELEASED
     HDFS-9691. TestBlockManagerSafeMode#testCheckSafeMode fails intermittently.
     (Mingliang Liu via aajisaka)
 
+    HDFS-9608. Disk IO imbalance in HDFS with heterogeneous storages.
+    (Wei Zhou via wang)
+
 Release 2.8.0 - UNRELEASED
 
   NEW FEATURES
