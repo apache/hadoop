@@ -1749,8 +1749,10 @@ public abstract class FileSystem extends Configured implements Closeable {
           throw new NoSuchElementException("No more entries in " + f);
         }
         FileStatus result = stats[i++];
+        // for files, use getBlockLocations(FileStatus, int, int) to avoid
+        // calling getFileStatus(Path) to load the FileStatus again
         BlockLocation[] locs = result.isFile() ?
-            getFileBlockLocations(result.getPath(), 0, result.getLen()) :
+            getFileBlockLocations(result, 0, result.getLen()) :
             null;
         return new LocatedFileStatus(result, locs);
       }
