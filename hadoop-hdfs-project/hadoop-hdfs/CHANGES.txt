@@ -2780,6 +2780,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-9815. Move o.a.h.fs.Hdfs to hadoop-hdfs-client.
     (Vinayakumar B via wheat9)
 
+    HDFS-9799. Reimplement getCurrentTrashDir to remove incompatibility. (zhz)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

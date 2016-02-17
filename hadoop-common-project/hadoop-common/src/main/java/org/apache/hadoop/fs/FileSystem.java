@@ -2689,9 +2689,8 @@ public abstract class FileSystem extends Configured implements Closeable {
    *
    * @param path the trash root of the path to be determined.
    * @return the default implementation returns "/user/$USER/.Trash".
-   * @throws IOException
    */
-  public Path getTrashRoot(Path path) throws IOException {
+  public Path getTrashRoot(Path path) {
     return this.makeQualified(new Path(getHomeDirectory().toUri().getPath(),
         TRASH_PREFIX));
   }
@@ -2703,29 +2702,31 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @return all the trash root directories.
    *         Default FileSystem returns .Trash under users' home directories if
    *         /user/$USER/.Trash exists.
-   * @throws IOException
    */
-  public Collection<FileStatus> getTrashRoots(boolean allUsers)
-      throws IOException {
+  public Collection<FileStatus> getTrashRoots(boolean allUsers) {
     Path userHome = new Path(getHomeDirectory().toUri().getPath());
-    List<FileStatus> ret = new ArrayList<FileStatus>();
-    if (!allUsers) {
-      Path userTrash = new Path(userHome, TRASH_PREFIX);
-      if (exists(userTrash)) {
-        ret.add(getFileStatus(userTrash));
-      }
-    } else {
-      Path homeParent = userHome.getParent();
-      if (exists(homeParent)) {
-        FileStatus[] candidates = listStatus(homeParent);
-        for (FileStatus candidate : candidates) {
-          Path userTrash = new Path(candidate.getPath(), TRASH_PREFIX);
-          if (exists(userTrash)) {
-            candidate.setPath(userTrash);
-            ret.add(candidate);
+    List<FileStatus> ret = new ArrayList<>();
+    try {
+      if (!allUsers) {
+        Path userTrash = new Path(userHome, TRASH_PREFIX);
+        if (exists(userTrash)) {
+          ret.add(getFileStatus(userTrash));
+        }
+      } else {
+        Path homeParent = userHome.getParent();
+        if (exists(homeParent)) {
+          FileStatus[] candidates = listStatus(homeParent);
+          for (FileStatus candidate : candidates) {
+            Path userTrash = new Path(candidate.getPath(), TRASH_PREFIX);
+            if (exists(userTrash)) {
+              candidate.setPath(userTrash);
+              ret.add(candidate);
+            }
           }
         }
       }
+    } catch (IOException e) {
+      LOG.warn("Cannot get all trash roots", e);
     }
     return ret;
   }
