@@ -766,6 +766,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12426. Add Entry point for Kerberos health check
     (Steve Loughran via cnauroth)
 
+    HADOOP-12548. Read s3a creds from a Credential Provider.
+    (Larry McCay via cnauroth)
+
   IMPROVEMENTS
 
     HADOOP-12458. Retries is typoed to spell Retires in parts of
