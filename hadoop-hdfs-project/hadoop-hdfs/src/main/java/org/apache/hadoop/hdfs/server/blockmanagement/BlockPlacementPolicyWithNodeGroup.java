@@ -389,4 +389,50 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
     }
     return true;
   }
+
+
+  @Override
+  public BlockPlacementStatus verifyBlockPlacement(DatanodeInfo[] locs,
+      int numberOfReplicas) {
+    if (locs == null) {
+      locs = DatanodeDescriptor.EMPTY_ARRAY;
+    }
+
+    List<String> locList = new ArrayList<String>();
+    /*
+     * remove the part of node group for BlockPlacementPolicyDefault to count
+     * distinct racks, e.g. "/d1/r1/n1" --> "/d1/r1"
+     */
+    for (int i = 0; i < locs.length; i++) {
+      locList.add(locs[i].getNetworkLocation());
+      locs[i].setNetworkLocation(NetworkTopology.getFirstHalf(locs[i]
+          .getNetworkLocation()));
+    }
+
+    BlockPlacementStatus defaultStatus = super.verifyBlockPlacement(locs,
+        numberOfReplicas);
+
+    // restore the part of node group back
+    for (int i = 0; i < locs.length; i++) {
+      locs[i].setNetworkLocation(locList.get(i));
+    }
+
+    int minNodeGroups = numberOfReplicas;
+    BlockPlacementStatusWithNodeGroup nodeGroupStatus =
+        new BlockPlacementStatusWithNodeGroup(
+            defaultStatus, getNodeGroupsFromNode(locs), minNodeGroups);
+    return nodeGroupStatus;
+  }
+
+  private Set<String> getNodeGroupsFromNode(DatanodeInfo[] nodes) {
+    Set<String> nodeGroups = new HashSet<>();
+    if (nodes == null) {
+      return nodeGroups;
+    }
+
+    for (DatanodeInfo node : nodes) {
+      nodeGroups.add(NetworkTopology.getLastHalf(node.getNetworkLocation()));
+    }
+    return nodeGroups;
+  }
 }

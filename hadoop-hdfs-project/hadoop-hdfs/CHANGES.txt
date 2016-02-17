@@ -2768,6 +2768,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9801. ReconfigurableBase should update the cached configuration.
     (Arpit Agarwal)
 
+    HDFS-9456. BlockPlacementPolicyWithNodeGroup should override 
+    verifyBlockPlacement(). (Xiaobing Zhou via junping_du)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
