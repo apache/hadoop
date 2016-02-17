@@ -688,6 +688,9 @@ Release 2.9.0 - UNRELEASED
     HADOOP-12749. Create a threadpoolexecutor that overrides afterExecute to
     log uncaught exceptions/errors. (Sidharta Seethana via vvasudev)
 
+    HADOOP-12710. Remove dependency on commons-httpclient for TestHttpServerLogs
+    (Wei-Chiu Chuang via iwasakims)
+
   BUG FIXES
 
     HADOOP-12605. Fix intermittent failure of TestIPC.testIpcWithReaderQueuing
