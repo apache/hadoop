@@ -397,11 +397,15 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
                     KMS_CLIENT_ENC_KEY_CACHE_NUM_REFILL_THREADS_DEFAULT),
             new EncryptedQueueRefiller());
     authToken = new DelegationTokenAuthenticatedURL.Token();
-    actualUgi =
-        (UserGroupInformation.getCurrentUser().getAuthenticationMethod() ==
-        UserGroupInformation.AuthenticationMethod.PROXY) ? UserGroupInformation
-            .getCurrentUser().getRealUser() : UserGroupInformation
-            .getCurrentUser();
+    UserGroupInformation.AuthenticationMethod authMethod =
+        UserGroupInformation.getCurrentUser().getAuthenticationMethod();
+    if (authMethod == UserGroupInformation.AuthenticationMethod.PROXY) {
+      actualUgi = UserGroupInformation.getCurrentUser().getRealUser();
+    } else if (authMethod == UserGroupInformation.AuthenticationMethod.TOKEN) {
+      actualUgi = UserGroupInformation.getLoginUser();
+    } else {
+      actualUgi =UserGroupInformation.getCurrentUser();
+    }
   }
 
   private static Path extractKMSPath(URI uri) throws MalformedURLException, IOException {
