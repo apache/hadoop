@@ -319,7 +319,7 @@ Thus the output of the job is:
     < Goodbye, 1>
     < Hadoop, 2>
     < Hello, 2>
-    < World, 2>`
+    < World, 2>
 
 The `main` method specifies various facets of the job, such as the input/output paths (passed via the command line), key/value types, input/output formats etc., in the `Job`. It then calls the `job.waitForCompletion` to submit the job and monitor its progress.
 
@@ -765,7 +765,7 @@ RecordWriter implementations write the job outputs to the `FileSystem`.
 
 Users submit jobs to Queues. Queues, as collection of jobs, allow the system to provide specific functionality. For example, queues use ACLs to control which users who can submit jobs to them. Queues are expected to be primarily used by Hadoop Schedulers.
 
-Hadoop comes configured with a single mandatory queue, called 'default'. Queue names are defined in the `mapreduce.job.queuename`\> property of the Hadoop site configuration. Some job schedulers, such as the
+Hadoop comes configured with a single mandatory queue, called 'default'. Queue names are defined in the `mapreduce.job.queuename` property of the Hadoop site configuration. Some job schedulers, such as the
 [Capacity Scheduler](../../hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html),
 support multiple queues.
 
@@ -799,7 +799,7 @@ The files/archives can be distributed by setting the property `mapreduce.job.cac
 and
 [Job.setCacheFiles(URI[])](../../api/org/apache/hadoop/mapreduce/Job.html)/
 [Job.setCacheArchives(URI[])](../../api/org/apache/hadoop/mapreduce/Job.html)
-where URI is of the form `hdfs://host:port/absolute-path\#link-name`. In Streaming, the files can be distributed through command line option `-cacheFile/-cacheArchive`.
+where URI is of the form `hdfs://host:port/absolute-path#link-name`. In Streaming, the files can be distributed through command line option `-cacheFile/-cacheArchive`.
 
 The `DistributedCache` can also be used as a rudimentary software distribution mechanism for use in the map and/or reduce tasks. It can be used to distribute both jars and native libraries. The
 [Job.addArchiveToClassPath(Path)](../../api/org/apache/hadoop/mapreduce/Job.html) or
