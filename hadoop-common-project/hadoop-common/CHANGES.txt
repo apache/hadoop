@@ -22,6 +22,9 @@ Release 2.6.5 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HADOOP-12810. FileSystem#listLocatedStatus causes unnecessary RPC calls
+    (Ryan Blue via vinayakumarb)
+
   BUG FIXES
 
     HADOOP-12773. HBase classes fail to load with client/job classloader
