@@ -196,7 +196,7 @@ public class TrashPolicyDefault extends TrashPolicy {
   }
 
   @Override
-  public Path getCurrentTrashDir() throws IOException {
+  public Path getCurrentTrashDir() {
     return new Path(fs.getTrashRoot(null), CURRENT);
   }
 
@@ -250,12 +250,7 @@ public class TrashPolicyDefault extends TrashPolicy {
           now = Time.now();
           if (now >= end) {
             Collection<FileStatus> trashRoots;
-            try {
-              trashRoots = fs.getTrashRoots(true);      // list all home dirs
-            } catch (IOException e) {
-              LOG.warn("Trash can't list all trash roots: "+e+" Sleeping.");
-              continue;
-            }
+            trashRoots = fs.getTrashRoots(true);      // list all trash dirs
 
             for (FileStatus trashRoot : trashRoots) {   // dump each trash
               if (!trashRoot.isDirectory())

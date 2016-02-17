@@ -2333,27 +2333,31 @@ public class DistributedFileSystem extends FileSystem {
   /**
    * Get the root directory of Trash for a path in HDFS.
    * 1. File in encryption zone returns /ez1/.Trash/username
-   * 2. File not in encryption zone returns /users/username/.Trash
+   * 2. File not in encryption zone, or encountered exception when checking
+   *    the encryption zone of the path, returns /users/username/.Trash
    * Caller appends either Current or checkpoint timestamp for trash destination
    * @param path the trash root of the path to be determined.
    * @return trash root
-   * @throws IOException
    */
   @Override
-  public Path getTrashRoot(Path path) throws IOException {
+  public Path getTrashRoot(Path path) {
     if ((path == null) || path.isRoot() || !dfs.isHDFSEncryptionEnabled()) {
       return super.getTrashRoot(path);
     }
 
     String parentSrc = path.getParent().toUri().getPath();
-    EncryptionZone ez = dfs.getEZForPath(parentSrc);
-    if ((ez != null)) {
-      return this.makeQualified(
-          new Path(ez.getPath() + "/" + FileSystem.TRASH_PREFIX +
-              dfs.ugi.getShortUserName()));
-    } else {
-      return super.getTrashRoot(path);
+    try {
+      EncryptionZone ez = dfs.getEZForPath(parentSrc);
+      if ((ez != null)) {
+        return this.makeQualified(
+            new Path(ez.getPath() + "/" + FileSystem.TRASH_PREFIX +
+                dfs.ugi.getShortUserName()));
+      }
+    } catch (IOException e) {
+      DFSClient.LOG.warn("Exception in checking the encryption zone for the " +
+          "path " + parentSrc + ". " + e.getMessage());
     }
+    return super.getTrashRoot(path);
   }
 
   /**
@@ -2361,32 +2365,37 @@ public class DistributedFileSystem extends FileSystem {
    * 1. File deleted from non-encryption zone /user/username/.Trash
    * 2. File deleted from encryption zones
    *    e.g., ez1 rooted at /ez1 has its trash root at /ez1/.Trash/$USER
-   * @allUsers return trashRoots of all users if true, used by emptier
+   * @param allUsers return trashRoots of all users if true, used by emptier
    * @return trash roots of HDFS
-   * @throws IOException
    */
   @Override
-  public Collection<FileStatus> getTrashRoots(boolean allUsers) throws IOException {
-    List<FileStatus> ret = new ArrayList<FileStatus>();
+  public Collection<FileStatus> getTrashRoots(boolean allUsers) {
+    List<FileStatus> ret = new ArrayList<>();
     // Get normal trash roots
     ret.addAll(super.getTrashRoots(allUsers));
 
-    // Get EZ Trash roots
-    final RemoteIterator<EncryptionZone> it = dfs.listEncryptionZones();
-    while (it.hasNext()) {
-      Path ezTrashRoot = new Path(it.next().getPath(), FileSystem.TRASH_PREFIX);
-      if (allUsers) {
-        for (FileStatus candidate : listStatus(ezTrashRoot)) {
-          if (exists(candidate.getPath())) {
-            ret.add(candidate);
+    try {
+      // Get EZ Trash roots
+      final RemoteIterator<EncryptionZone> it = dfs.listEncryptionZones();
+      while (it.hasNext()) {
+        Path ezTrashRoot = new Path(it.next().getPath(),
+            FileSystem.TRASH_PREFIX);
+        if (allUsers) {
+          for (FileStatus candidate : listStatus(ezTrashRoot)) {
+            if (exists(candidate.getPath())) {
+              ret.add(candidate);
+            }
+          }
+        } else {
+          Path userTrash = new Path(ezTrashRoot, System.getProperty(
+              "user.name"));
+          if (exists(userTrash)) {
+            ret.add(getFileStatus(userTrash));
           }
         }
-      } else {
-        Path userTrash = new Path(ezTrashRoot, System.getProperty("user.name"));
-        if (exists(userTrash)) {
-          ret.add(getFileStatus(userTrash));
-        }
       }
+    } catch (IOException e){
+      DFSClient.LOG.warn("Cannot get all encrypted trash roots", e);
     }
     return ret;
   }
