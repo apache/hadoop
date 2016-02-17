@@ -2774,6 +2774,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9456. BlockPlacementPolicyWithNodeGroup should override 
     verifyBlockPlacement(). (Xiaobing Zhou via junping_du)
 
+    HDFS-9815. Move o.a.h.fs.Hdfs to hadoop-hdfs-client.
+    (Vinayakumar B via wheat9)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
