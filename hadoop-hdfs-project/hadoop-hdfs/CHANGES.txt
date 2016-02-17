@@ -935,6 +935,9 @@ Trunk (Unreleased)
       HDFS-9755. Erasure Coding: allow to use multiple EC policies in striping
       related tests [Part 2]. (Rui Li via zhz)
 
+      HDFS-9787. SNNs stop uploading FSImage to ANN once isPrimaryCheckPointer
+      changed to false. (Guocui Mi via vinayakumarb)
+
 Release 2.9.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

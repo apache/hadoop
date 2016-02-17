@@ -65,6 +65,7 @@ public class StandbyCheckpointer {
   private final Configuration conf;
   private final FSNamesystem namesystem;
   private long lastCheckpointTime;
+  private long lastUploadTime;
   private final CheckpointerThread thread;
   private final ThreadFactory uploadThreadFactory;
   private List<URL> activeNNAddresses;
@@ -252,6 +253,7 @@ public class StandbyCheckpointer {
         break;
       }
     }
+    lastUploadTime = monotonicNow();
 
     // we are primary if we successfully updated the ANN
     this.isPrimaryCheckPointer = success;
@@ -362,6 +364,7 @@ public class StandbyCheckpointer {
       // Reset checkpoint time so that we don't always checkpoint
       // on startup.
       lastCheckpointTime = monotonicNow();
+      lastUploadTime = monotonicNow();
       while (shouldRun) {
         boolean needRollbackCheckpoint = namesystem.isNeedRollbackFsImage();
         if (!needRollbackCheckpoint) {
@@ -414,7 +417,9 @@ public class StandbyCheckpointer {
 
             // on all nodes, we build the checkpoint. However, we only ship the checkpoint if have a
             // rollback request, are the checkpointer, are outside the quiet period.
-            boolean sendRequest = isPrimaryCheckPointer || secsSinceLast >= checkpointConf.getQuietPeriod();
+            final long secsSinceLastUpload = (now - lastUploadTime) / 1000;
+            boolean sendRequest = isPrimaryCheckPointer
+                || secsSinceLastUpload >= checkpointConf.getQuietPeriod();
             doCheckpoint(sendRequest);
 
             // reset needRollbackCheckpoint to false only when we finish a ckpt
