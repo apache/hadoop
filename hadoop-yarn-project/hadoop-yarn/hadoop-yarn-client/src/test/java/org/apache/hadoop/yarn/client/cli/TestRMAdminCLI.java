@@ -36,7 +36,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -145,7 +147,20 @@ public class TestRMAdminCLI {
   private void initDummyNodeLabelsManager() {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
-    dummyNodeLabelsManager = new DummyCommonNodeLabelsManager();
+    dummyNodeLabelsManager = new DummyCommonNodeLabelsManager() {
+      @Override
+      public void replaceLabelsOnNode(
+          Map<NodeId, Set<String>> replaceLabelsToNode) throws IOException {
+        Iterator<NodeId> iterator = replaceLabelsToNode.keySet().iterator();
+        while(iterator.hasNext()) {
+          NodeId nodeId=iterator.next();
+          if(nodeId.getHost().endsWith("=")){
+            throw new IOException("Parsing of Input String failed");
+          }
+        }
+        super.replaceLabelsOnNode(replaceLabelsToNode);
+      }
+    };
     dummyNodeLabelsManager.init(conf);
   }
   
@@ -710,6 +725,21 @@ public class TestRMAdminCLI {
         { "-replaceLabelsOnNode", "node1,x,y",
             "-directlyAccessNodeLabelStore" };
     assertTrue(0 != rmAdminCLI.run(args));
+  }
+
+  @Test
+  public void testRemoveLabelsOnNodes() throws Exception {
+    // Successfully replace labels
+    dummyNodeLabelsManager
+        .addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y"));
+    String[] args = { "-replaceLabelsOnNode", "node1=x node2=y",
+        "-directlyAccessNodeLabelStore" };
+    assertTrue(0 == rmAdminCLI.run(args));
+
+    args = new String[] { "-replaceLabelsOnNode", "node1= node2=",
+        "-directlyAccessNodeLabelStore" };
+    assertTrue("Labels should get replaced even '=' is used ",
+        0 == rmAdminCLI.run(args));
   }
 
   private void testError(String[] args, String template,
