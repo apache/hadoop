@@ -2762,4 +2762,56 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.webhdfs.rest-csrf.enabled</name>
+  <value>false</value>
+  <description>
+    If true, then enables WebHDFS protection against cross-site request forgery
+    (CSRF).  The WebHDFS client also uses this property to determine whether or
+    not it needs to send the custom CSRF prevention header in its HTTP requests.
+  </description>
+</property>
+
+<property>
+  <name>dfs.webhdfs.rest-csrf.custom-header</name>
+  <value>X-XSRF-HEADER</value>
+  <description>
+    The name of a custom header that HTTP requests must send when protection
+    against cross-site request forgery (CSRF) is enabled for WebHDFS by setting
+    dfs.webhdfs.rest-csrf.enabled to true.  The WebHDFS client also uses this
+    property to determine whether or not it needs to send the custom CSRF
+    prevention header in its HTTP requests.
+  </description>
+</property>
+
+<property>
+  <name>dfs.webhdfs.rest-csrf.methods-to-ignore</name>
+  <value>GET,OPTIONS,HEAD,TRACE</value>
+  <description>
+    A comma-separated list of HTTP methods that do not require HTTP requests to
+    include a custom header when protection against cross-site request forgery
+    (CSRF) is enabled for WebHDFS by setting dfs.webhdfs.rest-csrf.enabled to
+    true.  The WebHDFS client also uses this property to determine whether or
+    not it needs to send the custom CSRF prevention header in its HTTP requests.
+  </description>
+</property>
+
+<property>
+  <name>dfs.webhdfs.rest-csrf.browser-useragents-regex</name>
+  <value>^Mozilla.*,^Opera.*</value>
+  <description>
+    A comma-separated list of regular expressions used to match against an HTTP
+    request's User-Agent header when protection against cross-site request
+    forgery (CSRF) is enabled for WebHDFS by setting
+    dfs.webhdfs.reset-csrf.enabled to true.  If the incoming User-Agent matches
+    any of these regular expressions, then the request is considered to be sent
+    by a browser, and therefore CSRF prevention is enforced.  If the request's
+    User-Agent does not match any of these regular expressions, then the request
+    is considered to be sent by something other than a browser, such as scripted
+    automation.  In this case, CSRF is not a potential attack vector, so
+    the prevention is not enforced.  This helps achieve backwards-compatibility
+    with existing automation that has not been updated to send the CSRF
+    prevention header.
+  </description>
+</property>
 </configuration>

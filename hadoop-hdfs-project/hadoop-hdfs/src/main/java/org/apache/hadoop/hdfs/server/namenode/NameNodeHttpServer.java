@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_WEBHDFS_REST_CSRF_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_WEBHDFS_REST_CSRF_ENABLED_KEY;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -45,6 +47,7 @@ import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
 
 /**
  * Encapsulates the HTTP server started by the NameNode. 
@@ -89,6 +92,16 @@ public class NameNodeHttpServer {
         params, new String[] { pathSpec });
     HttpServer2.LOG.info("Added filter '" + name + "' (class=" + className
         + ")");
+
+    // add REST CSRF prevention filter
+    if (conf.getBoolean(DFS_WEBHDFS_REST_CSRF_ENABLED_KEY,
+        DFS_WEBHDFS_REST_CSRF_ENABLED_DEFAULT)) {
+      Map<String, String> restCsrfParams = RestCsrfPreventionFilter
+          .getFilterParams(conf, "dfs.webhdfs.rest-csrf.");
+      String restCsrfClassName = RestCsrfPreventionFilter.class.getName();
+      HttpServer2.defineFilter(httpServer.getWebAppContext(), restCsrfClassName,
+          restCsrfClassName, restCsrfParams, new String[] {pathSpec});
+    }
 
     // add webhdfs packages
     httpServer.addJerseyResourcePackage(NamenodeWebHdfsMethods.class

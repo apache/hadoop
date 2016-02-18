@@ -18,7 +18,9 @@
 package org.apache.hadoop.security.http;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.Set;
@@ -32,6 +34,13 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * This filter provides protection against cross site request forgery (CSRF)
  * attacks for REST APIs. Enabling this filter on an endpoint results in the
@@ -39,7 +48,13 @@ import javax.servlet.http.HttpServletResponse;
  * with every request. In the absense of this header the filter will reject the
  * attempt as a bad request.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class RestCsrfPreventionFilter implements Filter {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RestCsrfPreventionFilter.class);
+
   public static final String HEADER_USER_AGENT = "User-Agent";
   public static final String BROWSER_USER_AGENT_PARAM =
       "browser-useragents-regex";
@@ -72,6 +87,9 @@ public class RestCsrfPreventionFilter implements Filter {
       agents = BROWSER_USER_AGENTS_DEFAULT;
     }
     parseBrowserUserAgents(agents);
+    LOG.info("Adding cross-site request forgery (CSRF) protection, "
+        + "headerName = {}, methodsToIgnore = {}, browserUserAgents = {}",
+        headerName, methodsToIgnore, browserUserAgents);
   }
 
   void parseBrowserUserAgents(String userAgents) {
@@ -118,22 +136,152 @@ public class RestCsrfPreventionFilter implements Filter {
     return false;
   }
 
-  @Override
-  public void doFilter(ServletRequest request, ServletResponse response,
-      FilterChain chain) throws IOException, ServletException {
-    HttpServletRequest httpRequest = (HttpServletRequest)request;
-    if (!isBrowser(httpRequest.getHeader(HEADER_USER_AGENT)) ||
-        methodsToIgnore.contains(httpRequest.getMethod()) ||
-        httpRequest.getHeader(headerName) != null) {
-      chain.doFilter(request, response);
+  /**
+   * Defines the minimal API requirements for the filter to execute its
+   * filtering logic.  This interface exists to facilitate integration in
+   * components that do not run within a servlet container and therefore cannot
+   * rely on a servlet container to dispatch to the {@link #doFilter} method.
+   * Applications that do run inside a servlet container will not need to write
+   * code that uses this interface.  Instead, they can use typical servlet
+   * container configuration mechanisms to insert the filter.
+   */
+  public interface HttpInteraction {
+
+    /**
+     * Returns the value of a header.
+     *
+     * @param header name of header
+     * @return value of header
+     */
+    String getHeader(String header);
+
+    /**
+     * Returns the method.
+     *
+     * @return method
+     */
+    String getMethod();
+
+    /**
+     * Called by the filter after it decides that the request may proceed.
+     *
+     * @throws IOException if there is an I/O error
+     * @throws ServletException if the implementation relies on the servlet API
+     *     and a servlet API call has failed
+     */
+    void proceed() throws IOException, ServletException;
+
+    /**
+     * Called by the filter after it decides that the request is a potential
+     * CSRF attack and therefore must be rejected.
+     *
+     * @param code status code to send
+     * @param message response message
+     * @throws IOException if there is an I/O error
+     */
+    void sendError(int code, String message) throws IOException;
+  }
+
+  /**
+   * Handles an {@link HttpInteraction} by applying the filtering logic.
+   *
+   * @param httpInteraction caller's HTTP interaction
+   * @throws IOException if there is an I/O error
+   * @throws ServletException if the implementation relies on the servlet API
+   *     and a servlet API call has failed
+   */
+  public void handleHttpInteraction(HttpInteraction httpInteraction)
+      throws IOException, ServletException {
+    if (!isBrowser(httpInteraction.getHeader(HEADER_USER_AGENT)) ||
+        methodsToIgnore.contains(httpInteraction.getMethod()) ||
+        httpInteraction.getHeader(headerName) != null) {
+      httpInteraction.proceed();
     } else {
-      ((HttpServletResponse)response).sendError(
-          HttpServletResponse.SC_BAD_REQUEST,
+      httpInteraction.sendError(HttpServletResponse.SC_BAD_REQUEST,
           "Missing Required Header for CSRF Vulnerability Protection");
     }
   }
 
   @Override
+  public void doFilter(ServletRequest request, ServletResponse response,
+      final FilterChain chain) throws IOException, ServletException {
+    final HttpServletRequest httpRequest = (HttpServletRequest)request;
+    final HttpServletResponse httpResponse = (HttpServletResponse)response;
+    handleHttpInteraction(new ServletFilterHttpInteraction(httpRequest,
+        httpResponse, chain));
+  }
+
+  @Override
   public void destroy() {
+  }
+
+  /**
+   * Constructs a mapping of configuration properties to be used for filter
+   * initialization.  The mapping includes all properties that start with the
+   * specified configuration prefix.  Property names in the mapping are trimmed
+   * to remove the configuration prefix.
+   *
+   * @param conf configuration to read
+   * @param confPrefix configuration prefix
+   * @return mapping of configuration properties to be used for filter
+   *     initialization
+   */
+  public static Map<String, String> getFilterParams(Configuration conf,
+      String confPrefix) {
+    Map<String, String> filterConfigMap = new HashMap<>();
+    for (Map.Entry<String, String> entry : conf) {
+      String name = entry.getKey();
+      if (name.startsWith(confPrefix)) {
+        String value = conf.get(name);
+        name = name.substring(confPrefix.length());
+        filterConfigMap.put(name, value);
+      }
+    }
+    return filterConfigMap;
+  }
+
+  /**
+   * {@link HttpInteraction} implementation for use in the servlet filter.
+   */
+  private static final class ServletFilterHttpInteraction
+      implements HttpInteraction {
+
+    private final FilterChain chain;
+    private final HttpServletRequest httpRequest;
+    private final HttpServletResponse httpResponse;
+
+    /**
+     * Creates a new ServletFilterHttpInteraction.
+     *
+     * @param httpRequest request to process
+     * @param httpResponse response to process
+     * @param chain filter chain to forward to if HTTP interaction is allowed
+     */
+    public ServletFilterHttpInteraction(HttpServletRequest httpRequest,
+        HttpServletResponse httpResponse, FilterChain chain) {
+      this.httpRequest = httpRequest;
+      this.httpResponse = httpResponse;
+      this.chain = chain;
+    }
+
+    @Override
+    public String getHeader(String header) {
+      return httpRequest.getHeader(header);
+    }
+
+    @Override
+    public String getMethod() {
+      return httpRequest.getMethod();
+    }
+
+    @Override
+    public void proceed() throws IOException, ServletException {
+      chain.doFilter(httpRequest, httpResponse);
+    }
+
+    @Override
+    public void sendError(int code, String message) throws IOException {
+      httpResponse.sendError(code, message);
+    }
   }
 }

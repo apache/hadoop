@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.web.dtp.DtpHttp2Handler;
+import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -51,19 +52,32 @@ public class PortUnificationServerHandler extends ByteToMessageDecoder {
 
   private final Configuration confForCreate;
 
+  private final RestCsrfPreventionFilter restCsrfPreventionFilter;
+
   public PortUnificationServerHandler(InetSocketAddress proxyHost,
-      Configuration conf, Configuration confForCreate) {
+      Configuration conf, Configuration confForCreate,
+      RestCsrfPreventionFilter restCsrfPreventionFilter) {
     this.proxyHost = proxyHost;
     this.conf = conf;
     this.confForCreate = confForCreate;
+    this.restCsrfPreventionFilter = restCsrfPreventionFilter;
   }
 
   private void configureHttp1(ChannelHandlerContext ctx) {
-    ctx.pipeline().addLast(new HttpServerCodec(), new ChunkedWriteHandler(),
+    ctx.pipeline().addLast(new HttpServerCodec());
+    if (this.restCsrfPreventionFilter != null) {
+      ctx.pipeline().addLast(new RestCsrfPreventionFilterHandler(
+          this.restCsrfPreventionFilter));
+    }
+    ctx.pipeline().addLast(new ChunkedWriteHandler(),
         new URLDispatcher(proxyHost, conf, confForCreate));
   }
 
   private void configureHttp2(ChannelHandlerContext ctx) {
+    if (this.restCsrfPreventionFilter != null) {
+      ctx.pipeline().addLast(new RestCsrfPreventionFilterHandler(
+          this.restCsrfPreventionFilter));
+    }
     ctx.pipeline().addLast(new DtpHttp2Handler());
   }
 

@@ -1041,6 +1041,8 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9244. Support nested encryption zones. (zhz)
 
+    HDFS-9711. Integrate CSRF prevention filter in WebHDFS. (cnauroth)
+
   IMPROVEMENTS
 
     HDFS-9257. improve error message for "Absolute path required" in INode.java
