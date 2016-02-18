@@ -31,6 +31,7 @@ import org.apache.hadoop.mapred.SkipBadRecords;
 import org.apache.hadoop.mapreduce.lib.map.MultithreadedMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.util.concurrent.HadoopThreadPoolExecutor;
 
 import java.io.IOException;
 import java.util.concurrent.*;
@@ -84,7 +85,8 @@ public class MultithreadedMapRunner<K1, V1, K2, V2>
 
     // Creating a threadpool of the configured size to execute the Mapper
     // map method in parallel.
-    executorService = new ThreadPoolExecutor(numberOfThreads, numberOfThreads, 
+    executorService = new HadoopThreadPoolExecutor(numberOfThreads,
+        numberOfThreads,
                                              0L, TimeUnit.MILLISECONDS,
                                              new BlockingArrayQueue
                                                (numberOfThreads));

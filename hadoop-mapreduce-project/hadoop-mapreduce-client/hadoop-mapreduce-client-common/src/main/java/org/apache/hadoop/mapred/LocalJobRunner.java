@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -73,6 +72,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 /** Implements MapReduce locally, in-process, for debugging. */
 @InterfaceAudience.Private
@@ -427,7 +427,8 @@ public class LocalJobRunner implements ClientProtocol {
       ThreadFactory tf = new ThreadFactoryBuilder()
         .setNameFormat("LocalJobRunner Map Task Executor #%d")
         .build();
-      ExecutorService executor = Executors.newFixedThreadPool(maxMapThreads, tf);
+      ExecutorService executor = HadoopExecutors.newFixedThreadPool(
+          maxMapThreads, tf);
 
       return executor;
     }
@@ -453,7 +454,8 @@ public class LocalJobRunner implements ClientProtocol {
       LOG.debug("Reduce tasks to process: " + this.numReduceTasks);
 
       // Create a new executor service to drain the work queue.
-      ExecutorService executor = Executors.newFixedThreadPool(maxReduceThreads);
+      ExecutorService executor = HadoopExecutors.newFixedThreadPool(
+          maxReduceThreads);
 
       return executor;
     }

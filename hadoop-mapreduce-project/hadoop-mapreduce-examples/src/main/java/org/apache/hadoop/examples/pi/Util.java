@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 
@@ -48,6 +47,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.base.Charsets;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 /** Utility methods */
 public class Util {
@@ -157,7 +157,8 @@ public class Util {
   /** Execute the callables by a number of threads */
   public static <T, E extends Callable<T>> void execute(int nThreads, List<E> callables
       ) throws InterruptedException, ExecutionException {
-    final ExecutorService executor = Executors.newFixedThreadPool(nThreads); 
+    final ExecutorService executor = HadoopExecutors.newFixedThreadPool(
+        nThreads);
     final List<Future<T>> futures = executor.invokeAll(callables);
     for(Future<T> f : futures)
       f.get();

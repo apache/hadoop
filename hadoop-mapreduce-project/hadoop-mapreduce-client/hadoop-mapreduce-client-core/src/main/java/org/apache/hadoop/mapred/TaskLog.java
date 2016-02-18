@@ -51,6 +51,7 @@ import org.apache.hadoop.mapreduce.util.ProcessTree;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.log4j.Appender;
 import org.apache.log4j.LogManager;
@@ -327,22 +328,22 @@ public class TaskLog {
 
   public static ScheduledExecutorService createLogSyncer() {
     final ScheduledExecutorService scheduler =
-      Executors.newSingleThreadScheduledExecutor(
-        new ThreadFactory() {
-          @Override
-          public Thread newThread(Runnable r) {
-            final Thread t = Executors.defaultThreadFactory().newThread(r);
-            t.setDaemon(true);
-            t.setName("Thread for syncLogs");
-            return t;
-          }
-        });
+        HadoopExecutors.newSingleThreadScheduledExecutor(
+            new ThreadFactory() {
+              @Override
+              public Thread newThread(Runnable r) {
+                final Thread t = Executors.defaultThreadFactory().newThread(r);
+                t.setDaemon(true);
+                t.setName("Thread for syncLogs");
+                return t;
+              }
+            });
     ShutdownHookManager.get().addShutdownHook(new Runnable() {
-        @Override
-        public void run() {
-          TaskLog.syncLogsShutdown(scheduler);
-        }
-      }, 50);
+      @Override
+      public void run() {
+        TaskLog.syncLogsShutdown(scheduler);
+      }
+    }, 50);
     scheduler.scheduleWithFixedDelay(
         new Runnable() {
           @Override

@@ -25,10 +25,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import junit.framework.TestCase;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
@@ -696,7 +696,7 @@ public class TestFileOutputCommitter extends TestCase {
       };
     }
 
-    final ExecutorService executor = Executors.newFixedThreadPool(2);
+    final ExecutorService executor = HadoopExecutors.newFixedThreadPool(2);
     try {
       for (int i = 0; i < taCtx.length; i++) {
         final int taskIdx = i;
