@@ -286,92 +286,117 @@ public class DataChecksum implements Checksum {
    * @throws ChecksumException if the checksums do not match
    */
   public void verifyChunkedSums(ByteBuffer data, ByteBuffer checksums,
-      String fileName, long basePos)
-  throws ChecksumException {
+      String fileName, long basePos) throws ChecksumException {
     if (type.size == 0) return;
     
     if (data.hasArray() && checksums.hasArray()) {
-      verifyChunkedSums(
-          data.array(), data.arrayOffset() + data.position(), data.remaining(),
-          checksums.array(), checksums.arrayOffset() + checksums.position(),
-          fileName, basePos);
+      final int dataOffset = data.arrayOffset() + data.position();
+      final int crcsOffset = checksums.arrayOffset() + checksums.position();
+      verifyChunked(type, summer, data.array(), dataOffset, data.remaining(),
+          bytesPerChecksum, checksums.array(), crcsOffset, fileName, basePos);
       return;
     }
     if (NativeCrc32.isAvailable()) {
       NativeCrc32.verifyChunkedSums(bytesPerChecksum, type.id, checksums, data,
           fileName, basePos);
-      return;
+    } else {
+      verifyChunked(type, summer, data, bytesPerChecksum, checksums, fileName,
+          basePos);
     }
-    
-    int startDataPos = data.position();
+  }
+
+  static void verifyChunked(final Type type, final Checksum algorithm,
+      final ByteBuffer data, final int bytesPerCrc, final ByteBuffer crcs,
+      final String filename, final long basePos) throws ChecksumException {
+    final byte[] bytes = new byte[bytesPerCrc];
+    final int dataOffset = data.position();
+    final int dataLength = data.remaining();
     data.mark();
-    checksums.mark();
+    crcs.mark();
+
     try {
-      byte[] buf = new byte[bytesPerChecksum];
-      byte[] sum = new byte[type.size];
-      while (data.remaining() > 0) {
-        int n = Math.min(data.remaining(), bytesPerChecksum);
-        checksums.get(sum);
-        data.get(buf, 0, n);
-        summer.reset();
-        summer.update(buf, 0, n);
-        int calculated = (int)summer.getValue();
-        int stored = (sum[0] << 24 & 0xff000000) |
-          (sum[1] << 16 & 0xff0000) |
-          (sum[2] << 8 & 0xff00) |
-          sum[3] & 0xff;
-        if (calculated != stored) {
-          long errPos = basePos + data.position() - startDataPos - n;
-          throw new ChecksumException(
-              "Checksum error: "+ fileName + " at "+ errPos +
-              " exp: " + stored + " got: " + calculated, errPos);
+      int i = 0;
+      for(final int n = dataLength - bytesPerCrc + 1; i < n; i += bytesPerCrc) {
+        data.get(bytes);
+        algorithm.reset();
+        algorithm.update(bytes, 0, bytesPerCrc);
+        final int computed = (int)algorithm.getValue();
+        final int expected = crcs.getInt();
+
+        if (computed != expected) {
+          long errPos = basePos + data.position() - dataOffset - bytesPerCrc;
+          throwChecksumException(type, algorithm, filename, errPos, expected,
+              computed);
+        }
+      }
+
+      final int remainder = dataLength - i;
+      if (remainder > 0) {
+        data.get(bytes, 0, remainder);
+        algorithm.reset();
+        algorithm.update(bytes, 0, remainder);
+        final int computed = (int)algorithm.getValue();
+        final int expected = crcs.getInt();
+
+        if (computed != expected) {
+          long errPos = basePos + data.position() - dataOffset - remainder;
+          throwChecksumException(type, algorithm, filename, errPos, expected,
+              computed);
         }
       }
     } finally {
       data.reset();
-      checksums.reset();
+      crcs.reset();
     }
   }
-  
+
   /**
    * Implementation of chunked verification specifically on byte arrays. This
    * is to avoid the copy when dealing with ByteBuffers that have array backing.
    */
-  private void verifyChunkedSums(
-      byte[] data, int dataOff, int dataLen,
-      byte[] checksums, int checksumsOff, String fileName,
-      long basePos) throws ChecksumException {
-    if (type.size == 0) return;
+  static void verifyChunked(final Type type, final Checksum algorithm,
+      final byte[] data, final int dataOffset, final int dataLength,
+      final int bytesPerCrc, final byte[] crcs, final int crcsOffset,
+      final String filename, final long basePos) throws ChecksumException {
+    final int dataEnd = dataOffset + dataLength;
+    int i = dataOffset;
+    int j = crcsOffset;
+    for(final int n = dataEnd-bytesPerCrc+1; i < n; i += bytesPerCrc, j += 4) {
+      algorithm.reset();
+      algorithm.update(data, i, bytesPerCrc);
+      final int computed = (int)algorithm.getValue();
+      final int expected = ((crcs[j] << 24) + ((crcs[j + 1] << 24) >>> 8))
+          + (((crcs[j + 2] << 24) >>> 16) + ((crcs[j + 3] << 24) >>> 24));
 
-    if (NativeCrc32.isAvailable()) {
-      NativeCrc32.verifyChunkedSumsByteArray(bytesPerChecksum, type.id,
-          checksums, checksumsOff, data, dataOff, dataLen, fileName, basePos);
-      return;
-    }
-    
-    int remaining = dataLen;
-    int dataPos = 0;
-    while (remaining > 0) {
-      int n = Math.min(remaining, bytesPerChecksum);
-      
-      summer.reset();
-      summer.update(data, dataOff + dataPos, n);
-      dataPos += n;
-      remaining -= n;
-      
-      int calculated = (int)summer.getValue();
-      int stored = (checksums[checksumsOff] << 24 & 0xff000000) |
-        (checksums[checksumsOff + 1] << 16 & 0xff0000) |
-        (checksums[checksumsOff + 2] << 8 & 0xff00) |
-        checksums[checksumsOff + 3] & 0xff;
-      checksumsOff += 4;
-      if (calculated != stored) {
-        long errPos = basePos + dataPos - n;
-        throw new ChecksumException(
-            "Checksum error: "+ fileName + " at "+ errPos +
-            " exp: " + stored + " got: " + calculated, errPos);
+      if (computed != expected) {
+        final long errPos = basePos + i - dataOffset;
+        throwChecksumException(type, algorithm, filename, errPos, expected,
+            computed);
       }
     }
+    final int remainder = dataEnd - i;
+    if (remainder > 0) {
+      algorithm.reset();
+      algorithm.update(data, i, remainder);
+      final int computed = (int)algorithm.getValue();
+      final int expected = ((crcs[j] << 24) + ((crcs[j + 1] << 24) >>> 8))
+          + (((crcs[j + 2] << 24) >>> 16) + ((crcs[j + 3] << 24) >>> 24));
+
+      if (computed != expected) {
+        final long errPos = basePos + i - dataOffset;
+        throwChecksumException(type, algorithm, filename, errPos, expected,
+            computed);
+      }
+    }
+  }
+
+  private static void throwChecksumException(Type type, Checksum algorithm,
+      String filename, long errPos, int expected, int computed)
+          throws ChecksumException {
+    throw new ChecksumException("Checksum " + type
+        + " not matched for file " + filename + " at position "+ errPos
+        + String.format(": expected=%X but computed=%X", expected, computed)
+        + ", algorithm=" + algorithm.getClass().getSimpleName(), errPos);
   }
 
   /**
