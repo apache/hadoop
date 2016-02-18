@@ -154,6 +154,51 @@ If you do any of these: change your credentials immediately!
       <description>AWS secret key. Omit for Role-based authentication.</description>
     </property>
 
+#### Protecting the AWS Credentials in S3A
+
+To protect these credentials from prying eyes, it is recommended that you use
+the credential provider framework securely storing them and accessing them
+ through configuration. The following describes its use for AWS credentials
+in S3A FileSystem.
+
+For additional reading on the credential provider API see:
+[Credential Provider API](../../../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html).
+
+##### End to End Steps for Distcp and S3 with Credential Providers
+
+###### provision
+
+```
+% hadoop credential create fs.s3a.access.key -value 123
+    -provider localjceks://file/home/lmccay/aws.jceks
+```
+
+```
+% hadoop credential create fs.s3a.secret.key -value 456
+    -provider localjceks://file/home/lmccay/aws.jceks
+```
+
+###### configure core-site.xml or command line system property
+
+```
+<property>
+  <name>hadoop.security.credential.provider.path</name>
+  <value>localjceks://file/home/lmccay/aws.jceks</value>
+  <description>Path to interrogate for protected credentials.</description>
+</property>
+```
+###### distcp
+
+```
+% hadoop distcp
+    [-D hadoop.security.credential.provider.path=localjceks://file/home/lmccay/aws.jceks]
+    hdfs://hostname:9001/user/lmccay/007020615 s3a://lmccay/
+```
+
+NOTE: You may optionally add the provider path property to the distcp command line instead of
+added job specific configuration to a generic core­site.xml. The square brackets above illustrate
+this capability.
+
 ### Other properties
 
     <property>
