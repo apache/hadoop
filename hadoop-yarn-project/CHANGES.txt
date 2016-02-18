@@ -964,6 +964,9 @@ Release 2.6.5 - UNRELEASED
 
   OPTIMIZATIONS
 
+    YARN-4690. Skip object allocation in FSAppAttempt#getResourceUsage when
+    possible (Ming Ma via sjlee)
+
   BUG FIXES
 
 Release 2.6.4 - 2016-02-11
