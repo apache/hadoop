@@ -66,6 +66,7 @@
       <item name="Secure Mode" href="hadoop-project-dist/hadoop-common/SecureMode.html"/>
       <item name="Service Level Authorization" href="hadoop-project-dist/hadoop-common/ServiceLevelAuth.html"/>
       <item name="HTTP Authentication" href="hadoop-project-dist/hadoop-common/HttpAuthentication.html"/>
+      <item name="Credential Provider API" href="hadoop-project-dist/hadoop-common/CredentialProviderAPI.html"/>
       <item name="Hadoop KMS" href="hadoop-kms/index.html"/>
       <item name="Tracing" href="hadoop-project-dist/hadoop-common/Tracing.html"/>
       <item name="Unix Shell Guide" href="hadoop-project-dist/hadoop-common/UnixShellGuide.html"/>
