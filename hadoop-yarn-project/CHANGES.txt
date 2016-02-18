@@ -34,6 +34,9 @@ Trunk - Unreleased
 
     YARN-3261. rewrite resourcemanager restart doc to remove roadmap bits (Gururaj Shetty via aw)
 
+    YARN-4689. FairScheduler: Cleanup preemptContainer to be more readable.
+    (Kai Sasaki via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
