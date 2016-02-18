@@ -197,4 +197,10 @@ public class TestDataChecksum {
     newBuf.limit(dataBuf.limit());
     return newBuf;
   }
+
+  @Test
+  public void testCrc32() throws Exception {
+    new Crc32PerformanceTest(8, 3, true).run();
+    new Crc32PerformanceTest(8, 3, false).run();
+  }
 }
