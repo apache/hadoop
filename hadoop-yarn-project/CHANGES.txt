@@ -1428,6 +1428,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4667. RM Admin CLI for refreshNodesResources throws NPE when nothing
     is configured. (Naganarasimha G R via devaraj)
 
+    YARN-4654. Yarn node label CLI should parse "=" correctly when trying to 
+    remove all labels on a node. (Naganarasimha G R via rohithsharmaks)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
