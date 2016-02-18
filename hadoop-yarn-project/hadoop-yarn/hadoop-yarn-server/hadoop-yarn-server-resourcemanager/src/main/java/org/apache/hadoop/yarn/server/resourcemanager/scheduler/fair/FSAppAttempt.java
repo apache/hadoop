@@ -890,7 +890,12 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   public Resource getResourceUsage() {
     // Here the getPreemptedResources() always return zero, except in
     // a preemption round
-    return Resources.subtract(getCurrentConsumption(), getPreemptedResources());
+    // In the common case where preempted resource is zero, return the
+    // current consumption Resource object directly without calling
+    // Resources.subtract which creates a new Resource object for each call.
+    return getPreemptedResources().equals(Resources.none()) ?
+        getCurrentConsumption() :
+        Resources.subtract(getCurrentConsumption(), getPreemptedResources());
   }
 
   @Override
