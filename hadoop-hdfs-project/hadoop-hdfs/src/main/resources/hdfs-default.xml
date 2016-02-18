@@ -798,6 +798,18 @@
 </property>
 
 <property>
+  <name>dfs.namenode.block-placement-policy.default.prefer-local-node</name>
+  <value>true</value>
+  <description>Controls how the default block placement policy places
+  the first replica of a block. When true, it will prefer the node where
+  the client is running.  When false, it will prefer a node in the same rack
+  as the client. Setting to false avoids situations where entire copies of
+  large files end up on a single node, thus creating hotspots.
+  </description>
+</property>
+
+
+<property>
   <name>dfs.stream-buffer-size</name>
   <value>4096</value>
   <description>The size of buffer to stream files.
