@@ -59,8 +59,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioning
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
@@ -592,26 +592,29 @@ public class RMAdminCLI extends HAAdmin {
         continue;
       }
 
-      // "," also supported for compatibility
       String[] splits = nodeToLabels.split("=");
-      int index = 0;
-      if (splits.length != 2) {
+      int labelsStartIndex = 0;
+      String nodeIdStr = splits[0];
+
+      if (splits.length == 2) {
+        splits = splits[1].split(",");
+      } else if (nodeToLabels.endsWith("=")) {
+        //case where no labels are mapped to a node
+        splits = new String[0];
+      } else {
+        // "," also supported for compatibility
         splits = nodeToLabels.split(",");
-        index = 1;
+        nodeIdStr = splits[0];
+        labelsStartIndex = 1;
       }
 
-      String nodeIdStr = splits[0];
-      if (index == 0) {
-        splits = splits[1].split(",");
-      }
-      
       Preconditions.checkArgument(!nodeIdStr.trim().isEmpty(),
           "node name cannot be empty");
 
       NodeId nodeId = ConverterUtils.toNodeIdWithDefaultPort(nodeIdStr);
       map.put(nodeId, new HashSet<String>());
 
-      for (int i = index; i < splits.length; i++) {
+      for (int i = labelsStartIndex; i < splits.length; i++) {
         if (!splits[i].trim().isEmpty()) {
           map.get(nodeId).add(splits[i].trim());
         }
