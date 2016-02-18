@@ -18,6 +18,13 @@ res * Licensed to the Apache Software Foundation (ASF) under one
 
 package org.apache.hadoop.hdfs.web;
 
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_WEBHDFS_REST_CSRF_CUSTOM_HEADER_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_WEBHDFS_REST_CSRF_CUSTOM_HEADER_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_WEBHDFS_REST_CSRF_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_WEBHDFS_REST_CSRF_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_WEBHDFS_REST_CSRF_METHODS_TO_IGNORE_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_WEBHDFS_REST_CSRF_METHODS_TO_IGNORE_KEY;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.EOFException;
@@ -33,8 +40,10 @@ import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.StringTokenizer;
 
 import javax.ws.rs.core.HttpHeaders;
@@ -129,6 +138,8 @@ public class WebHdfsFileSystem extends FileSystem
   private InetSocketAddress nnAddrs[];
   private int currentNNAddrIndex;
   private boolean disallowFallbackToInsecureCluster;
+  private String restCsrfCustomHeader;
+  private Set<String> restCsrfMethodsToIgnore;
   private static final ObjectReader READER =
       new ObjectMapper().reader(Map.class);
 
@@ -226,7 +237,50 @@ public class WebHdfsFileSystem extends FileSystem
     this.disallowFallbackToInsecureCluster = !conf.getBoolean(
         CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
         CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT);
+    this.initializeRestCsrf(conf);
     this.delegationToken = null;
+  }
+
+  /**
+   * Initializes client-side handling of cross-site request forgery (CSRF)
+   * protection by figuring out the custom HTTP headers that need to be sent in
+   * requests and which HTTP methods are ignored because they do not require
+   * CSRF protection.
+   *
+   * @param conf configuration to read
+   */
+  private void initializeRestCsrf(Configuration conf) {
+    if (conf.getBoolean(DFS_WEBHDFS_REST_CSRF_ENABLED_KEY,
+        DFS_WEBHDFS_REST_CSRF_ENABLED_DEFAULT)) {
+      this.restCsrfCustomHeader = conf.getTrimmed(
+          DFS_WEBHDFS_REST_CSRF_CUSTOM_HEADER_KEY,
+          DFS_WEBHDFS_REST_CSRF_CUSTOM_HEADER_DEFAULT);
+      this.restCsrfMethodsToIgnore = new HashSet<>();
+      this.restCsrfMethodsToIgnore.addAll(getTrimmedStringList(conf,
+          DFS_WEBHDFS_REST_CSRF_METHODS_TO_IGNORE_KEY,
+          DFS_WEBHDFS_REST_CSRF_METHODS_TO_IGNORE_DEFAULT));
+    } else {
+      this.restCsrfCustomHeader = null;
+      this.restCsrfMethodsToIgnore = null;
+    }
+  }
+
+  /**
+   * Returns a list of strings from a comma-delimited configuration value.
+   *
+   * @param conf configuration to check
+   * @param name configuration property name
+   * @param defaultValue default value if no value found for name
+   * @return list of strings from comma-delimited configuration value, or an
+   *     empty list if not found
+   */
+  private static List<String> getTrimmedStringList(Configuration conf,
+      String name, String defaultValue) {
+    String valueString = conf.get(name, defaultValue);
+    if (valueString == null) {
+      return new ArrayList<>();
+    }
+    return new ArrayList<>(StringUtils.getTrimmedStringCollection(valueString));
   }
 
   @Override
@@ -608,6 +662,11 @@ public class WebHdfsFileSystem extends FileSystem
       final boolean doOutput = op.getDoOutput();
       conn.setRequestMethod(op.getType().toString());
       conn.setInstanceFollowRedirects(false);
+      if (restCsrfCustomHeader != null &&
+          !restCsrfMethodsToIgnore.contains(op.getType().name())) {
+        // The value of the header is unimportant.  Only its presence matters.
+        conn.setRequestProperty(restCsrfCustomHeader, "\"\"");
+      }
       switch (op.getType()) {
       // if not sending a message body for a POST or PUT operation, need
       // to ensure the server/proxy knows this
