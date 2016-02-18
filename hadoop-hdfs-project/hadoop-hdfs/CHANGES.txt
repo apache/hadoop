@@ -2782,6 +2782,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9799. Reimplement getCurrentTrashDir to remove incompatibility. (zhz)
 
+    HDFS-6832. Fix the usage of 'hdfs namenode' command.
+    (Manjunath Ballur via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
