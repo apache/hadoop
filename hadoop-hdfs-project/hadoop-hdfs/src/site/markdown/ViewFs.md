@@ -75,9 +75,9 @@ Hence on Cluster X where the `core-site.xml` is set as above, the typical pathna
 
             distcp hdfs://namenodeClusterY:port/pathSrc hdfs://namenodeClusterZ:port/pathDest
 
-4.  `webhdfs://namenodeClusterX:http_port/foo/bar` and `hftp://namenodeClusterX:http_port/foo/bar`
+4.  `webhdfs://namenodeClusterX:http_port/foo/bar`
 
-    * These are file system URIs respectively for accessing files via the WebHDFS file system and the HFTP file system. Note that WebHDFS and HFTP use the HTTP port of the namenode but not the RPC port.
+    * It is an URI for accessing files via the WebHDFS file system. Note that WebHDFS uses the HTTP port of the namenode but not the RPC port.
 
 5.  `http://namenodeClusterX:http_port/webhdfs/v1/foo/bar` and `http://proxyClusterX:http_port/foo/bar`
 
@@ -133,9 +133,9 @@ Hence on Cluster X, where the `core-site.xml` is set to make the default fs to u
 
             distcp viewfs://clusterY:/pathSrc viewfs://clusterZ/pathDest
 
-4.  `viewfs://clusterX-webhdfs/foo/bar` and `viewfs://clusterX-hftp/foo/bar`
+4.  `viewfs://clusterX-webhdfs/foo/bar`
 
-    * These are URIs respectively for accessing files via the WebHDFS file system and the HFTP file system.
+    * It is an URI for accessing files via the WebHDFS file system.
 
 5.  `http://namenodeClusterX:http_port/webhdfs/v1/foo/bar` and `http://proxyClusterX:http_port/foo/bar`
 

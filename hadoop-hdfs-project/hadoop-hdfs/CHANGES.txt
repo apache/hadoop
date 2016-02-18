@@ -938,6 +938,9 @@ Trunk (Unreleased)
       HDFS-9787. SNNs stop uploading FSImage to ANN once isPrimaryCheckPointer
       changed to false. (Guocui Mi via vinayakumarb)
 
+      HDFS-9830. Remove references to hftp in ViewFs documentation in trunk.
+      (Wei-Chiu Chuang via aajisaka)
+
 Release 2.9.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
