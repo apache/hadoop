@@ -310,6 +310,9 @@ Release 2.9.0 - UNRELEASED
 
     MAPREDUCE-6431. JobClient should be an AutoClosable (haibochen via rkanter)
 
+    MAPREDUCE-6634. Log uncaught exceptions/errors in various thread pools in
+    mapreduce. (Sidharta Seethana via vvasudev)
+
   OPTIMIZATIONS
 
   BUG FIXES

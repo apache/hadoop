@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -60,6 +59,7 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
@@ -138,7 +138,7 @@ public class LocalContainerLauncher extends AbstractService implements
     // make it a daemon thread so that the process can exit even if the task is
     // not interruptible
     taskRunner =
-        Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().
+        HadoopExecutors.newSingleThreadExecutor(new ThreadFactoryBuilder().
             setDaemon(true).setNameFormat("uber-SubtaskRunner").build());
     // create and start an event handling thread
     eventHandler = new Thread(new EventHandler(), "uber-EventHandler");

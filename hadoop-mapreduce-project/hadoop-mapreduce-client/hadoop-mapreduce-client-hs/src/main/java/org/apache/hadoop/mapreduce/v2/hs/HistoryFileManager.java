@@ -66,6 +66,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ShutdownThreadsHelper;
+import org.apache.hadoop.util.concurrent.HadoopThreadPoolExecutor;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -554,8 +555,9 @@ public class HistoryFileManager extends AbstractService {
         JHAdminConfig.DEFAULT_MR_HISTORY_MOVE_THREAD_COUNT);
     ThreadFactory tf = new ThreadFactoryBuilder().setNameFormat(
         "MoveIntermediateToDone Thread #%d").build();
-    moveToDoneExecutor = new ThreadPoolExecutor(numMoveThreads, numMoveThreads,
-        1, TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>(), tf);
+    moveToDoneExecutor = new HadoopThreadPoolExecutor(numMoveThreads,
+        numMoveThreads, 1, TimeUnit.HOURS,
+        new LinkedBlockingQueue<Runnable>(), tf);
 
     super.serviceInit(conf);
   }

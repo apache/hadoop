@@ -44,6 +44,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.concurrent.HadoopScheduledThreadPoolExecutor;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -126,7 +127,7 @@ public class JobHistory extends AbstractService implements HistoryContext {
       ((Service) storage).start();
     }
 
-    scheduledExecutor = new ScheduledThreadPoolExecutor(2,
+    scheduledExecutor = new HadoopScheduledThreadPoolExecutor(2,
         new ThreadFactoryBuilder().setNameFormat("Log Scanner/Cleaner #%d")
             .build());
 
