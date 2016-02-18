@@ -691,6 +691,8 @@ Release 2.9.0 - UNRELEASED
     HADOOP-12710. Remove dependency on commons-httpclient for TestHttpServerLogs
     (Wei-Chiu Chuang via iwasakims)
 
+    HADOOP-12817. Enable TLS v1.1 and 1.2 (rkanter)
+
   BUG FIXES
 
     HADOOP-12605. Fix intermittent failure of TestIPC.testIpcWithReaderQueuing

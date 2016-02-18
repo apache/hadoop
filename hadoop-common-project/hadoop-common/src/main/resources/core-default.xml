@@ -1644,9 +1644,9 @@ for ldap providers in the same way as above does.
 
 <property>
   <name>hadoop.ssl.enabled.protocols</name>
-  <value>TLSv1</value>
+  <value>TLSv1,SSLv2Hello,TLSv1.1,TLSv1.2</value>
   <description>
-    Protocols supported by the ssl.
+    The supported SSL protocols.
   </description>
 </property>
 
