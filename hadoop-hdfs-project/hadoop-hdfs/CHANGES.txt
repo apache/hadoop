@@ -105,6 +105,8 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9244. Support nested encryption zones. (zhz)
 
+    HDFS-9711. Integrate CSRF prevention filter in WebHDFS. (cnauroth)
+
   IMPROVEMENTS
 
     HDFS-9653.  Added blocks pending deletion report to dfsadmin.
