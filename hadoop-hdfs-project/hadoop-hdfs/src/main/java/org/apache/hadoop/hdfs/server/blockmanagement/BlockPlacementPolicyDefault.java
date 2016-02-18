@@ -59,7 +59,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
 
   protected boolean considerLoad; 
   protected double considerLoadFactor;
-  private boolean preferLocalNode = true;
+  private boolean preferLocalNode;
   protected NetworkTopology clusterMap;
   protected Host2NodesMap host2datanodeMap;
   private FSClusterStats stats;
@@ -95,6 +95,11 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     this.staleInterval = conf.getLong(
         DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY, 
         DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT);
+    this.preferLocalNode = conf.getBoolean(
+        DFSConfigKeys.
+            DFS_NAMENODE_BLOCKPLACEMENTPOLICY_DEFAULT_PREFER_LOCAL_NODE_KEY,
+        DFSConfigKeys.
+            DFS_NAMENODE_BLOCKPLACEMENTPOLICY_DEFAULT_PREFER_LOCAL_NODE_DEFAULT);
   }
 
   @Override
