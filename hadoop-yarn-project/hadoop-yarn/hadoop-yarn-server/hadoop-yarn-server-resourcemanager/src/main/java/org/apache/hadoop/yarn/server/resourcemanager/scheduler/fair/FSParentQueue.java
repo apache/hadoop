@@ -266,10 +266,8 @@ public class FSParentQueue extends FSQueue {
             LOG.debug("skipping from queue=" + getName()
                 + " because it's a non-preemptable queue");
           }
-          continue;
-        }
-        if (candidateQueue == null ||
-            comparator.compare(queue, candidateQueue) > 0) {
+        } else if (candidateQueue == null ||
+                  comparator.compare(queue, candidateQueue) > 0) {
           candidateQueue = queue;
         }
       }

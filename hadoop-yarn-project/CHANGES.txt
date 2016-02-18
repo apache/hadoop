@@ -73,6 +73,10 @@ Release 2.9.0 - UNRELEASED
     YARN-4655. Log uncaught exceptions/errors in various thread pools in YARN.
     (Sidharta Seethana via vvasudev)
 
+    YARN-4689. FairScheduler: Cleanup preemptContainer to be more readable.
+    (Kai Sasaki via kasha)
+
+
   OPTIMIZATIONS
 
   BUG FIXES
