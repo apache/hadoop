@@ -687,6 +687,7 @@ public class StringUtils {
     LOG.info(
         toStartupShutdownString("STARTUP_MSG: ", new String[] {
             "Starting " + classname,
+            "  user = " + System.getProperty("user.name"),
             "  host = " + hostname,
             "  args = " + Arrays.asList(args),
             "  version = " + VersionInfo.getVersion(),
