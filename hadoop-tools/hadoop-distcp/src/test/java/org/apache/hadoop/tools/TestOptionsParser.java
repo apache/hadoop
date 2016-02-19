@@ -397,11 +397,16 @@ public class TestOptionsParser {
   @Test
   public void testToString() {
     DistCpOptions option = new DistCpOptions(new Path("abc"), new Path("xyz"));
-    String val = "DistCpOptions{atomicCommit=false, syncFolder=false, deleteMissing=false, " +
-        "ignoreFailures=false, maxMaps=20, sslConfigurationFile='null', copyStrategy='uniformsize', " +
-        "sourceFileListing=abc, sourcePaths=null, targetPath=xyz, targetPathExists=true, " +
-        "preserveRawXattrs=false, filtersFile='null'}";
-    Assert.assertEquals(val, option.toString());
+    String val = "DistCpOptions{atomicCommit=false, syncFolder=false, "
+        + "deleteMissing=false, ignoreFailures=false, overwrite=false, "
+        + "skipCRC=false, blocking=true, numListstatusThreads=0, maxMaps=20, "
+        + "mapBandwidth=100.0, sslConfigurationFile='null', "
+        + "copyStrategy='uniformsize', preserveStatus=[], "
+        + "preserveRawXattrs=false, atomicWorkPath=null, logPath=null, "
+        + "sourceFileListing=abc, sourcePaths=null, targetPath=xyz, "
+        + "targetPathExists=true, filtersFile='null'}";
+    String optionString = option.toString();
+    Assert.assertEquals(val, optionString);
     Assert.assertNotSame(DistCpOptionSwitch.ATOMIC_COMMIT.toString(),
         DistCpOptionSwitch.ATOMIC_COMMIT.name());
   }

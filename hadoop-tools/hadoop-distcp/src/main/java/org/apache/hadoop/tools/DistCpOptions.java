@@ -664,14 +664,22 @@ public class DistCpOptions {
         ", syncFolder=" + syncFolder +
         ", deleteMissing=" + deleteMissing +
         ", ignoreFailures=" + ignoreFailures +
+        ", overwrite=" + overwrite +
+        ", skipCRC=" + skipCRC +
+        ", blocking=" + blocking +
+        ", numListstatusThreads=" + numListstatusThreads +
         ", maxMaps=" + maxMaps +
+        ", mapBandwidth=" + mapBandwidth +
         ", sslConfigurationFile='" + sslConfigurationFile + '\'' +
         ", copyStrategy='" + copyStrategy + '\'' +
+        ", preserveStatus=" + preserveStatus +
+        ", preserveRawXattrs=" + preserveRawXattrs +
+        ", atomicWorkPath=" + atomicWorkPath +
+        ", logPath=" + logPath +
         ", sourceFileListing=" + sourceFileListing +
         ", sourcePaths=" + sourcePaths +
         ", targetPath=" + targetPath +
         ", targetPathExists=" + targetPathExists +
-        ", preserveRawXattrs=" + preserveRawXattrs +
         ", filtersFile='" + filtersFile + '\'' +
         '}';
   }
