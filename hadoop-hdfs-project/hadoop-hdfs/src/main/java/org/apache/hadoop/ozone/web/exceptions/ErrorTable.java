@@ -103,6 +103,10 @@ public final class ErrorTable {
                          "Missing authorization or authorization has to be " +
                              "unique.");
 
+  public static final OzoneException BAD_PROPERTY =
+      new OzoneException(HTTP_BAD_REQUEST, "unknownProperty",
+          "This property is not supported by this server.");
+
   /* Error 401 */
   public static final OzoneException UNAUTHORIZED =
       new OzoneException(HTTP_UNAUTHORIZED, "Unauthorized",
