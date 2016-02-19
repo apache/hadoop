@@ -313,6 +313,9 @@ Release 2.9.0 - UNRELEASED
     MAPREDUCE-6634. Log uncaught exceptions/errors in various thread pools in
     mapreduce. (Sidharta Seethana via vvasudev)
 
+    MAPREDUCE-6627. Add machine-readable output to mapred job -history
+    command (rkanter)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -992,6 +992,12 @@
         </exclusions>
       </dependency>
 
+        <dependency>
+            <groupId>org.skyscreamer</groupId>
+            <artifactId>jsonassert</artifactId>
+            <version>1.3.0</version>
+        </dependency>
+
     </dependencies>
   </dependencyManagement>
 
