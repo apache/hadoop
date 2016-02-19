@@ -1942,6 +1942,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8923. Add -source flag to balancer usage message.  (Chris Trezzo
     via szetszwo)
 
+    HDFS-9764. DistCp doesn't print value for several arguments including
+    -numListstatusThreads. (Wei-Chiu Chuang via Yongjun Zhang) 
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
