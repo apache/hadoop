@@ -124,6 +124,7 @@ public class KMSWebApp implements ServletContextListener {
       LOG.info("-------------------------------------------------------------");
       LOG.info("  Java runtime version : {}", System.getProperty(
           "java.runtime.version"));
+      LOG.info("  User: {}", System.getProperty("user.name"));
       LOG.info("  KMS Hadoop Version: " + VersionInfo.getVersion());
       LOG.info("-------------------------------------------------------------");
 
