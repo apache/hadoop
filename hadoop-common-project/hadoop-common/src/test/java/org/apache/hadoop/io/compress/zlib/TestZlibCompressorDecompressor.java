@@ -122,6 +122,31 @@ public class TestZlibCompressorDecompressor {
   }
 
   @Test
+  public void testZlibCompressorDecompressorWithCompressionLevels() {
+    Configuration conf = new Configuration();
+    conf.set("zlib.compress.level","FOUR");
+    if (ZlibFactory.isNativeZlibLoaded(conf)) {
+      byte[] rawData;
+      int tryNumber = 5;
+      int BYTE_SIZE = 10 * 1024;
+      Compressor zlibCompressor = ZlibFactory.getZlibCompressor(conf);
+      Decompressor zlibDecompressor = ZlibFactory.getZlibDecompressor(conf);
+      rawData = generate(BYTE_SIZE);
+      try {
+        for (int i = 0; i < tryNumber; i++)
+          compressDecompressZlib(rawData, (ZlibCompressor) zlibCompressor,
+                  (ZlibDecompressor) zlibDecompressor);
+        zlibCompressor.reinit(conf);
+      } catch (Exception ex) {
+        fail("testZlibCompressorDecompressorWithConfiguration ex error " + ex);
+      }
+    } else {
+      assertTrue("ZlibFactory is using native libs against request",
+              ZlibFactory.isNativeZlibLoaded(conf));
+    }
+  }
+
+  @Test
   public void testZlibCompressDecompress() {
     byte[] rawData = null;
     int rawDataSize = 0;
