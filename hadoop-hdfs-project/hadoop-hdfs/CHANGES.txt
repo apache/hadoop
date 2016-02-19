@@ -225,6 +225,9 @@ Trunk (Unreleased)
 
     HDFS-9795. OIV Delimited should show which files are ACL-enabled (lei)
 
+    HDFS-9829. Erasure Coding: Improve few exception handling logic of
+    ErasureCodingWorker. (Rakesh R via jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES
