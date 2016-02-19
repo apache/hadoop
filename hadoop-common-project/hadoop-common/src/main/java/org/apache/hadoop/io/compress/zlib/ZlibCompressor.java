@@ -67,7 +67,47 @@ public class ZlibCompressor implements Compressor {
      * Compression level for fastest compression.
      */
     BEST_SPEED (1),
-    
+
+    /**
+     * Compression level 2.
+     */
+    TWO (2),
+
+
+    /**
+     * Compression level 3.
+     */
+    THREE (3),
+
+
+    /**
+     * Compression level 4.
+     */
+    FOUR (4),
+
+
+    /**
+     * Compression level 5.
+     */
+    FIVE (5),
+
+
+    /**
+     * Compression level 6.
+     */
+    SIX (6),
+
+    /**
+     * Compression level 7.
+     */
+    SEVEN (7),
+
+    /**
+     * Compression level 8.
+     */
+    EIGHT (8),
+
+
     /**
      * Compression level for best compression.
      */
