@@ -2817,6 +2817,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-4946. Allow preferLocalNode in BlockPlacementPolicyDefault to be
     configurable (James Kinley and Nathan Roberts via kihwal)
 
+    HDFS-8923. Add -source flag to balancer usage message.  (Chris Trezzo
+    via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

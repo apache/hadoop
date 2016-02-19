@@ -179,6 +179,8 @@ public class Balancer {
       + "\tExcludes the specified datanodes."
       + "\n\t[-include [-f <hosts-file> | <comma-separated list of hosts>]]"
       + "\tIncludes only the specified datanodes."
+      + "\n\t[-source [-f <hosts-file> | <comma-separated list of hosts>]]"
+      + "\tPick only the specified datanodes as source nodes."
       + "\n\t[-blockpools <comma-separated list of blockpool ids>]"
       + "\tThe balancer will only run on blockpools included in this list."
       + "\n\t[-idleiterations <idleiterations>]"
