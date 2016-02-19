@@ -17,15 +17,18 @@
  */
 package org.apache.hadoop.ozone.web.localstorage;
 
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
+import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
+import org.apache.hadoop.ozone.web.request.OzoneAcl;
+import org.apache.hadoop.ozone.web.response.BucketInfo;
+import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.response.VolumeOwner;
@@ -37,19 +40,18 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
+import java.util.ListIterator;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
- * A stand alone Ozone implementation that allows us to run
- * Ozone tests in local mode. This acts as the
- * ozone backend when using MiniDFSCluster for testing.
+ * A stand alone Ozone implementation that allows us to run Ozone tests in local
+ * mode. This acts as the ozone backend when using MiniDFSCluster for testing.
  */
 public final class OzoneMetadataManager {
-  static final Log LOG = LogFactory.getLog(OzoneMetadataManager.class);
-  private static OzoneMetadataManager bm = null;
 
   /*
     OzoneMetadataManager manages volume/bucket/object metadata and
@@ -109,13 +111,12 @@ public final class OzoneMetadataManager {
       // //  stand-alone tests for the protocol and client code.
 
 */
-
+  static final Log LOG = LogFactory.getLog(OzoneMetadataManager.class);
+  private static final String USER_DB = "/user.db";
+  private static final String META_DB = "/metadata.db";
+  private static OzoneMetadataManager bm = null;
   private OzoneLevelDBStore userDB;
   private OzoneLevelDBStore metadataDB;
-
-  private static final  String USER_DB = "/user.db";
-  private static final  String META_DB = "/metadata.db";
-
   private ReadWriteLock lock;
   private Charset encoding = Charset.forName("UTF-8");
 
@@ -129,7 +130,7 @@ public final class OzoneMetadataManager {
 
     String storageRoot =
         conf.getTrimmed(OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT,
-                    OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT_DEFAULT);
+            OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT_DEFAULT);
 
     File file = new File(storageRoot);
 
@@ -147,9 +148,10 @@ public final class OzoneMetadataManager {
 
   /**
    * Gets Ozone Manager.
+   *
    * @return OzoneMetadataManager
    */
-  public static synchronized  OzoneMetadataManager getOzoneMetadataManager() {
+  public static synchronized OzoneMetadataManager getOzoneMetadataManager() {
     if (bm == null) {
       bm = new OzoneMetadataManager();
     }
@@ -160,16 +162,15 @@ public final class OzoneMetadataManager {
    * Creates a volume.
    *
    * @param args - VolumeArgs
-   *
    * @throws OzoneException
    */
   public void createVolume(VolumeArgs args) throws OzoneException {
+    lock.writeLock().lock();
     try {
       SimpleDateFormat format =
           new SimpleDateFormat(OzoneConsts.OZONE_DATE_FORMAT, Locale.US);
       format.setTimeZone(TimeZone.getTimeZone(OzoneConsts.OZONE_TIME_ZONE));
 
-      lock.writeLock().lock();
       byte[] volumeName =
           metadataDB.get(args.getVolumeName().getBytes(encoding));
 
@@ -203,10 +204,10 @@ public final class OzoneMetadataManager {
 
 
       userDB.put(args.getUserName().getBytes(encoding),
-                 volumeList.toDBString().getBytes(encoding));
+          volumeList.toDBString().getBytes(encoding));
 
       metadataDB.put(args.getVolumeName().getBytes(encoding),
-                     newVInfo.toDBString().getBytes(encoding));
+          newVInfo.toDBString().getBytes(encoding));
 
     } catch (IOException | DBException ex) {
       throw ErrorTable.newError(ErrorTable.SERVER_ERROR, args, ex);
@@ -218,22 +219,20 @@ public final class OzoneMetadataManager {
   /**
    * Updates the Volume properties like Owner Name and Quota.
    *
-   * @param args - Volume Args
+   * @param args     - Volume Args
    * @param property - Flag which tells us what property to upgrade
-   *
    * @throws OzoneException
    */
   public void setVolumeProperty(VolumeArgs args, VolumeProperty property)
       throws OzoneException {
-    VolumeInfo info;
+    lock.writeLock().lock();
     try {
-      lock.writeLock().lock();
       byte[] volumeInfo =
           metadataDB.get(args.getVolumeName().getBytes(encoding));
       if (volumeInfo == null) {
         throw ErrorTable.newError(ErrorTable.VOLUME_NOT_FOUND, args);
       }
-      info = VolumeInfo.parse(new String(volumeInfo, encoding));
+      VolumeInfo info = VolumeInfo.parse(new String(volumeInfo, encoding));
 
       byte[] userBytes = userDB.get(args.getResourceName().getBytes(encoding));
       ListVolumes volumeList;
@@ -260,7 +259,7 @@ public final class OzoneMetadataManager {
         break;
       default:
         OzoneException ozEx =
-            ErrorTable.newError(ErrorTable.SERVER_ERROR, args);
+            ErrorTable.newError(ErrorTable.BAD_PROPERTY, args);
         ozEx.setMessage("Volume property is not recognized");
         throw ozEx;
       }
@@ -268,12 +267,12 @@ public final class OzoneMetadataManager {
       volumeList.addVolume(info);
 
       metadataDB.put(args.getVolumeName().getBytes(encoding),
-                     info.toDBString().getBytes(encoding));
+          info.toDBString().getBytes(encoding));
 
       // if this is an owner change this put will create a new owner or update
       // the owner's volume list.
       userDB.put(args.getResourceName().getBytes(encoding),
-                 volumeList.toDBString().getBytes(encoding));
+          volumeList.toDBString().getBytes(encoding));
 
     } catch (IOException | DBException ex) {
       throw ErrorTable.newError(ErrorTable.SERVER_ERROR, args, ex);
@@ -286,7 +285,6 @@ public final class OzoneMetadataManager {
    * Removes the old owner from the volume.
    *
    * @param info - VolumeInfo
-   *
    * @throws IOException
    */
   private void removeOldOwner(VolumeInfo info) throws IOException {
@@ -299,28 +297,26 @@ public final class OzoneMetadataManager {
 
     // Write the new list info to the old user data
     userDB.put(info.getOwner().getName().getBytes(encoding),
-               volumeList.toDBString().getBytes(encoding));
+        volumeList.toDBString().getBytes(encoding));
   }
 
   /**
    * Checks if you are the owner of a specific volume.
    *
    * @param args - VolumeArgs
-   *
    * @return - True if you are the owner, false otherwise
-   *
    * @throws OzoneException
    */
   public boolean checkVolumeAccess(VolumeArgs args) throws OzoneException {
-    VolumeInfo info;
+    lock.readLock().lock();
     try {
-      lock.readLock().lock();
       byte[] volumeInfo =
           metadataDB.get(args.getVolumeName().getBytes(encoding));
       if (volumeInfo == null) {
         throw ErrorTable.newError(ErrorTable.VOLUME_NOT_FOUND, args);
       }
-      info = VolumeInfo.parse(new String(volumeInfo, encoding));
+
+      VolumeInfo info = VolumeInfo.parse(new String(volumeInfo, encoding));
       return info.getOwner().getName().equals(args.getUserName());
     } catch (IOException | DBException ex) {
       throw ErrorTable.newError(ErrorTable.SERVER_ERROR, args, ex);
@@ -333,14 +329,12 @@ public final class OzoneMetadataManager {
    * getVolumeInfo returns the Volume Info of a specific volume.
    *
    * @param args - Volume args
-   *
    * @return VolumeInfo
-   *
    * @throws OzoneException
    */
   public VolumeInfo getVolumeInfo(VolumeArgs args) throws OzoneException {
+    lock.readLock().lock();
     try {
-      lock.readLock().lock();
       byte[] volumeInfo =
           metadataDB.get(args.getVolumeName().getBytes(encoding));
       if (volumeInfo == null) {
@@ -359,14 +353,12 @@ public final class OzoneMetadataManager {
    * Returns all the volumes owned by a specific user.
    *
    * @param args - User Args
-   *
    * @return - ListVolumes
-   *
    * @throws OzoneException
    */
   public ListVolumes listVolumes(UserArgs args) throws OzoneException {
+    lock.readLock().lock();
     try {
-      lock.readLock().lock();
       byte[] volumeList = userDB.get(args.getUserName().getBytes(encoding));
       if (volumeList == null) {
         throw ErrorTable.newError(ErrorTable.USER_NOT_FOUND, args);
@@ -383,12 +375,11 @@ public final class OzoneMetadataManager {
    * Deletes a volume if it exists and is empty.
    *
    * @param args - volume args
-   *
    * @throws OzoneException
    */
   public void deleteVolume(VolumeArgs args) throws OzoneException {
+    lock.writeLock().lock();
     try {
-      lock.writeLock().lock();
       byte[] volumeName =
           metadataDB.get(args.getVolumeName().getBytes(encoding));
       if (volumeName == null) {
@@ -414,7 +405,7 @@ public final class OzoneMetadataManager {
 
       metadataDB.delete(args.getVolumeName().getBytes(encoding));
       userDB.put(user.getBytes(encoding),
-                 volumeList.toDBString().getBytes(encoding));
+          volumeList.toDBString().getBytes(encoding));
     } catch (IOException | DBException ex) {
       throw ErrorTable.newError(ErrorTable.SERVER_ERROR, args, ex);
     } finally {
@@ -422,11 +413,285 @@ public final class OzoneMetadataManager {
     }
   }
 
+  /**
+   * Create a bucket if it does not exist.
+   *
+   * @param args - BucketArgs
+   * @throws OzoneException
+   */
+  public void createBucket(BucketArgs args) throws OzoneException {
+    lock.writeLock().lock();
+    try {
+      // check if volume exists, buckets cannot be created without volumes
+      byte[] volumeName = metadataDB.get(args.getVolumeName()
+          .getBytes(encoding));
+      if (volumeName == null) {
+        throw ErrorTable.newError(ErrorTable.VOLUME_NOT_FOUND, args);
+      }
+
+      // A resource name is volume/bucket -- That is the key in metadata table
+      byte[] bucketName = metadataDB.get(args.getResourceName()
+          .getBytes(encoding));
+      if (bucketName != null) {
+        throw ErrorTable.newError(ErrorTable.BUCKET_ALREADY_EXISTS, args);
+      }
+
+      BucketInfo bucketInfo =
+          new BucketInfo(args.getVolumeName(), args.getBucketName());
+
+      if (args.getRemoveAcls() != null) {
+        OzoneException ex = ErrorTable.newError(ErrorTable.MALFORMED_ACL, args);
+        ex.setMessage("Remove ACLs specified in bucket create. Please remove " +
+            "them and retry.");
+        throw ex;
+      }
+
+      VolumeInfo volInfo = VolumeInfo.parse(new String(volumeName, encoding));
+      volInfo.setBucketCount(volInfo.getBucketCount() + 1);
+
+      bucketInfo.setAcls(args.getAddAcls());
+      bucketInfo.setStorageType(args.getStorageType());
+      bucketInfo.setVersioning(args.getVersioning());
+      ListBuckets bucketList;
+
+      // get bucket list from user/volume -> bucketList
+      byte[] volumeBuckets = userDB.get(args.getParentName()
+          .getBytes(encoding));
+      if (volumeBuckets == null) {
+        bucketList = new ListBuckets();
+      } else {
+        bucketList = ListBuckets.parse(new String(volumeBuckets, encoding));
+      }
+
+      bucketList.addBucket(bucketInfo);
+      bucketList.sort();
+
+      // Update Volume->bucketCount
+      userDB.put(args.getVolumeName().getBytes(encoding),
+          volInfo.toDBString().getBytes(encoding));
+
+      // Now update the userDB with user/volume -> bucketList
+      userDB.put(args.getParentName().getBytes(encoding),
+          bucketList.toDBString().getBytes(encoding));
+
+      // and update the metadataDB with volume/bucket->BucketInfo
+      metadataDB.put(args.getResourceName().getBytes(encoding),
+          bucketInfo.toDBString().getBytes(encoding));
+
+    } catch (IOException | DBException ex) {
+      throw ErrorTable.newError(ErrorTable.SERVER_ERROR, args, ex);
+    } finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * Updates the Bucket properties like ACls and Storagetype.
+   *
+   * @param args     - Bucket Args
+   * @param property - Flag which tells us what property to upgrade
+   * @throws OzoneException
+   */
+  public void setBucketProperty(BucketArgs args, BucketProperty property)
+      throws OzoneException {
+
+    lock.writeLock().lock();
+    try {
+      // volume/bucket-> bucketInfo
+      byte[] bucketInfo = metadataDB.get(args.getResourceName().
+          getBytes(encoding));
+      if (bucketInfo == null) {
+        throw ErrorTable.newError(ErrorTable.INVALID_BUCKET_NAME, args);
+      }
+
+      BucketInfo info = BucketInfo.parse(new String(bucketInfo, encoding));
+      byte[] volumeBuckets = userDB.get(args.getParentName()
+          .getBytes(encoding));
+      ListBuckets bucketList = ListBuckets.parse(new String(volumeBuckets,
+          encoding));
+      bucketList.getBuckets().remove(info);
+
+      switch (property) {
+      case ACLS:
+        processRemoveAcls(args, info);
+        processAddAcls(args, info);
+        break;
+      case STORAGETYPE:
+        info.setStorageType(args.getStorageType());
+        break;
+      case VERSIONING:
+        info.setVersioning(args.getVersioning());
+        break;
+      default:
+        OzoneException ozEx =
+            ErrorTable.newError(ErrorTable.BAD_PROPERTY, args);
+        ozEx.setMessage("Bucket property is not recognized.");
+        throw ozEx;
+      }
+
+      bucketList.addBucket(info);
+      metadataDB.put(args.getResourceName().getBytes(encoding),
+          info.toDBString().getBytes(encoding));
+
+      userDB.put(args.getParentName().getBytes(encoding),
+          bucketList.toDBString().getBytes(encoding));
+    } catch (IOException | DBException ex) {
+      throw ErrorTable.newError(ErrorTable.SERVER_ERROR, args, ex);
+    } finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * Process Remove Acls and remove them from the bucket.
+   *
+   * @param args - BucketArgs
+   * @param info - BucketInfo
+   */
+  private void processRemoveAcls(BucketArgs args, BucketInfo info) {
+    List<OzoneAcl> removeAcls = args.getRemoveAcls();
+    if ((removeAcls == null) || (info.getAcls() == null)) {
+      return;
+    }
+    for (OzoneAcl racl : args.getRemoveAcls()) {
+      ListIterator<OzoneAcl> aclIter = info.getAcls().listIterator();
+      while (aclIter.hasNext()) {
+        if (racl.equals(aclIter.next())) {
+          aclIter.remove();
+          break;
+        }
+      }
+    }
+  }
+
+  /**
+   * Process Add Acls and Add them to the bucket.
+   *
+   * @param args - BucketArgs
+   * @param info - BucketInfo
+   */
+  private void processAddAcls(BucketArgs args, BucketInfo info) {
+    List<OzoneAcl> addAcls = args.getAddAcls();
+    if ((addAcls == null)) {
+      return;
+    }
+
+    if (info.getAcls() == null) {
+      info.setAcls(addAcls);
+      return;
+    }
+
+    for (OzoneAcl newacl : addAcls) {
+      ListIterator<OzoneAcl> aclIter = info.getAcls().listIterator();
+      while (aclIter.hasNext()) {
+        if (newacl.equals(aclIter.next())) {
+          continue;
+        }
+      }
+      info.getAcls().add(newacl);
+    }
+  }
+
+  /**
+   * Deletes a given bucket.
+   *
+   * @param args - BucketArgs
+   * @throws OzoneException
+   */
+  public void deleteBucket(BucketArgs args) throws OzoneException {
+    lock.writeLock().lock();
+    try {
+      byte[] bucketInfo = metadataDB.get(args.getResourceName()
+          .getBytes(encoding));
+      if (bucketInfo == null) {
+        throw ErrorTable.newError(ErrorTable.INVALID_BUCKET_NAME, args);
+      }
+
+      BucketInfo bInfo = BucketInfo.parse(new String(bucketInfo, encoding));
+
+      // Only remove buckets if they are empty.
+      if (bInfo.getKeyCount() > 0) {
+        throw ErrorTable.newError(ErrorTable.BUCKET_NOT_EMPTY, args);
+      }
+
+      byte[] bucketBytes = userDB.get(args.getParentName().getBytes(encoding));
+      if (bucketBytes == null) {
+        throw ErrorTable.newError(ErrorTable.INVALID_BUCKET_NAME, args);
+      }
+
+      ListBuckets bucketList =
+          ListBuckets.parse(new String(bucketBytes, encoding));
+      bucketList.getBuckets().remove(bInfo);
+
+      metadataDB.delete(args.getResourceName().getBytes(encoding));
+      userDB.put(args.getParentName().getBytes(encoding),
+          bucketList.toDBString().getBytes(encoding));
+    } catch (IOException | DBException ex) {
+      throw ErrorTable.newError(ErrorTable.SERVER_ERROR, args, ex);
+    } finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * Returns the Bucket info for a given bucket.
+   *
+   * @param args - Bucket Args
+   * @return BucketInfo   -  Bucket Information
+   * @throws OzoneException
+   */
+  public BucketInfo getBucketInfo(BucketArgs args) throws OzoneException {
+    lock.readLock().lock();
+    try {
+      byte[] bucketBytes = metadataDB.get(args.getResourceName()
+          .getBytes(encoding));
+      if (bucketBytes == null) {
+        throw ErrorTable.newError(ErrorTable.INVALID_BUCKET_NAME, args);
+      }
+
+      return BucketInfo.parse(new String(bucketBytes, encoding));
+    } catch (IOException ex) {
+      throw ErrorTable.newError(ErrorTable.SERVER_ERROR, args, ex);
+    } finally {
+      lock.readLock().unlock();
+    }
+  }
+
+  /**
+   * Returns a list of buckets for a given volume.
+   *
+   * @param args - volume args
+   * @return List of buckets
+   * @throws OzoneException
+   */
+  public ListBuckets listBuckets(VolumeArgs args) throws OzoneException {
+    lock.readLock().lock();
+    try {
+      String userVolKey = args.getUserName() + "/" + args.getVolumeName();
+
+      byte[] bucketBytes = userDB.get(userVolKey.getBytes(encoding));
+      if (bucketBytes == null) {
+        throw ErrorTable.newError(ErrorTable.INVALID_VOLUME_NAME, args);
+      }
+      return ListBuckets.parse(new String(bucketBytes, encoding));
+    } catch (IOException ex) {
+      throw ErrorTable.newError(ErrorTable.SERVER_ERROR, args, ex);
+    } finally {
+      lock.readLock().unlock();
+    }
+  }
 
   /**
    * This is used in updates to volume metadata.
    */
   public enum VolumeProperty {
     OWNER, QUOTA
+  }
+
+  /**
+   * Bucket Properties.
+   */
+  public enum BucketProperty {
+    ACLS, STORAGETYPE, VERSIONING
   }
 }
