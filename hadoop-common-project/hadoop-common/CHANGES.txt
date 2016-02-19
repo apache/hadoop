@@ -1737,6 +1737,9 @@ Release 2.7.3 - UNRELEASED
     HADOOP-12413. AccessControlList should avoid calling getGroupNames in
     isUserInList with empty groups. (Zhihai Xu via cnauroth)
 
+    HADOOP-12794. Support additional compression levels for GzipCodec.
+    (Ravi Mutyala via junping_du)
+
   OPTIMIZATIONS
 
     HADOOP-12810. FileSystem#listLocatedStatus causes unnecessary RPC calls
