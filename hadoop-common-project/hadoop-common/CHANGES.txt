@@ -879,6 +879,9 @@ Release 2.6.5 - UNRELEASED
     HADOOP-12805. Annotate CanUnbuffer with @InterfaceAudience.Public
     (Ted Yu via vinayakumarb)
 
+    HADOOP-12800. Copy docker directory from 2.8 to 2.7/2.6 repos to enable
+    pre-commit Jenkins runs (zhz)
+
   OPTIMIZATIONS
 
   BUG FIXES
