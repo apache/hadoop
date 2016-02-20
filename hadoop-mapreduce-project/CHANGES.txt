@@ -729,6 +729,9 @@ Release 2.7.3 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-6637. Testcase Failure : TestFileInputFormat.testSplitLocationInfo.
+    (Brahma Reddy Battula via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
