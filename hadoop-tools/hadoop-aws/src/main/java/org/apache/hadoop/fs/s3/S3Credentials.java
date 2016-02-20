@@ -44,9 +44,10 @@ public class S3Credentials {
    *                     to talk to them.
    */
   public void initialize(URI uri, Configuration conf) throws IOException {
-    if (uri.getHost() == null) {
-      throw new IllegalArgumentException("Invalid hostname in URI " + uri);
-    }
+	  // How can the s3 url have a host?
+	  if (uri.getAuthority() == null) {
+	        	throw new IllegalArgumentException("Invalid hostname in URI " + uri);
+	  }
     
     String userInfo = uri.getUserInfo();
     if (userInfo != null) {

@@ -96,7 +96,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
         MAX_PART_SIZE);
     serverSideEncryptionAlgorithm = conf.get("fs.s3n.server-side-encryption-algorithm");
 
-    bucket = new S3Bucket(uri.getHost());
+    bucket = new S3Bucket(uri.getAuthority());
   }
   
   @Override
