@@ -227,5 +227,5 @@ public class JHAdminConfig {
   public static final String MR_HS_JHIST_FORMAT =
       MR_HISTORY_PREFIX + "jhist.format";
   public static final String DEFAULT_MR_HS_JHIST_FORMAT =
-      "json";
+      "binary";
 }

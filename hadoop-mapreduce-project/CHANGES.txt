@@ -16,6 +16,9 @@ Trunk (Unreleased)
     MAPREDUCE-6336. Enable v2 FileOutputCommitter by default.
     (Siqi Li via gera)
 
+    MAPREDUCE-6613. Change mapreduce.jobhistory.jhist.format default from
+    json to binary (rchiang via rkanter)
+
   NEW FEATURES
 
     MAPREDUCE-778. Rumen Anonymizer. (Amar Kamat and Chris Douglas via amarrk)

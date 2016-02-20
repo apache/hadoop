@@ -1754,7 +1754,7 @@
   values are "json" for text output and "binary" for faster parsing.
   </description>
   <name>mapreduce.jobhistory.jhist.format</name>
-  <value>json</value>
+  <value>binary</value>
 </property>
 
 <property>
