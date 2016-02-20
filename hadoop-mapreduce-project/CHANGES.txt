@@ -39,6 +39,9 @@ Release 2.6.5 - UNRELEASED
     MAPREDUCE-5817. Mappers get rescheduled on node transition even after all
     reducers are completed. (Sangjin Lee via kasha)
 
+    MAPREDUCE-6637. Testcase Failure : TestFileInputFormat.testSplitLocationInfo.
+    (Brahma Reddy Battula via wang)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
