@@ -10,6 +10,9 @@ Release 2.7.3 - UNRELEASED
 
     MAPREDUCE-6436. JobHistory cache issue. (Kai Sasaki via zxu)
 
+    MAPREDUCE-6637. Testcase Failure : TestFileInputFormat.testSplitLocationInfo.
+    (Brahma Reddy Battula via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
