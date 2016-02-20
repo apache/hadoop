@@ -243,7 +243,7 @@ public class TestFileInputFormat {
     }
 
     @Override
-    public BlockLocation[] getFileBlockLocations(Path p, long start, long len)
+    public BlockLocation[] getFileBlockLocations(FileStatus file, long start, long len)
         throws IOException {
       return new BlockLocation[] {
           new BlockLocation(new String[] { "localhost:50010", "otherhost:50010" },
