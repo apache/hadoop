@@ -1628,7 +1628,7 @@ public class BlockManager implements BlockStatsMXBean {
       for (int i = 0 ; i < liveBlockIndices.size(); i++) {
         indices[i] = liveBlockIndices.get(i);
       }
-      return new ErasureCodingWork(block, bc, srcNodes,
+      return new ErasureCodingWork(getBlockPoolId(), block, bc, srcNodes,
           containingNodes, liveReplicaNodes, additionalReplRequired,
           priority, indices);
     } else {
@@ -1636,6 +1636,16 @@ public class BlockManager implements BlockStatsMXBean {
           containingNodes, liveReplicaNodes, additionalReplRequired,
           priority);
     }
+  }
+
+  private boolean isInNewRack(DatanodeDescriptor[] srcs,
+      DatanodeDescriptor target) {
+    for (DatanodeDescriptor src : srcs) {
+      if (src.getNetworkLocation().equals(target.getNetworkLocation())) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private boolean validateReconstructionWork(BlockReconstructionWork rw) {
@@ -1665,31 +1675,14 @@ public class BlockManager implements BlockStatsMXBean {
     DatanodeStorageInfo[] targets = rw.getTargets();
     if ( (numReplicas.liveReplicas() >= requiredReplication) &&
         (!isPlacementPolicySatisfied(block)) ) {
-      if (rw.getSrcNodes()[0].getNetworkLocation().equals(
-          targets[0].getDatanodeDescriptor().getNetworkLocation())) {
-        //No use continuing, unless a new rack in this case
+      if (!isInNewRack(rw.getSrcNodes(), targets[0].getDatanodeDescriptor())) {
+        // No use continuing, unless a new rack in this case
         return false;
       }
     }
 
-    // Add block to the to be reconstructed list
-    if (block.isStriped()) {
-      assert rw instanceof ErasureCodingWork;
-      assert rw.getTargets().length > 0;
-      assert pendingNum == 0 : "Should wait the previous reconstruction"
-          + " to finish";
-      final ErasureCodingPolicy ecPolicy =
-          ((BlockInfoStriped) block).getErasureCodingPolicy();
-      assert ecPolicy != null;
-
-      rw.getTargets()[0].getDatanodeDescriptor().addBlockToBeErasureCoded(
-          new ExtendedBlock(getBlockPoolId(), block),
-          rw.getSrcNodes(), rw.getTargets(),
-          ((ErasureCodingWork) rw).getLiveBlockIndicies(), ecPolicy);
-    } else {
-      rw.getSrcNodes()[0].addBlockToBeReplicated(block, targets);
-    }
-
+    // Add block to the datanode's task list
+    rw.addTaskToDatanode();
     DatanodeStorageInfo.incrementBlocksScheduled(targets);
 
     // Move the block-replication into a "pending" state.
@@ -3973,7 +3966,8 @@ public class BlockManager implements BlockStatsMXBean {
         .getPolicy(storedBlock.isStriped());
     int numReplicas = storedBlock.isStriped() ? ((BlockInfoStriped) storedBlock)
         .getRealDataBlockNum() : storedBlock.getReplication();
-    return placementPolicy.verifyBlockPlacement(locs, numReplicas).isPlacementPolicySatisfied();
+    return placementPolicy.verifyBlockPlacement(locs, numReplicas)
+        .isPlacementPolicySatisfied();
   }
 
   /**

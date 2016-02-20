@@ -901,7 +901,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       locs = DatanodeDescriptor.EMPTY_ARRAY;
     if (!clusterMap.hasClusterEverBeenMultiRack()) {
       // only one rack
-      return new BlockPlacementStatusDefault(1, 1);
+      return new BlockPlacementStatusDefault(1, 1, 1);
     }
     int minRacks = 2;
     minRacks = Math.min(minRacks, numberOfReplicas);
@@ -910,7 +910,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     Set<String> racks = new TreeSet<>();
     for (DatanodeInfo dn : locs)
       racks.add(dn.getNetworkLocation());
-    return new BlockPlacementStatusDefault(racks.size(), minRacks);
+    return new BlockPlacementStatusDefault(racks.size(), minRacks,
+        clusterMap.getNumOfRacks());
   }
   /**
    * Decide whether deleting the specified replica of the block still makes

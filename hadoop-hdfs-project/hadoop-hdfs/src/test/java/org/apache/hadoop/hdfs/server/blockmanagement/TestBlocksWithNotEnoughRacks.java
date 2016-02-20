@@ -285,7 +285,7 @@ public class TestBlocksWithNotEnoughRacks {
     final DatanodeManager dm = ns.getBlockManager().getDatanodeManager();
 
     try {
-      // Create a file with one block with a replication factor of 2
+      // Create a file with one block with a replication factor of 3
       final FileSystem fs = cluster.getFileSystem();
       DFSTestUtil.createFile(fs, filePath, 1L, REPLICATION_FACTOR, 1L);
       ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, filePath);
@@ -315,8 +315,9 @@ public class TestBlocksWithNotEnoughRacks {
       dm.removeDatanode(dnId);
 
       // Make sure we have enough live replicas even though we are
-      // short one rack and therefore need one replica
-      DFSTestUtil.waitForReplication(cluster, b, 1, REPLICATION_FACTOR, 1);
+      // short one rack. The cluster now has only 1 rack thus we just make sure
+      // we still have 3 replicas.
+      DFSTestUtil.waitForReplication(cluster, b, 1, REPLICATION_FACTOR, 0);
     } finally {
       cluster.shutdown();
     }
@@ -357,9 +358,8 @@ public class TestBlocksWithNotEnoughRacks {
 
       // The block gets re-replicated to another datanode so it has a 
       // sufficient # replicas, but not across racks, so there should
-      // be 1 rack, and 1 needed replica (even though there are 2 hosts 
-      // available and only 2 replicas required).
-      DFSTestUtil.waitForReplication(cluster, b, 1, REPLICATION_FACTOR, 1);
+      // be 1 rack.
+      DFSTestUtil.waitForReplication(cluster, b, 1, REPLICATION_FACTOR, 0);
 
       // Start the "failed" datanode, which has a replica so the block is
       // now over-replicated and therefore a replica should be removed but

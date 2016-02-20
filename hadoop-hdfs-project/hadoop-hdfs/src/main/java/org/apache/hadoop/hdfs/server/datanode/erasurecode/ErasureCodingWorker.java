@@ -177,8 +177,14 @@ public final class ErasureCodingWorker {
       Collection<BlockECReconstructionInfo> ecTasks) {
     for (BlockECReconstructionInfo reconstructionInfo : ecTasks) {
       try {
-        EC_RECONSTRUCTION_STRIPED_BLK_THREAD_POOL
-            .submit(new ReconstructAndTransferBlock(reconstructionInfo));
+        ReconstructAndTransferBlock task =
+            new ReconstructAndTransferBlock(reconstructionInfo);
+        if (task.hasValidTargets()) {
+          EC_RECONSTRUCTION_STRIPED_BLK_THREAD_POOL.submit(task);
+        } else {
+          LOG.warn("No missing internal block. Skip reconstruction for task:{}",
+              reconstructionInfo);
+        }
       } catch (Throwable e) {
         LOG.warn("Failed to reconstruct striped block {}",
             reconstructionInfo.getExtendedBlock().getLocalBlock(), e);
@@ -292,6 +298,7 @@ public final class ErasureCodingWorker {
     private final CompletionService<Void> readService =
         new ExecutorCompletionService<>(
             EC_RECONSTRUCTION_STRIPED_READ_THREAD_POOL);
+    private final boolean hasValidTargets;
 
     ReconstructAndTransferBlock(BlockECReconstructionInfo reconstructionInfo) {
       ErasureCodingPolicy ecPolicy = reconstructionInfo
@@ -339,8 +346,12 @@ public final class ErasureCodingWorker {
         seqNo4Targets[i] = 0;
       }
 
-      getTargetIndices();
+      hasValidTargets = getTargetIndices();
       cachingStrategy = CachingStrategy.newDefaultStrategy();
+    }
+
+    boolean hasValidTargets() {
+      return hasValidTargets;
     }
 
     private ByteBuffer allocateBuffer(int length) {
@@ -505,24 +516,30 @@ public final class ErasureCodingWorker {
       }
     }
 
-    private void getTargetIndices() {
+    /**
+     * @return true if there is valid target for reconstruction
+     */
+    private boolean getTargetIndices() {
       BitSet bitset = new BitSet(dataBlkNum + parityBlkNum);
       for (int i = 0; i < sources.length; i++) {
         bitset.set(liveIndices[i]);
       }
       int m = 0;
       int k = 0;
+      boolean hasValidTarget = false;
       for (int i = 0; i < dataBlkNum + parityBlkNum; i++) {
         if (!bitset.get(i)) {
           if (getBlockLen(blockGroup, i) > 0) {
             if (m < targets.length) {
               targetIndices[m++] = (short)i;
+              hasValidTarget = true;
             }
           } else {
             zeroStripeIndices[k++] = (short)i;
           }
         }
       }
+      return hasValidTarget;
     }
 
     /** the reading length should not exceed the length for reconstruction. */

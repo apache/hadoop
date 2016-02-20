@@ -260,7 +260,12 @@ public class DFSStripedInputStream extends DFSInputStream {
 
   private void closeReader(BlockReaderInfo readerInfo) {
     if (readerInfo != null) {
-//      IOUtils.cleanup(null, readerInfo.reader);
+      if (readerInfo.reader != null) {
+        try {
+          readerInfo.reader.close();
+        } catch (Throwable ignored) {
+        }
+      }
       readerInfo.skip();
     }
   }

@@ -53,4 +53,9 @@ class ReplicationWork extends BlockReconstructionWork {
       getSrcNodes()[0].decrementPendingReplicationWithoutTargets();
     }
   }
+
+  @Override
+  void addTaskToDatanode() {
+    getSrcNodes()[0].addBlockToBeReplicated(getBlock(), getTargets());
+  }
 }
