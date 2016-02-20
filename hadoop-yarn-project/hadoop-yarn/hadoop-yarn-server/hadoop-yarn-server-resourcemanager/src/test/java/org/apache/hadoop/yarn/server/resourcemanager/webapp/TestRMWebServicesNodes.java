@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -242,8 +243,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
 
-      assertEquals(Status.BAD_REQUEST.getStatusCode(),
-          response.getStatusInfo().getStatusCode());
+      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
 
       JSONObject msg = response.getEntity(JSONObject.class);
@@ -435,8 +435,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
       fail("should have thrown exception on non-existent nodeid");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertEquals(Status.NOT_FOUND.getStatusCode(),
-          response.getStatusInfo().getStatusCode());
+      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -462,8 +461,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
       fail("should have thrown exception on non-existent nodeid");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertEquals(Status.NOT_FOUND.getStatusCode(),
-          response.getStatusInfo().getStatusCode());
+      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -489,8 +487,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
       fail("should have thrown exception on non-existent nodeid");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertEquals(Status.NOT_FOUND.getStatusCode(),
-          response.getStatusInfo().getStatusCode());
+      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_XML_TYPE, response.getType());
       String msg = response.getEntity(String.class);
       System.out.println(msg);
@@ -533,8 +530,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
 
-      assertEquals(Status.BAD_REQUEST.getStatusCode(),
-          response.getStatusInfo().getStatusCode());
+      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");

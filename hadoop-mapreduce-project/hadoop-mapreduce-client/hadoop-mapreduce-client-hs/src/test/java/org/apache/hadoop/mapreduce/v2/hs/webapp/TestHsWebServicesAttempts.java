@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
+import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -391,8 +392,7 @@ public class TestHsWebServicesAttempts extends JerseyTest {
           fail("should have thrown exception on invalid uri");
         } catch (UniformInterfaceException ue) {
           ClientResponse response = ue.getResponse();
-          assertEquals(Status.NOT_FOUND.getStatusCode(),
-              response.getStatusInfo().getStatusCode());
+          assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
           assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
           JSONObject msg = response.getEntity(JSONObject.class);
           JSONObject exception = msg.getJSONObject("RemoteException");

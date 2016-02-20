@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -1021,8 +1022,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
             .accept(media).post(ClientResponse.class);
 
     if (!this.isAuthenticationEnabled()) {
-      assertEquals(Status.UNAUTHORIZED.getStatusCode(),
-          response.getStatusInfo().getStatusCode());
+      assertResponseStatusCode(Status.UNAUTHORIZED, response.getStatusInfo());
       return null;
     }
 
@@ -1056,15 +1056,13 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
             .accept(media).post(ClientResponse.class);
 
     if (!this.isAuthenticationEnabled()) {
-      assertEquals(Status.UNAUTHORIZED.getStatusCode(),
-          response.getStatusInfo().getStatusCode());
+      assertResponseStatusCode(Status.UNAUTHORIZED, response.getStatusInfo());
       return;
     }
 
     System.out.println("RESPONSE:" + response);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    assertEquals(Status.OK.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode(Status.OK, response.getStatusInfo());
 
   }
 
@@ -1107,15 +1105,13 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
             .accept(media).post(ClientResponse.class);
 
     if (!this.isAuthenticationEnabled()) {
-      assertEquals(Status.UNAUTHORIZED.getStatusCode(),
-          response.getStatusInfo().getStatusCode());
+      assertResponseStatusCode(Status.UNAUTHORIZED, response.getStatusInfo());
       return;
     }
 
     System.out.println("RESPONSE:" + response);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    assertEquals(Status.OK.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode(Status.OK, response.getStatusInfo());
   }
 
   private void testRDLHelper(JSONObject json) throws JSONException {
@@ -1140,14 +1136,12 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ClientResponse response = resource.get(ClientResponse.class);
 
     if (!this.isAuthenticationEnabled()) {
-      assertEquals(Status.UNAUTHORIZED.getStatusCode(),
-          response.getStatusInfo().getStatusCode());
+      assertResponseStatusCode(Status.UNAUTHORIZED, response.getStatusInfo());
       return null;
     }
 
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    assertEquals(status.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode(status, response.getStatusInfo());
 
     return response.getEntity(JSONObject.class);
   }

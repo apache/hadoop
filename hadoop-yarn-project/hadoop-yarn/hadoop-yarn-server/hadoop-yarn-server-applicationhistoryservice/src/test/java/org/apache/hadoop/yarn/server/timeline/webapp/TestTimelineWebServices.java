@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.timeline.webapp;
 
+import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doNothing;
@@ -476,8 +477,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
         .type(MediaType.APPLICATION_JSON)
         .post(ClientResponse.class, entities);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    assertEquals(ClientResponse.Status.FORBIDDEN.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
 
     response = r.path("ws").path("v1").path("timeline")
         .queryParam("user.name", "tester")
@@ -518,8 +518,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
         .queryParam("user.name", "tester").accept(MediaType.APPLICATION_JSON)
          .type(MediaType.APPLICATION_JSON).post(ClientResponse.class, entities);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    assertEquals(ClientResponse.Status.BAD_REQUEST.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
   }
 
   @Test
@@ -702,8 +701,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-      assertEquals(ClientResponse.Status.NOT_FOUND.getStatusCode(),
-          response.getStatusInfo().getStatusCode());
+      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
     } finally {
       timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
     }
@@ -868,8 +866,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
       Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-      Assert.assertEquals(ClientResponse.Status.NOT_FOUND.getStatusCode(),
-          response.getStatusInfo().getStatusCode());
+      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
     } finally {
       timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
     }
@@ -937,8 +934,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
         .type(MediaType.APPLICATION_JSON)
         .put(ClientResponse.class, domain);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    assertEquals(ClientResponse.Status.FORBIDDEN.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
 
     response = r.path("ws").path("v1")
         .path("timeline").path("domain")
@@ -946,8 +942,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
         .accept(MediaType.APPLICATION_JSON)
         .type(MediaType.APPLICATION_JSON)
         .put(ClientResponse.class, domain);
-    assertEquals(Status.OK.getStatusCode(), response.getStatus());
-    
+    assertResponseStatusCode(Status.OK, response.getStatusInfo());
+
     // Verify the domain exists
     response = r.path("ws").path("v1").path("timeline")
         .path("domain").path("test_domain_id")
@@ -968,7 +964,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
         .accept(MediaType.APPLICATION_JSON)
         .type(MediaType.APPLICATION_JSON)
         .put(ClientResponse.class, domain);
-    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    assertResponseStatusCode(Status.OK, response.getStatusInfo());
 
     // Verify the domain is updated
     response = r.path("ws").path("v1").path("timeline")
@@ -996,7 +992,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
           .accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .put(ClientResponse.class, domain);
-      assertEquals(Status.OK.getStatusCode(), response.getStatus());
+      assertResponseStatusCode(Status.OK, response.getStatusInfo());
 
       // Update the domain by another user
       response = r.path("ws").path("v1")
@@ -1005,7 +1001,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
           .accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .put(ClientResponse.class, domain);
-      assertEquals(Status.FORBIDDEN.getStatusCode(), response.getStatus());
+      assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
     } finally {
       timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
     }

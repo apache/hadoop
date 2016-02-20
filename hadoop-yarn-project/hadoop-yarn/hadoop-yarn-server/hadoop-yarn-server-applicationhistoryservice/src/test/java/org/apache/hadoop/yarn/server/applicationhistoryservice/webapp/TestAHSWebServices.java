@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
+import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -201,9 +202,8 @@ public class TestAHSWebServices extends JerseyTestBase {
           .queryParam("user.name", USERS[round])
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
-    assertEquals("404 not found expected",
-        Status.NOT_FOUND.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode("404 not found expected",
+        Status.NOT_FOUND, response.getStatusInfo());
   }
 
   @Test
@@ -220,14 +220,11 @@ public class TestAHSWebServices extends JerseyTestBase {
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
     if (round == 1) {
-      assertEquals(
-          Status.FORBIDDEN.getStatusCode(),
-          response.getStatusInfo().getStatusCode());
+      assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
       return;
     }
-    assertEquals("404 not found expected",
-        Status.NOT_FOUND.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode("404 not found expected",
+        Status.NOT_FOUND, response.getStatusInfo());
   }
 
   @Test
@@ -247,14 +244,11 @@ public class TestAHSWebServices extends JerseyTestBase {
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
     if (round == 1) {
-      assertEquals(
-          Status.FORBIDDEN.getStatusCode(),
-          response.getStatusInfo().getStatusCode());
+      assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
       return;
     }
-    assertEquals("404 not found expected",
-        Status.NOT_FOUND.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode("404 not found expected",
+        Status.NOT_FOUND, response.getStatusInfo());
   }
 
   @Test
@@ -269,8 +263,7 @@ public class TestAHSWebServices extends JerseyTestBase {
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertEquals(Status.NOT_FOUND.getStatusCode(),
-          response.getStatusInfo().getStatusCode());
+      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
 
       WebServicesTestUtils.checkStringMatch(
         "error string exists and shouldn't", "", responseStr);
@@ -287,8 +280,7 @@ public class TestAHSWebServices extends JerseyTestBase {
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertEquals(Status.NOT_FOUND.getStatusCode(),
-          response.getStatusInfo().getStatusCode());
+      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
       WebServicesTestUtils.checkStringMatch(
         "error string exists and shouldn't", "", responseStr);
     }
@@ -306,8 +298,8 @@ public class TestAHSWebServices extends JerseyTestBase {
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+      assertResponseStatusCode(Status.INTERNAL_SERVER_ERROR,
+          response.getStatusInfo());
       WebServicesTestUtils.checkStringMatch(
         "error string exists and shouldn't", "", responseStr);
     }
@@ -394,8 +386,7 @@ public class TestAHSWebServices extends JerseyTestBase {
           .queryParam("user.name", USERS[round])
           .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     if (round == 1) {
-      assertEquals(Status.FORBIDDEN.getStatusCode(),
-          response.getStatusInfo().getStatusCode());
+      assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
       return;
     }
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
@@ -421,8 +412,7 @@ public class TestAHSWebServices extends JerseyTestBase {
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
     if (round == 1) {
-      assertEquals(Status.FORBIDDEN.getStatusCode(),
-          response.getStatusInfo().getStatusCode());
+      assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
       return;
     }
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
@@ -451,8 +441,7 @@ public class TestAHSWebServices extends JerseyTestBase {
           .queryParam("user.name", USERS[round])
           .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     if (round == 1) {
-      assertEquals(Status.FORBIDDEN.getStatusCode(),
-          response.getStatusInfo().getStatusCode());
+      assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
       return;
     }
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
@@ -480,8 +469,7 @@ public class TestAHSWebServices extends JerseyTestBase {
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
     if (round == 1) {
-      assertEquals(Status.FORBIDDEN.getStatusCode(),
-          response.getStatusInfo().getStatusCode());
+      assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
       return;
     }
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());

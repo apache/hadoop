@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
+import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -168,8 +169,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
         .path("mapreduce").path("jobs").queryParam("state", "InvalidState")
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
 
-    assertEquals(Status.BAD_REQUEST.getReasonPhrase(),
-        response.getStatusInfo().getReasonPhrase());
+    assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject msg = response.getEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
@@ -245,8 +245,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
         .path("mapreduce").path("jobs").queryParam("limit", "-1")
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
 
-    assertEquals(Status.BAD_REQUEST.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject msg = response.getEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
@@ -360,8 +359,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
         .queryParam("startedTimeBegin", String.valueOf(now))
         .queryParam("startedTimeEnd", String.valueOf(40000))
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(Status.BAD_REQUEST.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject msg = response.getEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
@@ -387,8 +385,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
     ClientResponse response = r.path("ws").path("v1").path("history")
         .path("mapreduce").path("jobs").queryParam("startedTimeBegin", "efsd")
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(Status.BAD_REQUEST.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject msg = response.getEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
@@ -414,8 +411,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
     ClientResponse response = r.path("ws").path("v1").path("history")
         .path("mapreduce").path("jobs").queryParam("startedTimeEnd", "efsd")
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(Status.BAD_REQUEST.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject msg = response.getEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
@@ -441,8 +437,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
         .path("mapreduce").path("jobs")
         .queryParam("startedTimeBegin", String.valueOf(-1000))
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(Status.BAD_REQUEST.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject msg = response.getEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
@@ -468,8 +463,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
         .path("mapreduce").path("jobs")
         .queryParam("startedTimeEnd", String.valueOf(-1000))
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(Status.BAD_REQUEST.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject msg = response.getEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
@@ -493,8 +487,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
         .path("mapreduce").path("jobs")
         .queryParam("finishedTimeEnd", String.valueOf(-1000))
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(Status.BAD_REQUEST.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject msg = response.getEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
@@ -518,8 +511,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
         .path("mapreduce").path("jobs")
         .queryParam("finishedTimeBegin", String.valueOf(-1000))
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(Status.BAD_REQUEST.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject msg = response.getEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
@@ -546,8 +538,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
         .queryParam("finishedTimeBegin", String.valueOf(now))
         .queryParam("finishedTimeEnd", String.valueOf(40000))
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(Status.BAD_REQUEST.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject msg = response.getEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
@@ -573,8 +564,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
     ClientResponse response = r.path("ws").path("v1").path("history")
         .path("mapreduce").path("jobs").queryParam("finishedTimeBegin", "efsd")
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(Status.BAD_REQUEST.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject msg = response.getEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
@@ -600,8 +590,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
     ClientResponse response = r.path("ws").path("v1").path("history")
         .path("mapreduce").path("jobs").queryParam("finishedTimeEnd", "efsd")
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(Status.BAD_REQUEST.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject msg = response.getEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");

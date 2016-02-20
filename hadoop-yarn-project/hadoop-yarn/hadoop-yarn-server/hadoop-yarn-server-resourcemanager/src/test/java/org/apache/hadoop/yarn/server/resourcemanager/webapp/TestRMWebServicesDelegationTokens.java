@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
@@ -296,8 +298,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
           .path("delegation-token").queryParam("user.name", "testuser")
           .accept(contentType).entity(body, mediaType)
           .post(ClientResponse.class);
-    assertEquals(Status.FORBIDDEN.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
   }
 
   private void verifyKerberosAuthCreate(String mType, String cType,
@@ -313,8 +314,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
             resource().path("ws").path("v1").path("cluster")
               .path("delegation-token").accept(contentType)
               .entity(body, mediaType).post(ClientResponse.class);
-        assertEquals(Status.OK.getStatusCode(),
-            response.getStatusInfo().getStatusCode());
+        assertResponseStatusCode(Status.OK, response.getStatusInfo());
         DelegationToken tok = getDelegationTokenFromResponse(response);
         assertFalse(tok.getToken().isEmpty());
         Token<RMDelegationTokenIdentifier> token =
@@ -327,8 +327,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
             resource().path("ws").path("v1").path("cluster")
               .path("delegation-token").accept(contentType)
               .entity(dtoken, mediaType).post(ClientResponse.class);
-        assertEquals(Status.OK.getStatusCode(),
-            response.getStatusInfo().getStatusCode());
+        assertResponseStatusCode(Status.OK, response.getStatusInfo());
         tok = getDelegationTokenFromResponse(response);
         assertFalse(tok.getToken().isEmpty());
         token = new Token<RMDelegationTokenIdentifier>();
@@ -369,8 +368,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
                     resource().path("ws").path("v1").path("cluster")
                       .path("delegation-token").accept(contentType)
                       .entity(dummyToken, mediaType).post(ClientResponse.class);
-                assertEquals(Status.OK.getStatusCode(),
-                    response.getStatusInfo().getStatusCode());
+                assertResponseStatusCode(Status.OK, response.getStatusInfo());
                 DelegationToken tok = getDelegationTokenFromResponse(response);
                 assertFalse(tok.getToken().isEmpty());
                 String body = generateRenewTokenBody(mediaType, tok.getToken());
@@ -380,8 +378,8 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
                       .header(yarnTokenHeader, tok.getToken())
                       .accept(contentType).entity(body, mediaType)
                       .post(ClientResponse.class);
-                assertEquals(Status.FORBIDDEN.getStatusCode(),
-                  response.getStatusInfo().getStatusCode());
+                assertResponseStatusCode(Status.FORBIDDEN,
+                    response.getStatusInfo());
                 return tok;
               }
             });
@@ -401,8 +399,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
                   .header(yarnTokenHeader, responseToken.getToken())
                   .accept(contentType).entity(body, mediaType)
                   .post(ClientResponse.class);
-            assertEquals(Status.OK.getStatusCode(),
-                response.getStatusInfo().getStatusCode());
+            assertResponseStatusCode(Status.OK, response.getStatusInfo());
             DelegationToken tok = getDelegationTokenFromResponse(response);
             String message =
                 "Expiration time not as expected: old = " + oldExpirationTime
@@ -417,8 +414,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
                   .header(yarnTokenHeader, responseToken.getToken())
                   .accept(contentType).entity(body, mediaType)
                   .post(ClientResponse.class);
-            assertEquals(Status.OK.getStatusCode(),
-                response.getStatusInfo().getStatusCode());
+            assertResponseStatusCode(Status.OK, response.getStatusInfo());
             tok = getDelegationTokenFromResponse(response);
             message =
                 "Expiration time not as expected: old = " + oldExpirationTime
@@ -440,8 +436,8 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
                   .header(yarnTokenHeader, responseToken.getToken())
                   .accept(contentType).entity(body, mediaType)
                   .post(ClientResponse.class);
-            assertEquals(Status.FORBIDDEN.getStatusCode(),
-                response.getStatusInfo().getStatusCode());
+            assertResponseStatusCode(Status.FORBIDDEN,
+                response.getStatusInfo());
             return null;
           }
         });
@@ -467,8 +463,8 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
                   .path("delegation-token").path("expiration")
                   .accept(contentType).entity(body, mediaType)
                   .post(ClientResponse.class);
-            assertEquals(Status.BAD_REQUEST.getStatusCode(),
-                response.getStatusInfo().getStatusCode());
+            assertResponseStatusCode(Status.BAD_REQUEST,
+                response.getStatusInfo());
             return null;
           }
         });
@@ -497,8 +493,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
           .path("delegation-token").queryParam("user.name", "testuser")
           .accept(contentType).entity(body, mediaType)
           .post(ClientResponse.class);
-    assertEquals(Status.FORBIDDEN.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
   }
 
   // Test to verify cancel functionality - create a token and then try to cancel
@@ -528,16 +523,14 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
                 resource().path("ws").path("v1").path("cluster")
                   .path("delegation-token").accept(contentType)
                   .entity(dtoken, mediaType).post(ClientResponse.class);
-            assertEquals(Status.OK.getStatusCode(),
-                response.getStatusInfo().getStatusCode());
+            assertResponseStatusCode(Status.OK, response.getStatusInfo());
             DelegationToken tok = getDelegationTokenFromResponse(response);
             response =
                 resource().path("ws").path("v1").path("cluster")
                   .path("delegation-token")
                   .header(yarnTokenHeader, tok.getToken()).accept(contentType)
                   .delete(ClientResponse.class);
-            assertEquals(Status.OK.getStatusCode(),
-                response.getStatusInfo().getStatusCode());
+            assertResponseStatusCode(Status.OK, response.getStatusInfo());
             assertTokenCancelled(tok.getToken());
             return null;
           }
@@ -552,8 +545,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
                     resource().path("ws").path("v1").path("cluster")
                       .path("delegation-token").accept(contentType)
                       .entity(dtoken, mediaType).post(ClientResponse.class);
-                assertEquals(Status.OK.getStatusCode(),
-                    response.getStatusInfo().getStatusCode());
+                assertResponseStatusCode(Status.OK, response.getStatusInfo());
                 DelegationToken tok = getDelegationTokenFromResponse(response);
                 return tok;
               }
@@ -567,8 +559,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
                   .path("delegation-token")
                   .header(yarnTokenHeader, tmpToken.getToken())
                   .accept(contentType).delete(ClientResponse.class);
-            assertEquals(Status.OK.getStatusCode(),
-                response.getStatusInfo().getStatusCode());
+            assertResponseStatusCode(Status.OK, response.getStatusInfo());
             assertTokenCancelled(tmpToken.getToken());
             return null;
           }
@@ -583,8 +574,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
                     resource().path("ws").path("v1").path("cluster")
                       .path("delegation-token").accept(contentType)
                       .entity(dtoken, mediaType).post(ClientResponse.class);
-                assertEquals(Status.OK.getStatusCode(),
-                    response.getStatusInfo().getStatusCode());
+                assertResponseStatusCode(Status.OK, response.getStatusInfo());
                 DelegationToken tok = getDelegationTokenFromResponse(response);
                 return tok;
               }
@@ -598,8 +588,8 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
                   .path("delegation-token")
                   .header(yarnTokenHeader, tmpToken2.getToken())
                   .accept(contentType).delete(ClientResponse.class);
-            assertEquals(Status.FORBIDDEN.getStatusCode(),
-                response.getStatusInfo().getStatusCode());
+            assertResponseStatusCode(Status.FORBIDDEN,
+                response.getStatusInfo());
             assertValidRMToken(tmpToken2.getToken());
             return null;
           }
@@ -631,8 +621,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
               .path("delegation-token")
               .header(yarnTokenHeader, "random-string").accept(contentType)
               .delete(ClientResponse.class);
-        assertEquals(Status.BAD_REQUEST.getStatusCode(),
-            response.getStatusInfo().getStatusCode());
+        assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
         return null;
       }
     });
@@ -645,8 +634,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
             resource().path("ws").path("v1").path("cluster")
               .path("delegation-token").accept(contentType)
               .delete(ClientResponse.class);
-        assertEquals(Status.BAD_REQUEST.getStatusCode(),
-            response.getStatusInfo().getStatusCode());
+        assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
 
         return null;
       }
@@ -661,8 +649,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
                 resource().path("ws").path("v1").path("cluster")
                   .path("delegation-token").accept(contentType)
                   .entity(dtoken, mediaType).post(ClientResponse.class);
-            assertEquals(Status.OK.getStatusCode(),
-                response.getStatusInfo().getStatusCode());
+            assertResponseStatusCode(Status.OK, response.getStatusInfo());
             DelegationToken tok = getDelegationTokenFromResponse(response);
             return tok;
           }
@@ -676,15 +663,13 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
               .path("delegation-token")
               .header(yarnTokenHeader, tmpToken.getToken()).accept(contentType)
               .delete(ClientResponse.class);
-        assertEquals(Status.OK.getStatusCode(),
-            response.getStatusInfo().getStatusCode());
+        assertResponseStatusCode(Status.OK, response.getStatusInfo());
         response =
             resource().path("ws").path("v1").path("cluster")
               .path("delegation-token")
               .header(yarnTokenHeader, tmpToken.getToken()).accept(contentType)
               .delete(ClientResponse.class);
-        assertEquals(Status.BAD_REQUEST.getStatusCode(),
-            response.getStatusInfo().getStatusCode());
+        assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
         return null;
       }
     });
@@ -697,8 +682,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
           .path("delegation-token").queryParam("user.name", "testuser")
           .header(RMWebServices.DELEGATION_TOKEN_HEADER, "random")
           .delete(ClientResponse.class);
-    assertEquals(Status.FORBIDDEN.getStatusCode(),
-        response.getStatusInfo().getStatusCode());
+    assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
   }
 
   private DelegationToken
