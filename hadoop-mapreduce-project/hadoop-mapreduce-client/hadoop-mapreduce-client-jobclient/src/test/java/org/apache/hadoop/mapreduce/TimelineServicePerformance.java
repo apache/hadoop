@@ -48,7 +48,7 @@ public class TimelineServicePerformance extends Configured implements Tool {
             ")\n" +
         "     [-v] timeline service version\n" +
         "     [-mtype <mapper type in integer>]\n" +
-        "          1. simple entity write mapper\n" +
+        "          1. simple entity write mapper (default)\n" +
         "          2. jobhistory files replay mapper\n" +
         "     [-s <(KBs)test>] number of KB per put (mtype=1, default: " +
              SimpleEntityWriterV1.KBS_SENT_DEFAULT + " KB)\n" +
