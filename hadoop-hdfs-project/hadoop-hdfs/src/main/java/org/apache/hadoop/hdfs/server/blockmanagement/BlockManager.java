@@ -1865,7 +1865,7 @@ public class BlockManager implements BlockStatsMXBean {
     final long startTime = Time.monotonicNow(); //after acquiring write lock
     final long endTime;
     DatanodeDescriptor node;
-    Collection<Block> invalidatedBlocks = null;
+    Collection<Block> invalidatedBlocks = Collections.emptyList();
 
     try {
       node = datanodeManager.getDatanode(nodeID);
@@ -1940,11 +1940,9 @@ public class BlockManager implements BlockStatsMXBean {
       namesystem.writeUnlock();
     }
 
-    if (invalidatedBlocks != null) {
-      for (Block b : invalidatedBlocks) {
-        blockLog.info("BLOCK* processReport: {} on node {} size {} does not " +
-            "belong to any file", b, node, b.getNumBytes());
-      }
+    for (Block b : invalidatedBlocks) {
+      blockLog.debug("BLOCK* processReport: {} on node {} size {} does not " +
+          "belong to any file", b, node, b.getNumBytes());
     }
 
     // Log the block report processing stats from Namenode perspective
@@ -1953,9 +1951,11 @@ public class BlockManager implements BlockStatsMXBean {
       metrics.addBlockReport((int) (endTime - startTime));
     }
     blockLog.info("BLOCK* processReport: from storage {} node {}, " +
-        "blocks: {}, hasStaleStorage: {}, processing time: {} msecs", storage
-        .getStorageID(), nodeID, newReport.getNumberOfBlocks(),
-        node.hasStaleStorages(), (endTime - startTime));
+        "blocks: {}, hasStaleStorage: {}, processing time: {} msecs, " +
+        "invalidatedBlocks: {}", storage.getStorageID(), nodeID,
+        newReport.getNumberOfBlocks(),
+        node.hasStaleStorages(), (endTime - startTime),
+        invalidatedBlocks.size());
     return !node.hasStaleStorages();
   }
 
