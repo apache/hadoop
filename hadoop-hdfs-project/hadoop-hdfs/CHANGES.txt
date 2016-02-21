@@ -2802,6 +2802,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-6832. Fix the usage of 'hdfs namenode' command.
     (Manjunath Ballur via aajisaka)
 
+    HDFS-9839. Reduce verbosity of processReport logging. (Arpit Agarwal)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
