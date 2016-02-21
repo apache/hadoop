@@ -783,8 +783,8 @@ String.
 | `entitytype` | string | The entity type |
 | `relatedentities` | map | The related entities' identifiers, which are organized in a map of entityType : [entity1, entity2, ...] |
 | `events` | list | The events of the entity |
-| `primaryfilters` | map | The primary filters of the entity, which are orgainzied in a map of key : [value1, value2, ...] |
-| `otherinfo` | map | The other information of the entity, which is orgainzied in a map of key : value |
+| `primaryfilters` | map | The primary filters of the entity, which are organized in a map of key : [value1, value2, ...] |
+| `otherinfo` | map | The other information of the entity, which is organized in a map of key : value |
 | `starttime` | long | The start time of the entity |
 
 ### Response Examples:
@@ -2038,7 +2038,7 @@ this failure *will not* result in an HTTP error code being retured.
 A status code of 200 will be returned —however, there will be an error code
 in the list of failed entities for each entity which could not be added.
 
-<a name="TIMELINE_SERVER_PERFORMANCE_TEST_TOOL"></a> Timelnine Server Performance Test Tool
+<a name="TIMELINE_SERVER_PERFORMANCE_TEST_TOOL"></a> Timeline Server Performance Test Tool
 ----------
 ###<a name="HIGHLIGHTS"></a>Highlights
 
@@ -2054,7 +2054,8 @@ Mapper Types Description:
 
      1. SimpleEntityWriter mapper
         Each mapper writes a user-specified number of timeline entities
-        with a user-specified size to the timeline server.
+        with a user-specified size to the timeline server. SimpleEntityWrite
+        is a default mapper of the performance test tool.
 
      2. JobHistoryFileReplay mapper
         Each mapper replays jobhistory files under a specified directory
@@ -2071,7 +2072,7 @@ Options:
     [-m <maps>] number of mappers (default: 1)
     [-v] timeline service version
     [-mtype <mapper type in integer>]
-          1. simple entity write mapper
+          1. simple entity write mapper (default)
           2. jobhistory files replay mapper
     [-s <(KBs)test>] number of KB per put (mtype=1, default: 1 KB)
     [-t] package sending iterations per mapper (mtype=1, default: 100)
@@ -2105,7 +2106,7 @@ Example input of JobHistoryFileReplay mapper test:
     /testInput/job_2.jhist
     /testInput/job_2_conf.xml
 
-Eample output of JobHistoryFileReplay test:
+Example output of JobHistoryFileReplay test:
 
     TRANSACTION RATE (per mapper): 4000.0 ops/s
     IO RATE (per mapper): 0.0 KB/s

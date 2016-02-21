@@ -135,6 +135,8 @@ Release 2.9.0 - UNRELEASED
     YARN-4689. FairScheduler: Cleanup preemptContainer to be more readable.
     (Kai Sasaki via kasha)
 
+    YARN-4708. Missing default mapper type in TimelineServer performance test tool
+    usage. (Kai Sasaki via ozawa)
 
   OPTIMIZATIONS
 
