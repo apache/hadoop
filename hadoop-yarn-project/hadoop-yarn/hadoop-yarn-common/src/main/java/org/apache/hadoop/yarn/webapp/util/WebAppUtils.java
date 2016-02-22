@@ -352,7 +352,9 @@ public class WebAppUtils {
             sslConf.get("ssl.server.keystore.type", "jks"))
         .trustStore(sslConf.get("ssl.server.truststore.location"),
             getPassword(sslConf, WEB_APP_TRUSTSTORE_PASSWORD_KEY),
-            sslConf.get("ssl.server.truststore.type", "jks"));
+            sslConf.get("ssl.server.truststore.type", "jks"))
+        .excludeCiphers(
+            sslConf.get("ssl.server.exclude.cipher.list"));
   }
 
   /**
