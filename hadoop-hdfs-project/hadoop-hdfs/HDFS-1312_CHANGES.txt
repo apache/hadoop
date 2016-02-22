@@ -21,6 +21,9 @@ HDFS-1312 Change Log
 
     HDFS-9645. DiskBalancer: Add Query RPC. (Anu Engineer via Arpit Agarwal)
 
-    HDFS-9647. DiskBalancer: Add getRuntimeSettings. (Anu Engineer
-    via Arpit Agarwal)
+    HDFS-9647. DiskBalancer: Add getRuntimeSettings. (Anu Engineer via
+    Arpit Agarwal)
+
+    HDFS-9671skBalancer: SubmitPlan implementation. (Anu Engineer via
+    Arpit Agarwal)
 

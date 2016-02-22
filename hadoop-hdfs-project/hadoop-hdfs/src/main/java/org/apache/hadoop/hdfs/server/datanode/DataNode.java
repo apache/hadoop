@@ -169,7 +169,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.web.DatanodeHttpServer;
-import org.apache.hadoop.hdfs.server.diskbalancer.DiskbalancerException;
+import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerException;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -386,6 +386,8 @@ public class DataNode extends ReconfigurableBase
   private static final int NUM_CORES = Runtime.getRuntime()
       .availableProcessors();
   private static final double CONGESTION_RATIO = 1.5;
+  private DiskBalancer diskBalancer;
+
 
   private static Tracer createTracer(Configuration conf) {
     return new Tracer.Builder("DataNode").
@@ -1022,7 +1024,33 @@ public class DataNode extends ReconfigurableBase
       directoryScanner.shutdown();
     }
   }
-  
+
+  /**
+   * Initilizes {@link DiskBalancer}.
+   * @param  data - FSDataSet
+   * @param conf - Config
+   */
+  private synchronized void initDiskBalancer(FsDatasetSpi data,
+                                             Configuration conf) {
+    if (this.diskBalancer != null) {
+      return;
+    }
+
+    DiskBalancer.BlockMover mover = new DiskBalancer.DiskBalancerMover(data,
+        conf);
+    this.diskBalancer = new DiskBalancer(getDatanodeUuid(), conf, mover);
+  }
+
+  /**
+   * Shutdown disk balancer.
+   */
+  private synchronized void shutdownDiskBalancer() {
+    if (this.diskBalancer != null) {
+      this.diskBalancer.shutdown();
+      this.diskBalancer = null;
+    }
+  }
+
   private void initDataXceiver(Configuration conf) throws IOException {
     // find free port or use privileged port provided
     TcpPeerServer tcpPeerServer;
@@ -1530,6 +1558,7 @@ public class DataNode extends ReconfigurableBase
     data.addBlockPool(nsInfo.getBlockPoolID(), conf);
     blockScanner.enableBlockPoolId(bpos.getBlockPoolId());
     initDirectoryScanner(conf);
+    initDiskBalancer(data, conf);
   }
 
   List<BPOfferService> getAllBpOs() {
@@ -1867,6 +1896,7 @@ public class DataNode extends ReconfigurableBase
 
     // Terminate directory scanner and block scanner
     shutdownPeriodicScanners();
+    shutdownDiskBalancer();
 
     // Stop the web server
     if (httpServer != null) {
@@ -3296,31 +3326,30 @@ public class DataNode extends ReconfigurableBase
    * @param bandwidth - Max disk bandwidth to use, 0 means use value defined
    *                  in the configration.
    * @param plan - Actual plan
-   * @return  success or throws an exception.
-   * @throws Exception
+   * @throws IOException
    */
   @Override
   public void submitDiskBalancerPlan(String planID,
       long planVersion, long bandwidth, String plan) throws IOException {
 
-    // TODO : This will be replaced with actual code later.
-    // Right now throwing DiskbalancerException instead
-    // NotImplementedException to indicate the eventually disk balancer code
-    // will throw DiskbalancerException.
-    throw new DiskbalancerException("Not Implemented", 0);
+    checkSuperuserPrivilege();
+    // TODO : Support force option
+    this.diskBalancer.submitPlan(planID, planVersion, plan, bandwidth, false);
   }
 
   @Override
   public void cancelDiskBalancePlan(String planID) throws
       IOException {
     checkSuperuserPrivilege();
-    throw new DiskbalancerException("Not Implemented", 0);
+    throw new DiskBalancerException("Not Implemented",
+        DiskBalancerException.Result.INTERNAL_ERROR);
   }
 
   @Override
-  public WorkStatus queryDiskBalancerPlan() throws IOException {
+  public DiskBalancerWorkStatus queryDiskBalancerPlan() throws IOException {
     checkSuperuserPrivilege();
-    throw new DiskbalancerException("Not Implemented", 0);
+    throw new DiskBalancerException("Not Implemented",
+        DiskBalancerException.Result.INTERNAL_ERROR);
   }
 
   /**
@@ -3334,6 +3363,7 @@ public class DataNode extends ReconfigurableBase
   @Override
   public String getDiskBalancerSetting(String key) throws IOException {
     checkSuperuserPrivilege();
-    throw new DiskbalancerException("Not Implemented", 0);
+    throw new DiskBalancerException("Not Implemented",
+        DiskBalancerException.Result.INTERNAL_ERROR);
   }
 }

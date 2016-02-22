@@ -59,7 +59,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.QueryP
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.DiskBalancerSettingRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.DiskBalancerSettingResponseProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
-import org.apache.hadoop.hdfs.server.datanode.WorkStatus;
+import org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
@@ -345,8 +345,7 @@ public class ClientDatanodeProtocolTranslatorPB implements
    *                  to zero allows datanode to use the value defined in
    *                  configration.
    * @param plan - Actual plan.
-   * @return Success or throws Exception.
-   * @throws Exception
+   * @throws IOException
    */
   @Override
   public void submitDiskBalancerPlan(String planID, long planVersion,
@@ -387,13 +386,14 @@ public class ClientDatanodeProtocolTranslatorPB implements
    * Gets the status of an executing diskbalancer Plan.
    */
   @Override
-  public WorkStatus queryDiskBalancerPlan() throws IOException {
+  public DiskBalancerWorkStatus queryDiskBalancerPlan() throws IOException {
     try {
       QueryPlanStatusRequestProto request =
           QueryPlanStatusRequestProto.newBuilder().build();
       QueryPlanStatusResponseProto response =
           rpcProxy.queryDiskBalancerPlan(NULL_CONTROLLER, request);
-      return new WorkStatus(response.hasResult() ? response.getResult() : 0,
+      return new DiskBalancerWorkStatus(response.hasResult() ?
+          response.getResult() : 0,
           response.hasPlanID() ? response.getPlanID() : null,
           response.hasStatus() ? response.getStatus() : null,
           response.hasCurrentStatus() ? response.getCurrentStatus() : null);

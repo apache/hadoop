@@ -20,16 +20,18 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Helper class that reports how much work has has been done by the node.
  */
 @InterfaceAudience.Private
-public class WorkStatus {
-  private int result;
-  private String planID;
-  private String status;
-  private String currentState;
+@InterfaceStability.Unstable
+public class DiskBalancerWorkStatus {
+  private final int result;
+  private final String planID;
+  private final String status;
+  private final String currentState;
 
   /**
    * Constructs a workStatus Object.
@@ -39,8 +41,8 @@ public class WorkStatus {
    * @param status       - Current Status
    * @param currentState - Current State
    */
-  public WorkStatus(int result, String planID, String status,
-                    String currentState) {
+  public DiskBalancerWorkStatus(int result, String planID, String status,
+                                String currentState) {
     this.result = result;
     this.planID = planID;
     this.status = status;

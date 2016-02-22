@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.diskbalancer;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -35,9 +36,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.io.IOException;
-import java.net.URI;
-
 public class TestDiskBalancerRPC {
   @Rule
   public ExpectedException thrown = ExpectedException.none();
@@ -48,6 +46,7 @@ public class TestDiskBalancerRPC {
   @Before
   public void setUp() throws Exception {
     conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     cluster.waitActive();
   }
@@ -72,22 +71,19 @@ public class TestDiskBalancerRPC {
     Assert.assertEquals(cluster.getDataNodes().size(),
                                     diskBalancerCluster.getNodes().size());
     diskBalancerCluster.setNodesToProcess(diskBalancerCluster.getNodes());
-    DiskBalancerDataNode node = diskBalancerCluster.getNodes().get(dnIndex);
+
+    DataNode dataNode = cluster.getDataNodes().get(dnIndex);
+    DiskBalancerDataNode node = diskBalancerCluster.getNodeByUUID(
+        dataNode.getDatanodeUuid());
     GreedyPlanner planner = new GreedyPlanner(10.0f, node);
     NodePlan plan = new NodePlan(node.getDataNodeName(), node.getDataNodePort
         ());
     planner.balanceVolumeSet(node, node.getVolumeSets().get("DISK"), plan);
-    final int planVersion = 0; // So far we support only one version.
-    DataNode dataNode = cluster.getDataNodes().get(dnIndex);
+    final int planVersion = 1; // So far we support only one version.
 
     String planHash = DigestUtils.sha512Hex(plan.toJson());
 
-    // Since submitDiskBalancerPlan is not implemented yet, it throws an
-    // Exception, this will be modified with the actual implementation.
-    thrown.expect(DiskbalancerException.class);
     dataNode.submitDiskBalancerPlan(planHash, planVersion, 10, plan.toJson());
-
-
   }
 
   @Test
@@ -117,10 +113,10 @@ public class TestDiskBalancerRPC {
     // Exception, this will be modified with the actual implementation.
     try {
       dataNode.submitDiskBalancerPlan(planHash, planVersion, 10, plan.toJson());
-    } catch (DiskbalancerException ex) {
+    } catch (DiskBalancerException ex) {
       // Let us ignore this for time being.
     }
-    thrown.expect(DiskbalancerException.class);
+    thrown.expect(DiskBalancerException.class);
     dataNode.cancelDiskBalancePlan(planHash);
   }
 
@@ -152,13 +148,13 @@ public class TestDiskBalancerRPC {
     // Exception, this will be modified with the actual implementation.
     try {
       dataNode.submitDiskBalancerPlan(planHash, planVersion, 10, plan.toJson());
-    } catch (DiskbalancerException ex) {
+    } catch (DiskBalancerException ex) {
       // Let us ignore this for time being.
     }
 
     // TODO : This will be fixed when we have implementation for this
     // function in server side.
-    thrown.expect(DiskbalancerException.class);
+    thrown.expect(DiskBalancerException.class);
     dataNode.queryDiskBalancerPlan();
   }
 
@@ -166,7 +162,7 @@ public class TestDiskBalancerRPC {
   public void testgetDiskBalancerSetting() throws Exception {
     final int dnIndex = 0;
     DataNode dataNode = cluster.getDataNodes().get(dnIndex);
-    thrown.expect(DiskbalancerException.class);
+    thrown.expect(DiskBalancerException.class);
     dataNode.getDiskBalancerSetting(
         DiskBalancerConstants.DISKBALANCER_BANDWIDTH);
   }

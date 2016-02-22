@@ -358,4 +358,18 @@ public class DiskBalancerCluster {
       return (10 - modValue) + threadRatio;
     }
   }
+
+  /**
+   * Returns a node by UUID.
+   * @param uuid - Node's UUID
+   * @return DiskBalancerDataNode.
+   */
+  public DiskBalancerDataNode getNodeByUUID(String uuid) {
+    for(DiskBalancerDataNode node : this.getNodes()) {
+      if(node.getDataNodeUUID().equals(uuid)) {
+        return node;
+      }
+    }
+    return null;
+  }
 }
