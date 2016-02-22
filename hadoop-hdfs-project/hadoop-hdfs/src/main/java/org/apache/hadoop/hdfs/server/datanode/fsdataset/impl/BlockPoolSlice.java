@@ -30,6 +30,7 @@ import java.io.RandomAccessFile;
 import java.io.Writer;
 import java.util.Iterator;
 import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
@@ -85,6 +86,7 @@ class BlockPoolSlice {
   private final boolean deleteDuplicateReplicas;
   private static final String REPLICA_CACHE_FILE = "replicas";
   private final long replicaCacheExpiry = 5*60*1000;
+  private AtomicLong numOfBlocks = new AtomicLong();
 
   // TODO:FEDERATION scalability issue - a thread per DU is needed
   private final DU dfsUsage;
@@ -267,7 +269,11 @@ class BlockPoolSlice {
    */
   File createTmpFile(Block b) throws IOException {
     File f = new File(tmpDir, b.getBlockName());
-    return DatanodeUtil.createTmpFile(b, f);
+    File tmpFile = DatanodeUtil.createTmpFile(b, f);
+    // If any exception during creation, its expected that counter will not be
+    // incremented, So no need to decrement
+    incrNumBlocks();
+    return tmpFile;
   }
 
   /**
@@ -276,7 +282,11 @@ class BlockPoolSlice {
    */
   File createRbwFile(Block b) throws IOException {
     File f = new File(rbwDir, b.getBlockName());
-    return DatanodeUtil.createTmpFile(b, f);
+    File rbwFile = DatanodeUtil.createTmpFile(b, f);
+    // If any exception during creation, its expected that counter will not be
+    // incremented, So no need to decrement
+    incrNumBlocks();
+    return rbwFile;
   }
 
   File addBlock(Block b, File f) throws IOException {
@@ -486,6 +496,9 @@ class BlockPoolSlice {
           (FsVolumeImpl) newReplica.getVolume(), 0);
     } else {
       lazyWriteReplicaMap.discardReplica(bpid, blockId, false);
+    }
+    if (oldReplica == null) {
+      incrNumBlocks();
     }
   }
   
@@ -818,5 +831,17 @@ class BlockPoolSlice {
             tmpFile.getPath());
       }
     }
+  }
+
+  void incrNumBlocks() {
+    numOfBlocks.incrementAndGet();
+  }
+
+  void decrNumBlocks() {
+    numOfBlocks.decrementAndGet();
+  }
+
+  public long getNumOfBlocks() {
+    return numOfBlocks.get();
   }
 }

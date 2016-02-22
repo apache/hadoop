@@ -283,21 +283,35 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   void onBlockFileDeletion(String bpid, long value) {
-    decDfsUsed(bpid, value);
+    decDfsUsedAndNumBlocks(bpid, value, true);
     if (isTransientStorage()) {
       dataset.releaseLockedMemory(value, true);
     }
   }
 
   void onMetaFileDeletion(String bpid, long value) {
-    decDfsUsed(bpid, value);
+    decDfsUsedAndNumBlocks(bpid, value, false);
   }
 
-  private void decDfsUsed(String bpid, long value) {
+  private void decDfsUsedAndNumBlocks(String bpid, long value,
+                                      boolean blockFileDeleted) {
     synchronized(dataset) {
       BlockPoolSlice bp = bpSlices.get(bpid);
       if (bp != null) {
         bp.decDfsUsed(value);
+        if (blockFileDeleted) {
+          bp.decrNumBlocks();
+        }
+      }
+    }
+  }
+
+  void incDfsUsedAndNumBlocks(String bpid, long value) {
+    synchronized (dataset) {
+      BlockPoolSlice bp = bpSlices.get(bpid);
+      if (bp != null) {
+        bp.incDfsUsed(value);
+        bp.incrNumBlocks();
       }
     }
   }
@@ -846,7 +860,15 @@ public class FsVolumeImpl implements FsVolumeSpi {
       throws IOException {
     getBlockPoolSlice(bpid).getVolumeMap(volumeMap, ramDiskReplicaMap);
   }
-  
+
+  long getNumBlocks() {
+    long numBlocks = 0;
+    for (BlockPoolSlice s : bpSlices.values()) {
+      numBlocks += s.getNumOfBlocks();
+    }
+    return numBlocks;
+  }
+
   @Override
   public String toString() {
     return currentDir.getAbsolutePath();
