@@ -30,7 +30,7 @@ Secure Containers work only in the context of secured YARN clusters.
 
 ###Linux Secure Container Executor
 
-  On Linux environment the secure container executor is the `LinuxContainerExecutor`. It uses an external program called the **container-executor**\> to launch the container. This program has the `setuid` access right flag set which allows it to launch the container with the permissions of the YARN application user.
+  On Linux environment the secure container executor is the `LinuxContainerExecutor`. It uses an external program called the **container-executor** to launch the container. This program has the `setuid` access right flag set which allows it to launch the container with the permissions of the YARN application user.
 
 ###Configuration
 
