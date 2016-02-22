@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -145,7 +146,8 @@ public class BlockPoolSliceStorage extends Storage {
    * @throws IOException
    */
   private StorageDirectory loadStorageDirectory(NamespaceInfo nsInfo,
-      File dataDir, StartupOption startOpt, Configuration conf)
+      File dataDir, StartupOption startOpt,
+      List<Callable<StorageDirectory>> callables, Configuration conf)
           throws IOException {
     StorageDirectory sd = new StorageDirectory(dataDir, null, true);
     try {
@@ -172,18 +174,16 @@ public class BlockPoolSliceStorage extends Storage {
       // Each storage directory is treated individually.
       // During startup some of them can upgrade or roll back
       // while others could be up-to-date for the regular startup.
-      if (doTransition(sd, nsInfo, startOpt, conf)) {
-        return sd;
-      }
+      if (!doTransition(sd, nsInfo, startOpt, callables, conf)) {
 
-      if (getCTime() != nsInfo.getCTime()) {
-        throw new IOException("Datanode CTime (=" + getCTime()
-            + ") is not equal to namenode CTime (=" + nsInfo.getCTime() + ")");
+        // 3. Check CTime and update successfully loaded storage.
+        if (getCTime() != nsInfo.getCTime()) {
+          throw new IOException("Datanode CTime (=" + getCTime()
+              + ") is not equal to namenode CTime (=" + nsInfo.getCTime() + ")");
+        }
+        setServiceLayoutVersion(getServiceLayoutVersion());
+        writeProperties(sd);
       }
-
-      // 3. Update successfully loaded storage.
-      setServiceLayoutVersion(getServiceLayoutVersion());
-      writeProperties(sd);
 
       return sd;
     } catch (IOException ioe) {
@@ -208,7 +208,8 @@ public class BlockPoolSliceStorage extends Storage {
    */
   List<StorageDirectory> loadBpStorageDirectories(NamespaceInfo nsInfo,
       Collection<File> dataDirs, StartupOption startOpt,
-      Configuration conf) throws IOException {
+      List<Callable<StorageDirectory>> callables, Configuration conf)
+          throws IOException {
     List<StorageDirectory> succeedDirs = Lists.newArrayList();
     try {
       for (File dataDir : dataDirs) {
@@ -218,7 +219,7 @@ public class BlockPoolSliceStorage extends Storage {
                   "attempt to load an used block storage: " + dataDir);
         }
         final StorageDirectory sd = loadStorageDirectory(
-            nsInfo, dataDir, startOpt, conf);
+            nsInfo, dataDir, startOpt, callables, conf);
         succeedDirs.add(sd);
       }
     } catch (IOException e) {
@@ -242,11 +243,12 @@ public class BlockPoolSliceStorage extends Storage {
    * @throws IOException on error
    */
   List<StorageDirectory> recoverTransitionRead(NamespaceInfo nsInfo,
-      Collection<File> dataDirs, StartupOption startOpt, Configuration conf)
+      Collection<File> dataDirs, StartupOption startOpt,
+      List<Callable<StorageDirectory>> callables, Configuration conf)
           throws IOException {
     LOG.info("Analyzing storage directories for bpid " + nsInfo.getBlockPoolID());
     final List<StorageDirectory> loaded = loadBpStorageDirectories(
-        nsInfo, dataDirs, startOpt, conf);
+        nsInfo, dataDirs, startOpt, callables, conf);
     for (StorageDirectory sd : loaded) {
       addStorageDir(sd);
     }
@@ -353,7 +355,8 @@ public class BlockPoolSliceStorage extends Storage {
    * @return true if the new properties has been written.
    */
   private boolean doTransition(StorageDirectory sd, NamespaceInfo nsInfo,
-      StartupOption startOpt, Configuration conf) throws IOException {
+      StartupOption startOpt, List<Callable<StorageDirectory>> callables,
+      Configuration conf) throws IOException {
     if (startOpt == StartupOption.ROLLBACK && sd.getPreviousDir().exists()) {
       Preconditions.checkState(!getTrashRootDir(sd).exists(),
           sd.getPreviousDir() + " and " + getTrashRootDir(sd) + " should not " +
@@ -395,7 +398,7 @@ public class BlockPoolSliceStorage extends Storage {
     }
     if (this.layoutVersion > HdfsServerConstants.DATANODE_LAYOUT_VERSION
         || this.cTime < nsInfo.getCTime()) {
-      doUpgrade(sd, nsInfo, conf); // upgrade
+      doUpgrade(sd, nsInfo, callables, conf); // upgrade
       return true;
     }
     // layoutVersion == LAYOUT_VERSION && this.cTime > nsInfo.cTime
@@ -425,7 +428,9 @@ public class BlockPoolSliceStorage extends Storage {
    * @throws IOException on error
    */
   private void doUpgrade(final StorageDirectory bpSd,
-      final NamespaceInfo nsInfo, final Configuration conf) throws IOException {
+      final NamespaceInfo nsInfo,
+      final List<Callable<StorageDirectory>> callables,
+      final Configuration conf) throws IOException {
     // Upgrading is applicable only to release with federation or after
     if (!DataNodeLayoutVersion.supports(
         LayoutVersion.Feature.FEDERATION, layoutVersion)) {
@@ -463,10 +468,21 @@ public class BlockPoolSliceStorage extends Storage {
     rename(bpCurDir, bpTmpDir);
     
     final String name = "block pool " + blockpoolID + " at " + bpSd.getRoot();
-    doUgrade(name, bpSd, nsInfo, bpPrevDir, bpTmpDir, bpCurDir, oldLV, conf);
+    if (callables == null) {
+      doUpgrade(name, bpSd, nsInfo, bpPrevDir, bpTmpDir, bpCurDir, oldLV, conf);
+    } else {
+      callables.add(new Callable<StorageDirectory>() {
+        @Override
+        public StorageDirectory call() throws Exception {
+          doUpgrade(name, bpSd, nsInfo, bpPrevDir, bpTmpDir, bpCurDir, oldLV,
+              conf);
+          return bpSd;
+        }
+      });
+    }
   }
 
-  private void doUgrade(String name, final StorageDirectory bpSd,
+  private void doUpgrade(String name, final StorageDirectory bpSd,
       NamespaceInfo nsInfo, final File bpPrevDir, final File bpTmpDir,
       final File bpCurDir, final int oldLV, Configuration conf)
           throws IOException {
