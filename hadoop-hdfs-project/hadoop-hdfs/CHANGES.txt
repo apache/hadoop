@@ -2804,6 +2804,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9839. Reduce verbosity of processReport logging. (Arpit Agarwal)
 
+    HDFS-7452. skip StandbyException log for getCorruptFiles()
+    (Bramha Reddy Battula via vinayakumarb)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

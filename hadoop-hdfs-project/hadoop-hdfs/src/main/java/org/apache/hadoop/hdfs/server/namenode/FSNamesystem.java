@@ -5596,6 +5596,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           list.add(c.toString());
         }
       }
+    } catch (StandbyException e) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Get corrupt file blocks returned error: " + e.getMessage());
+      }
     } catch (IOException e) {
       LOG.warn("Get corrupt file blocks returned error: " + e.getMessage());
     }
