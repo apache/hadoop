@@ -2024,6 +2024,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9768. Reuse ObjectMapper instance in HDFS to improve the performance.
     (Lin Yiqun via aajisaka)
 
+    HDFS-9425. Expose number of blocks per volume as a metric
+    (Brahma Reddy Battula via vinayakumarb)
+
   BUG FIXES
 
     HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.
