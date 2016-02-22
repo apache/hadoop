@@ -218,10 +218,32 @@ public class KeyStoreTestUtil {
    * @param useClientCert boolean true to make the client present a cert in the
    * SSL handshake
    * @param trustStore boolean true to create truststore, false not to create it
+   * @throws java.lang.Exception
    */
   public static void setupSSLConfig(String keystoresDir, String sslConfDir,
                                     Configuration conf, boolean useClientCert,
       boolean trustStore)
+    throws Exception {
+    setupSSLConfig(keystoresDir, sslConfDir, conf, useClientCert, true,"");
+  }
+
+    /**
+     * Performs complete setup of SSL configuration in preparation for testing an
+     * SSLFactory.  This includes keys, certs, keystores, truststores, the server
+     * SSL configuration file, the client SSL configuration file, and the master
+     * configuration file read by the SSLFactory.
+     *
+     * @param keystoresDir
+     * @param sslConfDir
+     * @param conf
+     * @param useClientCert
+     * @param trustStore
+     * @param excludeCiphers
+     * @throws Exception
+     */
+    public static void setupSSLConfig(String keystoresDir, String sslConfDir,
+                                    Configuration conf, boolean useClientCert,
+      boolean trustStore, String excludeCiphers)
     throws Exception {
     String clientKS = keystoresDir + "/clientKS.jks";
     String clientPassword = "clientP";
@@ -259,9 +281,9 @@ public class KeyStoreTestUtil {
     }
 
     Configuration clientSSLConf = createClientSSLConfig(clientKS, clientPassword,
-      clientPassword, trustKS);
+      clientPassword, trustKS, excludeCiphers);
     Configuration serverSSLConf = createServerSSLConfig(serverKS, serverPassword,
-      serverPassword, trustKS);
+      serverPassword, trustKS, excludeCiphers);
 
     saveConfig(sslClientConfFile, clientSSLConf);
     saveConfig(sslServerConfFile, serverSSLConf);
@@ -285,9 +307,26 @@ public class KeyStoreTestUtil {
    */
   public static Configuration createClientSSLConfig(String clientKS,
       String password, String keyPassword, String trustKS) {
-    Configuration clientSSLConf = createSSLConfig(SSLFactory.Mode.CLIENT,
-      clientKS, password, keyPassword, trustKS);
-    return clientSSLConf;
+    return createSSLConfig(SSLFactory.Mode.CLIENT,
+      clientKS, password, keyPassword, trustKS, "");
+  }
+
+  /**
+   * Creates SSL configuration for a client.
+   *
+   * @param clientKS String client keystore file
+   * @param password String store password, or null to avoid setting store
+   *   password
+   * @param keyPassword String key password, or null to avoid setting key
+   *   password
+   * @param trustKS String truststore file
+   * @param excludeCiphers String comma separated ciphers to exclude
+   * @return Configuration for client SSL
+   */
+    public static Configuration createClientSSLConfig(String clientKS,
+      String password, String keyPassword, String trustKS, String excludeCiphers) {
+    return createSSLConfig(SSLFactory.Mode.CLIENT,
+      clientKS, password, keyPassword, trustKS, excludeCiphers);
   }
 
   /**
@@ -300,12 +339,31 @@ public class KeyStoreTestUtil {
    *   password
    * @param trustKS String truststore file
    * @return Configuration for server SSL
+   * @throws java.io.IOException
    */
   public static Configuration createServerSSLConfig(String serverKS,
       String password, String keyPassword, String trustKS) throws IOException {
-    Configuration serverSSLConf = createSSLConfig(SSLFactory.Mode.SERVER,
-      serverKS, password, keyPassword, trustKS);
-    return serverSSLConf;
+    return createSSLConfig(SSLFactory.Mode.SERVER,
+      serverKS, password, keyPassword, trustKS, "");
+  }
+
+  /**
+   * Creates SSL configuration for a server.
+   *
+   * @param serverKS String server keystore file
+   * @param password String store password, or null to avoid setting store
+   * password
+   * @param keyPassword String key password, or null to avoid setting key
+   * password
+   * @param trustKS String truststore file
+   * @param excludeCiphers String comma separated ciphers to exclude
+   * @return
+   * @throws IOException
+   */
+    public static Configuration createServerSSLConfig(String serverKS,
+      String password, String keyPassword, String trustKS, String excludeCiphers) throws IOException {
+    return createSSLConfig(SSLFactory.Mode.SERVER,
+      serverKS, password, keyPassword, trustKS, excludeCiphers);
   }
 
   /**
@@ -357,7 +415,7 @@ public class KeyStoreTestUtil {
    * @return Configuration for SSL
    */
   private static Configuration createSSLConfig(SSLFactory.Mode mode,
-      String keystore, String password, String keyPassword, String trustKS) {
+    String keystore, String password, String keyPassword, String trustKS, String excludeCiphers) {
     String trustPassword = "trustP";
 
     Configuration sslConf = new Configuration(false);
@@ -382,6 +440,11 @@ public class KeyStoreTestUtil {
       sslConf.set(FileBasedKeyStoresFactory.resolvePropertyName(mode,
         FileBasedKeyStoresFactory.SSL_TRUSTSTORE_PASSWORD_TPL_KEY),
         trustPassword);
+    }
+    if(null != excludeCiphers && !excludeCiphers.isEmpty()) {
+      sslConf.set(FileBasedKeyStoresFactory.resolvePropertyName(mode,
+      FileBasedKeyStoresFactory.SSL_EXCLUDE_CIPHER_LIST),
+        excludeCiphers);
     }
     sslConf.set(FileBasedKeyStoresFactory.resolvePropertyName(mode,
       FileBasedKeyStoresFactory.SSL_TRUSTSTORE_RELOAD_INTERVAL_TPL_KEY), "1000");

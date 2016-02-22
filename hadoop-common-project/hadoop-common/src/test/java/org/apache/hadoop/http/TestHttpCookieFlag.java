@@ -102,7 +102,10 @@ public class TestHttpCookieFlag {
                     sslConf.get("ssl.server.keystore.type", "jks"))
             .trustStore(sslConf.get("ssl.server.truststore.location"),
                     sslConf.get("ssl.server.truststore.password"),
-                    sslConf.get("ssl.server.truststore.type", "jks")).build();
+                    sslConf.get("ssl.server.truststore.type", "jks"))
+            .excludeCiphers(
+                    sslConf.get("ssl.server.exclude.cipher.list"))
+            .build();
     server.addServlet("echo", "/echo", TestHttpServer.EchoServlet.class);
     server.start();
   }

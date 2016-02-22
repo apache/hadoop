@@ -67,6 +67,8 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
     "ssl.{0}.truststore.password";
   public static final String SSL_TRUSTSTORE_TYPE_TPL_KEY =
     "ssl.{0}.truststore.type";
+  public static final String SSL_EXCLUDE_CIPHER_LIST =
+      "ssl.{0}.exclude.cipher.list";
 
   /**
    * Default format of the keystore files.
