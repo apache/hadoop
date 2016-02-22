@@ -1269,6 +1269,41 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm1.stop();
   }
 
+  @Test
+  public void testIncorrectRecommission() throws Exception {
+    //Check decommissioned node not get recommissioned with graceful refresh
+    Configuration conf = new Configuration();
+    rm = new MockRM(conf);
+    rm.start();
+    MockNM nm1 = rm.registerNode("host1:1234", 5120);
+    MockNM nm2 = rm.registerNode("host2:5678", 10240);
+    nm1.nodeHeartbeat(true);
+    nm2.nodeHeartbeat(true);
+    File excludeHostFile =
+        new File(TEMP_DIR + File.separator + "excludeHostFile.txt");
+    writeToHostsFile(excludeHostFile, "host3", "host2");
+    conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
+        excludeHostFile.getAbsolutePath());
+    writeToHostsFile(hostFile, "host1", "host2");
+    writeToHostsFile(excludeHostFile, "host1");
+    rm.getNodesListManager().refreshNodesGracefully(conf);
+    rm.drainEvents();
+    nm1.nodeHeartbeat(true);
+    rm.drainEvents();
+    Assert.assertTrue("Node " + nm1.getNodeId().getHost() +
+        " should be Decommissioned", rm.getRMContext()
+        .getInactiveRMNodes().get(nm1.getNodeId()).getState() == NodeState
+        .DECOMMISSIONED);
+    writeToHostsFile(excludeHostFile, "");
+    rm.getNodesListManager().refreshNodesGracefully(conf);
+    rm.drainEvents();
+    Assert.assertTrue("Node " + nm1.getNodeId().getHost() +
+        " should be Decommissioned", rm.getRMContext()
+        .getInactiveRMNodes().get(nm1.getNodeId()).getState() == NodeState
+        .DECOMMISSIONED);
+    rm.stop();
+  }
+
   private void writeToHostsFile(String... hosts) throws IOException {
    writeToHostsFile(hostFile, hosts);
   }

@@ -1433,6 +1433,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4654. Yarn node label CLI should parse "=" correctly when trying to 
     remove all labels on a node. (Naganarasimha G R via rohithsharmaks)
 
+    YARN-4386. refreshNodesGracefully() should send recommission event to active
+    RMNodes only. (Kuhu Shukla via junping_du)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
