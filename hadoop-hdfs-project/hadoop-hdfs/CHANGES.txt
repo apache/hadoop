@@ -2810,6 +2810,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7452. skip StandbyException log for getCorruptFiles()
     (Bramha Reddy Battula via vinayakumarb)
 
+    HDFS-9842. dfs.datanode.balance.bandwidthPerSec should accept friendly
+    size units.  (Lin Yiqun via Arpit Agarwal)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
