@@ -2840,6 +2840,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-4946. Allow preferLocalNode in BlockPlacementPolicyDefault to be
     configurable (James Kinley and Nathan Roberts via kihwal)
 
+    HDFS-8578. On upgrade, Datanode should process all storage/data dirs in
+    parallel.  (vinayakumarb and szetszwo via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
