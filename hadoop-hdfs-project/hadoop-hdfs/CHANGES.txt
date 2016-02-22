@@ -1253,6 +1253,9 @@ Release 2.6.5 - UNRELEASED
      HDFS-9629. Update the footer of Web UI to show year 2016
      (Xiao Chen and Vinayakumar B via vinayakumarb)
 
+     HDFS-9688. Test the effect of nested encryption zones in HDFS downgrade.
+     (zhz)
+
   OPTIMIZATIONS
 
   BUG FIXES

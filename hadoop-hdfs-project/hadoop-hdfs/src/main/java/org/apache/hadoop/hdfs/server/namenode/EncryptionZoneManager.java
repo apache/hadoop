@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
@@ -56,6 +57,9 @@ public class EncryptionZoneManager {
 
   public static Logger LOG = LoggerFactory.getLogger(EncryptionZoneManager
       .class);
+
+  @VisibleForTesting
+  private boolean allowNestedEZ = false;
 
   /**
    * EncryptionZoneInt is the internal representation of an encryption zone. The
@@ -278,6 +282,16 @@ public class EncryptionZoneManager {
     }
   }
 
+  @VisibleForTesting
+  void setAllowNestedEZ() {
+    allowNestedEZ = true;
+  }
+
+  @VisibleForTesting
+  void setDisallowNestedEZ() {
+    allowNestedEZ = false;
+  }
+
   /**
    * Create a new encryption zone.
    * <p/>
@@ -299,7 +313,7 @@ public class EncryptionZoneManager {
       throw new IOException("Attempt to create an encryption zone for a file.");
     }
     EncryptionZoneInt ezi = getEncryptionZoneForPath(srcIIP);
-    if (ezi != null) {
+    if (!allowNestedEZ && ezi != null) {
       throw new IOException("Directory " + src + " is already in an " +
           "encryption zone. (" + getFullPathName(ezi) + ")");
     }
