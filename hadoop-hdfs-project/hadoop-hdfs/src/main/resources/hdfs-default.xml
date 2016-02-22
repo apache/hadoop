@@ -815,7 +815,11 @@
   <description>
         Specifies the maximum amount of bandwidth that each datanode
         can utilize for the balancing purpose in term of
-        the number of bytes per second.
+        the number of bytes per second. You can use the following
+        suffix (case insensitive):
+        k(kilo), m(mega), g(giga), t(tera), p(peta), e(exa)to specify the size
+        (such as 128k, 512m, 1g, etc.).
+        Or provide complete size in bytes (such as 134217728 for 128 MB).
   </description>
 </property>
 
