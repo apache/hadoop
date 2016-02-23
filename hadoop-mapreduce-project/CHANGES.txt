@@ -724,6 +724,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6616. Fail to create jobhistory file if there are some multibyte
     characters in the job name. (Kousuke Saruta via aajisaka)
 
+    MAPREDUCE-6635. Unsafe long to int conversion in UncompressedSplitLineReader
+    and IndexOutOfBoundsException. (Junping Du via vvasudev)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -762,6 +765,9 @@ Release 2.7.3 - UNRELEASED
 
     MAPREDUCE-6191. Improve clearing stale state of Java serialization
                     testcase.  (Sam Liu via Eric Yang)
+
+    MAPREDUCE-6635. Unsafe long to int conversion in UncompressedSplitLineReader
+    and IndexOutOfBoundsException. (Junping Du via vvasudev)
 
 Release 2.7.2 - 2016-01-25
 
@@ -1055,6 +1061,9 @@ Release 2.6.5 - UNRELEASED
 
     MAPREDUCE-6191. Improve clearing stale state of Java serialization
                     testcase.  (Sam Liu via Eric Yang)
+
+    MAPREDUCE-6635. Unsafe long to int conversion in UncompressedSplitLineReader
+    and IndexOutOfBoundsException. (Junping Du via vvasudev)
 
 Release 2.6.4 - 2016-02-11
 
