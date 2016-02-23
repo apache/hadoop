@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.web;
 
+import org.apache.hadoop.ozone.web.exceptions.OzoneExceptionMapper;
 import org.apache.hadoop.ozone.web.handlers.BucketHandler;
 import org.apache.hadoop.ozone.web.handlers.VolumeHandler;
 
@@ -38,6 +39,7 @@ public class ObjectStoreApplication extends Application {
     HashSet<Class<?>> set = new HashSet<>();
     set.add(BucketHandler.class);
     set.add(VolumeHandler.class);
+    set.add(OzoneExceptionMapper.class);
     return set;
   }
 
