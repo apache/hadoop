@@ -34,6 +34,11 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.util.Date;
 import java.util.EnumSet;
+import java.io.File;
+
+import org.apache.hadoop.security.ProviderUtils;
+import org.apache.hadoop.security.alias.CredentialProvider;
+import org.apache.hadoop.security.alias.CredentialProviderFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
@@ -43,7 +48,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.CreateOptions;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
@@ -56,6 +63,9 @@ public class TestWasbUriAndConfiguration {
   protected String accountName;
   protected String accountKey;
   protected static Configuration conf = null;
+
+  @Rule
+  public final TemporaryFolder tempDir = new TemporaryFolder();
 
   private AzureBlobStorageTestAccount testAccount;
 
@@ -307,6 +317,40 @@ public class TestWasbUriAndConfiguration {
   }
 
   @Test
+  public void testCredsFromCredentialProvider() throws Exception {
+    String account = "testacct";
+    String key = "testkey";
+    // set up conf to have a cred provider
+    final Configuration conf = new Configuration();
+    final File file = tempDir.newFile("test.jks");
+    final URI jks = ProviderUtils.nestURIForLocalJavaKeyStoreProvider(
+        file.toURI());
+    conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,
+        jks.toString());
+
+    provisionAccountKey(conf, account, key);
+
+    // also add to configuration as clear text that should be overridden
+    conf.set(SimpleKeyProvider.KEY_ACCOUNT_KEY_PREFIX + account,
+        key + "cleartext");
+
+    String result = AzureNativeFileSystemStore.getAccountKeyFromConfiguration(
+        account, conf);
+    // result should contain the credential provider key not the config key
+    assertEquals("AccountKey incorrect.", key, result);
+  }
+
+  void provisionAccountKey(
+      final Configuration conf, String account, String key) throws Exception {
+    // add our creds to the provider
+    final CredentialProvider provider =
+        CredentialProviderFactory.getProviders(conf).get(0);
+    provider.createCredentialEntry(
+        SimpleKeyProvider.KEY_ACCOUNT_KEY_PREFIX + account, key.toCharArray());
+    provider.flush();
+  }
+
+  @Test
   public void testValidKeyProvider() throws Exception {
     Configuration conf = new Configuration();
     String account = "testacct";
@@ -366,7 +410,6 @@ public class TestWasbUriAndConfiguration {
         String authority = testAccount.getFileSystem().getUri().getAuthority();
         URI defaultUri = new URI(defaultScheme, authority, null, null, null);
         conf.set(FS_DEFAULT_NAME_KEY, defaultUri.toString());
-        
         // Add references to file system implementations for wasb and wasbs.
         conf.addResource("azure-test.xml");
         URI wantedUri = new URI(wantedScheme + ":///random/path");

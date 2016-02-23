@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.fs.azure;
 
+import java.io.IOException;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
@@ -27,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
  */
 @InterfaceAudience.Private
 public class SimpleKeyProvider implements KeyProvider {
+  private static final Log LOG = LogFactory.getLog(SimpleKeyProvider.class);
 
   protected static final String KEY_ACCOUNT_KEY_PREFIX =
       "fs.azure.account.key.";
@@ -34,7 +39,16 @@ public class SimpleKeyProvider implements KeyProvider {
   @Override
   public String getStorageAccountKey(String accountName, Configuration conf)
       throws KeyProviderException {
-    return conf.get(getStorageAccountKeyName(accountName));
+    String key = null;
+    try {
+      char[] keyChars = conf.getPassword(getStorageAccountKeyName(accountName));
+      if (keyChars != null) {
+        key = new String(keyChars);
+      }
+    } catch(IOException ioe) {
+      LOG.warn("Unable to get key from credential providers.", ioe);
+    }
+    return key;
   }
 
   protected String getStorageAccountKeyName(String accountName) {
