@@ -413,6 +413,15 @@ public class DatanodeManager {
     return host2DatanodeMap.getDatanodeByXferAddr(host, xferPort);
   }
 
+  /** @return the datanode descriptors for all nodes. */
+  public Set<DatanodeDescriptor> getDatanodes() {
+    final Set<DatanodeDescriptor> datanodes;
+    synchronized (this) {
+      datanodes = new HashSet<>(datanodeMap.values());
+    }
+    return datanodes;
+  }
+
   /** @return the Host2NodesMap */
   public Host2NodesMap getHost2DatanodeMap() {
     return this.host2DatanodeMap;

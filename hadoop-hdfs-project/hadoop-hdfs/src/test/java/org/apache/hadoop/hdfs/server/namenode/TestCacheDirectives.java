@@ -72,7 +72,6 @@ import org.apache.hadoop.hdfs.protocol.CachePoolStats;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.server.blockmanagement.CacheReplicationMonitor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList.Type;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
@@ -86,9 +85,6 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.GSet;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -1470,6 +1466,7 @@ public class TestCacheDirectives {
    */
   private void checkPendingCachedEmpty(MiniDFSCluster cluster)
       throws Exception {
+    Thread.sleep(1000);
     cluster.getNamesystem().readLock();
     try {
       final DatanodeManager datanodeManager =
@@ -1501,7 +1498,6 @@ public class TestCacheDirectives {
     waitForCachedBlocks(namenode, -1, numCachedReplicas,
         "testExceeds:1");
     checkPendingCachedEmpty(cluster);
-    Thread.sleep(1000);
     checkPendingCachedEmpty(cluster);
 
     // Try creating a file with giant-sized blocks that exceed cache capacity
@@ -1509,7 +1505,6 @@ public class TestCacheDirectives {
     DFSTestUtil.createFile(dfs, fileName, 4096, fileLen, CACHE_CAPACITY * 2,
         (short) 1, 0xFADED);
     checkPendingCachedEmpty(cluster);
-    Thread.sleep(1000);
     checkPendingCachedEmpty(cluster);
   }
 

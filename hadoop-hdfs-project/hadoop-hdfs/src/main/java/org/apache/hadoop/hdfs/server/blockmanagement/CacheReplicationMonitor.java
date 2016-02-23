@@ -27,6 +27,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.Random;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
@@ -491,6 +492,26 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
    * Blocks that are over-replicated should be removed from Datanodes.
    */
   private void rescanCachedBlockMap() {
+    // Remove pendingCached blocks that will make DN out-of-capacity.
+    Set<DatanodeDescriptor> datanodes =
+        blockManager.getDatanodeManager().getDatanodes();
+    for (DatanodeDescriptor dn : datanodes) {
+      long remaining = dn.getCacheRemaining();
+      for (Iterator<CachedBlock> it = dn.getPendingCached().iterator();
+           it.hasNext();) {
+        CachedBlock cblock = it.next();
+        BlockInfo blockInfo = blockManager.
+            getStoredBlock(new Block(cblock.getBlockId()));
+        if (blockInfo.getNumBytes() > remaining) {
+          LOG.debug("Block {}: removing from PENDING_CACHED for node {} "
+                  + "because it cannot fit in remaining cache size {}.",
+              cblock.getBlockId(), dn.getDatanodeUuid(), remaining);
+          it.remove();
+        } else {
+          remaining -= blockInfo.getNumBytes();
+        }
+      }
+    }
     for (Iterator<CachedBlock> cbIter = cachedBlocks.iterator();
         cbIter.hasNext(); ) {
       scannedBlocks++;
@@ -531,7 +552,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
           DatanodeDescriptor datanode = iter.next();
           datanode.getPendingCached().remove(cblock);
           iter.remove();
-          LOG.trace("Block {}: removing from PENDING_CACHED for node {}"
+          LOG.trace("Block {}: removing from PENDING_CACHED for node {} "
                   + "because we already have {} cached replicas and we only" +
                   " need {}",
               cblock.getBlockId(), datanode.getDatanodeUuid(), numCached,
@@ -686,8 +707,8 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
       long pendingCapacity = pendingBytes + datanode.getCacheRemaining();
       if (pendingCapacity < blockInfo.getNumBytes()) {
         LOG.trace("Block {}: DataNode {} is not a valid possibility " +
-            "because the block has size {}, but the DataNode only has {}" +
-            "bytes of cache remaining ({} pending bytes, {} already cached.",
+            "because the block has size {}, but the DataNode only has {} " +
+            "bytes of cache remaining ({} pending bytes, {} already cached.)",
             blockInfo.getBlockId(), datanode.getDatanodeUuid(),
             blockInfo.getNumBytes(), pendingCapacity, pendingBytes,
             datanode.getCacheRemaining());

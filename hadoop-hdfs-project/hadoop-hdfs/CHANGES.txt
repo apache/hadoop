@@ -2816,6 +2816,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9842. dfs.datanode.balance.bandwidthPerSec should accept friendly
     size units.  (Lin Yiqun via Arpit Agarwal)
 
+    HDFS-9549. TestCacheDirectives#testExceedsCapacity is flaky (Xiao Chen via
+    cmccabe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
