@@ -77,4 +77,6 @@ public interface Context {
   boolean getDecommissioned();
 
   void setDecommissioned(boolean isDecommissioned);
+
+  NodeStatusUpdater getNodeStatusUpdater();
 }
