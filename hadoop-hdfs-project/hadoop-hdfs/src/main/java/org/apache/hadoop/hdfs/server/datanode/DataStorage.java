@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileLock;
 import java.util.ArrayList;
@@ -54,7 +55,6 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -441,7 +441,8 @@ public class DataStorage extends Storage {
         } catch (ExecutionException e) {
           LOG.warn("Failed to upgrade storage directory " + t.dataDir, e);
         } catch (InterruptedException e) {
-          throw DFSUtilClient.toInterruptedIOException("Task interrupted", e);
+          throw (InterruptedIOException) new InterruptedIOException(
+              "Task interrupted").initCause(e);
         }
       }
     }
@@ -490,7 +491,8 @@ public class DataStorage extends Storage {
           LOG.warn("Failed to upgrade storage directory " + t.dataDir
               + " for block pool " + bpid, e);
         } catch (InterruptedException e) {
-          throw DFSUtilClient.toInterruptedIOException("Task interrupted", e);
+          throw (InterruptedIOException) new InterruptedIOException(
+              "Task interrupted").initCause(e);
         }
       }
     }
