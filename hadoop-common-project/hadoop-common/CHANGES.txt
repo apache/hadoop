@@ -719,6 +719,9 @@ Release 2.9.0 - UNRELEASED
    HADOOP-12714. Fix hadoop-mapreduce-client-nativetask unit test which fails
    because it is not able to open the "glibc bug spill" file. (cmccabe)
 
+   HADOOP-12829. StatisticsDataReferenceCleaner swallows interrupt exceptions
+   (Gregory Chanan via cmccabe)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
