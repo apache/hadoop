@@ -188,6 +188,7 @@ public abstract class BaseContainerManagerTest {
     nodeStatusUpdater.init(conf);
     containerManager.init(conf);
     nodeStatusUpdater.start();
+    ((NMContext)context).setNodeStatusUpdater(nodeStatusUpdater);
   }
 
   protected ContainerManagerImpl
