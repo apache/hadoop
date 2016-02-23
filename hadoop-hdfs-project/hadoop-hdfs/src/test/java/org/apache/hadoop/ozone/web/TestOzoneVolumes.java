@@ -28,6 +28,7 @@ import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.junit.AfterClass;
@@ -42,6 +43,7 @@ import java.util.Date;
 import java.util.Locale;
 
 import static java.net.HttpURLConnection.HTTP_CREATED;
+import static java.net.HttpURLConnection.HTTP_OK;
 import static org.junit.Assert.assertEquals;
 
 public class TestOzoneVolumes {
@@ -241,7 +243,7 @@ public class TestOzoneVolumes {
           format.format(new Date(Time.monotonicNow())));
       httppost.addHeader(HttpHeaders.AUTHORIZATION,
           Header.OZONE_SIMPLE_AUTHENTICATION_SCHEME + " " +
-              "bilbo"); // This is not a root user in Simple
+              "bilbo"); // This is not a root user in Simple Auth
       httppost.addHeader(Header.OZONE_USER, OzoneConsts.OZONE_SIMPLE_HDFS_USER);
 
       HttpResponse response = client.execute(httppost);
@@ -253,7 +255,7 @@ public class TestOzoneVolumes {
   }
 
   /**
-   * Create a bunch of volumes in a loop
+   * Create a bunch of volumes in a loop.
    *
    * @throws IOException
    */
@@ -285,4 +287,117 @@ public class TestOzoneVolumes {
       client.getConnectionManager().shutdown();
     }
   }
+  /**
+   * Get volumes owned by the user.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testGetVolumesByUser() throws IOException {
+    SimpleDateFormat format =
+        new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss ZZZ", Locale.US);
+
+    HttpClient client = new DefaultHttpClient();
+    try {
+      HttpGet httpget =
+          new HttpGet(String.format("http://localhost:%d/", port));
+
+      httpget.addHeader(Header.OZONE_VERSION_HEADER,
+          Header.OZONE_V1_VERSION_HEADER);
+
+      httpget.addHeader(HttpHeaders.DATE,
+          format.format(new Date(Time.monotonicNow())));
+
+      httpget.addHeader(HttpHeaders.AUTHORIZATION,
+          Header.OZONE_SIMPLE_AUTHENTICATION_SCHEME + " " +
+              OzoneConsts.OZONE_SIMPLE_HDFS_USER);
+
+      httpget.addHeader(Header.OZONE_USER,
+          OzoneConsts.OZONE_SIMPLE_HDFS_USER );
+
+      HttpResponse response = client.execute(httpget);
+      assertEquals(response.toString(), HTTP_OK,
+          response.getStatusLine().getStatusCode());
+
+    } finally {
+      client.getConnectionManager().shutdown();
+    }
+  }
+
+  /**
+   * Admins can read volumes belonging to other users.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testGetVolumesOfAnotherUser() throws IOException {
+    SimpleDateFormat format =
+        new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss ZZZ", Locale.US);
+
+    HttpClient client = new DefaultHttpClient();
+    try {
+      HttpGet httpget =
+          new HttpGet(String.format("http://localhost:%d/", port));
+
+      httpget.addHeader(Header.OZONE_VERSION_HEADER,
+          Header.OZONE_V1_VERSION_HEADER);
+      httpget.addHeader(HttpHeaders.DATE,
+          format.format(new Date(Time.monotonicNow())));
+
+      httpget.addHeader(HttpHeaders.AUTHORIZATION,
+          Header.OZONE_SIMPLE_AUTHENTICATION_SCHEME + " " +
+              OzoneConsts.OZONE_SIMPLE_ROOT_USER);
+
+      // User Root is getting volumes belonging to user HDFS
+      httpget.addHeader(Header.OZONE_USER, OzoneConsts.OZONE_SIMPLE_HDFS_USER);
+
+      HttpResponse response = client.execute(httpget);
+      assertEquals(response.toString(), HTTP_OK,
+          response.getStatusLine().getStatusCode());
+
+    } finally {
+      client.getConnectionManager().shutdown();
+    }
+  }
+
+  /**
+   * if you try to read volumes belonging to another user,
+   * then server always ignores it.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testGetVolumesOfAnotherUserShouldFail() throws IOException {
+    SimpleDateFormat format =
+        new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss ZZZ", Locale.US);
+
+    HttpClient client = new DefaultHttpClient();
+    String userName = OzoneUtils.getRequestID().toLowerCase();
+    try {
+      HttpGet httpget =
+          new HttpGet(String.format("http://localhost:%d/", port));
+
+      httpget.addHeader(Header.OZONE_VERSION_HEADER,
+          Header.OZONE_V1_VERSION_HEADER);
+      httpget.addHeader(HttpHeaders.DATE,
+          format.format(new Date(Time.monotonicNow())));
+
+      httpget.addHeader(HttpHeaders.AUTHORIZATION,
+          Header.OZONE_SIMPLE_AUTHENTICATION_SCHEME + " " +
+              userName);
+
+      // userName is NOT a root user, hence he should NOT be able to read the
+      // volumes of user HDFS
+      httpget.addHeader(Header.OZONE_USER, OzoneConsts.OZONE_SIMPLE_HDFS_USER);
+
+      HttpResponse response = client.execute(httpget);
+      // We will get an Error called userNotFound when using Simple Auth Scheme
+      assertEquals(response.toString(), ErrorTable.USER_NOT_FOUND.getHttpCode(),
+          response.getStatusLine().getStatusCode());
+
+    } finally {
+      client.getConnectionManager().shutdown();
+    }
+  }
+
 }

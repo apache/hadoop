@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.web;
 
 import org.apache.hadoop.ozone.web.exceptions.OzoneExceptionMapper;
 import org.apache.hadoop.ozone.web.handlers.BucketHandler;
+import org.apache.hadoop.ozone.web.handlers.ServiceFilter;
 import org.apache.hadoop.ozone.web.handlers.VolumeHandler;
 
 import javax.ws.rs.core.Application;
@@ -46,6 +47,7 @@ public class ObjectStoreApplication extends Application {
   @Override
   public Set<Object> getSingletons() {
     HashSet<Object> set = new HashSet<>();
+    set.add(ServiceFilter.class);
     return set;
   }
 }

@@ -33,3 +33,6 @@
 
     HDFS-9834. OzoneHandler : Enable MiniDFSCluster based testing for Ozone.
     (Anu Engineer via cnauroth)
+
+    HDFS-9845. OzoneHandler : Support List and Info Volumes.
+    (Anu Engineer via cnauroth)
