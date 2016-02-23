@@ -76,6 +76,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -654,8 +655,11 @@ public class TestFsck {
         setNumFiles(4).build();
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(10)
-        .build();
+    ErasureCodingPolicy ecPolicy =
+        ErasureCodingPolicyManager.getSystemDefaultPolicy();
+    int numAllUnits = ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(
+        numAllUnits + 1).build();
     FileSystem fs = null;
     try {
       String topDir = "/myDir";
@@ -666,7 +670,8 @@ public class TestFsck {
       fs = cluster.getFileSystem();
       util.createFiles(fs, topDir);
       // set topDir to EC when it has replicated files
-      cluster.getFileSystem().getClient().setErasureCodingPolicy(topDir, null);
+      cluster.getFileSystem().getClient().setErasureCodingPolicy(
+          topDir, ecPolicy);
 
       // create a new file under topDir
       DFSTestUtil.createFile(fs, new Path(topDir, "ecFile"), 1024, (short) 1, 0L);
@@ -687,16 +692,16 @@ public class TestFsck {
           "-blocks", "-openforwrite");
       assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       assertTrue(outStr.contains("OPENFORWRITE"));
-      assertTrue(outStr.contains("Live_repl=9"));
-      assertTrue(outStr.contains("Expected_repl=9"));
+      assertTrue(outStr.contains("Live_repl=" + numAllUnits));
+      assertTrue(outStr.contains("Expected_repl=" + numAllUnits));
 
       // Use -openforwrite option to list open files
       outStr = runFsck(conf, 0, true, openFile.toString(), "-files", "-blocks",
           "-locations", "-openforwrite", "-replicaDetails");
       assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       assertTrue(outStr.contains("OPENFORWRITE"));
-      assertTrue(outStr.contains("Live_repl=9"));
-      assertTrue(outStr.contains("Expected_repl=9"));
+      assertTrue(outStr.contains("Live_repl=" + numAllUnits));
+      assertTrue(outStr.contains("Expected_repl=" + numAllUnits));
       assertTrue(outStr.contains("Under Construction Block:"));
 
       // Close the file
@@ -708,8 +713,8 @@ public class TestFsck {
       assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       assertFalse(outStr.contains("OPENFORWRITE"));
       assertFalse(outStr.contains("Under Construction Block:"));
-      assertFalse(outStr.contains("Expected_repl=9"));
-      assertTrue(outStr.contains("Live_repl=9"));
+      assertFalse(outStr.contains("Expected_repl=" + numAllUnits));
+      assertTrue(outStr.contains("Live_repl=" + numAllUnits));
       util.cleanup(fs, topDir);
     } finally {
       if (fs != null) {

@@ -111,37 +111,36 @@ public class TestUnderReplicatedBlockQueues {
     int groupSize = dataBlkNum + parityBlkNum;
     long numBytes = ecPolicy.getCellSize() * dataBlkNum;
     UnderReplicatedBlocks queues = new UnderReplicatedBlocks();
+    int numUR = 0;
+    int numCorrupt = 0;
 
-    // add a striped block which been left NUM_DATA_BLOCKS internal blocks
-    BlockInfo block1 = genStripedBlockInfo(-100, numBytes);
-    assertAdded(queues, block1, dataBlkNum, 0, groupSize);
-    assertEquals(1, queues.getUnderReplicatedBlockCount());
-    assertEquals(1, queues.size());
-    assertInLevel(queues, block1, UnderReplicatedBlocks.QUEUE_HIGHEST_PRIORITY);
-
-    // add a striped block which been left NUM_DATA_BLOCKS+1 internal blocks
-    BlockInfo block2 = genStripedBlockInfo(-200, numBytes);
-    assertAdded(queues, block2, dataBlkNum + 1, 0, groupSize);
-    assertEquals(2, queues.getUnderReplicatedBlockCount());
-    assertEquals(2, queues.size());
-    assertInLevel(queues, block2,
-        UnderReplicatedBlocks.QUEUE_VERY_UNDER_REPLICATED);
-
-    // add a striped block which been left NUM_DATA_BLOCKS+2 internal blocks
-    BlockInfo block3 = genStripedBlockInfo(-300, numBytes);
-    assertAdded(queues, block3, dataBlkNum + 2, 0, groupSize);
-    assertEquals(3, queues.getUnderReplicatedBlockCount());
-    assertEquals(3, queues.size());
-    assertInLevel(queues, block3,
-        UnderReplicatedBlocks.QUEUE_UNDER_REPLICATED);
+    // add under replicated blocks
+    for (int i = 0; dataBlkNum + i < groupSize; i++) {
+      BlockInfo block = genStripedBlockInfo(-100 - 100 * i, numBytes);
+      assertAdded(queues, block, dataBlkNum + i, 0, groupSize);
+      numUR++;
+      assertEquals(numUR, queues.getUnderReplicatedBlockCount());
+      assertEquals(numUR + numCorrupt, queues.size());
+      if (i == 0) {
+        assertInLevel(queues, block,
+            UnderReplicatedBlocks.QUEUE_HIGHEST_PRIORITY);
+      } else if (i * 3 < parityBlkNum + 1) {
+        assertInLevel(queues, block,
+            UnderReplicatedBlocks.QUEUE_VERY_UNDER_REPLICATED);
+      } else {
+        assertInLevel(queues, block,
+            UnderReplicatedBlocks.QUEUE_UNDER_REPLICATED);
+      }
+    }
 
     // add a corrupted block
-    BlockInfo block_corrupt = genStripedBlockInfo(-400, numBytes);
-    assertEquals(0, queues.getCorruptBlockSize());
+    BlockInfo block_corrupt = genStripedBlockInfo(-10, numBytes);
+    assertEquals(numCorrupt, queues.getCorruptBlockSize());
     assertAdded(queues, block_corrupt, dataBlkNum - 1, 0, groupSize);
-    assertEquals(4, queues.size());
-    assertEquals(3, queues.getUnderReplicatedBlockCount());
-    assertEquals(1, queues.getCorruptBlockSize());
+    numCorrupt++;
+    assertEquals(numUR + numCorrupt, queues.size());
+    assertEquals(numUR, queues.getUnderReplicatedBlockCount());
+    assertEquals(numCorrupt, queues.getCorruptBlockSize());
     assertInLevel(queues, block_corrupt,
         UnderReplicatedBlocks.QUEUE_WITH_CORRUPT_BLOCKS);
   }

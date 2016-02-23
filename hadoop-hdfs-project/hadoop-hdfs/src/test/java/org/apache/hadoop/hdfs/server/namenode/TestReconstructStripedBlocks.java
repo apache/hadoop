@@ -77,13 +77,10 @@ public class TestReconstructStripedBlocks {
   }
 
   @Test
-  public void testMissingStripedBlockWithBusyNode1() throws Exception {
-    doTestMissingStripedBlock(2, 1);
-  }
-
-  @Test
-  public void testMissingStripedBlockWithBusyNode2() throws Exception {
-    doTestMissingStripedBlock(3, 1);
+  public void testMissingStripedBlockWithBusyNode() throws Exception {
+    for (int i = 1; i <= NUM_PARITY_BLOCKS; i++) {
+      doTestMissingStripedBlock(i, 1);
+    }
   }
 
   /**

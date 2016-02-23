@@ -153,7 +153,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>ErasureCodingPolicy=[Name=RS-6-3-64k</expected-output>
+          <expected-output>ErasureCodingPolicy=[Name=</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -292,7 +292,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Policy 'invalidpolicy' does not match any of the supported policies. Please select any one of [RS-6-3-64k]</expected-output>
+          <expected-output>Policy 'invalidpolicy' does not match any of the supported policies. Please select any one of [</expected-output>
         </comparator>
       </comparators>
     </test>

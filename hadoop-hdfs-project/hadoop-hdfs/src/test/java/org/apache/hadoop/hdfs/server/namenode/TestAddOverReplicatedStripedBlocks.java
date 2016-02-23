@@ -104,11 +104,11 @@ public class TestAddOverReplicatedStripedBlocks {
     cluster.triggerBlockReports();
 
     // let a internal block be over replicated with 2 redundant blocks.
-    blk.setBlockId(groupId + 2);
+    blk.setBlockId(groupId);
     cluster.injectBlocks(numDNs - 3, Arrays.asList(blk), bpid);
     cluster.injectBlocks(numDNs - 2, Arrays.asList(blk), bpid);
     // let a internal block be over replicated with 1 redundant block.
-    blk.setBlockId(groupId + 6);
+    blk.setBlockId(groupId + DATA_BLK_NUM);
     cluster.injectBlocks(numDNs - 1, Arrays.asList(blk), bpid);
 
     // update blocksMap
@@ -143,10 +143,9 @@ public class TestAddOverReplicatedStripedBlocks {
     cluster.triggerBlockReports();
     List<DatanodeInfo> infos = Arrays.asList(bg.getLocations());
 
-    // let a internal block be over replicated with 2 redundant blocks.
-    // Therefor number of internal blocks is over GROUP_SIZE. (5 data blocks +
-    // 3 parity blocks  + 2 redundant blocks > GROUP_SIZE)
-    blk.setBlockId(groupId + 2);
+    // let a internal block be over replicated with (numDNs - GROUP_SIZE + 1)
+    // redundant blocks. Therefor number of internal blocks is over GROUP_SIZE.
+    blk.setBlockId(groupId);
     List<DataNode> dataNodeList = cluster.getDataNodes();
     for (int i = 0; i < numDNs; i++) {
       if (!infos.contains(dataNodeList.get(i).getDatanodeId())) {

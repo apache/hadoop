@@ -947,6 +947,9 @@ Trunk (Unreleased)
       HDFS-9830. Remove references to hftp in ViewFs documentation in trunk.
       (Wei-Chiu Chuang via aajisaka)
 
+      HDFS-9816. Erasure Coding: allow to use multiple EC policies in striping
+      related tests [Part 3]. (Rui Li via zhz)
+
 Release 2.9.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

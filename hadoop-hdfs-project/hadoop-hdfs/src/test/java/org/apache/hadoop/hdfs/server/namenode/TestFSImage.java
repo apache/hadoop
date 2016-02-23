@@ -143,7 +143,7 @@ public class TestFSImage {
   private void testSaveAndLoadStripedINodeFile(FSNamesystem fsn, Configuration conf,
                                                boolean isUC) throws IOException{
     // contruct a INode with StripedBlock for saving and loading
-    fsn.setErasureCodingPolicy("/", null, false);
+    fsn.setErasureCodingPolicy("/", testECPolicy, false);
     long id = 123456789;
     byte[] name = "testSaveAndLoadInodeFile_testfile".getBytes();
     PermissionStatus permissionStatus = new PermissionStatus("testuser_a",
@@ -439,8 +439,8 @@ public class TestFSImage {
    */
   @Test
   public void testSupportBlockGroup() throws IOException {
-    final short GROUP_SIZE = (short) (StripedFileTestUtil.NUM_DATA_BLOCKS
-        + StripedFileTestUtil.NUM_PARITY_BLOCKS);
+    final short GROUP_SIZE = (short) (testECPolicy.getNumDataUnits() +
+        testECPolicy.getNumParityUnits());
     final int BLOCK_SIZE = 8 * 1024 * 1024;
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
@@ -450,7 +450,7 @@ public class TestFSImage {
           .build();
       cluster.waitActive();
       DistributedFileSystem fs = cluster.getFileSystem();
-      fs.getClient().getNamenode().setErasureCodingPolicy("/", null);
+      fs.getClient().getNamenode().setErasureCodingPolicy("/", testECPolicy);
       Path file = new Path("/striped");
       FSDataOutputStream out = fs.create(file);
       byte[] bytes = DFSTestUtil.generateSequentialBytes(0, BLOCK_SIZE);
@@ -472,10 +472,14 @@ public class TestFSImage {
       BlockInfo[] blks = inode.getBlocks();
       assertEquals(1, blks.length);
       assertTrue(blks[0].isStriped());
-      assertEquals(StripedFileTestUtil.NUM_DATA_BLOCKS, ((BlockInfoStriped)blks[0]).getDataBlockNum());
-      assertEquals(StripedFileTestUtil.NUM_PARITY_BLOCKS, ((BlockInfoStriped)blks[0]).getParityBlockNum());
+      assertEquals(testECPolicy.getNumDataUnits(),
+          ((BlockInfoStriped) blks[0]).getDataBlockNum());
+      assertEquals(testECPolicy.getNumParityUnits(),
+          ((BlockInfoStriped) blks[0]).getParityBlockNum());
     } finally {
-      cluster.shutdown();
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 

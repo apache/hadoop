@@ -27,7 +27,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -45,12 +47,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeoutException;
 
 public class TestLeaseRecoveryStriped {
   public static final Log LOG = LogFactory
       .getLog(TestLeaseRecoveryStriped.class);
 
+  private static final ErasureCodingPolicy ecPolicy =
+      StripedFileTestUtil.TEST_EC_POLICY;
   private static final int NUM_DATA_BLOCKS = StripedFileTestUtil.NUM_DATA_BLOCKS;
   private static final int NUM_PARITY_BLOCKS = StripedFileTestUtil.NUM_PARITY_BLOCKS;
   private static final int CELL_SIZE = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
@@ -90,7 +96,7 @@ public class TestLeaseRecoveryStriped {
     cluster.waitActive();
     dfs = cluster.getFileSystem();
     dfs.mkdirs(dir);
-    dfs.setErasureCodingPolicy(dir, null);
+    dfs.setErasureCodingPolicy(dir, ecPolicy);
   }
 
   @After
@@ -100,26 +106,38 @@ public class TestLeaseRecoveryStriped {
     }
   }
 
-  public static final int[][][] BLOCK_LENGTHS_SUITE = {
-      { { 11 * CELL_SIZE, 10 * CELL_SIZE, 9 * CELL_SIZE, 8 * CELL_SIZE,
-          7 * CELL_SIZE, 6 * CELL_SIZE, 5 * CELL_SIZE, 4 * CELL_SIZE,
-          3 * CELL_SIZE }, { 36 * CELL_SIZE } },
+  private static int[][][] getBlockLengthsSuite() {
+    final int groups = 4;
+    final int minNumCell = 3;
+    final int maxNumCell = 11;
+    final int minNumDelta = -4;
+    final int maxNumDelta = 2;
+    int delta = 0;
+    int[][][] blkLenSuite = new int[groups][][];
+    Random random = ThreadLocalRandom.current();
+    for (int i = 0; i < blkLenSuite.length; i++) {
+      if (i == blkLenSuite.length - 1) {
+        delta = bytesPerChecksum;
+      }
+      int[][] suite = new int[2][];
+      int[] lens = new int[NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS];
+      long[] lenInLong = new long[lens.length];
+      for (int j = 0; j < lens.length; j++) {
+        int numCell = random.nextInt(maxNumCell - minNumCell + 1) + minNumCell;
+        int numDelta = j < NUM_DATA_BLOCKS ?
+            random.nextInt(maxNumDelta - minNumDelta + 1) + minNumDelta : 0;
+        lens[j] = CELL_SIZE * numCell + delta * numDelta;
+        lenInLong[j] = lens[j];
+      }
+      suite[0] = lens;
+      suite[1] = new int[]{
+          (int) StripedBlockUtil.getSafeLength(ecPolicy, lenInLong)};
+      blkLenSuite[i] = suite;
+    }
+    return blkLenSuite;
+  }
 
-      { { 3 * CELL_SIZE, 4 * CELL_SIZE, 5 * CELL_SIZE, 6 * CELL_SIZE,
-          7 * CELL_SIZE, 8 * CELL_SIZE, 9 * CELL_SIZE, 10 * CELL_SIZE,
-          11 * CELL_SIZE }, { 36 * CELL_SIZE } },
-
-      { { 11 * CELL_SIZE, 7 * CELL_SIZE, 6 * CELL_SIZE, 5 * CELL_SIZE,
-          4 * CELL_SIZE, 2 * CELL_SIZE, 9 * CELL_SIZE, 10 * CELL_SIZE,
-          11 * CELL_SIZE }, { 36 * CELL_SIZE } },
-
-      { { 8 * CELL_SIZE + bytesPerChecksum,
-          7 * CELL_SIZE + bytesPerChecksum * 2,
-          6 * CELL_SIZE + bytesPerChecksum * 2,
-          5 * CELL_SIZE - bytesPerChecksum * 3,
-          4 * CELL_SIZE - bytesPerChecksum * 4,
-          3 * CELL_SIZE - bytesPerChecksum * 4, 9 * CELL_SIZE, 10 * CELL_SIZE,
-          11 * CELL_SIZE }, { 36 * CELL_SIZE } }, };
+  private static final int[][][] BLOCK_LENGTHS_SUITE = getBlockLengthsSuite();
 
   @Test
   public void testLeaseRecovery() throws Exception {

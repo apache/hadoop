@@ -75,7 +75,7 @@ public class TestFSEditLogLoader {
   private static final int NUM_DATA_NODES = 0;
 
   private static final ErasureCodingPolicy testECPolicy
-      = ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      = StripedFileTestUtil.TEST_EC_POLICY;
   
   @Test
   public void testDisplayRecentEditLogOpCodes() throws IOException {
@@ -454,7 +454,8 @@ public class TestFSEditLogLoader {
 
       //set the storage policy of the directory
       fs.mkdir(new Path(testDir), new FsPermission("755"));
-      fs.getClient().getNamenode().setErasureCodingPolicy(testDir, null);
+      fs.getClient().getNamenode().setErasureCodingPolicy(
+          testDir, testECPolicy);
 
       // Create a file with striped block
       Path p = new Path(testFilePath);
@@ -526,7 +527,8 @@ public class TestFSEditLogLoader {
 
       //set the storage policy of the directory
       fs.mkdir(new Path(testDir), new FsPermission("755"));
-      fs.getClient().getNamenode().setErasureCodingPolicy(testDir, null);
+      fs.getClient().getNamenode().setErasureCodingPolicy(
+          testDir, testECPolicy);
 
       //create a file with striped blocks
       Path p = new Path(testFilePath);

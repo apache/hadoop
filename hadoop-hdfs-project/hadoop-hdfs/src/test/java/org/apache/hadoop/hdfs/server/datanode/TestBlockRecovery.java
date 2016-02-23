@@ -61,6 +61,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -98,8 +99,6 @@ import org.mockito.stubbing.Answer;
 
 import com.google.common.base.Supplier;
 
-import static org.apache.hadoop.hdfs.TestLeaseRecoveryStriped.BLOCK_LENGTHS_SUITE;
-
 /**
  * This tests if sync all replicas in block recovery works correctly
  */
@@ -124,6 +123,30 @@ public class TestBlockRecovery {
   private final static long REPLICA_LEN2 = 5000L;
   private final static ExtendedBlock block = new ExtendedBlock(POOL_ID,
       BLOCK_ID, BLOCK_LEN, GEN_STAMP);
+
+  private static final int CELL_SIZE =
+      StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
+  private static final int bytesPerChecksum = 512;
+  private static final int[][][] BLOCK_LENGTHS_SUITE = {
+      { { 11 * CELL_SIZE, 10 * CELL_SIZE, 9 * CELL_SIZE, 8 * CELL_SIZE,
+          7 * CELL_SIZE, 6 * CELL_SIZE, 5 * CELL_SIZE, 4 * CELL_SIZE,
+          3 * CELL_SIZE }, { 36 * CELL_SIZE } },
+
+      { { 3 * CELL_SIZE, 4 * CELL_SIZE, 5 * CELL_SIZE, 6 * CELL_SIZE,
+          7 * CELL_SIZE, 8 * CELL_SIZE, 9 * CELL_SIZE, 10 * CELL_SIZE,
+          11 * CELL_SIZE }, { 36 * CELL_SIZE } },
+
+      { { 11 * CELL_SIZE, 7 * CELL_SIZE, 6 * CELL_SIZE, 5 * CELL_SIZE,
+          4 * CELL_SIZE, 2 * CELL_SIZE, 9 * CELL_SIZE, 10 * CELL_SIZE,
+          11 * CELL_SIZE }, { 36 * CELL_SIZE } },
+
+      { { 8 * CELL_SIZE + bytesPerChecksum,
+          7 * CELL_SIZE + bytesPerChecksum * 2,
+          6 * CELL_SIZE + bytesPerChecksum * 2,
+          5 * CELL_SIZE - bytesPerChecksum * 3,
+          4 * CELL_SIZE - bytesPerChecksum * 4,
+          3 * CELL_SIZE - bytesPerChecksum * 4, 9 * CELL_SIZE, 10 * CELL_SIZE,
+          11 * CELL_SIZE }, { 36 * CELL_SIZE } }, };
   
   static {
     GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.ALL);

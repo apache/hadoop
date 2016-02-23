@@ -171,6 +171,30 @@ public class StripedBlockUtil {
         + lastCellSize(lastStripeDataLen, cellSize, numDataBlocks, i);
   }
 
+  /**
+   * Compute the safe length given the internal block lengths.
+   *
+   * @param ecPolicy The EC policy used for the block group
+   * @param blockLens The lengths of internal blocks
+   * @return The safe length
+   */
+  public static long getSafeLength(ErasureCodingPolicy ecPolicy,
+      long[] blockLens) {
+    final int cellSize = ecPolicy.getCellSize();
+    final int dataBlkNum = ecPolicy.getNumDataUnits();
+    Preconditions.checkArgument(blockLens.length >= dataBlkNum);
+    final int stripeSize = dataBlkNum * cellSize;
+    long[] cpy = Arrays.copyOf(blockLens, blockLens.length);
+    Arrays.sort(cpy);
+    // full stripe is a stripe has at least dataBlkNum full cells.
+    // lastFullStripeIdx is the index of the last full stripe.
+    int lastFullStripeIdx =
+        (int) (cpy[cpy.length - dataBlkNum] / cellSize);
+    return lastFullStripeIdx * stripeSize; // return the safeLength
+    // TODO: Include lastFullStripeIdx+1 stripe in safeLength, if there exists
+    // such a stripe (and it must be partial).
+  }
+
   private static int lastCellSize(int size, int cellSize, int numDataBlocks,
       int i) {
     if (i < numDataBlocks) {

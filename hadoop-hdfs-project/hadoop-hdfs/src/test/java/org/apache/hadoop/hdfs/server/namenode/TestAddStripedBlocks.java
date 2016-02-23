@@ -454,7 +454,7 @@ public class TestAddStripedBlocks {
     reports = DFSTestUtil.makeReportForReceivedBlock(reported,
         ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, storage);
     ns.processIncrementalBlockReport(
-        cluster.getDataNodes().get(5).getDatanodeId(), reports[0]);
+        cluster.getDataNodes().get(0).getDatanodeId(), reports[0]);
     BlockManagerTestUtil.updateState(ns.getBlockManager());
     Assert.assertEquals(1, ns.getCorruptReplicaBlocks());
     Assert.assertEquals(3, bm.getCorruptReplicas(stored).size());

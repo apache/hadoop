@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlo
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringStripedBlock;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
+import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
@@ -513,24 +514,15 @@ public class BlockRecoveryWorker {
      */
     @VisibleForTesting
     long getSafeLength(Map<Long, BlockRecord> syncBlocks) {
-      final int cellSize = ecPolicy.getCellSize();
       final int dataBlkNum = ecPolicy.getNumDataUnits();
       Preconditions.checkArgument(syncBlocks.size() >= dataBlkNum);
-      final int stripeSize = dataBlkNum * cellSize;
       long[] blockLengths = new long[syncBlocks.size()];
       int i = 0;
       for (BlockRecord r : syncBlocks.values()) {
         ReplicaRecoveryInfo rInfo = r.getReplicaRecoveryInfo();
         blockLengths[i++] = rInfo.getNumBytes();
       }
-      Arrays.sort(blockLengths);
-      // full stripe is a stripe has at least dataBlkNum full cells.
-      // lastFullStripeIdx is the index of the last full stripe.
-      int lastFullStripeIdx =
-          (int) (blockLengths[blockLengths.length - dataBlkNum] / cellSize);
-      return lastFullStripeIdx * stripeSize; // return the safeLength
-      // TODO: Include lastFullStripeIdx+1 stripe in safeLength, if there exists
-      // such a stripe (and it must be partial).
+      return StripedBlockUtil.getSafeLength(ecPolicy, blockLengths);
     }
 
     private void checkLocations(int locationCount)
