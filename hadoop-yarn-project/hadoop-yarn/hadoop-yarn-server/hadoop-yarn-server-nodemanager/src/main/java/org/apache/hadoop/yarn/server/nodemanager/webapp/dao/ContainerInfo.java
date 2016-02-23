@@ -53,7 +53,6 @@ public class ContainerInfo {
   @XmlTransient
   protected String exitStatus;
 
-  @XmlElementWrapper
   protected List<String> containerLogFiles;
 
   public ContainerInfo() {

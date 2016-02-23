@@ -1436,6 +1436,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4386. refreshNodesGracefully() should send recommission event to active
     RMNodes only. (Kuhu Shukla via junping_du)
 
+    YARN-4709. NMWebServices produces incorrect JSON for containers.
+    (Varun Saxena via vvasudev)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
