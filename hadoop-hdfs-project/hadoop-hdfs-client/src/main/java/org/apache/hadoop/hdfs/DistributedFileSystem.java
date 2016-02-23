@@ -2350,7 +2350,7 @@ public class DistributedFileSystem extends FileSystem {
       EncryptionZone ez = dfs.getEZForPath(parentSrc);
       if ((ez != null)) {
         return this.makeQualified(
-            new Path(ez.getPath() + "/" + FileSystem.TRASH_PREFIX +
+            new Path(ez.getPath(), FileSystem.TRASH_PREFIX +
                 dfs.ugi.getShortUserName()));
       }
     } catch (IOException e) {

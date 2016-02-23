@@ -1428,6 +1428,20 @@ public class TestEncryptionZones {
     verifyShellDeleteWithTrash(shell, topEZ);
   }
 
+  @Test(timeout = 120000)
+  public void testRootDirEZTrash() throws Exception {
+    final HdfsAdmin dfsAdmin =
+        new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+    dfsAdmin.createEncryptionZone(new Path("/"), TEST_KEY);
+    final Path encFile = new Path("/encFile");
+    final int len = 8192;
+    DFSTestUtil.createFile(fs, encFile, len, (short) 1, 0xFEED);
+    Configuration clientConf = new Configuration(conf);
+    clientConf.setLong(FS_TRASH_INTERVAL_KEY, 1);
+    FsShell shell = new FsShell(clientConf);
+    verifyShellDeleteWithTrash(shell, encFile);
+  }
+
   private void verifyShellDeleteWithTrash(FsShell shell, Path path)
       throws Exception{
     try {
