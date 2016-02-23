@@ -79,6 +79,7 @@ import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -110,6 +111,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private int httpPort;
   private final String nodeAddress; // The containerManager address
   private String httpAddress;
+  /* Snapshot of total resources before receiving decommissioning command */
+  private volatile Resource originalTotalCapability;
   private volatile Resource totalCapability;
   private final Node node;
 
@@ -236,6 +239,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       .addTransition(NodeState.DECOMMISSIONING, NodeState.RUNNING,
           RMNodeEventType.RECOMMISSION,
           new RecommissionNodeTransition(NodeState.RUNNING))
+      .addTransition(NodeState.DECOMMISSIONING, NodeState.DECOMMISSIONING,
+          RMNodeEventType.RESOURCE_UPDATE,
+          new UpdateNodeResourceWhenRunningTransition())
       .addTransition(NodeState.DECOMMISSIONING,
           EnumSet.of(NodeState.DECOMMISSIONING, NodeState.DECOMMISSIONED),
           RMNodeEventType.STATUS_UPDATE,
@@ -1050,7 +1056,12 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       LOG.info("Put Node " + rmNode.nodeId + " in DECOMMISSIONING.");
       // Update NM metrics during graceful decommissioning.
       rmNode.updateMetricsForGracefulDecommission(initState, finalState);
-      // TODO (in YARN-3223) Keep NM's available resource to be 0
+      if (rmNode.originalTotalCapability == null){
+        rmNode.originalTotalCapability =
+            Resources.clone(rmNode.totalCapability);
+        LOG.info("Preserve original total capability: "
+            + rmNode.originalTotalCapability);
+      }
     }
   }
 
@@ -1064,11 +1075,22 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
     @Override
     public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
+      // Restore the original total capability
+      if (rmNode.originalTotalCapability != null) {
+        rmNode.totalCapability = rmNode.originalTotalCapability;
+        rmNode.originalTotalCapability = null;
+      }
       LOG.info("Node " + rmNode.nodeId + " in DECOMMISSIONING is " +
           "recommissioned back to RUNNING.");
       rmNode
           .updateMetricsForGracefulDecommission(rmNode.getState(), finalState);
-      // TODO handle NM resource resume in YARN-3223.
+      //update the scheduler with the restored original total capability
+      rmNode.context
+          .getDispatcher()
+          .getEventHandler()
+          .handle(
+              new NodeResourceUpdateSchedulerEvent(rmNode, ResourceOption
+                  .newInstance(rmNode.totalCapability, 0)));
     }
   }
 
@@ -1355,4 +1377,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       writeLock.unlock();
     }
    }
+
+  public Resource getOriginalTotalCapability() {
+    return this.originalTotalCapability;
+  }
  }
