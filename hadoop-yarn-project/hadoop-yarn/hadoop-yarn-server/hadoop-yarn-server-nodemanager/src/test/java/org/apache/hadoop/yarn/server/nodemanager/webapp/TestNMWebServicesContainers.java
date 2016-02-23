@@ -20,13 +20,16 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 
 import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
@@ -48,6 +51,7 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer.NMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -203,12 +207,27 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
         app.getAppId(), 1);
     Container container1 = new MockContainer(appAttemptId, dispatcher, conf,
         app.getUser(), app.getAppId(), 1);
+    ((MockContainer)container1).setState(ContainerState.RUNNING);
     Container container2 = new MockContainer(appAttemptId, dispatcher, conf,
         app.getUser(), app.getAppId(), 2);
+    ((MockContainer)container2).setState(ContainerState.RUNNING);
     nmContext.getContainers()
         .put(container1.getContainerId(), container1);
     nmContext.getContainers()
         .put(container2.getContainerId(), container2);
+    File appDir = new File(testLogDir + "/" + app.getAppId().toString());
+    appDir.mkdir();
+    File container1Dir =
+        new File(appDir + "/" + container1.getContainerId().toString());
+    container1Dir.mkdir();
+    // Create log files for containers.
+    new File(container1Dir + "/" + "syslog").createNewFile();
+    new File(container1Dir + "/" + "stdout").createNewFile();
+    File container2Dir =
+        new File(appDir + "/" + container2.getContainerId().toString());
+    container2Dir.mkdir();
+    new File(container2Dir + "/" + "syslog").createNewFile();
+    new File(container2Dir + "/" + "stdout").createNewFile();
 
     app.getContainers().put(container1.getContainerId(), container1);
     app.getContainers().put(container2.getContainerId(), container2);
@@ -475,9 +494,13 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
           WebServicesTestUtils.getXmlInt(element, "totalVCoresNeeded"),
           WebServicesTestUtils.getXmlString(element, "containerLogsLink"));
       // verify that the container log files element exists
-      assertTrue("containerLogFiles missing",
-          WebServicesTestUtils.getXmlString(element, "containerLogFiles")
-              != null);
+      List<String> containerLogFiles =
+          WebServicesTestUtils.getXmlStrings(element, "containerLogFiles");
+      assertFalse("containerLogFiles missing",containerLogFiles.isEmpty());
+      assertEquals(2, containerLogFiles.size());
+      assertTrue("syslog and stdout expected",
+          containerLogFiles.contains("syslog") &&
+          containerLogFiles.contains("stdout"));
     }
   }
 
@@ -492,8 +515,14 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
         info.getInt("totalVCoresNeeded"),
         info.getString("containerLogsLink"));
     // verify that the container log files element exists
-    assertTrue("containerLogFiles missing",
-        info.getJSONArray("containerLogFiles") != null);
+    JSONArray containerLogFilesArr = info.getJSONArray("containerLogFiles");
+    assertTrue("containerLogFiles missing", containerLogFilesArr != null);
+    assertEquals(2, containerLogFilesArr.length());
+    for (int i = 0; i < 2; i++) {
+      assertTrue("syslog and stdout expected",
+          containerLogFilesArr.get(i).equals("syslog") ||
+          containerLogFilesArr.get(i).equals("stdout"));
+    }
   }
 
   public void verifyNodeContainerInfoGeneric(Container cont, String id,
