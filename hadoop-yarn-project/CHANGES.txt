@@ -138,6 +138,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4708. Missing default mapper type in TimelineServer performance test tool
     usage. (Kai Sasaki via ozawa)
 
+    YARN-4648. Move preemption related tests from TestFairScheduler to
+    TestFairSchedulerPreemption. (Kai Sasaki via ozawa)
+
   OPTIMIZATIONS
 
   BUG FIXES
