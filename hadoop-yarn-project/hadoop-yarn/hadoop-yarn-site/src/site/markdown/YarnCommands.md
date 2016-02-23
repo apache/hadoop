@@ -70,8 +70,11 @@ Usage: `yarn application [options] `
 | -appId \<ApplicationId\> | Specify Application Id to be operated |
 | -appStates \<States\> | Works with -list to filter applications based on input comma-separated list of application states. The valid application state can be one of the following:  ALL, NEW, NEW\_SAVING, SUBMITTED, ACCEPTED, RUNNING, FINISHED, FAILED, KILLED |
 | -appTypes \<Types\> | Works with -list to filter applications based on input comma-separated list of application types. |
+| -help | Help |
 | -list | Lists applications from the RM. Supports optional use of -appTypes to filter applications based on application type, and -appStates to filter applications based on application state. |
 | -kill \<ApplicationId\> | Kills the application. |
+| -movetoqueue \<Application Id\> | Moves the application to a different queue. |
+| -queue \<Queue Name\> | Works with the movetoqueue command to specify which queue to move an application to. |
 | -status \<ApplicationId\> | Prints the status of the application. |
 | -updatePriority \<Priority\> | Update priority of an application. ApplicationId can be passed using 'appId' option. |
 

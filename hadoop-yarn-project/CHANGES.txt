@@ -216,6 +216,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4569. Remove incorrect part of maxResources in FairScheduler
     documentation. (Ray Chiang via kasha)
 
+    YARN-4651. Document movetoqueue option in 'YARN Commands'
+    (Takashi Ohnishi via rohithsharmaks)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
