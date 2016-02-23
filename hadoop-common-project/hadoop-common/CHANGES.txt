@@ -66,6 +66,9 @@ Release 2.9.0 - UNRELEASED
 
    HADOOP-12712. Fix some cmake plugin and native build warnings (cmccabe)
 
+   HADOOP-12829. StatisticsDataReferenceCleaner swallows interrupt exceptions
+   (Gregory Chanan via cmccabe)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

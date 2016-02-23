@@ -3170,15 +3170,16 @@ public abstract class FileSystem extends Configured implements Closeable {
     private static class StatisticsDataReferenceCleaner implements Runnable {
       @Override
       public void run() {
-        while (true) {
+        while (!Thread.interrupted()) {
           try {
             StatisticsDataReference ref =
                 (StatisticsDataReference)STATS_DATA_REF_QUEUE.remove();
             ref.cleanUp();
+          } catch (InterruptedException ie) {
+            LOG.warn("Cleaner thread interrupted, will stop", ie);
+            Thread.currentThread().interrupt();
           } catch (Throwable th) {
-            // the cleaner thread should continue to run even if there are
-            // exceptions, including InterruptedException
-            LOG.warn("exception in the cleaner thread but it will continue to "
+            LOG.warn("Exception in the cleaner thread but it will continue to "
                 + "run", th);
           }
         }
