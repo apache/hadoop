@@ -17,15 +17,18 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static com.sun.jersey.api.core.ResourceConfig.PROPERTY_CONTAINER_REQUEST_FILTERS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_STORAGE_HANDLER_TYPE_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_STORAGE_HANDLER_TYPE_KEY;
 
 import java.io.IOException;
+import java.util.Collections;
 
 import com.sun.jersey.api.container.ContainerFactory;
 import com.sun.jersey.api.core.ApplicationAdapter;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ozone.web.handlers.ServiceFilter;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.ObjectStoreApplication;
 import org.apache.hadoop.ozone.web.netty.ObjectStoreJerseyContainer;
@@ -62,9 +65,13 @@ public final class ObjectStoreHandler {
                 DFS_STORAGE_HANDLER_TYPE_KEY, shType));
       }
     }
+    ApplicationAdapter aa =
+        new ApplicationAdapter(new ObjectStoreApplication());
+    aa.setPropertiesAndFeatures(Collections.<String, Object>singletonMap(
+        PROPERTY_CONTAINER_REQUEST_FILTERS,
+        ServiceFilter.class.getCanonicalName()));
     this.objectStoreJerseyContainer = ContainerFactory.createContainer(
-        ObjectStoreJerseyContainer.class, new ApplicationAdapter(
-            new ObjectStoreApplication()));
+        ObjectStoreJerseyContainer.class, aa);
     this.objectStoreJerseyContainer.setStorageHandler(storageHandler);
   }
 
