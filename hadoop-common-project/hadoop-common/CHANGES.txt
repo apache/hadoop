@@ -1143,6 +1143,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12668. Support excluding weak Ciphers in HttpServer2 through
     ssl-server.conf. (Vijay Singh via zhz)
 
+    HADOOP-12555. WASB to read credentials from a credential provider.
+    (Larry McCay via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp

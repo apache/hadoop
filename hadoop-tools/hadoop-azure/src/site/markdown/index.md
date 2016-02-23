@@ -88,9 +88,55 @@ For example:
       <value>YOUR ACCESS KEY</value>
     </property>
 
-In many Hadoop clusters, the core-site.xml file is world-readable.  If it's
-undesirable for the access key to be visible in core-site.xml, then it's also
-possible to configure it in encrypted form.  An additional configuration property
+In many Hadoop clusters, the core-site.xml file is world-readable. It is possible to
+protect the access key within a credential provider as well. This provides an encrypted
+file format along with protection with file permissions.
+
+#### Protecting the Azure Credentials for WASB with Credential Providers
+
+To protect these credentials from prying eyes, it is recommended that you use
+the credential provider framework to securely store them and access them
+through configuration. The following describes its use for Azure credentials
+in WASB FileSystem.
+
+For additional reading on the credential provider API see:
+[Credential Provider API](../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html).
+
+##### End to End Steps for Distcp and WASB with Credential Providers
+
+###### provision
+
+```
+% hadoop credential create fs.azure.account.key.youraccount.blob.core.windows.net -value 123
+    -provider localjceks://file/home/lmccay/wasb.jceks
+```
+
+###### configure core-site.xml or command line system property
+
+```
+<property>
+  <name>hadoop.security.credential.provider.path</name>
+  <value>localjceks://file/home/lmccay/wasb.jceks</value>
+  <description>Path to interrogate for protected credentials.</description>
+</property>
+```
+
+###### distcp
+
+```
+% hadoop distcp
+    [-D hadoop.security.credential.provider.path=localjceks://file/home/lmccay/wasb.jceks]
+    hdfs://hostname:9001/user/lmccay/007020615 wasb://yourcontainer@youraccount.blob.core.windows.net/testDir/
+```
+
+NOTE: You may optionally add the provider path property to the distcp command line instead of
+added job specific configuration to a generic core-site.xml. The square brackets above illustrate
+this capability.
+
+#### Protecting the Azure Credentials for WASB within an Encrypted File
+
+In addition to using the credential provider framework to protect your credentials, it's
+also possible to configure it in encrypted form.  An additional configuration property
 specifies an external program to be invoked by Hadoop processes to decrypt the
 key.  The encrypted key value is passed to this external program as a command
 line argument:
