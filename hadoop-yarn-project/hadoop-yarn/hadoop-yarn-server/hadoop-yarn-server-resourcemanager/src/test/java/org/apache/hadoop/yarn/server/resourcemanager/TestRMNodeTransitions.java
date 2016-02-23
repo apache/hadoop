@@ -975,4 +975,38 @@ public class TestRMNodeTransitions {
     verify(mockExpirer).unregister(expirationInfo1);
     verify(mockExpirer).unregister(expirationInfo2);
   }
+
+  @Test
+  public void testResourceUpdateOnDecommissioningNode() {
+    RMNodeImpl node = getDecommissioningNode();
+    Resource oldCapacity = node.getTotalCapability();
+    assertEquals("Memory resource is not match.", oldCapacity.getMemory(), 4096);
+    assertEquals("CPU resource is not match.", oldCapacity.getVirtualCores(), 4);
+    node.handle(new RMNodeResourceUpdateEvent(node.getNodeID(),
+        ResourceOption.newInstance(Resource.newInstance(2048, 2),
+            ResourceOption.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT)));
+    Resource originalCapacity = node.getOriginalTotalCapability();
+    assertEquals("Memory resource is not match.", originalCapacity.getMemory(), oldCapacity.getMemory());
+    assertEquals("CPU resource is not match.", originalCapacity.getVirtualCores(), oldCapacity.getVirtualCores());
+    Resource newCapacity = node.getTotalCapability();
+    assertEquals("Memory resource is not match.", newCapacity.getMemory(), 2048);
+    assertEquals("CPU resource is not match.", newCapacity.getVirtualCores(), 2);
+
+    Assert.assertEquals(NodeState.DECOMMISSIONING, node.getState());
+    Assert.assertNotNull(nodesListManagerEvent);
+    Assert.assertEquals(NodesListManagerEventType.NODE_USABLE,
+        nodesListManagerEvent.getType());
+  }
+
+  @Test
+  public void testResourceUpdateOnRecommissioningNode() {
+    RMNodeImpl node = getDecommissioningNode();
+    Resource oldCapacity = node.getTotalCapability();
+    assertEquals("Memory resource is not match.", oldCapacity.getMemory(), 4096);
+    assertEquals("CPU resource is not match.", oldCapacity.getVirtualCores(), 4);
+    node.handle(new RMNodeEvent(node.getNodeID(),
+        RMNodeEventType.RECOMMISSION));
+    Resource originalCapacity = node.getOriginalTotalCapability();
+    assertEquals("Original total capability not null after recommission", null, originalCapacity);
+  }
 }

@@ -63,6 +63,7 @@ import org.apache.hadoop.yarn.api.records.ContainerResourceChangeRequest;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
@@ -74,6 +75,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
+import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -115,6 +117,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEven
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -150,11 +153,11 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import org.mockito.Mockito;
 
 public class TestCapacityScheduler {
   private static final Log LOG = LogFactory.getLog(TestCapacityScheduler.class);
@@ -3359,5 +3362,89 @@ public class TestCapacityScheduler {
     Assert.assertEquals("Cluster resources don't match", newCapability,
         resourceManager.getResourceScheduler().getClusterResource());
     privateResourceTrackerService.stop();
+  }
+
+  @Test
+  public void testResourceUpdateDecommissioningNode() throws Exception {
+    // Mock the RMNodeResourceUpdate event handler to update SchedulerNode
+    // to have 0 available resource
+    RMContext spyContext = Mockito.spy(resourceManager.getRMContext());
+    Dispatcher mockDispatcher = mock(AsyncDispatcher.class);
+    when(mockDispatcher.getEventHandler()).thenReturn(new EventHandler() {
+      @Override
+      public void handle(Event event) {
+        if (event instanceof RMNodeResourceUpdateEvent) {
+          RMNodeResourceUpdateEvent resourceEvent =
+              (RMNodeResourceUpdateEvent) event;
+          resourceManager
+              .getResourceScheduler()
+              .getSchedulerNode(resourceEvent.getNodeId())
+              .setTotalResource(resourceEvent.getResourceOption().getResource());
+        }
+      }
+    });
+    Mockito.doReturn(mockDispatcher).when(spyContext).getDispatcher();
+    ((CapacityScheduler) resourceManager.getResourceScheduler())
+        .setRMContext(spyContext);
+    ((AsyncDispatcher) mockDispatcher).start();
+    // Register node
+    String host_0 = "host_0";
+    org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm_0 =
+        registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
+            Resources.createResource(8 * GB, 4));
+    // ResourceRequest priorities
+    Priority priority_0 =
+        org.apache.hadoop.yarn.server.resourcemanager.resource.Priority
+            .create(0);
+
+    // Submit an application
+    Application application_0 =
+        new Application("user_0", "a1", resourceManager);
+    application_0.submit();
+
+    application_0.addNodeManager(host_0, 1234, nm_0);
+
+    Resource capability_0_0 = Resources.createResource(1 * GB, 1);
+    application_0.addResourceRequestSpec(priority_0, capability_0_0);
+
+    Task task_0_0 =
+        new Task(application_0, priority_0, new String[] { host_0 });
+    application_0.addTask(task_0_0);
+
+    // Send resource requests to the scheduler
+    application_0.schedule();
+
+    nodeUpdate(nm_0);
+    // Kick off another heartbeat with the node state mocked to decommissioning
+    // This should update the schedulernodes to have 0 available resource
+    RMNode spyNode =
+        Mockito.spy(resourceManager.getRMContext().getRMNodes()
+            .get(nm_0.getNodeId()));
+    when(spyNode.getState()).thenReturn(NodeState.DECOMMISSIONING);
+    resourceManager.getResourceScheduler().handle(
+        new NodeUpdateSchedulerEvent(spyNode));
+
+    // Get allocations from the scheduler
+    application_0.schedule();
+
+    // Check the used resource is 1 GB 1 core
+    Assert.assertEquals(1 * GB, nm_0.getUsed().getMemory());
+    Resource usedResource =
+        resourceManager.getResourceScheduler()
+            .getSchedulerNode(nm_0.getNodeId()).getUsedResource();
+    Assert.assertEquals(usedResource.getMemory(), 1 * GB);
+    Assert.assertEquals(usedResource.getVirtualCores(), 1);
+    // Check total resource of scheduler node is also changed to 1 GB 1 core
+    Resource totalResource =
+        resourceManager.getResourceScheduler()
+            .getSchedulerNode(nm_0.getNodeId()).getTotalResource();
+    Assert.assertEquals(totalResource.getMemory(), 1 * GB);
+    Assert.assertEquals(totalResource.getVirtualCores(), 1);
+    // Check the available resource is 0/0
+    Resource availableResource =
+        resourceManager.getResourceScheduler()
+            .getSchedulerNode(nm_0.getNodeId()).getAvailableResource();
+    Assert.assertEquals(availableResource.getMemory(), 0);
+    Assert.assertEquals(availableResource.getVirtualCores(), 0);
   }
 }

@@ -441,6 +441,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4411. RMAppAttemptImpl#createApplicationAttemptReport throws
     IllegalArgumentException. (Bibin A Chundatt, yarntime via devaraj)
 
+    YARN-3223. Resource update during NM graceful decommission. (Brook Zhou
+    via junping_du)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before

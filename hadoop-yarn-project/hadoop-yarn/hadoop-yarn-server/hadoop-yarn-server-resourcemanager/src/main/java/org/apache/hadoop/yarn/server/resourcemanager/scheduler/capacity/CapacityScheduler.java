@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerResourceChangeRequest;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -91,6 +92,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEven
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeDecreaseContainerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
@@ -1082,6 +1084,20 @@ public class CapacityScheduler extends
       }
     }
 
+    // If the node is decommissioning, send an update to have the total
+    // resource equal to the used resource, so no available resource to
+    // schedule.
+    // TODO: Fix possible race-condition when request comes in before
+    // update is propagated
+    if (nm.getState() == NodeState.DECOMMISSIONING) {
+      this.rmContext
+          .getDispatcher()
+          .getEventHandler()
+          .handle(
+              new RMNodeResourceUpdateEvent(nm.getNodeID(), ResourceOption
+                  .newInstance(getSchedulerNode(nm.getNodeID())
+                      .getUsedResource(), 0)));
+    }
     schedulerHealth.updateSchedulerReleaseDetails(lastNodeUpdateTime,
       releaseResources);
     schedulerHealth.updateSchedulerReleaseCounts(releasedContainers);
