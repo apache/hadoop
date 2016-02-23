@@ -131,6 +131,7 @@ public class TestEventFlow {
     nodeStatusUpdater.init(conf);
     ((NMContext)context).setContainerManager(containerManager);
     nodeStatusUpdater.start();
+    ((NMContext)context).setNodeStatusUpdater(nodeStatusUpdater);
     containerManager.init(conf);
     containerManager.start();
 

@@ -353,6 +353,7 @@ public class NodeManager extends CompositeService
     // StatusUpdater should be added last so that it get started last 
     // so that we make sure everything is up before registering with RM. 
     addService(nodeStatusUpdater);
+    ((NMContext) context).setNodeStatusUpdater(nodeStatusUpdater);
 
     super.serviceInit(conf);
     // TODO add local dirs to del
@@ -458,6 +459,7 @@ public class NodeManager extends CompositeService
     private boolean isDecommissioned = false;
     private final ConcurrentLinkedQueue<LogAggregationReport>
         logAggregationReportForApps;
+    private NodeStatusUpdater nodeStatusUpdater;
 
     public NMContext(NMContainerTokenSecretManager containerTokenSecretManager,
         NMTokenSecretManagerInNM nmTokenSecretManager,
@@ -584,6 +586,14 @@ public class NodeManager extends CompositeService
     public ConcurrentLinkedQueue<LogAggregationReport>
         getLogAggregationStatusForApps() {
       return this.logAggregationReportForApps;
+    }
+
+    public NodeStatusUpdater getNodeStatusUpdater() {
+      return this.nodeStatusUpdater;
+    }
+
+    public void setNodeStatusUpdater(NodeStatusUpdater nodeStatusUpdater) {
+      this.nodeStatusUpdater = nodeStatusUpdater;
     }
   }
 

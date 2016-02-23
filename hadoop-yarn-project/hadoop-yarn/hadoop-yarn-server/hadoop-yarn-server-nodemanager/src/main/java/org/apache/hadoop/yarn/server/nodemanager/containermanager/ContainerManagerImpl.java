@@ -361,9 +361,9 @@ public class ContainerManagerImpl extends CompositeService implements
       Credentials credentials =
           YarnServerSecurityUtils.parseCredentials(launchContext);
       Container container = new ContainerImpl(getConfig(), dispatcher,
-          context.getNMStateStore(), req.getContainerLaunchContext(),
+          req.getContainerLaunchContext(),
           credentials, metrics, token, rcs.getStatus(), rcs.getExitCode(),
-          rcs.getDiagnostics(), rcs.getKilled(), rcs.getCapability());
+          rcs.getDiagnostics(), rcs.getKilled(), rcs.getCapability(), context);
       context.getContainers().put(containerId, container);
       dispatcher.getEventHandler().handle(
           new ApplicationContainerInitEvent(container));
@@ -921,8 +921,8 @@ public class ContainerManagerImpl extends CompositeService implements
 
     Container container =
         new ContainerImpl(getConfig(), this.dispatcher,
-            context.getNMStateStore(), launchContext,
-          credentials, metrics, containerTokenIdentifier);
+            launchContext, credentials, metrics, containerTokenIdentifier,
+            context);
     ApplicationId applicationID =
         containerId.getApplicationAttemptId().getApplicationId();
     if (context.getContainers().putIfAbsent(containerId, container) != null) {
@@ -1193,10 +1193,6 @@ public class ContainerManagerImpl extends CompositeService implements
       NMAuditLogger.logSuccess(container.getUser(),    
         AuditConstants.STOP_CONTAINER, "ContainerManageImpl", containerID
           .getApplicationAttemptId().getApplicationId(), containerID);
-
-      // TODO: Move this code to appropriate place once kill_container is
-      // implemented.
-      nodeStatusUpdater.sendOutofBandHeartBeat();
     }
   }
 
