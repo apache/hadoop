@@ -1539,6 +1539,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4707. Remove the extra char (>) from SecureContainer.md.
     (Brahma Reddy Battula via aajisaka)
 
+    YARN-2046. Out of band heartbeats are sent only on container kill and
+    possibly too early (Ming Ma via jlowe)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
@@ -2389,6 +2392,9 @@ Release 2.6.5 - UNRELEASED
     possible (Ming Ma via sjlee)
 
   BUG FIXES
+
+    YARN-2046. Out of band heartbeats are sent only on container kill and
+    possibly too early (Ming Ma via jlowe)
 
 Release 2.6.4 - 2016-02-11
 

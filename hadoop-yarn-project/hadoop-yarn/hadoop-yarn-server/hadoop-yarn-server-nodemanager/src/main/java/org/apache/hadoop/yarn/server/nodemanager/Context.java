@@ -87,4 +87,6 @@ public interface Context {
 
   ConcurrentLinkedQueue<LogAggregationReport>
       getLogAggregationStatusForApps();
+
+  NodeStatusUpdater getNodeStatusUpdater();
 }

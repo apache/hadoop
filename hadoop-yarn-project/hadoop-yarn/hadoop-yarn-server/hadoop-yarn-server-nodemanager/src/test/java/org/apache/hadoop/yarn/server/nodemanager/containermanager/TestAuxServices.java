@@ -25,6 +25,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,6 +54,7 @@ import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
 import org.apache.hadoop.yarn.server.api.AuxiliaryService;
 import org.apache.hadoop.yarn.server.api.ContainerInitializationContext;
 import org.apache.hadoop.yarn.server.api.ContainerTerminationContext;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.junit.Assert;
@@ -192,8 +194,9 @@ public class TestAuxServices {
     ContainerTokenIdentifier cti = new ContainerTokenIdentifier(
         ContainerId.newContainerId(attemptId, 1), "", "",
         Resource.newInstance(1, 1), 0,0,0, Priority.newInstance(0), 0);
-    Container container = new ContainerImpl(null, null, null, null, null,
-        null, cti);
+    Context context = mock(Context.class);
+    Container container = new ContainerImpl(null, null, null, null,
+        null, cti, context);
     ContainerId containerId = container.getContainerId();
     Resource resource = container.getResource();
     event = new AuxServicesEvent(AuxServicesEventType.CONTAINER_INIT,container);
