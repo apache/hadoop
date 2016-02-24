@@ -653,6 +653,9 @@ Trunk (Unreleased)
       HADOOP-12041. Implement another Reed-Solomon coder in pure Java.
       (Kai Zheng via zhz)
 
+      HADOOP-12808. Rename the RS coder from HDFS-RAID as legacy.
+      (Rui Li via zhz)
+
 Release 2.9.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

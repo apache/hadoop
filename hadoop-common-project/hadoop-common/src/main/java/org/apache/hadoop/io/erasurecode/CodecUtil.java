@@ -43,7 +43,7 @@ public final class CodecUtil {
         CommonConfigurationKeys.IO_ERASURECODE_CODEC_RS_RAWCODER_KEY,
         true, numDataUnits, numParityUnits);
     if (rawCoder == null) {
-      rawCoder = new RSRawEncoder(numDataUnits, numParityUnits);
+      rawCoder = new RSRawEncoderLegacy(numDataUnits, numParityUnits);
     }
 
     return (RawErasureEncoder) rawCoder;
@@ -62,7 +62,7 @@ public final class CodecUtil {
         CommonConfigurationKeys.IO_ERASURECODE_CODEC_RS_RAWCODER_KEY,
         false, numDataUnits, numParityUnits);
     if (rawCoder == null) {
-      rawCoder = new RSRawDecoder(numDataUnits, numParityUnits);
+      rawCoder = new RSRawDecoderLegacy(numDataUnits, numParityUnits);
     }
 
     return (RawErasureDecoder) rawCoder;

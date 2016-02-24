@@ -15,23 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.io.erasurecode.rawcoder;
-
-import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
- * A raw coder factory for raw Reed-Solomon coder in Java.
+ * General helpers for implementing raw erasure coders.
  */
 @InterfaceAudience.Private
-public class RSRawErasureCoderFactory implements RawErasureCoderFactory {
+@InterfaceStability.Unstable
+package org.apache.hadoop.io.erasurecode.rawcoder.util;
 
-  @Override
-  public RawErasureEncoder createEncoder(int numDataUnits, int numParityUnits) {
-    return new RSRawEncoder(numDataUnits, numParityUnits);
-  }
-
-  @Override
-  public RawErasureDecoder createDecoder(int numDataUnits, int numParityUnits) {
-    return new RSRawDecoder(numDataUnits, numParityUnits);
-  }
-}
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

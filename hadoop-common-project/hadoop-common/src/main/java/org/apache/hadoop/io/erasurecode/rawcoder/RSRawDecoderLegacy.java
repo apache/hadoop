@@ -34,7 +34,7 @@ import java.nio.ByteBuffer;
  * addressed in HADOOP-11871.
  */
 @InterfaceAudience.Private
-public class RSRawDecoder extends AbstractRawErasureDecoder {
+public class RSRawDecoderLegacy extends AbstractRawErasureDecoder {
   // To describe and calculate the needed Vandermonde matrix
   private int[] errSignature;
   private int[] primitivePower;
@@ -61,7 +61,7 @@ public class RSRawDecoder extends AbstractRawErasureDecoder {
   private ByteBuffer[] adjustedDirectBufferOutputsParameter =
       new ByteBuffer[getNumParityUnits()];
 
-  public RSRawDecoder(int numDataUnits, int numParityUnits) {
+  public RSRawDecoderLegacy(int numDataUnits, int numParityUnits) {
     super(numDataUnits, numParityUnits);
     if (numDataUnits + numParityUnits >= RSUtil.GF.getFieldSize()) {
       throw new HadoopIllegalArgumentException(
