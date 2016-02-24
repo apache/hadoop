@@ -1,0 +1,164 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~  or more contributor license agreements.  See the NOTICE file
+  ~  distributed with this work for additional information
+  ~  regarding copyright ownership.  The ASF licenses this file
+  ~  to you under the Apache License, Version 2.0 (the
+  ~  "License"); you may not use this file except in compliance
+  ~  with the License.  You may obtain a copy of the License at
+  ~
+  ~       http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  -->
+
+<configuration xmlns:xi="http://www.w3.org/2001/XInclude">
+  <!--
+ wasb is a blobstore, with very different behavior than a
+  classic filesystem.
+  -->
+    <!--
+    <property>
+        <name>fs.contract.test.fs.wasb</name>
+        <value>wasb://{CONTAINERNAME}@{ACCOUNTNAME}.blob.core.windows.net/value>
+        <description>The name of the azure file system for testing.</description>
+    </property>
+
+    <property>
+        <name>fs.azure.account.key.{ACCOUNTNAME}.blob.core.windows.net</name>
+        <value>{ACCOUNTKEY}</value>
+    </property>
+  -->
+  <!-- Save the above configuration properties in a separate file named -->
+  <!-- azure-auth-keys.xml in the same directory as this file. -->
+  <!-- DO NOT ADD azure-auth-keys.xml TO REVISION CONTROL.  The keys to your -->
+  <!-- Azure Storage account are a secret and must not be shared. -->
+  <include xmlns="http://www.w3.org/2001/XInclude" href="azure-auth-keys.xml">
+    <fallback />
+  </include>
+
+  <property>
+    <name>fs.contract.test.root-tests-enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <name>fs.contract.test.random-seek-count</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <name>fs.contract.is-blobstore</name>
+    <value>true</value>
+  </property>
+
+ <property>
+    <name>fs.contract.is-case-sensitive</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>fs.contract.rename-returns-false-if-dest-exists</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>fs.contract.rename-returns-false-if-source-missing</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>fs.contract.rename-creates-dest-dirs</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <name>fs.contract.rename-remove-dest-if-empty-dir</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-settimes</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-append</name>
+   <value>true</value>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-atomic-directory-delete</name>
+    <value>false</value>
+  </property>
+
+ <property>
+    <name>fs.contract.supports-atomic-rename</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-block-locality</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-concat</name>
+    <value>false</value>
+    </property>
+
+  <property>
+    <name>fs.contract.supports-seek</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-seek-on-closed-file</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>fs.contract.rejects-seek-past-eof</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-available-on-closed-file</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-strict-exceptions</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-unix-permissions</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <name>fs.contract.rename-overwrites-dest</name>
+    <value>false</value>
+  </property>
+
+   <property>
+    <name>fs.contract.supports-append</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>fs.azure.enable.append.support</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-getfilestatus</name>
+    <value>true</value>
+  </property>
+
+</configuration>

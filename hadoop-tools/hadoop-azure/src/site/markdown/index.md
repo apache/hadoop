@@ -310,5 +310,24 @@ For example:
       </property>
     </configuration>
 
+To run contract tests add live Azure Storage account by saving a
+file to `src/test/resources/azure-auth-keys.xml`.
+For example:
+
+    <?xml version="1.0"?>
+    <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+    <configuration>
+      <property>
+        <name>fs.contract.test.fs.wasb</name>
+        <value>wasb://{CONTAINERNAME}@{ACCOUNTNAME}.blob.core.windows.net</value>
+        <description>The name of the azure file system for testing.</description>
+      </property>
+
+      <property>
+        <name>fs.azure.account.key.{ACCOUNTNAME}.blob.core.windows.net</name>
+        <value>{ACCOUNTKEY}</value>
+      </property>
+    </configuration>
+
 DO NOT ADD azure-auth-keys.xml TO REVISION CONTROL.  The keys to your Azure
 Storage account are a secret and must not be shared.
