@@ -32,7 +32,7 @@ Transparent Encryption in HDFS
 * [Example usage](#Example_usage)
 * [Distcp considerations](#Distcp_considerations)
     * [Running as the superuser](#Running_as_the_superuser)
-    * [Copying between encrypted and unencrypted locations](#Copying_between_encrypted_and_unencrypted_locations)
+    * [Copying into encrypted locations](#Copying_into_encrypted_locations)
 * [Rename and Trash considerations](#Rename_and_Trash_considerations)
 * [Attack vectors](#Attack_vectors)
     * [Hardware access exploits](#Hardware_access_exploits)
@@ -207,11 +207,11 @@ One common usecase for distcp is to replicate data between clusters for backup a
 
 To enable this same workflow when using HDFS encryption, we introduced a new virtual path prefix, `/.reserved/raw/`, that gives superusers direct access to the underlying block data in the filesystem. This allows superusers to distcp data without needing having access to encryption keys, and also avoids the overhead of decrypting and re-encrypting data. It also means the source and destination data will be byte-for-byte identical, which would not be true if the data was being re-encrypted with a new EDEK.
 
-When using `/.reserved/raw` to distcp encrypted data, it's important to preserve extended attributes with the [-px](#a-px) flag. This is because encrypted file attributes (such as the EDEK) are exposed through extended attributes within `/.reserved/raw`, and must be preserved to be able to decrypt the file. This means that if the distcp is initiated at or above the encryption zone root, it will automatically create an encryption zone at the destination if it does not already exist. However, it's still recommended that the admin first create identical encryption zones on the destination cluster to avoid any potential mishaps.
+When using `/.reserved/raw` to distcp encrypted data, it's important to preserve extended attributes with the [-px](../../hadoop-distcp/DistCp.html#Command_Line_Options) flag. This is because encrypted file attributes (such as the EDEK) are exposed through extended attributes within `/.reserved/raw`, and must be preserved to be able to decrypt the file. This means that if the distcp is initiated at or above the encryption zone root, it will automatically create an encryption zone at the destination if it does not already exist. However, it's still recommended that the admin first create identical encryption zones on the destination cluster to avoid any potential mishaps.
 
-### <a name="Copying_between_encrypted_and_unencrypted_locations"></a>Copying between encrypted and unencrypted locations
+### <a name="Copying_into_encrypted_locations"></a>Copying into encrypted locations
 
-By default, distcp compares checksums provided by the filesystem to verify that the data was successfully copied to the destination. When copying between an unencrypted and encrypted location, the filesystem checksums will not match since the underlying block data is different. In this case, specify the [-skipcrccheck](#a-skipcrccheck) and [-update](#a-update) distcp flags to avoid verifying checksums.
+By default, distcp compares checksums provided by the filesystem to verify that the data was successfully copied to the destination. When copying from unencrypted or encrypted location into an encrypted location, the filesystem checksums will not match since the underlying block data is different because a new EDEK will be used to encrypt at destination. In this case, specify the [-skipcrccheck](../../hadoop-distcp/DistCp.html#Command_Line_Options) and [-update](../../hadoop-distcp/DistCp.html#Command_Line_Options) distcp flags to avoid verifying checksums.
 
 <a name="Rename_and_Trash_considerations"></a>Rename and Trash considerations
 ---------------------
