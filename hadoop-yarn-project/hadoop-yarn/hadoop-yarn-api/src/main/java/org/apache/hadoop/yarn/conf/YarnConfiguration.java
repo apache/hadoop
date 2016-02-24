@@ -1673,6 +1673,12 @@ public class YarnConfiguration extends Configuration {
   public static final long TIMELINE_SERVICE_CLIENT_FD_RETAIN_SECS_DEFAULT =
       5*60;
 
+  public static final String
+      TIMELINE_SERVICE_CLIENT_INTERNAL_TIMERS_TTL_SECS =
+      TIMELINE_SERVICE_CLIENT_PREFIX + "internal-timers-ttl-secs";
+  public static final long
+      TIMELINE_SERVICE_CLIENT_INTERNAL_TIMERS_TTL_SECS_DEFAULT = 7 * 60;
+
   // mark app-history related configs @Private as application history is going
   // to be integrated into the timeline service
   @Private
