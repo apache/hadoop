@@ -95,7 +95,7 @@ public class CLI extends Configured implements Tool {
     String submitJobFile = null;
     String jobid = null;
     String taskid = null;
-    String historyFile = null;
+    String historyFileOrJobId = null;
     String historyOutFile = null;
     String historyOutFormat = HistoryViewer.HUMAN_FORMAT;
     String counterGroupName = null;
@@ -188,15 +188,15 @@ public class CLI extends Configured implements Tool {
       // Some arguments are optional while others are not, and some require
       // second arguments.  Due to this, the indexing can vary depending on
       // what's specified and what's left out, as summarized in the below table:
-      // [all] <jobHistoryFile> [-outfile <file>] [-format <human|json>]
-      //   1          2             3       4         5         6
-      //   1          2             3       4
-      //   1          2                               3         4
-      //   1          2
-      //              1             2       3         4         5
-      //              1             2       3
-      //              1                               2         3
-      //              1
+      // [all] <jobHistoryFile|jobId> [-outfile <file>] [-format <human|json>]
+      //   1                  2            3       4         5         6
+      //   1                  2            3       4
+      //   1                  2                              3         4
+      //   1                  2
+      //                      1            2       3         4         5
+      //                      1            2       3
+      //                      1                              2         3
+      //                      1
 
       // "all" is optional, but comes first if specified
       int index = 1;
@@ -208,8 +208,8 @@ public class CLI extends Configured implements Tool {
           return exitCode;
         }
       }
-      // Get the job history file argument
-      historyFile = argv[index++];
+      // Get the job history file or job id argument
+      historyFileOrJobId = argv[index++];
       // "-outfile" is optional, but if specified requires a second argument
       if (argv.length > index + 1 && "-outfile".equals(argv[index])) {
         index++;
@@ -379,9 +379,28 @@ public class CLI extends Configured implements Tool {
           exitCode = 0;
         } 
       } else if (viewHistory) {
-        viewHistory(historyFile, viewAllHistory, historyOutFile,
-            historyOutFormat);
-        exitCode = 0;
+        // If it ends with .jhist, assume it's a jhist file; otherwise, assume
+        // it's a Job ID
+        if (historyFileOrJobId.endsWith(".jhist")) {
+          viewHistory(historyFileOrJobId, viewAllHistory, historyOutFile,
+              historyOutFormat);
+          exitCode = 0;
+        } else {
+          Job job = getJob(JobID.forName(historyFileOrJobId));
+          if (job == null) {
+            System.out.println("Could not find job " + jobid);
+          } else {
+            String historyUrl = job.getHistoryUrl();
+            if (historyUrl == null || historyUrl.isEmpty()) {
+              System.out.println("History file for job " + historyFileOrJobId +
+                  " is currently unavailable.");
+            } else {
+              viewHistory(historyUrl, viewAllHistory, historyOutFile,
+                  historyOutFormat);
+              exitCode = 0;
+            }
+          }
+        }
       } else if (listEvents) {
         listEvents(getJob(JobID.forName(jobid)), fromEvent, nEvents);
         exitCode = 0;
@@ -493,8 +512,8 @@ public class CLI extends Configured implements Tool {
       System.err.println(prefix + "[" + cmd + 
         " <job-id> <from-event-#> <#-of-events>]. Event #s start from 1.");
     } else if ("-history".equals(cmd)) {
-      System.err.println(prefix + "[" + cmd +
-          " [all] <jobHistoryFile> [-outfile <file>] [-format <human|json>]]");
+      System.err.println(prefix + "[" + cmd + " [all] <jobHistoryFile|jobId> " +
+          "[-outfile <file>] [-format <human|json>]]");
     } else if ("-list".equals(cmd)) {
       System.err.println(prefix + "[" + cmd + " [all]]");
     } else if ("-kill-task".equals(cmd) || "-fail-task".equals(cmd)) {
@@ -527,8 +546,8 @@ public class CLI extends Configured implements Tool {
           "Valid values for priorities are: " + jobPriorityValues +
           ". In addition to this, integers also can be used." + "%n");
       System.err.printf("\t[-events <job-id> <from-event-#> <#-of-events>]%n");
-      System.err.printf("\t[-history [all] <jobHistoryFile> [-outfile <file>]" +
-          " [-format <human|json>]]%n");
+      System.err.printf("\t[-history [all] <jobHistoryFile|jobId> " +
+          "[-outfile <file>] [-format <human|json>]]%n");
       System.err.printf("\t[-list [all]]%n");
       System.err.printf("\t[-list-active-trackers]%n");
       System.err.printf("\t[-list-blacklisted-trackers]%n");

@@ -68,6 +68,7 @@ public class TestJobInfo {
 
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
+    when(info.getHistoryFile()).thenReturn(fulleHistoryPath);
 
     JobId jobId = MRBuilderUtils.newJobId(1329348432655l, 1, 1);
     CompletedJob completedJob =

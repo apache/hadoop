@@ -327,7 +327,8 @@ public class TypeConverter {
         jobreport.getMapProgress(), jobreport.getReduceProgress(),
         jobreport.getCleanupProgress(), fromYarn(jobreport.getJobState()),
         jobPriority, jobreport.getUser(), jobreport.getJobName(),
-        jobreport.getJobFile(), trackingUrl, jobreport.isUber());
+        jobreport.getJobFile(), trackingUrl, jobreport.isUber(),
+        jobreport.getHistoryFile());
     jobStatus.setStartTime(jobreport.getStartTime());
     jobStatus.setFinishTime(jobreport.getFinishTime());
     jobStatus.setFailureInfo(jobreport.getDiagnostics());

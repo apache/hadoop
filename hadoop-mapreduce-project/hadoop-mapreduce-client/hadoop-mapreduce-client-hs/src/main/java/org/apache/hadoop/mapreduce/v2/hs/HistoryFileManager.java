@@ -454,10 +454,10 @@ public class HistoryFileManager extends AbstractService {
     }
 
     /**
-     * Return the history file.  This should only be used for testing.
+     * Return the history file.
      * @return the history file.
      */
-    synchronized Path getHistoryFile() {
+    public synchronized Path getHistoryFile() {
       return historyFile;
     }
     

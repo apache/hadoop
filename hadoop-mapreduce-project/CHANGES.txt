@@ -319,6 +319,9 @@ Release 2.9.0 - UNRELEASED
     MAPREDUCE-6627. Add machine-readable output to mapred job -history
     command (rkanter)
 
+    MAPREDUCE-6640. mapred job -history command should be able to take
+    Job ID (rkanter)
+
   OPTIMIZATIONS
 
   BUG FIXES

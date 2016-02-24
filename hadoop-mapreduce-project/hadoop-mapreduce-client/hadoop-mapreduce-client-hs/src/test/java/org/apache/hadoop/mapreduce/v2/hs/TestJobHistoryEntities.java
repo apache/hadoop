@@ -90,6 +90,7 @@ public class TestJobHistoryEntities {
   public void testCompletedJob() throws Exception {
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
+    when(info.getHistoryFile()).thenReturn(fullHistoryPath);
     //Re-initialize to verify the delayed load.
     completedJob =
       new CompletedJob(conf, jobId, fullHistoryPath, loadTasks, "user",
@@ -109,12 +110,14 @@ public class TestJobHistoryEntities {
     JobReport jobReport = completedJob.getReport();
     assertEquals("user", jobReport.getUser());
     assertEquals(JobState.SUCCEEDED, jobReport.getJobState());
+    assertEquals(fullHistoryPath.toString(), jobReport.getHistoryFile());
   }
   
   @Test (timeout=100000)
   public void testCopmletedJobReportWithZeroTasks() throws Exception {
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
+    when(info.getHistoryFile()).thenReturn(fullHistoryPathZeroReduces);
     completedJob =
       new CompletedJob(conf, jobId, fullHistoryPathZeroReduces, loadTasks, "user",
           info, jobAclsManager);
@@ -124,6 +127,8 @@ public class TestJobHistoryEntities {
     assertEquals(0, completedJob.getCompletedReduces());
     // Verify that the reduce progress is 1.0 (not NaN)
     assertEquals(1.0, jobReport.getReduceProgress(), 0.001);
+    assertEquals(fullHistoryPathZeroReduces.toString(),
+        jobReport.getHistoryFile());
   }
 
   @Test (timeout=10000)
