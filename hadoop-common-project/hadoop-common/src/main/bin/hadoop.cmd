@@ -144,9 +144,12 @@ call :updatepath %HADOOP_BIN_PATH%
       @echo %CLASSPATH%
       exit /b
     )
+  ) else if %hadoop-command% == jnipath (
+    echo !PATH!
+    exit /b
   )
-  
-  set corecommands=fs version jar checknative distcp daemonlog archive classpath credential kerbname key
+
+  set corecommands=fs version jar checknative conftest distch distcp daemonlog archive classpath credential kerbname key trace
   for %%i in ( %corecommands% ) do (
     if %hadoop-command% == %%i set corecommand=true  
   )
@@ -193,6 +196,15 @@ call :updatepath %HADOOP_BIN_PATH%
   set CLASS=org.apache.hadoop.util.NativeLibraryChecker
   goto :eof
 
+:conftest
+  set CLASS=org.apache.hadoop.util.ConfTest
+  goto :eof
+
+:distch
+  set CLASS=org.apache.hadoop.tools.DistCh
+  set CLASSPATH=%CLASSPATH%;%TOOL_PATH%
+  goto :eof
+
 :distcp
   set CLASS=org.apache.hadoop.tools.DistCp
   set CLASSPATH=%CLASSPATH%;%TOOL_PATH%
@@ -221,6 +233,10 @@ call :updatepath %HADOOP_BIN_PATH%
 
 :key
   set CLASS=org.apache.hadoop.crypto.key.KeyShell
+  goto :eof
+
+:trace
+  set CLASS=org.apache.hadoop.tracing.TraceAdmin
   goto :eof
 
 :updatepath
@@ -281,12 +297,18 @@ call :updatepath %HADOOP_BIN_PATH%
   @echo                        note: please use "yarn jar" to launch
   @echo                              YARN applications, not this command.
   @echo   checknative [-a^|-h]  check native hadoop and compression libraries availability
+  @echo   conftest             validate configuration XML files
+  @echo   distch path:owner:group:permisson
+  @echo                        distributed metadata changer
   @echo   distcp ^<srcurl^> ^<desturl^> copy file or directories recursively
   @echo   archive -archiveName NAME -p ^<parent path^> ^<src^>* ^<dest^> create a hadoop archive
   @echo   classpath            prints the class path needed to get the
   @echo                        Hadoop jar and the required libraries
   @echo   credential           interact with credential providers
+  @echo   jnipath              prints the java.library.path
+  @echo   kerbname             show auth_to_local principal conversion
   @echo   key                  manage keys via the KeyProvider
+  @echo   trace                view and modify Hadoop tracing settings
   @echo   daemonlog            get/set the log level for each daemon
   @echo  or
   @echo   CLASSNAME            run the class named CLASSNAME

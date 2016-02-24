@@ -551,6 +551,9 @@ Trunk (Unreleased)
     HADOOP-12647. Add /usr/lib default for ISAL library and fix missing .c file
     in CMakeLists (Kai Zheng via cmccabe)
 
+    HADOOP-12070. Some of the bin/hadoop subcommands are not available
+    on Windows. (Kengo Seki via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
