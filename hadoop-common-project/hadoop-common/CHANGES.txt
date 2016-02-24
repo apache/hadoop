@@ -1744,6 +1744,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12878. KMS SPNEGO sequence does not work with WEBHDFS. (xyao)
 
+    HADOOP-12716. KerberosAuthenticator#doSpnegoSequence use incorrect class to
+    determine isKeyTab in JDK8. (Xiaoyu Yao via cnauroth)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
