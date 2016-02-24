@@ -1149,6 +1149,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12555. WASB to read credentials from a credential provider.
     (Larry McCay via cnauroth)
 
+    HADOOP-12535. Run FileSystem contract tests with hadoop-azure.
+    (Madhumita Chakraborty via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp

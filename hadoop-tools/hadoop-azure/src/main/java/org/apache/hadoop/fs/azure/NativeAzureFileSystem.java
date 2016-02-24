@@ -51,6 +51,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -828,6 +829,8 @@ public class NativeAzureFileSystem extends FileSystem {
         }
 
         throw e;
+      } catch(IndexOutOfBoundsException e) {
+        throw new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF);
       }
     }
 
@@ -1488,7 +1491,7 @@ public class NativeAzureFileSystem extends FileSystem {
       boolean overwrite, boolean createParent, int bufferSize,
       short replication, long blockSize, Progressable progress,
       SelfRenewingLease parentFolderLease)
-          throws IOException {
+          throws FileAlreadyExistsException, IOException {
 
     LOG.debug("Creating file: {}", f.toString());
 
@@ -1503,11 +1506,11 @@ public class NativeAzureFileSystem extends FileSystem {
     FileMetadata existingMetadata = store.retrieveMetadata(key);
     if (existingMetadata != null) {
       if (existingMetadata.isDir()) {
-        throw new IOException("Cannot create file " + f
+        throw new FileAlreadyExistsException("Cannot create file " + f
             + "; already exists as a directory.");
       }
       if (!overwrite) {
-        throw new IOException("File already exists:" + f);
+        throw new FileAlreadyExistsException("File already exists:" + f);
       }
     }
 
@@ -2211,8 +2214,8 @@ public class NativeAzureFileSystem extends FileSystem {
       String currentKey = pathToKey(current);
       FileMetadata currentMetadata = store.retrieveMetadata(currentKey);
       if (currentMetadata != null && !currentMetadata.isDir()) {
-        throw new IOException("Cannot create directory " + f + " because " +
-            current + " is an existing file.");
+        throw new FileAlreadyExistsException("Cannot create directory " + f + " because "
+            + current + " is an existing file.");
       } else if (currentMetadata == null) {
         keysToCreateAsFolder.add(currentKey);
         childCreated = true;
