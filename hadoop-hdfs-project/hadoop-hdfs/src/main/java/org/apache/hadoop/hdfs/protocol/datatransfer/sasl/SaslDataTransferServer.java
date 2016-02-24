@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY;
 import static org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil.*;
 
 import java.io.ByteArrayInputStream;
@@ -40,6 +41,7 @@ import javax.security.sasl.SaslException;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherOption;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -175,7 +177,7 @@ public class SaslDataTransferServer {
           return encryptionKeyToPassword(getEncryptionKeyFromUserName(userName));
         }
       });
-    return doSaslHandshake(underlyingOut, underlyingIn, saslProps,
+    return doSaslHandshake(peer, underlyingOut, underlyingIn, saslProps,
         callbackHandler);
   }
 
@@ -295,7 +297,7 @@ public class SaslDataTransferServer {
           return buildServerPassword(userName);
         }
     });
-    return doSaslHandshake(underlyingOut, underlyingIn, saslProps,
+    return doSaslHandshake(peer, underlyingOut, underlyingIn, saslProps,
         callbackHandler);
   }
 
@@ -338,6 +340,7 @@ public class SaslDataTransferServer {
   /**
    * This method actually executes the server-side SASL handshake.
    *
+   * @param peer connection peer
    * @param underlyingOut connection output stream
    * @param underlyingIn connection input stream
    * @param saslProps properties of SASL negotiation
@@ -345,7 +348,7 @@ public class SaslDataTransferServer {
    * @return new pair of streams, wrapped after SASL negotiation
    * @throws IOException for any error
    */
-  private IOStreamPair doSaslHandshake(OutputStream underlyingOut,
+  private IOStreamPair doSaslHandshake(Peer peer, OutputStream underlyingOut,
       InputStream underlyingIn, Map<String, String> saslProps,
       CallbackHandler callbackHandler) throws IOException {
 
@@ -378,11 +381,23 @@ public class SaslDataTransferServer {
       CipherOption cipherOption = null;
       if (sasl.isNegotiatedQopPrivacy()) {
         // Negotiate a cipher option
-        cipherOption = negotiateCipherOption(dnConf.getConf(), cipherOptions);
-        if (cipherOption != null) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Server using cipher suite " + 
-                cipherOption.getCipherSuite().getName());
+        Configuration conf = dnConf.getConf();
+        cipherOption = negotiateCipherOption(conf, cipherOptions);
+        if (LOG.isDebugEnabled()) {
+          if (cipherOption == null) {
+            // No cipher suite is negotiated
+            String cipherSuites =
+                conf.get(DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY);
+            if (cipherSuites != null && !cipherSuites.isEmpty()) {
+              // the server accepts some cipher suites, but the client does not.
+              LOG.debug("Server accepts cipher suites {}, "
+                      + "but client {} does not accept any of them",
+                  cipherSuites, peer.getRemoteAddressString());
+            }
+          } else {
+            LOG.debug("Server using cipher suite {} with client {}",
+                cipherOption.getCipherSuite().getName(),
+                peer.getRemoteAddressString());
           }
         }
       }

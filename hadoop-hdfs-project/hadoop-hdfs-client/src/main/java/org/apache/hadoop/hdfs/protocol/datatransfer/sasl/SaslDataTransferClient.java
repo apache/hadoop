@@ -238,7 +238,7 @@ public class SaslDataTransferClient {
     if (encryptionKey != null) {
       LOG.debug("SASL client doing encrypted handshake for addr = {}, "
           + "datanodeId = {}", addr, datanodeId);
-      return getEncryptedStreams(underlyingOut, underlyingIn,
+      return getEncryptedStreams(addr, underlyingOut, underlyingIn,
           encryptionKey);
     } else if (!UserGroupInformation.isSecurityEnabled()) {
       LOG.debug("SASL client skipping handshake in unsecured configuration for "
@@ -275,13 +275,15 @@ public class SaslDataTransferClient {
   /**
    * Sends client SASL negotiation for specialized encrypted handshake.
    *
+   * @param addr connection address
    * @param underlyingOut connection output stream
    * @param underlyingIn connection input stream
    * @param encryptionKey for an encrypted SASL handshake
    * @return new pair of streams, wrapped after SASL negotiation
    * @throws IOException for any error
    */
-  private IOStreamPair getEncryptedStreams(OutputStream underlyingOut,
+  private IOStreamPair getEncryptedStreams(InetAddress addr,
+      OutputStream underlyingOut,
       InputStream underlyingIn, DataEncryptionKey encryptionKey)
       throws IOException {
     Map<String, String> saslProps = createSaslPropertiesForEncryption(
@@ -294,8 +296,8 @@ public class SaslDataTransferClient {
     char[] password = encryptionKeyToPassword(encryptionKey.encryptionKey);
     CallbackHandler callbackHandler = new SaslClientCallbackHandler(userName,
         password);
-    return doSaslHandshake(underlyingOut, underlyingIn, userName, saslProps,
-        callbackHandler);
+    return doSaslHandshake(addr, underlyingOut, underlyingIn, userName,
+        saslProps, callbackHandler);
   }
 
   /**
@@ -384,8 +386,8 @@ public class SaslDataTransferClient {
     char[] password = buildClientPassword(accessToken);
     CallbackHandler callbackHandler = new SaslClientCallbackHandler(userName,
         password);
-    return doSaslHandshake(underlyingOut, underlyingIn, userName, saslProps,
-        callbackHandler);
+    return doSaslHandshake(addr, underlyingOut, underlyingIn, userName,
+        saslProps, callbackHandler);
   }
 
   /**
@@ -418,6 +420,7 @@ public class SaslDataTransferClient {
   /**
    * This method actually executes the client-side SASL handshake.
    *
+   * @param addr connection address
    * @param underlyingOut connection output stream
    * @param underlyingIn connection input stream
    * @param userName SASL user name
@@ -426,8 +429,9 @@ public class SaslDataTransferClient {
    * @return new pair of streams, wrapped after SASL negotiation
    * @throws IOException for any error
    */
-  private IOStreamPair doSaslHandshake(OutputStream underlyingOut,
-      InputStream underlyingIn, String userName, Map<String, String> saslProps,
+  private IOStreamPair doSaslHandshake(InetAddress addr,
+      OutputStream underlyingOut, InputStream underlyingIn, String userName,
+      Map<String, String> saslProps,
       CallbackHandler callbackHandler) throws IOException {
 
     DataOutputStream out = new DataOutputStream(underlyingOut);
@@ -447,12 +451,12 @@ public class SaslDataTransferClient {
       byte[] remoteResponse = readSaslMessage(in);
       byte[] localResponse = sasl.evaluateChallengeOrResponse(remoteResponse);
       List<CipherOption> cipherOptions = null;
+      String cipherSuites = conf.get(
+          DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY);
       if (requestedQopContainsPrivacy(saslProps)) {
         // Negotiate cipher suites if configured.  Currently, the only supported
         // cipher suite is AES/CTR/NoPadding, but the protocol allows multiple
         // values for future expansion.
-        String cipherSuites = conf.get(
-            DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY);
         if (cipherSuites != null && !cipherSuites.isEmpty()) {
           if (!cipherSuites.equals(CipherSuite.AES_CTR_NOPADDING.getName())) {
             throw new IOException(String.format("Invalid cipher suite, %s=%s",
@@ -479,6 +483,20 @@ public class SaslDataTransferClient {
       if (sasl.isNegotiatedQopPrivacy()) {
         // Unwrap the negotiated cipher option
         cipherOption = unwrap(response.cipherOption, sasl);
+        if (LOG.isDebugEnabled()) {
+          if (cipherOption == null) {
+            // No cipher suite is negotiated
+            if (cipherSuites != null && !cipherSuites.isEmpty()) {
+              // the client accepts some cipher suites, but the server does not.
+              LOG.debug("Client accepts cipher suites {}, "
+                      + "but server {} does not accept any of them",
+                  cipherSuites, addr.toString());
+            }
+          } else {
+            LOG.debug("Client using cipher suite {} with server {}",
+                cipherOption.getCipherSuite().getName(), addr.toString());
+          }
+        }
       }
 
       // If negotiated cipher option is not null, we will use it to create
