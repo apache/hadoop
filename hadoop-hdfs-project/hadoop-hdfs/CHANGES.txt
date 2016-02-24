@@ -435,6 +435,9 @@ Trunk (Unreleased)
     HDFS-9818. Correctly handle EC reconstruction work caused by not enough
     racks. (jing9)
 
+    HDFS-9837. BlockManager#countNodes should be able to detect duplicated
+    internal blocks. (jing9)
+
     BREAKDOWN OF HDFS-7285 SUBTASKS AND RELATED JIRAS
 
       HDFS-7347. Configurable erasure coding policy for individual files and

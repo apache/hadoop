@@ -437,7 +437,7 @@ public class TestBlockManagerSafeMode {
     doReturn(storedBlock).when(bm).getStoredBlock(any(Block.class));
     NumberReplicas numberReplicas = mock(NumberReplicas.class);
     when(numberReplicas.liveReplicas()).thenReturn(0);
-    doReturn(numberReplicas).when(bm).countNodes(any(Block.class));
+    doReturn(numberReplicas).when(bm).countNodes(any(BlockInfo.class));
   }
 
   /**

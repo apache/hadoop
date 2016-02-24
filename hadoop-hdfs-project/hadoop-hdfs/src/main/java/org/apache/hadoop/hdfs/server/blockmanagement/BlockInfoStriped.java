@@ -23,6 +23,9 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+
 /**
  * Subclass of {@link BlockInfo}, presenting a block group in erasure coding.
  *
@@ -226,5 +229,48 @@ public class BlockInfoStriped extends BlockInfo {
       }
     }
     return true;
+  }
+
+  static class StorageAndBlockIndex {
+    final DatanodeStorageInfo storage;
+    final byte blockIndex;
+
+    StorageAndBlockIndex(DatanodeStorageInfo storage, byte blockIndex) {
+      this.storage = storage;
+      this.blockIndex = blockIndex;
+    }
+  }
+
+  public Iterable<StorageAndBlockIndex> getStorageAndIndexInfos() {
+    return new Iterable<StorageAndBlockIndex>() {
+      @Override
+      public Iterator<StorageAndBlockIndex> iterator() {
+        return new Iterator<StorageAndBlockIndex>() {
+          private int index = 0;
+
+          @Override
+          public boolean hasNext() {
+            while (index < getCapacity() && getStorageInfo(index) == null) {
+              index++;
+            }
+            return index < getCapacity();
+          }
+
+          @Override
+          public StorageAndBlockIndex next() {
+            if (!hasNext()) {
+              throw new NoSuchElementException();
+            }
+            int i = index++;
+            return new StorageAndBlockIndex(storages[i], indices[i]);
+          }
+
+          @Override
+          public void remove() {
+            throw new UnsupportedOperationException("Remove is not supported");
+          }
+        };
+      }
+    };
   }
 }

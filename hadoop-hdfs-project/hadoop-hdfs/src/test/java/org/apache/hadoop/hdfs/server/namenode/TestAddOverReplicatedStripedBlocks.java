@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -40,9 +41,11 @@ import org.junit.rules.Timeout;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class TestAddOverReplicatedStripedBlocks {
 
@@ -68,6 +71,7 @@ public class TestAddOverReplicatedStripedBlocks {
     // disable block recovery
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     SimulatedFSDataset.setFactory(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.waitActive();
@@ -201,7 +205,8 @@ public class TestAddOverReplicatedStripedBlocks {
     } finally {
       cluster.getNamesystem().writeUnlock();
     }
-    assertEquals(1, bm.countNodes(blockInfo).corruptReplicas());
+    assertEquals(1, bm.countNodes(bm.getStoredBlock(blockInfo))
+        .corruptReplicas());
 
     // let a internal block be over replicated with 2 redundant block.
     blk.setBlockId(groupId + 2);
@@ -210,17 +215,25 @@ public class TestAddOverReplicatedStripedBlocks {
 
     // update blocksMap
     cluster.triggerBlockReports();
-    // add to invalidates
-    cluster.triggerHeartbeats();
-    // datanode delete block
-    cluster.triggerHeartbeats();
-    // update blocksMap
-    cluster.triggerBlockReports();
 
-    // verify that all internal blocks exists
-    lbs = cluster.getNameNodeRpc().getBlockLocations(
-        filePath.toString(), 0, fileLen);
-    StripedFileTestUtil.verifyLocatedStripedBlocks(lbs, GROUP_SIZE);
+    // verify that all internal blocks exists except b0
+    // the redundant internal blocks will not be deleted before the corrupted
+    // block gets reconstructed. but since we set
+    // DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY to 0, the reconstruction will
+    // not happen
+    lbs = cluster.getNameNodeRpc().getBlockLocations(filePath.toString(), 0,
+        fileLen);
+    bg = (LocatedStripedBlock) (lbs.get(0));
+    assertEquals(GROUP_SIZE + 1, bg.getBlockIndices().length);
+    assertEquals(GROUP_SIZE + 1, bg.getLocations().length);
+    BitSet set = new BitSet(GROUP_SIZE);
+    for (byte index : bg.getBlockIndices()) {
+      set.set(index);
+    }
+    Assert.assertFalse(set.get(0));
+    for (int i = 1; i < GROUP_SIZE; i++) {
+      assertTrue(set.get(i));
+    }
   }
 
   @Test
@@ -260,11 +273,21 @@ public class TestAddOverReplicatedStripedBlocks {
     // update blocksMap
     cluster.triggerBlockReports();
 
-    // Since one block is missing, when over-replicated blocks got deleted,
-    // we are left GROUP_SIZE - 1 blocks.
-    lbs = cluster.getNameNodeRpc().getBlockLocations(
-        filePath.toString(), 0, fileLen);
-    StripedFileTestUtil.verifyLocatedStripedBlocks(lbs, GROUP_SIZE - 1);
+    // Since one block is missing, then over-replicated blocks will not be
+    // deleted until reconstruction happens
+    lbs = cluster.getNameNodeRpc().getBlockLocations(filePath.toString(), 0,
+        fileLen);
+    bg = (LocatedStripedBlock) (lbs.get(0));
+    assertEquals(GROUP_SIZE + 1, bg.getBlockIndices().length);
+    assertEquals(GROUP_SIZE + 1, bg.getLocations().length);
+    BitSet set = new BitSet(GROUP_SIZE);
+    for (byte index : bg.getBlockIndices()) {
+      set.set(index);
+    }
+    Assert.assertFalse(set.get(GROUP_SIZE - 1));
+    for (int i = 0; i < GROUP_SIZE - 1; i++) {
+      assertTrue(set.get(i));
+    }
   }
 
 }

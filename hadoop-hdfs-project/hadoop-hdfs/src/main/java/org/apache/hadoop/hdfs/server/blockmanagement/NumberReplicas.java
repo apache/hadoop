@@ -17,59 +17,49 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import org.apache.hadoop.hdfs.util.EnumCounters;
+
+import static org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplicaState.CORRUPT;
+import static org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplicaState.DECOMMISSIONED;
+import static org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplicaState.DECOMMISSIONING;
+import static org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplicaState.EXCESS;
+import static org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplicaState.LIVE;
+import static org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplicaState.REDUNDANT;
+import static org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplicaState.STALESTORAGE;
+import static org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplicaState.READONLY;
+
 /**
  * A immutable object that stores the number of live replicas and
  * the number of decommissioned Replicas.
  */
-public class NumberReplicas {
-  private int liveReplicas;
-  private int readOnlyReplicas;
+public class NumberReplicas extends EnumCounters<NumberReplicas.StoredReplicaState> {
 
-  // Tracks only the decommissioning replicas
-  private int decommissioning;
-  // Tracks only the decommissioned replicas
-  private int decommissioned;
-  private int corruptReplicas;
-  private int excessReplicas;
-  private int replicasOnStaleNodes;
-
-  NumberReplicas() {
-    this(0, 0, 0, 0, 0, 0, 0);
+  public enum StoredReplicaState {
+    // live replicas. for a striped block, this value excludes redundant
+    // replicas for the same internal block
+    LIVE,
+    READONLY,
+    DECOMMISSIONING,
+    DECOMMISSIONED,
+    CORRUPT,
+    // excess replicas already tracked by blockmanager's excess map
+    EXCESS,
+    STALESTORAGE,
+    // for striped blocks only. number of redundant internal block replicas
+    // that have not been tracked by blockmanager yet (i.e., not in excess)
+    REDUNDANT
   }
 
-  NumberReplicas(int live, int readonly, int decommissioned,
-      int decommissioning, int corrupt, int excess, int stale) {
-    set(live, readonly, decommissioned, decommissioning, corrupt, excess, stale);
-  }
-
-  void set(int live, int readonly, int decommissioned, int decommissioning,
-      int corrupt, int excess, int stale) {
-    liveReplicas = live;
-    readOnlyReplicas = readonly;
-    this.decommissioning = decommissioning;
-    this.decommissioned = decommissioned;
-    corruptReplicas = corrupt;
-    excessReplicas = excess;
-    replicasOnStaleNodes = stale;
+  public NumberReplicas() {
+    super(StoredReplicaState.class);
   }
 
   public int liveReplicas() {
-    return liveReplicas;
+    return (int) get(LIVE);
   }
 
   public int readOnlyReplicas() {
-    return readOnlyReplicas;
-  }
-
-  /**
-   *
-   * @return decommissioned replicas + decommissioning replicas
-   * It is deprecated by decommissionedAndDecommissioning
-   * due to its misleading name.
-   */
-  @Deprecated
-  public int decommissionedReplicas() {
-    return decommissionedAndDecommissioning();
+    return (int) get(READONLY);
   }
 
   /**
@@ -77,7 +67,7 @@ public class NumberReplicas {
    * @return decommissioned and decommissioning replicas
    */
   public int decommissionedAndDecommissioning() {
-    return decommissioned + decommissioning;
+    return (int) (get(DECOMMISSIONED) + get(DECOMMISSIONING));
   }
 
   /**
@@ -85,7 +75,7 @@ public class NumberReplicas {
    * @return decommissioned replicas only
    */
   public int decommissioned() {
-    return decommissioned;
+    return (int) get(DECOMMISSIONED);
   }
 
   /**
@@ -93,15 +83,15 @@ public class NumberReplicas {
    * @return decommissioning replicas only
    */
   public int decommissioning() {
-    return decommissioning;
+    return (int) get(DECOMMISSIONING);
   }
 
   public int corruptReplicas() {
-    return corruptReplicas;
+    return (int) get(CORRUPT);
   }
 
   public int excessReplicas() {
-    return excessReplicas;
+    return (int) get(EXCESS);
   }
   
   /**
@@ -110,6 +100,10 @@ public class NumberReplicas {
    * replica may count as both "live" and "stale".
    */
   public int replicasOnStaleNodes() {
-    return replicasOnStaleNodes;
+    return (int) get(STALESTORAGE);
+  }
+
+  public int redundantInternalBlocks() {
+    return (int) get(REDUNDANT);
   }
 } 
