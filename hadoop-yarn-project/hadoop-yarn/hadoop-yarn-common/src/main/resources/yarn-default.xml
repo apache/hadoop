@@ -1227,6 +1227,14 @@
   </property>
 
   <property>
+    <description>
+    Thread pool size for LogAggregationService in Node Manager.
+    </description>
+    <name>yarn.nodemanager.logaggregation.threadpool-size-max</name>
+    <value>100</value>
+  </property>
+
+  <property>
     <description>Percentage of CPU that can be allocated
     for containers. This setting allows users to limit the amount of
     CPU that YARN containers use. Currently functional only

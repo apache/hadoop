@@ -143,6 +143,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4648. Move preemption related tests from TestFairScheduler to
     TestFairSchedulerPreemption. (Kai Sasaki via ozawa)
 
+    YARN-4697. NM aggregation thread pool is not bound by
+    limits (haibochen via rkanter)
+
   OPTIMIZATIONS
 
   BUG FIXES
