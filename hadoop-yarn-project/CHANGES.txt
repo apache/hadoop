@@ -39,6 +39,8 @@ Trunk - Unreleased
 
   BUG FIXES
 
+    YARN-4680. TimerTasks leak in ATS V1.5 Writer. (Xuan Gong via gtcarrera9)
+
     YARN-524 TestYarnVersionInfo failing if generated properties doesn't
     include an SVN URL. (stevel)
 
