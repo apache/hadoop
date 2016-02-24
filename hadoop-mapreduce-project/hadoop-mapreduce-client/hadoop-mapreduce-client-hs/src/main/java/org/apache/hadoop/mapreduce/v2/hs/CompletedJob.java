@@ -166,6 +166,7 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     report.setTrackingUrl(historyUrl);
     report.setAMInfos(getAMInfos());
     report.setIsUber(isUber());
+    report.setHistoryFile(info.getHistoryFile().toString());
   }
 
   @Override

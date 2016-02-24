@@ -380,4 +380,16 @@ public class JobReportPBImpl extends ProtoBase<JobReportProto> implements
     }
     this.jobPriority = priority;
   }
+
+  @Override
+  public synchronized String getHistoryFile() {
+    JobReportProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getHistoryFile();
+  }
+
+  @Override
+  public synchronized void setHistoryFile(String historyFile) {
+    maybeInitBuilder();
+    builder.setHistoryFile(historyFile);
+  }
 }

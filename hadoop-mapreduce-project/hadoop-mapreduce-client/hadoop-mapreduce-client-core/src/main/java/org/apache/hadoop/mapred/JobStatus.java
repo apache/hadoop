@@ -201,12 +201,12 @@ public class JobStatus extends org.apache.hadoop.mapreduce.JobStatus {
    * @param jp Priority of the job.
    * @param user userid of the person who submitted the job.
    * @param jobName user-specified job name.
-   * @param jobFile job configuration file. 
+   * @param jobFile job configuration file.
    * @param trackingUrl link to the web-ui for details of the job.
    */
    public JobStatus(JobID jobid, float setupProgress, float mapProgress,
-                    float reduceProgress, float cleanupProgress, 
-                    int runState, JobPriority jp, String user, String jobName, 
+                    float reduceProgress, float cleanupProgress,
+                    int runState, JobPriority jp, String user, String jobName,
                     String jobFile, String trackingUrl) {
      this(jobid, setupProgress, mapProgress, reduceProgress, cleanupProgress,
          runState, jp, user, jobName, "default", jobFile, trackingUrl);
@@ -223,17 +223,43 @@ public class JobStatus extends org.apache.hadoop.mapreduce.JobStatus {
     * @param jp Priority of the job.
     * @param user userid of the person who submitted the job.
     * @param jobName user-specified job name.
-    * @param jobFile job configuration file. 
+    * @param jobFile job configuration file.
     * @param trackingUrl link to the web-ui for details of the job.
     * @param isUber Whether job running in uber mode
     */
     public JobStatus(JobID jobid, float setupProgress, float mapProgress,
-                     float reduceProgress, float cleanupProgress, 
-                     int runState, JobPriority jp, String user, String jobName, 
+                     float reduceProgress, float cleanupProgress,
+                     int runState, JobPriority jp, String user, String jobName,
                      String jobFile, String trackingUrl, boolean isUber) {
       this(jobid, setupProgress, mapProgress, reduceProgress, cleanupProgress,
           runState, jp, user, jobName, "default", jobFile, trackingUrl, isUber);
-    }   
+  }
+
+   /**
+    * Create a job status object for a given jobid.
+    * @param jobid The jobid of the job
+    * @param setupProgress The progress made on the setup
+    * @param mapProgress The progress made on the maps
+    * @param reduceProgress The progress made on the reduces
+    * @param cleanupProgress The progress made on the cleanup
+    * @param runState The current state of the job
+    * @param jp Priority of the job.
+    * @param user userid of the person who submitted the job.
+    * @param jobName user-specified job name.
+    * @param jobFile job configuration file.
+    * @param trackingUrl link to the web-ui for details of the job.
+    * @param isUber Whether job running in uber mode
+    * @param historyFile history file
+    */
+  public JobStatus(JobID jobid, float setupProgress, float mapProgress,
+                   float reduceProgress, float cleanupProgress,
+                   int runState, JobPriority jp, String user, String jobName,
+                   String jobFile, String trackingUrl, boolean isUber,
+                   String historyFile) {
+      this(jobid, setupProgress, mapProgress, reduceProgress, cleanupProgress,
+          runState, jp, user, jobName, "default", jobFile, trackingUrl, isUber,
+          historyFile);
+  }
    
    /**
     * Create a job status object for a given jobid.
@@ -281,10 +307,38 @@ public class JobStatus extends org.apache.hadoop.mapreduce.JobStatus {
        int runState, JobPriority jp, 
        String user, String jobName, String queue, 
        String jobFile, String trackingUrl, boolean isUber) {
-     super(jobid, setupProgress, mapProgress, reduceProgress, cleanupProgress,
-         getEnum(runState), org.apache.hadoop.mapreduce.JobPriority.valueOf(jp.name()),
-         user, jobName, queue, jobFile, trackingUrl, isUber);
+     this(jobid, setupProgress, mapProgress, reduceProgress, cleanupProgress,
+         runState, jp, user, jobName, queue, jobFile, trackingUrl, isUber, "");
    }
+
+  /**
+   * Create a job status object for a given jobid.
+   * @param jobid The jobid of the job
+   * @param setupProgress The progress made on the setup
+   * @param mapProgress The progress made on the maps
+   * @param reduceProgress The progress made on the reduces
+   * @param cleanupProgress The progress made on the cleanup
+   * @param runState The current state of the job
+   * @param jp Priority of the job.
+   * @param user userid of the person who submitted the job.
+   * @param jobName user-specified job name.
+   * @param queue job queue name.
+   * @param jobFile job configuration file.
+   * @param trackingUrl link to the web-ui for details of the job.
+   * @param isUber Whether job running in uber mode
+   * @param historyFile history file
+   */
+  public JobStatus(JobID jobid, float setupProgress, float mapProgress,
+                   float reduceProgress, float cleanupProgress,
+                   int runState, JobPriority jp,
+                   String user, String jobName, String queue,
+                   String jobFile, String trackingUrl, boolean isUber,
+                   String historyFile) {
+    super(jobid, setupProgress, mapProgress, reduceProgress, cleanupProgress,
+        getEnum(runState),
+        org.apache.hadoop.mapreduce.JobPriority.valueOf(jp.name()),
+        user, jobName, queue, jobFile, trackingUrl, isUber, historyFile);
+  }
 
   public static JobStatus downgrade(org.apache.hadoop.mapreduce.JobStatus stat){
     JobStatus old = new JobStatus(JobID.downgrade(stat.getJobID()),
