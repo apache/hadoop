@@ -1965,6 +1965,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9854. Log cipher suite negotiation more verbosely
     (Wei-Chiu Chuang via cnauroth)
 
+    HDFS-9843. Document distcp options required for copying between encrypted
+    locations. (Xiaoyu Yao via cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
