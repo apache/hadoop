@@ -45,7 +45,6 @@ import javax.security.auth.Subject;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.kerberos.KerberosTicket;
-import javax.security.auth.kerberos.KeyTab;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag;
 import javax.security.auth.login.LoginContext;
@@ -610,8 +609,8 @@ public class UserGroupInformation {
   UserGroupInformation(Subject subject) {
     this.subject = subject;
     this.user = subject.getPrincipals(User.class).iterator().next();
-    this.isKeytab = !subject.getPrivateCredentials(KeyTab.class).isEmpty();
-    this.isKrbTkt = !subject.getPrivateCredentials(KerberosTicket.class).isEmpty();
+    this.isKeytab = KerberosUtil.hasKerberosKeyTab(subject);
+    this.isKrbTkt = KerberosUtil.hasKerberosTicket(subject);
   }
   
   /**

@@ -38,6 +38,10 @@ import org.apache.directory.server.kerberos.shared.keytab.KeytabEntry;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.Oid;
 
+import javax.security.auth.Subject;
+import javax.security.auth.kerberos.KerberosTicket;
+import javax.security.auth.kerberos.KeyTab;
+
 public class KerberosUtil {
 
   /* Return the Kerberos login module name */
@@ -226,5 +230,29 @@ public class KerberosUtil {
       principals = matchingPrincipals.toArray(new String[0]);
     }
     return principals;
+  }
+
+  /**
+   * Check if the subject contains Kerberos keytab related objects.
+   * The Kerberos keytab object attached in subject has been changed
+   * from KerberosKey (JDK 7) to KeyTab (JDK 8)
+   *
+   *
+   * @param subject subject to be checked
+   * @return true if the subject contains Kerberos keytab
+   */
+  public static boolean hasKerberosKeyTab(Subject subject) {
+    return !subject.getPrivateCredentials(KeyTab.class).isEmpty();
+  }
+
+  /**
+   * Check if the subject contains Kerberos ticket.
+   *
+   *
+   * @param subject subject to be checked
+   * @return true if the subject contains Kerberos ticket
+   */
+  public static boolean hasKerberosTicket(Subject subject) {
+    return !subject.getPrivateCredentials(KerberosTicket.class).isEmpty();
   }
 }
