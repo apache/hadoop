@@ -32,10 +32,8 @@ import java.util.BitSet;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
@@ -54,6 +52,7 @@ import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSPacket;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.DFSUtilClient.CorruptedBlocks;
 import org.apache.hadoop.hdfs.RemoteBlockReader2;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -460,13 +459,13 @@ public final class ErasureCodingWorker {
               bufferSize, maxTargetLength - positionInBlock);
           // step1: read from minimum source DNs required for reconstruction.
           // The returned success list is the source DNs we do real read from
-          Map<ExtendedBlock, Set<DatanodeInfo>> corruptionMap = new HashMap<>();
+          CorruptedBlocks corruptedBlocks = new CorruptedBlocks();
           try {
             success = readMinimumStripedData4Reconstruction(success,
-                toReconstruct, corruptionMap);
+                toReconstruct, corruptedBlocks);
           } finally {
             // report corrupted blocks to NN
-            reportCorruptedBlocks(corruptionMap);
+            datanode.reportCorruptedBlocks(corruptedBlocks);
           }
 
           // step2: decode to reconstruct targets
@@ -564,8 +563,7 @@ public final class ErasureCodingWorker {
      * @throws IOException
      */
     private int[] readMinimumStripedData4Reconstruction(final int[] success,
-        int reconstructLength,
-        Map<ExtendedBlock, Set<DatanodeInfo>> corruptionMap)
+        int reconstructLength, CorruptedBlocks corruptedBlocks)
             throws IOException {
       Preconditions.checkArgument(reconstructLength >= 0 &&
           reconstructLength <= bufferSize);
@@ -582,7 +580,7 @@ public final class ErasureCodingWorker {
             reconstructLength);
         if (toRead > 0) {
           Callable<Void> readCallable = readFromBlock(reader, reader.buffer,
-              toRead, corruptionMap);
+              toRead, corruptedBlocks);
           Future<Void> f = readService.submit(readCallable);
           futures.put(f, success[i]);
         } else {
@@ -608,11 +606,11 @@ public final class ErasureCodingWorker {
             IOUtils.closeStream(failedReader.blockReader);
             failedReader.blockReader = null;
             resultIndex = scheduleNewRead(used, reconstructLength,
-                corruptionMap);
+                corruptedBlocks);
           } else if (result.state == StripingChunkReadResult.TIMEOUT) {
             // If timeout, we also schedule a new read.
             resultIndex = scheduleNewRead(used, reconstructLength,
-                corruptionMap);
+                corruptedBlocks);
           }
           if (resultIndex >= 0) {
             newSuccess[nsuccess++] = resultIndex;
@@ -723,7 +721,7 @@ public final class ErasureCodingWorker {
      * @return the array index of source DN if don't need to do real read.
      */
     private int scheduleNewRead(BitSet used, int reconstructLen,
-        Map<ExtendedBlock, Set<DatanodeInfo>> corruptionMap) {
+                                CorruptedBlocks corruptedBlocks) {
       StripedReader reader = null;
       // step1: initially we may only have <code>minRequiredSources</code>
       // number of StripedReader, and there may be some source DNs we never 
@@ -775,7 +773,7 @@ public final class ErasureCodingWorker {
       // step3: schedule if find a correct source DN and need to do real read.
       if (reader != null) {
         Callable<Void> readCallable = readFromBlock(reader, reader.buffer,
-            toRead, corruptionMap);
+            toRead, corruptedBlocks);
         Future<Void> f = readService.submit(readCallable);
         futures.put(f, m);
         used.set(m);
@@ -793,7 +791,7 @@ public final class ErasureCodingWorker {
 
     private Callable<Void> readFromBlock(final StripedReader reader,
         final ByteBuffer buf, final int length,
-        final Map<ExtendedBlock, Set<DatanodeInfo>> corruptionMap) {
+        final CorruptedBlocks corruptedBlocks) {
       return new Callable<Void>() {
 
         @Override
@@ -805,7 +803,7 @@ public final class ErasureCodingWorker {
           } catch (ChecksumException e) {
             LOG.warn("Found Checksum error for {} from {} at {}", reader.block,
                 reader.source, e.getPos());
-            addCorruptedBlock(reader.block, reader.source, corruptionMap);
+            corruptedBlocks.addCorruptedBlock(reader.block, reader.source);
             throw e;
           } catch (IOException e) {
             LOG.info(e.getMessage());
@@ -814,30 +812,6 @@ public final class ErasureCodingWorker {
         }
 
       };
-    }
-
-    private void reportCorruptedBlocks(
-        Map<ExtendedBlock, Set<DatanodeInfo>> corruptionMap) throws IOException {
-      if (!corruptionMap.isEmpty()) {
-        for (Map.Entry<ExtendedBlock, Set<DatanodeInfo>> entry :
-            corruptionMap.entrySet()) {
-          for (DatanodeInfo dnInfo : entry.getValue()) {
-            datanode.reportRemoteBadBlock(dnInfo, entry.getKey());
-          }
-        }
-      }
-    }
-
-    private void addCorruptedBlock(ExtendedBlock blk, DatanodeInfo node,
-        Map<ExtendedBlock, Set<DatanodeInfo>> corruptionMap) {
-      Set<DatanodeInfo> dnSet = corruptionMap.get(blk);
-      if (dnSet == null) {
-        dnSet = new HashSet<>();
-        corruptionMap.put(blk, dnSet);
-      }
-      if (!dnSet.contains(node)) {
-        dnSet.add(node);
-      }
     }
 
     /**

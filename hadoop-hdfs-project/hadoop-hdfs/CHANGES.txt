@@ -443,6 +443,9 @@ Trunk (Unreleased)
     HDFS-9837. BlockManager#countNodes should be able to detect duplicated
     internal blocks. (jing9)
 
+    HDFS-9734. Refactoring of checksum failure report related codes.
+    (Kai Zheng via zhz)
+
     BREAKDOWN OF HDFS-7285 SUBTASKS AND RELATED JIRAS
 
       HDFS-7347. Configurable erasure coding policy for individual files and

@@ -217,7 +217,7 @@ public class TestReconstructStripedFile {
     return d;
   }
 
-  private void shutdownDataNodes(DataNode dn) throws IOException {
+  private void shutdownDataNode(DataNode dn) throws IOException {
     /*
      * Kill the datanode which contains one replica
      * We need to make sure it dead in namenode: clear its update time and
@@ -237,7 +237,7 @@ public class TestReconstructStripedFile {
         // stop at least one DN to trigger reconstruction
         LOG.info("Note: stop DataNode " + target.getValue().getDisplayName()
             + " with internal block " + target.getKey());
-        shutdownDataNodes(target.getValue());
+        shutdownDataNode(target.getValue());
         stoppedDN++;
       } else { // corrupt the data on the DN
         LOG.info("Note: corrupt data on " + target.getValue().getDisplayName()

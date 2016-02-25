@@ -1150,7 +1150,21 @@ public class DataNode extends ReconfigurableBase
     BPOfferService bpos = getBPOSForBlock(block);
     bpos.reportRemoteBadBlock(srcDataNode, block);
   }
-  
+
+  public void reportCorruptedBlocks(
+      DFSUtilClient.CorruptedBlocks corruptedBlocks) throws IOException {
+    Map<ExtendedBlock, Set<DatanodeInfo>> corruptionMap =
+        corruptedBlocks.getCorruptionMap();
+    if (!corruptionMap.isEmpty()) {
+      for (Map.Entry<ExtendedBlock, Set<DatanodeInfo>> entry :
+          corruptionMap.entrySet()) {
+        for (DatanodeInfo dnInfo : entry.getValue()) {
+          reportRemoteBadBlock(dnInfo, entry.getKey());
+        }
+      }
+    }
+  }
+
   /**
    * Try to send an error report to the NNs associated with the given
    * block pool.
