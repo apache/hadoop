@@ -19,8 +19,17 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.codehaus.jackson.map.ObjectMapper;
+
+import static org.codehaus.jackson.map.type.TypeFactory.defaultInstance;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.LinkedList;
 
 /**
  * Helper class that reports how much work has has been done by the node.
@@ -28,33 +37,69 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class DiskBalancerWorkStatus {
-  private final int result;
-  private final String planID;
-  private final String status;
-  private final String currentState;
+
+  private final List<DiskBalancerWorkEntry> currentState;
+  private Result result;
+  private String planID;
+
+  /**
+   * Constructs a default workStatus Object.
+   */
+  public DiskBalancerWorkStatus() {
+    this.currentState = new LinkedList<>();
+  }
+
+  /**
+   * Constructs a workStatus Object.
+   *
+   * @param result - int
+   * @param planID - Plan ID
+   */
+  public DiskBalancerWorkStatus(Result result, String planID) {
+    this();
+    this.result = result;
+    this.planID = planID;
+  }
 
   /**
    * Constructs a workStatus Object.
    *
    * @param result       - int
    * @param planID       - Plan ID
-   * @param status       - Current Status
    * @param currentState - Current State
    */
-  public DiskBalancerWorkStatus(int result, String planID, String status,
-                                String currentState) {
+  public DiskBalancerWorkStatus(Result result, String planID,
+                                List<DiskBalancerWorkEntry> currentState) {
     this.result = result;
     this.planID = planID;
-    this.status = status;
     this.currentState = currentState;
   }
+
+
+  /**
+   * Constructs a workStatus Object.
+   *
+   * @param result       - int
+   * @param planID       - Plan ID
+   * @param currentState - List of WorkEntries.
+   */
+  public DiskBalancerWorkStatus(Result result, String planID,
+                                String currentState) throws IOException {
+    this.result = result;
+    this.planID = planID;
+    ObjectMapper mapper = new ObjectMapper();
+    this.currentState = mapper.readValue(currentState,
+        defaultInstance().constructCollectionType(
+            List.class, DiskBalancerWorkEntry.class));
+  }
+
 
   /**
    * Returns result.
    *
    * @return long
    */
-  public int getResult() {
+  public Result getResult() {
     return result;
   }
 
@@ -68,20 +113,135 @@ public class DiskBalancerWorkStatus {
   }
 
   /**
-   * Returns Status.
-   *
-   * @return String
-   */
-  public String getStatus() {
-    return status;
-  }
-
-  /**
    * Gets current Status.
    *
    * @return - Json String
    */
-  public String getCurrentState() {
+  public List<DiskBalancerWorkEntry> getCurrentState() {
     return currentState;
+  }
+
+  /**
+   * Return current state as a string.
+   *
+   * @throws IOException
+   **/
+  public String getCurrentStateString() throws IOException {
+    ObjectMapper mapper = new ObjectMapper();
+    return mapper.writeValueAsString(currentState);
+  }
+
+
+  /**
+   * Adds a new work entry to the list.
+   *
+   * @param entry - DiskBalancerWorkEntry
+   */
+
+  public void addWorkEntry(DiskBalancerWorkEntry entry) {
+    Preconditions.checkNotNull(entry);
+    currentState.add(entry);
+  }
+
+  /** Various result values. **/
+  public enum Result {
+    NO_PLAN(0),
+    PLAN_UNDER_PROGRESS(1),
+    PLAN_DONE(2),
+    PLAN_CANCELLED(3);
+    private int result;
+
+    private Result(int result) {
+      this.result = result;
+    }
+
+    /**
+     * Get int value of result.
+     *
+     * @return int
+     */
+    public int getIntResult() {
+      return result;
+    }
+  }
+
+  /**
+   * A class that is used to report each work item that we are working on. This
+   * class describes the Source, Destination and how much data has been already
+   * moved, errors encountered etc. This is useful for the disk balancer stats
+   * as well as the queryStatus RPC.
+   */
+  public static class DiskBalancerWorkEntry {
+    private String sourcePath;
+    private String destPath;
+    private DiskBalancerWorkItem workItem;
+
+    /**
+     * Constructs a Work Entry class.
+     *
+     * @param sourcePath - Source Path where we are moving data from.
+     * @param destPath   - Destination path to where we are moving data to.
+     * @param workItem   - Current work status of this move.
+     */
+    public DiskBalancerWorkEntry(String sourcePath, String destPath,
+                                 DiskBalancerWorkItem workItem) {
+      this.sourcePath = sourcePath;
+      this.destPath = destPath;
+      this.workItem = workItem;
+    }
+
+    /**
+     * Returns the source path.
+     *
+     * @return - Source path
+     */
+    public String getSourcePath() {
+      return sourcePath;
+    }
+
+    /**
+     * Sets the Source Path.
+     *
+     * @param sourcePath - Volume Path.
+     */
+    public void setSourcePath(String sourcePath) {
+      this.sourcePath = sourcePath;
+    }
+
+    /**
+     * Gets the Destination path.
+     *
+     * @return - Path
+     */
+    public String getDestPath() {
+      return destPath;
+    }
+
+    /**
+     * Sets the destination path.
+     *
+     * @param destPath - Path
+     */
+    public void setDestPath(String destPath) {
+      this.destPath = destPath;
+    }
+
+    /**
+     * Gets the current status of work for these volumes.
+     *
+     * @return - Work Item
+     */
+    public DiskBalancerWorkItem getWorkItem() {
+      return workItem;
+    }
+
+    /**
+     * Sets the work item.
+     *
+     * @param workItem - sets the work item information
+     */
+    public void setWorkItem(DiskBalancerWorkItem workItem) {
+      this.workItem = workItem;
+    }
   }
 }

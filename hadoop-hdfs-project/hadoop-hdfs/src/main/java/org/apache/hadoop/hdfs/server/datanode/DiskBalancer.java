@@ -25,6 +25,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.DiskBalancerWorkEntry;
+import org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.Result;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerConstants;
@@ -68,6 +70,7 @@ public class DiskBalancer {
   private ExecutorService scheduler;
   private Future future;
   private String planID;
+  private DiskBalancerWorkStatus.Result currentResult;
 
   /**
    * Constructs a Disk Balancer object. This object takes care of reading a
@@ -79,6 +82,7 @@ public class DiskBalancer {
    */
   public DiskBalancer(String dataNodeUUID,
                       Configuration conf, BlockMover blockMover) {
+    this.currentResult = Result.NO_PLAN;
     this.blockMover = blockMover;
     this.dataset = this.blockMover.getDataset();
     this.dataNodeUUID = dataNodeUUID;
@@ -97,6 +101,7 @@ public class DiskBalancer {
     lock.lock();
     try {
       this.isDiskBalancerEnabled = false;
+      this.currentResult = Result.NO_PLAN;
       if ((this.future != null) && (!this.future.isDone())) {
         this.blockMover.setExitFlag();
         shutdownExecutor();
@@ -151,7 +156,41 @@ public class DiskBalancer {
           verifyPlan(planID, planVersion, plan, bandwidth, force);
       createWorkPlan(nodePlan);
       this.planID = planID;
+      this.currentResult = Result.PLAN_UNDER_PROGRESS;
       executePlan();
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  /**
+   * Returns the Current Work Status of a submitted Plan.
+   *
+   * @return DiskBalancerWorkStatus.
+   * @throws DiskBalancerException
+   */
+  public DiskBalancerWorkStatus queryWorkStatus() throws DiskBalancerException {
+    lock.lock();
+    try {
+      checkDiskBalancerEnabled();
+      // if we had a plan in progress, check if it is finished.
+      if (this.currentResult == Result.PLAN_UNDER_PROGRESS &&
+          this.future != null &&
+          this.future.isDone()) {
+        this.currentResult = Result.PLAN_DONE;
+      }
+
+      DiskBalancerWorkStatus status =
+          new DiskBalancerWorkStatus(this.currentResult, this.planID);
+      for (Map.Entry<VolumePair, DiskBalancerWorkItem> entry :
+          workMap.entrySet()) {
+        DiskBalancerWorkEntry workEntry = new DiskBalancerWorkEntry(
+            entry.getKey().getSource().getBasePath(),
+            entry.getKey().getDest().getBasePath(),
+            entry.getValue());
+        status.addWorkEntry(workEntry);
+      }
+      return status;
     } finally {
       lock.unlock();
     }

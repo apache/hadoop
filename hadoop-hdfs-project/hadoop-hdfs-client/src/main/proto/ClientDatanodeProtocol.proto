@@ -194,9 +194,8 @@ message QueryPlanStatusRequestProto {
  */
 message QueryPlanStatusResponseProto {
   optional uint32 result = 1;
-  optional string status = 2;
-  optional string planID = 3;
-  optional string currentStatus = 4;
+  optional string planID = 2;
+  optional string currentStatus = 3;
 }
 
 /**

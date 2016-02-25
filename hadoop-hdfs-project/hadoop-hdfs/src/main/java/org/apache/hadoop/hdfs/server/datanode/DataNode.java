@@ -3345,11 +3345,15 @@ public class DataNode extends ReconfigurableBase
         DiskBalancerException.Result.INTERNAL_ERROR);
   }
 
+  /**
+   * Returns the status of current or last executed work plan.
+   * @return DiskBalancerWorkStatus.
+   * @throws IOException
+   */
   @Override
   public DiskBalancerWorkStatus queryDiskBalancerPlan() throws IOException {
     checkSuperuserPrivilege();
-    throw new DiskBalancerException("Not Implemented",
-        DiskBalancerException.Result.INTERNAL_ERROR);
+    return this.diskBalancer.queryWorkStatus();
   }
 
   /**

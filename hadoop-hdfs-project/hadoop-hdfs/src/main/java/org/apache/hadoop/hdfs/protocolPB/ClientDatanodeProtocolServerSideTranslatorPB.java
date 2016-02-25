@@ -296,10 +296,9 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       DiskBalancerWorkStatus result = impl.queryDiskBalancerPlan();
       return QueryPlanStatusResponseProto
           .newBuilder()
-          .setResult(result.getResult())
+          .setResult(result.getResult().getIntResult())
           .setPlanID(result.getPlanID())
-          .setStatus(result.getStatus())
-          .setCurrentStatus(result.getCurrentState())
+          .setCurrentStatus(result.getCurrentStateString())
           .build();
     } catch (Exception e) {
       throw new ServiceException(e);
