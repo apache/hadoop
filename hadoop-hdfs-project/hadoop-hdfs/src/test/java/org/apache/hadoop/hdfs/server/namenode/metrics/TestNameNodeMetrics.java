@@ -289,7 +289,7 @@ public class TestNameNodeMetrics {
     fs.delete(file, true);
     rb = getMetrics(NS_METRICS);
     assertGauge("ExcessBlocks", 0L, rb);
-    assertTrue(bm.excessReplicateMap.isEmpty());
+    assertEquals(0L, bm.getExcessBlocksCount());
   }
   
   /** Test to ensure metrics reflects missing blocks */

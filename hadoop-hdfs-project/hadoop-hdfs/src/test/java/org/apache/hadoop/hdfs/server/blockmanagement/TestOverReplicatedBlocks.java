@@ -22,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
-import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -153,6 +152,7 @@ public class TestOverReplicatedBlocks {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
       fs = cluster.getFileSystem();
       final FSNamesystem namesystem = cluster.getNamesystem();
+      final BlockManager bm = namesystem.getBlockManager();
 
       conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 300);
       cluster.startDataNodes(conf, 1, true, null, null, null);
@@ -171,8 +171,7 @@ public class TestOverReplicatedBlocks {
       long waitTime = DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT * 1000 *
         (DFSConfigKeys.DFS_NAMENODE_TOLERATE_HEARTBEAT_MULTIPLIER_DEFAULT + 1);
       do {
-        nodeInfo = namesystem.getBlockManager().getDatanodeManager()
-            .getDatanode(dnReg);
+        nodeInfo = bm.getDatanodeManager().getDatanode(dnReg);
         lastHeartbeat = nodeInfo.getLastUpdateMonotonic();
       } while (monotonicNow() - lastHeartbeat < waitTime);
       fs.setReplication(fileName, (short)3);
@@ -183,10 +182,9 @@ public class TestOverReplicatedBlocks {
       // All replicas for deletion should be scheduled on lastDN.
       // And should not actually be deleted, because lastDN does not heartbeat.
       namesystem.readLock();
-      Collection<BlockInfo> dnBlocks =
-        namesystem.getBlockManager().excessReplicateMap.get(lastDNid);
+      final int dnBlocks = bm.getExcessSize4Testing(dnReg.getDatanodeUuid());
       assertEquals("Replicas on node " + lastDNid + " should have been deleted",
-          SMALL_FILE_LENGTH / SMALL_BLOCK_SIZE, dnBlocks.size());
+          SMALL_FILE_LENGTH / SMALL_BLOCK_SIZE, dnBlocks);
       namesystem.readUnlock();
       for(BlockLocation location : locs)
         assertEquals("Block should still have 4 replicas",

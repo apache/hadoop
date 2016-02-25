@@ -155,7 +155,6 @@ public class BlockManager implements BlockStatsMXBean {
   /** flag indicating whether replication queues have been initialized */
   private boolean initializedReplQueues;
 
-  private final AtomicLong excessBlocksCount = new AtomicLong(0L);
   private final AtomicLong postponedMisreplicatedBlocksCount = new AtomicLong(0L);
   private final long startupDelayBlockDeletionInMs;
   private final BlockReportLeaseManager blockReportLeaseManager;
@@ -187,7 +186,7 @@ public class BlockManager implements BlockStatsMXBean {
   }
   /** Used by metrics */
   public long getExcessBlocksCount() {
-    return excessBlocksCount.get();
+    return excessReplicas.size();
   }
   /** Used by metrics */
   public long getPostponedMisreplicatedBlocksCount() {
@@ -247,8 +246,7 @@ public class BlockManager implements BlockStatsMXBean {
    * Maps a StorageID to the set of blocks that are "extra" for this
    * DataNode. We'll eventually remove these extras.
    */
-  public final Map<String, LightWeightHashSet<BlockInfo>> excessReplicateMap =
-    new HashMap<>();
+  private final ExcessReplicaMap excessReplicas = new ExcessReplicaMap();
 
   /**
    * Store set of Blocks that need to be replicated 1 or more times.
@@ -1832,10 +1830,14 @@ public class BlockManager implements BlockStatsMXBean {
       }
       containingNodes.add(node);
 
-      // do not select corrupted replica as src. also do not select the block
-      // that is already in excess map
+      // do not select the replica if it is corrupt or excess
       if (state == StoredReplicaState.CORRUPT ||
           state == StoredReplicaState.EXCESS) {
+        continue;
+      }
+
+      // never use already decommissioned nodes or unknown state replicas
+      if (state == null || state == StoredReplicaState.DECOMMISSIONED) {
         continue;
       }
 
@@ -1845,10 +1847,6 @@ public class BlockManager implements BlockStatsMXBean {
         continue; // already reached replication limit
       }
       if (node.getNumberOfBlocksToBeReplicated() >= replicationStreamsHardLimit) {
-        continue;
-      }
-      // never use already decommissioned nodes
-      if (node.isDecommissioned()) {
         continue;
       }
 
@@ -3194,9 +3192,7 @@ public class BlockManager implements BlockStatsMXBean {
         postponeBlock(block);
         return;
       }
-      LightWeightHashSet<BlockInfo> excessBlocks = excessReplicateMap.get(
-          cur.getDatanodeUuid());
-      if (excessBlocks == null || !excessBlocks.contains(block)) {
+      if (!isExcess(cur, block)) {
         if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
           // exclude corrupt replicas
           if (corruptNodes == null || !corruptNodes.contains(cur)) {
@@ -3335,7 +3331,7 @@ public class BlockManager implements BlockStatsMXBean {
       final Collection<DatanodeStorageInfo> nonExcess,
       final DatanodeStorageInfo chosen, BlockInfo storedBlock) {
     nonExcess.remove(chosen);
-    addToExcessReplicate(chosen.getDatanodeDescriptor(), storedBlock);
+    excessReplicas.add(chosen.getDatanodeDescriptor(), storedBlock);
     //
     // The 'excessblocks' tracks blocks until we get confirmation
     // that the datanode has deleted them; the only way we remove them
@@ -3349,21 +3345,6 @@ public class BlockManager implements BlockStatsMXBean {
     addToInvalidates(blockToInvalidate, chosen.getDatanodeDescriptor());
     blockLog.debug("BLOCK* chooseExcessReplicates: "
         + "({}, {}) is added to invalidated blocks set", chosen, storedBlock);
-  }
-
-  private void addToExcessReplicate(DatanodeInfo dn, BlockInfo storedBlock) {
-    assert namesystem.hasWriteLock();
-    LightWeightHashSet<BlockInfo> excessBlocks = excessReplicateMap.get(
-        dn.getDatanodeUuid());
-    if (excessBlocks == null) {
-      excessBlocks = new LightWeightHashSet<>();
-      excessReplicateMap.put(dn.getDatanodeUuid(), excessBlocks);
-    }
-    if (excessBlocks.add(storedBlock)) {
-      excessBlocksCount.incrementAndGet();
-      blockLog.debug("BLOCK* addToExcessReplicate: ({}, {}) is added to"
-          + " excessReplicateMap", dn, storedBlock);
-    }
   }
 
   private void removeStoredBlock(DatanodeStorageInfo storageInfo, Block block,
@@ -3414,24 +3395,7 @@ public class BlockManager implements BlockStatsMXBean {
         updateNeededReplications(storedBlock, -1, 0);
       }
 
-      //
-      // We've removed a block from a node, so it's definitely no longer
-      // in "excess" there.
-      //
-      LightWeightHashSet<BlockInfo> excessBlocks = excessReplicateMap.get(
-          node.getDatanodeUuid());
-      if (excessBlocks != null) {
-        if (excessBlocks.remove(storedBlock)) {
-          excessBlocksCount.decrementAndGet();
-          blockLog.debug("BLOCK* removeStoredBlock: {} is removed from " +
-              "excessBlocks", storedBlock);
-          if (excessBlocks.size() == 0) {
-            excessReplicateMap.remove(node.getDatanodeUuid());
-          }
-        }
-      }
-
-      // Remove the replica from corruptReplicas
+      excessReplicas.remove(node, storedBlock);
       corruptReplicas.removeFromCorruptReplicasMap(storedBlock, node);
     }
   }
@@ -3745,10 +3709,13 @@ public class BlockManager implements BlockStatsMXBean {
     }
   }
 
-  private boolean isExcess(DatanodeDescriptor node, BlockInfo block) {
-    LightWeightHashSet<BlockInfo> blocksExcess = excessReplicateMap.get(
-        node.getDatanodeUuid());
-    return blocksExcess != null && blocksExcess.contains(block);
+  @VisibleForTesting
+  int getExcessSize4Testing(String dnUuid) {
+    return excessReplicas.getSize4Testing(dnUuid);
+  }
+
+  public boolean isExcess(DatanodeDescriptor dn, BlockInfo blk) {
+    return excessReplicas.contains(dn, blk);
   }
 
   /** 
@@ -4053,29 +4020,13 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   public void removeBlockFromMap(BlockInfo block) {
-    removeFromExcessReplicateMap(block);
+    for(DatanodeStorageInfo info : blocksMap.getStorages(block)) {
+      excessReplicas.remove(info.getDatanodeDescriptor(), block);
+    }
+
     blocksMap.removeBlock(block);
     // If block is removed from blocksMap remove it from corruptReplicasMap
     corruptReplicas.removeFromCorruptReplicasMap(block);
-  }
-
-  /**
-   * If a block is removed from blocksMap, remove it from excessReplicateMap.
-   */
-  private void removeFromExcessReplicateMap(BlockInfo block) {
-    for (DatanodeStorageInfo info : blocksMap.getStorages(block)) {
-      String uuid = info.getDatanodeDescriptor().getDatanodeUuid();
-      LightWeightHashSet<BlockInfo> excessReplicas =
-          excessReplicateMap.get(uuid);
-      if (excessReplicas != null) {
-        if (excessReplicas.remove(block)) {
-          excessBlocksCount.decrementAndGet();
-          if (excessReplicas.isEmpty()) {
-            excessReplicateMap.remove(uuid);
-          }
-        }
-      }
-    }
   }
 
   public int getCapacity() {
@@ -4270,7 +4221,7 @@ public class BlockManager implements BlockStatsMXBean {
   public void clearQueues() {
     neededReplications.clear();
     pendingReplications.clear();
-    excessReplicateMap.clear();
+    excessReplicas.clear();
     invalidateBlocks.clear();
     datanodeManager.clearPendingQueues();
     postponedMisreplicatedBlocks.clear();

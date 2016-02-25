@@ -228,6 +228,8 @@ Trunk (Unreleased)
     HDFS-9829. Erasure Coding: Improve few exception handling logic of
     ErasureCodingWorker. (Rakesh R via jing9)
 
+    HDFS-9838. Refactor the excessReplicateMap to a class.  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

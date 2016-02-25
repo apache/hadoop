@@ -73,7 +73,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
-import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NodeBase;
@@ -570,8 +569,6 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
             storage.getStorageType()));
       }
       if (showReplicaDetails) {
-        LightWeightHashSet<BlockInfo> blocksExcess =
-            blockManager.excessReplicateMap.get(dnDesc.getDatanodeUuid());
         Collection<DatanodeDescriptor> corruptReplicas =
             blockManager.getCorruptReplicas(storedBlock);
         sb.append("(");
@@ -582,8 +579,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         } else if (corruptReplicas != null
             && corruptReplicas.contains(dnDesc)) {
           sb.append("CORRUPT)");
-        } else if (blocksExcess != null
-            && blocksExcess.contains(storedBlock)) {
+        } else if (blockManager.isExcess(dnDesc, storedBlock)) {
           sb.append("EXCESS)");
         } else if (dnDesc.isStale(this.staleInterval)) {
           sb.append("STALE_NODE)");

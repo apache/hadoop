@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.junit.Assert.assertTrue;
 
-import java.util.Collection;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -105,10 +104,12 @@ public class TestNodeCount {
       
       // find out a non-excess node
       DatanodeDescriptor nonExcessDN = null;
+
       for(DatanodeStorageInfo storage : bm.blocksMap.getStorages(block.getLocalBlock())) {
         final DatanodeDescriptor dn = storage.getDatanodeDescriptor();
-        Collection<BlockInfo> blocks = bm.excessReplicateMap.get(dn.getDatanodeUuid());
-        if (blocks == null || !blocks.contains(block.getLocalBlock()) ) {
+        final BlockInfo info = new BlockInfoContiguous(
+            block.getLocalBlock(), (short)0);
+        if (!bm.isExcess(dn, info)) {
           nonExcessDN = dn;
           break;
         }
