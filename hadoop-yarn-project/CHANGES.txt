@@ -227,6 +227,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4651. Document movetoqueue option in 'YARN Commands'
     (Takashi Ohnishi via rohithsharmaks)
 
+    YARN-4729. SchedulerApplicationAttempt#getTotalRequiredResources can throw 
+    an NPE. (kasha)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
