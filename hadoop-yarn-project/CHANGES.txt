@@ -230,6 +230,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4729. SchedulerApplicationAttempt#getTotalRequiredResources can throw 
     an NPE. (kasha)
 
+    YARN-4701. When task logs are not available, port 8041 is referenced
+    instead of port 8042 (haibochen via rkanter)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

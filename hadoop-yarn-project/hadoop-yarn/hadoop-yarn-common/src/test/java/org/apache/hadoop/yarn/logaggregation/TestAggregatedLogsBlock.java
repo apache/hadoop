@@ -88,6 +88,26 @@ public class TestAggregatedLogsBlock {
 
   }
 
+  @Test
+  public void testBlockContainsPortNumForUnavailableAppLog() {
+    FileUtil.fullyDelete(new File("target/logs"));
+    Configuration configuration = getConfiguration();
+
+    String nodeName = configuration.get(YarnConfiguration.NM_WEBAPP_ADDRESS,
+        YarnConfiguration.DEFAULT_NM_WEBAPP_ADDRESS);
+    AggregatedLogsBlockForTest aggregatedBlock = getAggregatedLogsBlockForTest(
+        configuration, "admin", "container_0_0001_01_000001", nodeName);
+    ByteArrayOutputStream data = new ByteArrayOutputStream();
+    PrintWriter printWriter = new PrintWriter(data);
+    HtmlBlock html = new HtmlBlockForTest();
+    HtmlBlock.Block block = new BlockForTest(html, printWriter, 10, false);
+    aggregatedBlock.render(block);
+
+    block.getWriter().flush();
+    String out = data.toString();
+    assertTrue(out.contains(nodeName));
+  }
+
   /**
    * try to read bad logs
    * 
