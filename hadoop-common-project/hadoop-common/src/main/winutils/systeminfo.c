@@ -18,6 +18,8 @@
 #include "winutils.h"
 #include <psapi.h>
 #include <PowrProf.h>
+#include <pdh.h>
+#include <pdhmsg.h>
 
 #ifdef PSAPI_VERSION
 #undef PSAPI_VERSION
@@ -25,6 +27,12 @@
 #define PSAPI_VERSION 1
 #pragma comment(lib, "psapi.lib")
 #pragma comment(lib, "Powrprof.lib")
+#pragma comment(lib, "pdh.lib")
+
+CONST PWSTR COUNTER_PATH_NET_READ_ALL   = L"\\Network Interface(*)\\Bytes Received/Sec";
+CONST PWSTR COUNTER_PATH_NET_WRITE_ALL  = L"\\Network Interface(*)\\Bytes Sent/Sec";
+CONST PWSTR COUNTER_PATH_DISK_READ_ALL  = L"\\LogicalDisk(*)\\Disk Read Bytes/sec";
+CONST PWSTR COUNTER_PATH_DISK_WRITE_ALL = L"\\LogicalDisk(*)\\Disk Write Bytes/sec";
 
 typedef struct _PROCESSOR_POWER_INFORMATION {
    ULONG  Number;
@@ -57,6 +65,7 @@ int SystemInfo()
   PROCESSOR_POWER_INFORMATION const *ppi;
   ULONGLONG cpuFrequencyKhz;
   NTSTATUS status;
+  LONGLONG diskRead, diskWrite, netRead, netWrite;
 
   ZeroMemory(&memInfo, sizeof(PERFORMANCE_INFORMATION));
   memInfo.cb = sizeof(PERFORMANCE_INFORMATION);
@@ -105,8 +114,16 @@ int SystemInfo()
   cpuFrequencyKhz = ppi->MaxMhz*1000;
   LocalFree(pBuffer);
 
-  fwprintf_s(stdout, L"%Iu,%Iu,%Iu,%Iu,%u,%I64u,%I64u\n", vmemSize, memSize,
-    vmemFree, memFree, sysInfo.dwNumberOfProcessors, cpuFrequencyKhz, cpuTimeMs);
+  status = GetDiskAndNetwork(&diskRead, &diskWrite, &netRead, &netWrite);
+  if(0 != status)
+  {
+    fwprintf_s(stderr, L"Error in GetDiskAndNetwork. Err:%d\n", status);
+    return EXIT_FAILURE;
+  }
+
+  fwprintf_s(stdout, L"%Iu,%Iu,%Iu,%Iu,%u,%I64u,%I64u,%I64d,%I64d,%I64d,%I64d\n", vmemSize, memSize,
+    vmemFree, memFree, sysInfo.dwNumberOfProcessors, cpuFrequencyKhz, cpuTimeMs,
+    diskRead, diskWrite, netRead, netWrite);
 
   return EXIT_SUCCESS;
 }
@@ -120,5 +137,151 @@ void SystemInfoUsage()
     VirtualMemorySize(bytes),PhysicalMemorySize(bytes),\n\
     FreeVirtualMemory(bytes),FreePhysicalMemory(bytes),\n\
     NumberOfProcessors,CpuFrequency(Khz),\n\
-    CpuTime(MilliSec,Kernel+User)\n");
+    CpuTime(MilliSec,Kernel+User),\n\
+    DiskRead(bytes),DiskWrite(bytes),\n\
+    NetworkRead(bytes),NetworkWrite(bytes)\n");
+}
+
+int GetDiskAndNetwork(LONGLONG* diskRead, LONGLONG* diskWrite, LONGLONG* netRead, LONGLONG* netWrite)
+{
+  int ret = EXIT_SUCCESS;
+  PDH_STATUS status = ERROR_SUCCESS;
+  PDH_HQUERY hQuery = NULL;
+  PDH_HCOUNTER hCounterNetRead = NULL;
+  PDH_HCOUNTER hCounterNetWrite = NULL;
+  PDH_HCOUNTER hCounterDiskRead = NULL;
+  PDH_HCOUNTER hCounterDiskWrite = NULL;
+  DWORD i;
+
+  if(status = PdhOpenQuery(NULL, 0, &hQuery))
+  {
+    fwprintf_s(stderr, L"PdhOpenQuery failed with 0x%x.\n", status);
+    ret = EXIT_FAILURE;
+    goto cleanup;
+  }
+
+  // Add each one of the counters with wild cards
+  if(status = PdhAddCounter(hQuery, COUNTER_PATH_NET_READ_ALL, 0, &hCounterNetRead))
+  {
+    fwprintf_s(stderr, L"PdhAddCounter %s failed with 0x%x.\n", COUNTER_PATH_NET_READ_ALL, status);
+    ret = EXIT_FAILURE;
+    goto cleanup;
+  }
+  if(status = PdhAddCounter(hQuery, COUNTER_PATH_NET_WRITE_ALL, 0, &hCounterNetWrite))
+  {
+    fwprintf_s(stderr, L"PdhAddCounter %s failed with 0x%x.\n", COUNTER_PATH_NET_WRITE_ALL, status);
+    ret = EXIT_FAILURE;
+    goto cleanup;
+  }
+  if(status = PdhAddCounter(hQuery, COUNTER_PATH_DISK_READ_ALL, 0, &hCounterDiskRead))
+  {
+    fwprintf_s(stderr, L"PdhAddCounter %s failed with 0x%x.\n", COUNTER_PATH_DISK_READ_ALL, status);
+    ret = EXIT_FAILURE;
+    goto cleanup;
+  }
+  if(status = PdhAddCounter(hQuery, COUNTER_PATH_DISK_WRITE_ALL, 0, &hCounterDiskWrite))
+  {
+    fwprintf_s(stderr, L"PdhAddCounter %s failed with 0x%x.\n", COUNTER_PATH_DISK_WRITE_ALL, status);
+    ret = EXIT_FAILURE;
+    goto cleanup;
+  }
+
+  if(status = PdhCollectQueryData(hQuery))
+  {
+    fwprintf_s(stderr, L"PdhCollectQueryData() failed with 0x%x.\n", status);
+    ret = EXIT_FAILURE;
+    goto cleanup;
+  }
+
+  // Read and aggregate counters
+  status = ReadTotalCounter(hCounterNetRead, netRead);
+  if(ERROR_SUCCESS != status)
+  {
+    fwprintf_s(stderr, L"ReadTotalCounter(Network Read): Error 0x%x.\n", status);
+    ret = EXIT_FAILURE;
+  }
+
+  status = ReadTotalCounter(hCounterNetWrite, netWrite);
+  if(ERROR_SUCCESS != status)
+  {
+    fwprintf_s(stderr, L"ReadTotalCounter(Network Write): Error 0x%x.\n", status);
+    ret = EXIT_FAILURE;
+  }
+
+  status = ReadTotalCounter(hCounterDiskRead, diskRead);
+  if(ERROR_SUCCESS != status)
+  {
+    fwprintf_s(stderr, L"ReadTotalCounter(Disk Read): Error 0x%x.\n", status);
+    ret = EXIT_FAILURE;
+  }
+
+  status = ReadTotalCounter(hCounterDiskWrite, diskWrite);
+  if(ERROR_SUCCESS != status)
+  {
+    fwprintf_s(stderr, L"ReadTotalCounter(Disk Write): Error 0x%x.\n", status);
+    ret = EXIT_FAILURE;
+  }
+
+cleanup:
+  if (hQuery)
+  {
+    status = PdhCloseQuery(hQuery);
+  }
+
+  return ret;
+}
+
+PDH_STATUS ReadTotalCounter(PDH_HCOUNTER hCounter, LONGLONG* ret)
+{
+  PDH_STATUS status = ERROR_SUCCESS;
+  DWORD i = 0;
+  DWORD dwBufferSize = 0;
+  DWORD dwItemCount = 0;
+  PDH_RAW_COUNTER_ITEM *pItems = NULL;
+
+  // Initialize output
+  *ret = 0;
+
+  // Get the required size of the pItems buffer
+  status = PdhGetRawCounterArray(hCounter, &dwBufferSize, &dwItemCount, NULL);
+  if (PDH_MORE_DATA == status)
+  {
+    pItems = (PDH_RAW_COUNTER_ITEM *) malloc(dwBufferSize);
+    if (pItems)
+    {
+      // Actually query the counter
+      status = PdhGetRawCounterArray(hCounter, &dwBufferSize, &dwItemCount, pItems);
+      if (ERROR_SUCCESS == status) {
+        for (i = 0; i < dwItemCount; i++) {
+          if (wcscmp(L"_Total", pItems[i].szName) == 0) {
+            *ret = pItems[i].RawValue.FirstValue;
+            break;
+          } else {
+            *ret += pItems[i].RawValue.FirstValue;
+          }
+        }
+      } else {
+        *ret = -1;
+        goto cleanup;
+      }
+      // Reset structures
+      free(pItems);
+      pItems = NULL;
+      dwBufferSize = dwItemCount = 0;
+    } else {
+      *ret = -1;
+      status = PDH_NO_DATA;
+      goto cleanup;
+    }
+  } else {
+    *ret = -1;
+    goto cleanup;
+  }
+
+cleanup:
+  if (pItems) {
+    free(pItems);
+  }
+
+  return status;
 }
