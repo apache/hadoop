@@ -80,11 +80,17 @@ public class AggregatedLogsBlock extends HtmlBlock {
       logEntity = containerId.toString();
     }
 
+    String nmApplicationLogUrl = getApplicationLogURL(applicationId);
     if (!conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
         YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED)) {
       html.h1()
           ._("Aggregation is not enabled. Try the nodemanager at " + nodeId)
           ._();
+      if(nmApplicationLogUrl != null) {
+        html.h1()
+            ._("Or see application log at " + nmApplicationLogUrl)
+            ._();
+      }
       return;
     }
 
@@ -107,6 +113,11 @@ public class AggregatedLogsBlock extends HtmlBlock {
           ._("Logs not available for " + logEntity
               + ". Aggregation may not be complete, "
               + "Check back later or try the nodemanager at " + nodeId)._();
+      if(nmApplicationLogUrl != null)  {
+        html.h1()
+            ._("Or see application log at " + nmApplicationLogUrl)
+            ._();
+      }
       return;
     } catch (Exception ex) {
       html.h1()
@@ -352,5 +363,21 @@ public class AggregatedLogsBlock extends HtmlBlock {
     limits.start = start;
     limits.end = end;
     return limits;
+  }
+
+  private String getApplicationLogURL(ApplicationId applicationId) {
+    String appId = applicationId.toString();
+    if (appId == null || appId.isEmpty()) {
+      return null;
+    }
+    String nodeId = $(NM_NODENAME);
+    if(nodeId == null || nodeId.isEmpty()) {
+      return null;
+    }
+    StringBuilder sb = new StringBuilder();
+    String scheme = YarnConfiguration.useHttps(this.conf) ? "https://":
+        "http://";
+    sb.append(scheme).append(nodeId).append("/node/application/").append(appId);
+    return sb.toString();
   }
 }

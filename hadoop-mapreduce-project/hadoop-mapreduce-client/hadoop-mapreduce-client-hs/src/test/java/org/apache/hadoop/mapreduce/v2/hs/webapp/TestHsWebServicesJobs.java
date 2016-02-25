@@ -766,7 +766,7 @@ public class TestHsWebServicesJobs extends JerseyTest {
     for (int i = 0; i < attempts.length(); i++) {
       JSONObject attempt = attempts.getJSONObject(i);
       verifyHsJobAttemptsGeneric(job, attempt.getString("nodeHttpAddress"),
-          attempt.getString("nodeId"), attempt.getInt("id"),
+          attempt.getInt("id"),
           attempt.getLong("startTime"), attempt.getString("containerId"),
           attempt.getString("logsLink"));
     }
@@ -779,7 +779,6 @@ public class TestHsWebServicesJobs extends JerseyTest {
       Element element = (Element) nodes.item(i);
       verifyHsJobAttemptsGeneric(job,
           WebServicesTestUtils.getXmlString(element, "nodeHttpAddress"),
-          WebServicesTestUtils.getXmlString(element, "nodeId"),
           WebServicesTestUtils.getXmlInt(element, "id"),
           WebServicesTestUtils.getXmlLong(element, "startTime"),
           WebServicesTestUtils.getXmlString(element, "containerId"),
@@ -788,7 +787,7 @@ public class TestHsWebServicesJobs extends JerseyTest {
   }
 
   public void verifyHsJobAttemptsGeneric(Job job, String nodeHttpAddress,
-      String nodeId, int id, long startTime, String containerId, String logsLink) {
+      int id, long startTime, String containerId, String logsLink) {
     boolean attemptFound = false;
     for (AMInfo amInfo : job.getAMInfos()) {
       if (amInfo.getAppAttemptId().getAttemptId() == id) {
@@ -798,16 +797,14 @@ public class TestHsWebServicesJobs extends JerseyTest {
         int nmPort = amInfo.getNodeManagerPort();
         WebServicesTestUtils.checkStringMatch("nodeHttpAddress", nmHost + ":"
             + nmHttpPort, nodeHttpAddress);
-        WebServicesTestUtils.checkStringMatch("nodeId",
-            NodeId.newInstance(nmHost, nmPort).toString(), nodeId);
         assertTrue("startime not greater than 0", startTime > 0);
         WebServicesTestUtils.checkStringMatch("containerId", amInfo
             .getContainerId().toString(), containerId);
 
         String localLogsLink = join(
             "hsmockwebapp",
-            ujoin("logs", nodeId, containerId, MRApps.toString(job.getID()),
-                job.getUserName()));
+            ujoin("logs", nodeHttpAddress, containerId,
+              MRApps.toString(job.getID()), job.getUserName()));
 
         assertTrue("logsLink", logsLink.contains(localLogsLink));
       }
