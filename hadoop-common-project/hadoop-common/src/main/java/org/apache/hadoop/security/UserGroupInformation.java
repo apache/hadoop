@@ -1238,7 +1238,7 @@ public class UserGroupInformation {
     if (now - user.getLastLogin() < kerberosMinSecondsBeforeRelogin ) {
       LOG.warn("Not attempting to re-login since the last re-login was " +
           "attempted less than " + (kerberosMinSecondsBeforeRelogin/1000) +
-          " seconds before.");
+          " seconds before. Last Login=" + user.getLastLogin());
       return false;
     }
     return true;

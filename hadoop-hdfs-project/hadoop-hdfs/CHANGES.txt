@@ -58,6 +58,9 @@ Trunk (Unreleased)
     HDFS-9525. hadoop utilities need to support provided delegation
     tokens (HeeSoo Kim via aw)
 
+    HDFS-9804. Allow long-running Balancer to login with keytab.
+    (Xiao Chen via zhz)
+
   IMPROVEMENTS
 
     HDFS-9653.  Added blocks pending deletion report to dfsadmin.  
