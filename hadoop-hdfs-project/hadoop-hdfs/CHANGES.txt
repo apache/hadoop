@@ -1810,6 +1810,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9549. TestCacheDirectives#testExceedsCapacity is flaky (Xiao Chen via
     cmccabe)
 
+    HDFS-9855. Modify TestAuditLoggerWithCommands to workaround the absence
+    of HDFS-8332 (Kuhu Shukla via kihwal)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
