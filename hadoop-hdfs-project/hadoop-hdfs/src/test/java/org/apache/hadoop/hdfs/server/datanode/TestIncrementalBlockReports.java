@@ -88,7 +88,7 @@ public class TestIncrementalBlockReports {
     ReceivedDeletedBlockInfo rdbi = new ReceivedDeletedBlockInfo(
         getDummyBlock(), BlockStatus.RECEIVED_BLOCK, null);
     DatanodeStorage s = singletonDn.getFSDataset().getStorage(storageUuid);
-    actor.getIbrManager().notifyNamenodeBlock(rdbi, s);
+    actor.getIbrManager().notifyNamenodeBlock(rdbi, s, false);
   }
 
   /**

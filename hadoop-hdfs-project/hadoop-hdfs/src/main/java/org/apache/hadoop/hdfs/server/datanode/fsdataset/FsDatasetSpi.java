@@ -374,7 +374,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * @return the storage uuid of the replica.
    * @throws IOException
    */
-  String recoverClose(ExtendedBlock b, long newGS, long expectedBlockLen
+  Replica recoverClose(ExtendedBlock b, long newGS, long expectedBlockLen
       ) throws IOException;
   
   /**
@@ -524,7 +524,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * Update replica's generation stamp and length and finalize it.
    * @return the ID of storage that stores the block
    */
-  String updateReplicaUnderRecovery(ExtendedBlock oldBlock,
+  Replica updateReplicaUnderRecovery(ExtendedBlock oldBlock,
       long recoveryId, long newBlockId, long newLength) throws IOException;
 
   /**
