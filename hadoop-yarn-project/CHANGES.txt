@@ -852,6 +852,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4682. AMRM client to log when AMRM token updated.
     (Prabhu Joseph via stevel)
 
+    YARN-4579. Allow DefaultContainerExecutor container log directory
+    permissions to be configurable (rchiang via rkanter)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

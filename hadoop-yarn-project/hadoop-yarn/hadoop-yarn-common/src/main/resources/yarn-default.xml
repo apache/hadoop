@@ -1073,6 +1073,16 @@
   </property>
 
   <property>
+    <description>
+      The permissions settings used for the creation of container
+      directories when using DefaultContainerExecutor.  This follows
+      standard user/group/all permissions format.
+    </description>
+    <name>yarn.nodemanager.default-container-executor.log-dirs.permissions</name>
+    <value>710</value>
+  </property>
+
+  <property>
     <description>Whether to enable log aggregation. Log aggregation collects
       each container's logs and moves these logs onto a file-system, for e.g.
       HDFS, after the application completes. Users can configure the
