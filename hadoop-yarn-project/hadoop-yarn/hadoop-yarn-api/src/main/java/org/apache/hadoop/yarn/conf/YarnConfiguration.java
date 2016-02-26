@@ -764,6 +764,13 @@ public class YarnConfiguration extends Configuration {
       NM_PREFIX + "logaggregation.threadpool-size-max";
   public static final int DEFAULT_NM_LOG_AGGREGATION_THREAD_POOL_SIZE = 100;
 
+  /** Default permissions for container logs. */
+  public static final String NM_DEFAULT_CONTAINER_EXECUTOR_PREFIX =
+      NM_PREFIX + "default-container-executor.";
+  public static final String NM_DEFAULT_CONTAINER_EXECUTOR_LOG_DIRS_PERMISSIONS =
+      NM_DEFAULT_CONTAINER_EXECUTOR_PREFIX + "log-dirs.permissions";
+  public static final String NM_DEFAULT_CONTAINER_EXECUTOR_LOG_DIRS_PERMISSIONS_DEFAULT = "710";
+
   public static final String NM_RESOURCEMANAGER_MINIMUM_VERSION =
       NM_PREFIX + "resourcemanager.minimum.version";
   public static final String DEFAULT_NM_RESOURCEMANAGER_MINIMUM_VERSION = "NONE";
