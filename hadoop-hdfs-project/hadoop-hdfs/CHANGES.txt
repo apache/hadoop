@@ -36,6 +36,8 @@ Release 2.7.3 - UNRELEASED
     HDFS-8578. On upgrade, Datanode should process all storage/data dirs in
     parallel.  (vinayakumarb and szetszwo via szetszwo)
 
+    HDFS-9395. Make HDFS audit logging consistant (Kuhu Shukla via kihwal)
+
   OPTIMIZATIONS
 
     HDFS-8845. DiskChecker should not traverse the entire tree (Chang Li via
