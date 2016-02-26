@@ -2870,4 +2870,66 @@
     Keytab based login can be enabled with dfs.balancer.keytab.enabled.
   </description>
 </property>
+
+<property>
+  <name>dfs.http.client.retry.policy.enabled</name>
+  <value>false</value>
+  <description>
+    If "true", enable the retry policy of WebHDFS client.
+    If "false", retry policy is turned off.
+    Enabling the retry policy can be quite useful while using WebHDFS to
+    copy large files between clusters that could timeout, or
+    copy files between HA clusters that could failover during the copy.
+  </description>
+</property>
+
+<property>
+  <name>dfs.http.client.retry.policy.spec</name>
+  <value>10000,6,60000,10</value>
+  <description>
+    Specify a policy of multiple linear random retry for WebHDFS client,
+    e.g. given pairs of number of retries and sleep time (n0, t0), (n1, t1),
+    ..., the first n0 retries sleep t0 milliseconds on average,
+    the following n1 retries sleep t1 milliseconds on average, and so on.
+  </description>
+</property>
+
+<property>
+  <name>dfs.http.client.failover.max.attempts</name>
+  <value>15</value>
+  <description>
+    Specify the max number of failover attempts for WebHDFS client
+    in case of network exception.
+  </description>
+</property>
+
+<property>
+  <name>dfs.http.client.retry.max.attempts</name>
+  <value>10</value>
+  <description>
+    Specify the max number of retry attempts for WebHDFS client,
+    if the difference between retried attempts and failovered attempts is
+    larger than the max number of retry attempts, there will be no more
+    retries.
+  </description>
+</property>
+
+<property>
+  <name>dfs.http.client.failover.sleep.base.millis</name>
+  <value>500</value>
+  <description>
+    Specify the base amount of time in milliseconds upon which the
+    exponentially increased sleep time between retries or failovers
+    is calculated for WebHDFS client.
+  </description>
+</property>
+
+<property>
+  <name>dfs.http.client.failover.sleep.max.millis</name>
+  <value>15000</value>
+  <description>
+    Specify the upper bound of sleep time in milliseconds between
+    retries or failovers for WebHDFS client.
+  </description>
+</property>
 </configuration>

@@ -24,6 +24,7 @@ WebHDFS REST API
     * [Authentication](#Authentication)
     * [Proxy Users](#Proxy_Users)
     * [Cross-Site Request Forgery Prevention](#Cross-Site_Request_Forgery_Prevention)
+    * [WebHDFS Retry Policy](#WebHDFS_Retry_Policy)
     * [File and Directory Operations](#File_and_Directory_Operations)
         * [Create and Write to a File](#Create_and_Write_to_a_File)
         * [Append to a File](#Append_to_a_File)
@@ -298,6 +299,23 @@ The following is an example `curl` call that uses the `-H` option to include the
 custom header in the request.
 
         curl -i -L -X PUT -H 'X-XSRF-HEADER: ""' 'http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=CREATE'
+
+WebHDFS Retry Policy
+-------------------------------------
+
+WebHDFS supports an optional, configurable retry policy for resilient copy of
+large files that could timeout, or copy file between HA clusters that could failover during the copy.
+
+The following properties control WebHDFS retry and failover policy.
+
+| Property | Description | Default Value |
+|:---- |:---- |:----
+| `dfs.http.client.retry.policy.enabled` | If "true", enable the retry policy of WebHDFS client. If "false", retry policy is turned off. | `false` |
+| `dfs.http.client.retry.policy.spec` | Specify a policy of multiple linear random retry for WebHDFS client, e.g. given pairs of number of retries and sleep time (n0, t0), (n1, t1), ..., the first n0 retries sleep t0 milliseconds on average, the following n1 retries sleep t1 milliseconds on average, and so on. | `10000,6,60000,10` |
+| `dfs.http.client.failover.max.attempts` | Specify the max number of failover attempts for WebHDFS client in case of network exception. | `15` |
+| `dfs.http.client.retry.max.attempts` | Specify the max number of retry attempts for WebHDFS client, if the difference between retried attempts and failovered attempts is larger than the max number of retry attempts, there will be no more retries. | `10` |
+| `dfs.http.client.failover.sleep.base.millis` | Specify the base amount of time in milliseconds upon which the exponentially increased sleep time between retries or failovers is calculated for WebHDFS client. | `500` |
+| `dfs.http.client.failover.sleep.max.millis` | Specify the upper bound of sleep time in milliseconds between retries or failovers for WebHDFS client. | `15000` |
 
 File and Directory Operations
 -----------------------------
