@@ -645,6 +645,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4207. Add a non-judgemental YARN app completion status. (Rich Haase via sseth)
 
+    YARN-4720. Skip unnecessary NN operations in log aggregation.
+    (Jun Gong via mingma)
+
   BUG FIXES
 
     YARN-4680. TimerTasks leak in ATS V1.5 Writer. (Xuan Gong via gtcarrera9)
