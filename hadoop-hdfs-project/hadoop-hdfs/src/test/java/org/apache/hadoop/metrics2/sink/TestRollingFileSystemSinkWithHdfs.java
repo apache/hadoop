@@ -151,12 +151,12 @@ public class TestRollingFileSystemSinkWithHdfs
     new MyMetrics1().registerWith(ms);
 
     shutdownHdfs();
-    ErrorSink.errored = false;
+    MockSink.errored = false;
 
     ms.publishMetricsNow(); // publish the metrics
 
     assertTrue("No exception was generated while writing metrics "
-        + "even though HDFS was unavailable", ErrorSink.errored);
+        + "even though HDFS was unavailable", MockSink.errored);
 
     ms.stop();
     ms.shutdown();
@@ -178,12 +178,12 @@ public class TestRollingFileSystemSinkWithHdfs
     ms.publishMetricsNow(); // publish the metrics
 
     shutdownHdfs();
-    ErrorSink.errored = false;
+    MockSink.errored = false;
 
     ms.stop();
 
     assertTrue("No exception was generated while stopping sink "
-        + "even though HDFS was unavailable", ErrorSink.errored);
+        + "even though HDFS was unavailable", MockSink.errored);
 
     ms.shutdown();
   }
@@ -203,13 +203,13 @@ public class TestRollingFileSystemSinkWithHdfs
     new MyMetrics1().registerWith(ms);
 
     shutdownHdfs();
-    ErrorSink.errored = false;
+    MockSink.errored = false;
 
     ms.publishMetricsNow(); // publish the metrics
 
     assertFalse("An exception was generated writing metrics "
         + "while HDFS was unavailable, even though the sink is set to "
-        + "ignore errors", ErrorSink.errored);
+        + "ignore errors", MockSink.errored);
 
     ms.stop();
     ms.shutdown();
@@ -231,13 +231,13 @@ public class TestRollingFileSystemSinkWithHdfs
     ms.publishMetricsNow(); // publish the metrics
 
     shutdownHdfs();
-    ErrorSink.errored = false;
+    MockSink.errored = false;
 
     ms.stop();
 
     assertFalse("An exception was generated stopping sink "
         + "while HDFS was unavailable, even though the sink is set to "
-        + "ignore errors", ErrorSink.errored);
+        + "ignore errors", MockSink.errored);
 
     ms.shutdown();
   }
@@ -282,5 +282,23 @@ public class TestRollingFileSystemSinkWithHdfs
         status.getLen() >= 236);
 
     ms.stop();
+  }
+
+  /**
+   * Test that a failure to connect to HDFS does not cause the init() method
+   * to fail.
+   */
+  @Test
+  public void testInitWithNoHDFS() {
+    String path = "hdfs://" + cluster.getNameNode().getHostAndPort() + "/tmp";
+
+    shutdownHdfs();
+    MockSink.errored = false;
+    initMetricsSystem(path, true, false);
+
+    assertTrue("The sink was not initialized as expected",
+        MockSink.initialized);
+    assertFalse("The sink threw an unexpected error on initialization",
+        MockSink.errored);
   }
 }

@@ -51,6 +51,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.junit.Test;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test the {@link RollingFileSystemSink} class in the context of HDFS with
@@ -147,7 +148,7 @@ public class TestRollingFileSystemSinkWithSecureHdfs
 
       assertTrue("No exception was generated initializing the sink against a "
           + "secure cluster even though the principal and keytab properties "
-          + "were missing", ErrorSink.errored);
+          + "were missing", MockSink.errored);
     } finally {
       if (cluster != null) {
         cluster.shutdown();

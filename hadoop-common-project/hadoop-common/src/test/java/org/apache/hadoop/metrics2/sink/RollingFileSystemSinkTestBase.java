@@ -175,7 +175,7 @@ public class RollingFileSystemSinkTestBase {
     String prefix = methodName.getMethodName().toLowerCase();
 
     ConfigBuilder builder = new ConfigBuilder().add("*.period", 10000)
-        .add(prefix + ".sink.mysink0.class", ErrorSink.class.getName())
+        .add(prefix + ".sink.mysink0.class", MockSink.class.getName())
         .add(prefix + ".sink.mysink0.basepath", path)
         .add(prefix + ".sink.mysink0.source", "testsrc")
         .add(prefix + ".sink.mysink0.context", "test1")
@@ -503,8 +503,9 @@ public class RollingFileSystemSinkTestBase {
    * This class is a {@link RollingFileSystemSink} wrapper that tracks whether
    * an exception has been thrown during operations.
    */
-  public static class ErrorSink extends RollingFileSystemSink {
+  public static class MockSink extends RollingFileSystemSink {
     public static volatile boolean errored = false;
+    public static volatile boolean initialized = false;
 
     @Override
     public void init(SubsetConfiguration conf) {
@@ -515,6 +516,8 @@ public class RollingFileSystemSinkTestBase {
 
         throw new MetricsException(ex);
       }
+
+      initialized = true;
     }
 
     @Override

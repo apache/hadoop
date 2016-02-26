@@ -1047,6 +1047,9 @@ Release 2.9.0 - UNRELEASED
     HDFS-9608. Disk IO imbalance in HDFS with heterogeneous storages.
     (Wei Zhou via wang)
 
+    HDFS-9858. RollingFileSystemSink can throw an NPE on non-secure clusters. 
+    (Daniel Templeton via kasha)
+
 Release 2.8.0 - UNRELEASED
 
   NEW FEATURES
