@@ -2270,6 +2270,65 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     logAggregationService.stop();
   }
 
+  @Test (timeout = 20000)
+  public void testSkipUnnecessaryNNOperationsForShortJob() throws Exception {
+    LogAggregationContext logAggregationContext =
+        Records.newRecord(LogAggregationContext.class);
+    logAggregationContext.setLogAggregationPolicyClassName(
+        FailedOrKilledContainerLogAggregationPolicy.class.getName());
+    verifySkipUnnecessaryNNOperations(logAggregationContext, 0, 2);
+  }
+
+  @Test (timeout = 20000)
+  public void testSkipUnnecessaryNNOperationsForService() throws Exception {
+    this.conf.setLong(
+        YarnConfiguration.NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS,
+        3600);
+    LogAggregationContext contextWithAMOnly =
+        Records.newRecord(LogAggregationContext.class);
+    contextWithAMOnly.setLogAggregationPolicyClassName(
+        AMOnlyLogAggregationPolicy.class.getName());
+    contextWithAMOnly.setRolledLogsIncludePattern("sys*");
+    contextWithAMOnly.setRolledLogsExcludePattern("std_final");
+    verifySkipUnnecessaryNNOperations(contextWithAMOnly, 1, 4);
+  }
+
+  private void verifySkipUnnecessaryNNOperations(
+      LogAggregationContext logAggregationContext,
+      int expectedLogAggregationTimes, int expectedAggregationReportNum)
+      throws Exception {
+    LogAggregationService logAggregationService = new LogAggregationService(
+        dispatcher, this.context, this.delSrvc, super.dirsHandler);
+    logAggregationService.init(this.conf);
+    logAggregationService.start();
+
+    ApplicationId appId = createApplication();
+    logAggregationService.handle(new LogHandlerAppStartedEvent(appId, this.user,
+        null, this.acls, logAggregationContext));
+
+    // Container finishes
+    String[] logFiles = new String[] { "stdout" };
+    finishContainer(appId, logAggregationService,
+        ContainerType.APPLICATION_MASTER, 1, 0, logFiles);
+    AppLogAggregatorImpl aggregator =
+        (AppLogAggregatorImpl) logAggregationService.getAppLogAggregators()
+            .get(appId);
+    aggregator.doLogAggregationOutOfBand();
+
+    Thread.sleep(2000);
+    aggregator.doLogAggregationOutOfBand();
+    Thread.sleep(2000);
+
+    // App finishes.
+    logAggregationService.handle(new LogHandlerAppFinishedEvent(appId));
+    logAggregationService.stop();
+
+    assertEquals(expectedLogAggregationTimes,
+        aggregator.getLogAggregationTimes());
+    assertEquals(expectedAggregationReportNum,
+        this.context.getLogAggregationStatusForApps().size());
+  }
+
   private int numOfLogsAvailable(LogAggregationService logAggregationService,
       ApplicationId appId, boolean sizeLimited, String lastLogFile)
       throws IOException {
