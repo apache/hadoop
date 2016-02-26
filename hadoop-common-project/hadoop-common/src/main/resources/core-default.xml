@@ -682,6 +682,16 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
+  <name>fs.s3.awsAccessKeyId</name>
+  <description>AWS access key ID used by S3 block file system.</description>
+</property>
+
+<property>
+  <name>fs.s3.awsSecretAccessKey</name>
+  <description>AWS secret key used by S3 block file system.</description>
+</property>
+
+<property>
   <name>fs.s3.block.size</name>
   <value>67108864</value>
   <description>Block size to use when writing files to S3.</description>
@@ -728,6 +738,16 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
+  <name>fs.s3n.awsAccessKeyId</name>
+  <description>AWS access key ID used by S3 native file system.</description>
+</property>
+
+<property>
+  <name>fs.s3n.awsSecretAccessKey</name>
+  <description>AWS secret key used by S3 native file system.</description>
+</property>
+
+<property>
   <name>fs.s3n.block.size</name>
   <value>67108864</value>
   <description>Block size to use when reading files using the native S3
@@ -768,13 +788,13 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
-  <name>fs.s3a.awsAccessKeyId</name>
-  <description>AWS access key ID. Omit for Role-based authentication.</description>
+  <name>fs.s3a.access.key</name>
+  <description>AWS access key ID used by S3A file system. Omit for Role-based authentication.</description>
 </property>
 
 <property>
-  <name>fs.s3a.awsSecretAccessKey</name>
-  <description>AWS secret key. Omit for Role-based authentication.</description>
+  <name>fs.s3a.secret.key</name>
+  <description>AWS secret key used by S3A file system. Omit for Role-based authentication.</description>
 </property>
 
 <property>
