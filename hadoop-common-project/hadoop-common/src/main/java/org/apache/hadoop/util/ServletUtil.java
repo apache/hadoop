@@ -17,18 +17,22 @@
  */
 package org.apache.hadoop.util;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.util.Calendar;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.commons.httpclient.URIException;
-import org.apache.commons.httpclient.util.URIUtil;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import com.google.common.base.Preconditions;
+import org.apache.http.client.utils.URIBuilder;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -94,9 +98,10 @@ public class ServletUtil {
    */
   public static String encodeQueryValue(final String value) {
     try {
-      return URIUtil.encodeWithinQuery(value, "UTF-8");
-    } catch (URIException e) {
-      throw new AssertionError("JVM does not support UTF-8"); // should never happen!
+      return URLEncoder.encode(value, "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      throw new AssertionError("Failed to encode query value in UTF-8: " +
+          value);
     }
   }
 
@@ -106,11 +111,7 @@ public class ServletUtil {
    * @return encoded path, null if UTF-8 is not supported
    */
   public static String encodePath(final String path) {
-    try {
-      return URIUtil.encodePath(path, "UTF-8");
-    } catch (URIException e) {
-      throw new AssertionError("JVM does not support UTF-8"); // should never happen!
-    }
+    return new URIBuilder().setPath(path).toString();
   }
 
   /**
@@ -119,11 +120,14 @@ public class ServletUtil {
    * @param servletName the name of servlet that precedes the path
    * @return decoded path component, null if UTF-8 is not supported
    */
-  public static String getDecodedPath(final HttpServletRequest request, String servletName) {
+  public static String getDecodedPath(final HttpServletRequest request,
+      String servletName) {
+    String requestURI = request.getRequestURI();
+    String uriPath = getRawPath(request, servletName);
     try {
-      return URIUtil.decode(getRawPath(request, servletName), "UTF-8");
-    } catch (URIException e) {
-      throw new AssertionError("JVM does not support UTF-8"); // should never happen!
+      return new URI(uriPath).getPath();
+    } catch (URISyntaxException e) {
+      throw new AssertionError("Failed to decode URI: " + requestURI);
     }
   }
 
