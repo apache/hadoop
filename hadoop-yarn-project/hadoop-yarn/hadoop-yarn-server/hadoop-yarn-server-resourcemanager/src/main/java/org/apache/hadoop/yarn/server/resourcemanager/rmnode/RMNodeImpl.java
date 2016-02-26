@@ -1003,6 +1003,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
    */
   public static void deactivateNode(RMNodeImpl rmNode, NodeState finalState) {
 
+    if (rmNode.getNodeID().getPort() == -1) {
+      rmNode.updateMetricsForDeactivatedNode(rmNode.getState(), finalState);
+      return;
+    }
     reportNodeUnusable(rmNode, finalState);
 
     // Deactivate the node
