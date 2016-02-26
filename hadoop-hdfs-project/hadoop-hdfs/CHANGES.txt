@@ -980,6 +980,8 @@ Release 2.9.0 - UNRELEASED
     HDFS-9047. Retire libwebhdfs. (wheat9)
 
   NEW FEATURES
+    HDFS-9835. OIV: add ReverseXML processor which reconstructs an fsimage from
+    an XML file (cmccabe)
 
   IMPROVEMENTS
 

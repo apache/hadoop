@@ -90,14 +90,14 @@ public final class FSImageFormatPBINode {
   private static final AclEntryType[] ACL_ENTRY_TYPE_VALUES = AclEntryType
       .values();
   
-  private static final int XATTR_NAMESPACE_MASK = 3;
-  private static final int XATTR_NAMESPACE_OFFSET = 30;
-  private static final int XATTR_NAME_MASK = (1 << 24) - 1;
-  private static final int XATTR_NAME_OFFSET = 6;
+  public static final int XATTR_NAMESPACE_MASK = 3;
+  public static final int XATTR_NAMESPACE_OFFSET = 30;
+  public static final int XATTR_NAME_MASK = (1 << 24) - 1;
+  public static final int XATTR_NAME_OFFSET = 6;
 
   /* See the comments in fsimage.proto for an explanation of the following. */
-  private static final int XATTR_NAMESPACE_EXT_OFFSET = 5;
-  private static final int XATTR_NAMESPACE_EXT_MASK = 1;
+  public static final int XATTR_NAMESPACE_EXT_OFFSET = 5;
+  public static final int XATTR_NAMESPACE_EXT_MASK = 1;
 
   private static final XAttr.NameSpace[] XATTR_NAMESPACE_VALUES =
       XAttr.NameSpace.values();
