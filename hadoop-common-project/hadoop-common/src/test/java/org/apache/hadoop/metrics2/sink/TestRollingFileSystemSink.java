@@ -23,6 +23,8 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.junit.Test;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test the {@link RollingFileSystemSink} class in the context of the local file
@@ -106,7 +108,7 @@ public class TestRollingFileSystemSink extends RollingFileSystemSinkTestBase {
     new MyMetrics1().registerWith(ms);
 
     methodDir.setWritable(false);
-    ErrorSink.errored = false;
+    MockSink.errored = false;
 
     try {
       // publish the metrics
@@ -114,7 +116,7 @@ public class TestRollingFileSystemSink extends RollingFileSystemSinkTestBase {
 
       assertTrue("No exception was generated while writing metrics "
           + "even though the target directory was not writable",
-          ErrorSink.errored);
+          MockSink.errored);
 
       ms.stop();
       ms.shutdown();
@@ -135,7 +137,7 @@ public class TestRollingFileSystemSink extends RollingFileSystemSinkTestBase {
     new MyMetrics1().registerWith(ms);
 
     methodDir.setWritable(false);
-    ErrorSink.errored = false;
+    MockSink.errored = false;
 
     try {
       // publish the metrics
@@ -144,7 +146,7 @@ public class TestRollingFileSystemSink extends RollingFileSystemSinkTestBase {
       assertFalse("An exception was generated while writing metrics "
           + "when the target directory was not writable, even though the "
           + "sink is set to ignore errors",
-          ErrorSink.errored);
+          MockSink.errored);
 
       ms.stop();
       ms.shutdown();
