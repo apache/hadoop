@@ -17,8 +17,12 @@
  */
 package org.apache.hadoop.test;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
@@ -32,6 +36,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.FileUtil;
@@ -480,5 +485,56 @@ public abstract class GenericTestUtils {
   public static void assumeInNativeProfile() {
     Assume.assumeTrue(
         Boolean.parseBoolean(System.getProperty("runningWithNative", "false")));
+  }
+
+  /**
+   * Get the diff between two files.
+   *
+   * @param a
+   * @param b
+   * @return The empty string if there is no diff; the diff, otherwise.
+   *
+   * @throws IOException If there is an error reading either file.
+   */
+  public static String getFilesDiff(File a, File b) throws IOException {
+    StringBuilder bld = new StringBuilder();
+    BufferedReader ra = null, rb = null;
+    try {
+      ra = new BufferedReader(
+          new InputStreamReader(new FileInputStream(a)));
+      rb = new BufferedReader(
+          new InputStreamReader(new FileInputStream(b)));
+      while (true) {
+        String la = ra.readLine();
+        String lb = rb.readLine();
+        if (la == null) {
+          if (lb != null) {
+            addPlusses(bld, ra);
+          }
+          break;
+        } else if (lb == null) {
+          if (la != null) {
+            addPlusses(bld, rb);
+          }
+          break;
+        }
+        if (!la.equals(lb)) {
+          bld.append(" - ").append(la).append("\n");
+          bld.append(" + ").append(lb).append("\n");
+        }
+      }
+    } finally {
+      IOUtils.closeQuietly(ra);
+      IOUtils.closeQuietly(rb);
+    }
+    return bld.toString();
+  }
+
+  private static void addPlusses(StringBuilder bld, BufferedReader r)
+      throws IOException {
+    String l;
+    while ((l = r.readLine()) != null) {
+      bld.append(" + ").append(l).append("\n");
+    }
   }
 }
