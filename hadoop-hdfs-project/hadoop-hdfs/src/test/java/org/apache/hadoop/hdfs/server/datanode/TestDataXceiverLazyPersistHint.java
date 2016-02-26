@@ -138,12 +138,14 @@ public class TestDataXceiverLazyPersistHint {
       PeerLocality locality,
       NonLocalLazyPersist nonLocalLazyPersist,
       final ArgumentCaptor<Boolean> captor) throws IOException {
+    final BlockReceiver mockBlockReceiver = mock(BlockReceiver.class);
+    doReturn(mock(Replica.class)).when(mockBlockReceiver).getReplica();
+
     DataXceiver xceiverSpy = spy(DataXceiver.create(
             getMockPeer(locality),
             getMockDn(nonLocalLazyPersist),
             mock(DataXceiverServer.class)));
-
-    doReturn(mock(BlockReceiver.class)).when(xceiverSpy).getBlockReceiver(
+    doReturn(mockBlockReceiver).when(xceiverSpy).getBlockReceiver(
         any(ExtendedBlock.class), any(StorageType.class),
         any(DataInputStream.class), anyString(), anyString(),
         any(BlockConstructionStage.class), anyLong(), anyLong(), anyLong(),
