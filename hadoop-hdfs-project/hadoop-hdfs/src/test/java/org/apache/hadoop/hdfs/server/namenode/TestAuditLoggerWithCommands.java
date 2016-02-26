@@ -121,7 +121,6 @@ public class TestAuditLoggerWithCommands {
   public void testSetQuota() throws Exception {
     Path path = new Path("/testdir/testdir1");
     fs.mkdirs(path);
-    fileSys = DFSTestUtil.getFileSystemAs(user1, conf);
     try {
       ((DistributedFileSystem)fileSys).setQuota(path, 10l, 10l);
       fail("The operation should have failed with AccessControlException");
@@ -129,15 +128,17 @@ public class TestAuditLoggerWithCommands {
     }
     String acePattern =
         ".*allowed=false.*ugi=theDoctor.*cmd=setQuota.*";
-    int length = verifyAuditLogs(acePattern);
-    fileSys.close();
+    verifyAuditLogs(acePattern);
+    String ioePattern =
+        ".*allowed=true.*ugi=" + fs.getFileStatus(path).getOwner().toString() +
+            ".*cmd=delete.*";
+    fs.delete(path, true);
     try {
-      ((DistributedFileSystem)fileSys).setQuota(path, 10l, 10l);
+      ((DistributedFileSystem)fs).setQuota(path, 10l, 10l);
       fail("The operation should have failed with IOException");
     } catch (IOException ace) {
     }
-    assertTrue("Unexpected log from getContentSummary",
-        length == auditlog.getOutput().split("\n").length);
+    verifyAuditLogs(ioePattern);
   }
 
   @Test
