@@ -143,17 +143,8 @@ public class NodesListManager extends AbstractService implements
       UnknownNodeId nodeId = new UnknownNodeId(host);
       RMNodeImpl rmNode = new RMNodeImpl(nodeId,
           rmContext, host, -1, -1, new UnknownNode(host), null, null);
-
-      RMNode prevRMNode =
-          rmContext.getRMNodes().putIfAbsent(nodeId, rmNode);
-      if (prevRMNode != null) {
-        this.rmContext.getDispatcher().getEventHandler().handle(
-            new RMNodeEvent(prevRMNode.getNodeID(),
-                RMNodeEventType.DECOMMISSION));
-      } else {
-        this.rmContext.getDispatcher().getEventHandler().handle(
-            new RMNodeEvent(nodeId, RMNodeEventType.DECOMMISSION));
-      }
+      rmContext.getInactiveRMNodes().put(nodeId.getHost(), rmNode);
+      rmNode.handle(new RMNodeEvent(nodeId, RMNodeEventType.DECOMMISSION));
     }
   }
 

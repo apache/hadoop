@@ -457,6 +457,20 @@ public class TestRMNodeTransitions {
     Assert.assertEquals(finishedAppId, hbrsp.getApplicationsToCleanup().get(0));
   }
 
+  @Test
+  public void testUnknownNodeId() {
+    NodesListManager.UnknownNodeId nodeId =
+        new NodesListManager.UnknownNodeId("host1");
+    RMNodeImpl node =
+        new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null, null);
+    rmContext.getInactiveRMNodes().putIfAbsent(nodeId.getHost(),node);
+    node.handle(
+        new RMNodeEvent(node.getNodeID(), RMNodeEventType.DECOMMISSION));
+    Assert.assertNull(
+        "Must be null as there is no NODE_UNUSABLE update",
+        nodesListManagerEvent);
+  }
+
   private RMNodeImpl getRunningNode() {
     return getRunningNode(null);
   }

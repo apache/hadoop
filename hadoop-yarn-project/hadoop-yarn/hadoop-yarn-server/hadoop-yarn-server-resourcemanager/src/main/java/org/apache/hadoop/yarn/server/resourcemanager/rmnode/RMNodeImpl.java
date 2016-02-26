@@ -743,6 +743,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
     @Override
     public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
+      //check for UnknownNodeId
+      if (rmNode.getNodeID().getPort() == -1) {
+        rmNode.updateMetricsForDeactivatedNode(rmNode.getState(), finalState);
+        return;
+      }
       // Inform the scheduler
       rmNode.nodeUpdateQueue.clear();
       // If the current state is NodeState.UNHEALTHY
