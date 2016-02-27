@@ -13,6 +13,9 @@ Release 2.7.3 - UNRELEASED
     MAPREDUCE-6637. Testcase Failure : TestFileInputFormat.testSplitLocationInfo.
     (Brahma Reddy Battula via wang)
 
+    MAPREDUCE-6622. Add capability to set JHS job cache to a
+    task-based limit (rchiang via rkanter)
+
   OPTIMIZATIONS
 
   BUG FIXES

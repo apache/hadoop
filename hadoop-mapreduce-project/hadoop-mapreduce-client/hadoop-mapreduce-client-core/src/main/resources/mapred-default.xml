@@ -2034,7 +2034,32 @@
 <property>
   <name>mapreduce.jobhistory.loadedjobs.cache.size</name>
   <value>5</value>
-  <description>Size of the loaded job cache</description>
+  <description>Size of the loaded job cache.  This property is ignored if
+  the property mapreduce.jobhistory.loadedtasks.cache.size is set to a
+  positive value.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.loadedtasks.cache.size</name>
+  <value></value>
+  <description>Change the job history cache limit to be set in terms
+  of total task count.  If the total number of tasks loaded exceeds
+  this value, then the job cache will be shrunk down until it is
+  under this limit (minimum 1 job in cache).  If this value is empty
+  or nonpositive then the cache reverts to using the property
+  mapreduce.jobhistory.loadedjobs.cache.size as a job cache size.
+
+  Two recommendations for the mapreduce.jobhistory.loadedtasks.cache.size
+  property:
+  1) For every 100k of cache size, set the heap size of the Job History
+     Server to 1.2GB. For example,
+     mapreduce.jobhistory.loadedtasks.cache.size=500000, heap size=6GB.
+  2) Make sure that the cache size is larger than the number of tasks
+     required for the largest job run on the cluster. It might be a good
+     idea to set the value slightly higher (say, 20%) in order to allow
+     for job size growth.
+  </description>
 </property>
 
 <property>
