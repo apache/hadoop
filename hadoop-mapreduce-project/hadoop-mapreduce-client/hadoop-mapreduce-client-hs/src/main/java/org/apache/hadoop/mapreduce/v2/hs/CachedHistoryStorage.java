@@ -20,12 +20,16 @@ package org.apache.hadoop.mapreduce.v2.hs;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.common.cache.Weigher;
+import com.google.common.util.concurrent.UncheckedExecutionException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -49,9 +53,10 @@ public class CachedHistoryStorage extends AbstractService implements
     HistoryStorage {
   private static final Log LOG = LogFactory.getLog(CachedHistoryStorage.class);
 
-  private Map<JobId, Job> loadedJobCache = null;
-  // The number of loaded jobs.
+  private LoadingCache<JobId, Job> loadedJobCache = null;
   private int loadedJobCacheSize;
+  private int loadedTasksCacheSize;
+  private boolean useLoadedTasksCache;
 
   private HistoryFileManager hsManager;
 
@@ -70,17 +75,70 @@ public class CachedHistoryStorage extends AbstractService implements
 
   @SuppressWarnings("serial")
   private void createLoadedJobCache(Configuration conf) {
+    // Set property for old "loaded jobs" cache
     loadedJobCacheSize = conf.getInt(
         JHAdminConfig.MR_HISTORY_LOADED_JOB_CACHE_SIZE,
         JHAdminConfig.DEFAULT_MR_HISTORY_LOADED_JOB_CACHE_SIZE);
 
-    loadedJobCache = Collections.synchronizedMap(new LinkedHashMap<JobId, Job>(
-        loadedJobCacheSize + 1, 0.75f, true) {
-      @Override
-      public boolean removeEldestEntry(final Map.Entry<JobId, Job> eldest) {
-        return super.size() > loadedJobCacheSize;
+    // Check property for new "loaded tasks" cache perform sanity checking
+    useLoadedTasksCache = false;
+    try {
+      String taskSizeString = conf
+          .get(JHAdminConfig.MR_HISTORY_LOADED_TASKS_CACHE_SIZE);
+      if (taskSizeString != null) {
+        loadedTasksCacheSize = Math.max(Integer.parseInt(taskSizeString), 1);
+        useLoadedTasksCache = true;
       }
-    });
+    } catch (NumberFormatException nfe) {
+      LOG.error("The property " +
+          JHAdminConfig.MR_HISTORY_LOADED_TASKS_CACHE_SIZE +
+          " is not an integer value.  Please set it to a positive" +
+          " integer value.");
+    }
+
+    CacheLoader<JobId, Job> loader;
+    loader = new CacheLoader<JobId, Job>() {
+      @Override
+      public Job load(JobId key) throws Exception {
+        return loadJob(key);
+      }
+    };
+
+    if (!useLoadedTasksCache) {
+      loadedJobCache = CacheBuilder.newBuilder()
+          .maximumSize(loadedJobCacheSize)
+          .initialCapacity(loadedJobCacheSize)
+          .concurrencyLevel(1)
+          .build(loader);
+    } else {
+      Weigher<JobId, Job> weightByTasks;
+      weightByTasks = new Weigher<JobId, Job>() {
+        /**
+         * Method for calculating Job weight by total task count.  If
+         * the total task count is greater than the size of the tasks
+         * cache, then cap it at the cache size.  This allows the cache
+         * to always hold one large job.
+         * @param key JobId object
+         * @param value Job object
+         * @return Weight of the job as calculated by total task count
+         */
+        @Override
+        public int weigh(JobId key, Job value) {
+          int taskCount = Math.min(loadedTasksCacheSize,
+              value.getTotalMaps() + value.getTotalReduces());
+          return taskCount;
+        }
+      };
+      // Keep concurrencyLevel at 1.  Otherwise, two problems:
+      // 1) The largest job that can be initially loaded is
+      //    cache size / 4.
+      // 2) Unit tests are not deterministic.
+      loadedJobCache = CacheBuilder.newBuilder()
+          .maximumWeight(loadedTasksCacheSize)
+          .weigher(weightByTasks)
+          .concurrencyLevel(1)
+          .build(loader);
+    }
   }
   
   public void refreshLoadedJobCache() {
@@ -100,52 +158,48 @@ public class CachedHistoryStorage extends AbstractService implements
   public CachedHistoryStorage() {
     super(CachedHistoryStorage.class.getName());
   }
+
+  private static class HSFileRuntimeException extends RuntimeException {
+    public HSFileRuntimeException(String message) {
+      super(message);
+    }
+  }
   
-  private Job loadJob(HistoryFileInfo fileInfo) {
-    try {
-      Job job = fileInfo.loadJob();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Adding " + job.getID() + " to loaded job cache");
-      }
-      // We can clobber results here, but that should be OK, because it only
-      // means that we may have two identical copies of the same job floating
-      // around for a while.
-      loadedJobCache.put(job.getID(), job);
-      return job;
-    } catch (IOException e) {
-      throw new YarnRuntimeException(
-          "Could not find/load job: " + fileInfo.getJobId(), e);
+  private Job loadJob(JobId jobId) throws RuntimeException, IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Looking for Job " + jobId);
+    }
+    HistoryFileInfo fileInfo;
+
+    fileInfo = hsManager.getFileInfo(jobId);
+    if (fileInfo == null) {
+      throw new HSFileRuntimeException("Unable to find job " + jobId);
+    } else if (fileInfo.isDeleted()) {
+      throw new HSFileRuntimeException("Cannot load deleted job " + jobId);
+    } else {
+      return fileInfo.loadJob();
     }
   }
 
   @VisibleForTesting
-  Map<JobId, Job> getLoadedJobCache() {
+  Cache<JobId, Job> getLoadedJobCache() {
     return loadedJobCache;
   }
   
   @Override
   public Job getFullJob(JobId jobId) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Looking for Job " + jobId);
-    }
+    Job retVal = null;
     try {
-      HistoryFileInfo fileInfo = hsManager.getFileInfo(jobId);
-      Job result = null;
-      if (fileInfo != null) {
-        result = loadedJobCache.get(jobId);
-        if (result == null) {
-          result = loadJob(fileInfo);
-        } else if(fileInfo.isDeleted()) {
-          loadedJobCache.remove(jobId);
-          result = null;
-        }
+      retVal = loadedJobCache.getUnchecked(jobId);
+    } catch (UncheckedExecutionException e) {
+      if (e.getCause() instanceof HSFileRuntimeException) {
+        LOG.error(e.getCause().getMessage());
+        return null;
       } else {
-        loadedJobCache.remove(jobId);
+        throw new YarnRuntimeException(e.getCause());
       }
-      return result;
-    } catch (IOException e) {
-      throw new YarnRuntimeException(e);
     }
+    return retVal;
   }
 
   @Override
@@ -242,5 +296,15 @@ public class CachedHistoryStorage extends AbstractService implements
       allJobs.add(jobInfo);
     }
     return allJobs;
+  }
+
+  @VisibleForTesting
+  public boolean getUseLoadedTasksCache() {
+    return useLoadedTasksCache;
+  }
+
+  @VisibleForTesting
+  public int getLoadedTasksCacheSize() {
+    return loadedTasksCacheSize;
   }
 }

@@ -98,7 +98,7 @@ public class JHAdminConfig {
   public static final String MR_HISTORY_JOBLIST_CACHE_SIZE =
     MR_HISTORY_PREFIX + "joblist.cache.size";
   public static final int DEFAULT_MR_HISTORY_JOBLIST_CACHE_SIZE = 20000;
-  
+
   /** The location of the Kerberos keytab file.*/
   public static final String MR_HISTORY_KEYTAB = MR_HISTORY_PREFIX + "keytab";
   
@@ -106,7 +106,11 @@ public class JHAdminConfig {
   public static final String MR_HISTORY_LOADED_JOB_CACHE_SIZE = 
     MR_HISTORY_PREFIX + "loadedjobs.cache.size";
   public static final int DEFAULT_MR_HISTORY_LOADED_JOB_CACHE_SIZE = 5;
-  
+
+  /** Size of the loaded job cache (in tasks).*/
+  public static final String MR_HISTORY_LOADED_TASKS_CACHE_SIZE =
+      MR_HISTORY_PREFIX + "loadedtasks.cache.size";
+
   /**
    * The maximum age of a job history file before it is deleted from the history
    * server.
