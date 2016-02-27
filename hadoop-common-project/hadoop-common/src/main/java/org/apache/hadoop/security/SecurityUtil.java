@@ -30,6 +30,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ServiceLoader;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 import javax.security.auth.kerberos.KerberosPrincipal;
@@ -47,6 +48,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
+import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.StringUtils;
 
 
@@ -78,6 +80,9 @@ public class SecurityUtil {
         CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT);
     setTokenServiceUseIp(useIp);
   }
+
+  private static boolean logSlowLookups = getLogSlowLookupsEnabled();
+  private static int slowLookupThresholdMs = getSlowLookupThresholdMs();
 
   /**
    * For use only by tests and initialization
@@ -480,9 +485,27 @@ public class SecurityUtil {
     }
   }
 
+  private static boolean getLogSlowLookupsEnabled() {
+    Configuration conf = new Configuration();
+
+    return conf.getBoolean(CommonConfigurationKeys
+            .HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_ENABLED_KEY,
+        CommonConfigurationKeys
+            .HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_ENABLED_DEFAULT);
+  }
+
+  private static int getSlowLookupThresholdMs() {
+    Configuration conf = new Configuration();
+
+    return conf.getInt(CommonConfigurationKeys
+            .HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_THRESHOLD_MS_KEY,
+        CommonConfigurationKeys
+            .HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_THRESHOLD_MS_DEFAULT);
+  }
+
   /**
    * Resolves a host subject to the security requirements determined by
-   * hadoop.security.token.service.use_ip.
+   * hadoop.security.token.service.use_ip. Optionally logs slow resolutions.
    * 
    * @param hostname host or ip to resolve
    * @return a resolved host
@@ -491,7 +514,22 @@ public class SecurityUtil {
   @InterfaceAudience.Private
   public static
   InetAddress getByName(String hostname) throws UnknownHostException {
-    return hostResolver.getByName(hostname);
+    if (logSlowLookups || LOG.isTraceEnabled()) {
+      StopWatch lookupTimer = new StopWatch().start();
+      InetAddress result = hostResolver.getByName(hostname);
+      long elapsedMs = lookupTimer.stop().now(TimeUnit.MILLISECONDS);
+
+      if (elapsedMs >= slowLookupThresholdMs) {
+        LOG.warn("Slow name lookup for " + hostname + ". Took " + elapsedMs +
+            " ms.");
+      } else if (LOG.isTraceEnabled()) {
+        LOG.trace("Name lookup for " + hostname + " took " + elapsedMs +
+            " ms.");
+      }
+      return result;
+    } else {
+      return hostResolver.getByName(hostname);
+    }
   }
   
   interface HostResolver {
