@@ -203,7 +203,19 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
       "hadoop.security.token.service.use_ip";
   public static final boolean HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT =
       true;
-  
+
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml .</a> */
+  public static final String HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_ENABLED_KEY =
+      "hadoop.security.dns.log-slow-lookups.enabled";
+  public static final boolean
+      HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_ENABLED_DEFAULT = false;
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml .</a> */
+  public static final String
+      HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_THRESHOLD_MS_KEY =
+      "hadoop.security.dns.log-slow-lookups.threshold.ms";
+  public static final int
+      HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_THRESHOLD_MS_DEFAULT = 1000;
+
   /**
    * HA health monitor and failover controller.
    */

@@ -1160,6 +1160,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12824. Collect network and disk usage on the node running Windows.
     (Inigo Goiri via xyao)
 
+    HADOOP-12825. Log slow name resolutions.
+    (Sidharta Seethana via stevel)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp

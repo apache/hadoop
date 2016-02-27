@@ -113,6 +113,24 @@
   </description>
 </property>
 
+<property>
+  <name>hadoop.security.dns.log-slow-lookups.enabled</name>
+  <value>false</value>
+  <description>
+    Time name lookups (via SecurityUtil) and log them if they exceed the
+    configured threshold.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.dns.log-slow-lookups.threshold.ms</name>
+  <value>1000</value>
+  <description>
+    If slow lookup logging is enabled, this threshold is used to decide if a
+    lookup is considered slow enough to be logged.
+  </description>
+</property>
+
 <!-- 
 === Multiple group mapping providers configuration sample === 
   This sample illustrates a typical use case for CompositeGroupsMapping where
