@@ -54,9 +54,9 @@ public abstract class SchedulerNode {
 
   private static final Log LOG = LogFactory.getLog(SchedulerNode.class);
 
-  private Resource availableResource = Resource.newInstance(0, 0);
-  private Resource usedResource = Resource.newInstance(0, 0);
-  private Resource totalResourceCapability;
+  private Resource unallocatedResource = Resource.newInstance(0, 0);
+  private Resource allocatedResource = Resource.newInstance(0, 0);
+  private Resource totalResource;
   private RMContainer reservedContainer;
   private volatile int numContainers;
   private volatile ResourceUtilization containersUtilization =
@@ -65,20 +65,20 @@ public abstract class SchedulerNode {
       ResourceUtilization.newInstance(0, 0, 0f);
 
 
-  /* set of containers that are allocated containers */
+  /** Set of containers that are allocated containers. */
   private final Map<ContainerId, RMContainer> launchedContainers =
-      new HashMap<ContainerId, RMContainer>();
+      new HashMap<>();
 
   private final RMNode rmNode;
   private final String nodeName;
-  
+
   private volatile Set<String> labels = null;
-  
+
   public SchedulerNode(RMNode node, boolean usePortForNodeName,
       Set<String> labels) {
     this.rmNode = node;
-    this.availableResource = Resources.clone(node.getTotalCapability());
-    this.totalResourceCapability = Resources.clone(node.getTotalCapability());
+    this.unallocatedResource = Resources.clone(node.getTotalCapability());
+    this.totalResource = Resources.clone(node.getTotalCapability());
     if (usePortForNodeName) {
       nodeName = rmNode.getHostName() + ":" + node.getNodeID().getPort();
     } else {
@@ -97,23 +97,26 @@ public abstract class SchedulerNode {
 
   /**
    * Set total resources on the node.
-   * @param resource total resources on the node.
+   * @param resource Total resources on the node.
    */
   public synchronized void setTotalResource(Resource resource){
-    this.totalResourceCapability = resource;
-    this.availableResource = Resources.subtract(totalResourceCapability,
-      this.usedResource);
+    this.totalResource = resource;
+    this.unallocatedResource = Resources.subtract(totalResource,
+      this.allocatedResource);
   }
   
   /**
    * Get the ID of the node which contains both its hostname and port.
-   * 
-   * @return the ID of the node
+   * @return The ID of the node.
    */
   public NodeId getNodeID() {
     return this.rmNode.getNodeID();
   }
 
+  /**
+   * Get HTTP address for the node.
+   * @return HTTP address for the node.
+   */
   public String getHttpAddress() {
     return this.rmNode.getHttpAddress();
   }
@@ -126,8 +129,7 @@ public abstract class SchedulerNode {
    * {@link YarnConfiguration#RM_SCHEDULER_INCLUDE_PORT_IN_NODE_NAME} constant.
    * The main usecase of this is Yarn minicluster to be able to differentiate
    * node manager instances by their port number.
-   * 
-   * @return name of the node for scheduling matching decisions.
+   * @return Name of the node for scheduling matching decisions.
    */
   public String getNodeName() {
     return nodeName;
@@ -135,7 +137,6 @@ public abstract class SchedulerNode {
 
   /**
    * Get rackname.
-   * 
    * @return rackname
    */
   public String getRackName() {
@@ -145,13 +146,11 @@ public abstract class SchedulerNode {
   /**
    * The Scheduler has allocated containers on this node to the given
    * application.
-   * 
-   * @param rmContainer
-   *          allocated container
+   * @param rmContainer Allocated container
    */
   public synchronized void allocateContainer(RMContainer rmContainer) {
     Container container = rmContainer.getContainer();
-    deductAvailableResource(container.getResource());
+    deductUnallocatedResource(container.getResource());
     ++numContainers;
 
     launchedContainers.put(container.getId(), rmContainer);
@@ -159,27 +158,35 @@ public abstract class SchedulerNode {
     LOG.info("Assigned container " + container.getId() + " of capacity "
         + container.getResource() + " on host " + rmNode.getNodeAddress()
         + ", which has " + numContainers + " containers, "
-        + getUsedResource() + " used and " + getAvailableResource()
+        + getAllocatedResource() + " used and " + getUnallocatedResource()
         + " available after allocation");
   }
-  
+
+  /**
+   * Change the resources allocated for a container.
+   * @param containerId Identifier of the container to change.
+   * @param deltaResource Change in the resource allocation.
+   * @param increase True if the change is an increase of allocation.
+   */
   private synchronized void changeContainerResource(ContainerId containerId,
       Resource deltaResource, boolean increase) {
     if (increase) {
-      deductAvailableResource(deltaResource);
+      deductUnallocatedResource(deltaResource);
     } else {
-      addAvailableResource(deltaResource);
+      addUnallocatedResource(deltaResource);
     }
 
     LOG.info((increase ? "Increased" : "Decreased") + " container "
         + containerId + " of capacity " + deltaResource + " on host "
         + rmNode.getNodeAddress() + ", which has " + numContainers
-        + " containers, " + getUsedResource() + " used and "
-        + getAvailableResource() + " available after allocation");
+        + " containers, " + getAllocatedResource() + " used and "
+        + getUnallocatedResource() + " available after allocation");
   }
   
   /**
-   * The Scheduler increased container
+   * Increase the resources allocated to a container.
+   * @param containerId Identifier of the container to change.
+   * @param deltaResource Increase of resource allocation.
    */
   public synchronized void increaseContainer(ContainerId containerId,
       Resource deltaResource) {
@@ -187,7 +194,9 @@ public abstract class SchedulerNode {
   }
   
   /**
-   * The Scheduler decreased container
+   * Decrease the resources allocated to a container.
+   * @param containerId Identifier of the container to change.
+   * @param deltaResource Decrease of resource allocation.
    */
   public synchronized void decreaseContainer(ContainerId containerId,
       Resource deltaResource) {
@@ -195,32 +204,33 @@ public abstract class SchedulerNode {
   }
 
   /**
-   * Get available resources on the node.
-   * 
-   * @return available resources on the node
+   * Get unallocated resources on the node.
+   * @return Unallocated resources on the node
    */
-  public synchronized Resource getAvailableResource() {
-    return this.availableResource;
+  public synchronized Resource getUnallocatedResource() {
+    return this.unallocatedResource;
   }
 
   /**
-   * Get used resources on the node.
-   * 
-   * @return used resources on the node
+   * Get allocated resources on the node.
+   * @return Allocated resources on the node
    */
-  public synchronized Resource getUsedResource() {
-    return this.usedResource;
+  public synchronized Resource getAllocatedResource() {
+    return this.allocatedResource;
   }
 
   /**
    * Get total resources on the node.
-   * 
-   * @return total resources on the node.
+   * @return Total resources on the node.
    */
   public synchronized Resource getTotalResource() {
-    return this.totalResourceCapability;
+    return this.totalResource;
   }
 
+  /**
+   * Check if a container is launched by this node.
+   * @return If the container is launched by the node.
+   */
   public synchronized boolean isValidContainer(ContainerId containerId) {
     if (launchedContainers.containsKey(containerId)) {
       return true;
@@ -228,16 +238,18 @@ public abstract class SchedulerNode {
     return false;
   }
 
+  /**
+   * Update the resources of the node when allocating a new container.
+   * @param container Container to allocate.
+   */
   private synchronized void updateResource(Container container) {
-    addAvailableResource(container.getResource());
+    addUnallocatedResource(container.getResource());
     --numContainers;
   }
 
   /**
    * Release an allocated container on this node.
-   * 
-   * @param container
-   *          container to be released
+   * @param container Container to be released.
    */
   public synchronized void releaseContainer(Container container) {
     if (!isValidContainer(container.getId())) {
@@ -245,7 +257,7 @@ public abstract class SchedulerNode {
       return;
     }
 
-    /* remove the containers from the nodemanger */
+    // Remove the containers from the nodemanger
     if (null != launchedContainers.remove(container.getId())) {
       updateResource(container);
     }
@@ -253,81 +265,118 @@ public abstract class SchedulerNode {
     LOG.info("Released container " + container.getId() + " of capacity "
         + container.getResource() + " on host " + rmNode.getNodeAddress()
         + ", which currently has " + numContainers + " containers, "
-        + getUsedResource() + " used and " + getAvailableResource()
+        + getAllocatedResource() + " used and " + getUnallocatedResource()
         + " available" + ", release resources=" + true);
   }
 
-  private synchronized void addAvailableResource(Resource resource) {
+  /**
+   * Add unallocated resources to the node. This is used when unallocating a
+   * container.
+   * @param resource Resources to add.
+   */
+  private synchronized void addUnallocatedResource(Resource resource) {
     if (resource == null) {
       LOG.error("Invalid resource addition of null resource for "
           + rmNode.getNodeAddress());
       return;
     }
-    Resources.addTo(availableResource, resource);
-    Resources.subtractFrom(usedResource, resource);
+    Resources.addTo(unallocatedResource, resource);
+    Resources.subtractFrom(allocatedResource, resource);
   }
 
-  private synchronized void deductAvailableResource(Resource resource) {
+  /**
+   * Deduct unallocated resources from the node. This is used when allocating a
+   * container.
+   * @param resource Resources to deduct.
+   */
+  private synchronized void deductUnallocatedResource(Resource resource) {
     if (resource == null) {
       LOG.error("Invalid deduction of null resource for "
           + rmNode.getNodeAddress());
       return;
     }
-    Resources.subtractFrom(availableResource, resource);
-    Resources.addTo(usedResource, resource);
+    Resources.subtractFrom(unallocatedResource, resource);
+    Resources.addTo(allocatedResource, resource);
   }
 
   /**
    * Reserve container for the attempt on this node.
+   * @param attempt Application attempt asking for the reservation.
+   * @param priority Priority of the reservation.
+   * @param container Container reserving resources for.
    */
   public abstract void reserveResource(SchedulerApplicationAttempt attempt,
       Priority priority, RMContainer container);
 
   /**
    * Unreserve resources on this node.
+   * @param attempt Application attempt that had done the reservation.
    */
   public abstract void unreserveResource(SchedulerApplicationAttempt attempt);
 
   @Override
   public String toString() {
     return "host: " + rmNode.getNodeAddress() + " #containers="
-        + getNumContainers() + " available=" + getAvailableResource()
-        + " used=" + getUsedResource();
+        + getNumContainers() + " available=" + getUnallocatedResource()
+        + " used=" + getAllocatedResource();
   }
 
   /**
    * Get number of active containers on the node.
-   * 
-   * @return number of active containers on the node
+   * @return Number of active containers on the node.
    */
   public int getNumContainers() {
     return numContainers;
   }
 
+  /**
+   * Get the running containers in the node.
+   * @return List of running containers in the node.
+   */
   public synchronized List<RMContainer> getRunningContainers() {
     return new ArrayList<RMContainer>(launchedContainers.values());
   }
 
+  /**
+   * Get the reserved container in the node.
+   * @return Reserved container in the node.
+   */
   public synchronized RMContainer getReservedContainer() {
     return reservedContainer;
   }
 
+  /**
+   * Set the reserved container in the node.
+   * @param reservedContainer Reserved container in the node.
+   */
   protected synchronized void
       setReservedContainer(RMContainer reservedContainer) {
     this.reservedContainer = reservedContainer;
   }
 
+  /**
+   * Recover a container.
+   * @param rmContainer Container to recover.
+   */
   public synchronized void recoverContainer(RMContainer rmContainer) {
     if (rmContainer.getState().equals(RMContainerState.COMPLETED)) {
       return;
     }
     allocateContainer(rmContainer);
   }
-  
+
+  /**
+   * Get the labels for the node.
+   * @return Set of labels for the node.
+   */
   public Set<String> getLabels() {
     return labels;
   }
-  
+
+  /**
+   * Update the labels for the node.
+   * @param labels Set of labels for the node.
+   */
   public void updateLabels(Set<String> labels) {
     this.labels = labels;
   }
@@ -336,6 +385,7 @@ public abstract class SchedulerNode {
    * Get partition of which the node belongs to, if node-labels of this node is
    * empty or null, it belongs to NO_LABEL partition. And since we only support
    * one partition for each node (YARN-2694), first label will be its partition.
+   * @return Partition for the node.
    */
   public String getPartition() {
     if (this.labels == null || this.labels.isEmpty()) {

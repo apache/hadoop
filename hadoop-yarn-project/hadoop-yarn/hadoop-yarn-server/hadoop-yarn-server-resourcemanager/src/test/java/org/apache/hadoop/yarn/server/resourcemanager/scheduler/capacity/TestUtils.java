@@ -195,7 +195,7 @@ public class TestUtils {
     when(rmNode.getRackName()).thenReturn(rack);
     
     FiCaSchedulerNode node = spy(new FiCaSchedulerNode(rmNode, false));
-    LOG.info("node = " + host + " avail=" + node.getAvailableResource());
+    LOG.info("node = " + host + " avail=" + node.getUnallocatedResource());
     
     when(node.getNodeID()).thenReturn(nodeId);
     return node;

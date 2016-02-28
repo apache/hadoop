@@ -3431,7 +3431,7 @@ public class TestCapacityScheduler {
     Assert.assertEquals(1 * GB, nm_0.getUsed().getMemory());
     Resource usedResource =
         resourceManager.getResourceScheduler()
-            .getSchedulerNode(nm_0.getNodeId()).getUsedResource();
+            .getSchedulerNode(nm_0.getNodeId()).getAllocatedResource();
     Assert.assertEquals(usedResource.getMemory(), 1 * GB);
     Assert.assertEquals(usedResource.getVirtualCores(), 1);
     // Check total resource of scheduler node is also changed to 1 GB 1 core
@@ -3443,7 +3443,7 @@ public class TestCapacityScheduler {
     // Check the available resource is 0/0
     Resource availableResource =
         resourceManager.getResourceScheduler()
-            .getSchedulerNode(nm_0.getNodeId()).getAvailableResource();
+            .getSchedulerNode(nm_0.getNodeId()).getUnallocatedResource();
     Assert.assertEquals(availableResource.getMemory(), 0);
     Assert.assertEquals(availableResource.getVirtualCores(), 0);
   }

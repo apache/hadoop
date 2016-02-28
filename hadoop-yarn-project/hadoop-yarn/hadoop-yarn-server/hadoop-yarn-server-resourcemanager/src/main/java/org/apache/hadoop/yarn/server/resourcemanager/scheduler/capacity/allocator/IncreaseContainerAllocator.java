@@ -112,7 +112,7 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
       SchedulerNode node, Resource cluster,
       SchedContainerChangeRequest increaseRequest) {
     if (Resources.fitsIn(rc, cluster, increaseRequest.getDeltaCapacity(),
-        node.getAvailableResource())) {
+        node.getUnallocatedResource())) {
       // OK, we can allocate this increase request
       // Unreserve it first
       application.unreserve(increaseRequest.getPriority(),
@@ -141,7 +141,7 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
   private CSAssignment allocateIncreaseRequest(FiCaSchedulerNode node,
       Resource cluster, SchedContainerChangeRequest increaseRequest) {
     if (Resources.fitsIn(rc, cluster, increaseRequest.getDeltaCapacity(),
-        node.getAvailableResource())) {
+        node.getUnallocatedResource())) {
       // Notify node
       node.increaseContainer(increaseRequest.getContainerId(),
           increaseRequest.getDeltaCapacity());

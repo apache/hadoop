@@ -147,9 +147,9 @@ public class TestChildQueueOrder {
                   any(ResourceLimits.class), any(SchedulingMode.class));
 
           // Mock the node's resource availability
-          Resource available = node.getAvailableResource();
+          Resource available = node.getUnallocatedResource();
           doReturn(Resources.subtractFrom(available, allocatedResource)).
-          when(node).getAvailableResource();
+          when(node).getUnallocatedResource();
         }
 
         return new CSAssignment(allocatedResource, type);

@@ -589,7 +589,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       diagnosticMessageBldr.append(", Total resource : ");
       diagnosticMessageBldr.append(node.getTotalResource());
       diagnosticMessageBldr.append(", Available resource : ");
-      diagnosticMessageBldr.append(node.getAvailableResource());
+      diagnosticMessageBldr.append(node.getUnallocatedResource());
       diagnosticMessageBldr.append(" ).");
       updateAMContainerDiagnostics(AMState.ACTIVATED, diagnosticMessageBldr.toString());
     }

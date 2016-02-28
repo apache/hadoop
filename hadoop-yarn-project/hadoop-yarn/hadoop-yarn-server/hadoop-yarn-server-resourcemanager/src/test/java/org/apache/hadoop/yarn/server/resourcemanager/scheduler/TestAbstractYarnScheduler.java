@@ -268,12 +268,12 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
       SchedulerNode mockNode1 = mock(SchedulerNode.class);
       when(mockNode1.getNodeID()).thenReturn(NodeId.newInstance("foo", 8080));
-      when(mockNode1.getAvailableResource()).thenReturn(emptyResource);
+      when(mockNode1.getUnallocatedResource()).thenReturn(emptyResource);
       when(mockNode1.getTotalResource()).thenReturn(fullResource1);
 
       SchedulerNode mockNode2 = mock(SchedulerNode.class);
       when(mockNode1.getNodeID()).thenReturn(NodeId.newInstance("bar", 8081));
-      when(mockNode2.getAvailableResource()).thenReturn(emptyResource);
+      when(mockNode2.getUnallocatedResource()).thenReturn(emptyResource);
       when(mockNode2.getTotalResource()).thenReturn(fullResource2);
 
       verifyMaximumResourceCapability(configuredMaximumResource, scheduler);

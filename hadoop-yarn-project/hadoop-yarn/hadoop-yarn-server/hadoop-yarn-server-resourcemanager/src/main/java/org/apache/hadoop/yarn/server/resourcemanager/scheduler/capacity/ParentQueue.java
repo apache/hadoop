@@ -496,7 +496,7 @@ public class ParentQueue extends AbstractCSQueue {
   private boolean canAssign(Resource clusterResource, FiCaSchedulerNode node) {
     return (node.getReservedContainer() == null) && 
         Resources.greaterThanOrEqual(resourceCalculator, clusterResource, 
-            node.getAvailableResource(), minimumAllocation);
+            node.getUnallocatedResource(), minimumAllocation);
   }
   
   private ResourceLimits getResourceLimitsOfChild(CSQueue child,

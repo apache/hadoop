@@ -1096,7 +1096,7 @@ public class CapacityScheduler extends
           .handle(
               new RMNodeResourceUpdateEvent(nm.getNodeID(), ResourceOption
                   .newInstance(getSchedulerNode(nm.getNodeID())
-                      .getUsedResource(), 0)));
+                      .getAllocatedResource(), 0)));
     }
     schedulerHealth.updateSchedulerReleaseDetails(lastNodeUpdateTime,
       releaseResources);
@@ -1109,8 +1109,8 @@ public class CapacityScheduler extends
 
     // Now node data structures are upto date and ready for scheduling.
     if(LOG.isDebugEnabled()) {
-      LOG.debug("Node being looked for scheduling " + nm
-        + " availableResource: " + node.getAvailableResource());
+      LOG.debug("Node being looked for scheduling " + nm +
+          " availableResource: " + node.getUnallocatedResource());
     }
   }
   
@@ -1254,11 +1254,11 @@ public class CapacityScheduler extends
 
     // Try to schedule more if there are no reservations to fulfill
     if (node.getReservedContainer() == null) {
-      if (calculator.computeAvailableContainers(node.getAvailableResource(),
+      if (calculator.computeAvailableContainers(node.getUnallocatedResource(),
         minimumAllocation) > 0) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Trying to schedule on node: " + node.getNodeName() +
-              ", available: " + node.getAvailableResource());
+              ", available: " + node.getUnallocatedResource());
         }
 
         assignment = root.assignContainers(

@@ -348,7 +348,7 @@ public class TestFifoScheduler {
     assertEquals(schedulerNodes.get(node0.getNodeID()).getTotalResource()
         .getMemory(), 1024);
     assertEquals(schedulerNodes.get(node0.getNodeID()).
-        getAvailableResource().getMemory(), 1024);
+        getUnallocatedResource().getMemory(), 1024);
     QueueInfo queueInfo = scheduler.getQueueInfo(null, false, false);
     Assert.assertEquals(0.0f, queueInfo.getCurrentCapacity(), 0.0f);
     
@@ -1247,7 +1247,7 @@ public class TestFifoScheduler {
     // Assert.assertEquals(1 * GB, nm_0.getUsed().getMemory());
     Resource usedResource =
         resourceManager.getResourceScheduler()
-            .getSchedulerNode(nm_0.getNodeId()).getUsedResource();
+            .getSchedulerNode(nm_0.getNodeId()).getAllocatedResource();
     Assert.assertEquals(usedResource.getMemory(), 1 * GB);
     Assert.assertEquals(usedResource.getVirtualCores(), 1);
     // Check total resource of scheduler node is also changed to 1 GB 1 core
@@ -1259,7 +1259,7 @@ public class TestFifoScheduler {
     // Check the available resource is 0/0
     Resource availableResource =
         resourceManager.getResourceScheduler()
-            .getSchedulerNode(nm_0.getNodeId()).getAvailableResource();
+            .getSchedulerNode(nm_0.getNodeId()).getUnallocatedResource();
     Assert.assertEquals(availableResource.getMemory(), 0);
     Assert.assertEquals(availableResource.getVirtualCores(), 0);
   }

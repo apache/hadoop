@@ -33,8 +33,8 @@ public class SchedulerNodeReport {
   private final int num;
   
   public SchedulerNodeReport(SchedulerNode node) {
-    this.used = node.getUsedResource();
-    this.avail = node.getAvailableResource();
+    this.used = node.getAllocatedResource();
+    this.avail = node.getUnallocatedResource();
     this.num = node.getNumContainers();
   }
   

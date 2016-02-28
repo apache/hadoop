@@ -1311,7 +1311,7 @@ public class TestLeafQueue {
     assertEquals(2*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
     assertEquals(4*GB, app_1.getCurrentReservation().getMemory());
-    assertEquals(2*GB, node_0.getUsedResource().getMemory());
+    assertEquals(2*GB, node_0.getAllocatedResource().getMemory());
     assertEquals(4*GB, a.getMetrics().getReservedMB());
     assertEquals(2*GB, a.getMetrics().getAllocatedMB());
     
@@ -1328,7 +1328,7 @@ public class TestLeafQueue {
     assertEquals(1*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
     assertEquals(4*GB, app_1.getCurrentReservation().getMemory());
-    assertEquals(1*GB, node_0.getUsedResource().getMemory());
+    assertEquals(1*GB, node_0.getAllocatedResource().getMemory());
     assertEquals(4*GB, a.getMetrics().getReservedMB());
     assertEquals(1*GB, a.getMetrics().getAllocatedMB());
 
@@ -1345,7 +1345,7 @@ public class TestLeafQueue {
     assertEquals(0*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(4*GB, app_1.getCurrentConsumption().getMemory());
     assertEquals(0*GB, app_1.getCurrentReservation().getMemory());
-    assertEquals(4*GB, node_0.getUsedResource().getMemory());
+    assertEquals(4*GB, node_0.getAllocatedResource().getMemory());
     assertEquals(0*GB, a.getMetrics().getReservedMB());
     assertEquals(4*GB, a.getMetrics().getAllocatedMB());
   }
@@ -1434,7 +1434,7 @@ public class TestLeafQueue {
     assertEquals(2*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
     assertEquals(4*GB, app_1.getCurrentReservation().getMemory());
-    assertEquals(2*GB, node_0.getUsedResource().getMemory());
+    assertEquals(2*GB, node_0.getAllocatedResource().getMemory());
     
     // Now free 1 container from app_0 i.e. 1G, and re-reserve it
     RMContainer rmContainer = app_0.getLiveContainers().iterator().next();
@@ -1449,7 +1449,7 @@ public class TestLeafQueue {
     assertEquals(1*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
     assertEquals(4*GB, app_1.getCurrentReservation().getMemory());
-    assertEquals(1*GB, node_0.getUsedResource().getMemory());
+    assertEquals(1*GB, node_0.getAllocatedResource().getMemory());
     assertEquals(1, app_1.getReReservations(priority));
 
     // Re-reserve
@@ -1459,7 +1459,7 @@ public class TestLeafQueue {
     assertEquals(1*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
     assertEquals(4*GB, app_1.getCurrentReservation().getMemory());
-    assertEquals(1*GB, node_0.getUsedResource().getMemory());
+    assertEquals(1*GB, node_0.getAllocatedResource().getMemory());
     assertEquals(2, app_1.getReReservations(priority));
     
     // Try to schedule on node_1 now, should *move* the reservation
@@ -1469,7 +1469,7 @@ public class TestLeafQueue {
     assertEquals(1*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(4*GB, app_1.getCurrentConsumption().getMemory());
     assertEquals(4*GB, app_1.getCurrentReservation().getMemory());
-    assertEquals(4*GB, node_1.getUsedResource().getMemory());
+    assertEquals(4*GB, node_1.getAllocatedResource().getMemory());
     // Doesn't change yet... only when reservation is cancelled or a different
     // container is reserved
     assertEquals(2, app_1.getReReservations(priority)); 
@@ -1487,7 +1487,7 @@ public class TestLeafQueue {
     assertEquals(0*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(4*GB, app_1.getCurrentConsumption().getMemory());
     assertEquals(0*GB, app_1.getCurrentReservation().getMemory());
-    assertEquals(0*GB, node_0.getUsedResource().getMemory());
+    assertEquals(0*GB, node_0.getAllocatedResource().getMemory());
   }
   
   private void verifyContainerAllocated(CSAssignment assignment, NodeType nodeType) {

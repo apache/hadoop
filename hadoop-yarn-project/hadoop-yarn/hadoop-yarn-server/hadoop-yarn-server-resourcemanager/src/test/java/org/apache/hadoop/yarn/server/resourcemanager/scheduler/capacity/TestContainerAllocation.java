@@ -388,7 +388,7 @@ public class TestContainerAllocation {
     
     // NM1 has available resource = 2G (8G - 2 * 1G - 4G)
     Assert.assertEquals(2 * GB, cs.getNode(nm1.getNodeId())
-        .getAvailableResource().getMemory());
+        .getUnallocatedResource().getMemory());
     Assert.assertNotNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
     // Usage of queue = 4G + 2 * 1G + 4G (reserved)
     Assert.assertEquals(10 * GB, cs.getRootQueue().getQueueResourceUsage()
@@ -401,7 +401,7 @@ public class TestContainerAllocation {
     // App2's reservation will be cancelled
     Assert.assertTrue(schedulerApp2.getReservedContainers().size() == 0);
     Assert.assertEquals(2 * GB, cs.getNode(nm1.getNodeId())
-        .getAvailableResource().getMemory());
+        .getUnallocatedResource().getMemory());
     Assert.assertNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
     Assert.assertEquals(6 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getUsed().getMemory());
