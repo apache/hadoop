@@ -605,7 +605,8 @@ public class DFSStripedInputStream extends DFSInputStream {
       if (alignedStripe.missingChunksNum > parityBlkNum) {
         clearFutures(futures.keySet());
         throw new IOException(alignedStripe.missingChunksNum
-            + " missing blocks, the stripe is: " + alignedStripe);
+            + " missing blocks, the stripe is: " + alignedStripe
+            + "; locatedBlocks is: " + locatedBlocks);
       }
     }
 
