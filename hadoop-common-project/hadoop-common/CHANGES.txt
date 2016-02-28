@@ -780,6 +780,9 @@ Release 2.8.0 - UNRELEASED
     (Larry McCay via cnauroth)
 
   IMPROVEMENTS
+    
+    HADOOP-12831. LocalFS/FSOutputSummer NPEs in constructor if bytes per checksum 
+    set to 0 (Mingliang Liu via gtcarrera9)
 
     HADOOP-12458. Retries is typoed to spell Retires in parts of
     hadoop-yarn and hadoop-common
