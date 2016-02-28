@@ -228,6 +228,29 @@ public class TestChecksumFileSystem {
   }
 
 
+  @Test
+  public void testSetConf() {
+    Configuration conf = new Configuration();
+
+    conf.setInt(LocalFileSystemConfigKeys.LOCAL_FS_BYTES_PER_CHECKSUM_KEY, 0);
+    try {
+      localFs.setConf(conf);
+      fail("Should have failed because zero bytes per checksum is invalid");
+    } catch (IllegalStateException ignored) {
+    }
+
+    conf.setInt(LocalFileSystemConfigKeys.LOCAL_FS_BYTES_PER_CHECKSUM_KEY, -1);
+    try {
+      localFs.setConf(conf);
+      fail("Should have failed because negative bytes per checksum is invalid");
+    } catch (IllegalStateException ignored) {
+    }
+
+    conf.setInt(LocalFileSystemConfigKeys.LOCAL_FS_BYTES_PER_CHECKSUM_KEY, 512);
+    localFs.setConf(conf);
+
+  }
+
   void verifyRename(Path srcPath, Path dstPath, boolean dstIsDir)
       throws Exception { 
     localFs.delete(srcPath,true);
