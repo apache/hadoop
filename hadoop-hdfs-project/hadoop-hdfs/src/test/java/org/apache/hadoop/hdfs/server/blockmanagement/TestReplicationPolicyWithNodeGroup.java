@@ -637,7 +637,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
 
     List<DatanodeStorageInfo> first = new ArrayList<>();
     List<DatanodeStorageInfo> second = new ArrayList<>();
-    replicator.splitNodesWithRack(
+    replicator.splitNodesWithRack(replicaList,
         replicaList, rackMap, first, second);
     assertEquals(3, first.size());
     assertEquals(1, second.size());

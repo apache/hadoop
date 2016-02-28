@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.net.Node;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.List;
@@ -137,6 +138,11 @@ class ErasureCodingWork extends BlockReconstructionWork {
           stripedBlk.getBlockId() + blockIndex, internBlkLen,
           stripedBlk.getGenerationStamp());
       source.addBlockToBeReplicated(targetBlk, getTargets());
+      if (BlockManager.LOG.isDebugEnabled()) {
+        BlockManager.LOG.debug("Add replication task from source {} to " +
+            "targets {} for EC block {}", source, Arrays.toString(getTargets()),
+            targetBlk);
+      }
     } else {
       getTargets()[0].getDatanodeDescriptor().addBlockToBeErasureCoded(
           new ExtendedBlock(blockPoolId, stripedBlk),
