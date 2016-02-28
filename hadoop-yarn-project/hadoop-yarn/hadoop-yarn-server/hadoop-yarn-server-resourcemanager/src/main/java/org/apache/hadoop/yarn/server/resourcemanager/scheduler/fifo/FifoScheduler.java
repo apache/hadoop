@@ -527,7 +527,7 @@ public class FifoScheduler extends
 
       // Done
       if (Resources.lessThan(resourceCalculator, clusterResource,
-              node.getAvailableResource(), minimumAllocation)) {
+              node.getUnallocatedResource(), minimumAllocation)) {
         break;
       }
     }
@@ -682,13 +682,9 @@ public class FifoScheduler extends
         " request=" + request + " type=" + type);
     Resource capability = request.getCapability();
 
-    int availableContainers = 
-      node.getAvailableResource().getMemory() / capability.getMemory(); // TODO: A buggy
-                                                                        // application
-                                                                        // with this
-                                                                        // zero would
-                                                                        // crash the
-                                                                        // scheduler.
+    // TODO: A buggy application with this zero would crash the scheduler.
+    int availableContainers = node.getUnallocatedResource().getMemory() /
+        capability.getMemory();
     int assignedContainers = 
       Math.min(assignableContainers, availableContainers);
 
@@ -760,7 +756,7 @@ public class FifoScheduler extends
           .handle(
               new RMNodeResourceUpdateEvent(rmNode.getNodeID(), ResourceOption
                   .newInstance(getSchedulerNode(rmNode.getNodeID())
-                      .getUsedResource(), 0)));
+                      .getAllocatedResource(), 0)));
     }
 
     if (rmContext.isWorkPreservingRecoveryEnabled()
@@ -769,14 +765,14 @@ public class FifoScheduler extends
     }
 
     if (Resources.greaterThanOrEqual(resourceCalculator, clusterResource,
-            node.getAvailableResource(),minimumAllocation)) {
+            node.getUnallocatedResource(), minimumAllocation)) {
       LOG.debug("Node heartbeat " + rmNode.getNodeID() + 
-          " available resource = " + node.getAvailableResource());
+          " available resource = " + node.getUnallocatedResource());
 
       assignContainers(node);
 
       LOG.debug("Node after allocation " + rmNode.getNodeID() + " resource = "
-          + node.getAvailableResource());
+          + node.getUnallocatedResource());
     }
 
     updateAvailableResourcesMetrics();

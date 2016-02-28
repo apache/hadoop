@@ -318,7 +318,7 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
         .when(spyApp).isWaitingForAMContainer();
     assertTrue(spyApp.isBlacklisted(n1.getNodeName()));
     assertFalse(spyApp.isBlacklisted(n2.getNodeName()));
-    assertEquals(n2.getAvailableResource(), spyApp.getHeadroom());
+    assertEquals(n2.getUnallocatedResource(), spyApp.getHeadroom());
 
     blacklistAdditions.clear();
     blacklistAdditions.add(n2.getNodeName());
@@ -326,7 +326,7 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     app.updateBlacklist(blacklistAdditions, blacklistRemovals);
     assertFalse(spyApp.isBlacklisted(n1.getNodeName()));
     assertTrue(spyApp.isBlacklisted(n2.getNodeName()));
-    assertEquals(n1.getAvailableResource(), spyApp.getHeadroom());
+    assertEquals(n1.getUnallocatedResource(), spyApp.getHeadroom());
 
     blacklistAdditions.clear();
     blacklistRemovals.clear();

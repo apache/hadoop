@@ -146,6 +146,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4697. NM aggregation thread pool is not bound by
     limits (haibochen via rkanter)
 
+    YARN-4718. Rename variables in SchedulerNode to reduce ambiguity post 
+    YARN-1011. (Inigo Goiri via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES

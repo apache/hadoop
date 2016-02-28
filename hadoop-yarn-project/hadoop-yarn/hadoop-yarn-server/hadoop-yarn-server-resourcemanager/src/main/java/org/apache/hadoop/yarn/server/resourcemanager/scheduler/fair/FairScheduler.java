@@ -1069,7 +1069,7 @@ public class FairScheduler extends
           .handle(
               new RMNodeResourceUpdateEvent(nm.getNodeID(), ResourceOption
                   .newInstance(getSchedulerNode(nm.getNodeID())
-                      .getUsedResource(), 0)));
+                      .getAllocatedResource(), 0)));
     }
 
     if (continuousSchedulingEnabled) {
@@ -1105,7 +1105,7 @@ public class FairScheduler extends
       FSSchedulerNode node = getFSSchedulerNode(nodeId);
       try {
         if (node != null && Resources.fitsIn(minimumAllocation,
-            node.getAvailableResource())) {
+            node.getUnallocatedResource())) {
           attemptScheduling(node);
         }
       } catch (Throwable ex) {
@@ -1137,8 +1137,8 @@ public class FairScheduler extends
         return -1;
       }
       return RESOURCE_CALCULATOR.compare(clusterResource,
-              nodes.get(n2).getAvailableResource(),
-              nodes.get(n1).getAvailableResource());
+              nodes.get(n2).getUnallocatedResource(),
+              nodes.get(n1).getUnallocatedResource());
     }
   }
 

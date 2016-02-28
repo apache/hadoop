@@ -429,7 +429,7 @@ public class TestIncreaseAllocationExpirer {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     SchedulerNode node = cs.getNode(nodeId);
     Assert
-        .assertEquals(expectedMemory, node.getAvailableResource().getMemory());
+        .assertEquals(expectedMemory, node.getUnallocatedResource().getMemory());
   }
 
   private Container getContainer(

@@ -191,7 +191,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       SchedulerNode node = scheduler.getSchedulerNode(nodeId);
       if (node != null) {
         Resources.subtractFrom(availableResources,
-            node.getAvailableResource());
+            node.getUnallocatedResource());
       }
     }
     if (availableResources.getMemory() < 0) {
@@ -613,7 +613,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     Resource capability = request.getCapability();
 
     // How much does the node have?
-    Resource available = node.getAvailableResource();
+    Resource available = node.getUnallocatedResource();
 
     Container container = null;
     if (reserved) {
@@ -840,7 +840,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     // Note that we have an assumption here that
     // there's only one container size per priority.
     if (Resources.fitsIn(node.getReservedContainer().getReservedResource(),
-        node.getAvailableResource())) {
+        node.getUnallocatedResource())) {
       assignContainer(node, true);
     }
     return true;

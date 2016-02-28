@@ -423,7 +423,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     }
 
     Resource capability = request.getCapability();
-    Resource available = node.getAvailableResource();
+    Resource available = node.getUnallocatedResource();
     Resource totalResource = node.getTotalResource();
 
     if (!Resources.lessThanOrEqual(rc, clusterResource,
