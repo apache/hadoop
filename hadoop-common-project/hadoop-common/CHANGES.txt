@@ -1761,6 +1761,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12849. TestSymlinkLocalFSFileSystem fails intermittently.
     (Mingliang Liu via cnauroth)
 
+    HADOOP-12846. Credential Provider Recursive Dependencies.
+    (Larry McCay via cnauroth)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

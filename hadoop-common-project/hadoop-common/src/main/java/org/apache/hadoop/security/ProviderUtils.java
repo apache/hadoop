@@ -18,14 +18,34 @@
 
 package org.apache.hadoop.security;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
 import org.apache.hadoop.security.alias.LocalJavaKeyStoreProvider;
 
-public class ProviderUtils {
+/**
+ * Utility methods for both key and credential provider APIs.
+ *
+ */
+public final class ProviderUtils {
+  private static final Log LOG = LogFactory.getLog(ProviderUtils.class);
+
+  /**
+   * Hidden ctor to ensure that this utility class isn't
+   * instantiated explicitly.
+   */
+  private ProviderUtils() {
+    // hide ctor for checkstyle compliance
+  }
+
   /**
    * Convert a nested URI to decode the underlying path. The translation takes
    * the authority and parses it into the underlying scheme and authority.
@@ -35,11 +55,15 @@ public class ProviderUtils {
    * @return the unnested path
    */
   public static Path unnestUri(URI nestedUri) {
-    String[] parts = nestedUri.getAuthority().split("@", 2);
-    StringBuilder result = new StringBuilder(parts[0]);
-    result.append("://");
-    if (parts.length == 2) {
-      result.append(parts[1]);
+    StringBuilder result = new StringBuilder();
+    String authority = nestedUri.getAuthority();
+    if (authority != null) {
+      String[] parts = nestedUri.getAuthority().split("@", 2);
+      result.append(parts[0]);
+      result.append("://");
+      if (parts.length == 2) {
+        result.append(parts[1]);
+      }
     }
     result.append(nestedUri.getPath());
     if (nestedUri.getQuery() != null) {
@@ -79,4 +103,75 @@ public class ProviderUtils {
         "//file" + localFile.getSchemeSpecificPart(), localFile.getFragment());
   }
 
+  /**
+   * There are certain integrations of the credential provider API in
+   * which a recursive dependency between the provider and the hadoop
+   * filesystem abstraction causes a problem. These integration points
+   * need to leverage this utility method to remove problematic provider
+   * types from the existing provider path within the configuration.
+   *
+   * @param config the existing configuration with provider path
+   * @param fileSystemClass the class which providers must be compatible
+   * @return Configuration clone with new provider path
+   */
+  public static Configuration excludeIncompatibleCredentialProviders(
+      Configuration config, Class<? extends FileSystem> fileSystemClass)
+          throws IOException {
+
+    String providerPath = config.get(
+        CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH);
+
+    if (providerPath == null) {
+      return config;
+    }
+    StringBuffer newProviderPath = new StringBuffer();
+    String[] providers = providerPath.split(",");
+    Path path = null;
+    for (String provider: providers) {
+      try {
+        path = unnestUri(new URI(provider));
+        Class<? extends FileSystem> clazz = null;
+        try {
+          String scheme = path.toUri().getScheme();
+          clazz = FileSystem.getFileSystemClass(scheme, config);
+        } catch (IOException ioe) {
+          // not all providers are filesystem based
+          // for instance user:/// will not be able to
+          // have a filesystem class associated with it.
+          if (newProviderPath.length() > 0) {
+            newProviderPath.append(",");
+          }
+          newProviderPath.append(provider);
+        }
+        if (clazz != null) {
+          if (fileSystemClass.isAssignableFrom(clazz)) {
+            LOG.debug("Filesystem based provider" +
+                " excluded from provider path due to recursive dependency: "
+                + provider);
+          } else {
+            if (newProviderPath.length() > 0) {
+              newProviderPath.append(",");
+            }
+            newProviderPath.append(provider);
+          }
+        }
+      } catch (URISyntaxException e) {
+        LOG.warn("Credential Provider URI is invalid." + provider);
+      }
+    }
+
+    String effectivePath = newProviderPath.toString();
+    if (effectivePath.equals(providerPath)) {
+      return config;
+    }
+
+    Configuration conf = new Configuration(config);
+    if (effectivePath.equals("")) {
+      conf.unset(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH);
+    } else {
+      conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,
+          effectivePath);
+    }
+    return conf;
+  }
 }

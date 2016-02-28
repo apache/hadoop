@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.ProviderUtils;
 
 /**
  * Key provider that simply returns the storage account key from the
@@ -41,7 +42,9 @@ public class SimpleKeyProvider implements KeyProvider {
       throws KeyProviderException {
     String key = null;
     try {
-      char[] keyChars = conf.getPassword(getStorageAccountKeyName(accountName));
+      Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
+          conf, NativeAzureFileSystem.class);
+      char[] keyChars = c.getPassword(getStorageAccountKeyName(accountName));
       if (keyChars != null) {
         key = new String(keyChars);
       }
