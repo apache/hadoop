@@ -49,3 +49,36 @@ message SleepRequestProto{
 
 message SleepResponseProto{
 }
+
+message SlowPingRequestProto {
+  required bool shouldSlow = 1;
+}
+
+message EchoRequestProto2 {
+  repeated string message = 1;
+}
+
+message EchoResponseProto2 {
+  repeated string message = 1;
+}
+
+message AddRequestProto {
+  required int32 param1 = 1;
+  required int32 param2 = 2;
+}
+
+message AddRequestProto2 {
+  repeated int32 params = 1;
+}
+
+message AddResponseProto {
+  required int32 result = 1;
+}
+
+message ExchangeRequestProto {
+  repeated int32 values = 1;
+}
+
+message ExchangeResponseProto {
+  repeated int32 values = 1;
+}

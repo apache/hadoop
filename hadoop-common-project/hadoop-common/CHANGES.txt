@@ -1763,6 +1763,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12846. Credential Provider Recursive Dependencies.
     (Larry McCay via cnauroth)
 
+    HADOOP-12813. Migrate TestRPC and related codes to rebase on
+    ProtobufRpcEngine. (Kai Zheng via wheat9)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

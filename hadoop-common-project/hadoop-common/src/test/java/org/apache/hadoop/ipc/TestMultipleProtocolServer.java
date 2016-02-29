@@ -23,8 +23,6 @@ import java.net.InetSocketAddress;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.TestProtoBufRpc.PBServerImpl;
-import org.apache.hadoop.ipc.TestProtoBufRpc.TestRpcService;
 import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.TestProtobufRpcProto;
 import org.apache.hadoop.net.NetUtils;
 import org.junit.Before;
@@ -32,8 +30,7 @@ import org.junit.After;
 import org.junit.Test;
 import com.google.protobuf.BlockingService;
 
-public class TestMultipleProtocolServer {
-  private static final String ADDRESS = "0.0.0.0";
+public class TestMultipleProtocolServer extends TestRpcBase {
   private static InetSocketAddress addr;
   private static RPC.Server server;
 
@@ -64,12 +61,11 @@ public class TestMultipleProtocolServer {
     public static final long versionID = 0L;
     void hello() throws IOException;
   }
+
   interface Bar extends Mixin {
     public static final long versionID = 0L;
     int echo(int i) throws IOException;
   }
-  
-  
   
   class Foo0Impl implements Foo0 {
 
@@ -185,8 +181,7 @@ public class TestMultipleProtocolServer {
     
     // Add Protobuf server
     // Create server side implementation
-    PBServerImpl pbServerImpl = 
-        new PBServerImpl();
+    PBServerImpl pbServerImpl = new PBServerImpl();
     BlockingService service = TestProtobufRpcProto
         .newReflectiveBlockingService(pbServerImpl);
     server.addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER, TestRpcService.class,
@@ -241,8 +236,7 @@ public class TestMultipleProtocolServer {
     FooUnimplemented foo = (FooUnimplemented)proxy.getProxy(); 
     foo.ping();
   }
-  
-  
+
   /**
    * getProtocolVersion of an unimplemented version should return highest version
    * Similarly getProtocolSignature should work.

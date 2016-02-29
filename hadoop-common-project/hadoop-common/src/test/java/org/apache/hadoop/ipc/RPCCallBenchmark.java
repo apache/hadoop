@@ -34,8 +34,6 @@ import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.RPC.Server;
-import org.apache.hadoop.ipc.TestProtoBufRpc.PBServerImpl;
-import org.apache.hadoop.ipc.TestProtoBufRpc.TestRpcService;
 import org.apache.hadoop.ipc.TestRPC.TestProtocol;
 import org.apache.hadoop.ipc.protobuf.TestProtos.EchoRequestProto;
 import org.apache.hadoop.ipc.protobuf.TestProtos.EchoResponseProto;
@@ -54,7 +52,7 @@ import com.google.protobuf.BlockingService;
  * Benchmark for protobuf RPC.
  * Run with --help option for usage.
  */
-public class RPCCallBenchmark implements Tool {
+public class RPCCallBenchmark extends TestRpcBase implements Tool {
   private Configuration conf;
   private AtomicLong callCount = new AtomicLong(0);
   private static ThreadMXBean threadBean =
