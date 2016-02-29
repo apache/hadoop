@@ -185,45 +185,50 @@ bool ConfigurationLoader::UpdateMapWithString(ConfigMap & map,
 
 bool ConfigurationLoader::UpdateMapWithBytes(ConfigMap& map,
                                                  std::vector<char>& raw_bytes) {
-  rapidxml::xml_document<> dom;
-  dom.parse<rapidxml::parse_trim_whitespace>(&raw_bytes[0]);
+  try {
+    rapidxml::xml_document<> dom;
+    dom.parse<rapidxml::parse_trim_whitespace>(&raw_bytes[0]);
 
-  /* File must contain a single <configuration> stanza */
-  auto config_node = dom.first_node("configuration", 0, false);
-  if (!config_node) {
+    /* File must contain a single <configuration> stanza */
+    auto config_node = dom.first_node("configuration", 0, false);
+    if (!config_node) {
+      return false;
+    }
+
+    /* Walk all of the <property> nodes, ignoring the rest */
+    for (auto property_node = config_node->first_node("property", 0, false);
+         property_node;
+         property_node = property_node->next_sibling("property", 0, false)) {
+      auto name_node = property_node->first_node("name", 0, false);
+      auto value_node = property_node->first_node("value", 0, false);
+
+      if (name_node && value_node) {
+        std::string final_value;
+        auto final_node = property_node->first_node("final", 0, false);
+        if (final_node) {
+          final_value = final_node->value();
+        }
+        UpdateMapWithValue(map, name_node->value(), value_node->value(), final_value);
+      }
+
+      auto name_attr = property_node->first_attribute("name", 0, false);
+      auto value_attr = property_node->first_attribute("value", 0, false);
+
+      if (name_attr && value_attr) {
+        std::string final_value;
+        auto final_attr = property_node->first_attribute("final", 0, false);
+        if (final_attr) {
+          final_value = final_attr->value();
+        }
+        UpdateMapWithValue(map, name_attr->value(), value_attr->value(), final_value);
+      }
+    }
+
+    return true;
+  } catch (const rapidxml::parse_error &e) {
+    // TODO: Capture the result in a Status object
     return false;
   }
-
-  /* Walk all of the <property> nodes, ignoring the rest */
-  for (auto property_node = config_node->first_node("property", 0, false);
-       property_node;
-       property_node = property_node->next_sibling("property", 0, false)) {
-    auto name_node = property_node->first_node("name", 0, false);
-    auto value_node = property_node->first_node("value", 0, false);
-
-    if (name_node && value_node) {
-      std::string final_value;
-      auto final_node = property_node->first_node("final", 0, false);
-      if (final_node) {
-        final_value = final_node->value();
-      }
-      UpdateMapWithValue(map, name_node->value(), value_node->value(), final_value);
-    }
-
-    auto name_attr = property_node->first_attribute("name", 0, false);
-    auto value_attr = property_node->first_attribute("value", 0, false);
-
-    if (name_attr && value_attr) {
-      std::string final_value;
-      auto final_attr = property_node->first_attribute("final", 0, false);
-      if (final_attr) {
-        final_value = final_attr->value();
-      }
-      UpdateMapWithValue(map, name_attr->value(), value_attr->value(), final_value);
-    }
-  }
-
-  return true;
 }
 
 bool ConfigurationLoader::UpdateMapWithValue(ConfigMap& map,
