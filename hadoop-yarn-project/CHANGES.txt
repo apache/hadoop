@@ -239,6 +239,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4566. Fix test failure in TestMiniYarnClusterNodeUtilization.
     (Takashi Ohnishi via rohithsharmaks)
 
+    YARN-4731. container-executor should not follow symlinks in
+    recursive_unlink_children (Colin Patrick McCabe via jlowe)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
