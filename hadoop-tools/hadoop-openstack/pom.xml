@@ -113,8 +113,8 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
-      <artifactId>httpclient</artifactId>
+      <groupId>commons-httpclient</groupId>
+      <artifactId>commons-httpclient</artifactId>
       <scope>compile</scope>
     </dependency>
 

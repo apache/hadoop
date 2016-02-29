@@ -733,6 +733,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12416. Trash messages should be handled by Logger instead of being
     delivered on System.out. (Mingliang Liu via aajisaka)
 
+    HADOOP-12552. Fix undeclared/unused dependency to httpclient (iwasakims)
+
   NEW FEATURES
 
     HADOOP-11226. Add a configuration to set ipc.Client's traffic class with
