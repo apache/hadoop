@@ -163,8 +163,8 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`SETOWNER`](#Set_Owner) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).setOwner)
     * [`SETPERMISSION`](#Set_Permission) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).setPermission)
     * [`SETTIMES`](#Set_Access_or_Modification_Time) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).setTimes)
-    * [`RENEWDELEGATIONTOKEN`](#Renew_Delegation_Token) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).renewDelegationToken)
-    * [`CANCELDELEGATIONTOKEN`](#Cancel_Delegation_Token) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).cancelDelegationToken)
+    * [`RENEWDELEGATIONTOKEN`](#Renew_Delegation_Token) (see [DelegationTokenAuthenticator](../../api/org/apache/hadoop/security/token/delegation/web/DelegationTokenAuthenticator.html).renewDelegationToken)
+    * [`CANCELDELEGATIONTOKEN`](#Cancel_Delegation_Token) (see [DelegationTokenAuthenticator](../../api/org/apache/hadoop/security/token/delegation/web/DelegationTokenAuthenticator.html).cancelDelegationToken)
     * [`CREATESNAPSHOT`](#Create_Snapshot) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).createSnapshot)
     * [`RENAMESNAPSHOT`](#Rename_Snapshot) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).renameSnapshot)
     * [`SETXATTR`](#Set_XAttr) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).setXAttr)
@@ -1071,7 +1071,7 @@ See also: [`renewer`](#Renewer), [FileSystem](../../api/org/apache/hadoop/fs/Fil
 
         {"long": 1320962673997}           //the new expiration time
 
-See also: [`token`](#Token), [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).renewDelegationToken
+See also: [`token`](#Token), [DelegationTokenAuthenticator](../../api/org/apache/hadoop/security/token/delegation/web/DelegationTokenAuthenticator.html).renewDelegationToken
 
 ### Cancel Delegation Token
 
@@ -1084,7 +1084,7 @@ See also: [`token`](#Token), [FileSystem](../../api/org/apache/hadoop/fs/FileSys
         HTTP/1.1 200 OK
         Content-Length: 0
 
-See also: [`token`](#Token), [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).cancelDelegationToken
+See also: [`token`](#Token), [DelegationTokenAuthenticator](../../api/org/apache/hadoop/security/token/delegation/web/DelegationTokenAuthenticator.html).cancelDelegationToken
 
 Error Responses
 ---------------

@@ -2949,6 +2949,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9765. TestBlockScanner#testVolumeIteratorWithCaching fails
     intermittently. (aajisaka)
 
+    HDFS-9864. Correct reference for RENEWDELEGATIONTOKEN and
+    CANCELDELEGATIONTOKEN in webhdfs doc. (Brahma Reddy Battula via aajisaka)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
