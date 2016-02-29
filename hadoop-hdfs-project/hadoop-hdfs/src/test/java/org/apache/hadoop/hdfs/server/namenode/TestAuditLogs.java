@@ -69,17 +69,21 @@ import org.junit.runners.Parameterized.Parameters;
 public class TestAuditLogs {
   static final String auditLogFile = PathUtils.getTestDirName(TestAuditLogs.class) + "/TestAuditLogs-audit.log";
   final boolean useAsyncLog;
-  
+  final boolean useAsyncEdits;
+
   @Parameters
   public static Collection<Object[]> data() {
     Collection<Object[]> params = new ArrayList<Object[]>();
-    params.add(new Object[]{new Boolean(false)});
-    params.add(new Object[]{new Boolean(true)});
+    params.add(new Object[]{Boolean.FALSE, Boolean.FALSE});
+    params.add(new Object[]{Boolean.TRUE,  Boolean.FALSE});
+    params.add(new Object[]{Boolean.FALSE, Boolean.TRUE});
+    params.add(new Object[]{Boolean.TRUE,  Boolean.TRUE});
     return params;
   }
-  
-  public TestAuditLogs(boolean useAsyncLog) {
+
+  public TestAuditLogs(boolean useAsyncLog, boolean useAsyncEdits) {
     this.useAsyncLog = useAsyncLog;
+    this.useAsyncEdits = useAsyncEdits;
   }
 
   // Pattern for: 
@@ -116,6 +120,7 @@ public class TestAuditLogs {
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, precision);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY, useAsyncLog);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_EDITS_ASYNC_LOGGING, useAsyncEdits);
     util = new DFSTestUtil.Builder().setName("TestAuditAllowed").
         setNumFiles(20).build();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();

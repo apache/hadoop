@@ -21,12 +21,13 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -43,13 +44,37 @@ import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 import org.mockito.Mockito;
 
+@RunWith(Parameterized.class)
 public class TestEditLogJournalFailures {
 
   private int editsPerformed = 0;
   private MiniDFSCluster cluster;
   private FileSystem fs;
+  private boolean useAsyncEdits;
+
+  @Parameters
+  public static Collection<Object[]> data() {
+    Collection<Object[]> params = new ArrayList<Object[]>();
+    params.add(new Object[]{Boolean.FALSE});
+    params.add(new Object[]{Boolean.TRUE});
+    return params;
+  }
+
+  public TestEditLogJournalFailures(boolean useAsyncEdits) {
+    this.useAsyncEdits = useAsyncEdits;
+  }
+
+  private Configuration getConf() {
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_EDITS_ASYNC_LOGGING,
+        useAsyncEdits);
+    return conf;
+  }
 
   /**
    * Create the mini cluster for testing and sub in a custom runtime so that
@@ -57,9 +82,9 @@ public class TestEditLogJournalFailures {
    */
   @Before
   public void setUpMiniCluster() throws IOException {
-    setUpMiniCluster(new HdfsConfiguration(), true);
+    setUpMiniCluster(getConf(), true);
   }
-  
+
   public void setUpMiniCluster(Configuration conf, boolean manageNameDfsDirs)
       throws IOException {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
@@ -153,7 +178,7 @@ public class TestEditLogJournalFailures {
     String[] editsDirs = cluster.getConfiguration(0).getTrimmedStrings(
         DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
     shutDownMiniCluster();
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = getConf();
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY, editsDirs[0]);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_MINIMUM_KEY, 0);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_MINIMUM_KEY, 0);
@@ -193,7 +218,7 @@ public class TestEditLogJournalFailures {
       throws IOException {
     // Set up 4 name/edits dirs.
     shutDownMiniCluster();
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = getConf();
     String[] nameDirs = new String[4];
     for (int i = 0; i < nameDirs.length; i++) {
       File nameDir = new File(PathUtils.getTestDir(getClass()), "name-dir" + i);

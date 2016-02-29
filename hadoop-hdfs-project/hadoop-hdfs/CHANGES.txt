@@ -1037,6 +1037,8 @@ Release 2.9.0 - UNRELEASED
     HDFS-9754. Avoid unnecessary getBlockCollection calls in BlockManager.
     (jing9)
 
+    HDFS-7964. Add support for async edit logging. (Daryn Sharp)
+
   OPTIMIZATIONS
 
   BUG FIXES
