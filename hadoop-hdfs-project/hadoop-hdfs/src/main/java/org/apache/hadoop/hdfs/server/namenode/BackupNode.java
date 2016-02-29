@@ -143,6 +143,10 @@ public class BackupNode extends NameNode {
 
   @Override // NameNode
   protected void initialize(Configuration conf) throws IOException {
+    // async edit logs are incompatible with backup node due to race
+    // conditions resulting from laxer synchronization
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_EDITS_ASYNC_LOGGING, false);
+
     // Trash is disabled in BackupNameNode,
     // but should be turned back on if it ever becomes active.
     conf.setLong(CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY, 

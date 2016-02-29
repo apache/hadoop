@@ -31,6 +31,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedMap;
@@ -51,25 +53,48 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.log4j.Level;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 
+@RunWith(Parameterized.class)
 public class TestFSEditLogLoader {
-  
+  @Parameters
+  public static Collection<Object[]> data() {
+    Collection<Object[]> params = new ArrayList<Object[]>();
+    params.add(new Object[]{ Boolean.FALSE });
+    params.add(new Object[]{ Boolean.TRUE });
+    return params;
+  }
+
+  private static boolean useAsyncEditLog;
+  public TestFSEditLogLoader(Boolean async) {
+    useAsyncEditLog = async;
+  }
+
+  private static Configuration getConf() {
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_EDITS_ASYNC_LOGGING,
+        useAsyncEditLog);
+    return conf;
+  }
+
   static {
     GenericTestUtils.setLogLevel(FSImage.LOG, Level.ALL);
     GenericTestUtils.setLogLevel(FSEditLogLoader.LOG, Level.ALL);
   }
-  
+
   private static final File TEST_DIR = PathUtils.getTestDir(TestFSEditLogLoader.class);
 
   private static final int NUM_DATA_NODES = 0;
-  
+
   @Test
   public void testDisplayRecentEditLogOpCodes() throws IOException {
-    // start a cluster 
-    Configuration conf = new HdfsConfiguration();
+    // start a cluster
+    Configuration conf = getConf();
     MiniDFSCluster cluster = null;
     FileSystem fileSys = null;
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES)
@@ -119,7 +144,7 @@ public class TestFSEditLogLoader {
   @Test
   public void testReplicationAdjusted() throws Exception {
     // start a cluster 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = getConf();
     // Replicate and heartbeat fast to shave a few seconds off test
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);

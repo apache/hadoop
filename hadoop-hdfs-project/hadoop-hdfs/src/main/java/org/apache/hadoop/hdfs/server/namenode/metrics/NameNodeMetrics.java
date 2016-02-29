@@ -283,8 +283,8 @@ public class NameNodeMetrics {
     transactions.add(latency);
   }
 
-  public void incrTransactionsBatchedInSync() {
-    transactionsBatchedInSync.incr();
+  public void incrTransactionsBatchedInSync(long count) {
+    transactionsBatchedInSync.incr(count);
   }
 
   public void addSync(long elapsed) {
