@@ -32,6 +32,13 @@ service TestProtobufRpcProto {
   rpc echo(EchoRequestProto) returns (EchoResponseProto);
   rpc error(EmptyRequestProto) returns (EmptyResponseProto);
   rpc error2(EmptyRequestProto) returns (EmptyResponseProto);
+  rpc slowPing(SlowPingRequestProto) returns (EmptyResponseProto);
+  rpc echo2(EchoRequestProto2) returns (EchoResponseProto2);
+  rpc add(AddRequestProto) returns (AddResponseProto);
+  rpc add2(AddRequestProto2) returns (AddResponseProto);
+  rpc testServerGet(EmptyRequestProto) returns (EmptyResponseProto);
+  rpc exchange(ExchangeRequestProto) returns (ExchangeResponseProto);
+  rpc sleep(SleepRequestProto) returns (EmptyResponseProto);
 }
 
 service TestProtobufRpc2Proto {
