@@ -1811,9 +1811,9 @@ static int rmdir_as_nm(const char* path) {
 static int open_helper(int dirfd, const char *name) {
   int fd;
   if (dirfd >= 0) {
-    fd = openat(dirfd, name, O_RDONLY);
+    fd = openat(dirfd, name, O_RDONLY | O_NOFOLLOW);
   } else {
-    fd = open(name, O_RDONLY);
+    fd = open(name, O_RDONLY | O_NOFOLLOW);
   }
   if (fd >= 0) {
     return fd;
@@ -1847,6 +1847,34 @@ static int unlink_helper(int dirfd, const char *name, int flags) {
   return errno;
 }
 
+/**
+ * Determine if an entry in a directory is a symlink.
+ *
+ * @param dirfd     The directory file descriptor, or -1 if there is none.
+ * @param name      If dirfd is -1, this is the path to examine.
+ *                  Otherwise, this is the file name in the directory to
+ *                  examine.
+ *
+ * @return          0 if the entry is not a symlink
+ *                  1 if the entry is a symlink
+ *                  A negative errno code if we couldn't access the entry.
+ */
+static int is_symlink_helper(int dirfd, const char *name)
+{
+  struct stat stat;
+
+  if (dirfd < 0) {
+    if (lstat(name, &stat) < 0) {
+      return -errno;
+    }
+  } else {
+    if (fstatat(dirfd, name, &stat, AT_SYMLINK_NOFOLLOW) < 0) {
+      return -errno;
+    }
+  }
+  return !!S_ISLNK(stat.st_mode);
+}
+
 static int recursive_unlink_helper(int dirfd, const char *name,
                                    const char* fullpath)
 {
@@ -1854,6 +1882,28 @@ static int recursive_unlink_helper(int dirfd, const char *name,
   DIR *dfd = NULL;
   struct stat stat;
 
+  // Check to see if the file is a symlink.  If so, delete the symlink rather
+  // than what it points to.
+  ret = is_symlink_helper(dirfd, name);
+  if (ret < 0) {
+    // is_symlink_helper failed.
+    ret = -ret;
+    fprintf(LOGFILE, "is_symlink_helper(%s) failed: %s\n",
+            fullpath, strerror(ret));
+    goto done;
+  } else if (ret == 1) {
+    // is_symlink_helper determined that the path is a symlink.
+    ret = unlink_helper(dirfd, name, 0);
+    if (ret) {
+      fprintf(LOGFILE, "failed to unlink symlink %s: %s\n",
+              fullpath, strerror(ret));
+    }
+    goto done;
+  }
+
+  // Open the file.  We use O_NOFOLLOW here to ensure that we if a symlink was
+  // swapped in by an attacker, we will fail to follow it rather than deleting
+  // something we potentially should not.
   fd = open_helper(dirfd, name);
   if (fd == -EACCES) {
     ret = chmod_helper(dirfd, name, 0700);

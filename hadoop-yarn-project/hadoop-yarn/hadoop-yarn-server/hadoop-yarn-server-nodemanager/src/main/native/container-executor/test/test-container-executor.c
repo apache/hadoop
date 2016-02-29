@@ -714,6 +714,100 @@ void test_run_container() {
   check_pid_file(cgroups_pids[1], child);
 }
 
+static void mkdir_or_die(const char *path) {
+  if (mkdir(path, 0777) < 0) {
+    int err = errno;
+    printf("mkdir(%s) failed: %s\n", path, strerror(err));
+    exit(1);
+  }
+}
+
+static void touch_or_die(const char *path) {
+  FILE* f = fopen(path, "w");
+  if (!f) {
+    int err = errno;
+    printf("fopen(%s, w) failed: %s\n", path, strerror(err));
+    exit(1);
+  }
+  if (fclose(f) < 0) {
+    int err = errno;
+    printf("fclose(%s) failed: %s\n", path, strerror(err));
+    exit(1);
+  }
+}
+
+static void symlink_or_die(const char *old, const char *new) {
+  if (symlink(old, new) < 0) {
+    int err = errno;
+    printf("symlink(%s, %s) failed: %s\n", old, new, strerror(err));
+    exit(1);
+  }
+}
+
+static void expect_type(const char *path, int mode) {
+  struct stat st_buf;
+
+  if (stat(path, &st_buf) < 0) {
+    int err = errno;
+    if (err == ENOENT) {
+      if (mode == 0) {
+        return;
+      }
+      printf("expect_type(%s): stat failed unexpectedly: %s\n",
+             path, strerror(err));
+      exit(1);
+    }
+  }
+  if (mode == 0) {
+    printf("expect_type(%s): we expected the file to be gone, but it "
+           "existed.\n", path);
+    exit(1);
+  }
+  if (!(st_buf.st_mode & mode)) {
+    printf("expect_type(%s): the file existed, but it had mode 0%4o, "
+           "which didn't have bit 0%4o\n", path, st_buf.st_mode, mode);
+    exit(1);
+  }
+}
+
+int recursive_unlink_children(const char *name);
+
+void test_recursive_unlink_children() {
+  int ret;
+
+  mkdir_or_die(TEST_ROOT "/unlinkRoot");
+  mkdir_or_die(TEST_ROOT "/unlinkRoot/a");
+  touch_or_die(TEST_ROOT "/unlinkRoot/b");
+  mkdir_or_die(TEST_ROOT "/unlinkRoot/c");
+  touch_or_die(TEST_ROOT "/unlinkRoot/c/d");
+  touch_or_die(TEST_ROOT "/external");
+  symlink_or_die(TEST_ROOT "/external",
+                 TEST_ROOT "/unlinkRoot/c/external");
+  ret = recursive_unlink_children(TEST_ROOT "/unlinkRoot");
+  if (ret != 0) {
+    printf("recursive_unlink_children(%s) failed: error %d\n",
+           TEST_ROOT "/unlinkRoot", ret);
+    exit(1);
+  }
+  // unlinkRoot should still exist.
+  expect_type(TEST_ROOT "/unlinkRoot", S_IFDIR);
+  // Other files under unlinkRoot should have been deleted.
+  expect_type(TEST_ROOT "/unlinkRoot/a", 0);
+  expect_type(TEST_ROOT "/unlinkRoot/b", 0);
+  expect_type(TEST_ROOT "/unlinkRoot/c", 0);
+  // We shouldn't have followed the symlink.
+  expect_type(TEST_ROOT "/external", S_IFREG);
+  // Clean up.
+  if (rmdir(TEST_ROOT "/unlinkRoot") < 0) {
+    int err = errno;
+    printf("failed to rmdir " TEST_ROOT "/unlinkRoot: %s\n", strerror(err));
+  }
+  if (unlink(TEST_ROOT "/external") < 0) {
+    int err = errno;
+    printf("failed to unlink " TEST_ROOT "/external: %s\n", strerror(err));
+  }
+}
+
 void test_sanitize_docker_command() {
 
   char *input[] = {
@@ -772,7 +866,7 @@ int main(int argc, char **argv) {
   if (mkdirs(TEST_ROOT "/logs/userlogs", 0755) != 0) {
     exit(1);
   }
-  
+
   if (write_config_file(TEST_ROOT "/test.cfg", 1) != 0) {
     exit(1);
   }
@@ -803,6 +897,9 @@ int main(int argc, char **argv) {
   }
 
   printf("\nStarting tests\n");
+
+  printf("\nTesting recursive_unlink_children()\n");
+  test_recursive_unlink_children();
 
   printf("\nTesting resolve_config_path()\n");
   test_resolve_config_path();
