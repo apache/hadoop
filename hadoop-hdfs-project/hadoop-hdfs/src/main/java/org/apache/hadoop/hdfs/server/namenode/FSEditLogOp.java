@@ -147,6 +147,55 @@ public abstract class FSEditLogOp {
   byte[] rpcClientId;
   int rpcCallId;
 
+  public static class OpInstanceCache {
+    private static ThreadLocal<OpInstanceCacheMap> cache =
+        new ThreadLocal<OpInstanceCacheMap>() {
+      @Override
+      protected OpInstanceCacheMap initialValue() {
+        return new OpInstanceCacheMap();
+      }
+    };
+
+    @SuppressWarnings("serial")
+    static final class OpInstanceCacheMap extends
+        EnumMap<FSEditLogOpCodes, FSEditLogOp> {
+      OpInstanceCacheMap() {
+        super(FSEditLogOpCodes.class);
+        for (FSEditLogOpCodes opCode : FSEditLogOpCodes.values()) {
+          put(opCode, newInstance(opCode));
+        }
+      }
+    }
+
+    private boolean useCache = true;
+
+    void disableCache() {
+      useCache = false;
+    }
+
+    public OpInstanceCache get() {
+      return this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T extends FSEditLogOp> T get(FSEditLogOpCodes opCode) {
+      return useCache ? (T)cache.get().get(opCode) : (T)newInstance(opCode);
+    }
+
+    private static FSEditLogOp newInstance(FSEditLogOpCodes opCode) {
+      FSEditLogOp instance = null;
+      Class<? extends FSEditLogOp> clazz = opCode.getOpClass();
+      if (clazz != null) {
+        try {
+          instance = clazz.newInstance();
+        } catch (Exception ex) {
+          throw new RuntimeException("Failed to instantiate "+opCode, ex);
+        }
+      }
+      return instance;
+    }
+  }
+
   final void reset() {
     txid = HdfsServerConstants.INVALID_TXID;
     rpcClientId = RpcConstants.DUMMY_CLIENT_ID;
@@ -155,72 +204,6 @@ public abstract class FSEditLogOp {
   }
 
   abstract void resetSubFields();
-
-  final public static class OpInstanceCache {
-    private final EnumMap<FSEditLogOpCodes, FSEditLogOp> inst =
-        new EnumMap<FSEditLogOpCodes, FSEditLogOp>(FSEditLogOpCodes.class);
-    
-    public OpInstanceCache() {
-      inst.put(OP_ADD, new AddOp());
-      inst.put(OP_CLOSE, new CloseOp());
-      inst.put(OP_SET_REPLICATION, new SetReplicationOp());
-      inst.put(OP_CONCAT_DELETE, new ConcatDeleteOp());
-      inst.put(OP_RENAME_OLD, new RenameOldOp());
-      inst.put(OP_DELETE, new DeleteOp());
-      inst.put(OP_MKDIR, new MkdirOp());
-      inst.put(OP_SET_GENSTAMP_V1, new SetGenstampV1Op());
-      inst.put(OP_SET_PERMISSIONS, new SetPermissionsOp());
-      inst.put(OP_SET_OWNER, new SetOwnerOp());
-      inst.put(OP_SET_NS_QUOTA, new SetNSQuotaOp());
-      inst.put(OP_CLEAR_NS_QUOTA, new ClearNSQuotaOp());
-      inst.put(OP_SET_QUOTA, new SetQuotaOp());
-      inst.put(OP_TIMES, new TimesOp());
-      inst.put(OP_SYMLINK, new SymlinkOp());
-      inst.put(OP_RENAME, new RenameOp());
-      inst.put(OP_REASSIGN_LEASE, new ReassignLeaseOp());
-      inst.put(OP_GET_DELEGATION_TOKEN, new GetDelegationTokenOp());
-      inst.put(OP_RENEW_DELEGATION_TOKEN, new RenewDelegationTokenOp());
-      inst.put(OP_CANCEL_DELEGATION_TOKEN, new CancelDelegationTokenOp());
-      inst.put(OP_UPDATE_MASTER_KEY, new UpdateMasterKeyOp());
-      inst.put(OP_START_LOG_SEGMENT, new LogSegmentOp(OP_START_LOG_SEGMENT));
-      inst.put(OP_END_LOG_SEGMENT, new LogSegmentOp(OP_END_LOG_SEGMENT));
-      inst.put(OP_UPDATE_BLOCKS, new UpdateBlocksOp());
-      inst.put(OP_TRUNCATE, new TruncateOp());
-
-      inst.put(OP_ALLOW_SNAPSHOT, new AllowSnapshotOp());
-      inst.put(OP_DISALLOW_SNAPSHOT, new DisallowSnapshotOp());
-      inst.put(OP_CREATE_SNAPSHOT, new CreateSnapshotOp());
-      inst.put(OP_DELETE_SNAPSHOT, new DeleteSnapshotOp());
-      inst.put(OP_RENAME_SNAPSHOT, new RenameSnapshotOp());
-      inst.put(OP_SET_GENSTAMP_V2, new SetGenstampV2Op());
-      inst.put(OP_ALLOCATE_BLOCK_ID, new AllocateBlockIdOp());
-      inst.put(OP_ADD_BLOCK, new AddBlockOp());
-      inst.put(OP_ADD_CACHE_DIRECTIVE,
-          new AddCacheDirectiveInfoOp());
-      inst.put(OP_MODIFY_CACHE_DIRECTIVE,
-          new ModifyCacheDirectiveInfoOp());
-      inst.put(OP_REMOVE_CACHE_DIRECTIVE,
-          new RemoveCacheDirectiveInfoOp());
-      inst.put(OP_ADD_CACHE_POOL, new AddCachePoolOp());
-      inst.put(OP_MODIFY_CACHE_POOL, new ModifyCachePoolOp());
-      inst.put(OP_REMOVE_CACHE_POOL, new RemoveCachePoolOp());
-
-      inst.put(OP_SET_ACL, new SetAclOp());
-      inst.put(OP_ROLLING_UPGRADE_START, new RollingUpgradeOp(
-          OP_ROLLING_UPGRADE_START, "start"));
-      inst.put(OP_ROLLING_UPGRADE_FINALIZE, new RollingUpgradeOp(
-          OP_ROLLING_UPGRADE_FINALIZE, "finalize"));
-      inst.put(OP_SET_XATTR, new SetXAttrOp());
-      inst.put(OP_REMOVE_XATTR, new RemoveXAttrOp());
-      inst.put(OP_SET_STORAGE_POLICY, new SetStoragePolicyOp());
-      inst.put(OP_APPEND, new AppendOp());
-      inst.put(OP_SET_QUOTA_BY_STORAGETYPE, new SetQuotaByStorageTypeOp());
-    }
-    
-    public FSEditLogOp get(FSEditLogOpCodes opcode) {
-      return inst.get(opcode);
-    }
-  }
 
   private static ImmutableMap<String, FsAction> fsActionMap() {
     ImmutableMap.Builder<String, FsAction> b = ImmutableMap.builder();
@@ -776,7 +759,7 @@ public abstract class FSEditLogOp {
    * {@link ClientProtocol#append}
    */
   static class AddOp extends AddCloseOp {
-    private AddOp() {
+    AddOp() {
       super(OP_ADD);
     }
 
@@ -804,7 +787,7 @@ public abstract class FSEditLogOp {
    * finally log an AddOp.
    */
   static class CloseOp extends AddCloseOp {
-    private CloseOp() {
+    CloseOp() {
       super(OP_CLOSE);
     }
 
@@ -832,7 +815,7 @@ public abstract class FSEditLogOp {
     String clientMachine;
     boolean newBlock;
 
-    private AppendOp() {
+    AppendOp() {
       super(OP_APPEND);
     }
 
@@ -922,7 +905,7 @@ public abstract class FSEditLogOp {
     private Block penultimateBlock;
     private Block lastBlock;
     
-    private AddBlockOp() {
+    AddBlockOp() {
       super(OP_ADD_BLOCK);
     }
     
@@ -1034,7 +1017,7 @@ public abstract class FSEditLogOp {
     String path;
     Block[] blocks;
     
-    private UpdateBlocksOp() {
+    UpdateBlocksOp() {
       super(OP_UPDATE_BLOCKS);
     }
     
@@ -1128,7 +1111,7 @@ public abstract class FSEditLogOp {
     String path;
     short replication;
 
-    private SetReplicationOp() {
+    SetReplicationOp() {
       super(OP_SET_REPLICATION);
     }
 
@@ -1207,7 +1190,7 @@ public abstract class FSEditLogOp {
     long timestamp;
     final static public int MAX_CONCAT_SRC = 1024 * 1024;
 
-    private ConcatDeleteOp() {
+    ConcatDeleteOp() {
       super(OP_CONCAT_DELETE);
     }
 
@@ -1365,7 +1348,7 @@ public abstract class FSEditLogOp {
     String dst;
     long timestamp;
 
-    private RenameOldOp() {
+    RenameOldOp() {
       super(OP_RENAME_OLD);
     }
 
@@ -1477,7 +1460,7 @@ public abstract class FSEditLogOp {
     String path;
     long timestamp;
 
-    private DeleteOp() {
+    DeleteOp() {
       super(OP_DELETE);
     }
 
@@ -1578,7 +1561,7 @@ public abstract class FSEditLogOp {
     List<AclEntry> aclEntries;
     List<XAttr> xAttrs;
 
-    private MkdirOp() {
+    MkdirOp() {
       super(OP_MKDIR);
     }
     
@@ -1751,7 +1734,7 @@ public abstract class FSEditLogOp {
   static class SetGenstampV1Op extends FSEditLogOp {
     long genStampV1;
 
-    private SetGenstampV1Op() {
+    SetGenstampV1Op() {
       super(OP_SET_GENSTAMP_V1);
     }
 
@@ -1809,7 +1792,7 @@ public abstract class FSEditLogOp {
   static class SetGenstampV2Op extends FSEditLogOp {
     long genStampV2;
 
-    private SetGenstampV2Op() {
+    SetGenstampV2Op() {
       super(OP_SET_GENSTAMP_V2);
     }
 
@@ -1867,7 +1850,7 @@ public abstract class FSEditLogOp {
   static class AllocateBlockIdOp extends FSEditLogOp {
     long blockId;
 
-    private AllocateBlockIdOp() {
+    AllocateBlockIdOp() {
       super(OP_ALLOCATE_BLOCK_ID);
     }
 
@@ -1926,7 +1909,7 @@ public abstract class FSEditLogOp {
     String src;
     FsPermission permissions;
 
-    private SetPermissionsOp() {
+    SetPermissionsOp() {
       super(OP_SET_PERMISSIONS);
     }
 
@@ -1999,7 +1982,7 @@ public abstract class FSEditLogOp {
     String username;
     String groupname;
 
-    private SetOwnerOp() {
+    SetOwnerOp() {
       super(OP_SET_OWNER);
     }
 
@@ -2086,7 +2069,7 @@ public abstract class FSEditLogOp {
     String src;
     long nsQuota;
 
-    private SetNSQuotaOp() {
+    SetNSQuotaOp() {
       super(OP_SET_NS_QUOTA);
     }
 
@@ -2144,7 +2127,7 @@ public abstract class FSEditLogOp {
   static class ClearNSQuotaOp extends FSEditLogOp {
     String src;
 
-    private ClearNSQuotaOp() {
+    ClearNSQuotaOp() {
       super(OP_CLEAR_NS_QUOTA);
     }
 
@@ -2198,7 +2181,7 @@ public abstract class FSEditLogOp {
     long nsQuota;
     long dsQuota;
 
-    private SetQuotaOp() {
+    SetQuotaOp() {
       super(OP_SET_QUOTA);
     }
 
@@ -2283,7 +2266,7 @@ public abstract class FSEditLogOp {
     long dsQuota;
     StorageType type;
 
-    private SetQuotaByStorageTypeOp() {
+    SetQuotaByStorageTypeOp() {
       super(OP_SET_QUOTA_BY_STORAGETYPE);
     }
 
@@ -2366,7 +2349,7 @@ public abstract class FSEditLogOp {
     long mtime;
     long atime;
 
-    private TimesOp() {
+    TimesOp() {
       super(OP_TIMES);
     }
 
@@ -2475,7 +2458,7 @@ public abstract class FSEditLogOp {
     long atime;
     PermissionStatus permissionStatus;
 
-    private SymlinkOp() {
+    SymlinkOp() {
       super(OP_SYMLINK);
     }
 
@@ -2634,7 +2617,7 @@ public abstract class FSEditLogOp {
     long timestamp;
     Rename[] options;
 
-    private RenameOp() {
+    RenameOp() {
       super(OP_RENAME);
     }
 
@@ -2799,7 +2782,7 @@ public abstract class FSEditLogOp {
     long timestamp;
     Block truncateBlock;
 
-    private TruncateOp() {
+    TruncateOp() {
       super(OP_TRUNCATE);
     }
 
@@ -2932,7 +2915,7 @@ public abstract class FSEditLogOp {
     String path;
     String newHolder;
 
-    private ReassignLeaseOp() {
+    ReassignLeaseOp() {
       super(OP_REASSIGN_LEASE);
     }
 
@@ -3014,7 +2997,7 @@ public abstract class FSEditLogOp {
     DelegationTokenIdentifier token;
     long expiryTime;
 
-    private GetDelegationTokenOp() {
+    GetDelegationTokenOp() {
       super(OP_GET_DELEGATION_TOKEN);
     }
 
@@ -3093,7 +3076,7 @@ public abstract class FSEditLogOp {
     DelegationTokenIdentifier token;
     long expiryTime;
 
-    private RenewDelegationTokenOp() {
+    RenewDelegationTokenOp() {
       super(OP_RENEW_DELEGATION_TOKEN);
     }
 
@@ -3171,7 +3154,7 @@ public abstract class FSEditLogOp {
   static class CancelDelegationTokenOp extends FSEditLogOp {
     DelegationTokenIdentifier token;
 
-    private CancelDelegationTokenOp() {
+    CancelDelegationTokenOp() {
       super(OP_CANCEL_DELEGATION_TOKEN);
     }
 
@@ -3230,7 +3213,7 @@ public abstract class FSEditLogOp {
   static class UpdateMasterKeyOp extends FSEditLogOp {
     DelegationKey key;
 
-    private UpdateMasterKeyOp() {
+    UpdateMasterKeyOp() {
       super(OP_UPDATE_MASTER_KEY);
     }
 
@@ -3335,8 +3318,20 @@ public abstract class FSEditLogOp {
     }
   }
 
+  static class StartLogSegmentOp extends LogSegmentOp {
+    StartLogSegmentOp() {
+      super(OP_START_LOG_SEGMENT);
+    }
+  }
+
+  static class EndLogSegmentOp extends LogSegmentOp {
+    EndLogSegmentOp() {
+      super(OP_END_LOG_SEGMENT);
+    }
+  }
+
   static class InvalidOp extends FSEditLogOp {
-    private InvalidOp() {
+    InvalidOp() {
       super(OP_INVALID);
     }
 
@@ -4147,7 +4142,7 @@ public abstract class FSEditLogOp {
     List<XAttr> xAttrs;
     String src;
     
-    private RemoveXAttrOp() {
+    RemoveXAttrOp() {
       super(OP_REMOVE_XATTR);
     }
     
@@ -4200,7 +4195,7 @@ public abstract class FSEditLogOp {
     List<XAttr> xAttrs;
     String src;
     
-    private SetXAttrOp() {
+    SetXAttrOp() {
       super(OP_SET_XATTR);
     }
     
@@ -4253,7 +4248,7 @@ public abstract class FSEditLogOp {
     List<AclEntry> aclEntries = Lists.newArrayList();
     String src;
 
-    private SetAclOp() {
+    SetAclOp() {
       super(OP_SET_ACL);
     }
 
@@ -4350,7 +4345,7 @@ public abstract class FSEditLogOp {
   /**
    * Operation corresponding to upgrade
    */
-  static class RollingUpgradeOp extends FSEditLogOp { // @Idempotent
+  abstract static class RollingUpgradeOp extends FSEditLogOp { // @Idempotent
     private final String name;
     private long time;
 
@@ -4417,7 +4412,7 @@ public abstract class FSEditLogOp {
     String path;
     byte policyId;
 
-    private SetStoragePolicyOp() {
+    SetStoragePolicyOp() {
       super(OP_SET_STORAGE_POLICY);
     }
 
@@ -4482,6 +4477,26 @@ public abstract class FSEditLogOp {
       this.policyId = Byte.parseByte(st.getValue("POLICYID"));
     }
   }  
+
+  static class RollingUpgradeStartOp extends RollingUpgradeOp {
+    RollingUpgradeStartOp() {
+      super(OP_ROLLING_UPGRADE_START, "start");
+    }
+
+    static RollingUpgradeStartOp getInstance(OpInstanceCache cache) {
+      return (RollingUpgradeStartOp) cache.get(OP_ROLLING_UPGRADE_START);
+    }
+  }
+
+  static class RollingUpgradeFinalizeOp extends RollingUpgradeOp {
+    RollingUpgradeFinalizeOp() {
+      super(OP_ROLLING_UPGRADE_FINALIZE, "finalize");
+    }
+
+    static RollingUpgradeFinalizeOp getInstance(OpInstanceCache cache) {
+      return (RollingUpgradeFinalizeOp) cache.get(OP_ROLLING_UPGRADE_FINALIZE);
+    }
+  }
 
   /**
    * Class for writing editlog ops

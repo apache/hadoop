@@ -267,6 +267,9 @@ public class DFSTestUtil {
   }
 
   public static void setEditLogForTesting(FSNamesystem fsn, FSEditLog newLog) {
+    // spies are shallow copies, must allow async log to restart its thread
+    // so it has the new copy
+    newLog.restart();
     Whitebox.setInternalState(fsn.getFSImage(), "editLog", newLog);
     Whitebox.setInternalState(fsn.getFSDirectory(), "editLog", newLog);
   }

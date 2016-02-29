@@ -24,6 +24,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.AfterClass;
 
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
@@ -56,11 +59,14 @@ import org.apache.commons.logging.LogFactory;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Collection;
 
 /**
  * Integration test to ensure that the BookKeeper JournalManager
  * works for HDFS Namenode HA
  */
+@RunWith(Parameterized.class)
 public class TestBookKeeperAsHASharedDir {
   static final Log LOG = LogFactory.getLog(TestBookKeeperAsHASharedDir.class);
 
@@ -68,6 +74,27 @@ public class TestBookKeeperAsHASharedDir {
   static int numBookies = 3;
 
   private static final String TEST_FILE_DATA = "HA BookKeeperJournalManager";
+
+  @Parameters
+  public static Collection<Object[]> data() {
+    Collection<Object[]> params = new ArrayList<Object[]>();
+    params.add(new Object[]{ Boolean.FALSE });
+    params.add(new Object[]{ Boolean.TRUE });
+    return params;
+  }
+
+  private static boolean useAsyncEditLog;
+  public TestBookKeeperAsHASharedDir(Boolean async) {
+    useAsyncEditLog = async;
+  }
+
+  private static Configuration getConf() {
+    Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_EDITS_ASYNC_LOGGING,
+        useAsyncEditLog);
+    return conf;
+  }
 
   @BeforeClass
   public static void setupBookkeeper() throws Exception {
@@ -92,8 +119,7 @@ public class TestBookKeeperAsHASharedDir {
   public void testFailoverWithBK() throws Exception {
     MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new Configuration();
-      conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+      Configuration conf = getConf();
       conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
                BKJMUtil.createJournalURI("/hotfailover").toString());
       BKJMUtil.addJournalManagerDefinition(conf);
@@ -144,8 +170,7 @@ public class TestBookKeeperAsHASharedDir {
     MiniDFSCluster cluster = null;
 
     try {
-      Configuration conf = new Configuration();
-      conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+      Configuration conf = getConf();
       conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
                BKJMUtil.createJournalURI("/hotfailoverWithFail").toString());
       conf.setInt(BookKeeperJournalManager.BKJM_BOOKKEEPER_ENSEMBLE_SIZE,
@@ -221,8 +246,7 @@ public class TestBookKeeperAsHASharedDir {
 
     MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new Configuration();
-      conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+      Configuration conf = getConf();
       conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
                BKJMUtil.createJournalURI("/hotfailoverMultiple").toString());
       BKJMUtil.addJournalManagerDefinition(conf);
@@ -245,7 +269,9 @@ public class TestBookKeeperAsHASharedDir {
       fs = cluster.getFileSystem(0); // get the older active server.
 
       try {
-        fs.delete(p1, true);
+        System.out.println("DMS: > *************");
+        boolean foo = fs.delete(p1, true);
+        System.out.println("DMS: < ************* "+foo);
         fail("Log update on older active should cause it to exit");
       } catch (RemoteException re) {
         assertTrue(re.getClassName().contains("ExitException"));
@@ -267,9 +293,8 @@ public class TestBookKeeperAsHASharedDir {
   public void testInitializeBKSharedEdits() throws Exception {
     MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new Configuration();
+      Configuration conf = getConf();
       HAUtil.setAllowStandbyReads(conf, true);
-      conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
 
       MiniDFSNNTopology topology = MiniDFSNNTopology.simpleHATopology();
       cluster = new MiniDFSCluster.Builder(conf).nnTopology(topology)
@@ -358,8 +383,7 @@ public class TestBookKeeperAsHASharedDir {
   public void testNameNodeMultipleSwitchesUsingBKJM() throws Exception {
     MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new Configuration();
-      conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+      Configuration conf = getConf();
       conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY, BKJMUtil
           .createJournalURI("/correctEditLogSelection").toString());
       BKJMUtil.addJournalManagerDefinition(conf);
