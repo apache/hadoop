@@ -236,6 +236,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4701. When task logs are not available, port 8041 is referenced
     instead of port 8042 (haibochen via rkanter)
 
+    YARN-4566. Fix test failure in TestMiniYarnClusterNodeUtilization.
+    (Takashi Ohnishi via rohithsharmaks)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
