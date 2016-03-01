@@ -19,10 +19,12 @@
 package org.apache.hadoop.record.compiler;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Writer;
 import java.util.*;
 
+import org.apache.commons.io.Charsets;
+import org.apache.commons.io.output.FileWriterWithEncoding;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -469,11 +471,8 @@ public class JRecord extends JCompType {
       cb.append("}\n");
       cb.append("}\n");
 
-      FileWriter jj = new FileWriter(jfile);
-      try {
+      try (Writer jj = new FileWriterWithEncoding(jfile, Charsets.UTF_8)) {
         jj.write(cb.toString());
-      } finally {
-        jj.close();
       }
     }
   }
@@ -545,7 +544,7 @@ public class JRecord extends JCompType {
       cb.append("}\n");
     }
     
-    void genCode(FileWriter hh, FileWriter cc, ArrayList<String> options)
+    void genCode(Writer hh, Writer cc, ArrayList<String> options)
       throws IOException {
       CodeBuffer hb = new CodeBuffer();
       
@@ -810,7 +809,7 @@ public class JRecord extends JCompType {
     return signature;
   }
   
-  void genCppCode(FileWriter hh, FileWriter cc, ArrayList<String> options)
+  void genCppCode(Writer hh, Writer cc, ArrayList<String> options)
     throws IOException {
     ((CppRecord)getCppType()).genCode(hh, cc, options);
   }

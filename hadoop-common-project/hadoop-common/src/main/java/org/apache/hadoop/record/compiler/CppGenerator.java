@@ -18,11 +18,14 @@
 
 package org.apache.hadoop.record.compiler;
 
+import java.io.Writer;
 import java.util.ArrayList;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Iterator;
+
+import org.apache.commons.io.Charsets;
+import org.apache.commons.io.output.FileWriterWithEncoding;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -44,36 +47,28 @@ class CppGenerator extends CodeGenerator {
     throws IOException {
     name = new File(destDir, (new File(name)).getName()).getAbsolutePath();
 
-    FileWriter cc = new FileWriter(name+".cc");
-    try {
-      FileWriter hh = new FileWriter(name+".hh");
-      
-      try {
-        String fileName = (new File(name)).getName();
-        hh.write("#ifndef __"+
-            StringUtils.toUpperCase(fileName).replace('.','_')+"__\n");
-        hh.write("#define __"+
-            StringUtils.toUpperCase(fileName).replace('.','_')+"__\n");
-        hh.write("#include \"recordio.hh\"\n");
-        hh.write("#include \"recordTypeInfo.hh\"\n");
-        for (Iterator<JFile> iter = ilist.iterator(); iter.hasNext();) {
-          hh.write("#include \""+iter.next().getName()+".hh\"\n");
-        }
-        
-        cc.write("#include \""+fileName+".hh\"\n");
-        cc.write("#include \"utils.hh\"\n");
-        
-        for (Iterator<JRecord> iter = rlist.iterator(); iter.hasNext();) {
-          iter.next().genCppCode(hh, cc, options);
-        }
-        
-        hh.write("#endif //"+
-            StringUtils.toUpperCase(fileName).replace('.','_')+"__\n");
-      } finally {
-        hh.close();
+    try (Writer cc = new FileWriterWithEncoding(name+".cc", Charsets.UTF_8);
+         Writer hh = new FileWriterWithEncoding(name+".hh", Charsets.UTF_8)) {
+      String fileName = (new File(name)).getName();
+      hh.write("#ifndef __"+
+          StringUtils.toUpperCase(fileName).replace('.','_')+"__\n");
+      hh.write("#define __"+
+          StringUtils.toUpperCase(fileName).replace('.','_')+"__\n");
+      hh.write("#include \"recordio.hh\"\n");
+      hh.write("#include \"recordTypeInfo.hh\"\n");
+      for (Iterator<JFile> iter = ilist.iterator(); iter.hasNext();) {
+        hh.write("#include \""+iter.next().getName()+".hh\"\n");
       }
-    } finally {
-      cc.close();
+
+      cc.write("#include \""+fileName+".hh\"\n");
+      cc.write("#include \"utils.hh\"\n");
+
+      for (Iterator<JRecord> iter = rlist.iterator(); iter.hasNext();) {
+        iter.next().genCppCode(hh, cc, options);
+      }
+
+      hh.write("#endif //"+
+          StringUtils.toUpperCase(fileName).replace('.','_')+"__\n");
     }
   }
 }

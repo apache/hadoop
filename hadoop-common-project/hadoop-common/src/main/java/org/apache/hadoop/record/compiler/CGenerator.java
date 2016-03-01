@@ -18,11 +18,14 @@
 
 package org.apache.hadoop.record.compiler;
 
+import java.io.Writer;
 import java.util.ArrayList;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Iterator;
+
+import org.apache.commons.io.Charsets;
+import org.apache.commons.io.output.FileWriterWithEncoding;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -43,34 +46,27 @@ class CGenerator extends CodeGenerator {
                ArrayList<JRecord> rlist, String destDir, ArrayList<String> options)
     throws IOException {
     name = new File(destDir, (new File(name)).getName()).getAbsolutePath();
-    FileWriter cc = new FileWriter(name+".c");
-    try {
-      FileWriter hh = new FileWriter(name+".h");
-      try {
-        hh.write("#ifndef __"+
-            StringUtils.toUpperCase(name).replace('.','_')+"__\n");
-        hh.write("#define __"+
-            StringUtils.toUpperCase(name).replace('.','_')+"__\n");
-        hh.write("#include \"recordio.h\"\n");
-        for (Iterator<JFile> iter = ilist.iterator(); iter.hasNext();) {
-          hh.write("#include \""+iter.next().getName()+".h\"\n");
-        }
-
-        cc.write("#include \""+name+".h\"\n");
-
-        /*
-        for (Iterator<JRecord> iter = rlist.iterator(); iter.hasNext();) {
-        iter.next().genCppCode(hh, cc);
-        }
-         */
-
-        hh.write("#endif //"+
-            StringUtils.toUpperCase(name).replace('.','_')+"__\n");
-      } finally {
-        hh.close();
+    try (Writer cc = new FileWriterWithEncoding(name+".c", Charsets.UTF_8);
+         Writer hh = new FileWriterWithEncoding(name+".h", Charsets.UTF_8)) {
+      hh.write("#ifndef __"+
+          StringUtils.toUpperCase(name).replace('.','_')+"__\n");
+      hh.write("#define __"+
+          StringUtils.toUpperCase(name).replace('.','_')+"__\n");
+      hh.write("#include \"recordio.h\"\n");
+      for (Iterator<JFile> iter = ilist.iterator(); iter.hasNext();) {
+        hh.write("#include \""+iter.next().getName()+".h\"\n");
       }
-    } finally {
-      cc.close();
+
+      cc.write("#include \""+name+".h\"\n");
+
+      /*
+      for (Iterator<JRecord> iter = rlist.iterator(); iter.hasNext();) {
+      iter.next().genCppCode(hh, cc);
+      }
+       */
+
+      hh.write("#endif //"+
+          StringUtils.toUpperCase(name).replace('.','_')+"__\n");
     }
   }
 }
