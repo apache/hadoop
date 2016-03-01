@@ -28,6 +28,15 @@ import static org.apache.hadoop.io.retry.RetryPolicies.retryUpToMaximumCountWith
 import static org.apache.hadoop.io.retry.RetryPolicies.retryUpToMaximumTimeWithFixedSleep;
 import static org.apache.hadoop.io.retry.RetryPolicies.retryForeverWithFixedSleep;
 import static org.apache.hadoop.io.retry.RetryPolicies.exponentialBackoffRetry;
+
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import static org.junit.Assert.*;
 
 import java.io.IOException;
@@ -41,10 +50,19 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
+import org.apache.hadoop.io.retry.RetryPolicy.RetryAction.RetryDecision;
+import org.apache.hadoop.io.retry.RetryPolicies.RetryUpToMaximumCountWithFixedSleep;
+import org.apache.hadoop.io.retry.RetryPolicies.RetryUpToMaximumTimeWithFixedSleep;
+import org.apache.hadoop.io.retry.RetryPolicies.TryOnceThenFail;
 import org.apache.hadoop.io.retry.UnreliableInterface.FatalException;
 import org.apache.hadoop.io.retry.UnreliableInterface.UnreliableException;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RemoteException;
+
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -53,25 +71,57 @@ import java.lang.reflect.UndeclaredThrowableException;
 public class TestRetryProxy {
   
   private UnreliableImplementation unreliableImpl;
+  private RetryAction caughtRetryAction = null;
   
   @Before
   public void setUp() throws Exception {
     unreliableImpl = new UnreliableImplementation();
   }
 
+  // answer mockPolicy's method with realPolicy, caught method's return value
+  private void setupMockPolicy(RetryPolicy mockPolicy,
+      final RetryPolicy realPolicy) throws Exception {
+    when(mockPolicy.shouldRetry(any(Exception.class), anyInt(), anyInt(),
+        anyBoolean())).thenAnswer(new Answer<RetryAction>() {
+      @SuppressWarnings("rawtypes")
+      @Override
+      public RetryAction answer(InvocationOnMock invocation) throws Throwable {
+        Object[] args = invocation.getArguments();
+        Exception e = (Exception) args[0];
+        int retries = (int) args[1];
+        int failovers = (int) args[2];
+        boolean isIdempotentOrAtMostOnce = (boolean) args[3];
+        caughtRetryAction = realPolicy.shouldRetry(e, retries, failovers,
+            isIdempotentOrAtMostOnce);
+        return caughtRetryAction;
+      }
+    });
+  }
+
   @Test
-  public void testTryOnceThenFail() throws UnreliableException {
+  public void testTryOnceThenFail() throws Exception {
+    RetryPolicy policy = mock(TryOnceThenFail.class);
+    RetryPolicy realPolicy = TRY_ONCE_THEN_FAIL;
+    setupMockPolicy(policy, realPolicy);
+
     UnreliableInterface unreliable = (UnreliableInterface)
-      RetryProxy.create(UnreliableInterface.class, unreliableImpl, TRY_ONCE_THEN_FAIL);
+      RetryProxy.create(UnreliableInterface.class, unreliableImpl, policy);
     unreliable.alwaysSucceeds();
     try {
       unreliable.failsOnceThenSucceeds();
       fail("Should fail");
     } catch (UnreliableException e) {
       // expected
+      verify(policy, times(1)).shouldRetry(any(Exception.class), anyInt(),
+          anyInt(), anyBoolean());
+      assertEquals(RetryDecision.FAIL, caughtRetryAction.action);
+      assertEquals("try once and fail.", caughtRetryAction.reason);
+    } catch (Exception e) {
+      fail("Other exception other than UnreliableException should also get " +
+          "failed.");
     }
   }
-  
+
   /**
    * Test for {@link RetryInvocationHandler#isRpcInvocation(Object)}
    */
@@ -125,25 +175,48 @@ public class TestRetryProxy {
   }
 
   @Test
-  public void testRetryUpToMaximumCountWithFixedSleep() throws UnreliableException {
+  public void testRetryUpToMaximumCountWithFixedSleep() throws
+      Exception {
+
+    RetryPolicy policy = mock(RetryUpToMaximumCountWithFixedSleep.class);
+    int maxRetries = 8;
+    RetryPolicy realPolicy = retryUpToMaximumCountWithFixedSleep(maxRetries, 1,
+        TimeUnit.NANOSECONDS);
+    setupMockPolicy(policy, realPolicy);
+
     UnreliableInterface unreliable = (UnreliableInterface)
-      RetryProxy.create(UnreliableInterface.class, unreliableImpl,
-                        retryUpToMaximumCountWithFixedSleep(8, 1, TimeUnit.NANOSECONDS));
+      RetryProxy.create(UnreliableInterface.class, unreliableImpl, policy);
+    // shouldRetry += 1
     unreliable.alwaysSucceeds();
+    // shouldRetry += 2
     unreliable.failsOnceThenSucceeds();
     try {
+      // shouldRetry += (maxRetries -1) (just failed once above)
       unreliable.failsTenTimesThenSucceeds();
       fail("Should fail");
     } catch (UnreliableException e) {
       // expected
+      verify(policy, times(maxRetries + 2)).shouldRetry(any(Exception.class),
+          anyInt(), anyInt(), anyBoolean());
+      assertEquals(RetryDecision.FAIL, caughtRetryAction.action);
+      assertEquals(RetryUpToMaximumCountWithFixedSleep.constructReasonString(
+          maxRetries), caughtRetryAction.reason);
+    } catch (Exception e) {
+      fail("Other exception other than UnreliableException should also get " +
+          "failed.");
     }
   }
   
   @Test
-  public void testRetryUpToMaximumTimeWithFixedSleep() throws UnreliableException {
+  public void testRetryUpToMaximumTimeWithFixedSleep() throws Exception {
+    RetryPolicy policy = mock(RetryUpToMaximumTimeWithFixedSleep.class);
+    long maxTime = 80L;
+    RetryPolicy realPolicy = retryUpToMaximumTimeWithFixedSleep(maxTime, 10,
+        TimeUnit.NANOSECONDS);
+    setupMockPolicy(policy, realPolicy);
+
     UnreliableInterface unreliable = (UnreliableInterface)
-      RetryProxy.create(UnreliableInterface.class, unreliableImpl,
-                        retryUpToMaximumTimeWithFixedSleep(80, 10, TimeUnit.NANOSECONDS));
+      RetryProxy.create(UnreliableInterface.class, unreliableImpl, policy);
     unreliable.alwaysSucceeds();
     unreliable.failsOnceThenSucceeds();
     try {
@@ -151,9 +224,17 @@ public class TestRetryProxy {
       fail("Should fail");
     } catch (UnreliableException e) {
       // expected
+      verify(policy, times((int)(maxTime/10) + 2)).shouldRetry(any(Exception.class),
+          anyInt(), anyInt(), anyBoolean());
+      assertEquals(RetryDecision.FAIL, caughtRetryAction.action);
+      assertEquals(RetryUpToMaximumTimeWithFixedSleep.constructReasonString(
+          maxTime, TimeUnit.NANOSECONDS), caughtRetryAction.reason);
+    } catch (Exception e) {
+      fail("Other exception other than UnreliableException should also get " +
+          "failed.");
     }
   }
-  
+
   @Test
   public void testRetryUpToMaximumCountWithProportionalSleep() throws UnreliableException {
     UnreliableInterface unreliable = (UnreliableInterface)
