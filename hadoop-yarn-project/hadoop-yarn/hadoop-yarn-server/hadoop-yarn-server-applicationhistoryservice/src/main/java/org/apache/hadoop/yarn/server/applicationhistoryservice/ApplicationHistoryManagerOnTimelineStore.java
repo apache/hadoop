@@ -625,6 +625,15 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
       }
     } catch (AuthorizationException | ApplicationAttemptNotFoundException e) {
       // AuthorizationException is thrown because the user doesn't have access
+      if (e instanceof AuthorizationException) {
+        LOG.warn("Failed to authorize when generating application report for "
+            + app.appReport.getApplicationId()
+            + ". Use a placeholder for its latest attempt id. ", e);
+      } else { // Attempt not found
+        LOG.info("No application attempt found for "
+            + app.appReport.getApplicationId()
+            + ". Use a placeholder for its latest attempt id. ", e);
+      }
       // It's possible that the app is finished before the first attempt is created.
       app.appReport.setDiagnostics(null);
       app.appReport.setCurrentApplicationAttemptId(null);

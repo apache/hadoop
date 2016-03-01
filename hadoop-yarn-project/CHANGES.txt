@@ -1477,6 +1477,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4709. NMWebServices produces incorrect JSON for containers.
     (Varun Saxena via vvasudev)
 
+    YARN-4748. ApplicationHistoryManagerOnTimelineStore should not
+    swallow exceptions on generateApplicationReport. (Li Lu via jianhe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
