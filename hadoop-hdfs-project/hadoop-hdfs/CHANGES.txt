@@ -2896,6 +2896,9 @@ Release 2.7.3 - UNRELEASED
 
     HDFS-9395. Make HDFS audit logging consistant (Kuhu Shukla via kihwal)
 
+    HDFS-8791. block ID-based DN storage layout can be very slow for datanode
+    on ext4 (Chris Trezzo via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES

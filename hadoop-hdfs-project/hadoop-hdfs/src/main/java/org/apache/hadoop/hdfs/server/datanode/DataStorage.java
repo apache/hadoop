@@ -1102,10 +1102,13 @@ public class DataStorage extends Storage {
     LOG.info("Start linking block files from " + from + " to " + to);
     boolean upgradeToIdBasedLayout = false;
     // If we are upgrading from a version older than the one where we introduced
-    // block ID-based layout AND we're working with the finalized directory,
-    // we'll need to upgrade from the old flat layout to the block ID-based one
-    if (oldLV > DataNodeLayoutVersion.Feature.BLOCKID_BASED_LAYOUT.getInfo().
-        getLayoutVersion() && to.getName().equals(STORAGE_DIR_FINALIZED)) {
+    // block ID-based layout (32x32) AND we're working with the finalized
+    // directory, we'll need to upgrade from the old layout to the new one. The
+    // upgrade path from pre-blockid based layouts (>-56) and blockid based
+    // 256x256 layouts (-56) is fortunately the same.
+    if (oldLV > DataNodeLayoutVersion.Feature.BLOCKID_BASED_LAYOUT_32_by_32
+        .getInfo().getLayoutVersion()
+        && to.getName().equals(STORAGE_DIR_FINALIZED)) {
       upgradeToIdBasedLayout = true;
     }
 
