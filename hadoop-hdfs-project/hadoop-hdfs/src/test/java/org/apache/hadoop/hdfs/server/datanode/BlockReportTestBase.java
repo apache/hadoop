@@ -113,9 +113,13 @@ public abstract class BlockReportTestBase {
 
   @After
   public void shutDownCluster() throws IOException {
-    fs.close();
-    cluster.shutdownDataNodes();
-    cluster.shutdown();
+    if (fs != null) {
+      fs.close();
+    }
+    if (cluster != null) {
+      cluster.shutdownDataNodes();
+      cluster.shutdown();
+    }
   }
 
   protected static void resetConfiguration() {

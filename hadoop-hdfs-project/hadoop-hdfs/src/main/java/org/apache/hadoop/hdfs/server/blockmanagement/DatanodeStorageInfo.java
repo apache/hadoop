@@ -144,7 +144,7 @@ public class DatanodeStorageInfo {
     this.state = s.getState();
   }
 
-  int getBlockReportCount() {
+  public int getBlockReportCount() {
     return blockReportCount;
   }
 
@@ -202,7 +202,7 @@ public class DatanodeStorageInfo {
     return getState() == State.FAILED && numBlocks != 0;
   }
 
-  String getStorageID() {
+  public String getStorageID() {
     return storageID;
   }
 
