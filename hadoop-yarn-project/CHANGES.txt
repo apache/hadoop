@@ -242,6 +242,9 @@ Release 2.9.0 - UNRELEASED
     YARN-4731. container-executor should not follow symlinks in
     recursive_unlink_children (Colin Patrick McCabe via jlowe)
 
+    YARN-4704. TestResourceManager#testResourceAllocation() fails when using 
+    FairScheduler. (Yufei Gu via kasha)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
