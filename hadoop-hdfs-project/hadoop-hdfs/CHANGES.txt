@@ -2861,6 +2861,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9549. TestCacheDirectives#testExceedsCapacity is flaky (Xiao Chen via
     cmccabe)
 
+    HDFS-9870. Remove unused imports from DFSUtil.
+    (Brahma Reddy Battula via cnauroth)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
