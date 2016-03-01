@@ -29,6 +29,7 @@ import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -317,5 +318,38 @@ public class TestS3AConfiguration {
         s3afs.getAWSAccessKeys(new URI("s3a://foobar"), conf);
     assertEquals("AccessKey incorrect.", EXAMPLE_ID, creds.getAccessKey());
     assertEquals("SecretKey incorrect.", EXAMPLE_KEY, creds.getAccessSecret());
+  }
+
+  @Test
+  public void testExcludingS3ACredentialProvider() throws Exception {
+    // set up conf to have a cred provider
+    final Configuration conf = new Configuration();
+    final File file = tempDir.newFile("test.jks");
+    final URI jks = ProviderUtils.nestURIForLocalJavaKeyStoreProvider(
+        file.toURI());
+    conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,
+        "jceks://s3a/foobar," + jks.toString());
+
+    // first make sure that the s3a based provider is removed
+    Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
+        conf, S3AFileSystem.class);
+    String newPath = conf.get(
+        CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH);
+    assertFalse("Provider Path incorrect", newPath.contains("s3a://"));
+
+    // now let's make sure the new path is created by the S3AFileSystem
+    // and the integration still works. Let's provision the keys through
+    // the altered configuration instance and then try and access them
+    // using the original config with the s3a provider in the path.
+    provisionAccessKeys(c);
+
+    S3AFileSystem s3afs = new S3AFileSystem();
+    conf.set(Constants.ACCESS_KEY, EXAMPLE_ID + "LJM");
+    URI uriWithUserInfo = new URI("s3a://123:456@foobar");
+    S3AFileSystem.AWSAccessKeys creds =
+        s3afs.getAWSAccessKeys(uriWithUserInfo, conf);
+    assertEquals("AccessKey incorrect.", "123", creds.getAccessKey());
+    assertEquals("SecretKey incorrect.", "456", creds.getAccessSecret());
+
   }
 }

@@ -1772,6 +1772,10 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12813. Migrate TestRPC and related codes to rebase on
     ProtobufRpcEngine. (Kai Zheng via wheat9)
 
+    HADOOP-12851. S3AFileSystem Uptake of
+    ProviderUtils.excludeIncompatibleCredentialProviders.
+    (Larry McCay via cnauroth)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
