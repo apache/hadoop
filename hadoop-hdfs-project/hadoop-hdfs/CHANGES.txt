@@ -233,6 +233,9 @@ Trunk (Unreleased)
 
     HDFS-9838. Refactor the excessReplicateMap to a class.  (szetszwo)
 
+    HDFS-9733. Refactor DFSClient#getFileChecksum and DataXceiver#blockChecksum
+    (Kai Zheng via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES

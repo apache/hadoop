@@ -128,6 +128,17 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
     return new MD5Hash(digest);
   }
 
+  /** Construct a hash value for an array of byte array. */
+  public static MD5Hash digest(byte[][] dataArr, int start, int len) {
+    byte[] digest;
+    MessageDigest digester = getDigester();
+    for (byte[] data : dataArr) {
+      digester.update(data, start, len);
+    }
+    digest = digester.digest();
+    return new MD5Hash(digest);
+  }
+
   /** Construct a hash value for a String. */
   public static MD5Hash digest(String string) {
     return digest(UTF8.getBytes(string));

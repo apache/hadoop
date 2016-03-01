@@ -3170,6 +3170,16 @@ public class DataNode extends ReconfigurableBase
     return ecWorker;
   }
 
+  IOStreamPair connectToDN(DatanodeInfo datanodeID, int timeout,
+                           ExtendedBlock block,
+                           Token<BlockTokenIdentifier> blockToken)
+      throws IOException {
+
+    return DFSUtilClient.connectToDN(datanodeID, timeout, conf, saslClient,
+        NetUtils.getDefaultSocketFactory(getConf()), false,
+        getDataEncryptionKeyFactoryForBlock(block), blockToken);
+  }
+
   /**
    * Get timeout value of each OOB type from configuration
    */

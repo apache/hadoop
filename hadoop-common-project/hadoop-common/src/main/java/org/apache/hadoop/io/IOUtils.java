@@ -261,7 +261,9 @@ public class IOUtils {
    * @param stream the Stream to close
    */
   public static void closeStream(java.io.Closeable stream) {
-    cleanup(null, stream);
+    if (stream != null) {
+      cleanup(null, stream);
+    }
   }
   
   /**
