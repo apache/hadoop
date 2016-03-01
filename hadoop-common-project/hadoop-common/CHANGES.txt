@@ -1218,6 +1218,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-10865. Add a Crc32 chunked verification benchmark for both directly
     and non-directly buffer cases.  (szetszwo)
 
+    HADOOP-12853. Change WASB documentation regarding page blob support.
+    (Madhumita Chakraborty via cnauroth)
+
   BUG FIXES
 
     HADOOP-12352. Delay in checkpointing Trash can leave trash for 2 intervals
