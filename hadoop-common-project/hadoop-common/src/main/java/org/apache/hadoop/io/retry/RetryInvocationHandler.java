@@ -120,6 +120,7 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
                 invocationFailoverCount, isIdempotentOrAtMostOnce);
         RetryAction failAction = getFailAction(actions);
         if (failAction != null) {
+          // fail.
           if (failAction.reason != null) {
             LOG.warn("Exception while invoking " + currentProxy.proxy.getClass()
                 + "." + method.getName() + " over " + currentProxy.proxyInfo
@@ -135,7 +136,8 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
           worthLogging |= LOG.isDebugEnabled();
           RetryAction failOverAction = getFailOverAction(actions);
           long delay = getDelayMillis(actions);
-          if (failOverAction != null && worthLogging) {
+
+          if (worthLogging) {
             String msg = "Exception while invoking " + method.getName()
                 + " of class " + currentProxy.proxy.getClass().getSimpleName()
                 + " over " + currentProxy.proxyInfo;
@@ -143,21 +145,21 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
             if (invocationFailoverCount > 0) {
               msg += " after " + invocationFailoverCount + " fail over attempts"; 
             }
-            msg += ". Trying to fail over " + formatSleepMessage(delay);
-            LOG.info(msg, ex);
-          } else {
-            if(LOG.isDebugEnabled()) {
-              LOG.debug("Exception while invoking " + method.getName()
-                  + " of class " + currentProxy.proxy.getClass().getSimpleName()
-                  + " over " + currentProxy.proxyInfo + ". Retrying "
-                  + formatSleepMessage(delay), ex);
+
+            if (failOverAction != null) {
+              // failover
+              msg += ". Trying to fail over " + formatSleepMessage(delay);
+            } else {
+              // retry
+              msg += ". Retrying " + formatSleepMessage(delay);
             }
+            LOG.info(msg, ex);
           }
 
           if (delay > 0) {
             Thread.sleep(delay);
           }
-          
+
           if (failOverAction != null) {
             // Make sure that concurrent failed method invocations only cause a
             // single actual fail over.

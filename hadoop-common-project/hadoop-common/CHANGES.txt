@@ -1165,6 +1165,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12825. Log slow name resolutions.
     (Sidharta Seethana via stevel)
 
+    HADOOP-12622. Improve the loggings in RetryPolicies and RetryInvocationHandler.
+    (Junping Du via jianhe)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
