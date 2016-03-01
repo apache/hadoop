@@ -1819,6 +1819,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9855. Modify TestAuditLoggerWithCommands to workaround the absence
     of HDFS-8332 (Kuhu Shukla via kihwal)
 
+    HDFS-9870. Remove unused imports from DFSUtil.
+    (Brahma Reddy Battula via cnauroth)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
