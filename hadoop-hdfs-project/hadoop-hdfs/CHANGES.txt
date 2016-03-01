@@ -124,6 +124,8 @@ Release 2.7.3 - UNRELEASED
     HDFS-9864. Correct reference for RENEWDELEGATIONTOKEN and
     CANCELDELEGATIONTOKEN in webhdfs doc. (Brahma Reddy Battula via aajisaka)
 
+    HDFS-9880. TestDatanodeRegistration fails occasionally (kihwal)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
