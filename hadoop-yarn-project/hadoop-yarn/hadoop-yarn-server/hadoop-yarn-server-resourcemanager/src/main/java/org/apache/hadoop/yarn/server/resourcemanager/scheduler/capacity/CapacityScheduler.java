@@ -227,7 +227,7 @@ public class CapacityScheduler extends
   private AsyncScheduleThread asyncSchedulerThread;
   private RMNodeLabelsManager labelManager;
   private SchedulerHealth schedulerHealth = new SchedulerHealth();
-  long lastNodeUpdateTime;
+  volatile long lastNodeUpdateTime;
 
   /**
    * EXPERT
@@ -925,7 +925,6 @@ public class CapacityScheduler extends
   }
 
   @Override
-  // Note: when AM asks to release container, we will acquire scheduler lock
   @Lock(Lock.NoLock.class)
   public Allocation allocate(ApplicationAttemptId applicationAttemptId,
       List<ResourceRequest> ask, List<ContainerId> release,
@@ -1543,9 +1542,8 @@ public class CapacityScheduler extends
     }
   }
 
-  @Lock(CapacityScheduler.class)
   @Override
-  protected synchronized void completedContainerInternal(
+  protected void completedContainerInternal(
       RMContainer rmContainer, ContainerStatus containerStatus,
       RMContainerEventType event) {
     
@@ -1954,7 +1952,7 @@ public class CapacityScheduler extends
     return this.schedulerHealth;
   }
 
-  private synchronized void setLastNodeUpdateTime(long time) {
+  private void setLastNodeUpdateTime(long time) {
     this.lastNodeUpdateTime = time;
   }
 
