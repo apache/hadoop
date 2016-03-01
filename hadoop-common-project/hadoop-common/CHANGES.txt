@@ -1776,6 +1776,8 @@ Release 2.8.0 - UNRELEASED
     ProviderUtils.excludeIncompatibleCredentialProviders.
     (Larry McCay via cnauroth)
 
+    HADOOP-12843. Fix findbugs warnings in hadoop-common (branch-2). (aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
