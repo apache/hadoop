@@ -40,8 +40,8 @@ on the additional artifacts it requires, notably the
 * Present a hierarchical file system view by implementing the standard Hadoop
   [`FileSystem`](../api/org/apache/hadoop/fs/FileSystem.html) interface.
 * Supports configuration of multiple Azure Blob Storage accounts.
-* Supports both page blobs (suitable for most use cases, such as MapReduce) and
-  block blobs (suitable for continuous write use cases, such as an HBase
+* Supports both block blobs (suitable for most use cases, such as MapReduce) and
+  page blobs (suitable for continuous write use cases, such as an HBase
   write-ahead log).
 * Reference file system paths using URLs using the `wasb` scheme.
 * Also reference file system paths using URLs with the `wasbs` scheme for SSL
@@ -168,9 +168,9 @@ can be written any number of times, whereas block blobs can only be appended to
 work for HBase logs, so page blob support was introduced to overcome this
 limitation.
 
-Page blobs can be used for other purposes beyond just HBase log files though.
 Page blobs can be up to 1TB in size, larger than the maximum 200GB size for block
 blobs.
+You should stick to block blobs for most usage, and page blobs are only tested in context of HBase write-ahead logs.
 
 In order to have the files you create be page blobs, you must set the
 configuration variable `fs.azure.page.blob.dir` to a comma-separated list of
