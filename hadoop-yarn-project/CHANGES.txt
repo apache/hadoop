@@ -1480,6 +1480,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4748. ApplicationHistoryManagerOnTimelineStore should not
     swallow exceptions on generateApplicationReport. (Li Lu via jianhe)
 
+    YARN-4671. There is no need to acquire CS lock when completing a container.
+    (Meng Ding via jianhe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

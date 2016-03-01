@@ -1078,9 +1078,33 @@ public class TestCapacityScheduler {
         RegisterApplicationMasterRequest.newInstance("localhost", 12345, "");
     client.registerApplicationMaster(request);
 
+    // Allocate a container
+    List<ResourceRequest> asks = Collections.singletonList(
+        ResourceRequest.newInstance(
+            Priority.newInstance(1), "*", Resources.createResource(2 * GB), 1));
+    AllocateRequest allocateRequest =
+        AllocateRequest.newInstance(0, 0.0f, asks, null, null);
+    client.allocate(allocateRequest);
+
+    // Make sure the container is allocated in RM
+    nm1.nodeHeartbeat(true);
+    ContainerId containerId2 =
+        ContainerId.newContainerId(applicationAttemptId, 2);
+    Assert.assertTrue(rm.waitForState(nm1, containerId2,
+        RMContainerState.ALLOCATED, 10 * 1000));
+
+    // Acquire the container
+    allocateRequest = AllocateRequest.newInstance(1, 0.0f, null, null, null);
+    client.allocate(allocateRequest);
+
+    // Launch the container
+    final CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    RMContainer rmContainer = cs.getRMContainer(containerId2);
+    rmContainer.handle(
+        new RMContainerEvent(containerId2, RMContainerEventType.LAUNCHED));
+
     // grab the scheduler lock from another thread
     // and verify an allocate call in this thread doesn't block on it
-    final CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     final CyclicBarrier barrier = new CyclicBarrier(2);
     Thread otherThread = new Thread(new Runnable() {
       @Override
@@ -1089,9 +1113,7 @@ public class TestCapacityScheduler {
           try {
             barrier.await();
             barrier.await();
-          } catch (InterruptedException e) {
-            e.printStackTrace();
-          } catch (BrokenBarrierException e) {
+          } catch (InterruptedException | BrokenBarrierException e) {
             e.printStackTrace();
           }
         }
@@ -1099,8 +1121,9 @@ public class TestCapacityScheduler {
     });
     otherThread.start();
     barrier.await();
-    AllocateRequest allocateRequest =
-        AllocateRequest.newInstance(0, 0.0f, null, null, null);
+    List<ContainerId> release = Collections.singletonList(containerId2);
+    allocateRequest =
+        AllocateRequest.newInstance(2, 0.0f, null, release, null);
     client.allocate(allocateRequest);
     barrier.await();
     otherThread.join();
