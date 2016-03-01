@@ -65,7 +65,10 @@ public class DataNodeLayoutVersion {
     FIRST_LAYOUT(-55, -53, "First datanode layout", false),
     BLOCKID_BASED_LAYOUT(-56,
         "The block ID of a finalized block uniquely determines its position " +
-            "in the directory structure");
+        "in the directory structure"),
+    BLOCKID_BASED_LAYOUT_32_by_32(-57,
+        "Identical to the block id based layout (-56) except it uses a smaller"
+        + " directory structure (32x32)");
    
     private final FeatureInfo info;
 

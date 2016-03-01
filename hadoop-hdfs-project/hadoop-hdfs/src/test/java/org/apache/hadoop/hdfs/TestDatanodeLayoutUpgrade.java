@@ -28,10 +28,16 @@ public class TestDatanodeLayoutUpgrade {
   private static final String HADOOP_DATANODE_DIR_TXT =
       "hadoop-datanode-dir.txt";
   private static final String HADOOP24_DATANODE = "hadoop-24-datanode-dir.tgz";
+  private static final String HADOOP_56_DN_LAYOUT_TXT =
+      "hadoop-to-57-dn-layout-dir.txt";
+  private static final String HADOOP_56_DN_LAYOUT =
+      "hadoop-56-layout-datanode-dir.tgz";
 
+  /**
+   * Upgrade from LDir-based layout to 32x32 block ID-based layout (-57) --
+   * change described in HDFS-6482 and HDFS-8791
+   */
   @Test
-  // Upgrade from LDir-based layout to block ID-based layout -- change described
-  // in HDFS-6482
   public void testUpgradeToIdBasedLayout() throws IOException {
     TestDFSUpgradeFromImage upgrade = new TestDFSUpgradeFromImage();
     upgrade.unpackStorage(HADOOP24_DATANODE, HADOOP_DATANODE_DIR_TXT);
@@ -44,5 +50,24 @@ public class TestDatanodeLayoutUpgrade {
             "dfs" + File.separator + "name").toURI().toString());
     upgrade.upgradeAndVerify(new MiniDFSCluster.Builder(conf).numDataNodes(1)
     .manageDataDfsDirs(false).manageNameDfsDirs(false), null);
+  }
+
+  /**
+   * Test upgrade from block ID-based layout 256x256 (-56) to block ID-based
+   * layout 32x32 (-57)
+   */
+  @Test
+  public void testUpgradeFrom256To32Layout() throws IOException {
+    TestDFSUpgradeFromImage upgrade = new TestDFSUpgradeFromImage();
+    upgrade.unpackStorage(HADOOP_56_DN_LAYOUT, HADOOP_56_DN_LAYOUT_TXT);
+    Configuration conf = new Configuration(TestDFSUpgradeFromImage.upgradeConf);
+    conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
+        new File(System.getProperty("test.build.data"), "dfs" + File.separator
+            + "data").toURI().toString());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+        new File(System.getProperty("test.build.data"), "dfs" + File.separator
+            + "name").toURI().toString());
+    upgrade.upgradeAndVerify(new MiniDFSCluster.Builder(conf).numDataNodes(1)
+        .manageDataDfsDirs(false).manageNameDfsDirs(false), null);
   }
 }
