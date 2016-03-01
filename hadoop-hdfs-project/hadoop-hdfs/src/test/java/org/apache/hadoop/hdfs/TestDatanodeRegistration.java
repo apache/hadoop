@@ -324,7 +324,7 @@ public class TestDatanodeRegistration {
   // should not occur other than dead/unregistered node which will trigger a
   // re-registration.  If a non-IPC exception does occur, the safety net is
   // a forced re-registration on the next heartbeat.
-  @Test(timeout=10000)
+  @Test
   public void testForcedRegistration() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HANDLER_COUNT_KEY, 4);
@@ -439,7 +439,7 @@ public class TestDatanodeRegistration {
         public Boolean get() {
           return lastCount != storage.getBlockReportCount();
         }
-      }, 10, 100);
+      }, 10, 2000);
     } catch (TimeoutException te) {
       return false;
     }
