@@ -695,6 +695,9 @@ Release 2.9.0 - UNRELEASED
 
     HADOOP-12841. Update s3-related properties in core-default.xml. (Wei-Chiu Chuang via lei)
 
+    HADOOP-10321. TestCompositeService should cover all enumerations of 
+    adding a service to a parent service. (Ray Chiang via kasha)
+
   BUG FIXES
 
     HADOOP-12605. Fix intermittent failure of TestIPC.testIpcWithReaderQueuing
