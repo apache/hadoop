@@ -455,6 +455,9 @@ Trunk (Unreleased)
     HDFS-9867. Missing block exception should carry locatedBlocks information.
     (Mingliang Liu via jing9)
 
+    HDFS-9876. shouldProcessOverReplicated should not count number of pending
+    replicas. (jing9)
+
     BREAKDOWN OF HDFS-7285 SUBTASKS AND RELATED JIRAS
 
       HDFS-7347. Configurable erasure coding policy for individual files and
