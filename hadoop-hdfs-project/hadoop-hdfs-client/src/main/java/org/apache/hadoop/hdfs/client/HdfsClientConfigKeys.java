@@ -373,6 +373,8 @@ public interface HdfsClientConfigKeys {
 
   /** dfs.client.hedged.read configuration properties */
   interface HedgedRead {
+    String PREFIX = HdfsClientConfigKeys.PREFIX + "hedged.read.";
+
     String  THRESHOLD_MILLIS_KEY = PREFIX + "threshold.millis";
     long    THRESHOLD_MILLIS_DEFAULT = 500;
     String  THREADPOOL_SIZE_KEY = PREFIX + "threadpool.size";

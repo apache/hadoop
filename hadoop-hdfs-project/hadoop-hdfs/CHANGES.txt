@@ -2873,6 +2873,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9881. DistributedFileSystem#getTrashRoot returns incorrect path for
     encryption zones. (wang)
 
+    HDFS-9886. Configuration properties for hedged read is broken. 
+    (Akira AJISAKA via zhz)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
