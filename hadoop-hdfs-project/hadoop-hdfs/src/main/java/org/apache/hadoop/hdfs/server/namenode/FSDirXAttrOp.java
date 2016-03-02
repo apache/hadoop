@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.security.AccessControlException;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
@@ -388,7 +389,7 @@ class FSDirXAttrOp {
   private static void checkXAttrChangeAccess(
       FSDirectory fsd, INodesInPath iip, XAttr xAttr,
       FSPermissionChecker pc)
-      throws AccessControlException {
+      throws AccessControlException, FileNotFoundException {
     if (fsd.isPermissionEnabled() && xAttr.getNameSpace() == XAttr.NameSpace
         .USER) {
       final INode inode = iip.getLastINode();
