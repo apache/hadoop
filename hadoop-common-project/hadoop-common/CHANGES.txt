@@ -698,6 +698,8 @@ Release 2.9.0 - UNRELEASED
     HADOOP-10321. TestCompositeService should cover all enumerations of 
     adding a service to a parent service. (Ray Chiang via kasha)
 
+    HADOOP-12859. Disable hiding field style checks in class setters. (Kai Zheng via wang)
+
   BUG FIXES
 
     HADOOP-12605. Fix intermittent failure of TestIPC.testIpcWithReaderQueuing
