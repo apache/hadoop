@@ -1445,6 +1445,14 @@ public class TestEncryptionZones {
   private void verifyShellDeleteWithTrash(FsShell shell, Path path)
       throws Exception{
     try {
+      Path trashDir = shell.getCurrentTrashDir(path);
+      // Verify that trashDir has a path component named ".Trash"
+      Path checkTrash = trashDir;
+      while (!checkTrash.isRoot() && !checkTrash.getName().equals(".Trash")) {
+        checkTrash = checkTrash.getParent();
+      }
+      assertEquals("No .Trash component found in trash dir " + trashDir,
+          ".Trash", checkTrash.getName());
       final Path trashFile =
           new Path(shell.getCurrentTrashDir(path) + "/" + path);
       String[] argv = new String[]{"-rm", "-r", path.toString()};

@@ -2864,6 +2864,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9870. Remove unused imports from DFSUtil.
     (Brahma Reddy Battula via cnauroth)
 
+    HDFS-9881. DistributedFileSystem#getTrashRoot returns incorrect path for
+    encryption zones. (wang)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
