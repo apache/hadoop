@@ -114,7 +114,7 @@ case ${COMMAND} in
   ;;
   archive)
     CLASS=org.apache.hadoop.tools.HadoopArchives
-    hadoop_add_to_classpath_toolspath
+    hadoop_add_to_classpath_tools hadoop-archives
   ;;
   checknative)
     CLASS=org.apache.hadoop.util.NativeLibraryChecker
@@ -133,11 +133,11 @@ case ${COMMAND} in
   ;;
   distch)
     CLASS=org.apache.hadoop.tools.DistCh
-    hadoop_add_to_classpath_toolspath
+    hadoop_add_to_classpath_tools hadoop-extras
   ;;
   distcp)
     CLASS=org.apache.hadoop.tools.DistCp
-    hadoop_add_to_classpath_toolspath
+    hadoop_add_to_classpath_tools hadoop-distcp
   ;;
   envvars)
     echo "JAVA_HOME='${JAVA_HOME}'"
@@ -146,7 +146,9 @@ case ${COMMAND} in
     echo "HADOOP_COMMON_LIB_JARS_DIR='${HADOOP_COMMON_LIB_JARS_DIR}'"
     echo "HADOOP_COMMON_LIB_NATIVE_DIR='${HADOOP_COMMON_LIB_NATIVE_DIR}'"
     echo "HADOOP_CONF_DIR='${HADOOP_CONF_DIR}'"
-    echo "HADOOP_TOOLS_PATH='${HADOOP_TOOLS_PATH}'"
+    echo "HADOOP_TOOLS_HOME='${HADOOP_TOOLS_HOME}'"
+    echo "HADOOP_TOOLS_DIR='${HADOOP_TOOLS_DIR}'"
+    echo "HADOOP_TOOLS_LIB_JARS_DIR='${HADOOP_TOOLS_LIB_JARS_DIR}'"
     exit 0
   ;;
   fs)

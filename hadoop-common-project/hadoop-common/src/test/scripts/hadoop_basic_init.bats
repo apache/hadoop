@@ -38,7 +38,8 @@ basicinitsetup () {
   dirvars="HADOOP_COMMON_HOME \
         HADOOP_MAPRED_HOME \
         HADOOP_HDFS_HOME \
-        HADOOP_YARN_HOME"
+        HADOOP_YARN_HOME \
+        HADOOP_TOOLS_HOME"
 
   for j in ${testvars}; do
     unset ${j}

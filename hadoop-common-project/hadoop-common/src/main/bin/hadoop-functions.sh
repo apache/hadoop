@@ -41,6 +41,44 @@ function hadoop_debug
   fi
 }
 
+## @description  Given variable $1 delete $2 from it
+## @audience     public
+## @stability    stable
+## @replaceable  no
+function hadoop_delete_entry
+{
+  if [[ ${!1} =~ \ ${2}\  ]] ; then
+    hadoop_debug "Removing ${2} from ${1}"
+    eval "${1}"=\""${!1// ${2} }"\"
+  fi
+}
+
+## @description  Given variable $1 add $2 to it
+## @audience     public
+## @stability    stable
+## @replaceable  no
+function hadoop_add_entry
+{
+  if [[ ! ${!1} =~ \ ${2}\  ]] ; then
+    hadoop_debug "Adding ${2} to ${1}"
+    #shellcheck disable=SC2140
+    eval "${1}"=\""${!1} ${2} "\"
+  fi
+}
+
+## @description  Given variable $1 determine if $2 is in it
+## @audience     public
+## @stability    stable
+## @replaceable  no
+## @return       0 = yes, 1 = no
+function hadoop_verify_entry
+{
+  # this unfortunately can't really be tested by bats. :(
+  # so if this changes, be aware that unit tests effectively
+  # do this function in them
+  [[ ${!1} =~ \ ${2}\  ]]
+}
+
 ## @description  Add a subcommand to the usage output
 ## @audience     private
 ## @stability    evolving
@@ -264,10 +302,9 @@ function hadoop_bootstrap
   YARN_LIB_JARS_DIR=${YARN_LIB_JARS_DIR:-"share/hadoop/yarn/lib"}
   MAPRED_DIR=${MAPRED_DIR:-"share/hadoop/mapreduce"}
   MAPRED_LIB_JARS_DIR=${MAPRED_LIB_JARS_DIR:-"share/hadoop/mapreduce/lib"}
-
-  # setup a default HADOOP_TOOLS_PATH
-  hadoop_deprecate_envvar TOOL_PATH HADOOP_TOOLS_PATH
-  HADOOP_TOOLS_PATH=${HADOOP_TOOLS_PATH:-${HADOOP_PREFIX}/share/hadoop/tools/lib/*}
+  HADOOP_TOOLS_HOME=${HADOOP_TOOLS_HOME:-${HADOOP_PREFIX}}
+  HADOOP_TOOLS_DIR=${HADOOP_TOOLS_DIR:-"share/hadoop/tools"}
+  HADOOP_TOOLS_LIB_JARS_DIR=${HADOOP_TOOLS_LIB_JARS_DIR:-"${HADOOP_TOOLS_DIR}/lib"}
 
   # usage output set to zero
   hadoop_reset_usage
@@ -322,6 +359,7 @@ function hadoop_exec_hadoopenv
   if [[ -z "${HADOOP_ENV_PROCESSED}" ]]; then
     if [[ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]]; then
       export HADOOP_ENV_PROCESSED=true
+      # shellcheck disable=SC1090
       . "${HADOOP_CONF_DIR}/hadoop-env.sh"
     fi
   fi
@@ -334,6 +372,7 @@ function hadoop_exec_hadoopenv
 function hadoop_exec_userfuncs
 {
   if [[ -e "${HADOOP_CONF_DIR}/hadoop-user-functions.sh" ]]; then
+    # shellcheck disable=SC1090
     . "${HADOOP_CONF_DIR}/hadoop-user-functions.sh"
   fi
 }
@@ -348,6 +387,7 @@ function hadoop_exec_hadooprc
 {
   if [[ -f "${HOME}/.hadooprc" ]]; then
     hadoop_debug "Applying the user's .hadooprc"
+    # shellcheck disable=SC1090
     . "${HOME}/.hadooprc"
   fi
 }
@@ -373,11 +413,22 @@ function hadoop_import_shellprofiles
     files2=(${HADOOP_CONF_DIR}/shellprofile.d/*.sh)
   fi
 
+  # enable bundled shellprofiles that come
+  # from hadoop-tools.  This converts the user-facing HADOOP_OPTIONAL_TOOLS
+  # to the HADOOP_TOOLS_OPTIONS that the shell profiles expect.
+  # See dist-tools-hooks-maker for how the example HADOOP_OPTIONAL_TOOLS
+  # gets populated into hadoop-env.sh
+
+  for i in ${HADOOP_OPTIONAL_TOOLS//,/ }; do
+    hadoop_add_entry HADOOP_TOOLS_OPTIONS "${i}"
+  done
+
   for i in "${files1[@]}" "${files2[@]}"
   do
     if [[ -n "${i}"
       && -f "${i}" ]]; then
       hadoop_debug "Profiles: importing ${i}"
+      # shellcheck disable=SC1090
       . "${i}"
     fi
   done
@@ -945,34 +996,25 @@ function hadoop_add_common_to_classpath
   hadoop_add_classpath "${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR}"'/*'
 }
 
-## @description  Add the HADOOP_TOOLS_PATH to the classpath
+## @description  Run libexec/tools/module.sh to add to the classpath
 ## @description  environment
 ## @audience     private
 ## @stability    evolving
 ## @replaceable  yes
-function hadoop_add_to_classpath_toolspath
+## @param        module
+function hadoop_add_to_classpath_tools
 {
-  declare -a array
-  declare -i c=0
-  declare -i j
-  declare -i i
-  declare idx
+  declare module=$1
 
-  if [[ -n "${HADOOP_TOOLS_PATH}" ]]; then
-    hadoop_debug "Adding HADOOP_TOOLS_PATH to CLASSPATH"
-    oldifs=${IFS}
-    IFS=:
-    for idx in ${HADOOP_TOOLS_PATH}; do
-      array[${c}]=${idx}
-      ((c=c+1))
-    done
-    IFS=${oldifs}
-    ((j=c-1)) || ${QATESTMODE}
+  if [[ -f "${HADOOP_LIBEXEC_DIR}/tools/${module}.sh" ]]; then
+    # shellcheck disable=SC1090
+    . "${HADOOP_LIBEXEC_DIR}/tools/${module}.sh"
+  else
+    hadoop_error "ERROR: Tools helper ${HADOOP_LIBEXEC_DIR}/tools/${module}.sh was not found."
+  fi
 
-    for ((i=0; i<=j; i++)); do
-      hadoop_add_classpath "${array[$i]}" after
-    done
-
+  if declare -f hadoop_classpath_tools_${module} >/dev/null 2>&1; then
+    "hadoop_classpath_tools_${module}"
   fi
 }
 

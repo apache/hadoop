@@ -34,6 +34,9 @@ The built jar file, named hadoop-azure.jar, also declares transitive dependencie
 on the additional artifacts it requires, notably the
 [Azure Storage SDK for Java](https://github.com/Azure/azure-storage-java).
 
+To make it part of Apache Hadoop's default classpath, simply make sure that
+HADOOP_OPTIONAL_TOOLS in hadoop-env.sh has 'hadoop-azure' in the list.
+
 ## <a name="Features" />Features
 
 * Read and write data stored in an Azure Blob Storage account.

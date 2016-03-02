@@ -104,6 +104,24 @@
                 </configuration>
               </execution>
               <execution>
+                <id>toolshooks</id>
+                <phase>prepare-package</phase>
+                <goals>
+                    <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>${shell-executable}</executable>
+                  <workingDirectory>${basedir}</workingDirectory>
+                  <requiresOnline>false</requiresOnline>
+                  <arguments>
+                    <argument>${basedir}/../dev-support/bin/dist-tools-hooks-maker</argument>
+                    <argument>${project.version}</argument>
+                    <argument>${project.build.directory}</argument>
+                    <argument>${basedir}/../hadoop-tools</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
                 <id>tar</id>
                 <phase>package</phase>
                 <goals>

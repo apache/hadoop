@@ -19,6 +19,9 @@ JAR file, `hadoop-aws.jar` also declares a transitive dependency on all
 external artifacts which are needed for this support —enabling downstream
 applications to easily use this support.
 
+To make it part of Apache Hadoop's default classpath, simply make sure that
+HADOOP_OPTIONAL_TOOLS in hadoop-env.sh has 'hadoop-aws' in the list.
+
 Features
 
 1. The "classic" `s3:` filesystem for storing objects in Amazon S3 Storage
@@ -30,7 +33,7 @@ higher performance.
 
 The specifics of using these filesystems are documented below.
 
-## Warning: Object Stores are not filesystems.
+## Warning #1: Object Stores are not filesystems.
 
 Amazon S3 is an example of "an object store". In order to achieve scalability
 and especially high availability, S3 has —as many other cloud object stores have

@@ -54,6 +54,9 @@ Introduction
 
 This module enables Apache Hadoop applications -including MapReduce jobs, read and write data to and from instances of the [OpenStack Swift object store](http://www.openstack.org/software/openstack-storage/).
 
+To make it part of Apache Hadoop's default classpath, simply make sure that
+HADOOP_OPTIONAL_TOOLS in hadoop-env.sh has 'hadoop-openstack' in the list.
+
 Features
 --------
 
@@ -440,7 +443,9 @@ If the host is declared, the proxy port must be set to a valid integer value.
 
 The `hadoop-openstack` JAR -or any dependencies- may not be on your classpath.
 
-If it is a remote MapReduce job that is failing, make sure that the JAR is installed on the servers in the cluster -or that the job submission process uploads the JAR file to the distributed cache.
+Make sure that the:
+* JAR is installed on the servers in the cluster.
+* 'hadoop-openstack' is on the HADOOP_OPTIONAL_TOOLS entry in hadoop-env.sh or that the job submission process uploads the JAR file to the distributed cache.
 
 #### Failure to Authenticate
 

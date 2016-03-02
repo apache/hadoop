@@ -69,13 +69,13 @@ case ${COMMAND} in
   ;;
   archive)
     CLASS=org.apache.hadoop.tools.HadoopArchives
-    hadoop_add_to_classpath_toolspath
+    hadoop_add_to_classpath_tools hadoop-archives
     hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
   archive-logs)
     CLASS=org.apache.hadoop.tools.HadoopArchiveLogs
-    hadoop_add_to_classpath_toolspath
+    hadoop_add_to_classpath_tools hadoop-archive-logs
     hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
@@ -84,7 +84,7 @@ case ${COMMAND} in
   ;;
   distcp)
     CLASS=org.apache.hadoop.tools.DistCp
-    hadoop_add_to_classpath_toolspath
+    hadoop_add_to_classpath_tools hadoop-distcp
     hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
@@ -94,7 +94,9 @@ case ${COMMAND} in
     echo "MAPRED_DIR='${MAPRED_DIR}'"
     echo "MAPRED_LIB_JARS_DIR='${MAPRED_LIB_JARS_DIR}'"
     echo "HADOOP_CONF_DIR='${HADOOP_CONF_DIR}'"
-    echo "HADOOP_TOOLS_PATH='${HADOOP_TOOLS_PATH}'"
+    echo "HADOOP_TOOLS_HOME='${HADOOP_TOOLS_HOME}'"
+    echo "HADOOP_TOOLS_DIR='${HADOOP_TOOLS_DIR}'"
+    echo "HADOOP_TOOLS_LIB_JARS_DIR='${HADOOP_TOOLS_LIB_JARS_DIR}'"
     exit 0
   ;;
   historyserver)
