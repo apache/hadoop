@@ -51,6 +51,7 @@ public class TestPermission {
   final private static Path CHILD_DIR2 = new Path(ROOT_PATH, "child2");
   final private static Path CHILD_FILE1 = new Path(ROOT_PATH, "file1");
   final private static Path CHILD_FILE2 = new Path(ROOT_PATH, "file2");
+  final private static Path CHILD_FILE3 = new Path(ROOT_PATH, "file3");
 
   final private static int FILE_LEN = 100;
   final private static Random RAN = new Random();
@@ -270,6 +271,18 @@ public class TestPermission {
       final Path RENAME_PATH = new Path("/foo/bar");
       userfs.mkdirs(RENAME_PATH);
       assertTrue(canRename(userfs, RENAME_PATH, CHILD_DIR1));
+      // test permissions on files that do not exist
+      assertFalse(userfs.exists(CHILD_FILE3));
+      try {
+        userfs.setOwner(CHILD_FILE3, "foo", "bar");
+        fail("setOwner should fail for non-exist file");
+      } catch (java.io.FileNotFoundException ignored) {
+      }
+      try {
+        userfs.setPermission(CHILD_FILE3, new FsPermission((short) 0777));
+        fail("setPermission should fail for non-exist file");
+      } catch (java.io.FileNotFoundException ignored) {
+      }
     } finally {
       cluster.shutdown();
     }

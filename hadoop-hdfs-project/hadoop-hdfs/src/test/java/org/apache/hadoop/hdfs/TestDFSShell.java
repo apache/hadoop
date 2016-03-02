@@ -3344,7 +3344,7 @@ public class TestDFSShell {
       fs.createSnapshot(reserved, "snap");
       fail("Can't create snapshot on /.reserved");
     } catch (FileNotFoundException e) {
-      assertTrue(e.getMessage().contains("Directory does not exist"));
+      assertTrue(e.getMessage().contains("Directory/File does not exist"));
     }
     cluster.shutdown();
   }
