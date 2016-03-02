@@ -1547,7 +1547,11 @@ public class FSDirectory implements Closeable {
   }
 
   void checkOwner(FSPermissionChecker pc, INodesInPath iip)
-      throws AccessControlException {
+      throws AccessControlException, FileNotFoundException {
+    if (iip.getLastINode() == null) {
+      throw new FileNotFoundException(
+          "Directory/File does not exist " + iip.getPath());
+    }
     checkPermission(pc, iip, true, null, null, null, null);
   }
 
