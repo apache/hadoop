@@ -2318,6 +2318,33 @@
 </property>
 
 <property>
+  <name>dfs.webhdfs.socket.connect-timeout</name>
+  <value>60s</value>
+  <description>
+    Socket timeout for connecting to WebHDFS servers. This prevents a
+    WebHDFS client from hanging if the server hostname is
+    misconfigured, or the server does not response before the timeout
+    expires. Value is followed by a unit specifier: ns, us, ms, s, m,
+    h, d for nanoseconds, microseconds, milliseconds, seconds,
+    minutes, hours, days respectively. Values should provide units,
+    but milliseconds are assumed.
+  </description>
+</property>
+
+<property>
+  <name>dfs.webhdfs.socket.read-timeout</name>
+  <value>60s</value>
+  <description>
+    Socket timeout for reading data from WebHDFS servers. This
+    prevents a WebHDFS client from hanging if the server stops sending
+    data. Value is followed by a unit specifier: ns, us, ms, s, m, h,
+    d for nanoseconds, microseconds, milliseconds, seconds, minutes,
+    hours, days respectively. Values should provide units,
+    but milliseconds are assumed.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.context</name>
   <value>default</value>
   <description>

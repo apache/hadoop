@@ -199,6 +199,8 @@ Below are the HDFS configuration options for WebHDFS.
 |:---- |:---- |
 | `dfs.web.authentication.kerberos.principal` | The HTTP Kerberos principal used by Hadoop-Auth in the HTTP endpoint. The HTTP Kerberos principal MUST start with 'HTTP/' per Kerberos HTTP SPNEGO specification. A value of "\*" will use all HTTP principals found in the keytab. |
 | `dfs.web.authentication.kerberos.keytab ` | The Kerberos keytab file with the credentials for the HTTP Kerberos principal used by Hadoop-Auth in the HTTP endpoint. |
+| `dfs.webhdfs.socket.connect-timeout` | How long to wait for a connection to be established before failing.  Specified as a time duration, ie numerical value followed by a units symbol, eg 2m for two minutes. Defaults to 60s. |
+| `dfs.webhdfs.socket.read-timeout` | How long to wait for data to arrive before failing.  Defaults to 60s. |
 
 Authentication
 --------------

@@ -1993,8 +1993,11 @@ Release 2.8.0 - UNRELEASED
     HDFS-9843. Document distcp options required for copying between encrypted
     locations. (Xiaoyu Yao via cnauroth)
 
-    HDFS-9831.Document webhdfs retry configuration keys introduced by
+    HDFS-9831. Document webhdfs retry configuration keys introduced by
     HDFS-5219/HDFS-5122. (Xiaobing Zhou via xyao)
+
+    HDFS-9887. WebHdfs socket timeouts should be configurable.
+    (Austin Donnelly and Chris Douglas via xyao)
 
   OPTIMIZATIONS
 
