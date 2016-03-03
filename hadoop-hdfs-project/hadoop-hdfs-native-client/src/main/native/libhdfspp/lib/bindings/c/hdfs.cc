@@ -150,6 +150,16 @@ static int Error(const Status &stat) {
   return -1;
 }
 
+static int ReportException(const std::exception & e)
+{
+  return Error(Status::Exception("Uncaught exception", e.what()));
+}
+
+static int ReportCaughtNonException()
+{
+  return Error(Status::Exception("Uncaught value not derived from std::exception", ""));
+}
+
 /* return false on failure */
 bool CheckSystemAndHandle(hdfsFS fs, hdfsFile file) {
   if (!fs) {
@@ -180,135 +190,202 @@ hdfsFS hdfsConnect(const char *nn, tPort port) {
 }
 
 hdfsFS hdfsConnectAsUser(const char* nn, tPort port, const char *user) {
-  std::string port_as_string = std::to_string(port);
-  IoService * io_service = IoService::New();
-  std::string user_name;
-  if (user) {
-    user_name = user;
-  }
+  try
+  {
+    std::string port_as_string = std::to_string(port);
+    IoService * io_service = IoService::New();
+    std::string user_name;
+    if (user) {
+      user_name = user;
+    }
 
-  FileSystem *fs = FileSystem::New(io_service, user_name, Options());
-  if (!fs) {
-    ReportError(ENODEV, "Could not create FileSystem object");
+    FileSystem *fs = FileSystem::New(io_service, user_name, Options());
+    if (!fs) {
+      ReportError(ENODEV, "Could not create FileSystem object");
+      return nullptr;
+    }
+
+    if (!fs->Connect(nn, port_as_string).ok()) {
+      ReportError(ENODEV, "Unable to connect to NameNode.");
+
+      // FileSystem's ctor might take ownership of the io_service; if it does,
+      //    it will null out the pointer
+      if (io_service)
+        delete io_service;
+
+      delete fs;
+
+      return nullptr;
+    }
+    return new hdfs_internal(fs);
+  } catch (const std::exception & e) {
+    ReportException(e);
+    return nullptr;
+  } catch (...) {
+    ReportCaughtNonException();
     return nullptr;
   }
-
-  if (!fs->Connect(nn, port_as_string).ok()) {
-    ReportError(ENODEV, "Unable to connect to NameNode.");
-
-    // FileSystem's ctor might take ownership of the io_service; if it does,
-    //    it will null out the pointer
-    if (io_service)
-      delete io_service;
-
-    delete fs;
-
-    return nullptr;
-  }
-  return new hdfs_internal(fs);
 }
 
 int hdfsDisconnect(hdfsFS fs) {
-  if (!fs) {
-    ReportError(ENODEV, "Cannot disconnect null FS handle.");
-    return -1;
-  }
+  try
+  {
+    if (!fs) {
+      ReportError(ENODEV, "Cannot disconnect null FS handle.");
+      return -1;
+    }
 
-  delete fs;
-  return 0;
+    delete fs;
+    return 0;
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
+  }
 }
 
 hdfsFile hdfsOpenFile(hdfsFS fs, const char *path, int flags, int bufferSize,
                       short replication, tSize blocksize) {
-  (void)flags;
-  (void)bufferSize;
-  (void)replication;
-  (void)blocksize;
-  if (!fs) {
-    ReportError(ENODEV, "Cannot perform FS operations with null FS handle.");
+  try
+  {
+    (void)flags;
+    (void)bufferSize;
+    (void)replication;
+    (void)blocksize;
+    if (!fs) {
+      ReportError(ENODEV, "Cannot perform FS operations with null FS handle.");
+      return nullptr;
+    }
+    FileHandle *f = nullptr;
+    Status stat = fs->get_impl()->Open(path, &f);
+    if (!stat.ok()) {
+      Error(stat);
+      return nullptr;
+    }
+    return new hdfsFile_internal(f);
+  } catch (const std::exception & e) {
+    ReportException(e);
+    return nullptr;
+  } catch (...) {
+    ReportCaughtNonException();
     return nullptr;
   }
-  FileHandle *f = nullptr;
-  Status stat = fs->get_impl()->Open(path, &f);
-  if (!stat.ok()) {
-    Error(stat);
-    return nullptr;
-  }
-  return new hdfsFile_internal(f);
 }
 
 int hdfsCloseFile(hdfsFS fs, hdfsFile file) {
-  if (!CheckSystemAndHandle(fs, file)) {
-    return -1;
+  try
+  {
+    if (!CheckSystemAndHandle(fs, file)) {
+      return -1;
+    }
+    delete file;
+    return 0;
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
   }
-  delete file;
-  return 0;
 }
 
 tSize hdfsPread(hdfsFS fs, hdfsFile file, tOffset position, void *buffer,
                 tSize length) {
-  if (!CheckSystemAndHandle(fs, file)) {
-    return -1;
-  }
+  try
+  {
+    if (!CheckSystemAndHandle(fs, file)) {
+      return -1;
+    }
 
-  size_t len = length;
-  Status stat = file->get_impl()->PositionRead(buffer, &len, position);
-  if(!stat.ok()) {
-    return Error(stat);
+    size_t len = length;
+    Status stat = file->get_impl()->PositionRead(buffer, &len, position);
+    if(!stat.ok()) {
+      return Error(stat);
+    }
+    return (tSize)len;
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
   }
-  return (tSize)len;
 }
 
 tSize hdfsRead(hdfsFS fs, hdfsFile file, void *buffer, tSize length) {
+  try
+  {
   if (!CheckSystemAndHandle(fs, file)) {
     return -1;
   }
 
-  size_t len = length;
-  Status stat = file->get_impl()->Read(buffer, &len);
-  if (!stat.ok()) {
-    return Error(stat);
-  }
+    size_t len = length;
+    Status stat = file->get_impl()->Read(buffer, &len);
+    if (!stat.ok()) {
+      return Error(stat);
+    }
 
-  return (tSize)len;
+    return (tSize)len;
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
+  }
 }
 
 /* 0 on success, -1 on error*/
 int hdfsSeek(hdfsFS fs, hdfsFile file, tOffset desiredPos) {
-  if (!CheckSystemAndHandle(fs, file)) {
-    return -1;
-  }
+  try
+  {
+    if (!CheckSystemAndHandle(fs, file)) {
+      return -1;
+    }
 
-  off_t desired = desiredPos;
-  Status stat = file->get_impl()->Seek(&desired, std::ios_base::beg);
-  if (!stat.ok()) {
-    return Error(stat);
-  }
+    off_t desired = desiredPos;
+    Status stat = file->get_impl()->Seek(&desired, std::ios_base::beg);
+    if (!stat.ok()) {
+      return Error(stat);
+    }
 
-  return 0;
+    return 0;
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
+  }
 }
 
 tOffset hdfsTell(hdfsFS fs, hdfsFile file) {
-  if (!CheckSystemAndHandle(fs, file)) {
-    return -1;
-  }
+  try
+  {
+    if (!CheckSystemAndHandle(fs, file)) {
+      return -1;
+    }
 
-  ssize_t offset = 0;
-  Status stat = file->get_impl()->Seek(&offset, std::ios_base::cur);
-  if (!stat.ok()) {
-    return Error(stat);
-  }
+    ssize_t offset = 0;
+    Status stat = file->get_impl()->Seek(&offset, std::ios_base::cur);
+    if (!stat.ok()) {
+      return Error(stat);
+    }
 
-  return offset;
+    return offset;
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
+  }
 }
 
 /* extended API */
 int hdfsCancel(hdfsFS fs, hdfsFile file) {
-  if (!CheckSystemAndHandle(fs, file)) {
-    return -1;
+  try
+  {
+    if (!CheckSystemAndHandle(fs, file)) {
+      return -1;
+    }
+    static_cast<FileHandleImpl*>(file->get_impl())->CancelOperations();
+    return 0;
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
   }
-  static_cast<FileHandleImpl*>(file->get_impl())->CancelOperations();
-  return 0;
 }
 
 /*******************************************************************
@@ -341,7 +418,16 @@ hdfsBuilder::hdfsBuilder(const char * directory) :
 
 struct hdfsBuilder *hdfsNewBuilder(void)
 {
-  return new struct hdfsBuilder();
+  try
+  {
+    return new struct hdfsBuilder();
+  } catch (const std::exception & e) {
+    ReportException(e);
+    return nullptr;
+  } catch (...) {
+    ReportCaughtNonException();
+    return nullptr;
+  }
 }
 
 void hdfsBuilderSetNameNode(struct hdfsBuilder *bld, const char *nn)
@@ -366,22 +452,36 @@ void hdfsBuilderSetUserName(struct hdfsBuilder *bld, const char *userName)
 
 void hdfsFreeBuilder(struct hdfsBuilder *bld)
 {
-  delete bld;
+  try
+  {
+    delete bld;
+  } catch (const std::exception & e) {
+    ReportException(e);
+  } catch (...) {
+    ReportCaughtNonException();
+  }
 }
 
 int hdfsBuilderConfSetStr(struct hdfsBuilder *bld, const char *key,
                           const char *val)
 {
-  optional<HdfsConfiguration> newConfig = bld->loader.OverlayValue(bld->config, key, val);
-  if (newConfig)
+  try
   {
-    bld->config = newConfig.value();
-    return 0;
-  }
-  else
-  {
-    ReportError(EINVAL, "Could not change Builder value");
-    return 1;
+    optional<HdfsConfiguration> newConfig = bld->loader.OverlayValue(bld->config, key, val);
+    if (newConfig)
+    {
+      bld->config = newConfig.value();
+      return 0;
+    }
+    else
+    {
+      ReportError(EINVAL, "Could not change Builder value");
+      return 1;
+    }
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
   }
 }
 
@@ -391,38 +491,60 @@ void hdfsConfStrFree(char *val)
 }
 
 hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld) {
-
-  if (!bld->overrideHost.empty())
+  try
   {
-    // TODO: pass rest of config once we get that done (HDFS-9556)
-    tPort port = bld->overridePort;
-    if (port == hdfsBuilder::kUseDefaultPort)
+    if (!bld->overrideHost.empty())
     {
-      port = hdfsBuilder::kDefaultPort;
+      // TODO: pass rest of config once we get that done (HDFS-9556)
+      tPort port = bld->overridePort;
+      if (port == hdfsBuilder::kUseDefaultPort)
+      {
+        port = hdfsBuilder::kDefaultPort;
+      }
+      if (bld->user.empty())
+        return hdfsConnect(bld->overrideHost.c_str(), port);
+      else
+        return hdfsConnectAsUser(bld->overrideHost.c_str(), port, bld->user.c_str());
     }
-    if (bld->user.empty())
-      return hdfsConnect(bld->overrideHost.c_str(), port);
     else
-      return hdfsConnectAsUser(bld->overrideHost.c_str(), port, bld->user.c_str());
-  }
-  else
-  {
-    //TODO: allow construction from default port once that is done (HDFS-9556)
-    ReportError(EINVAL, "No host provided to builder in hdfsBuilderConnect");
+    {
+      //TODO: allow construction from default port once that is done (HDFS-9556)
+      ReportError(EINVAL, "No host provided to builder in hdfsBuilderConnect");
+      return nullptr;
+    }
+  } catch (const std::exception & e) {
+    ReportException(e);
+    return nullptr;
+  } catch (...) {
+    ReportCaughtNonException();
     return nullptr;
   }
 }
 
 int hdfsConfGetStr(const char *key, char **val)
 {
-  hdfsBuilder builder;
-  return hdfsBuilderConfGetStr(&builder, key, val);
+  try
+  {
+    hdfsBuilder builder;
+    return hdfsBuilderConfGetStr(&builder, key, val);
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
+  }
 }
 
 int hdfsConfGetInt(const char *key, int32_t *val)
 {
-  hdfsBuilder builder;
-  return hdfsBuilderConfGetInt(&builder, key, val);
+  try
+  {
+    hdfsBuilder builder;
+    return hdfsBuilderConfGetInt(&builder, key, val);
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
+  }
 }
 
 //
@@ -430,24 +552,40 @@ int hdfsConfGetInt(const char *key, int32_t *val)
 //
 struct hdfsBuilder *hdfsNewBuilderFromDirectory(const char * configDirectory)
 {
-  return new struct hdfsBuilder(configDirectory);
+  try
+  {
+    return new struct hdfsBuilder(configDirectory);
+  } catch (const std::exception & e) {
+    ReportException(e);
+    return nullptr;
+  } catch (...) {
+    ReportCaughtNonException();
+    return nullptr;
+  }
 }
 
 int hdfsBuilderConfGetStr(struct hdfsBuilder *bld, const char *key,
                           char **val)
 {
-  optional<std::string> value = bld->config.Get(key);
-  if (value)
+  try
   {
-    size_t len = value->length() + 1;
-    *val = static_cast<char *>(malloc(len));
-    strncpy(*val, value->c_str(), len);
+    optional<std::string> value = bld->config.Get(key);
+    if (value)
+    {
+      size_t len = value->length() + 1;
+      *val = static_cast<char *>(malloc(len));
+      strncpy(*val, value->c_str(), len);
+    }
+    else
+    {
+      *val = nullptr;
+    }
+    return 0;
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
   }
-  else
-  {
-    *val = nullptr;
-  }
-  return 0;
 }
 
 // If we're running on a 32-bit platform, we might get 64-bit values that
@@ -460,16 +598,23 @@ bool isValidInt(int64_t value)
 
 int hdfsBuilderConfGetInt(struct hdfsBuilder *bld, const char *key, int32_t *val)
 {
-  // Pull from default configuration
-  optional<int64_t> value = bld->config.GetInt(key);
-  if (value)
+  try
   {
-    if (!isValidInt(*value))
-      return 1;
+    // Pull from default configuration
+    optional<int64_t> value = bld->config.GetInt(key);
+    if (value)
+    {
+      if (!isValidInt(*value))
+        return 1;
 
-    *val = *value;
+      *val = *value;
+    }
+    // If not found, don't change val
+    ReportError(EINVAL, "Could not get Builder value");
+    return 0;
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
   }
-  // If not found, don't change val
-  ReportError(EINVAL, "Could not get Builder value");
-  return 0;
 }
