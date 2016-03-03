@@ -65,6 +65,9 @@ Release 2.7.3 - UNRELEASED
     HADOOP-9121. InodeTree.java has redundant check for vName while
     throwing exception. (Arup Malakar via suresh)
 
+    HADOOP-12870. Fix typo admininistration in CommandsManual.md.
+    (John Zhuge via aajisaka)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
