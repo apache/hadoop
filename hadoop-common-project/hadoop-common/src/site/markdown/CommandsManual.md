@@ -66,7 +66,7 @@ Many subcommands honor a common set of configuration options to alter their beha
 Hadoop Common Commands
 ======================
 
-All of these commands are executed from the `hadoop` shell command. They have been broken up into [User Commands](#User_Commands) and [Admininistration Commands](#Administration_Commands).
+All of these commands are executed from the `hadoop` shell command. They have been broken up into [User Commands](#User_Commands) and [Administration Commands](#Administration_Commands).
 
 User Commands
 -------------
