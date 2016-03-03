@@ -26,6 +26,7 @@ Archival Storage, SSD & Memory
     * [Storage Policy Commands](#Storage_Policy_Commands)
         * [List Storage Policies](#List_Storage_Policies)
         * [Set Storage Policy](#Set_Storage_Policy)
+        * [Unset Storage Policy](#Unset_Storage_Policy)
         * [Get Storage Policy](#Get_Storage_Policy)
 
 Introduction
@@ -149,6 +150,20 @@ Set a storage policy to a file or a directory.
 |:---- |:---- |
 | `-path <path>` | The path referring to either a directory or a file. |
 | `-policy <policy>` | The name of the storage policy. |
+
+### Unset Storage Policy
+
+Unset a storage policy to a file or a directory. After the unset command the storage policy of the nearest ancestor will apply, and if there is no policy on any ancestor then the default storage policy will apply.
+
+* Command:
+
+        hdfs storagepolicies -unsetStoragePolicy -path <path>
+
+* Arguments:
+
+| | |
+|:---- |:---- |
+| `-path <path>` | The path referring to either a directory or a file. |
 
 ### Get Storage Policy
 
