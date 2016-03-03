@@ -1854,6 +1854,9 @@ Release 2.7.3 - UNRELEASED
     HADOOP-12870. Fix typo admininistration in CommandsManual.md.
     (John Zhuge via aajisaka)
 
+    HADOOP-12871. Fix dead link to NativeLibraries.html in CommandsManual.md.
+    (Brahma Reddy Battula via aajisaka)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES

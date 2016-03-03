@@ -109,7 +109,7 @@ Usage: `hadoop checknative [-a] [-h] `
 | `-a` | Check all libraries are available. |
 | `-h` | print help |
 
-This command checks the availability of the Hadoop native code. See [\#NativeLibraries.html](#NativeLibraries.html) for more information. By default, this command only checks the availability of libhadoop.
+This command checks the availability of the Hadoop native code. See [Native Libaries](./NativeLibraries.html) for more information. By default, this command only checks the availability of libhadoop.
 
 ### `classpath`
 
