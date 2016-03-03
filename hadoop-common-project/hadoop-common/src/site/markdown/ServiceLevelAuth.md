@@ -115,7 +115,7 @@ Of course, one can use the `security.refresh.policy.protocol.acl` property in `$
 
     It is possible to specify a blocked list of hosts. Only those machines which are in the hosts list, but not in the blocked hosts list will be granted access to the service. The property name is derived by suffixing with ".blocked".
 
-    Example: The property name of blocked hosts list for `security.client.protocol.hosts>> will be <<<security.client.protocol.hosts.blocked`
+    Example: The property name of blocked hosts list for `security.client.protocol.hosts` will be `security.client.protocol.hosts.blocked`
 
     If blocked hosts list is not defined for a service, the value of `security.service.authorization.default.hosts.blocked` is applied. If `security.service.authorization.default.hosts.blocked` is not defined, empty blocked hosts list is applied.
 
