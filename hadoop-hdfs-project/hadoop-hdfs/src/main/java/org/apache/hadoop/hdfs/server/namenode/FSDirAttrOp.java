@@ -37,6 +37,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.security.AccessControlException;
 
+import com.google.common.collect.Lists;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
@@ -158,13 +160,31 @@ public class FSDirAttrOp {
     return isFile;
   }
 
-  static HdfsFileStatus setStoragePolicy(
-      FSDirectory fsd, BlockManager bm, String src, final String policyName)
+  static HdfsFileStatus unsetStoragePolicy(FSDirectory fsd, BlockManager bm,
+      String src) throws IOException {
+    return setStoragePolicy(fsd, bm, src,
+        HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, "unset");
+  }
+
+  static HdfsFileStatus setStoragePolicy(FSDirectory fsd, BlockManager bm,
+      String src, final String policyName) throws IOException {
+    // get the corresponding policy and make sure the policy name is valid
+    BlockStoragePolicy policy = bm.getStoragePolicy(policyName);
+    if (policy == null) {
+      throw new HadoopIllegalArgumentException(
+          "Cannot find a block policy with the name " + policyName);
+    }
+
+    return setStoragePolicy(fsd, bm, src, policy.getId(), "set");
+  }
+
+  static HdfsFileStatus setStoragePolicy(FSDirectory fsd, BlockManager bm,
+      String src, final byte policyId, final String operation)
       throws IOException {
     if (!fsd.isStoragePolicyEnabled()) {
-      throw new IOException(
-          "Failed to set storage policy since "
-              + DFS_STORAGE_POLICY_ENABLED_KEY + " is set to false.");
+      throw new IOException(String.format(
+          "Failed to %s storage policy since %s is set to false.", operation,
+          DFS_STORAGE_POLICY_ENABLED_KEY));
     }
     FSPermissionChecker pc = fsd.getPermissionChecker();
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
@@ -178,14 +198,8 @@ public class FSDirAttrOp {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
       }
 
-      // get the corresponding policy and make sure the policy name is valid
-      BlockStoragePolicy policy = bm.getStoragePolicy(policyName);
-      if (policy == null) {
-        throw new HadoopIllegalArgumentException(
-            "Cannot find a block policy with the name " + policyName);
-      }
-      unprotectedSetStoragePolicy(fsd, bm, iip, policy.getId());
-      fsd.getEditLog().logSetStoragePolicy(src, policy.getId());
+      unprotectedSetStoragePolicy(fsd, bm, iip, policyId);
+      fsd.getEditLog().logSetStoragePolicy(src, policyId);
     } finally {
       fsd.writeUnlock();
     }
@@ -446,8 +460,8 @@ public class FSDirAttrOp {
     return file.getBlocks();
   }
 
-  static void unprotectedSetStoragePolicy(
-      FSDirectory fsd, BlockManager bm, INodesInPath iip, byte policyId)
+  static void unprotectedSetStoragePolicy(FSDirectory fsd, BlockManager bm,
+      INodesInPath iip, final byte policyId)
       throws IOException {
     assert fsd.hasWriteLock();
     final INode inode = iip.getLastINode();
@@ -457,10 +471,12 @@ public class FSDirAttrOp {
     }
     final int snapshotId = iip.getLatestSnapshotId();
     if (inode.isFile()) {
-      BlockStoragePolicy newPolicy = bm.getStoragePolicy(policyId);
-      if (newPolicy.isCopyOnCreateFile()) {
-        throw new HadoopIllegalArgumentException(
-            "Policy " + newPolicy + " cannot be set after file creation.");
+      if (policyId != HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
+        BlockStoragePolicy newPolicy = bm.getStoragePolicy(policyId);
+        if (newPolicy.isCopyOnCreateFile()) {
+          throw new HadoopIllegalArgumentException("Policy " + newPolicy
+              + " cannot be set after file creation.");
+        }
       }
 
       BlockStoragePolicy currentPolicy =
@@ -473,7 +489,8 @@ public class FSDirAttrOp {
       }
       inode.asFile().setStoragePolicyID(policyId, snapshotId);
     } else if (inode.isDirectory()) {
-      setDirStoragePolicy(fsd, inode.asDirectory(), policyId, snapshotId);
+      setDirStoragePolicy(fsd, inode.asDirectory(), policyId,
+          snapshotId);
     } else {
       throw new FileNotFoundException(iip.getPath()
           + " is not a file or directory");
@@ -485,11 +502,18 @@ public class FSDirAttrOp {
       int latestSnapshotId) throws IOException {
     List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
     XAttr xAttr = BlockStoragePolicySuite.buildXAttr(policyId);
-    List<XAttr> newXAttrs = FSDirXAttrOp.setINodeXAttrs(fsd, existingXAttrs,
-                                                        Arrays.asList(xAttr),
-                                                        EnumSet.of(
-                                                            XAttrSetFlag.CREATE,
-                                                            XAttrSetFlag.REPLACE));
+    List<XAttr> newXAttrs = null;
+    if (policyId == HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
+      List<XAttr> toRemove = Lists.newArrayList();
+      toRemove.add(xAttr);
+      List<XAttr> removed = Lists.newArrayList();
+      newXAttrs = FSDirXAttrOp.filterINodeXAttrs(existingXAttrs, toRemove,
+          removed);
+    } else {
+      newXAttrs = FSDirXAttrOp.setINodeXAttrs(fsd, existingXAttrs,
+          Arrays.asList(xAttr),
+          EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
+    }
     XAttrStorage.updateINodeXAttrs(inode, newXAttrs, latestSnapshotId);
   }
 

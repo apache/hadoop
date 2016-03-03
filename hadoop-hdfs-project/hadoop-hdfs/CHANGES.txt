@@ -1047,6 +1047,9 @@ Release 2.9.0 - UNRELEASED
 
     HDFS-7964. Add support for async edit logging. (Daryn Sharp)
 
+    HDFS-9534. Add CLI command to clear storage policy from a path.
+    (Xiaobing Zhou via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES

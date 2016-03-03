@@ -514,6 +514,31 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   @Override
+  public void unsetStoragePolicy(final Path src)
+      throws IOException {
+    statistics.incrementWriteOps(1);
+    Path absF = fixRelativePart(src);
+    new FileSystemLinkResolver<Void>() {
+      @Override
+      public Void doCall(final Path p) throws IOException {
+        dfs.unsetStoragePolicy(getPathName(p));
+        return null;
+      }
+      @Override
+      public Void next(final FileSystem fs, final Path p) throws IOException {
+        if (fs instanceof DistributedFileSystem) {
+          ((DistributedFileSystem) fs).unsetStoragePolicy(p);
+          return null;
+        } else {
+          throw new UnsupportedOperationException(
+              "Cannot perform unsetStoragePolicy on a "
+                  + "non-DistributedFileSystem: " + src + " -> " + p);
+        }
+      }
+    }.resolve(this, absF);
+  }
+
+  @Override
   public BlockStoragePolicySpi getStoragePolicy(Path path) throws IOException {
     statistics.incrementReadOps(1);
     Path absF = fixRelativePart(path);

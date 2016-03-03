@@ -157,6 +157,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Remove
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveCacheDirectiveResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveCachePoolRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveCachePoolResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UnsetStoragePolicyRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UnsetStoragePolicyResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Rename2RequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Rename2ResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenameRequestProto;
@@ -262,6 +264,9 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       GetSnapshottableDirListingResponseProto.newBuilder().build();
   static final SetStoragePolicyResponseProto VOID_SET_STORAGE_POLICY_RESPONSE =
       SetStoragePolicyResponseProto.newBuilder().build();
+  static final UnsetStoragePolicyResponseProto
+      VOID_UNSET_STORAGE_POLICY_RESPONSE =
+      UnsetStoragePolicyResponseProto.newBuilder().build();
 
   private static final CreateResponseProto VOID_CREATE_RESPONSE = 
   CreateResponseProto.newBuilder().build();
@@ -1483,6 +1488,18 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throw new ServiceException(e);
     }
     return VOID_SET_STORAGE_POLICY_RESPONSE;
+  }
+
+  @Override
+  public UnsetStoragePolicyResponseProto unsetStoragePolicy(
+      RpcController controller, UnsetStoragePolicyRequestProto request)
+      throws ServiceException {
+    try {
+      server.unsetStoragePolicy(request.getSrc());
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return VOID_UNSET_STORAGE_POLICY_RESPONSE;
   }
 
   @Override

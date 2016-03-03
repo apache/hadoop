@@ -113,6 +113,13 @@ message SetStoragePolicyRequestProto {
 message SetStoragePolicyResponseProto { // void response
 }
 
+message UnsetStoragePolicyRequestProto {
+  required string src = 1;
+}
+
+message UnsetStoragePolicyResponseProto {
+}
+
 message GetStoragePolicyRequestProto {
   required string path = 1;
 }
@@ -745,6 +752,8 @@ service ClientNamenodeProtocol {
       returns(SetReplicationResponseProto);
   rpc setStoragePolicy(SetStoragePolicyRequestProto)
       returns(SetStoragePolicyResponseProto);
+  rpc unsetStoragePolicy(UnsetStoragePolicyRequestProto)
+      returns(UnsetStoragePolicyResponseProto);
   rpc getStoragePolicy(GetStoragePolicyRequestProto)
       returns(GetStoragePolicyResponseProto);
   rpc getStoragePolicies(GetStoragePoliciesRequestProto)

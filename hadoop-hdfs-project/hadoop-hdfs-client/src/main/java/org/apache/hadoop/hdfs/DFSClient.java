@@ -1431,6 +1431,24 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
+   * Unset storage policy set for a given file/directory.
+   * @param src file/directory name
+   */
+  public void unsetStoragePolicy(String src) throws IOException {
+    checkOpen();
+    try (TraceScope ignored = newPathTraceScope("unsetStoragePolicy", src)) {
+      namenode.unsetStoragePolicy(src);
+    } catch (RemoteException e) {
+      throw e.unwrapRemoteException(AccessControlException.class,
+          FileNotFoundException.class,
+          SafeModeException.class,
+          NSQuotaExceededException.class,
+          UnresolvedPathException.class,
+          SnapshotAccessControlException.class);
+    }
+  }
+
+  /**
    * @param path file/directory name
    * @return Get the storage policy for specified path
    */
