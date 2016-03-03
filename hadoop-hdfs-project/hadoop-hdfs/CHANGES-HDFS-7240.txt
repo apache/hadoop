@@ -36,3 +36,6 @@
 
     HDFS-9845. OzoneHandler : Support List and Info Volumes.
     (Anu Engineer via cnauroth)
+
+    HDFS-9848. Ozone: Add Ozone Client lib for volume handling.
+    (Anu Engineer via cnauroth)

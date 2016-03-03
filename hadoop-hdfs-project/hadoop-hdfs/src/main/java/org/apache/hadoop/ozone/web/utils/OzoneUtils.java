@@ -30,6 +30,7 @@ import javax.ws.rs.core.Response;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -43,6 +44,8 @@ import java.util.UUID;
  */
 @InterfaceAudience.Private
 public final class OzoneUtils {
+
+  public static final Charset ENCODING = Charset.forName("UTF-8");
 
   private OzoneUtils() {
     // Never constructed

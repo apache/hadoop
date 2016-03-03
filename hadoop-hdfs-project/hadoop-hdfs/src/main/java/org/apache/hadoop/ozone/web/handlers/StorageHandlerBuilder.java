@@ -19,6 +19,8 @@
 package org.apache.hadoop.ozone.web.handlers;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.localstorage.LocalStorageHandler;
 
@@ -44,7 +46,8 @@ public final class StorageHandlerBuilder {
       return storageHandler;
     } else {
       // This only happens while using mvn jetty:run for testing.
-      return new LocalStorageHandler();
+      Configuration conf = new OzoneConfiguration();
+      return new LocalStorageHandler(conf);
     }
   }
 

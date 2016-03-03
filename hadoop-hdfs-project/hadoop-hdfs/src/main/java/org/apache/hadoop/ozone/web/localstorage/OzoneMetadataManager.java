@@ -19,8 +19,8 @@ package org.apache.hadoop.ozone.web.localstorage;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
@@ -123,11 +123,9 @@ public final class OzoneMetadataManager {
   /**
    * Constructs OzoneMetadataManager.
    */
-  private OzoneMetadataManager() {
+  private OzoneMetadataManager(Configuration conf) {
 
     lock = new ReentrantReadWriteLock();
-    OzoneConfiguration conf = new OzoneConfiguration();
-
     String storageRoot =
         conf.getTrimmed(OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT,
             OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT_DEFAULT);
@@ -151,9 +149,10 @@ public final class OzoneMetadataManager {
    *
    * @return OzoneMetadataManager
    */
-  public static synchronized OzoneMetadataManager getOzoneMetadataManager() {
+  public static synchronized OzoneMetadataManager
+      getOzoneMetadataManager(Configuration conf) {
     if (bm == null) {
-      bm = new OzoneMetadataManager();
+      bm = new OzoneMetadataManager(conf);
     }
     return bm;
   }

@@ -34,6 +34,10 @@ public final class OzoneConfigKeys {
   public static final String DFS_STORAGE_HANDLER_TYPE_KEY =
       "dfs.storage.handler.type";
   public static final String DFS_STORAGE_HANDLER_TYPE_DEFAULT = "distributed";
+  public static final String DFS_OBJECTSTORE_TRACE_ENABLED_KEY =
+      "dfs.objectstore.trace.enabled";
+  public static final boolean DFS_OBJECTSTORE_TRACE_ENABLED_DEFAULT = false;
+
 
   /**
    * There is no need to instantiate this class.
