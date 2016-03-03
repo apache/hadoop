@@ -74,13 +74,7 @@ Regardless of the mode of operation, the user identity mechanism is extrinsic to
 Group Mapping
 -------------
 
-Once a username has been determined as described above, the list of groups is determined by a group mapping service, configured by the hadoop.security.group.mapping property. The default implementation, org.apache.hadoop.security.JniBasedUnixGroupsMappingWithFallback, will determine if the Java Native Interface (JNI) is available. If JNI is available, the implementation will use the API within hadoop to resolve a list of groups for a user. If JNI is not available then the shell implementation, org.apache.hadoop.security.ShellBasedUnixGroupsMapping, is used. This implementation shells out with the `bash -c groups` command (for a Linux/Unix environment) or the `net group` command (for a Windows environment) to resolve a list of groups for a user.
-
-An alternate implementation, which connects directly to an LDAP server to resolve the list of groups, is available via org.apache.hadoop.security.LdapGroupsMapping. However, this provider should only be used if the required groups reside exclusively in LDAP, and are not materialized on the Unix servers. More information on configuring the group mapping service is available in the Javadocs.
-
-For HDFS, the mapping of users to groups is performed on the NameNode. Thus, the host system configuration of the NameNode determines the group mappings for the users.
-
-Note that HDFS stores the user and group of a file or directory as strings; there is no conversion from user and group identity numbers as is conventional in Unix.
+Once a username has been determined as described above, the list of groups is determined by a group mapping service, configured by the `hadoop.security.group.mapping` property.  See [Hadoop Groups Mapping](../hadoop-common/GroupsMapping.html) for details.
 
 Permission Checks
 -----------------
