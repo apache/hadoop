@@ -27,10 +27,7 @@ namespace hdfs {
 
 class IoServiceImpl : public IoService {
  public:
-  virtual void Run() override {
-    asio::io_service::work work(io_service_);
-    io_service_.run();
-  }
+  virtual void Run() override;
   virtual void Stop() override { io_service_.stop(); }
   ::asio::io_service &io_service() { return io_service_; }
  private:

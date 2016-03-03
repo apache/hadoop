@@ -18,10 +18,30 @@
 
 #include "hdfs_public_api.h"
 
+#include "common/logging.h"
+
 namespace hdfs {
 
 IoService::~IoService() {}
 
 IoService *IoService::New() { return new IoServiceImpl(); }
+
+void IoServiceImpl::Run() {
+  // As recommended in http://www.boost.org/doc/libs/1_39_0/doc/html/boost_asio/reference/io_service.html#boost_asio.reference.io_service.effect_of_exceptions_thrown_from_handlers
+  asio::io_service::work work(io_service_);
+  for(;;)
+  {
+    try
+    {
+      io_service_.run();
+      break;
+    } catch (const std::exception & e) {
+      LOG_WARN() << "Unexpected exception in libhdfspp worker thread: " << e.what();
+    } catch (...) {
+      LOG_WARN() << "Unexpected value not derived from std::exception in libhdfspp worker thread";
+    }
+  }
+}
+
 
 }
