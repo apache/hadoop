@@ -412,12 +412,13 @@ $H3 Map sizing
 
 $H3 Copying Between Versions of HDFS
 
-  For copying between two different versions of Hadoop, one will usually use
-  HftpFileSystem. This is a read-only FileSystem, so DistCp must be run on the
-  destination cluster (more specifically, on NodeManagers that can write to the
-  destination cluster). Each source is specified as
-  `hftp://<dfs.http.address>/<path>` (the default `dfs.http.address` is
-  `<namenode>:50070`).
+  For copying between two different major versions of Hadoop (e.g. between 1.X
+  and 2.X), one will usually use WebHdfsFileSystem. Unlike the previous
+  HftpFileSystem, as webhdfs is available for both read and write operations,
+  DistCp can be run on both source and destination cluster.
+  Remote cluster is specified as `webhdfs://<namenode_hostname>:<http_port>`.
+  When copying between same major versions of Hadoop cluster (e.g. between 2.X
+  and 2.X), use hdfs protocol for better performance.
 
 $H3 MapReduce and other side-effects
 

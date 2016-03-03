@@ -2916,6 +2916,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-8791. block ID-based DN storage layout can be very slow for datanode
     on ext4 (Chris Trezzo via kihwal)
 
+    HDFS-9048. DistCp documentation is out-of-dated
+    (Daisuke Kobayashi via iwasakims)
+
   OPTIMIZATIONS
 
   BUG FIXES
