@@ -224,9 +224,55 @@ public class StoragePolicyAdmin extends Configured implements Tool {
     }
   }
 
+  /* Command to unset the storage policy set for a file/directory */
+  private static class UnsetStoragePolicyCommand
+      implements AdminHelper.Command {
+
+    @Override
+    public String getName() {
+      return "-unsetStoragePolicy";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName() + " -path <path>]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      TableListing listing = AdminHelper.getOptionDescriptionListing();
+      listing.addRow("<path>", "The path of the file/directory "
+          + "from which the storage policy will be unset.");
+      return getShortUsage() + "\n"
+          + "Unset the storage policy set for a file/directory.\n\n"
+          + listing.toString();
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      final String path = StringUtils.popOptionWithArgument("-path", args);
+      if (path == null) {
+        System.err.println("Please specify the path from which "
+            + "the storage policy will be unsetd.\nUsage: " + getLongUsage());
+        return 1;
+      }
+
+      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+      try {
+        dfs.unsetStoragePolicy(new Path(path));
+        System.out.println("Unset storage policy from " + path);
+      } catch (Exception e) {
+        System.err.println(AdminHelper.prettifyException(e));
+        return 2;
+      }
+      return 0;
+    }
+  }
+
   private static final AdminHelper.Command[] COMMANDS = {
       new ListStoragePoliciesCommand(),
       new SetStoragePolicyCommand(),
-      new GetStoragePolicyCommand()
+      new GetStoragePolicyCommand(),
+      new UnsetStoragePolicyCommand()
   };
 }
