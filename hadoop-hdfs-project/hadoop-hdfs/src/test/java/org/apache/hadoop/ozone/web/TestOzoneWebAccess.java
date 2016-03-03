@@ -23,6 +23,7 @@ import static org.apache.hadoop.ozone.web.utils.OzoneUtils.*;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -69,9 +70,8 @@ public class TestOzoneWebAccess {
   public static void init() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
 
-    String path = new Path(
-        System.getProperty("test.build.data", "target/test/data"),
-        TestOzoneWebAccess.class.getSimpleName()).toUri().getPath();
+    URL p = conf.getClass().getResource("");
+    String path = p.getPath().concat(TestOzoneWebAccess.class.getSimpleName());
     conf.set(OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT, path);
     conf.setBoolean(OzoneConfigKeys.DFS_OBJECTSTORE_ENABLED_KEY, true);
     conf.set(OzoneConfigKeys.DFS_STORAGE_HANDLER_TYPE_KEY, "local");

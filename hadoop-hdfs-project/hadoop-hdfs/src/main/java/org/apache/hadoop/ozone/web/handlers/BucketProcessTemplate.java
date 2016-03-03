@@ -181,7 +181,7 @@ public abstract class BucketProcessTemplate {
    *
    * @throws OzoneException
    */
-  List<String> getAcls(BucketArgs args, String tag) throws OzoneException {
+  List<String> getAcls(BucketArgs args, String tag)  {
     List<String> aclStrings =
         args.getHeaders().getRequestHeader(Header.OZONE_ACLS);
     List<String> filteredSet = null;
@@ -242,7 +242,7 @@ public abstract class BucketProcessTemplate {
 
     try {
       List<String> storageClassString =
-          args.getHeaders().getRequestHeader(Header.OZONE_STORAGE_CLASS);
+          args.getHeaders().getRequestHeader(Header.OZONE_STORAGE_TYPE);
       if (storageClassString == null) {
         return null;
       }

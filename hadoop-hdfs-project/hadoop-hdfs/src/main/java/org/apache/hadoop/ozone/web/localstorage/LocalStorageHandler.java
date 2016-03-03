@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.web.localstorage;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
@@ -40,10 +41,12 @@ import java.io.IOException;
  */
 @InterfaceAudience.Private
 public class LocalStorageHandler implements StorageHandler {
+  private final Configuration conf;
   /**
    * Constructs LocalStorageHandler.
    */
-  public LocalStorageHandler() {
+  public LocalStorageHandler(Configuration conf) {
+    this.conf = conf;
   }
 
   /**
@@ -55,7 +58,8 @@ public class LocalStorageHandler implements StorageHandler {
    */
   @Override
   public void createVolume(VolumeArgs args) throws IOException, OzoneException {
-    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+    OzoneMetadataManager oz =
+        OzoneMetadataManager.getOzoneMetadataManager(conf);
     oz.createVolume(args);
 
   }
@@ -70,7 +74,8 @@ public class LocalStorageHandler implements StorageHandler {
   @Override
   public void setVolumeOwner(VolumeArgs args)
       throws IOException, OzoneException {
-    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+    OzoneMetadataManager oz =
+        OzoneMetadataManager.getOzoneMetadataManager(conf);
     oz.setVolumeProperty(args, OzoneMetadataManager.VolumeProperty.OWNER);
   }
 
@@ -85,7 +90,8 @@ public class LocalStorageHandler implements StorageHandler {
   @Override
   public void setVolumeQuota(VolumeArgs args, boolean remove)
       throws IOException, OzoneException {
-    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+    OzoneMetadataManager oz =
+        OzoneMetadataManager.getOzoneMetadataManager(conf);
 
     if(remove) {
       OzoneQuota quota = new OzoneQuota();
@@ -109,7 +115,8 @@ public class LocalStorageHandler implements StorageHandler {
   @Override
   public boolean checkVolumeAccess(VolumeArgs args)
       throws IOException, OzoneException {
-    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+    OzoneMetadataManager oz =
+        OzoneMetadataManager.getOzoneMetadataManager(conf);
     return oz.checkVolumeAccess(args);
   }
 
@@ -126,7 +133,8 @@ public class LocalStorageHandler implements StorageHandler {
   @Override
   public VolumeInfo getVolumeInfo(VolumeArgs args)
       throws IOException, OzoneException {
-    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+    OzoneMetadataManager oz =
+        OzoneMetadataManager.getOzoneMetadataManager(conf);
     return oz.getVolumeInfo(args);
   }
 
@@ -140,7 +148,8 @@ public class LocalStorageHandler implements StorageHandler {
    */
   @Override
   public void deleteVolume(VolumeArgs args) throws IOException, OzoneException {
-    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+    OzoneMetadataManager oz =
+        OzoneMetadataManager.getOzoneMetadataManager(conf);
     oz.deleteVolume(args);
 
   }
@@ -157,7 +166,8 @@ public class LocalStorageHandler implements StorageHandler {
   @Override
   public ListVolumes listVolumes(UserArgs args)
       throws IOException, OzoneException {
-    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+    OzoneMetadataManager oz =
+        OzoneMetadataManager.getOzoneMetadataManager(conf);
     return oz.listVolumes(args);
   }
 
@@ -184,7 +194,8 @@ public class LocalStorageHandler implements StorageHandler {
    */
   @Override
   public void createBucket(BucketArgs args) throws IOException, OzoneException {
-    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+    OzoneMetadataManager oz =
+        OzoneMetadataManager.getOzoneMetadataManager(conf);
     oz.createBucket(args);
   }
 
@@ -198,7 +209,8 @@ public class LocalStorageHandler implements StorageHandler {
   @Override
   public void setBucketAcls(BucketArgs args)
       throws IOException, OzoneException {
-    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+    OzoneMetadataManager oz =
+        OzoneMetadataManager.getOzoneMetadataManager(conf);
     oz.setBucketProperty(args, OzoneMetadataManager.BucketProperty.ACLS);
   }
 
@@ -212,7 +224,8 @@ public class LocalStorageHandler implements StorageHandler {
   @Override
   public void setBucketVersioning(BucketArgs args)
       throws IOException, OzoneException {
-    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+    OzoneMetadataManager oz =
+        OzoneMetadataManager.getOzoneMetadataManager(conf);
     oz.setBucketProperty(args, OzoneMetadataManager.BucketProperty.VERSIONING);
 
   }
@@ -227,7 +240,8 @@ public class LocalStorageHandler implements StorageHandler {
   @Override
   public void setBucketStorageClass(BucketArgs args)
       throws IOException, OzoneException {
-    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+    OzoneMetadataManager oz =
+        OzoneMetadataManager.getOzoneMetadataManager(conf);
     oz.setBucketProperty(args, OzoneMetadataManager.BucketProperty.STORAGETYPE);
 
   }
@@ -241,7 +255,8 @@ public class LocalStorageHandler implements StorageHandler {
    */
   @Override
   public void deleteBucket(BucketArgs args) throws IOException, OzoneException {
-    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+    OzoneMetadataManager oz =
+        OzoneMetadataManager.getOzoneMetadataManager(conf);
     oz.deleteBucket(args);
   }
 
@@ -257,7 +272,8 @@ public class LocalStorageHandler implements StorageHandler {
   @Override
   public ListBuckets listBuckets(VolumeArgs args)
       throws IOException, OzoneException {
-    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+    OzoneMetadataManager oz =
+        OzoneMetadataManager.getOzoneMetadataManager(conf);
     return oz.listBuckets(args);
   }
 
@@ -273,7 +289,8 @@ public class LocalStorageHandler implements StorageHandler {
   @Override
   public BucketInfo getBucketInfo(BucketArgs args)
       throws IOException, OzoneException {
-    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+    OzoneMetadataManager oz =
+        OzoneMetadataManager.getOzoneMetadataManager(conf);
     return oz.getBucketInfo(args);
   }
 }

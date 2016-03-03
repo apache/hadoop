@@ -45,7 +45,7 @@ public final class Header {
   public static final String OZONE_REQUEST_ID = "x-ozone-request-id";
   public static final String OZONE_SERVER_NAME = "x-ozone-server-name";
 
-  public static final String OZONE_STORAGE_CLASS = "x-ozone-storage-type";
+  public static final String OZONE_STORAGE_TYPE = "x-ozone-storage-type";
 
   public static final String OZONE_BUCKET_VERSIONING =
       "x-ozone-bucket-versioning";
@@ -53,6 +53,10 @@ public final class Header {
   public static final String OZONE_ACLS = "x-ozone-acls";
   public static final String OZONE_ACL_ADD = "ADD";
   public static final String OZONE_ACL_REMOVE = "REMOVE";
+
+  public static final String OZONE_LIST_QUERY_TAG ="info";
+  public static final String OZONE_QUOTA_QUERY_TAG ="quota";
+
 
 
   private Header() {

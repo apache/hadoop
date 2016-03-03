@@ -46,6 +46,16 @@ public class OzoneException extends Exception {
   @JsonProperty("hostName")
   private String hostID;
 
+  /**
+   * Constructs a new exception with {@code null} as its detail message. The
+   * cause is not initialized, and may subsequently be initialized by a call
+   * to {@link #initCause}.
+   *
+   * This constructor is needed by Json Serializer.
+   */
+  public OzoneException() {
+  }
+
 
   /**
    * Constructor that allows a shortMessage and exception.

@@ -31,6 +31,8 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -64,13 +66,15 @@ public class TestOzoneVolumes {
     OzoneConfiguration conf = new OzoneConfiguration();
 
     URL p = conf.getClass().getResource("");
-    String path = p.getPath();
+    String path = p.getPath().concat(TestOzoneVolumes.class.getSimpleName());
     path += conf.getTrimmed(OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT,
         OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT_DEFAULT);
 
     conf.set(OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT, path);
     conf.setBoolean(OzoneConfigKeys.DFS_OBJECTSTORE_ENABLED_KEY, true);
     conf.set(OzoneConfigKeys.DFS_STORAGE_HANDLER_TYPE_KEY, "local");
+    conf.setBoolean(OzoneConfigKeys.DFS_OBJECTSTORE_TRACE_ENABLED_KEY, true);
+    Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);
 
     cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitActive();
@@ -296,7 +300,8 @@ public class TestOzoneVolumes {
   public void testGetVolumesByUser() throws IOException {
     SimpleDateFormat format =
         new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss ZZZ", Locale.US);
-
+    // We need to create a volume for this test to succeed.
+    testCreateVolumes();
     HttpClient client = new DefaultHttpClient();
     try {
       HttpGet httpget =

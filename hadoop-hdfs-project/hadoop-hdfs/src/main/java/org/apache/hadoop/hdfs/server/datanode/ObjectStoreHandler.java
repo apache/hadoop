@@ -18,11 +18,15 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static com.sun.jersey.api.core.ResourceConfig.PROPERTY_CONTAINER_REQUEST_FILTERS;
+import static com.sun.jersey.api.core.ResourceConfig.FEATURE_TRACE;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_STORAGE_HANDLER_TYPE_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_STORAGE_HANDLER_TYPE_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_OBJECTSTORE_TRACE_ENABLED_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_OBJECTSTORE_TRACE_ENABLED_DEFAULT;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.sun.jersey.api.container.ContainerFactory;
 import com.sun.jersey.api.core.ApplicationAdapter;
@@ -53,12 +57,14 @@ public final class ObjectStoreHandler {
   public ObjectStoreHandler(Configuration conf) throws IOException {
     String shType = conf.getTrimmed(DFS_STORAGE_HANDLER_TYPE_KEY,
         DFS_STORAGE_HANDLER_TYPE_DEFAULT);
+    boolean ozoneTrace = conf.getBoolean(DFS_OBJECTSTORE_TRACE_ENABLED_KEY,
+        DFS_OBJECTSTORE_TRACE_ENABLED_DEFAULT);
     final StorageHandler storageHandler;
     if ("distributed".equalsIgnoreCase(shType)) {
       storageHandler = new DistributedStorageHandler();
     } else {
       if ("local".equalsIgnoreCase(shType)) {
-        storageHandler = new LocalStorageHandler();
+        storageHandler = new LocalStorageHandler(conf);
       } else {
         throw new IllegalArgumentException(
             String.format("Unrecognized value for %s: %s",
@@ -67,9 +73,11 @@ public final class ObjectStoreHandler {
     }
     ApplicationAdapter aa =
         new ApplicationAdapter(new ObjectStoreApplication());
-    aa.setPropertiesAndFeatures(Collections.<String, Object>singletonMap(
-        PROPERTY_CONTAINER_REQUEST_FILTERS,
-        ServiceFilter.class.getCanonicalName()));
+    Map<String, Object> settingsMap = new HashMap<>();
+    settingsMap.put(PROPERTY_CONTAINER_REQUEST_FILTERS,
+        ServiceFilter.class.getCanonicalName());
+    settingsMap.put(FEATURE_TRACE, ozoneTrace);
+    aa.setPropertiesAndFeatures(settingsMap);
     this.objectStoreJerseyContainer = ContainerFactory.createContainer(
         ObjectStoreJerseyContainer.class, aa);
     this.objectStoreJerseyContainer.setStorageHandler(storageHandler);

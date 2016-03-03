@@ -22,6 +22,7 @@ import org.apache.hadoop.ozone.web.exceptions.OzoneExceptionMapper;
 import org.apache.hadoop.ozone.web.handlers.BucketHandler;
 import org.apache.hadoop.ozone.web.handlers.ServiceFilter;
 import org.apache.hadoop.ozone.web.handlers.VolumeHandler;
+import org.apache.hadoop.ozone.web.messages.StringMessageBodyWriter;
 
 import javax.ws.rs.core.Application;
 import java.util.HashSet;
@@ -41,6 +42,7 @@ public class ObjectStoreApplication extends Application {
     set.add(BucketHandler.class);
     set.add(VolumeHandler.class);
     set.add(OzoneExceptionMapper.class);
+    set.add(StringMessageBodyWriter.class);
     return set;
   }
 
