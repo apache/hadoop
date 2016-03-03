@@ -131,98 +131,6 @@
   </description>
 </property>
 
-<!-- 
-=== Multiple group mapping providers configuration sample === 
-  This sample illustrates a typical use case for CompositeGroupsMapping where
-Hadoop authentication uses MIT Kerberos which trusts an AD realm. In this case, service
-principals such as hdfs, mapred, hbase, hive, oozie and etc can be placed in In MIT Kerberos,
-but end users are just from the trusted AD. For the service principals, ShellBasedUnixGroupsMapping
-provider can be used to query their groups for efficiency, and for end users, LdapGroupsMapping 
-provider can be used. This avoids to add group entries in AD for service principals when only using 
-LdapGroupsMapping provider.
-  In case multiple ADs are involved and trusted by the MIT Kerberos in this use case, LdapGroupsMapping
-provider can be used more times with different AD specific configurations. This sample also shows how
-to do that. Here are the necessary configurations.
-
-<property>
-  <name>hadoop.security.group.mapping</name>
-  <value>org.apache.hadoop.security.CompositeGroupsMapping</value>
-  <description>
-    Class for user to group mapping (get groups for a given user) for ACL, which 
-    makes use of other multiple providers to provide the service.
-  </description>
-</property>
-
-<property>
-  <name>hadoop.security.group.mapping.providers</name>
-  <value>shell4services,ad4usersX,ad4usersY</value>
-  <description>
-    Comma separated of names of other providers to provide user to group mapping. 
-  </description>
-</property>
-
-<property>
-  <name>hadoop.security.group.mapping.providers.combined</name>
-  <value>true</value>
-  <description>
-    true or false to indicate whether groups from the providers are combined or not. The default value is true
-    If true, then all the providers will be tried to get groups and all the groups are combined to return as
-    the final results. Otherwise, providers are tried one by one in the configured list order, and if any
-    groups are retrieved from any provider, then the groups will be returned without trying the left ones.
-  </description>
-</property>
-
-<property>
-  <name>hadoop.security.group.mapping.provider.shell4services</name>
-  <value>org.apache.hadoop.security.ShellBasedUnixGroupsMapping</value>
-  <description>
-    Class for group mapping provider named by 'shell4services'. The name can then be referenced 
-    by hadoop.security.group.mapping.providers property.
-  </description>
-</property>
-
-<property>
-  <name>hadoop.security.group.mapping.provider.ad4usersX</name>
-  <value>org.apache.hadoop.security.LdapGroupsMapping</value>
-  <description>
-    Class for group mapping provider named by 'ad4usersX'. The name can then be referenced 
-    by hadoop.security.group.mapping.providers property.
-  </description>
-</property>
-
-<property>
-  <name>hadoop.security.group.mapping.provider.ad4usersY</name>
-  <value>org.apache.hadoop.security.LdapGroupsMapping</value>
-  <description>
-    Class for group mapping provider named by 'ad4usersY'. The name can then be referenced 
-    by hadoop.security.group.mapping.providers property.
-  </description>
-</property>
-
-<property>
-<name>hadoop.security.group.mapping.provider.ad4usersX.ldap.url</name>
-<value>ldap://ad-host-for-users-X:389</value>
-  <description>
-    ldap url for the provider named by 'ad4usersX'. Note this property comes from 
-    'hadoop.security.group.mapping.ldap.url'.
-  </description>
-</property>
-
-<property>
-<name>hadoop.security.group.mapping.provider.ad4usersY.ldap.url</name>
-<value>ldap://ad-host-for-users-Y:389</value>
-  <description>
-    ldap url for the provider named by 'ad4usersY'. Note this property comes from 
-    'hadoop.security.group.mapping.ldap.url'.
-  </description>
-</property>
-
-You also need to configure other properties like
-  hadoop.security.group.mapping.ldap.bind.password.file and etc.
-for ldap providers in the same way as above does.
-
--->
- 
 <property>
   <name>hadoop.security.groups.cache.secs</name>
   <value>300</value>
@@ -397,6 +305,28 @@ for ldap providers in the same way as above does.
     maximum time limit when searching and awaiting a result.
     Set to 0 if infinite wait period is desired.
     Default is 10 seconds. Units in milliseconds.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.providers</name>
+  <value></value>
+  <description>
+    Comma separated of names of other providers to provide user to group
+    mapping. Used by CompositeGroupsMapping.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.providers.combined</name>
+  <value>true</value>
+  <description>
+    true or false to indicate whether groups from the providers are combined or
+    not. The default value is true. If true, then all the providers will be
+    tried to get groups and all the groups are combined to return as the final
+    results. Otherwise, providers are tried one by one in the configured list
+    order, and if any groups are retrieved from any provider, then the groups
+    will be returned without trying the left ones.
   </description>
 </property>
 

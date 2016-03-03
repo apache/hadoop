@@ -1173,6 +1173,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12622. Improve the loggings in RetryPolicies and RetryInvocationHandler.
     (Junping Du via jianhe)
 
+    HADOOP-12793. Write a new group mapping service guide
+    (Wei-Chiu Chuang via iwasakims)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp

@@ -184,7 +184,7 @@ Custom rules can be tested using the `hadoop kerbname` command.  This command al
 
 ### Mapping from user to group
 
-The system user to system group mapping mechanism can be configured via `hadoop.security.group.mapping`. See [HDFS Permissions Guide](../hadoop-hdfs/HdfsPermissionsGuide.html#Group_Mapping) for details.
+The system user to system group mapping mechanism can be configured via `hadoop.security.group.mapping`. See [Hadoop Groups Mapping](GroupsMapping.html) for details.
 
 Practically you need to manage SSO environment using Kerberos with LDAP for Hadoop in secure mode.
 
