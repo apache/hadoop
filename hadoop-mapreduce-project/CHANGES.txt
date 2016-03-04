@@ -20,6 +20,8 @@ Release 2.7.3 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-4785. TestMRApp occasionally fails (haibochen via rkanter)
+
     MAPREDUCE-6540. TestMRTimelineEventHandling fails (sjlee)
 
     MAPREDUCE-5485. Allow repeating job commit by extending OutputCommitter API. 
