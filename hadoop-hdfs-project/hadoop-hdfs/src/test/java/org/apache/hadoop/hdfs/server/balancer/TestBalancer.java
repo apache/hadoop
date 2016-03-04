@@ -106,6 +106,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.LazyPersistTestCase
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.minikdc.MiniKdc;
+import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
@@ -152,6 +153,7 @@ public class TestBalancer {
     SecurityUtil.setAuthenticationMethod(
         UserGroupInformation.AuthenticationMethod.KERBEROS, conf);
     UserGroupInformation.setConfiguration(conf);
+    KerberosName.resetDefaultRealm();
     assertTrue("Expected configuration to enable security",
         UserGroupInformation.isSecurityEnabled());
 
@@ -248,12 +250,12 @@ public class TestBalancer {
       short replicationFactor, int nnIndex)
   throws IOException, InterruptedException, TimeoutException {
     FileSystem fs = cluster.getFileSystem(nnIndex);
-    DFSTestUtil.createFile(fs, filePath, fileLen, 
+    DFSTestUtil.createFile(fs, filePath, fileLen,
         replicationFactor, r.nextLong());
     DFSTestUtil.waitReplication(fs, filePath, replicationFactor);
   }
 
-  /* fill up a cluster with <code>numNodes</code> datanodes 
+  /* fill up a cluster with <code>numNodes</code> datanodes
    * whose used space to be <code>size</code>
    */
   private ExtendedBlock[] generateBlocks(Configuration conf, long size,
@@ -292,7 +294,7 @@ public class TestBalancer {
     long[] usedSpace = new long[distribution.length];
     System.arraycopy(distribution, 0, usedSpace, 0, distribution.length);
 
-    List<List<Block>> blockReports = 
+    List<List<Block>> blockReports =
       new ArrayList<List<Block>>(usedSpace.length);
     Block[][] results = new Block[usedSpace.length][];
     for(int i=0; i<usedSpace.length; i++) {
@@ -349,7 +351,7 @@ public class TestBalancer {
         blocks, (short)(numDatanodes-1), distribution);
 
     // restart the cluster: do NOT format the cluster
-    conf.set(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, "0.0f"); 
+    conf.set(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, "0.0f");
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
                                               .format(false)
                                               .racks(racks)
@@ -368,7 +370,7 @@ public class TestBalancer {
   }
 
   /**
-   * Wait until heartbeat gives expected results, within CAPACITY_ALLOWED_VARIANCE, 
+   * Wait until heartbeat gives expected results, within CAPACITY_ALLOWED_VARIANCE,
    * summed over all nodes.  Times out after TIMEOUT msec.
    * @param expectedUsedSpace
    * @param expectedTotalSpace
@@ -381,22 +383,22 @@ public class TestBalancer {
     long timeout = TIMEOUT;
     long failtime = (timeout <= 0L) ? Long.MAX_VALUE
              : Time.monotonicNow() + timeout;
-    
+
     while (true) {
       long[] status = client.getStats();
-      double totalSpaceVariance = Math.abs((double)status[0] - expectedTotalSpace) 
+      double totalSpaceVariance = Math.abs((double)status[0] - expectedTotalSpace)
           / expectedTotalSpace;
-      double usedSpaceVariance = Math.abs((double)status[1] - expectedUsedSpace) 
+      double usedSpaceVariance = Math.abs((double)status[1] - expectedUsedSpace)
           / expectedUsedSpace;
-      if (totalSpaceVariance < CAPACITY_ALLOWED_VARIANCE 
+      if (totalSpaceVariance < CAPACITY_ALLOWED_VARIANCE
           && usedSpaceVariance < CAPACITY_ALLOWED_VARIANCE)
         break; //done
 
       if (Time.monotonicNow() > failtime) {
         throw new TimeoutException("Cluster failed to reached expected values of "
-            + "totalSpace (current: " + status[0] 
-            + ", expected: " + expectedTotalSpace 
-            + "), or usedSpace (current: " + status[1] 
+            + "totalSpace (current: " + status[0]
+            + ", expected: " + expectedTotalSpace
+            + "), or usedSpace (current: " + status[1]
             + ", expected: " + expectedUsedSpace
             + "), in more than " + timeout + " msec.");
       }
@@ -418,10 +420,10 @@ public class TestBalancer {
   throws IOException, TimeoutException {
     waitForBalancer(totalUsedSpace, totalCapacity, client, cluster, p, 0);
   }
-  
+
   /**
    * Make sure that balancer can't move pinned blocks.
-   * If specified favoredNodes when create file, blocks will be pinned use 
+   * If specified favoredNodes when create file, blocks will be pinned use
    * sticky bit.
    * @throws Exception
    */
@@ -435,7 +437,7 @@ public class TestBalancer {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
     conf.setBoolean(DFS_DATANODE_BLOCK_PINNING_ENABLED, true);
-    
+
     long[] capacities =  new long[] { CAPACITY, CAPACITY };
     String[] hosts = {"host0", "host1"};
     String[] racks = { RACK0, RACK1 };
@@ -574,7 +576,7 @@ public class TestBalancer {
   }
 
   /**
-   * Wait until balanced: each datanode gives utilization within 
+   * Wait until balanced: each datanode gives utilization within
    * BALANCE_ALLOWED_VARIANCE of average
    * @throws IOException
    * @throws TimeoutException
@@ -594,7 +596,7 @@ public class TestBalancer {
     final double avgUtilization = ((double)totalUsedSpace) / totalCapacity;
     boolean balanced;
     do {
-      DatanodeInfo[] datanodeReport = 
+      DatanodeInfo[] datanodeReport =
           client.getDatanodeReport(DatanodeReportType.ALL);
       assertEquals(datanodeReport.length, cluster.getDataNodes().size());
       balanced = true;
@@ -745,7 +747,7 @@ public class TestBalancer {
    * @param newCapacity - new node's capacity
    * @param newRack - new node's rack
    * @param nodes - information about new nodes to be started.
-   * @param useTool - if true run test via Cli with command-line argument 
+   * @param useTool - if true run test via Cli with command-line argument
    *   parsing, etc.   Otherwise invoke balancer API directly.
    * @param useFile - if true, the hosts to included or excluded will be stored in a
    *   file and then later read from the file.
@@ -755,9 +757,9 @@ public class TestBalancer {
       String[] racks, long newCapacity, String newRack, NewNodeInfo nodes,
       boolean useTool, boolean useFile) throws Exception {
     LOG.info("capacities = " +  long2String(capacities));
-    LOG.info("racks      = " +  Arrays.asList(racks)); 
-    LOG.info("newCapacity= " +  newCapacity); 
-    LOG.info("newRack    = " +  newRack); 
+    LOG.info("racks      = " +  Arrays.asList(racks));
+    LOG.info("newCapacity= " +  newCapacity);
+    LOG.info("newRack    = " +  newRack);
     LOG.info("useTool    = " +  useTool);
     assertEquals(capacities.length, racks.length);
     int numOfDatanodes = capacities.length;
@@ -867,7 +869,7 @@ public class TestBalancer {
     // start rebalancing
     Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
     final int r = runBalancer(namenodes, p, conf);
-    if (conf.getInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY, 
+    if (conf.getInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
         DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT) ==0) {
       assertEquals(ExitStatus.NO_MOVE_PROGRESS.getExitCode(), r);
       return;
@@ -895,7 +897,7 @@ public class TestBalancer {
 
     List<NameNodeConnector> connectors = Collections.emptyList();
     try {
-      connectors = NameNodeConnector.newNameNodeConnectors(namenodes, 
+      connectors = NameNodeConnector.newNameNodeConnectors(namenodes,
           Balancer.class.getSimpleName(), Balancer.BALANCER_ID_PATH, conf,
               BalancerParameters.DEFAULT.getMaxIdleIteration());
 
@@ -976,10 +978,10 @@ public class TestBalancer {
       }
     }
 
-    final Tool tool = new Cli();    
+    final Tool tool = new Cli();
     tool.setConf(conf);
     final int r = tool.run(args.toArray(new String[0])); // start rebalancing
-    
+
     assertEquals("Tools should exit 0 on success", 0, r);
     waitForHeartBeat(totalUsedSpace, totalCapacity, client, cluster);
     LOG.info("Rebalancing with default ctor.");
@@ -992,20 +994,20 @@ public class TestBalancer {
       includeHostsFile.delete();
     }
   }
-  
+
   /** one-node cluster test*/
   private void oneNodeTest(Configuration conf, boolean useTool) throws Exception {
     // add an empty node with half of the CAPACITY & the same rack
     doTest(conf, new long[]{CAPACITY}, new String[]{RACK0}, CAPACITY/2,
             RACK0, useTool);
   }
-  
+
   /** two-node cluster test */
   private void twoNodeTest(Configuration conf) throws Exception {
     doTest(conf, new long[]{CAPACITY, CAPACITY}, new String[]{RACK0, RACK1},
         CAPACITY, RACK2, false);
   }
-  
+
   /** test using a user-supplied conf */
   public void integrationTest(Configuration conf) throws Exception {
     initConf(conf);
@@ -1018,7 +1020,7 @@ public class TestBalancer {
     initConf(conf);
     testUnknownDatanode(conf);
   }
-  
+
   /* we first start a cluster and fill the cluster up to a certain size.
    * then redistribute blocks according the required distribution.
    * Then we start an empty datanode.
@@ -1101,14 +1103,14 @@ public class TestBalancer {
       assertEquals("Number out of range: threshold = 101.0", e.getMessage());
     }
   }
-  
+
   /** Test a cluster with even distribution,
    * then a new empty node is added to the cluster*/
   @Test(timeout=100000)
   public void testBalancer0() throws Exception {
     testBalancer0Internal(new HdfsConfiguration());
   }
-  
+
   void testBalancer0Internal(Configuration conf) throws Exception {
     initConf(conf);
     oneNodeTest(conf, false);
@@ -1120,7 +1122,7 @@ public class TestBalancer {
   public void testBalancer1() throws Exception {
     testBalancer1Internal(new HdfsConfiguration());
   }
-  
+
   void testBalancer1Internal(Configuration conf) throws Exception {
     initConf(conf);
     testUnevenDistribution(conf,
@@ -1128,7 +1130,7 @@ public class TestBalancer {
         new long[]{CAPACITY, CAPACITY},
         new String[] {RACK0, RACK1});
   }
-  
+
   @Test(expected=HadoopIllegalArgumentException.class)
   public void testBalancerWithZeroThreadsForMove() throws Exception {
     Configuration conf = new HdfsConfiguration();
@@ -1142,12 +1144,12 @@ public class TestBalancer {
     conf.setInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY, 8);
     testBalancer1Internal (conf);
   }
-  
+
   @Test(timeout=100000)
   public void testBalancer2() throws Exception {
     testBalancer2Internal(new HdfsConfiguration());
   }
-  
+
   void testBalancer2Internal(Configuration conf) throws Exception {
     initConf(conf);
     testBalancerDefaultConstructor(conf, new long[] { CAPACITY, CAPACITY },
@@ -1744,9 +1746,9 @@ public class TestBalancer {
   public void testMinBlockSizeAndSourceNodes() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
- 
+
     final short replication = 3;
-    final long[] lengths = {10, 10, 10, 10}; 
+    final long[] lengths = {10, 10, 10, 10};
     final long[] capacities = new long[replication];
     final long totalUsed = capacities.length * sum(lengths);
     Arrays.fill(capacities, 1000);
@@ -1854,10 +1856,10 @@ public class TestBalancer {
   @Test(timeout = 300000)
   public void testBalancerWithKeytabs() throws Exception {
     final Configuration conf = new HdfsConfiguration();
-    initSecureConf(conf);
-    final UserGroupInformation ugi = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        principal, keytabFile.getAbsolutePath());
     try {
+      initSecureConf(conf);
+      final UserGroupInformation ugi = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
+          principal, keytabFile.getAbsolutePath());
       ugi.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
