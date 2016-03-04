@@ -21,9 +21,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedSet;
-import java.util.Map.Entry;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -308,24 +308,6 @@ public final class TimelineStorageUtils {
   }
 
   /**
-   * get the time at which an app finished.
-   *
-   * @param te TimelineEntity object.
-   * @return true if application has finished else false
-   */
-  public static long getApplicationFinishedTime(TimelineEntity te) {
-    SortedSet<TimelineEvent> allEvents = te.getEvents();
-    if ((allEvents != null) && (allEvents.size() > 0)) {
-      TimelineEvent event = allEvents.last();
-      if (event.getId().equals(
-          ApplicationMetricsConstants.FINISHED_EVENT_TYPE)) {
-        return event.getTimestamp();
-      }
-    }
-    return 0L;
-  }
-
-  /**
    * Checks if the input TimelineEntity object is an ApplicationEntity.
    *
    * @param te TimelineEntity object.
@@ -336,21 +318,20 @@ public final class TimelineStorageUtils {
   }
 
   /**
-   * Checks for the APPLICATION_CREATED event.
-   *
    * @param te TimelineEntity object.
-   * @return true is application event exists, false otherwise
+   * @param eventId event with this id needs to be fetched
+   * @return TimelineEvent if TimelineEntity contains the desired event.
    */
-  public static boolean isApplicationCreated(TimelineEntity te) {
+  public static TimelineEvent getApplicationEvent(TimelineEntity te,
+      String eventId) {
     if (isApplicationEntity(te)) {
       for (TimelineEvent event : te.getEvents()) {
-        if (event.getId()
-            .equals(ApplicationMetricsConstants.CREATED_EVENT_TYPE)) {
-          return true;
+        if (event.getId().equals(eventId)) {
+          return event;
         }
       }
     }
-    return false;
+    return null;
   }
 
   /**

@@ -52,8 +52,8 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilte
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelinePrefixFilter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
-import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
+import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -114,7 +114,7 @@ public class TestHBaseStorageFlowRun {
     String flowVersion = "CF7022C10F1354";
     long runid = 1002345678919L;
     String appName = "application_100000000000_1111";
-    long minStartTs = 10000000000000L;
+    long minStartTs = 1425026900000L;
     long greaterStartTs = 30000000000000L;
     long endTs = 1439750690000L;
     TimelineEntity entityMinStartTime = TestFlowDataGenerator
