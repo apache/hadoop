@@ -120,17 +120,22 @@ class BPOfferService {
     mWriteLock.unlock();
   }
 
-  BPOfferService(List<InetSocketAddress> nnAddrs, DataNode dn) {
+  BPOfferService(List<InetSocketAddress> nnAddrs,
+      List<InetSocketAddress> lifelineNnAddrs, DataNode dn) {
     Preconditions.checkArgument(!nnAddrs.isEmpty(),
         "Must pass at least one NN.");
+    Preconditions.checkArgument(nnAddrs.size() == lifelineNnAddrs.size(),
+        "Must pass same number of NN addresses and lifeline addresses.");
     this.dn = dn;
 
-    for (InetSocketAddress addr : nnAddrs) {
-      this.bpServices.add(new BPServiceActor(addr, this));
+    for (int i = 0; i < nnAddrs.size(); ++i) {
+      this.bpServices.add(new BPServiceActor(nnAddrs.get(i),
+          lifelineNnAddrs.get(i), this));
     }
   }
 
-  void refreshNNList(ArrayList<InetSocketAddress> addrs) throws IOException {
+  void refreshNNList(ArrayList<InetSocketAddress> addrs,
+      ArrayList<InetSocketAddress> lifelineAddrs) throws IOException {
     Set<InetSocketAddress> oldAddrs = Sets.newHashSet();
     for (BPServiceActor actor : bpServices) {
       oldAddrs.add(actor.getNNSocketAddress());

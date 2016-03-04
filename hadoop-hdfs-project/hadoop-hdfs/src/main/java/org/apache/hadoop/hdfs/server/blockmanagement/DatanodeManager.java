@@ -1496,6 +1496,47 @@ public class DatanodeManager {
   }
 
   /**
+   * Handles a lifeline message sent by a DataNode.
+   *
+   * @param nodeReg registration info for DataNode sending the lifeline
+   * @param reports storage reports from DataNode
+   * @param blockPoolId block pool ID
+   * @param cacheCapacity cache capacity at DataNode
+   * @param cacheUsed cache used at DataNode
+   * @param xceiverCount estimated count of transfer threads running at DataNode
+   * @param maxTransfers count of transfers running at DataNode
+   * @param failedVolumes count of failed volumes at DataNode
+   * @param volumeFailureSummary info on failed volumes at DataNode
+   * @throws IOException if there is an error
+   */
+  public void handleLifeline(DatanodeRegistration nodeReg,
+      StorageReport[] reports, String blockPoolId, long cacheCapacity,
+      long cacheUsed, int xceiverCount, int maxTransfers, int failedVolumes,
+      VolumeFailureSummary volumeFailureSummary) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Received handleLifeline from nodeReg = " + nodeReg);
+    }
+    DatanodeDescriptor nodeinfo = getDatanode(nodeReg);
+    if (nodeinfo == null) {
+      // This is null if the DataNode has not yet registered.  We expect this
+      // will never happen, because the DataNode has logic to prevent sending
+      // lifeline messages until after initial registration is successful.
+      // Lifeline message handling can't send commands back to the DataNode to
+      // tell it to register, so simply exit.
+      return;
+    }
+    if (nodeinfo.isDisallowed()) {
+      // This is highly unlikely, because heartbeat handling is much more
+      // frequent and likely would have already sent the disallowed error.
+      // Lifeline messages are not intended to send any kind of control response
+      // back to the DataNode, so simply exit.
+      return;
+    }
+    heartbeatManager.updateLifeline(nodeinfo, reports, cacheCapacity, cacheUsed,
+        xceiverCount, failedVolumes, volumeFailureSummary);
+  }
+
+  /**
    * Convert a CachedBlockList into a DatanodeCommand with a list of blocks.
    *
    * @param list       The {@link CachedBlocksList}.  This function 

@@ -26,6 +26,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
@@ -396,7 +397,8 @@ public class TestBPOfferService {
           Mockito.eq(new InetSocketAddress(port)));
     }
 
-    return new BPOfferService(Lists.newArrayList(nnMap.keySet()), mockDn);
+    return new BPOfferService(Lists.newArrayList(nnMap.keySet()),
+        Collections.<InetSocketAddress>nCopies(nnMap.size(), null), mockDn);
   }
 
   private void waitForInitialization(final BPOfferService bpos)

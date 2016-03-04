@@ -34,6 +34,7 @@ import org.apache.hadoop.tracing.TraceAdminProtocol;
 public interface NamenodeProtocols
   extends ClientProtocol,
           DatanodeProtocol,
+          DatanodeLifelineProtocol,
           NamenodeProtocol,
           RefreshAuthorizationPolicyProtocol,
           ReconfigurationProtocol,

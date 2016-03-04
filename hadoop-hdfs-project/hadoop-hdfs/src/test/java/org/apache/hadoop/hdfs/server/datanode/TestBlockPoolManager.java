@@ -51,7 +51,8 @@ public class TestBlockPoolManager {
     bpm = new BlockPoolManager(mockDN){
 
       @Override
-      protected BPOfferService createBPOS(List<InetSocketAddress> nnAddrs) {
+      protected BPOfferService createBPOS(List<InetSocketAddress> nnAddrs,
+          List<InetSocketAddress> lifelineNnAddrs) {
         final int idx = mockIdx++;
         doLog("create #" + idx);
         final BPOfferService bpos = Mockito.mock(BPOfferService.class);
@@ -66,6 +67,7 @@ public class TestBlockPoolManager {
                   return null;
                 }
               }).when(bpos).refreshNNList(
+                  Mockito.<ArrayList<InetSocketAddress>>any(),
                   Mockito.<ArrayList<InetSocketAddress>>any());
         } catch (IOException e) {
           throw new RuntimeException(e);

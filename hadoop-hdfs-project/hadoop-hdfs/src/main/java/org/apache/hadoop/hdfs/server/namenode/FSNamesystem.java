@@ -3626,6 +3626,37 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
+   * Handles a lifeline message sent by a DataNode.  This method updates contact
+   * information and statistics for the DataNode, so that it doesn't time out.
+   * Unlike a heartbeat, this method does not dispatch any commands back to the
+   * DataNode for local execution.  This method also cannot request a lease for
+   * sending a full block report.  Lifeline messages are used only as a fallback
+   * in case something prevents successful delivery of heartbeat messages.
+   * Therefore, the implementation of this method must remain lightweight
+   * compared to heartbeat handling.  It should avoid lock contention and
+   * expensive computation.
+   *
+   * @param nodeReg registration info for DataNode sending the lifeline
+   * @param reports storage reports from DataNode
+   * @param cacheCapacity cache capacity at DataNode
+   * @param cacheUsed cache used at DataNode
+   * @param xceiverCount estimated count of transfer threads running at DataNode
+   * @param xmitsInProgress count of transfers running at DataNode
+   * @param failedVolumes count of failed volumes at DataNode
+   * @param volumeFailureSummary info on failed volumes at DataNode
+   * @throws IOException if there is an error
+   */
+  void handleLifeline(DatanodeRegistration nodeReg, StorageReport[] reports,
+      long cacheCapacity, long cacheUsed, int xceiverCount, int xmitsInProgress,
+      int failedVolumes, VolumeFailureSummary volumeFailureSummary)
+      throws IOException {
+    int maxTransfer = blockManager.getMaxReplicationStreams() - xmitsInProgress;
+    blockManager.getDatanodeManager().handleLifeline(nodeReg, reports,
+        getBlockPoolId(), cacheCapacity, cacheUsed, xceiverCount, maxTransfer,
+        failedVolumes, volumeFailureSummary);
+  }
+
+  /**
    * Returns whether or not there were available resources at the last check of
    * resources.
    *
