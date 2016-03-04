@@ -112,9 +112,9 @@ public class TestHBaseStorageFlowActivity {
     String flowVersion = "CF7022C10F1354";
     long runid = 1002345678919L;
     String appName = "application_100000000000_1111";
-    long minStartTs = 10000000000000L;
-    long greaterStartTs = 30000000000000L;
-    long endTs = 1439750690000L;
+    long minStartTs = 1424995200300L;
+    long greaterStartTs = 1424995200300L + 864000L;
+    long endTs = 1424995200300L + 86000000L;;
     TimelineEntity entityMinStartTime = TestFlowDataGenerator
         .getEntityMinStartTime(minStartTs);
 
@@ -155,7 +155,8 @@ public class TestHBaseStorageFlowActivity {
     // check in flow activity table
     Table table1 = conn.getTable(TableName
         .valueOf(FlowActivityTable.DEFAULT_TABLE_NAME));
-    byte[] startRow = FlowActivityRowKey.getRowKey(cluster, user, flow);
+    byte[] startRow =
+        FlowActivityRowKey.getRowKey(cluster, minStartTs, user, flow);
     Get g = new Get(startRow);
     Result r1 = table1.get(g);
     assertNotNull(r1);
@@ -169,8 +170,7 @@ public class TestHBaseStorageFlowActivity {
     assertEquals(cluster, flowActivityRowKey.getClusterId());
     assertEquals(user, flowActivityRowKey.getUserId());
     assertEquals(flow, flowActivityRowKey.getFlowName());
-    long dayTs = TimelineStorageUtils.getTopOfTheDayTimestamp(System
-        .currentTimeMillis());
+    long dayTs = TimelineStorageUtils.getTopOfTheDayTimestamp(minStartTs);
     assertEquals(dayTs, flowActivityRowKey.getDayTimestamp());
     assertEquals(1, values.size());
     checkFlowActivityRunId(runid, flowVersion, values);
@@ -216,7 +216,9 @@ public class TestHBaseStorageFlowActivity {
     long runid = 1001111178919L;
 
     TimelineEntities te = new TimelineEntities();
-    TimelineEntity entityApp1 = TestFlowDataGenerator.getFlowApp1();
+    long appCreatedTime = 1425016501000L;
+    TimelineEntity entityApp1 =
+        TestFlowDataGenerator.getFlowApp1(appCreatedTime);
     te.addEntity(entityApp1);
 
     HBaseTimelineWriterImpl hbi = null;
@@ -231,7 +233,8 @@ public class TestHBaseStorageFlowActivity {
       hbi.close();
     }
     // check flow activity
-    checkFlowActivityTable(cluster, user, flow, flowVersion, runid, c1);
+    checkFlowActivityTable(cluster, user, flow, flowVersion, runid, c1,
+        appCreatedTime);
 
     // use the reader to verify the data
     HBaseTimelineReaderImpl hbr = null;
@@ -262,13 +265,16 @@ public class TestHBaseStorageFlowActivity {
   }
 
   private void checkFlowActivityTable(String cluster, String user, String flow,
-      String flowVersion, long runid, Configuration c1) throws IOException {
+      String flowVersion, long runid, Configuration c1, long appCreatedTime)
+          throws IOException {
     Scan s = new Scan();
     s.addFamily(FlowActivityColumnFamily.INFO.getBytes());
-    byte[] startRow = FlowActivityRowKey.getRowKey(cluster, user, flow);
+    byte[] startRow =
+        FlowActivityRowKey.getRowKey(cluster, appCreatedTime, user, flow);
     s.setStartRow(startRow);
     String clusterStop = cluster + "1";
-    byte[] stopRow = FlowActivityRowKey.getRowKey(clusterStop, user, flow);
+    byte[] stopRow =
+        FlowActivityRowKey.getRowKey(clusterStop, appCreatedTime, user, flow);
     s.setStopRow(stopRow);
     Connection conn = ConnectionFactory.createConnection(c1);
     Table table1 = conn.getTable(TableName
@@ -288,8 +294,7 @@ public class TestHBaseStorageFlowActivity {
       assertEquals(cluster, flowActivityRowKey.getClusterId());
       assertEquals(user, flowActivityRowKey.getUserId());
       assertEquals(flow, flowActivityRowKey.getFlowName());
-      long dayTs = TimelineStorageUtils.getTopOfTheDayTimestamp(System
-          .currentTimeMillis());
+      long dayTs = TimelineStorageUtils.getTopOfTheDayTimestamp(appCreatedTime);
       assertEquals(dayTs, flowActivityRowKey.getDayTimestamp());
       assertEquals(1, values.size());
       checkFlowActivityRunId(runid, flowVersion, values);
@@ -319,7 +324,9 @@ public class TestHBaseStorageFlowActivity {
     long runid3 = 3333333333333L;
 
     TimelineEntities te = new TimelineEntities();
-    TimelineEntity entityApp1 = TestFlowDataGenerator.getFlowApp1();
+    long appCreatedTime = 1425016501000L;
+    TimelineEntity entityApp1 =
+        TestFlowDataGenerator.getFlowApp1(appCreatedTime);
     te.addEntity(entityApp1);
 
     HBaseTimelineWriterImpl hbi = null;
@@ -348,7 +355,7 @@ public class TestHBaseStorageFlowActivity {
     }
     // check flow activity
     checkFlowActivityTableSeveralRuns(cluster, user, flow, c1, flowVersion1,
-        runid1, flowVersion2, runid2, flowVersion3, runid3);
+        runid1, flowVersion2, runid2, flowVersion3, runid3, appCreatedTime);
 
     // use the timeline reader to verify data
     HBaseTimelineReaderImpl hbr = null;
@@ -369,8 +376,8 @@ public class TestHBaseStorageFlowActivity {
         assertEquals(cluster, flowActivity.getCluster());
         assertEquals(user, flowActivity.getUser());
         assertEquals(flow, flowActivity.getFlowName());
-        long dayTs = TimelineStorageUtils.getTopOfTheDayTimestamp(System
-            .currentTimeMillis());
+        long dayTs =
+            TimelineStorageUtils.getTopOfTheDayTimestamp(appCreatedTime);
         assertEquals(dayTs, flowActivity.getDate().getTime());
         Set<FlowRunEntity> flowRuns = flowActivity.getFlowRuns();
         assertEquals(3, flowRuns.size());
@@ -395,14 +402,17 @@ public class TestHBaseStorageFlowActivity {
 
   private void checkFlowActivityTableSeveralRuns(String cluster, String user,
       String flow, Configuration c1, String flowVersion1, long runid1,
-      String flowVersion2, long runid2, String flowVersion3, long runid3)
+      String flowVersion2, long runid2, String flowVersion3, long runid3,
+      long appCreatedTime)
       throws IOException {
     Scan s = new Scan();
     s.addFamily(FlowActivityColumnFamily.INFO.getBytes());
-    byte[] startRow = FlowActivityRowKey.getRowKey(cluster, user, flow);
+    byte[] startRow =
+        FlowActivityRowKey.getRowKey(cluster, appCreatedTime, user, flow);
     s.setStartRow(startRow);
     String clusterStop = cluster + "1";
-    byte[] stopRow = FlowActivityRowKey.getRowKey(clusterStop, user, flow);
+    byte[] stopRow =
+        FlowActivityRowKey.getRowKey(clusterStop, appCreatedTime, user, flow);
     s.setStopRow(stopRow);
     Connection conn = ConnectionFactory.createConnection(c1);
     Table table1 = conn.getTable(TableName
@@ -419,8 +429,7 @@ public class TestHBaseStorageFlowActivity {
       assertEquals(cluster, flowActivityRowKey.getClusterId());
       assertEquals(user, flowActivityRowKey.getUserId());
       assertEquals(flow, flowActivityRowKey.getFlowName());
-      long dayTs = TimelineStorageUtils.getTopOfTheDayTimestamp(System
-          .currentTimeMillis());
+      long dayTs = TimelineStorageUtils.getTopOfTheDayTimestamp(appCreatedTime);
       assertEquals(dayTs, flowActivityRowKey.getDayTimestamp());
 
       Map<byte[], byte[]> values = result

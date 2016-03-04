@@ -62,8 +62,8 @@ import org.junit.Test;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.api.client.ClientResponse.Status;
+import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
@@ -128,15 +128,14 @@ public class TestTimelineReaderWebServicesHBaseStorage {
 
     TimelineEvent event = new TimelineEvent();
     event.setId(ApplicationMetricsConstants.CREATED_EVENT_TYPE);
-    Long expTs = 1436512802000L;
-    event.setTimestamp(expTs);
+    event.setTimestamp(cTime);
     String expKey = "foo_event";
     Object expVal = "test";
     event.addInfo(expKey, expVal);
     entity.addEvent(event);
     TimelineEvent event11 = new TimelineEvent();
     event11.setId(ApplicationMetricsConstants.FINISHED_EVENT_TYPE);
-    expTs = 1436512802010L;
+    Long expTs = 1425019501000L;
     event11.setTimestamp(expTs);
     entity.addEvent(event11);
 
@@ -165,7 +164,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     entity1.addMetrics(metrics);
     TimelineEvent event1 = new TimelineEvent();
     event1.setId(ApplicationMetricsConstants.CREATED_EVENT_TYPE);
-    event1.setTimestamp(expTs);
+    event1.setTimestamp(cTime);
     event1.addInfo(expKey, expVal);
     entity1.addEvent(event1);
     te1.addEntity(entity1);
@@ -182,7 +181,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     entity3.setCreatedTime(cTime);
     TimelineEvent event2 = new TimelineEvent();
     event2.setId(ApplicationMetricsConstants.CREATED_EVENT_TYPE);
-    event2.setTimestamp(1436512802037L);
+    event2.setTimestamp(cTime);
     event2.addInfo("foo_event", "test");
     entity3.addEvent(event2);
     te3.addEntity(entity3);
@@ -196,7 +195,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     entity4.setCreatedTime(cTime);
     TimelineEvent event4 = new TimelineEvent();
     event4.setId(ApplicationMetricsConstants.CREATED_EVENT_TYPE);
-    event4.setTimestamp(1436512802037L);
+    event4.setTimestamp(cTime);
     event4.addInfo("foo_event", "test");
     entity4.addEvent(event4);
     te4.addEntity(entity4);
@@ -785,10 +784,14 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       assertNotNull(entities);
       assertEquals(1, entities.size());
 
+      long firstFlowActivity =
+          TimelineStorageUtils.getTopOfTheDayTimestamp(1425016501000L);
+
       DateFormat fmt = TimelineReaderWebServices.DATE_FORMAT.get();
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
-          "timeline/clusters/cluster1/flows?daterange=" + fmt.format(dayTs) +
-          "-" + fmt.format(dayTs + (2*86400000L)));
+          "timeline/clusters/cluster1/flows?daterange="
+          + fmt.format(firstFlowActivity) + "-"
+          + fmt.format(dayTs));
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<FlowActivityEntity>>(){});
       assertNotNull(entities);
@@ -810,7 +813,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
 
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
           "timeline/clusters/cluster1/flows?daterange=-" +
-          fmt.format(dayTs + (2*86400000L)));
+          fmt.format(dayTs));
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<FlowActivityEntity>>(){});
       assertNotNull(entities);
@@ -818,7 +821,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
 
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
           "timeline/clusters/cluster1/flows?daterange=" +
-          fmt.format(dayTs - (2*86400000L)) + "-");
+           fmt.format(firstFlowActivity) + "-");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<FlowActivityEntity>>(){});
       assertNotNull(entities);
