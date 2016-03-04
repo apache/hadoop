@@ -15,16 +15,7 @@
 CredentialProvider API Guide
 =====================
 
----
-
- - [Overview](#Overview)
- - [Usage](#Usage)
-     - [Usage Overview](#Usage_Overview)
-     - [Supported Features](#Supported_Features)
- - [Credential Management](#Credential_Management)
-    - [The hadoop credential Command](#The_hadoop_credential_Command)
-
----
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Overview
 --------

@@ -12,29 +12,7 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-* [Overview](#Overview)
-* [jvm context](#jvm_context)
-    * [JvmMetrics](#JvmMetrics)
-* [rpc context](#rpc_context)
-    * [rpc](#rpc)
-    * [RetryCache/NameNodeRetryCache](#RetryCacheNameNodeRetryCache)
-* [rpcdetailed context](#rpcdetailed_context)
-    * [rpcdetailed](#rpcdetailed)
-* [dfs context](#dfs_context)
-    * [namenode](#namenode)
-    * [FSNamesystem](#FSNamesystem)
-    * [JournalNode](#JournalNode)
-    * [datanode](#datanode)
-* [yarn context](#yarn_context)
-    * [ClusterMetrics](#ClusterMetrics)
-    * [QueueMetrics](#QueueMetrics)
-    * [NodeManagerMetrics](#NodeManagerMetrics)
-* [ugi context](#ugi_context)
-    * [UgiMetrics](#UgiMetrics)
-* [metricssystem context](#metricssystem_context)
-    * [MetricsSystem](#MetricsSystem)
-* [default context](#default_context)
-    * [StartupProgress](#StartupProgress)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Overview
 ========

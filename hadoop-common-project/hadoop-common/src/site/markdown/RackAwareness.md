@@ -12,9 +12,7 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-* [Rack Awareness](#Rack_Awareness)
-    * [python Example](#python_Example)
-    * [bash Example](#bash_Example)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Rack Awareness
 ==============

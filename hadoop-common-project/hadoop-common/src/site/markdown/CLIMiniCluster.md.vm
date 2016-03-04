@@ -15,10 +15,7 @@
 Hadoop: CLI MiniCluster.
 ========================
 
-* [Hadoop: CLI MiniCluster.](#Hadoop:_CLI_MiniCluster.)
-    * [Purpose](#Purpose)
-    * [Hadoop Tarball](#Hadoop_Tarball)
-    * [Running the MiniCluster](#Running_the_MiniCluster)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Purpose
 -------

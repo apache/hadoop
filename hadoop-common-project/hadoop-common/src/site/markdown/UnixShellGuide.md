@@ -14,6 +14,8 @@
 
 # Unix Shell Guide
 
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
+
 Much of Hadoop's functionality is controlled via [the shell](CommandsManual.html).  There are several ways to modify the default behavior of how these commands execute.
 
 ## Important End-User Environment Variables

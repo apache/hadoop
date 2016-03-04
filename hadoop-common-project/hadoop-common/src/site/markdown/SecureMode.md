@@ -12,38 +12,10 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-* [Hadoop in Secure Mode](#Hadoop_in_Secure_Mode)
-    * [Introduction](#Introduction)
-    * [Authentication](#Authentication)
-        * [End User Accounts](#End_User_Accounts)
-        * [User Accounts for Hadoop Daemons](#User_Accounts_for_Hadoop_Daemons)
-        * [Kerberos principals for Hadoop Daemons](#Kerberos_principals_for_Hadoop_Daemons)
-        * [Mapping from Kerberos principals to OS user accounts](#Mapping_from_Kerberos_principals_to_OS_user_accounts)
-        * [Mapping from user to group](#Mapping_from_user_to_group)
-        * [Proxy user](#Proxy_user)
-        * [Secure DataNode](#Secure_DataNode)
-    * [Data confidentiality](#Data_confidentiality)
-        * [Data Encryption on RPC](#Data_Encryption_on_RPC)
-        * [Data Encryption on Block data transfer.](#Data_Encryption_on_Block_data_transfer.)
-        * [Data Encryption on HTTP](#Data_Encryption_on_HTTP)
-    * [Configuration](#Configuration)
-        * [Permissions for both HDFS and local fileSystem paths](#Permissions_for_both_HDFS_and_local_fileSystem_paths)
-        * [Common Configurations](#Common_Configurations)
-        * [NameNode](#NameNode)
-        * [Secondary NameNode](#Secondary_NameNode)
-        * [JournalNode](#JournalNode)
-        * [DataNode](#DataNode)
-        * [WebHDFS](#WebHDFS)
-        * [ResourceManager](#ResourceManager)
-        * [NodeManager](#NodeManager)
-        * [Configuration for WebAppProxy](#Configuration_for_WebAppProxy)
-        * [LinuxContainerExecutor](#LinuxContainerExecutor)
-        * [MapReduce JobHistory Server](#MapReduce_JobHistory_Server)
-    * [Multihoming](#Multihoming)
-    * [References](#References)
-
 Hadoop in Secure Mode
 =====================
+
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Introduction
 ------------
