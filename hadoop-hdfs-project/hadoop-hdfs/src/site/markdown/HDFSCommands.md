@@ -285,6 +285,8 @@ Runs a cluster balancing utility. An administrator can simply press Ctrl-C to st
 
 Note that the `blockpool` policy is more strict than the `datanode` policy.
 
+Besides the above command options, a pinning feature is introduced starting from 2.7.0 to prevent certain replicas from getting moved by balancer/mover. This pinning feature is disabled by default, and can be enabled by configuration property "dfs.datanode.block-pinning.enabled". When enabled, this feature only affects blocks that are written to favored nodes specified in the create() call. This feature is useful when we want to maintain the data locality, for applications such as HBase regionserver.
+
 ### `cacheadmin`
 
 Usage: `hdfs cacheadmin -addDirective -path <path> -pool <pool-name> [-force] [-replication <replication>] [-ttl <time-to-live>]`
@@ -444,6 +446,8 @@ Usage: `hdfs mover [-p <files/dirs> | -f <local file name>]`
 Runs the data migration utility. See [Mover](./ArchivalStorage.html#Mover_-_A_New_Data_Migration_Tool) for more details.
 
 Note that, when both -p and -f options are omitted, the default path is the root directory.
+
+In addition, a pinning feature is introduced starting from 2.7.0 to prevent certain replicas from getting moved by balancer/mover. This pinning feature is disabled by default, and can be enabled by configuration property "dfs.datanode.block-pinning.enabled". When enabled, this feature only affects blocks that are written to favored nodes specified in the create() call. This feature is useful when we want to maintain the data locality, for applications such as HBase regionserver.
 
 ### `namenode`
 
