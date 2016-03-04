@@ -314,7 +314,7 @@ public class UserGroupInformation {
   
   @InterfaceAudience.Private
   @VisibleForTesting
-  static void reset() {
+  public static void reset() {
     authenticationMethod = null;
     conf = null;
     groups = null;
