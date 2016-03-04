@@ -27,19 +27,38 @@ WORKDIR /root
 # Install common dependencies from packages
 ######
 RUN apt-get update && apt-get install --no-install-recommends -y \
-    git curl ant make maven \
-    cmake gcc g++ \
-    protobuf-compiler libprotoc-dev \
-    protobuf-c-compiler libprotobuf-dev \
-    build-essential libtool \
-    zlib1g-dev pkg-config libssl-dev \
-    snappy libsnappy-dev \
-    bzip2 libbz2-dev \
-    libjansson-dev \
-    fuse libfuse-dev \
+    ant \
+    build-essential \
+    bzip2 \
+    cmake \
+    curl \
+    doxygen \
+    fuse \
+    g++ \
+    gcc \
+    git \
+    gnupg-agent \
+    make \
+    maven \
+    libbz2-dev \
     libcurl4-openssl-dev \
-    python python2.7 pylint \
-    openjdk-7-jdk doxygen
+    libfuse-dev \
+    libjansson-dev \
+    libprotobuf-dev \
+    libprotoc-dev \
+    libsnappy-dev \
+    libssl-dev \
+    libtool \
+    openjdk-7-jdk \
+    pinentry-curses \
+    pkg-config \
+    protobuf-compiler \
+    protobuf-c-compiler \
+    python \
+    python2.7 \
+    pylint \
+    snappy \
+    zlib1g-dev
 
 # Fixing the Apache commons / Maven dependency problem under Ubuntu:
 # See http://wiki.apache.org/commons/VfsProblems

@@ -139,7 +139,7 @@
       <outputDirectory>/share/doc/hadoop/${hadoop.component}</outputDirectory>
     </fileSet>
     <fileSet>
-      <directory>${basedir}/src/main/native/libhdfs</directory>
+      <directory>${basedir}/src/main/native/libhdfs/include/hdfs</directory>
       <includes>
         <include>hdfs.h</include>
       </includes>
