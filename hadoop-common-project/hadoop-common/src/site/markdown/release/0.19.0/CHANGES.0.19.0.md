@@ -51,6 +51,12 @@
 | [HADOOP-1700](https://issues.apache.org/jira/browse/HADOOP-1700) | Append to files in HDFS |  Major | . | stack | dhruba borthakur |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

@@ -18,7 +18,7 @@
 -->
 # Apache Hadoop  0.20.203.0 Release Notes
 
-These release notes cover new developer and user-facing incompatibilities, features, and major improvements.
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
 
 ---
@@ -73,10 +73,10 @@ Configuration changes:
 
 This patch does four things:
 
-    * it changes the directory structure of the done directory that holds history logs for jobs that are completed,
-    * it builds toy databases for completed jobs, so we no longer have to scan 2N files on DFS to find out facts about the N jobs that have completed since the job tracker started [which can be hundreds of thousands of files in practical cases],
-    * it changes the job history browser to display more information and allow more filtering criteria, and
-    * it creates a new programmatic interface for finding files matching user-chosen criteria. This allows users to no longer be concerned with our methods of storing them, in turn allowing us to change those at will.
+\* it changes the directory structure of the done directory that holds history logs for jobs that are completed,
+\* it builds toy databases for completed jobs, so we no longer have to scan 2N files on DFS to find out facts about the N jobs that have completed since the job tracker started [which can be hundreds of thousands of files in practical cases],
+\* it changes the job history browser to display more information and allow more filtering criteria, and
+\* it creates a new programmatic interface for finding files matching user-chosen criteria. This allows users to no longer be concerned with our methods of storing them, in turn allowing us to change those at will.
 
 The new API described above, which can be used to programmatically obtain history file PATHs given search criteria, is described below:
 

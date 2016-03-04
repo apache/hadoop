@@ -18,7 +18,7 @@
 -->
 # Apache Hadoop  0.22.1 Release Notes
 
-These release notes cover new developer and user-facing incompatibilities, features, and major improvements.
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
 
 ---
@@ -32,7 +32,7 @@ Adding support for Kerberos HTTP SPNEGO authentication to the Hadoop web-console
 
 * [HADOOP-6995](https://issues.apache.org/jira/browse/HADOOP-6995) | *Minor* | **Allow wildcards to be used in ProxyUsers configurations**
 
-When configuring proxy users and hosts, the special wildcard value "*" may be specified to match any host or any user.
+When configuring proxy users and hosts, the special wildcard value "\*" may be specified to match any host or any user.
 
 
 ---

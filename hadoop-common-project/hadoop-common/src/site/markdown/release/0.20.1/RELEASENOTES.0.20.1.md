@@ -18,7 +18,7 @@
 -->
 # Apache Hadoop  0.20.1 Release Notes
 
-These release notes cover new developer and user-facing incompatibilities, features, and major improvements.
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
 
 ---
@@ -46,7 +46,7 @@ Post HADOOP-4372, empty job history files caused NPE. This issues fixes that by 
 
 * [HADOOP-5921](https://issues.apache.org/jira/browse/HADOOP-5921) | *Major* | **JobTracker does not come up because of NotReplicatedYetException**
 
-Jobtracker crashes if it fails to create jobtracker.info file (i.e if sufficient datanodes are not up). With this patch it keeps on retrying on IOExceptions assuming IOExceptions in jobtracker.info creation implies that the hdfs is not in *ready *state.
+Jobtracker crashes if it fails to create jobtracker.info file (i.e if sufficient datanodes are not up). With this patch it keeps on retrying on IOExceptions assuming IOExceptions in jobtracker.info creation implies that the hdfs is not in \*ready \*state.
 
 
 ---
@@ -142,7 +142,7 @@ Job initialization process was changed to not change (run) states during initial
 - this can lead to deadlock as state changes require circular locking (i.e JobInProgress requires JobTracker lock)
 - events were not raised as these state changes were not informed/propogated back to the JobTracker
 
-Now the JobTracker takes care of initializing/failing/killing the job and raising appropriate events. The simple rule that was enforced was that "The JobTracker lock is *must* before changing the run-state of a job".
+Now the JobTracker takes care of initializing/failing/killing the job and raising appropriate events. The simple rule that was enforced was that "The JobTracker lock is \*must\* before changing the run-state of a job".
 
 
 ---

@@ -18,7 +18,7 @@
 -->
 # Apache Hadoop  0.17.0 Release Notes
 
-These release notes cover new developer and user-facing incompatibilities, features, and major improvements.
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
 
 ---
@@ -416,7 +416,7 @@ Change DFS block placement to allocate the first replica locally, the second off
 
 * [HADOOP-2551](https://issues.apache.org/jira/browse/HADOOP-2551) | *Blocker* | **hadoop-env.sh needs finer granularity**
 
-New environment variables were introduced to allow finer grained control of Java options passed to server and client JVMs.  See the new *\_OPTS variables in conf/hadoop-env.sh.
+New environment variables were introduced to allow finer grained control of Java options passed to server and client JVMs.  See the new \*\_OPTS variables in conf/hadoop-env.sh.
 
 
 ---

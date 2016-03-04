@@ -18,7 +18,7 @@
 -->
 # Apache Hadoop  2.5.0 Release Notes
 
-These release notes cover new developer and user-facing incompatibilities, features, and major improvements.
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
 
 ---
@@ -55,20 +55,6 @@ Add getUGIFromSubject to leverage an external kerberos authentication
 * [HADOOP-9919](https://issues.apache.org/jira/browse/HADOOP-9919) | *Major* | **Update hadoop-metrics2.properties examples to Yarn**
 
 Remove MRv1 settings from hadoop-metrics2.properties, add YARN settings instead.
-
-
----
-
-* [HDFS-6471](https://issues.apache.org/jira/browse/HDFS-6471) | *Major* | **Make moveFromLocal CLI testcases to be non-disruptive**
-
-Committed to trunk and merged into branch-2. Thanks Dasha!
-
-
----
-
-* [HDFS-6297](https://issues.apache.org/jira/browse/HDFS-6297) | *Major* | **Add CLI testcases to reflect new features of dfs and dfsadmin**
-
-Committed to the trunk and branch-2. Thanks Dasha!
 
 
 ---

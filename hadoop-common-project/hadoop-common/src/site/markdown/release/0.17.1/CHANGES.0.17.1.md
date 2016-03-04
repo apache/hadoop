@@ -27,6 +27,12 @@
 | [HADOOP-3565](https://issues.apache.org/jira/browse/HADOOP-3565) | JavaSerialization can throw java.io.StreamCorruptedException |  Major | . | Tom White | Tom White |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

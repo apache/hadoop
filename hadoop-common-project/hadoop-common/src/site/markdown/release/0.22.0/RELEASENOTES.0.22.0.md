@@ -18,7 +18,7 @@
 -->
 # Apache Hadoop  0.22.0 Release Notes
 
-These release notes cover new developer and user-facing incompatibilities, features, and major improvements.
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
 
 ---
@@ -74,7 +74,7 @@ I have just committed this to trunk and branch-0.22. Thanks Roman!
 
 * [HADOOP-7117](https://issues.apache.org/jira/browse/HADOOP-7117) | *Major* | **Move secondary namenode checkpoint configs from core-default.xml to hdfs-default.xml**
 
-Removed references to the older fs.checkpoint.* properties that resided in core-site.xml
+Removed references to the older fs.checkpoint.\* properties that resided in core-site.xml
 
 
 ---
@@ -208,7 +208,7 @@ Removed thriftfs contrib component.
 
 * [HDFS-1596](https://issues.apache.org/jira/browse/HDFS-1596) | *Major* | **Move secondary namenode checkpoint configs from core-default.xml to hdfs-default.xml**
 
-Removed references to the older fs.checkpoint.* properties that resided in core-site.xml
+Removed references to the older fs.checkpoint.\* properties that resided in core-site.xml
 
 
 ---
@@ -510,6 +510,7 @@ Added a metric to track number of heartbeats processed by the JobTracker.
 
 * [MAPREDUCE-1664](https://issues.apache.org/jira/browse/MAPREDUCE-1664) | *Major* | **Job Acls affect Queue Acls**
 
+<!-- markdown -->
 * Removed aclsEnabled flag from queues configuration files.
 * Removed the configuration property mapreduce.cluster.job-authorization-enabled.
 * Added mapreduce.cluster.acls.enabled as the single configuration property in mapred-default.xml that enables the authorization checks for all job level and queue level operations.

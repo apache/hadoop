@@ -18,7 +18,7 @@
 -->
 # Apache Hadoop  0.19.0 Release Notes
 
-These release notes cover new developer and user-facing incompatibilities, features, and major improvements.
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
 
 ---
@@ -304,7 +304,7 @@ Adds a new contrib, bash-tab-completion, which enables bash tab completion for t
 
 * [HADOOP-3702](https://issues.apache.org/jira/browse/HADOOP-3702) | *Major* | **add support for chaining Maps in a single Map and after a Reduce [M\*/RM\*]**
 
-Introduced ChainMapper and the ChainReducer classes to allow composing chains of Maps and Reduces in a single Map/Reduce job, something like MAP+ REDUCE MAP*.
+Introduced ChainMapper and the ChainReducer classes to allow composing chains of Maps and Reduces in a single Map/Reduce job, something like MAP+ REDUCE MAP\*.
 
 
 ---
@@ -474,7 +474,7 @@ Introduced LZOP codec.
 
 * [HADOOP-2411](https://issues.apache.org/jira/browse/HADOOP-2411) | *Major* | **Add support for larger EC2 instance types**
 
-Added support for c1.* instance types and associated kernels for EC2.
+Added support for c1.\* instance types and associated kernels for EC2.
 
 
 ---

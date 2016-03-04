@@ -61,6 +61,12 @@
 | [HADOOP-771](https://issues.apache.org/jira/browse/HADOOP-771) | Namenode should return error when trying to delete non-empty directory |  Major | . | Milind Bhandarkar | Mahadev konar |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

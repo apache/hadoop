@@ -31,6 +31,12 @@
 | [MAPREDUCE-3812](https://issues.apache.org/jira/browse/MAPREDUCE-3812) | Lower default allocation sizes, fix allocation configurations and document them |  Major | mrv2, performance | Vinod Kumar Vavilapalli | Harsh J |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

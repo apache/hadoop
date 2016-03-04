@@ -30,6 +30,12 @@
 | [YARN-668](https://issues.apache.org/jira/browse/YARN-668) | TokenIdentifier serialization should consider Unknown fields |  Blocker | . | Siddharth Seth | Junping Du |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |
@@ -120,7 +126,6 @@
 | [HADOOP-10696](https://issues.apache.org/jira/browse/HADOOP-10696) | Add optional attributes to KeyProvider Options and Metadata |  Major | security | Alejandro Abdelnur | Alejandro Abdelnur |
 | [HADOOP-10695](https://issues.apache.org/jira/browse/HADOOP-10695) | KMSClientProvider should respect a configurable timeout. |  Major | . | Andrew Wang | Mike Yoder |
 | [HADOOP-10675](https://issues.apache.org/jira/browse/HADOOP-10675) | Add server-side encryption functionality to s3a |  Major | fs/s3 | David S. Wang | David S. Wang |
-| [HADOOP-10620](https://issues.apache.org/jira/browse/HADOOP-10620) | /docs/current doesn't point to the latest version 2.4.0 |  Major | documentation | Jacek Laskowski |  |
 | [HADOOP-10610](https://issues.apache.org/jira/browse/HADOOP-10610) | Upgrade S3n fs.s3.buffer.dir to support multi directories |  Minor | fs/s3 | Ted Malaska | Ted Malaska |
 | [HADOOP-10433](https://issues.apache.org/jira/browse/HADOOP-10433) | Key Management Server based on KeyProvider API |  Major | security | Alejandro Abdelnur | Alejandro Abdelnur |
 | [HADOOP-10432](https://issues.apache.org/jira/browse/HADOOP-10432) | Refactor SSLFactory to expose static method to determine HostnameVerifier |  Major | security | Alejandro Abdelnur | Alejandro Abdelnur |
@@ -132,7 +137,7 @@
 | [HADOOP-10373](https://issues.apache.org/jira/browse/HADOOP-10373) | create tools/hadoop-amazon for aws/EMR support |  Major | fs/s3 | Steve Loughran | Steve Loughran |
 | [HADOOP-10335](https://issues.apache.org/jira/browse/HADOOP-10335) | An ip whilelist based implementation to resolve Sasl properties per connection |  Major | . | Benoy Antony | Benoy Antony |
 | [HADOOP-10231](https://issues.apache.org/jira/browse/HADOOP-10231) | Add some components in Native Libraries document |  Minor | documentation | Akira AJISAKA | Akira AJISAKA |
-| [HADOOP-9540](https://issues.apache.org/jira/browse/HADOOP-9540) | Expose the InMemoryS3 and S3N FilesystemStores implementations for Unit testing. |  Minor | fs/s3, test | Hari |  |
+| [HADOOP-9540](https://issues.apache.org/jira/browse/HADOOP-9540) | Expose the InMemoryS3 and S3N FilesystemStores implementations for Unit testing. |  Minor | fs/s3, test | Hari | Hari |
 | [HADOOP-9457](https://issues.apache.org/jira/browse/HADOOP-9457) | add an SCM-ignored XML filename to keep secrets in (auth-keys.xml?) |  Minor | build | Steve Loughran |  |
 | [HADOOP-8896](https://issues.apache.org/jira/browse/HADOOP-8896) | Javadoc points to Wrong Reader and Writer classes in SequenceFile |  Trivial | documentation, io | Timothy Mann | Ray Chiang |
 | [HADOOP-8815](https://issues.apache.org/jira/browse/HADOOP-8815) | RandomDatum overrides equals(Object) but no hashCode() |  Minor | test | Brandon Li | Brandon Li |
@@ -234,7 +239,7 @@
 | [YARN-1954](https://issues.apache.org/jira/browse/YARN-1954) | Add waitFor to AMRMClient(Async) |  Major | client | Zhijie Shen | Tsuyoshi Ozawa |
 | [YARN-1918](https://issues.apache.org/jira/browse/YARN-1918) | Typo in description and error message for 'yarn.resourcemanager.cluster-id' |  Trivial | . | Devaraj K | Anandha L Ranganathan |
 | [YARN-1769](https://issues.apache.org/jira/browse/YARN-1769) | CapacityScheduler:  Improve reservations |  Major | capacityscheduler | Thomas Graves | Thomas Graves |
-| [YARN-666](https://issues.apache.org/jira/browse/YARN-666) | [Umbrella] Support rolling upgrades in YARN |  Major | . | Siddharth Seth |  |
+| [YARN-666](https://issues.apache.org/jira/browse/YARN-666) | [Umbrella] Support rolling upgrades in YARN |  Major | graceful, rolling upgrade | Siddharth Seth |  |
 
 
 ### BUG FIXES:

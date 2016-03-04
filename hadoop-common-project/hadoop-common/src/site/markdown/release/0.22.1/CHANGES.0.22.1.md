@@ -18,13 +18,19 @@
 -->
 # Apache Hadoop Changelog
 
-## Release 0.22.1 - Unreleased
+## Release 0.22.1 - Unreleased (as of 2016-03-04)
 
 ### INCOMPATIBLE CHANGES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |
 |:---- |:---- | :--- |:---- |:---- |:---- |
 | [HADOOP-6453](https://issues.apache.org/jira/browse/HADOOP-6453) | Hadoop wrapper script shouldn't ignore an existing JAVA\_LIBRARY\_PATH |  Minor | scripts | Chad Metcalf |  |
+
+
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
 
 
 ### NEW FEATURES:
