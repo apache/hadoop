@@ -69,6 +69,12 @@
 | [MAPREDUCE-1738](https://issues.apache.org/jira/browse/MAPREDUCE-1738) | MapReduce portion of HADOOP-6728 (ovehaul metrics framework) |  Major | . | Luke Lu | Luke Lu |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

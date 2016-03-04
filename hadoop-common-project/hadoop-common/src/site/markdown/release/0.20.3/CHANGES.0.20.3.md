@@ -18,7 +18,7 @@
 -->
 # Apache Hadoop Changelog
 
-## Release 0.20.3 - Unreleased
+## Release 0.20.3 - Unreleased (as of 2016-03-04)
 
 ### INCOMPATIBLE CHANGES:
 
@@ -27,6 +27,12 @@
 | [HADOOP-6701](https://issues.apache.org/jira/browse/HADOOP-6701) |  Incorrect exit codes for "dfs -chown", "dfs -chgrp" |  Minor | fs | Ravi Phulari | Ravi Phulari |
 | [HADOOP-6382](https://issues.apache.org/jira/browse/HADOOP-6382) | publish hadoop jars to apache mvn repo. |  Major | build | Giridharan Kesavan | Giridharan Kesavan |
 | [HDFS-132](https://issues.apache.org/jira/browse/HDFS-132) | Namenode in Safemode reports to Simon non-zero number of deleted files during startup |  Minor | namenode | Hairong Kuang | Suresh Srinivas |
+
+
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
 
 
 ### NEW FEATURES:

@@ -107,6 +107,12 @@
 | [MAPREDUCE-157](https://issues.apache.org/jira/browse/MAPREDUCE-157) | Job History log file format is not friendly for external tools. |  Major | . | Owen O'Malley | Jothi Padmanabhan |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

@@ -27,6 +27,12 @@
 | [HADOOP-5332](https://issues.apache.org/jira/browse/HADOOP-5332) | Make support for file append API configurable |  Blocker | . | Nigel Daley | dhruba borthakur |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

@@ -18,7 +18,7 @@
 -->
 # Apache Hadoop Changelog
 
-## Release 0.24.0 - Unreleased
+## Release 0.24.0 - Unreleased (as of 2016-03-04)
 
 ### INCOMPATIBLE CHANGES:
 
@@ -26,6 +26,12 @@
 |:---- |:---- | :--- |:---- |:---- |:---- |
 | [HADOOP-7547](https://issues.apache.org/jira/browse/HADOOP-7547) | Fix the warning in writable classes.[ WritableComparable is a raw type. References to generic type WritableComparable\<T\> should be parameterized  ] |  Minor | io | Uma Maheswara Rao G | Uma Maheswara Rao G |
 | [HADOOP-7507](https://issues.apache.org/jira/browse/HADOOP-7507) | jvm metrics all use the same namespace |  Major | metrics | Jeff Bean | Alejandro Abdelnur |
+
+
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
 
 
 ### NEW FEATURES:

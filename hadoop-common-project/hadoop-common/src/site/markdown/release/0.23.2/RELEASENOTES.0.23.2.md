@@ -18,7 +18,7 @@
 -->
 # Apache Hadoop  0.23.2 Release Notes
 
-These release notes cover new developer and user-facing incompatibilities, features, and major improvements.
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
 
 ---
@@ -32,7 +32,7 @@ FsShell mkdir now accepts a -p flag.  Like unix, mkdir -p will not fail if the d
 
 * [HADOOP-8164](https://issues.apache.org/jira/browse/HADOOP-8164) | *Major* | **Handle paths using back slash as path separator for windows only**
 
-This jira only allows providing paths using back slash as separator on Windows. The back slash on *nix system will be used as escape character. The support for paths using back slash as path separator will be removed in HADOOP-8139 in release 23.3.
+This jira only allows providing paths using back slash as separator on Windows. The back slash on \*nix system will be used as escape character. The support for paths using back slash as path separator will be removed in HADOOP-8139 in release 23.3.
 
 
 ---

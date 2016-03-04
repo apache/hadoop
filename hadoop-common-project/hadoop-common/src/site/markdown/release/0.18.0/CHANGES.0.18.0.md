@@ -65,6 +65,12 @@
 | [HADOOP-544](https://issues.apache.org/jira/browse/HADOOP-544) | Replace the job, tip and task ids with objects. |  Major | . | Owen O'Malley | Enis Soztutar |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

@@ -39,6 +39,12 @@
 | [MAPREDUCE-4123](https://issues.apache.org/jira/browse/MAPREDUCE-4123) | ./mapred groups gives NoClassDefFoundError |  Critical | mrv2 | Nishan Shetty | Devaraj K |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

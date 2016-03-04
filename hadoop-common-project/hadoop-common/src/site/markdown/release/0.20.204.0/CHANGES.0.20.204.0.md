@@ -27,6 +27,12 @@
 | [HADOOP-6255](https://issues.apache.org/jira/browse/HADOOP-6255) | Create an rpm integration project |  Major | . | Owen O'Malley | Eric Yang |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

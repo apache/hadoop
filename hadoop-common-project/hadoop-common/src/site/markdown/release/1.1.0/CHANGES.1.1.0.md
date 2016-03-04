@@ -35,6 +35,12 @@
 | [HDFS-2617](https://issues.apache.org/jira/browse/HDFS-2617) | Replaced Kerberized SSL for image transfer and fsck with SPNEGO-based solution |  Major | security | Jakob Homan | Jakob Homan |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

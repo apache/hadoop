@@ -18,7 +18,7 @@
 -->
 # Apache Hadoop Changelog
 
-## Release 0.23.2 - Unreleased
+## Release 0.23.2 - Unreleased (as of 2016-03-04)
 
 ### INCOMPATIBLE CHANGES:
 
@@ -27,6 +27,12 @@
 | [HADOOP-8164](https://issues.apache.org/jira/browse/HADOOP-8164) | Handle paths using back slash as path separator for windows only |  Major | fs | Suresh Srinivas | Daryn Sharp |
 | [HADOOP-8131](https://issues.apache.org/jira/browse/HADOOP-8131) | FsShell put doesn't correctly handle a non-existent dir |  Critical | . | Daryn Sharp | Daryn Sharp |
 | [HDFS-2887](https://issues.apache.org/jira/browse/HDFS-2887) | Define a FSVolume interface |  Major | datanode | Tsz Wo Nicholas Sze | Tsz Wo Nicholas Sze |
+
+
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
 
 
 ### NEW FEATURES:

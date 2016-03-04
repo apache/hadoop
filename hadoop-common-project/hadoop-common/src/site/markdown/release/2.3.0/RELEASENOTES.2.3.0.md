@@ -18,7 +18,7 @@
 -->
 # Apache Hadoop  2.3.0 Release Notes
 
-These release notes cover new developer and user-facing incompatibilities, features, and major improvements.
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
 
 ---
@@ -39,6 +39,7 @@ The 'du' (disk usage command from Unix) script refresh monitor is now configurab
 
 * [HADOOP-8545](https://issues.apache.org/jira/browse/HADOOP-8545) | *Major* | **Filesystem Implementation for OpenStack Swift**
 
+<!-- markdown -->
 Added file system implementation for OpenStack Swift.
 There are two implementation: block and native (similar to Amazon S3 integration).
 Data locality issue solved by patch in Swift, commit procedure to OpenStack is in progress.

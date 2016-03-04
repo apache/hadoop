@@ -109,6 +109,12 @@
 | [YARN-387](https://issues.apache.org/jira/browse/YARN-387) | Fix inconsistent protocol naming |  Blocker | . | Vinod Kumar Vavilapalli | Vinod Kumar Vavilapalli |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

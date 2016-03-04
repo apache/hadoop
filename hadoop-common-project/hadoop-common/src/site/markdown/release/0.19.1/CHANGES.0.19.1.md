@@ -29,6 +29,12 @@
 | [HADOOP-4061](https://issues.apache.org/jira/browse/HADOOP-4061) | Large number of decommission freezes the Namenode |  Major | . | Koji Noguchi | Tsz Wo Nicholas Sze |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

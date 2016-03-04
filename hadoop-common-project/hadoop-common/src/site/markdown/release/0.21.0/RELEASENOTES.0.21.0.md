@@ -18,7 +18,7 @@
 -->
 # Apache Hadoop  0.21.0 Release Notes
 
-These release notes cover new developer and user-facing incompatibilities, features, and major improvements.
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
 
 ---
@@ -503,7 +503,7 @@ Jars passed to the -libjars option of hadoop jars are no longer unpacked inside 
 
 * [HADOOP-5144](https://issues.apache.org/jira/browse/HADOOP-5144) | *Major* | **manual way of turning on restore of failed storage replicas for namenode**
 
-New DFSAdmin command -restoreFailedStorage true|false|check sets policy for restoring failed fsimage/editslog volumes.
+New DFSAdmin command -restoreFailedStorage true\|false\|check sets policy for restoring failed fsimage/editslog volumes.
 
 
 ---
@@ -1624,7 +1624,7 @@ Fixed TaskTracker and related classes so as to set correct and most restrictive 
 $mapred.local.dir
    `-- taskTracker
         `-- $user
-               |- distcache
+               \|- distcache
                `-- jobcache
  - Distributed cache files/archives are now user-owned by the job-owner and the group-owned by the special group-owner of the task-controller binary. The files/archives are set most private permissions possible, and as soon as possible, immediately after the files/dirs are first localized on the TT.
  - As depicted by the new directory structure, a directory corresponding to each user is created on each TT when that particular user's first task are assigned to the corresponding TT. These user directories remain on the TT forever are not cleaned when unused, which is targeted to be fixed via MAPREDUCE-1019.
@@ -1951,7 +1951,7 @@ Added a new target 'test-commit' to the build.xml file which runs tests specifie
 
 * [MAPREDUCE-656](https://issues.apache.org/jira/browse/MAPREDUCE-656) | *Major* | **Change org.apache.hadoop.mapred.SequenceFile\* classes to use new api**
 
-Ports the SequenceFile* classes to the new Map/Reduce API
+Ports the SequenceFile\* classes to the new Map/Reduce API
 
 
 ---
@@ -2224,7 +2224,7 @@ Only one MR cluster is brought up and hence there is no scope of jobid clashing.
 
 * [MAPREDUCE-144](https://issues.apache.org/jira/browse/MAPREDUCE-144) | *Major* | **TaskMemoryManager should log process-tree's status while killing tasks.**
 
-Modified TaskMemoryManager so that it logs a map/reduce task's process-tree's status just before it is killed when it grows out of its configured memory limits. The log dump is in the format " |- PID PPID PGRPID SESSID CMD\_NAME VMEM\_USAGE(BYTES) FULL\_CMD\_LINE".
+Modified TaskMemoryManager so that it logs a map/reduce task's process-tree's status just before it is killed when it grows out of its configured memory limits. The log dump is in the format " \|- PID PPID PGRPID SESSID CMD\_NAME VMEM\_USAGE(BYTES) FULL\_CMD\_LINE".
 
 This is useful for debugging the cause for a map/reduce task and it's corresponding process-tree to be killed by the TaskMemoryManager.
 
