@@ -197,6 +197,32 @@ public class DiskBalancer {
   }
 
   /**
+   * Cancels a running plan.
+   * @param planID - Hash of the plan to cancel.
+   * @throws DiskBalancerException
+   */
+  public void cancelPlan(String planID) throws DiskBalancerException {
+    lock.lock();
+    try {
+      checkDiskBalancerEnabled();
+      if ((this.planID == null) || (!this.planID.equals(planID))) {
+        LOG.error("Disk Balancer - No such plan. Cancel plan failed. PlanID: " +
+            planID);
+        throw new DiskBalancerException("No such plan.",
+            DiskBalancerException.Result.NO_SUCH_PLAN);
+      }
+      if (!this.future.isDone()) {
+        this.blockMover.setExitFlag();
+        shutdownExecutor();
+      }
+    } finally {
+      lock.unlock();
+    }
+  }
+
+
+
+  /**
    * Throws if Disk balancer is disabled.
    *
    * @throws DiskBalancerException

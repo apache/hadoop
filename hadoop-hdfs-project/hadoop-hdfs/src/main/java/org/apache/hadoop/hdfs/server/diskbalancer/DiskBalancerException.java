@@ -35,7 +35,8 @@ public class DiskBalancerException extends IOException {
     PLAN_ALREADY_IN_PROGRESS,
     INVALID_VOLUME,
     INVALID_MOVE,
-    INTERNAL_ERROR
+    INTERNAL_ERROR,
+    NO_SUCH_PLAN
   }
 
   private final Result result;

@@ -3337,12 +3337,15 @@ public class DataNode extends ReconfigurableBase
     this.diskBalancer.submitPlan(planID, planVersion, plan, bandwidth, false);
   }
 
+  /**
+   * Cancels a running plan.
+   * @param planID - Hash string that identifies a plan
+   */
   @Override
   public void cancelDiskBalancePlan(String planID) throws
       IOException {
     checkSuperuserPrivilege();
-    throw new DiskBalancerException("Not Implemented",
-        DiskBalancerException.Result.INTERNAL_ERROR);
+    this.diskBalancer.cancelPlan(planID);
   }
 
   /**

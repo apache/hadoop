@@ -30,3 +30,6 @@ HDFS-1312 Change Log
     HDFS-9681. DiskBalancer: Add QueryPlan implementation. (Anu Engineer via
     Arpit Agarwal)
 
+    HDFS-9683. DiskBalancer: Add cancelPlan implementation. (Anu Engineer via
+    Arpit Agarwal)
+
