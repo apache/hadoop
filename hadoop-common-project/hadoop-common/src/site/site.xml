@@ -16,7 +16,7 @@
   <skin>
     <groupId>org.apache.maven.skins</groupId>
     <artifactId>maven-stylus-skin</artifactId>
-    <version>1.2</version>
+    <version>${maven-stylus-skin.version}</version>
   </skin>
 
   <body>

@@ -15,9 +15,7 @@
 Authentication for Hadoop HTTP web-consoles
 ===========================================
 
-* [Authentication for Hadoop HTTP web-consoles](#Authentication_for_Hadoop_HTTP_web-consoles)
-    * [Introduction](#Introduction)
-    * [Configuration](#Configuration)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Introduction
 ------------

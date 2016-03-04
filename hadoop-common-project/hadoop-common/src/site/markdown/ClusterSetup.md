@@ -12,24 +12,10 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-* [Hadoop Cluster Setup](#Hadoop_Cluster_Setup)
-    * [Purpose](#Purpose)
-    * [Prerequisites](#Prerequisites)
-    * [Installation](#Installation)
-    * [Configuring Hadoop in Non-Secure Mode](#Configuring_Hadoop_in_Non-Secure_Mode)
-        * [Configuring Environment of Hadoop Daemons](#Configuring_Environment_of_Hadoop_Daemons)
-        * [Configuring the Hadoop Daemons](#Configuring_the_Hadoop_Daemons)
-    * [Monitoring Health of NodeManagers](#Monitoring_Health_of_NodeManagers)
-    * [Slaves File](#Slaves_File)
-    * [Hadoop Rack Awareness](#Hadoop_Rack_Awareness)
-    * [Logging](#Logging)
-    * [Operating the Hadoop Cluster](#Operating_the_Hadoop_Cluster)
-        * [Hadoop Startup](#Hadoop_Startup)
-        * [Hadoop Shutdown](#Hadoop_Shutdown)
-    * [Web Interfaces](#Web_Interfaces)
-
 Hadoop Cluster Setup
 ====================
+
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Purpose
 -------

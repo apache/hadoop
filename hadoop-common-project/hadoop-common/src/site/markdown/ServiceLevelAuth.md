@@ -15,16 +15,7 @@
 Service Level Authorization Guide
 =================================
 
-* [Service Level Authorization Guide](#Service_Level_Authorization_Guide)
-    * [Purpose](#Purpose)
-    * [Prerequisites](#Prerequisites)
-    * [Overview](#Overview)
-    * [Configuration](#Configuration)
-        * [Enable Service Level Authorization](#Enable_Service_Level_Authorization)
-        * [Hadoop Services and Configuration Properties](#Hadoop_Services_and_Configuration_Properties)
-        * [Access Control Lists](#Access_Control_Lists)
-        * [Refreshing Service Level Authorization Configuration](#Refreshing_Service_Level_Authorization_Configuration)
-        * [Examples](#Examples)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Purpose
 -------
