@@ -15,16 +15,7 @@
 Enabling Dapper-like Tracing in Hadoop
 ======================================
 
-* [Enabling Dapper-like Tracing in Hadoop](#Enabling_Dapper-like_Tracing_in_Hadoop)
-    * [Dapper-like Tracing in Hadoop](#Dapper-like_Tracing_in_Hadoop)
-        * [HTrace](#HTrace)
-        * [SpanReceivers](#SpanReceivers)
-        * [Dynamic update of tracing configuration](#Dynamic_update_of_tracing_configuration)
-        * [Starting tracing spans by HTrace API](#Starting_tracing_spans_by_HTrace_API)
-        * [Sample code for tracing](#Sample_code_for_tracing)
-        * [Starting tracing spans by FileSystem Shell](#Starting_tracing_spans_by_FileSystem_Shell)
-        * [Starting tracing spans by configuration for HDFS client](#Starting_tracing_spans_by_configuration_for_HDFS_client)
-
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Dapper-like Tracing in Hadoop
 -----------------------------

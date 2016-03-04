@@ -15,17 +15,7 @@
 Native Libraries Guide
 ======================
 
-* [Native Libraries Guide](#Native_Libraries_Guide)
-    * [Overview](#Overview)
-    * [Native Hadoop Library](#Native_Hadoop_Library)
-    * [Usage](#Usage)
-    * [Components](#Components)
-    * [Supported Platforms](#Supported_Platforms)
-    * [Download](#Download)
-    * [Build](#Build)
-    * [Runtime](#Runtime)
-    * [Check](#Check)
-    * [Native Shared Libraries](#Native_Shared_Libraries)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Overview
 --------

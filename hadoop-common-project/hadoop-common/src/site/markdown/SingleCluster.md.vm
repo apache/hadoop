@@ -19,21 +19,7 @@
 Hadoop: Setting up a Single Node Cluster.
 =========================================
 
-* [Hadoop: Setting up a Single Node Cluster.](#Hadoop:_Setting_up_a_Single_Node_Cluster.)
-    * [Purpose](#Purpose)
-    * [Prerequisites](#Prerequisites)
-        * [Supported Platforms](#Supported_Platforms)
-        * [Required Software](#Required_Software)
-        * [Installing Software](#Installing_Software)
-    * [Download](#Download)
-    * [Prepare to Start the Hadoop Cluster](#Prepare_to_Start_the_Hadoop_Cluster)
-    * [Standalone Operation](#Standalone_Operation)
-    * [Pseudo-Distributed Operation](#Pseudo-Distributed_Operation)
-        * [Configuration](#Configuration)
-        * [Setup passphraseless ssh](#Setup_passphraseless_ssh)
-        * [Execution](#Execution)
-        * [YARN on a Single Node](#YARN_on_a_Single_Node)
-    * [Fully-Distributed Operation](#Fully-Distributed_Operation)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Purpose
 -------

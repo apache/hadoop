@@ -15,13 +15,7 @@
 Hadoop Interface Taxonomy: Audience and Stability Classification
 ================================================================
 
-* [Hadoop Interface Taxonomy: Audience and Stability Classification](#Hadoop_Interface_Taxonomy:_Audience_and_Stability_Classification)
-    * [Motivation](#Motivation)
-    * [Interface Classification](#Interface_Classification)
-        * [Audience](#Audience)
-        * [Stability](#Stability)
-    * [How are the Classifications Recorded?](#How_are_the_Classifications_Recorded)
-    * [FAQ](#FAQ)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Motivation
 ----------
