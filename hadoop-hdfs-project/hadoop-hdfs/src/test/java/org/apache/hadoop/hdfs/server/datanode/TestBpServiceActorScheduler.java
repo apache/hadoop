@@ -49,6 +49,7 @@ public class TestBpServiceActorScheduler {
   public Timeout timeout = new Timeout(300000);
 
   private static final long HEARTBEAT_INTERVAL_MS = 5000;      // 5 seconds
+  private static final long LIFELINE_INTERVAL_MS = 3 * HEARTBEAT_INTERVAL_MS;
   private static final long BLOCK_REPORT_INTERVAL_MS = 10000;  // 10 seconds
   private final Random random = new Random(System.nanoTime());
 
@@ -166,9 +167,23 @@ public class TestBpServiceActorScheduler {
     }
   }
 
+  @Test
+  public void testScheduleLifeline() {
+    for (final long now : getTimestamps()) {
+      Scheduler scheduler = makeMockScheduler(now);
+      scheduler.scheduleNextLifeline(now);
+      assertFalse(scheduler.isLifelineDue(now));
+      assertThat(scheduler.getLifelineWaitTime(), is(LIFELINE_INTERVAL_MS));
+      scheduler.scheduleNextLifeline(now - LIFELINE_INTERVAL_MS);
+      assertTrue(scheduler.isLifelineDue(now));
+      assertThat(scheduler.getLifelineWaitTime(), is(0L));
+    }
+  }
+
   private Scheduler makeMockScheduler(long now) {
     LOG.info("Using now = " + now);
-    Scheduler mockScheduler = spy(new Scheduler(HEARTBEAT_INTERVAL_MS, BLOCK_REPORT_INTERVAL_MS));
+    Scheduler mockScheduler = spy(new Scheduler(HEARTBEAT_INTERVAL_MS,
+        LIFELINE_INTERVAL_MS, BLOCK_REPORT_INTERVAL_MS));
     doReturn(now).when(mockScheduler).monotonicNow();
     mockScheduler.nextBlockReportTime = now;
     mockScheduler.nextHeartbeatTime = now;
