@@ -18,7 +18,7 @@
 -->
 # Apache Hadoop  0.23.0 Release Notes
 
-These release notes cover new developer and user-facing incompatibilities, features, and major improvements.
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
 
 ---
@@ -238,7 +238,7 @@ Adding support for Kerberos HTTP SPNEGO authentication to the Hadoop web-console
 
 * [HADOOP-7117](https://issues.apache.org/jira/browse/HADOOP-7117) | *Major* | **Move secondary namenode checkpoint configs from core-default.xml to hdfs-default.xml**
 
-Removed references to the older fs.checkpoint.* properties that resided in core-site.xml
+Removed references to the older fs.checkpoint.\* properties that resided in core-site.xml
 
 
 ---
@@ -464,7 +464,7 @@ Removed the deprecated fields in DataTransferProtocol.
 
 * [HDFS-1939](https://issues.apache.org/jira/browse/HDFS-1939) | *Major* | **ivy: test conf should not extend common conf**
 
-* Removed duplicated jars in test class path.
+\* Removed duplicated jars in test class path.
 
 
 ---
@@ -562,7 +562,7 @@ Added two configuration properties, dfs.client.block.write.replace-datanode-on-f
 
 * [HDFS-1596](https://issues.apache.org/jira/browse/HDFS-1596) | *Major* | **Move secondary namenode checkpoint configs from core-default.xml to hdfs-default.xml**
 
-Removed references to the older fs.checkpoint.* properties that resided in core-site.xml
+Removed references to the older fs.checkpoint.\* properties that resided in core-site.xml
 
 
 ---
@@ -1064,9 +1064,9 @@ Adds cpu, physical memory, virtual memory and heap usages to TraceBuilder's outp
 * [MAPREDUCE-2037](https://issues.apache.org/jira/browse/MAPREDUCE-2037) | *Major* | **Capturing interim progress times, CPU usage, and memory usage, when tasks reach certain progress thresholds**
 
 Capture intermediate task resource consumption information:
-* Time taken so far
-* CPU load [either at the time the data are taken, or exponentially smoothed]
-* Memory load [also either at the time the data are taken, or exponentially smoothed]
+\* Time taken so far
+\* CPU load [either at the time the data are taken, or exponentially smoothed]
+\* Memory load [also either at the time the data are taken, or exponentially smoothed]
 
 This would be taken at intervals that depend on the task progress plateaus. For example, reducers have three progress ranges - [0-1/3], (1/3-2/3], and (2/3-3/3] - where fundamentally different activities happen. Mappers have different boundaries that are not symmetrically placed [0-9/10], (9/10-1]. Data capture boundaries should coincide with activity boundaries. For the state information capture [CPU and memory] we should average over the covered interval.
 
@@ -1157,8 +1157,8 @@ MapReduce has undergone a complete re-haul in hadoop-0.23 and we now have, what 
 The fundamental idea of MRv2 is to split up the two major functionalities of the JobTracker, resource management and job scheduling/monitoring, into separate daemons. The idea is to have a global ResourceManager (RM) and per-application ApplicationMaster (AM).  An application is either a single job in the classical sense of Map-Reduce jobs or a DAG of jobs. The ResourceManager and per-node slave, the NodeManager (NM), form the data-computation framework. The ResourceManager is the ultimate authority that arbitrates resources among all the applications in the system. The per-application ApplicationMaster is, in effect, a framework specific library and is tasked with negotiating resources from the ResourceManager and working with the NodeManager(s) to execute and monitor the tasks.
 
 The ResourceManager has two main components:
-* Scheduler (S)
-* ApplicationsManager (ASM)
+\* Scheduler (S)
+\* ApplicationsManager (ASM)
 
 The Scheduler is responsible for allocating resources to the various running applications subject to familiar constraints of capacities, queues etc. The Scheduler is pure scheduler in the sense that it performs no monitoring or tracking of status for the application. Also, it offers no guarantees on restarting failed tasks either due to application failure or hardware failures. The Scheduler performs its scheduling function based the resource requirements of the applications; it does so based on the abstract notion of a Resource Container which incorporates elements such as memory, cpu, disk, network etc. 
 

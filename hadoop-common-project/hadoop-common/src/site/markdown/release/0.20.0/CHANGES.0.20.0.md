@@ -52,6 +52,12 @@
 | [HADOOP-1650](https://issues.apache.org/jira/browse/HADOOP-1650) | Upgrade Jetty to 6.x |  Major | . | Devaraj Das | Chris Douglas |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

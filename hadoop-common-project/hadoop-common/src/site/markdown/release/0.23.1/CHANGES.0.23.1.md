@@ -30,6 +30,12 @@
 | [MAPREDUCE-3720](https://issues.apache.org/jira/browse/MAPREDUCE-3720) | Command line listJobs should not visit each AM |  Major | client, mrv2 | Vinod Kumar Vavilapalli | Vinod Kumar Vavilapalli |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

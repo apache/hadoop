@@ -18,7 +18,7 @@
 -->
 # Apache Hadoop  0.23.1 Release Notes
 
-These release notes cover new developer and user-facing incompatibilities, features, and major improvements.
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
 
 ---
@@ -46,7 +46,7 @@ Adding config for MapReduce History Server protocol in hadoop-policy.xml for ser
 
 * [HADOOP-7963](https://issues.apache.org/jira/browse/HADOOP-7963) | *Blocker* | **test failures: TestViewFileSystemWithAuthorityLocalFileSystem and TestViewFileSystemLocalFileSystem**
 
-Fix ViewFS to catch a null canonical service-name and pass tests TestViewFileSystem*
+Fix ViewFS to catch a null canonical service-name and pass tests TestViewFileSystem\*
 
 
 ---
@@ -308,7 +308,7 @@ Fixed TaskHeartbeatHandler to not hold a global lock for all task-updates.
 
 * [MAPREDUCE-3597](https://issues.apache.org/jira/browse/MAPREDUCE-3597) | *Major* | **Provide a way to access other info of history file from Rumentool**
 
-Rumen now provides {{Parsed*}} objects. These objects provide extra information that are not provided by {{Logged*}} objects.
+Rumen now provides {{Parsed\*}} objects. These objects provide extra information that are not provided by {{Logged\*}} objects.
 
 
 ---

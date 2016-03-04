@@ -49,6 +49,12 @@
 | [MAPREDUCE-1664](https://issues.apache.org/jira/browse/MAPREDUCE-1664) | Job Acls affect Queue Acls |  Major | security | Ravi Gummadi | Ravi Gummadi |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

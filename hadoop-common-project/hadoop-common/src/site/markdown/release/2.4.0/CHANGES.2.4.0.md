@@ -33,6 +33,12 @@
 | [MAPREDUCE-5036](https://issues.apache.org/jira/browse/MAPREDUCE-5036) | Default shuffle handler port should not be 8080 |  Major | . | Sandy Ryza | Sandy Ryza |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |
@@ -392,6 +398,7 @@
 | [YARN-1719](https://issues.apache.org/jira/browse/YARN-1719) | ATSWebServices produces jersey warnings |  Major | . | Billie Rinaldi | Billie Rinaldi |
 | [YARN-1717](https://issues.apache.org/jira/browse/YARN-1717) | Enable offline deletion of entries in leveldb timeline store |  Major | . | Billie Rinaldi | Billie Rinaldi |
 | [YARN-1706](https://issues.apache.org/jira/browse/YARN-1706) | Create an utility function to dump timeline records to json |  Major | . | Zhijie Shen | Zhijie Shen |
+| [YARN-1705](https://issues.apache.org/jira/browse/YARN-1705) | Reset cluster-metrics on transition to standby |  Major | resourcemanager | Karthik Kambatla | Rohith Sharma K S |
 | [YARN-1704](https://issues.apache.org/jira/browse/YARN-1704) | Review LICENSE and NOTICE to reflect new levelDB releated libraries being used |  Blocker | . | Billie Rinaldi | Billie Rinaldi |
 | [YARN-1698](https://issues.apache.org/jira/browse/YARN-1698) | Replace MemoryApplicationTimelineStore with LeveldbApplicationTimelineStore as default |  Major | . | Zhijie Shen | Zhijie Shen |
 | [YARN-1690](https://issues.apache.org/jira/browse/YARN-1690) | Sending timeline entities+events from Distributed shell |  Major | . | Mayank Bansal | Mayank Bansal |

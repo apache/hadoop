@@ -27,6 +27,12 @@
 | [HADOOP-4228](https://issues.apache.org/jira/browse/HADOOP-4228) | dfs datanode metrics, bytes\_read, bytes\_written overflows due to incorrect type used. |  Blocker | metrics | Eric Yang | Eric Yang |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

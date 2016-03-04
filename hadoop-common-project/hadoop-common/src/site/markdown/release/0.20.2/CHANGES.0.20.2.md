@@ -27,6 +27,12 @@
 | [HDFS-793](https://issues.apache.org/jira/browse/HDFS-793) | DataNode should first receive the whole packet ack message before it constructs and sends its own ack message for the packet |  Blocker | datanode | Hairong Kuang | Hairong Kuang |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

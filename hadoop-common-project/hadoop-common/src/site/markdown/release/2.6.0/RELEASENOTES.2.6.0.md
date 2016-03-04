@@ -18,7 +18,7 @@
 -->
 # Apache Hadoop  2.6.0 Release Notes
 
-These release notes cover new developer and user-facing incompatibilities, features, and major improvements.
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
 
 ---
@@ -44,13 +44,6 @@ Remove unnecessary synchronized blocks from Snappy/Zlib codecs.
 
 ---
 
-* [HADOOP-10620](https://issues.apache.org/jira/browse/HADOOP-10620) | *Major* | **/docs/current doesn't point to the latest version 2.4.0**
-
-Verified http://hadoop.apache.org/docs/current/ link now point to current release (v2.6.0).
-
-
----
-
 * [HADOOP-10583](https://issues.apache.org/jira/browse/HADOOP-10583) | *Minor* | **bin/hadoop key throws NPE with no args and assorted other fixups**
 
 bin/hadoop key
@@ -62,13 +55,6 @@ with no args would throw an NPE.
 * [HADOOP-10244](https://issues.apache.org/jira/browse/HADOOP-10244) | *Major* | **TestKeyShell improperly tests the results of a Delete**
 
 Fix of inappropriate test of delete functionality.
-
-
----
-
-* [HADOOP-10201](https://issues.apache.org/jira/browse/HADOOP-10201) | *Major* | **Add Listing Support to Key Management APIs**
-
-I just committed this. Thanks, Larry!
 
 
 ---
@@ -106,20 +92,6 @@ The time period in milliseconds that the allocation count for each array length 
 
 ---
 
-* [HDFS-7091](https://issues.apache.org/jira/browse/HDFS-7091) | *Minor* | **Add forwarding constructor for INodeFile for existing callers**
-
-Thanks Nicholas! Revised title and committed to the feature branch.
-
-
----
-
-* [HDFS-7046](https://issues.apache.org/jira/browse/HDFS-7046) | *Critical* | **HA NN can NPE upon transition to active**
-
-Thanks for the reviews, gentlemen. It's been committed to trunk and branch-2.
-
-
----
-
 * [HDFS-6606](https://issues.apache.org/jira/browse/HDFS-6606) | *Major* | **Optimize HDFS Encrypted Transport performance**
 
 HDFS now supports the option to configure AES encryption for block data transfer.  AES offers improved cryptographic strength and performance over the prior options of 3DES and RC4.
@@ -151,13 +123,6 @@ SASL now can be used to secure the DataTransferProtocol, which transfers file bl
 * [HDFS-573](https://issues.apache.org/jira/browse/HDFS-573) | *Major* | **Porting libhdfs to Windows**
 
 The libhdfs C API is now supported on Windows.
-
-
----
-
-* [YARN-2830](https://issues.apache.org/jira/browse/YARN-2830) | *Blocker* | **Add backwords compatible ContainerId.newInstance constructor for use within Tez Local Mode**
-
-I just committed this. Thanks [~jeagles] for the patch and [~ozawa] for the reviews!
 
 
 ---

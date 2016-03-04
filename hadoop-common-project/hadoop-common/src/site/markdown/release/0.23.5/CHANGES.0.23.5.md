@@ -27,6 +27,12 @@
 | [HDFS-4080](https://issues.apache.org/jira/browse/HDFS-4080) | Add a separate logger for block state change logs to enable turning off those logs |  Major | namenode | Kihwal Lee | Kihwal Lee |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

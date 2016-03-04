@@ -18,7 +18,7 @@
 -->
 # Apache Hadoop  2.7.0 Release Notes
 
-These release notes cover new developer and user-facing incompatibilities, features, and major improvements.
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
 
 ---
@@ -30,13 +30,6 @@ ProtocolBuffer is packaged in Ubuntu
 
 ---
 
-* [HADOOP-11729](https://issues.apache.org/jira/browse/HADOOP-11729) | *Minor* | **Fix link to cgroups doc in site.xml**
-
-Committed this to trunk, branch-2, and branch-2.7. Thanks Masatake for your contribution!
-
-
----
-
 * [HADOOP-11498](https://issues.apache.org/jira/browse/HADOOP-11498) | *Major* | **Bump the version of HTrace to 3.1.0-incubating**
 
 **WARNING: No release note provided for this incompatible change.**
@@ -44,21 +37,16 @@ Committed this to trunk, branch-2, and branch-2.7. Thanks Masatake for your cont
 
 ---
 
-* [HADOOP-11497](https://issues.apache.org/jira/browse/HADOOP-11497) | *Major* | **Fix typo in ClusterSetup.html#Hadoop\_Startup**
-
-Correct startup command for cluster data nodes
-
-
----
-
 * [HADOOP-11492](https://issues.apache.org/jira/browse/HADOOP-11492) | *Major* | **Bump up curator version to 2.7.1**
 
+<!-- markdown -->
 Apache Curator version change: Apache Hadoop has updated the version of Apache Curator used from 2.6.0 to 2.7.1. This change should be binary and source compatible for the majority of downstream users. Notable exceptions:
-# Binary incompatible change: org.apache.curator.utils.PathUtils.validatePath(String) changed return types. Downstream users of this method will need to recompile.
-# Source incompatible change: org.apache.curator.framework.recipes.shared.SharedCountReader added a method to its interface definition. Downstream users with custom implementations of this interface can continue without binary compatibility problems but will need to modify their source code to recompile.
-# Source incompatible change: org.apache.curator.framework.recipes.shared.SharedValueReader added a method to its interface definition. Downstream users with custom implementations of this interface can continue without binary compatibility problems but will need to modify their source code to recompile.
 
-Downstream users are reminded that while the Hadoop community will attempt to avoid egregious incompatible dependency changes, there is currently no policy around when Hadoop's exposed dependencies will change across versions (ref http://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Compatibility.html#Java\_Classpath).
+* Binary incompatible change: org.apache.curator.utils.PathUtils.validatePath(String) changed return types. Downstream users of this method will need to recompile.
+* Source incompatible change: org.apache.curator.framework.recipes.shared.SharedCountReader added a method to its interface definition. Downstream users with custom implementations of this interface can continue without binary compatibility problems but will need to modify their source code to recompile.
+* Source incompatible change: org.apache.curator.framework.recipes.shared.SharedValueReader added a method to its interface definition. Downstream users with custom implementations of this interface can continue without binary compatibility problems but will need to modify their source code to recompile.
+
+Downstream users are reminded that while the Hadoop community will attempt to avoid egregious incompatible dependency changes, there is currently no policy around when Hadoop's exposed dependencies will change across versions (ref http://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Compatibility.html#Java_Classpath ).
 
 
 ---
@@ -84,13 +72,6 @@ fs.s3a.max.total.tasks:    the maximum number of tasks that the LinkedBlockingQu
 * [HADOOP-11385](https://issues.apache.org/jira/browse/HADOOP-11385) | *Critical* | **Prevent cross site scripting attack on JMXJSONServlet**
 
 **WARNING: No release note provided for this incompatible change.**
-
-
----
-
-* [HADOOP-11348](https://issues.apache.org/jira/browse/HADOOP-11348) | *Minor* | **Remove unused variable from CMake error message for finding openssl**
-
-Test failure is unrelated.  Committed to 2.7.  Thanks, Dian.
 
 
 ---
@@ -148,13 +129,6 @@ New fs -find command
 
 ---
 
-* [HDFS-8001](https://issues.apache.org/jira/browse/HDFS-8001) | *Trivial* | **RpcProgramNfs3 : wrong parsing of dfs.blocksize**
-
-patch is fully backward compatible.
-
-
----
-
 * [HDFS-7806](https://issues.apache.org/jira/browse/HDFS-7806) | *Minor* | **Refactor: move StorageType from hadoop-hdfs to hadoop-common**
 
 This fix moves the public class StorageType from the package org.apache.hadoop.hdfs to org.apache.hadoop.fs.
@@ -177,13 +151,6 @@ LibHDFS now supports 32-bit build targets on Windows.
 
 ---
 
-* [HDFS-7457](https://issues.apache.org/jira/browse/HDFS-7457) | *Major* | **DatanodeID generates excessive garbage**
-
-Thanks for the reviews, gentlemen. I've committed this to trunk and branch-2. Thanks for identifying and working on the issue, Daryn.
-
-
----
-
 * [HDFS-7411](https://issues.apache.org/jira/browse/HDFS-7411) | *Major* | **Refactor and improve decommissioning logic into DecommissionManager**
 
 This change introduces a new configuration key used to throttle decommissioning work, "dfs.namenode.decommission.blocks.per.interval". This new key overrides and deprecates the previous related configuration key "dfs.namenode.decommission.nodes.per.interval". The new key is intended to result in more predictable pause times while scanning decommissioning nodes.
@@ -191,17 +158,16 @@ This change introduces a new configuration key used to throttle decommissioning 
 
 ---
 
-* [HDFS-7326](https://issues.apache.org/jira/browse/HDFS-7326) | *Minor* | **Add documentation for hdfs debug commands**
+* [HDFS-7270](https://issues.apache.org/jira/browse/HDFS-7270) | *Major* | **Add congestion signaling capability to DataNode write protocol**
 
-Added documentation for the hdfs debug commands to the following URL in the documentation website.
+Introduced a new configuration dfs.pipeline.ecn. When the configuration is turned on, DataNodes will signal in the writing pipelines when they are overloaded. The client can back off based on this congestion signal to avoid overloading the system.
 
-hadoop-project-dist/hadoop-hdfs/HDFSCommands.html
 
-In order to view the new documentation, build the website in a staging area:
-$ mvn clean site; mvn site:stage -DstagingDirectory=/tmp/hadoop-site
+---
 
-Point your browser to 
-file:///tmp/hadoop-site/hadoop-project/hadoop-project-dist/hadoop-hdfs/HDFSCommands.html
+* [HDFS-7210](https://issues.apache.org/jira/browse/HDFS-7210) | *Major* | **Avoid two separate RPC's namenode.append() and namenode.getFileInfo() for an append call from DFSClient**
+
+**WARNING: No release note provided for this incompatible change.**
 
 
 ---
@@ -220,9 +186,9 @@ file:///tmp/hadoop-site/hadoop-project/hadoop-project-dist/hadoop-hdfs/HDFSComma
 
 ---
 
-* [HDFS-6133](https://issues.apache.org/jira/browse/HDFS-6133) | *Major* | **Make Balancer support exclude specified path**
+* [HDFS-6133](https://issues.apache.org/jira/browse/HDFS-6133) | *Major* | **Add a feature for replica pinning so that a pinned replica will not be moved by Balancer/Mover.**
 
-Add a feature for replica pinning so that when a replica is pinned in a datanode, it will not be moved by Balancer/Mover.  The replica pinning feature can be enabled/disabled by "dfs.datanode.block-pinning.enabled", where the default is false.
+Add a feature for replica pinning so that when a replica is pinned in a datanode, it will not be moved by Balancer/Mover. The replica pinning feature can be enabled/disabled by "dfs.datanode.block-pinning.enabled", where the default is false.
 
 
 ---
@@ -252,6 +218,7 @@ Based on the reconfiguration framework provided by HADOOP-7001, enable reconfigu
 
 * [MAPREDUCE-5583](https://issues.apache.org/jira/browse/MAPREDUCE-5583) | *Major* | **Ability to limit running map and reduce tasks**
 
+<!-- markdown -->
 This introduces two new MR2 job configs, mentioned below, which allow users to control the maximum simultaneously-running tasks of the submitted job, across the cluster:
 
 * mapreduce.job.running.map.limit (default: 0, for no limit)
@@ -272,24 +239,6 @@ Removed commons-httpclient dependency from hadoop-yarn-server-web-proxy module.
 * [YARN-3154](https://issues.apache.org/jira/browse/YARN-3154) | *Blocker* | **Should not upload partial logs for MR jobs or other "short-running' applications**
 
 Applications which made use of the LogAggregationContext in their application will need to revisit this code in order to make sure that their logs continue to get rolled out.
-
-
----
-
-* [YARN-2230](https://issues.apache.org/jira/browse/YARN-2230) | *Minor* | **Fix description of yarn.scheduler.maximum-allocation-vcores in yarn-default.xml (or code)**
-
-I have modified the description of the yarn.scheduler.maximum-allocation-vcores setting in yarn-default.xml to be reflective of the actual behavior (throw InvalidRequestException when the limit is crossed).
-
-Since this is a documentation change, I have not added any test cases.
-
-Please review the patch, thanks!
-
-
----
-
-* [YARN-1904](https://issues.apache.org/jira/browse/YARN-1904) | *Major* | **Uniform the XXXXNotFound messages from ClientRMService and ApplicationHistoryClientService**
-
-I just committed this. Thanks Zhijie!
 
 
 

@@ -28,6 +28,12 @@
 | [HADOOP-7470](https://issues.apache.org/jira/browse/HADOOP-7470) | move up to Jackson 1.8.8 |  Minor | util | Steve Loughran | Enis Soztutar |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

@@ -18,7 +18,7 @@
 -->
 # Apache Hadoop  2.0.3-alpha Release Notes
 
-These release notes cover new developer and user-facing incompatibilities, features, and major improvements.
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
 
 ---
@@ -167,7 +167,7 @@ Please see hdfs-default.xml documentation corresponding to ""dfs.namenode.stale.
 
 This jira adds a new DataNode state called "stale" at the NameNode. DataNodes are marked as stale if it does not send heartbeat message to NameNode within the timeout configured using the configuration parameter "dfs.namenode.stale.datanode.interval" in seconds (default value is 30 seconds). NameNode picks a stale datanode as the last target to read from when returning block locations for reads.
 
-This feature is by default turned * off *. To turn on the feature, set the HDFS configuration "dfs.namenode.check.stale.datanode" to true.
+This feature is by default turned \* off \*. To turn on the feature, set the HDFS configuration "dfs.namenode.check.stale.datanode" to true.
 
 
 ---

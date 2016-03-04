@@ -31,6 +31,12 @@
 | [MAPREDUCE-4629](https://issues.apache.org/jira/browse/MAPREDUCE-4629) | Remove JobHistory.DEBUG\_MODE |  Major | . | Karthik Kambatla | Karthik Kambatla |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

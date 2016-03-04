@@ -18,7 +18,7 @@
 -->
 # Apache Hadoop  0.20.0 Release Notes
 
-These release notes cover new developer and user-facing incompatibilities, features, and major improvements.
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
 
 ---
@@ -306,7 +306,7 @@ Removed deprecated method parseArgs from org.apache.hadoop.fs.FileSystem.
 
 * [HADOOP-3497](https://issues.apache.org/jira/browse/HADOOP-3497) | *Major* | **File globbing with a PathFilter is too restrictive**
 
-Changed the semantics of file globbing with a PathFilter (using the globStatus method of FileSystem). Previously, the filtering was too restrictive, so that a glob of /*/* and a filter that only accepts /a/b would not have matched /a/b. With this change /a/b does match.
+Changed the semantics of file globbing with a PathFilter (using the globStatus method of FileSystem). Previously, the filtering was too restrictive, so that a glob of /\*/\* and a filter that only accepts /a/b would not have matched /a/b. With this change /a/b does match.
 
 
 ---

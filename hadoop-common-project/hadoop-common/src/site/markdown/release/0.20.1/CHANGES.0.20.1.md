@@ -28,6 +28,12 @@
 | [HADOOP-5726](https://issues.apache.org/jira/browse/HADOOP-5726) | Remove pre-emption from the capacity scheduler code base |  Major | . | Hemanth Yamijala | rahul k singh |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

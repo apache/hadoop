@@ -27,6 +27,12 @@
 | [HDFS-617](https://issues.apache.org/jira/browse/HDFS-617) | Support for non-recursive create() in HDFS |  Major | hdfs-client, namenode | Kan Zhang | Kan Zhang |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |

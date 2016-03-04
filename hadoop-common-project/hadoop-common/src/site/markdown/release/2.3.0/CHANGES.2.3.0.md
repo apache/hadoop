@@ -27,6 +27,12 @@
 | [HDFS-4997](https://issues.apache.org/jira/browse/HDFS-4997) | libhdfs doesn't return correct error codes in most cases |  Major | libhdfs | Colin Patrick McCabe | Colin Patrick McCabe |
 
 
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
 ### NEW FEATURES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |
@@ -34,7 +40,7 @@
 | [HADOOP-10047](https://issues.apache.org/jira/browse/HADOOP-10047) | Add a directbuffer Decompressor API to hadoop |  Major | io | Gopal V | Gopal V |
 | [HADOOP-9848](https://issues.apache.org/jira/browse/HADOOP-9848) | Create a MiniKDC for use with security testing |  Major | security, test | Wei Yan | Wei Yan |
 | [HADOOP-9618](https://issues.apache.org/jira/browse/HADOOP-9618) | Add thread which detects JVM pauses |  Major | util | Todd Lipcon | Todd Lipcon |
-| [HADOOP-9432](https://issues.apache.org/jira/browse/HADOOP-9432) | Add support for markdown .md files in site documentation |  Minor | build, documentation | Steve Loughran |  |
+| [HADOOP-9432](https://issues.apache.org/jira/browse/HADOOP-9432) | Add support for markdown .md files in site documentation |  Minor | build, documentation | Steve Loughran | Steve Loughran |
 | [HADOOP-8545](https://issues.apache.org/jira/browse/HADOOP-8545) | Filesystem Implementation for OpenStack Swift |  Major | fs | Tim Miller | Dmitry Mezhensky |
 | [HDFS-5703](https://issues.apache.org/jira/browse/HDFS-5703) | Add support for HTTPS and swebhdfs to HttpFS |  Major | webhdfs | Alejandro Abdelnur | Alejandro Abdelnur |
 | [HDFS-5260](https://issues.apache.org/jira/browse/HDFS-5260) | Merge zero-copy memory-mapped HDFS client reads to trunk and branch-2. |  Major | hdfs-client, libhdfs | Chris Nauroth | Chris Nauroth |
@@ -428,6 +434,7 @@
 | [YARN-1454](https://issues.apache.org/jira/browse/YARN-1454) | TestRMRestart.testRMDelegationTokenRestoredOnRMRestart is failing intermittently |  Critical | . | Jian He | Karthik Kambatla |
 | [YARN-1451](https://issues.apache.org/jira/browse/YARN-1451) | TestResourceManager relies on the scheduler assigning multiple containers in a single node update |  Minor | . | Sandy Ryza | Sandy Ryza |
 | [YARN-1450](https://issues.apache.org/jira/browse/YARN-1450) | TestUnmanagedAMLauncher#testDSShell fails on trunk |  Major | applications/distributed-shell | Akira AJISAKA | Binglin Chang |
+| [YARN-1438](https://issues.apache.org/jira/browse/YARN-1438) | When a container fails, the text of the exception isn't included in the diagnostics |  Major | nodemanager | Steve Loughran | Steve Loughran |
 | [YARN-1435](https://issues.apache.org/jira/browse/YARN-1435) | Distributed Shell should not run other commands except "sh", and run the custom script at the same time. |  Major | applications/distributed-shell | Tassapol Athiapinya | Xuan Gong |
 | [YARN-1425](https://issues.apache.org/jira/browse/YARN-1425) | TestRMRestart fails because MockRM.waitForState(AttemptId) uses current attempt instead of the attempt passed as argument |  Major | . | Omkar Vinit Joshi | Omkar Vinit Joshi |
 | [YARN-1419](https://issues.apache.org/jira/browse/YARN-1419) | TestFifoScheduler.testAppAttemptMetrics fails intermittently under jdk7 |  Minor | scheduler | Jonathan Eagles | Jonathan Eagles |
@@ -648,8 +655,8 @@
 | [YARN-427](https://issues.apache.org/jira/browse/YARN-427) | Coverage fix for org.apache.hadoop.yarn.server.api.\* |  Major | . | Aleksey Gorshkov | Aleksey Gorshkov |
 | [YARN-425](https://issues.apache.org/jira/browse/YARN-425) | coverage fix for yarn api |  Major | . | Aleksey Gorshkov | Aleksey Gorshkov |
 | [YARN-353](https://issues.apache.org/jira/browse/YARN-353) | Add Zookeeper-based store implementation for RMStateStore |  Major | resourcemanager | Hitesh Shah | Karthik Kambatla |
-| [YARN-312](https://issues.apache.org/jira/browse/YARN-312) | Add updateNodeResource in ResourceManagerAdministrationProtocol |  Major | api | Junping Du | Junping Du |
-| [YARN-311](https://issues.apache.org/jira/browse/YARN-311) | Dynamic node resource configuration: core scheduler changes |  Major | resourcemanager, scheduler | Junping Du | Junping Du |
+| [YARN-312](https://issues.apache.org/jira/browse/YARN-312) | Add updateNodeResource in ResourceManagerAdministrationProtocol |  Major | api, graceful | Junping Du | Junping Du |
+| [YARN-311](https://issues.apache.org/jira/browse/YARN-311) | Dynamic node resource configuration: core scheduler changes |  Major | graceful, resourcemanager, scheduler | Junping Du | Junping Du |
 | [YARN-7](https://issues.apache.org/jira/browse/YARN-7) | Add support for DistributedShell to ask for CPUs along with memory |  Major | . | Arun C Murthy | Junping Du |
 
 

@@ -18,9 +18,15 @@
 -->
 # Apache Hadoop Changelog
 
-## Release 0.18.4 - Unreleased
+## Release 0.18.4 - Unreleased (as of 2016-03-04)
 
 ### INCOMPATIBLE CHANGES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
+
+
+### IMPORTANT ISSUES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |
 |:---- |:---- | :--- |:---- |:---- |:---- |

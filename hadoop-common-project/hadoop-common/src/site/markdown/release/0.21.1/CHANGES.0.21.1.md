@@ -18,13 +18,19 @@
 -->
 # Apache Hadoop Changelog
 
-## Release 0.21.1 - Unreleased
+## Release 0.21.1 - Unreleased (as of 2016-03-04)
 
 ### INCOMPATIBLE CHANGES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |
 |:---- |:---- | :--- |:---- |:---- |:---- |
 | [MAPREDUCE-1905](https://issues.apache.org/jira/browse/MAPREDUCE-1905) | Context.setStatus() and progress() api are ignored |  Blocker | task | Amareshwari Sriramadasu | Amareshwari Sriramadasu |
+
+
+### IMPORTANT ISSUES:
+
+| JIRA | Summary | Priority | Component | Reporter | Contributor |
+|:---- |:---- | :--- |:---- |:---- |:---- |
 
 
 ### NEW FEATURES:

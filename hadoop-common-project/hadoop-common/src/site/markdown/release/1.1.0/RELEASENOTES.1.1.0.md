@@ -18,7 +18,7 @@
 -->
 # Apache Hadoop  1.1.0 Release Notes
 
-These release notes cover new developer and user-facing incompatibilities, features, and major improvements.
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
 
 ---
@@ -60,7 +60,7 @@ Append is not supported in Hadoop 1.x. Please upgrade to 2.x if you need append.
 
 * [HADOOP-6995](https://issues.apache.org/jira/browse/HADOOP-6995) | *Minor* | **Allow wildcards to be used in ProxyUsers configurations**
 
-When configuring proxy users and hosts, the special wildcard value "*" may be specified to match any host or any user.
+When configuring proxy users and hosts, the special wildcard value "\*" may be specified to match any host or any user.
 
 
 ---
@@ -87,7 +87,7 @@ Please see hdfs-default.xml for detailed description.
 
 This jira adds a new DataNode state called "stale" at the NameNode. DataNodes are marked as stale if it does not send heartbeat message to NameNode within the timeout configured using the configuration parameter "dfs.namenode.stale.datanode.interval" in seconds (default value is 30 seconds). NameNode picks a stale datanode as the last target to read from when returning block locations for reads.
 
-This feature is by default turned * off *. To turn on the feature, set the HDFS configuration "dfs.namenode.check.stale.datanode" to true.
+This feature is by default turned \* off \*. To turn on the feature, set the HDFS configuration "dfs.namenode.check.stale.datanode" to true.
 
 
 ---
@@ -182,7 +182,7 @@ Fixes the issue of GenerateDistCacheData  job slowness.
 
 * [MAPREDUCE-3597](https://issues.apache.org/jira/browse/MAPREDUCE-3597) | *Major* | **Provide a way to access other info of history file from Rumentool**
 
-Rumen now provides {{Parsed*}} objects. These objects provide extra information that are not provided by {{Logged*}} objects.
+Rumen now provides {{Parsed\*}} objects. These objects provide extra information that are not provided by {{Logged\*}} objects.
 
 
 ---
