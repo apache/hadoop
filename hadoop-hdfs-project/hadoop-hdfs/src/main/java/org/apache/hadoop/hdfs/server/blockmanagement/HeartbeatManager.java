@@ -240,6 +240,20 @@ class HeartbeatManager implements DatanodeStatistics {
     stats.add(node);
   }
 
+  synchronized void updateLifeline(final DatanodeDescriptor node,
+      StorageReport[] reports, long cacheCapacity, long cacheUsed,
+      int xceiverCount, int failedVolumes,
+      VolumeFailureSummary volumeFailureSummary) {
+    stats.subtract(node);
+    // This intentionally calls updateHeartbeatState instead of
+    // updateHeartbeat, because we don't want to modify the
+    // heartbeatedSinceRegistration flag.  Arrival of a lifeline message does
+    // not count as arrival of the first heartbeat.
+    node.updateHeartbeatState(reports, cacheCapacity, cacheUsed,
+        xceiverCount, failedVolumes, volumeFailureSummary);
+    stats.add(node);
+  }
+
   synchronized void startDecommission(final DatanodeDescriptor node) {
     if (!node.isAlive()) {
       LOG.info("Dead node {} is decommissioned immediately.", node);

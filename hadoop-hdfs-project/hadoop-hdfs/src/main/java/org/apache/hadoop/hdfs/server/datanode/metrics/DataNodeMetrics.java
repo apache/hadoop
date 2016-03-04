@@ -107,6 +107,7 @@ public class DataNodeMetrics {
   @Metric MutableRate copyBlockOp;
   @Metric MutableRate replaceBlockOp;
   @Metric MutableRate heartbeats;
+  @Metric MutableRate lifelines;
   @Metric MutableRate blockReports;
   @Metric MutableRate incrementalBlockReports;
   @Metric MutableRate cacheReports;
@@ -197,6 +198,10 @@ public class DataNodeMetrics {
   
   public void addHeartbeat(long latency) {
     heartbeats.add(latency);
+  }
+
+  public void addLifeline(long latency) {
+    lifelines.add(latency);
   }
 
   public void addBlockReport(long latency) {
