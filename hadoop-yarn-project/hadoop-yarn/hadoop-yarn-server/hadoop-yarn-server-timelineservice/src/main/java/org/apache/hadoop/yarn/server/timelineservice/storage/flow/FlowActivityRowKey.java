@@ -83,36 +83,21 @@ public class FlowActivityRowKey {
   /**
    * Constructs a row key for the flow activity table as follows:
    * {@code clusterId!dayTimestamp!user!flowName}.
-   * Will insert into current day's record in the table. Uses current time to
-   * store top of the day timestamp.
    *
    * @param clusterId Cluster Id.
-   * @param userId User Id.
-   * @param flowName Flow Name.
-   * @return byte array with the row key prefix
-   */
-  public static byte[] getRowKey(String clusterId, String userId,
-      String flowName) {
-    long dayTs = TimelineStorageUtils.getTopOfTheDayTimestamp(System
-        .currentTimeMillis());
-    return getRowKey(clusterId, dayTs, userId, flowName);
-  }
-
-  /**
-   * Constructs a row key for the flow activity table as follows:
-   * {@code clusterId!dayTimestamp!user!flowName}.
-   *
-   * @param clusterId Cluster Id.
-   * @param dayTs Top of the day timestamp.
+   * @param eventTs event's TimeStamp.
    * @param userId User Id.
    * @param flowName Flow Name.
    * @return byte array for the row key
    */
-  public static byte[] getRowKey(String clusterId, long dayTs, String userId,
+  public static byte[] getRowKey(String clusterId, long eventTs, String userId,
       String flowName) {
+    // convert it to Day's time stamp
+    eventTs = TimelineStorageUtils.getTopOfTheDayTimestamp(eventTs);
+
     return Separator.QUALIFIERS.join(
         Bytes.toBytes(Separator.QUALIFIERS.encode(clusterId)),
-        Bytes.toBytes(TimelineStorageUtils.invertLong(dayTs)),
+        Bytes.toBytes(TimelineStorageUtils.invertLong(eventTs)),
         Bytes.toBytes(Separator.QUALIFIERS.encode(userId)),
         Bytes.toBytes(Separator.QUALIFIERS.encode(flowName)));
   }
