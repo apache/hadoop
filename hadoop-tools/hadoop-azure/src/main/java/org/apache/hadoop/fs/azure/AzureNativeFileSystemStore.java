@@ -450,7 +450,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       // Add to this the hbase root directory, or /hbase is that is not set.
       hbaseRoot = verifyAndConvertToStandardFormat(
           sessionConfiguration.get("hbase.rootdir", "hbase"));
-      atomicRenameDirs.add(hbaseRoot);
+      if (hbaseRoot != null) {
+        atomicRenameDirs.add(hbaseRoot);
+      }
     } catch (URISyntaxException e) {
       LOG.warn("Unable to initialize HBase root as an atomic rename directory.");
     }
