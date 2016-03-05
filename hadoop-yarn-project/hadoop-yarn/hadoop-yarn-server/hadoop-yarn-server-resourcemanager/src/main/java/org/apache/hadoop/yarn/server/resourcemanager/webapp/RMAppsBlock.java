@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.webapp.AppsBlock;
 import org.apache.hadoop.yarn.server.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -95,9 +96,11 @@ public class RMAppsBlock extends AppsBlock {
       }
 
       String blacklistedNodesCount = "N/A";
-      Set<String> nodes = rm.getRMContext().getRMApps()
-          .get(appAttemptId.getApplicationId()).getAppAttempts()
-          .get(appAttemptId).getBlacklistedNodes();
+      RMAppAttempt appAttempt =
+          rm.getRMContext().getRMApps().get(appAttemptId.getApplicationId())
+              .getAppAttempts().get(appAttemptId);
+      Set<String> nodes =
+          null == appAttempt ? null : appAttempt.getBlacklistedNodes();
       if (nodes != null) {
         blacklistedNodesCount = String.valueOf(nodes.size());
       }
