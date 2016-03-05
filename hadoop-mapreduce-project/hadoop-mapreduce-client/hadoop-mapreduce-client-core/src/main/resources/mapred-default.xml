@@ -351,6 +351,16 @@
 </property>
 
 <property>
+  <name>yarn.app.mapreduce.am.log.level</name>
+  <value>INFO</value>
+  <description>The logging level for the MR ApplicationMaster. The allowed
+  levels are: OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE and ALL.
+  The setting here could be overriden if "mapreduce.job.log4j-properties-file"
+  is set.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.map.log.level</name>
   <value>INFO</value>
   <description>The logging level for the map task. The allowed levels are:
