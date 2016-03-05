@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -60,7 +60,8 @@ import java.util.concurrent.locks.ReentrantLock;
 @InterfaceAudience.Private
 public class DiskBalancer {
 
-  private static final Log LOG = LogFactory.getLog(DiskBalancer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DiskBalancer
+      .class);
   private final FsDatasetSpi<?> dataset;
   private final String dataNodeUUID;
   private final BlockMover blockMover;

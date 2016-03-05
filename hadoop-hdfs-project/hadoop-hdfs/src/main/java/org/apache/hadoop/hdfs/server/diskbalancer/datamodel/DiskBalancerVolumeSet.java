@@ -19,8 +19,8 @@
 package org.apache.hadoop.hdfs.server.diskbalancer.datamodel;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
@@ -40,7 +40,8 @@ import java.util.UUID;
  */
 @JsonIgnoreProperties({"sortedQueue", "volumeCount", "idealUsed"})
 public class DiskBalancerVolumeSet {
-  static final Log LOG = LogFactory.getLog(DiskBalancerVolumeSet.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DiskBalancerVolumeSet.class);
   private final int maxDisks = 256;
 
   @JsonProperty("transient")
@@ -172,7 +173,7 @@ public class DiskBalancerVolumeSet {
                                       volume.getStorageType(),
                                       volume.getUuid());
 
-    LOG.fatal(errMessage);
+    LOG.error(errMessage);
     volume.setSkip(true);
   }
 

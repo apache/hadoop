@@ -16,8 +16,8 @@
  */
 package org.apache.hadoop.hdfs.server.diskbalancer.connectors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.IOException;
@@ -28,7 +28,8 @@ import java.net.URISyntaxException;
  * Connector factory creates appropriate connector based on the URL.
  */
 public final class ConnectorFactory {
-  static final Log LOG = LogFactory.getLog(ConnectorFactory.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ConnectorFactory.class);
 
   /**
    * Constructs an appropriate connector based on the URL.
@@ -37,13 +38,13 @@ public final class ConnectorFactory {
    */
   public static ClusterConnector getCluster(URI clusterURI, Configuration
       conf) throws IOException, URISyntaxException {
-    LOG.info("Cluster URI : " + clusterURI);
-    LOG.info("scheme : " + clusterURI.getScheme());
+    LOG.debug("Cluster URI : {}" , clusterURI);
+    LOG.debug("scheme : {}" , clusterURI.getScheme());
     if (clusterURI.getScheme().startsWith("file")) {
-      LOG.info("Creating a JsonNodeConnector");
+      LOG.debug("Creating a JsonNodeConnector");
       return new JsonNodeConnector(clusterURI.toURL());
     } else {
-      LOG.info("Creating NameNode connector");
+      LOG.debug("Creating NameNode connector");
       return new DBNameNodeConnector(clusterURI, conf);
     }
   }

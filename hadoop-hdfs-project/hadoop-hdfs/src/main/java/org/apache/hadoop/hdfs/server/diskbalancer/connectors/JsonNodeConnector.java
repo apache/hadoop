@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdfs.server.diskbalancer.connectors;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel
     .DiskBalancerDataNode;
@@ -33,7 +33,8 @@ import java.util.List;
  * A connector that understands JSON data cluster models.
  */
 public class JsonNodeConnector implements ClusterConnector {
-  static final Log LOG = LogFactory.getLog(JsonNodeConnector.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(JsonNodeConnector.class);
   private final URL clusterURI;
 
   /**

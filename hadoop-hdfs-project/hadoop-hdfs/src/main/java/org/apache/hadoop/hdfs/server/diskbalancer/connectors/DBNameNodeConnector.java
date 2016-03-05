@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdfs.server.diskbalancer.connectors;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -42,7 +42,8 @@ import java.util.List;
  * given cluster.
  */
 class DBNameNodeConnector implements ClusterConnector {
-  static final Log LOG = LogFactory.getLog(DBNameNodeConnector.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DBNameNodeConnector.class);
   static final Path DISKBALANCER_ID_PATH = new Path("/system/diskbalancer.id");
   private final URI clusterURI;
   private final NameNodeConnector connector;

@@ -16,8 +16,8 @@
  */
 package org.apache.hadoop.hdfs.server.diskbalancer.planner;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel
     .DiskBalancerDataNode;
 
@@ -25,7 +25,8 @@ import org.apache.hadoop.hdfs.server.diskbalancer.datamodel
  * Returns a planner based on the user defined tags.
  */
 public final class PlannerFactory {
-  static final Log LOG = LogFactory.getLog(PlannerFactory.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(PlannerFactory.class);
 
   public static final String GREEDY_PLANNER = "greedyPlanner";
 

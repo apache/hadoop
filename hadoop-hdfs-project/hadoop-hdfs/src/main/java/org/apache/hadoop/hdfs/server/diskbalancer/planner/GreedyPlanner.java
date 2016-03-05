@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdfs.server.diskbalancer.planner;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel
     .DiskBalancerDataNode;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
@@ -42,7 +42,8 @@ public class GreedyPlanner implements Planner {
   public static final long MB = 1024L * 1024L;
   public static final long GB = MB * 1024L;
   public static final long TB = GB * 1024L;
-  static final Log LOG = LogFactory.getLog(GreedyPlanner.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(GreedyPlanner.class);
   private final float threshold;
 
   /**
@@ -108,13 +109,13 @@ public class GreedyPlanner implements Planner {
       if (!lowVolume.isSkip() && !highVolume.isSkip()) {
         nextStep = computeMove(currentSet, lowVolume, highVolume);
       } else {
-        LOG.debug("Skipping compute move. lowVolume :" + lowVolume.getPath());
-        LOG.debug("Skipping compute move. highVolume :" + highVolume.getPath());
+        LOG.debug("Skipping compute move. lowVolume: {} highVolume: {}",
+            lowVolume.getPath(), highVolume.getPath());
       }
 
       applyStep(nextStep, currentSet, lowVolume, highVolume);
       if (nextStep != null) {
-        LOG.debug("Step : " + nextStep.toString());
+        LOG.debug("Step : {} ",  nextStep.toString());
         plan.addStep(nextStep);
       }
     }
@@ -179,9 +180,8 @@ public class GreedyPlanner implements Planner {
     // This disk cannot take any more data from any disk.
     // Remove it from our computation matrix.
     if (maxLowVolumeCanReceive <= 0) {
-      LOG.debug(lowVolume.getPath() +
-          " Skipping disk from computation. Maximum data size " +
-          "achieved.");
+      LOG.debug("{} Skipping disk from computation. Maximum data size " +
+          "achieved.", lowVolume.getPath());
       lowVolume.setSkip(true);
     }
 
@@ -191,9 +191,8 @@ public class GreedyPlanner implements Planner {
     // This volume cannot give any more data, remove it from the
     // computation matrix
     if (maxHighVolumeCanGive <= 0) {
-      LOG.debug(highVolume.getPath() +
-          " Skipping disk from computation. Minimum data size " +
-          "achieved.");
+      LOG.debug(" {} Skipping disk from computation. Minimum data size " +
+          "achieved.", highVolume.getPath());
       highVolume.setSkip(true);
     }
 

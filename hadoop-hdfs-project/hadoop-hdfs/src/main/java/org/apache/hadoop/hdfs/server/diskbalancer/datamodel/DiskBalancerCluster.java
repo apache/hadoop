@@ -19,8 +19,8 @@ package org.apache.hadoop.hdfs.server.diskbalancer.datamodel;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ClusterConnector;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.Planner;
@@ -66,7 +66,8 @@ import java.util.concurrent.Future;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class DiskBalancerCluster {
 
-  static final Log LOG = LogFactory.getLog(DiskBalancerCluster.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DiskBalancerCluster.class);
   private final Set<String> exclusionList;
   private final Set<String> inclusionList;
   private ClusterConnector clusterConnector;
@@ -264,7 +265,7 @@ public class DiskBalancerCluster {
    */
   public void createOutPutDirectory() throws IOException {
     if (Files.exists(Paths.get(this.getOutput()))) {
-      LOG.fatal("An output directory already exists at this location. Path : " +
+      LOG.error("An output directory already exists at this location. Path : " +
           this.getOutput());
       throw new IOException(
           "An output directory already exists at this location. Path : " +
@@ -273,7 +274,7 @@ public class DiskBalancerCluster {
 
     File f = new File(this.getOutput());
     if (!f.mkdirs()) {
-      LOG.fatal("Unable to create the output directory. Path : " + this
+      LOG.error("Unable to create the output directory. Path : " + this
           .getOutput());
       throw new IOException(
           "Unable to create the output directory. Path : " + this.getOutput());
