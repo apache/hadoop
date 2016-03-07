@@ -68,10 +68,16 @@ public class PrivilegedOperation {
 
   private final OperationType opType;
   private final List<String> args;
+  private boolean failureLogging;
 
-  public PrivilegedOperation(OperationType opType, String arg) {
+  public PrivilegedOperation(OperationType opType) {
     this.opType = opType;
     this.args = new ArrayList<String>();
+    this.failureLogging = true;
+  }
+
+  public PrivilegedOperation(OperationType opType, String arg) {
+    this(opType);
 
     if (arg != null) {
       this.args.add(arg);
@@ -79,8 +85,7 @@ public class PrivilegedOperation {
   }
 
   public PrivilegedOperation(OperationType opType, List<String> args) {
-    this.opType = opType;
-    this.args = new ArrayList<String>();
+    this(opType);
 
     if (args != null) {
       this.args.addAll(args);
@@ -95,6 +100,18 @@ public class PrivilegedOperation {
 
   public void appendArgs(List<String> args) {
     this.args.addAll(args);
+  }
+
+  public void enableFailureLogging() {
+    this.failureLogging = true;
+  }
+
+  public void disableFailureLogging() {
+    this.failureLogging = false;
+  }
+
+  public boolean isFailureLoggingEnabled() {
+    return failureLogging;
   }
 
   public OperationType getOperationType() {

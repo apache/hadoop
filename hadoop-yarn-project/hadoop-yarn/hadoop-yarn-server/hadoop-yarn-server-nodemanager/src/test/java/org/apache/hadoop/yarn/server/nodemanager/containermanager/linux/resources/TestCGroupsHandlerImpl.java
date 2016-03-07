@@ -89,7 +89,7 @@ public class TestCGroupsHandlerImpl {
       cGroupsHandler = new CGroupsHandlerImpl(conf,
           privilegedOperationExecutorMock);
       PrivilegedOperation expectedOp = new PrivilegedOperation(
-          PrivilegedOperation.OperationType.MOUNT_CGROUPS, (String) null);
+          PrivilegedOperation.OperationType.MOUNT_CGROUPS);
       //This is expected to be of the form :
       //net_cls=<mount_path>/net_cls
       StringBuffer controllerKV = new StringBuffer(controller.getName())
