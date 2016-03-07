@@ -2612,7 +2612,7 @@ public class BlockManager implements BlockStatsMXBean {
       corruptReplicas.removeFromCorruptReplicasMap(block, node,
           Reason.GENSTAMP_MISMATCH);
       curReplicaDelta = 0;
-      blockLog.warn("BLOCK* addStoredBlock: Redundant addStoredBlock request"
+      blockLog.debug("BLOCK* addStoredBlock: Redundant addStoredBlock request"
               + " received for {} on node {} size {}", storedBlock, node,
           storedBlock.getNumBytes());
     }
