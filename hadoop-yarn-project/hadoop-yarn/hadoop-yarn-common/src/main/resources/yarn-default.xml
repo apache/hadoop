@@ -2637,4 +2637,82 @@
     <name>yarn.node-labels.fs-store.impl.class</name>
     <value>org.apache.hadoop.yarn.nodelabels.FileSystemNodeLabelsStore</value>
   </property>
+
+  <property>
+    <description>
+      Enable the CSRF filter for the RM web app
+    </description>
+    <name>yarn.resourcemanager.webapp.rest-csrf.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Optional parameter that indicates the custom header name to use for CSRF
+      protection.
+    </description>
+    <name>yarn.resourcemanager.webapp.rest-csrf.custom-header</name>
+    <value>X-XSRF-Header</value>
+  </property>
+
+  <property>
+    <description>
+      Optional parameter that indicates the list of HTTP methods that do not
+      require CSRF protection
+    </description>
+    <name>yarn.resourcemanager.webapp.rest-csrf.methods-to-ignore</name>
+    <value>GET,OPTIONS,HEAD</value>
+  </property>
+
+  <property>
+    <description>
+      Enable the CSRF filter for the NM web app
+    </description>
+    <name>yarn.nodemanager.webapp.rest-csrf.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Optional parameter that indicates the custom header name to use for CSRF
+      protection.
+    </description>
+    <name>yarn.nodemanager.webapp.rest-csrf.custom-header</name>
+    <value>X-XSRF-Header</value>
+  </property>
+
+  <property>
+    <description>
+      Optional parameter that indicates the list of HTTP methods that do not
+      require CSRF protection
+    </description>
+    <name>yarn.nodemanager.webapp.rest-csrf.methods-to-ignore</name>
+    <value>GET,OPTIONS,HEAD</value>
+  </property>
+
+  <property>
+    <description>
+      Enable the CSRF filter for the timeline service web app
+    </description>
+    <name>yarn.timeline-service.webapp.rest-csrf.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Optional parameter that indicates the custom header name to use for CSRF
+      protection.
+    </description>
+    <name>yarn.timeline-service.webapp.rest-csrf.custom-header</name>
+    <value>X-XSRF-Header</value>
+  </property>
+
+  <property>
+    <description>
+      Optional parameter that indicates the list of HTTP methods that do not
+      require CSRF protection
+    </description>
+    <name>yarn.timeline-service.webapp.rest-csrf.methods-to-ignore</name>
+    <value>GET,OPTIONS,HEAD</value>
+  </property>
 </configuration>

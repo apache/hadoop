@@ -225,6 +225,19 @@ public class JHAdminConfig {
       + "jobname.limit";
   public static final int DEFAULT_MR_HS_JOBNAME_LIMIT = 50;
 
+
+  /**
+   * CSRF settings.
+   */
+  public static final String MR_HISTORY_CSRF_PREFIX = MR_HISTORY_PREFIX +
+                                                      "webapp.rest-csrf.";
+  public static final String MR_HISTORY_CSRF_ENABLED = MR_HISTORY_CSRF_PREFIX +
+                                                       "enabled";
+  public static final String MR_HISTORY_CSRF_CUSTOM_HEADER =
+      MR_HISTORY_CSRF_PREFIX + "custom-header";
+  public static final String MR_HISTORY_METHODS_TO_IGNORE =
+      MR_HISTORY_CSRF_PREFIX + "methods-to-ignore";
+
   /**
    * Settings for .jhist file format.
    */

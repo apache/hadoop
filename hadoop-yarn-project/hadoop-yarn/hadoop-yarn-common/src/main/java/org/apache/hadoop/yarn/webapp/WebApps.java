@@ -39,6 +39,7 @@ import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.slf4j.Logger;
@@ -73,6 +74,7 @@ import com.google.inject.servlet.GuiceFilter;
 public class WebApps {
   static final Logger LOG = LoggerFactory.getLogger(WebApps.class);
   public static class Builder<T> {
+
     static class ServletStruct {
       public Class<? extends HttpServlet> clazz;
       public String name;
@@ -91,6 +93,7 @@ public class WebApps {
     boolean devMode = false;
     private String spnegoPrincipalKey;
     private String spnegoKeytabKey;
+    private String configPrefix;
     private final HashSet<ServletStruct> servlets = new HashSet<ServletStruct>();
     private final HashMap<String, Object> attributes = new HashMap<String, Object>();
 
@@ -158,6 +161,18 @@ public class WebApps {
     
     public Builder<T> withHttpSpnegoKeytabKey(String spnegoKeytabKey) {
       this.spnegoKeytabKey = spnegoKeytabKey;
+      return this;
+    }
+
+    /**
+     * Enable the CSRF filter.
+     * @param csrfConfigPrefix The config prefix that identifies the
+     *                         CSRF parameters applicable for this filter
+     *                         instance.
+     * @return the Builder instance
+     */
+    public Builder<T> withCSRFProtection(String csrfConfigPrefix) {
+      this.configPrefix = csrfConfigPrefix;
       return this;
     }
 
@@ -266,6 +281,19 @@ public class WebApps {
         for(Map.Entry<String, Object> entry : attributes.entrySet()) {
           server.setAttribute(entry.getKey(), entry.getValue());
         }
+        Map<String, String> params = getCsrfConfigParameters();
+
+        if (hasCSRFEnabled(params)) {
+          LOG.info("CSRF Protection has been enabled for the {} application. "
+                   + "Please ensure that there is an authentication mechanism "
+                   + "enabled (kerberos, custom, etc).",
+                   name);
+          String restCsrfClassName = RestCsrfPreventionFilter.class.getName();
+          HttpServer2.defineFilter(server.getWebAppContext(), restCsrfClassName,
+                                   restCsrfClassName, params,
+                                   new String[] {"/*"});
+        }
+
         HttpServer2.defineFilter(server.getWebAppContext(), "guice",
           GuiceFilter.class.getName(), null, new String[] { "/*" });
 
@@ -293,6 +321,20 @@ public class WebApps {
         LOG.info("in dev mode!");
       }
       return webapp;
+    }
+
+    private boolean hasCSRFEnabled(Map<String, String> params) {
+      return params != null && Boolean.valueOf(params.get("enabled"));
+    }
+
+    private Map<String, String> getCsrfConfigParameters() {
+      Map<String, String> params = null;
+      if (configPrefix != null) {
+        // need to obtain parameters for CSRF filter
+        params =
+            RestCsrfPreventionFilter.getFilterParams(conf, configPrefix);
+      }
+      return params;
     }
 
     public WebApp start() {
