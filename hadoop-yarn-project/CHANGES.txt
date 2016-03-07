@@ -18,6 +18,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4653. Document YARN security model from the perspective of
     Application Developers. (Steve Loughran via jianhe)
 
+    YARN-4761. NMs reconnecting with changed capabilities can lead to wrong cluster
+    resource calculations on fair scheduler. (Sangjin Lee via zxu)
+
   OPTIMIZATIONS
 
   BUG FIXES
