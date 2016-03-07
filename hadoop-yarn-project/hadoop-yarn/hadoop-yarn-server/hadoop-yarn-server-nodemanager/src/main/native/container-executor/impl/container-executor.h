@@ -95,9 +95,14 @@ extern FILE *LOGFILE;
 // the log file for error messages
 extern FILE *ERRORFILE;
 
-
 // get the executable's filename
 char* get_executable();
+
+//function used to load the configurations present in the secure config
+void read_executor_config(const char* file_name);
+
+//Lookup nodemanager group from container executor configuration.
+char *get_nodemanager_group();
 
 /**
  * Check the permissions on the container-executor to make sure that security is
@@ -110,6 +115,12 @@ char* get_executable();
  * @return -1 on error 0 on success.
  */
 int check_executor_permissions(char *executable_file);
+
+//function used to load the configurations present in the secure config.
+void read_executor_config(const char* file_name);
+
+//function used to free executor configuration data
+void free_executor_configurations();
 
 // initialize the application directory
 int initialize_app(const char *user, const char *app_id,
