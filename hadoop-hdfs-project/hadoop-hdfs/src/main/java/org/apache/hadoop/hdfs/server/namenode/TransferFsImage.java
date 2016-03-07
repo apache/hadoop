@@ -30,6 +30,7 @@ import java.net.URL;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -481,6 +482,9 @@ public class TransferFsImage {
       MD5Hash advertisedDigest, String fsImageName, InputStream stream,
       DataTransferThrottler throttler) throws IOException {
     long startTime = Time.monotonicNow();
+    Map<FileOutputStream, File> streamPathMap = new HashMap<>();
+    StringBuilder xferStats = new StringBuilder();
+    double xferCombined = 0;
     if (localPaths != null) {
       // If the local paths refer to directories, use the server-provided header
       // as the filename within that directory
@@ -517,7 +521,9 @@ public class TransferFsImage {
               LOG.warn("Overwriting existing file " + f
                   + " with file downloaded from " + url);
             }
-            outputStreams.add(new FileOutputStream(f));
+            FileOutputStream fos = new FileOutputStream(f);
+            outputStreams.add(fos);
+            streamPathMap.put(fos, f);
           } catch (IOException ioe) {
             LOG.warn("Unable to download file " + f, ioe);
             // This will be null if we're downloading the fsimage to a file
@@ -550,11 +556,26 @@ public class TransferFsImage {
         }
       }
       finishedReceiving = true;
+      double xferSec = Math.max(
+                 ((float)(Time.monotonicNow() - startTime)) / 1000.0, 0.001);
+      long xferKb = received / 1024;
+      xferCombined += xferSec;
+      xferStats.append(
+          String.format(" The fsimage download took %.2fs at %.2f KB/s.",
+              xferSec, xferKb / xferSec));
     } finally {
       stream.close();
       for (FileOutputStream fos : outputStreams) {
+        long flushStartTime = Time.monotonicNow();
         fos.getChannel().force(true);
         fos.close();
+        double writeSec = Math.max(((float)
+               (flushStartTime - Time.monotonicNow())) / 1000.0, 0.001);
+        xferCombined += writeSec;
+        xferStats.append(String
+                .format(" Synchronous (fsync) write to disk of " +
+                 streamPathMap.get(fos).getAbsolutePath() +
+                " took %.2fs.", writeSec));
       }
 
       // Something went wrong and did not finish reading.
@@ -573,11 +594,11 @@ public class TransferFsImage {
                               advertisedSize);
       }
     }
-    double xferSec = Math.max(
-        ((float)(Time.monotonicNow() - startTime)) / 1000.0, 0.001);
-    long xferKb = received / 1024;
-    LOG.info(String.format("Transfer took %.2fs at %.2f KB/s",
-        xferSec, xferKb / xferSec));
+    xferStats.insert(
+        0, String.format(
+            "Combined time for fsimage download and fsync " +
+            "to all disks took %.2fs.", xferCombined));
+    LOG.info(xferStats.toString());
 
     if (digester != null) {
       MD5Hash computedDigest = new MD5Hash(digester.digest());
