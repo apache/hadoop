@@ -812,8 +812,9 @@ public class FairScheduler extends
   }
 
   private synchronized void addNode(RMNode node) {
-    nodes.put(node.getNodeID(), new FSSchedulerNode(node, usePortForNodeName));
-    Resources.addTo(clusterResource, node.getTotalCapability());
+    FSSchedulerNode schedulerNode = new FSSchedulerNode(node, usePortForNodeName);
+    nodes.put(node.getNodeID(), schedulerNode);
+    Resources.addTo(clusterResource, schedulerNode.getTotalResource());
     updateRootQueueMetrics();
 
     queueMgr.getRootQueue().setSteadyFairShare(clusterResource);
@@ -828,7 +829,7 @@ public class FairScheduler extends
     if (node == null) {
       return;
     }
-    Resources.subtractFrom(clusterResource, rmNode.getTotalCapability());
+    Resources.subtractFrom(clusterResource, node.getTotalResource());
     updateRootQueueMetrics();
 
     // Remove running containers

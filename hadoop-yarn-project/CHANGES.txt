@@ -21,6 +21,9 @@ Release 2.6.5 - UNRELEASED
     YARN-4722. AsyncDispatcher logs redundant event queue sizes (Jason Lowe via
     sjlee)
 
+    YARN-4761. NMs reconnecting with changed capabilities can lead to wrong cluster
+    resource calculations on fair scheduler. (Sangjin Lee via zxu)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
