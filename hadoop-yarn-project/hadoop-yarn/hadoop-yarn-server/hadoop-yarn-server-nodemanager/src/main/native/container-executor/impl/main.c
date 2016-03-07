@@ -112,11 +112,11 @@ static void assert_valid_setup(char *current_executable) {
     flush_and_close_log_files();
     exit(INVALID_CONFIG_FILE);
   }
-  read_config(conf_file);
+  read_executor_config(conf_file);
   free(conf_file);
 
   // look up the node manager group in the config file
-  char *nm_group = get_value(NM_GROUP_KEY);
+  char *nm_group = get_nodemanager_group();
   if (nm_group == NULL) {
     fprintf(ERRORFILE, "Can't get configured value for %s.\n", NM_GROUP_KEY);
     flush_and_close_log_files();
