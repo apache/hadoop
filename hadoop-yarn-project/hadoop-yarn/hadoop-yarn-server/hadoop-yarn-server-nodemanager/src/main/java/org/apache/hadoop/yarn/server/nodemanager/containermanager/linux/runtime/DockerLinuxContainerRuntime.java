@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -36,6 +37,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerModule;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerClient;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRunCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
@@ -89,9 +91,24 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   }
 
   public DockerLinuxContainerRuntime(PrivilegedOperationExecutor
+      privilegedOperationExecutor) {
+    this(privilegedOperationExecutor, ResourceHandlerModule
+        .getCGroupsHandler());
+  }
+
+  //A constructor with an injected cGroupsHandler primarily used for testing.
+  @VisibleForTesting
+  public DockerLinuxContainerRuntime(PrivilegedOperationExecutor
       privilegedOperationExecutor, CGroupsHandler cGroupsHandler) {
     this.privilegedOperationExecutor = privilegedOperationExecutor;
-    this.cGroupsHandler = cGroupsHandler;
+
+    if (cGroupsHandler == null) {
+      if (LOG.isInfoEnabled()) {
+        LOG.info("cGroupsHandler is null - cgroups not in use.");
+      }
+    } else {
+      this.cGroupsHandler = cGroupsHandler;
+    }
   }
 
   @Override
@@ -113,6 +130,14 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   public void addCGroupParentIfRequired(String resourcesOptions,
       String containerIdStr, DockerRunCommand runCommand)
       throws ContainerExecutionException {
+    if (cGroupsHandler == null) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("cGroupsHandler is null. cgroups are not in use. nothing to"
+            + " do.");
+      }
+      return;
+    }
+
     if (resourcesOptions.equals(
         (PrivilegedOperation.CGROUP_ARG_PREFIX + PrivilegedOperation
             .CGROUP_ARG_NO_TASKS))) {

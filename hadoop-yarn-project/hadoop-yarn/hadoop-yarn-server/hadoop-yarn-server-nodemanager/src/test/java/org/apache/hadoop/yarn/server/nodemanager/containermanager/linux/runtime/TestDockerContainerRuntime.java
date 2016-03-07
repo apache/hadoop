@@ -429,5 +429,20 @@ public class TestDockerContainerRuntime {
     //--cgroup-parent should be added for the containerId in question
     String expectedPath = "/" + hierarchy + "/" + containerIdStr;
     Mockito.verify(command).setCGroupParent(expectedPath);
+
+    //create a runtime with a 'null' cgroups handler - i.e no
+    // cgroup-based resource handlers are in use.
+
+    runtime = new DockerLinuxContainerRuntime
+        (mockExecutor, null);
+    runtime.initialize(conf);
+
+    runtime.addCGroupParentIfRequired(resourceOptionsNone, containerIdStr,
+        command);
+    runtime.addCGroupParentIfRequired(resourceOptionsCpu, containerIdStr,
+        command);
+
+    //no --cgroup-parent should be added in either case
+    Mockito.verifyZeroInteractions(command);
   }
 }

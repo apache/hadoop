@@ -27,9 +27,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerModule;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
 
@@ -48,19 +45,11 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
       throws ContainerExecutionException {
     PrivilegedOperationExecutor privilegedOperationExecutor =
         PrivilegedOperationExecutor.getInstance(conf);
-    CGroupsHandler cGroupsHandler;
-    try {
-      cGroupsHandler = ResourceHandlerModule.getCGroupsHandler(conf);
-    } catch (ResourceHandlerException e) {
-      LOG.error("Unable to get cgroups handle.");
-      throw new ContainerExecutionException(e);
-    }
-
     defaultLinuxContainerRuntime = new DefaultLinuxContainerRuntime(
         privilegedOperationExecutor);
     defaultLinuxContainerRuntime.initialize(conf);
     dockerLinuxContainerRuntime = new DockerLinuxContainerRuntime(
-        privilegedOperationExecutor, cGroupsHandler);
+        privilegedOperationExecutor);
     dockerLinuxContainerRuntime.initialize(conf);
   }
 
