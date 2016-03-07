@@ -104,6 +104,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4723. NodesListManager$UnknownNodeId ClassCastException (Kuhu Shukla
     via jlowe)
 
+    YARN-4760. proxy redirect to history server uses wrong URL (Eric Badger
+    via jlowe)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES

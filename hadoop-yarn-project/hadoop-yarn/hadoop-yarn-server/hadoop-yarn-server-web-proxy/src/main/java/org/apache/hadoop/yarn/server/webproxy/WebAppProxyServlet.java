@@ -112,7 +112,7 @@ public class WebAppProxyServlet extends HttpServlet {
         WebAppUtils.getResolvedRMWebAppURLWithScheme(conf), "cluster", "app");
     this.ahsAppPageUrlBase = StringHelper.pjoin(
         WebAppUtils.getHttpSchemePrefix(conf) + WebAppUtils
-        .getAHSWebAppURLWithoutScheme(conf), "applicationhistory", "apps");
+        .getAHSWebAppURLWithoutScheme(conf), "applicationhistory", "app");
   }
 
   /**
