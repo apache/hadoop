@@ -275,7 +275,7 @@ public class TestWebAppProxyServlet {
     }
     String appAddressInAhs = WebAppUtils.getHttpSchemePrefix(configuration) +
         WebAppUtils.getAHSWebAppURLWithoutScheme(configuration) +
-        "/applicationhistory" + "/apps/" + app.toString();
+        "/applicationhistory" + "/app/" + app.toString();
     assertTrue("Webapp proxy servlet should have redirected to AHS",
         proxyConn.getURL().toString().equals(appAddressInAhs));
     }
