@@ -181,7 +181,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     // verify configuration/permissions and exit
     try {
       PrivilegedOperation checkSetupOp = new PrivilegedOperation(
-          PrivilegedOperation.OperationType.CHECK_SETUP, (String) null);
+          PrivilegedOperation.OperationType.CHECK_SETUP);
       PrivilegedOperationExecutor privilegedOperationExecutor =
           PrivilegedOperationExecutor.getInstance(conf);
 
@@ -242,7 +242,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     verifyUsernamePattern(user);
     String runAsUser = getRunAsUser(user);
     PrivilegedOperation initializeContainerOp = new PrivilegedOperation(
-        PrivilegedOperation.OperationType.INITIALIZE_CONTAINER, (String) null);
+        PrivilegedOperation.OperationType.INITIALIZE_CONTAINER);
     List<String> prefixCommands = new ArrayList<>();
 
     addSchedPriorityCommand(prefixCommands);

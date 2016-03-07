@@ -280,8 +280,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     String commandFile = dockerClient.writeCommandToTempFile(runCommand,
         containerIdStr);
     PrivilegedOperation launchOp = new PrivilegedOperation(
-        PrivilegedOperation.OperationType.LAUNCH_DOCKER_CONTAINER, (String)
-        null);
+        PrivilegedOperation.OperationType.LAUNCH_DOCKER_CONTAINER);
 
     launchOp.appendArgs(runAsUser, ctx.getExecutionAttribute(USER),
         Integer.toString(PrivilegedOperation
@@ -321,7 +320,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       throws ContainerExecutionException {
     Container container = ctx.getContainer();
     PrivilegedOperation signalOp = new PrivilegedOperation(
-        PrivilegedOperation.OperationType.SIGNAL_CONTAINER, (String) null);
+        PrivilegedOperation.OperationType.SIGNAL_CONTAINER);
 
     signalOp.appendArgs(ctx.getExecutionAttribute(RUN_AS_USER),
         ctx.getExecutionAttribute(USER),
