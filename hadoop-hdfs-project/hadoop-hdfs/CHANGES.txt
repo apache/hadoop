@@ -135,6 +135,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9851. NameNode throws NPE when setPermission is called on a path that
     does not exist. (Brahma Reddy Battula via aajisaka)
 
+    HDFS-9865. TestBlockReplacement fails intermittently in trunk
+    (Lin Yiqun via iwasakims)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
