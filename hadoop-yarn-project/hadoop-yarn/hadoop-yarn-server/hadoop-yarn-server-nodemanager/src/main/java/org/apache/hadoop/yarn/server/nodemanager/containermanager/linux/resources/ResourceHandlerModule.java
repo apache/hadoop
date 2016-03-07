@@ -63,7 +63,7 @@ public class ResourceHandlerModule {
   /**
    * Returns an initialized, thread-safe CGroupsHandler instance.
    */
-  public static CGroupsHandler getCGroupsHandler(Configuration conf)
+  private static CGroupsHandler getInitializedCGroupsHandler(Configuration conf)
       throws ResourceHandlerException {
     if (cGroupsHandler == null) {
       synchronized (CGroupsHandler.class) {
@@ -77,7 +77,17 @@ public class ResourceHandlerModule {
     return cGroupsHandler;
   }
 
-  private static CGroupsCpuResourceHandlerImpl getcGroupsCpuResourceHandler(
+  /**
+   * Returns a (possibly null) reference to a cGroupsHandler. This handler is
+   * non-null only if one or more of the known cgroups-based resource
+   * handlers are in use and have been initialized.
+   */
+
+  public static CGroupsHandler getCGroupsHandler() {
+    return cGroupsHandler;
+  }
+
+  private static CGroupsCpuResourceHandlerImpl getCGroupsCpuResourceHandler(
       Configuration conf) throws ResourceHandlerException {
     boolean cgroupsCpuEnabled =
         conf.getBoolean(YarnConfiguration.NM_CPU_RESOURCE_ENABLED,
@@ -92,7 +102,8 @@ public class ResourceHandlerModule {
           if (cGroupsCpuResourceHandler == null) {
             LOG.debug("Creating new cgroups cpu handler");
             cGroupsCpuResourceHandler =
-                new CGroupsCpuResourceHandlerImpl(getCGroupsHandler(conf));
+                new CGroupsCpuResourceHandlerImpl(
+                    getInitializedCGroupsHandler(conf));
             return cGroupsCpuResourceHandler;
           }
         }
@@ -112,7 +123,7 @@ public class ResourceHandlerModule {
             LOG.debug("Creating new traffic control bandwidth handler");
             trafficControlBandwidthHandler = new
                 TrafficControlBandwidthHandlerImpl(PrivilegedOperationExecutor
-                .getInstance(conf), getCGroupsHandler(conf),
+                .getInstance(conf), getInitializedCGroupsHandler(conf),
                 new TrafficController(conf, PrivilegedOperationExecutor
                     .getInstance(conf)));
           }
@@ -147,7 +158,8 @@ public class ResourceHandlerModule {
         if (cGroupsBlkioResourceHandler == null) {
           LOG.debug("Creating new cgroups blkio handler");
           cGroupsBlkioResourceHandler =
-              new CGroupsBlkioResourceHandlerImpl(getCGroupsHandler(conf));
+              new CGroupsBlkioResourceHandlerImpl(
+                  getInitializedCGroupsHandler(conf));
         }
       }
     }
@@ -170,7 +182,8 @@ public class ResourceHandlerModule {
       synchronized (MemoryResourceHandler.class) {
         if (cGroupsMemoryResourceHandler == null) {
           cGroupsMemoryResourceHandler =
-              new CGroupsMemoryResourceHandlerImpl(getCGroupsHandler(conf));
+              new CGroupsMemoryResourceHandlerImpl(
+                  getInitializedCGroupsHandler(conf));
         }
       }
     }
@@ -191,7 +204,7 @@ public class ResourceHandlerModule {
     addHandlerIfNotNull(handlerList, getOutboundBandwidthResourceHandler(conf));
     addHandlerIfNotNull(handlerList, getDiskResourceHandler(conf));
     addHandlerIfNotNull(handlerList, getMemoryResourceHandler(conf));
-    addHandlerIfNotNull(handlerList, getcGroupsCpuResourceHandler(conf));
+    addHandlerIfNotNull(handlerList, getCGroupsCpuResourceHandler(conf));
     resourceHandlerChain = new ResourceHandlerChain(handlerList);
   }
 
