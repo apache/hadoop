@@ -1862,4 +1862,30 @@
   default is -1</description>
 </property>
 
+<property>
+  <description>
+    Enable the CSRF filter for the job history web app
+  </description>
+  <name>mapreduce.jobhistory.webapp.rest-csrf.enabled</name>
+  <value>false</value>
+</property>
+
+<property>
+  <description>
+    Optional parameter that indicates the custom header name to use for CSRF
+    protection.
+  </description>
+  <name>mapreduce.jobhistory.webapp.rest-csrf.custom-header</name>
+  <value>X-XSRF-Header</value>
+</property>
+
+<property>
+  <description>
+    Optional parameter that indicates the list of HTTP methods that do not
+    require CSRF protection
+  </description>
+  <name>mapreduce.jobhistory.webapp.rest-csrf.methods-to-ignore</name>
+  <value>GET,OPTIONS,HEAD</value>
+</property>
+
 </configuration>
