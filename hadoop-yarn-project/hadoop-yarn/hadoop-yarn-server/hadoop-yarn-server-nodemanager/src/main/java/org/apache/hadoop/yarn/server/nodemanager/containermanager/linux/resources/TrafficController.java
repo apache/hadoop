@@ -546,7 +546,7 @@ import java.util.regex.Pattern;
       case TC_MODIFY_STATE:
       case TC_READ_STATE:
       case TC_READ_STATS:
-        operation = new PrivilegedOperation(opType, (String) null);
+        operation = new PrivilegedOperation(opType);
         commands = new ArrayList<>();
         break;
       default:

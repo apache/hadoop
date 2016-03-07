@@ -67,7 +67,7 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
       throws ContainerExecutionException {
     Container container = ctx.getContainer();
     PrivilegedOperation launchOp = new PrivilegedOperation(
-        PrivilegedOperation.OperationType.LAUNCH_CONTAINER, (String) null);
+        PrivilegedOperation.OperationType.LAUNCH_CONTAINER);
 
     //All of these arguments are expected to be available in the runtime context
     launchOp.appendArgs(ctx.getExecutionAttribute(RUN_AS_USER),
@@ -116,7 +116,7 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
       throws ContainerExecutionException {
     Container container = ctx.getContainer();
     PrivilegedOperation signalOp = new PrivilegedOperation(
-        PrivilegedOperation.OperationType.SIGNAL_CONTAINER, (String) null);
+        PrivilegedOperation.OperationType.SIGNAL_CONTAINER);
 
     signalOp.appendArgs(ctx.getExecutionAttribute(RUN_AS_USER),
         ctx.getExecutionAttribute(USER),
@@ -124,6 +124,9 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
             .SIGNAL_CONTAINER.getValue()),
         ctx.getExecutionAttribute(PID),
         Integer.toString(ctx.getExecutionAttribute(SIGNAL).getValue()));
+
+    //Some failures here are acceptable. Let the calling executor decide.
+    signalOp.disableFailureLogging();
 
     try {
       PrivilegedOperationExecutor executor = PrivilegedOperationExecutor
@@ -133,8 +136,8 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
           signalOp, null, container.getLaunchContext().getEnvironment(),
           false);
     } catch (PrivilegedOperationException e) {
-      LOG.warn("Signal container failed. Exception: ", e);
-
+      //Don't log the failure here. Some kinds of signaling failures are
+      // acceptable. Let the calling executor decide what to do.
       throw new ContainerExecutionException("Signal container failed", e
           .getExitCode(), e.getOutput(), e.getErrorOutput());
     }

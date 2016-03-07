@@ -69,7 +69,7 @@ public class TestPrivilegedOperationExecutor {
     cGroupTasks2 = "net_cls/hadoop_yarn/container_01/tasks";
     cGroupTasks3 = "blkio/hadoop_yarn/container_01/tasks";
     opDisallowed = new PrivilegedOperation
-        (PrivilegedOperation.OperationType.DELETE_AS_USER, (String) null);
+        (PrivilegedOperation.OperationType.DELETE_AS_USER);
     opTasksNone = new PrivilegedOperation
         (PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
             PrivilegedOperation.CGROUP_ARG_PREFIX + cGroupTasksNone);
@@ -118,7 +118,7 @@ public class TestPrivilegedOperationExecutor {
     PrivilegedOperationExecutor exec = PrivilegedOperationExecutor
         .getInstance(confWithExecutorPath);
     PrivilegedOperation op = new PrivilegedOperation(PrivilegedOperation
-        .OperationType.TC_MODIFY_STATE, (String) null);
+        .OperationType.TC_MODIFY_STATE);
     String[] cmdArray = exec.getPrivilegedOperationExecutionCommand(null, op);
 
     //No arguments added - so the resulting array should consist of
