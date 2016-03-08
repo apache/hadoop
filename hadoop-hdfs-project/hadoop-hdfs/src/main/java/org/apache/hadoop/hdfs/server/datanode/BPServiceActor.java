@@ -607,6 +607,11 @@ class BPServiceActor implements Runnable {
           processCommand(new DatanodeCommand[]{ cmd });
         }
 
+        if (sendHeartbeat) {
+          dn.getMetrics().addHeartbeatTotal(
+              scheduler.monotonicNow() - startTime);
+        }
+
         // There is no work to do;  sleep until hearbeat timer elapses, 
         // or work arrives, and then iterate again.
         ibrManager.waitTillNextIBR(scheduler.getHeartbeatWaitTime());
