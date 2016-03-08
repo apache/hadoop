@@ -25,6 +25,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public final class OzoneConfigKeys {
+  public static final String DFS_OZONE_CONTAINER_IPC_PORT =
+      "dfs.ozone.container.ipc";
+  public static final int DFS_OZONE_CONTAINER_IPC_PORT_DEFAULT =  50011;
   public static final String DFS_STORAGE_LOCAL_ROOT =
       "dfs.ozone.localstorage.root";
   public static final String DFS_STORAGE_LOCAL_ROOT_DEFAULT = "/tmp/ozone";

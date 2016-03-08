@@ -39,3 +39,5 @@
 
     HDFS-9848. Ozone: Add Ozone Client lib for volume handling.
     (Anu Engineer via cnauroth)
+
+    HDFS-9873. Ozone: Add container transport server (Anu Engineer via cnauroth)
