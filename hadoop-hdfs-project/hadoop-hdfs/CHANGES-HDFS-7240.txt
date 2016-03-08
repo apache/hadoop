@@ -41,3 +41,5 @@
     (Anu Engineer via cnauroth)
 
     HDFS-9873. Ozone: Add container transport server (Anu Engineer via cnauroth)
+
+    HDFS-9891. Ozone: Add container transport client (Anu Engineer via cnauroth)

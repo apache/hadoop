@@ -19,9 +19,16 @@
 package org.apache.hadoop.ozone.container.transport.server;
 
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .ContainerCommandRequestProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .ContainerCommandResponseProto;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.ozone.container.ContainerTestHelper;
+import org.apache.hadoop.ozone.container.helpers.Pipeline;
 import org.apache.hadoop.ozone.container.interfaces.ContainerDispatcher;
+import org.apache.hadoop.ozone.container.transport.client.XceiverClient;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -30,17 +37,53 @@ import java.io.IOException;
 public class TestContainerServer {
 
   @Test
-  public void testPipeline() {
-    EmbeddedChannel channel = new EmbeddedChannel(new XceiverServerHandler(
-        new TestContainerDispatcher()));
-    ContainerCommandRequestProto request = ContainerCommandRequestProto
-        .getDefaultInstance();
-    channel.writeInbound(request);
-    Assert.assertTrue(channel.finish());
-    ContainerCommandResponseProto response = channel.readOutbound();
-    Assert.assertTrue(
-        ContainerCommandResponseProto.getDefaultInstance().equals(response));
-    channel.close();
+  public void testPipeline() throws IOException {
+    EmbeddedChannel channel = null;
+    try {
+      channel = new EmbeddedChannel(new XceiverServerHandler(
+          new TestContainerDispatcher()));
+      ContainerCommandRequestProto request =
+          ContainerTestHelper.getCreateContainerRequest();
+      channel.writeInbound(request);
+      Assert.assertTrue(channel.finish());
+      ContainerCommandResponseProto response = channel.readOutbound();
+      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+    } finally {
+      if (channel != null) {
+        channel.close();
+      }
+    }
+  }
+
+  @Test
+  public void testClientServer() throws Exception {
+    XceiverServer server = null;
+    XceiverClient client = null;
+
+    try {
+      Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline();
+      OzoneConfiguration conf = new OzoneConfiguration();
+      conf.setInt(OzoneConfigKeys.DFS_OZONE_CONTAINER_IPC_PORT,
+          pipeline.getLeader().getContainerPort());
+
+      server = new XceiverServer(conf, new TestContainerDispatcher());
+      client = new XceiverClient(pipeline, conf);
+
+      server.start();
+      client.connect();
+
+      ContainerCommandRequestProto request =
+          ContainerTestHelper.getCreateContainerRequest();
+      ContainerCommandResponseProto response = client.sendCommand(request);
+      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+    } finally {
+      if (client != null) {
+        client.close();
+      }
+      if (server != null) {
+        server.stop();
+      }
+    }
   }
 
   private class TestContainerDispatcher implements ContainerDispatcher {
@@ -54,7 +97,7 @@ public class TestContainerServer {
     @Override
     public ContainerCommandResponseProto
     dispatch(ContainerCommandRequestProto msg) throws IOException {
-      return ContainerCommandResponseProto.getDefaultInstance();
+      return ContainerTestHelper.getCreateContainerResponse(msg);
     }
   }
 }
