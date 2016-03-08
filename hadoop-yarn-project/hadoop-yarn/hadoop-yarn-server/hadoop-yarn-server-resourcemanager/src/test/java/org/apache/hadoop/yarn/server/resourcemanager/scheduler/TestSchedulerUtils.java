@@ -95,7 +95,8 @@ public class TestSchedulerUtils {
   private static final Log LOG = LogFactory.getLog(TestSchedulerUtils.class);
   
   private RMContext rmContext = getMockRMContext();
-  
+  private static YarnConfiguration conf = new YarnConfiguration();
+
   @Test (timeout = 30000)
   public void testNormalizeRequest() {
     ResourceCalculator resourceCalculator = new DefaultResourceCalculator();
@@ -464,6 +465,34 @@ public class TestSchedulerUtils {
       rmContext.getNodeLabelManager().removeFromClusterNodeLabels(
           Arrays.asList("x"));
     }
+    try {
+      Resource resource = Resources.createResource(0,
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
+      ResourceRequest resReq1 = BuilderUtils
+          .newResourceRequest(mock(Priority.class), "*", resource, 1, "x");
+      SchedulerUtils.normalizeAndvalidateRequest(resReq1, maxResource, "queue",
+          scheduler, rmContext);
+      fail("Should fail");
+    } catch (InvalidResourceRequestException e) {
+      assertEquals("Invalid label resource request, cluster do not contain , "
+          + "label= x", e.getMessage());
+    }
+
+    try {
+      rmContext.getYarnConfiguration()
+          .set(YarnConfiguration.NODE_LABELS_ENABLED, "false");
+      Resource resource = Resources.createResource(0,
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
+      ResourceRequest resReq1 = BuilderUtils
+          .newResourceRequest(mock(Priority.class), "*", resource, 1, "x");
+      SchedulerUtils.normalizeAndvalidateRequest(resReq1, maxResource, "queue",
+          scheduler, rmContext);
+      Assert.assertEquals(RMNodeLabelsManager.NO_LABEL,
+          resReq1.getNodeLabelExpression());
+    } catch (InvalidResourceRequestException e) {
+      assertEquals("Invalid resource request, node label not enabled but "
+          + "request contains label expression", e.getMessage());
+    }
   }
 
   @Test (timeout = 30000)
@@ -773,6 +802,9 @@ public class TestSchedulerUtils {
     RMContext rmContext = mock(RMContext.class);
     RMNodeLabelsManager nlm = new NullRMNodeLabelsManager();
     nlm.init(new Configuration(false));
+    when(rmContext.getYarnConfiguration()).thenReturn(conf);
+    rmContext.getYarnConfiguration().set(YarnConfiguration.NODE_LABELS_ENABLED,
+        "true");
     when(rmContext.getNodeLabelManager()).thenReturn(nlm);
     return rmContext;
   }
