@@ -770,14 +770,19 @@ public class DFSOutputStream extends FSOutputSummer
       flushInternal();             // flush all data to Datanodes
       // get last block before destroying the streamer
       ExtendedBlock lastBlock = getStreamer().getBlock();
-      closeThreads(false);
+
       try (TraceScope ignored =
                dfsClient.getTracer().newScope("completeFile")) {
         completeFile(lastBlock);
       }
     } catch (ClosedChannelException ignored) {
     } finally {
-      setClosed();
+      // Failures may happen when flushing data.
+      // Streamers may keep waiting for the new block information.
+      // Thus need to force closing these threads.
+      // Don't need to call setClosed() because closeThreads(true)
+      // calls setClosed() in the finally block.
+      closeThreads(true);
     }
   }
 

@@ -507,7 +507,7 @@ class DataStreamer extends Daemon {
   }
 
   protected void endBlock() {
-    LOG.debug("Closing old block " + block);
+    LOG.debug("Closing old block {}", block);
     this.setName("DataStreamer for file " + src);
     closeResponder();
     closeStream();
@@ -591,7 +591,7 @@ class DataStreamer extends Daemon {
           LOG.debug("stage=" + stage + ", " + this);
         }
         if (stage == BlockConstructionStage.PIPELINE_SETUP_CREATE) {
-          LOG.debug("Allocating new block: " + this);
+          LOG.debug("Allocating new block: {}", this);
           setPipeline(nextBlockOutputStream());
           initDataStreaming();
         } else if (stage == BlockConstructionStage.PIPELINE_SETUP_APPEND) {
@@ -644,7 +644,7 @@ class DataStreamer extends Daemon {
           }
         }
 
-        LOG.debug(this + " sending " + one);
+        LOG.debug("{} sending {}", this, one);
 
         // write out data to remote datanode
         try (TraceScope ignored = dfsClient.getTracer().
@@ -1766,7 +1766,7 @@ class DataStreamer extends Daemon {
       packet.addTraceParent(Tracer.getCurrentSpanId());
       dataQueue.addLast(packet);
       lastQueuedSeqno = packet.getSeqno();
-      LOG.debug("Queued " + packet + ", " + this);
+      LOG.debug("Queued {}, {}", packet, this);
       dataQueue.notifyAll();
     }
   }
