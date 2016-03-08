@@ -47,6 +47,7 @@ abstract class BlockReconstructionWork {
 
   private DatanodeStorageInfo[] targets;
   private final int priority;
+  private boolean notEnoughRack = false;
 
   public BlockReconstructionWork(BlockInfo block,
       BlockCollection bc,
@@ -105,12 +106,26 @@ abstract class BlockReconstructionWork {
     return additionalReplRequired;
   }
 
+  /**
+   * Mark that the reconstruction work is to replicate internal block to a new
+   * rack.
+   */
+  void setNotEnoughRack() {
+    notEnoughRack = true;
+  }
+
+  boolean hasNotEnoughRack() {
+    return notEnoughRack;
+  }
+
   abstract void chooseTargets(BlockPlacementPolicy blockplacement,
       BlockStoragePolicySuite storagePolicySuite,
       Set<Node> excludedNodes);
 
   /**
-   * add reconstruction task into a source datanode
+   * Add reconstruction task into a source datanode.
+   *
+   * @param numberReplicas replica details
    */
-  abstract void addTaskToDatanode();
+  abstract void addTaskToDatanode(NumberReplicas numberReplicas);
 }

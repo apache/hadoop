@@ -55,7 +55,7 @@ class ReplicationWork extends BlockReconstructionWork {
   }
 
   @Override
-  void addTaskToDatanode() {
+  void addTaskToDatanode(NumberReplicas numberReplicas) {
     getSrcNodes()[0].addBlockToBeReplicated(getBlock(), getTargets());
   }
 }

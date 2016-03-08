@@ -23,7 +23,6 @@ import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.net.Node;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.List;
@@ -121,33 +120,55 @@ class ErasureCodingWork extends BlockReconstructionWork {
   }
 
   @Override
-  void addTaskToDatanode() {
-    assert getTargets().length > 0;
+  void addTaskToDatanode(NumberReplicas numberReplicas) {
+    final DatanodeStorageInfo[] targets = getTargets();
+    assert targets.length > 0;
     BlockInfoStriped stripedBlk = (BlockInfoStriped) getBlock();
 
-    // if we already have all the internal blocks, but not enough racks,
-    // we only need to replicate one internal block to a new rack
-    if (hasAllInternalBlocks()) {
+    if (hasNotEnoughRack()) {
+      // if we already have all the internal blocks, but not enough racks,
+      // we only need to replicate one internal block to a new rack
       int sourceIndex = chooseSource4SimpleReplication();
-      final byte blockIndex = liveBlockIndicies[sourceIndex];
-      final DatanodeDescriptor source = getSrcNodes()[sourceIndex];
-      final long internBlkLen = StripedBlockUtil.getInternalBlockLength(
-          stripedBlk.getNumBytes(), stripedBlk.getCellSize(),
-          stripedBlk.getDataBlockNum(), blockIndex);
-      final Block targetBlk = new Block(
-          stripedBlk.getBlockId() + blockIndex, internBlkLen,
-          stripedBlk.getGenerationStamp());
-      source.addBlockToBeReplicated(targetBlk, getTargets());
-      if (BlockManager.LOG.isDebugEnabled()) {
-        BlockManager.LOG.debug("Add replication task from source {} to " +
-            "targets {} for EC block {}", source, Arrays.toString(getTargets()),
-            targetBlk);
+      createReplicationWork(sourceIndex, targets[0]);
+    } else if (numberReplicas.decommissioning() > 0 && hasAllInternalBlocks()) {
+      List<Integer> decommissioningSources = findDecommissioningSources();
+      // decommissioningSources.size() should be >= targets.length
+      final int num = Math.min(decommissioningSources.size(), targets.length);
+      for (int i = 0; i < num; i++) {
+        createReplicationWork(decommissioningSources.get(i), targets[i]);
       }
     } else {
-      getTargets()[0].getDatanodeDescriptor().addBlockToBeErasureCoded(
-          new ExtendedBlock(blockPoolId, stripedBlk),
-          getSrcNodes(), getTargets(), getLiveBlockIndicies(),
-          stripedBlk.getErasureCodingPolicy());
+      targets[0].getDatanodeDescriptor().addBlockToBeErasureCoded(
+          new ExtendedBlock(blockPoolId, stripedBlk), getSrcNodes(), targets,
+          getLiveBlockIndicies(), stripedBlk.getErasureCodingPolicy());
     }
+  }
+
+  private void createReplicationWork(int sourceIndex,
+      DatanodeStorageInfo target) {
+    BlockInfoStriped stripedBlk = (BlockInfoStriped) getBlock();
+    final byte blockIndex = liveBlockIndicies[sourceIndex];
+    final DatanodeDescriptor source = getSrcNodes()[sourceIndex];
+    final long internBlkLen = StripedBlockUtil.getInternalBlockLength(
+        stripedBlk.getNumBytes(), stripedBlk.getCellSize(),
+        stripedBlk.getDataBlockNum(), blockIndex);
+    final Block targetBlk = new Block(stripedBlk.getBlockId() + blockIndex,
+        internBlkLen, stripedBlk.getGenerationStamp());
+    source.addBlockToBeReplicated(targetBlk,
+        new DatanodeStorageInfo[] {target});
+    if (BlockManager.LOG.isDebugEnabled()) {
+      BlockManager.LOG.debug("Add replication task from source {} to "
+          + "target {} for EC block {}", source, target, targetBlk);
+    }
+  }
+
+  private List<Integer> findDecommissioningSources() {
+    List<Integer> srcIndices = new ArrayList<>();
+    for (int i = 0; i < getSrcNodes().length; i++) {
+      if (getSrcNodes()[i].isDecommissionInProgress()) {
+        srcIndices.add(i);
+      }
+    }
+    return srcIndices;
   }
 }

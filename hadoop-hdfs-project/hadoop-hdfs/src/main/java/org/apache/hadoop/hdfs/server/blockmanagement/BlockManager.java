@@ -1610,7 +1610,7 @@ public class BlockManager implements BlockStatsMXBean {
       return null;
     }
 
-    final int additionalReplRequired;
+    int additionalReplRequired;
     if (numReplicas.liveReplicas() < requiredReplication) {
       additionalReplRequired = requiredReplication - numReplicas.liveReplicas()
           - pendingNum;
@@ -1623,6 +1623,13 @@ public class BlockManager implements BlockStatsMXBean {
       if (pendingNum > 0) {
         // Wait the previous reconstruction to finish.
         return null;
+      }
+
+      // should reconstruct all the internal blocks before scheduling
+      // replication task for decommissioning node(s).
+      if (additionalReplRequired - numReplicas.decommissioning() > 0) {
+        additionalReplRequired = additionalReplRequired
+            - numReplicas.decommissioning();
       }
       byte[] indices = new byte[liveBlockIndices.size()];
       for (int i = 0 ; i < liveBlockIndices.size(); i++) {
@@ -1679,10 +1686,13 @@ public class BlockManager implements BlockStatsMXBean {
         // No use continuing, unless a new rack in this case
         return false;
       }
+      // mark that the reconstruction work is to replicate internal block to a
+      // new rack.
+      rw.setNotEnoughRack();
     }
 
     // Add block to the datanode's task list
-    rw.addTaskToDatanode();
+    rw.addTaskToDatanode(numReplicas);
     DatanodeStorageInfo.incrementBlocksScheduled(targets);
 
     // Move the block-replication into a "pending" state.
