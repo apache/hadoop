@@ -40,6 +40,7 @@ import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
@@ -179,6 +180,8 @@ public class TestApplicationACLs {
     verifyEnemyAccess();
 
     verifyAdministerQueueUserAccess();
+
+    verifyInvalidQueueWithAcl();
   }
 
   @SuppressWarnings("deprecation")
@@ -390,6 +393,39 @@ public class TestApplicationACLs {
         -1, usageReport.getReservedResources().getMemory());
     Assert.assertEquals("Enemy should not see app needed resources",
         -1, usageReport.getNeededResources().getMemory());
+  }
+
+  private void verifyInvalidQueueWithAcl() throws Exception {
+    isQueueUser = true;
+    SubmitApplicationRequest submitRequest =
+        recordFactory.newRecordInstance(SubmitApplicationRequest.class);
+    ApplicationSubmissionContext context =
+        recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
+    ApplicationId applicationId = rmClient
+        .getNewApplication(
+            recordFactory.newRecordInstance(GetNewApplicationRequest.class))
+        .getApplicationId();
+    context.setApplicationId(applicationId);
+    Map<ApplicationAccessType, String> acls =
+        new HashMap<ApplicationAccessType, String>();
+    ContainerLaunchContext amContainer =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    Resource resource = BuilderUtils.newResource(1024, 1);
+    context.setResource(resource);
+    amContainer.setApplicationACLs(acls);
+    context.setQueue("InvalidQueue");
+    context.setAMContainerSpec(amContainer);
+    submitRequest.setApplicationSubmissionContext(context);
+    rmClient.submitApplication(submitRequest);
+    resourceManager.waitForState(applicationId, RMAppState.FAILED);
+    final GetApplicationReportRequest appReportRequest =
+        recordFactory.newRecordInstance(GetApplicationReportRequest.class);
+    appReportRequest.setApplicationId(applicationId);
+    GetApplicationReportResponse applicationReport =
+        rmClient.getApplicationReport(appReportRequest);
+    ApplicationReport appReport = applicationReport.getApplicationReport();
+    Assert.assertTrue(appReport.getDiagnostics()
+        .contains("submitted by user owner to unknown queue: InvalidQueue"));
   }
 
   private void verifyAdministerQueueUserAccess() throws Exception {
