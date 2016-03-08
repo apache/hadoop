@@ -94,10 +94,6 @@ public class ApplicationClassLoader extends URLClassLoader {
   public ApplicationClassLoader(URL[] urls, ClassLoader parent,
       List<String> systemClasses) {
     super(urls, parent);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("urls: " + Arrays.toString(urls));
-      LOG.debug("system classes: " + systemClasses);
-    }
     this.parent = parent;
     if (parent == null) {
       throw new IllegalArgumentException("No parent classloader!");
@@ -106,6 +102,7 @@ public class ApplicationClassLoader extends URLClassLoader {
     this.systemClasses = (systemClasses == null || systemClasses.isEmpty()) ?
         Arrays.asList(StringUtils.getTrimmedStrings(SYSTEM_CLASSES_DEFAULT)) :
         systemClasses;
+    LOG.info("classpath: " + Arrays.toString(urls));
     LOG.info("system classes: " + this.systemClasses);
   }
 
