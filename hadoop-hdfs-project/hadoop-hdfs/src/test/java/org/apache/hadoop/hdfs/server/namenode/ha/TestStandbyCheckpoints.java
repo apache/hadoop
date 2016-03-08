@@ -485,7 +485,7 @@ public class TestStandbyCheckpoints {
     for (int i = 0; i < NUM_NNS; i++) {
       // Once the standby catches up, it should do a checkpoint
       // and save to local directories.
-      HATestUtil.waitForCheckpoint(cluster, 1, ImmutableList.of(12));
+      HATestUtil.waitForCheckpoint(cluster, i, ImmutableList.of(12));
     }
 
     cluster.transitionToActive(0);
