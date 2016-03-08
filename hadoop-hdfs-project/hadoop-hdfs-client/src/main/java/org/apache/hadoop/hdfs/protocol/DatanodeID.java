@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 
 /**
  * This class represents the primary identifier for a Datanode.
@@ -49,6 +50,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
   private int infoSecurePort; // info server port
   private int ipcPort;       // IPC server port
   private String xferAddr;
+  private int containerPort; // container server port.
 
   /**
    * UUID identifying a given datanode. For upgraded Datanodes this is the
@@ -273,5 +275,56 @@ public class DatanodeID implements Comparable<DatanodeID> {
   @Override
   public int compareTo(DatanodeID that) {
     return getXferAddr().compareTo(that.getXferAddr());
+  }
+
+  /**
+   * Returns the container port.
+   * @return Port
+   */
+  public int getContainerPort() {
+    return containerPort;
+  }
+
+  /**
+   * Sets the container port.
+   * @param containerPort - container port.
+   */
+  public void setContainerPort(int containerPort) {
+    this.containerPort = containerPort;
+  }
+
+  /**
+   * Returns a DataNode ID from the protocol buffers.
+   *
+   * @param datanodeIDProto - protoBuf Message
+   * @return DataNodeID
+   */
+  public static DatanodeID getFromProtoBuf(HdfsProtos.DatanodeIDProto
+                                               datanodeIDProto) {
+    DatanodeID id = new DatanodeID(datanodeIDProto.getDatanodeUuid(),
+        datanodeIDProto.getIpAddr(), datanodeIDProto.getHostName(),
+        datanodeIDProto.getXferPort(), datanodeIDProto.getInfoPort(),
+        datanodeIDProto.getInfoSecurePort(), datanodeIDProto.getIpcPort());
+    id.setContainerPort(datanodeIDProto.getContainerPort());
+    return id;
+  }
+
+  /**
+   * Returns a DataNodeID protobuf message from a datanode ID.
+   * @return HdfsProtos.DatanodeIDProto
+   */
+  public  HdfsProtos.DatanodeIDProto getProtoBufMessage() {
+    HdfsProtos.DatanodeIDProto.Builder builder =
+        HdfsProtos.DatanodeIDProto.newBuilder();
+
+    return builder.setDatanodeUuid(this.getDatanodeUuid())
+        .setIpAddr(this.getIpcAddr())
+        .setHostName(this.getHostName())
+        .setXferPort(this.getXferPort())
+        .setInfoPort(this.getInfoPort())
+        .setInfoSecurePort(this.getInfoSecurePort())
+        .setIpcPort(this.getIpcPort())
+        .setContainerPort(this.getContainerPort())
+        .build();
   }
 }
