@@ -290,6 +290,8 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `ReplaceBlockOpAvgTime` | Average time of block replace operations in milliseconds |
 | `HeartbeatsNumOps` | Total number of heartbeats |
 | `HeartbeatsAvgTime` | Average heartbeat time in milliseconds |
+| `HeartbeatsTotalNumOps` | Total number of heartbeats which is a duplicate of HeartbeatsNumOps |
+| `HeartbeatsTotalAvgTime` | Average total heartbeat time in milliseconds |
 | `LifelinesNumOps` | Total number of lifeline messages |
 | `LifelinesAvgTime` | Average lifeline message processing time in milliseconds |
 | `BlockReportsNumOps` | Total number of block report operations |
