@@ -897,6 +897,9 @@ Release 2.6.5 - UNRELEASED
     HADOOP-12800. Copy docker directory from 2.8 to 2.7/2.6 repos to enable
     pre-commit Jenkins runs (zhz)
 
+    HADOOP-12789. log classpath of ApplicationClassLoader at INFO level
+    (Sangjin Lee via mingma)
+
   OPTIMIZATIONS
 
   BUG FIXES
