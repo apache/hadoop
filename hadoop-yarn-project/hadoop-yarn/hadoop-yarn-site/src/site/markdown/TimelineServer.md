@@ -176,7 +176,7 @@ and cluster operators.
 
 Note that the selection between the HTTP and HTTPS binding is made in the `TimelineClient` based
 upon the value of the YARN-wide configuration option `yarn.http.policy`; the HTTPS endpoint will be
-selected if this policy is either of `HTTPS_ONLY` or `HTTP_AND_HTTPS`.
+selected if this policy is `HTTPS_ONLY`.
 
 #### Advanced Server-side configuration
 
