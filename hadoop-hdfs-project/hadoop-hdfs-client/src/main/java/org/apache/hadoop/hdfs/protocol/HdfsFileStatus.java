@@ -79,7 +79,7 @@ public class HdfsFileStatus {
       byte storagePolicy, ErasureCodingPolicy ecPolicy) {
     this.length = length;
     this.isdir = isdir;
-    this.block_replication = (short)block_replication;
+    this.block_replication = ecPolicy == null ? (short) block_replication : 0;
     this.blocksize = blocksize;
     this.modification_time = modification_time;
     this.access_time = access_time;

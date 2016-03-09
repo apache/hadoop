@@ -31,11 +31,25 @@ public final class ErasureCodingPolicy {
   private final String name;
   private final ECSchema schema;
   private final int cellSize;
+  private final byte id;
 
-  public ErasureCodingPolicy(String name, ECSchema schema, int cellSize){
+  public ErasureCodingPolicy(String name, ECSchema schema,
+      int cellSize, byte id) {
     this.name = name;
     this.schema = schema;
     this.cellSize = cellSize;
+    this.id = id;
+  }
+
+  public ErasureCodingPolicy(ECSchema schema, int cellSize, byte id) {
+    this(composePolicyName(schema, cellSize), schema, cellSize, id);
+  }
+
+  private static String composePolicyName(ECSchema schema, int cellSize) {
+    assert cellSize % 1024 == 0;
+    return schema.getCodecName().toUpperCase() + "-" +
+        schema.getNumDataUnits() + "-" + schema.getNumParityUnits() +
+        "-" + cellSize / 1024 + "k";
   }
 
   public String getName() {
@@ -56,6 +70,10 @@ public final class ErasureCodingPolicy {
 
   public int getNumParityUnits() {
     return schema.getNumParityUnits();
+  }
+
+  public byte getId() {
+    return id;
   }
 
   @Override

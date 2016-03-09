@@ -2487,7 +2487,7 @@ public class PBHelperClient {
       ErasureCodingPolicyProto policy) {
     return new ErasureCodingPolicy(policy.getName(),
         convertECSchema(policy.getSchema()),
-        policy.getCellSize());
+        policy.getCellSize(), (byte) policy.getId());
   }
 
   public static ErasureCodingPolicyProto convertErasureCodingPolicy(
@@ -2496,7 +2496,8 @@ public class PBHelperClient {
         .newBuilder()
         .setName(policy.getName())
         .setSchema(convertECSchema(policy.getSchema()))
-        .setCellSize(policy.getCellSize());
+        .setCellSize(policy.getCellSize())
+        .setId(policy.getId());
     return builder.build();
   }
 }

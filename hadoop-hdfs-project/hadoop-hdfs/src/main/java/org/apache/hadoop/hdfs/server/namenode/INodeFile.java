@@ -82,24 +82,57 @@ public class INodeFile extends INodeWithAdditionalFields
 
   /** 
    * Bit format:
-   * [4-bit storagePolicyID][1-bit isStriped]
-   * [11-bit replication][48-bit preferredBlockSize]
+   * [4-bit storagePolicyID][12-bit BLOCK_LAYOUT_AND_REDUNDANCY]
+   * [48-bit preferredBlockSize]
+   *
+   * BLOCK_LAYOUT_AND_REDUNDANCY contains 12 bits and describes the layout and
+   * redundancy of a block. We use the highest 1 bit to determine whether the
+   * block is replica or erasure coded. For replica blocks, the tail 11 bits
+   * stores the replication factor. For erasure coded blocks, the tail 11 bits
+   * stores the EC policy ID, and in the future, we may further divide these
+   * 11 bits to store both the EC policy ID and replication factor for erasure
+   * coded blocks. The layout of this section is demonstrated as below.
+   * +---------------+-------------------------------+
+   * |     1 bit     |             11 bit            |
+   * +---------------+-------------------------------+
+   * | Replica or EC |Replica factor or EC policy ID |
+   * +---------------+-------------------------------+
+   *
+   * BLOCK_LAYOUT_AND_REDUNDANCY format for replicated block:
+   * 0 [11-bit replication]
+   *
+   * BLOCK_LAYOUT_AND_REDUNDANCY format for striped block:
+   * 1 [11-bit ErasureCodingPolicy ID]
    */
   enum HeaderFormat {
     PREFERRED_BLOCK_SIZE(null, 48, 1),
-    REPLICATION(PREFERRED_BLOCK_SIZE.BITS, 11, 0),
-    IS_STRIPED(REPLICATION.BITS, 1, 0),
-    STORAGE_POLICY_ID(IS_STRIPED.BITS, BlockStoragePolicySuite.ID_BIT_LENGTH,
-        0);
+    BLOCK_LAYOUT_AND_REDUNDANCY(PREFERRED_BLOCK_SIZE.BITS,
+        HeaderFormat.LAYOUT_BIT_WIDTH + 11, 0),
+    STORAGE_POLICY_ID(BLOCK_LAYOUT_AND_REDUNDANCY.BITS,
+        BlockStoragePolicySuite.ID_BIT_LENGTH, 0);
 
     private final LongBitFormat BITS;
+
+    /**
+     * Number of bits used to encode block layout type.
+     * Different types can be replica or EC
+     */
+    private static final int LAYOUT_BIT_WIDTH = 1;
+
+    private static final int MAX_REDUNDANCY = (1 << 11) - 1;
 
     HeaderFormat(LongBitFormat previous, int length, long min) {
       BITS = new LongBitFormat(name(), previous, length, min);
     }
 
     static short getReplication(long header) {
-      return (short)REPLICATION.BITS.retrieve(header);
+      long layoutRedundancy = BLOCK_LAYOUT_AND_REDUNDANCY.BITS.retrieve(header);
+      return (short) (layoutRedundancy & MAX_REDUNDANCY);
+    }
+
+    static byte getECPolicyID(long header) {
+      long layoutRedundancy = BLOCK_LAYOUT_AND_REDUNDANCY.BITS.retrieve(header);
+      return (byte) (layoutRedundancy & MAX_REDUNDANCY);
     }
 
     static long getPreferredBlockSize(long header) {
@@ -111,26 +144,27 @@ public class INodeFile extends INodeWithAdditionalFields
     }
 
     static boolean isStriped(long header) {
-      long isStriped = IS_STRIPED.BITS.retrieve(header);
-      Preconditions.checkState(isStriped == 0 || isStriped == 1);
-      return isStriped == 1;
+      long layoutRedundancy = BLOCK_LAYOUT_AND_REDUNDANCY.BITS.retrieve(header);
+      return (layoutRedundancy & (1 << 11)) != 0;
     }
 
     static long toLong(long preferredBlockSize, short replication,
         boolean isStriped, byte storagePolicyID) {
+      Preconditions.checkArgument(replication >= 0 &&
+          replication <= MAX_REDUNDANCY);
       long h = 0;
       if (preferredBlockSize == 0) {
         preferredBlockSize = PREFERRED_BLOCK_SIZE.BITS.getMin();
       }
       h = PREFERRED_BLOCK_SIZE.BITS.combine(preferredBlockSize, h);
-      // Replication factor for striped files is zero
+      // For erasure coded files, replication is used to store ec policy id
+      // TODO: this is hacky. Add some utility to generate the layoutRedundancy
+      long layoutRedundancy = 0;
       if (isStriped) {
-        h = REPLICATION.BITS.combine(0L, h);
-        h = IS_STRIPED.BITS.combine(1L, h);
-      } else {
-        h = REPLICATION.BITS.combine(replication, h);
-        h = IS_STRIPED.BITS.combine(0L, h);
+        layoutRedundancy |= 1 << 11;
       }
+      layoutRedundancy |= replication;
+      h = BLOCK_LAYOUT_AND_REDUNDANCY.BITS.combine(layoutRedundancy, h);
       h = STORAGE_POLICY_ID.BITS.combine(storagePolicyID, h);
       return h;
     }
@@ -401,9 +435,11 @@ public class INodeFile extends INodeWithAdditionalFields
     return HeaderFormat.getReplication(header);
   }
 
-  /** The same as getFileReplication(null). */
+  /**
+   * The same as getFileReplication(null).
+   * For erasure coded files, this returns the EC policy ID.
+   * */
   @Override // INodeFileAttributes
-  // TODO properly handle striped files
   public final short getFileReplication() {
     return getFileReplication(CURRENT_STATE_ID);
   }
@@ -429,7 +465,12 @@ public class INodeFile extends INodeWithAdditionalFields
 
   /** Set the replication factor of this file. */
   private void setFileReplication(short replication) {
-    header = HeaderFormat.REPLICATION.BITS.combine(replication, header);
+    long layoutRedundancy =
+        HeaderFormat.BLOCK_LAYOUT_AND_REDUNDANCY.BITS.retrieve(header);
+    layoutRedundancy = (layoutRedundancy &
+        ~HeaderFormat.MAX_REDUNDANCY) | replication;
+    header = HeaderFormat.BLOCK_LAYOUT_AND_REDUNDANCY.BITS.
+        combine(layoutRedundancy, header);
   }
 
   /** Set the replication factor of this file. */
@@ -474,16 +515,16 @@ public class INodeFile extends INodeWithAdditionalFields
 
 
   /**
-   * @return The ID of the erasure coding policy on the file. 0 represents no
-   *          EC policy (file is in contiguous format). 1 represents the system
-   *          default EC policy:
-   *          {@link ErasureCodingPolicyManager#SYS_DEFAULT_POLICY}.
-   * TODO: support more policies by reusing {@link HeaderFormat#REPLICATION}.
+   * @return The ID of the erasure coding policy on the file. -1 represents no
+   *          EC policy.
    */
   @VisibleForTesting
   @Override
   public byte getErasureCodingPolicyID() {
-    return isStriped() ? (byte)1 : (byte)0;
+    if (isStriped()) {
+      return HeaderFormat.getECPolicyID(header);
+    }
+    return -1;
   }
 
   /**

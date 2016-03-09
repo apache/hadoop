@@ -22,6 +22,7 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.util.StringUtils;
 
 @InterfaceAudience.Private
@@ -143,6 +144,12 @@ public final class HdfsConstants {
   public enum DatanodeReportType {
     ALL, LIVE, DEAD, DECOMMISSIONING
   }
+
+  public static final ECSchema RS_6_3_SCHEMA = new ECSchema("rs", 6, 3);
+  public static final byte RS_6_3_POLICY_ID = 0;
+
+  public static final ECSchema RS_3_2_SCHEMA = new ECSchema("rs", 3, 2);
+  public static final byte RS_3_2_POLICY_ID = 1;
 
   /* Hidden constructor */
   protected HdfsConstants() {

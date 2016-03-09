@@ -248,12 +248,10 @@ final class FSDirErasureCodingOp {
         if (inode == null) {
           continue;
         }
-        /**
-         * TODO: lookup {@link ErasureCodingPolicyManager#getSystemPolices()}
-         */
         if (inode.isFile()) {
-          return inode.asFile().getErasureCodingPolicyID() == 0 ?
-              null : ErasureCodingPolicyManager.getSystemDefaultPolicy();
+          byte id = inode.asFile().getErasureCodingPolicyID();
+          return id < 0 ? null : fsd.getFSNamesystem().
+              getErasureCodingPolicyManager().getPolicyByID(id);
         }
         // We don't allow setting EC policies on paths with a symlink. Thus
         // if a symlink is encountered, the dir shouldn't have EC policy.
@@ -269,7 +267,7 @@ final class FSDirErasureCodingOp {
             DataInputStream dIn = new DataInputStream(bIn);
             String ecPolicyName = WritableUtils.readString(dIn);
             return fsd.getFSNamesystem().getErasureCodingPolicyManager().
-                getPolicy(ecPolicyName);
+                getPolicyByName(ecPolicyName);
           }
         }
       }

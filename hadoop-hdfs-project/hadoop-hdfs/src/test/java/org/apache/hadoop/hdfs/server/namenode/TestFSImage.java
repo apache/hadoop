@@ -151,7 +151,7 @@ public class TestFSImage {
     long mtime = 1426222916-3600;
     long atime = 1426222916;
     BlockInfoContiguous[] blks = new BlockInfoContiguous[0];
-    short replication = 3;
+    short replication = testECPolicy.getId();
     long preferredBlockSize = 128*1024*1024;
     INodeFile file = new INodeFile(id, name, permissionStatus, mtime, atime,
         blks, replication, preferredBlockSize, (byte) 0, true);

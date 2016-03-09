@@ -777,8 +777,9 @@ public class TestBlockRecovery {
 
   @Test
   public void testSafeLength() throws Exception {
+    // hard coded policy to work with hard coded test suite
     ErasureCodingPolicy ecPolicy = ErasureCodingPolicyManager
-        .getSystemDefaultPolicy();
+        .getSystemPolicies()[0];
     RecoveringStripedBlock rBlockStriped = new RecoveringStripedBlock(rBlock,
         new byte[9], ecPolicy);
     BlockRecoveryWorker recoveryWorker = new BlockRecoveryWorker(dn);

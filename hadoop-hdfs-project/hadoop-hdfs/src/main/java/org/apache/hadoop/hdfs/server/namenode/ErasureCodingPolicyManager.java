@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
 import java.util.Map;
 import java.util.TreeMap;
@@ -37,33 +37,29 @@ public final class ErasureCodingPolicyManager {
   /**
    * TODO: HDFS-8095
    */
-  private static final int DEFAULT_DATA_BLOCKS = 6;
-  private static final int DEFAULT_PARITY_BLOCKS = 3;
   private static final int DEFAULT_CELLSIZE = 64 * 1024;
-  private static final String DEFAULT_CODEC_NAME = "rs";
-  private static final String DEFAULT_POLICY_NAME = "RS-6-3-64k";
-  private static final ECSchema SYS_DEFAULT_SCHEMA = new ECSchema(
-      DEFAULT_CODEC_NAME, DEFAULT_DATA_BLOCKS, DEFAULT_PARITY_BLOCKS);
-  private static final ErasureCodingPolicy SYS_DEFAULT_POLICY =
-      new ErasureCodingPolicy(DEFAULT_POLICY_NAME, SYS_DEFAULT_SCHEMA,
-      DEFAULT_CELLSIZE);
+  private static final ErasureCodingPolicy SYS_POLICY1 =
+      new ErasureCodingPolicy(HdfsConstants.RS_6_3_SCHEMA, DEFAULT_CELLSIZE,
+          HdfsConstants.RS_6_3_POLICY_ID);
+  private static final ErasureCodingPolicy SYS_POLICY2 =
+      new ErasureCodingPolicy(HdfsConstants.RS_3_2_SCHEMA, DEFAULT_CELLSIZE,
+          HdfsConstants.RS_3_2_POLICY_ID);
 
   //We may add more later.
-  private static ErasureCodingPolicy[] SYS_POLICY = new ErasureCodingPolicy[] {
-      SYS_DEFAULT_POLICY
-  };
+  private static final ErasureCodingPolicy[] SYS_POLICIES =
+      new ErasureCodingPolicy[]{SYS_POLICY1, SYS_POLICY2};
 
   /**
    * All active policies maintained in NN memory for fast querying,
    * identified and sorted by its name.
    */
-  private final Map<String, ErasureCodingPolicy> activePolicies;
+  private final Map<String, ErasureCodingPolicy> activePoliciesByName;
 
   ErasureCodingPolicyManager() {
 
-    this.activePolicies = new TreeMap<>();
-    for (ErasureCodingPolicy policy : SYS_POLICY) {
-      activePolicies.put(policy.getName(), policy);
+    this.activePoliciesByName = new TreeMap<>();
+    for (ErasureCodingPolicy policy : SYS_POLICIES) {
+      activePoliciesByName.put(policy.getName(), policy);
     }
 
     /**
@@ -77,8 +73,8 @@ public final class ErasureCodingPolicyManager {
    * Get system defined policies.
    * @return system policies
    */
-  public static ErasureCodingPolicy[] getSystemPolices() {
-    return SYS_POLICY;
+  public static ErasureCodingPolicy[] getSystemPolicies() {
+    return SYS_POLICIES;
   }
 
   /**
@@ -87,7 +83,8 @@ public final class ErasureCodingPolicyManager {
    * @return ecPolicy
    */
   public static ErasureCodingPolicy getSystemDefaultPolicy() {
-    return SYS_DEFAULT_POLICY;
+    // make this configurable?
+    return SYS_POLICY1;
   }
 
   /**
@@ -95,21 +92,34 @@ public final class ErasureCodingPolicyManager {
    * @return all policies
    */
   public ErasureCodingPolicy[] getPolicies() {
-    ErasureCodingPolicy[] results = new ErasureCodingPolicy[activePolicies.size()];
-    return activePolicies.values().toArray(results);
+    ErasureCodingPolicy[] results =
+        new ErasureCodingPolicy[activePoliciesByName.size()];
+    return activePoliciesByName.values().toArray(results);
   }
 
   /**
    * Get the policy specified by the policy name.
    */
-  public ErasureCodingPolicy getPolicy(String name) {
-    return activePolicies.get(name);
+  public ErasureCodingPolicy getPolicyByName(String name) {
+    return activePoliciesByName.get(name);
+  }
+
+  /**
+   * Get the policy specified by the policy ID.
+   */
+  public ErasureCodingPolicy getPolicyByID(byte id) {
+    for (ErasureCodingPolicy policy : activePoliciesByName.values()) {
+      if (policy.getId() == id) {
+        return policy;
+      }
+    }
+    return null;
   }
 
   /**
    * Clear and clean up
    */
   public void clear() {
-    activePolicies.clear();
+    activePoliciesByName.clear();
   }
 }

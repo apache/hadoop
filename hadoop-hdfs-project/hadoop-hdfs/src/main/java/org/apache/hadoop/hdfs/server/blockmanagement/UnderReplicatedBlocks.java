@@ -208,7 +208,7 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
       // highest risk of loss, highest priority
       return QUEUE_HIGHEST_PRIORITY;
     } else if ((curReplicas - dataBlkNum) * 3 < parityBlkNum + 1) {
-      // can only afford one replica loss
+      // there is less than a third as many blocks as requested;
       // this is considered very under-replicated
       return QUEUE_VERY_UNDER_REPLICATED;
     } else {

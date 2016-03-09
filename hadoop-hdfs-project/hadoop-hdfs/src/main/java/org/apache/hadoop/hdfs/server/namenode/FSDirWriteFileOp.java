@@ -497,16 +497,19 @@ class FSDirWriteFileOp {
     assert fsd.hasWriteLock();
     try {
       // check if the file has an EC policy
-      final boolean isStriped = FSDirErasureCodingOp.hasErasureCodingPolicy(
-          fsd.getFSNamesystem(), existing);
+      ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.
+          getErasureCodingPolicy(fsd.getFSNamesystem(), existing);
+      if (ecPolicy != null) {
+        replication = ecPolicy.getId();
+      }
       if (underConstruction) {
         newNode = newINodeFile(id, permissions, modificationTime,
             modificationTime, replication, preferredBlockSize, storagePolicyId,
-            isStriped);
+            ecPolicy != null);
         newNode.toUnderConstruction(clientName, clientMachine);
       } else {
         newNode = newINodeFile(id, permissions, modificationTime, atime,
-            replication, preferredBlockSize, storagePolicyId, isStriped);
+            replication, preferredBlockSize, storagePolicyId, ecPolicy != null);
       }
       newNode.setLocalName(localName);
       INodesInPath iip = fsd.addINode(existing, newNode);
@@ -595,10 +598,13 @@ class FSDirWriteFileOp {
     INodesInPath newiip;
     fsd.writeLock();
     try {
-      final boolean isStriped = FSDirErasureCodingOp.hasErasureCodingPolicy(
-          fsd.getFSNamesystem(), existing);
+      ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.
+          getErasureCodingPolicy(fsd.getFSNamesystem(), existing);
+      if (ecPolicy != null) {
+        replication = ecPolicy.getId();
+      }
       INodeFile newNode = newINodeFile(fsd.allocateNewInodeId(), permissions,
-          modTime, modTime, replication, preferredBlockSize, isStriped);
+          modTime, modTime, replication, preferredBlockSize, ecPolicy != null);
       newNode.setLocalName(localName.getBytes(Charsets.UTF_8));
       newNode.toUnderConstruction(clientName, clientMachine);
       newiip = fsd.addINode(existing, newNode);

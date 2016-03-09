@@ -27,26 +27,26 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile.HeaderFormat;
 @InterfaceAudience.Private
 public interface INodeFileAttributes extends INodeAttributes {
   /** @return the file replication. */
-  public short getFileReplication();
+  short getFileReplication();
 
   /** @return whether the file is striped (instead of contiguous) */
-  public boolean isStriped();
+  boolean isStriped();
 
-  /** @return whether the file is striped (instead of contiguous) */
-  public byte getErasureCodingPolicyID();
+  /** @return the ID of the ErasureCodingPolicy */
+  byte getErasureCodingPolicyID();
 
   /** @return preferred block size in bytes */
-  public long getPreferredBlockSize();
+  long getPreferredBlockSize();
 
   /** @return the header as a long. */
-  public long getHeaderLong();
+  long getHeaderLong();
 
-  public boolean metadataEquals(INodeFileAttributes other);
+  boolean metadataEquals(INodeFileAttributes other);
 
-  public byte getLocalStoragePolicyID();
+  byte getLocalStoragePolicyID();
 
   /** A copy of the inode file attributes */
-  public static class SnapshotCopy extends INodeAttributes.SnapshotCopy
+  static class SnapshotCopy extends INodeAttributes.SnapshotCopy
       implements INodeFileAttributes {
     private final long header;
 
@@ -82,7 +82,10 @@ public interface INodeFileAttributes extends INodeAttributes {
 
     @Override
     public byte getErasureCodingPolicyID() {
-      return isStriped() ? (byte)1 : (byte)0;
+      if (isStriped()) {
+        return HeaderFormat.getECPolicyID(header);
+      }
+      return -1;
     }
 
     @Override

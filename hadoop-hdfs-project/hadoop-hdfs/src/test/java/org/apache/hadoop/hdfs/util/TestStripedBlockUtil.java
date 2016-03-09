@@ -79,15 +79,16 @@ import static org.junit.Assert.assertFalse;
  * TODO: test parity block logic
  */
 public class TestStripedBlockUtil {
-  private final short DATA_BLK_NUM = StripedFileTestUtil.NUM_DATA_BLOCKS;
-  private final short PARITY_BLK_NUM = StripedFileTestUtil.NUM_PARITY_BLOCKS;
+  // use hard coded policy - see HDFS-9816
+  private final ErasureCodingPolicy EC_POLICY =
+      ErasureCodingPolicyManager.getSystemPolicies()[0];
+  private final short DATA_BLK_NUM = (short) EC_POLICY.getNumDataUnits();
+  private final short PARITY_BLK_NUM = (short) EC_POLICY.getNumParityUnits();
   private final short BLK_GROUP_WIDTH = (short) (DATA_BLK_NUM + PARITY_BLK_NUM);
   private final int CELLSIZE = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
   private final int FULL_STRIPE_SIZE = DATA_BLK_NUM * CELLSIZE;
   /** number of full stripes in a full block group */
   private final int BLK_GROUP_STRIPE_NUM = 16;
-  private final ErasureCodingPolicy ECPOLICY = ErasureCodingPolicyManager.
-      getSystemDefaultPolicy();
   private final Random random = new Random();
 
   private int[] blockGroupSizes;
@@ -157,7 +158,7 @@ public class TestStripedBlockUtil {
     int done = 0;
     while (done < bgSize) {
       Preconditions.checkState(done % CELLSIZE == 0);
-      StripingCell cell = new StripingCell(ECPOLICY, CELLSIZE, done / CELLSIZE, 0);
+      StripingCell cell = new StripingCell(EC_POLICY, CELLSIZE, done / CELLSIZE, 0);
       int idxInStripe = cell.idxInStripe;
       int size = Math.min(CELLSIZE, bgSize - done);
       for (int i = 0; i < size; i++) {
@@ -250,7 +251,7 @@ public class TestStripedBlockUtil {
           if (brStart + brSize > bgSize) {
             continue;
           }
-          AlignedStripe[] stripes = divideByteRangeIntoStripes(ECPOLICY,
+          AlignedStripe[] stripes = divideByteRangeIntoStripes(EC_POLICY,
               CELLSIZE, blockGroup, brStart, brStart + brSize - 1, assembled, 0);
 
           for (AlignedStripe stripe : stripes) {

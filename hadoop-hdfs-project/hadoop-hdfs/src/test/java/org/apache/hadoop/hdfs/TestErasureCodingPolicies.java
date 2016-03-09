@@ -35,6 +35,7 @@ import org.junit.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
@@ -225,8 +226,11 @@ public class TestErasureCodingPolicies {
     fs.create(fooFile, FsPermission.getFileDefault(), true,
         conf.getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
         (short)0, fs.getDefaultBlockSize(fooFile), null);
+    ErasureCodingPolicy policy = fs.getErasureCodingPolicy(fooFile);
     // set replication should be a no-op
     fs.setReplication(fooFile, (short) 3);
+    // should preserve the policy after set replication
+    assertEquals(policy, fs.getErasureCodingPolicy(fooFile));
   }
 
   @Test(timeout = 60000)
@@ -247,9 +251,10 @@ public class TestErasureCodingPolicies {
 
   @Test(timeout = 60000)
   public void testGetErasureCodingPolicy() throws Exception {
-    ErasureCodingPolicy[] sysECPolicies = ErasureCodingPolicyManager.getSystemPolices();
-    assertTrue("System ecPolicies should be of only 1 for now",
-        sysECPolicies.length == 1);
+    ErasureCodingPolicy[] sysECPolicies =
+        ErasureCodingPolicyManager.getSystemPolicies();
+    assertTrue("System ecPolicies should exist",
+        sysECPolicies.length > 0);
 
     ErasureCodingPolicy usingECPolicy = sysECPolicies[0];
     String src = "/ec2";
@@ -281,7 +286,7 @@ public class TestErasureCodingPolicies {
     String policyName = "RS-4-2-128k";
     int cellSize = 128 * 1024;
     ErasureCodingPolicy ecPolicy=
-        new ErasureCodingPolicy(policyName,rsSchema,cellSize);
+        new ErasureCodingPolicy(policyName, rsSchema, cellSize, (byte) -1);
     String src = "/ecDir4-2";
     final Path ecDir = new Path(src);
     try {
@@ -298,16 +303,11 @@ public class TestErasureCodingPolicies {
   @Test(timeout = 60000)
   public void testGetAllErasureCodingPolicies() throws Exception {
     ErasureCodingPolicy[] sysECPolicies = ErasureCodingPolicyManager
-        .getSystemPolices();
-    assertTrue("System ecPolicies should be of only 1 for now",
-        sysECPolicies.length == 1);
-
+        .getSystemPolicies();
     Collection<ErasureCodingPolicy> allECPolicies = fs
         .getAllErasureCodingPolicies();
-    assertTrue("All ecPolicies should be of only 1 for now",
-        allECPolicies.size() == 1);
-    assertEquals("Erasure coding policy mismatches",
-        sysECPolicies[0], allECPolicies.iterator().next());
+    assertTrue("All system policies should be active",
+        allECPolicies.containsAll(Arrays.asList(sysECPolicies)));
   }
 
   @Test(timeout = 60000)
@@ -327,6 +327,25 @@ public class TestErasureCodingPolicies {
           + " file path");
     } catch (FileNotFoundException e) {
       assertExceptionContains("Path not found: " + path, e);
+    }
+  }
+
+  @Test(timeout = 60000)
+  public void testMultiplePoliciesCoExist() throws Exception {
+    ErasureCodingPolicy[] sysPolicies =
+        ErasureCodingPolicyManager.getSystemPolicies();
+    if (sysPolicies.length > 1) {
+      for (ErasureCodingPolicy policy : sysPolicies) {
+        Path dir = new Path("/policy_" + policy.getId());
+        fs.mkdir(dir, FsPermission.getDefault());
+        fs.setErasureCodingPolicy(dir, policy);
+        Path file = new Path(dir, "child");
+        fs.create(file).close();
+        assertEquals(policy, fs.getErasureCodingPolicy(file));
+        assertEquals(policy, fs.getErasureCodingPolicy(dir));
+        INode iNode = namesystem.getFSDirectory().getINode(file.toString());
+        assertEquals(policy.getId(), iNode.asFile().getFileReplication());
+      }
     }
   }
 }

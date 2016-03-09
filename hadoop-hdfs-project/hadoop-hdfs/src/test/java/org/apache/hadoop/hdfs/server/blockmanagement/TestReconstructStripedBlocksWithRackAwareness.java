@@ -58,10 +58,35 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     GenericTestUtils.setLogLevel(BlockManager.LOG, Level.ALL);
   }
 
-  private static final String[] hosts = new String[]{"host1", "host2", "host3",
-      "host4", "host5", "host6", "host7", "host8", "host9", "host10"};
-  private static final String[] racks = new String[]{"/r1", "/r1", "/r2", "/r2",
-      "/r3", "/r3", "/r4", "/r4", "/r5", "/r6"};
+  private static final String[] hosts = getHosts();
+  private static final String[] racks = getRacks();
+
+  private static String[] getHosts() {
+    String[] hosts = new String[NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS + 1];
+    for (int i = 0; i < hosts.length; i++) {
+      hosts[i] = "host" + (i + 1);
+    }
+    return hosts;
+  }
+
+  private static String[] getRacks() {
+    String[] racks = new String[NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS + 1];
+    int numHostEachRack = (NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS - 1) /
+        (NUM_DATA_BLOCKS - 1) + 1;
+    int j = 0;
+    // we have NUM_DATA_BLOCKS racks
+    for (int i = 1; i <= NUM_DATA_BLOCKS; i++) {
+      if (j == racks.length - 1) {
+        assert i == NUM_DATA_BLOCKS;
+        racks[j++] = "/r" + i;
+      } else {
+        for (int k = 0; k < numHostEachRack && j < racks.length - 1; k++) {
+          racks[j++] = "/r" + i;
+        }
+      }
+    }
+    return racks;
+  }
 
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
@@ -118,7 +143,8 @@ public class TestReconstructStripedBlocksWithRackAwareness {
    */
   @Test
   public void testReconstructForNotEnoughRacks() throws Exception {
-    MiniDFSCluster.DataNodeProperties host10 = stopDataNode("host10");
+    MiniDFSCluster.DataNodeProperties lastHost = stopDataNode(
+        hosts[hosts.length - 1]);
 
     final Path file = new Path("/foo");
     // the file's block is in 9 dn but 5 racks
@@ -135,16 +161,16 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     for (DatanodeStorageInfo storage : blockInfo.storages) {
       rackSet.add(storage.getDatanodeDescriptor().getNetworkLocation());
     }
-    Assert.assertEquals(5, rackSet.size());
+    Assert.assertEquals(NUM_DATA_BLOCKS - 1, rackSet.size());
 
     // restart the stopped datanode
-    cluster.restartDataNode(host10);
+    cluster.restartDataNode(lastHost);
     cluster.waitActive();
 
     // make sure we have 6 racks again
     NetworkTopology topology = bm.getDatanodeManager().getNetworkTopology();
     Assert.assertEquals(hosts.length, topology.getNumOfLeaves());
-    Assert.assertEquals(6, topology.getNumOfRacks());
+    Assert.assertEquals(NUM_DATA_BLOCKS, topology.getNumOfRacks());
 
     // pause all the heartbeats
     for (DataNode dn : cluster.getDataNodes()) {
@@ -180,7 +206,8 @@ public class TestReconstructStripedBlocksWithRackAwareness {
 
   @Test
   public void testChooseExcessReplicasToDelete() throws Exception {
-    MiniDFSCluster.DataNodeProperties host10 = stopDataNode("host10");
+    MiniDFSCluster.DataNodeProperties lastHost = stopDataNode(
+        hosts[hosts.length - 1]);
 
     final Path file = new Path("/foo");
     DFSTestUtil.createFile(fs, file,
@@ -188,8 +215,8 @@ public class TestReconstructStripedBlocksWithRackAwareness {
 
     // stop host1
     MiniDFSCluster.DataNodeProperties host1 = stopDataNode("host1");
-    // bring host10 back
-    cluster.restartDataNode(host10);
+    // bring last host back
+    cluster.restartDataNode(lastHost);
     cluster.waitActive();
 
     // wait for reconstruction to finish
