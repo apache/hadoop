@@ -134,10 +134,8 @@ static int Error(const Status &stat) {
       default_message = "Operation canceled";
       break;
     case Status::Code::kPermissionDenied:
-      if (!stat.ToString().empty())
-        ReportError(EACCES, stat.ToString().c_str());
-      else
-        ReportError(EACCES, "Permission denied");
+      errnum = EACCES;
+      default_message = "Permission denied";
       break;
     default:
       errnum = ENOSYS;
