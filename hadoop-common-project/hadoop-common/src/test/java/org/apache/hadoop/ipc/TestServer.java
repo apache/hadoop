@@ -19,13 +19,19 @@
 package org.apache.hadoop.ipc;
 
 import static org.junit.Assert.*;
+import static org.mockito.Matchers.*;
+import static org.mockito.Mockito.*;
 
 import java.io.IOException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 
+import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.ipc.Server.Call;
 import org.junit.Test;
 
 /**
@@ -117,15 +123,66 @@ public class TestServer {
     }
   }
   
-  @Test
-  public void testExceptionsHandler() {
-    Server.ExceptionsHandler handler = new Server.ExceptionsHandler();
-    handler.addTerseExceptions(IOException.class);
-    handler.addTerseExceptions(RpcServerException.class, IpcException.class);
+  static class TestException1 extends Exception {
+  }
 
-    assertTrue(handler.isTerse(IOException.class));
-    assertTrue(handler.isTerse(RpcServerException.class));
-    assertTrue(handler.isTerse(IpcException.class));
-    assertFalse(handler.isTerse(RpcClientException.class));
+  static class TestException2 extends Exception {
+  }
+
+  static class TestException3 extends Exception {
+  }
+
+  @Test (timeout=300000)
+  public void testLogExceptions() throws Exception {
+    final Configuration conf = new Configuration();
+    final Call dummyCall = new Call(0, 0, null, null);
+    Log logger = mock(Log.class);
+    Server server = new Server("0.0.0.0", 0, LongWritable.class, 1, conf) {
+      @Override
+      public Writable call(
+          RPC.RpcKind rpcKind, String protocol, Writable param,
+          long receiveTime) throws Exception {
+        return null;
+      }
+    };
+    server.addSuppressedLoggingExceptions(TestException1.class);
+    server.addTerseExceptions(TestException2.class);
+
+    // Nothing should be logged for a suppressed exception.
+    server.logException(logger, new TestException1(), dummyCall);
+    verifyZeroInteractions(logger);
+
+    // No stack trace should be logged for a terse exception.
+    server.logException(logger, new TestException2(), dummyCall);
+    verify(logger, times(1)).info(anyObject());
+
+    // Full stack trace should be logged for other exceptions.
+    final Throwable te3 = new TestException3();
+    server.logException(logger, te3, dummyCall);
+    verify(logger, times(1)).info(anyObject(), eq(te3));
+  }
+
+  @Test
+  public void testExceptionsHandlerTerse() {
+    Server.ExceptionsHandler handler = new Server.ExceptionsHandler();
+    handler.addTerseLoggingExceptions(IOException.class);
+    handler.addTerseLoggingExceptions(RpcServerException.class, IpcException.class);
+
+    assertTrue(handler.isTerseLog(IOException.class));
+    assertTrue(handler.isTerseLog(RpcServerException.class));
+    assertTrue(handler.isTerseLog(IpcException.class));
+    assertFalse(handler.isTerseLog(RpcClientException.class));
+  }
+
+  @Test
+  public void testExceptionsHandlerSuppressed() {
+    Server.ExceptionsHandler handler = new Server.ExceptionsHandler();
+    handler.addSuppressedLoggingExceptions(IOException.class);
+    handler.addSuppressedLoggingExceptions(RpcServerException.class, IpcException.class);
+
+    assertTrue(handler.isSuppressedLog(IOException.class));
+    assertTrue(handler.isSuppressedLog(RpcServerException.class));
+    assertTrue(handler.isSuppressedLog(IpcException.class));
+    assertFalse(handler.isSuppressedLog(RpcClientException.class));
   }
 }
