@@ -47,7 +47,6 @@ function print_usage(){
   echo "  datanode             run a DFS datanode"
   echo "  debug                run a Debug Admin to execute HDFS debug commands"
   echo "  dfsadmin             run a DFS admin client"
-  echo "  envvars              display computed Hadoop environment variables"
   echo "  haadmin              run a DFS HA admin client"
   echo "  fsck                 run a DFS filesystem checking utility"
   echo "  balancer             run a cluster balancing utility"
@@ -162,14 +161,6 @@ elif [ "$COMMAND" = "haadmin" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.DFSHAAdmin
   CLASSPATH=${CLASSPATH}:${TOOL_PATH}
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
-elif [ "$COMMAND" = "envvars" ] ; then
-  echo "JAVA_HOME='${JAVA_HOME}'"
-  echo "HADOOP_HDFS_HOME='${HADOOP_HDFS_HOME}'"
-  echo "HDFS_DIR='${HDFS_DIR}'"
-  echo "HDFS_LIB_JARS_DIR='${HDFS_LIB_JARS_DIR}'"
-  echo "HADOOP_CONF_DIR='${HADOOP_CONF_DIR}'"
-  echo "HADOOP_TOOLS_PATH='${TOOL_PATH}'"
-  exit 0
 elif [ "$COMMAND" = "fsck" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.DFSck
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
