@@ -18,17 +18,22 @@
 
 package org.apache.hadoop.ozone.web.storage;
 
-import java.io.IOException;
-
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
+import org.apache.hadoop.ozone.web.handlers.KeyArgs;
+import org.apache.hadoop.ozone.web.handlers.ListArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.ListBuckets;
+import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
+
+import java.io.IOException;
+import java.io.OutputStream;
 
 /**
  * A {@link StorageHandler} implementation that distributes object storage
@@ -123,6 +128,69 @@ public final class DistributedStorageHandler implements StorageHandler {
   @Override
   public BucketInfo getBucketInfo(BucketArgs args)
       throws IOException, OzoneException {
+    return null;
+  }
+
+  /**
+   * Writes a key in an existing bucket.
+   *
+   * @param args KeyArgs
+   * @return InputStream
+   * @throws OzoneException
+   */
+  @Override
+  public OutputStream newKeyWriter(KeyArgs args) throws IOException,
+      OzoneException {
+    return null;
+  }
+
+  /**
+   * Tells the file system that the object has been written out completely and
+   * it can do any house keeping operation that needs to be done.
+   *
+   * @param args   Key Args
+   * @param stream
+   * @throws IOException
+   */
+  @Override
+  public void commitKey(KeyArgs args, OutputStream stream) throws
+      IOException, OzoneException {
+
+  }
+
+  /**
+   * Reads a key from an existing bucket.
+   *
+   * @param args KeyArgs
+   * @return LengthInputStream
+   * @throws IOException
+   */
+  @Override
+  public LengthInputStream newKeyReader(KeyArgs args) throws IOException,
+      OzoneException {
+    return null;
+  }
+
+  /**
+   * Deletes an existing key.
+   *
+   * @param args KeyArgs
+   * @throws OzoneException
+   */
+  @Override
+  public void deleteKey(KeyArgs args) throws IOException, OzoneException {
+
+  }
+
+  /**
+   * Returns a list of Key.
+   *
+   * @param args KeyArgs
+   * @return BucketList
+   * @throws IOException
+   */
+  @Override
+  public ListKeys listKeys(ListArgs args) throws IOException, OzoneException {
     return null;
   }
 }

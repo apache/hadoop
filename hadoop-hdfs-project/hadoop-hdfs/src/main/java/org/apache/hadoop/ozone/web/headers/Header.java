@@ -56,6 +56,7 @@ public final class Header {
 
   public static final String OZONE_LIST_QUERY_TAG ="info";
   public static final String OZONE_QUOTA_QUERY_TAG ="quota";
+  public static final String CONTENT_MD5 = "Content-MD5";
 
 
 

@@ -26,6 +26,7 @@ import org.apache.hadoop.ozone.web.headers.Header;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.interfaces.UserAuth;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
+import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.apache.hadoop.ozone.web.utils.OzoneConsts;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 
@@ -179,7 +180,6 @@ public abstract class BucketProcessTemplate {
    *
    * @return List of ACLs
    *
-   * @throws OzoneException
    */
   List<String> getAcls(BucketArgs args, String tag)  {
     List<String> aclStrings =
@@ -273,6 +273,19 @@ public abstract class BucketProcessTemplate {
     StorageHandler fs = StorageHandlerBuilder.getStorageHandler();
     BucketInfo info = fs.getBucketInfo(args);
     return OzoneUtils.getResponse(args, HTTP_OK, info.toJsonString());
+  }
+
+  /**
+   * Returns list of objects in a bucket.
+   * @param args - ListArgs
+   * @return Response
+   * @throws IOException
+   * @throws OzoneException
+   */
+  Response getBucketKeysList(ListArgs args) throws IOException, OzoneException {
+    StorageHandler fs = StorageHandlerBuilder.getStorageHandler();
+    ListKeys objects = fs.listKeys(args);
+    return OzoneUtils.getResponse(args, HTTP_OK, objects.toJsonString());
   }
 
 }

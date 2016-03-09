@@ -19,16 +19,21 @@
 package org.apache.hadoop.ozone.web.interfaces;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
+import org.apache.hadoop.ozone.web.handlers.KeyArgs;
+import org.apache.hadoop.ozone.web.handlers.ListArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.ListBuckets;
+import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 
 import java.io.IOException;
+import java.io.OutputStream;
 
 /**
  * Storage handler Interface is the Interface between
@@ -205,5 +210,64 @@ public interface StorageHandler {
    */
   BucketInfo getBucketInfo(BucketArgs args) throws IOException, OzoneException;
 
+  /**
+   * Writes a key in an existing bucket.
+   *
+   * @param args KeyArgs
+   *
+   * @return InputStream
+   *
+   * @throws OzoneException
+   */
+  OutputStream newKeyWriter(KeyArgs args)
+      throws IOException, OzoneException;
 
+
+  /**
+   * Tells the file system that the object has been written out
+   * completely and it can do any house keeping operation that needs
+   * to be done.
+   *
+   * @param args Key Args
+   *
+   * @param stream
+   * @throws IOException
+   */
+  void commitKey(KeyArgs args, OutputStream stream)
+      throws IOException, OzoneException;
+
+
+  /**
+   * Reads a key from an existing bucket.
+   *
+   * @param args KeyArgs
+   *
+   * @return LengthInputStream
+   *
+   * @throws IOException
+   */
+  LengthInputStream newKeyReader(KeyArgs args)
+      throws IOException, OzoneException;
+
+
+  /**
+   * Deletes an existing key.
+   *
+   * @param args KeyArgs
+   *
+   * @throws OzoneException
+   */
+  void deleteKey(KeyArgs args) throws IOException, OzoneException;
+
+
+  /**
+   * Returns a list of Key.
+   *
+   * @param args KeyArgs
+   *
+   * @return BucketList
+   *
+   * @throws IOException
+   */
+  ListKeys listKeys(ListArgs args) throws IOException, OzoneException;
 }
