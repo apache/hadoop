@@ -169,6 +169,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.web.DatanodeHttpServer;
+import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerConstants;
 import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerException;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -3360,8 +3361,8 @@ public class DataNode extends ReconfigurableBase
   }
 
   /**
-   * Gets a run-time configuration value from running diskbalancer instance. For
-   * example : Disk Balancer bandwidth of a running instance.
+   * Gets a runtime configuration value from  diskbalancer instance. For
+   * example : DiskBalancer bandwidth.
    *
    * @param key - String that represents the run time key value.
    * @return value of the key as a string.
@@ -3370,7 +3371,15 @@ public class DataNode extends ReconfigurableBase
   @Override
   public String getDiskBalancerSetting(String key) throws IOException {
     checkSuperuserPrivilege();
-    throw new DiskBalancerException("Not Implemented",
-        DiskBalancerException.Result.INTERNAL_ERROR);
+    Preconditions.checkNotNull(key);
+    switch (key) {
+    case DiskBalancerConstants.DISKBALANCER_VOLUME_NAME:
+      return this.diskBalancer.getVolumeNames();
+    default:
+      LOG.error("Disk Balancer - Unknown key in get balancer setting. Key: " +
+          key);
+      throw new DiskBalancerException("Unknown key",
+          DiskBalancerException.Result.UNKNOWN_KEY);
+    }
   }
 }

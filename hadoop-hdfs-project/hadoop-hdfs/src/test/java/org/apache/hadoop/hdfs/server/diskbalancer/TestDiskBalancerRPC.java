@@ -24,18 +24,24 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus;
+import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerException.*;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ClusterConnector;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ConnectorFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.GreedyPlanner;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
+import org.hamcrest.*;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.codehaus.jackson.map.ObjectMapper;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.Result.NO_PLAN;
 import static org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.Result.PLAN_DONE;
@@ -84,6 +90,8 @@ public class TestDiskBalancerRPC {
     int planVersion = rpcTestHelper.getPlanVersion();
     NodePlan plan = rpcTestHelper.getPlan();
     thrown.expect(DiskBalancerException.class);
+    thrown.expect(new
+        ResultVerifier(Result.INVALID_PLAN_HASH));
     dataNode.submitDiskBalancerPlan(planHash, planVersion, 10, plan.toJson());
   }
 
@@ -96,6 +104,8 @@ public class TestDiskBalancerRPC {
     planVersion++;
     NodePlan plan = rpcTestHelper.getPlan();
     thrown.expect(DiskBalancerException.class);
+    thrown.expect(new
+        ResultVerifier(Result.INVALID_PLAN_VERSION));
     dataNode.submitDiskBalancerPlan(planHash, planVersion, 10, plan.toJson());
   }
 
@@ -107,6 +117,8 @@ public class TestDiskBalancerRPC {
     int planVersion = rpcTestHelper.getPlanVersion();
     NodePlan plan = rpcTestHelper.getPlan();
     thrown.expect(DiskBalancerException.class);
+    thrown.expect(new
+        ResultVerifier(Result.INVALID_PLAN));
     dataNode.submitDiskBalancerPlan(planHash, planVersion, 10, "");
   }
 
@@ -131,6 +143,8 @@ public class TestDiskBalancerRPC {
     planHash = String.valueOf(hashArray);
     NodePlan plan = rpcTestHelper.getPlan();
     thrown.expect(DiskBalancerException.class);
+    thrown.expect(new
+        ResultVerifier(Result.NO_SUCH_PLAN));
     dataNode.cancelDiskBalancePlan(planHash);
   }
 
@@ -141,7 +155,36 @@ public class TestDiskBalancerRPC {
     String planHash = "";
     NodePlan plan = rpcTestHelper.getPlan();
     thrown.expect(DiskBalancerException.class);
+    thrown.expect(new
+        ResultVerifier(Result.NO_SUCH_PLAN));
     dataNode.cancelDiskBalancePlan(planHash);
+  }
+
+  @Test
+  public void testGetDiskBalancerVolumeMapping() throws Exception {
+    final int dnIndex = 0;
+    DataNode dataNode = cluster.getDataNodes().get(dnIndex);
+    String volumeNameJson = dataNode.getDiskBalancerSetting(
+        DiskBalancerConstants.DISKBALANCER_VOLUME_NAME);
+    Assert.assertNotNull(volumeNameJson);
+    ObjectMapper mapper = new ObjectMapper();
+
+    @SuppressWarnings("unchecked")
+    Map<String, String> volumemap =
+        mapper.readValue(volumeNameJson, HashMap.class);
+
+    Assert.assertEquals(2, volumemap.size());
+  }
+
+  @Test
+  public void testGetDiskBalancerInvalidSetting() throws Exception {
+    final int dnIndex = 0;
+    final String invalidSetting = "invalidSetting";
+    DataNode dataNode = cluster.getDataNodes().get(dnIndex);
+    thrown.expect(DiskBalancerException.class);
+    thrown.expect(new
+        ResultVerifier(Result.UNKNOWN_KEY));
+    dataNode.getDiskBalancerSetting(invalidSetting);
   }
 
 
@@ -173,6 +216,8 @@ public class TestDiskBalancerRPC {
     final int dnIndex = 0;
     DataNode dataNode = cluster.getDataNodes().get(dnIndex);
     thrown.expect(DiskBalancerException.class);
+    thrown.expect(new
+        ResultVerifier(Result.UNKNOWN_KEY));
     dataNode.getDiskBalancerSetting(
         DiskBalancerConstants.DISKBALANCER_BANDWIDTH);
   }
@@ -221,6 +266,27 @@ public class TestDiskBalancerRPC {
       planVersion = 1;
       planHash = DigestUtils.sha512Hex(plan.toJson());
       return this;
+    }
+  }
+
+  private class ResultVerifier
+      extends TypeSafeMatcher<DiskBalancerException> {
+    private final DiskBalancerException.Result expectedResult;
+
+    ResultVerifier(DiskBalancerException.Result expectedResult){
+      this.expectedResult = expectedResult;
+    }
+
+    @Override
+    protected boolean matchesSafely(DiskBalancerException exception) {
+      return (this.expectedResult == exception.getResult());
+    }
+
+    @Override
+    public void describeTo(Description description) {
+      description.appendText("expects Result: ")
+          .appendValue(this.expectedResult);
+
     }
   }
 }

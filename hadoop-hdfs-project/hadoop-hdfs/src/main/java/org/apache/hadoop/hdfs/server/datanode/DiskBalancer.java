@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerException;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.Step;
 import org.apache.hadoop.util.Time;
+import org.codehaus.jackson.map.ObjectMapper;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -221,6 +222,31 @@ public class DiskBalancer {
     }
   }
 
+  /**
+   * Returns a volume ID to Volume base path map.
+   *
+   * @return Json string of the volume map.
+   * @throws DiskBalancerException
+   */
+  public String getVolumeNames() throws DiskBalancerException {
+    lock.lock();
+    try {
+      checkDiskBalancerEnabled();
+      Map<String, String> pathMap = new HashMap<>();
+      Map<String, FsVolumeSpi> volMap = getStorageIDToVolumeMap();
+      for (Map.Entry<String, FsVolumeSpi> entry : volMap.entrySet()) {
+        pathMap.put(entry.getKey(), entry.getValue().getBasePath());
+      }
+      ObjectMapper mapper = new ObjectMapper();
+      return mapper.writeValueAsString(pathMap);
+    } catch (IOException e) {
+      throw new DiskBalancerException("Internal error, Unable to " +
+          "create JSON string.", e,
+          DiskBalancerException.Result.INTERNAL_ERROR);
+    } finally {
+      lock.unlock();
+    }
+  }
 
 
   /**
