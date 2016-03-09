@@ -16,28 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred;
+package org.apache.hadoop.mapreduce;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocatedFileStatus;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.mapred.TimelineServicePerformanceV2.EntityWriter;
-import org.apache.hadoop.mapred.TimelineServicePerformanceV2.PerfCounters;
-import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapred.JobID;
+import org.apache.hadoop.mapreduce.JobHistoryFileReplayHelper.JobFiles;
+import org.apache.hadoop.mapreduce.TimelineServicePerformance.PerfCounters;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -49,96 +40,24 @@ import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollector
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorManager;
 
 /**
- * Mapper for TimelineServicePerformanceV2 that replays job history files to the
- * timeline service.
+ * Mapper for TimelineServicePerformance that replays job history files to the
+ * timeline service v.2.
  *
  */
-class JobHistoryFileReplayMapper extends EntityWriter {
+class JobHistoryFileReplayMapperV2 extends EntityWriterV2 {
   private static final Log LOG =
-      LogFactory.getLog(JobHistoryFileReplayMapper.class);
-
-  static final String PROCESSING_PATH = "processing path";
-  static final String REPLAY_MODE = "replay mode";
-  static final int WRITE_ALL_AT_ONCE = 1;
-  static final int WRITE_PER_ENTITY = 2;
-  static final int REPLAY_MODE_DEFAULT = WRITE_ALL_AT_ONCE;
-
-  private static final Pattern JOB_ID_PARSER =
-      Pattern.compile("^(job_[0-9]+_([0-9]+)).*");
-
-  public static class JobFiles {
-    private final String jobId;
-    private Path jobHistoryFilePath;
-    private Path jobConfFilePath;
-
-    public JobFiles(String jobId) {
-      this.jobId = jobId;
-    }
-
-    public String getJobId() {
-      return jobId;
-    }
-
-    public Path getJobHistoryFilePath() {
-      return jobHistoryFilePath;
-    }
-
-    public void setJobHistoryFilePath(Path jobHistoryFilePath) {
-      this.jobHistoryFilePath = jobHistoryFilePath;
-    }
-
-    public Path getJobConfFilePath() {
-      return jobConfFilePath;
-    }
-
-    public void setJobConfFilePath(Path jobConfFilePath) {
-      this.jobConfFilePath = jobConfFilePath;
-    }
-
-    @Override
-    public int hashCode() {
-      return jobId.hashCode();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      if (this == obj) {
-        return true;
-      }
-      if (obj == null) {
-        return false;
-      }
-      if (getClass() != obj.getClass()) {
-        return false;
-      }
-      JobFiles other = (JobFiles) obj;
-      return jobId.equals(other.jobId);
-    }
-  }
-
-  private enum FileType { JOB_HISTORY_FILE, JOB_CONF_FILE, UNKNOWN }
-
+      LogFactory.getLog(JobHistoryFileReplayMapperV2.class);
 
   @Override
   protected void writeEntities(Configuration tlConf,
       TimelineCollectorManager manager, Context context) throws IOException {
-    // collect the apps it needs to process
-    Configuration conf = context.getConfiguration();
-    int taskId = context.getTaskAttemptID().getTaskID().getId();
-    int size = conf.getInt(MRJobConfig.NUM_MAPS,
-        TimelineServicePerformanceV2.NUM_MAPS_DEFAULT);
-    String processingDir =
-        conf.get(JobHistoryFileReplayMapper.PROCESSING_PATH);
-    int replayMode =
-        conf.getInt(JobHistoryFileReplayMapper.REPLAY_MODE,
-        JobHistoryFileReplayMapper.REPLAY_MODE_DEFAULT);
-    Path processingPath = new Path(processingDir);
-    FileSystem processingFs = processingPath.getFileSystem(conf);
-    JobHistoryFileParser parser = new JobHistoryFileParser(processingFs);
-    TimelineEntityConverter converter = new TimelineEntityConverter();
+    JobHistoryFileReplayHelper helper = new JobHistoryFileReplayHelper(context);
+    int replayMode = helper.getReplayMode();
+    JobHistoryFileParser parser = helper.getParser();
+    TimelineEntityConverterV2 converter = new TimelineEntityConverterV2();
 
-    Collection<JobFiles> jobs =
-        selectJobFiles(processingFs, processingPath, taskId, size);
+    // collect the apps it needs to process
+    Collection<JobFiles> jobs = helper.getJobFiles();
     if (jobs.isEmpty()) {
       LOG.info(context.getTaskAttemptID().getTaskID() +
           " will process no jobs");
@@ -149,6 +68,13 @@ class JobHistoryFileReplayMapper extends EntityWriter {
     for (JobFiles job: jobs) {
       // process each job
       String jobIdStr = job.getJobId();
+      // skip if either of the file is missing
+      if (job.getJobConfFilePath() == null ||
+          job.getJobHistoryFilePath() == null) {
+        LOG.info(jobIdStr + " missing either the job history file or the " +
+            "configuration file. Skipping.");
+        continue;
+      }
       LOG.info("processing " + jobIdStr + "...");
       JobId jobId = TypeConverter.toYarn(JobID.forName(jobIdStr));
       ApplicationId appId = jobId.getAppId();
@@ -184,10 +110,10 @@ class JobHistoryFileReplayMapper extends EntityWriter {
         long startWrite = System.nanoTime();
         try {
           switch (replayMode) {
-          case JobHistoryFileReplayMapper.WRITE_ALL_AT_ONCE:
+          case JobHistoryFileReplayHelper.WRITE_ALL_AT_ONCE:
             writeAllEntities(collector, entitySet, ugi);
             break;
-          case JobHistoryFileReplayMapper.WRITE_PER_ENTITY:
+          case JobHistoryFileReplayHelper.WRITE_PER_ENTITY:
             writePerEntity(collector, entitySet, ugi);
             break;
           default:
@@ -231,71 +157,5 @@ class JobHistoryFileReplayMapper extends EntityWriter {
       collector.putEntities(entities, ugi);
       LOG.info("wrote entity " + entity.getId());
     }
-  }
-
-  private Collection<JobFiles> selectJobFiles(FileSystem fs,
-      Path processingRoot, int i, int size) throws IOException {
-    Map<String,JobFiles> jobs = new HashMap<>();
-    RemoteIterator<LocatedFileStatus> it = fs.listFiles(processingRoot, true);
-    while (it.hasNext()) {
-      LocatedFileStatus status = it.next();
-      Path path = status.getPath();
-      String fileName = path.getName();
-      Matcher m = JOB_ID_PARSER.matcher(fileName);
-      if (!m.matches()) {
-        continue;
-      }
-      String jobId = m.group(1);
-      int lastId = Integer.parseInt(m.group(2));
-      int mod = lastId % size;
-      if (mod != i) {
-        continue;
-      }
-      LOG.info("this mapper will process file " + fileName);
-      // it's mine
-      JobFiles jobFiles = jobs.get(jobId);
-      if (jobFiles == null) {
-        jobFiles = new JobFiles(jobId);
-        jobs.put(jobId, jobFiles);
-      }
-      setFilePath(fileName, path, jobFiles);
-    }
-    return jobs.values();
-  }
-
-  private void setFilePath(String fileName, Path path,
-      JobFiles jobFiles) {
-    // determine if we're dealing with a job history file or a job conf file
-    FileType type = getFileType(fileName);
-    switch (type) {
-    case JOB_HISTORY_FILE:
-      if (jobFiles.getJobHistoryFilePath() == null) {
-        jobFiles.setJobHistoryFilePath(path);
-      } else {
-        LOG.warn("we already have the job history file " +
-            jobFiles.getJobHistoryFilePath() + ": skipping " + path);
-      }
-      break;
-    case JOB_CONF_FILE:
-      if (jobFiles.getJobConfFilePath() == null) {
-        jobFiles.setJobConfFilePath(path);
-      } else {
-        LOG.warn("we already have the job conf file " +
-            jobFiles.getJobConfFilePath() + ": skipping " + path);
-      }
-      break;
-    case UNKNOWN:
-      LOG.warn("unknown type: " + path);
-    }
-  }
-
-  private FileType getFileType(String fileName) {
-    if (fileName.endsWith(".jhist")) {
-      return FileType.JOB_HISTORY_FILE;
-    }
-    if (fileName.endsWith("_conf.xml")) {
-      return FileType.JOB_CONF_FILE;
-    }
-    return FileType.UNKNOWN;
   }
 }

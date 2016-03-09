@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred;
+package org.apache.hadoop.mapreduce;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -38,9 +38,9 @@ import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 
-class TimelineEntityConverter {
+class TimelineEntityConverterV2 {
   private static final Log LOG =
-      LogFactory.getLog(TimelineEntityConverter.class);
+      LogFactory.getLog(TimelineEntityConverterV2.class);
 
   static final String JOB = "MAPREDUCE_JOB";
   static final String TASK = "MAPREDUCE_TASK";
