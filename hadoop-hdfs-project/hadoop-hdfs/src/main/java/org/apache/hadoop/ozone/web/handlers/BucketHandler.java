@@ -174,18 +174,16 @@ public class BucketHandler implements Bucket {
       public Response doProcess(BucketArgs args)
           throws OzoneException, IOException {
         switch (info) {
-          //TODO : Enable when Object support is enabled.
-          //          case Header.OZONE_LIST_QUERY_KEY:
-          //            ListArgs listArgs = new ListArgs(args, prefix,
-          // maxKeys, startPage);
-          //            return getBucketKeysList(listArgs);
-          case Header.OZONE_LIST_QUERY_BUCKET:
-            return getBucketInfoResponse(args);
-          default:
-            OzoneException ozException =
-                ErrorTable.newError(ErrorTable.INVALID_QUERY_PARAM, args);
-            ozException.setMessage("Unrecognized query param : " + info);
-            throw ozException;
+        case Header.OZONE_LIST_QUERY_KEY:
+          ListArgs listArgs = new ListArgs(args, prefix, maxKeys, startPage);
+          return getBucketKeysList(listArgs);
+        case Header.OZONE_LIST_QUERY_BUCKET:
+          return getBucketInfoResponse(args);
+        default:
+          OzoneException ozException =
+              ErrorTable.newError(ErrorTable.INVALID_QUERY_PARAM, args);
+          ozException.setMessage("Unrecognized query param : " + info);
+          throw ozException;
         }
       }
     }.handleCall(volume, bucket, req, uriInfo, headers);
