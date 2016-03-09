@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred;
+package org.apache.hadoop.mapreduce;
 
 import java.io.IOException;
 import java.util.Random;
@@ -25,9 +25,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapred.TimelineServicePerformanceV2.EntityWriter;
-import org.apache.hadoop.mapred.TimelineServicePerformanceV2.PerfCounters;
-import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.TimelineServicePerformance.PerfCounters;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
@@ -39,19 +37,12 @@ import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollector
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorManager;
 
 /**
-   * Adds simple entities with random string payload, events, metrics, and
-   * configuration.
-   */
-class SimpleEntityWriter extends EntityWriter {
-  private static final Log LOG = LogFactory.getLog(SimpleEntityWriter.class);
-
-  // constants for mtype = 1
-  static final String KBS_SENT = "kbs sent";
-  static final int KBS_SENT_DEFAULT = 1;
-  static final String TEST_TIMES = "testtimes";
-  static final int TEST_TIMES_DEFAULT = 100;
-  static final String TIMELINE_SERVICE_PERFORMANCE_RUN_ID =
-      "timeline.server.performance.run.id";
+ * Adds simple entities with random string payload, events, metrics, and
+ * configuration.
+ */
+class SimpleEntityWriterV2 extends EntityWriterV2
+    implements SimpleEntityWriterConstants {
+  private static final Log LOG = LogFactory.getLog(SimpleEntityWriterV2.class);
 
   protected void writeEntities(Configuration tlConf,
       TimelineCollectorManager manager, Context context) throws IOException {
@@ -87,8 +78,8 @@ class SimpleEntityWriter extends EntityWriter {
         // Generate a fixed length random payload
         for (int xx = 0; xx < kbs * 1024; xx++) {
           int alphaNumIdx =
-              rand.nextInt(TimelineServicePerformanceV2.alphaNums.length);
-          payLoad[xx] = TimelineServicePerformanceV2.alphaNums[alphaNumIdx];
+              rand.nextInt(ALPHA_NUMS.length);
+          payLoad[xx] = ALPHA_NUMS[alphaNumIdx];
         }
         String entId = taskAttemptId + "_" + Integer.toString(i);
         final TimelineEntity entity = new TimelineEntity();
