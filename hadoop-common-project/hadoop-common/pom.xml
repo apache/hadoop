@@ -473,7 +473,6 @@
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>
           <excludes>
-            <exclude>CHANGES.txt</exclude>
             <exclude>.idea/**</exclude>
             <exclude>src/main/conf/*</exclude>
             <exclude>src/main/docs/**</exclude>
