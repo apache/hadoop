@@ -167,8 +167,8 @@ REST API compatibility corresponds to both the request (URLs) and responses to e
 * [WebHDFS](../hadoop-hdfs/WebHDFS.html) - Stable
 * [ResourceManager](../../hadoop-yarn/hadoop-yarn-site/ResourceManagerRest.html)
 * [NodeManager](../../hadoop-yarn/hadoop-yarn-site/NodeManagerRest.html)
-* [MR Application Master](../../hadoop-yarn/hadoop-yarn-site/MapredAppMasterRest.html)
-* [History Server](../../hadoop-yarn/hadoop-yarn-site/HistoryServerRest.html)
+* [MR Application Master](../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapredAppMasterRest.html)
+* [History Server](../../hadoop-mapreduce-client/hadoop-mapreduce-client-hs/HistoryServerRest.html)
 * [Timeline Server v1 REST API](../../hadoop-yarn/hadoop-yarn-site/TimelineServer.html)
 
 #### Policy
