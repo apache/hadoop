@@ -27,11 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -92,22 +88,10 @@ public abstract class AbstractYarnScheduler
 
   private static final Log LOG = LogFactory.getLog(AbstractYarnScheduler.class);
 
-  // Nodes in the cluster, indexed by NodeId
-  protected Map<NodeId, N> nodes = new ConcurrentHashMap<NodeId, N>();
-
-  // Whole capacity of the cluster
-  protected Resource clusterResource = Resource.newInstance(0, 0);
+  protected final ClusterNodeTracker<N> nodeTracker =
+      new ClusterNodeTracker<>();
 
   protected Resource minimumAllocation;
-  protected Resource maximumAllocation;
-  private Resource configuredMaximumAllocation;
-  private int maxNodeMemory = -1;
-  private int maxNodeVCores = -1;
-  private final ReadLock maxAllocReadLock;
-  private final WriteLock maxAllocWriteLock;
-
-  private boolean useConfiguredMaximumAllocationOnly = true;
-  private long configuredMaximumAllocationWaitTime;
 
   protected RMContext rmContext;
   
@@ -132,9 +116,6 @@ public abstract class AbstractYarnScheduler
    */
   public AbstractYarnScheduler(String name) {
     super(name);
-    ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-    this.maxAllocReadLock = lock.readLock();
-    this.maxAllocWriteLock = lock.writeLock();
   }
 
   @Override
@@ -142,12 +123,19 @@ public abstract class AbstractYarnScheduler
     nmExpireInterval =
         conf.getInt(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS,
           YarnConfiguration.DEFAULT_RM_NM_EXPIRY_INTERVAL_MS);
-    configuredMaximumAllocationWaitTime =
+    long configuredMaximumAllocationWaitTime =
         conf.getLong(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS,
           YarnConfiguration.DEFAULT_RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS);
+    nodeTracker.setConfiguredMaxAllocationWaitTime(
+        configuredMaximumAllocationWaitTime);
     maxClusterLevelAppPriority = getMaxPriorityFromConf(conf);
     createReleaseCache();
     super.serviceInit(conf);
+  }
+
+  @VisibleForTesting
+  public ClusterNodeTracker getNodeTracker() {
+    return nodeTracker;
   }
 
   public List<Container> getTransferredContainers(
@@ -184,20 +172,21 @@ public abstract class AbstractYarnScheduler
    * Add blacklisted NodeIds to the list that is passed.
    *
    * @param app application attempt.
-   * @param blacklistNodeIdList the list to store blacklisted NodeIds.
    */
-  public void addBlacklistedNodeIdsToList(SchedulerApplicationAttempt app,
-      List<NodeId> blacklistNodeIdList) {
-    for (Map.Entry<NodeId, N> nodeEntry : nodes.entrySet()) {
-      if (SchedulerAppUtils.isBlacklisted(app, nodeEntry.getValue(), LOG)) {
-        blacklistNodeIdList.add(nodeEntry.getKey());
+  public List<N> getBlacklistedNodes(final SchedulerApplicationAttempt app) {
+
+    NodeFilter nodeFilter = new NodeFilter() {
+      @Override
+      public boolean accept(SchedulerNode node) {
+        return SchedulerAppUtils.isBlacklisted(app, node, LOG);
       }
-    }
+    };
+    return nodeTracker.getNodes(nodeFilter);
   }
 
   @Override
   public Resource getClusterResource() {
-    return clusterResource;
+    return nodeTracker.getClusterCapacity();
   }
 
   @Override
@@ -207,22 +196,7 @@ public abstract class AbstractYarnScheduler
 
   @Override
   public Resource getMaximumResourceCapability() {
-    Resource maxResource;
-    maxAllocReadLock.lock();
-    try {
-      if (useConfiguredMaximumAllocationOnly) {
-        if (System.currentTimeMillis() - ResourceManager.getClusterTimeStamp()
-            > configuredMaximumAllocationWaitTime) {
-          useConfiguredMaximumAllocationOnly = false;
-        }
-        maxResource = Resources.clone(configuredMaximumAllocation);
-      } else {
-        maxResource = Resources.clone(maximumAllocation);
-      }
-    } finally {
-      maxAllocReadLock.unlock();
-    }
-    return maxResource;
+    return nodeTracker.getMaxAllowedAllocation();
   }
 
   @Override
@@ -231,15 +205,7 @@ public abstract class AbstractYarnScheduler
   }
 
   protected void initMaximumResourceCapability(Resource maximumAllocation) {
-    maxAllocWriteLock.lock();
-    try {
-      if (this.configuredMaximumAllocation == null) {
-        this.configuredMaximumAllocation = Resources.clone(maximumAllocation);
-        this.maximumAllocation = Resources.clone(maximumAllocation);
-      }
-    } finally {
-      maxAllocWriteLock.unlock();
-    }
+    nodeTracker.setConfiguredMaxAllocation(maximumAllocation);
   }
 
   protected synchronized void containerLaunchedOnNode(
@@ -332,8 +298,7 @@ public abstract class AbstractYarnScheduler
 
   @Override
   public SchedulerNodeReport getNodeReport(NodeId nodeId) {
-    N node = nodes.get(nodeId);
-    return node == null ? null : new SchedulerNodeReport(node);
+    return nodeTracker.getNodeReport(nodeId);
   }
 
   @Override
@@ -431,12 +396,13 @@ public abstract class AbstractYarnScheduler
         container));
 
       // recover scheduler node
-      SchedulerNode schedulerNode = nodes.get(nm.getNodeID());
+      SchedulerNode schedulerNode = nodeTracker.getNode(nm.getNodeID());
       schedulerNode.recoverContainer(rmContainer);
 
       // recover queue: update headroom etc.
       Queue queue = schedulerAttempt.getQueue();
-      queue.recoverContainer(clusterResource, schedulerAttempt, rmContainer);
+      queue.recoverContainer(
+          getClusterResource(), schedulerAttempt, rmContainer);
 
       // recover scheduler attempt
       schedulerAttempt.recoverContainer(schedulerNode, rmContainer);
@@ -621,7 +587,7 @@ public abstract class AbstractYarnScheduler
 
   @Override
   public SchedulerNode getSchedulerNode(NodeId nodeId) {
-    return nodes.get(nodeId);
+    return nodeTracker.getNode(nodeId);
   }
 
   @Override
@@ -690,18 +656,12 @@ public abstract class AbstractYarnScheduler
           + " from: " + oldResource + ", to: "
           + newResource);
 
-      nodes.remove(nm.getNodeID());
-      updateMaximumAllocation(node, false);
+      nodeTracker.removeNode(nm.getNodeID());
 
       // update resource to node
       node.setTotalResource(newResource);
 
-      nodes.put(nm.getNodeID(), (N)node);
-      updateMaximumAllocation(node, true);
-
-      // update resource to clusterResource
-      Resources.subtractFrom(clusterResource, oldResource);
-      Resources.addTo(clusterResource, newResource);
+      nodeTracker.addNode((N) node);
     } else {
       // Log resource change
       LOG.warn("Update resource on node: " + node.getNodeName() 
@@ -721,80 +681,8 @@ public abstract class AbstractYarnScheduler
         + " does not support reservations");
   }
 
-  protected void updateMaximumAllocation(SchedulerNode node, boolean add) {
-    Resource totalResource = node.getTotalResource();
-    maxAllocWriteLock.lock();
-    try {
-      if (add) { // added node
-        int nodeMemory = totalResource.getMemory();
-        if (nodeMemory > maxNodeMemory) {
-          maxNodeMemory = nodeMemory;
-          maximumAllocation.setMemory(Math.min(
-              configuredMaximumAllocation.getMemory(), maxNodeMemory));
-        }
-        int nodeVCores = totalResource.getVirtualCores();
-        if (nodeVCores > maxNodeVCores) {
-          maxNodeVCores = nodeVCores;
-          maximumAllocation.setVirtualCores(Math.min(
-              configuredMaximumAllocation.getVirtualCores(), maxNodeVCores));
-        }
-      } else {  // removed node
-        if (maxNodeMemory == totalResource.getMemory()) {
-          maxNodeMemory = -1;
-        }
-        if (maxNodeVCores == totalResource.getVirtualCores()) {
-          maxNodeVCores = -1;
-        }
-        // We only have to iterate through the nodes if the current max memory
-        // or vcores was equal to the removed node's
-        if (maxNodeMemory == -1 || maxNodeVCores == -1) {
-          for (Map.Entry<NodeId, N> nodeEntry : nodes.entrySet()) {
-            int nodeMemory =
-                nodeEntry.getValue().getTotalResource().getMemory();
-            if (nodeMemory > maxNodeMemory) {
-              maxNodeMemory = nodeMemory;
-            }
-            int nodeVCores =
-                nodeEntry.getValue().getTotalResource().getVirtualCores();
-            if (nodeVCores > maxNodeVCores) {
-              maxNodeVCores = nodeVCores;
-            }
-          }
-          if (maxNodeMemory == -1) {  // no nodes
-            maximumAllocation.setMemory(configuredMaximumAllocation.getMemory());
-          } else {
-            maximumAllocation.setMemory(
-                Math.min(configuredMaximumAllocation.getMemory(), maxNodeMemory));
-          }
-          if (maxNodeVCores == -1) {  // no nodes
-            maximumAllocation.setVirtualCores(configuredMaximumAllocation.getVirtualCores());
-          } else {
-            maximumAllocation.setVirtualCores(
-                Math.min(configuredMaximumAllocation.getVirtualCores(), maxNodeVCores));
-          }
-        }
-      }
-    } finally {
-      maxAllocWriteLock.unlock();
-    }
-  }
-
   protected void refreshMaximumAllocation(Resource newMaxAlloc) {
-    maxAllocWriteLock.lock();
-    try {
-      configuredMaximumAllocation = Resources.clone(newMaxAlloc);
-      int maxMemory = newMaxAlloc.getMemory();
-      if (maxNodeMemory != -1) {
-        maxMemory = Math.min(maxMemory, maxNodeMemory);
-      }
-      int maxVcores = newMaxAlloc.getVirtualCores();
-      if (maxNodeVCores != -1) {
-        maxVcores = Math.min(maxVcores, maxNodeVCores);
-      }
-      maximumAllocation = Resources.createResource(maxMemory, maxVcores);
-    } finally {
-      maxAllocWriteLock.unlock();
-    }
+    nodeTracker.setConfiguredMaxAllocation(newMaxAlloc);
   }
 
   @Override

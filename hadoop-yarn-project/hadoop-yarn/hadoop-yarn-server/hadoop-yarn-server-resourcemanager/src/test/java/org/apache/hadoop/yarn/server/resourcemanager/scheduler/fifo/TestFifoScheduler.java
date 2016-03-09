@@ -306,12 +306,7 @@ public class TestFifoScheduler {
     nmTokenSecretManager.rollMasterKey();
     RMApplicationHistoryWriter writer = mock(RMApplicationHistoryWriter.class);
     
-    FifoScheduler scheduler = new FifoScheduler(){
-      @SuppressWarnings("unused")
-      public Map<NodeId, FiCaSchedulerNode> getNodes(){
-        return nodes;
-      }
-    };
+    FifoScheduler scheduler = new FifoScheduler();
     RMContext rmContext = new RMContextImpl(dispatcher, null, null, null, null,
         null, containerTokenSecretManager, nmTokenSecretManager, null, scheduler);
     rmContext.setSystemMetricsPublisher(mock(SystemMetricsPublisher.class));
@@ -331,11 +326,7 @@ public class TestFifoScheduler {
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node0);
     scheduler.handle(nodeEvent1);
     
-    Method method = scheduler.getClass().getDeclaredMethod("getNodes");
-    @SuppressWarnings("unchecked")
-    Map<NodeId, FiCaSchedulerNode> schedulerNodes = 
-        (Map<NodeId, FiCaSchedulerNode>) method.invoke(scheduler);
-    assertEquals(schedulerNodes.values().size(), 1);
+    assertEquals(scheduler.getNumClusterNodes(), 1);
     
     Resource newResource = Resources.createResource(1024, 4);
     
@@ -345,9 +336,9 @@ public class TestFifoScheduler {
     scheduler.handle(node0ResourceUpdate);
     
     // SchedulerNode's total resource and available resource are changed.
-    assertEquals(schedulerNodes.get(node0.getNodeID()).getTotalResource()
-        .getMemory(), 1024);
-    assertEquals(schedulerNodes.get(node0.getNodeID()).
+    assertEquals(1024, scheduler.getNodeTracker().getNode(node0.getNodeID())
+        .getTotalResource().getMemory());
+    assertEquals(1024, scheduler.getNodeTracker().getNode(node0.getNodeID()).
         getUnallocatedResource().getMemory(), 1024);
     QueueInfo queueInfo = scheduler.getQueueInfo(null, false, false);
     Assert.assertEquals(0.0f, queueInfo.getCurrentCapacity(), 0.0f);
