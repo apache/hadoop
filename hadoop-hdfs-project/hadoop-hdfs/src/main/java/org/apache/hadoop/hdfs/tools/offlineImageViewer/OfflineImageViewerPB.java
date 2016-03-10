@@ -60,7 +60,7 @@ public class OfflineImageViewerPB {
       + "  * XML: This processor creates an XML document with all elements of\n"
       + "    the fsimage enumerated, suitable for further analysis by XML\n"
       + "    tools.\n"
-      + "  * reverseXML: This processor takes an XML file and creates a\n"
+      + "  * ReverseXML: This processor takes an XML file and creates a\n"
       + "    binary fsimage containing the same elements.\n"
       + "  * FileDistribution: This processor analyzes the file size\n"
       + "    distribution in the image.\n"
