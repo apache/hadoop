@@ -90,16 +90,17 @@
                 <id>dist</id>
                 <phase>prepare-package</phase>
                 <goals>
-                    <goal>exec</goal>
+                  <goal>exec</goal>
                 </goals>
                 <configuration>
-                    <executable>${basedir}/../dev-support/bin/dist-layout-stitching</executable>
-                    <workingDirectory>${project.build.directory}</workingDirectory>
-                    <requiresOnline>false</requiresOnline>
-                    <arguments>
-                       <argument>${project.version}</argument>
-                       <argument>${project.build.directory}</argument>
-                    </arguments>
+                  <executable>${shell-executable}</executable>
+                  <workingDirectory>${project.build.directory}</workingDirectory>
+                  <requiresOnline>false</requiresOnline>
+                  <arguments>
+                    <argument>${basedir}/../dev-support/bin/dist-layout-stitching</argument>
+                    <argument>${project.version}</argument>
+                    <argument>${project.build.directory}</argument>
+                  </arguments>
                 </configuration>
               </execution>
               <execution>
@@ -109,12 +110,13 @@
                   <goal>exec</goal>
                 </goals>
                 <configuration>
-                    <executable>${basedir}/../dev-support/bin/dist-tar-stitching</executable>
+                    <executable>${shell-executable}</executable>
                     <workingDirectory>${project.build.directory}</workingDirectory>
                     <requiresOnline>false</requiresOnline>
                     <arguments>
-                       <argument>${project.version}</argument>
-                       <argument>${project.build.directory}</argument>
+                      <argument>${basedir}/../dev-support/bin/dist-tar-stitching</argument>
+                      <argument>${project.version}</argument>
+                      <argument>${project.build.directory}</argument>
                     </arguments>
                 </configuration>
               </execution>
