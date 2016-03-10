@@ -23,6 +23,7 @@ import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.interfaces.UserAuth;
+import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
@@ -232,4 +233,29 @@ public abstract class VolumeProcessTemplate {
     }
   }
 
+
+  /**
+   * Returns a list of Buckets in a Volume.
+   *
+   * @return List of Buckets
+   *
+   * @throws OzoneException
+   */
+  Response getBucketsInVolume(VolumeArgs args) throws OzoneException {
+    String requestID = OzoneUtils.getRequestID();
+    String hostName = OzoneUtils.getHostName();
+    try {
+      UserAuth auth = UserHandlerBuilder.getAuthHandler();
+      // TODO : Check for ACLS access.
+      StorageHandler fs = StorageHandlerBuilder.getStorageHandler();
+      ListBuckets bucketList = fs.listBuckets(args);
+      return OzoneUtils.getResponse(args, HTTP_OK, bucketList.toJsonString());
+    } catch (IOException ex) {
+      OzoneException exp =
+          ErrorTable.newError(ErrorTable.SERVER_ERROR, requestID, "", hostName);
+      exp.setMessage("unable to get the bucket list for the specified volume.");
+      throw exp;
+
+    }
+  }
 }
