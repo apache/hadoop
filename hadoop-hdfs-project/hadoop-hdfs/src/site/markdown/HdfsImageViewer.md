@@ -38,7 +38,7 @@ The Offline Image Viewer provides several output processors:
     interactively by using HTTP REST API.
 
 2.  XML creates an XML document of the fsimage and includes all of the
-    information within the fsimage, similar to the lsr processor. The
+    information within the fsimage. The
     output of this processor is amenable to automated processing and
     analysis with XML tools. Due to the verbosity of the XML syntax,
     this processor will also generate the largest amount of output.
@@ -59,6 +59,11 @@ The Offline Image Viewer provides several output processors:
    common to both inodes and inodes-under-construction, separated by a
    delimiter. The default delimiter is \t, though this may be changed via
    the -delimiter argument.
+
+5. ReverseXML (experimental): This is the opposite of the XML processor;
+   it reconstructs an fsimage from an XML file. This processor makes it easy to
+   create fsimages for testing, and manually edit fsimages when there is
+   corruption.
 
 Usage
 -----
@@ -139,9 +144,9 @@ Options
 
 | **Flag** | **Description** |
 |:---- |:---- |
-| `-i`\|`--inputFile` *input file* | Specify the input fsimage file to process. Required. |
-| `-o`\|`--outputFile` *output file* | Specify the output filename, if the specified output processor generates one. If the specified file already exists, it is silently overwritten. (output to stdout by default)\|
-| `-p`\|`--processor` *processor* | Specify the image processor to apply against the image file. Currently valid options are Web (default), XML, Delimited and FileDistribution. |
+| `-i`\|`--inputFile` *input file* | Specify the input fsimage file (or XML file, if ReverseXML processor is used) to process. Required. |
+| `-o`\|`--outputFile` *output file* | Specify the output filename, if the specified output processor generates one. If the specified file already exists, it is silently overwritten. (output to stdout by default) If the input file is an XML file, it also creates an &lt;outputFile&gt;.md5. |
+| `-p`\|`--processor` *processor* | Specify the image processor to apply against the image file. Currently valid options are `Web` (default), `XML`, `Delimited`, `FileDistribution` and `ReverseXML`. |
 | `-addr` *address* | Specify the address(host:port) to listen. (localhost:5978 by default). This option is used with Web processor. |
 | `-maxSize` *size* | Specify the range [0, maxSize] of file sizes to be analyzed in bytes (128GB by default). This option is used with FileDistribution processor. |
 | `-step` *size* | Specify the granularity of the distribution in bytes (2MB by default). This option is used with FileDistribution processor. |
@@ -157,7 +162,7 @@ The Offline Image Viewer makes it easy to gather large amounts of data about the
 oiv\_legacy Command
 -------------------
 
-Due to the internal layout changes introduced by the ProtocolBuffer-based fsimage ([HDFS-5698](https://issues.apache.org/jira/browse/HDFS-5698)), OfflineImageViewer consumes excessive amount of memory and loses some functions such as Indented and Delimited processor. If you want to process without large amount of memory or use these processors, you can use `oiv_legacy` command (same as `oiv` in Hadoop 2.3).
+Due to the internal layout changes introduced by the ProtocolBuffer-based fsimage ([HDFS-5698](https://issues.apache.org/jira/browse/HDFS-5698)), OfflineImageViewer consumes excessive amount of memory and loses some functions such as Indented processor. If you want to process without large amount of memory or use these processors, you can use `oiv_legacy` command (same as `oiv` in Hadoop 2.3).
 
 ### Usage
 
