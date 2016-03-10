@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.client.api;
 
+import java.io.Flushable;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -41,7 +42,8 @@ import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
  */
 @Public
 @Evolving
-public abstract class TimelineClient extends AbstractService {
+public abstract class TimelineClient extends AbstractService implements
+    Flushable {
 
   /**
    * Create a timeline client. The current UGI when the user initialize the

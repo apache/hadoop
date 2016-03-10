@@ -107,30 +107,30 @@ public class EntityCacheItem {
           store.init(config);
           store.start();
         }
-        TimelineDataManager tdm = new TimelineDataManager(store,
-            aclManager);
-        tdm.init(config);
-        tdm.start();
-        List<LogInfo> removeList = new ArrayList<LogInfo>();
-        for (LogInfo log : appLogs.getDetailLogs()) {
-          LOG.debug("Try refresh logs for {}", log.getFilename());
-          // Only refresh the log that matches the cache id
-          if (log.matchesGroupId(groupId)) {
-            Path appDirPath = appLogs.getAppDirPath();
-            if (fs.exists(log.getPath(appDirPath))) {
-              LOG.debug("Refresh logs for cache id {}", groupId);
-              log.parseForStore(tdm, appDirPath, appLogs.isDone(), jsonFactory,
-                  objMapper, fs);
-            } else {
-              // The log may have been removed, remove the log
-              removeList.add(log);
-              LOG.info("File {} no longer exists, remove it from log list",
-                  log.getPath(appDirPath));
+        List<LogInfo> removeList = new ArrayList<>();
+        try(TimelineDataManager tdm =
+                new TimelineDataManager(store, aclManager)) {
+          tdm.init(config);
+          tdm.start();
+          for (LogInfo log : appLogs.getDetailLogs()) {
+            LOG.debug("Try refresh logs for {}", log.getFilename());
+            // Only refresh the log that matches the cache id
+            if (log.matchesGroupId(groupId)) {
+              Path appDirPath = appLogs.getAppDirPath();
+              if (fs.exists(log.getPath(appDirPath))) {
+                LOG.debug("Refresh logs for cache id {}", groupId);
+                log.parseForStore(tdm, appDirPath, appLogs.isDone(),
+                    jsonFactory, objMapper, fs);
+              } else {
+                // The log may have been removed, remove the log
+                removeList.add(log);
+                LOG.info("File {} no longer exists, removing it from log list",
+                    log.getPath(appDirPath));
+              }
             }
           }
         }
         appLogs.getDetailLogs().removeAll(removeList);
-        tdm.close();
       }
       updateRefreshTimeToNow();
     } else {

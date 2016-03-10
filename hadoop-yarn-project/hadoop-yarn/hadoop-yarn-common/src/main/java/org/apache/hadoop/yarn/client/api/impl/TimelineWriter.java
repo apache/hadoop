@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
+import java.io.Flushable;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
@@ -48,7 +50,7 @@ import com.sun.jersey.api.client.WebResource;
  */
 @Private
 @Unstable
-public abstract class TimelineWriter {
+public abstract class TimelineWriter implements Flushable {
 
   private static final Log LOG = LogFactory
       .getLog(TimelineWriter.class);
@@ -66,6 +68,16 @@ public abstract class TimelineWriter {
 
   public void close() throws Exception {
     // DO NOTHING
+  }
+
+  @Override
+  public void flush() throws IOException {
+    // DO NOTHING
+  }
+
+  @Override
+  public String toString() {
+    return "Timeline writer posting to " + resURI;
   }
 
   public TimelinePutResponse putEntities(
@@ -104,19 +116,27 @@ public abstract class TimelineWriter {
         }
       });
     } catch (UndeclaredThrowableException e) {
-      throw new IOException(e.getCause());
+      Throwable cause = e.getCause();
+      if (cause instanceof IOException) {
+        throw (IOException)cause;
+      } else {
+        throw new IOException(cause);
+      }
     } catch (InterruptedException ie) {
-      throw new IOException(ie);
+      throw (IOException)new InterruptedIOException().initCause(ie);
     }
     if (resp == null ||
         resp.getClientResponseStatus() != ClientResponse.Status.OK) {
       String msg =
           "Failed to get the response from the timeline server.";
       LOG.error(msg);
-      if (LOG.isDebugEnabled() && resp != null) {
-        String output = resp.getEntity(String.class);
-        LOG.debug("HTTP error code: " + resp.getStatus()
-            + " Server response : \n" + output);
+      if (resp != null) {
+        msg += " HTTP error code: " + resp.getStatus();
+        if (LOG.isDebugEnabled()) {
+          String output = resp.getEntity(String.class);
+          LOG.debug("HTTP error code: " + resp.getStatus()
+              + " Server response : \n" + output);
+        }
       }
       throw new YarnException(msg);
     }
@@ -128,10 +148,16 @@ public abstract class TimelineWriter {
   public ClientResponse doPostingObject(Object object, String path) {
     WebResource webResource = client.resource(resURI);
     if (path == null) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("POST to " + resURI);
+      }
       return webResource.accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .post(ClientResponse.class, object);
     } else if (path.equals("domain")) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("PUT to " + resURI +"/" + path);
+      }
       return webResource.path(path).accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .put(ClientResponse.class, object);
