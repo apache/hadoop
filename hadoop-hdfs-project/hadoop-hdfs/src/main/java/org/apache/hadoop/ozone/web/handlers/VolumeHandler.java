@@ -209,9 +209,7 @@ public class VolumeHandler implements Volume {
 
         switch (info) {
           case Header.OZONE_LIST_QUERY_BUCKET:
-            // TODO : Resolve this dependency when we bring
-            // in bucket code.
-            // return getBucketsInVolume(args); // Return list of Buckets
+            return getBucketsInVolume(args); // Return list of Buckets
           case Header.OZONE_LIST_QUERY_VOLUME:
             return getVolumeInfoResponse(args); // Return volume info
           case Header.OZONE_LIST_QUERY_SERVICE:

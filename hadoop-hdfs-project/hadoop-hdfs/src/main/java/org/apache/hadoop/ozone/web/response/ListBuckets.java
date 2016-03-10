@@ -75,7 +75,7 @@ public class ListBuckets {
    * @return Bucket list
    */
   public List<BucketInfo> getBuckets() {
-    return Collections.unmodifiableList(buckets);
+    return buckets;
   }
 
   /**

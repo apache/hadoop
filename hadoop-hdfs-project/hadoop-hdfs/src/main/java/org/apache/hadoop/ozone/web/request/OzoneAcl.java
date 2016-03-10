@@ -38,6 +38,12 @@ public class OzoneAcl {
 
   /**
    * Constructor for OzoneAcl.
+   */
+  public OzoneAcl() {
+  }
+
+  /**
+   * Constructor for OzoneAcl.
    *
    * @param type - Type
    * @param name - Name of user
