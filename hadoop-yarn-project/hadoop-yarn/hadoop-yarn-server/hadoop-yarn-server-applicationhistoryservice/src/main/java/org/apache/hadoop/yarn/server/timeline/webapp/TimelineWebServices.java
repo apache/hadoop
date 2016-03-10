@@ -129,9 +129,9 @@ public class TimelineWebServices {
           getUser(req));
     } catch (NumberFormatException e) {
       throw new BadRequestException(
-          "windowStart, windowEnd or limit is not a numeric value.");
+        "windowStart, windowEnd, fromTs or limit is not a numeric value: " + e);
     } catch (IllegalArgumentException e) {
-      throw new BadRequestException("requested invalid field.");
+      throw new BadRequestException("requested invalid field: " + e);
     } catch (Exception e) {
       LOG.error("Error getting entities", e);
       throw new WebApplicationException(e,
@@ -160,8 +160,7 @@ public class TimelineWebServices {
           parseFieldsStr(fields, ","),
           getUser(req));
     } catch (IllegalArgumentException e) {
-      throw new BadRequestException(
-          "requested invalid field.");
+      throw new BadRequestException(e);
     } catch (Exception e) {
       LOG.error("Error getting entity", e);
       throw new WebApplicationException(e,
@@ -201,8 +200,9 @@ public class TimelineWebServices {
           parseLongStr(limit),
           getUser(req));
     } catch (NumberFormatException e) {
-      throw new BadRequestException(
-          "windowStart, windowEnd or limit is not a numeric value.");
+      throw (BadRequestException)new BadRequestException(
+          "windowStart, windowEnd or limit is not a numeric value.")
+          .initCause(e);
     } catch (Exception e) {
       LOG.error("Error getting entity timelines", e);
       throw new WebApplicationException(e,
