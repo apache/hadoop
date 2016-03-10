@@ -116,11 +116,13 @@ public class ServiceAuthorizationManager {
     }
     if((clientPrincipal != null && !clientPrincipal.equals(user.getUserName())) || 
        acls.length != 2  || !acls[0].isUserAllowed(user) || acls[1].isUserAllowed(user)) {
-      AUDITLOG.warn(AUTHZ_FAILED_FOR + user + " for protocol=" + protocol
-          + ", expected client Kerberos principal is " + clientPrincipal);
-      throw new AuthorizationException("User " + user + 
-          " is not authorized for protocol " + protocol + 
-          ", expected client Kerberos principal is " + clientPrincipal);
+      String cause = clientPrincipal != null ?
+          ": this service is only accessible by " + clientPrincipal :
+          ": denied by configured ACL";
+      AUDITLOG.warn(AUTHZ_FAILED_FOR + user
+          + " for protocol=" + protocol + cause);
+      throw new AuthorizationException("User " + user +
+          " is not authorized for protocol " + protocol + cause);
     }
     if (addr != null) {
       String hostAddress = addr.getHostAddress();
