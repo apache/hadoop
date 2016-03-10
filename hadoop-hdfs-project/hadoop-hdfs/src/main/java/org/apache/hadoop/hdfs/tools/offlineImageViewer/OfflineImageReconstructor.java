@@ -68,6 +68,7 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.NameSystemSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotDiffSection.DiffEntry;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.io.IOUtils;
@@ -1492,6 +1493,16 @@ class OfflineImageReconstructor {
     if (layoutVersion == null) {
       throw new IOException("The <version> section doesn't contain " +
           "the layoutVersion.");
+    }
+    if (layoutVersion.intValue() !=
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION) {
+      throw new IOException("Layout version mismatch.  This oiv tool " +
+          "handles layout version " +
+          NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION + ", but the " +
+          "XML file has <layoutVersion> " + layoutVersion + ".  Please " +
+          "either re-generate the XML file with the proper layout version, " +
+          "or manually edit the XML file to be usable with this version " +
+          "of the oiv tool.");
     }
     fileSummaryBld.setOndiskVersion(onDiskVersion);
     fileSummaryBld.setLayoutVersion(layoutVersion);
