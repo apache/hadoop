@@ -15,6 +15,7 @@ package org.apache.hadoop.security.authentication.client;
 
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -269,10 +270,15 @@ public class AuthenticatedURL {
           }
         }
       }
+    } else if (respCode == HttpURLConnection.HTTP_NOT_FOUND) {
+      token.set(null);
+      throw new FileNotFoundException(conn.getURL().toString());
     } else {
       token.set(null);
-      throw new AuthenticationException("Authentication failed, status: " + conn.getResponseCode() +
-                                        ", message: " + conn.getResponseMessage());
+      throw new AuthenticationException("Authentication failed" +
+          ", URL: " + conn.getURL() +
+          ", status: " + conn.getResponseCode() +
+          ", message: " + conn.getResponseMessage());
     }
   }
 
