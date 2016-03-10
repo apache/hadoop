@@ -116,14 +116,14 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
           EntityGroupPlugInForTest.class.getName());
     }
     store.init(config);
-    store.start();
     store.setFs(fs);
+    store.start();
   }
 
   @After
   public void tearDown() throws Exception {
-    fs.delete(TEST_APP_DIR_PATH, true);
     store.stop();
+    fs.delete(TEST_APP_DIR_PATH, true);
   }
 
   @AfterClass
@@ -222,7 +222,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     fs.mkdirs(dirPathEmpty);
 
     // Should retain all logs after this run
-    EntityGroupFSTimelineStore.cleanLogs(TEST_DONE_DIR_PATH, fs, 10000);
+    store.cleanLogs(TEST_DONE_DIR_PATH, fs, 10000);
     assertTrue(fs.exists(irrelevantDirPath));
     assertTrue(fs.exists(irrelevantFilePath));
     assertTrue(fs.exists(filePath));
@@ -239,7 +239,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     // Touch the third application by creating a new dir
     fs.mkdirs(new Path(dirPathHold, "holdByMe"));
 
-    EntityGroupFSTimelineStore.cleanLogs(TEST_DONE_DIR_PATH, fs, 1000);
+    store.cleanLogs(TEST_DONE_DIR_PATH, fs, 1000);
 
     // Verification after the second cleaner call
     assertTrue(fs.exists(irrelevantDirPath));
