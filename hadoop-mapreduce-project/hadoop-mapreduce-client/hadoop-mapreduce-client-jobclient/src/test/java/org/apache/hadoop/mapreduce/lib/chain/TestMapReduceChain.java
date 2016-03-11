@@ -30,6 +30,11 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.junit.Test;
+
+import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class TestMapReduceChain extends HadoopTestCase {
 
@@ -63,6 +68,7 @@ public class TestMapReduceChain extends HadoopTestCase {
     super(HadoopTestCase.LOCAL_MR, HadoopTestCase.LOCAL_FS, 1, 1);
   }
 
+  @Test
   public void testChain() throws Exception {
     Path inDir = new Path(localPathRoot, "testing/chain/input");
     Path outDir = new Path(localPathRoot, "testing/chain/output");

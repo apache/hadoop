@@ -18,25 +18,40 @@
 
 package org.apache.hadoop.mapreduce.lib.db;
 
-import java.sql.*;
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-//import org.apache.hadoop.examples.DBCountPageView;
-import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.HadoopTestCase;
-import org.apache.hadoop.mapreduce.*;
-import org.apache.hadoop.mapreduce.lib.db.*;
-import org.apache.hadoop.mapreduce.lib.input.*;
-import org.apache.hadoop.mapreduce.lib.output.*;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.TaskCounter;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.StringUtils;
 import org.hsqldb.server.Server;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+//import org.apache.hadoop.examples.DBCountPageView;
 
 /**
  * Test aspects of DataDrivenDBInputFormat
@@ -109,11 +124,13 @@ public class TestDataDrivenDBInputFormat extends HadoopTestCase {
     createConnection(driverClassName, url);
   }
 
+  @Before
   public void setUp() throws Exception {
     initialize(DRIVER_CLASS, DB_URL);
     super.setUp();
   }
 
+  @After
   public void tearDown() throws Exception {
     super.tearDown();
     shutdown();
@@ -170,6 +187,7 @@ public class TestDataDrivenDBInputFormat extends HadoopTestCase {
     }
   }
 
+  @Test
   public void testDateSplits() throws Exception {
     Statement s = connection.createStatement();
     final String DATE_TABLE = "datetable";

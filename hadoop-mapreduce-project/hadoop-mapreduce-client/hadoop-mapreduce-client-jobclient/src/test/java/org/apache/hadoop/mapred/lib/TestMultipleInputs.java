@@ -17,11 +17,6 @@
  */
 package org.apache.hadoop.mapred.lib;
 
-import java.io.IOException;
-import java.util.Map;
-
-import junit.framework.TestCase;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.JobConf;
@@ -30,12 +25,19 @@ import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TextInputFormat;
+import org.junit.Test;
+
+import java.io.IOException;
+import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * @see TestDelegatingInputFormat
  */
-public class TestMultipleInputs extends TestCase {
-  
+public class TestMultipleInputs {
+
+  @Test
   public void testAddInputPathWithFormat() {
     final JobConf conf = new JobConf();
     MultipleInputs.addInputPath(conf, new Path("/foo"), TextInputFormat.class);
@@ -48,6 +50,7 @@ public class TestMultipleInputs extends TestCase {
        .getClass());
   }
 
+  @Test
   public void testAddInputPathWithMapper() {
     final JobConf conf = new JobConf();
     MultipleInputs.addInputPath(conf, new Path("/foo"), TextInputFormat.class,

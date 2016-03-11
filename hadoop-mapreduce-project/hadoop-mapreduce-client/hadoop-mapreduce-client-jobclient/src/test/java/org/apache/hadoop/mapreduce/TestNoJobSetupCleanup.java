@@ -30,6 +30,9 @@ import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.junit.Ignore;
+import org.junit.Test;
+import static org.junit.Assert.assertTrue;
+
 @Ignore
 public class TestNoJobSetupCleanup extends HadoopTestCase {
   private static String TEST_ROOT_DIR =
@@ -68,7 +71,8 @@ public class TestNoJobSetupCleanup extends HadoopTestCase {
         + numPartFiles, list.length == numPartFiles);
     return job;
   }
-  
+
+  @Test
   public void testNoJobSetupCleanup() throws Exception {
     try {
       Configuration conf = createJobConf();
