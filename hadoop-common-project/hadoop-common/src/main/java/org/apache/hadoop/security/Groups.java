@@ -27,6 +27,8 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.htrace.core.TraceScope;
+import org.apache.htrace.core.Tracer;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
@@ -217,7 +219,20 @@ public class Groups {
      */
     @Override
     public List<String> load(String user) throws Exception {
-      List<String> groups = fetchGroupList(user);
+      TraceScope scope = null;
+      Tracer tracer = Tracer.curThreadTracer();
+      if (tracer != null) {
+        scope = tracer.newScope("Groups#fetchGroupList");
+        scope.addKVAnnotation("user", user);
+      }
+      List<String> groups = null;
+      try {
+        groups = fetchGroupList(user);
+      } finally {
+        if (scope != null) {
+          scope.close();
+        }
+      }
 
       if (groups.isEmpty()) {
         if (isNegativeCacheEnabled()) {
