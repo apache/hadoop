@@ -23,9 +23,16 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.HadoopTestCase;
-import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MapReduceTestUtil;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.junit.Test;
 
 import java.io.IOException;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class TestMultithreadedMapper extends HadoopTestCase {
 
@@ -33,13 +40,16 @@ public class TestMultithreadedMapper extends HadoopTestCase {
     super(HadoopTestCase.LOCAL_MR, HadoopTestCase.LOCAL_FS, 1, 1);
   }
 
+  @Test
   public void testOKRun() throws Exception {
     run(false, false);
   }
 
+  @Test
   public void testIOExRun() throws Exception {
     run(true, false);
   }
+  @Test
   public void testRuntimeExRun() throws Exception {
     run(false, true);
   }
