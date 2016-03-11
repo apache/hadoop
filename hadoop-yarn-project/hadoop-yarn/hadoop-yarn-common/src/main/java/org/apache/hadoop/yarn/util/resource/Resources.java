@@ -120,11 +120,6 @@ public class Resources {
     }
 
     @Override
-    public void setResources(Map<String, ResourceInformation> resources) {
-      throw new RuntimeException(name + " cannot be modified!");
-    }
-
-    @Override
     public void setResourceInformation(String resource,
         ResourceInformation resourceInformation)
         throws ResourceNotFoundException {
@@ -143,11 +138,14 @@ public class Resources {
       // needs to be Integer.MAX_VALUE
       int max = resourceValue > Integer.MAX_VALUE ? Integer.MAX_VALUE :
           resourceValue.intValue();
-      tmp.put(ResourceInformation.MEMORY.getName(), ResourceInformation
-          .newInstance(ResourceInformation.MEMORY.getName(),
-              ResourceInformation.MEMORY_MB.getUnits(), (long) max));
-      tmp.put(ResourceInformation.VCORES.getName(), ResourceInformation
-          .newInstance(ResourceInformation.VCORES.getName(), (long) max));
+      Map<String, ResourceInformation> types = ResourceUtils.getResourceTypes();
+      if (types != null) {
+        for (Map.Entry<String, ResourceInformation> entry : types.entrySet()) {
+          tmp.put(entry.getKey(),
+              ResourceInformation.newInstance(entry.getValue()));
+          tmp.get(entry.getKey()).setValue((long) max);
+        }
+      }
       return tmp;
     }
 
