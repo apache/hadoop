@@ -23,6 +23,7 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.net.InetAddresses;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -70,6 +71,8 @@ public class DatanodeManager {
   private final HeartbeatManager heartbeatManager;
   private final FSClusterStats fsClusterStats;
 
+  private volatile long heartbeatIntervalSeconds;
+  private volatile int heartbeatRecheckInterval;
   /**
    * Stores the datanode -> block map.  
    * <p>
@@ -113,7 +116,7 @@ public class DatanodeManager {
   /** The period to wait for datanode heartbeat.*/
   private long heartbeatExpireInterval;
   /** Ask Datanode only up to this many blocks to delete. */
-  final int blockInvalidateLimit;
+  private volatile int blockInvalidateLimit;
 
   /** The interval for judging stale DataNodes for read/write */
   private final long staleInterval;
@@ -227,10 +230,10 @@ public class DatanodeManager {
       dnsToSwitchMapping.resolve(locations);
     }
 
-    final long heartbeatIntervalSeconds = conf.getLong(
+    heartbeatIntervalSeconds = conf.getLong(
         DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
         DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT);
-    final int heartbeatRecheckInterval = conf.getInt(
+    heartbeatRecheckInterval = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 
         DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT); // 5 minutes
     this.heartbeatExpireInterval = 2 * heartbeatRecheckInterval
@@ -346,6 +349,10 @@ public class DatanodeManager {
   @VisibleForTesting
   public FSClusterStats getFSClusterStats() {
     return fsClusterStats;
+  }
+
+  int getBlockInvalidateLimit() {
+    return blockInvalidateLimit;
   }
 
   /** @return the datanode statistics. */
@@ -1103,6 +1110,14 @@ public class DatanodeManager {
     return staleInterval;
   }
 
+  public long getHeartbeatInterval() {
+    return this.heartbeatIntervalSeconds;
+  }
+
+  public long getHeartbeatRecheckInterval() {
+    return this.heartbeatRecheckInterval;
+  }
+
   /**
    * Set the number of current stale DataNodes. The HeartbeatManager got this
    * number based on DataNodes' heartbeats.
@@ -1666,6 +1681,29 @@ public class DatanodeManager {
         return avgLoad;
       }
     };
+  }
+
+  public void setHeartbeatInterval(long intervalSeconds) {
+    setHeartbeatInterval(intervalSeconds,
+        this.heartbeatRecheckInterval);
+  }
+
+  public void setHeartbeatRecheckInterval(int recheckInterval) {
+    setHeartbeatInterval(this.heartbeatIntervalSeconds,
+        recheckInterval);
+  }
+
+  /**
+   * Set parameters derived from heartbeat interval.
+   */
+  private void setHeartbeatInterval(long intervalSeconds,
+      int recheckInterval) {
+    this.heartbeatIntervalSeconds = intervalSeconds;
+    this.heartbeatRecheckInterval = recheckInterval;
+    this.heartbeatExpireInterval = 2L * recheckInterval + 10 * 1000
+        * intervalSeconds;
+    this.blockInvalidateLimit = Math.max(20 * (int) (intervalSeconds),
+        DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT);
   }
 }
 

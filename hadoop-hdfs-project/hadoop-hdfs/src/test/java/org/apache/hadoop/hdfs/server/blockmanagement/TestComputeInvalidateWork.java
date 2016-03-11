@@ -81,7 +81,7 @@ public class TestComputeInvalidateWork {
   @Test(timeout=120000)
   public void testCompInvalidate() throws Exception {
     final int blockInvalidateLimit = bm.getDatanodeManager()
-        .blockInvalidateLimit;
+        .getBlockInvalidateLimit();
     namesystem.writeLock();
     try {
       for (int i=0; i<nodes.length; i++) {
