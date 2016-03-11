@@ -74,15 +74,6 @@ public abstract class Resource implements Comparable<Resource> {
     return resource;
   }
 
-  @Public
-  @Stable
-  public static Resource newInstance(
-      Map<String, ResourceInformation> resources) {
-    Resource resource = Records.newRecord(Resource.class);
-    resource.setResources(resources);
-    return resource;
-  }
-
   /**
    * This method is DEPRECATED:
    * Use {@link Resource#getMemorySize()} instead
@@ -207,15 +198,6 @@ public abstract class Resource implements Comparable<Resource> {
   public abstract Long getResourceValue(String resource) throws YarnException;
 
   /**
-   * Set the resources to the map specified.
-   *
-   * @param resources Desired resources
-   */
-  @Public
-  @Evolving
-  public abstract void setResources(Map<String, ResourceInformation> resources);
-
-  /**
    * Set the ResourceInformation object for a particular resource.
    *
    * @param resource the resource for which the ResourceInformation is provided
@@ -249,8 +231,8 @@ public abstract class Resource implements Comparable<Resource> {
     result = prime * result + getVirtualCores();
     for (Map.Entry<String, ResourceInformation> entry : getResources()
         .entrySet()) {
-      if (entry.getKey().equals(ResourceInformation.MEMORY.getName()) || entry
-          .getKey().equals(ResourceInformation.VCORES.getName())) {
+      if (entry.getKey().equals(ResourceInformation.MEMORY_MB.getName())
+          || entry.getKey().equals(ResourceInformation.VCORES.getName())) {
         continue;
       }
       result = prime * result + entry.getValue().hashCode();
@@ -284,7 +266,7 @@ public abstract class Resource implements Comparable<Resource> {
         .append(getVirtualCores());
     for (Map.Entry<String, ResourceInformation> entry : getResources()
         .entrySet()) {
-      if (entry.getKey().equals(ResourceInformation.MEMORY.getName())
+      if (entry.getKey().equals(ResourceInformation.MEMORY_MB.getName())
           && entry.getValue().getUnits()
           .equals(ResourceInformation.MEMORY_MB.getUnits())) {
         continue;

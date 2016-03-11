@@ -27,7 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public class ResourceNotFoundException extends YarnException {
+public class ResourceNotFoundException extends YarnRuntimeException {
 
   private static final long serialVersionUID = 10081982L;
 
