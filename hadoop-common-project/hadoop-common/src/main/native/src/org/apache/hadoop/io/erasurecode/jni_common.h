@@ -16,34 +16,27 @@
  * limitations under the License.
  */
 
+#ifndef _JNI_CODER_COMMON_H_
+#define _JNI_CODER_COMMON_H_
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "org_apache_hadoop.h"
-#include "../include/erasure_code.h"
-#include "org_apache_hadoop_io_erasurecode_ErasureCodeNative.h"
+#include <jni.h>
 
-#ifdef UNIX
-#include "config.h"
-#endif
+#include "erasure_coder.h"
 
-JNIEXPORT void JNICALL
-Java_org_apache_hadoop_io_erasurecode_ErasureCodeNative_loadLibrary
-(JNIEnv *env, jclass myclass) {
-  char errMsg[1024];
-  load_erasurecode_lib(errMsg, sizeof(errMsg));
-  if (strlen(errMsg) > 0) {
-    THROW(env, "java/lang/UnsatisfiedLinkError", errMsg);
-  }
-}
+void loadLib(JNIEnv *env);
 
-JNIEXPORT jstring JNICALL
-Java_org_apache_hadoop_io_erasurecode_ErasureCodeNative_getLibraryName
-(JNIEnv *env, jclass myclass) {
-  char* libName = get_library_name();
-  if (libName == NULL) {
-    libName = "Unavailable";
-  }
-  return (*env)->NewStringUTF(env, libName);
-}
+void setCoder(JNIEnv* env, jobject thiz, IsalCoder* coder);
+
+IsalCoder* getCoder(JNIEnv* env, jobject thiz);
+
+void getInputs(JNIEnv *env, jobjectArray inputs, jintArray inputOffsets,
+                              unsigned char** destInputs, int num);
+
+void getOutputs(JNIEnv *env, jobjectArray outputs, jintArray outputOffsets,
+                              unsigned char** destOutputs, int num);
+
+#endif //_JNI_CODER_COMMON_H_

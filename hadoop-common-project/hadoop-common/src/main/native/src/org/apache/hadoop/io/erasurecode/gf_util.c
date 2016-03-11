@@ -21,24 +21,34 @@
 #include <string.h>
 
 #include "isal_load.h"
-#include "erasure_code.h"
+#include "gf_util.h"
 
 /**
- *  erasure_code.c
- *  Implementation erasure code utilities based on ISA-L library.
+ *  gf_util.c
+ *  Implementation GF utilities based on ISA-L library.
  *
  */
 
-void h_ec_init_tables(int k, int rows, unsigned char* a, unsigned char* gftbls) {
-  isaLoader->ec_init_tables(k, rows, a, gftbls);
+unsigned char h_gf_mul(unsigned char a, unsigned char b) {
+  return isaLoader->gf_mul(a, b);
 }
 
-void h_ec_encode_data(int len, int k, int rows, unsigned char *gftbls,
-    unsigned char **data, unsigned char **coding) {
-  isaLoader->ec_encode_data(len, k, rows, gftbls, data, coding);
+unsigned char h_gf_inv(unsigned char a) {
+  return isaLoader->gf_inv(a);
 }
 
-void h_ec_encode_data_update(int len, int k, int rows, int vec_i,
-         unsigned char *gftbls, unsigned char *data, unsigned char **coding) {
-  isaLoader->ec_encode_data_update(len, k, rows, vec_i, gftbls, data, coding);
+void h_gf_gen_rs_matrix(unsigned char *a, int m, int k) {
+  isaLoader->gf_gen_rs_matrix(a, m, k);
+}
+
+void h_gf_gen_cauchy_matrix(unsigned char *a, int m, int k) {
+  isaLoader->gf_gen_cauchy_matrix(a, m, k);
+}
+
+int h_gf_invert_matrix(unsigned char *in, unsigned char *out, const int n) {
+  return isaLoader->gf_invert_matrix(in, out, n);
+}
+
+int h_gf_vect_mul(int len, unsigned char *gftbl, void *src, void *dest) {
+  return isaLoader->gf_vect_mul(len, gftbl, src, dest);
 }

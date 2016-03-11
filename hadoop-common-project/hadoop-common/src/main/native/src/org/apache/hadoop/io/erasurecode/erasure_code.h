@@ -38,24 +38,6 @@
  */
 
 /**
- * Return 0 if not support, 1 otherwise.
- */
-int build_support_erasurecode();
-
-/**
- * Get the library name possibly of full path.
- */
-const char* get_library_name();
-
-/**
- * Initialize and load erasure code library, returning error message if any.
- *
- * @param err     The err message buffer.
- * @param err_len The length of the message buffer.
- */
-void load_erasurecode_lib(char* err, size_t err_len);
-
-/**
  * Initialize tables for fast Erasure Code encode and decode.
  *
  * Generates the expanded tables needed for fast encode or decode for erasure
