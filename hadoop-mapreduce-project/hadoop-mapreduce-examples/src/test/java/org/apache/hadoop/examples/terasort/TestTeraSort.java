@@ -27,12 +27,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
 public class TestTeraSort extends HadoopTestCase {
   private static Log LOG = LogFactory.getLog(TestTeraSort.class);
   
@@ -41,8 +35,7 @@ public class TestTeraSort extends HadoopTestCase {
     super(LOCAL_MR, LOCAL_FS, 1, 1);
   }
 
-  @After
-  public void tearDown() throws Exception {
+  protected void tearDown() throws Exception {
     getFileSystem().delete(new Path(TEST_DIR), true);
     super.tearDown();
   }
@@ -83,7 +76,6 @@ public class TestTeraSort extends HadoopTestCase {
     assertEquals(ToolRunner.run(job, new TeraValidate(), svArgs), 0);
   }
 
-  @Test
   public void testTeraSort() throws Exception {
     // Run TeraGen to generate input for 'terasort'
     runTeraGen(createJobConf(), SORT_INPUT_PATH);
@@ -112,7 +104,6 @@ public class TestTeraSort extends HadoopTestCase {
       TERA_OUTPUT_PATH);
   }
 
-  @Test
   public void testTeraSortWithLessThanTwoArgs() throws Exception {
     String[] args = new String[1];
     assertEquals(new TeraSort().run(args), 2);

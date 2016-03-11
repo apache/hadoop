@@ -17,30 +17,17 @@
  */
 package org.apache.hadoop.conf;
 
-import org.apache.hadoop.fs.FileUtil;
+import org.junit.Assert;
+
+import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.FileInputFormat;
-import org.apache.hadoop.mapred.FileOutputFormat;
-import org.apache.hadoop.mapred.HadoopTestCase;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.TextInputFormat;
-import org.apache.hadoop.mapred.TextOutputFormat;
-import org.apache.hadoop.mapred.Utils;
-import org.junit.Test;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import java.io.*;
 
 /**
  * This testcase tests that a JobConf without default values submits jobs
@@ -53,7 +40,6 @@ public class TestNoDefaultsJobConf extends HadoopTestCase {
     super(HadoopTestCase.CLUSTER_MR, HadoopTestCase.DFS_FS, 1, 1);
   }
 
-  @Test
   public void testNoDefaults() throws Exception {
     JobConf configuration = new JobConf();
     assertTrue(configuration.get("hadoop.tmp.dir", null) != null);

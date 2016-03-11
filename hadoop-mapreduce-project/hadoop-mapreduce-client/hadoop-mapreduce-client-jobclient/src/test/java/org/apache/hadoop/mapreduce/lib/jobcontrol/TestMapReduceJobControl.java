@@ -33,9 +33,6 @@ import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.junit.Test;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 
 /**
  * This class performs unit test for Job/JobControl classes.
@@ -123,8 +120,7 @@ public class TestMapReduceJobControl extends HadoopTestCase {
       } catch (Exception e) {}
     }
   }
-
-  @Test
+  
   public void testJobControlWithFailJob() throws Exception {
     LOG.info("Starting testJobControlWithFailJob");
     Configuration conf = createJobConf();
@@ -148,7 +144,6 @@ public class TestMapReduceJobControl extends HadoopTestCase {
     theControl.stop();
   }
 
-  @Test
   public void testJobControlWithKillJob() throws Exception {
     LOG.info("Starting testJobControlWithKillJob");
 
@@ -187,7 +182,6 @@ public class TestMapReduceJobControl extends HadoopTestCase {
     theControl.stop();
   }
 
-  @Test
   public void testJobControl() throws Exception {
     LOG.info("Starting testJobControl");
 
