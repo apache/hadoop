@@ -2970,6 +2970,7 @@ public class DataNode extends ReconfigurableBase
   @Override // ClientDatanodeProtocol & ReconfigurationProtocol
   public List<String> listReconfigurableProperties()
       throws IOException {
+    checkSuperuserPrivilege();
     return RECONFIGURABLE_PROPERTIES;
   }
 

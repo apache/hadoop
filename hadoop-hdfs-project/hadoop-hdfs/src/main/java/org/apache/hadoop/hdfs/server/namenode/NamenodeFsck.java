@@ -855,7 +855,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
             setInetSocketAddress(targetAddr).
             setCachingStrategy(CachingStrategy.newDropBehind()).
             setClientCacheContext(dfs.getClientContext()).
-            setConfiguration(namenode.conf).
+            setConfiguration(namenode.getConf()).
             setTracer(tracer).
             setRemotePeerFactory(new RemotePeerFactory() {
               @Override

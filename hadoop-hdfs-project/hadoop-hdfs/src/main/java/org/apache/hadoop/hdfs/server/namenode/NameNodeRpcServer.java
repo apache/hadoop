@@ -43,7 +43,6 @@ import com.google.common.collect.Lists;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.conf.ReconfigurationTaskStatus;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
@@ -2086,7 +2085,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.READ); // only active
     namesystem.checkSuperuserPrivilege();
-    int maxEventsPerRPC = nn.conf.getInt(
+    int maxEventsPerRPC = nn.getConf().getInt(
         DFSConfigKeys.DFS_NAMENODE_INOTIFY_MAX_EVENTS_PER_RPC_KEY,
         DFSConfigKeys.DFS_NAMENODE_INOTIFY_MAX_EVENTS_PER_RPC_DEFAULT);
     FSEditLog log = namesystem.getFSImage().getEditLog();
@@ -2189,23 +2188,24 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ReconfigurationProtocol
-  public void startReconfiguration() {
-    throw new UnsupportedOperationException(
-        "Namenode startReconfiguration is not implemented.",
-        new ReconfigurationException());
+  public void startReconfiguration() throws IOException {
+    checkNNStartup();
+    namesystem.checkSuperuserPrivilege();
+    nn.startReconfigurationTask();
   }
 
   @Override // ReconfigurationProtocol
-  public ReconfigurationTaskStatus getReconfigurationStatus() {
-    throw new UnsupportedOperationException(
-        " Namenode getReconfigurationStatus is not implemented.",
-        new ReconfigurationException());
+  public ReconfigurationTaskStatus getReconfigurationStatus()
+      throws IOException {
+    checkNNStartup();
+    namesystem.checkSuperuserPrivilege();
+    return nn.getReconfigurationTaskStatus();
   }
 
   @Override // ReconfigurationProtocol
-  public List<String> listReconfigurableProperties() {
-    throw new UnsupportedOperationException(
-        " Namenode listReconfigurableProperties is not implemented.",
-        new ReconfigurationException());
+  public List<String> listReconfigurableProperties() throws IOException {
+    checkNNStartup();
+    namesystem.checkSuperuserPrivilege();
+    return NameNode.RECONFIGURABLE_PROPERTIES;
   }
 }
