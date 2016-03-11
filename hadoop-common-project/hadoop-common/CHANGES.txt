@@ -902,6 +902,8 @@ Release 2.6.5 - UNRELEASED
     HADOOP-12789. log classpath of ApplicationClassLoader at INFO level
     (Sangjin Lee via mingma)
 
+    HADOOP-12672. RPC timeout should not override IPC ping interval (iwasakims)
+
   OPTIMIZATIONS
 
   BUG FIXES
