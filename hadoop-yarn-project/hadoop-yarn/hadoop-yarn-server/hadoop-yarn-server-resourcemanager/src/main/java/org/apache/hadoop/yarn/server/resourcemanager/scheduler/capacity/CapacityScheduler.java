@@ -525,7 +525,7 @@ public class CapacityScheduler extends
     updatePlacementRules();
 
     // Re-calculate headroom for active applications
-    Resource clusterResource = nodeTracker.getClusterCapacity();
+    Resource clusterResource = getClusterResource();
     root.updateClusterResource(clusterResource, new ResourceLimits(
         clusterResource));
 
