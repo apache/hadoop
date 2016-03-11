@@ -26,7 +26,6 @@ import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 
-import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -60,9 +59,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
   private Set<String> resourceNames;
 
   public DominantResourceCalculator() {
-    resourceNames = new HashSet<>();
-    resourceNames.add(ResourceInformation.MEMORY.getName());
-    resourceNames.add(ResourceInformation.VCORES.getName());
+    resourceNames = ResourceUtils.getResourceTypes().keySet();
   }
 
   /**

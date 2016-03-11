@@ -3479,6 +3479,16 @@
     <value></value>
   </property>
 
+  <!-- resource types configuration -->
+  <property>
+    <name>yarn.resource-types</name>
+    <value></value>
+    <description>
+    The resource types to be used for scheduling. Use resource-types.xml
+    to specify details about the individual resource types.
+    </description>
+  </property>
+
   <property>
     <description>
       Containers launcher implementation for determining how containers
