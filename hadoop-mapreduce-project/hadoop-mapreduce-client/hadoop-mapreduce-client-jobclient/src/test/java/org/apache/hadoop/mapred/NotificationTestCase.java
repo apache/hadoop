@@ -34,13 +34,6 @@ import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.DataOutputStream;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
-import org.junit.Before;
-import org.junit.After;
-import org.junit.Test;
-
-
 /**
  * Base class to test Job end notification in local and cluster mode.
  *
@@ -147,19 +140,17 @@ public abstract class NotificationTestCase extends HadoopTestCase {
     return conf;
   }
 
-  @Before
-  public void setUp() throws Exception {
+
+  protected void setUp() throws Exception {
     super.setUp();
     startHttpServer();
   }
 
-  @After
-  public void tearDown() throws Exception {
+  protected void tearDown() throws Exception {
     stopHttpServer();
     super.tearDown();
   }
 
-  @Test
   public void testMR() throws Exception {
 
     System.out.println(launchWordCount(this.createJobConf(),

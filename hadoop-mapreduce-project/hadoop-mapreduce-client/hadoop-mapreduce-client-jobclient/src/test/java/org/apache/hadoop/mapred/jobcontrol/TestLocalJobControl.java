@@ -27,8 +27,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapred.JobConf;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
 
 /**
  * HadoopTestCase that tests the local job runner.
@@ -61,7 +59,6 @@ public class TestLocalJobControl extends HadoopTestCase {
    * object. Finally, it creates a thread to run the JobControl object and
    * monitors/reports the job states.
    */
-  @Test
   public void testLocalJobControlDataCopy() throws Exception {
 
     FileSystem fs = FileSystem.get(createJobConf());
