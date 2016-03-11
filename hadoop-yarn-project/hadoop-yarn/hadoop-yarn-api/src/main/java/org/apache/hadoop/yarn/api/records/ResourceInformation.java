@@ -32,11 +32,9 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
   private ResourceTypes resourceType;
   private Long value;
 
-  private static final String MEMORY_URI = "yarn.io/memory";
-  private static final String VCORES_URI = "yarn.io/vcores";
+  private static final String MEMORY_URI = "memory-mb";
+  private static final String VCORES_URI = "vcores";
 
-  public static final ResourceInformation MEMORY =
-      ResourceInformation.newInstance(MEMORY_URI);
   public static final ResourceInformation MEMORY_MB =
       ResourceInformation.newInstance(MEMORY_URI, "M");
   public static final ResourceInformation VCORES =
@@ -77,7 +75,7 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
   public void setUnits(String rUnits) {
     if (!UnitsConversionUtil.KNOWN_UNITS.contains(rUnits)) {
       throw new IllegalArgumentException(
-          "Unknown unit '" + units + "'. Known units are "
+          "Unknown unit '" + rUnits + "'. Known units are "
               + UnitsConversionUtil.KNOWN_UNITS);
     }
     this.units = rUnits;
