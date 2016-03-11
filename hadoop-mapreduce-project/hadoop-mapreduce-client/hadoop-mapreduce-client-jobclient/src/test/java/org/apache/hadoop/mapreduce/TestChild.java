@@ -30,13 +30,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.log4j.Level;
-import org.junit.Before;
-import org.junit.Test;
-
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 
 public class TestChild extends HadoopTestCase {
   private static String TEST_ROOT_DIR =
@@ -152,8 +145,7 @@ public class TestChild extends HadoopTestCase {
         + numPartFiles, list.length == numPartFiles);
     return job;
   }
-
-  @Test
+  
   public void testChild() throws Exception {
     try {
       submitAndValidateJob(createJobConf(), 1, 1, true);
