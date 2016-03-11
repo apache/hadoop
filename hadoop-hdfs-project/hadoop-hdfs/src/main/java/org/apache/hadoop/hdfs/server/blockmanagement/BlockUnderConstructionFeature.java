@@ -314,6 +314,5 @@ public class BlockUnderConstructionFeature {
         sb.append(", ");
       }
     }
-    sb.append("");
   }
 }

@@ -858,7 +858,7 @@ class FSDirWriteFileOp {
     }
     StringBuilder sb = new StringBuilder(150);
     sb.append("BLOCK* allocate ");
-    b.<Block>appendStringTo(sb);
+    b.appendStringTo(sb);
     sb.append(", ");
     BlockUnderConstructionFeature uc = b.getUnderConstructionFeature();
     if (uc != null) {
