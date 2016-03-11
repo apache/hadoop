@@ -3404,4 +3404,14 @@
     <name>yarn.scheduler.configuration.zk-store.parent-path</name>
     <value>/confstore</value>
   </property>
+
+  <!-- resource types configuration -->
+  <property>
+    <name>yarn.resource-types</name>
+    <value></value>
+    <description>
+    The resource types to be used for scheduling. Use resource-types.xml
+    to specify details about the individual resource types.
+    </description>
+  </property>
 </configuration>
