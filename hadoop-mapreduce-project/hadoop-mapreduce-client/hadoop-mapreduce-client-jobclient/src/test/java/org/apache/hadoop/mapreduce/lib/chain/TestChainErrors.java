@@ -29,6 +29,10 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.junit.Test;
+
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Tests error conditions in ChainMapper/ChainReducer.
@@ -51,6 +55,7 @@ public class TestChainErrors extends HadoopTestCase {
    * 
    * @throws Exception
    */
+  @Test
   public void testChainSubmission() throws Exception {
 
     Configuration conf = createJobConf();
@@ -89,6 +94,7 @@ public class TestChainErrors extends HadoopTestCase {
    * 
    * @throws Exception
    */
+  @Test
   public void testChainFail() throws Exception {
 
     Configuration conf = createJobConf();
@@ -114,6 +120,7 @@ public class TestChainErrors extends HadoopTestCase {
    * 
    * @throws Exception
    */
+  @Test
   public void testReducerFail() throws Exception {
 
     Configuration conf = createJobConf();
@@ -139,6 +146,7 @@ public class TestChainErrors extends HadoopTestCase {
    * 
    * @throws Exception
    */
+  @Test
   public void testChainMapNoOuptut() throws Exception {
     Configuration conf = createJobConf();
     String expectedOutput = "";
@@ -163,6 +171,7 @@ public class TestChainErrors extends HadoopTestCase {
    * 
    * @throws Exception
    */
+  @Test
   public void testChainReduceNoOuptut() throws Exception {
     Configuration conf = createJobConf();
     String expectedOutput = "";
