@@ -32,6 +32,7 @@
  */
 
 #include "configuration.h"
+#include "uri.h"
 
 #include <strings.h>
 #include <sstream>
@@ -137,4 +138,30 @@ bool Configuration::GetBoolWithDefault(const std::string& key,
                                        bool default_value) const {
   return GetBool(key).value_or(default_value);
 }
+
+optional<URI> Configuration::GetUri(const std::string& key) const {
+  auto raw = Get(key);
+  if (raw) {
+    return URI::parse_from_string(*raw);
+  } else {
+    return optional<URI>();
+  }
+}
+
+URI Configuration::GetUriWithDefault(const std::string& key,
+                                     std::string default_value) const {
+  optional<URI> result = GetUri(key);
+  if (result) {
+    return *result;
+  } else {
+    result = URI::parse_from_string(default_value);
+    if (result) {
+      return *result;
+    } else {
+      return URI();
+    }
+  }
+}
+
+
 }

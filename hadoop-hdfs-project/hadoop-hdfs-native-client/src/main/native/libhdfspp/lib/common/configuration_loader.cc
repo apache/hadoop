@@ -63,9 +63,15 @@ bool str_to_bool(const std::string& raw) {
 }
 
 void ConfigurationLoader::SetDefaultSearchPath() {
-  //TODO: Use HADOOP_CONF_DIR when we get environment subs with HDFS-9385
-  AddToSearchPath("./");
-  AddToSearchPath("/etc/hadoop/");
+  // Try (in order, taking the first valid one):
+  //    $HADOOP_CONF_DIR
+  //    /etc/hadoop/conf
+  const char * hadoop_conf_dir_env = getenv("HADOOP_CONF_DIR");
+  if (hadoop_conf_dir_env) {
+    AddToSearchPath(hadoop_conf_dir_env);
+  } else {
+    AddToSearchPath("/etc/hadoop/conf");
+  }
 }
 
 void ConfigurationLoader::ClearSearchPath()

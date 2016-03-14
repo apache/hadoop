@@ -47,6 +47,7 @@ Options HdfsConfiguration::GetOptions() {
   OptionalSet(result.rpc_timeout, GetInt(kDfsClientSocketTimeoutKey));
   OptionalSet(result.max_rpc_retries, GetInt(kIpcClientConnectMaxRetriesKey));
   OptionalSet(result.rpc_retry_delay_ms, GetInt(kIpcClientConnectRetryIntervalKey));
+  OptionalSet(result.defaultFS, GetUri(kFsDefaultFsKey));
 
   return result;
 }

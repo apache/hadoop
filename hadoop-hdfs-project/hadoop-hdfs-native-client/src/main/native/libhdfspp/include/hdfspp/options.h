@@ -18,6 +18,8 @@
 #ifndef LIBHDFSPP_OPTIONS_H_
 #define LIBHDFSPP_OPTIONS_H_
 
+#include "common/uri.h"
+
 namespace hdfs {
 
 /**
@@ -50,6 +52,11 @@ struct Options {
    **/
   unsigned int host_exclusion_duration;
   static const unsigned int kDefaultHostExclusionDuration = 600000;
+
+  /**
+   * URI to connect to if no host:port are specified in connect
+   */
+  URI defaultFS;
 
   Options();
 };

@@ -31,6 +31,9 @@
 #include <algorithm>
 
 using namespace hdfs;
+using std::experimental::nullopt;
+
+static constexpr tPort kDefaultPort = 8020;
 
 /* Separate the handles used by the C api from the C++ API*/
 struct hdfs_internal {
@@ -84,12 +87,11 @@ struct hdfsBuilder {
   ConfigurationLoader loader;
   HdfsConfiguration config;
 
-  std::string overrideHost;
-  tPort       overridePort; // 0 --> use default
-  std::string user;
+  optional<std::string> overrideHost;
+  optional<tPort>       overridePort;
+  optional<std::string> user;
 
   static constexpr tPort kUseDefaultPort = 0;
-  static constexpr tPort kDefaultPort = 8020;
 };
 
 /* Error handling with optional debug to stderr */
@@ -183,28 +185,30 @@ int hdfsFileIsOpenForRead(hdfsFile file) {
   return 0;
 }
 
-hdfsFS hdfsConnect(const char *nn, tPort port) {
-  return hdfsConnectAsUser(nn, port, "");
-}
-
-hdfsFS hdfsConnectAsUser(const char* nn, tPort port, const char *user) {
+hdfsFS doHdfsConnect(optional<std::string> nn, optional<tPort> port, optional<std::string> user, const Options & options) {
   try
   {
-    std::string port_as_string = std::to_string(port);
     IoService * io_service = IoService::New();
-    std::string user_name;
-    if (user) {
-      user_name = user;
-    }
 
-    FileSystem *fs = FileSystem::New(io_service, user_name, Options());
+    FileSystem *fs = FileSystem::New(io_service, user.value_or(""), options);
     if (!fs) {
       ReportError(ENODEV, "Could not create FileSystem object");
       return nullptr;
     }
 
-    if (!fs->Connect(nn, port_as_string).ok()) {
-      ReportError(ENODEV, "Unable to connect to NameNode.");
+    Status status;
+    if (nn || port) {
+      if (!port) {
+        port = kDefaultPort;
+      }
+      std::string port_as_string = std::to_string(*port);
+      status = fs->Connect(nn.value_or(""), port_as_string);
+    } else {
+      status = fs->ConnectToDefaultFs();
+    }
+
+    if (!status.ok()) {
+      Error(status);
 
       // FileSystem's ctor might take ownership of the io_service; if it does,
       //    it will null out the pointer
@@ -223,6 +227,14 @@ hdfsFS hdfsConnectAsUser(const char* nn, tPort port, const char *user) {
     ReportCaughtNonException();
     return nullptr;
   }
+}
+
+hdfsFS hdfsConnect(const char *nn, tPort port) {
+  return hdfsConnectAsUser(nn, port, "");
+}
+
+hdfsFS hdfsConnectAsUser(const char* nn, tPort port, const char *user) {
+  return doHdfsConnect(std::string(nn), port, std::string(user), Options());
 }
 
 int hdfsDisconnect(hdfsFS fs) {
@@ -403,12 +415,14 @@ HdfsConfiguration LoadDefault(ConfigurationLoader & loader)
   }
 }
 
-hdfsBuilder::hdfsBuilder() : config(LoadDefault(loader)), overridePort(kUseDefaultPort)
+hdfsBuilder::hdfsBuilder() : config(loader.New<HdfsConfiguration>())
 {
+  loader.SetDefaultSearchPath();
+  config = LoadDefault(loader);
 }
 
 hdfsBuilder::hdfsBuilder(const char * directory) :
-      config(loader.New<HdfsConfiguration>()), overridePort(kUseDefaultPort)
+      config(loader.New<HdfsConfiguration>())
 {
   loader.SetSearchPath(directory);
   config = LoadDefault(loader);
@@ -430,7 +444,7 @@ struct hdfsBuilder *hdfsNewBuilder(void)
 
 void hdfsBuilderSetNameNode(struct hdfsBuilder *bld, const char *nn)
 {
-  bld->overrideHost = nn;
+  bld->overrideHost = std::string(nn);
 }
 
 void hdfsBuilderSetNameNodePort(struct hdfsBuilder *bld, tPort port)
@@ -440,10 +454,8 @@ void hdfsBuilderSetNameNodePort(struct hdfsBuilder *bld, tPort port)
 
 void hdfsBuilderSetUserName(struct hdfsBuilder *bld, const char *userName)
 {
-  if (userName) {
-    bld->user = userName;
-  } else {
-    bld->user = "";
+  if (userName && *userName) {
+    bld->user = std::string(userName);
   }
 }
 
@@ -489,34 +501,7 @@ void hdfsConfStrFree(char *val)
 }
 
 hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld) {
-  try
-  {
-    if (!bld->overrideHost.empty())
-    {
-      // TODO: pass rest of config once we get that done (HDFS-9556)
-      tPort port = bld->overridePort;
-      if (port == hdfsBuilder::kUseDefaultPort)
-      {
-        port = hdfsBuilder::kDefaultPort;
-      }
-      if (bld->user.empty())
-        return hdfsConnect(bld->overrideHost.c_str(), port);
-      else
-        return hdfsConnectAsUser(bld->overrideHost.c_str(), port, bld->user.c_str());
-    }
-    else
-    {
-      //TODO: allow construction from default port once that is done (HDFS-9556)
-      ReportError(EINVAL, "No host provided to builder in hdfsBuilderConnect");
-      return nullptr;
-    }
-  } catch (const std::exception & e) {
-    ReportException(e);
-    return nullptr;
-  } catch (...) {
-    ReportCaughtNonException();
-    return nullptr;
-  }
+  return doHdfsConnect(bld->overrideHost, bld->overridePort, bld->user, bld->config.GetOptions());
 }
 
 int hdfsConfGetStr(const char *key, char **val)

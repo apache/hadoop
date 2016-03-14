@@ -46,6 +46,7 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
 
 if(UNIX)
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -std=c++11 -g -fPIC -fno-strict-aliasing")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -fPIC -fno-strict-aliasing")
 endif()
 
 # Mac OS 10.7 and later deprecates most of the methods in OpenSSL.
@@ -138,7 +139,7 @@ if(NEED_LINK_DL)
    set(LIB_DL dl)
 endif()
 
-set(LIBHDFSPP_ALL_OBJECTS $<TARGET_OBJECTS:bindings_c_obj> $<TARGET_OBJECTS:fs_obj> $<TARGET_OBJECTS:rpc_obj> $<TARGET_OBJECTS:reader_obj> $<TARGET_OBJECTS:proto_obj> $<TARGET_OBJECTS:connection_obj> $<TARGET_OBJECTS:common_obj>)
+set(LIBHDFSPP_ALL_OBJECTS $<TARGET_OBJECTS:bindings_c_obj> $<TARGET_OBJECTS:fs_obj> $<TARGET_OBJECTS:rpc_obj> $<TARGET_OBJECTS:reader_obj> $<TARGET_OBJECTS:proto_obj> $<TARGET_OBJECTS:connection_obj> $<TARGET_OBJECTS:common_obj> $<TARGET_OBJECTS:uriparser2_obj>)
 if (HADOOP_BUILD)
   hadoop_add_dual_library(hdfspp ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
   hadoop_target_link_dual_libraries(hdfspp

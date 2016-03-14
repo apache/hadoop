@@ -79,7 +79,7 @@ public:
    *                    SEARCH PATH METHODS
    ***************************************************************************/
 
-  // Sets the search path to the default search path (namely, ".:/etc/hadoop")
+  // Sets the search path to the default search path (namely, "$HADOOP_CONF_DIR" or "/etc/hadoop/conf")
   void SetDefaultSearchPath();
 
   // Clears out the search path

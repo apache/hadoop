@@ -37,6 +37,9 @@ static const int kNamenodeProtocolVersion = 1;
 
 using ::asio::ip::tcp;
 
+static constexpr uint16_t kDefaultPort = 8020;
+
+
 /*****************************************************************************
  *                    NAMENODE OPERATIONS
  ****************************************************************************/
@@ -148,7 +151,8 @@ const std::string get_effective_user_name(const std::string &user_name) {
 
 FileSystemImpl::FileSystemImpl(IoService *&io_service, const std::string &user_name,
                                const Options &options)
-  :   io_service_(static_cast<IoServiceImpl *>(io_service)),
+  :   options_(options),
+      io_service_(static_cast<IoServiceImpl *>(io_service)),
       nn_(&io_service_->io_service(), options,
       GetRandomClientName(), get_effective_user_name(user_name), kNamenodeProtocol,
       kNamenodeProtocolVersion), client_name_(GetRandomClientName()),
@@ -175,7 +179,7 @@ FileSystemImpl::~FileSystemImpl() {
 
 void FileSystemImpl::Connect(const std::string &server,
                              const std::string &service,
-                             const std::function<void(const Status &, FileSystem * fs)> &&handler) {
+                             const std::function<void(const Status &, FileSystem * fs)> &handler) {
   /* IoService::New can return nullptr */
   if (!io_service_) {
     handler (Status::Error("Null IoService"), this);
@@ -203,6 +207,48 @@ Status FileSystemImpl::Connect(const std::string &server, const std::string &ser
 
   return s;
 }
+
+void FileSystemImpl::ConnectToDefaultFs(const std::function<void(const Status &, FileSystem *)> &handler) {
+  std::string scheme = options_.defaultFS.get_scheme();
+  if (strcasecmp(scheme.c_str(), "hdfs") != 0) {
+    std::string error_message;
+    error_message += "defaultFS of [" + options_.defaultFS.str() + "] is not supported";
+    handler(Status::InvalidArgument(error_message.c_str()), nullptr);
+    return;
+  }
+
+  std::string host = options_.defaultFS.get_host();
+  if (host.empty()) {
+    handler(Status::InvalidArgument("defaultFS must specify a hostname"), nullptr);
+    return;
+  }
+
+  optional<uint16_t>  port = options_.defaultFS.get_port();
+  if (!port) {
+    port = kDefaultPort;
+  }
+  std::string port_as_string = std::to_string(*port);
+
+  Connect(host, port_as_string, handler);
+}
+
+Status FileSystemImpl::ConnectToDefaultFs() {
+  auto stat = std::make_shared<std::promise<Status>>();
+  std::future<Status> future = stat->get_future();
+
+  auto callback = [stat](const Status &s, FileSystem *fs) {
+    (void)fs;
+    stat->set_value(s);
+  };
+
+  ConnectToDefaultFs(callback);
+
+  /* block until promise is set */
+  auto s = future.get();
+
+  return s;
+}
+
 
 
 int FileSystemImpl::AddWorkerThread() {
