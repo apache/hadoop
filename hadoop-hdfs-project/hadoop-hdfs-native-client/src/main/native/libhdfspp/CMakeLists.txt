@@ -117,11 +117,13 @@ include_directories( SYSTEM
   third_party/gmock-1.7.0
   third_party/tr2
   third_party/protobuf
+  third_party/uriparser2
   ${OPENSSL_INCLUDE_DIR}
 )
 
 
 add_subdirectory(third_party/gmock-1.7.0)
+add_subdirectory(third_party/uriparser2)
 add_subdirectory(lib)
 add_subdirectory(tests)
 add_subdirectory(examples)
