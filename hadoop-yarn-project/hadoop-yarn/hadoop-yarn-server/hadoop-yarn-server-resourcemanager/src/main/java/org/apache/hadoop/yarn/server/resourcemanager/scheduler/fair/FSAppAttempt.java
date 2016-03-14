@@ -86,7 +86,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   // Key = RackName, Value = Set of Nodes reserved by app on rack
   private Map<String, Set<String>> reservations = new HashMap<>();
 
-  private List<NodeId> blacklistNodeIds = new ArrayList<NodeId>();
+  private List<FSSchedulerNode> blacklistNodeIds = new ArrayList<>();
   /**
    * Delay scheduling: We often want to prioritize scheduling of node-local
    * containers over rack-local or off-switch containers. To achieve this
@@ -185,14 +185,11 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       Resource availableResources) {
     if (appSchedulingInfo.getAndResetBlacklistChanged()) {
       blacklistNodeIds.clear();
-      scheduler.addBlacklistedNodeIdsToList(this, blacklistNodeIds);
+      blacklistNodeIds.addAll(scheduler.getBlacklistedNodes(this));
     }
-    for (NodeId nodeId: blacklistNodeIds) {
-      SchedulerNode node = scheduler.getSchedulerNode(nodeId);
-      if (node != null) {
-        Resources.subtractFrom(availableResources,
-            node.getUnallocatedResource());
-      }
+    for (FSSchedulerNode node: blacklistNodeIds) {
+      Resources.subtractFrom(availableResources,
+          node.getUnallocatedResource());
     }
     if (availableResources.getMemory() < 0) {
       availableResources.setMemory(0);
