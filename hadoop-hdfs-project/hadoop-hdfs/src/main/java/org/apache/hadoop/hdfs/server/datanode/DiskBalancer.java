@@ -73,6 +73,7 @@ public class DiskBalancer {
   private Future future;
   private String planID;
   private DiskBalancerWorkStatus.Result currentResult;
+  private long bandwidth;
 
   /**
    * Constructs a Disk Balancer object. This object takes care of reading a
@@ -159,6 +160,7 @@ public class DiskBalancer {
       createWorkPlan(nodePlan);
       this.planID = planID;
       this.currentResult = Result.PLAN_UNDER_PROGRESS;
+      this.bandwidth = bandwidth;
       executePlan();
     } finally {
       lock.unlock();
@@ -248,6 +250,21 @@ public class DiskBalancer {
     }
   }
 
+  /**
+   * Returns the current bandwidth.
+   *
+   * @return string representation of bandwidth.
+   * @throws DiskBalancerException
+   */
+  public long getBandwidth() throws DiskBalancerException {
+    lock.lock();
+    try {
+      checkDiskBalancerEnabled();
+      return this.bandwidth;
+    } finally {
+      lock.unlock();
+    }
+  }
 
   /**
    * Throws if Disk balancer is disabled.

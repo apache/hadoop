@@ -1031,7 +1031,7 @@ public class DataNode extends ReconfigurableBase
    * @param  data - FSDataSet
    * @param conf - Config
    */
-  private synchronized void initDiskBalancer(FsDatasetSpi data,
+  private void initDiskBalancer(FsDatasetSpi data,
                                              Configuration conf) {
     if (this.diskBalancer != null) {
       return;
@@ -1045,7 +1045,7 @@ public class DataNode extends ReconfigurableBase
   /**
    * Shutdown disk balancer.
    */
-  private synchronized void shutdownDiskBalancer() {
+  private  void shutdownDiskBalancer() {
     if (this.diskBalancer != null) {
       this.diskBalancer.shutdown();
       this.diskBalancer = null;
@@ -3375,6 +3375,8 @@ public class DataNode extends ReconfigurableBase
     switch (key) {
     case DiskBalancerConstants.DISKBALANCER_VOLUME_NAME:
       return this.diskBalancer.getVolumeNames();
+    case DiskBalancerConstants.DISKBALANCER_BANDWIDTH :
+      return Long.toString(this.diskBalancer.getBandwidth());
     default:
       LOG.error("Disk Balancer - Unknown key in get balancer setting. Key: " +
           key);

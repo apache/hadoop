@@ -187,6 +187,22 @@ public class TestDiskBalancerRPC {
     dataNode.getDiskBalancerSetting(invalidSetting);
   }
 
+  @Test
+  public void testgetDiskBalancerBandwidth() throws Exception {
+    RpcTestHelper rpcTestHelper = new RpcTestHelper().invoke();
+    DataNode dataNode = rpcTestHelper.getDataNode();
+    String planHash = rpcTestHelper.getPlanHash();
+    int planVersion = rpcTestHelper.getPlanVersion();
+    NodePlan plan = rpcTestHelper.getPlan();
+
+    dataNode.submitDiskBalancerPlan(planHash, planVersion, 10, plan.toJson());
+    String bandwidthString = dataNode.getDiskBalancerSetting(
+        DiskBalancerConstants.DISKBALANCER_BANDWIDTH);
+    long value = Long.decode(bandwidthString);
+    Assert.assertEquals(10L, value);
+  }
+
+
 
   @Test
   public void testQueryPlan() throws Exception {
@@ -211,16 +227,6 @@ public class TestDiskBalancerRPC {
     Assert.assertTrue(status.getResult() == NO_PLAN);
   }
 
-  @Test
-  public void testGetDiskBalancerSetting() throws Exception {
-    final int dnIndex = 0;
-    DataNode dataNode = cluster.getDataNodes().get(dnIndex);
-    thrown.expect(DiskBalancerException.class);
-    thrown.expect(new
-        ResultVerifier(Result.UNKNOWN_KEY));
-    dataNode.getDiskBalancerSetting(
-        DiskBalancerConstants.DISKBALANCER_BANDWIDTH);
-  }
 
   private class RpcTestHelper {
     private NodePlan plan;
