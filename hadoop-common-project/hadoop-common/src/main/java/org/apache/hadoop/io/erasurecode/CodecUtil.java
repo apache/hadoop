@@ -20,7 +20,14 @@ package org.apache.hadoop.io.erasurecode;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.io.erasurecode.rawcoder.*;
+import org.apache.hadoop.io.erasurecode.rawcoder.RSRawDecoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.RSRawEncoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureCoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureCoderFactory;
+import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.XORRawDecoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.XORRawEncoder;
 
 /**
  * A codec & coder utility to help create raw coders conveniently.
@@ -43,7 +50,7 @@ public final class CodecUtil {
         CommonConfigurationKeys.IO_ERASURECODE_CODEC_RS_RAWCODER_KEY,
         true, numDataUnits, numParityUnits);
     if (rawCoder == null) {
-      rawCoder = new RSRawEncoderLegacy(numDataUnits, numParityUnits);
+      rawCoder = new RSRawEncoder(numDataUnits, numParityUnits);
     }
 
     return (RawErasureEncoder) rawCoder;
@@ -62,7 +69,7 @@ public final class CodecUtil {
         CommonConfigurationKeys.IO_ERASURECODE_CODEC_RS_RAWCODER_KEY,
         false, numDataUnits, numParityUnits);
     if (rawCoder == null) {
-      rawCoder = new RSRawDecoderLegacy(numDataUnits, numParityUnits);
+      rawCoder = new RSRawDecoder(numDataUnits, numParityUnits);
     }
 
     return (RawErasureDecoder) rawCoder;

@@ -23,7 +23,6 @@ import org.apache.hadoop.io.erasurecode.rawcoder.util.CoderUtil;
 import org.apache.hadoop.io.erasurecode.rawcoder.util.DumpUtil;
 import org.apache.hadoop.io.erasurecode.rawcoder.util.GF256;
 import org.apache.hadoop.io.erasurecode.rawcoder.util.RSUtil;
-import org.apache.hadoop.io.erasurecode.rawcoder.util.RSUtil2;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -35,7 +34,7 @@ import java.util.Arrays;
  * from HDFS-RAID, and also compatible with the native/ISA-L coder.
  */
 @InterfaceAudience.Private
-public class RSRawDecoder2 extends AbstractRawErasureDecoder {
+public class RSRawDecoder extends AbstractRawErasureDecoder {
   //relevant to schema and won't change during decode calls
   private byte[] encodeMatrix;
 
@@ -55,7 +54,7 @@ public class RSRawDecoder2 extends AbstractRawErasureDecoder {
   private int numErasedDataUnits;
   private boolean[] erasureFlags;
 
-  public RSRawDecoder2(int numDataUnits, int numParityUnits) {
+  public RSRawDecoder(int numDataUnits, int numParityUnits) {
     super(numDataUnits, numParityUnits);
     if (numDataUnits + numParityUnits >= RSUtil.GF.getFieldSize()) {
       throw new HadoopIllegalArgumentException(
@@ -64,7 +63,7 @@ public class RSRawDecoder2 extends AbstractRawErasureDecoder {
 
     int numAllUnits = getNumDataUnits() + numParityUnits;
     encodeMatrix = new byte[numAllUnits * getNumDataUnits()];
-    RSUtil2.genCauchyMatrix(encodeMatrix, numAllUnits, getNumDataUnits());
+    RSUtil.genCauchyMatrix(encodeMatrix, numAllUnits, getNumDataUnits());
     if (isAllowingVerboseDump()) {
       DumpUtil.dumpMatrix(encodeMatrix, numDataUnits, numAllUnits);
     }
@@ -79,7 +78,7 @@ public class RSRawDecoder2 extends AbstractRawErasureDecoder {
     for (int i = 0; i < getNumDataUnits(); i++) {
       realInputs[i] = inputs[validIndexes[i]];
     }
-    RSUtil2.encodeData(gfTables, realInputs, outputs);
+    RSUtil.encodeData(gfTables, realInputs, outputs);
   }
 
   @Override
@@ -94,7 +93,7 @@ public class RSRawDecoder2 extends AbstractRawErasureDecoder {
       realInputs[i] = inputs[validIndexes[i]];
       realInputOffsets[i] = inputOffsets[validIndexes[i]];
     }
-    RSUtil2.encodeData(gfTables, dataLen, realInputs, realInputOffsets,
+    RSUtil.encodeData(gfTables, dataLen, realInputs, realInputOffsets,
             outputs, outputOffsets);
   }
 
@@ -131,7 +130,7 @@ public class RSRawDecoder2 extends AbstractRawErasureDecoder {
 
     generateDecodeMatrix(erasedIndexes);
 
-    RSUtil2.initTables(getNumDataUnits(), erasedIndexes.length,
+    RSUtil.initTables(getNumDataUnits(), erasedIndexes.length,
         decodeMatrix, 0, gfTables);
     if (isAllowingVerboseDump()) {
       System.out.println(DumpUtil.bytesToHex(gfTables, -1));
