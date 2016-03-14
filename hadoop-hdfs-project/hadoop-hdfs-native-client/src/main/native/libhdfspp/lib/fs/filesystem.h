@@ -85,10 +85,14 @@ public:
 
   /* attempt to connect to namenode, return bad status on failure */
   void Connect(const std::string &server, const std::string &service,
-               const std::function<void(const Status &, FileSystem *)> &&handler) override;
+               const std::function<void(const Status &, FileSystem *)> &handler) override;
   /* attempt to connect to namenode, return bad status on failure */
   Status Connect(const std::string &server, const std::string &service) override;
 
+  /* Connect to the NN indicated in options.defaultFs */
+  virtual void ConnectToDefaultFs(
+      const std::function<void(const Status &, FileSystem *)> &handler) override;
+  virtual Status ConnectToDefaultFs() override;
 
   virtual void Open(const std::string &path,
                     const std::function<void(const Status &, FileHandle *)>
@@ -105,6 +109,7 @@ public:
 
 
 private:
+  const Options options_;
   /**
    *  The IoService must be the first member variable to ensure that it gets
    *  destroyed last.  This allows other members to dequeue things from the

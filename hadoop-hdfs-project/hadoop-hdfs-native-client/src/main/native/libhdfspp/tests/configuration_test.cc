@@ -483,6 +483,43 @@ TEST(ConfigurationTest, TestBoolConversions) {
   }
 }
 
+TEST(ConfigurationTest, TestUriConversions) {
+  /* No defaults */
+  {
+    std::stringstream stream;
+    simpleConfigStream(stream, "key1", "hdfs:///");
+    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
+    EXPECT_TRUE(config && "Parse single value");
+    optional<URI> value = config->GetUri("key1");
+    EXPECT_TRUE((bool)value);
+    EXPECT_EQ("hdfs:///", value->str());
+    EXPECT_FALSE(config->GetUri("key2"));
+  }
+
+  {
+    optional<Configuration> config = simpleConfig("key1", "hdfs:///");
+    EXPECT_EQ("hdfs:///", config->GetUriWithDefault("key1", "http:///").str());
+  }
+  {
+    optional<Configuration> config = simpleConfig("key1", " hdfs:/// ");
+    EXPECT_EQ("hdfs:///", config->GetUriWithDefault("key1", "http:///").str());
+  }
+  {
+    optional<Configuration> config = simpleConfig("key1", "");
+    EXPECT_EQ("", config->GetUriWithDefault("key1", "http:///").str());
+  }
+  {
+    optional<Configuration> config = simpleConfig("key1", "%%");  // invalid URI
+    EXPECT_EQ("http:///", config->GetUriWithDefault("key1", "http:///").str());
+  }
+  {
+    optional<Configuration> config = simpleConfig("key2", "hdfs:///");
+    EXPECT_EQ("http:///", config->GetUriWithDefault("key1", "http:///").str());
+  }
+}
+
+
+
 int main(int argc, char *argv[]) {
   /*
    *  The following line must be executed to initialize Google Mock

@@ -128,11 +128,22 @@ class FileSystem {
 
   virtual void Connect(const std::string &server,
       const std::string &service,
-      const std::function<void(const Status &, FileSystem *)> &&handler) = 0;
+      const std::function<void(const Status &, FileSystem *)> &handler) = 0;
 
   /* Synchronous call of Connect */
   virtual Status Connect(const std::string &server,
       const std::string &service) = 0;
+
+
+  /**
+   * Connects to the hdfs instance indicated by the defaultFs value of the
+   * Options structure.
+   *
+   * If no defaultFs is defined, returns an error.
+   */
+  virtual void ConnectToDefaultFs(
+      const std::function<void(const Status &, FileSystem *)> &handler) = 0;
+  virtual Status ConnectToDefaultFs() = 0;
 
   /**
    * Open a file on HDFS. The call issues an RPC to the NameNode to

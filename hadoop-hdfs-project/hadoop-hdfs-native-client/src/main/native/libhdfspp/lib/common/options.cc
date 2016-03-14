@@ -29,5 +29,7 @@ const unsigned int Options::kDefaultHostExclusionDuration;
 
 Options::Options() : rpc_timeout(kDefaultRpcTimeout), max_rpc_retries(kDefaultMaxRpcRetries),
                      rpc_retry_delay_ms(kDefaultRpcRetryDelayMs),
-                     host_exclusion_duration(kDefaultHostExclusionDuration) {}
+                     host_exclusion_duration(kDefaultHostExclusionDuration),
+                     defaultFS()
+{}
 }

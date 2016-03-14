@@ -55,6 +55,10 @@ function(add_memcheck_test name binary)
 endfunction(add_memcheck_test)
 
 
+add_executable(uri_test uri_test.cc)
+target_link_libraries(uri_test common gmock_main ${CMAKE_THREAD_LIBS_INIT})
+add_memcheck_test(uri uri_test)
+
 add_executable(remote_block_reader_test remote_block_reader_test.cc)
 target_link_libraries(remote_block_reader_test test_common reader proto common connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(remote_block_reader remote_block_reader_test)

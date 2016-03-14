@@ -19,6 +19,8 @@
 #ifndef COMMON_CONFIGURATION_H_
 #define COMMON_CONFIGURATION_H_
 
+#include "common/uri.h"
+
 #include <string>
 #include <map>
 #include <vector>
@@ -63,6 +65,9 @@ class Configuration {
   bool                  GetBoolWithDefault(const std::string &key,
                                            bool default_value) const;
   optional<bool>        GetBool(const std::string &key) const;
+  URI                   GetUriWithDefault(const std::string &key,
+                                          std::string default_value) const;
+  optional<URI>         GetUri(const std::string &key) const;
 
 protected:
    friend class ConfigurationLoader;
