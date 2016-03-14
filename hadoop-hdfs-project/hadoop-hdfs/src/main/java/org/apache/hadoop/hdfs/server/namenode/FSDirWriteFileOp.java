@@ -848,8 +848,24 @@ class FSDirWriteFileOp {
     assert fsn.hasWriteLock();
     BlockInfo b = addBlock(fsn.dir, src, inodesInPath, newBlock, targets,
         isStriped);
-    NameNode.stateChangeLog.info("BLOCK* allocate " + b + " for " + src);
+    logAllocatedBlock(src, b);
     DatanodeStorageInfo.incrementBlocksScheduled(targets);
+  }
+
+  private static void logAllocatedBlock(String src, BlockInfo b) {
+    if (!NameNode.stateChangeLog.isInfoEnabled()) {
+      return;
+    }
+    StringBuilder sb = new StringBuilder(150);
+    sb.append("BLOCK* allocate ");
+    b.appendStringTo(sb);
+    sb.append(", ");
+    BlockUnderConstructionFeature uc = b.getUnderConstructionFeature();
+    if (uc != null) {
+      uc.appendUCPartsConcise(sb);
+    }
+    sb.append(" for " + src);
+    NameNode.stateChangeLog.info(sb.toString());
   }
 
   private static void setNewINodeStoragePolicy(BlockManager bm, INodeFile

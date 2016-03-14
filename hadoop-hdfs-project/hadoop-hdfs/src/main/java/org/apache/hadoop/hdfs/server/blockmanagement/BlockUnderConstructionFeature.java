@@ -33,11 +33,13 @@ import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCSt
  */
 public class BlockUnderConstructionFeature {
   private BlockUCState blockUCState;
+  private static final ReplicaUnderConstruction[] NO_REPLICAS =
+      new ReplicaUnderConstruction[0];
 
   /**
    * Block replicas as assigned when the block was allocated.
    */
-  private ReplicaUnderConstruction[] replicas;
+  private ReplicaUnderConstruction[] replicas = NO_REPLICAS;
 
   /**
    * Index of the primary data node doing the recovery. Useful for log
@@ -120,7 +122,7 @@ public class BlockUnderConstructionFeature {
   }
 
   public int getNumExpectedLocations() {
-    return replicas == null ? 0 : replicas.length;
+    return replicas.length;
   }
 
   /**
@@ -130,7 +132,7 @@ public class BlockUnderConstructionFeature {
    */
   void updateStorageScheduledSize(BlockInfoStriped storedBlock) {
     assert storedBlock.getUnderConstructionFeature() == this;
-    if (replicas == null) {
+    if (replicas.length == 0) {
       return;
     }
     final int dataBlockNum = storedBlock.getDataBlockNum();
@@ -182,12 +184,10 @@ public class BlockUnderConstructionFeature {
 
   List<ReplicaUnderConstruction> getStaleReplicas(long genStamp) {
     List<ReplicaUnderConstruction> staleReplicas = new ArrayList<>();
-    if (replicas != null) {
-      // Remove replicas with wrong gen stamp. The replica list is unchanged.
-      for (ReplicaUnderConstruction r : replicas) {
-        if (genStamp != r.getGenerationStamp()) {
-          staleReplicas.add(r);
-        }
+    // Remove replicas with wrong gen stamp. The replica list is unchanged.
+    for (ReplicaUnderConstruction r : replicas) {
+      if (genStamp != r.getGenerationStamp()) {
+        staleReplicas.add(r);
       }
     }
     return staleReplicas;
@@ -201,7 +201,7 @@ public class BlockUnderConstructionFeature {
   public void initializeBlockRecovery(BlockInfo blockInfo, long recoveryId) {
     setBlockUCState(BlockUCState.UNDER_RECOVERY);
     blockRecoveryId = recoveryId;
-    if (replicas == null || replicas.length == 0) {
+    if (replicas.length == 0) {
       NameNode.blockStateChangeLog.warn("BLOCK*" +
           " BlockUnderConstructionFeature.initializeBlockRecovery:" +
           " No blocks found, lease removed.");
@@ -252,7 +252,7 @@ public class BlockUnderConstructionFeature {
   /** Add the reported replica if it is not already in the replica list. */
   void addReplicaIfNotPresent(DatanodeStorageInfo storage,
       Block reportedBlock, ReplicaState rState) {
-    if (replicas == null) {
+    if (replicas.length == 0) {
       replicas = new ReplicaUnderConstruction[1];
       replicas[0] = new ReplicaUnderConstruction(reportedBlock, storage,
           rState);
@@ -295,15 +295,24 @@ public class BlockUnderConstructionFeature {
       .append(", truncateBlock=").append(truncateBlock)
       .append(", primaryNodeIndex=").append(primaryNodeIndex)
       .append(", replicas=[");
-    if (replicas != null) {
-      int i = 0;
-      for (ReplicaUnderConstruction r : replicas) {
-        r.appendStringTo(sb);
-        if (++i < replicas.length) {
-          sb.append(", ");
-        }
+    int i = 0;
+    for (ReplicaUnderConstruction r : replicas) {
+      r.appendStringTo(sb);
+      if (++i < replicas.length) {
+        sb.append(", ");
       }
     }
     sb.append("]}");
+  }
+  
+  public void appendUCPartsConcise(StringBuilder sb) {
+    sb.append("replicas=");
+    int i = 0;
+    for (ReplicaUnderConstruction r : replicas) {
+      sb.append(r.getExpectedStorageLocation().getDatanodeDescriptor());
+      if (++i < replicas.length) {
+        sb.append(", ");
+      }
+    }
   }
 }
