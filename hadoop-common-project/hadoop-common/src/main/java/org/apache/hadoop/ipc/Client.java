@@ -1120,12 +1120,11 @@ public class Client {
         if (LOG.isDebugEnabled())
           LOG.debug(getName() + " got value #" + callId);
 
-        Call call = calls.get(callId);
         RpcStatusProto status = header.getStatus();
         if (status == RpcStatusProto.SUCCESS) {
           Writable value = ReflectionUtils.newInstance(valueClass, conf);
           value.readFields(in);                 // read value
-          calls.remove(callId);
+          final Call call = calls.remove(callId);
           call.setRpcResponse(value);
           
           // verify that length was correct
@@ -1157,7 +1156,7 @@ public class Client {
           }
           RemoteException re = new RemoteException(exceptionClassName, errorMsg, erCode);
           if (status == RpcStatusProto.ERROR) {
-            calls.remove(callId);
+            final Call call = calls.remove(callId);
             call.setException(re);
           } else if (status == RpcStatusProto.FATAL) {
             // Close the connection
@@ -1288,85 +1287,6 @@ public class Client {
     clientExcecutorFactory.unrefAndCleanup();
   }
 
-  /**
-   * Same as {@link #call(RPC.RpcKind, Writable, ConnectionId)}
-   *  for RPC_BUILTIN
-   */
-  public Writable call(Writable param, InetSocketAddress address)
-      throws IOException {
-    ConnectionId remoteId = ConnectionId.getConnectionId(address, null, null, 0,
-        conf);
-    return call(RpcKind.RPC_BUILTIN, param, remoteId);
-  }
-
-  /**
-   * Same as {@link #call(RPC.RpcKind, Writable, InetSocketAddress,
-   * Class, UserGroupInformation, int, Configuration)}
-   * except that rpcKind is writable.
-   */
-  public Writable call(Writable param, InetSocketAddress addr,
-      Class<?> protocol, UserGroupInformation ticket,
-      int rpcTimeout, Configuration conf) throws IOException {
-    ConnectionId remoteId = ConnectionId.getConnectionId(addr, protocol,
-        ticket, rpcTimeout, conf);
-    return call(RPC.RpcKind.RPC_BUILTIN, param, remoteId);
-  }
-  
-  /**
-   * Same as {@link #call(Writable, InetSocketAddress,
-   * Class, UserGroupInformation, int, Configuration)}
-   * except that specifying serviceClass.
-   */
-  public Writable call(Writable param, InetSocketAddress addr,
-      Class<?> protocol, UserGroupInformation ticket,
-      int rpcTimeout, int serviceClass, Configuration conf)
-      throws IOException {
-    ConnectionId remoteId = ConnectionId.getConnectionId(addr, protocol,
-        ticket, rpcTimeout, conf);
-    return call(RPC.RpcKind.RPC_BUILTIN, param, remoteId, serviceClass);
-  }
-
-  /**
-   * Make a call, passing <code>param</code>, to the IPC server running at
-   * <code>address</code> which is servicing the <code>protocol</code> protocol,
-   * with the <code>ticket</code> credentials, <code>rpcTimeout</code> as
-   * timeout and <code>conf</code> as conf for this connection, returning the
-   * value. Throws exceptions if there are network problems or if the remote
-   * code threw an exception.
-   */
-  public Writable call(RPC.RpcKind rpcKind, Writable param, InetSocketAddress addr, 
-                       Class<?> protocol, UserGroupInformation ticket,
-                       int rpcTimeout, Configuration conf) throws IOException {
-    ConnectionId remoteId = ConnectionId.getConnectionId(addr, protocol,
-        ticket, rpcTimeout, conf);
-    return call(rpcKind, param, remoteId);
-  }
-  
-  /**
-   * Same as {link {@link #call(RPC.RpcKind, Writable, ConnectionId)}
-   * except the rpcKind is RPC_BUILTIN
-   */
-  public Writable call(Writable param, ConnectionId remoteId)
-      throws IOException {
-     return call(RPC.RpcKind.RPC_BUILTIN, param, remoteId);
-  }
-  
-  /**
-   * Make a call, passing <code>rpcRequest</code>, to the IPC server defined by
-   * <code>remoteId</code>, returning the rpc respond.
-   *
-   * @param rpcKind
-   * @param rpcRequest -  contains serialized method and method parameters
-   * @param remoteId - the target rpc server
-   * @returns the rpc response
-   * Throws exceptions if there are network problems or if the remote code 
-   * threw an exception.
-   */
-  public Writable call(RPC.RpcKind rpcKind, Writable rpcRequest,
-      ConnectionId remoteId) throws IOException {
-    return call(rpcKind, rpcRequest, remoteId, RPC.RPC_SERVICE_CLASS_DEFAULT);
-  }
-
   /** 
    * Make a call, passing <code>rpcRequest</code>, to the IPC server defined by
    * <code>remoteId</code>, returning the rpc respond.
@@ -1390,23 +1310,6 @@ public class Client {
   /**
    * Make a call, passing <code>rpcRequest</code>, to the IPC server defined by
    * <code>remoteId</code>, returning the rpc response.
-   * 
-   * @param rpcKind
-   * @param rpcRequest -  contains serialized method and method parameters
-   * @param remoteId - the target rpc server
-   * @param serviceClass - service class for RPC
-   * @returns the rpc response
-   * Throws exceptions if there are network problems or if the remote code 
-   * threw an exception.
-   */
-  public Writable call(RPC.RpcKind rpcKind, Writable rpcRequest,
-      ConnectionId remoteId, int serviceClass) throws IOException {
-    return call(rpcKind, rpcRequest, remoteId, serviceClass, null);
-  }
-
-  /**
-   * Make a call, passing <code>rpcRequest</code>, to the IPC server defined by
-   * <code>remoteId</code>, returning the rpc response.
    *
    * @param rpcKind
    * @param rpcRequest -  contains serialized method and method parameters
@@ -1418,7 +1321,7 @@ public class Client {
    * Throws exceptions if there are network problems or if the remote code
    * threw an exception.
    */
-  public Writable call(RPC.RpcKind rpcKind, Writable rpcRequest,
+  Writable call(RPC.RpcKind rpcKind, Writable rpcRequest,
       ConnectionId remoteId, int serviceClass,
       AtomicBoolean fallbackToSimpleAuth) throws IOException {
     final Call call = createCall(rpcKind, rpcRequest);
@@ -1620,12 +1523,6 @@ public class Client {
       return saslQop;
     }
     
-    static ConnectionId getConnectionId(InetSocketAddress addr,
-        Class<?> protocol, UserGroupInformation ticket, int rpcTimeout,
-        Configuration conf) throws IOException {
-      return getConnectionId(addr, protocol, ticket, rpcTimeout, null, conf);
-    }
-
     /**
      * Returns a ConnectionId object. 
      * @param addr Remote address for the connection.
