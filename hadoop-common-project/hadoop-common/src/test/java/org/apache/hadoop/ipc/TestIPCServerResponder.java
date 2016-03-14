@@ -39,6 +39,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.ipc.Client.ConnectionId;
+import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.Server.Call;
 import org.apache.hadoop.net.NetUtils;
 import org.junit.Assert;
@@ -64,6 +66,14 @@ public class TestIPCServerResponder {
   static {
     for (int i = 0; i < BYTE_COUNT; i++)
       BYTES[i] = (byte) ('a' + (i % 26));
+  }
+
+  static Writable call(Client client, Writable param,
+      InetSocketAddress address) throws IOException {
+    final ConnectionId remoteId = ConnectionId.getConnectionId(address, null,
+        null, 0, null, conf);
+    return client.call(RpcKind.RPC_BUILTIN, param, remoteId,
+        RPC.RPC_SERVICE_CLASS_DEFAULT, null);
   }
 
   private static class TestServer extends Server {
@@ -113,7 +123,7 @@ public class TestIPCServerResponder {
           byte[] bytes = new byte[byteSize];
           System.arraycopy(BYTES, 0, bytes, 0, byteSize);
           Writable param = new BytesWritable(bytes);
-          client.call(param, address);
+          call(client, param, address);
           Thread.sleep(RANDOM.nextInt(20));
         } catch (Exception e) {
           LOG.fatal("Caught Exception", e);
@@ -209,17 +219,16 @@ public class TestIPCServerResponder {
 
     // calls should return immediately, check the sequence number is
     // increasing
-    assertEquals(0,
-        ((IntWritable)client.call(wait0, address)).get());
-    assertEquals(1,
-        ((IntWritable)client.call(wait0, address)).get());
+    assertEquals(0, ((IntWritable)call(client, wait0, address)).get());
+    assertEquals(1, ((IntWritable)call(client, wait0, address)).get());
 
     // do a call in the background that will have a deferred response
     final ExecutorService exec = Executors.newCachedThreadPool();
     Future<Integer> future1 = exec.submit(new Callable<Integer>() {
       @Override
       public Integer call() throws IOException {
-        return ((IntWritable)client.call(wait1, address)).get();
+        return ((IntWritable)TestIPCServerResponder.call(
+            client, wait1, address)).get();
       }
     });
     // make sure it blocked
@@ -237,14 +246,14 @@ public class TestIPCServerResponder {
 
     // proves the handler isn't tied up, and that the prior sequence number
     // was consumed
-    assertEquals(3,
-        ((IntWritable)client.call(wait0, address)).get());
+    assertEquals(3, ((IntWritable)call(client, wait0, address)).get());
 
     // another call with wait count of 2
     Future<Integer> future2 = exec.submit(new Callable<Integer>() {
       @Override
       public Integer call() throws IOException {
-        return ((IntWritable)client.call(wait2, address)).get();
+        return ((IntWritable)TestIPCServerResponder.call(
+            client, wait2, address)).get();
       }
     });
     // make sure it blocked
@@ -286,8 +295,7 @@ public class TestIPCServerResponder {
     assertFalse(future2.isDone());
 
     // call should return immediately
-    assertEquals(5,
-        ((IntWritable)client.call(wait0, address)).get());
+    assertEquals(5, ((IntWritable)call(client, wait0, address)).get());
 
     // trigger last waiting call
     waitingCalls[1].sendResponse();
