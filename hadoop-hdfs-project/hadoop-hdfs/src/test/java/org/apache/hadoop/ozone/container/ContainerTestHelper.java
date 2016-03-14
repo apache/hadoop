@@ -96,6 +96,7 @@ public class ContainerTestHelper {
     response.setCmdType(ContainerProtos.Type.CreateContainer);
     response.setTraceID(request.getTraceID());
     response.setCreateContainer(createResponse.build());
+    response.setResult(ContainerProtos.Result.SUCCESS);
     return response.build();
   }
 

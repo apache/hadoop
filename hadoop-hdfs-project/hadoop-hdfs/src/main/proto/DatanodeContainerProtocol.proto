@@ -90,6 +90,14 @@ enum Type {
 }
 
 
+enum Result {
+  SUCCESS = 1;
+  UNSUPPORTED_REQUEST = 2;
+  MALFORMED_REQUEST = 3;
+  CONTAINER_INTERNAL_ERROR = 4;
+
+}
+
 message ContainerCommandRequestProto {
   required Type cmdType = 1; // Type of the command
 
@@ -139,6 +147,9 @@ message ContainerCommandResponseProto {
   optional  ReadChunkReponseProto readChunk = 14;
   optional  DeleteChunkResponseProto deleteChunk = 15;
   optional  ListChunkResponseProto listChunk = 16;
+
+  required Result result = 17;
+  optional string message = 18;
 
 }
 

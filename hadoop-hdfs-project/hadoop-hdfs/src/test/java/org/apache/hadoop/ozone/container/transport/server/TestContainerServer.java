@@ -19,20 +19,23 @@
 package org.apache.hadoop.ozone.container.transport.server;
 
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
-    .ContainerCommandRequestProto;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
-    .ContainerCommandResponseProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.container.helpers.Pipeline;
 import org.apache.hadoop.ozone.container.interfaces.ContainerDispatcher;
+import org.apache.hadoop.ozone.container.interfaces.ContainerManager;
+import org.apache.hadoop.ozone.container.ozoneimpl.Dispatcher;
 import org.apache.hadoop.ozone.container.transport.client.XceiverClient;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+
+import static org.mockito.Mockito.mock;
 
 public class TestContainerServer {
 
@@ -76,6 +79,39 @@ public class TestContainerServer {
           ContainerTestHelper.getCreateContainerRequest();
       ContainerCommandResponseProto response = client.sendCommand(request);
       Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+    } finally {
+      if (client != null) {
+        client.close();
+      }
+      if (server != null) {
+        server.stop();
+      }
+    }
+  }
+
+  @Test
+  public void testClientServerWithContainerDispatcher() throws Exception {
+    XceiverServer server = null;
+    XceiverClient client = null;
+
+    try {
+      Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline();
+      OzoneConfiguration conf = new OzoneConfiguration();
+      conf.setInt(OzoneConfigKeys.DFS_OZONE_CONTAINER_IPC_PORT,
+          pipeline.getLeader().getContainerPort());
+
+      server = new XceiverServer(conf, new Dispatcher(
+          mock(ContainerManager.class)));
+      client = new XceiverClient(pipeline, conf);
+
+      server.start();
+      client.connect();
+
+      ContainerCommandRequestProto request =
+          ContainerTestHelper.getCreateContainerRequest();
+      ContainerCommandResponseProto response = client.sendCommand(request);
+      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+      Assert.assertEquals(response.getResult(), ContainerProtos.Result.SUCCESS);
     } finally {
       if (client != null) {
         client.close();
