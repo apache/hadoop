@@ -158,6 +158,7 @@ import org.apache.hadoop.ipc.RetryCache;
 import org.apache.hadoop.ipc.RetryCache.CacheEntry;
 import org.apache.hadoop.ipc.RetryCache.CacheEntryWithPayload;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.ipc.WritableRpcEngine;
 import org.apache.hadoop.ipc.RefreshRegistry;
 import org.apache.hadoop.ipc.RefreshResponse;
@@ -476,6 +477,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
         FSLimitException.PathComponentTooLongException.class,
         FSLimitException.MaxDirectoryItemsExceededException.class,
         UnresolvedPathException.class);
+
+    clientRpcServer.addSuppressedLoggingExceptions(StandbyException.class);
+
     clientRpcServer.setTracer(nn.tracer);
     if (serviceRpcServer != null) {
       serviceRpcServer.setTracer(nn.tracer);
