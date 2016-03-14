@@ -221,7 +221,7 @@ public class WritableRpcEngine implements RpcEngine {
                    int rpcTimeout, AtomicBoolean fallbackToSimpleAuth)
         throws IOException {
       this.remoteId = Client.ConnectionId.getConnectionId(address, protocol,
-          ticket, rpcTimeout, conf);
+          ticket, rpcTimeout, null, conf);
       this.client = CLIENTS.getClient(conf, factory);
       this.fallbackToSimpleAuth = fallbackToSimpleAuth;
     }
