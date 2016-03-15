@@ -38,7 +38,8 @@ public final class SystemClock implements Clock {
     return INSTANCE;
   }
 
-  private SystemClock() {
+  @Deprecated
+  public SystemClock() {
     // do nothing
   }
 
