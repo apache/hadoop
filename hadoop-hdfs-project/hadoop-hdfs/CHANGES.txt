@@ -141,6 +141,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9812. Streamer threads leak if failure happens when closing
     DFSOutputStream. (Lin Yiqun via aajisaka)
 
+    HDFS-9904. testCheckpointCancellationDuringUpload occasionally fails.
+    (Lin Yiqun via kihwal)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
