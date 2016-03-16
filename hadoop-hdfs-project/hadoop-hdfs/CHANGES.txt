@@ -44,6 +44,8 @@ Release 2.7.3 - UNRELEASED
     HDFS-9048. DistCp documentation is out-of-dated
     (Daisuke Kobayashi via iwasakims)
 
+    HDFS-9860. Backport HDFS-9638 to branch-2.7. (Wei-Chiu Chuang via aajisaka)
+
   OPTIMIZATIONS
 
     HDFS-8845. DiskChecker should not traverse the entire tree (Chang Li via

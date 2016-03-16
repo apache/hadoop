@@ -82,7 +82,7 @@ public enum DistCpOptionSwitch {
    */
   SSL_CONF(DistCpConstants.CONF_LABEL_SSL_CONF,
       new Option("mapredSslConf", true, "Configuration for ssl config file" +
-          ", to use with hftps://")),
+          ", to use with hftps://. Must be in the classpath.")),
 
   /**
    * Max number of maps to use during copy. DistCp will split work
