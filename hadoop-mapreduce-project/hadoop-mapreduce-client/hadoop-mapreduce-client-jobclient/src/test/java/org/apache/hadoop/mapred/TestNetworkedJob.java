@@ -155,9 +155,9 @@ public class TestNetworkedJob {
       // test getters
       assertTrue(runningJob.getConfiguration().toString()
           .endsWith("0001/job.xml"));
-      assertEquals(runningJob.getID(), jobId);
-      assertEquals(runningJob.getJobID(), jobId.toString());
-      assertEquals(runningJob.getJobName(), "N/A");
+      assertEquals(jobId, runningJob.getID());
+      assertEquals(jobId.toString(), runningJob.getJobID());
+      assertEquals("N/A", runningJob.getJobName());
       assertTrue(runningJob.getJobFile().endsWith(
           ".staging/" + runningJob.getJobID() + "/job.xml"));
       assertTrue(runningJob.getTrackingURL().length() > 0);
@@ -169,40 +169,40 @@ public class TestNetworkedJob {
       TaskCompletionEvent[] tce = runningJob.getTaskCompletionEvents(0);
       assertEquals(tce.length, 0);
 
-      assertEquals(runningJob.getHistoryUrl(),"");
+      assertEquals("", runningJob.getHistoryUrl());
       assertFalse(runningJob.isRetired());
-      assertEquals( runningJob.getFailureInfo(),"");
-      assertEquals(runningJob.getJobStatus().getJobName(), "N/A");
-      assertEquals(client.getMapTaskReports(jobId).length, 0);
+      assertEquals("", runningJob.getFailureInfo());
+      assertEquals("N/A", runningJob.getJobStatus().getJobName());
+      assertEquals(0, client.getMapTaskReports(jobId).length);
       
       try {
         client.getSetupTaskReports(jobId);
       } catch (YarnRuntimeException e) {
-        assertEquals(e.getMessage(), "Unrecognized task type: JOB_SETUP");
+        assertEquals("Unrecognized task type: JOB_SETUP", e.getMessage());
       }
       try {
         client.getCleanupTaskReports(jobId);
       } catch (YarnRuntimeException e) {
-        assertEquals(e.getMessage(), "Unrecognized task type: JOB_CLEANUP");
+        assertEquals("Unrecognized task type: JOB_CLEANUP", e.getMessage());
       }
-      assertEquals(client.getReduceTaskReports(jobId).length, 0);
+      assertEquals(0, client.getReduceTaskReports(jobId).length);
       // test ClusterStatus
       ClusterStatus status = client.getClusterStatus(true);
-      assertEquals(status.getActiveTrackerNames().size(), 2);
+      assertEquals(2, status.getActiveTrackerNames().size());
       // it method does not implemented and always return empty array or null;
-      assertEquals(status.getBlacklistedTrackers(), 0);
-      assertEquals(status.getBlacklistedTrackerNames().size(), 0);
-      assertEquals(status.getBlackListedTrackersInfo().size(), 0);
-      assertEquals(status.getJobTrackerStatus(), JobTrackerStatus.RUNNING);
-      assertEquals(status.getMapTasks(), 1);
-      assertEquals(status.getMaxMapTasks(), 20);
-      assertEquals(status.getMaxReduceTasks(), 4);
-      assertEquals(status.getNumExcludedNodes(), 0);
-      assertEquals(status.getReduceTasks(), 1);
-      assertEquals(status.getTaskTrackers(), 2);
-      assertEquals(status.getTTExpiryInterval(), 0);
-      assertEquals(status.getJobTrackerStatus(), JobTrackerStatus.RUNNING);
-      assertEquals(status.getGraylistedTrackers(), 0);
+      assertEquals(0, status.getBlacklistedTrackers());
+      assertEquals(0, status.getBlacklistedTrackerNames().size());
+      assertEquals(0, status.getBlackListedTrackersInfo().size());
+      assertEquals(JobTrackerStatus.RUNNING, status.getJobTrackerStatus());
+      assertEquals(1, status.getMapTasks());
+      assertEquals(20, status.getMaxMapTasks());
+      assertEquals(4, status.getMaxReduceTasks());
+      assertEquals(0, status.getNumExcludedNodes());
+      assertEquals(1, status.getReduceTasks());
+      assertEquals(2, status.getTaskTrackers());
+      assertEquals(0, status.getTTExpiryInterval());
+      assertEquals(JobTrackerStatus.RUNNING, status.getJobTrackerStatus());
+      assertEquals(0, status.getGraylistedTrackers());
 
       // test read and write
       ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
@@ -219,34 +219,34 @@ public class TestNetworkedJob {
 
       // test taskStatusfilter
       JobClient.setTaskOutputFilter(job, TaskStatusFilter.ALL);
-      assertEquals(JobClient.getTaskOutputFilter(job), TaskStatusFilter.ALL);
+      assertEquals(TaskStatusFilter.ALL, JobClient.getTaskOutputFilter(job));
 
       // runningJob.setJobPriority(JobPriority.HIGH.name());
 
       // test default map
-      assertEquals(client.getDefaultMaps(), 20);
-      assertEquals(client.getDefaultReduces(), 4);
-      assertEquals(client.getSystemDir().getName(), "jobSubmitDir");
+      assertEquals(20, client.getDefaultMaps());
+      assertEquals(4, client.getDefaultReduces());
+      assertEquals("jobSubmitDir", client.getSystemDir().getName());
       // test queue information
       JobQueueInfo[] rootQueueInfo = client.getRootQueues();
-      assertEquals(rootQueueInfo.length, 1);
-      assertEquals(rootQueueInfo[0].getQueueName(), "default");
+      assertEquals(1, rootQueueInfo.length);
+      assertEquals("default", rootQueueInfo[0].getQueueName());
       JobQueueInfo[] qinfo = client.getQueues();
-      assertEquals(qinfo.length, 1);
-      assertEquals(qinfo[0].getQueueName(), "default");
-      assertEquals(client.getChildQueues("default").length, 0);
-      assertEquals(client.getJobsFromQueue("default").length, 1);
+      assertEquals(1, qinfo.length);
+      assertEquals("default", qinfo[0].getQueueName());
+      assertEquals(0, client.getChildQueues("default").length);
+      assertEquals(1, client.getJobsFromQueue("default").length);
       assertTrue(client.getJobsFromQueue("default")[0].getJobFile().endsWith(
           "/job.xml"));
 
       JobQueueInfo qi = client.getQueueInfo("default");
-      assertEquals(qi.getQueueName(), "default");
-      assertEquals(qi.getQueueState(), "running");
+      assertEquals("default", qi.getQueueName());
+      assertEquals("running", qi.getQueueState());
 
       QueueAclsInfo[] aai = client.getQueueAclsForCurrentUser();
-      assertEquals(aai.length, 2);
-      assertEquals(aai[0].getQueueName(), "root");
-      assertEquals(aai[1].getQueueName(), "default");
+      assertEquals(2, aai.length);
+      assertEquals("root", aai[0].getQueueName());
+      assertEquals("default", aai[1].getQueueName());
       
       // test JobClient
       // The following asserts read JobStatus twice and ensure the returned
@@ -282,12 +282,11 @@ public class TestNetworkedJob {
     BlackListInfo info2 = new BlackListInfo();
     info2.readFields(new DataInputStream(new ByteArrayInputStream(byteOut
         .toByteArray())));
-    assertEquals(info, info);
-    assertEquals(info.toString(), info.toString());
-    assertEquals(info.getTrackerName(), "trackerName");
-    assertEquals(info.getReasonForBlackListing(), "reasonForBlackListing");
-    assertEquals(info.getBlackListReport(), "blackListInfo");
-
+    assertEquals(info, info2);
+    assertEquals(info.toString(), info2.toString());
+    assertEquals("trackerName", info2.getTrackerName());
+    assertEquals("reasonForBlackListing", info2.getReasonForBlackListing());
+    assertEquals("blackListInfo", info2.getBlackListReport());
   }
 /**
  *  test run from command line JobQueueClient
