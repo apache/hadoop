@@ -257,6 +257,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String RESERVATION_ENFORCEMENT_WINDOW =
       "reservation-enforcement-window";
 
+  @Private
+  public static final String LAZY_PREEMPTION_ENALBED = PREFIX + "lazy-preemption-enabled";
+
+  @Private
+  public static final boolean DEFAULT_LAZY_PREEMPTION_ENABLED = false;
+
   public CapacitySchedulerConfiguration() {
     this(new Configuration());
   }
@@ -1007,7 +1013,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @VisibleForTesting
   public void setOrderingPolicyParameter(String queue,
       String parameterKey, String parameterValue) {
-    set(getQueuePrefix(queue) + ORDERING_POLICY + "."
-        + parameterKey, parameterValue);
+    set(getQueuePrefix(queue) + ORDERING_POLICY + "." + parameterKey,
+        parameterValue);
+  }
+
+  public boolean getLazyPreemptionEnabled() {
+    return getBoolean(LAZY_PREEMPTION_ENALBED, DEFAULT_LAZY_PREEMPTION_ENABLED);
   }
 }

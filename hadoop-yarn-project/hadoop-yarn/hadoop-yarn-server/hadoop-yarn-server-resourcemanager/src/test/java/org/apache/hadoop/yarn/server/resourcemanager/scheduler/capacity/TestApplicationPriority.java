@@ -205,7 +205,7 @@ public class TestApplicationPriority {
       if (++counter > 2) {
         break;
       }
-      cs.killPreemptedContainer(schedulerAppAttempt.getRMContainer(c.getId()));
+      cs.markContainerForKillable(schedulerAppAttempt.getRMContainer(c.getId()));
     }
 
     // check node report, 12 GB used and 4 GB available
@@ -512,7 +512,7 @@ public class TestApplicationPriority {
       if (++counter > 2) {
         break;
       }
-      cs.killPreemptedContainer(schedulerAppAttemptApp1.getRMContainer(c.getId()));
+      cs.markContainerForKillable(schedulerAppAttemptApp1.getRMContainer(c.getId()));
       iterator.remove();
     }
 
@@ -542,7 +542,7 @@ public class TestApplicationPriority {
       if (++counter > 1) {
         break;
       }
-      cs.killPreemptedContainer(schedulerAppAttemptApp1.getRMContainer(c.getId()));
+      cs.markContainerForKillable(schedulerAppAttemptApp1.getRMContainer(c.getId()));
       iterator.remove();
     }
 

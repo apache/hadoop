@@ -18,18 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -57,11 +46,24 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerStat
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.util.resource.Resources;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 @Private
 @Evolving
@@ -386,6 +388,11 @@ public class ParentQueue extends AbstractCSQueue {
     // if our queue cannot access this node, just return
     if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY
         && !accessibleToPartition(node.getPartition())) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Skip this queue=" + getQueuePath()
+            + ", because it is not able to access partition=" + node
+            .getPartition());
+      }
       return CSAssignment.NULL_ASSIGNMENT;
     }
     
@@ -431,7 +438,7 @@ public class ParentQueue extends AbstractCSQueue {
               resourceCalculator, clusterResource, 
               assignedToChild.getResource(), Resources.none())) {
         // Track resource utilization for the parent-queue
-        super.allocateResource(clusterResource, assignedToChild.getResource(),
+        allocateResource(clusterResource, assignedToChild.getResource(),
             node.getPartition(), assignedToChild.isIncreasedAllocation());
         
         // Track resource utilization in this pass of the scheduler
@@ -494,29 +501,38 @@ public class ParentQueue extends AbstractCSQueue {
   }
 
   private boolean canAssign(Resource clusterResource, FiCaSchedulerNode node) {
-    return (node.getReservedContainer() == null) && 
-        Resources.greaterThanOrEqual(resourceCalculator, clusterResource, 
-            node.getUnallocatedResource(), minimumAllocation);
+    // Two conditions need to meet when trying to allocate:
+    // 1) Node doesn't have reserved container
+    // 2) Node's available-resource + killable-resource should > 0
+    return node.getReservedContainer() == null && Resources.greaterThanOrEqual(
+        resourceCalculator, clusterResource, Resources
+            .add(node.getUnallocatedResource(), node.getTotalKillableResources()),
+        minimumAllocation);
   }
-  
+
   private ResourceLimits getResourceLimitsOfChild(CSQueue child,
-      Resource clusterResource, ResourceLimits parentLimits) {
+      Resource clusterResource, ResourceLimits parentLimits,
+      String nodePartition) {
     // Set resource-limit of a given child, child.limit =
     // min(my.limit - my.used + child.used, child.max)
 
     // Parent available resource = parent-limit - parent-used-resource
-    Resource parentMaxAvailableResource =
-        Resources.subtract(parentLimits.getLimit(), getUsedResources());
+    Resource parentMaxAvailableResource = Resources.subtract(
+        parentLimits.getLimit(), queueUsage.getUsed(nodePartition));
+    // Deduct killable from used
+    Resources.addTo(parentMaxAvailableResource,
+        getTotalKillableResource(nodePartition));
 
     // Child's limit = parent-available-resource + child-used
-    Resource childLimit =
-        Resources.add(parentMaxAvailableResource, child.getUsedResources());
+    Resource childLimit = Resources.add(parentMaxAvailableResource,
+        child.getQueueResourceUsage().getUsed(nodePartition));
 
     // Get child's max resource
-    Resource childConfiguredMaxResource =
-        Resources.multiplyAndNormalizeDown(resourceCalculator, labelManager
-            .getResourceByLabel(RMNodeLabelsManager.NO_LABEL, clusterResource),
-            child.getAbsoluteMaximumCapacity(), minimumAllocation);
+    Resource childConfiguredMaxResource = Resources.multiplyAndNormalizeDown(
+        resourceCalculator,
+        labelManager.getResourceByLabel(nodePartition, clusterResource),
+        child.getQueueCapacities().getAbsoluteMaximumCapacity(nodePartition),
+        minimumAllocation);
 
     // Child's limit should be capped by child configured max resource
     childLimit =
@@ -568,7 +584,7 @@ public class ParentQueue extends AbstractCSQueue {
 
       // Get ResourceLimits of child queue before assign containers
       ResourceLimits childLimits =
-          getResourceLimitsOfChild(childQueue, cluster, limits);
+          getResourceLimitsOfChild(childQueue, cluster, limits, node.getPartition());
       
       assignment = childQueue.assignContainers(cluster, node, 
           childLimits, schedulingMode);
@@ -714,8 +730,8 @@ public class ParentQueue extends AbstractCSQueue {
     // Update all children
     for (CSQueue childQueue : childQueues) {
       // Get ResourceLimits of child queue before assign containers
-      ResourceLimits childLimits =
-          getResourceLimitsOfChild(childQueue, clusterResource, resourceLimits);     
+      ResourceLimits childLimits = getResourceLimitsOfChild(childQueue,
+          clusterResource, resourceLimits, RMNodeLabelsManager.NO_LABEL);
       childQueue.updateClusterResource(clusterResource, childLimits);
     }
     
@@ -738,8 +754,8 @@ public class ParentQueue extends AbstractCSQueue {
     synchronized (this) {
       FiCaSchedulerNode node =
           scheduler.getNode(rmContainer.getContainer().getNodeId());
-      super.allocateResource(clusterResource, rmContainer.getContainer()
-          .getResource(), node.getPartition(), false);
+      allocateResource(clusterResource,
+          rmContainer.getContainer().getResource(), node.getPartition(), false);
     }
     if (parent != null) {
       parent.recoverContainer(clusterResource, attempt, rmContainer);
@@ -766,7 +782,7 @@ public class ParentQueue extends AbstractCSQueue {
     if (application != null) {
       FiCaSchedulerNode node =
           scheduler.getNode(rmContainer.getContainer().getNodeId());
-      super.allocateResource(clusterResource, rmContainer.getContainer()
+      allocateResource(clusterResource, rmContainer.getContainer()
           .getResource(), node.getPartition(), false);
       LOG.info("movedContainer" + " queueMoveIn=" + getQueueName()
           + " usedCapacity=" + getUsedCapacity() + " absoluteUsedCapacity="
@@ -801,5 +817,80 @@ public class ParentQueue extends AbstractCSQueue {
   
   public synchronized int getNumApplications() {
     return numApplications;
+  }
+
+  synchronized void allocateResource(Resource clusterResource,
+      Resource resource, String nodePartition, boolean changeContainerResource) {
+    super.allocateResource(clusterResource, resource, nodePartition,
+        changeContainerResource);
+
+    /**
+     * check if we need to kill (killable) containers if maximum resource violated.
+     * Doing this because we will deduct killable resource when going from root.
+     * For example:
+     * <pre>
+     *      Root
+     *      /   \
+     *     a     b
+     *   /  \
+     *  a1  a2
+     * </pre>
+     *
+     * a: max=10G, used=10G, killable=2G
+     * a1: used=8G, killable=2G
+     * a2: used=2G, pending=2G, killable=0G
+     *
+     * When we get queue-a to allocate resource, even if queue-a
+     * reaches its max resource, we deduct its used by killable, so we can allocate
+     * at most 2G resources. ResourceLimits passed down to a2 has headroom set to 2G.
+     *
+     * If scheduler finds a 2G available resource in existing cluster, and assigns it
+     * to a2, now a2's used= 2G + 2G = 4G, and a's used = 8G + 4G = 12G > 10G
+     *
+     * When this happens, we have to preempt killable container (on same or different
+     * nodes) of parent queue to avoid violating parent's max resource.
+     */
+    if (getQueueCapacities().getAbsoluteMaximumCapacity(nodePartition)
+        < getQueueCapacities().getAbsoluteUsedCapacity(nodePartition)) {
+      killContainersToEnforceMaxQueueCapacity(nodePartition, clusterResource);
+    }
+  }
+
+  private void killContainersToEnforceMaxQueueCapacity(String partition,
+      Resource clusterResource) {
+    Iterator<RMContainer> killableContainerIter = getKillableContainers(
+        partition);
+    if (!killableContainerIter.hasNext()) {
+      return;
+    }
+
+    Resource partitionResource = labelManager.getResourceByLabel(partition,
+        null);
+    Resource maxResource = Resources.multiply(partitionResource,
+        getQueueCapacities().getAbsoluteMaximumCapacity(partition));
+
+    while (Resources.greaterThan(resourceCalculator, partitionResource,
+        queueUsage.getUsed(partition), maxResource)) {
+      RMContainer toKillContainer = killableContainerIter.next();
+      FiCaSchedulerApp attempt = csContext.getApplicationAttempt(
+          toKillContainer.getContainerId().getApplicationAttemptId());
+      FiCaSchedulerNode node = csContext.getNode(
+          toKillContainer.getAllocatedNode());
+      if (null != attempt && null != node) {
+        LeafQueue lq = attempt.getCSLeafQueue();
+        lq.completedContainer(clusterResource, attempt, node, toKillContainer,
+            SchedulerUtils.createPreemptedContainerStatus(
+                toKillContainer.getContainerId(),
+                SchedulerUtils.PREEMPTED_CONTAINER), RMContainerEventType.KILL,
+            null, false);
+        LOG.info("Killed container=" + toKillContainer.getContainerId()
+            + " from queue=" + lq.getQueueName() + " to make queue=" + this
+            .getQueueName() + "'s max-capacity enforced");
+      }
+
+      if (!killableContainerIter.hasNext()) {
+        break;
+      }
+    }
   }
 }
