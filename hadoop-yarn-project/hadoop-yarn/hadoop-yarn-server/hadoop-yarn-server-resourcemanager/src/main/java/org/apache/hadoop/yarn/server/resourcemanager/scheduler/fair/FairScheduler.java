@@ -235,12 +235,13 @@ public class FairScheduler extends
 
     if (minMem < 0 || minMem > maxMem) {
       throw new YarnRuntimeException("Invalid resource scheduler memory"
-        + " allocation configuration"
-        + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB
+        + " allocation configuration: "
+        + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB
         + "=" + minMem
         + ", " + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
-        + "=" + maxMem + ", min should equal greater than 0"
-        + ", max should be no smaller than min.");
+        + "=" + maxMem + ".  Both values must be greater than or equal to 0"
+        + "and the maximum allocation value must be greater than or equal to"
+        + "the minimum allocation value.");
     }
 
     // validate scheduler vcores allocation setting
@@ -253,12 +254,13 @@ public class FairScheduler extends
 
     if (minVcores < 0 || minVcores > maxVcores) {
       throw new YarnRuntimeException("Invalid resource scheduler vcores"
-        + " allocation configuration"
-        + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES
+        + " allocation configuration: "
+        + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES
         + "=" + minVcores
         + ", " + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES
-        + "=" + maxVcores + ", min should equal greater than 0"
-        + ", max should be no smaller than min.");
+        + "=" + maxVcores + ".  Both values must be greater than or equal to 0"
+          + "and the maximum allocation value must be greater than or equal to"
+          + "the minimum allocation value.");
     }
   }
 
