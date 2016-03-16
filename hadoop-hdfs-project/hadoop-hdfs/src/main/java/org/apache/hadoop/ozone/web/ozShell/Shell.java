@@ -31,6 +31,10 @@ import org.apache.hadoop.ozone.web.ozShell.volume.DeleteVolumeHandler;
 import org.apache.hadoop.ozone.web.ozShell.volume.InfoVolumeHandler;
 import org.apache.hadoop.ozone.web.ozShell.volume.ListVolumeHandler;
 import org.apache.hadoop.ozone.web.ozShell.volume.UpdateVolumeHandler;
+import org.apache.hadoop.ozone.web.ozShell.bucket.CreateBucketHandler;
+import org.apache.hadoop.ozone.web.ozShell.bucket.DeleteBucketHandler;
+import org.apache.hadoop.ozone.web.ozShell.bucket.InfoBucketHandler;
+import org.apache.hadoop.ozone.web.ozShell.bucket.ListBucketHandler;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -59,6 +63,15 @@ public class Shell extends Configured implements Tool {
   public static final String DELETE_VOLUME = "deleteVolume";
   public static final String LIST_VOLUME = "listVolume";
   public static final String INFO_VOLUME = "infoVolume";
+
+  // bucket related command line arguments
+  public static final String CREATE_BUCKET = "createBucket";
+  public static final String UPDATE_BUCKET = "updateBucket";
+  public static final String DELETE_BUCKET = "deleteBucket";
+  public static final String LIST_BUCKET = "listBucket";
+  public static final String INFO_BUCKET = "infoBucket";
+  public static final String ADD_ACLS = "addAcl";
+  public static final String REMOVE_ACLS = "removeAcl";
 
 
   /**
@@ -91,6 +104,7 @@ public class Shell extends Configured implements Tool {
   private Options getOpts() {
     Options opts = new Options();
     addVolumeCommands(opts);
+    addBucketCommands(opts);
     return opts;
   }
 
@@ -162,6 +176,34 @@ public class Shell extends Configured implements Tool {
   }
 
   /**
+   * All bucket related commands for ozone.
+   *
+   * @param opts - Options
+   */
+  private void addBucketCommands(Options opts) {
+    Option createBucket = new Option(CREATE_BUCKET, true,
+        "creates a bucket in a given volume.\n" +
+            "\t For example : hdfs oz " +
+            "-createBucket " +
+            "<volumeName/bucketName>");
+    opts.addOption(createBucket);
+
+    Option infoBucket =
+        new Option(INFO_BUCKET, true, "returns information about a bucket.");
+    opts.addOption(infoBucket);
+
+    Option deleteBucket =
+        new Option(DELETE_BUCKET, true, "deletes an empty bucket.");
+    opts.addOption(deleteBucket);
+
+    Option listBucket =
+        new Option(LIST_BUCKET, true, "Lists the buckets in a volume.");
+    opts.addOption(listBucket);
+
+  }
+
+
+  /**
    * Main for the ozShell Command handling.
    *
    * @param argv - System Args Strings[]
@@ -194,6 +236,7 @@ public class Shell extends Configured implements Tool {
   private int dispatch(CommandLine cmd, Options opts)
       throws IOException, OzoneException, URISyntaxException {
     Handler handler = null;
+    final int eightyColumn = 80;
 
     try {
 
@@ -218,16 +261,33 @@ public class Shell extends Configured implements Tool {
         handler = new InfoVolumeHandler();
       }
 
+      // bucket functions
+      if (cmd.hasOption(Shell.CREATE_BUCKET)) {
+        handler = new CreateBucketHandler();
+      }
+
+      if (cmd.hasOption(Shell.DELETE_BUCKET)) {
+        handler = new DeleteBucketHandler();
+      }
+
+      if (cmd.hasOption(Shell.INFO_BUCKET)) {
+        handler = new InfoBucketHandler();
+      }
+
+      if (cmd.hasOption(Shell.LIST_BUCKET)) {
+        handler = new ListBucketHandler();
+      }
+
+
       if (handler != null) {
         handler.execute(cmd);
         return 0;
       } else {
         HelpFormatter helpFormatter = new HelpFormatter();
-        helpFormatter
-            .printHelp(80, "hdfs oz -command uri [args]", "Ozone Commands",
-                       opts, "Please correct your command and try again.");
+        helpFormatter.printHelp(eightyColumn, "hdfs oz -command uri [args]",
+                "Ozone Commands",
+                opts, "Please correct your command and try again.");
         return 1;
-
       }
     } catch (IOException | OzoneException | URISyntaxException ex) {
       System.err.printf("Command Failed : %s%n", ex.getMessage());
