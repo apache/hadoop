@@ -120,9 +120,9 @@ public class AssignmentInformation {
   }
 
   private ContainerId getFirstContainerIdFromOperation(Operation op) {
-    if (null != operationDetails.get(Operation.ALLOCATION)) {
+    if (null != operationDetails.get(op)) {
       List<AssignmentDetails> assignDetails =
-          operationDetails.get(Operation.ALLOCATION);
+          operationDetails.get(op);
       if (!assignDetails.isEmpty()) {
         return assignDetails.get(0).containerId;
       }
@@ -131,7 +131,7 @@ public class AssignmentInformation {
   }
 
   public ContainerId getFirstAllocatedOrReservedContainerId() {
-    ContainerId containerId = null;
+    ContainerId containerId;
     containerId = getFirstContainerIdFromOperation(Operation.ALLOCATION);
     if (null != containerId) {
       return containerId;

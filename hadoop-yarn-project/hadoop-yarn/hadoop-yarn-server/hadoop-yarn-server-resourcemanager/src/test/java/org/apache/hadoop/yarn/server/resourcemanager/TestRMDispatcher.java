@@ -59,7 +59,7 @@ public class TestRMDispatcher {
       rmDispatcher.getEventHandler().handle(event1);
       ContainerPreemptEvent event2 =
           new ContainerPreemptEvent(appAttemptId, container,
-            SchedulerEventType.KILL_PREEMPTED_CONTAINER);
+            SchedulerEventType.MARK_CONTAINER_FOR_KILLABLE);
       rmDispatcher.getEventHandler().handle(event2);
       ContainerPreemptEvent event3 =
           new ContainerPreemptEvent(appAttemptId, container,
@@ -70,7 +70,7 @@ public class TestRMDispatcher {
       verify(sched, times(3)).handle(any(SchedulerEvent.class));
       verify(sched).killReservedContainer(container);
       verify(sched).markContainerForPreemption(appAttemptId, container);
-      verify(sched).killPreemptedContainer(container);
+      verify(sched).markContainerForKillable(container);
     } catch (InterruptedException e) {
       Assert.fail();
     } finally {

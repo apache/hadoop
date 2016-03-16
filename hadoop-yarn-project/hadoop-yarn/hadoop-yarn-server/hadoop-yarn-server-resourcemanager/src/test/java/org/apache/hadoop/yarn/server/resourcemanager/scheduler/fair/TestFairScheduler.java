@@ -4861,7 +4861,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Trigger container rescheduled event
     scheduler.handle(new ContainerPreemptEvent(appAttemptId, rmContainer,
-      SchedulerEventType.KILL_PREEMPTED_CONTAINER));
+      SchedulerEventType.MARK_CONTAINER_FOR_KILLABLE));
 
     List<ResourceRequest> requests = rmContainer.getResourceRequests();
     // Once recovered, resource request will be present again in app

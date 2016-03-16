@@ -110,6 +110,8 @@ public abstract class AbstractContainerAllocator {
           assignment.setFulfilledReservation(true);
         }
       }
+
+      assignment.setContainersToKill(result.getToKillContainers());
     } else {
       if (result.getAllocationState() == AllocationState.QUEUE_SKIPPED) {
         assignment.setSkippedType(

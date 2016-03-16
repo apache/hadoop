@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p/>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p/>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,37 +16,30 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption;
 
-public enum SchedulerEventType {
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 
-  // Source: Node
-  NODE_ADDED,
-  NODE_REMOVED,
-  NODE_UPDATE,
-  NODE_RESOURCE_UPDATE,
-  NODE_LABELS_UPDATE,
+public class KillableContainer {
+  RMContainer container;
+  String partition;
+  String leafQueueName;
 
-  // Source: RMApp
-  APP_ADDED,
-  APP_REMOVED,
+  public KillableContainer(RMContainer container, String partition, String leafQueueName) {
+    this.container = container;
+    this.partition = partition;
+    this.leafQueueName = leafQueueName;
+  }
 
-  // Source: RMAppAttempt
-  APP_ATTEMPT_ADDED,
-  APP_ATTEMPT_REMOVED,
+  public RMContainer getRMContainer() {
+    return this.container;
+  }
 
-  // Source: ContainerAllocationExpirer
-  CONTAINER_EXPIRED,
+  public String getNodePartition() {
+    return this.partition;
+  }
 
-  /* Source: SchedulingEditPolicy */
-  KILL_RESERVED_CONTAINER,
-
-  // Mark a container for preemption
-  MARK_CONTAINER_FOR_PREEMPTION,
-
-  // Mark a for-preemption container killable
-  MARK_CONTAINER_FOR_KILLABLE,
-
-  // Cancel a killable container
-  MARK_CONTAINER_FOR_NONKILLABLE
+  public String getLeafQueueName() {
+    return this.leafQueueName;
+  }
 }
