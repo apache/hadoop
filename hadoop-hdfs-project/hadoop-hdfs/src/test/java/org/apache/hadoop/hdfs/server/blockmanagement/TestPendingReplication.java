@@ -183,7 +183,7 @@ public class TestPendingReplication {
 
       PendingReplicationBlocks pendingReplications =
           blkManager.pendingReplications;
-      UnderReplicatedBlocks neededReplications = blkManager.neededReplications;
+      LowRedundancyBlocks neededReconstruction = blkManager.neededReconstruction;
       BlocksMap blocksMap = blkManager.blocksMap;
 
       //
@@ -227,9 +227,9 @@ public class TestPendingReplication {
       }
 
       //
-      // Verify that block moves to neededReplications
+      // Verify that block moves to neededReconstruction
       //
-      while (neededReplications.size() == 0) {
+      while (neededReconstruction.size() == 0) {
         try {
           Thread.sleep(100);
         } catch (Exception e) {
@@ -238,14 +238,14 @@ public class TestPendingReplication {
 
       // Verify that the generation stamp we will try to replicate
       // is now 1
-      for (Block b: neededReplications) {
+      for (Block b: neededReconstruction) {
         assertEquals("Generation stamp is 1 ", 1,
             b.getGenerationStamp());
       }
 
-      // Verify size of neededReplications is exactly 1.
-      assertEquals("size of neededReplications is 1 ", 1,
-          neededReplications.size());
+      // Verify size of neededReconstruction is exactly 1.
+      assertEquals("size of neededReconstruction is 1 ", 1,
+          neededReconstruction.size());
     } finally {
       if (cluster != null) {
         cluster.shutdown();

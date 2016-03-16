@@ -836,12 +836,12 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
         .format(true).build();
     try {
       cluster.waitActive();
-      final UnderReplicatedBlocks neededReplications = cluster.getNameNode()
-          .getNamesystem().getBlockManager().neededReplications;
+      final LowRedundancyBlocks neededReconstruction = cluster.getNameNode()
+          .getNamesystem().getBlockManager().neededReconstruction;
       for (int i = 0; i < 100; i++) {
         // Adding the blocks directly to normal priority
 
-        neededReplications.add(genBlockInfo(ThreadLocalRandom.current().
+        neededReconstruction.add(genBlockInfo(ThreadLocalRandom.current().
             nextLong()), 2, 0, 0, 3);
       }
       // Lets wait for the replication interval, to start process normal
@@ -849,7 +849,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
       Thread.sleep(DFS_NAMENODE_REPLICATION_INTERVAL);
       
       // Adding the block directly to high priority list
-      neededReplications.add(genBlockInfo(ThreadLocalRandom.current().
+      neededReconstruction.add(genBlockInfo(ThreadLocalRandom.current().
           nextLong()), 1, 0, 0, 3);
 
       // Lets wait for the replication interval
@@ -858,68 +858,68 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
       // Check replication completed successfully. Need not wait till it process
       // all the 100 normal blocks.
       assertFalse("Not able to clear the element from high priority list",
-          neededReplications.iterator(HIGH_PRIORITY).hasNext());
+          neededReconstruction.iterator(HIGH_PRIORITY).hasNext());
     } finally {
       cluster.shutdown();
     }
   }
   
   /**
-   * Test for the ChooseUnderReplicatedBlocks are processed based on priority
+   * Test for the ChooseLowRedundancyBlocks are processed based on priority
    */
   @Test
-  public void testChooseUnderReplicatedBlocks() throws Exception {
-    UnderReplicatedBlocks underReplicatedBlocks = new UnderReplicatedBlocks();
+  public void testChooseLowRedundancyBlocks() throws Exception {
+    LowRedundancyBlocks lowRedundancyBlocks = new LowRedundancyBlocks();
 
     for (int i = 0; i < 5; i++) {
       // Adding QUEUE_HIGHEST_PRIORITY block
-      underReplicatedBlocks.add(genBlockInfo(ThreadLocalRandom.current().
+      lowRedundancyBlocks.add(genBlockInfo(ThreadLocalRandom.current().
           nextLong()), 1, 0, 0, 3);
 
-      // Adding QUEUE_VERY_UNDER_REPLICATED block
-      underReplicatedBlocks.add(genBlockInfo(ThreadLocalRandom.current().
+      // Adding QUEUE_VERY_LOW_REDUNDANCY block
+      lowRedundancyBlocks.add(genBlockInfo(ThreadLocalRandom.current().
           nextLong()), 2, 0, 0, 7);
 
       // Adding QUEUE_REPLICAS_BADLY_DISTRIBUTED block
-      underReplicatedBlocks.add(genBlockInfo(ThreadLocalRandom.current().
+      lowRedundancyBlocks.add(genBlockInfo(ThreadLocalRandom.current().
           nextLong()), 6, 0, 0, 6);
 
-      // Adding QUEUE_UNDER_REPLICATED block
-      underReplicatedBlocks.add(genBlockInfo(ThreadLocalRandom.current().
+      // Adding QUEUE_LOW_REDUNDANCY block
+      lowRedundancyBlocks.add(genBlockInfo(ThreadLocalRandom.current().
           nextLong()), 5, 0, 0, 6);
 
       // Adding QUEUE_WITH_CORRUPT_BLOCKS block
-      underReplicatedBlocks.add(genBlockInfo(ThreadLocalRandom.current().
+      lowRedundancyBlocks.add(genBlockInfo(ThreadLocalRandom.current().
           nextLong()), 0, 0, 0, 3);
     }
 
-    // Choose 6 blocks from UnderReplicatedBlocks. Then it should pick 5 blocks
-    // from
-    // QUEUE_HIGHEST_PRIORITY and 1 block from QUEUE_VERY_UNDER_REPLICATED.
+    // Choose 6 blocks from lowRedundancyBlocks. Then it should pick 5 blocks
+    // from QUEUE_HIGHEST_PRIORITY and 1 block from QUEUE_VERY_LOW_REDUNDANCY.
     List<List<BlockInfo>> chosenBlocks =
-        underReplicatedBlocks.chooseUnderReplicatedBlocks(6);
+        lowRedundancyBlocks.chooseLowRedundancyBlocks(6);
     assertTheChosenBlocks(chosenBlocks, 5, 1, 0, 0, 0);
 
-    // Choose 10 blocks from UnderReplicatedBlocks. Then it should pick 4 blocks from
-    // QUEUE_VERY_UNDER_REPLICATED, 5 blocks from QUEUE_UNDER_REPLICATED and 1
+    // Choose 10 blocks from lowRedundancyBlocks. Then it should pick 4 blocks
+    // from QUEUE_VERY_LOW_REDUNDANCY, 5 blocks from QUEUE_LOW_REDUNDANCY and 1
     // block from QUEUE_REPLICAS_BADLY_DISTRIBUTED.
-    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(10);
+    chosenBlocks = lowRedundancyBlocks.chooseLowRedundancyBlocks(10);
     assertTheChosenBlocks(chosenBlocks, 0, 4, 5, 1, 0);
 
     // Adding QUEUE_HIGHEST_PRIORITY
-    underReplicatedBlocks.add(genBlockInfo(ThreadLocalRandom.current().
+    lowRedundancyBlocks.add(genBlockInfo(ThreadLocalRandom.current().
         nextLong()), 0, 1, 0, 3);
 
-    // Choose 10 blocks from UnderReplicatedBlocks. Then it should pick 1 block from
-    // QUEUE_HIGHEST_PRIORITY, 4 blocks from QUEUE_REPLICAS_BADLY_DISTRIBUTED
-    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(10);
+    // Choose 10 blocks from lowRedundancyBlocks. Then it should pick 1 block
+    // from QUEUE_HIGHEST_PRIORITY, 4 blocks from
+    // QUEUE_REPLICAS_BADLY_DISTRIBUTED
+    chosenBlocks = lowRedundancyBlocks.chooseLowRedundancyBlocks(10);
     assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 4);
 
     // Since it is reached to end of all lists,
     // should start picking the blocks from start.
-    // Choose 7 blocks from UnderReplicatedBlocks. Then it should pick 6 blocks from
-    // QUEUE_HIGHEST_PRIORITY, 1 block from QUEUE_VERY_UNDER_REPLICATED.
-    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(7);
+    // Choose 7 blocks from lowRedundancyBlocks. Then it should pick 6 blocks
+    // from QUEUE_HIGHEST_PRIORITY, 1 block from QUEUE_VERY_LOW_REDUNDANCY.
+    chosenBlocks = lowRedundancyBlocks.chooseLowRedundancyBlocks(7);
     assertTheChosenBlocks(chosenBlocks, 6, 1, 0, 0, 0);
   }
   
@@ -1268,45 +1268,45 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
 
   @Test(timeout = 60000)
   public void testUpdateDoesNotCauseSkippedReplication() {
-    UnderReplicatedBlocks underReplicatedBlocks = new UnderReplicatedBlocks();
+    LowRedundancyBlocks lowRedundancyBlocks = new LowRedundancyBlocks();
 
     BlockInfo block1 = genBlockInfo(ThreadLocalRandom.current().nextLong());
     BlockInfo block2 = genBlockInfo(ThreadLocalRandom.current().nextLong());
     BlockInfo block3 = genBlockInfo(ThreadLocalRandom.current().nextLong());
 
-    // Adding QUEUE_VERY_UNDER_REPLICATED block
+    // Adding QUEUE_VERY_LOW_REDUNDANCY block
     final int block1CurReplicas = 2;
     final int block1ExpectedReplicas = 7;
-    underReplicatedBlocks.add(block1, block1CurReplicas, 0, 0,
+    lowRedundancyBlocks.add(block1, block1CurReplicas, 0, 0,
         block1ExpectedReplicas);
 
-    // Adding QUEUE_VERY_UNDER_REPLICATED block
-    underReplicatedBlocks.add(block2, 2, 0, 0, 7);
+    // Adding QUEUE_VERY_LOW_REDUNDANCY block
+    lowRedundancyBlocks.add(block2, 2, 0, 0, 7);
 
-    // Adding QUEUE_UNDER_REPLICATED block
-    underReplicatedBlocks.add(block3, 2, 0, 0, 6);
+    // Adding QUEUE_LOW_REDUNDANCY block
+    lowRedundancyBlocks.add(block3, 2, 0, 0, 6);
 
     List<List<BlockInfo>> chosenBlocks;
 
-    // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
-    // from QUEUE_VERY_UNDER_REPLICATED.
-    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
+    // Choose 1 block from lowRedundancyBlocks. Then it should pick 1 block
+    // from QUEUE_VERY_LOW_REDUNDANCY.
+    chosenBlocks = lowRedundancyBlocks.chooseLowRedundancyBlocks(1);
     assertTheChosenBlocks(chosenBlocks, 0, 1, 0, 0, 0);
 
     // Increasing the replications will move the block down a
     // priority.  This simulates a replica being completed in between checks.
-    underReplicatedBlocks.update(block1, block1CurReplicas+1, 0, 0,
+    lowRedundancyBlocks.update(block1, block1CurReplicas+1, 0, 0,
         block1ExpectedReplicas, 1, 0);
 
-    // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
-    // from QUEUE_VERY_UNDER_REPLICATED.
+    // Choose 1 block from lowRedundancyBlocks. Then it should pick 1 block
+    // from QUEUE_VERY_LOW_REDUNDANCY.
     // This block was moved up a priority and should not be skipped over.
-    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
+    chosenBlocks = lowRedundancyBlocks.chooseLowRedundancyBlocks(1);
     assertTheChosenBlocks(chosenBlocks, 0, 1, 0, 0, 0);
 
-    // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
-    // from QUEUE_UNDER_REPLICATED.
-    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
+    // Choose 1 block from lowRedundancyBlocks. Then it should pick 1 block
+    // from QUEUE_LOW_REDUNDANCY.
+    chosenBlocks = lowRedundancyBlocks.chooseLowRedundancyBlocks(1);
     assertTheChosenBlocks(chosenBlocks, 0, 0, 1, 0, 0);
   }
 
@@ -1317,27 +1317,27 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     when(mockNS.hasWriteLock()).thenReturn(true);
     when(mockNS.hasReadLock()).thenReturn(true);
     BlockManager bm = new BlockManager(mockNS, false, new HdfsConfiguration());
-    UnderReplicatedBlocks underReplicatedBlocks = bm.neededReplications;
+    LowRedundancyBlocks lowRedundancyBlocks = bm.neededReconstruction;
 
     BlockInfo block1 = genBlockInfo(ThreadLocalRandom.current().nextLong());
     BlockInfo block2 = genBlockInfo(ThreadLocalRandom.current().nextLong());
 
-    // Adding QUEUE_UNDER_REPLICATED block
-    underReplicatedBlocks.add(block1, 0, 0, 1, 1);
+    // Adding QUEUE_LOW_REDUNDANCY block
+    lowRedundancyBlocks.add(block1, 0, 0, 1, 1);
 
-    // Adding QUEUE_UNDER_REPLICATED block
-    underReplicatedBlocks.add(block2, 0, 0, 1, 1);
+    // Adding QUEUE_LOW_REDUNDANCY block
+    lowRedundancyBlocks.add(block2, 0, 0, 1, 1);
 
     List<List<BlockInfo>> chosenBlocks;
 
-    // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
-    // from QUEUE_VERY_UNDER_REPLICATED.
-    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
+    // Choose 1 block from lowRedundancyBlocks. Then it should pick 1 block
+    // from QUEUE_VERY_LOW_REDUNDANCY.
+    chosenBlocks = lowRedundancyBlocks.chooseLowRedundancyBlocks(1);
     assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 0, 0);
 
-    // Adding this block collection to the BlockManager, so that when we add the
+    // Adding this block collection to the BlockManager, so that when we add
     // block under construction, the BlockManager will realize the expected
-    // replication has been achieved and remove it from the under-replicated
+    // replication has been achieved and remove it from the low redundancy
     // queue.
     BlockInfoContiguous info = new BlockInfoContiguous(block1, (short) 1);
     info.convertToBlockUnderConstruction(BlockUCState.UNDER_CONSTRUCTION, null);
@@ -1353,9 +1353,9 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
         ReplicaState.FINALIZED), storages[0]);
 
     // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
-    // from QUEUE_VERY_UNDER_REPLICATED.
+    // from QUEUE_VERY_LOW_REDUNDANCY.
     // This block remains and should not be skipped over.
-    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
+    chosenBlocks = lowRedundancyBlocks.chooseLowRedundancyBlocks(1);
     assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 0, 0);
   }
 
@@ -1367,7 +1367,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     when(mockNS.hasWriteLock()).thenReturn(true);
 
     BlockManager bm = new BlockManager(mockNS, false, new HdfsConfiguration());
-    UnderReplicatedBlocks underReplicatedBlocks = bm.neededReplications;
+    LowRedundancyBlocks lowRedundancyBlocks = bm.neededReconstruction;
 
     long blkID1 = ThreadLocalRandom.current().nextLong();
     if (blkID1 < 0) {
@@ -1381,17 +1381,17 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     BlockInfo block1 = genBlockInfo(blkID1);
     BlockInfo block2 = genBlockInfo(blkID2);
 
-    // Adding QUEUE_UNDER_REPLICATED block
-    underReplicatedBlocks.add(block1, 0, 0, 1, 1);
+    // Adding QUEUE_LOW_REDUNDANCY block
+    lowRedundancyBlocks.add(block1, 0, 0, 1, 1);
 
-    // Adding QUEUE_UNDER_REPLICATED block
-    underReplicatedBlocks.add(block2, 0, 0, 1, 1);
+    // Adding QUEUE_LOW_REDUNDANCY block
+    lowRedundancyBlocks.add(block2, 0, 0, 1, 1);
 
     List<List<BlockInfo>> chosenBlocks;
 
-    // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
-    // from QUEUE_VERY_UNDER_REPLICATED.
-    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
+    // Choose 1 block from lowRedundancyBlocks. Then it should pick 1 block
+    // from QUEUE_VERY_LOW_REDUNDANCY.
+    chosenBlocks = lowRedundancyBlocks.chooseLowRedundancyBlocks(1);
     assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 0, 0);
 
     final BlockInfoContiguous info = new BlockInfoContiguous(block1, (short) 1);
@@ -1425,10 +1425,10 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
 
     bm.convertLastBlockToUnderConstruction(mbc, 0L);
 
-    // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
-    // from QUEUE_VERY_UNDER_REPLICATED.
+    // Choose 1 block from lowRedundancyBlocks. Then it should pick 1 block
+    // from QUEUE_VERY_LOW_REDUNDANCY.
     // This block remains and should not be skipped over.
-    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
+    chosenBlocks = lowRedundancyBlocks.chooseLowRedundancyBlocks(1);
     assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 0, 0);
   }
 
@@ -1439,30 +1439,30 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     when(mockNS.hasReadLock()).thenReturn(true);
 
     BlockManager bm = new BlockManager(mockNS, false, new HdfsConfiguration());
-    UnderReplicatedBlocks underReplicatedBlocks = bm.neededReplications;
+    LowRedundancyBlocks lowRedundancyBlocks = bm.neededReconstruction;
 
     BlockInfo block1 = genBlockInfo(ThreadLocalRandom.current().nextLong());
     BlockInfo block2 = genBlockInfo(ThreadLocalRandom.current().nextLong());
 
-    // Adding QUEUE_UNDER_REPLICATED block
-    underReplicatedBlocks.add(block1, 0, 0, 1, 1);
+    // Adding QUEUE_LOW_REDUNDANCY block
+    lowRedundancyBlocks.add(block1, 0, 0, 1, 1);
 
-    // Adding QUEUE_UNDER_REPLICATED block
-    underReplicatedBlocks.add(block2, 0, 0, 1, 1);
+    // Adding QUEUE_LOW_REDUNDANCY block
+    lowRedundancyBlocks.add(block2, 0, 0, 1, 1);
 
     List<List<BlockInfo>> chosenBlocks;
 
-    // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
-    // from QUEUE_VERY_UNDER_REPLICATED.
-    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
+    // Choose 1 block from lowRedundancyBlocks. Then it should pick 1 block
+    // from QUEUE_VERY_LOW_REDUNDANCY.
+    chosenBlocks = lowRedundancyBlocks.chooseLowRedundancyBlocks(1);
     assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 0, 0);
 
     bm.setReplication((short)0, (short)1, block1);
 
     // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
-    // from QUEUE_VERY_UNDER_REPLICATED.
+    // from QUEUE_VERY_LOW_REDUNDANCY.
     // This block remains and should not be skipped over.
-    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
+    chosenBlocks = lowRedundancyBlocks.chooseLowRedundancyBlocks(1);
     assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 0, 0);
   }
 

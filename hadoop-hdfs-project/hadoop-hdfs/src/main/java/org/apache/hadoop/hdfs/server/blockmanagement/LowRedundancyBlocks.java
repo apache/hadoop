@@ -26,9 +26,9 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
 
 /**
- * Keep prioritized queues of under replicated blocks.
- * Blocks have replication priority, with priority {@link #QUEUE_HIGHEST_PRIORITY}
- * indicating the highest priority.
+ * Keep prioritized queues of low redundant blocks.
+ * Blocks have redundancy priority, with priority
+ * {@link #QUEUE_HIGHEST_PRIORITY} indicating the highest priority.
  * </p>
  * Having a prioritised queue allows the {@link BlockManager} to select
  * which blocks to replicate first -it tries to give priority to data
@@ -40,19 +40,19 @@ import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
  * </p>
  * <p>The queue order is as follows:</p>
  * <ol>
- *   <li>{@link #QUEUE_HIGHEST_PRIORITY}: the blocks that must be replicated
+ *   <li>{@link #QUEUE_HIGHEST_PRIORITY}: the blocks that should be redundant
  *   first. That is blocks with only one copy, or blocks with zero live
  *   copies but a copy in a node being decommissioned. These blocks
  *   are at risk of loss if the disk or server on which they
  *   remain fails.</li>
- *   <li>{@link #QUEUE_VERY_UNDER_REPLICATED}: blocks that are very
+ *   <li>{@link #QUEUE_VERY_LOW_REDUNDANCY}: blocks that are very
  *   under-replicated compared to their expected values. Currently
  *   that means the ratio of the ratio of actual:expected means that
  *   there is <i>less than</i> 1:3.</li>. These blocks may not be at risk,
  *   but they are clearly considered "important".
- *   <li>{@link #QUEUE_UNDER_REPLICATED}: blocks that are also under
+ *   <li>{@link #QUEUE_LOW_REDUNDANCY}: blocks that are also under
  *   replicated, and the ratio of actual:expected is good enough that
- *   they do not need to go into the {@link #QUEUE_VERY_UNDER_REPLICATED}
+ *   they do not need to go into the {@link #QUEUE_VERY_LOW_REDUNDANCY}
  *   queue.</li>
  *   <li>{@link #QUEUE_REPLICAS_BADLY_DISTRIBUTED}: there are as least as
  *   many copies of a block as required, but the blocks are not adequately
@@ -63,15 +63,17 @@ import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
  *   blocks that are not corrupt higher priority.</li>
  * </ol>
  */
-class UnderReplicatedBlocks implements Iterable<BlockInfo> {
+class LowRedundancyBlocks implements Iterable<BlockInfo> {
   /** The total number of queues : {@value} */
   static final int LEVEL = 5;
   /** The queue with the highest priority: {@value} */
   static final int QUEUE_HIGHEST_PRIORITY = 0;
   /** The queue for blocks that are way below their expected value : {@value} */
-  static final int QUEUE_VERY_UNDER_REPLICATED = 1;
-  /** The queue for "normally" under-replicated blocks: {@value} */
-  static final int QUEUE_UNDER_REPLICATED = 2;
+  static final int QUEUE_VERY_LOW_REDUNDANCY = 1;
+  /**
+   * The queue for "normally" without sufficient redundancy blocks : {@value}.
+   */
+  static final int QUEUE_LOW_REDUNDANCY = 2;
   /** The queue for blocks that have the right number of replicas,
    * but which the block manager felt were badly distributed: {@value}
    */
@@ -86,7 +88,7 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
   private int corruptReplOneBlocks = 0;
 
   /** Create an object. */
-  UnderReplicatedBlocks() {
+  LowRedundancyBlocks() {
     for (int i = 0; i < LEVEL; i++) {
       priorityQueues.add(new LightWeightLinkedSet<BlockInfo>());
     }
@@ -102,7 +104,7 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
     corruptReplOneBlocks = 0;
   }
 
-  /** Return the total number of under replication blocks */
+  /** Return the total number of insufficient redundancy blocks. */
   synchronized int size() {
     int size = 0;
     for (int i = 0; i < LEVEL; i++) {
@@ -111,8 +113,11 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
     return size;
   }
 
-  /** Return the number of under replication blocks excluding corrupt blocks */
-  synchronized int getUnderReplicatedBlockCount() {
+  /**
+   * Return the number of insufficiently redundant blocks excluding corrupt
+   * blocks.
+   */
+  synchronized int getLowRedundancyBlockCount() {
     int size = 0;
     for (int i = 0; i < LEVEL; i++) {
       if (i != QUEUE_WITH_CORRUPT_BLOCKS) {
@@ -132,7 +137,7 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
     return corruptReplOneBlocks;
   }
 
-  /** Check if a block is in the neededReplication queue */
+  /** Check if a block is in the neededReconstruction queue. */
   synchronized boolean contains(BlockInfo block) {
     for(LightWeightLinkedSet<BlockInfo> set : priorityQueues) {
       if (set.contains(block)) {
@@ -187,12 +192,12 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
       // highest priority
       return QUEUE_HIGHEST_PRIORITY;
     } else if ((curReplicas * 3) < expectedReplicas) {
-      //there is less than a third as many blocks as requested;
-      //this is considered very under-replicated
-      return QUEUE_VERY_UNDER_REPLICATED;
+      //can only afford one replica loss
+      //this is considered very insufficiently redundant blocks.
+      return QUEUE_VERY_LOW_REDUNDANCY;
     } else {
-      //add to the normal queue for under replicated blocks
-      return QUEUE_UNDER_REPLICATED;
+      //add to the normal queue for insufficiently redundant blocks
+      return QUEUE_LOW_REDUNDANCY;
     }
   }
 
@@ -208,17 +213,19 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
       // highest risk of loss, highest priority
       return QUEUE_HIGHEST_PRIORITY;
     } else if ((curReplicas - dataBlkNum) * 3 < parityBlkNum + 1) {
-      // there is less than a third as many blocks as requested;
-      // this is considered very under-replicated
-      return QUEUE_VERY_UNDER_REPLICATED;
+      // can only afford one replica loss
+      // this is considered very insufficiently redundant blocks.
+      return QUEUE_VERY_LOW_REDUNDANCY;
     } else {
-      // add to the normal queue for under replicated blocks
-      return QUEUE_UNDER_REPLICATED;
+      // add to the normal queue for insufficiently redundant blocks.
+      return QUEUE_LOW_REDUNDANCY;
     }
   }
 
-  /** add a block to a under replication queue according to its priority
-   * @param block a under replication block
+  /**
+   * Add a block to insufficiently redundant queue according to its priority.
+   *
+   * @param block a low redundancy block
    * @param curReplicas current number of replicas of the block
    * @param decomissionedReplicas the number of decommissioned replicas
    * @param expectedReplicas expected number of replicas of the block
@@ -238,17 +245,17 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
         corruptReplOneBlocks++;
       }
       NameNode.blockStateChangeLog.debug(
-          "BLOCK* NameSystem.UnderReplicationBlock.add: {}"
-              + " has only {} replicas and need {} replicas so is added to" +
-              " neededReplications at priority level {}", block, curReplicas,
-          expectedReplicas, priLevel);
+          "BLOCK* NameSystem.LowRedundancyBlock.add: {}"
+              + " has only {} replicas and need {} replicas so is added to"
+              + " neededReconstructions at priority level {}",
+          block, curReplicas, expectedReplicas, priLevel);
 
       return true;
     }
     return false;
   }
 
-  /** remove a block from a under replication queue */
+  /** Remove a block from a low redundancy queue. */
   synchronized boolean remove(BlockInfo block,
                               int oldReplicas,
                               int oldReadOnlyReplicas,
@@ -269,7 +276,7 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
   }
 
   /**
-   * Remove a block from the under replication queues.
+   * Remove a block from the low redundancy queues.
    *
    * The priLevel parameter is a hint of which queue to query
    * first: if negative or &gt;= {@link #LEVEL} this shortcutting
@@ -281,14 +288,16 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
    * <i>Warning:</i> This is not a synchronized method.
    * @param block block to remove
    * @param priLevel expected privilege level
-   * @return true if the block was found and removed from one of the priority queues
+   * @return true if the block was found and removed from one of the priority
+   *         queues
    */
   boolean remove(BlockInfo block, int priLevel) {
     if(priLevel >= 0 && priLevel < LEVEL
         && priorityQueues.get(priLevel).remove(block)) {
       NameNode.blockStateChangeLog.debug(
-        "BLOCK* NameSystem.UnderReplicationBlock.remove: Removing block {}" +
-            " from priority queue {}", block, priLevel);
+          "BLOCK* NameSystem.LowRedundancyBlock.remove: Removing block {}"
+              + " from priority queue {}",
+          block, priLevel);
       return true;
     } else {
       // Try to remove the block from all queues if the block was
@@ -296,7 +305,7 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
       for (int i = 0; i < LEVEL; i++) {
         if (i != priLevel && priorityQueues.get(i).remove(block)) {
           NameNode.blockStateChangeLog.debug(
-              "BLOCK* NameSystem.UnderReplicationBlock.remove: Removing block" +
+              "BLOCK* NameSystem.LowRedundancyBlock.remove: Removing block" +
                   " {} from priority queue {}", block, i);
           return true;
         }
@@ -314,12 +323,13 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
    * to add it to that queue. This ensures that the block will be
    * in its expected priority queue (and only that queue) by the end of the
    * method call.
-   * @param block a under replicated block
+   * @param block a low redundancy block
    * @param curReplicas current number of replicas of the block
    * @param decommissionedReplicas  the number of decommissioned replicas
    * @param curExpectedReplicas expected number of replicas of the block
    * @param curReplicasDelta the change in the replicate count from before
-   * @param expectedReplicasDelta the change in the expected replica count from before
+   * @param expectedReplicasDelta the change in the expected replica count
+   *        from before
    */
   synchronized void update(BlockInfo block, int curReplicas,
                            int readOnlyReplicas, int decommissionedReplicas,
@@ -332,7 +342,7 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
     int oldPri = getPriority(block, oldReplicas, readOnlyReplicas,
         decommissionedReplicas, oldExpectedReplicas);
     if(NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("UnderReplicationBlocks.update " + 
+      NameNode.stateChangeLog.debug("LowRedundancyBlocks.update " +
         block +
         " curReplicas " + curReplicas +
         " curExpectedReplicas " + curExpectedReplicas +
@@ -346,10 +356,10 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
     }
     if(priorityQueues.get(curPri).add(block)) {
       NameNode.blockStateChangeLog.debug(
-          "BLOCK* NameSystem.UnderReplicationBlock.update: {} has only {} " +
-              "replicas and needs {} replicas so is added to " +
-              "neededReplications at priority level {}", block, curReplicas,
-          curExpectedReplicas, curPri);
+          "BLOCK* NameSystem.LowRedundancyBlock.update: {} has only {} "
+              + "replicas and needs {} replicas so is added to "
+              + "neededReconstructions at priority level {}",
+          block, curReplicas, curExpectedReplicas, curPri);
 
     }
     if (oldPri != curPri || expectedReplicasDelta != 0) {
@@ -365,25 +375,25 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
       }
     }
   }
-  
+
   /**
-   * Get a list of block lists to be replicated. The index of block lists
-   * represents its replication priority. Iterates each block list in priority
-   * order beginning with the highest priority list. Iterators use a bookmark to
-   * resume where the previous iteration stopped. Returns when the block count
-   * is met or iteration reaches the end of the lowest priority list, in which
-   * case bookmarks for each block list are reset to the heads of their
-   * respective lists.
+   * Get a list of block lists without sufficient redundancy. The index of
+   * block lists represents its replication priority. Iterates each block list
+   * in priority order beginning with the highest priority list. Iterators use
+   * a bookmark to resume where the previous iteration stopped. Returns when
+   * the block count is met or iteration reaches the end of the lowest priority
+   * list, in which case bookmarks for each block list are reset to the heads
+   * of their respective lists.
    *
-   * @param blocksToProcess - number of blocks to fetch from underReplicated
+   * @param blocksToProcess - number of blocks to fetch from low redundancy
    *          blocks.
-   * @return Return a list of block lists to be replicated. The block list index
-   *         represents its replication priority.
+   * @return Return a list of block lists to be replicated. The block list
+   *         index represents its redundancy priority.
    */
-  synchronized List<List<BlockInfo>> chooseUnderReplicatedBlocks(
+  synchronized List<List<BlockInfo>> chooseLowRedundancyBlocks(
       int blocksToProcess) {
-    final List<List<BlockInfo>> blocksToReplicate = new ArrayList<>(LEVEL);
-    
+    final List<List<BlockInfo>> blocksToReconstruct = new ArrayList<>(LEVEL);
+
     int count = 0;
     int priority = 0;
     for (; count < blocksToProcess && priority < LEVEL; priority++) {
@@ -392,11 +402,11 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
         continue;
       }
 
-      // Go through all blocks that need replications with current priority.
-      // Set the iterator to the first unprocessed block at this priority level.
+      // Go through all blocks that need reconstructions with current priority.
+      // Set the iterator to the first unprocessed block at this priority level
       final Iterator<BlockInfo> i = priorityQueues.get(priority).getBookmark();
       final List<BlockInfo> blocks = new LinkedList<>();
-      blocksToReplicate.add(blocks);
+      blocksToReconstruct.add(blocks);
       // Loop through all remaining blocks in the list.
       for(; count < blocksToProcess && i.hasNext(); count++) {
         blocks.add(i.next());
@@ -410,15 +420,15 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
       }
     }
 
-    return blocksToReplicate;
+    return blocksToReconstruct;
   }
 
-  /** returns an iterator of all blocks in a given priority queue */
+  /** Returns an iterator of all blocks in a given priority queue. */
   synchronized Iterator<BlockInfo> iterator(int level) {
     return priorityQueues.get(level).iterator();
   }
 
-  /** return an iterator of all the under replication blocks */
+  /** Return an iterator of all the low redundancy blocks. */
   @Override
   public synchronized Iterator<BlockInfo> iterator() {
     final Iterator<LightWeightLinkedSet<BlockInfo>> q = priorityQueues.iterator();

@@ -30,7 +30,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
-public class TestUnderReplicatedBlockQueues {
+public class TestLowRedundancyBlockQueues {
 
   private final ErasureCodingPolicy ecPolicy =
       ErasureCodingPolicyManager.getSystemDefaultPolicy();
@@ -52,39 +52,39 @@ public class TestUnderReplicatedBlockQueues {
    */
   @Test
   public void testBlockPriorities() throws Throwable {
-    UnderReplicatedBlocks queues = new UnderReplicatedBlocks();
+    LowRedundancyBlocks queues = new LowRedundancyBlocks();
     BlockInfo block1 = genBlockInfo(1);
     BlockInfo block2 = genBlockInfo(2);
-    BlockInfo block_very_under_replicated = genBlockInfo(3);
+    BlockInfo block_very_low_redundancy = genBlockInfo(3);
     BlockInfo block_corrupt = genBlockInfo(4);
     BlockInfo block_corrupt_repl_one = genBlockInfo(5);
 
     //add a block with a single entry
     assertAdded(queues, block1, 1, 0, 3);
 
-    assertEquals(1, queues.getUnderReplicatedBlockCount());
+    assertEquals(1, queues.getLowRedundancyBlockCount());
     assertEquals(1, queues.size());
-    assertInLevel(queues, block1, UnderReplicatedBlocks.QUEUE_HIGHEST_PRIORITY);
+    assertInLevel(queues, block1, LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY);
     //repeated additions fail
     assertFalse(queues.add(block1, 1, 0, 0, 3));
 
     //add a second block with two replicas
     assertAdded(queues, block2, 2, 0, 3);
-    assertEquals(2, queues.getUnderReplicatedBlockCount());
+    assertEquals(2, queues.getLowRedundancyBlockCount());
     assertEquals(2, queues.size());
-    assertInLevel(queues, block2, UnderReplicatedBlocks.QUEUE_UNDER_REPLICATED);
+    assertInLevel(queues, block2, LowRedundancyBlocks.QUEUE_LOW_REDUNDANCY);
     //now try to add a block that is corrupt
     assertAdded(queues, block_corrupt, 0, 0, 3);
     assertEquals(3, queues.size());
-    assertEquals(2, queues.getUnderReplicatedBlockCount());
+    assertEquals(2, queues.getLowRedundancyBlockCount());
     assertEquals(1, queues.getCorruptBlockSize());
     assertInLevel(queues, block_corrupt,
-                  UnderReplicatedBlocks.QUEUE_WITH_CORRUPT_BLOCKS);
+                  LowRedundancyBlocks.QUEUE_WITH_CORRUPT_BLOCKS);
 
-    //insert a very under-replicated block
-    assertAdded(queues, block_very_under_replicated, 4, 0, 25);
-    assertInLevel(queues, block_very_under_replicated,
-                  UnderReplicatedBlocks.QUEUE_VERY_UNDER_REPLICATED);
+    //insert a very insufficiently redundancy block
+    assertAdded(queues, block_very_low_redundancy, 4, 0, 25);
+    assertInLevel(queues, block_very_low_redundancy,
+                  LowRedundancyBlocks.QUEUE_VERY_LOW_REDUNDANCY);
 
     //insert a corrupt block with replication factor 1
     assertAdded(queues, block_corrupt_repl_one, 0, 0, 1);
@@ -94,7 +94,7 @@ public class TestUnderReplicatedBlockQueues {
     assertEquals(0, queues.getCorruptReplOneBlockSize());
     queues.update(block_corrupt, 0, 0, 0, 1, 0, -2);
     assertEquals(1, queues.getCorruptReplOneBlockSize());
-    queues.update(block_very_under_replicated, 0, 0, 0, 1, -4, -24);
+    queues.update(block_very_low_redundancy, 0, 0, 0, 1, -4, -24);
     assertEquals(2, queues.getCorruptReplOneBlockSize());
   }
 
@@ -110,26 +110,26 @@ public class TestUnderReplicatedBlockQueues {
       throws Throwable {
     int groupSize = dataBlkNum + parityBlkNum;
     long numBytes = ecPolicy.getCellSize() * dataBlkNum;
-    UnderReplicatedBlocks queues = new UnderReplicatedBlocks();
+    LowRedundancyBlocks queues = new LowRedundancyBlocks();
     int numUR = 0;
     int numCorrupt = 0;
 
-    // add under replicated blocks
+    // add low redundancy blocks
     for (int i = 0; dataBlkNum + i < groupSize; i++) {
       BlockInfo block = genStripedBlockInfo(-100 - 100 * i, numBytes);
       assertAdded(queues, block, dataBlkNum + i, 0, groupSize);
       numUR++;
-      assertEquals(numUR, queues.getUnderReplicatedBlockCount());
+      assertEquals(numUR, queues.getLowRedundancyBlockCount());
       assertEquals(numUR + numCorrupt, queues.size());
       if (i == 0) {
         assertInLevel(queues, block,
-            UnderReplicatedBlocks.QUEUE_HIGHEST_PRIORITY);
+            LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY);
       } else if (i * 3 < parityBlkNum + 1) {
         assertInLevel(queues, block,
-            UnderReplicatedBlocks.QUEUE_VERY_UNDER_REPLICATED);
+            LowRedundancyBlocks.QUEUE_VERY_LOW_REDUNDANCY);
       } else {
         assertInLevel(queues, block,
-            UnderReplicatedBlocks.QUEUE_UNDER_REPLICATED);
+            LowRedundancyBlocks.QUEUE_LOW_REDUNDANCY);
       }
     }
 
@@ -139,13 +139,13 @@ public class TestUnderReplicatedBlockQueues {
     assertAdded(queues, block_corrupt, dataBlkNum - 1, 0, groupSize);
     numCorrupt++;
     assertEquals(numUR + numCorrupt, queues.size());
-    assertEquals(numUR, queues.getUnderReplicatedBlockCount());
+    assertEquals(numUR, queues.getLowRedundancyBlockCount());
     assertEquals(numCorrupt, queues.getCorruptBlockSize());
     assertInLevel(queues, block_corrupt,
-        UnderReplicatedBlocks.QUEUE_WITH_CORRUPT_BLOCKS);
+        LowRedundancyBlocks.QUEUE_WITH_CORRUPT_BLOCKS);
   }
 
-  private void assertAdded(UnderReplicatedBlocks queues,
+  private void assertAdded(LowRedundancyBlocks queues,
                            BlockInfo block,
                            int curReplicas,
                            int decomissionedReplicas,
@@ -167,7 +167,7 @@ public class TestUnderReplicatedBlockQueues {
    * @param block block to look for
    * @param level level to select
    */
-  private void assertInLevel(UnderReplicatedBlocks queues,
+  private void assertInLevel(LowRedundancyBlocks queues,
                              Block block,
                              int level) {
     final Iterator<BlockInfo> bi = queues.iterator(level);
