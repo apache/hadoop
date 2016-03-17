@@ -28,6 +28,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @XmlRootElement(name = "capacityScheduler")
 @XmlType(name = "capacityScheduler")
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -86,14 +89,29 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   }
 
   protected CapacitySchedulerQueueInfoList getQueues(CSQueue parent) {
-    CSQueue parentQueue = parent;
     CapacitySchedulerQueueInfoList queuesInfo =
         new CapacitySchedulerQueueInfoList();
-    for (CSQueue queue : parentQueue.getChildQueues()) {
+    // JAXB marashalling leads to situation where the "type" field injected
+    // for JSON changes from string to array depending on order of printing
+    // Issue gets fixed if all the leaf queues are marshalled before the
+    // non-leaf queues. See YARN-4785 for more details.
+    List<CSQueue> childQueues = new ArrayList<>();
+    List<CSQueue> childLeafQueues = new ArrayList<>();
+    List<CSQueue> childNonLeafQueues = new ArrayList<>();
+    for (CSQueue queue : parent.getChildQueues()) {
+      if (queue instanceof LeafQueue) {
+        childLeafQueues.add(queue);
+      } else {
+        childNonLeafQueues.add(queue);
+      }
+    }
+    childQueues.addAll(childLeafQueues);
+    childQueues.addAll(childNonLeafQueues);
+
+    for (CSQueue queue : childQueues) {
       CapacitySchedulerQueueInfo info;
       if (queue instanceof LeafQueue) {
-        info =
-            new CapacitySchedulerLeafQueueInfo((LeafQueue) queue);
+        info = new CapacitySchedulerLeafQueueInfo((LeafQueue) queue);
       } else {
         info = new CapacitySchedulerQueueInfo(queue);
         info.queues = getQueues(queue);
