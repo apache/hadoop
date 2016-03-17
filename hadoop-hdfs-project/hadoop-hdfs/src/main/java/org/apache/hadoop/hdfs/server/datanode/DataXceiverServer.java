@@ -75,7 +75,7 @@ class DataXceiverServer implements Runnable {
     private BlockBalanceThrottler(long bandwidth, int maxThreads) {
       super(bandwidth);
       this.maxThreads.set(maxThreads);
-      LOG.info("Balancing bandwith is " + bandwidth + " bytes/s");
+      LOG.info("Balancing bandwidth is " + bandwidth + " bytes/s");
       LOG.info("Number threads for balancing is " + maxThreads);
     }
 
