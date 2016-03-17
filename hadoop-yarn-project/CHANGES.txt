@@ -107,6 +107,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4760. proxy redirect to history server uses wrong URL (Eric Badger
     via jlowe)
 
+    YARN-4785. inconsistent value type of the "type" field for LeafQueueInfo 
+    in response of RM REST API. (Varun Vasudev via junping_du)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
