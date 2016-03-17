@@ -38,8 +38,6 @@ public class ResourceLimits {
   // containers.
   private volatile Resource headroom;
 
-  private boolean allowPreempt = false;
-
   public ResourceLimits(Resource limit) {
     this(limit, Resources.none());
   }
@@ -74,11 +72,4 @@ public class ResourceLimits {
     this.amountNeededUnreserve = amountNeededUnreserve;
   }
 
-  public boolean isAllowPreemption() {
-    return allowPreempt;
-  }
-
-  public void setIsAllowPreemption(boolean allowPreempt) {
-   this.allowPreempt = allowPreempt;
-  }
 }

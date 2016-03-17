@@ -64,8 +64,9 @@ public abstract class SchedulerNode {
   private volatile ResourceUtilization nodeUtilization =
       ResourceUtilization.newInstance(0, 0, 0f);
 
-  /* set of containers that are allocated containers */
-  protected final Map<ContainerId, RMContainer> launchedContainers =
+
+  /** Set of containers that are allocated containers. */
+  private final Map<ContainerId, RMContainer> launchedContainers =
       new HashMap<>();
 
   private final RMNode rmNode;
@@ -167,7 +168,7 @@ public abstract class SchedulerNode {
    * @param deltaResource Change in the resource allocation.
    * @param increase True if the change is an increase of allocation.
    */
-  protected synchronized void changeContainerResource(ContainerId containerId,
+  private synchronized void changeContainerResource(ContainerId containerId,
       Resource deltaResource, boolean increase) {
     if (increase) {
       deductUnallocatedResource(deltaResource);
@@ -241,7 +242,7 @@ public abstract class SchedulerNode {
    * Update the resources of the node when allocating a new container.
    * @param container Container to allocate.
    */
-  protected synchronized void updateResource(Container container) {
+  private synchronized void updateResource(Container container) {
     addUnallocatedResource(container.getResource());
     --numContainers;
   }

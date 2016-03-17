@@ -26,8 +26,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.Assignment
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import java.util.List;
-
 @Private
 @Unstable
 public class CSAssignment {
@@ -44,7 +42,6 @@ public class CSAssignment {
   private boolean fulfilledReservation;
   private final AssignmentInformation assignmentInformation;
   private boolean increaseAllocation;
-  private List<RMContainer> containersToKill;
 
   public CSAssignment(Resource resource, NodeType type) {
     this(resource, type, null, null, false, false);
@@ -149,13 +146,5 @@ public class CSAssignment {
 
   public void setIncreasedAllocation(boolean flag) {
     increaseAllocation = flag;
-  }
-
-  public void setContainersToKill(List<RMContainer> containersToKill) {
-    this.containersToKill = containersToKill;
-  }
-
-  public List<RMContainer> getContainersToKill() {
-    return containersToKill;
   }
 }

@@ -42,9 +42,6 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Allocate normal (new) containers, considers locality/label, etc. Using
  * delayed scheduling mechanism to get better locality allocation.
@@ -438,6 +435,9 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       return ContainerAllocation.LOCALITY_SKIPPED;
     }
 
+    assert Resources.greaterThan(
+        rc, clusterResource, available, Resources.none());
+
     boolean shouldAllocOrReserveNewContainer = shouldAllocOrReserveNewContainer(
         priority, capability);
 
@@ -459,29 +459,6 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     RMContainer unreservedContainer = null;
     boolean reservationsContinueLooking =
         application.getCSLeafQueue().getReservationContinueLooking();
-
-    // Check if we need to kill some containers to allocate this one
-    List<RMContainer> toKillContainers = null;
-    if (availableContainers == 0 && currentResoureLimits.isAllowPreemption()) {
-      Resource availableAndKillable = Resources.clone(available);
-      for (RMContainer killableContainer : node
-          .getKillableContainers().values()) {
-        if (null == toKillContainers) {
-          toKillContainers = new ArrayList<>();
-        }
-        toKillContainers.add(killableContainer);
-        Resources.addTo(availableAndKillable,
-                        killableContainer.getAllocatedResource());
-        if (Resources.fitsIn(rc,
-                             clusterResource,
-                             capability,
-                             availableAndKillable)) {
-          // Stop if we find enough spaces
-          availableContainers = 1;
-          break;
-        }
-      }
-    }
 
     if (availableContainers > 0) {
       // Allocate...
@@ -522,12 +499,12 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
           new ContainerAllocation(unreservedContainer, request.getCapability(),
               AllocationState.ALLOCATED);
       result.containerNodeType = type;
-      result.setToKillContainers(toKillContainers);
       return result;
     } else {
       // if we are allowed to allocate but this node doesn't have space, reserve
       // it or if this was an already a reserved container, reserve it again
       if (shouldAllocOrReserveNewContainer || rmContainer != null) {
+
         if (reservationsContinueLooking && rmContainer == null) {
           // we could possibly ignoring queue capacity or user limits when
           // reservationsContinueLooking is set. Make sure we didn't need to
@@ -545,7 +522,6 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
             new ContainerAllocation(null, request.getCapability(),
                 AllocationState.RESERVED);
         result.containerNodeType = type;
-        result.setToKillContainers(null);
         return result;
       }
       // Skip the locality request
@@ -637,7 +613,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
   }
 
   ContainerAllocation doAllocation(ContainerAllocation allocationResult,
-      FiCaSchedulerNode node, Priority priority,
+      Resource clusterResource, FiCaSchedulerNode node,
+      SchedulingMode schedulingMode, Priority priority,
       RMContainer reservedContainer) {
     // Create the container if necessary
     Container container =
@@ -701,7 +678,9 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
 
     if (AllocationState.ALLOCATED == result.state
         || AllocationState.RESERVED == result.state) {
-      result = doAllocation(result, node, priority, reservedContainer);
+      result =
+          doAllocation(result, clusterResource, node, schedulingMode, priority,
+              reservedContainer);
     }
 
     return result;
