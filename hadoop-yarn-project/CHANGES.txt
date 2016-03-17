@@ -24,6 +24,9 @@ Release 2.6.5 - UNRELEASED
     YARN-4761. NMs reconnecting with changed capabilities can lead to wrong cluster
     resource calculations on fair scheduler. (Sangjin Lee via zxu)
 
+    YARN-4785. inconsistent value type of the "type" field for LeafQueueInfo in
+    response of RM REST API. (Varun Vasudev via junping-du)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
