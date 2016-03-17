@@ -31,15 +31,18 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.ToolRunner;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestWordStats {
 
   private final static String INPUT = "src/test/java/org/apache/hadoop/examples/pi/math";
-  private final static String MEAN_OUTPUT = "build/data/mean_output";
-  private final static String MEDIAN_OUTPUT = "build/data/median_output";
-  private final static String STDDEV_OUTPUT = "build/data/stddev_output";
+  private final static String BASEDIR = System.getProperty("test.build.data",
+                                                           "target/test-dir");
+  private final static String MEAN_OUTPUT = BASEDIR + "/mean_output";
+  private final static String MEDIAN_OUTPUT = BASEDIR + "/median_output";
+  private final static String STDDEV_OUTPUT = BASEDIR + "/stddev_output";
 
   /**
    * Modified internal test class that is designed to read all the files in the
@@ -284,6 +287,12 @@ public class TestWordStats {
     // outputs MUST match
     WordStdDevReader wr = new WordStdDevReader();
     assertEquals(stddev, wr.read(INPUT), 0.0);
+  }
+
+  @AfterClass public static void cleanup() throws Exception {
+    deleteDir(new File(MEAN_OUTPUT));
+    deleteDir(new File(MEDIAN_OUTPUT));
+    deleteDir(new File(STDDEV_OUTPUT));
   }
 
 }
