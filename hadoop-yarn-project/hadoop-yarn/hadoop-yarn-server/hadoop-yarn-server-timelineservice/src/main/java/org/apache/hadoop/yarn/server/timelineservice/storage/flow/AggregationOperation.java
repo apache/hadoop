@@ -21,19 +21,19 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Identifies the attributes to be set for puts into the {@link FlowRunTable}.
- * The numbers used for tagType are prime numbers
+ * The numbers used for tagType are prime numbers.
  */
 public enum AggregationOperation {
 
   /**
    * When the flow was started.
    */
-  MIN((byte) 71),
+  GLOBAL_MIN((byte) 71),
 
   /**
    * When it ended.
    */
-  MAX((byte) 73),
+  GLOBAL_MAX((byte) 73),
 
   /**
    * The metrics of the flow.
@@ -46,9 +46,16 @@ public enum AggregationOperation {
   SUM_FINAL((byte) 83),
 
   /**
-   * compact.
+   * Min value as per the latest timestamp
+   * seen for a given app.
    */
-  COMPACT((byte) 89);
+  LATEST_MIN((byte) 89),
+
+  /**
+   * Max value as per the latest timestamp
+   * seen for a given app.
+   */
+  LATEST_MAX((byte) 97);
 
   private byte tagType;
   private byte[] inBytes;

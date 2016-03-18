@@ -261,7 +261,8 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       byte[] rowKey = FlowRunRowKey.getRowKey(clusterId, userId, flowName,
           flowRunId);
       storeFlowMetrics(rowKey, metrics,
-          AggregationCompactionDimension.APPLICATION_ID.getAttribute(appId));
+          AggregationCompactionDimension.APPLICATION_ID.getAttribute(appId),
+          AggregationOperation.SUM.getAttribute());
     }
   }
 

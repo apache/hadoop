@@ -40,7 +40,7 @@ public enum FlowRunColumnPrefix implements ColumnPrefix<FlowRunTable> {
   /**
    * To store flow run info values.
    */
-  METRIC(FlowRunColumnFamily.INFO, "m", AggregationOperation.SUM,
+  METRIC(FlowRunColumnFamily.INFO, "m", null,
       LongConverter.getInstance());
 
   private final ColumnHelper<FlowRunTable> column;
