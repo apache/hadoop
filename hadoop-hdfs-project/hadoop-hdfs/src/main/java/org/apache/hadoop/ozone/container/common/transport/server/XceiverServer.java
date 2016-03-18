@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.container.transport.server;
+package org.apache.hadoop.ozone.container.common.transport.server;
 
 import com.google.common.base.Preconditions;
 import io.netty.bootstrap.ServerBootstrap;
@@ -28,7 +28,7 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
-import org.apache.hadoop.ozone.container.interfaces.ContainerDispatcher;
+import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 
 /**
  * Creates a netty server endpoint that acts as the communication layer for

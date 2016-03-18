@@ -15,7 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.ozone.container.helpers;
+package org.apache.hadoop.ozone.container.common;
 /**
- Contains protocol buffer helper classes.
+  Common Container Layer. At this layer the abstractions are:
+
+ 1. Containers - Both data and metadata containers.
+ 2. Keys - Key/Value pairs that live inside a container.
+ 3. Chunks - Keys can be composed of many chunks.
+
+ Ozone uses these abstractions to build Volumes, Buckets and Keys.
+
  **/
