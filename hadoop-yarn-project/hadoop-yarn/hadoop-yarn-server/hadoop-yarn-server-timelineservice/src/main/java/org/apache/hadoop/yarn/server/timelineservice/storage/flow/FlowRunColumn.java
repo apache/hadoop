@@ -41,14 +41,14 @@ public enum FlowRunColumn implements Column<FlowRunTable> {
    * application start times.
    */
   MIN_START_TIME(FlowRunColumnFamily.INFO, "min_start_time",
-      AggregationOperation.MIN, LongConverter.getInstance()),
+      AggregationOperation.GLOBAL_MIN, LongConverter.getInstance()),
 
   /**
    * When the flow ended. This is the maximum of currently known application end
    * times.
    */
   MAX_END_TIME(FlowRunColumnFamily.INFO, "max_end_time",
-      AggregationOperation.MAX, LongConverter.getInstance()),
+      AggregationOperation.GLOBAL_MAX, LongConverter.getInstance()),
 
   /**
    * The version of the flow that this flow belongs to.

@@ -24,9 +24,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedSet;
+import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -474,5 +478,56 @@ public final class TimelineStorageUtils {
   public static boolean isIntegralValue(Object obj) {
     return (obj instanceof Short) || (obj instanceof Integer) ||
         (obj instanceof Long);
+  }
+
+  /**
+   * creates a new cell based on the input cell but with the new value.
+   *
+   * @param origCell Original cell
+   * @param newValue new cell value
+   * @return cell
+   * @throws IOException while creating new cell.
+   */
+  public static Cell createNewCell(Cell origCell, byte[] newValue)
+      throws IOException {
+    return CellUtil.createCell(CellUtil.cloneRow(origCell),
+        CellUtil.cloneFamily(origCell), CellUtil.cloneQualifier(origCell),
+        origCell.getTimestamp(), KeyValue.Type.Put.getCode(), newValue);
+  }
+
+  /**
+   * creates a cell with the given inputs.
+   *
+   * @param row row of the cell to be created
+   * @param family column family name of the new cell
+   * @param qualifier qualifier for the new cell
+   * @param ts timestamp of the new cell
+   * @param newValue value of the new cell
+   * @param tags tags in the new cell
+   * @return cell
+   * @throws IOException while creating the cell.
+   */
+  public static Cell createNewCell(byte[] row, byte[] family, byte[] qualifier,
+      long ts, byte[] newValue, byte[] tags) throws IOException {
+    return CellUtil.createCell(row, family, qualifier, ts, KeyValue.Type.Put,
+        newValue, tags);
+  }
+
+  /**
+   * returns app id from the list of tags.
+   *
+   * @param tags cell tags to be looked into
+   * @return App Id as the AggregationCompactionDimension
+   */
+  public static String getAggregationCompactionDimension(List<Tag> tags) {
+    String appId = null;
+    for (Tag t : tags) {
+      if (AggregationCompactionDimension.APPLICATION_ID.getTagType() == t
+          .getType()) {
+        appId = Bytes.toString(t.getValue());
+        return appId;
+      }
+    }
+    return appId;
   }
 }

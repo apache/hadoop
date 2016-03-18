@@ -113,4 +113,20 @@ public class FlowRunRowKey {
         TimelineStorageUtils.invertLong(Bytes.toLong(rowKeyComponents[3]));
     return new FlowRunRowKey(clusterId, userId, flowName, flowRunId);
   }
+
+  /**
+   * returns the Flow Key as a verbose String output.
+   * @return String
+   */
+  @Override
+  public String toString() {
+    StringBuilder flowKeyStr = new StringBuilder();
+    flowKeyStr.append("{clusterId=" + clusterId);
+    flowKeyStr.append(" userId=" + userId);
+    flowKeyStr.append(" flowName=" + flowName);
+    flowKeyStr.append(" flowRunId=");
+    flowKeyStr.append(flowRunId);
+    flowKeyStr.append("}");
+    return flowKeyStr.toString();
+  }
 }
