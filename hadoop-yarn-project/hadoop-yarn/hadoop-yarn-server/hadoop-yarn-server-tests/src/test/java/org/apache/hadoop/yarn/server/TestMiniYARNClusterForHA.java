@@ -44,10 +44,6 @@ public class TestMiniYARNClusterForHA {
     cluster.init(conf);
     cluster.start();
 
-    cluster.getResourceManager(0).getRMContext().getRMAdminService()
-        .transitionToActive(new HAServiceProtocol.StateChangeRequestInfo(
-            HAServiceProtocol.RequestSource.REQUEST_BY_USER));
-
     assertFalse("RM never turned active", -1 == cluster.getActiveRMIndex());
   }
 
