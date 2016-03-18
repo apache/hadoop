@@ -237,7 +237,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
   protected void verifyConnections() throws InterruptedException,
       YarnException {
     assertTrue("NMs failed to connect to the RM",
-        cluster.waitForNodeManagersToConnect(20000));
+        cluster.waitForNodeManagersToConnect(5000));
     verifyClientConnection();
   }
 
@@ -299,7 +299,6 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
     cluster.resetStartFailoverFlag(false);
     cluster.init(conf);
     cluster.start();
-    getAdminService(0).transitionToActive(req);
     assertFalse("RM never turned active", -1 == cluster.getActiveRMIndex());
     verifyConnections();
 
