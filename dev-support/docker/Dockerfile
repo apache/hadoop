@@ -45,6 +45,14 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 # See http://wiki.apache.org/commons/VfsProblems
 RUN cd /usr/share/maven/lib && ln -s ../../java/commons-lang.jar .
 
+######
+# Install ISA-L library
+######
+RUN curl -L http://http.us.debian.org/debian/pool/main/libi/libisal/libisal2_2.15.0-2_amd64.deb \
+         -o /opt/libisal2_2.15.0-2_amd64.deb && \
+    dpkg -i /opt/libisal2_2.15.0-2_amd64.deb
+
+
 #######
 # Oracle Java
 #######
