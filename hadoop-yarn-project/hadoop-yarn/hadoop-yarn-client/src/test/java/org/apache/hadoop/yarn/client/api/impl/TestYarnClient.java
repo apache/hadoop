@@ -1195,6 +1195,24 @@ public class TestYarnClient {
       client.init(yarnConf);
       client.start();
 
+      int attempts;
+      for(attempts = 10; attempts > 0; attempts--) {
+        if (cluster.getResourceManager().getRMContext().getReservationSystem()
+            .getPlan(ReservationSystemTestUtil.reservationQ).getTotalCapacity()
+            .getMemory() > 0) {
+          break;
+        }
+        try {
+          Thread.sleep(100);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+      if (attempts <= 0) {
+        Assert.fail("Exhausted attempts in checking if node capacity was "
+            + "added to the plan");
+      }
+
       // create a reservation
       Clock clock = new UTCClock();
       long arrival = clock.getTime();
