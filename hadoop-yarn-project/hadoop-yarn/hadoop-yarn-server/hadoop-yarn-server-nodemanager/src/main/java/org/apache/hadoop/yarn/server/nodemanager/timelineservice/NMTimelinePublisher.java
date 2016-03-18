@@ -113,29 +113,28 @@ public class NMTimelinePublisher extends CompositeService {
   }
 
   @SuppressWarnings("unchecked")
-  public void reportContainerResourceUsage(Container container, String pId,
-      Long pmemUsage, Float cpuUsageTotalCoresPercentage) {
+  public void reportContainerResourceUsage(Container container, Long pmemUsage,
+      Float cpuUsagePercentPerCore) {
     if (pmemUsage != ResourceCalculatorProcessTree.UNAVAILABLE ||
-        cpuUsageTotalCoresPercentage !=
-            ResourceCalculatorProcessTree.UNAVAILABLE) {
+        cpuUsagePercentPerCore != ResourceCalculatorProcessTree.UNAVAILABLE) {
       ContainerEntity entity =
           createContainerEntity(container.getContainerId());
       long currentTimeMillis = System.currentTimeMillis();
       if (pmemUsage != ResourceCalculatorProcessTree.UNAVAILABLE) {
         TimelineMetric memoryMetric = new TimelineMetric();
-        memoryMetric.setId(ContainerMetric.MEMORY.toString() + pId);
+        memoryMetric.setId(ContainerMetric.MEMORY.toString());
         memoryMetric.addValue(currentTimeMillis, pmemUsage);
         entity.addMetric(memoryMetric);
       }
-      if (cpuUsageTotalCoresPercentage !=
-          ResourceCalculatorProcessTree.UNAVAILABLE) {
+      if (cpuUsagePercentPerCore != ResourceCalculatorProcessTree.UNAVAILABLE) {
         TimelineMetric cpuMetric = new TimelineMetric();
-        cpuMetric.setId(ContainerMetric.CPU.toString() + pId);
-        cpuMetric.addValue(currentTimeMillis, cpuUsageTotalCoresPercentage);
+        cpuMetric.setId(ContainerMetric.CPU.toString());
+        cpuMetric.addValue(currentTimeMillis,
+            Math.round(cpuUsagePercentPerCore));
         entity.addMetric(cpuMetric);
       }
-      dispatcher.getEventHandler().handle(
-          new TimelinePublishEvent(entity, container.getContainerId()
+      dispatcher.getEventHandler()
+          .handle(new TimelinePublishEvent(entity, container.getContainerId()
               .getApplicationAttemptId().getApplicationId()));
     }
   }
