@@ -95,7 +95,7 @@ public class ResourcePBImpl extends Resource {
     initResourcesMap();
     ResourceInformation ri =
         this.getResourceInformation(ResourceInformation.MEMORY_MB.getName());
-    return UnitsConversionUtil.convert(ri.getUnits(), "M", ri.getValue());
+    return UnitsConversionUtil.convert(ri.getUnits(), "Mi", ri.getValue());
   }
 
   @Override

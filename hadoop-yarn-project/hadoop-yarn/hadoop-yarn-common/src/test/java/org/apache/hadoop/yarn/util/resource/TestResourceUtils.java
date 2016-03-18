@@ -195,7 +195,7 @@ public class TestResourceUtils {
       // we must always have memory and vcores with their fixed units
       Assert.assertTrue(ret.containsKey("memory-mb"));
       ResourceInformation memInfo = ret.get("memory-mb");
-      Assert.assertEquals("M", memInfo.getUnits());
+      Assert.assertEquals("Mi", memInfo.getUnits());
       Assert.assertEquals(ResourceTypes.COUNTABLE, memInfo.getResourceType());
       Assert.assertTrue(ret.containsKey("vcores"));
       ResourceInformation vcoresInfo = ret.get("vcores");
