@@ -25,11 +25,14 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerComm
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
-import org.apache.hadoop.ozone.container.helpers.Pipeline;
-import org.apache.hadoop.ozone.container.interfaces.ContainerDispatcher;
-import org.apache.hadoop.ozone.container.interfaces.ContainerManager;
-import org.apache.hadoop.ozone.container.ozoneimpl.Dispatcher;
-import org.apache.hadoop.ozone.container.transport.client.XceiverClient;
+import org.apache.hadoop.ozone.container.common.helpers.Pipeline;
+import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
+import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
+import org.apache.hadoop.ozone.container.common.impl.Dispatcher;
+import org.apache.hadoop.ozone.container.common.transport.client.XceiverClient;
+import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
+import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerHandler;
+
 import org.junit.Assert;
 import org.junit.Test;
 

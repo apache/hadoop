@@ -16,18 +16,18 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.container.ozoneimpl;
+package org.apache.hadoop.ozone.container.common.impl;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Type;
-import org.apache.hadoop.ozone.container.helpers.ContainerData;
-import org.apache.hadoop.ozone.container.helpers.ContainerUtils;
-import org.apache.hadoop.ozone.container.helpers.Pipeline;
-import org.apache.hadoop.ozone.container.interfaces.ContainerDispatcher;
-import org.apache.hadoop.ozone.container.interfaces.ContainerManager;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
+import org.apache.hadoop.ozone.container.common.helpers.Pipeline;
+import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
+import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,7 +61,8 @@ public class Dispatcher implements ContainerDispatcher {
     if ((cmdType == Type.CreateContainer) ||
         (cmdType == Type.DeleteContainer) ||
         (cmdType == Type.ReadContainer) ||
-        (cmdType == Type.ListContainer)) {
+        (cmdType == Type.ListContainer) ||
+        (cmdType == Type.UpdateContainer)) {
 
       return containerProcessHandler(msg);
     }
@@ -95,6 +96,9 @@ public class Dispatcher implements ContainerDispatcher {
         return handleDeleteContainer(msg, cData, pipeline);
 
       case ListContainer:
+        return ContainerUtils.unsupportedRequest(msg);
+
+      case UpdateContainer:
         return ContainerUtils.unsupportedRequest(msg);
 
       case ReadContainer:

@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.container.helpers;
+package org.apache.hadoop.ozone.container.common.helpers;
 
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 

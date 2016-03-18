@@ -16,12 +16,12 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.container.interfaces;
+package org.apache.hadoop.ozone.container.common.interfaces;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.ozone.container.helpers.ContainerData;
-import org.apache.hadoop.ozone.container.helpers.Pipeline;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
+import org.apache.hadoop.ozone.container.common.helpers.Pipeline;
 
 import java.io.IOException;
 import java.util.List;

@@ -24,7 +24,7 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .ContainerCommandResponseProto;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.ozone.container.helpers.Pipeline;
+import org.apache.hadoop.ozone.container.common.helpers.Pipeline;
 
 import java.io.IOException;
 import java.net.ServerSocket;
