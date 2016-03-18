@@ -384,6 +384,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.edits.dir.required</name>
+  <value></value>
+  <description>This should be a subset of dfs.namenode.edits.dir,
+      to ensure that the transaction (edits) file
+      in these places is always up-to-date.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.shared.edits.dir</name>
   <value></value>
   <description>A directory on shared storage between the multiple namenodes
