@@ -36,7 +36,7 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
   private static final String VCORES_URI = "vcores";
 
   public static final ResourceInformation MEMORY_MB =
-      ResourceInformation.newInstance(MEMORY_URI, "M");
+      ResourceInformation.newInstance(MEMORY_URI, "Mi");
   public static final ResourceInformation VCORES =
       ResourceInformation.newInstance(VCORES_URI);
 

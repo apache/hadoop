@@ -46,7 +46,8 @@ public class UnitsConversionUtil {
   }
 
   private static final String[] UNITS =
-      {"p", "n", "u", "m", "", "k", "M", "G", "T", "P"};
+      { "p", "n", "u", "m", "", "k", "M", "G", "T", "P", "Ki", "Mi", "Gi", "Ti",
+          "Pi" };
   private static final List<String> SORTED_UNITS = Arrays.asList(UNITS);
   public static final Set<String> KNOWN_UNITS = createKnownUnitsSet();
   private static final Converter PICO =
@@ -64,6 +65,15 @@ public class UnitsConversionUtil {
       new Converter(1000L * 1000L * 1000L * 1000L, 1L);
   private static final Converter PETA =
       new Converter(1000L * 1000L * 1000L * 1000L * 1000L, 1L);
+
+  private static final Converter KILO_BINARY = new Converter(1024L, 1L);
+  private static final Converter MEGA_BINARY = new Converter(1024L * 1024L, 1L);
+  private static final Converter GIGA_BINARY =
+      new Converter(1024L * 1024L * 1024L, 1L);
+  private static final Converter TERA_BINARY =
+      new Converter(1024L * 1024L * 1024L * 1024L, 1L);
+  private static final Converter PETA_BINARY =
+      new Converter(1024L * 1024L * 1024L * 1024L * 1024L, 1L);
 
   private static Set<String> createKnownUnitsSet() {
     Set<String> ret = new HashSet<>();
@@ -93,6 +103,16 @@ public class UnitsConversionUtil {
       return TERA;
     case "P":
       return PETA;
+    case "Ki":
+      return KILO_BINARY;
+    case "Mi":
+      return MEGA_BINARY;
+    case "Gi":
+      return GIGA_BINARY;
+    case "Ti":
+      return TERA_BINARY;
+    case "Pi":
+      return PETA_BINARY;
     default:
       throw new IllegalArgumentException(
           "Unknown unit '" + unit + "'. Known units are " + KNOWN_UNITS);
@@ -112,28 +132,29 @@ public class UnitsConversionUtil {
     if (toUnit == null || fromUnit == null || fromValue == null) {
       throw new IllegalArgumentException("One or more arguments are null");
     }
-    Long tmp;
     String overflowMsg =
         "Converting " + fromValue + " from '" + fromUnit + "' to '" + toUnit
             + "' will result in an overflow of Long";
+    if (fromUnit.equals(toUnit)) {
+      return fromValue;
+    }
     Converter fc = getConverter(fromUnit);
     Converter tc = getConverter(toUnit);
     Long numerator = fc.numerator * tc.denominator;
     Long denominator = fc.denominator * tc.numerator;
+    Long numeratorMultiplierLimit = Long.MAX_VALUE / numerator;
     if (numerator < denominator) {
-      if (!toUnit.equals(fromUnit)) {
-        tmp = Long.MAX_VALUE / numerator;
-        if (tmp < fromValue) {
-          throw new IllegalArgumentException(overflowMsg);
-        }
+      if (numeratorMultiplierLimit < fromValue) {
+        throw new IllegalArgumentException(overflowMsg);
       }
       return (fromValue * numerator) / denominator;
     }
-    tmp = numerator / denominator;
-    if (!toUnit.equals(fromUnit)) {
-      if ((Long.MAX_VALUE / tmp) < fromValue) {
-        throw new IllegalArgumentException(overflowMsg);
-      }
+    if (numeratorMultiplierLimit > fromValue) {
+      return (numerator * fromValue) / denominator;
+    }
+    Long tmp = numerator / denominator;
+    if ((Long.MAX_VALUE / tmp) < fromValue) {
+      throw new IllegalArgumentException(overflowMsg);
     }
     return fromValue * tmp;
   }

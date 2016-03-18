@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.util;
 
-import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -45,6 +44,7 @@ public class TestUnitsConversionUtil {
     fromUnit = "";
     Assert.assertEquals("kilo test failed", Long.valueOf(test / 1000l),
         UnitsConversionUtil.convert(fromUnit, "k", test));
+
     Assert
         .assertEquals("mega test failed", Long.valueOf(test / (1000l * 1000l)),
             UnitsConversionUtil.convert(fromUnit, "M", test));
@@ -63,6 +63,21 @@ public class TestUnitsConversionUtil {
 
     Assert.assertEquals("mega to giga test failed", Long.valueOf(value),
         UnitsConversionUtil.convert("M", "G", Long.valueOf(value * 1000l)));
+
+    Assert.assertEquals("Mi to Gi test failed", Long.valueOf(value),
+        UnitsConversionUtil.convert("Mi", "Gi", Long.valueOf(value * 1024l)));
+
+    Assert.assertEquals("Mi to Ki test failed", Long.valueOf(value * 1024),
+        UnitsConversionUtil.convert("Mi", "Ki", Long.valueOf(value)));
+
+    Assert.assertEquals("Ki to base units test failed", Long.valueOf(5 * 1024),
+        UnitsConversionUtil.convert("Ki", "", Long.valueOf(5)));
+
+    Assert.assertEquals("Mi to k test failed", Long.valueOf(1073741),
+        UnitsConversionUtil.convert("Mi", "k", Long.valueOf(1024)));
+
+    Assert.assertEquals("M to Mi test failed", Long.valueOf(953),
+        UnitsConversionUtil.convert("M", "Mi", Long.valueOf(1000)));
   }
 
   @Test
