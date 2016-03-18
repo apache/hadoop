@@ -29,20 +29,26 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Bytes.ByteArrayComparator;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.GenericConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.NumericValueConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ValueConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimestampGenerator;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Invoked via the coprocessor when a Get or a Scan is issued for flow run
@@ -55,23 +61,42 @@ class FlowScanner implements RegionScanner, Closeable {
 
   private static final Log LOG = LogFactory.getLog(FlowScanner.class);
 
+  /**
+   * use a special application id to represent the flow id this is needed since
+   * TimestampGenerator parses the app id to generate a cell timestamp.
+   */
+  private static final String FLOW_APP_ID = "application_00000000000_0000";
+
   private final HRegion region;
   private final InternalScanner flowRunScanner;
-  private RegionScanner regionScanner;
   private final int limit;
+  private final long appFinalValueRetentionThreshold;
+  private RegionScanner regionScanner;
   private boolean hasMore;
   private byte[] currentRow;
   private List<Cell> availableCells = new ArrayList<>();
   private int currentIndex;
+  private FlowScannerOperation action = FlowScannerOperation.READ;
 
-  FlowScanner(HRegion region, int limit, InternalScanner internalScanner) {
-    this.region = region;
+  FlowScanner(RegionCoprocessorEnvironment env, int limit,
+      InternalScanner internalScanner, FlowScannerOperation action) {
     this.limit = limit;
     this.flowRunScanner = internalScanner;
     if (internalScanner instanceof RegionScanner) {
       this.regionScanner = (RegionScanner) internalScanner;
     }
-    // TODO: note if it's compaction/flush
+    this.action = action;
+    if (env == null) {
+      this.appFinalValueRetentionThreshold =
+          YarnConfiguration.DEFAULT_APP_FINAL_VALUE_RETENTION_THRESHOLD;
+      this.region = null;
+    } else {
+      this.region = env.getRegion();
+      Configuration hbaseConf = env.getConfiguration();
+      this.appFinalValueRetentionThreshold = hbaseConf.getLong(
+          YarnConfiguration.APP_FINAL_VALUE_RETENTION_THRESHOLD,
+          YarnConfiguration.DEFAULT_APP_FINAL_VALUE_RETENTION_THRESHOLD);
+    }
   }
 
   /*
@@ -102,17 +127,6 @@ class FlowScanner implements RegionScanner, Closeable {
   @Override
   public boolean next(List<Cell> cells, int cellLimit) throws IOException {
     return nextInternal(cells, cellLimit);
-  }
-
-  private String getAggregationCompactionDimension(List<Tag> tags) {
-    String appId = null;
-    for (Tag t : tags) {
-      if (AggregationCompactionDimension.APPLICATION_ID.getTagType() == t
-          .getType()) {
-        appId = Bytes.toString(t.getValue());
-      }
-    }
-    return appId;
   }
 
   /**
@@ -165,6 +179,7 @@ class FlowScanner implements RegionScanner, Closeable {
    * @return true if next row is available for the scanner, false otherwise
    * @throws IOException
    */
+  @SuppressWarnings("deprecation")
   private boolean nextInternal(List<Cell> cells, int cellLimit)
       throws IOException {
     Cell cell = null;
@@ -183,14 +198,18 @@ class FlowScanner implements RegionScanner, Closeable {
     SortedSet<Cell> currentColumnCells = new TreeSet<>(KeyValue.COMPARATOR);
     Set<String> alreadySeenAggDim = new HashSet<>();
     int addedCnt = 0;
+    long currentTimestamp = System.currentTimeMillis();
     ValueConverter converter = null;
-    while (((cell = peekAtNextCell(cellLimit)) != null)
-        && (cellLimit <= 0 || addedCnt < cellLimit)) {
+    while (cellLimit <= 0 || addedCnt < cellLimit) {
+      cell = peekAtNextCell(cellLimit);
+      if (cell == null) {
+        break;
+      }
       byte[] newColumnQualifier = CellUtil.cloneQualifier(cell);
       if (comp.compare(currentColumnQualifier, newColumnQualifier) != 0) {
         if (converter != null && isNumericConverter(converter)) {
           addedCnt += emitCells(cells, currentColumnCells, currentAggOp,
-              (NumericValueConverter)converter);
+              (NumericValueConverter)converter, currentTimestamp);
         }
         resetState(currentColumnCells, alreadySeenAggDim);
         currentColumnQualifier = newColumnQualifier;
@@ -207,8 +226,17 @@ class FlowScanner implements RegionScanner, Closeable {
       nextCell(cellLimit);
     }
     if (!currentColumnCells.isEmpty()) {
-      emitCells(cells, currentColumnCells, currentAggOp,
-          (NumericValueConverter)converter);
+      addedCnt += emitCells(cells, currentColumnCells, currentAggOp,
+          (NumericValueConverter)converter, currentTimestamp);
+      if (LOG.isDebugEnabled()) {
+        if (addedCnt > 0) {
+          LOG.debug("emitted cells. " + addedCnt + " for " + this.action
+              + " rowKey="
+              + FlowRunRowKey.parseRowKey(cells.get(0).getRow()).toString());
+        } else {
+          LOG.debug("emitted no cells for " + this.action);
+        }
+      }
     }
     return hasMore();
   }
@@ -247,7 +275,7 @@ class FlowScanner implements RegionScanner, Closeable {
     }
 
     switch (currentAggOp) {
-    case MIN:
+    case GLOBAL_MIN:
       if (currentColumnCells.size() == 0) {
         currentColumnCells.add(cell);
       } else {
@@ -260,7 +288,7 @@ class FlowScanner implements RegionScanner, Closeable {
         }
       }
       break;
-    case MAX:
+    case GLOBAL_MAX:
       if (currentColumnCells.size() == 0) {
         currentColumnCells.add(cell);
       } else {
@@ -275,16 +303,32 @@ class FlowScanner implements RegionScanner, Closeable {
       break;
     case SUM:
     case SUM_FINAL:
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("In collect cells "
+            + " FlowSannerOperation="
+            + this.action
+            + " currentAggOp="
+            + currentAggOp
+            + " cell qualifier="
+            + Bytes.toString(CellUtil.cloneQualifier(cell))
+            + " cell value= "
+            + (Number) converter.decodeValue(CellUtil.cloneValue(cell))
+            + " timestamp=" + cell.getTimestamp());
+      }
+
       // only if this app has not been seen yet, add to current column cells
       List<Tag> tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(),
           cell.getTagsLength());
-      String aggDim = getAggregationCompactionDimension(tags);
-
-      // If this agg dimension has already been seen, since they show up in
-      // sorted order, we drop the rest which are older. In other words, this
-      // cell is older than previously seen cells for that agg dim.
+      String aggDim = TimelineStorageUtils
+          .getAggregationCompactionDimension(tags);
       if (!alreadySeenAggDim.contains(aggDim)) {
-        // Not seen this agg dim, hence consider this cell in our working set
+        // if this agg dimension has already been seen,
+        // since they show up in sorted order
+        // we drop the rest which are older
+        // in other words, this cell is older than previously seen cells
+        // for that agg dim
+        // but when this agg dim is not seen,
+        // consider this cell in our working set
         currentColumnCells.add(cell);
         alreadySeenAggDim.add(aggDim);
       }
@@ -300,8 +344,8 @@ class FlowScanner implements RegionScanner, Closeable {
    * parameter.
    */
   private int emitCells(List<Cell> cells, SortedSet<Cell> currentColumnCells,
-      AggregationOperation currentAggOp, NumericValueConverter converter)
-      throws IOException {
+      AggregationOperation currentAggOp, NumericValueConverter converter,
+      long currentTimestamp) throws IOException {
     if ((currentColumnCells == null) || (currentColumnCells.size() == 0)) {
       return 0;
     }
@@ -309,17 +353,36 @@ class FlowScanner implements RegionScanner, Closeable {
       cells.addAll(currentColumnCells);
       return currentColumnCells.size();
     }
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("In emitCells " + this.action + " currentColumnCells size= "
+          + currentColumnCells.size() + " currentAggOp" + currentAggOp);
+    }
 
     switch (currentAggOp) {
-    case MIN:
-    case MAX:
+    case GLOBAL_MIN:
+    case GLOBAL_MAX:
       cells.addAll(currentColumnCells);
       return currentColumnCells.size();
     case SUM:
     case SUM_FINAL:
-      Cell sumCell = processSummation(currentColumnCells, converter);
-      cells.add(sumCell);
-      return 1;
+      switch (action) {
+      case FLUSH:
+      case MINOR_COMPACTION:
+        cells.addAll(currentColumnCells);
+        return currentColumnCells.size();
+      case READ:
+        Cell sumCell = processSummation(currentColumnCells, converter);
+        cells.add(sumCell);
+        return 1;
+      case MAJOR_COMPACTION:
+        List<Cell> finalCells = processSummationMajorCompaction(
+            currentColumnCells, converter, currentTimestamp);
+        cells.addAll(finalCells);
+        return finalCells.size();
+      default:
+        cells.addAll(currentColumnCells);
+        return currentColumnCells.size();
+      }
     default:
       cells.addAll(currentColumnCells);
       return currentColumnCells.size();
@@ -349,8 +412,120 @@ class FlowScanner implements RegionScanner, Closeable {
       sum = converter.add(sum, currentValue);
     }
     byte[] sumBytes = converter.encodeValue(sum);
-    Cell sumCell = createNewCell(mostRecentCell, sumBytes);
+    Cell sumCell = TimelineStorageUtils.createNewCell(mostRecentCell, sumBytes);
     return sumCell;
+  }
+
+
+  /**
+   * Returns a list of cells that contains
+   *
+   * A) the latest cells for applications that haven't finished yet
+   * B) summation
+   * for the flow, based on applications that have completed and are older than
+   * a certain time
+   *
+   * The new cell created has the timestamp of the most recent metric cell. The
+   * sum of a metric for a flow run is the summation at the point of the last
+   * metric update in that flow till that time.
+   */
+  @VisibleForTesting
+  List<Cell> processSummationMajorCompaction(
+      SortedSet<Cell> currentColumnCells, NumericValueConverter converter,
+      long currentTimestamp)
+      throws IOException {
+    Number sum = 0;
+    Number currentValue = 0;
+    long ts = 0L;
+    boolean summationDone = false;
+    List<Cell> finalCells = new ArrayList<Cell>();
+    if (currentColumnCells == null) {
+      return finalCells;
+    }
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("In processSummationMajorCompaction,"
+          + " will drop cells older than " + currentTimestamp
+          + " CurrentColumnCells size=" + currentColumnCells.size());
+    }
+
+    for (Cell cell : currentColumnCells) {
+      AggregationOperation cellAggOp = getCurrentAggOp(cell);
+      // if this is the existing flow sum cell
+      List<Tag> tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(),
+          cell.getTagsLength());
+      String appId = TimelineStorageUtils
+          .getAggregationCompactionDimension(tags);
+      if (appId == FLOW_APP_ID) {
+        sum = converter.add(sum, currentValue);
+        summationDone = true;
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("reading flow app id sum=" + sum);
+        }
+      } else {
+        currentValue = (Number) converter.decodeValue(CellUtil
+            .cloneValue(cell));
+        // read the timestamp truncated by the generator
+        ts =  TimestampGenerator.getTruncatedTimestamp(cell.getTimestamp());
+        if ((cellAggOp == AggregationOperation.SUM_FINAL)
+            && ((ts + this.appFinalValueRetentionThreshold)
+                < currentTimestamp)) {
+          sum = converter.add(sum, currentValue);
+          summationDone = true;
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("MAJOR COMPACTION loop sum= " + sum
+                + " discarding now: " + " qualifier="
+                + Bytes.toString(CellUtil.cloneQualifier(cell)) + " value="
+                + (Number) converter.decodeValue(CellUtil.cloneValue(cell))
+                + " timestamp=" + cell.getTimestamp() + " " + this.action);
+          }
+        } else {
+          // not a final value but it's the latest cell for this app
+          // so include this cell in the list of cells to write back
+          finalCells.add(cell);
+        }
+      }
+    }
+    if (summationDone) {
+      Cell anyCell = currentColumnCells.first();
+      List<Tag> tags = new ArrayList<Tag>();
+      Tag t = new Tag(AggregationOperation.SUM_FINAL.getTagType(),
+          Bytes.toBytes(FLOW_APP_ID));
+      tags.add(t);
+      t = new Tag(AggregationCompactionDimension.APPLICATION_ID.getTagType(),
+          Bytes.toBytes(FLOW_APP_ID));
+      tags.add(t);
+      byte[] tagByteArray = Tag.fromList(tags);
+      Cell sumCell = TimelineStorageUtils.createNewCell(
+          CellUtil.cloneRow(anyCell),
+          CellUtil.cloneFamily(anyCell),
+          CellUtil.cloneQualifier(anyCell),
+          TimestampGenerator.getSupplementedTimestamp(
+              System.currentTimeMillis(), FLOW_APP_ID),
+              converter.encodeValue(sum), tagByteArray);
+      finalCells.add(sumCell);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("MAJOR COMPACTION final sum= " + sum + " for "
+            + Bytes.toString(CellUtil.cloneQualifier(sumCell))
+            + " " + this.action);
+      }
+      LOG.info("After major compaction for qualifier="
+          + Bytes.toString(CellUtil.cloneQualifier(sumCell))
+          + " with currentColumnCells.size="
+          + currentColumnCells.size()
+          + " returning finalCells.size=" + finalCells.size()
+          + " with sum=" + sum.longValue()
+          + " with cell timestamp " + sumCell.getTimestamp());
+    } else {
+      String qualifier = "";
+      LOG.info("After major compaction for qualifier=" + qualifier
+          + " with currentColumnCells.size="
+          + currentColumnCells.size()
+          + " returning finalCells.size=" + finalCells.size()
+          + " with zero sum="
+          + sum.longValue());
+    }
+    return finalCells;
   }
 
   /**
@@ -375,7 +550,7 @@ class FlowScanner implements RegionScanner, Closeable {
       Number currentCellValue = (Number) converter.decodeValue(CellUtil
           .cloneValue(currentCell));
       switch (currentAggOp) {
-      case MIN:
+      case GLOBAL_MIN:
         if (converter.compare(
             currentCellValue, previouslyChosenCellValue) < 0) {
           // new value is minimum, hence return this cell
@@ -384,7 +559,7 @@ class FlowScanner implements RegionScanner, Closeable {
           // previously chosen value is miniumum, hence return previous min cell
           return previouslyChosenCell;
         }
-      case MAX:
+      case GLOBAL_MAX:
         if (converter.compare(
             currentCellValue, previouslyChosenCellValue) > 0) {
           // new value is max, hence return this cell
@@ -402,16 +577,13 @@ class FlowScanner implements RegionScanner, Closeable {
     }
   }
 
-  private Cell createNewCell(Cell origCell, byte[] newValue)
-      throws IOException {
-    return CellUtil.createCell(CellUtil.cloneRow(origCell),
-        CellUtil.cloneFamily(origCell), CellUtil.cloneQualifier(origCell),
-        origCell.getTimestamp(), KeyValue.Type.Put.getCode(), newValue);
-  }
-
   @Override
   public void close() throws IOException {
-    flowRunScanner.close();
+    if (flowRunScanner != null) {
+      flowRunScanner.close();
+    } else {
+      LOG.warn("scanner close called but scanner is null");
+    }
   }
 
   /**
@@ -423,8 +595,6 @@ class FlowScanner implements RegionScanner, Closeable {
 
   /**
    * Returns whether or not the underlying scanner has more rows.
-   *
-   * @return true, if there are more cells to return, false otherwise.
    */
   public boolean hasMore() {
     return currentIndex < availableCells.size() ? true : hasMore;
@@ -440,8 +610,7 @@ class FlowScanner implements RegionScanner, Closeable {
    *          fetched by the wrapped scanner
    * @return the next available cell or null if no more cells are available for
    *         the current row
-   * @throws IOException if any problem is encountered while grabbing the next
-   *     cell.
+   * @throws IOException
    */
   public Cell nextCell(int cellLimit) throws IOException {
     Cell cell = peekAtNextCell(cellLimit);

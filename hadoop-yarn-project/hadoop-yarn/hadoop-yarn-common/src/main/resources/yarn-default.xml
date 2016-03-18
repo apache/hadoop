@@ -2159,6 +2159,7 @@
     <value>604800</value>
   </property>
 
+  <!-- Timeline Service v2 Configuration -->
   <property>
     <name>yarn.timeline-service.entity-group-fs-store.leveldb-cache-read-cache-size</name>
     <description>
@@ -2227,6 +2228,15 @@
     <name>yarn.timeline-service.timeline-client.number-of-async-entities-to-merge</name>
     <value>10</value>
   </property>
+
+  <property>
+    <description> The setting that controls how long the final value
+    of a metric of a completed app is retained before merging into
+    the flow sum.</description>
+    <name>yarn.timeline-service.coprocessor.app-final-value-retention-milliseconds</name>
+    <value>259200000</value>
+  </property>
+
   <!--  Shared Cache Configuration -->
 
   <property>

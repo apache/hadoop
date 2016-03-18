@@ -33,7 +33,7 @@ public class TimestampGenerator {
    * if this is changed, then reading cell timestamps written with older
    * multiplier value will not work
    */
-  public static final long TS_MULTIPLIER = 1000L;
+  public static final long TS_MULTIPLIER = 1000000L;
 
   private final AtomicLong lastTimestamp = new AtomicLong();
 
@@ -74,13 +74,14 @@ public class TimestampGenerator {
   }
 
   /**
-   * returns a timestamp multiplied with TS_MULTIPLIER and last few digits of
-   * application id
+   * Returns a timestamp multiplied with TS_MULTIPLIER and last few digits of
+   * application id.
    *
    * Unlikely scenario of generating a timestamp that is a duplicate: If more
-   * than a 1000 concurrent apps are running in one flow run AND write to same
-   * column at the same time, then say appId of 1001 will overlap with appId of
-   * 001 and there may be collisions for that flow run's specific column.
+   * than a 1M concurrent apps are running in one flow run AND write to same
+   * column at the same time, then say appId of 1M and 1 will overlap
+   * with appId of 001 and there may be collisions for that flow run's
+   * specific column.
    *
    * @param incomingTS Timestamp to be converted.
    * @param appId Application Id.

@@ -52,8 +52,8 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilte
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelinePrefixFilter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
-import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -216,7 +216,8 @@ public class TestHBaseStorageFlowRun {
     long runid = 1002345678919L;
 
     TimelineEntities te = new TimelineEntities();
-    TimelineEntity entityApp1 = TestFlowDataGenerator.getEntityMetricsApp1();
+    TimelineEntity entityApp1 = TestFlowDataGenerator
+        .getEntityMetricsApp1(System.currentTimeMillis());
     te.addEntity(entityApp1);
 
     HBaseTimelineWriterImpl hbi = null;
@@ -228,7 +229,8 @@ public class TestHBaseStorageFlowRun {
       hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
       // write another application with same metric to this flow
       te = new TimelineEntities();
-      TimelineEntity entityApp2 = TestFlowDataGenerator.getEntityMetricsApp2();
+      TimelineEntity entityApp2 = TestFlowDataGenerator
+          .getEntityMetricsApp2(System.currentTimeMillis());
       te.addEntity(entityApp2);
       appName = "application_11111111111111_2222";
       hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
@@ -323,7 +325,8 @@ public class TestHBaseStorageFlowRun {
     long runid = 1002345678919L;
 
     TimelineEntities te = new TimelineEntities();
-    TimelineEntity entityApp1 = TestFlowDataGenerator.getEntityMetricsApp1();
+    TimelineEntity entityApp1 = TestFlowDataGenerator
+        .getEntityMetricsApp1(System.currentTimeMillis());
     te.addEntity(entityApp1);
 
     HBaseTimelineWriterImpl hbi = null;
@@ -335,7 +338,8 @@ public class TestHBaseStorageFlowRun {
       hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
       // write another application with same metric to this flow
       te = new TimelineEntities();
-      TimelineEntity entityApp2 = TestFlowDataGenerator.getEntityMetricsApp2();
+      TimelineEntity entityApp2 = TestFlowDataGenerator
+          .getEntityMetricsApp2(System.currentTimeMillis());
       te.addEntity(entityApp2);
       appName = "application_11111111111111_2222";
       hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
@@ -420,7 +424,8 @@ public class TestHBaseStorageFlowRun {
     long runid = 1002345678919L;
 
     TimelineEntities te = new TimelineEntities();
-    TimelineEntity entityApp1 = TestFlowDataGenerator.getEntityMetricsApp1();
+    TimelineEntity entityApp1 = TestFlowDataGenerator
+        .getEntityMetricsApp1(System.currentTimeMillis());
     te.addEntity(entityApp1);
 
     HBaseTimelineWriterImpl hbi = null;
@@ -432,7 +437,8 @@ public class TestHBaseStorageFlowRun {
       hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
       // write another application with same metric to this flow
       te = new TimelineEntities();
-      TimelineEntity entityApp2 = TestFlowDataGenerator.getEntityMetricsApp2();
+      TimelineEntity entityApp2 = TestFlowDataGenerator
+          .getEntityMetricsApp2(System.currentTimeMillis());
       te.addEntity(entityApp2);
       appName = "application_11111111111111_2222";
       hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
@@ -491,6 +497,98 @@ public class TestHBaseStorageFlowRun {
       }
     } finally {
       hbr.close();
+    }
+  }
+
+  @Test
+  public void testWriteFlowRunFlush() throws Exception {
+    String cluster = "atestFlushFlowRun_cluster1";
+    String user = "atestFlushFlowRun__user1";
+    String flow = "atestFlushFlowRun_flow_name";
+    String flowVersion = "AF1021C19F1351";
+    long runid = 1449526652000L;
+
+    int start = 10;
+    int count = 20000;
+    int appIdSuffix = 1;
+    HBaseTimelineWriterImpl hbi = null;
+    long insertTs = 1449796654827L - count;
+    long minTS = insertTs + 1;
+    long startTs = insertTs;
+    Configuration c1 = util.getConfiguration();
+    TimelineEntities te1 = null;
+    TimelineEntity entityApp1 = null;
+    TimelineEntity entityApp2 = null;
+    try {
+      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi.init(c1);
+
+      for (int i = start; i < count; i++) {
+        String appName = "application_1060350000000_" + appIdSuffix;
+        insertTs++;
+        te1 = new TimelineEntities();
+        entityApp1 = TestFlowDataGenerator.getMinFlushEntity(insertTs);
+        te1.addEntity(entityApp1);
+        entityApp2 = TestFlowDataGenerator.getMaxFlushEntity(insertTs);
+        te1.addEntity(entityApp2);
+        hbi.write(cluster, user, flow, flowVersion, runid, appName, te1);
+        Thread.sleep(1);
+
+        appName = "application_1001199480000_7" + appIdSuffix;
+        insertTs++;
+        appIdSuffix++;
+        te1 = new TimelineEntities();
+        entityApp1 = TestFlowDataGenerator.getMinFlushEntity(insertTs);
+        te1.addEntity(entityApp1);
+        entityApp2 = TestFlowDataGenerator.getMaxFlushEntity(insertTs);
+        te1.addEntity(entityApp2);
+
+        hbi.write(cluster, user, flow, flowVersion, runid, appName, te1);
+        if (i % 1000 == 0) {
+          hbi.flush();
+          checkMinMaxFlush(c1, minTS, startTs, count, cluster, user, flow,
+              runid, false);
+        }
+      }
+    } finally {
+      hbi.flush();
+      hbi.close();
+      checkMinMaxFlush(c1, minTS, startTs, count, cluster, user, flow, runid,
+          true);
+    }
+  }
+
+  private void checkMinMaxFlush(Configuration c1, long minTS, long startTs,
+      int count, String cluster, String user, String flow, long runid,
+      boolean checkMax) throws IOException {
+    Connection conn = ConnectionFactory.createConnection(c1);
+    // check in flow run table
+    Table table1 = conn.getTable(TableName
+        .valueOf(FlowRunTable.DEFAULT_TABLE_NAME));
+    // scan the table and see that we get back the right min and max
+    // timestamps
+    byte[] startRow = FlowRunRowKey.getRowKey(cluster, user, flow, runid);
+    Get g = new Get(startRow);
+    g.addColumn(FlowRunColumnFamily.INFO.getBytes(),
+        FlowRunColumn.MIN_START_TIME.getColumnQualifierBytes());
+    g.addColumn(FlowRunColumnFamily.INFO.getBytes(),
+        FlowRunColumn.MAX_END_TIME.getColumnQualifierBytes());
+
+    Result r1 = table1.get(g);
+    assertNotNull(r1);
+    assertTrue(!r1.isEmpty());
+    Map<byte[], byte[]> values = r1.getFamilyMap(FlowRunColumnFamily.INFO
+        .getBytes());
+    int start = 10;
+    assertEquals(2, r1.size());
+    long starttime = Bytes.toLong(values
+        .get(FlowRunColumn.MIN_START_TIME.getColumnQualifierBytes()));
+    assertEquals(minTS, starttime);
+    if (checkMax) {
+      assertEquals(startTs + 2 * (count - start)
+          + TestFlowDataGenerator.END_TS_INCR,
+          Bytes.toLong(values
+          .get(FlowRunColumn.MAX_END_TIME.getColumnQualifierBytes())));
     }
   }
 
