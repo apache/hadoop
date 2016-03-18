@@ -152,7 +152,7 @@ public class TestMetaSave {
       line = reader.readLine();
       assertTrue(line.equals("Dead Datanodes: 1"));
       line = reader.readLine();
-      assertTrue(line.equals("Metasave: Blocks waiting for replication: 0"));
+      assertTrue(line.equals("Metasave: Blocks waiting for reconstruction: 0"));
       line = reader.readLine();
       assertTrue(line.equals("Mis-replicated blocks that have been postponed:"));
       line = reader.readLine();

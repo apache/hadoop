@@ -27,11 +27,22 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.serializer.JavaSerializationComparator;
 import org.apache.hadoop.mapred.HadoopTestCase;
-import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.CounterGroup;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MapReduceTestUtil;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class TestMRMultipleOutputs extends HadoopTestCase {
 
@@ -39,11 +50,13 @@ public class TestMRMultipleOutputs extends HadoopTestCase {
     super(HadoopTestCase.LOCAL_MR, HadoopTestCase.LOCAL_FS, 1, 1);
   }
 
+  @Test
   public void testWithoutCounters() throws Exception {
     _testMultipleOutputs(false);
     _testMOWithJavaSerialization(false);
   }
 
+  @Test
   public void testWithCounters() throws Exception {
     _testMultipleOutputs(true);
     _testMOWithJavaSerialization(true);
@@ -57,6 +70,7 @@ public class TestMRMultipleOutputs extends HadoopTestCase {
   private static String TEXT = "text";
   private static String SEQUENCE = "sequence";
 
+  @Before
   public void setUp() throws Exception {
     super.setUp();
     Configuration conf = createJobConf();
@@ -64,6 +78,7 @@ public class TestMRMultipleOutputs extends HadoopTestCase {
     fs.delete(ROOT_DIR, true);
   }
 
+  @After
   public void tearDown() throws Exception {
     Configuration conf = createJobConf();
     FileSystem fs = FileSystem.get(conf);

@@ -75,12 +75,10 @@ import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.server.resourcemanager.Application;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.Task;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -108,7 +106,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueuePlacementRule.Default;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -2751,8 +2748,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
     RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(1024), 2, "127.0.0.2");
-    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node1);
-    scheduler.handle(nodeEvent2);
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
 
     ApplicationAttemptId attId = createSchedulingRequest(1024, "queue1",
         "user1", 0);
@@ -3739,81 +3736,6 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.handle(appRemovedEvent3);
     verifyQueueNumRunnable("queue1.sub2", 1, 0);
     verifyQueueNumRunnable("queue1.sub3", 0, 0);
-  }
-
-  @Test (timeout = 10000)
-  public void testContinuousScheduling() throws Exception {
-    // set continuous scheduling enabled
-    scheduler = new FairScheduler();
-    Configuration conf = createConfiguration();
-    conf.setBoolean(FairSchedulerConfiguration.CONTINUOUS_SCHEDULING_ENABLED,
-            true);
-    scheduler.setRMContext(resourceManager.getRMContext());
-    scheduler.init(conf);
-    scheduler.start();
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
-    Assert.assertTrue("Continuous scheduling should be enabled.",
-        scheduler.isContinuousSchedulingEnabled());
-
-    // Add two nodes
-    RMNode node1 =
-            MockNodes.newNodeInfo(1, Resources.createResource(8 * 1024, 8), 1,
-                    "127.0.0.1");
-    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
-    scheduler.handle(nodeEvent1);
-    RMNode node2 =
-            MockNodes.newNodeInfo(1, Resources.createResource(8 * 1024, 8), 2,
-                    "127.0.0.2");
-    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
-    scheduler.handle(nodeEvent2);
-
-    // available resource
-    Assert.assertEquals(scheduler.getClusterResource().getMemory(), 16 * 1024);
-    Assert.assertEquals(scheduler.getClusterResource().getVirtualCores(), 16);
-
-    // send application request
-    ApplicationAttemptId appAttemptId =
-            createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
-    createMockRMApp(appAttemptId);
-
-    scheduler.addApplication(appAttemptId.getApplicationId(), "queue11", "user11", false);
-    scheduler.addApplicationAttempt(appAttemptId, false, false);
-    List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
-    ResourceRequest request =
-            createResourceRequest(1024, 1, ResourceRequest.ANY, 1, 1, true);
-    ask.add(request);
-    scheduler.allocate(appAttemptId, ask, new ArrayList<ContainerId>(), null, null, null, null);
-
-    // waiting for continuous_scheduler_sleep_time
-    // at least one pass
-    Thread.sleep(scheduler.getConf().getContinuousSchedulingSleepMs() + 500);
-
-    FSAppAttempt app = scheduler.getSchedulerApp(appAttemptId);
-    // Wait until app gets resources.
-    while (app.getCurrentConsumption().equals(Resources.none())) { }
-
-    // check consumption
-    Assert.assertEquals(1024, app.getCurrentConsumption().getMemory());
-    Assert.assertEquals(1, app.getCurrentConsumption().getVirtualCores());
-
-    // another request
-    request =
-            createResourceRequest(1024, 1, ResourceRequest.ANY, 2, 1, true);
-    ask.clear();
-    ask.add(request);
-    scheduler.stop();
-    scheduler.allocate(appAttemptId, ask, new ArrayList<ContainerId>(), null, null, null, null);
-    scheduler.continuousSchedulingAttempt();
-    Assert.assertEquals(2048, app.getCurrentConsumption().getMemory());
-    Assert.assertEquals(2, app.getCurrentConsumption().getVirtualCores());
-
-    // 2 containers should be assigned to 2 nodes
-    Set<NodeId> nodes = new HashSet<NodeId>();
-    Iterator<RMContainer> it = app.getLiveContainers().iterator();
-    while (it.hasNext()) {
-      nodes.add(it.next().getContainer().getNodeId());
-    }
-    Assert.assertEquals(2, nodes.size());
   }
 
   @Test

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.ipc;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_RPC_PROTECTION;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
 import static org.apache.hadoop.security.SaslRpcServer.AuthMethod.KERBEROS;
 import static org.apache.hadoop.security.SaslRpcServer.AuthMethod.SIMPLE;
 import static org.apache.hadoop.security.SaslRpcServer.AuthMethod.TOKEN;
@@ -42,16 +42,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -454,7 +451,12 @@ public class TestSaslRPC {
       }
     }
   }
-  
+
+  static ConnectionId getConnectionId(Configuration conf) throws IOException {
+    return ConnectionId.getConnectionId(new InetSocketAddress(0),
+        TestSaslProtocol.class, null, 0, null, conf);
+  }
+
   @Test
   public void testPingInterval() throws Exception {
     Configuration newConf = new Configuration(conf);
@@ -464,14 +466,12 @@ public class TestSaslRPC {
 
     // set doPing to true
     newConf.setBoolean(CommonConfigurationKeys.IPC_CLIENT_PING_KEY, true);
-    ConnectionId remoteId = ConnectionId.getConnectionId(
-        new InetSocketAddress(0), TestSaslProtocol.class, null, 0, newConf);
+    ConnectionId remoteId = getConnectionId(newConf);
     assertEquals(CommonConfigurationKeys.IPC_PING_INTERVAL_DEFAULT,
         remoteId.getPingInterval());
     // set doPing to false
     newConf.setBoolean(CommonConfigurationKeys.IPC_CLIENT_PING_KEY, false);
-    remoteId = ConnectionId.getConnectionId(
-        new InetSocketAddress(0), TestSaslProtocol.class, null, 0, newConf);
+    remoteId = getConnectionId(newConf);
     assertEquals(0, remoteId.getPingInterval());
   }
   

@@ -281,21 +281,6 @@
       dust.render('explorer', base.push(d), function(err, out) {
         $('#panel').html(out);
 
-        $('#table-explorer').dataTable( {
-          'lengthMenu': [ [25, 50, 100, -1], [25, 50, 100, "All"] ],
-          'columns': [
-            {'searchable': false }, //Permissions
-            null, //Owner
-            null, //Group
-            { 'searchable': false, 'render': func_size_render}, //Size
-            { 'searchable': false, 'render': func_time_render}, //Last Modified
-            { 'searchable': false }, //Replication
-            null, //Block Size
-            null, //Name
-            { 'sortable' : false } //Trash
-          ],
-          "deferRender": true
-        });
 
         $('.explorer-browse-links').click(function() {
           var type = $(this).attr('inode-type');
@@ -324,7 +309,23 @@
           var inode_name = $(this).closest('tr').attr('inode-path');
           var absolute_file_path = append_path(current_directory, inode_name);
           delete_path(inode_name, absolute_file_path);
-        })
+        });
+          
+          $('#table-explorer').dataTable( {
+              'lengthMenu': [ [25, 50, 100, -1], [25, 50, 100, "All"] ],
+              'columns': [
+                  {'searchable': false }, //Permissions
+                  null, //Owner
+                  null, //Group
+                  { 'searchable': false, 'render': func_size_render}, //Size
+                  { 'searchable': false, 'render': func_time_render}, //Last Modified
+                  { 'searchable': false }, //Replication
+                  null, //Block Size
+                  null, //Name
+                  { 'sortable' : false } //Trash
+              ],
+              "deferRender": true
+          });
       });
     }).error(network_error_handler(url));
   }

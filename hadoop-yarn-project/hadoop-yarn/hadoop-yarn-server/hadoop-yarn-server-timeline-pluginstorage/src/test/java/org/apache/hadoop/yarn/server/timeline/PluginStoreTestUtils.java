@@ -18,13 +18,16 @@
 package org.apache.hadoop.yarn.server.timeline;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
 import org.codehaus.jackson.JsonFactory;
@@ -48,7 +51,53 @@ import java.util.Set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-class PluginStoreTestUtils {
+/**
+ * Utility methods related to the ATS v1.5 plugin storage tests.
+ */
+public class PluginStoreTestUtils {
+
+  /**
+   * For a given file system, setup directories ready to test the plugin storage.
+   *
+   * @param fs a {@link FileSystem} object that the plugin storage will work with
+   * @return the dfsCluster ready to start plugin storage tests.
+   * @throws IOException
+   */
+  public static FileSystem prepareFileSystemForPluginStore(FileSystem fs)
+      throws IOException {
+    Path activeDir = new Path(
+        YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_ACTIVE_DIR_DEFAULT
+    );
+    Path doneDir = new Path(
+        YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_DONE_DIR_DEFAULT
+    );
+
+    fs.mkdirs(activeDir);
+    fs.mkdirs(doneDir);
+    return fs;
+  }
+
+  /**
+   * Prepare configuration for plugin tests. This method will also add the mini
+   * DFS cluster's info to the configuration.
+   * Note: the test program needs to setup the reader plugin by itself.
+   *
+   * @param conf
+   * @param dfsCluster
+   * @return the modified configuration
+   */
+  public static YarnConfiguration prepareConfiguration(YarnConfiguration conf,
+      MiniDFSCluster dfsCluster) {
+    conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
+        dfsCluster.getURI().toString());
+    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 1.5f);
+    conf.setLong(
+        YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_SCAN_INTERVAL_SECONDS,
+        1);
+    conf.set(YarnConfiguration.TIMELINE_SERVICE_STORE,
+        EntityGroupFSTimelineStore.class.getName());
+    return conf;
+  }
 
   static FSDataOutputStream createLogFile(Path logPath, FileSystem fs)
       throws IOException {

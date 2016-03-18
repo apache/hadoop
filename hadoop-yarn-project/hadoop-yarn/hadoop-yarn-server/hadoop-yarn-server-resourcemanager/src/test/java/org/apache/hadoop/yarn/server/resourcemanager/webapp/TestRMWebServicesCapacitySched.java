@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.w3c.dom.Document;
@@ -379,6 +380,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
         verifySubQueue(obj, q2, qi.absoluteCapacity, qi.absoluteMaxCapacity);
       }
     } else {
+      Assert.assertEquals("\"type\" field is incorrect",
+          "capacitySchedulerLeafQueueInfo", info.getString("type"));
       LeafQueueInfo lqi = (LeafQueueInfo) qi;
       lqi.numActiveApplications = info.getInt("numActiveApplications");
       lqi.numPendingApplications = info.getInt("numPendingApplications");

@@ -38,10 +38,15 @@ public enum SchedulerEventType {
   // Source: ContainerAllocationExpirer
   CONTAINER_EXPIRED,
 
-  // Source: SchedulingEditPolicy
+  /* Source: SchedulingEditPolicy */
   KILL_RESERVED_CONTAINER,
-  MARK_CONTAINER_FOR_PREEMPTION, // Mark a container for preemption
-                                 // in the near future
-  KILL_PREEMPTED_CONTAINER // Kill a container previously marked for
-                           // preemption
+
+  // Mark a container for preemption
+  MARK_CONTAINER_FOR_PREEMPTION,
+
+  // Mark a for-preemption container killable
+  MARK_CONTAINER_FOR_KILLABLE,
+
+  // Cancel a killable container
+  MARK_CONTAINER_FOR_NONKILLABLE
 }

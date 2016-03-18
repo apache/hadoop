@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt.AMState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
@@ -126,6 +127,7 @@ public class TestReservations {
     when(csContext.getNonPartitionedQueueComparator()).thenReturn(
         CapacityScheduler.nonPartitionedQueueComparator);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
+    when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
     when(csContext.getRMContext()).thenReturn(rmContext);
     RMContainerTokenSecretManager containerTokenSecretManager = new RMContainerTokenSecretManager(
         conf);
@@ -183,6 +185,7 @@ public class TestReservations {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   public void testReservation() throws Exception {
     // Test that we now unreserve and use a node that has space
 
@@ -231,9 +234,9 @@ public class TestReservations {
     when(csContext.getNode(node_1.getNodeID())).thenReturn(node_1);
     when(csContext.getNode(node_2.getNodeID())).thenReturn(node_2);
 
-    cs.getAllNodes().put(node_0.getNodeID(), node_0);
-    cs.getAllNodes().put(node_1.getNodeID(), node_1);
-    cs.getAllNodes().put(node_2.getNodeID(), node_2);
+    cs.getNodeTracker().addNode(node_0);
+    cs.getNodeTracker().addNode(node_1);
+    cs.getNodeTracker().addNode(node_2);
 
     final int numNodes = 3;
     Resource clusterResource = Resources.createResource(numNodes * (8 * GB));
@@ -346,6 +349,7 @@ public class TestReservations {
   // Test that hitting a reservation limit and needing to unreserve
   // does not affect assigning containers for other users
   @Test
+  @SuppressWarnings("unchecked")
   public void testReservationLimitOtherUsers() throws Exception {
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
     setup(csConf, true);
@@ -395,9 +399,9 @@ public class TestReservations {
     when(csContext.getNode(node_1.getNodeID())).thenReturn(node_1);
     when(csContext.getNode(node_2.getNodeID())).thenReturn(node_2);
 
-    cs.getAllNodes().put(node_0.getNodeID(), node_0);
-    cs.getAllNodes().put(node_1.getNodeID(), node_1);
-    cs.getAllNodes().put(node_2.getNodeID(), node_2);
+    cs.getNodeTracker().addNode(node_0);
+    cs.getNodeTracker().addNode(node_1);
+    cs.getNodeTracker().addNode(node_2);
 
     final int numNodes = 3;
     Resource clusterResource = Resources.createResource(numNodes * (8 * GB));
@@ -641,6 +645,7 @@ public class TestReservations {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   public void testAssignContainersNeedToUnreserve() throws Exception {
     // Test that we now unreserve and use a node that has space
     Logger rootLogger = LogManager.getRootLogger();
@@ -684,8 +689,8 @@ public class TestReservations {
     FiCaSchedulerNode node_1 = TestUtils.getMockNode(host_1, DEFAULT_RACK, 0,
         8 * GB);
 
-    cs.getAllNodes().put(node_0.getNodeID(), node_0);
-    cs.getAllNodes().put(node_1.getNodeID(), node_1);
+    cs.getNodeTracker().addNode(node_0);
+    cs.getNodeTracker().addNode(node_1);
 
     when(csContext.getNode(node_0.getNodeID())).thenReturn(node_0);
     when(csContext.getNode(node_1.getNodeID())).thenReturn(node_1);

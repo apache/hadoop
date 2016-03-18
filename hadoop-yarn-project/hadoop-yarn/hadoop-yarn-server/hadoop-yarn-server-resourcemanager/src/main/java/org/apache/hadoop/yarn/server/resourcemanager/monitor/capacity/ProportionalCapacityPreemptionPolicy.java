@@ -35,7 +35,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptableQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
@@ -125,8 +126,8 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
   private long maxWaitTime;
   private CapacityScheduler scheduler;
   private long monitoringInterval;
-  private final Map<RMContainer,Long> preempted =
-    new HashMap<RMContainer,Long>();
+  private final Map<RMContainer, Long> preempted = new HashMap<>();
+
   private ResourceCalculator rc;
   private float percentageClusterPreemptionAllowed;
   private double naturalTerminationFactor;
@@ -134,6 +135,10 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
   private Map<String, Map<String, TempQueuePerPartition>> queueToPartitions =
       new HashMap<>();
   private RMNodeLabelsManager nlm;
+
+  // Preemptable Entities, synced from scheduler at every run
+  private Map<String, PreemptableQueue> preemptableEntities = null;
+  private Set<ContainerId> killableContainers;
 
   public ProportionalCapacityPreemptionPolicy() {
     clock = SystemClock.getInstance();
@@ -184,6 +189,64 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
     Resource clusterResources = Resources.clone(scheduler.getClusterResource());
     containerBasedPreemptOrKill(root, clusterResources);
   }
+
+  @SuppressWarnings("unchecked")
+  private void cleanupStaledKillableContainers(Resource cluster,
+      Set<String> leafQueueNames) {
+    for (String q : leafQueueNames) {
+      for (TempQueuePerPartition tq : getQueuePartitions(q)) {
+        // When queue's used - killable <= guaranteed and, killable > 0, we need
+        // to check if any of killable containers needs to be reverted
+        if (Resources.lessThanOrEqual(rc, cluster,
+            Resources.subtract(tq.current, tq.killable), tq.idealAssigned)
+            && Resources.greaterThan(rc, cluster, tq.killable, Resources.none())) {
+          // How many killable resources need to be reverted
+          // need-to-revert = already-marked-killable - (current - ideal)
+          Resource toBeRevertedFromKillable = Resources.subtract(tq.killable,
+              Resources.subtract(tq.current, tq.idealAssigned));
+
+          Resource alreadyReverted = Resources.createResource(0);
+
+          for (RMContainer c : preemptableEntities.get(q).getKillableContainers(
+              tq.partition).values()) {
+            if (Resources.greaterThanOrEqual(rc, cluster, alreadyReverted,
+                toBeRevertedFromKillable)) {
+              break;
+            }
+
+            if (Resources.greaterThan(rc, cluster,
+                Resources.add(alreadyReverted, c.getAllocatedResource()),
+                toBeRevertedFromKillable)) {
+              continue;
+            } else {
+              // This container need to be marked to unkillable
+              Resources.addTo(alreadyReverted, c.getAllocatedResource());
+              rmContext.getDispatcher().getEventHandler().handle(
+                  new ContainerPreemptEvent(c.getApplicationAttemptId(), c,
+                      SchedulerEventType.MARK_CONTAINER_FOR_NONKILLABLE));
+            }
+          }
+
+        }
+      }
+    }
+  }
+
+  private void syncKillableContainersFromScheduler() {
+    // sync preemptable entities from scheduler
+    preemptableEntities =
+        scheduler.getPreemptionManager().getShallowCopyOfPreemptableEntities();
+
+    killableContainers = new HashSet<>();
+    for (Map.Entry<String, PreemptableQueue> entry : preemptableEntities
+        .entrySet()) {
+      PreemptableQueue entity = entry.getValue();
+      for (Map<ContainerId, RMContainer> map : entity.getKillableContainers()
+          .values()) {
+        killableContainers.addAll(map.keySet());
+      }
+    }
+  }
   
   /**
    * This method selects and tracks containers to be preempted. If a container
@@ -200,6 +263,8 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
     allPartitions.addAll(scheduler.getRMContext()
         .getNodeLabelManager().getClusterNodeLabelNames());
     allPartitions.add(RMNodeLabelsManager.NO_LABEL);
+
+    syncKillableContainersFromScheduler();
 
     // extract a summary of the queues from scheduler
     synchronized (scheduler) {
@@ -228,13 +293,17 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
           recursivelyComputeIdealAssignment(tRoot, totalPreemptionAllowed);
     }
 
+    // remove containers from killable list when we want to preempt less resources
+    // from queue.
+    cleanupStaledKillableContainers(clusterResources, leafQueueNames);
+
     // based on ideal allocation select containers to be preempted from each
     // queue and each application
     Map<ApplicationAttemptId,Set<RMContainer>> toPreempt =
         getContainersToPreempt(leafQueueNames, clusterResources);
 
     if (LOG.isDebugEnabled()) {
-      logToCSV(new ArrayList<String>(leafQueueNames));
+      logToCSV(new ArrayList<>(leafQueueNames));
     }
 
     // if we are in observeOnly mode return before any action is taken
@@ -254,10 +323,10 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
         // if we tried to preempt this for more than maxWaitTime
         if (preempted.get(container) != null &&
             preempted.get(container) + maxWaitTime < clock.getTime()) {
-          // kill it
+          // mark container killable
           rmContext.getDispatcher().getEventHandler().handle(
               new ContainerPreemptEvent(appAttemptId, container,
-                  SchedulerEventType.KILL_PREEMPTED_CONTAINER));
+                  SchedulerEventType.MARK_CONTAINER_FOR_KILLABLE));
           preempted.remove(container);
         } else {
           if (preempted.get(container) != null) {
@@ -333,14 +402,14 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
 
     // qAlloc tracks currently active queues (will decrease progressively as
     // demand is met)
-    List<TempQueuePerPartition> qAlloc = new ArrayList<TempQueuePerPartition>(queues);
+    List<TempQueuePerPartition> qAlloc = new ArrayList<>(queues);
     // unassigned tracks how much resources are still to assign, initialized
     // with the total capacity for this set of queues
     Resource unassigned = Resources.clone(tot_guarant);
 
     // group queues based on whether they have non-zero guaranteed capacity
-    Set<TempQueuePerPartition> nonZeroGuarQueues = new HashSet<TempQueuePerPartition>();
-    Set<TempQueuePerPartition> zeroGuarQueues = new HashSet<TempQueuePerPartition>();
+    Set<TempQueuePerPartition> nonZeroGuarQueues = new HashSet<>();
+    Set<TempQueuePerPartition> zeroGuarQueues = new HashSet<>();
 
     for (TempQueuePerPartition q : qAlloc) {
       if (Resources
@@ -415,8 +484,8 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
     // idealAssigned >= current + pending), remove it from consideration.
     // Sort queues from most under-guaranteed to most over-guaranteed.
     TQComparator tqComparator = new TQComparator(rc, tot_guarant);
-    PriorityQueue<TempQueuePerPartition> orderedByNeed =
-        new PriorityQueue<TempQueuePerPartition>(10, tqComparator);
+    PriorityQueue<TempQueuePerPartition> orderedByNeed = new PriorityQueue<>(10,
+        tqComparator);
     for (Iterator<TempQueuePerPartition> i = qAlloc.iterator(); i.hasNext();) {
       TempQueuePerPartition q = i.next();
       if (Resources.greaterThan(rc, tot_guarant, q.current, q.guaranteed)) {
@@ -474,7 +543,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
   // percentage of guaranteed.
   protected Collection<TempQueuePerPartition> getMostUnderservedQueues(
       PriorityQueue<TempQueuePerPartition> orderedByNeed, TQComparator tqComparator) {
-    ArrayList<TempQueuePerPartition> underserved = new ArrayList<TempQueuePerPartition>();
+    ArrayList<TempQueuePerPartition> underserved = new ArrayList<>();
     while (!orderedByNeed.isEmpty()) {
       TempQueuePerPartition q1 = orderedByNeed.remove();
       underserved.add(q1);
@@ -502,7 +571,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
     
     if (ignoreGuar) {
       for (TempQueuePerPartition q : queues) {
-        q.normalizedGuarantee = (float)  1.0f / ((float) queues.size());
+        q.normalizedGuarantee = 1.0f / queues.size();
       }
     } else {
       for (TempQueuePerPartition q : queues) {
@@ -515,8 +584,9 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
     }
   }
 
-  private String getPartitionByNodeId(NodeId nodeId) {
-    return scheduler.getSchedulerNode(nodeId).getPartition();
+  private String getPartitionByRMContainer(RMContainer rmContainer) {
+    return scheduler.getSchedulerNode(rmContainer.getAllocatedNode())
+        .getPartition();
   }
 
   /**
@@ -534,7 +604,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       return false;
     }
 
-    String nodePartition = getPartitionByNodeId(rmContainer.getAllocatedNode());
+    String nodePartition = getPartitionByRMContainer(rmContainer);
     Resource toObtainByPartition =
         resourceToObtainByPartitions.get(nodePartition);
 
@@ -575,7 +645,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       ApplicationAttemptId appAttemptId, RMContainer containerToPreempt) {
     Set<RMContainer> set;
     if (null == (set = preemptMap.get(appAttemptId))) {
-      set = new HashSet<RMContainer>();
+      set = new HashSet<>();
       preemptMap.put(appAttemptId, set);
     }
     set.add(containerToPreempt);
@@ -587,7 +657,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
    * over-capacity queue. It uses {@link #NATURAL_TERMINATION_FACTOR} to
    * account for containers that will naturally complete.
    *
-   * @param queues set of leaf queues to preempt from
+   * @param leafQueueNames set of leaf queues to preempt from
    * @param clusterResource total amount of cluster resources
    * @return a map of applciationID to set of containers to preempt
    */
@@ -595,8 +665,8 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       Set<String> leafQueueNames, Resource clusterResource) {
 
     Map<ApplicationAttemptId, Set<RMContainer>> preemptMap =
-        new HashMap<ApplicationAttemptId, Set<RMContainer>>();
-    List<RMContainer> skippedAMContainerlist = new ArrayList<RMContainer>();
+        new HashMap<>();
+    List<RMContainer> skippedAMContainerlist = new ArrayList<>();
 
     // Loop all leaf queues
     for (String queueName : leafQueueNames) {
@@ -614,7 +684,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       LeafQueue leafQueue = null;
 
       Map<String, Resource> resToObtainByPartition =
-          new HashMap<String, Resource>();
+          new HashMap<>();
       for (TempQueuePerPartition qT : getQueuePartitions(queueName)) {
         leafQueue = qT.leafQueue;
         // we act only if we are violating balance by more than
@@ -703,7 +773,6 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
    * @param clusterResource
    * @param preemptMap
    * @param skippedAMContainerlist
-   * @param resToObtain
    * @param skippedAMSize
    * @param maxAMCapacityForThisQueue
    */
@@ -751,7 +820,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
 
     // first drop reserved containers towards rsrcPreempt
     List<RMContainer> reservedContainers =
-        new ArrayList<RMContainer>(app.getReservedContainers());
+        new ArrayList<>(app.getReservedContainers());
     for (RMContainer c : reservedContainers) {
       if (resToObtainByPartition.isEmpty()) {
         return;
@@ -771,8 +840,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
     // if more resources are to be freed go through all live containers in
     // reverse priority and reverse allocation order and mark them for
     // preemption
-    List<RMContainer> liveContainers =
-      new ArrayList<RMContainer>(app.getLiveContainers());
+    List<RMContainer> liveContainers = new ArrayList<>(app.getLiveContainers());
 
     sortContainers(liveContainers);
 
@@ -785,6 +853,11 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       if (c.isAMContainer()) {
         skippedAMContainerlist.add(c);
         Resources.addTo(skippedAMSize, c.getAllocatedResource());
+        continue;
+      }
+
+      // Skip already marked to killable containers
+      if (killableContainers.contains(c.getContainerId())) {
         continue;
       }
 
@@ -826,6 +899,10 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
     return "ProportionalCapacityPreemptionPolicy";
   }
 
+  @VisibleForTesting
+  public Map<RMContainer, Long> getToPreemptContainers() {
+    return preempted;
+  }
 
   /**
    * This method walks a tree of CSQueue and clones the portion of the state
@@ -851,6 +928,11 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
           partitionToLookAt);
       Resource guaranteed = Resources.multiply(partitionResource, absCap);
       Resource maxCapacity = Resources.multiply(partitionResource, absMaxCap);
+      Resource killable = Resources.none();
+      if (null != preemptableEntities.get(queueName)) {
+         killable = preemptableEntities.get(queueName)
+            .getKillableResource(partitionToLookAt);
+      }
 
       // when partition is a non-exclusive partition, the actual maxCapacity
       // could more than specified maxCapacity
@@ -875,7 +957,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
               l.getTotalPendingResourcesConsideringUserLimit(
                   partitionResource, partitionToLookAt);
         ret = new TempQueuePerPartition(queueName, current, pending, guaranteed,
-            maxCapacity, preemptionDisabled, partitionToLookAt);
+            maxCapacity, preemptionDisabled, partitionToLookAt, killable);
         if (preemptionDisabled) {
           ret.untouchableExtra = extra;
         } else {
@@ -886,7 +968,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
         Resource pending = Resource.newInstance(0, 0);
         ret =
             new TempQueuePerPartition(curQueue.getQueueName(), current, pending,
-                guaranteed, maxCapacity, false, partitionToLookAt);
+                guaranteed, maxCapacity, false, partitionToLookAt, killable);
         Resource childrensPreemptable = Resource.newInstance(0, 0);
         for (CSQueue c : curQueue.getChildQueues()) {
           TempQueuePerPartition subq =
@@ -932,7 +1014,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
 
     Map<String, TempQueuePerPartition> queuePartitions;
     if (null == (queuePartitions = queueToPartitions.get(queueName))) {
-      queuePartitions = new HashMap<String, TempQueuePerPartition>();
+      queuePartitions = new HashMap<>();
       queueToPartitions.put(queueName, queuePartitions);
     }
     queuePartitions.put(queuePartition.partition, queuePartition);
@@ -971,8 +1053,10 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
     final Resource guaranteed;
     final Resource maxCapacity;
     final String partition;
+    final Resource killable;
     Resource idealAssigned;
     Resource toBePreempted;
+
     // For logging purpose
     Resource actuallyPreempted;
     Resource untouchableExtra;
@@ -986,7 +1070,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
 
     TempQueuePerPartition(String queueName, Resource current, Resource pending,
         Resource guaranteed, Resource maxCapacity, boolean preemptionDisabled,
-        String partition) {
+        String partition, Resource killableResource) {
       this.queueName = queueName;
       this.current = current;
       this.pending = pending;
@@ -996,11 +1080,12 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       this.actuallyPreempted = Resource.newInstance(0, 0);
       this.toBePreempted = Resource.newInstance(0, 0);
       this.normalizedGuarantee = Float.NaN;
-      this.children = new ArrayList<TempQueuePerPartition>();
+      this.children = new ArrayList<>();
       this.untouchableExtra = Resource.newInstance(0, 0);
       this.preemptableExtra = Resource.newInstance(0, 0);
       this.preemptionDisabled = preemptionDisabled;
       this.partition = partition;
+      this.killable = killableResource;
     }
 
     public void setLeafQueue(LeafQueue l){
@@ -1017,12 +1102,6 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       children.add(q);
       Resources.addTo(pending, q.pending);
     }
-
-    public void addChildren(ArrayList<TempQueuePerPartition> queues) {
-      assert leafQueue == null;
-      children.addAll(queues);
-    }
-
 
     public ArrayList<TempQueuePerPartition> getChildren(){
       return children;
@@ -1064,18 +1143,13 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       return sb.toString();
     }
 
-    public void printAll() {
-      LOG.info(this.toString());
-      for (TempQueuePerPartition sub : this.getChildren()) {
-        sub.printAll();
-      }
-    }
-
     public void assignPreemption(float scalingFactor,
         ResourceCalculator rc, Resource clusterResource) {
-      if (Resources.greaterThan(rc, clusterResource, current, idealAssigned)) {
-          toBePreempted = Resources.multiply(
-              Resources.subtract(current, idealAssigned), scalingFactor);
+      if (Resources.greaterThan(rc, clusterResource,
+          Resources.subtract(current, killable), idealAssigned)) {
+        toBePreempted = Resources.multiply(Resources.subtract(
+            Resources.subtract(current, killable), idealAssigned),
+            scalingFactor);
       } else {
         toBePreempted = Resource.newInstance(0, 0);
       }

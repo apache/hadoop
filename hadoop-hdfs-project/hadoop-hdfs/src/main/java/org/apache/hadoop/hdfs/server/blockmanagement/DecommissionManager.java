@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.util.CyclicIteration;
 import org.apache.hadoop.util.ChunkedArrayList;
@@ -214,10 +215,10 @@ public class DecommissionManager {
     if (node.isDecommissionInProgress() || node.isDecommissioned()) {
       // Update DN stats maintained by HeartbeatManager
       hbManager.stopDecommission(node);
-      // Over-replicated blocks will be detected and processed when
+      // extra redundancy blocks will be detected and processed when
       // the dead node comes back and send in its full block report.
       if (node.isAlive()) {
-        blockManager.processOverReplicatedBlocksOnReCommission(node);
+        blockManager.processExtraRedundancyBlocksOnReCommission(node);
       }
       // Remove from tracking in DecommissionManager
       pendingNodes.remove(node);
@@ -280,6 +281,10 @@ public class DecommissionManager {
       BlockCollection bc,
       DatanodeDescriptor srcNode, NumberReplicas num,
       Iterable<DatanodeStorageInfo> storages) {
+    if (!NameNode.blockStateChangeLog.isInfoEnabled()) {
+      return;
+    }
+
     int curReplicas = num.liveReplicas();
     int curExpectedReplicas = blockManager.getExpectedReplicaNum(block);
     StringBuilder nodeList = new StringBuilder();
@@ -288,7 +293,8 @@ public class DecommissionManager {
       nodeList.append(node);
       nodeList.append(" ");
     }
-    LOG.info("Block: " + block + ", Expected Replicas: "
+    NameNode.blockStateChangeLog.info(
+        "Block: " + block + ", Expected Replicas: "
         + curExpectedReplicas + ", live replicas: " + curReplicas
         + ", corrupt replicas: " + num.corruptReplicas()
         + ", decommissioned replicas: " + num.decommissioned()
@@ -507,9 +513,9 @@ public class DecommissionManager {
         final List<BlockInfo> insufficientList,
         boolean pruneReliableBlocks) {
       boolean firstReplicationLog = true;
-      int underReplicatedBlocks = 0;
+      int lowRedundancyBlocks = 0;
       int decommissionOnlyReplicas = 0;
-      int underReplicatedInOpenFiles = 0;
+      int lowRedundancyInOpenFiles = 0;
       while (it.hasNext()) {
         numBlocksChecked++;
         final BlockInfo block = it.next();
@@ -531,22 +537,22 @@ public class DecommissionManager {
         final NumberReplicas num = blockManager.countNodes(block);
         final int liveReplicas = num.liveReplicas();
 
-        // Schedule under-replicated blocks for replication if not already
+        // Schedule low redundancy blocks for reconstruction if not already
         // pending
-        if (blockManager.isNeededReplication(block, liveReplicas)) {
-          if (!blockManager.neededReplications.contains(block) &&
+        if (blockManager.isNeededReconstruction(block, liveReplicas)) {
+          if (!blockManager.neededReconstruction.contains(block) &&
               blockManager.pendingReplications.getNumReplicas(block) == 0 &&
               blockManager.isPopulatingReplQueues()) {
             // Process these blocks only when active NN is out of safe mode.
-            blockManager.neededReplications.add(block,
+            blockManager.neededReconstruction.add(block,
                 liveReplicas, num.readOnlyReplicas(),
                 num.decommissionedAndDecommissioning(),
                 blockManager.getExpectedReplicaNum(block));
           }
         }
 
-        // Even if the block is under-replicated, 
-        // it doesn't block decommission if it's sufficiently replicated
+        // Even if the block is without sufficient redundancy,
+        // it doesn't block decommission if has sufficient redundancy
         if (isSufficient(block, bc, num)) {
           if (pruneReliableBlocks) {
             it.remove();
@@ -554,7 +560,7 @@ public class DecommissionManager {
           continue;
         }
 
-        // We've found an insufficiently replicated block.
+        // We've found a block without sufficient redundancy.
         if (insufficientList != null) {
           insufficientList.add(block);
         }
@@ -565,18 +571,18 @@ public class DecommissionManager {
           firstReplicationLog = false;
         }
         // Update various counts
-        underReplicatedBlocks++;
+        lowRedundancyBlocks++;
         if (bc.isUnderConstruction()) {
-          underReplicatedInOpenFiles++;
+          lowRedundancyInOpenFiles++;
         }
         if ((liveReplicas == 0) && (num.decommissionedAndDecommissioning() > 0)) {
           decommissionOnlyReplicas++;
         }
       }
 
-      datanode.decommissioningStatus.set(underReplicatedBlocks,
+      datanode.decommissioningStatus.set(lowRedundancyBlocks,
           decommissionOnlyReplicas,
-          underReplicatedInOpenFiles);
+          lowRedundancyInOpenFiles);
     }
   }
 

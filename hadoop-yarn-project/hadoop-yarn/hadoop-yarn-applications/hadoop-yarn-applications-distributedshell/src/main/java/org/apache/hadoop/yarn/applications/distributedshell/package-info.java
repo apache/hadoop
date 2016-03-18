@@ -15,19 +15,5 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.io.erasurecode.rawcoder;
 
-import org.junit.Before;
-
-/**
- * Test the new raw Reed-solomon coder implemented in Java.
- */
-public class TestRSRawCoder2 extends TestRSRawCoderBase {
-
-  @Before
-  public void setup() {
-    this.encoderClass = RSRawEncoder2.class;
-    this.decoderClass = RSRawDecoder2.class;
-    setAllowDump(false);
-  }
-}
+package org.apache.hadoop.yarn.applications.distributedshell;

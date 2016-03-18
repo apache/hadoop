@@ -399,7 +399,7 @@ public abstract class AbstractService implements Service {
   }
 
   @Override
-  public synchronized Configuration getConfig() {
+  public Configuration getConfig() {
     return config;
   }
 

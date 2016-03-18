@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAMCont
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAssignment;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityHeadroomProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
@@ -94,6 +95,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
    * to hold the message if its app doesn't not get container from a node
    */
   private String appSkipNodeDiagnostics;
+  private CapacitySchedulerContext capacitySchedulerContext;
 
   public FiCaSchedulerApp(ApplicationAttemptId applicationAttemptId, 
       String user, Queue queue, ActiveUsersManager activeUsersManager,
@@ -138,28 +140,30 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     }
     
     containerAllocator = new ContainerAllocator(this, rc, rmContext);
+
+    if (scheduler instanceof CapacityScheduler) {
+      capacitySchedulerContext = (CapacitySchedulerContext) scheduler;
+    }
   }
 
-  synchronized public boolean containerCompleted(RMContainer rmContainer,
+  public synchronized boolean containerCompleted(RMContainer rmContainer,
       ContainerStatus containerStatus, RMContainerEventType event,
       String partition) {
+    ContainerId containerId = rmContainer.getContainerId();
 
     // Remove from the list of containers
-    if (null == liveContainers.remove(rmContainer.getContainerId())) {
+    if (null == liveContainers.remove(containerId)) {
       return false;
     }
-    
+
     // Remove from the list of newly allocated containers if found
     newlyAllocatedContainers.remove(rmContainer);
-
-    Container container = rmContainer.getContainer();
-    ContainerId containerId = container.getId();
 
     // Inform the container
     rmContainer.handle(
         new RMContainerFinishedEvent(containerId, containerStatus, event));
 
-    containersToPreempt.remove(rmContainer.getContainerId());
+    containersToPreempt.remove(containerId);
 
     RMAuditLogger.logSuccess(getUser(),
         AuditConstants.RELEASE_CONTAINER, "SchedulerApp",
@@ -176,7 +180,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     return true;
   }
 
-  synchronized public RMContainer allocate(NodeType type, FiCaSchedulerNode node,
+  public synchronized RMContainer allocate(NodeType type, FiCaSchedulerNode node,
       Priority priority, ResourceRequest request, 
       Container container) {
 
@@ -200,7 +204,9 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
     // Add it to allContainers list.
     newlyAllocatedContainers.add(rmContainer);
-    liveContainers.put(container.getId(), rmContainer);    
+
+    ContainerId containerId = container.getId();
+    liveContainers.put(containerId, rmContainer);
 
     // Update consumption and track allocations
     List<ResourceRequest> resourceRequestList = appSchedulingInfo.allocate(
@@ -213,17 +219,17 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
     // Inform the container
     rmContainer.handle(
-        new RMContainerEvent(container.getId(), RMContainerEventType.START));
+        new RMContainerEvent(containerId, RMContainerEventType.START));
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("allocate: applicationAttemptId=" 
-          + container.getId().getApplicationAttemptId() 
-          + " container=" + container.getId() + " host="
+          + containerId.getApplicationAttemptId()
+          + " container=" + containerId + " host="
           + container.getNodeId().getHost() + " type=" + type);
     }
     RMAuditLogger.logSuccess(getUser(),
         AuditConstants.ALLOC_CONTAINER, "SchedulerApp",
-        getApplicationId(), container.getId());
+        getApplicationId(), containerId);
     
     return rmContainer;
   }

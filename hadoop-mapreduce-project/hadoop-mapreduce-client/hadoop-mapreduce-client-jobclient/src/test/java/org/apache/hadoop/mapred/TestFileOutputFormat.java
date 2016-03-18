@@ -30,12 +30,16 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Iterator;
 
+import org.junit.Test;
+import static org.junit.Assert.assertTrue;
+
 public class TestFileOutputFormat extends HadoopTestCase {
 
   public TestFileOutputFormat() throws IOException {
     super(HadoopTestCase.LOCAL_MR, HadoopTestCase.LOCAL_FS, 1, 1);
   }
 
+  @Test
   public void testCustomFile() throws Exception {
     Path inDir = new Path("testing/fileoutputformat/input");
     Path outDir = new Path("testing/fileoutputformat/output");

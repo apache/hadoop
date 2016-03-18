@@ -33,6 +33,11 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 /**
  * A JUnit test to test Map-Reduce job committer.
@@ -54,15 +59,15 @@ public class TestJobOutputCommitter extends HadoopTestCase {
   private FileSystem fs;
   private Configuration conf = null;
 
-  @Override
-  protected void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     super.setUp();
     conf = createJobConf();
     fs = getFileSystem();
   }
 
-  @Override
-  protected void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     fs.delete(new Path(TEST_ROOT_DIR), true);
     super.tearDown();
   }
@@ -219,6 +224,7 @@ public class TestJobOutputCommitter extends HadoopTestCase {
    * 
    * @throws Exception
    */
+  @Test
   public void testDefaultCleanupAndAbort() throws Exception {
     // check with a successful job
     testSuccessfulJob(FileOutputCommitter.SUCCEEDED_FILE_NAME,
@@ -238,6 +244,7 @@ public class TestJobOutputCommitter extends HadoopTestCase {
    * 
    * @throws Exception
    */
+  @Test
   public void testCustomAbort() throws Exception {
     // check with a successful job
     testSuccessfulJob(FileOutputCommitter.SUCCEEDED_FILE_NAME,
@@ -264,6 +271,7 @@ public class TestJobOutputCommitter extends HadoopTestCase {
    * compatibility testing.
    * @throws Exception 
    */
+  @Test
   public void testCustomCleanup() throws Exception {
     // check with a successful job
     testSuccessfulJob(CUSTOM_CLEANUP_FILE_NAME, 

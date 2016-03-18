@@ -162,7 +162,9 @@ public class Block implements Writable, Comparable<Block> {
    */
   public static String toString(final Block b) {
     StringBuilder sb = new StringBuilder();
-    b.appendStringTo(sb);
+    sb.append(BLOCK_FILE_PREFIX).
+       append(b.blockId).append("_").
+       append(b.generationStamp);
     return sb.toString();
   }
 

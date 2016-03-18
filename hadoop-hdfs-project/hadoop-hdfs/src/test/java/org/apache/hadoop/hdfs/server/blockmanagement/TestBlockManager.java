@@ -397,20 +397,20 @@ public class TestBlockManager {
     addNodes(nodes);
     List<DatanodeDescriptor> origNodes = nodes.subList(0, 3);
     for (int i = 0; i < NUM_TEST_ITERS; i++) {
-      doTestSingleRackClusterIsSufficientlyReplicated(i, origNodes);
+      doTestSingleRackClusterHasSufficientRedundancy(i, origNodes);
     }
   }
   
-  private void doTestSingleRackClusterIsSufficientlyReplicated(int testIndex,
+  private void doTestSingleRackClusterHasSufficientRedundancy(int testIndex,
       List<DatanodeDescriptor> origNodes)
       throws Exception {
     assertEquals(0, bm.numOfUnderReplicatedBlocks());
     BlockInfo block = addBlockOnNodes(testIndex, origNodes);
-    assertFalse(bm.isNeededReplication(block, bm.countLiveNodes(block)));
+    assertFalse(bm.isNeededReconstruction(block, bm.countLiveNodes(block)));
   }
   
   @Test(timeout = 60000)
-  public void testNeededReplicationWhileAppending() throws IOException {
+  public void testNeededReconstructionWhileAppending() throws IOException {
     Configuration conf = new HdfsConfiguration();
     String src = "/test-file";
     Path file = new Path(src);
@@ -449,7 +449,7 @@ public class TestBlockManager {
         namenode.updatePipeline(clientName, oldBlock, newBlock,
             newLocatedBlock.getLocations(), newLocatedBlock.getStorageIDs());
         BlockInfo bi = bm.getStoredBlock(newBlock.getLocalBlock());
-        assertFalse(bm.isNeededReplication(bi, bm.countLiveNodes(bi)));
+        assertFalse(bm.isNeededReconstruction(bi, bm.countLiveNodes(bi)));
       } finally {
         IOUtils.closeStream(out);
       }
@@ -601,7 +601,7 @@ public class TestBlockManager {
             liveNodes,
             new NumberReplicas(),
             new ArrayList<Byte>(),
-            UnderReplicatedBlocks.QUEUE_HIGHEST_PRIORITY)[0]);
+            LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY)[0]);
 
     assertEquals("Does not choose a source node for a less-than-highest-priority"
             + " replication since all available source nodes have reached"
@@ -612,7 +612,7 @@ public class TestBlockManager {
             liveNodes,
             new NumberReplicas(),
             new ArrayList<Byte>(),
-            UnderReplicatedBlocks.QUEUE_VERY_UNDER_REPLICATED).length);
+            LowRedundancyBlocks.QUEUE_VERY_LOW_REDUNDANCY).length);
 
     // Increase the replication count to test replication count > hard limit
     DatanodeStorageInfo targets[] = { origNodes.get(1).getStorageInfos()[0] };
@@ -626,7 +626,7 @@ public class TestBlockManager {
             liveNodes,
             new NumberReplicas(),
             new ArrayList<Byte>(),
-            UnderReplicatedBlocks.QUEUE_HIGHEST_PRIORITY).length);
+            LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY).length);
   }
 
   @Test
@@ -652,7 +652,7 @@ public class TestBlockManager {
             cntNodes,
             liveNodes,
             new NumberReplicas(), new LinkedList<Byte>(),
-            UnderReplicatedBlocks.QUEUE_UNDER_REPLICATED)[0]);
+            LowRedundancyBlocks.QUEUE_LOW_REDUNDANCY)[0]);
 
 
     // Increase the replication count to test replication count > hard limit
@@ -666,7 +666,7 @@ public class TestBlockManager {
             cntNodes,
             liveNodes,
             new NumberReplicas(), new LinkedList<Byte>(),
-            UnderReplicatedBlocks.QUEUE_UNDER_REPLICATED).length);
+            LowRedundancyBlocks.QUEUE_LOW_REDUNDANCY).length);
   }
 
   @Test

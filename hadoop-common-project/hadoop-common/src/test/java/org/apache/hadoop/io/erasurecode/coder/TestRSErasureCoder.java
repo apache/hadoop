@@ -19,7 +19,7 @@ package org.apache.hadoop.io.erasurecode.coder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactoryLegacy;
+import org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -58,20 +58,20 @@ public class TestRSErasureCoder extends TestErasureCoderBase {
      */
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.IO_ERASURECODE_CODEC_RS_RAWCODER_KEY,
-        RSRawErasureCoderFactoryLegacy.class.getCanonicalName());
+        RSRawErasureCoderFactory.class.getCanonicalName());
     prepare(conf, 10, 4, new int[]{0}, new int[0]);
 
     testCoding(true);
     testCoding(true);
   }
-  
+
   @Test
   public void testCodingDirectBuffer_10x4_erasing_p1() {
     prepare(null, 10, 4, new int[]{}, new int[]{1});
     testCoding(true);
     testCoding(true);
   }
-  
+
   @Test
   public void testCodingDirectBuffer_10x4_erasing_d2() {
     prepare(null, 10, 4, new int[] {2}, new int[] {});

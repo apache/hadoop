@@ -18,13 +18,12 @@
 
 package org.apache.hadoop.mapred;
 
-import junit.framework.TestCase;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.junit.After;
+import org.junit.Before;
 
-import java.io.File;
 import java.io.IOException;
 
 /**
@@ -38,7 +37,7 @@ import java.io.IOException;
  * Job Configurations should be created using a configuration returned by the
  * 'createJobConf()' method.
  */
-public abstract class HadoopTestCase extends TestCase {
+public abstract class HadoopTestCase {
   public static final int LOCAL_MR = 1;
   public static final int CLUSTER_MR = 2;
   public static final int LOCAL_FS = 4;
@@ -140,8 +139,8 @@ public abstract class HadoopTestCase extends TestCase {
    *
    * @throws Exception
    */
-  protected void setUp() throws Exception {
-    super.setUp();
+  @Before
+  public void setUp() throws Exception {
     if (localFS) {
       fileSystem = FileSystem.getLocal(new JobConf());
     }
@@ -164,7 +163,8 @@ public abstract class HadoopTestCase extends TestCase {
    *
    * @throws Exception
    */
-  protected void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     try {
       if (mrCluster != null) {
         mrCluster.shutdown();
@@ -181,7 +181,6 @@ public abstract class HadoopTestCase extends TestCase {
     catch (Exception ex) {
       System.out.println(ex);
     }
-    super.tearDown();
   }
 
   /**

@@ -717,6 +717,10 @@ public abstract class Shell {
     } catch (IOException ioe) {
       LOG.warn("Bash is not supported by the OS", ioe);
       supported = false;
+    } catch (SecurityException se) {
+      LOG.info("Bash execution is not allowed by the JVM " +
+          "security manager.Considering it not supported.");
+      supported = false;
     }
 
     return supported;
@@ -744,7 +748,11 @@ public abstract class Shell {
     } catch (IOException ioe) {
       LOG.debug("setsid is not available on this machine. So not using it.");
       setsidSupported = false;
-    }  catch (Error err) {
+    } catch (SecurityException se) {
+      LOG.debug("setsid is not allowed to run by the JVM "+
+          "security manager. So not using it.");
+      setsidSupported = false;
+    } catch (Error err) {
       if (err.getMessage() != null
           && err.getMessage().contains("posix_spawn is not " +
           "a supported process launch mechanism")

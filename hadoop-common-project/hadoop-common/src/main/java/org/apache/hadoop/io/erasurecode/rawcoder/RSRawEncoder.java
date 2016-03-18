@@ -21,7 +21,6 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.rawcoder.util.DumpUtil;
 import org.apache.hadoop.io.erasurecode.rawcoder.util.RSUtil;
-import org.apache.hadoop.io.erasurecode.rawcoder.util.RSUtil2;
 
 import java.nio.ByteBuffer;
 
@@ -32,7 +31,7 @@ import java.nio.ByteBuffer;
  * from HDFS-RAID, and also compatible with the native/ISA-L coder.
  */
 @InterfaceAudience.Private
-public class RSRawEncoder2 extends AbstractRawErasureEncoder {
+public class RSRawEncoder extends AbstractRawErasureEncoder {
   // relevant to schema and won't change during encode calls.
   private byte[] encodeMatrix;
   /**
@@ -41,7 +40,7 @@ public class RSRawEncoder2 extends AbstractRawErasureEncoder {
    */
   private byte[] gfTables;
 
-  public RSRawEncoder2(int numDataUnits, int numParityUnits) {
+  public RSRawEncoder(int numDataUnits, int numParityUnits) {
     super(numDataUnits, numParityUnits);
 
     if (numDataUnits + numParityUnits >= RSUtil.GF.getFieldSize()) {
@@ -50,12 +49,12 @@ public class RSRawEncoder2 extends AbstractRawErasureEncoder {
     }
 
     encodeMatrix = new byte[getNumAllUnits() * numDataUnits];
-    RSUtil2.genCauchyMatrix(encodeMatrix, getNumAllUnits(), numDataUnits);
+    RSUtil.genCauchyMatrix(encodeMatrix, getNumAllUnits(), numDataUnits);
     if (isAllowingVerboseDump()) {
       DumpUtil.dumpMatrix(encodeMatrix, numDataUnits, getNumAllUnits());
     }
     gfTables = new byte[getNumAllUnits() * numDataUnits * 32];
-    RSUtil2.initTables(numDataUnits, numParityUnits, encodeMatrix,
+    RSUtil.initTables(numDataUnits, numParityUnits, encodeMatrix,
         numDataUnits * numDataUnits, gfTables);
     if (isAllowingVerboseDump()) {
       System.out.println(DumpUtil.bytesToHex(gfTables, -1));
@@ -64,13 +63,13 @@ public class RSRawEncoder2 extends AbstractRawErasureEncoder {
 
   @Override
   protected void doEncode(ByteBuffer[] inputs, ByteBuffer[] outputs) {
-    RSUtil2.encodeData(gfTables, inputs, outputs);
+    RSUtil.encodeData(gfTables, inputs, outputs);
   }
 
   @Override
   protected void doEncode(byte[][] inputs, int[] inputOffsets,
                           int dataLen, byte[][] outputs, int[] outputOffsets) {
-    RSUtil2.encodeData(gfTables, dataLen, inputs, inputOffsets, outputs,
+    RSUtil.encodeData(gfTables, dataLen, inputs, inputOffsets, outputs,
         outputOffsets);
   }
 }
