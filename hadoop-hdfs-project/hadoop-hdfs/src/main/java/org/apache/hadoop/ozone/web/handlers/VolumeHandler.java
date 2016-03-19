@@ -26,6 +26,9 @@ import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.interfaces.UserAuth;
 import org.apache.hadoop.ozone.web.interfaces.Volume;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Request;
@@ -35,6 +38,7 @@ import java.io.IOException;
 
 import static java.net.HttpURLConnection.HTTP_CREATED;
 import static java.net.HttpURLConnection.HTTP_OK;
+import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_FUNCTION;
 
 /**
  * VolumeHandler handles volume specific HTTP calls.
@@ -50,6 +54,8 @@ import static java.net.HttpURLConnection.HTTP_OK;
  */
 @InterfaceAudience.Private
 public class VolumeHandler implements Volume {
+  private static final Logger LOG = LoggerFactory.getLogger(VolumeHandler
+      .class);
   /**
    * Creates a volume.
    *
@@ -67,6 +73,7 @@ public class VolumeHandler implements Volume {
   public Response createVolume(String volume, final String quota, Request req,
                                UriInfo uriInfo, HttpHeaders headers)
       throws OzoneException {
+    MDC.put(OZONE_FUNCTION, "createVolume");
     return new VolumeProcessTemplate() {
       @Override
       public Response doProcess(VolumeArgs args)
@@ -119,6 +126,7 @@ public class VolumeHandler implements Volume {
   public Response updateVolume(String volume, final String quota, Request req,
                                UriInfo uriInfo, HttpHeaders headers)
       throws OzoneException {
+    MDC.put(OZONE_FUNCTION, "updateVolume");
     return new VolumeProcessTemplate() {
       @Override
       public Response doProcess(VolumeArgs args)
@@ -171,6 +179,8 @@ public class VolumeHandler implements Volume {
   @Override
   public Response deleteVolume(String volume, Request req, UriInfo uriInfo,
                                HttpHeaders headers) throws OzoneException {
+    MDC.put(OZONE_FUNCTION, "deleteVolume");
+
     return new VolumeProcessTemplate() {
       @Override
       public Response doProcess(VolumeArgs args)
@@ -202,6 +212,7 @@ public class VolumeHandler implements Volume {
   public Response getVolumeInfo(String volume, final String info, Request req,
                                 final UriInfo uriInfo, HttpHeaders headers)
       throws OzoneException {
+    MDC.put(OZONE_FUNCTION, "getVolumeInfo");
     return new VolumeProcessTemplate() {
       @Override
       public Response doProcess(VolumeArgs args)
@@ -215,6 +226,7 @@ public class VolumeHandler implements Volume {
           case Header.OZONE_LIST_QUERY_SERVICE:
             return getVolumesByUser(args); // Return list of volumes
           default:
+            LOG.debug("Unrecognized query param : {} ", info);
             OzoneException ozoneException =
                 ErrorTable.newError(ErrorTable.INVALID_QUERY_PARAM, args);
             ozoneException.setMessage("Unrecognized query param : " + info);

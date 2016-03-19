@@ -27,6 +27,7 @@ import org.apache.hadoop.ozone.web.interfaces.Bucket;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.utils.OzoneConsts;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.slf4j.MDC;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Request;
@@ -36,6 +37,7 @@ import java.io.IOException;
 
 import static java.net.HttpURLConnection.HTTP_CREATED;
 import static java.net.HttpURLConnection.HTTP_OK;
+import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_FUNCTION;
 
 
 /**
@@ -59,6 +61,7 @@ public class BucketHandler implements Bucket {
   public Response createBucket(String volume, String bucket, Request req,
                                UriInfo info, HttpHeaders headers)
       throws OzoneException {
+    MDC.put(OZONE_FUNCTION, "createBucket");
     return new BucketProcessTemplate() {
       @Override
       public Response doProcess(BucketArgs args)
@@ -94,6 +97,7 @@ public class BucketHandler implements Bucket {
   public Response updateBucket(String volume, String bucket, Request req,
                                UriInfo info, HttpHeaders headers)
       throws OzoneException {
+    MDC.put(OZONE_FUNCTION, "updateBucket");
     return new BucketProcessTemplate() {
       @Override
       public Response doProcess(BucketArgs args)
@@ -136,6 +140,7 @@ public class BucketHandler implements Bucket {
   public Response deleteBucket(String volume, String bucket, Request req,
                                UriInfo info, HttpHeaders headers)
       throws OzoneException {
+    MDC.put(OZONE_FUNCTION, "deleteBucket");
     return new BucketProcessTemplate() {
       @Override
       public Response doProcess(BucketArgs args)
@@ -169,6 +174,7 @@ public class BucketHandler implements Bucket {
                              final String startPage, Request req,
                              UriInfo uriInfo, HttpHeaders headers)
       throws OzoneException {
+    MDC.put(OZONE_FUNCTION, "listBucket");
     return new BucketProcessTemplate() {
       @Override
       public Response doProcess(BucketArgs args)

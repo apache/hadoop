@@ -22,14 +22,22 @@ package org.apache.hadoop.ozone.web.exceptions;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 
+import org.apache.log4j.MDC;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  *  Class the represents various errors returned by the
  *  Object Layer.
  */
 public class OzoneExceptionMapper implements ExceptionMapper<OzoneException> {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(OzoneExceptionMapper.class);
 
   @Override
   public Response toResponse(OzoneException exception) {
+    LOG.info("Returning exception. ex: {}", exception.toJsonString());
+    MDC.clear();
     return Response.status((int)exception.getHttpCode())
       .entity(exception.toJsonString()).build();
   }

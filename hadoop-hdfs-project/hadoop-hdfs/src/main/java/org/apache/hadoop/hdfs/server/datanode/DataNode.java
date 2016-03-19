@@ -1314,13 +1314,14 @@ public class DataNode extends ReconfigurableBase
    * Initializes the object store handler.  This must be called before
    * initialization of the HTTP server.
    *
-   * @param conf configuration
+   * @param config configuration
    * @throws IOException if there is an I/O error
    */
   private void initObjectStoreHandler(Configuration config) throws IOException {
     if (config.getBoolean(DFS_OBJECTSTORE_ENABLED_KEY,
         DFS_OBJECTSTORE_ENABLED_DEFAULT)) {
       this.objectStoreHandler = new ObjectStoreHandler(conf);
+      LOG.info("ozone is enabled.");
     }
   }
 

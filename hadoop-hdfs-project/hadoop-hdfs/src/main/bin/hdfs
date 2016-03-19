@@ -50,6 +50,7 @@ function hadoop_usage
   hadoop_add_subcommand "oev" "apply the offline edits viewer to an edits file"
   hadoop_add_subcommand "oiv" "apply the offline fsimage viewer to an fsimage"
   hadoop_add_subcommand "oiv_legacy" "apply the offline fsimage viewer to a legacy fsimage"
+  hadoop_add_subcommand "oz" "command line interface for ozone"
   hadoop_add_subcommand "portmap" "run a portmap service"
   hadoop_add_subcommand "secondarynamenode" "run the DFS secondary namenode"
   hadoop_add_subcommand "snapshotDiff" "diff two snapshots of a directory or diff the current directory contents with a snapshot"
@@ -222,6 +223,9 @@ case ${COMMAND} in
   ;;
   oiv_legacy)
     CLASS=org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer
+  ;;
+  oz)
+  CLASS=org.apache.hadoop.ozone.web.ozShell.Shell
   ;;
   portmap)
     supportdaemonization="true"

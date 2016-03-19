@@ -25,6 +25,9 @@ import org.apache.hadoop.ozone.web.headers.Header;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.interfaces.UserAuth;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Request;
@@ -41,11 +44,17 @@ import static org.apache.hadoop.ozone.web.exceptions.ErrorTable.INVALID_BUCKET_N
 import static org.apache.hadoop.ozone.web.exceptions.ErrorTable.INVALID_REQUEST;
 import static org.apache.hadoop.ozone.web.exceptions.ErrorTable.SERVER_ERROR;
 import static org.apache.hadoop.ozone.web.exceptions.ErrorTable.newError;
+import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_COMPONENT;
+import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_REQUEST;
+import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_RESOURCE;
+import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_USER;
 
 /**
  * This class abstracts way the repetitive tasks in  Key handling code.
  */
 public abstract class KeyProcessTemplate {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(KeyProcessTemplate.class);
 
   /**
    * This function serves as the common error handling function for all Key
@@ -63,31 +72,37 @@ public abstract class KeyProcessTemplate {
 
     String reqID = OzoneUtils.getRequestID();
     String hostName = OzoneUtils.getHostName();
+    MDC.put(OZONE_COMPONENT, "ozone");
+    MDC.put(OZONE_REQUEST, reqID);
     UserArgs userArgs = null;
     try {
+      userArgs = new UserArgs(reqID, hostName, request, info, headers);
       OzoneUtils.validate(request, headers, reqID, bucket, hostName);
       OzoneUtils.verifyBucketName(bucket);
 
       UserAuth auth = UserHandlerBuilder.getAuthHandler();
-      userArgs = new UserArgs(reqID, hostName, request, info, headers);
       userArgs.setUserName(auth.getUser(userArgs));
+      MDC.put(OZONE_USER, userArgs.getUserName());
 
       KeyArgs args = new KeyArgs(volume, bucket, key, userArgs);
-      return doProcess(args, is, request, headers, info);
+      MDC.put(OZONE_RESOURCE, args.getResourceName());
+      Response response =  doProcess(args, is, request, headers, info);
+      LOG.info("Success");
+      MDC.clear();
+      return response;
+
     } catch (IllegalArgumentException argExp) {
-      OzoneException ex =
-          newError(INVALID_BUCKET_NAME, reqID, bucket, hostName);
-      ex.setMessage(argExp.getMessage());
-      throw ex;
+      LOG.debug("Invalid bucket in key call. ex:{}", argExp);
+      throw newError(INVALID_BUCKET_NAME, userArgs, argExp);
     } catch (IOException fsExp) {
       // TODO : Handle errors from the FileSystem , let us map to server error
       // for now.
+      LOG.debug("IOException. ex : {}", fsExp);
       throw ErrorTable.newError(ErrorTable.SERVER_ERROR, userArgs, fsExp);
     } catch (NoSuchAlgorithmException algoEx) {
-      OzoneException ex =
-          ErrorTable.newError(SERVER_ERROR, reqID, key, hostName);
-      ex.setMessage(algoEx.getMessage());
-      throw ex;
+      LOG.debug("NoSuchAlgorithmException. Probably indicates an unusual java "
+          + "installation.  ex : {}", algoEx);
+      throw ErrorTable.newError(SERVER_ERROR, userArgs, algoEx);
     }
   }
 
@@ -131,10 +146,11 @@ public abstract class KeyProcessTemplate {
 
       if (!contentString.equals(computedString)) {
         fs.deleteKey(args);
-        OzoneException ex = ErrorTable.newError(BAD_DIGEST, args.getRequestID(),
-            args.getKeyName(), args.getHostName());
-        ex.setMessage(String.format("MD5 Digest mismatch. Expected %s Found " +
-            "%s", contentString, computedString));
+        OzoneException ex = ErrorTable.newError(BAD_DIGEST, args);
+        String msg = String.format("MD5 Digest mismatch. Expected %s Found " +
+            "%s", contentString, computedString);
+        ex.setMessage(msg);
+        LOG.debug(msg);
         throw ex;
       }
     }
@@ -158,10 +174,11 @@ public abstract class KeyProcessTemplate {
       throws IOException, OzoneException {
     if (bytesRead != contentLen) {
       fs.deleteKey(args);
-      OzoneException ex = ErrorTable.newError(INCOMPLETE_BODY,
-          args.getRequestID(), args.getKeyName(), args.getHostName());
-      ex.setMessage(String.format("Body length mismatch. Expected length : %d" +
-          " Found %d", contentLen, bytesRead));
+      OzoneException ex = ErrorTable.newError(INCOMPLETE_BODY, args);
+      String msg = String.format("Body length mismatch. Expected length : %d" +
+          " Found %d", contentLen, bytesRead);
+      ex.setMessage(msg);
+      LOG.debug(msg);
       throw ex;
     }
   }
