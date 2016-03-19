@@ -49,6 +49,8 @@ public class LocalStorageHandler implements StorageHandler {
 
   /**
    * Constructs LocalStorageHandler.
+   *
+   * @param conf ozone conf.
    */
   public LocalStorageHandler(Configuration conf) {
     this.conf = conf;
@@ -285,7 +287,9 @@ public class LocalStorageHandler implements StorageHandler {
   @Override
   public OutputStream newKeyWriter(KeyArgs args) throws IOException,
       OzoneException {
-    return null;
+    OzoneMetadataManager oz =
+        OzoneMetadataManager.getOzoneMetadataManager(conf);
+    return oz.createKey(args);
   }
 
   /**
@@ -299,6 +303,9 @@ public class LocalStorageHandler implements StorageHandler {
   @Override
   public void commitKey(KeyArgs args, OutputStream stream) throws
       IOException, OzoneException {
+    OzoneMetadataManager oz =
+        OzoneMetadataManager.getOzoneMetadataManager(conf);
+    oz.commitKey(args, stream);
 
   }
 
@@ -312,7 +319,9 @@ public class LocalStorageHandler implements StorageHandler {
   @Override
   public LengthInputStream newKeyReader(KeyArgs args) throws IOException,
       OzoneException {
-    return null;
+    OzoneMetadataManager oz =
+        OzoneMetadataManager.getOzoneMetadataManager(conf);
+    return oz.newKeyReader(args);
   }
 
   /**
@@ -323,7 +332,9 @@ public class LocalStorageHandler implements StorageHandler {
    */
   @Override
   public void deleteKey(KeyArgs args) throws IOException, OzoneException {
-
+    OzoneMetadataManager oz =
+        OzoneMetadataManager.getOzoneMetadataManager(conf);
+    oz.deleteKey(args);
   }
 
   /**
@@ -335,7 +346,10 @@ public class LocalStorageHandler implements StorageHandler {
    */
   @Override
   public ListKeys listKeys(ListArgs args) throws IOException, OzoneException {
-    return null;
+    OzoneMetadataManager oz =
+        OzoneMetadataManager.getOzoneMetadataManager(conf);
+    return oz.listKeys(args);
+
   }
 
 }

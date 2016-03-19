@@ -59,7 +59,7 @@ public class TestBuckets {
     OzoneConfiguration conf = new OzoneConfiguration();
 
     URL p = conf.getClass().getResource("");
-    String path = p.getPath();
+    String path = p.getPath().concat(TestBuckets.class.getSimpleName());
     path += conf.getTrimmed(OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT,
         OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT_DEFAULT);
 
