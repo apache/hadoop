@@ -41,13 +41,13 @@ public class ListKeys {
   private String prefix;
   private long maxKeys;
   private boolean truncated;
-  private List<KeyInfo> objectList;
+  private List<KeyInfo> keyList;
 
   /**
    * Default constructor needed for json serialization.
    */
   public ListKeys() {
-    this.objectList = new LinkedList<>();
+    this.keyList = new LinkedList<>();
   }
 
   /**
@@ -65,9 +65,9 @@ public class ListKeys {
 
   /**
    * Converts a Json string to POJO.
-   * @param jsonString
+   * @param jsonString - json string.
    * @return ListObject
-   * @throws IOException
+   * @throws IOException - Json conversion error.
    */
   public static ListKeys parse(String jsonString) throws IOException {
     ObjectMapper mapper = new ObjectMapper();
@@ -79,17 +79,17 @@ public class ListKeys {
    *
    * @return List of KeyInfo Objects.
    */
-  public List<KeyInfo> getObjectList() {
-    return objectList;
+  public List<KeyInfo> getKeyList() {
+    return keyList;
   }
 
   /**
    * Sets the list of Objects.
    *
-   * @param objectList
+   * @param objectList - List of Keys
    */
-  public void setObjectList(List<KeyInfo> objectList) {
-    this.objectList = objectList;
+  public void setKeyList(List<KeyInfo> objectList) {
+    this.keyList = objectList;
   }
 
   /**
@@ -142,6 +142,7 @@ public class ListKeys {
    * keyCount.
    *
    * @return String
+   * @throws  IOException - On json Errors.
    */
   public String toJsonString() throws IOException {
     String[] ignorableFieldNames = {"dataFileName"};
@@ -159,6 +160,9 @@ public class ListKeys {
 
   /**
    * Returns the Object as a Json String.
+   *
+   * @return String
+   * @throws IOException - on json errors.
    */
   public String toDBString() throws IOException {
     ObjectMapper mapper = new ObjectMapper();
@@ -170,7 +174,7 @@ public class ListKeys {
    * list of keys.
    */
   public void sort() {
-    Collections.sort(objectList);
+    Collections.sort(keyList);
   }
 
   /**

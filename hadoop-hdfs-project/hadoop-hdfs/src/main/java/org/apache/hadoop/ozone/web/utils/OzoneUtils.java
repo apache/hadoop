@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.web.utils;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
@@ -27,7 +28,7 @@ import org.apache.hadoop.ozone.web.headers.Header;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Request;
 import javax.ws.rs.core.Response;
-import java.io.InputStream;
+import javax.ws.rs.core.MediaType;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
@@ -45,7 +46,8 @@ import java.util.UUID;
 @InterfaceAudience.Private
 public final class OzoneUtils {
 
-  public static final Charset ENCODING = Charset.forName("UTF-8");
+  public static final String ENCODING_NAME = "UTF-8";
+  public static final Charset ENCODING = Charset.forName(ENCODING_NAME);
 
   private OzoneUtils() {
     // Never constructed
@@ -256,15 +258,17 @@ public final class OzoneUtils {
    * @return JAX-RS Response
    */
   public static Response getResponse(UserArgs args, int statusCode,
-                                     InputStream stream) {
+                                     LengthInputStream stream) {
     SimpleDateFormat format =
         new SimpleDateFormat(OzoneConsts.OZONE_DATE_FORMAT, Locale.US);
     format.setTimeZone(TimeZone.getTimeZone(OzoneConsts.OZONE_TIME_ZONE));
     String date = format.format(new Date(System.currentTimeMillis()));
-    return Response.ok(stream)
+    return Response.ok(stream, MediaType.APPLICATION_OCTET_STREAM)
         .header(Header.OZONE_SERVER_NAME, args.getHostName())
         .header(Header.OZONE_REQUEST_ID, args.getRequestID())
         .header(HttpHeaders.DATE, date).status(statusCode)
-        .header(HttpHeaders.CONTENT_TYPE, "application/octet-stream").build();
+        .header(HttpHeaders.CONTENT_LENGTH, stream.getLength())
+        .build();
+
   }
 }
