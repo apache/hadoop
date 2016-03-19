@@ -27,6 +27,9 @@ import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Request;
@@ -38,6 +41,11 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.NoSuchFileException;
 
 import static java.net.HttpURLConnection.HTTP_OK;
+import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_COMPONENT;
+import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_RESOURCE;
+import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_REQUEST;
+import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_USER;
+
 
 /**
  * This class abstracts way the repetitive tasks in
@@ -45,6 +53,8 @@ import static java.net.HttpURLConnection.HTTP_OK;
  */
 @InterfaceAudience.Private
 public abstract class VolumeProcessTemplate {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(VolumeProcessTemplate.class);
 
 
   /**
@@ -64,24 +74,30 @@ public abstract class VolumeProcessTemplate {
                              HttpHeaders headers) throws OzoneException {
     String reqID = OzoneUtils.getRequestID();
     String hostName = OzoneUtils.getHostName();
+    MDC.put(OZONE_COMPONENT, "ozone");
+    MDC.put(OZONE_REQUEST, reqID);
+    UserArgs userArgs  = null;
     try {
-
+      userArgs = new UserArgs(reqID, hostName, request, info, headers);
       OzoneUtils.validate(request, headers, reqID, volume, hostName);
 
       // we use the same logic for both bucket and volume names
       OzoneUtils.verifyBucketName(volume);
       UserAuth auth = UserHandlerBuilder.getAuthHandler();
-      UserArgs userArgs = new UserArgs(reqID, hostName, request, info, headers);
 
       userArgs.setUserName(auth.getUser(userArgs));
+      MDC.put(OZONE_USER, userArgs.getUserName());
       VolumeArgs args = new VolumeArgs(volume, userArgs);
 
-      return doProcess(args);
+      MDC.put(OZONE_RESOURCE, args.getResourceName());
+      Response response =  doProcess(args);
+      LOG.info("Success");
+      MDC.clear();
+      return response;
+
     } catch (IllegalArgumentException ex) {
-      OzoneException exp = ErrorTable
-          .newError(ErrorTable.INVALID_VOLUME_NAME, reqID, volume, hostName);
-      exp.setMessage(ex.getMessage());
-      throw exp;
+      LOG.debug("illegal argument. {}", ex);
+      throw ErrorTable.newError(ErrorTable.INVALID_VOLUME_NAME, userArgs, ex);
     } catch (IOException ex) {
       handleIOException(volume, reqID, hostName, ex);
     }
@@ -142,6 +158,7 @@ public abstract class VolumeProcessTemplate {
         exp.setMessage(fsExp.getMessage());
       }
     }
+    LOG.debug("IOException: {}", exp);
     throw exp;
   }
 
@@ -158,6 +175,7 @@ public abstract class VolumeProcessTemplate {
     try {
       args.setQuota(quota);
     } catch (IllegalArgumentException ex) {
+      LOG.debug("Malformed Quota: {}", ex);
       throw ErrorTable.newError(ErrorTable.MALFORMED_QUOTA, args, ex);
     }
   }
@@ -227,7 +245,9 @@ public abstract class VolumeProcessTemplate {
                        args.getRequest(), args.getUri(), args.getHeaders());
       return getVolumesByUser(user);
     } catch (IOException ex) {
-      OzoneException exp = ErrorTable.newError(ErrorTable.SERVER_ERROR, args);
+      LOG.debug("unable to get the volume list for the user. Ex: {}", ex);
+      OzoneException exp = ErrorTable.newError(ErrorTable.SERVER_ERROR,
+          args, ex);
       exp.setMessage("unable to get the volume list for the user");
       throw exp;
     }
@@ -242,20 +262,19 @@ public abstract class VolumeProcessTemplate {
    * @throws OzoneException
    */
   Response getBucketsInVolume(VolumeArgs args) throws OzoneException {
-    String requestID = OzoneUtils.getRequestID();
-    String hostName = OzoneUtils.getHostName();
     try {
-      UserAuth auth = UserHandlerBuilder.getAuthHandler();
-      // TODO : Check for ACLS access.
+      // UserAuth auth = UserHandlerBuilder.getAuthHandler();
+      // TODO : Check ACLS.
       StorageHandler fs = StorageHandlerBuilder.getStorageHandler();
       ListBuckets bucketList = fs.listBuckets(args);
       return OzoneUtils.getResponse(args, HTTP_OK, bucketList.toJsonString());
     } catch (IOException ex) {
+      LOG.debug("unable to get the bucket list for the specified volume." +
+          " Ex: {}", ex);
       OzoneException exp =
-          ErrorTable.newError(ErrorTable.SERVER_ERROR, requestID, "", hostName);
+          ErrorTable.newError(ErrorTable.SERVER_ERROR, args, ex);
       exp.setMessage("unable to get the bucket list for the specified volume.");
       throw exp;
-
     }
   }
 }

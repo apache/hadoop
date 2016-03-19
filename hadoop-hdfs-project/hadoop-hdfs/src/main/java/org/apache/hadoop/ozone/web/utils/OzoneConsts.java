@@ -47,6 +47,13 @@ public final class OzoneConsts {
       "EEE, dd MMM yyyy HH:mm:ss zzz";
   public static final String OZONE_TIME_ZONE = "GMT";
 
+  public static final String OZONE_COMPONENT = "component";
+  public static final String OZONE_FUNCTION  = "function";
+  public static final String OZONE_RESOURCE = "resource";
+  public static final String OZONE_USER = "user";
+  public static final String OZONE_REQUEST = "request";
+
+
   /**
    * Supports Bucket Versioning.
    */

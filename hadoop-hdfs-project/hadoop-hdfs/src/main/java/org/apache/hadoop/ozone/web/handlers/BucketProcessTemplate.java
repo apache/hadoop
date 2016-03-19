@@ -30,6 +30,11 @@ import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.apache.hadoop.ozone.web.utils.OzoneConsts;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
+
+
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Request;
 import javax.ws.rs.core.Response;
@@ -42,6 +47,11 @@ import java.util.LinkedList;
 import java.util.List;
 
 import static java.net.HttpURLConnection.HTTP_OK;
+import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_COMPONENT;
+import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_RESOURCE;
+import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_REQUEST;
+import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_USER;
+
 
 
 /**
@@ -49,6 +59,8 @@ import static java.net.HttpURLConnection.HTTP_OK;
  * Bucket handling code.
  */
 public abstract class BucketProcessTemplate {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(BucketProcessTemplate.class);
 
   /**
    * This function serves as the common error handling function
@@ -70,22 +82,30 @@ public abstract class BucketProcessTemplate {
     // TODO : Add logging
     String reqID = OzoneUtils.getRequestID();
     String hostName = OzoneUtils.getHostName();
+    MDC.put(OZONE_COMPONENT, "ozone");
+    MDC.put(OZONE_REQUEST, reqID);
+    UserArgs userArgs = null;
     try {
+      userArgs = new UserArgs(reqID, hostName, request, uriInfo, headers);
+
       OzoneUtils.validate(request, headers, reqID, bucket, hostName);
       OzoneUtils.verifyBucketName(bucket);
 
       UserAuth auth = UserHandlerBuilder.getAuthHandler();
-      UserArgs userArgs =
-          new UserArgs(reqID, hostName, request, uriInfo, headers);
       userArgs.setUserName(auth.getUser(userArgs));
+      MDC.put(OZONE_USER, userArgs.getUserName());
 
       BucketArgs args = new BucketArgs(volume, bucket, userArgs);
-      return doProcess(args);
-    } catch (IllegalArgumentException argExp) {
-      OzoneException ex = ErrorTable
-          .newError(ErrorTable.INVALID_BUCKET_NAME, reqID, bucket, hostName);
-      ex.setMessage(argExp.getMessage());
-      throw ex;
+      MDC.put(OZONE_RESOURCE, args.getResourceName());
+      Response response =  doProcess(args);
+      LOG.info("Success");
+      MDC.clear();
+      return response;
+
+    } catch (IllegalArgumentException argEx) {
+      LOG.debug("Invalid bucket. ex:{}", argEx);
+      throw ErrorTable.newError(ErrorTable.INVALID_BUCKET_NAME, userArgs,
+          argEx);
     } catch (IOException fsExp) {
       handleIOException(bucket, reqID, hostName, fsExp);
     }
@@ -133,6 +153,7 @@ public abstract class BucketProcessTemplate {
    */
   void handleIOException(String bucket, String reqID, String hostName,
                          IOException fsExp) throws OzoneException {
+    LOG.debug("IOException: {}", fsExp);
 
     if (fsExp instanceof FileAlreadyExistsException) {
       throw ErrorTable
@@ -224,6 +245,7 @@ public abstract class BucketProcessTemplate {
     try {
       return OzoneConsts.Versioning.valueOf(version);
     } catch (IllegalArgumentException ex) {
+      LOG.debug("Malformed Version. version: {}", version);
       throw ErrorTable.newError(ErrorTable.MALFORMED_BUCKET_VERSION, args, ex);
     }
   }
@@ -239,10 +261,11 @@ public abstract class BucketProcessTemplate {
    * @throws OzoneException
    */
   StorageType getStorageType(BucketArgs args) throws OzoneException {
-
+    List<String> storageClassString = null;
     try {
-      List<String> storageClassString =
+      storageClassString =
           args.getHeaders().getRequestHeader(Header.OZONE_STORAGE_TYPE);
+
       if (storageClassString == null) {
         return null;
       }
@@ -254,6 +277,10 @@ public abstract class BucketProcessTemplate {
       }
       return StorageType.valueOf(storageClassString.get(0).toUpperCase());
     } catch (IllegalArgumentException ex) {
+      if(storageClassString != null) {
+        LOG.debug("Malformed storage type. Type: {}",
+            storageClassString.get(0).toUpperCase());
+      }
       throw ErrorTable.newError(ErrorTable.MALFORMED_STORAGE_TYPE, args, ex);
     }
   }
