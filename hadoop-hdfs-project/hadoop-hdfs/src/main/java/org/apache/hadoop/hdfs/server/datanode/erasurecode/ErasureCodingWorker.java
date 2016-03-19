@@ -849,12 +849,13 @@ public final class ErasureCodingWorker {
          * read directly from DN and need to check the replica is FINALIZED
          * state, notice we should not use short-circuit local read which
          * requires config for domain-socket in UNIX or legacy config in Windows.
+         * The network distance value isn't used for this scenario.
          */
         return RemoteBlockReader2.newBlockReader(
             "dummy", block, blockToken, offsetInBlock, 
             block.getNumBytes() - offsetInBlock, true,
             "", newConnectedPeer(block, dnAddr, blockToken, dnInfo), dnInfo,
-            null, cachingStrategy, datanode.getTracer());
+            null, cachingStrategy, datanode.getTracer(), -1);
       } catch (IOException e) {
         LOG.debug("Exception while creating remote block reader, datanode {}",
             dnInfo, e);

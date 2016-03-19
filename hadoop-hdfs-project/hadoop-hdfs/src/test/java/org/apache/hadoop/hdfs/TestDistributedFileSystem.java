@@ -70,6 +70,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
@@ -649,6 +650,67 @@ public class TestDistributedFileSystem {
     assertEquals(readOps, DFSTestUtil.getStatistics(fs).getReadOps());
     assertEquals(writeOps, DFSTestUtil.getStatistics(fs).getWriteOps());
     assertEquals(largeReadOps, DFSTestUtil.getStatistics(fs).getLargeReadOps());
+  }
+
+  /** Checks read statistics. */
+  private void checkReadStatistics(FileSystem fs, int distance, long expectedReadBytes) {
+    long bytesRead = DFSTestUtil.getStatistics(fs).
+        getBytesReadByDistance(distance);
+    assertEquals(expectedReadBytes, bytesRead);
+  }
+
+  @Test
+  public void testLocalHostReadStatistics() throws Exception {
+    testReadFileSystemStatistics(0);
+  }
+
+  @Test
+  public void testLocalRackReadStatistics() throws Exception {
+    testReadFileSystemStatistics(2);
+  }
+
+  @Test
+  public void testRemoteRackOfFirstDegreeReadStatistics() throws Exception {
+    testReadFileSystemStatistics(4);
+  }
+
+  /** expectedDistance is the expected distance between client and dn.
+   * 0 means local host.
+   * 2 means same rack.
+   * 4 means remote rack of first degree.
+   */
+  private void testReadFileSystemStatistics(int expectedDistance)
+      throws IOException {
+    MiniDFSCluster cluster = null;
+    final Configuration conf = getTestConfiguration();
+
+    // create a cluster with a dn with the expected distance.
+    if (expectedDistance == 0) {
+      cluster = new MiniDFSCluster.Builder(conf).
+          hosts(new String[] {NetUtils.getLocalHostname()}).build();
+    } else if (expectedDistance == 2) {
+      cluster = new MiniDFSCluster.Builder(conf).
+          hosts(new String[] {"hostFoo"}).build();
+    } else if (expectedDistance == 4) {
+      cluster = new MiniDFSCluster.Builder(conf).
+          racks(new String[] {"/rackFoo"}).build();
+    }
+
+    // create a file, read the file and verify the metrics
+    try {
+      final FileSystem fs = cluster.getFileSystem();
+      DFSTestUtil.getStatistics(fs).reset();
+      Path dir = new Path("/test");
+      Path file = new Path(dir, "file");
+      String input = "hello world";
+      DFSTestUtil.writeFile(fs, file, input);
+      FSDataInputStream stm = fs.open(file);
+      byte[] actual = new byte[4096];
+      stm.read(actual);
+      checkReadStatistics(fs, expectedDistance, input.length());
+    } finally {
+      if (cluster != null) cluster.shutdown();
+    }
   }
 
   @Test

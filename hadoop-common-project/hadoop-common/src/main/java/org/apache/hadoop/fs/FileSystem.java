@@ -3023,11 +3023,15 @@ public abstract class FileSystem extends Configured implements Closeable {
      * need.
      */
     public static class StatisticsData {
-      volatile long bytesRead;
-      volatile long bytesWritten;
-      volatile int readOps;
-      volatile int largeReadOps;
-      volatile int writeOps;
+      private volatile long bytesRead;
+      private volatile long bytesWritten;
+      private volatile int readOps;
+      private volatile int largeReadOps;
+      private volatile int writeOps;
+      private volatile long bytesReadLocalHost;
+      private volatile long bytesReadDistanceOfOneOrTwo;
+      private volatile long bytesReadDistanceOfThreeOrFour;
+      private volatile long bytesReadDistanceOfFiveOrLarger;
 
       /**
        * Add another StatisticsData object to this one.
@@ -3038,6 +3042,12 @@ public abstract class FileSystem extends Configured implements Closeable {
         this.readOps += other.readOps;
         this.largeReadOps += other.largeReadOps;
         this.writeOps += other.writeOps;
+        this.bytesReadLocalHost += other.bytesReadLocalHost;
+        this.bytesReadDistanceOfOneOrTwo += other.bytesReadDistanceOfOneOrTwo;
+        this.bytesReadDistanceOfThreeOrFour +=
+            other.bytesReadDistanceOfThreeOrFour;
+        this.bytesReadDistanceOfFiveOrLarger +=
+            other.bytesReadDistanceOfFiveOrLarger;
       }
 
       /**
@@ -3049,6 +3059,12 @@ public abstract class FileSystem extends Configured implements Closeable {
         this.readOps = -this.readOps;
         this.largeReadOps = -this.largeReadOps;
         this.writeOps = -this.writeOps;
+        this.bytesReadLocalHost = -this.bytesReadLocalHost;
+        this.bytesReadDistanceOfOneOrTwo = -this.bytesReadDistanceOfOneOrTwo;
+        this.bytesReadDistanceOfThreeOrFour =
+            -this.bytesReadDistanceOfThreeOrFour;
+        this.bytesReadDistanceOfFiveOrLarger =
+            -this.bytesReadDistanceOfFiveOrLarger;
       }
 
       @Override
@@ -3076,6 +3092,22 @@ public abstract class FileSystem extends Configured implements Closeable {
       
       public int getWriteOps() {
         return writeOps;
+      }
+
+      public long getBytesReadLocalHost() {
+        return bytesReadLocalHost;
+      }
+
+      public long getBytesReadDistanceOfOneOrTwo() {
+        return bytesReadDistanceOfOneOrTwo;
+      }
+
+      public long getBytesReadDistanceOfThreeOrFour() {
+        return bytesReadDistanceOfThreeOrFour;
+      }
+
+      public long getBytesReadDistanceOfFiveOrLarger() {
+        return bytesReadDistanceOfFiveOrLarger;
       }
     }
 
@@ -3268,6 +3300,33 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
 
     /**
+     * Increment the bytes read by the network distance in the statistics
+     * In the common network topology setup, distance value should be an even
+     * number such as 0, 2, 4, 6. To make it more general, we group distance
+     * by {1, 2}, {3, 4} and {5 and beyond} for accounting.
+     * @param distance the network distance
+     * @param newBytes the additional bytes read
+     */
+    public void incrementBytesReadByDistance(int distance, long newBytes) {
+      switch (distance) {
+      case 0:
+        getThreadStatistics().bytesReadLocalHost += newBytes;
+        break;
+      case 1:
+      case 2:
+        getThreadStatistics().bytesReadDistanceOfOneOrTwo += newBytes;
+        break;
+      case 3:
+      case 4:
+        getThreadStatistics().bytesReadDistanceOfThreeOrFour += newBytes;
+        break;
+      default:
+        getThreadStatistics().bytesReadDistanceOfFiveOrLarger += newBytes;
+        break;
+      }
+    }
+
+    /**
      * Apply the given aggregator to all StatisticsData objects associated with
      * this Statistics object.
      *
@@ -3384,6 +3443,55 @@ public abstract class FileSystem extends Configured implements Closeable {
       });
     }
 
+    /**
+     * In the common network topology setup, distance value should be an even
+     * number such as 0, 2, 4, 6. To make it more general, we group distance
+     * by {1, 2}, {3, 4} and {5 and beyond} for accounting. So if the caller
+     * ask for bytes read for distance 2, the function will return the value
+     * for group {1, 2}.
+     * @param distance the network distance
+     * @return the total number of bytes read by the network distance
+     */
+    public long getBytesReadByDistance(int distance) {
+      long bytesRead;
+      switch (distance) {
+      case 0:
+        bytesRead = getData().getBytesReadLocalHost();
+        break;
+      case 1:
+      case 2:
+        bytesRead = getData().getBytesReadDistanceOfOneOrTwo();
+        break;
+      case 3:
+      case 4:
+        bytesRead = getData().getBytesReadDistanceOfThreeOrFour();
+        break;
+      default:
+        bytesRead = getData().getBytesReadDistanceOfFiveOrLarger();
+        break;
+      }
+      return bytesRead;
+    }
+
+    /**
+     * Get all statistics data
+     * MR or other frameworks can use the method to get all statistics at once.
+     * @return the StatisticsData
+     */
+    public StatisticsData getData() {
+      return visitAll(new StatisticsAggregator<StatisticsData>() {
+        private StatisticsData all = new StatisticsData();
+
+        @Override
+        public void accept(StatisticsData data) {
+          all.add(data);
+        }
+
+        public StatisticsData aggregate() {
+          return all;
+        }
+      });
+    }
 
     @Override
     public String toString() {

@@ -369,6 +369,16 @@ public class NetworkTopology {
     int getNumOfLeaves() {
       return numOfLeaves;
     }
+
+    @Override
+    public int hashCode() {
+      return super.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object to) {
+      return super.equals(to);
+    }
   } // end of InnerNode
 
   /**
@@ -607,8 +617,13 @@ public class NetworkTopology {
    *  or {@link Integer#MAX_VALUE} if node1 or node2 do not belong to the cluster
    */
   public int getDistance(Node node1, Node node2) {
-    if (node1 == node2) {
+    if ((node1 != null && node1.equals(node2)) ||
+        (node1 == null && node2 == null))  {
       return 0;
+    }
+    if (node1 == null || node2 == null) {
+      LOG.warn("One of the nodes is a null pointer");
+      return Integer.MAX_VALUE;
     }
     Node n1=node1, n2=node2;
     int dis = 0;

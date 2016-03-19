@@ -212,7 +212,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   final String clientName;
   final SocketFactory socketFactory;
   final ReplaceDatanodeOnFailure dtpReplaceDatanodeOnFailure;
-  final FileSystem.Statistics stats;
+  private final FileSystem.Statistics stats;
   private final String authority;
   private final Random r = new Random();
   private SocketAddress[] localInterfaceAddrs;
@@ -357,7 +357,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         new CachingStrategy(writeDropBehind, readahead);
     this.clientContext = ClientContext.get(
         conf.get(DFS_CLIENT_CONTEXT, DFS_CLIENT_CONTEXT_DEFAULT),
-        dfsClientConf);
+        dfsClientConf, conf);
 
     if (dfsClientConf.getHedgedReadThreadpoolSize() > 0) {
       this.initThreadsNumForHedgedReads(dfsClientConf.
@@ -2737,6 +2737,13 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         IOUtilsClient.cleanup(LOG, peer);
         IOUtils.closeSocket(sock);
       }
+    }
+  }
+
+  void updateFileSystemReadStats(int distance, int nRead) {
+    if (stats != null) {
+      stats.incrementBytesRead(nRead);
+      stats.incrementBytesReadByDistance(distance, nRead);
     }
   }
 

@@ -833,16 +833,19 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
 
   @SuppressWarnings("deprecation")
   private BlockReader getRemoteBlockReader(Peer peer) throws IOException {
+    int networkDistance = clientContext.getNetworkDistance(datanode);
     if (conf.getShortCircuitConf().isUseLegacyBlockReader()) {
       return RemoteBlockReader.newBlockReader(fileName,
           block, token, startOffset, length, conf.getIoBufferSize(),
           verifyChecksum, clientName, peer, datanode,
-          clientContext.getPeerCache(), cachingStrategy, tracer);
+          clientContext.getPeerCache(), cachingStrategy, tracer,
+          networkDistance);
     } else {
       return RemoteBlockReader2.newBlockReader(
           fileName, block, token, startOffset, length,
           verifyChecksum, clientName, peer, datanode,
-          clientContext.getPeerCache(), cachingStrategy, tracer);
+          clientContext.getPeerCache(), cachingStrategy, tracer,
+          networkDistance);
     }
   }
 

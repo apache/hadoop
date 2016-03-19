@@ -17,16 +17,28 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf.ShortCircuitConf;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.shortcircuit.DomainSocketFactory;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitCache;
 import org.apache.hadoop.hdfs.util.ByteArrayManager;
+import org.apache.hadoop.net.DNSToSwitchMapping;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.NodeBase;
+import org.apache.hadoop.net.ScriptBasedMapping;
+import org.apache.hadoop.util.ReflectionUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -101,7 +113,12 @@ public class ClientContext {
    */
   private boolean printedConfWarning = false;
 
-  private ClientContext(String name, DfsClientConf conf) {
+  private final NetworkTopology topology;
+  private final NodeBase clientNode;
+  private final Map<NodeBase, Integer> nodeToDistance;
+
+  private ClientContext(String name, DfsClientConf conf,
+      Configuration config) {
     final ShortCircuitConf scConf = conf.getShortCircuitConf();
 
     this.name = name;
@@ -116,20 +133,38 @@ public class ClientContext {
 
     this.byteArrayManager = ByteArrayManager.newInstance(
         conf.getWriteByteArrayManagerConf());
+
+    DNSToSwitchMapping dnsToSwitchMapping = ReflectionUtils.newInstance(
+        config.getClass(
+            CommonConfigurationKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+            ScriptBasedMapping.class, DNSToSwitchMapping.class), config);
+    List<String> nodes = new ArrayList<>();
+    String clientHostName = NetUtils.getLocalHostname();
+    nodes.add(clientHostName);
+    clientNode = new NodeBase(clientHostName,
+        dnsToSwitchMapping.resolve(nodes).get(0));
+    this.topology = NetworkTopology.getInstance(config);
+    this.topology.add(clientNode);
+    this.nodeToDistance = new ConcurrentHashMap<>();
   }
 
-  public static ClientContext get(String name, DfsClientConf conf) {
+  public static ClientContext get(String name, DfsClientConf conf,
+      Configuration config) {
     ClientContext context;
     synchronized(ClientContext.class) {
       context = CACHES.get(name);
       if (context == null) {
-        context = new ClientContext(name, conf);
+        context = new ClientContext(name, conf, config);
         CACHES.put(name, context);
       } else {
         context.printConfWarningIfNeeded(conf);
       }
     }
     return context;
+  }
+
+  public static ClientContext get(String name, Configuration config) {
+    return get(name, new DfsClientConf(config), config);
   }
 
   /**
@@ -141,8 +176,7 @@ public class ClientContext {
   @VisibleForTesting
   public static ClientContext getFromConf(Configuration conf) {
     return get(conf.get(HdfsClientConfigKeys.DFS_CLIENT_CONTEXT,
-        HdfsClientConfigKeys.DFS_CLIENT_CONTEXT_DEFAULT),
-            new DfsClientConf(conf));
+        HdfsClientConfigKeys.DFS_CLIENT_CONTEXT_DEFAULT), conf);
   }
 
   private void printConfWarningIfNeeded(DfsClientConf conf) {
@@ -192,5 +226,17 @@ public class ClientContext {
 
   public ByteArrayManager getByteArrayManager() {
     return byteArrayManager;
+  }
+
+  public int getNetworkDistance(DatanodeInfo datanodeInfo) {
+    NodeBase node = new NodeBase(datanodeInfo.getHostName(),
+        datanodeInfo.getNetworkLocation());
+    Integer distance = nodeToDistance.get(node);
+    if (distance == null) {
+      topology.add(node);
+      distance = topology.getDistance(clientNode, node);
+      nodeToDistance.put(node, distance);
+    }
+    return distance;
   }
 }
