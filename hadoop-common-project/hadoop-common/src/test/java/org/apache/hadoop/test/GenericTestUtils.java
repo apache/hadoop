@@ -624,7 +624,7 @@ public abstract class GenericTestUtils {
    * is used as the inner cause of the exception
    * @throws AssertionError with the formatted message
    */
-  public static void failFormatted(String format, Object... args) {
+  public static void failf(String format, Object... args) {
     String message = String.format(Locale.ENGLISH, format, args);
     AssertionError error = new AssertionError(message);
     int len = args.length;
@@ -636,16 +636,17 @@ public abstract class GenericTestUtils {
 
   /**
    * Conditional formatted fail, via {@link String#format(String, Object...)}
+   * @param condition condition: if true the method fails
    * @param format format string
    * @param args argument list. If the last argument is a throwable, it
    * is used as the inner cause of the exception
    * @throws AssertionError with the formatted message
    */
-  public static void failFormattedIf(boolean condition,
+  public static void failif(boolean condition,
       String format,
       Object... args) {
     if (condition) {
-      failFormatted(format, args);
+      failf(format, args);
     }
   }
 }

@@ -99,7 +99,7 @@ public class AbstractServiceLauncherTestBase extends Assert implements
   protected void assertInState(Service service, Service.STATE expected) {
     assertNotNull(service);
     Service.STATE actual = service.getServiceState();
-    failFormattedIf(actual != expected,
+    failif(actual != expected,
         "Service %s in state %s expected state: %s", service.getName(), actual, expected);
 
   }
@@ -127,7 +127,7 @@ public class AbstractServiceLauncherTestBase extends Assert implements
     boolean failed = expected != exitCode;
     failed |= StringUtils.isNotEmpty(text)
               && !StringUtils.contains(toString, text);
-    failFormattedIf(failed,
+    failif(failed,
         "Expected exception with exit code %d and text \"%s\""
             + " but got the exit code %d"
             + " in \"%s\"",
@@ -295,7 +295,7 @@ public class AbstractServiceLauncherTestBase extends Assert implements
           Arrays.asList(args),
           true);
 
-      failFormatted("Expected an exception with error code %d and text \"%s\" "
+      failf("Expected an exception with error code %d and text \"%s\" "
               + " -but the service completed with :%s",
           errorCode, expectedText,
           launch.getServiceException());
@@ -304,7 +304,7 @@ public class AbstractServiceLauncherTestBase extends Assert implements
       int actualCode = e.getExitCode();
       boolean condition = errorCode != actualCode ||
              !StringUtils.contains(e.toString(), expectedText);
-      failFormattedIf(condition,
+      failif(condition,
           "Expected an exception with error code %d and text \"%s\" "
             + " -but the service threw an exception with exit code %d: %s",
           errorCode, expectedText,
