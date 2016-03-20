@@ -78,7 +78,7 @@ public abstract class ResourceCalculatorProcessTree extends Configured {
   public long getVirtualMemorySize() {
     return getVirtualMemorySize(0);
   }
-  
+
   /**
    * Get the virtual memory used by all the processes in the
    * process-tree.
@@ -101,7 +101,7 @@ public abstract class ResourceCalculatorProcessTree extends Configured {
   public long getRssMemorySize() {
     return getRssMemorySize(0);
   }
-  
+
   /**
    * Get the resident set size (rss) memory used by all the processes
    * in the process-tree.
@@ -127,7 +127,7 @@ public abstract class ResourceCalculatorProcessTree extends Configured {
   public long getVirtualMemorySize(int olderThanAge) {
     return UNAVAILABLE;
   }
-  
+
   /**
    * Get the virtual memory used by all the processes in the
    * process-tree that are older than the passed in age.
@@ -156,7 +156,7 @@ public abstract class ResourceCalculatorProcessTree extends Configured {
   public long getRssMemorySize(int olderThanAge) {
     return UNAVAILABLE;
   }
-  
+
   /**
    * Get the resident set size (rss) memory used by all the processes
    * in the process-tree that are older than the passed in age.

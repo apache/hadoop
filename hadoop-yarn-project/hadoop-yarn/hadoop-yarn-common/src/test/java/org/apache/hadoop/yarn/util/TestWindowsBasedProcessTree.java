@@ -29,7 +29,7 @@ import static org.junit.Assert.assertTrue;
 public class TestWindowsBasedProcessTree {
   private static final Log LOG = LogFactory
       .getLog(TestWindowsBasedProcessTree.class);
-  
+
   class WindowsBasedProcessTreeTester extends WindowsBasedProcessTree {
     String infoStr = null;
 
@@ -62,7 +62,6 @@ public class TestWindowsBasedProcessTree {
     assertTrue(pTree.getCumulativeVmem() == 2048);
     assertTrue(pTree.getVirtualMemorySize(0) == 2048);
     assertTrue(pTree.getCumulativeVmem(0) == 2048);
-    
     assertTrue(pTree.getRssMemorySize() == 2048);
     assertTrue(pTree.getCumulativeRssmem() == 2048);
     assertTrue(pTree.getRssMemorySize(0) == 2048);
