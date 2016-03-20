@@ -45,7 +45,6 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
     long cpuTimeMsDelta; // delta of cpuTime since last update
     int age = 1;
   }
-  
   private String taskProcessId = null;
   private long cpuTimeMs = UNAVAILABLE;
   private Map<String, ProcessInfo> processTree =
@@ -144,7 +143,7 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
     }
     return allProcs;
   }
-  
+
   @Override
   public void updateProcessTree() {
     if(taskProcessId != null) {
@@ -214,7 +213,7 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
     }
     return total;
   }
-  
+
   @Override
   @SuppressWarnings("deprecation")
   public long getCumulativeVmem(int olderThanAge) {
