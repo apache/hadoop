@@ -82,3 +82,12 @@ message ExchangeRequestProto {
 message ExchangeResponseProto {
   repeated int32 values = 1;
 }
+
+message AuthMethodResponseProto {
+  required int32 code = 1;
+  required string mechanismName = 2;
+}
+
+message AuthUserResponseProto {
+  required string authUser = 1;
+}
