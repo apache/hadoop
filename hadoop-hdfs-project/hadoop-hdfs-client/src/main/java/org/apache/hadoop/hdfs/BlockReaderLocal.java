@@ -641,11 +641,6 @@ class BlockReaderLocal implements BlockReader {
   }
 
   @Override
-  public boolean isLocal() {
-    return true;
-  }
-
-  @Override
   public boolean isShortCircuit() {
     return true;
   }
@@ -715,5 +710,10 @@ class BlockReaderLocal implements BlockReader {
   @VisibleForTesting
   void forceUnanchorable() {
     replica.getSlot().makeUnanchorable();
+  }
+
+  @Override
+  public int getNetworkDistance() {
+    return 0;
   }
 }

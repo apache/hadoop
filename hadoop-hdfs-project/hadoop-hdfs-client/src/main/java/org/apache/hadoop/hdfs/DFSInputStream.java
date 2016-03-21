@@ -778,7 +778,7 @@ public class DFSInputStream extends FSInputStream
     synchronized(infoLock) {
       if (blockReader.isShortCircuit()) {
         readStatistics.addShortCircuitBytes(nRead);
-      } else if (blockReader.isLocal()) {
+      } else if (blockReader.getNetworkDistance() == 0) {
         readStatistics.addLocalBytes(nRead);
       } else {
         readStatistics.addRemoteBytes(nRead);
@@ -801,6 +801,8 @@ public class DFSInputStream extends FSInputStream
         throws IOException {
       int nRead = blockReader.read(buf, off, len);
       updateReadStatistics(readStatistics, nRead, blockReader);
+      dfsClient.updateFileSystemReadStats(blockReader.getNetworkDistance(),
+          nRead);
       return nRead;
     }
 
@@ -831,6 +833,8 @@ public class DFSInputStream extends FSInputStream
         int ret = blockReader.read(buf);
         success = true;
         updateReadStatistics(readStatistics, ret, blockReader);
+        dfsClient.updateFileSystemReadStats(blockReader.getNetworkDistance(),
+            ret);
         if (ret == 0) {
           DFSClient.LOG.warn("zero");
         }
@@ -940,9 +944,6 @@ public class DFSInputStream extends FSInputStream
           } else {
             // got a EOS from reader though we expect more data on it.
             throw new IOException("Unexpected EOS from the reader");
-          }
-          if (dfsClient.stats != null) {
-            dfsClient.stats.incrementBytesRead(result);
           }
           return result;
         } catch (ChecksumException ce) {
@@ -1223,6 +1224,8 @@ public class DFSInputStream extends FSInputStream
         for (int i = 0; i < offsets.length; i++) {
           int nread = reader.readAll(buf, offsets[i], lengths[i]);
           updateReadStatistics(readStatistics, nread, reader);
+          dfsClient.updateFileSystemReadStats(
+              reader.getNetworkDistance(), nread);
           if (nread != lengths[i]) {
             throw new IOException("truncated return from reader.read(): " +
                 "excpected " + lengths[i] + ", got " + nread);
@@ -1528,9 +1531,6 @@ public class DFSInputStream extends FSInputStream
       offset += bytesToRead;
     }
     assert remaining == 0 : "Wrong number of bytes read.";
-    if (dfsClient.stats != null) {
-      dfsClient.stats.incrementBytesRead(realLen);
-    }
     return realLen;
   }
 

@@ -87,4 +87,11 @@ public abstract class ReplicaAccessor {
    * short-circuit byte count statistics.
    */
   public abstract boolean isShortCircuit();
+
+  /**
+   * Return the network distance between local machine and the remote machine.
+   */
+  public int getNetworkDistance() {
+    return isLocal() ? 0 : Integer.MAX_VALUE;
+  }
 }

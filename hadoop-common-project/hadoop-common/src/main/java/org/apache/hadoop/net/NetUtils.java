@@ -638,13 +638,27 @@ public class NetUtils {
 
   /**
    * Return hostname without throwing exception.
+   * The returned hostname String format is "hostname".
+   * @return hostname
+   */
+  public static String getLocalHostname() {
+    try {
+      return InetAddress.getLocalHost().getHostName();
+    } catch(UnknownHostException uhe) {
+      return "" + uhe;
+    }
+  }
+
+  /**
+   * Return hostname without throwing exception.
+   * The returned hostname String format is "hostname/ip address".
    * @return hostname
    */
   public static String getHostname() {
     try {return "" + InetAddress.getLocalHost();}
     catch(UnknownHostException uhe) {return "" + uhe;}
   }
-  
+
   /**
    * Compose a "host:port" string from the address.
    */

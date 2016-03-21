@@ -109,11 +109,6 @@ public final class ExternalBlockReader implements BlockReader {
   }
 
   @Override
-  public boolean isLocal() {
-    return accessor.isLocal();
-  }
-
-  @Override
   public boolean isShortCircuit() {
     return accessor.isShortCircuit();
   }
@@ -122,5 +117,10 @@ public final class ExternalBlockReader implements BlockReader {
   public ClientMmap getClientMmap(EnumSet<ReadOption> opts) {
     // For now, pluggable ReplicaAccessors do not support zero-copy.
     return null;
+  }
+
+  @Override
+  public int getNetworkDistance() {
+    return accessor.getNetworkDistance();
   }
 }

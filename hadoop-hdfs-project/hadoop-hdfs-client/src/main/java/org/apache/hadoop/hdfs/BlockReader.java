@@ -80,11 +80,6 @@ public interface BlockReader extends ByteBufferReadable {
   int readAll(byte[] buf, int offset, int len) throws IOException;
 
   /**
-   * @return              true only if this is a local read.
-   */
-  boolean isLocal();
-
-  /**
    * @return              true only if this is a short-circuit read.
    *                      All short-circuit reads are also local.
    */
@@ -98,4 +93,9 @@ public interface BlockReader extends ByteBufferReadable {
    *                      supported.
    */
   ClientMmap getClientMmap(EnumSet<ReadOption> opts);
+
+  /**
+   * Return the network distance between local machine and the remote machine.
+   */
+   int getNetworkDistance();
 }
