@@ -19,7 +19,6 @@ package org.apache.hadoop.crypto.key;
 
 import java.io.IOException;
 import java.util.Queue;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -158,17 +157,12 @@ public class TestValueQueue {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        try {
           int size = vq.getSize("k1");
           if (size != 10) {
             LOG.info("Current ValueQueue size is " + size);
             return false;
           }
           return true;
-        } catch (ExecutionException e) {
-          LOG.error("Exception when getSize.", e);
-          return false;
-        }
       }
     }, 100, 3000);
     Assert.assertEquals("Failed in async call.", 10, filler.getTop().num);
