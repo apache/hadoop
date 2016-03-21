@@ -1,3 +1,5 @@
+import Constants from 'yarn-ui/constants';
+
 export default {
   containerIdToAttemptId: function(containerId) {
     if (containerId) {
@@ -70,5 +72,20 @@ export default {
       var ts = moment(date, "YYYY/MM/DD HH:mm:ss").valueOf();
       return ts;
     }
-  }
-}
+  },
+  splitForContainerLogs: function(id) {
+    if (id) {
+      var splits = id.split(Constants.PARAM_SEPARATOR);
+      var splitLen = splits.length;
+      if (splitLen < 3) {
+        return null;
+      }
+      var fileName = splits[2];
+      var index;
+      for (index = 3; index < splitLen; index++) {
+        fileName = fileName + Constants.PARAM_SEPARATOR + splits[index];
+      }
+      return [splits[0], splits[1], fileName];
+    }
+  },
+};
