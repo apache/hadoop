@@ -106,7 +106,8 @@
 </div>
 {/if}
 
-{@if cond="{NumberOfMissingBlocks} > 0"}
+{@eq key=nnstat.State value="active"}
+  {@if cond="{NumberOfMissingBlocks} > 0"}
 <div class="alert alert-dismissable alert-warning">
   <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
 
@@ -119,7 +120,8 @@
   </div>
   <p>Please check the logs or run fsck in order to identify the missing blocks.{@if cond="{NumberOfSnapshottableDirs} > 0"} Please run fsck with -includeSnapshots in order to see detailed reports about snapshots.{/if} See the Hadoop FAQ for common causes and potential solutions.</p>
 </div>
-{/if}
+  {/if}
+{/eq}
 {/nn}
 
 <div class="page-header"><h1>Overview {#nnstat}<small>'{HostAndPort}' ({State})</small>{/nnstat}</h1></div>
@@ -173,10 +175,13 @@
   <tr><th><a href="#tab-datanode">Dead Nodes</a></th><td>{NumDeadDataNodes} (Decommissioned: {NumDecomDeadDataNodes})</td></tr>
   <tr><th><a href="#tab-datanode">Decommissioning Nodes</a></th><td>{NumDecommissioningDataNodes}</td></tr>
   <tr><th><a href="#tab-datanode-volume-failures">Total Datanode Volume Failures</a></th><td>{VolumeFailuresTotal} ({EstimatedCapacityLostTotal|fmt_bytes})</td></tr>
-  <tr><th title="Excludes missing blocks.">Number of Under-Replicated Blocks</th><td>{UnderReplicatedBlocks}</td></tr>
-  <tr><th>Number of Blocks Pending Deletion</th><td>{PendingDeletionBlocks}</td></tr>
+  {@eq key=nnstat.State value="active"}
+    <tr><th title="Excludes missing blocks.">Number of Under-Replicated Blocks</th><td>{UnderReplicatedBlocks}</td></tr>
+    <tr><th>Number of Blocks Pending Deletion</th><td>{PendingDeletionBlocks}</td></tr>
+  {/eq}
   <tr><th>Block Deletion Start Time</th><td>{BlockDeletionStartTime|date_tostring}</td></tr>
 {/fs}
+
 </table>
 
 <div class="page-header"><h1>NameNode Journal Status</h1></div>
