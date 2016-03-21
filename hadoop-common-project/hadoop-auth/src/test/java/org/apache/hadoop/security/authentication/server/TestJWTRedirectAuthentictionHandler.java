@@ -13,19 +13,15 @@
  */
 package org.apache.hadoop.security.authentication.server;
 
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
-import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Properties;
@@ -50,8 +46,6 @@ import com.nimbusds.jose.*;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.jose.crypto.RSASSASigner;
-import com.nimbusds.jose.crypto.RSASSAVerifier;
-import com.nimbusds.jose.util.Base64URL;
 
 public class TestJWTRedirectAuthentictionHandler extends
     KerberosSecurityTestcase {
@@ -262,6 +256,36 @@ public class TestJWTRedirectAuthentictionHandler extends
   }
 
   @Test
+  public void testNoExpirationJWT() throws Exception {
+    try {
+      handler.setPublicKey(publicKey);
+
+      Properties props = getProperties();
+      handler.init(props);
+
+      SignedJWT jwt = getJWT("bob", null, privateKey);
+
+      Cookie cookie = new Cookie("hadoop-jwt", jwt.serialize());
+      HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+      Mockito.when(request.getCookies()).thenReturn(new Cookie[] { cookie });
+      Mockito.when(request.getRequestURL()).thenReturn(
+          new StringBuffer(SERVICE_URL));
+      HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+      Mockito.when(response.encodeRedirectURL(SERVICE_URL)).thenReturn(
+          SERVICE_URL);
+
+      AuthenticationToken token = handler.alternateAuthenticate(request,
+          response);
+      Assert.assertNotNull("Token should not be null.", token);
+      Assert.assertEquals("bob", token.getUserName());
+    } catch (ServletException se) {
+      fail("alternateAuthentication should NOT have thrown a ServletException");
+    } catch (AuthenticationException ae) {
+      fail("alternateAuthentication should NOT have thrown a AuthenticationException");
+    }
+  }
+
+  @Test
   public void testInvalidAudienceJWT() throws Exception {
     try {
       handler.setPublicKey(publicKey);
@@ -442,7 +466,6 @@ public class TestJWTRedirectAuthentictionHandler extends
     JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256).build();
 
     SignedJWT signedJWT = new SignedJWT(header, claimsSet);
-    Base64URL sigInput = Base64URL.encode(signedJWT.getSigningInput());
     JWSSigner signer = new RSASSASigner(privateKey);
 
     signedJWT.sign(signer);
