@@ -849,12 +849,8 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   }
 
   @VisibleForTesting
-  public int getEncKeyQueueSize(String keyName) throws IOException {
-    try {
-      return encKeyVersionQueue.getSize(keyName);
-    } catch (ExecutionException e) {
-      throw new IOException(e);
-    }
+  public int getEncKeyQueueSize(String keyName) {
+    return encKeyVersionQueue.getSize(keyName);
   }
 
   @Override

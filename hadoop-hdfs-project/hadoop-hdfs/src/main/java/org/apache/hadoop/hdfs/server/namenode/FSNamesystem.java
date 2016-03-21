@@ -125,6 +125,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -294,6 +296,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /***************************************************
  * FSNamesystem does the actual bookkeeping work for the
@@ -426,6 +429,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   // A daemon to periodically clean up corrupt lazyPersist files
   // from the name space.
   Daemon lazyPersistFileScrubber = null;
+
+  // Executor to warm up EDEK cache
+  private ExecutorService edekCacheLoader = null;
+  private final int edekCacheLoaderDelay;
+  private final int edekCacheLoaderInterval;
+
   /**
    * When an active namenode will roll its own edit log, in # edits
    */
@@ -802,6 +811,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
                 + " must be zero (for disable) or greater than zero.");
       }
 
+      this.edekCacheLoaderDelay = conf.getInt(
+          DFSConfigKeys.DFS_NAMENODE_EDEKCACHELOADER_INITIAL_DELAY_MS_KEY,
+          DFSConfigKeys.DFS_NAMENODE_EDEKCACHELOADER_INITIAL_DELAY_MS_DEFAULT);
+      this.edekCacheLoaderInterval = conf.getInt(
+          DFSConfigKeys.DFS_NAMENODE_EDEKCACHELOADER_INTERVAL_MS_KEY,
+          DFSConfigKeys.DFS_NAMENODE_EDEKCACHELOADER_INTERVAL_MS_DEFAULT);
+
       // For testing purposes, allow the DT secret manager to be started regardless
       // of whether security is enabled.
       alwaysUseDelegationTokensForTests = conf.getBoolean(
@@ -1143,6 +1159,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
       cacheManager.startMonitorThread();
       blockManager.getDatanodeManager().setShouldSendCachingCommands(true);
+      if (provider != null) {
+        edekCacheLoader = Executors.newSingleThreadExecutor(
+            new ThreadFactoryBuilder().setDaemon(true)
+                .setNameFormat("Warm Up EDEK Cache Thread #%d")
+                .build());
+        FSDirEncryptionZoneOp.warmUpEdekCache(edekCacheLoader, dir,
+            edekCacheLoaderDelay, edekCacheLoaderInterval);
+      }
     } finally {
       startingActiveService = false;
       checkSafeMode();
@@ -1180,6 +1204,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (nnrmthread != null) {
         ((NameNodeResourceMonitor) nnrmthread.getRunnable()).stopMonitor();
         nnrmthread.interrupt();
+      }
+      if (edekCacheLoader != null) {
+        edekCacheLoader.shutdownNow();
       }
       if (nnEditLogRoller != null) {
         ((NameNodeEditLogRoller)nnEditLogRoller.getRunnable()).stop();
