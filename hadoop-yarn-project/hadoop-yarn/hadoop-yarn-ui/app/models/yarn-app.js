@@ -2,12 +2,12 @@ import Converter from 'yarn-ui/utils/converter';
 import DS from 'ember-data';
 
 export default DS.Model.extend({
-	appName: DS.attr('string'),
-	user: DS.attr('string'),
-	queue: DS.attr('string'),
-	state: DS.attr('string'),
-	startTime: DS.attr('string'),
-	elapsedTime: DS.attr('string'),
+  appName: DS.attr('string'),
+  user: DS.attr('string'),
+  queue: DS.attr('string'),
+  state: DS.attr('string'),
+  startTime: DS.attr('string'),
+  elapsedTime: DS.attr('string'),
   finalStatus: DS.attr('string'),
   finishedTime: DS.attr('finishedTime'),
   progress: DS.attr('number'),
