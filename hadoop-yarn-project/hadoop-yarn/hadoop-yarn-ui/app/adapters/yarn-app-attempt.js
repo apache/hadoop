@@ -1,11 +1,12 @@
 import DS from 'ember-data';
 import Converter from 'yarn-ui/utils/converter';
+import Config from 'yarn-ui/config';
 
 export default DS.JSONAPIAdapter.extend({
   headers: {
     Accept: 'application/json'
   },
-  host: 'http://localhost:1337/localhost:8088', // configurable
+  host: 'http://localhost:1337/' + Config.RM_HOST + ':' + Config.RM_PORT, // configurable
   namespace: 'ws/v1/cluster', // common const
 
   urlForQuery(query, modelName) {
