@@ -117,10 +117,10 @@ import javax.xml.parsers.SAXParserFactory;
 
 public class TestEncryptionZones {
 
-  private Configuration conf;
+  protected Configuration conf;
   private FileSystemTestHelper fsHelper;
 
-  private MiniDFSCluster cluster;
+  protected MiniDFSCluster cluster;
   protected HdfsAdmin dfsAdmin;
   protected DistributedFileSystem fs;
   private File testRootDir;

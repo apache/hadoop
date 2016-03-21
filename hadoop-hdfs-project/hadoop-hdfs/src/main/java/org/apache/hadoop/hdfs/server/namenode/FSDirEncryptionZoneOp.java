@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.AbstractMap;
+import java.util.concurrent.ExecutorService;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -302,6 +303,88 @@ final class FSDirEncryptionZoneOp {
       return fsd.ezManager.isInAnEZ(iip);
     } finally {
       fsd.readUnlock();
+    }
+  }
+
+  /**
+   * Proactively warm up the edek cache. We'll get all the edek key names,
+   * then launch up a separate thread to warm them up.
+   */
+  static void warmUpEdekCache(final ExecutorService executor,
+      final FSDirectory fsd, final int delay, final int interval) {
+    fsd.readLock();
+    try {
+      String[] edeks  = fsd.ezManager.getKeyNames();
+      executor.execute(
+          new EDEKCacheLoader(edeks, fsd.getProvider(), delay, interval));
+    } finally {
+      fsd.readUnlock();
+    }
+  }
+
+  /**
+   * EDEKCacheLoader is being run in a separate thread to loop through all the
+   * EDEKs and warm them up in the KMS cache.
+   */
+  static class EDEKCacheLoader implements Runnable {
+    private final String[] keyNames;
+    private final KeyProviderCryptoExtension kp;
+    private int initialDelay;
+    private int retryInterval;
+
+    EDEKCacheLoader(final String[] names, final KeyProviderCryptoExtension kp,
+        final int delay, final int interval) {
+      this.keyNames = names;
+      this.kp = kp;
+      this.initialDelay = delay;
+      this.retryInterval = interval;
+    }
+
+    @Override
+    public void run() {
+      NameNode.LOG.info("Warming up {} EDEKs... (initialDelay={}, "
+          + "retryInterval={})", keyNames.length, initialDelay, retryInterval);
+      try {
+        Thread.sleep(initialDelay);
+      } catch (InterruptedException ie) {
+        NameNode.LOG.info("EDEKCacheLoader interrupted before warming up.");
+        return;
+      }
+
+      final int logCoolDown = 10000; // periodically print error log (if any)
+      int sinceLastLog = logCoolDown; // always print the first failure
+      boolean success = false;
+      IOException lastSeenIOE = null;
+      while (true) {
+        try {
+          kp.warmUpEncryptedKeys(keyNames);
+          NameNode.LOG
+              .info("Successfully warmed up {} EDEKs.", keyNames.length);
+          success = true;
+          break;
+        } catch (IOException ioe) {
+          lastSeenIOE = ioe;
+          if (sinceLastLog >= logCoolDown) {
+            NameNode.LOG.info("Failed to warm up EDEKs.", ioe);
+            sinceLastLog = 0;
+          } else {
+            NameNode.LOG.debug("Failed to warm up EDEKs.", ioe);
+          }
+        }
+        try {
+          Thread.sleep(retryInterval);
+        } catch (InterruptedException ie) {
+          NameNode.LOG.info("EDEKCacheLoader interrupted during retry.");
+          break;
+        }
+        sinceLastLog += retryInterval;
+      }
+      if (!success) {
+        NameNode.LOG.warn("Unable to warm up EDEKs.");
+        if (lastSeenIOE != null) {
+          NameNode.LOG.warn("Last seen exception:", lastSeenIOE);
+        }
+      }
     }
   }
 }
