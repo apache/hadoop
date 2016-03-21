@@ -22,6 +22,7 @@ import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_OFFSET;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_EXT_OFFSET;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_EXT_MASK;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.*;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -434,36 +435,38 @@ class OfflineImageReconstructor {
       Node node = new Node();
       loadNodeChildren(node, "NameSection fields");
       NameSystemSection.Builder b =  NameSystemSection.newBuilder();
-      Integer namespaceId = node.removeChildInt("namespaceId");
+      Integer namespaceId = node.removeChildInt(NAME_SECTION_NAMESPACE_ID);
       if (namespaceId == null)  {
         throw new IOException("<NameSection> is missing <namespaceId>");
       }
       b.setNamespaceId(namespaceId);
-      Long lval = node.removeChildLong("genstampV1");
+      Long lval = node.removeChildLong(NAME_SECTION_GENSTAMPV1);
       if (lval != null)  {
         b.setGenstampV1(lval);
       }
-      lval = node.removeChildLong("genstampV2");
+      lval = node.removeChildLong(NAME_SECTION_GENSTAMPV2);
       if (lval != null)  {
         b.setGenstampV2(lval);
       }
-      lval = node.removeChildLong("genstampV1Limit");
+      lval = node.removeChildLong(NAME_SECTION_GENSTAMPV1_LIMIT);
       if (lval != null)  {
         b.setGenstampV1Limit(lval);
       }
-      lval = node.removeChildLong("lastAllocatedBlockId");
+      lval = node.removeChildLong(NAME_SECTION_LAST_ALLOCATED_BLOCK_ID);
       if (lval != null)  {
         b.setLastAllocatedBlockId(lval);
       }
-      lval = node.removeChildLong("txid");
+      lval = node.removeChildLong(NAME_SECTION_TXID);
       if (lval != null)  {
         b.setTransactionId(lval);
       }
-      lval = node.removeChildLong("rollingUpgradeStartTime");
+      lval = node.removeChildLong(
+          NAME_SECTION_ROLLING_UPGRADE_START_TIME);
       if (lval != null)  {
         b.setRollingUpgradeStartTime(lval);
       }
-      lval = node.removeChildLong("lastAllocatedStripedBlockId");
+      lval = node.removeChildLong(
+          NAME_SECTION_LAST_ALLOCATED_STRIPED_BLOCK_ID);
       if (lval != null)  {
         b.setLastAllocatedStripedBlockId(lval);
       }
@@ -486,11 +489,12 @@ class OfflineImageReconstructor {
       Node headerNode = new Node();
       loadNodeChildren(headerNode, "INodeSection fields", "inode");
       INodeSection.Builder b =  INodeSection.newBuilder();
-      Long lval = headerNode.removeChildLong("lastInodeId");
+      Long lval = headerNode.removeChildLong(INODE_SECTION_LAST_INODE_ID);
       if (lval != null)  {
         b.setLastInodeId(lval);
       }
-      Integer expectedNumINodes = headerNode.removeChildInt("numInodes");
+      Integer expectedNumINodes =
+          headerNode.removeChildInt(INODE_SECTION_NUM_INODES);
       if (expectedNumINodes == null) {
         throw new IOException("Failed to find <numInodes> in INodeSection.");
       }
@@ -501,7 +505,7 @@ class OfflineImageReconstructor {
       int actualNumINodes = 0;
       while (actualNumINodes < expectedNumINodes) {
         try {
-          expectTag("inode", false);
+          expectTag(INODE_SECTION_INODE, false);
         } catch (IOException e) {
           throw new IOException("Only found " + actualNumINodes +
               " <inode> entries out of " + expectedNumINodes, e);
@@ -512,24 +516,24 @@ class OfflineImageReconstructor {
         INodeSection.INode.Builder inodeBld = processINodeXml(inode);
         inodeBld.build().writeDelimitedTo(out);
       }
-      expectTagEnd("INodeSection");
+      expectTagEnd(INODE_SECTION_NAME);
       recordSectionLength(SectionName.INODE.name());
     }
   }
 
   private INodeSection.INode.Builder processINodeXml(Node node)
       throws IOException {
-    String type = node.removeChildStr("type");
+    String type = node.removeChildStr(INODE_SECTION_TYPE);
     if (type == null) {
       throw new IOException("INode XML found with no <type> tag.");
     }
     INodeSection.INode.Builder inodeBld = INodeSection.INode.newBuilder();
-    Long id = node.removeChildLong("id");
+    Long id = node.removeChildLong(SECTION_ID);
     if (id == null) {
       throw new IOException("<inode> found without <id>");
     }
     inodeBld.setId(id);
-    String name = node.removeChildStr("name");
+    String name = node.removeChildStr(SECTION_NAME);
     if (name != null) {
       inodeBld.setName(ByteString.copyFrom(name, "UTF8"));
     }
@@ -555,46 +559,46 @@ class OfflineImageReconstructor {
       throws IOException {
     inodeBld.setType(INodeSection.INode.Type.FILE);
     INodeSection.INodeFile.Builder bld = INodeSection.INodeFile.newBuilder();
-    Integer ival = node.removeChildInt("replication");
+    Integer ival = node.removeChildInt(SECTION_REPLICATION);
     if (ival != null) {
       bld.setReplication(ival);
     }
-    Long lval = node.removeChildLong("mtime");
+    Long lval = node.removeChildLong(INODE_SECTION_MTIME);
     if (lval != null) {
       bld.setModificationTime(lval);
     }
-    lval = node.removeChildLong("atime");
+    lval = node.removeChildLong(INODE_SECTION_ATIME);
     if (lval != null) {
       bld.setAccessTime(lval);
     }
-    lval = node.removeChildLong("preferredBlockSize");
+    lval = node.removeChildLong(INODE_SECTION_PREFERRED_BLOCK_SIZE);
     if (lval != null) {
       bld.setPreferredBlockSize(lval);
     }
-    String perm = node.removeChildStr("permission");
+    String perm = node.removeChildStr(INODE_SECTION_PERMISSION);
     if (perm != null) {
       bld.setPermission(permissionXmlToU64(perm));
     }
-    Node blocks = node.removeChild("blocks");
+    Node blocks = node.removeChild(INODE_SECTION_BLOCKS);
     if (blocks != null) {
       while (true) {
-        Node block = blocks.removeChild("block");
+        Node block = blocks.removeChild(INODE_SECTION_BLOCK);
         if (block == null) {
           break;
         }
         HdfsProtos.BlockProto.Builder blockBld =
             HdfsProtos.BlockProto.newBuilder();
-        Long id = block.removeChildLong("id");
+        Long id = block.removeChildLong(SECTION_ID);
         if (id == null) {
           throw new IOException("<block> found without <id>");
         }
         blockBld.setBlockId(id);
-        Long genstamp = block.removeChildLong("genstamp");
+        Long genstamp = block.removeChildLong(INODE_SECTION_GEMSTAMP);
         if (genstamp == null) {
           throw new IOException("<block> found without <genstamp>");
         }
         blockBld.setGenStamp(genstamp);
-        Long numBytes = block.removeChildLong("numBytes");
+        Long numBytes = block.removeChildLong(INODE_SECTION_NUM_BYTES);
         if (numBytes == null) {
           throw new IOException("<block> found without <numBytes>");
         }
@@ -602,19 +606,21 @@ class OfflineImageReconstructor {
         bld.addBlocks(blockBld);
       }
     }
-    Node fileUnderConstruction = node.removeChild("file-under-construction");
+    Node fileUnderConstruction =
+        node.removeChild(INODE_SECTION_FILE_UNDER_CONSTRUCTION);
     if (fileUnderConstruction != null) {
       INodeSection.FileUnderConstructionFeature.Builder fb =
           INodeSection.FileUnderConstructionFeature.newBuilder();
       String clientName =
-          fileUnderConstruction.removeChildStr("clientName");
+          fileUnderConstruction.removeChildStr(INODE_SECTION_CLIENT_NAME);
       if (clientName == null) {
         throw new IOException("<file-under-construction> found without " +
             "<clientName>");
       }
       fb.setClientName(clientName);
       String clientMachine =
-          fileUnderConstruction.removeChildStr("clientMachine");
+          fileUnderConstruction
+                  .removeChildStr(INODE_SECTION_CLIENT_MACHINE);
       if (clientMachine == null) {
         throw new IOException("<file-under-construction> found without " +
             "<clientMachine>");
@@ -622,19 +628,19 @@ class OfflineImageReconstructor {
       fb.setClientMachine(clientMachine);
       bld.setFileUC(fb);
     }
-    Node acls = node.removeChild("acls");
+    Node acls = node.removeChild(INODE_SECTION_ACLS);
     if (acls != null) {
       bld.setAcl(aclXmlToProto(acls));
     }
-    Node xattrs = node.removeChild("xattrs");
+    Node xattrs = node.removeChild(INODE_SECTION_XATTRS);
     if (xattrs != null) {
       bld.setXAttrs(xattrsXmlToProto(xattrs));
     }
-    ival = node.removeChildInt("storagePolicyId");
+    ival = node.removeChildInt(INODE_SECTION_STORAGE_POLICY_ID);
     if (ival != null) {
       bld.setStoragePolicyID(ival);
     }
-    Boolean bval = node.removeChildBool("isStriped");
+    Boolean bval = node.removeChildBool(INODE_SECTION_IS_STRIPED);
     bld.setIsStriped(bval);
     inodeBld.setFile(bld);
     // Will check remaining keys and serialize in processINodeXml
@@ -645,40 +651,40 @@ class OfflineImageReconstructor {
     inodeBld.setType(INodeSection.INode.Type.DIRECTORY);
     INodeSection.INodeDirectory.Builder bld =
         INodeSection.INodeDirectory.newBuilder();
-    Long lval = node.removeChildLong("mtime");
+    Long lval = node.removeChildLong(INODE_SECTION_MTIME);
     if (lval != null) {
       bld.setModificationTime(lval);
     }
-    lval = node.removeChildLong("nsquota");
+    lval = node.removeChildLong(INODE_SECTION_NS_QUOTA);
     if (lval != null) {
       bld.setNsQuota(lval);
     }
-    lval = node.removeChildLong("dsquota");
+    lval = node.removeChildLong(INODE_SECTION_DS_QUOTA);
     if (lval != null) {
       bld.setDsQuota(lval);
     }
-    String perm = node.removeChildStr("permission");
+    String perm = node.removeChildStr(INODE_SECTION_PERMISSION);
     if (perm != null) {
       bld.setPermission(permissionXmlToU64(perm));
     }
-    Node acls = node.removeChild("acls");
+    Node acls = node.removeChild(INODE_SECTION_ACLS);
     if (acls != null) {
       bld.setAcl(aclXmlToProto(acls));
     }
-    Node xattrs = node.removeChild("xattrs");
+    Node xattrs = node.removeChild(INODE_SECTION_XATTRS);
     if (xattrs != null) {
       bld.setXAttrs(xattrsXmlToProto(xattrs));
     }
     INodeSection.QuotaByStorageTypeFeatureProto.Builder qf =
         INodeSection.QuotaByStorageTypeFeatureProto.newBuilder();
     while (true) {
-      Node typeQuota = node.removeChild("typeQuota");
+      Node typeQuota = node.removeChild(INODE_SECTION_TYPE_QUOTA);
       if (typeQuota == null) {
         break;
       }
       INodeSection.QuotaByStorageTypeEntryProto.Builder qbld =
           INodeSection.QuotaByStorageTypeEntryProto.newBuilder();
-      String type = typeQuota.removeChildStr("type");
+      String type = typeQuota.removeChildStr(INODE_SECTION_TYPE);
       if (type == null) {
         throw new IOException("<typeQuota> was missing <type>");
       }
@@ -688,7 +694,7 @@ class OfflineImageReconstructor {
         throw new IOException("<typeQuota> had unknown <type> " + type);
       }
       qbld.setStorageType(storageType);
-      Long quota = typeQuota.removeChildLong("quota");
+      Long quota = typeQuota.removeChildLong(INODE_SECTION_QUOTA);
       if (quota == null) {
         throw new IOException("<typeQuota> was missing <quota>");
       }
@@ -705,19 +711,19 @@ class OfflineImageReconstructor {
     inodeBld.setType(INodeSection.INode.Type.SYMLINK);
     INodeSection.INodeSymlink.Builder bld =
         INodeSection.INodeSymlink.newBuilder();
-    String perm = node.removeChildStr("permission");
+    String perm = node.removeChildStr(INODE_SECTION_PERMISSION);
     if (perm != null) {
       bld.setPermission(permissionXmlToU64(perm));
     }
-    String target = node.removeChildStr("target");
+    String target = node.removeChildStr(INODE_SECTION_TARGET);
     if (target != null) {
       bld.setTarget(ByteString.copyFrom(target, "UTF8"));
     }
-    Long lval = node.removeChildLong("mtime");
+    Long lval = node.removeChildLong(INODE_SECTION_MTIME);
     if (lval != null) {
       bld.setModificationTime(lval);
     }
-    lval = node.removeChildLong("atime");
+    lval = node.removeChildLong(INODE_SECTION_ATIME);
     if (lval != null) {
       bld.setAccessTime(lval);
     }
@@ -736,23 +742,23 @@ class OfflineImageReconstructor {
     INodeSection.XAttrFeatureProto.Builder bld =
         INodeSection.XAttrFeatureProto.newBuilder();
     while (true) {
-      Node xattr = xattrs.removeChild("xattr");
+      Node xattr = xattrs.removeChild(INODE_SECTION_XATTR);
       if (xattr == null) {
         break;
       }
       INodeSection.XAttrCompactProto.Builder b =
           INodeSection.XAttrCompactProto.newBuilder();
-      String ns = xattr.removeChildStr("ns");
+      String ns = xattr.removeChildStr(INODE_SECTION_NS);
       if (ns == null) {
         throw new IOException("<xattr> had no <ns> entry.");
       }
       int nsIdx = XAttrProtos.XAttrProto.
           XAttrNamespaceProto.valueOf(ns).ordinal();
-      String name = xattr.removeChildStr("name");
-      String valStr = xattr.removeChildStr("val");
+      String name = xattr.removeChildStr(SECTION_NAME);
+      String valStr = xattr.removeChildStr(INODE_SECTION_VAL);
       byte[] val = null;
       if (valStr == null) {
-        String valHex = xattr.removeChildStr("valHex");
+        String valHex = xattr.removeChildStr(INODE_SECTION_VAL_HEX);
         if (valHex == null) {
           throw new IOException("<xattr> had no <val> or <valHex> entry.");
         }
@@ -787,24 +793,28 @@ class OfflineImageReconstructor {
       loadNodeChildren(secretHeader, "SecretManager fields",
           "delegationKey", "token");
       SecretManagerSection.Builder b =  SecretManagerSection.newBuilder();
-      Integer currentId = secretHeader.removeChildInt("currentId");
+      Integer currentId =
+          secretHeader.removeChildInt(SECRET_MANAGER_SECTION_CURRENT_ID);
       if (currentId == null) {
         throw new IOException("SecretManager section had no <currentId>");
       }
       b.setCurrentId(currentId);
-      Integer tokenSequenceNumber = secretHeader.removeChildInt("tokenSequenceNumber");
+      Integer tokenSequenceNumber = secretHeader.removeChildInt(
+          SECRET_MANAGER_SECTION_TOKEN_SEQUENCE_NUMBER);
       if (tokenSequenceNumber == null) {
         throw new IOException("SecretManager section had no " +
             "<tokenSequenceNumber>");
       }
       b.setTokenSequenceNumber(tokenSequenceNumber);
-      Integer expectedNumKeys = secretHeader.removeChildInt("numDelegationKeys");
+      Integer expectedNumKeys = secretHeader.removeChildInt(
+          SECRET_MANAGER_SECTION_NUM_DELEGATION_KEYS);
       if (expectedNumKeys == null) {
         throw new IOException("SecretManager section had no " +
             "<numDelegationKeys>");
       }
       b.setNumKeys(expectedNumKeys);
-      Integer expectedNumTokens = secretHeader.removeChildInt("numTokens");
+      Integer expectedNumTokens =
+          secretHeader.removeChildInt(SECRET_MANAGER_SECTION_NUM_TOKENS);
       if (expectedNumTokens == null) {
         throw new IOException("SecretManager section had no " +
             "<numTokens>");
@@ -815,7 +825,7 @@ class OfflineImageReconstructor {
       for (int actualNumKeys = 0; actualNumKeys < expectedNumKeys;
            actualNumKeys++) {
         try {
-          expectTag("delegationKey", false);
+          expectTag(SECRET_MANAGER_SECTION_DELEGATION_KEY, false);
         } catch (IOException e) {
           throw new IOException("Only read " + actualNumKeys +
               " delegation keys out of " + expectedNumKeys, e);
@@ -824,32 +834,32 @@ class OfflineImageReconstructor {
             SecretManagerSection.DelegationKey.newBuilder();
         Node dkey = new Node();
         loadNodeChildren(dkey, "Delegation key fields");
-        Integer id = dkey.removeChildInt("id");
+        Integer id = dkey.removeChildInt(SECTION_ID);
         if (id == null) {
           throw new IOException("Delegation key stanza <delegationKey> " +
               "lacked an <id> field.");
         }
         dbld.setId(id);
-        String expiry = dkey.removeChildStr("expiry");
+        String expiry = dkey.removeChildStr(SECRET_MANAGER_SECTION_EXPIRY);
         if (expiry == null) {
           throw new IOException("Delegation key stanza <delegationKey> " +
               "lacked an <expiry> field.");
         }
         dbld.setExpiryDate(dateStrToLong(expiry));
-        String keyHex = dkey.removeChildStr("key");
+        String keyHex = dkey.removeChildStr(SECRET_MANAGER_SECTION_KEY);
         if (keyHex == null) {
           throw new IOException("Delegation key stanza <delegationKey> " +
               "lacked a <key> field.");
         }
         byte[] key = new HexBinaryAdapter().unmarshal(keyHex);
-        dkey.verifyNoRemainingKeys("delegationKey");
+        dkey.verifyNoRemainingKeys(SECRET_MANAGER_SECTION_DELEGATION_KEY);
         dbld.setKey(ByteString.copyFrom(key));
         dbld.build().writeDelimitedTo(out);
       }
       for (int actualNumTokens = 0; actualNumTokens < expectedNumTokens;
            actualNumTokens++) {
         try {
-          expectTag("token", false);
+          expectTag(SECRET_MANAGER_SECTION_TOKEN, false);
         } catch (IOException e) {
           throw new IOException("Only read " + actualNumTokens +
               " tokens out of " + expectedNumTokens, e);
@@ -858,46 +868,54 @@ class OfflineImageReconstructor {
             SecretManagerSection.PersistToken.newBuilder();
         Node token = new Node();
         loadNodeChildren(token, "PersistToken key fields");
-        Integer version = token.removeChildInt("version");
+        Integer version =
+            token.removeChildInt(SECRET_MANAGER_SECTION_VERSION);
         if (version != null) {
           tbld.setVersion(version);
         }
-        String owner = token.removeChildStr("owner");
+        String owner = token.removeChildStr(SECRET_MANAGER_SECTION_OWNER);
         if (owner != null) {
           tbld.setOwner(owner);
         }
-        String renewer = token.removeChildStr("renewer");
+        String renewer =
+            token.removeChildStr(SECRET_MANAGER_SECTION_RENEWER);
         if (renewer != null) {
           tbld.setRenewer(renewer);
         }
-        String realUser = token.removeChildStr("realUser");
+        String realUser =
+            token.removeChildStr(SECRET_MANAGER_SECTION_REAL_USER);
         if (realUser != null) {
           tbld.setRealUser(realUser);
         }
-        String issueDateStr = token.removeChildStr("issueDate");
+        String issueDateStr =
+            token.removeChildStr(SECRET_MANAGER_SECTION_ISSUE_DATE);
         if (issueDateStr != null) {
           tbld.setIssueDate(dateStrToLong(issueDateStr));
         }
-        String maxDateStr = token.removeChildStr("maxDate");
+        String maxDateStr =
+            token.removeChildStr(SECRET_MANAGER_SECTION_MAX_DATE);
         if (maxDateStr != null) {
           tbld.setMaxDate(dateStrToLong(maxDateStr));
         }
-        Integer seqNo = token.removeChildInt("sequenceNumber");
+        Integer seqNo =
+            token.removeChildInt(SECRET_MANAGER_SECTION_SEQUENCE_NUMBER);
         if (seqNo != null) {
           tbld.setSequenceNumber(seqNo);
         }
-        Integer masterKeyId = token.removeChildInt("masterKeyId");
+        Integer masterKeyId =
+            token.removeChildInt(SECRET_MANAGER_SECTION_MASTER_KEY_ID);
         if (masterKeyId != null) {
           tbld.setMasterKeyId(masterKeyId);
         }
-        String expiryDateStr = token.removeChildStr("expiryDate");
+        String expiryDateStr =
+            token.removeChildStr(SECRET_MANAGER_SECTION_EXPIRY_DATE);
         if (expiryDateStr != null) {
           tbld.setExpiryDate(dateStrToLong(expiryDateStr));
         }
         token.verifyNoRemainingKeys("token");
         tbld.build().writeDelimitedTo(out);
       }
-      expectTagEnd("SecretManagerSection");
+      expectTagEnd(SECRET_MANAGER_SECTION_NAME);
       recordSectionLength(SectionName.SECRET_MANAGER.name());
     }
 
@@ -919,17 +937,20 @@ class OfflineImageReconstructor {
       Node node = new Node();
       loadNodeChildren(node, "CacheManager fields", "pool", "directive");
       CacheManagerSection.Builder b =  CacheManagerSection.newBuilder();
-      Long nextDirectiveId = node.removeChildLong("nextDirectiveId");
+      Long nextDirectiveId =
+          node.removeChildLong(CACHE_MANAGER_SECTION_NEXT_DIRECTIVE_ID);
       if (nextDirectiveId == null) {
         throw new IOException("CacheManager section had no <nextDirectiveId>");
       }
       b.setNextDirectiveId(nextDirectiveId);
-      Integer expectedNumPools = node.removeChildInt("numPools");
+      Integer expectedNumPools =
+          node.removeChildInt(CACHE_MANAGER_SECTION_NUM_POOLS);
       if (expectedNumPools == null) {
         throw new IOException("CacheManager section had no <numPools>");
       }
       b.setNumPools(expectedNumPools);
-      Integer expectedNumDirectives = node.removeChildInt("numDirectives");
+      Integer expectedNumDirectives =
+          node.removeChildInt(CACHE_MANAGER_SECTION_NUM_DIRECTIVES);
       if (expectedNumDirectives == null) {
         throw new IOException("CacheManager section had no <numDirectives>");
       }
@@ -938,7 +959,7 @@ class OfflineImageReconstructor {
       long actualNumPools = 0;
       while (actualNumPools < expectedNumPools) {
         try {
-          expectTag("pool", false);
+          expectTag(CACHE_MANAGER_SECTION_POOL, false);
         } catch (IOException e) {
           throw new IOException("Only read " + actualNumPools +
               " cache pools out of " + expectedNumPools, e);
@@ -951,7 +972,7 @@ class OfflineImageReconstructor {
       long actualNumDirectives = 0;
       while (actualNumDirectives < expectedNumDirectives) {
         try {
-          expectTag("directive", false);
+          expectTag(CACHE_MANAGER_SECTION_DIRECTIVE, false);
         } catch (IOException e) {
           throw new IOException("Only read " + actualNumDirectives +
               " cache pools out of " + expectedNumDirectives, e);
@@ -961,38 +982,42 @@ class OfflineImageReconstructor {
         loadNodeChildren(pool, "directive fields", "");
         processDirectiveXml(node);
       }
-      expectTagEnd("CacheManagerSection");
+      expectTagEnd(CACHE_MANAGER_SECTION_NAME);
       recordSectionLength(SectionName.CACHE_MANAGER.name());
     }
 
     private void processPoolXml(Node pool) throws IOException {
       CachePoolInfoProto.Builder bld = CachePoolInfoProto.newBuilder();
-      String poolName = pool.removeChildStr("poolName");
+      String poolName =
+          pool.removeChildStr(CACHE_MANAGER_SECTION_POOL_NAME);
       if (poolName == null) {
         throw new IOException("<pool> found without <poolName>");
       }
       bld.setPoolName(poolName);
-      String ownerName = pool.removeChildStr("ownerName");
+      String ownerName =
+          pool.removeChildStr(CACHE_MANAGER_SECTION_OWNER_NAME);
       if (ownerName == null) {
         throw new IOException("<pool> found without <ownerName>");
       }
       bld.setOwnerName(ownerName);
-      String groupName = pool.removeChildStr("groupName");
+      String groupName =
+          pool.removeChildStr(CACHE_MANAGER_SECTION_GROUP_NAME);
       if (groupName == null) {
         throw new IOException("<pool> found without <groupName>");
       }
       bld.setGroupName(groupName);
-      Integer mode = pool.removeChildInt("mode");
+      Integer mode = pool.removeChildInt(CACHE_MANAGER_SECTION_MODE);
       if (mode == null) {
         throw new IOException("<pool> found without <mode>");
       }
       bld.setMode(mode);
-      Long limit = pool.removeChildLong("limit");
+      Long limit = pool.removeChildLong(CACHE_MANAGER_SECTION_LIMIT);
       if (limit == null) {
         throw new IOException("<pool> found without <limit>");
       }
       bld.setLimit(limit);
-      Long maxRelativeExpiry = pool.removeChildLong("maxRelativeExpiry");
+      Long maxRelativeExpiry =
+          pool.removeChildLong(CACHE_MANAGER_SECTION_MAX_RELATIVE_EXPIRY);
       if (maxRelativeExpiry == null) {
         throw new IOException("<pool> found without <maxRelativeExpiry>");
       }
@@ -1004,37 +1029,39 @@ class OfflineImageReconstructor {
     private void processDirectiveXml(Node directive) throws IOException {
       CacheDirectiveInfoProto.Builder bld =
           CacheDirectiveInfoProto.newBuilder();
-      Long id = directive.removeChildLong("id");
+      Long id = directive.removeChildLong(SECTION_ID);
       if (id == null) {
         throw new IOException("<directive> found without <id>");
       }
       bld.setId(id);
-      String path = directive.removeChildStr("path");
+      String path = directive.removeChildStr(SECTION_PATH);
       if (path == null) {
         throw new IOException("<directive> found without <path>");
       }
       bld.setPath(path);
-      Integer replication = directive.removeChildInt("replication");
+      Integer replication = directive.removeChildInt(SECTION_REPLICATION);
       if (replication == null) {
         throw new IOException("<directive> found without <replication>");
       }
       bld.setReplication(replication);
-      String pool = directive.removeChildStr("pool");
+      String pool = directive.removeChildStr(CACHE_MANAGER_SECTION_POOL);
       if (path == null) {
         throw new IOException("<directive> found without <pool>");
       }
       bld.setPool(pool);
-      Node expiration = directive.removeChild("expiration");
+      Node expiration =
+          directive.removeChild(CACHE_MANAGER_SECTION_EXPIRATION);
       if (expiration != null) {
         CacheDirectiveInfoExpirationProto.Builder ebld =
             CacheDirectiveInfoExpirationProto.newBuilder();
-        Long millis = expiration.removeChildLong("millis");
+        Long millis =
+            expiration.removeChildLong(CACHE_MANAGER_SECTION_MILLIS);
         if (millis == null) {
           throw new IOException("cache directive <expiration> found " +
               "without <millis>");
         }
         ebld.setMillis(millis);
-        if (expiration.removeChildBool("relative")) {
+        if (expiration.removeChildBool(CACHE_MANAGER_SECTION_RELATIVE)) {
           ebld.setIsRelative(true);
         } else {
           ebld.setIsRelative(false);
@@ -1054,7 +1081,7 @@ class OfflineImageReconstructor {
       // There is no header for this section.
       // We process the repeated <ref> elements.
       while (true) {
-        XMLEvent ev = expectTag("ref", true);
+        XMLEvent ev = expectTag(INODE_REFERENCE_SECTION_REF, true);
         if (ev.isEndElement()) {
           break;
         }
@@ -1062,7 +1089,8 @@ class OfflineImageReconstructor {
         FsImageProto.INodeReferenceSection.INodeReference.Builder bld =
             FsImageProto.INodeReferenceSection.INodeReference.newBuilder();
         loadNodeChildren(inodeRef, "INodeReference");
-        Long referredId = inodeRef.removeChildLong("referredId");
+        Long referredId =
+            inodeRef.removeChildLong(INODE_REFERENCE_SECTION_REFERRED_ID);
         if (referredId != null) {
           bld.setReferredId(referredId);
         }
@@ -1070,11 +1098,13 @@ class OfflineImageReconstructor {
         if (name != null) {
           bld.setName(ByteString.copyFrom(name, "UTF8"));
         }
-        Integer dstSnapshotId = inodeRef.removeChildInt("dstSnapshotId");
+        Integer dstSnapshotId = inodeRef.removeChildInt(
+            INODE_REFERENCE_SECTION_DST_SNAPSHOT_ID);
         if (dstSnapshotId != null) {
           bld.setDstSnapshotId(dstSnapshotId);
         }
-        Integer lastSnapshotId = inodeRef.removeChildInt("lastSnapshotId");
+        Integer lastSnapshotId = inodeRef.removeChildInt(
+            INODE_REFERENCE_SECTION_LAST_SNAPSHOT_ID);
         if (lastSnapshotId != null) {
           bld.setLastSnapshotId(lastSnapshotId);
         }
@@ -1093,7 +1123,7 @@ class OfflineImageReconstructor {
       // No header for this section
       // Process the repeated <directory> elements.
       while (true) {
-        XMLEvent ev = expectTag("directory", true);
+        XMLEvent ev = expectTag(INODE_DIRECTORY_SECTION_DIRECTORY, true);
         if (ev.isEndElement()) {
           break;
         }
@@ -1101,19 +1131,22 @@ class OfflineImageReconstructor {
         FsImageProto.INodeDirectorySection.DirEntry.Builder bld =
             FsImageProto.INodeDirectorySection.DirEntry.newBuilder();
         loadNodeChildren(directory, "directory");
-        Long parent = directory.removeChildLong("parent");
+        Long parent = directory.removeChildLong(
+            INODE_DIRECTORY_SECTION_PARENT);
         if (parent != null) {
           bld.setParent(parent);
         }
         while (true) {
-          Node child = directory.removeChild("child");
+          Node child = directory.removeChild(
+              INODE_DIRECTORY_SECTION_CHILD);
           if (child == null) {
             break;
           }
           bld.addChildren(Long.parseLong(child.getVal()));
         }
         while (true) {
-          Node refChild = directory.removeChild("refChild");
+          Node refChild = directory.removeChild(
+              INODE_DIRECTORY_SECTION_REF_CHILD);
           if (refChild == null) {
             break;
           }
@@ -1135,7 +1168,7 @@ class OfflineImageReconstructor {
       // No header for this section type.
       // Process the repeated files under construction elements.
       while (true) {
-        XMLEvent ev = expectTag("inode", true);
+        XMLEvent ev = expectTag(INODE_SECTION_INODE, true);
         if (ev.isEndElement()) {
           break;
         }
@@ -1143,11 +1176,12 @@ class OfflineImageReconstructor {
         loadNodeChildren(fileUnderConstruction, "file under construction");
         FileUnderConstructionEntry.Builder bld =
             FileUnderConstructionEntry.newBuilder();
-        Long id = fileUnderConstruction.removeChildLong("id");
+        Long id = fileUnderConstruction.removeChildLong(SECTION_ID);
         if (id != null) {
           bld.setInodeId(id);
         }
-        String fullpath = fileUnderConstruction.removeChildStr("path");
+        String fullpath =
+            fileUnderConstruction.removeChildStr(SECTION_PATH);
         if (fullpath != null) {
           bld.setFullPath(fullpath);
         }
@@ -1167,24 +1201,26 @@ class OfflineImageReconstructor {
           FsImageProto.SnapshotSection.newBuilder();
       Node header = new Node();
       loadNodeChildren(header, "SnapshotSection fields", "snapshot");
-      Integer snapshotCounter = header.removeChildInt("snapshotCounter");
+      Integer snapshotCounter = header.removeChildInt(
+          SNAPSHOT_SECTION_SNAPSHOT_COUNTER);
       if (snapshotCounter == null) {
         throw new IOException("No <snapshotCounter> entry found in " +
             "SnapshotSection header");
       }
       bld.setSnapshotCounter(snapshotCounter);
-      Integer expectedNumSnapshots = header.removeChildInt("numSnapshots");
+      Integer expectedNumSnapshots = header.removeChildInt(
+          SNAPSHOT_SECTION_NUM_SNAPSHOTS);
       if (expectedNumSnapshots == null) {
         throw new IOException("No <numSnapshots> entry found in " +
             "SnapshotSection header");
       }
       bld.setNumSnapshots(expectedNumSnapshots);
       while (true) {
-        Node sd = header.removeChild("snapshottableDir");
+        Node sd = header.removeChild(SNAPSHOT_SECTION_SNAPSHOT_TABLE_DIR);
         if (sd == null) {
           break;
         }
-        Long dir = sd.removeChildLong("dir");
+        Long dir = sd.removeChildLong(SNAPSHOT_SECTION_DIR);
         sd.verifyNoRemainingKeys("<dir>");
         bld.addSnapshottableDir(dir);
       }
@@ -1193,7 +1229,7 @@ class OfflineImageReconstructor {
       int actualNumSnapshots = 0;
       while (actualNumSnapshots < expectedNumSnapshots) {
         try {
-          expectTag("snapshot", false);
+          expectTag(SNAPSHOT_SECTION_SNAPSHOT, false);
         } catch (IOException e) {
           throw new IOException("Only read " + actualNumSnapshots +
               " <snapshot> entries out of " + expectedNumSnapshots, e);
@@ -1203,17 +1239,17 @@ class OfflineImageReconstructor {
         loadNodeChildren(snapshot, "snapshot fields");
         FsImageProto.SnapshotSection.Snapshot.Builder s =
             FsImageProto.SnapshotSection.Snapshot.newBuilder();
-        Integer snapshotId = snapshot.removeChildInt("id");
+        Integer snapshotId = snapshot.removeChildInt(SECTION_ID);
         if (snapshotId == null) {
           throw new IOException("<snapshot> section was missing <id>");
         }
         s.setSnapshotId(snapshotId);
-        Node snapshotRoot = snapshot.removeChild("root");
+        Node snapshotRoot = snapshot.removeChild(SNAPSHOT_SECTION_ROOT);
         INodeSection.INode.Builder inodeBld = processINodeXml(snapshotRoot);
         s.setRoot(inodeBld);
         s.build().writeDelimitedTo(out);
       }
-      expectTagEnd("SnapshotSection");
+      expectTagEnd(SNAPSHOT_SECTION_NAME);
       recordSectionLength(SectionName.SNAPSHOT.name());
     }
   }
@@ -1229,15 +1265,15 @@ class OfflineImageReconstructor {
         XMLEvent ev = expectTag("[diff start tag]", true);
         if (ev.isEndElement()) {
           String name = ev.asEndElement().getName().getLocalPart();
-          if (name.equals("SnapshotDiffSection")) {
+          if (name.equals(SNAPSHOT_DIFF_SECTION_NAME)) {
             break;
           }
           throw new IOException("Got unexpected end tag for " + name);
         }
         String tagName = ev.asStartElement().getName().getLocalPart();
-        if (tagName.equals("dirDiffEntry")) {
+        if (tagName.equals(SNAPSHOT_DIFF_SECTION_DIR_DIFF_ENTRY)) {
           processDirDiffEntry();
-        } else if (tagName.equals("fileDiffEntry")) {
+        } else if (tagName.equals(SNAPSHOT_DIFF_SECTION_FILE_DIFF_ENTRY)) {
           processFileDiffEntry();
         } else {
           throw new IOException("SnapshotDiffSection contained unexpected " +
@@ -1253,12 +1289,14 @@ class OfflineImageReconstructor {
       headerBld.setType(DiffEntry.Type.DIRECTORYDIFF);
       Node dirDiffHeader = new Node();
       loadNodeChildren(dirDiffHeader, "dirDiffEntry fields", "dirDiff");
-      Long inodeId = dirDiffHeader.removeChildLong("inodeId");
+      Long inodeId = dirDiffHeader.removeChildLong(
+          SNAPSHOT_DIFF_SECTION_INODE_ID);
       if (inodeId == null) {
         throw new IOException("<dirDiffEntry> contained no <inodeId> entry.");
       }
       headerBld.setInodeId(inodeId);
-      Integer expectedDiffs = dirDiffHeader.removeChildInt("count");
+      Integer expectedDiffs = dirDiffHeader.removeChildInt(
+          SNAPSHOT_DIFF_SECTION_COUNT);
       if (expectedDiffs == null) {
         throw new IOException("<dirDiffEntry> contained no <count> entry.");
       }
@@ -1267,7 +1305,7 @@ class OfflineImageReconstructor {
       headerBld.build().writeDelimitedTo(out);
       for (int actualDiffs = 0; actualDiffs < expectedDiffs; actualDiffs++) {
         try {
-          expectTag("dirDiff", false);
+          expectTag(SNAPSHOT_DIFF_SECTION_DIR_DIFF, false);
         } catch (IOException e) {
           throw new IOException("Only read " + (actualDiffs + 1) +
               " diffs out of " + expectedDiffs, e);
@@ -1276,38 +1314,43 @@ class OfflineImageReconstructor {
         loadNodeChildren(dirDiff, "dirDiff fields");
         FsImageProto.SnapshotDiffSection.DirectoryDiff.Builder bld =
             FsImageProto.SnapshotDiffSection.DirectoryDiff.newBuilder();
-        Integer snapshotId = dirDiff.removeChildInt("snapshotId");
+        Integer snapshotId = dirDiff.removeChildInt(
+            SNAPSHOT_DIFF_SECTION_SNAPSHOT_ID);
         if (snapshotId != null) {
           bld.setSnapshotId(snapshotId);
         }
-        Integer childrenSize = dirDiff.removeChildInt("childrenSize");
+        Integer childrenSize = dirDiff.removeChildInt(
+            SNAPSHOT_DIFF_SECTION_CHILDREN_SIZE);
         if (childrenSize == null) {
           throw new IOException("Expected to find <childrenSize> in " +
               "<dirDiff> section.");
         }
-        bld.setIsSnapshotRoot(dirDiff.removeChildBool("isSnapshotRoot"));
+        bld.setIsSnapshotRoot(dirDiff.removeChildBool(
+            SNAPSHOT_DIFF_SECTION_IS_SNAPSHOT_ROOT));
         bld.setChildrenSize(childrenSize);
-        String name = dirDiff.removeChildStr("name");
+        String name = dirDiff.removeChildStr(SECTION_NAME);
         if (name != null) {
           bld.setName(ByteString.copyFrom(name, "UTF8"));
         }
         // TODO: add missing snapshotCopy field to XML
-        Integer expectedCreatedListSize =
-            dirDiff.removeChildInt("createdListSize");
+        Integer expectedCreatedListSize = dirDiff.removeChildInt(
+            SNAPSHOT_DIFF_SECTION_CREATED_LIST_SIZE);
         if (expectedCreatedListSize == null) {
           throw new IOException("Expected to find <createdListSize> in " +
               "<dirDiff> section.");
         }
         bld.setCreatedListSize(expectedCreatedListSize);
         while (true) {
-          Node deleted = dirDiff.removeChild("deletedInode");
+          Node deleted = dirDiff.removeChild(
+              SNAPSHOT_DIFF_SECTION_DELETED_INODE);
           if (deleted == null){
             break;
           }
           bld.addDeletedINode(Long.parseLong(deleted.getVal()));
         }
         while (true) {
-          Node deleted = dirDiff.removeChild("deletedInoderef");
+          Node deleted = dirDiff.removeChild(
+              SNAPSHOT_DIFF_SECTION_DELETED_INODE_REF);
           if (deleted == null){
             break;
           }
@@ -1317,11 +1360,12 @@ class OfflineImageReconstructor {
         // After the DirectoryDiff header comes a list of CreatedListEntry PBs.
         int actualCreatedListSize = 0;
         while (true) {
-          Node created = dirDiff.removeChild("created");
+          Node created = dirDiff.removeChild(
+              SNAPSHOT_DIFF_SECTION_CREATED);
           if (created == null){
             break;
           }
-          String cleName = created.removeChildStr("name");
+          String cleName = created.removeChildStr(SECTION_NAME);
           if (cleName == null) {
             throw new IOException("Expected <created> entry to have " +
                 "a <name> field");
@@ -1339,7 +1383,7 @@ class OfflineImageReconstructor {
         }
         dirDiff.verifyNoRemainingKeys("dirDiff");
       }
-      expectTagEnd("dirDiffEntry");
+      expectTagEnd(SNAPSHOT_DIFF_SECTION_DIR_DIFF_ENTRY);
     }
 
     private void processFileDiffEntry() throws IOException {
@@ -1348,12 +1392,14 @@ class OfflineImageReconstructor {
       headerBld.setType(DiffEntry.Type.FILEDIFF);
       Node fileDiffHeader = new Node();
       loadNodeChildren(fileDiffHeader, "fileDiffEntry fields", "fileDiff");
-      Long inodeId = fileDiffHeader.removeChildLong("inodeid");
+      Long inodeId = fileDiffHeader.removeChildLong(
+          SNAPSHOT_DIFF_SECTION_INODE_ID);
       if (inodeId == null) {
         throw new IOException("<fileDiffEntry> contained no <inodeid> entry.");
       }
       headerBld.setInodeId(inodeId);
-      Integer expectedDiffs = fileDiffHeader.removeChildInt("count");
+      Integer expectedDiffs = fileDiffHeader.removeChildInt(
+          SNAPSHOT_DIFF_SECTION_COUNT);
       if (expectedDiffs == null) {
         throw new IOException("<fileDiffEntry> contained no <count> entry.");
       }
@@ -1362,7 +1408,7 @@ class OfflineImageReconstructor {
       headerBld.build().writeDelimitedTo(out);
       for (int actualDiffs = 0; actualDiffs < expectedDiffs; actualDiffs++) {
         try {
-          expectTag("fileDiff", false);
+          expectTag(SNAPSHOT_DIFF_SECTION_FILE_DIFF, false);
         } catch (IOException e) {
           throw new IOException("Only read " + (actualDiffs + 1) +
               " diffs out of " + expectedDiffs, e);
@@ -1371,15 +1417,17 @@ class OfflineImageReconstructor {
         loadNodeChildren(fileDiff, "fileDiff fields");
         FsImageProto.SnapshotDiffSection.FileDiff.Builder bld =
             FsImageProto.SnapshotDiffSection.FileDiff.newBuilder();
-        Integer snapshotId = fileDiff.removeChildInt("snapshotId");
+        Integer snapshotId = fileDiff.removeChildInt(
+            SNAPSHOT_DIFF_SECTION_SNAPSHOT_ID);
         if (snapshotId != null) {
           bld.setSnapshotId(snapshotId);
         }
-        Long size = fileDiff.removeChildLong("size");
+        Long size = fileDiff.removeChildLong(
+            SNAPSHOT_DIFF_SECTION_SIZE);
         if (size != null) {
           bld.setFileSize(size);
         }
-        String name = fileDiff.removeChildStr("name");
+        String name = fileDiff.removeChildStr(SECTION_NAME);
         if (name != null) {
           bld.setName(ByteString.copyFrom(name, "UTF8"));
         }
@@ -1388,7 +1436,7 @@ class OfflineImageReconstructor {
         fileDiff.verifyNoRemainingKeys("fileDiff");
         bld.build().writeDelimitedTo(out);
       }
-      expectTagEnd("fileDiffEntry");
+      expectTagEnd(SNAPSHOT_DIFF_SECTION_FILE_DIFF_ENTRY);
     }
   }
 

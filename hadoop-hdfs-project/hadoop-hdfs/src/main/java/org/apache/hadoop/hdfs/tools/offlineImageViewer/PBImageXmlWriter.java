@@ -77,6 +77,154 @@ import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_
  */
 @InterfaceAudience.Private
 public final class PBImageXmlWriter {
+  public static final String NAME_SECTION_NAME = "NameSection";
+  public static final String INODE_SECTION_NAME = "INodeSection";
+  public static final String SECRET_MANAGER_SECTION_NAME =
+      "SecretManagerSection";
+  public static final String CACHE_MANAGER_SECTION_NAME = "CacheManagerSection";
+  public static final String SNAPSHOT_DIFF_SECTION_NAME = "SnapshotDiffSection";
+  public static final String INODE_REFERENCE_SECTION_NAME =
+      "INodeReferenceSection";
+  public static final String INODE_DIRECTORY_SECTION_NAME =
+      "INodeDirectorySection";
+  public static final String FILE_UNDER_CONSTRUCTION_SECTION_NAME =
+      "FileUnderConstructionSection";
+  public static final String SNAPSHOT_SECTION_NAME = "SnapshotSection";
+
+  public static final String SECTION_ID = "id";
+  public static final String SECTION_REPLICATION = "replication";
+  public static final String SECTION_PATH = "path";
+  public static final String SECTION_NAME = "name";
+
+  public static final String NAME_SECTION_NAMESPACE_ID = "namespaceId";
+  public static final String NAME_SECTION_GENSTAMPV1 = "genstampV1";
+  public static final String NAME_SECTION_GENSTAMPV2 = "genstampV2";
+  public static final String NAME_SECTION_GENSTAMPV1_LIMIT = "genstampV1Limit";
+  public static final String NAME_SECTION_LAST_ALLOCATED_BLOCK_ID =
+      "lastAllocatedBlockId";
+  public static final String NAME_SECTION_TXID = "txid";
+  public static final String NAME_SECTION_ROLLING_UPGRADE_START_TIME =
+      "rollingUpgradeStartTime";
+  public static final String NAME_SECTION_LAST_ALLOCATED_STRIPED_BLOCK_ID =
+      "lastAllocatedStripedBlockId";
+
+  public static final String INODE_SECTION_LAST_INODE_ID = "lastInodeId";
+  public static final String INODE_SECTION_NUM_INODES = "numInodes";
+  public static final String INODE_SECTION_TYPE = "type";
+  public static final String INODE_SECTION_MTIME = "mtime";
+  public static final String INODE_SECTION_ATIME = "atime";
+  public static final String INODE_SECTION_PREFERRED_BLOCK_SIZE =
+      "preferredBlockSize";
+  public static final String INODE_SECTION_PERMISSION = "permission";
+  public static final String INODE_SECTION_BLOCKS = "blocks";
+  public static final String INODE_SECTION_BLOCK = "block";
+  public static final String INODE_SECTION_GEMSTAMP = "genstamp";
+  public static final String INODE_SECTION_NUM_BYTES = "numBytes";
+  public static final String INODE_SECTION_FILE_UNDER_CONSTRUCTION =
+      "file-under-construction";
+  public static final String INODE_SECTION_CLIENT_NAME = "clientName";
+  public static final String INODE_SECTION_CLIENT_MACHINE = "clientMachine";
+  public static final String INODE_SECTION_ACL = "acl";
+  public static final String INODE_SECTION_ACLS = "acls";
+  public static final String INODE_SECTION_XATTR = "xattr";
+  public static final String INODE_SECTION_XATTRS = "xattrs";
+  public static final String INODE_SECTION_STORAGE_POLICY_ID =
+      "storagePolicyId";
+  public static final String INODE_SECTION_IS_STRIPED = "isStriped";
+  public static final String INODE_SECTION_NS_QUOTA = "nsquota";
+  public static final String INODE_SECTION_DS_QUOTA = "dsquota";
+  public static final String INODE_SECTION_TYPE_QUOTA = "typeQuota";
+  public static final String INODE_SECTION_QUOTA = "quota";
+  public static final String INODE_SECTION_TARGET = "target";
+  public static final String INODE_SECTION_NS = "ns";
+  public static final String INODE_SECTION_VAL = "val";
+  public static final String INODE_SECTION_VAL_HEX = "valHex";
+  public static final String INODE_SECTION_INODE = "inode";
+
+  public static final String SECRET_MANAGER_SECTION_CURRENT_ID = "currentId";
+  public static final String SECRET_MANAGER_SECTION_TOKEN_SEQUENCE_NUMBER =
+      "tokenSequenceNumber";
+  public static final String SECRET_MANAGER_SECTION_NUM_DELEGATION_KEYS =
+      "numDelegationKeys";
+  public static final String SECRET_MANAGER_SECTION_NUM_TOKENS = "numTokens";
+  public static final String SECRET_MANAGER_SECTION_EXPIRY = "expiry";
+  public static final String SECRET_MANAGER_SECTION_KEY = "key";
+  public static final String SECRET_MANAGER_SECTION_DELEGATION_KEY =
+      "delegationKey";
+  public static final String SECRET_MANAGER_SECTION_VERSION = "version";
+  public static final String SECRET_MANAGER_SECTION_OWNER = "owner";
+  public static final String SECRET_MANAGER_SECTION_RENEWER = "renewer";
+  public static final String SECRET_MANAGER_SECTION_REAL_USER = "realUser";
+  public static final String SECRET_MANAGER_SECTION_ISSUE_DATE = "issueDate";
+  public static final String SECRET_MANAGER_SECTION_MAX_DATE = "maxDate";
+  public static final String SECRET_MANAGER_SECTION_SEQUENCE_NUMBER =
+      "sequenceNumber";
+  public static final String SECRET_MANAGER_SECTION_MASTER_KEY_ID =
+      "masterKeyId";
+  public static final String SECRET_MANAGER_SECTION_EXPIRY_DATE = "expiryDate";
+  public static final String SECRET_MANAGER_SECTION_TOKEN = "token";
+
+  public static final String CACHE_MANAGER_SECTION_NEXT_DIRECTIVE_ID =
+      "nextDirectiveId";
+  public static final String CACHE_MANAGER_SECTION_NUM_POOLS = "numPools";
+  public static final String CACHE_MANAGER_SECTION_NUM_DIRECTIVES =
+      "numDirectives";
+  public static final String CACHE_MANAGER_SECTION_POOL_NAME = "poolName";
+  public static final String CACHE_MANAGER_SECTION_OWNER_NAME = "ownerName";
+  public static final String CACHE_MANAGER_SECTION_GROUP_NAME = "groupName";
+  public static final String CACHE_MANAGER_SECTION_MODE = "mode";
+  public static final String CACHE_MANAGER_SECTION_LIMIT = "limit";
+  public static final String CACHE_MANAGER_SECTION_MAX_RELATIVE_EXPIRY =
+      "maxRelativeExpiry";
+  public static final String CACHE_MANAGER_SECTION_POOL = "pool";
+  public static final String CACHE_MANAGER_SECTION_EXPIRATION = "expiration";
+  public static final String CACHE_MANAGER_SECTION_MILLIS = "millis";
+  public static final String CACHE_MANAGER_SECTION_RELATIVE = "relative";
+  public static final String CACHE_MANAGER_SECTION_DIRECTIVE = "directive";
+
+  public static final String SNAPSHOT_DIFF_SECTION_INODE_ID = "inodeId";
+  public static final String SNAPSHOT_DIFF_SECTION_COUNT = "count";
+  public static final String SNAPSHOT_DIFF_SECTION_SNAPSHOT_ID = "snapshotId";
+  public static final String SNAPSHOT_DIFF_SECTION_CHILDREN_SIZE =
+      "childrenSize";
+  public static final String SNAPSHOT_DIFF_SECTION_IS_SNAPSHOT_ROOT =
+      "isSnapshotRoot";
+  public static final String SNAPSHOT_DIFF_SECTION_CREATED_LIST_SIZE =
+      "createdListSize";
+  public static final String SNAPSHOT_DIFF_SECTION_DELETED_INODE =
+      "deletedInode";
+  public static final String SNAPSHOT_DIFF_SECTION_DELETED_INODE_REF =
+      "deletedInoderef";
+  public static final String SNAPSHOT_DIFF_SECTION_CREATED = "created";
+  public static final String SNAPSHOT_DIFF_SECTION_SIZE = "size";
+  public static final String SNAPSHOT_DIFF_SECTION_FILE_DIFF_ENTRY =
+      "fileDiffEntry";
+  public static final String SNAPSHOT_DIFF_SECTION_DIR_DIFF_ENTRY =
+      "dirDiffEntry";
+  public static final String SNAPSHOT_DIFF_SECTION_FILE_DIFF = "fileDiff";
+  public static final String SNAPSHOT_DIFF_SECTION_DIR_DIFF = "dirDiff";
+
+  public static final String INODE_REFERENCE_SECTION_REFERRED_ID = "referredId";
+  public static final String INODE_REFERENCE_SECTION_DST_SNAPSHOT_ID =
+      "dstSnapshotId";
+  public static final String INODE_REFERENCE_SECTION_LAST_SNAPSHOT_ID =
+      "lastSnapshotId";
+  public static final String INODE_REFERENCE_SECTION_REF = "ref";
+
+  public static final String INODE_DIRECTORY_SECTION_PARENT = "parent";
+  public static final String INODE_DIRECTORY_SECTION_CHILD = "child";
+  public static final String INODE_DIRECTORY_SECTION_REF_CHILD = "refChild";
+  public static final String INODE_DIRECTORY_SECTION_DIRECTORY = "directory";
+
+  public static final String SNAPSHOT_SECTION_SNAPSHOT_COUNTER =
+      "snapshotCounter";
+  public static final String SNAPSHOT_SECTION_NUM_SNAPSHOTS = "numSnapshots";
+  public static final String SNAPSHOT_SECTION_SNAPSHOT_TABLE_DIR =
+      "snapshottableDir";
+  public static final String SNAPSHOT_SECTION_DIR = "dir";
+  public static final String SNAPSHOT_SECTION_ROOT = "root";
+  public static final String SNAPSHOT_SECTION_SNAPSHOT = "snapshot";
+
   private final Configuration conf;
   private final PrintStream out;
   private final SimpleDateFormat isoDateFormat;
@@ -177,98 +325,106 @@ public final class PBImageXmlWriter {
   }
 
   private void dumpCacheManagerSection(InputStream is) throws IOException {
-    out.print("<CacheManagerSection>");
+    out.print("<" + CACHE_MANAGER_SECTION_NAME + ">");
     CacheManagerSection s = CacheManagerSection.parseDelimitedFrom(is);
-    o("nextDirectiveId", s.getNextDirectiveId());
-    o("numDirectives", s.getNumDirectives());
-    o("numPools", s.getNumPools());
+    o(CACHE_MANAGER_SECTION_NEXT_DIRECTIVE_ID, s.getNextDirectiveId());
+    o(CACHE_MANAGER_SECTION_NUM_DIRECTIVES, s.getNumDirectives());
+    o(CACHE_MANAGER_SECTION_NUM_POOLS, s.getNumPools());
     for (int i = 0; i < s.getNumPools(); ++i) {
       CachePoolInfoProto p = CachePoolInfoProto.parseDelimitedFrom(is);
-      out.print("<pool>");
-      o("poolName", p.getPoolName()).o("ownerName", p.getOwnerName())
-          .o("groupName", p.getGroupName()).o("mode", p.getMode())
-          .o("limit", p.getLimit())
-          .o("maxRelativeExpiry", p.getMaxRelativeExpiry());
-      out.print("</pool>\n");
+      out.print("<" + CACHE_MANAGER_SECTION_POOL +">");
+      o(CACHE_MANAGER_SECTION_POOL_NAME, p.getPoolName()).
+          o(CACHE_MANAGER_SECTION_OWNER_NAME, p.getOwnerName())
+          .o(CACHE_MANAGER_SECTION_GROUP_NAME, p.getGroupName())
+          .o(CACHE_MANAGER_SECTION_MODE, p.getMode())
+          .o(CACHE_MANAGER_SECTION_LIMIT, p.getLimit())
+          .o(CACHE_MANAGER_SECTION_MAX_RELATIVE_EXPIRY,
+              p.getMaxRelativeExpiry());
+      out.print("</" + CACHE_MANAGER_SECTION_POOL + ">\n");
     }
     for (int i = 0; i < s.getNumDirectives(); ++i) {
       CacheDirectiveInfoProto p = CacheDirectiveInfoProto
           .parseDelimitedFrom(is);
-      out.print("<directive>");
-      o("id", p.getId()).o("path", p.getPath())
-          .o("replication", p.getReplication()).o("pool", p.getPool());
-      out.print("<expiration>");
+      out.print("<" + CACHE_MANAGER_SECTION_DIRECTIVE + ">");
+      o(SECTION_ID, p.getId()).o(SECTION_PATH, p.getPath())
+          .o(SECTION_REPLICATION, p.getReplication())
+          .o(CACHE_MANAGER_SECTION_POOL, p.getPool());
+      out.print("<" + CACHE_MANAGER_SECTION_EXPIRATION +">");
       CacheDirectiveInfoExpirationProto e = p.getExpiration();
-      o("millis", e.getMillis()).o("relative", e.getIsRelative());
-      out.print("</expiration>\n");
-      out.print("</directive>\n");
+      o(CACHE_MANAGER_SECTION_MILLIS, e.getMillis())
+          .o(CACHE_MANAGER_SECTION_RELATIVE, e.getIsRelative());
+      out.print("</" + CACHE_MANAGER_SECTION_EXPIRATION+ ">\n");
+      out.print("</" + CACHE_MANAGER_SECTION_DIRECTIVE + ">\n");
     }
-    out.print("</CacheManagerSection>\n");
+    out.print("</" + CACHE_MANAGER_SECTION_NAME + ">\n");
 
   }
 
   private void dumpFileUnderConstructionSection(InputStream in)
       throws IOException {
-    out.print("<FileUnderConstructionSection>");
+    out.print("<" + FILE_UNDER_CONSTRUCTION_SECTION_NAME + ">");
     while (true) {
       FileUnderConstructionEntry e = FileUnderConstructionEntry
           .parseDelimitedFrom(in);
       if (e == null) {
         break;
       }
-      out.print("<inode>");
-      o("id", e.getInodeId()).o("path", e.getFullPath());
-      out.print("</inode>\n");
+      out.print("<" + INODE_SECTION_INODE + ">");
+      o(SECTION_ID, e.getInodeId())
+          .o(SECTION_PATH, e.getFullPath());
+      out.print("</" + INODE_SECTION_INODE + ">\n");
     }
-    out.print("</FileUnderConstructionSection>\n");
+    out.print("</" + FILE_UNDER_CONSTRUCTION_SECTION_NAME + ">\n");
   }
 
   private void dumpXattrs(INodeSection.XAttrFeatureProto xattrs) {
-    out.print("<xattrs>");
+    out.print("<" + INODE_SECTION_XATTRS + ">");
     for (INodeSection.XAttrCompactProto xattr : xattrs.getXAttrsList()) {
-      out.print("<xattr>");
+      out.print("<" + INODE_SECTION_XATTR + ">");
       int encodedName = xattr.getName();
       int ns = (XATTR_NAMESPACE_MASK & (encodedName >> XATTR_NAMESPACE_OFFSET)) |
           ((XATTR_NAMESPACE_EXT_MASK & (encodedName >> XATTR_NAMESPACE_EXT_OFFSET)) << 2);
-      o("ns", XAttrProtos.XAttrProto.
+      o(INODE_SECTION_NS, XAttrProtos.XAttrProto.
           XAttrNamespaceProto.valueOf(ns).toString());
-      o("name", stringTable[XATTR_NAME_MASK & (encodedName >> XATTR_NAME_OFFSET)]);
+      o(SECTION_NAME,
+          stringTable[XATTR_NAME_MASK & (encodedName >> XATTR_NAME_OFFSET)]);
       ByteString val = xattr.getValue();
       if (val.isValidUtf8()) {
-        o("val", val.toStringUtf8());
+        o(INODE_SECTION_VAL, val.toStringUtf8());
       } else {
-        o("valHex", Hex.encodeHexString(val.toByteArray()));
+        o(INODE_SECTION_VAL_HEX, Hex.encodeHexString(val.toByteArray()));
       }
-      out.print("</xattr>");
+      out.print("</" + INODE_SECTION_XATTR + ">");
     }
-    out.print("</xattrs>");
+    out.print("</" + INODE_SECTION_XATTRS + ">");
   }
 
   private void dumpINodeDirectory(INodeDirectory d) {
-    o("mtime", d.getModificationTime()).o("permission",
-        dumpPermission(d.getPermission()));
+    o(INODE_SECTION_MTIME, d.getModificationTime())
+        .o(INODE_SECTION_PERMISSION, dumpPermission(d.getPermission()));
     if (d.hasXAttrs()) {
       dumpXattrs(d.getXAttrs());
     }
     dumpAcls(d.getAcl());
     if (d.hasDsQuota() && d.hasNsQuota()) {
-      o("nsquota", d.getNsQuota()).o("dsquota", d.getDsQuota());
+      o(INODE_SECTION_NS_QUOTA, d.getNsQuota())
+        .o(INODE_SECTION_DS_QUOTA, d.getDsQuota());
     }
     INodeSection.QuotaByStorageTypeFeatureProto typeQuotas =
       d.getTypeQuotas();
     if (typeQuotas != null) {
       for (INodeSection.QuotaByStorageTypeEntryProto entry:
             typeQuotas.getQuotasList()) {
-        out.print("<typeQuota>");
-        o("type", entry.getStorageType().toString());
-        o("quota", entry.getQuota());
-        out.print("</typeQuota>");
+        out.print("<" + INODE_SECTION_TYPE_QUOTA + ">");
+        o(INODE_SECTION_TYPE, entry.getStorageType().toString());
+        o(INODE_SECTION_QUOTA, entry.getQuota());
+        out.print("</" + INODE_SECTION_TYPE_QUOTA + ">");
       }
     }
   }
 
   private void dumpINodeDirectorySection(InputStream in) throws IOException {
-    out.print("<INodeDirectorySection>");
+    out.print("<" + INODE_DIRECTORY_SECTION_NAME + ">");
     while (true) {
       INodeDirectorySection.DirEntry e = INodeDirectorySection.DirEntry
           .parseDelimitedFrom(in);
@@ -276,21 +432,21 @@ public final class PBImageXmlWriter {
       if (e == null) {
         break;
       }
-      out.print("<directory>");
-      o("parent", e.getParent());
+      out.print("<" + INODE_DIRECTORY_SECTION_DIRECTORY + ">");
+      o(INODE_DIRECTORY_SECTION_PARENT, e.getParent());
       for (long id : e.getChildrenList()) {
-        o("child", id);
+        o(INODE_DIRECTORY_SECTION_CHILD, id);
       }
       for (int refId : e.getRefChildrenList()) {
-        o("refChild", refId);
+        o(INODE_DIRECTORY_SECTION_REF_CHILD, refId);
       }
-      out.print("</directory>\n");
+      out.print("</" + INODE_DIRECTORY_SECTION_DIRECTORY + ">\n");
     }
-    out.print("</INodeDirectorySection>\n");
+    out.print("</" + INODE_DIRECTORY_SECTION_NAME + ">\n");
   }
 
   private void dumpINodeReferenceSection(InputStream in) throws IOException {
-    out.print("<INodeReferenceSection>");
+    out.print("<" + INODE_REFERENCE_SECTION_NAME + ">");
     while (true) {
       INodeReferenceSection.INodeReference e = INodeReferenceSection
           .INodeReference.parseDelimitedFrom(in);
@@ -299,49 +455,53 @@ public final class PBImageXmlWriter {
       }
       dumpINodeReference(e);
     }
-    out.print("</INodeReferenceSection>");
+    out.print("</" + INODE_REFERENCE_SECTION_NAME + ">");
   }
 
   private void dumpINodeReference(INodeReferenceSection.INodeReference r) {
-    out.print("<ref>");
-    o("referredId", r.getReferredId()).o("name", r.getName().toStringUtf8())
-        .o("dstSnapshotId", r.getDstSnapshotId())
-        .o("lastSnapshotId", r.getLastSnapshotId());
-    out.print("</ref>\n");
+    out.print("<" + INODE_REFERENCE_SECTION_REF + ">");
+    o(INODE_REFERENCE_SECTION_REFERRED_ID, r.getReferredId())
+        .o(SECTION_NAME, r.getName().toStringUtf8())
+            .o(INODE_REFERENCE_SECTION_DST_SNAPSHOT_ID, r.getDstSnapshotId())
+            .o(INODE_REFERENCE_SECTION_LAST_SNAPSHOT_ID,
+            r.getLastSnapshotId());
+    out.print("</" + INODE_REFERENCE_SECTION_REF + ">\n");
   }
 
   private void dumpINodeFile(INodeSection.INodeFile f) {
-    o("replication", f.getReplication()).o("mtime", f.getModificationTime())
-        .o("atime", f.getAccessTime())
-        .o("preferredBlockSize", f.getPreferredBlockSize())
-        .o("permission", dumpPermission(f.getPermission()));
+    o(SECTION_REPLICATION, f.getReplication())
+        .o(INODE_SECTION_MTIME, f.getModificationTime())
+        .o(INODE_SECTION_ATIME, f.getAccessTime())
+        .o(INODE_SECTION_PREFERRED_BLOCK_SIZE, f.getPreferredBlockSize())
+        .o(INODE_SECTION_PERMISSION, dumpPermission(f.getPermission()));
     if (f.hasXAttrs()) {
       dumpXattrs(f.getXAttrs());
     }
     dumpAcls(f.getAcl());
     if (f.getBlocksCount() > 0) {
-      out.print("<blocks>");
+      out.print("<" + INODE_SECTION_BLOCKS + ">");
       for (BlockProto b : f.getBlocksList()) {
-        out.print("<block>");
-        o("id", b.getBlockId()).o("genstamp", b.getGenStamp()).o("numBytes",
-            b.getNumBytes());
-        out.print("</block>\n");
+        out.print("<" + INODE_SECTION_BLOCK + ">");
+        o(SECTION_ID, b.getBlockId())
+            .o(INODE_SECTION_GEMSTAMP, b.getGenStamp())
+            .o(INODE_SECTION_NUM_BYTES, b.getNumBytes());
+        out.print("</" + INODE_SECTION_BLOCK + ">\n");
       }
-      out.print("</blocks>\n");
+      out.print("</" + INODE_SECTION_BLOCKS + ">\n");
     }
     if (f.hasStoragePolicyID()) {
-      o("storagePolicyId", f.getStoragePolicyID());
+      o(INODE_SECTION_STORAGE_POLICY_ID, f.getStoragePolicyID());
     }
     if (f.getIsStriped()) {
-      out.print("<isStriped/>");
+      out.print("<" + INODE_SECTION_IS_STRIPED + "/>");
     }
 
     if (f.hasFileUC()) {
       INodeSection.FileUnderConstructionFeature u = f.getFileUC();
-      out.print("<file-under-construction>");
-      o("clientName", u.getClientName()).o("clientMachine",
-          u.getClientMachine());
-      out.print("</file-under-construction>\n");
+      out.print("<" + INODE_SECTION_FILE_UNDER_CONSTRUCTION + ">");
+      o(INODE_SECTION_CLIENT_NAME, u.getClientName())
+          .o(INODE_SECTION_CLIENT_MACHINE, u.getClientMachine());
+      out.print("</" + INODE_SECTION_FILE_UNDER_CONSTRUCTION + ">\n");
     }
   }
 
@@ -349,31 +509,31 @@ public final class PBImageXmlWriter {
     ImmutableList<AclEntry> aclEntryList = FSImageFormatPBINode.Loader
         .loadAclEntries(aclFeatureProto, stringTable);
     if (aclEntryList.size() > 0) {
-      out.print("<acls>");
+      out.print("<" + INODE_SECTION_ACLS + ">");
       for (AclEntry aclEntry : aclEntryList) {
-        o("acl", aclEntry.toString());
+        o(INODE_SECTION_ACL, aclEntry.toString());
       }
-      out.print("</acls>");
+      out.print("</" + INODE_SECTION_ACLS + ">");
     }
   }
 
   private void dumpINodeSection(InputStream in) throws IOException {
     INodeSection s = INodeSection.parseDelimitedFrom(in);
-    out.print("<INodeSection>");
-    o("lastInodeId", s.getLastInodeId());
-    o("numInodes", s.getNumInodes());
+    out.print("<" + INODE_SECTION_NAME + ">");
+    o(INODE_SECTION_LAST_INODE_ID, s.getLastInodeId());
+    o(INODE_SECTION_NUM_INODES, s.getNumInodes());
     for (int i = 0; i < s.getNumInodes(); ++i) {
       INodeSection.INode p = INodeSection.INode.parseDelimitedFrom(in);
-      out.print("<inode>");
+      out.print("<" + INODE_SECTION_INODE + ">");
       dumpINodeFields(p);
-      out.print("</inode>\n");
+      out.print("</" + INODE_SECTION_INODE + ">\n");
     }
-    out.print("</INodeSection>\n");
+    out.print("</" + INODE_SECTION_NAME + ">\n");
   }
 
   private void dumpINodeFields(INodeSection.INode p) {
-    o("id", p.getId()).o("type", p.getType()).o("name",
-        p.getName().toStringUtf8());
+    o(SECTION_ID, p.getId()).o(INODE_SECTION_TYPE, p.getType())
+            .o(SECTION_NAME, p.getName().toStringUtf8());
     if (p.hasFile()) {
       dumpINodeFile(p.getFile());
     } else if (p.hasDirectory()) {
@@ -384,20 +544,23 @@ public final class PBImageXmlWriter {
   }
 
   private void dumpINodeSymlink(INodeSymlink s) {
-    o("permission", dumpPermission(s.getPermission()))
-        .o("target", s.getTarget().toStringUtf8())
-        .o("mtime", s.getModificationTime()).o("atime", s.getAccessTime());
+    o(INODE_SECTION_PERMISSION, dumpPermission(s.getPermission()))
+        .o(INODE_SECTION_TARGET, s.getTarget().toStringUtf8())
+        .o(INODE_SECTION_MTIME, s.getModificationTime())
+        .o(INODE_SECTION_ATIME, s.getAccessTime());
   }
 
   private void dumpNameSection(InputStream in) throws IOException {
     NameSystemSection s = NameSystemSection.parseDelimitedFrom(in);
-    out.print("<NameSection>");
-    o("namespaceId", s.getNamespaceId());
-    o("genstampV1", s.getGenstampV1()).o("genstampV2", s.getGenstampV2())
-        .o("genstampV1Limit", s.getGenstampV1Limit())
-        .o("lastAllocatedBlockId", s.getLastAllocatedBlockId())
-        .o("txid", s.getTransactionId());
-    out.print("</NameSection>\n");
+    out.print("<" + NAME_SECTION_NAME + ">");
+    o(NAME_SECTION_NAMESPACE_ID, s.getNamespaceId());
+    o(NAME_SECTION_GENSTAMPV1, s.getGenstampV1())
+        .o(NAME_SECTION_GENSTAMPV2, s.getGenstampV2())
+        .o(NAME_SECTION_GENSTAMPV1_LIMIT, s.getGenstampV1Limit())
+        .o(NAME_SECTION_LAST_ALLOCATED_BLOCK_ID,
+            s.getLastAllocatedBlockId())
+        .o(NAME_SECTION_TXID, s.getTransactionId());
+    out.print("</" + NAME_SECTION_NAME + ">\n");
   }
 
   private String dumpPermission(long permission) {
@@ -408,59 +571,63 @@ public final class PBImageXmlWriter {
   }
 
   private void dumpSecretManagerSection(InputStream is) throws IOException {
-    out.print("<SecretManagerSection>");
+    out.print("<" + SECRET_MANAGER_SECTION_NAME + ">");
     SecretManagerSection s = SecretManagerSection.parseDelimitedFrom(is);
     int expectedNumDelegationKeys = s.getNumKeys();
     int expectedNumTokens = s.getNumTokens();
-    o("currentId", s.getCurrentId()).o("tokenSequenceNumber",
-        s.getTokenSequenceNumber()).
-        o("numDelegationKeys", expectedNumDelegationKeys).
-        o("numTokens", expectedNumTokens);
+    o(SECRET_MANAGER_SECTION_CURRENT_ID, s.getCurrentId())
+        .o(SECRET_MANAGER_SECTION_TOKEN_SEQUENCE_NUMBER,
+            s.getTokenSequenceNumber()).
+        o(SECRET_MANAGER_SECTION_NUM_DELEGATION_KEYS,
+            expectedNumDelegationKeys).
+        o(SECRET_MANAGER_SECTION_NUM_TOKENS, expectedNumTokens);
     for (int i = 0; i < expectedNumDelegationKeys; i++) {
       SecretManagerSection.DelegationKey dkey =
           SecretManagerSection.DelegationKey.parseDelimitedFrom(is);
-      out.print("<delegationKey>");
-      o("id", dkey.getId());
-      o("key", Hex.encodeHexString(dkey.getKey().toByteArray()));
+      out.print("<" + SECRET_MANAGER_SECTION_DELEGATION_KEY + ">");
+      o(SECTION_ID, dkey.getId());
+      o(SECRET_MANAGER_SECTION_KEY,
+          Hex.encodeHexString(dkey.getKey().toByteArray()));
       if (dkey.hasExpiryDate()) {
-        dumpDate("expiry", dkey.getExpiryDate());
+        dumpDate(SECRET_MANAGER_SECTION_EXPIRY, dkey.getExpiryDate());
       }
-      out.print("</delegationKey>");
+      out.print("</" + SECRET_MANAGER_SECTION_DELEGATION_KEY + ">");
     }
     for (int i = 0; i < expectedNumTokens; i++) {
       SecretManagerSection.PersistToken token =
           SecretManagerSection.PersistToken.parseDelimitedFrom(is);
-      out.print("<token>");
+      out.print("<" + SECRET_MANAGER_SECTION_TOKEN + ">");
       if (token.hasVersion()) {
-        o("version", token.getVersion());
+        o(SECRET_MANAGER_SECTION_VERSION, token.getVersion());
       }
       if (token.hasOwner()) {
-        o("owner", token.getOwner());
+        o(SECRET_MANAGER_SECTION_OWNER, token.getOwner());
       }
       if (token.hasRenewer()) {
-        o("renewer", token.getRenewer());
+        o(SECRET_MANAGER_SECTION_RENEWER, token.getRenewer());
       }
       if (token.hasRealUser()) {
-        o("realUser", token.getRealUser());
+        o(SECRET_MANAGER_SECTION_REAL_USER, token.getRealUser());
       }
       if (token.hasIssueDate()) {
-        dumpDate("issueDate", token.getIssueDate());
+        dumpDate(SECRET_MANAGER_SECTION_ISSUE_DATE, token.getIssueDate());
       }
       if (token.hasMaxDate()) {
-        dumpDate("maxDate", token.getMaxDate());
+        dumpDate(SECRET_MANAGER_SECTION_MAX_DATE, token.getMaxDate());
       }
       if (token.hasSequenceNumber()) {
-        o("sequenceNumber", token.getSequenceNumber());
+        o(SECRET_MANAGER_SECTION_SEQUENCE_NUMBER,
+            token.getSequenceNumber());
       }
       if (token.hasMasterKeyId()) {
-        o("masterKeyId", token.getMasterKeyId());
+        o(SECRET_MANAGER_SECTION_MASTER_KEY_ID, token.getMasterKeyId());
       }
       if (token.hasExpiryDate()) {
-        dumpDate("expiryDate", token.getExpiryDate());
+        dumpDate(SECRET_MANAGER_SECTION_EXPIRY_DATE, token.getExpiryDate());
       }
-      out.print("</token>");
+      out.print("</" + SECRET_MANAGER_SECTION_TOKEN + ">");
     }
-    out.print("</SecretManagerSection>");
+    out.print("</" + SECRET_MANAGER_SECTION_NAME + ">");
   }
 
   private void dumpDate(String tag, long date) {
@@ -469,7 +636,7 @@ public final class PBImageXmlWriter {
   }
 
   private void dumpSnapshotDiffSection(InputStream in) throws IOException {
-    out.print("<SnapshotDiffSection>");
+    out.print("<" + SNAPSHOT_DIFF_SECTION_NAME + ">");
     while (true) {
       SnapshotDiffSection.DiffEntry e = SnapshotDiffSection.DiffEntry
           .parseDelimitedFrom(in);
@@ -478,52 +645,54 @@ public final class PBImageXmlWriter {
       }
       switch (e.getType()) {
       case FILEDIFF:
-        out.print("<fileDiffEntry>");
+        out.print("<" + SNAPSHOT_DIFF_SECTION_FILE_DIFF_ENTRY + ">");
         break;
       case DIRECTORYDIFF:
-        out.print("<dirDiffEntry>");
+        out.print("<" + SNAPSHOT_DIFF_SECTION_DIR_DIFF_ENTRY + ">");
         break;
       default:
         throw new IOException("unknown DiffEntry type " + e.getType());
       }
-      o("inodeId", e.getInodeId());
-      o("count", e.getNumOfDiff());
+      o(SNAPSHOT_DIFF_SECTION_INODE_ID, e.getInodeId());
+      o(SNAPSHOT_DIFF_SECTION_COUNT, e.getNumOfDiff());
       switch (e.getType()) {
       case FILEDIFF: {
         for (int i = 0; i < e.getNumOfDiff(); ++i) {
-          out.print("<fileDiff>");
+          out.print("<" + SNAPSHOT_DIFF_SECTION_FILE_DIFF + ">");
           SnapshotDiffSection.FileDiff f = SnapshotDiffSection.FileDiff
               .parseDelimitedFrom(in);
-          o("snapshotId", f.getSnapshotId()).o("size", f.getFileSize()).o(
-              "name", f.getName().toStringUtf8());
-          out.print("</fileDiff>\n");
+          o(SNAPSHOT_DIFF_SECTION_SNAPSHOT_ID, f.getSnapshotId())
+              .o(SNAPSHOT_DIFF_SECTION_SIZE, f.getFileSize())
+              .o(SECTION_NAME, f.getName().toStringUtf8());
+          out.print("</" + SNAPSHOT_DIFF_SECTION_FILE_DIFF + ">\n");
         }
       }
         break;
       case DIRECTORYDIFF: {
         for (int i = 0; i < e.getNumOfDiff(); ++i) {
-          out.print("<dirDiff>");
+          out.print("<" + SNAPSHOT_DIFF_SECTION_DIR_DIFF + ">");
           SnapshotDiffSection.DirectoryDiff d = SnapshotDiffSection.DirectoryDiff
               .parseDelimitedFrom(in);
-          o("snapshotId", d.getSnapshotId())
-              .o("childrenSize", d.getChildrenSize())
-              .o("isSnapshotRoot", d.getIsSnapshotRoot())
-              .o("name", d.getName().toStringUtf8())
-              .o("createdListSize", d.getCreatedListSize());
+          o(SNAPSHOT_DIFF_SECTION_SNAPSHOT_ID, d.getSnapshotId())
+              .o(SNAPSHOT_DIFF_SECTION_CHILDREN_SIZE, d.getChildrenSize())
+              .o(SNAPSHOT_DIFF_SECTION_IS_SNAPSHOT_ROOT, d.getIsSnapshotRoot())
+              .o(SECTION_NAME, d.getName().toStringUtf8())
+              .o(SNAPSHOT_DIFF_SECTION_CREATED_LIST_SIZE,
+                  d.getCreatedListSize());
           for (long did : d.getDeletedINodeList()) {
-            o("deletedInode", did);
+            o(SNAPSHOT_DIFF_SECTION_DELETED_INODE, did);
           }
           for (int dRefid : d.getDeletedINodeRefList()) {
-            o("deletedInoderef", dRefid);
+            o(SNAPSHOT_DIFF_SECTION_DELETED_INODE_REF, dRefid);
           }
           for (int j = 0; j < d.getCreatedListSize(); ++j) {
             SnapshotDiffSection.CreatedListEntry ce = SnapshotDiffSection.CreatedListEntry
                 .parseDelimitedFrom(in);
-            out.print("<created>");
-            o("name", ce.getName().toStringUtf8());
-            out.print("</created>\n");
+            out.print("<" + SNAPSHOT_DIFF_SECTION_CREATED + ">");
+            o(SECTION_NAME, ce.getName().toStringUtf8());
+            out.print("</" + SNAPSHOT_DIFF_SECTION_CREATED + ">\n");
           }
-          out.print("</dirDiff>\n");
+          out.print("</" + SNAPSHOT_DIFF_SECTION_DIR_DIFF + ">\n");
         }
         break;
       }
@@ -532,41 +701,41 @@ public final class PBImageXmlWriter {
       }
       switch (e.getType()) {
       case FILEDIFF:
-        out.print("</fileDiffEntry>");
+        out.print("</" + SNAPSHOT_DIFF_SECTION_FILE_DIFF_ENTRY + ">");
         break;
       case DIRECTORYDIFF:
-        out.print("</dirDiffEntry>");
+        out.print("</" + SNAPSHOT_DIFF_SECTION_DIR_DIFF_ENTRY + ">");
         break;
       default:
         throw new IOException("unknown DiffEntry type " + e.getType());
       }
     }
-    out.print("</SnapshotDiffSection>\n");
+    out.print("</" + SNAPSHOT_DIFF_SECTION_NAME + ">\n");
   }
 
   private void dumpSnapshotSection(InputStream in) throws IOException {
-    out.print("<SnapshotSection>");
+    out.print("<" + SNAPSHOT_SECTION_NAME + ">");
     SnapshotSection s = SnapshotSection.parseDelimitedFrom(in);
-    o("snapshotCounter", s.getSnapshotCounter());
-    o("numSnapshots", s.getNumSnapshots());
+    o(SNAPSHOT_SECTION_SNAPSHOT_COUNTER, s.getSnapshotCounter());
+    o(SNAPSHOT_SECTION_NUM_SNAPSHOTS, s.getNumSnapshots());
     if (s.getSnapshottableDirCount() > 0) {
-      out.print("<snapshottableDir>");
+      out.print("<" + SNAPSHOT_SECTION_SNAPSHOT_TABLE_DIR + ">");
       for (long id : s.getSnapshottableDirList()) {
-        o("dir", id);
+        o(SNAPSHOT_SECTION_DIR, id);
       }
-      out.print("</snapshottableDir>\n");
+      out.print("</" + SNAPSHOT_SECTION_SNAPSHOT_TABLE_DIR + ">\n");
     }
     for (int i = 0; i < s.getNumSnapshots(); ++i) {
       SnapshotSection.Snapshot pbs = SnapshotSection.Snapshot
           .parseDelimitedFrom(in);
-      out.print("<snapshot>");
-      o("id", pbs.getSnapshotId());
-      out.print("<root>");
+      out.print("<" + SNAPSHOT_SECTION_SNAPSHOT + ">");
+      o(SECTION_ID, pbs.getSnapshotId());
+      out.print("<" + SNAPSHOT_SECTION_ROOT + ">");
       dumpINodeFields(pbs.getRoot());
-      out.print("</root>");
-      out.print("</snapshot>");
+      out.print("</" + SNAPSHOT_SECTION_ROOT + ">");
+      out.print("</" + SNAPSHOT_SECTION_SNAPSHOT + ">");
     }
-    out.print("</SnapshotSection>\n");
+    out.print("</" + SNAPSHOT_SECTION_NAME + ">\n");
   }
 
   private void loadStringTable(InputStream in) throws IOException {
