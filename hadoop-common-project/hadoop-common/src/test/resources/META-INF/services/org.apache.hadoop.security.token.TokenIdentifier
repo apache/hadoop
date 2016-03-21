@@ -11,5 +11,5 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
-org.apache.hadoop.ipc.TestSaslRPC$TestTokenIdentifier
+org.apache.hadoop.ipc.TestRpcBase$TestTokenIdentifier
 org.apache.hadoop.security.token.delegation.TestDelegationToken$TestDelegationTokenIdentifier
