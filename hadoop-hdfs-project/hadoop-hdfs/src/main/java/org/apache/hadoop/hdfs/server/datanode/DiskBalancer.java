@@ -40,7 +40,11 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -106,6 +110,7 @@ public class DiskBalancer {
       this.isDiskBalancerEnabled = false;
       this.currentResult = Result.NO_PLAN;
       if ((this.future != null) && (!this.future.isDone())) {
+        this.currentResult = Result.PLAN_CANCELLED;
         this.blockMover.setExitFlag();
         shutdownExecutor();
       }
@@ -120,9 +125,9 @@ public class DiskBalancer {
   private void shutdownExecutor() {
     scheduler.shutdown();
     try {
-      if(!scheduler.awaitTermination(30, TimeUnit.SECONDS)) {
+      if(!scheduler.awaitTermination(10, TimeUnit.SECONDS)) {
         scheduler.shutdownNow();
-        if (!scheduler.awaitTermination(30, TimeUnit.SECONDS)) {
+        if (!scheduler.awaitTermination(10, TimeUnit.SECONDS)) {
           LOG.error("Disk Balancer : Scheduler did not terminate.");
         }
       }
@@ -218,6 +223,7 @@ public class DiskBalancer {
       if (!this.future.isDone()) {
         this.blockMover.setExitFlag();
         shutdownExecutor();
+        this.currentResult = Result.PLAN_CANCELLED;
       }
     } finally {
       lock.unlock();
@@ -537,7 +543,7 @@ public class DiskBalancer {
   /**
    * Holds references to actual volumes that we will be operating against.
    */
-  static class VolumePair {
+  public static class VolumePair {
     private final FsVolumeSpi source;
     private final FsVolumeSpi dest;
 
