@@ -1157,7 +1157,7 @@ class BlockReceiver implements Closeable {
 
       final StringBuilder b = new StringBuilder(getClass().getSimpleName())
           .append(": ").append(block).append(", type=").append(type);
-      if (type != PacketResponderType.HAS_DOWNSTREAM_IN_PIPELINE) {
+      if (type == PacketResponderType.HAS_DOWNSTREAM_IN_PIPELINE) {
         b.append(", downstreams=").append(downstreams.length)
             .append(":").append(Arrays.asList(downstreams));
       }
