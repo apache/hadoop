@@ -87,7 +87,7 @@ public class TestCLI {
     JobID jobId = JobID.forName(jobIdStr);
     Cluster mockCluster = mock(Cluster.class);
     Job job = mock(Job.class);
-    CLI cli = spy(new CLI());
+    CLI cli = spy(new CLI(new Configuration()));
 
     doReturn(mockCluster).when(cli).createCluster();
     when(mockCluster.getJob(jobId)).thenReturn(job);
@@ -101,12 +101,18 @@ public class TestCLI {
     int retCode_invalidTaskState = cli.run(new String[] { "-list-attempt-ids",
         jobIdStr, "REDUCE", "complete" });
 
+    String jobIdStr2 = "job_1015298225799_0016";
+    int retCode_invalidJobId = cli.run(new String[] { "-list-attempt-ids",
+        jobIdStr2, "MAP", "running" });
+
     assertEquals("JOB_SETUP is an invalid input,exit code should be -1", -1,
         retCode_JOB_SETUP);
     assertEquals("JOB_CLEANUP is an invalid input,exit code should be -1", -1,
         retCode_JOB_CLEANUP);
     assertEquals("complete is an invalid input,exit code should be -1", -1,
         retCode_invalidTaskState);
+    assertEquals("Non existing job id should be skippted with -1", -1,
+        retCode_invalidJobId);
 
   }
 
@@ -175,5 +181,35 @@ public class TestCLI {
       Assert.assertTrue(end - start > (i * sleepTime));
       Assert.assertTrue(end - start < ((i + 1) * sleepTime));
     }
+  }
+
+  @Test
+  public void testListEvents() throws Exception {
+    Cluster mockCluster = mock(Cluster.class);
+    CLI cli = spy(new CLI(new Configuration()));
+    doReturn(mockCluster).when(cli).createCluster();
+    String jobId1 = "job_1234654654_001";
+    String jobId2 = "job_1234654656_002";
+
+    Job mockJob1 = mockJob(mockCluster, jobId1, State.RUNNING);
+
+    // Check exiting with non existing job
+    int exitCode = cli.run(new String[]{"-events", jobId2, "0", "10"});
+    assertEquals(-1, exitCode);
+  }
+
+  @Test
+  public void testLogs() throws Exception {
+    Cluster mockCluster = mock(Cluster.class);
+    CLI cli = spy(new CLI(new Configuration()));
+    doReturn(mockCluster).when(cli).createCluster();
+    String jobId1 = "job_1234654654_001";
+    String jobId2 = "job_1234654656_002";
+
+    Job mockJob1 = mockJob(mockCluster, jobId1, State.SUCCEEDED);
+
+    // Check exiting with non existing job
+    int exitCode = cli.run(new String[]{"-logs", jobId2});
+    assertEquals(-1, exitCode);
   }
 }

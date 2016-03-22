@@ -402,8 +402,13 @@ public class CLI extends Configured implements Tool {
           }
         }
       } else if (listEvents) {
-        listEvents(getJob(JobID.forName(jobid)), fromEvent, nEvents);
-        exitCode = 0;
+        Job job = getJob(JobID.forName(jobid));
+        if (job == null) {
+          System.out.println("Could not find job " + jobid);
+        } else {
+          listEvents(job, fromEvent, nEvents);
+          exitCode = 0;
+        }
       } else if (listJobs) {
         listJobs(cluster);
         exitCode = 0;
@@ -417,8 +422,13 @@ public class CLI extends Configured implements Tool {
         listBlacklistedTrackers(cluster);
         exitCode = 0;
       } else if (displayTasks) {
-        displayTasks(getJob(JobID.forName(jobid)), taskType, taskState);
-        exitCode = 0;
+        Job job = getJob(JobID.forName(jobid));
+        if (job == null) {
+          System.out.println("Could not find job " + jobid);
+        } else {
+          displayTasks(getJob(JobID.forName(jobid)), taskType, taskState);
+          exitCode = 0;
+        }
       } else if(killTask) {
         TaskAttemptID taskID = TaskAttemptID.forName(taskid);
         Job job = getJob(taskID.getJobID());
@@ -444,20 +454,24 @@ public class CLI extends Configured implements Tool {
           exitCode = -1;
         }
       } else if (logs) {
-        try {
         JobID jobID = JobID.forName(jobid);
-        TaskAttemptID taskAttemptID = TaskAttemptID.forName(taskid);
-        LogParams logParams = cluster.getLogParams(jobID, taskAttemptID);
-        LogCLIHelpers logDumper = new LogCLIHelpers();
-        logDumper.setConf(getConf());
-        exitCode = logDumper.dumpAContainersLogs(logParams.getApplicationId(),
-            logParams.getContainerId(), logParams.getNodeId(),
-            logParams.getOwner());
-        } catch (IOException e) {
-          if (e instanceof RemoteException) {
-            throw e;
-          } 
-          System.out.println(e.getMessage());
+        if (getJob(jobID) == null) {
+          System.out.println("Could not find job " + jobid);
+        } else {
+          try {
+            TaskAttemptID taskAttemptID = TaskAttemptID.forName(taskid);
+            LogParams logParams = cluster.getLogParams(jobID, taskAttemptID);
+            LogCLIHelpers logDumper = new LogCLIHelpers();
+            logDumper.setConf(getConf());
+            exitCode = logDumper.dumpAContainersLogs(
+                    logParams.getApplicationId(), logParams.getContainerId(),
+                    logParams.getNodeId(), logParams.getOwner());
+          } catch (IOException e) {
+            if (e instanceof RemoteException) {
+              throw e;
+            }
+            System.out.println(e.getMessage());
+          }
         }
       }
     } catch (RemoteException re) {
