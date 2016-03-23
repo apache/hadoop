@@ -18,6 +18,7 @@
 #include "rpc_engine.h"
 #include "rpc_connection.h"
 #include "common/util.h"
+#include "common/logging.h"
 #include "optional.hpp"
 
 #include <future>
@@ -38,11 +39,15 @@ RpcEngine::RpcEngine(::asio::io_service *io_service, const Options &options,
       protocol_version_(protocol_version),
       retry_policy_(std::move(MakeRetryPolicy(options))),
       call_id_(0),
-      retry_timer(*io_service) {}
+      retry_timer(*io_service) {
+    LOG_DEBUG(kRPC, << "RpcEngine::RpcEngine called");
+  }
 
 void RpcEngine::Connect(const std::vector<::asio::ip::tcp::endpoint> &server,
                         RpcCallback &handler) {
   std::lock_guard<std::mutex> state_lock(engine_state_lock_);
+  LOG_DEBUG(kRPC, << "RpcEngine::Connect called");
+
   last_endpoints_ = server;
 
   conn_ = NewConnection();
@@ -50,6 +55,7 @@ void RpcEngine::Connect(const std::vector<::asio::ip::tcp::endpoint> &server,
 }
 
 void RpcEngine::Shutdown() {
+  LOG_DEBUG(kRPC, << "RpcEngine::Shutdown called");
   io_service_->post([this]() {
     std::lock_guard<std::mutex> state_lock(engine_state_lock_);
     conn_->Disconnect();
@@ -58,6 +64,7 @@ void RpcEngine::Shutdown() {
 }
 
 std::unique_ptr<const RetryPolicy> RpcEngine::MakeRetryPolicy(const Options &options) {
+  LOG_DEBUG(kRPC, << "RpcEngine::MakeRetryPolicy called");
   if (options.max_rpc_retries > 0) {
     return std::unique_ptr<RetryPolicy>(new FixedDelayRetryPolicy(options.rpc_retry_delay_ms, options.max_rpc_retries));
   } else {
@@ -74,6 +81,9 @@ void RpcEngine::AsyncRpc(
     const std::shared_ptr<::google::protobuf::MessageLite> &resp,
     const std::function<void(const Status &)> &handler) {
   std::lock_guard<std::mutex> state_lock(engine_state_lock_);
+
+  LOG_TRACE(kRPC, << "RpcEngine::AsyncRpc called");
+
   if (!conn_) {
     conn_ = NewConnection();
     conn_->ConnectAndFlush(last_endpoints_);
@@ -84,6 +94,9 @@ void RpcEngine::AsyncRpc(
 Status RpcEngine::Rpc(
     const std::string &method_name, const ::google::protobuf::MessageLite *req,
     const std::shared_ptr<::google::protobuf::MessageLite> &resp) {
+
+  LOG_TRACE(kRPC, << "RpcEngine::Rpc called");
+
   auto stat = std::make_shared<std::promise<Status>>();
   std::future<Status> future(stat->get_future());
   AsyncRpc(method_name, req, resp,
@@ -93,12 +106,16 @@ Status RpcEngine::Rpc(
 
 std::shared_ptr<RpcConnection> RpcEngine::NewConnection()
 {
+  LOG_DEBUG(kRPC, << "RpcEngine::NewConnection called");
+
   return std::make_shared<RpcConnectionImpl<::asio::ip::tcp::socket>>(this);
 }
 
 
 Status RpcEngine::RawRpc(const std::string &method_name, const std::string &req,
                          std::shared_ptr<std::string> resp) {
+  LOG_TRACE(kRPC, << "RpcEngine::RawRpc called");
+
   std::shared_ptr<RpcConnection> conn;
   {
     std::lock_guard<std::mutex> state_lock(engine_state_lock_);
@@ -119,6 +136,8 @@ Status RpcEngine::RawRpc(const std::string &method_name, const std::string &req,
 void RpcEngine::AsyncRpcCommsError(
     const Status &status,
     std::vector<std::shared_ptr<Request>> pendingRequests) {
+  LOG_ERROR(kRPC, << "RpcEngine::AsyncRpcCommsError called");
+
   io_service().post([this, status, pendingRequests]() {
     RpcCommsError(status, pendingRequests);
   });
@@ -128,6 +147,8 @@ void RpcEngine::RpcCommsError(
     const Status &status,
     std::vector<std::shared_ptr<Request>> pendingRequests) {
   (void)status;
+
+  LOG_ERROR(kRPC, << "RpcEngine::RpcCommsError called");
 
   std::lock_guard<std::mutex> state_lock(engine_state_lock_);
 

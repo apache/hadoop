@@ -18,11 +18,14 @@
 
 #include "filehandle.h"
 #include "common/continuation/continuation.h"
+#include "common/logging.h"
 #include "connection/datanodeconnection.h"
 #include "reader/block_reader.h"
 
 #include <future>
 #include <tuple>
+
+#define FMT_THIS_ADDR "this=" << (void*)this
 
 namespace hdfs {
 
@@ -35,11 +38,17 @@ FileHandleImpl::FileHandleImpl(::asio::io_service *io_service, const std::string
                                  std::shared_ptr<BadDataNodeTracker> bad_data_nodes)
     : io_service_(io_service), client_name_(client_name), file_info_(file_info),
       bad_node_tracker_(bad_data_nodes), offset_(0), cancel_state_(CancelTracker::New()) {
+  LOG_TRACE(kFileHandle, << "FileHandleImpl::FileHandleImpl("
+                         << FMT_THIS_ADDR << ", ...) called");
 }
 
 void FileHandleImpl::PositionRead(
     void *buf, size_t nbyte, uint64_t offset,
     const std::function<void(const Status &, size_t)> &handler) {
+  LOG_TRACE(kFileHandle, << "FileHandleImpl::PositionRead("
+                         << FMT_THIS_ADDR << ", buf=" << buf
+                         << ", nbyte=" << nbyte << ") called");
+
   /* prevent usage after cancelation */
   if(cancel_state_->is_canceled()) {
     handler(Status::Canceled(), 0);
@@ -61,6 +70,10 @@ void FileHandleImpl::PositionRead(
 }
 
 Status FileHandleImpl::PositionRead(void *buf, size_t *nbyte, off_t offset) {
+  LOG_TRACE(kFileHandle, << "FileHandleImpl::[sync]PositionRead("
+                         << FMT_THIS_ADDR << ", buf=" << buf
+                         << ", nbyte=" << *nbyte << ") called");
+
   auto callstate = std::make_shared<std::promise<std::tuple<Status, size_t>>>();
   std::future<std::tuple<Status, size_t>> future(callstate->get_future());
 
@@ -84,6 +97,10 @@ Status FileHandleImpl::PositionRead(void *buf, size_t *nbyte, off_t offset) {
 }
 
 Status FileHandleImpl::Read(void *buf, size_t *nbyte) {
+  LOG_TRACE(kFileHandle, << "FileHandleImpl::Read("
+                         << FMT_THIS_ADDR << ", buf=" << buf
+                         << ", nbyte=" << *nbyte << ") called");
+
   Status stat = PositionRead(buf, nbyte, offset_);
   if(!stat.ok()) {
     return stat;
@@ -94,6 +111,9 @@ Status FileHandleImpl::Read(void *buf, size_t *nbyte) {
 }
 
 Status FileHandleImpl::Seek(off_t *offset, std::ios_base::seekdir whence) {
+  LOG_TRACE(kFileHandle, << "FileHandleImpl::Seek("
+                         << ", offset=" << *offset << ", ...) called");
+
   if(cancel_state_->is_canceled()) {
     return Status::Canceled();
   }
@@ -146,6 +166,9 @@ void FileHandleImpl::AsyncPreadSome(
   using ::hadoop::hdfs::DatanodeInfoProto;
   using ::hadoop::hdfs::LocatedBlockProto;
 
+  LOG_TRACE(kFileHandle, << "FileHandleImpl::AsyncPreadSome("
+                         << FMT_THIS_ADDR << ", ...) called");
+
   if(cancel_state_->is_canceled()) {
     handler(Status::Canceled(), "", 0);
     return;
@@ -161,6 +184,8 @@ void FileHandleImpl::AsyncPreadSome(
       });
 
   if (block == file_info_->blocks_.end()) {
+    LOG_WARN(kFileHandle, << "FileHandleImpl::AsyncPreadSome(" << FMT_THIS_ADDR
+                          << ", ...) Cannot find corresponding blocks");
     handler(Status::InvalidArgument("Cannot find corresponding blocks"), "", 0);
     return;
   }
@@ -179,6 +204,9 @@ void FileHandleImpl::AsyncPreadSome(
                          });
 
   if (it == datanodes.end()) {
+    LOG_WARN(kFileHandle, << "FileHandleImpl::AsyncPreadSome("
+                          << FMT_THIS_ADDR << ", ...) No datanodes available");
+
     handler(Status::ResourceUnavailable("No datanodes available"), "", 0);
     return;
   }
@@ -224,6 +252,11 @@ std::shared_ptr<BlockReader> FileHandleImpl::CreateBlockReader(const BlockReader
                                                std::shared_ptr<DataNodeConnection> dn)
 {
   std::shared_ptr<BlockReader> reader = std::make_shared<BlockReaderImpl>(options, dn, cancel_state_);
+
+  LOG_TRACE(kFileHandle, << "FileHandleImpl::CreateBlockReader(" << FMT_THIS_ADDR
+                         << ", ..., dnconn=" << dn.get()
+                         << ") called.  New BlockReader = " << reader.get());
+
   readers_.AddReader(reader);
   return reader;
 }
@@ -232,10 +265,15 @@ std::shared_ptr<DataNodeConnection> FileHandleImpl::CreateDataNodeConnection(
     ::asio::io_service * io_service,
     const ::hadoop::hdfs::DatanodeInfoProto & dn,
     const hadoop::common::TokenProto * token) {
+  LOG_TRACE(kFileHandle, << "FileHandleImpl::CreateDataNodeConnection("
+                         << FMT_THIS_ADDR << ", ...) called");
   return std::make_shared<DataNodeConnectionImpl>(io_service, dn, token);
 }
 
 void FileHandleImpl::CancelOperations() {
+  LOG_INFO(kFileHandle, << "FileHandleImpl::CancelOperations("
+                        << FMT_THIS_ADDR << ") called");
+
   cancel_state_->set_canceled();
 
   /* Push update to BlockReaders that may be hung in an asio call */

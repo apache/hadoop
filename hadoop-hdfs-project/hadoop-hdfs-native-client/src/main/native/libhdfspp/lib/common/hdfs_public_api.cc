@@ -36,9 +36,9 @@ void IoServiceImpl::Run() {
       io_service_.run();
       break;
     } catch (const std::exception & e) {
-      LOG_WARN() << "Unexpected exception in libhdfspp worker thread: " << e.what();
+      LOG_WARN(kFileSystem, << "Unexpected exception in libhdfspp worker thread: " << e.what());
     } catch (...) {
-      LOG_WARN() << "Unexpected value not derived from std::exception in libhdfspp worker thread";
+      LOG_WARN(kFileSystem, << "Unexpected value not derived from std::exception in libhdfspp worker thread");
     }
   }
 }
