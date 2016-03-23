@@ -712,6 +712,7 @@ public class NNBench {
           doRenameOp(fileName, reporter);
         } else if (op.equals(OP_DELETE)) {
           startTimeTPmS = System.currentTimeMillis();
+          doDeleteOp(fileName, reporter);
         } else {
           throw new IllegalArgumentException(
               "unsupported operation [" + op + "]");
