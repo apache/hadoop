@@ -570,6 +570,11 @@ int fuseConnectAsThreadUid(struct hdfsConn **conn)
   
   ctx = fuse_get_context();
   usrname = getUsername(ctx->uid);
+  if (!usrname) {
+    ERROR("fuseConnectAsThreadUid(): failed to get username for uid %"PRId64
+          "\n", (uint64_t)ctx->uid);
+    return EIO;
+  }
   ret = fuseConnect(usrname, ctx, conn);
   free(usrname);
   return ret;
