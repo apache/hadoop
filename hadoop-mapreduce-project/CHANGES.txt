@@ -357,6 +357,9 @@ Release 2.6.5 - UNRELEASED
     MAPREDUCE-6635. Unsafe long to int conversion in UncompressedSplitLineReader
     and IndexOutOfBoundsException. (Junping Du via vvasudev)
 
+    MAPREDUCE-6656. [NNBench] OP_DELETE operation isn't working after
+    MAPREDUCE-6363. (J.Andreina via aajisaka)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
