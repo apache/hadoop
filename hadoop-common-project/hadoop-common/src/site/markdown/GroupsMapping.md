@@ -15,14 +15,7 @@
 Hadoop Groups Mapping
 ===================
 
-* [Hadoop Groups Mapping](#Hadoop_Groups_Mapping)
-    * [Overview](#Overview)
-    * [LDAP Groups Mapping](#LDAP_Groups_Mapping)
-        * [Active Directory](#Active_Directory)
-        * [POSIX Groups](#POSIX_Groups)
-        * [SSL](#SSL)
-    * [Composite Groups Mapping](#Composite_Groups_Mapping)
-        * [Multiple group mapping providers configuration sample](#Multiple_group_mapping_providers_configuration_sample)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Overview
 --------
@@ -61,6 +54,17 @@ For HDFS, the mapping of users to groups is performed on the NameNode. Thus, the
 
 Note that HDFS stores the user and group of a file or directory as strings; there is no conversion from user and group identity numbers as is conventional in Unix.
 
+Static Mapping
+--------
+It is possible to statically map users to groups by defining the mapping in `hadoop.user.group.static.mapping.overrides` in the format `user1=group1,group2;user2=;user3=group2`.
+This property overrides any group mapping service provider. If a user's groups are defined in it, the groups are returned without more lookups; otherwise, the service provider defined in `hadoop.security.group.mapping` is used to look up the groups. By default, `dr.who=;` is defined, so the fake user dr.who will not have any groups.
+
+Caching/Negative caching
+--------
+Since the group mapping resolution relies on external mechanisms, the NameNode performance may be impacted. To reduce the impact due to repeated lookups, Hadoop caches the groups returned by the service provider. The cache invalidate is configurable via `hadoop.security.groups.cache.secs`, and the default is 300 seconds.
+
+To avoid spamming NameNode with unknown users, Hadoop employs negative caching so that if the result of the lookup is empty, return an empty group directly instead of performing more group mapping queries,
+The cache invalidation is configurable via `hadoop.security.groups.negative-cache.secs`. The default is 30 seconds, so if group mapping service providers returns no group for a user, no lookup will be performed for the same user within 30 seconds.
 
 LDAP Groups Mapping
 --------
@@ -85,9 +89,9 @@ in order to be considered a member.
 The default configuration supports LDAP group name resolution with an Active Directory server.
 
 ### POSIX Groups ###
-If the LDAP server supports POSIX group semantics, Hadoop can perform LDAP group resolution queries to the server by setting both
-`hadoop.security.group.mapping.ldap.search.filter.user` to  `posixAccount` and
-`hadoop.security.group.mapping.ldap.search.filter.group` to `posixGroup`.
+If the LDAP server supports POSIX group semantics (RFC-2307), Hadoop can perform LDAP group resolution queries to the server by setting both
+`hadoop.security.group.mapping.ldap.search.filter.user` to  `(&amp;(objectClass=posixAccount)(uid={0}))` and
+`hadoop.security.group.mapping.ldap.search.filter.group` to `(objectClass=posixGroup)`.
 
 ### SSL ###
 To secure the connection, the implementation supports LDAP over SSL (LDAPS). SSL is enable by setting `hadoop.security.group.mapping.ldap.ssl` to `true`.
