@@ -252,7 +252,7 @@ Building distributions:
 
 Create binary distribution without native code and without documentation:
 
-  $ mvn package -Pdist -DskipTests -Dtar
+  $ mvn package -Pdist -DskipTests -Dtar -Dmaven.javadoc.skip=true
 
 Create binary distribution with native code and with documentation:
 
