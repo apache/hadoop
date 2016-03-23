@@ -134,7 +134,7 @@ public class TestMRJobsWithProfiler {
     if (!useDefault) {
       // use hprof for map to profile.out
       sleepConf.set(MRJobConfig.TASK_MAP_PROFILE_PARAMS,
-          "-agentlib:hprof=cpu=times,heap=sites,force=n,thread=y,verbose=n,"
+          "-agentlib:hprof=cpu=samples,heap=sites,force=n,thread=y,verbose=n,"
               + "file=%s");
 
       // use Xprof for reduce to stdout

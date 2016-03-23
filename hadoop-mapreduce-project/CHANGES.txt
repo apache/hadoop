@@ -61,6 +61,9 @@ Release 2.7.3 - UNRELEASED
     MAPREDUCE-6645. TestWordStats outputs logs under directories other than
     target/test-dir. (Gabor Liptak via aajisaka)
 
+    MAPREDUCE-6580. Test failure: TestMRJobsWithProfiler.
+    (Eric Badger via aajisaka)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
