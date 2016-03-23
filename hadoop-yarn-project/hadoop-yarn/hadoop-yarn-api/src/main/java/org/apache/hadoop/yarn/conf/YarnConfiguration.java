@@ -1747,6 +1747,12 @@ public class YarnConfiguration extends Configuration {
   public static final long
       TIMELINE_SERVICE_CLIENT_INTERNAL_TIMERS_TTL_SECS_DEFAULT = 7 * 60;
 
+  public static final String
+      TIMELINE_SERVICE_CLIENT_INTERNAL_ATTEMPT_DIR_CACHE_SIZE =
+      TIMELINE_SERVICE_CLIENT_PREFIX + "internal-attempt-dir-cache-size";
+  public static final int
+      DEFAULT_TIMELINE_SERVICE_CLIENT_INTERNAL_ATTEMPT_DIR_CACHE_SIZE = 1000;
+
   // This is temporary solution. The configuration will be deleted once we have
   // the FileSystem API to check whether append operation is supported or not.
   public static final String TIMELINE_SERVICE_ENTITYFILE_FS_SUPPORT_APPEND
