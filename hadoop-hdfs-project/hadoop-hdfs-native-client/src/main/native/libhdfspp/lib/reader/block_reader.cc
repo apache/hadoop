@@ -19,11 +19,16 @@
 #include "reader/datatransfer.h"
 #include "common/continuation/continuation.h"
 #include "common/continuation/asio.h"
+#include "common/logging.h"
 
 #include <future>
 
 
 namespace hdfs {
+
+#define FMT_CONT_AND_PARENT_ADDR "this=" << (void*)this << ", parent=" << (void*)parent_
+#define FMT_CONT_AND_READER_ADDR "this=" << (void*)this << ", reader=" << (void*)reader_
+#define FMT_THIS_ADDR "this=" << (void*)this
 
 hadoop::hdfs::OpReadBlockProto
 ReadBlockProto(const std::string &client_name, bool verify_checksum,
@@ -54,6 +59,10 @@ void BlockReaderImpl::AsyncRequestBlock(
     const std::string &client_name,
     const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
     uint64_t offset, const std::function<void(Status)> &handler) {
+  LOG_TRACE(kBlockReader, << "BlockReaderImpl::AsyncRequestBlock("
+                          << FMT_THIS_ADDR << ", ..., length="
+                          << length << ", offset=" << offset << ", ...) called");
+
   // The total number of bytes that we need to transfer from the DN is
   // the amount that the user wants (bytesToRead), plus the padding at
   // the beginning in order to chunk-align. Note that the DN may elect
@@ -103,6 +112,10 @@ Status BlockReaderImpl::RequestBlock(
     const std::string &client_name,
     const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
     uint64_t offset) {
+  LOG_TRACE(kBlockReader, << "BlockReaderImpl::RequestBlock("
+                          << FMT_THIS_ADDR <<"..., length="
+                          << length << ", offset=" << offset << ") called");
+
   auto stat = std::make_shared<std::promise<Status>>();
   std::future<Status> future(stat->get_future());
   AsyncRequestBlock(client_name, block, length, offset,
@@ -121,6 +134,9 @@ struct BlockReaderImpl::ReadPacketHeader
   ReadPacketHeader(BlockReaderImpl *parent) : parent_(parent) {}
 
   virtual void Run(const Next &next) override {
+    LOG_TRACE(kBlockReader, << "BlockReaderImpl::ReadPacketHeader::Run("
+                            << FMT_CONT_AND_PARENT_ADDR << ") called");
+
     parent_->packet_data_read_bytes_ = 0;
     parent_->packet_len_ = 0;
     auto handler = [next, this](const asio::error_code &ec, size_t) {
@@ -178,6 +194,9 @@ struct BlockReaderImpl::ReadChecksum : continuation::Continuation {
   ReadChecksum(BlockReaderImpl *parent) : parent_(parent) {}
 
   virtual void Run(const Next &next) override {
+    LOG_TRACE(kBlockReader, << "BlockReaderImpl::ReadChecksum::Run("
+                            << FMT_CONT_AND_PARENT_ADDR << ") called");
+
     auto parent = parent_;
     if (parent->state_ != kReadChecksum) {
       next(Status::OK());
@@ -216,6 +235,9 @@ struct BlockReaderImpl::ReadData : continuation::Continuation {
   }
 
   virtual void Run(const Next &next) override {
+    LOG_TRACE(kBlockReader, << "BlockReaderImpl::ReadData::Run("
+                            << FMT_CONT_AND_PARENT_ADDR << ") called");
+
     auto handler =
         [next, this](const asio::error_code &ec, size_t transferred) {
           Status status;
@@ -251,6 +273,9 @@ struct BlockReaderImpl::ReadPadding : continuation::Continuation {
             parent, bytes_transferred_, asio::buffer(padding_))) {}
 
   virtual void Run(const Next &next) override {
+    LOG_TRACE(kBlockReader, << "BlockReaderImpl::ReadPadding::Run("
+                            << FMT_CONT_AND_PARENT_ADDR << ") called");
+
     if (parent_->state_ != kReadPadding || !parent_->chunk_padding_bytes_) {
       next(Status::OK());
       return;
@@ -282,6 +307,8 @@ struct BlockReaderImpl::AckRead : continuation::Continuation {
   AckRead(BlockReaderImpl *parent) : parent_(parent) {}
 
   virtual void Run(const Next &next) override {
+    LOG_TRACE(kBlockReader, << "BlockReaderImpl::AckRead::Run(" << FMT_CONT_AND_PARENT_ADDR << ") called");
+
     if (parent_->bytes_to_read_ > 0) {
       next(Status::OK());
       return;
@@ -314,6 +341,8 @@ void BlockReaderImpl::AsyncReadPacket(
     const std::function<void(const Status &, size_t bytes_transferred)> &handler) {
   assert(state_ != kOpen && "Not connected");
 
+  LOG_TRACE(kBlockReader, << "BlockReaderImpl::AsyncReadPacket called");
+
   struct State {
     std::shared_ptr<size_t> bytes_transferred;
   };
@@ -337,6 +366,8 @@ void BlockReaderImpl::AsyncReadPacket(
 size_t
 BlockReaderImpl::ReadPacket(const MutableBuffers &buffers,
                                      Status *status) {
+  LOG_TRACE(kBlockReader, << "BlockReaderImpl::ReadPacket called");
+
   size_t transferred = 0;
   auto done = std::make_shared<std::promise<void>>();
   auto future = done->get_future();
@@ -361,6 +392,9 @@ struct BlockReaderImpl::RequestBlockContinuation : continuation::Continuation {
   }
 
   virtual void Run(const Next &next) override {
+    LOG_TRACE(kBlockReader, << "BlockReaderImpl::RequestBlockContinuation::Run("
+                            << FMT_CONT_AND_READER_ADDR << ") called");
+
     reader_->AsyncRequestBlock(client_name_, &block_, length_,
                            offset_, next);
   }
@@ -381,6 +415,8 @@ struct BlockReaderImpl::ReadBlockContinuation : continuation::Continuation {
   }
 
   virtual void Run(const Next &next) override {
+    LOG_TRACE(kBlockReader, << "BlockReaderImpl::ReadBlockContinuation::Run("
+                            << FMT_CONT_AND_READER_ADDR << ") called");
     *transferred_ = 0;
     next_ = next;
     OnReadData(Status::OK(), 0);
@@ -415,6 +451,8 @@ void BlockReaderImpl::AsyncReadBlock(
     size_t offset,
     const MutableBuffers &buffers,
     const std::function<void(const Status &, size_t)> handler) {
+  LOG_TRACE(kBlockReader, << "BlockReaderImpl::AsyncReadBlock("
+                          << FMT_THIS_ADDR << ") called");
 
   auto m = continuation::Pipeline<size_t>::Create(cancel_state_);
   size_t * bytesTransferred = &m->state();
@@ -432,6 +470,8 @@ void BlockReaderImpl::AsyncReadBlock(
 }
 
 void BlockReaderImpl::CancelOperation() {
+  LOG_TRACE(kBlockReader, << "BlockReaderImpl::CancelOperation("
+                          << FMT_THIS_ADDR << ") called");
   /* just forward cancel to DNConnection */
   dn_->Cancel();
 }

@@ -21,6 +21,7 @@
 #include "fs/filesystem.h"
 #include "common/hdfs_configuration.h"
 #include "common/configuration_loader.h"
+#include "common/logging.h"
 
 #include <hdfs/hdfs.h>
 #include <hdfspp/hdfs_ext.h>
@@ -600,4 +601,138 @@ int hdfsBuilderConfGetInt(struct hdfsBuilder *bld, const char *key, int32_t *val
   } catch (...) {
     return ReportCaughtNonException();
   }
+}
+
+/**
+ * Logging functions
+ **/
+class CForwardingLogger : public LoggerInterface {
+ public:
+  CForwardingLogger() : callback_(nullptr) {};
+
+  // Converts LogMessage into LogData, a POD type,
+  // and invokes callback_ if it's not null.
+  void Write(const LogMessage& msg);
+
+  // pass in NULL to clear the hook
+  void SetCallback(void (*callback)(LogData*));
+
+  //return a copy, or null on failure.
+  static LogData *CopyLogData(const LogData*);
+  //free LogData allocated with CopyLogData
+  static void FreeLogData(LogData*);
+ private:
+  void (*callback_)(LogData*);
+};
+
+/**
+ *  Plugin to forward message to a C function pointer
+ **/
+void CForwardingLogger::Write(const LogMessage& msg) {
+  if(!callback_)
+    return;
+
+  const std::string text = msg.MsgString();
+
+  LogData data;
+  data.level = msg.level();
+  data.component = msg.component();
+  data.msg = text.c_str();
+  data.file_name = msg.file_name();
+  data.file_line = msg.file_line();
+  callback_(&data);
+}
+
+void CForwardingLogger::SetCallback(void (*callback)(LogData*)) {
+  callback_ = callback;
+}
+
+LogData *CForwardingLogger::CopyLogData(const LogData *orig) {
+  if(!orig)
+    return nullptr;
+
+  LogData *copy = (LogData*)malloc(sizeof(LogData));
+  if(!copy)
+    return nullptr;
+
+  copy->level = orig->level;
+  copy->component = orig->component;
+  if(orig->msg)
+    copy->msg = strdup(orig->msg);
+  copy->file_name = orig->file_name;
+  copy->file_line = orig->file_line;
+  return copy;
+}
+
+void CForwardingLogger::FreeLogData(LogData *data) {
+  if(!data)
+    return;
+  if(data->msg)
+    free((void*)data->msg);
+
+  // Inexpensive way to help catch use-after-free
+  memset(data, 0, sizeof(LogData));
+  free(data);
+}
+
+
+LogData *hdfsCopyLogData(LogData *data) {
+  return CForwardingLogger::CopyLogData(data);
+}
+
+void hdfsFreeLogData(LogData *data) {
+  CForwardingLogger::FreeLogData(data);
+}
+
+void hdfsSetLogFunction(void (*callback)(LogData*)) {
+  CForwardingLogger *logger = new CForwardingLogger();
+  logger->SetCallback(callback);
+  LogManager::SetLoggerImplementation(std::unique_ptr<LoggerInterface>(logger));
+}
+
+static bool IsLevelValid(int component) {
+  if(component < HDFSPP_LOG_LEVEL_TRACE || component > HDFSPP_LOG_LEVEL_ERROR)
+    return false;
+  return true;
+}
+
+
+//  should use  __builtin_popcnt as optimization on some platforms
+static int popcnt(int val) {
+  int bits = sizeof(val) * 8;
+  int count = 0;
+  for(int i=0; i<bits; i++) {
+    if((val >> i) & 0x1)
+      count++;
+  }
+  return count;
+}
+
+static bool IsComponentValid(int component) {
+  if(component < HDFSPP_LOG_COMPONENT_UNKNOWN || component > HDFSPP_LOG_COMPONENT_FILESYSTEM)
+    return false;
+  if(popcnt(component) != 1)
+    return false;
+  return true;
+}
+
+int hdfsEnableLoggingForComponent(int component) {
+  if(!IsComponentValid(component))
+    return 1;
+  LogManager::EnableLogForComponent(static_cast<LogSourceComponent>(component));
+  return 0;
+}
+
+int hdfsDisableLoggingForComponent(int component) {
+  if(!IsComponentValid(component))
+    return 1;
+  LogManager::DisableLogForComponent(static_cast<LogSourceComponent>(component));
+  return 0;
+}
+
+int hdfsSetLoggingLevel(int level) {
+  if(!IsLevelValid(level))
+    return 1;
+  LogManager::SetLogLevel(static_cast<LogLevel>(level));
+  return 0;
 }

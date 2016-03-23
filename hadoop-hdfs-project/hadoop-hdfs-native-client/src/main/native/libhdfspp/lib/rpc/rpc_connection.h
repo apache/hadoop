@@ -63,11 +63,14 @@ template <class NextLayer>
 RpcConnectionImpl<NextLayer>::RpcConnectionImpl(RpcEngine *engine)
     : RpcConnection(engine),
       options_(engine->options()),
-      next_layer_(engine->io_service()) {}
+      next_layer_(engine->io_service()) {
+    LOG_TRACE(kRPC, << "RpcConnectionImpl::RpcConnectionImpl called");
+  }
 
 template <class NextLayer>
 void RpcConnectionImpl<NextLayer>::Connect(
     const std::vector<::asio::ip::tcp::endpoint> &server, RpcCallback &handler) {
+  LOG_TRACE(kRPC, << "RpcConnectionImpl::Connect called");
   auto connectionSuccessfulReq = std::make_shared<Request>(
       engine_, [handler](::google::protobuf::io::CodedInputStream *is,
                          const Status &status) {
@@ -105,6 +108,8 @@ void RpcConnectionImpl<NextLayer>::ConnectComplete(const ::asio::error_code &ec)
   auto shared_this = RpcConnectionImpl<NextLayer>::shared_from_this();
   std::lock_guard<std::mutex> state_lock(connection_state_lock_);
 
+  LOG_TRACE(kRPC, << "RpcConnectionImpl::ConnectComplete called");
+
   Status status = ToStatus(ec);
   if (status.ok()) {
     StartReading();
@@ -131,6 +136,9 @@ void RpcConnectionImpl<NextLayer>::ConnectComplete(const ::asio::error_code &ec)
 template <class NextLayer>
 void RpcConnectionImpl<NextLayer>::HandshakeComplete(const Status &s) {
   std::lock_guard<std::mutex> state_lock(connection_state_lock_);
+
+  LOG_TRACE(kRPC, << "RpcConnectionImpl::HandshakeComplete called");
+
   if (s.ok()) {
     FlushPendingRequests();
   } else {
@@ -142,6 +150,8 @@ void RpcConnectionImpl<NextLayer>::HandshakeComplete(const Status &s) {
 template <class NextLayer>
 void RpcConnectionImpl<NextLayer>::Handshake(RpcCallback &handler) {
   assert(lock_held(connection_state_lock_));  // Must be holding lock before calling
+
+  LOG_TRACE(kRPC, << "RpcConnectionImpl::Handshake called");
 
   auto shared_this = shared_from_this();
   auto handshake_packet = PrepareHandshakePacket();
@@ -163,9 +173,11 @@ void RpcConnectionImpl<NextLayer>::OnSendCompleted(const ::asio::error_code &ec,
   using std::placeholders::_2;
   std::lock_guard<std::mutex> state_lock(connection_state_lock_);
 
+  LOG_TRACE(kRPC, << "RpcConnectionImpl::OnSendCompleted called");
+
   request_over_the_wire_.reset();
   if (ec) {
-    LOG_WARN() << "Network error during RPC write: " << ec.message();
+    LOG_WARN(kRPC, << "Network error during RPC write: " << ec.message());
     CommsError(ToStatus(ec));
     return;
   }
@@ -179,6 +191,8 @@ void RpcConnectionImpl<NextLayer>::FlushPendingRequests() {
 
   // Lock should be held
   assert(lock_held(connection_state_lock_));
+
+  LOG_TRACE(kRPC, << "RpcConnectionImpl::FlushPendingRequests called");
 
   if (pending_requests_.empty()) {
     return;
@@ -233,6 +247,8 @@ void RpcConnectionImpl<NextLayer>::OnRecvCompleted(const ::asio::error_code &ec,
   using std::placeholders::_2;
   std::lock_guard<std::mutex> state_lock(connection_state_lock_);
 
+  LOG_TRACE(kRPC, << "RpcConnectionImpl::OnRecvCompleted called");
+
   std::shared_ptr<RpcConnection> shared_this = shared_from_this();
 
   switch (ec.value()) {
@@ -243,7 +259,7 @@ void RpcConnectionImpl<NextLayer>::OnRecvCompleted(const ::asio::error_code &ec,
       // The event loop has been shut down. Ignore the error.
       return;
     default:
-      LOG_WARN() << "Network error during RPC read: " << ec.message();
+      LOG_WARN(kRPC, << "Network error during RPC read: " << ec.message());
       CommsError(ToStatus(ec));
       return;
   }
@@ -280,6 +296,8 @@ void RpcConnectionImpl<NextLayer>::OnRecvCompleted(const ::asio::error_code &ec,
 template <class NextLayer>
 void RpcConnectionImpl<NextLayer>::Disconnect() {
   assert(lock_held(connection_state_lock_));  // Must be holding lock before calling
+
+  LOG_INFO(kRPC, << "RpcConnectionImpl::Disconnect called");
 
   request_over_the_wire_.reset();
   if (connected_) {

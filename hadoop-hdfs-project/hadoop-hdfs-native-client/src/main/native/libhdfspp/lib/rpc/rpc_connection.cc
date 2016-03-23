@@ -191,7 +191,7 @@ void RpcConnection::HandleRpcResponse(std::shared_ptr<Response> response) {
 
   auto req = RemoveFromRunningQueue(h.callid());
   if (!req) {
-    LOG_WARN() << "RPC response with Unknown call id " << h.callid();
+    LOG_WARN(kRPC, << "RPC response with Unknown call id " << h.callid());
     return;
   }
 
