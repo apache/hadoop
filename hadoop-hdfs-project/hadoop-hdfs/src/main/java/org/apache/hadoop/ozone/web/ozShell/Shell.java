@@ -73,6 +73,25 @@ public class Shell extends Configured implements Tool {
   public static final String ADD_ACLS = "addAcl";
   public static final String REMOVE_ACLS = "removeAcl";
 
+  /**
+   * Main for the ozShell Command handling.
+   *
+   * @param argv - System Args Strings[]
+   * @throws Exception
+   */
+  public static void main(String[] argv) throws Exception {
+    Shell shell = new Shell();
+    Configuration conf = new Configuration();
+    conf.setQuietMode(false);
+    shell.setConf(conf);
+    int res = 0;
+    try {
+      res = ToolRunner.run(shell, argv);
+    } catch (Exception ex) {
+      System.exit(1);
+    }
+    System.exit(res);
+  }
 
   /**
    * Execute the command with the given arguments.
@@ -88,12 +107,6 @@ public class Shell extends Configured implements Tool {
     Options opts = getOpts();
     CommandLine cmd = parseArgs(args, opts);
     return dispatch(cmd, opts);
-  }
-
-  /**
-   * Construct an ozShell.
-   */
-  public Shell() {
   }
 
   /**
@@ -202,28 +215,6 @@ public class Shell extends Configured implements Tool {
 
   }
 
-
-  /**
-   * Main for the ozShell Command handling.
-   *
-   * @param argv - System Args Strings[]
-   *
-   * @throws Exception
-   */
-  public static void main(String[] argv) throws Exception {
-    Shell shell = new Shell();
-    Configuration conf = new Configuration();
-    conf.setQuietMode(false);
-    shell.setConf(conf);
-    int res = 0;
-    try {
-      res = ToolRunner.run(shell, argv);
-    } catch (Exception ex) {
-      System.exit(1);
-    }
-    System.exit(res);
-  }
-
   /**
    * Dispatches calls to the right command Handler classes.
    *
@@ -285,14 +276,16 @@ public class Shell extends Configured implements Tool {
       } else {
         HelpFormatter helpFormatter = new HelpFormatter();
         helpFormatter.printHelp(eightyColumn, "hdfs oz -command uri [args]",
-                "Ozone Commands",
-                opts, "Please correct your command and try again.");
+            "Ozone Commands",
+            opts, "Please correct your command and try again.");
         return 1;
       }
-    } catch (IOException | OzoneException | URISyntaxException ex) {
+    } catch (IOException | URISyntaxException ex) {
       System.err.printf("Command Failed : %s%n", ex.getMessage());
-      return 1;
+    } catch (OzoneException ex) {
+      System.err.printf("Command Failed : %s%n", ex.toJsonString());
     }
+    return 1;
   }
 }
 
