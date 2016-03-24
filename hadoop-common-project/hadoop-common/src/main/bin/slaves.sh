@@ -22,7 +22,7 @@
 #
 #   HADOOP_SLAVES    File naming remote hosts.
 #     Default is ${HADOOP_CONF_DIR}/slaves.
-#   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_PREFIX}/conf.
+#   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_HOME}/conf.
 #   HADOOP_SLAVE_SLEEP Seconds to sleep between spawning remote commands.
 #   HADOOP_SSH_OPTS Options passed to ssh when running remote commands.
 ##
@@ -33,8 +33,8 @@ function hadoop_usage
 }
 
 # let's locate libexec...
-if [[ -n "${HADOOP_PREFIX}" ]]; then
-  HADOOP_DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
+if [[ -n "${HADOOP_HOME}" ]]; then
+  HADOOP_DEFAULT_LIBEXEC_DIR="${HADOOP_HOME}/libexec"
 else
   this="${BASH_SOURCE-$0}"
   bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)

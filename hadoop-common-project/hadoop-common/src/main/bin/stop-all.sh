@@ -22,8 +22,8 @@ echo "This script is deprecated. Use stop-dfs.sh and stop-yarn.sh instead."
 exit 1
 
 # let's locate libexec...
-if [[ -n "${HADOOP_PREFIX}" ]]; then
-  HADOOP_DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
+if [[ -n "${HADOOP_HOME}" ]]; then
+  HADOOP_DEFAULT_LIBEXEC_DIR="${HADOOP_HOME}/libexec"
 else
   this="${BASH_SOURCE-$0}"
   bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)

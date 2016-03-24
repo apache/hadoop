@@ -20,7 +20,7 @@
 
 # HTTPFS temporary directory
 #
-# export HTTPFS_TEMP=${HADOOP_PREFIX}/temp
+# export HTTPFS_TEMP=${HADOOP_HOME}/temp
 
 # The HTTP port used by HTTPFS
 #
@@ -53,7 +53,7 @@
 #
 # Location of tomcat
 #
-# export HTTPFS_CATALINA_HOME=${HADOOP_PREFIX}/share/hadoop/httpfs/tomcat
+# export HTTPFS_CATALINA_HOME=${HADOOP_HOME}/share/hadoop/httpfs/tomcat
 
 # Java System properties for HTTPFS should be specified in this variable.
 # The java.library.path and hadoop.home.dir properties are automatically

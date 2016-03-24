@@ -28,7 +28,7 @@ function hadoop_subproject_init
 
   export HADOOP_CATALINA_PREFIX=httpfs
 
-  export HADOOP_CATALINA_TEMP="${HTTPFS_TEMP:-${HADOOP_PREFIX}/temp}"
+  export HADOOP_CATALINA_TEMP="${HTTPFS_TEMP:-${HADOOP_HOME}/temp}"
 
   hadoop_deprecate_envvar HTTPFS_CONFIG HADOOP_CONF_DIR
 
@@ -47,7 +47,7 @@ function hadoop_subproject_init
 
   export HADOOP_CATALINA_SSL_KEYSTORE_FILE="${HTTPFS_SSL_KEYSTORE_FILE:-${HOME}/.keystore}"
 
-  export CATALINA_BASE="${CATALINA_BASE:-${HADOOP_PREFIX}/share/hadoop/httpfs/tomcat}"
+  export CATALINA_BASE="${CATALINA_BASE:-${HADOOP_HOME}/share/hadoop/httpfs/tomcat}"
   export HADOOP_CATALINA_HOME="${HTTPFS_CATALINA_HOME:-${CATALINA_BASE}}"
 
   export CATALINA_OUT="${CATALINA_OUT:-${HADOOP_LOG_DIR}/hadoop-${HADOOP_IDENT_STRING}-httpfs-${HOSTNAME}.out}"
@@ -67,8 +67,8 @@ if [[ -n "${HADOOP_COMMON_HOME}" ]] &&
   . "${HADOOP_COMMON_HOME}/libexec/hadoop-config.sh"
 elif [[ -e "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]]; then
   . "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
-elif [[ -e "${HADOOP_PREFIX}/libexec/hadoop-config.sh" ]]; then
-  . "${HADOOP_PREFIX}/libexec/hadoop-config.sh"
+elif [[ -e "${HADOOP_HOME}/libexec/hadoop-config.sh" ]]; then
+  . "${HADOOP_HOME}/libexec/hadoop-config.sh"
 else
   echo "ERROR: Hadoop common not found." 2>&1
   exit 1

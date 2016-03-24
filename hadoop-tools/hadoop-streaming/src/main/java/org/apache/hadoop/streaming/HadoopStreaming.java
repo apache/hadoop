@@ -56,7 +56,7 @@ public class HadoopStreaming {
   }
   
   private static void printUsage() {
-    System.out.println("Usage: $HADOOP_PREFIX/bin/hadoop jar hadoop-streaming.jar"
+    System.out.println("Usage: $HADOOP_HOME/bin/hadoop jar hadoop-streaming.jar"
         + " [options]");
     System.out.println("Options:");
     System.out.println("  dumptb <glob-pattern> Dumps all files that match the" 

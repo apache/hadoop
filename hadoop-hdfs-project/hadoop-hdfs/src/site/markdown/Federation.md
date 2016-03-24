@@ -150,13 +150,13 @@ Here is an example configuration with two Namenodes:
 
 **Step 1**: Format a Namenode using the following command:
 
-    [hdfs]$ $HADOOP_PREFIX/bin/hdfs namenode -format [-clusterId <cluster_id>]
+    [hdfs]$ $HADOOP_HOME/bin/hdfs namenode -format [-clusterId <cluster_id>]
 
 Choose a unique cluster\_id which will not conflict other clusters in your environment. If a cluster\_id is not provided, then a unique one is auto generated.
 
 **Step 2**: Format additional Namenodes using the following command:
 
-    [hdfs]$ $HADOOP_PREFIX/bin/hdfs namenode -format -clusterId <cluster_id>
+    [hdfs]$ $HADOOP_HOME/bin/hdfs namenode -format -clusterId <cluster_id>
 
 Note that the cluster\_id in step 2 must be same as that of the cluster\_id in step 1. If they are different, the additional Namenodes will not be part of the federated cluster.
 
@@ -164,7 +164,7 @@ Note that the cluster\_id in step 2 must be same as that of the cluster\_id in s
 
 Older releases only support a single Namenode. Upgrade the cluster to newer release in order to enable federation During upgrade you can provide a ClusterID as follows:
 
-    [hdfs]$ $HADOOP_PREFIX/bin/hdfs --daemon start namenode -upgrade -clusterId <cluster_ID>
+    [hdfs]$ $HADOOP_HOME/bin/hdfs --daemon start namenode -upgrade -clusterId <cluster_ID>
 
 If cluster\_id is not provided, it is auto generated.
 
@@ -187,7 +187,7 @@ Perform the following steps:
 * Refresh the Datanodes to pickup the newly added Namenode by running
   the following command against all the Datanodes in the cluster:
 
-        [hdfs]$ $HADOOP_PREFIX/bin/hdfs dfsadmin -refreshNamenodes <datanode_host_name>:<datanode_rpc_port>
+        [hdfs]$ $HADOOP_HOME/bin/hdfs dfsadmin -refreshNamenodes <datanode_host_name>:<datanode_rpc_port>
 
 Managing the cluster
 --------------------
@@ -196,11 +196,11 @@ Managing the cluster
 
 To start the cluster run the following command:
 
-    [hdfs]$ $HADOOP_PREFIX/sbin/start-dfs.sh
+    [hdfs]$ $HADOOP_HOME/sbin/start-dfs.sh
 
 To stop the cluster run the following command:
 
-    [hdfs]$ $HADOOP_PREFIX/sbin/stop-dfs.sh
+    [hdfs]$ $HADOOP_HOME/sbin/stop-dfs.sh
 
 These commands can be run from any node where the HDFS configuration is available. The command uses the configuration to determine the Namenodes in the cluster and then starts the Namenode process on those nodes. The Datanodes are started on the nodes specified in the `slaves` file. The script can be used as a reference for building your own scripts to start and stop the cluster.
 
@@ -208,7 +208,7 @@ These commands can be run from any node where the HDFS configuration is availabl
 
 The Balancer has been changed to work with multiple Namenodes. The Balancer can be run using the command:
 
-    [hdfs]$ $HADOOP_PREFIX/bin/hdfs --daemon start balancer [-policy <policy>]
+    [hdfs]$ $HADOOP_HOME/bin/hdfs --daemon start balancer [-policy <policy>]
 
 The policy parameter can be any of the following:
 
@@ -227,11 +227,11 @@ Decommissioning is similar to prior releases. The nodes that need to be decomiss
 
 **Step 1**: To distribute an exclude file to all the Namenodes, use the following command:
 
-    [hdfs]$ $HADOOP_PREFIX/sbin/distribute-exclude.sh <exclude_file>
+    [hdfs]$ $HADOOP_HOME/sbin/distribute-exclude.sh <exclude_file>
 
 **Step 2**: Refresh all the Namenodes to pick up the new exclude file:
 
-    [hdfs]$ $HADOOP_PREFIX/sbin/refresh-namenodes.sh
+    [hdfs]$ $HADOOP_HOME/sbin/refresh-namenodes.sh
 
 The above command uses HDFS configuration to determine the configured Namenodes in the cluster and refreshes them to pick up the new exclude file.
 

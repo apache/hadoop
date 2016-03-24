@@ -26,8 +26,8 @@
 ##
 ## If you move HADOOP_LIBEXEC_DIR from some location that
 ## isn't bin/../libexec, you MUST define either HADOOP_LIBEXEC_DIR
-## or have HADOOP_PREFIX/libexec/hadoop-config.sh and
-## HADOOP_PREFIX/libexec/hadoop-layout.sh (this file) exist.
+## or have HADOOP_HOME/libexec/hadoop-config.sh and
+## HADOOP_HOME/libexec/hadoop-layout.sh (this file) exist.
 
 ## NOTE:
 ##
@@ -44,7 +44,7 @@
 ####
 
 # Default location for the common/core Hadoop project
-# export HADOOP_COMMON_HOME=${HADOOP_PREFIX}
+# export HADOOP_COMMON_HOME=${HADOOP_HOME}
 
 # Relative locations where components under HADOOP_COMMON_HOME are located
 # export HADOOP_COMMON_DIR="share/hadoop/common"
@@ -56,7 +56,7 @@
 ####
 
 # Default location for the HDFS subproject
-# export HADOOP_HDFS_HOME=${HADOOP_PREFIX}
+# export HADOOP_HDFS_HOME=${HADOOP_HOME}
 
 # Relative locations where components under HADOOP_HDFS_HOME are located
 # export HDFS_DIR="share/hadoop/hdfs"
@@ -67,7 +67,7 @@
 ####
 
 # Default location for the YARN subproject
-# export HADOOP_YARN_HOME=${HADOOP_PREFIX}
+# export HADOOP_YARN_HOME=${HADOOP_HOME}
 
 # Relative locations where components under HADOOP_YARN_HOME are located
 # export YARN_DIR="share/hadoop/yarn"
@@ -78,7 +78,7 @@
 ####
 
 # Default location for the MapReduce subproject
-# export HADOOP_MAPRED_HOME=${HADOOP_PREFIX}
+# export HADOOP_MAPRED_HOME=${HADOOP_HOME}
 
 # Relative locations where components under HADOOP_MAPRED_HOME are located
 # export MAPRED_DIR="share/hadoop/mapreduce"
@@ -92,6 +92,6 @@
 # note that this path only gets added for certain commands and not
 # part of the general classpath unless HADOOP_OPTIONAL_TOOLS is used
 # to configure them in
-# export HADOOP_TOOLS_HOME=${HADOOP_PREFIX}
+# export HADOOP_TOOLS_HOME=${HADOOP_HOME}
 # export HADOOP_TOOLS_DIR=${HADOOP_TOOLS_DIR:-"share/hadoop/tools"}
 # export HADOOP_TOOLS_LIB_JARS_DIR=${HADOOP_TOOLS_LIB_JARS_DIR:-"${HADOOP_TOOLS_DIR}/lib"}

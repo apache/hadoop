@@ -28,7 +28,7 @@ function hadoop_subproject_init
 
   export HADOOP_CATALINA_PREFIX=kms
 
-  export HADOOP_CATALINA_TEMP="${KMS_TEMP:-${HADOOP_PREFIX}/temp}"
+  export HADOOP_CATALINA_TEMP="${KMS_TEMP:-${HADOOP_HOME}/temp}"
 
   hadoop_deprecate_envvar KMS_CONFIG HADOOP_CONF_DIR
 
@@ -49,7 +49,7 @@ function hadoop_subproject_init
   # shellcheck disable=SC2086
   export KMS_SSL_TRUSTSTORE_PASS=${KMS_SSL_TRUSTSTORE_PASS:-"$(echo ${CATALINA_OPTS} | grep -o 'trustStorePassword=[^ ]*' | cut -f2 -d= )"}
 
-  export CATALINA_BASE="${CATALINA_BASE:-${HADOOP_PREFIX}/share/hadoop/kms/tomcat}"
+  export CATALINA_BASE="${CATALINA_BASE:-${HADOOP_HOME}/share/hadoop/kms/tomcat}"
   export HADOOP_CATALINA_HOME="${KMS_CATALINA_HOME:-${CATALINA_BASE}}"
 
   export CATALINA_OUT="${CATALINA_OUT:-${HADOOP_LOG_DIR}/hadoop-${HADOOP_IDENT_STRING}-kms-${HOSTNAME}.out}"
@@ -69,8 +69,8 @@ if [[ -n "${HADOOP_COMMON_HOME}" ]] &&
   . "${HADOOP_COMMON_HOME}/libexec/hadoop-config.sh"
 elif [[ -e "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]]; then
   . "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
-elif [[ -e "${HADOOP_PREFIX}/libexec/hadoop-config.sh" ]]; then
-  . "${HADOOP_PREFIX}/libexec/hadoop-config.sh"
+elif [[ -e "${HADOOP_HOME}/libexec/hadoop-config.sh" ]]; then
+  . "${HADOOP_HOME}/libexec/hadoop-config.sh"
 else
   echo "ERROR: Hadoop common not found." 2>&1
   exit 1

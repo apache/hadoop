@@ -86,10 +86,10 @@ Other useful configuration parameters that you can customize include:
 
 In most cases, you should specify the `HADOOP_PID_DIR` and `HADOOP_LOG_DIR` directories such that they can only be written to by the users that are going to run the hadoop daemons. Otherwise there is the potential for a symlink attack.
 
-It is also traditional to configure `HADOOP_PREFIX` in the system-wide shell environment configuration. For example, a simple script inside `/etc/profile.d`:
+It is also traditional to configure `HADOOP_HOME` in the system-wide shell environment configuration. For example, a simple script inside `/etc/profile.d`:
 
-      HADOOP_PREFIX=/path/to/hadoop
-      export HADOOP_PREFIX
+      HADOOP_HOME=/path/to/hadoop
+      export HADOOP_HOME
 
 | Daemon | Environment Variable |
 |:---- |:---- |
@@ -243,73 +243,73 @@ To start a Hadoop cluster you will need to start both the HDFS and YARN cluster.
 
 The first time you bring up HDFS, it must be formatted. Format a new distributed filesystem as *hdfs*:
 
-    [hdfs]$ $HADOOP_PREFIX/bin/hdfs namenode -format <cluster_name>
+    [hdfs]$ $HADOOP_HOME/bin/hdfs namenode -format <cluster_name>
 
 Start the HDFS NameNode with the following command on the designated node as *hdfs*:
 
-    [hdfs]$ $HADOOP_PREFIX/bin/hdfs --daemon start namenode
+    [hdfs]$ $HADOOP_HOME/bin/hdfs --daemon start namenode
 
 Start a HDFS DataNode with the following command on each designated node as *hdfs*:
 
-    [hdfs]$ $HADOOP_PREFIX/bin/hdfs --daemon start datanode
+    [hdfs]$ $HADOOP_HOME/bin/hdfs --daemon start datanode
 
 If `etc/hadoop/slaves` and ssh trusted access is configured (see [Single Node Setup](./SingleCluster.html)), all of the HDFS processes can be started with a utility script. As *hdfs*:
 
-    [hdfs]$ $HADOOP_PREFIX/sbin/start-dfs.sh
+    [hdfs]$ $HADOOP_HOME/sbin/start-dfs.sh
 
 Start the YARN with the following command, run on the designated ResourceManager as *yarn*:
 
-    [yarn]$ $HADOOP_PREFIX/bin/yarn --daemon start resourcemanager
+    [yarn]$ $HADOOP_HOME/bin/yarn --daemon start resourcemanager
 
 Run a script to start a NodeManager on each designated host as *yarn*:
 
-    [yarn]$ $HADOOP_PREFIX/bin/yarn --daemon start nodemanager
+    [yarn]$ $HADOOP_HOME/bin/yarn --daemon start nodemanager
 
 Start a standalone WebAppProxy server. Run on the WebAppProxy server as *yarn*. If multiple servers are used with load balancing it should be run on each of them:
 
-    [yarn]$ $HADOOP_PREFIX/bin/yarn --daemon start proxyserver
+    [yarn]$ $HADOOP_HOME/bin/yarn --daemon start proxyserver
 
 If `etc/hadoop/slaves` and ssh trusted access is configured (see [Single Node Setup](./SingleCluster.html)), all of the YARN processes can be started with a utility script. As *yarn*:
 
-    [yarn]$ $HADOOP_PREFIX/sbin/start-yarn.sh
+    [yarn]$ $HADOOP_HOME/sbin/start-yarn.sh
 
 Start the MapReduce JobHistory Server with the following command, run on the designated server as *mapred*:
 
-    [mapred]$ $HADOOP_PREFIX/bin/mapred --daemon start historyserver
+    [mapred]$ $HADOOP_HOME/bin/mapred --daemon start historyserver
 
 ### Hadoop Shutdown
 
 Stop the NameNode with the following command, run on the designated NameNode as *hdfs*:
 
-    [hdfs]$ $HADOOP_PREFIX/bin/hdfs --daemon stop namenode
+    [hdfs]$ $HADOOP_HOME/bin/hdfs --daemon stop namenode
 
 Run a script to stop a DataNode as *hdfs*:
 
-    [hdfs]$ $HADOOP_PREFIX/bin/hdfs --daemon stop datanode
+    [hdfs]$ $HADOOP_HOME/bin/hdfs --daemon stop datanode
 
 If `etc/hadoop/slaves` and ssh trusted access is configured (see [Single Node Setup](./SingleCluster.html)), all of the HDFS processes may be stopped with a utility script. As *hdfs*:
 
-    [hdfs]$ $HADOOP_PREFIX/sbin/stop-dfs.sh
+    [hdfs]$ $HADOOP_HOME/sbin/stop-dfs.sh
 
 Stop the ResourceManager with the following command, run on the designated ResourceManager as *yarn*:
 
-    [yarn]$ $HADOOP_PREFIX/bin/yarn --daemon stop resourcemanager
+    [yarn]$ $HADOOP_HOME/bin/yarn --daemon stop resourcemanager
 
 Run a script to stop a NodeManager on a slave as *yarn*:
 
-    [yarn]$ $HADOOP_PREFIX/bin/yarn --daemon stop nodemanager
+    [yarn]$ $HADOOP_HOME/bin/yarn --daemon stop nodemanager
 
 If `etc/hadoop/slaves` and ssh trusted access is configured (see [Single Node Setup](./SingleCluster.html)), all of the YARN processes can be stopped with a utility script. As *yarn*:
 
-    [yarn]$ $HADOOP_PREFIX/sbin/stop-yarn.sh
+    [yarn]$ $HADOOP_HOME/sbin/stop-yarn.sh
 
 Stop the WebAppProxy server. Run on the WebAppProxy server as *yarn*. If multiple servers are used with load balancing it should be run on each of them:
 
-    [yarn]$ $HADOOP_PREFIX/bin/yarn stop proxyserver
+    [yarn]$ $HADOOP_HOME/bin/yarn stop proxyserver
 
 Stop the MapReduce JobHistory Server with the following command, run on the designated server as *mapred*:
 
-    [mapred]$ $HADOOP_PREFIX/bin/mapred --daemon stop historyserver
+    [mapred]$ $HADOOP_HOME/bin/mapred --daemon stop historyserver
 
 Web Interfaces
 --------------

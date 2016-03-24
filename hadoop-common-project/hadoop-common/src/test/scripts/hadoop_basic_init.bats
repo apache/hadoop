@@ -45,7 +45,7 @@ basicinitsetup () {
     unset ${j}
   done
 
-  HADOOP_PREFIX=${TMP}
+  HADOOP_HOME=${TMP}
 }
 
 check_var_values () {

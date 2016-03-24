@@ -53,7 +53,7 @@ function hadoop_subproject_init
 
   hadoop_deprecate_envvar YARN_SLAVES HADOOP_SLAVES
   
-  HADOOP_YARN_HOME="${HADOOP_YARN_HOME:-$HADOOP_PREFIX}"
+  HADOOP_YARN_HOME="${HADOOP_YARN_HOME:-$HADOOP_HOME}"
   
   # YARN-1429 added the completely superfluous YARN_USER_CLASSPATH
   # env var.  We're going to override HADOOP_USER_CLASSPATH to keep
@@ -74,8 +74,8 @@ if [[ -n "${HADOOP_COMMON_HOME}" ]] &&
   . "${HADOOP_COMMON_HOME}/libexec/hadoop-config.sh"
 elif [[ -e "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]]; then
   . "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
-elif [ -e "${HADOOP_PREFIX}/libexec/hadoop-config.sh" ]; then
-  . "${HADOOP_PREFIX}/libexec/hadoop-config.sh"
+elif [ -e "${HADOOP_HOME}/libexec/hadoop-config.sh" ]; then
+  . "${HADOOP_HOME}/libexec/hadoop-config.sh"
 else
   echo "ERROR: Hadoop common not found." 2>&1
   exit 1

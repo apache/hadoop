@@ -450,7 +450,7 @@ public class DFSCIOTest {
         }
 
         //Copy the executables over to the remote filesystem
-        String hadoopHome = System.getenv("HADOOP_PREFIX");
+        String hadoopHome = System.getenv("HADOOP_HOME");
         fs.copyFromLocalFile(new Path(hadoopHome + "/libhdfs/libhdfs.so." + HDFS_LIB_VERSION),
                              HDFS_SHLIB);
         fs.copyFromLocalFile(new Path(hadoopHome + "/libhdfs/hdfs_read"), HDFS_READ);

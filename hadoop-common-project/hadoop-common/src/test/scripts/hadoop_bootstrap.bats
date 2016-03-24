@@ -22,7 +22,7 @@ load hadoop-functions_test_helper
 }
 
 @test "hadoop_bootstrap (libexec)" {
-  unset   HADOOP_PREFIX
+  unset   HADOOP_HOME
   unset   HADOOP_COMMON_DIR
   unset   HADOOP_COMMON_LIB_JARS_DIR
   unset   HDFS_DIR
@@ -39,7 +39,7 @@ load hadoop-functions_test_helper
   hadoop_bootstrap
 
   # all of these should be set
-  [ -n ${HADOOP_PREFIX} ]
+  [ -n ${HADOOP_HOME} ]
   [ -n ${HADOOP_COMMON_DIR} ]
   [ -n ${HADOOP_COMMON_LIB_JARS_DIR} ]
   [ -n ${HDFS_DIR} ]

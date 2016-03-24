@@ -65,10 +65,10 @@ public class TestTracingShortCircuitLocalRead {
   public void testShortCircuitTraceHooks() throws IOException {
     assumeTrue(NativeCodeLoader.isNativeCodeLoaded() && !Path.WINDOWS);
     conf = new Configuration();
-    conf.set(TraceUtils.DEFAULT_HADOOP_PREFIX +
+    conf.set(TraceUtils.DEFAULT_HADOOP_TRACE_PREFIX +
             Tracer.SPAN_RECEIVER_CLASSES_KEY,
         SetSpanReceiver.class.getName());
-    conf.set(TraceUtils.DEFAULT_HADOOP_PREFIX +
+    conf.set(TraceUtils.DEFAULT_HADOOP_TRACE_PREFIX +
             Tracer.SAMPLER_CLASSES_KEY,
         "AlwaysSampler");
     conf.setLong("dfs.blocksize", 100 * 1024);

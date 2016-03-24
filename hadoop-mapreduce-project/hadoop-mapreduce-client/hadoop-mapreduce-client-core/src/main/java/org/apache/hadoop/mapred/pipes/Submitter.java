@@ -315,7 +315,7 @@ public class Submitter extends Configured implements Tool {
     // <path>#<executable>
     if (exec.contains("#")) {
       // set default gdb commands for map and reduce task 
-      String defScript = "$HADOOP_PREFIX/src/c++/pipes/debug/pipes-default-script";
+      String defScript = "$HADOOP_HOME/src/c++/pipes/debug/pipes-default-script";
       setIfUnset(conf, MRJobConfig.MAP_DEBUG_SCRIPT,defScript);
       setIfUnset(conf, MRJobConfig.REDUCE_DEBUG_SCRIPT,defScript);
     }

@@ -47,8 +47,8 @@ function hadoop_usage
 # This script runs the hadoop core commands.
 
 # let's locate libexec...
-if [[ -n "${HADOOP_PREFIX}" ]]; then
-  HADOOP_DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
+if [[ -n "${HADOOP_HOME}" ]]; then
+  HADOOP_DEFAULT_LIBEXEC_DIR="${HADOOP_HOME}/libexec"
 else
   bin=$(cd -P -- "$(dirname -- "${MYNAME}")" >/dev/null && pwd -P)
   HADOOP_DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
@@ -84,9 +84,9 @@ case ${COMMAND} in
       # shellcheck disable=SC2086
       exec "${HADOOP_HDFS_HOME}/bin/hdfs" \
       --config "${HADOOP_CONF_DIR}" "${COMMAND}"  "$@"
-    elif [[ -f "${HADOOP_PREFIX}/bin/hdfs" ]]; then
+    elif [[ -f "${HADOOP_HOME}/bin/hdfs" ]]; then
       # shellcheck disable=SC2086
-      exec "${HADOOP_PREFIX}/bin/hdfs" \
+      exec "${HADOOP_HOME}/bin/hdfs" \
       --config "${HADOOP_CONF_DIR}" "${COMMAND}" "$@"
     else
       hadoop_error "HADOOP_HDFS_HOME not found!"
@@ -104,8 +104,8 @@ case ${COMMAND} in
     if [[ -f "${HADOOP_MAPRED_HOME}/bin/mapred" ]]; then
       exec "${HADOOP_MAPRED_HOME}/bin/mapred" \
       --config "${HADOOP_CONF_DIR}" "${COMMAND}" "$@"
-    elif [[ -f "${HADOOP_PREFIX}/bin/mapred" ]]; then
-      exec "${HADOOP_PREFIX}/bin/mapred" \
+    elif [[ -f "${HADOOP_HOME}/bin/mapred" ]]; then
+      exec "${HADOOP_HOME}/bin/mapred" \
       --config "${HADOOP_CONF_DIR}" "${COMMAND}" "$@"
     else
       hadoop_error "HADOOP_MAPRED_HOME not found!"

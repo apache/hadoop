@@ -35,9 +35,9 @@ Requirements
 BUILDING
 
    fuse-dfs executable can be built by setting `require.fuse` option to true using Maven. For example:
-   in HADOOP_PREFIX: `mvn package -Pnative -Drequire.fuse=true -DskipTests -Dmaven.javadoc.skip=true`
+   in HADOOP_HOME: `mvn package -Pnative -Drequire.fuse=true -DskipTests -Dmaven.javadoc.skip=true`
 
-   The executable `fuse_dfs` will be located at HADOOP_PREFIX/hadoop-hdfs-project/hadoop-hdfs-native-client/target/main/native/fuse-dfs/
+   The executable `fuse_dfs` will be located at HADOOP_HOME/hadoop-hdfs-project/hadoop-hdfs-native-client/target/main/native/fuse-dfs/
 
 Common build problems include not finding the libjvm.so in JAVA_HOME/jre/lib/OS_ARCH/server or not finding fuse in FUSE_HOME or /usr/local.
 
@@ -109,7 +109,7 @@ NOTE - you cannot export this with a FUSE module built into the kernel
 
 RECOMMENDATIONS
 
-1. From /bin, `ln -s HADOOP_PREFIX/hadoop-hdfs-project/hadoop-hdfs-native-client/target/main/native/fuse-dfs/fuse_dfs* .`
+1. From /bin, `ln -s HADOOP_HOME/hadoop-hdfs-project/hadoop-hdfs-native-client/target/main/native/fuse-dfs/fuse_dfs* .`
 
 2. Always start with debug on so you can see if you are missing a classpath or something like that.
 
