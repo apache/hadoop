@@ -20,6 +20,7 @@
 
 #include "hdfspp/options.h"
 #include "hdfspp/status.h"
+#include "hdfspp/events.h"
 
 #include <functional>
 #include <memory>
@@ -108,6 +109,18 @@ public:
    **/
   static bool ShouldExclude(const Status &status);
 
+
+  /**
+   * Sets an event callback for file-level event notifications (such as connecting
+   * to the DataNode, communications errors, etc.)
+   *
+   * Many events are defined in hdfspp/events.h; the consumer should also expect
+   * to be called with many private events, which can be ignored.
+   *
+   * @param callback The function to call when a reporting event occurs.
+   */
+  virtual void SetFileEventCallback(file_event_callback callback) = 0;
+
   virtual ~FileHandle();
 };
 
@@ -161,6 +174,17 @@ class FileSystem {
    */
   virtual ~FileSystem() {};
 
+
+  /**
+   * Sets an event callback for fs-level event notifications (such as connecting
+   * to the NameNode, communications errors with the NN, etc.)
+   *
+   * Many events are defined in hdfspp/events.h; the consumer should also expect
+   * to be called with many private events, which can be ignored.
+   *
+   * @param callback The function to call when a reporting event occurs.
+   */
+  virtual void SetFsEventCallback(fs_event_callback callback) = 0;
 };
 }
 

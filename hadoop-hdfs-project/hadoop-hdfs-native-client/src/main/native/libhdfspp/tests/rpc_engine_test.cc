@@ -266,7 +266,7 @@ TEST(RpcEngineTest, TestConnectionFailure)
   EXPECT_CALL(*producer, Produce())
       .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")));
 
-  engine.Connect(make_endpoint(), [&complete, &io_service](const Status &stat) {
+  engine.Connect("", make_endpoint(), [&complete, &io_service](const Status &stat) {
     complete = true;
     io_service.stop();
     ASSERT_FALSE(stat.ok());
@@ -294,7 +294,7 @@ TEST(RpcEngineTest, TestConnectionFailureRetryAndFailure)
       .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")))
       .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")));
 
-  engine.Connect(make_endpoint(), [&complete, &io_service](const Status &stat) {
+  engine.Connect("", make_endpoint(), [&complete, &io_service](const Status &stat) {
     complete = true;
     io_service.stop();
     ASSERT_FALSE(stat.ok());
@@ -322,7 +322,7 @@ TEST(RpcEngineTest, TestConnectionFailureAndRecover)
       .WillOnce(Return(std::make_pair(::asio::error_code(), "")))
       .WillOnce(Return(std::make_pair(::asio::error::would_block, "")));
 
-  engine.Connect(make_endpoint(), [&complete, &io_service](const Status &stat) {
+  engine.Connect("", make_endpoint(), [&complete, &io_service](const Status &stat) {
     complete = true;
     io_service.stop();
     ASSERT_TRUE(stat.ok());
@@ -330,6 +330,72 @@ TEST(RpcEngineTest, TestConnectionFailureAndRecover)
   io_service.run();
   ASSERT_TRUE(complete);
 }
+
+TEST(RpcEngineTest, TestEventCallbacks)
+{
+  ::asio::io_service io_service;
+  Options options;
+  options.max_rpc_retries = 99;
+  options.rpc_retry_delay_ms = 0;
+  SharedConnectionEngine engine(&io_service, options, "foo", "", "protocol", 1);
+
+  // Set up event callbacks
+  int calls = 0;
+  std::vector<std::string> callbacks;
+  engine.SetFsEventCallback([&calls, &callbacks] (const char * event,
+                    const char * cluster,
+                    int64_t value) {
+    (void)cluster; (void)value;
+    callbacks.push_back(event);
+
+    // Allow connect and fail first read
+    calls++;
+    if (calls == 1 || calls == 3) // First connect and first read
+      return event_response::test_err(Status::Error("Test"));
+
+    return event_response::ok();
+  });
+
+
+
+  EchoResponseProto server_resp;
+  server_resp.set_message("foo");
+
+  auto producer = std::make_shared<SharedConnectionData>();
+  producer->checkProducerForConnect = true;
+  RpcResponseHeaderProto h;
+  h.set_callid(1);
+  h.set_status(RpcResponseHeaderProto::SUCCESS);
+  EXPECT_CALL(*producer, Produce())
+      .WillOnce(Return(std::make_pair(::asio::error_code(), ""))) // subverted by callback
+      .WillOnce(Return(std::make_pair(::asio::error_code(), "")))
+      .WillOnce(Return(RpcResponse(h, "b"))) // subverted by callback
+      .WillOnce(Return(RpcResponse(h, server_resp.SerializeAsString())));
+  SharedMockConnection::SetSharedConnectionData(producer);
+
+
+  EchoRequestProto req;
+  req.set_message("foo");
+  std::shared_ptr<EchoResponseProto> resp(new EchoResponseProto());
+
+  bool complete = false;
+  engine.AsyncRpc("test", &req, resp, [&complete, &io_service](const Status &stat) {
+    complete = true;
+    io_service.stop();
+    ASSERT_TRUE(stat.ok());
+  });
+  io_service.run();
+  ASSERT_TRUE(complete);
+  ASSERT_EQ(7, callbacks.size());
+  ASSERT_EQ(FS_NN_CONNECT_EVENT, callbacks[0]); // error
+  ASSERT_EQ(FS_NN_CONNECT_EVENT, callbacks[1]); // reconnect
+  ASSERT_EQ(FS_NN_READ_EVENT, callbacks[2]); // makes an error
+  ASSERT_EQ(FS_NN_CONNECT_EVENT, callbacks[3]); // reconnect
+  for (int i=4; i < 7; i++)
+    ASSERT_EQ(FS_NN_READ_EVENT, callbacks[i]);
+}
+
+
 
 TEST(RpcEngineTest, TestConnectionFailureAndAsyncRecover)
 {
@@ -351,7 +417,7 @@ TEST(RpcEngineTest, TestConnectionFailureAndAsyncRecover)
       .WillOnce(Return(std::make_pair(::asio::error_code(), "")))
       .WillOnce(Return(std::make_pair(::asio::error::would_block, "")));
 
-  engine.Connect(make_endpoint(), [&complete, &io_service](const Status &stat) {
+  engine.Connect("", make_endpoint(), [&complete, &io_service](const Status &stat) {
     complete = true;
     io_service.stop();
     ASSERT_TRUE(stat.ok());

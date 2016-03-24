@@ -30,9 +30,11 @@
 #include <cstring>
 #include <iostream>
 #include <algorithm>
+#include <functional>
 
 using namespace hdfs;
 using std::experimental::nullopt;
+using namespace std::placeholders;
 
 static constexpr tPort kDefaultPort = 8020;
 
@@ -80,6 +82,10 @@ void hdfsGetLastError(char *buf, int len) {
   /* stick in null */
   buf[copylen] = 0;
 }
+
+/* Event callbacks for next open calls */
+thread_local std::experimental::optional<fs_event_callback> fsEventCallback;
+thread_local std::experimental::optional<file_event_callback> fileEventCallback;
 
 struct hdfsBuilder {
   hdfsBuilder();
@@ -195,6 +201,10 @@ hdfsFS doHdfsConnect(optional<std::string> nn, optional<tPort> port, optional<st
     if (!fs) {
       ReportError(ENODEV, "Could not create FileSystem object");
       return nullptr;
+    }
+
+    if (fsEventCallback) {
+      fs->SetFsEventCallback(fsEventCallback.value());
     }
 
     Status status;
@@ -397,6 +407,72 @@ int hdfsCancel(hdfsFS fs, hdfsFile file) {
   } catch (...) {
     return ReportCaughtNonException();
   }
+}
+
+
+/*******************************************************************
+ *                EVENT CALLBACKS
+ *******************************************************************/
+
+const char * FS_NN_CONNECT_EVENT = hdfs::FS_NN_CONNECT_EVENT;
+const char * FS_NN_READ_EVENT = hdfs::FS_NN_READ_EVENT;
+const char * FS_NN_WRITE_EVENT = hdfs::FS_NN_WRITE_EVENT;
+
+const char * FILE_DN_CONNECT_EVENT = hdfs::FILE_DN_CONNECT_EVENT;
+const char * FILE_DN_READ_EVENT = hdfs::FILE_DN_READ_EVENT;
+const char * FILE_DN_WRITE_EVENT = hdfs::FILE_DN_WRITE_EVENT;
+
+
+event_response fs_callback_glue(libhdfspp_fs_event_callback handler,
+                      int64_t cookie,
+                      const char * event,
+                      const char * cluster,
+                      int64_t value) {
+  int result = handler(event, cluster, value, cookie);
+  if (result == LIBHDFSPP_EVENT_OK) {
+    return event_response::ok();
+  }
+#ifndef NDEBUG
+  if (result == DEBUG_SIMULATE_ERROR) {
+    return event_response::test_err(Status::Error("Simulated error"));
+  }
+#endif
+
+  return event_response::ok();
+}
+
+event_response file_callback_glue(libhdfspp_file_event_callback handler,
+                      int64_t cookie,
+                      const char * event,
+                      const char * cluster,
+                      const char * file,
+                      int64_t value) {
+  int result = handler(event, cluster, file, value, cookie);
+  if (result == LIBHDFSPP_EVENT_OK) {
+    return event_response::ok();
+  }
+#ifndef NDEBUG
+  if (result == DEBUG_SIMULATE_ERROR) {
+    return event_response::test_err(Status::Error("Simulated error"));
+  }
+#endif
+
+  return event_response::ok();
+}
+
+int hdfsPreAttachFSMonitor(libhdfspp_fs_event_callback handler, int64_t cookie)
+{
+  fs_event_callback callback = std::bind(fs_callback_glue, handler, cookie, _1, _2, _3);
+  fsEventCallback = callback;
+  return 0;
+}
+
+
+int hdfsPreAttachFileMonitor(libhdfspp_file_event_callback handler, int64_t cookie)
+{
+  file_event_callback callback = std::bind(file_callback_glue, handler, cookie, _1, _2, _3, _4);
+  fileEventCallback = callback;
+  return 0;
 }
 
 /*******************************************************************

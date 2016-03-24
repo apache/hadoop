@@ -21,6 +21,7 @@
 #include "common/hdfs_public_api.h"
 #include "common/async_stream.h"
 #include "ClientNamenodeProtocol.pb.h"
+#include "common/libhdfs_events_impl.h"
 
 #include "asio.hpp"
 
@@ -42,10 +43,12 @@ public:
   std::unique_ptr<asio::ip::tcp::socket> conn_;
   std::array<asio::ip::tcp::endpoint, 1> endpoints_;
   std::string uuid_;
+  LibhdfsEvents *event_handlers_;
 
   virtual ~DataNodeConnectionImpl();
   DataNodeConnectionImpl(asio::io_service * io_service, const ::hadoop::hdfs::DatanodeInfoProto &dn_proto,
-                          const hadoop::common::TokenProto *token);
+                          const hadoop::common::TokenProto *token,
+                          LibhdfsEvents *event_handlers);
 
   void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) override;
 
@@ -54,12 +57,17 @@ public:
   void async_read_some(const MutableBuffers &buf,
         std::function<void (const asio::error_code & error,
                                std::size_t bytes_transferred) > handler) override {
+    event_handlers_->call("DN_read_req", "", "", buf.end() - buf.begin());
+
     conn_->async_read_some(buf, handler);
   };
 
   void async_write_some(const ConstBuffers &buf,
             std::function<void (const asio::error_code & error,
                                  std::size_t bytes_transferred) > handler) override {
+
+    event_handlers_->call("DN_write_req", "", "", buf.end() - buf.begin());
+
     conn_->async_write_some(buf, handler);
   }
 };

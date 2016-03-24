@@ -22,6 +22,7 @@
 #include "hdfspp/status.h"
 
 #include "common/retry_policy.h"
+#include "common/libhdfs_events_impl.h"
 
 #include <google/protobuf/message_lite.h>
 #include <google/protobuf/io/coded_stream.h>
@@ -131,6 +132,9 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
   //   on connect
   void PreEnqueueRequests(std::vector<std::shared_ptr<Request>> requests);
 
+  void SetEventHandlers(std::shared_ptr<LibhdfsEvents> event_handlers);
+  void SetClusterName(std::string cluster_name);
+
   LockFreeRpcEngine *engine() { return engine_; }
   ::asio::io_service &io_service();
 
@@ -186,6 +190,10 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
   // Requests that are waiting for responses
   typedef std::unordered_map<int, std::shared_ptr<Request>> RequestOnFlyMap;
   RequestOnFlyMap requests_on_fly_;
+  std::shared_ptr<LibhdfsEvents> event_handlers_;
+  std::string cluster_name_;
+
+
   // Lock for mutable parts of this class that need to be thread safe
   std::mutex connection_state_lock_;
 };
@@ -234,7 +242,9 @@ class RpcEngine : public LockFreeRpcEngine {
             const std::string &client_name, const std::string &user_name,
             const char *protocol_name, int protocol_version);
 
-  void Connect(const std::vector<::asio::ip::tcp::endpoint> &server, RpcCallback &handler);
+  void Connect(const std::string & cluster_name,
+               const std::vector<::asio::ip::tcp::endpoint> &server,
+               RpcCallback &handler);
 
   void AsyncRpc(const std::string &method_name,
                 const ::google::protobuf::MessageLite *req,
@@ -272,13 +282,17 @@ class RpcEngine : public LockFreeRpcEngine {
   ::asio::io_service &io_service() override { return *io_service_; }
   const Options &options() const override { return options_; }
   static std::string GetRandomClientName();
- protected:
+
+  void SetFsEventCallback(fs_event_callback callback);
+protected:
   std::shared_ptr<RpcConnection> conn_;
+  std::shared_ptr<RpcConnection> InitializeConnection();
   virtual std::shared_ptr<RpcConnection> NewConnection();
   virtual std::unique_ptr<const RetryPolicy> MakeRetryPolicy(const Options &options);
 
   // Remember all of the last endpoints in case we need to reconnect and retry
   std::vector<::asio::ip::tcp::endpoint> last_endpoints_;
+
 private:
   ::asio::io_service * const io_service_;
   const Options options_;
@@ -287,8 +301,11 @@ private:
   const std::string protocol_name_;
   const int protocol_version_;
   const std::unique_ptr<const RetryPolicy> retry_policy_; //null --> no retry
+  std::string cluster_name_;
   std::atomic_int call_id_;
   ::asio::deadline_timer retry_timer;
+
+  std::shared_ptr<LibhdfsEvents> event_handlers_;
 
   std::mutex engine_state_lock_;
 

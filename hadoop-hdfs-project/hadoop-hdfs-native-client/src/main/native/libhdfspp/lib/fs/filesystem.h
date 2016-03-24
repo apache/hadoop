@@ -19,6 +19,7 @@
 #define LIBHDFSPP_LIB_FS_FILESYSTEM_H_
 
 #include "filehandle.h"
+#include "common/libhdfs_events_impl.h"
 #include "common/hdfs_public_api.h"
 #include "common/async_stream.h"
 #include "hdfspp/hdfspp.h"
@@ -53,13 +54,15 @@ public:
   engine_(io_service, options, client_name, user_name, protocol_name, protocol_version),
   namenode_(& engine_) {}
 
-  void Connect(const std::string &server,
+  void Connect(const std::string &cluster_name,
+               const std::string &server,
                const std::string &service,
                std::function<void(const Status &)> &&handler);
 
   void GetBlockLocations(const std::string & path,
     std::function<void(const Status &, std::shared_ptr<const struct FileInfo>)> handler);
 
+  void SetFsEventCallback(fs_event_callback callback);
 private:
   ::asio::io_service * io_service_;
   RpcEngine engine_;
@@ -100,6 +103,8 @@ public:
   Status Open(const std::string &path, FileHandle **handle) override;
 
 
+  void SetFsEventCallback(fs_event_callback callback) override;
+
   /* add a new thread to handle asio requests, return number of threads in pool
    */
   int AddWorkerThread();
@@ -107,9 +112,13 @@ public:
   /* how many worker threads are servicing asio requests */
   int WorkerThreadCount() { return worker_threads_.size(); }
 
+  /* all monitored events will need to lookup handlers */
+  std::shared_ptr<LibhdfsEvents> get_event_handlers();
 
 private:
   const Options options_;
+
+  std::string cluster_name_;
   /**
    *  The IoService must be the first member variable to ensure that it gets
    *  destroyed last.  This allows other members to dequeue things from the
@@ -126,6 +135,12 @@ private:
   typedef std::unique_ptr<std::thread, WorkerDeleter> WorkerPtr;
   std::vector<WorkerPtr> worker_threads_;
 
+  /**
+   * Runtime event monitoring handlers.
+   * Note:  This is really handy to have for advanced usage but
+   * exposes implementation details that may change at any time.
+   **/
+  std::shared_ptr<LibhdfsEvents> event_handlers_;
 };
 }
 

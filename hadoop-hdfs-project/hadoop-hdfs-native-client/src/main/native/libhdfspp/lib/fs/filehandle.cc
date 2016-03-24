@@ -21,6 +21,7 @@
 #include "common/logging.h"
 #include "connection/datanodeconnection.h"
 #include "reader/block_reader.h"
+#include "hdfspp/events.h"
 
 #include <future>
 #include <tuple>
@@ -33,13 +34,17 @@ using ::hadoop::hdfs::LocatedBlocksProto;
 
 FileHandle::~FileHandle() {}
 
-FileHandleImpl::FileHandleImpl(::asio::io_service *io_service, const std::string &client_name,
+FileHandleImpl::FileHandleImpl(const std::string & cluster_name,
+                               const std::string & path,
+                               ::asio::io_service *io_service, const std::string &client_name,
                                  const std::shared_ptr<const struct FileInfo> file_info,
-                                 std::shared_ptr<BadDataNodeTracker> bad_data_nodes)
-    : io_service_(io_service), client_name_(client_name), file_info_(file_info),
-      bad_node_tracker_(bad_data_nodes), offset_(0), cancel_state_(CancelTracker::New()) {
+                                 std::shared_ptr<BadDataNodeTracker> bad_data_nodes,
+                                 std::shared_ptr<LibhdfsEvents> event_handlers)
+    : cluster_name_(cluster_name), path_(path), io_service_(io_service), client_name_(client_name), file_info_(file_info),
+      bad_node_tracker_(bad_data_nodes), offset_(0), cancel_state_(CancelTracker::New()), event_handlers_(event_handlers) {
   LOG_TRACE(kFileHandle, << "FileHandleImpl::FileHandleImpl("
                          << FMT_THIS_ADDR << ", ...) called");
+
 }
 
 void FileHandleImpl::PositionRead(
@@ -228,14 +233,34 @@ void FileHandleImpl::AsyncPreadSome(
   std::shared_ptr<BlockReader> reader;
   reader = CreateBlockReader(BlockReaderOptions(), dn);
 
+  // Lambdas cannot capture copies of member variables so we'll make explicit
+  //    copies for it
+  auto event_handlers = event_handlers_;
+  auto path = path_;
+  auto cluster_name = cluster_name_;
 
-  auto read_handler = [reader, dn_id, handler](const Status & status, size_t transferred) {
+  auto read_handler = [reader, event_handlers, cluster_name, path, dn_id, handler](const Status & status, size_t transferred) {
+    auto event_resp = event_handlers->call(FILE_DN_READ_EVENT, cluster_name.c_str(), path.c_str(), transferred);
+#ifndef NDEBUG
+    if (event_resp.response() == event_response::kTest_Error) {
+      handler(event_resp.status(), dn_id, transferred);
+      return;
+    }
+#endif
+
     handler(status, dn_id, transferred);
   };
 
-  dn->Connect([handler,read_handler,block,offset_within_block,size_within_block, buffers, reader, dn_id, client_name]
+  auto connect_handler = [handler,event_handlers,cluster_name,path,read_handler,block,offset_within_block,size_within_block, buffers, reader, dn_id, client_name]
           (Status status, std::shared_ptr<DataNodeConnection> dn) {
     (void)dn;
+    auto event_resp = event_handlers->call(FILE_DN_CONNECT_EVENT, cluster_name.c_str(), path.c_str(), 0);
+#ifndef NDEBUG
+    if (event_resp.response() == event_response::kTest_Error) {
+      status = event_resp.status();
+    }
+#endif
+
     if (status.ok()) {
       reader->AsyncReadBlock(
           client_name, *block, offset_within_block,
@@ -243,7 +268,9 @@ void FileHandleImpl::AsyncPreadSome(
     } else {
       handler(status, dn_id, 0);
     }
-  });
+  };
+
+  dn->Connect(connect_handler);
 
   return;
 }
@@ -267,7 +294,11 @@ std::shared_ptr<DataNodeConnection> FileHandleImpl::CreateDataNodeConnection(
     const hadoop::common::TokenProto * token) {
   LOG_TRACE(kFileHandle, << "FileHandleImpl::CreateDataNodeConnection("
                          << FMT_THIS_ADDR << ", ...) called");
-  return std::make_shared<DataNodeConnectionImpl>(io_service, dn, token);
+  return std::make_shared<DataNodeConnectionImpl>(io_service, dn, token, event_handlers_.get());
+}
+
+std::shared_ptr<LibhdfsEvents> FileHandleImpl::get_event_handlers() {
+  return event_handlers_;
 }
 
 void FileHandleImpl::CancelOperations() {
@@ -282,6 +313,18 @@ void FileHandleImpl::CancelOperations() {
     reader->CancelOperation();
   }
 }
+
+void FileHandleImpl::SetFileEventCallback(file_event_callback callback) {
+  std::shared_ptr<LibhdfsEvents> new_event_handlers;
+  if (event_handlers_) {
+    new_event_handlers = std::make_shared<LibhdfsEvents>(*event_handlers_);
+  } else {
+    new_event_handlers = std::make_shared<LibhdfsEvents>();
+  }
+  new_event_handlers->set_file_callback(callback);
+  event_handlers_ = new_event_handlers;
+}
+
 
 
 bool FileHandle::ShouldExclude(const Status &s) {

@@ -22,6 +22,7 @@
 
 #include "common/logging.h"
 #include "common/util.h"
+#include "common/libhdfs_events_impl.h"
 
 #include <asio/connect.hpp>
 #include <asio/read.hpp>
@@ -111,6 +112,15 @@ void RpcConnectionImpl<NextLayer>::ConnectComplete(const ::asio::error_code &ec)
   LOG_TRACE(kRPC, << "RpcConnectionImpl::ConnectComplete called");
 
   Status status = ToStatus(ec);
+  if(event_handlers_) {
+    auto event_resp = event_handlers_->call(FS_NN_CONNECT_EVENT, cluster_name_.c_str(), 0);
+#ifndef NDEBUG
+    if (event_resp.response() == event_response::kTest_Error) {
+      status = event_resp.status();
+    }
+#endif
+  }
+
   if (status.ok()) {
     StartReading();
     Handshake([shared_this, this](const Status & s) {
@@ -241,7 +251,7 @@ void RpcConnectionImpl<NextLayer>::FlushPendingRequests() {
 
 
 template <class NextLayer>
-void RpcConnectionImpl<NextLayer>::OnRecvCompleted(const ::asio::error_code &ec,
+void RpcConnectionImpl<NextLayer>::OnRecvCompleted(const ::asio::error_code &asio_ec,
                                                    size_t) {
   using std::placeholders::_1;
   using std::placeholders::_2;
@@ -250,6 +260,16 @@ void RpcConnectionImpl<NextLayer>::OnRecvCompleted(const ::asio::error_code &ec,
   LOG_TRACE(kRPC, << "RpcConnectionImpl::OnRecvCompleted called");
 
   std::shared_ptr<RpcConnection> shared_this = shared_from_this();
+
+  ::asio::error_code ec = asio_ec;
+  if(event_handlers_) {
+    auto event_resp = event_handlers_->call(FS_NN_READ_EVENT, cluster_name_.c_str(), 0);
+#ifndef NDEBUG
+    if (event_resp.response() == event_response::kTest_Error) {
+        ec = std::make_error_code(std::errc::network_down);
+    }
+#endif
+  }
 
   switch (ec.value()) {
     case 0:

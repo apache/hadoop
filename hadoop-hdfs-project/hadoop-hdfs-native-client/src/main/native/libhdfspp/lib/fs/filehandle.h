@@ -21,6 +21,7 @@
 #include "common/hdfs_public_api.h"
 #include "common/async_stream.h"
 #include "common/cancel_tracker.h"
+#include "common/libhdfs_events_impl.h"
 #include "reader/fileinfo.h"
 #include "reader/readergroup.h"
 
@@ -48,9 +49,12 @@ class DataNodeConnection;
  */
 class FileHandleImpl : public FileHandle {
 public:
-  FileHandleImpl(::asio::io_service *io_service, const std::string &client_name,
+  FileHandleImpl(const std::string & cluster_name,
+                 const std::string & path,
+                 ::asio::io_service *io_service, const std::string &client_name,
                   const std::shared_ptr<const struct FileInfo> file_info,
-                  std::shared_ptr<BadDataNodeTracker> bad_data_nodes);
+                  std::shared_ptr<BadDataNodeTracker> bad_data_nodes,
+                  std::shared_ptr<LibhdfsEvents> event_handlers);
 
   /*
    * [Some day reliably] Reads a particular offset into the data file.
@@ -58,9 +62,9 @@ public:
    * success, bytes_read will equal nbyte
    */
   void PositionRead(
-		void *buf,
-		size_t nbyte,
-		uint64_t offset,
+    void *buf,
+    size_t nbyte,
+    uint64_t offset,
     const std::function<void(const Status &status, size_t bytes_read)> &handler
     ) override;
 
@@ -96,13 +100,20 @@ public:
                       const std::function<void(const Status &status,
                       const std::string &dn_id, size_t bytes_read)> handler);
 
-
   /**
    *  Cancels all operations instantiated from this FileHandle.
    *  Will set a flag to abort continuation pipelines when they try to move to the next step.
    *  Closes TCP connections to Datanode in order to abort pipelines waiting on slow IO.
    **/
   virtual void CancelOperations(void) override;
+
+  virtual void SetFileEventCallback(file_event_callback callback) override;
+
+  /**
+   * Ephemeral objects created by the filehandle will need to get the event
+   * handler registry owned by the FileSystem.
+   **/
+  std::shared_ptr<LibhdfsEvents> get_event_handlers();
 
 protected:
   virtual std::shared_ptr<BlockReader> CreateBlockReader(const BlockReaderOptions &options,
@@ -112,6 +123,8 @@ protected:
       const ::hadoop::hdfs::DatanodeInfoProto & dn,
       const hadoop::common::TokenProto * token);
 private:
+  const std::string cluster_name_;
+  const std::string path_;
   ::asio::io_service * const io_service_;
   const std::string client_name_;
   const std::shared_ptr<const struct FileInfo> file_info_;
@@ -120,6 +133,7 @@ private:
   off_t offset_;
   CancelHandle cancel_state_;
   ReaderGroup readers_;
+  std::shared_ptr<LibhdfsEvents> event_handlers_;
 };
 
 }

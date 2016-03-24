@@ -321,6 +321,16 @@ void RpcConnection::PreEnqueueRequests(
   // Don't start sending yet; will flush when connected
 }
 
+void RpcConnection::SetEventHandlers(std::shared_ptr<LibhdfsEvents> event_handlers) {
+  std::lock_guard<std::mutex> state_lock(connection_state_lock_);
+  event_handlers_ = event_handlers;
+}
+
+void RpcConnection::SetClusterName(std::string cluster_name) {
+  std::lock_guard<std::mutex> state_lock(connection_state_lock_);
+  cluster_name_ = cluster_name;
+}
+
 void RpcConnection::CommsError(const Status &status) {
   assert(lock_held(connection_state_lock_));  // Must be holding lock before calling
 

@@ -47,7 +47,8 @@ static constexpr uint16_t kDefaultPort = 8020;
  *                    NAMENODE OPERATIONS
  ****************************************************************************/
 
-void NameNodeOperations::Connect(const std::string &server,
+void NameNodeOperations::Connect(const std::string &cluster_name,
+                                 const std::string &server,
                              const std::string &service,
                              std::function<void(const Status &)> &&handler) {
   using namespace asio_continuation;
@@ -55,8 +56,8 @@ void NameNodeOperations::Connect(const std::string &server,
   auto m = Pipeline<State>::Create();
   m->Push(Resolve(io_service_, server, service,
                   std::back_inserter(m->state())))
-      .Push(Bind([this, m](const Continuation::Next &next) {
-        engine_.Connect(m->state(), next);
+      .Push(Bind([this, m, cluster_name](const Continuation::Next &next) {
+        engine_.Connect(cluster_name, m->state(), next);
       }));
   m->Run([this, handler](const Status &status, const State &) {
     handler(status);
@@ -113,6 +114,10 @@ void NameNodeOperations::GetBlockLocations(const std::string & path,
 }
 
 
+void NameNodeOperations::SetFsEventCallback(fs_event_callback callback) {
+  engine_.SetFsEventCallback(callback);
+}
+
 /*****************************************************************************
  *                    FILESYSTEM BASE CLASS
  ****************************************************************************/
@@ -162,7 +167,8 @@ FileSystemImpl::FileSystemImpl(IoService *&io_service, const std::string &user_n
       nn_(&io_service_->io_service(), options,
       GetRandomClientName(), get_effective_user_name(user_name), kNamenodeProtocol,
       kNamenodeProtocolVersion), client_name_(GetRandomClientName()),
-      bad_node_tracker_(std::make_shared<BadDataNodeTracker>())
+      bad_node_tracker_(std::make_shared<BadDataNodeTracker>()),
+      event_handlers_(std::make_shared<LibhdfsEvents>())
 {
   LOG_TRACE(kFileSystem, << "FileSystemImpl::FileSystemImpl("
                          << FMT_THIS_ADDR << ") called");
@@ -201,7 +207,9 @@ void FileSystemImpl::Connect(const std::string &server,
     handler (Status::Error("Null IoService"), this);
   }
 
-  nn_.Connect(server, service, [this, handler](const Status & s) {
+  cluster_name_ = server + ":" + service;
+
+  nn_.Connect(cluster_name_, server, service, [this, handler](const Status & s) {
     handler(s, this);
   });
 }
@@ -288,8 +296,8 @@ void FileSystemImpl::Open(
                                  << FMT_THIS_ADDR << ", path="
                                  << path << ") called");
 
-  nn_.GetBlockLocations(path, [this, handler](const Status &stat, std::shared_ptr<const struct FileInfo> file_info) {
-    handler(stat, stat.ok() ? new FileHandleImpl(&io_service_->io_service(), client_name_, file_info, bad_node_tracker_)
+  nn_.GetBlockLocations(path, [this, path, handler](const Status &stat, std::shared_ptr<const struct FileInfo> file_info) {
+    handler(stat, stat.ok() ? new FileHandleImpl(cluster_name_, path, &io_service_->io_service(), client_name_, file_info, bad_node_tracker_, event_handlers_)
                             : nullptr);
   });
 }
@@ -338,6 +346,20 @@ void FileSystemImpl::WorkerDeleter::operator()(std::thread *t) {
   }
   t->join();
   delete t;
+}
+
+
+void FileSystemImpl::SetFsEventCallback(fs_event_callback callback) {
+  if (event_handlers_) {
+    event_handlers_->set_fs_callback(callback);
+    nn_.SetFsEventCallback(callback);
+  }
+}
+
+
+
+std::shared_ptr<LibhdfsEvents> FileSystemImpl::get_event_handlers() {
+  return event_handlers_;
 }
 
 }
