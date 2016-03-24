@@ -1381,20 +1381,13 @@ public class ClientRMService extends AbstractService implements
     checkReservationACLs(requestInfo.getQueue(),
             AuditConstants.LIST_RESERVATION_REQUEST, reservationId);
 
-    ReservationId requestedId = null;
-    if (requestInfo.getReservationId() != null
-            && !requestInfo.getReservationId().isEmpty()) {
-      requestedId = ReservationId.parseReservationId(requestInfo
-            .getReservationId());
-    }
-
     long startTime = Math.max(requestInfo.getStartTime(), 0);
     long endTime = requestInfo.getEndTime() <= -1? Long.MAX_VALUE : requestInfo
             .getEndTime();
 
     Set<ReservationAllocation> reservations;
 
-    reservations = plan.getReservations(requestedId, new ReservationInterval(
+    reservations = plan.getReservations(reservationId, new ReservationInterval(
             startTime, endTime));
 
     List<ReservationAllocationState> info =
