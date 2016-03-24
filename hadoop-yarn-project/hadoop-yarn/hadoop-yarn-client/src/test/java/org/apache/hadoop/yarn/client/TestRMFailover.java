@@ -273,8 +273,8 @@ public class TestRMFailover extends ClientBaseWithFixes {
     redirectURL = getRedirectURL(rm2Url + "/metrics");
     assertEquals(redirectURL,rm1Url + "/metrics");
 
-    redirectURL = getRedirectURL(rm2Url + "/jmx");
-    assertEquals(redirectURL,rm1Url + "/jmx");
+    redirectURL = getRedirectURL(rm2Url + "/jmx?param1=value1+x&param2=y");
+    assertEquals(rm1Url + "/jmx?param1=value1+x&param2=y", redirectURL);
 
     // standby RM links /conf, /stacks, /logLevel, /static, /logs,
     // /cluster/cluster as well as webService
@@ -327,8 +327,9 @@ public class TestRMFailover extends ClientBaseWithFixes {
       // do not automatically follow the redirection
       // otherwise we get too many redirections exception
       conn.setInstanceFollowRedirects(false);
-      if(conn.getResponseCode() == HttpServletResponse.SC_TEMPORARY_REDIRECT)
+      if(conn.getResponseCode() == HttpServletResponse.SC_TEMPORARY_REDIRECT) {
         redirectUrl = conn.getHeaderField("Location");
+      }
     } catch (Exception e) {
       // throw new RuntimeException(e);
     }
