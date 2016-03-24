@@ -189,11 +189,15 @@ The allocation file must be in XML format. The format contains five types of ele
 
 ###Queue Access Control Lists
 
-Queue Access Control Lists (ACLs) allow administrators to control who may take actions on particular queues. They are configured with the aclSubmitApps and aclAdministerApps properties, which can be set per queue. Currently the only supported administrative action is killing an application. Anybody who may administer a queue may also submit applications to it. These properties take values in a format like "user1,user2 group1,group2" or " group1,group2". An action on a queue will be permitted if its user or group is in the ACL of that queue or in the ACL of any of that queue's ancestors. So if queue2 is inside queue1, and user1 is in queue1's ACL, and user2 is in queue2's ACL, then both users may submit to queue2.
+Queue Access Control Lists (ACLs) allow administrators to control who may take actions on particular queues. They are configured with the aclSubmitApps and aclAdministerApps properties, which can be set per queue. Currently the only supported administrative action is killing an application. An administrator may also submit applications to it. These properties take values in a format like "user1,user2 group1,group2" or " group1,group2". Actions on a queue are permitted if the user/group is a member of the queue ACL or a member of the queue ACL of any of that queue's ancestors. So if queue2 is inside queue1, and user1 is in queue1's ACL, and user2 is in queue2's ACL, then both users may submit to queue2.
 
 **Note:** The delimiter is a space character. To specify only ACL groups, begin the value with a space character.
 
 The root queue's ACLs are "\*" by default which, because ACLs are passed down, means that everybody may submit to and kill applications from every queue. To start restricting access, change the root queue's ACLs to something other than "\*".
+
+###Reservation Access Control Lists
+
+Reservation Access Control Lists (ACLs) allow administrators to control who may take reservation actions on particular queues. They are configured with the aclAdministerReservations, aclListReservations, and the aclSubmitReservations properties, which can be set per queue. Currently the supported administrative actions are updating and deleting reservations. An administrator may also submit and list *all* reservations on the queue. These properties take values in a format like "user1,user2 group1,group2" or " group1,group2". Actions on a queue are permitted if the user/group is a member of the reservation ACL. Note that any user can update, delete, or list their own reservations. If reservation ACLs are enabled but not defined, everyone will have access.
 
 ##Administration
 
