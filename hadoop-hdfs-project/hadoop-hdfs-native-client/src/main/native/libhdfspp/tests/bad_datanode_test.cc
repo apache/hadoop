@@ -18,6 +18,7 @@
 
 #include "fs/filesystem.h"
 #include "fs/bad_datanode_tracker.h"
+#include "common/libhdfs_events_impl.h"
 
 #include "common/util.h"
 
@@ -129,9 +130,10 @@ TEST(BadDataNodeTest, TestNoNodes) {
   };
   IoServiceImpl io_service;
   auto bad_node_tracker = std::make_shared<BadDataNodeTracker>();
+  auto monitors = std::make_shared<LibhdfsEvents>();
   bad_node_tracker->AddBadNode("foo");
 
-  PartialMockFileHandle is(&io_service.io_service(), GetRandomClientName(), file_info, bad_node_tracker);
+  PartialMockFileHandle is("cluster", "file", &io_service.io_service(), GetRandomClientName(), file_info, bad_node_tracker, monitors);
   Status stat;
   size_t read = 0;
 
@@ -146,6 +148,69 @@ TEST(BadDataNodeTest, TestNoNodes) {
   ASSERT_EQ(static_cast<int>(std::errc::resource_unavailable_try_again), stat.code());
   ASSERT_EQ(0UL, read);
 }
+
+TEST(BadDataNodeTest, NNEventCallback) {
+  auto file_info = std::make_shared<struct FileInfo>();
+  file_info->blocks_.push_back(LocatedBlockProto());
+  LocatedBlockProto & block = file_info->blocks_[0];
+  ExtendedBlockProto *b = block.mutable_b();
+  b->set_poolid("");
+  b->set_blockid(1);
+  b->set_generationstamp(1);
+  b->set_numbytes(4096);
+
+  // Set up the one block to have one datanodes holding it
+  DatanodeInfoProto *di = block.add_locs();
+  DatanodeIDProto *dnid = di->mutable_id();
+  dnid->set_datanodeuuid("dn1");
+
+  char buf[4096] = {
+      0,
+  };
+  IoServiceImpl io_service;
+  auto tracker = std::make_shared<BadDataNodeTracker>();
+
+
+  // Set up event callbacks
+  int calls = 0;
+  std::vector<std::string> callbacks;
+  auto monitors = std::make_shared<LibhdfsEvents>();
+  monitors->set_file_callback([&calls, &callbacks] (const char * event,
+                    const char * cluster,
+                    const char * file,
+                    int64_t value) {
+    (void)cluster; (void) file; (void)value;
+    callbacks.push_back(event);
+
+    // Allow connect call to succeed by fail on read
+    if (calls++ == 1)
+      return event_response::test_err(Status::Error("Test"));
+
+    return event_response::ok();
+  });
+  PartialMockFileHandle is("cluster", "file", &io_service.io_service(), GetRandomClientName(),  file_info, tracker, monitors);
+  Status stat;
+  size_t read = 0;
+
+  EXPECT_CALL(*is.mock_reader_, AsyncReadBlock(_,_,_,_,_))
+      // Will return OK, but our callback will subvert it
+      .WillOnce(InvokeArgument<4>(
+          Status::OK(), 0));
+
+  is.AsyncPreadSome(
+      0, asio::buffer(buf, sizeof(buf)), nullptr,
+      [&stat, &read](const Status &status, const std::string &,
+                     size_t transferred) {
+        stat = status;
+        read = transferred;
+      });
+
+  ASSERT_FALSE(stat.ok());
+  ASSERT_EQ(2, callbacks.size());
+  ASSERT_EQ(FILE_DN_CONNECT_EVENT, callbacks[0]);
+  ASSERT_EQ(FILE_DN_READ_EVENT, callbacks[1]);
+}
+
 
 TEST(BadDataNodeTest, RecoverableError) {
   auto file_info = std::make_shared<struct FileInfo>();
@@ -167,7 +232,8 @@ TEST(BadDataNodeTest, RecoverableError) {
   };
   IoServiceImpl io_service;
   auto tracker = std::make_shared<BadDataNodeTracker>();
-  PartialMockFileHandle is(&io_service.io_service(), GetRandomClientName(),  file_info, tracker);
+  auto monitors = std::make_shared<LibhdfsEvents>();
+  PartialMockFileHandle is("cluster", "file", &io_service.io_service(), GetRandomClientName(),  file_info, tracker, monitors);
   Status stat;
   size_t read = 0;
   EXPECT_CALL(*is.mock_reader_, AsyncReadBlock(_,_,_,_,_))
@@ -216,7 +282,8 @@ TEST(BadDataNodeTest, InternalError) {
   };
   IoServiceImpl io_service;
   auto tracker = std::make_shared<BadDataNodeTracker>();
-  PartialMockFileHandle is(&io_service.io_service(), GetRandomClientName(),  file_info, tracker);
+  auto monitors = std::make_shared<LibhdfsEvents>();
+  PartialMockFileHandle is("cluster", "file", &io_service.io_service(), GetRandomClientName(),  file_info, tracker, monitors);
   Status stat;
   size_t read = 0;
   EXPECT_CALL(*is.mock_reader_, AsyncReadBlock(_,_,_,_,_))

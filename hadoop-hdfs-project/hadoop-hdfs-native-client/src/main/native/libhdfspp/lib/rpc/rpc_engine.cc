@@ -39,18 +39,21 @@ RpcEngine::RpcEngine(::asio::io_service *io_service, const Options &options,
       protocol_version_(protocol_version),
       retry_policy_(std::move(MakeRetryPolicy(options))),
       call_id_(0),
-      retry_timer(*io_service) {
+      retry_timer(*io_service),
+      event_handlers_(std::make_shared<LibhdfsEvents>()) {
     LOG_DEBUG(kRPC, << "RpcEngine::RpcEngine called");
-  }
+}
 
-void RpcEngine::Connect(const std::vector<::asio::ip::tcp::endpoint> &server,
+void RpcEngine::Connect(const std::string &cluster_name,
+                        const std::vector<::asio::ip::tcp::endpoint> &server,
                         RpcCallback &handler) {
   std::lock_guard<std::mutex> state_lock(engine_state_lock_);
   LOG_DEBUG(kRPC, << "RpcEngine::Connect called");
 
   last_endpoints_ = server;
+  cluster_name_ = cluster_name;
 
-  conn_ = NewConnection();
+  conn_ = InitializeConnection();
   conn_->Connect(last_endpoints_, handler);
 }
 
@@ -85,7 +88,7 @@ void RpcEngine::AsyncRpc(
   LOG_TRACE(kRPC, << "RpcEngine::AsyncRpc called");
 
   if (!conn_) {
-    conn_ = NewConnection();
+    conn_ = InitializeConnection();
     conn_->ConnectAndFlush(last_endpoints_);
   }
   conn_->AsyncRpc(method_name, req, resp, handler);
@@ -111,6 +114,14 @@ std::shared_ptr<RpcConnection> RpcEngine::NewConnection()
   return std::make_shared<RpcConnectionImpl<::asio::ip::tcp::socket>>(this);
 }
 
+std::shared_ptr<RpcConnection> RpcEngine::InitializeConnection()
+{
+  std::shared_ptr<RpcConnection> result = NewConnection();
+  result->SetEventHandlers(event_handlers_);
+  result->SetClusterName(cluster_name_);
+  return result;
+}
+
 
 Status RpcEngine::RawRpc(const std::string &method_name, const std::string &req,
                          std::shared_ptr<std::string> resp) {
@@ -120,7 +131,7 @@ Status RpcEngine::RawRpc(const std::string &method_name, const std::string &req,
   {
     std::lock_guard<std::mutex> state_lock(engine_state_lock_);
     if (!conn_) {
-        conn_ = NewConnection();
+        conn_ = InitializeConnection();
         conn_->ConnectAndFlush(last_endpoints_);
       }
     conn = conn_;
@@ -185,7 +196,7 @@ void RpcEngine::RpcCommsError(
   //    the NN
   if (!pendingRequests.empty() &&
           head_action && head_action->action != RetryAction::FAIL) {
-    conn_ = NewConnection();
+    conn_ = InitializeConnection();
 
     conn_->PreEnqueueRequests(pendingRequests);
     if (head_action->delayMillis > 0) {
@@ -202,5 +213,11 @@ void RpcEngine::RpcCommsError(
     conn_.reset();
   }
 }
+
+
+void RpcEngine::SetFsEventCallback(fs_event_callback callback) {
+  event_handlers_->set_fs_callback(callback);
+}
+
 
 }

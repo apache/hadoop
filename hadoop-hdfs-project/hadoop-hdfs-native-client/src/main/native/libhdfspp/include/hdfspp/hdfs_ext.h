@@ -162,6 +162,61 @@ int hdfsDisableLoggingForComponent(int component);
 LIBHDFS_EXTERNAL
 int hdfsSetLoggingLevel(int component);
 
+/*
+ * Supported event names.  These names will stay consistent in libhdfs callbacks.
+ *
+ * Other events not listed here may be seen, but they are not stable and
+ * should not be counted on.
+ */
+extern const char * FS_NN_CONNECT_EVENT;
+extern const char * FS_NN_READ_EVENT;
+extern const char * FS_NN_WRITE_EVENT;
+
+extern const char * FILE_DN_CONNECT_EVENT;
+extern const char * FILE_DN_READ_EVENT;
+extern const char * FILE_DN_WRITE_EVENT;
+
+
+#define LIBHDFSPP_EVENT_OK (0)
+#ifndef NDEBUG
+  #define DEBUG_SIMULATE_ERROR (-1)
+#endif
+
+typedef int (*libhdfspp_fs_event_callback)(const char * event, const char * cluster,
+                                           int64_t value, int64_t cookie);
+typedef int (*libhdfspp_file_event_callback)(const char * event,
+                                             const char * cluster,
+                                             const char * file,
+                                             int64_t value, int64_t cookie);
+
+/**
+ * Registers a callback for the next filesystem connect operation the current
+ * thread executes.
+ *
+ *  @param handler A function pointer.  Taken as a void* and internally
+ *                 cast into the appropriate type.
+ *  @param cookie  An opaque value that will be passed into the handler; can
+ *                 be used to correlate the handler with some object in the
+ *                 consumer's space.
+ **/
+LIBHDFS_EXTERNAL
+int hdfsPreAttachFSMonitor(libhdfspp_fs_event_callback handler, int64_t cookie);
+
+
+/**
+ * Registers a callback for the next file open operation the current thread
+ * executes.
+ *
+ *  @param fs      The filesystem
+ *  @param handler A function pointer.  Taken as a void* and internally
+ *                 cast into the appropriate type.
+ *  @param cookie  An opaque value that will be passed into the handler; can
+ *                 be used to correlate the handler with some object in the
+ *                 consumer's space.
+ **/
+LIBHDFS_EXTERNAL
+int hdfsPreAttachFileMonitor(libhdfspp_file_event_callback handler, int64_t cookie);
+
 
 #ifdef __cplusplus
 } /* end extern "C" */

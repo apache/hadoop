@@ -26,7 +26,8 @@ DataNodeConnectionImpl::~DataNodeConnectionImpl(){}
 
 DataNodeConnectionImpl::DataNodeConnectionImpl(asio::io_service * io_service,
                                                 const ::hadoop::hdfs::DatanodeInfoProto &dn_proto,
-                                                const hadoop::common::TokenProto *token)
+                                                const hadoop::common::TokenProto *token,
+                                                LibhdfsEvents *event_handlers) : event_handlers_(event_handlers)
 {
   using namespace ::asio::ip;
 
