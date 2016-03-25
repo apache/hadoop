@@ -19,11 +19,6 @@ package org.apache.hadoop.mapreduce.lib.join;
 
 import java.io.IOException;
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
-import junit.extensions.TestSetup;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -37,23 +32,31 @@ import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-public class TestJoinDatamerge extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+public class TestJoinDatamerge {
 
   private static MiniDFSCluster cluster = null;
-  public static Test suite() {
-    TestSetup setup = new TestSetup(new TestSuite(TestJoinDatamerge.class)) {
-      protected void setUp() throws Exception {
-        Configuration conf = new Configuration();
-        cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-      }
-      protected void tearDown() throws Exception {
-        if (cluster != null) {
-          cluster.shutdown();
-        }
-      }
-    };
-    return setup;
+
+  @BeforeClass
+  public static void setUp() throws Exception {
+    Configuration conf = new Configuration();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+  }
+
+  @AfterClass
+  public static void tearDown() throws Exception {
+    if (cluster != null) {
+      cluster.shutdown();
+    }
   }
 
   private static SequenceFile.Writer[] createWriters(Path testdir,
@@ -111,7 +114,7 @@ public class TestJoinDatamerge extends TestCase {
       extends Mapper<IntWritable, V, IntWritable, IntWritable>{
     protected final static IntWritable one = new IntWritable(1);
     int srcs;
-    
+
     public void setup(Context context) {
       srcs = context.getConfiguration().getInt("testdatamerge.sources", 0);
       assertTrue("Invalid src count: " + srcs, srcs > 0);
@@ -123,7 +126,7 @@ public class TestJoinDatamerge extends TestCase {
     protected final static IntWritable one = new IntWritable(1);
 
     int srcs;
-    
+
     public void setup(Context context) {
       srcs = context.getConfiguration().getInt("testdatamerge.sources", 0);
       assertTrue("Invalid src count: " + srcs, srcs > 0);
@@ -272,10 +275,12 @@ public class TestJoinDatamerge extends TestCase {
     base.getFileSystem(conf).delete(base, true);
   }
 
+  @Test
   public void testSimpleInnerJoin() throws Exception {
     joinAs("inner", InnerJoinMapChecker.class, InnerJoinReduceChecker.class);
   }
 
+  @Test
   public void testSimpleOuterJoin() throws Exception {
     joinAs("outer", OuterJoinMapChecker.class, OuterJoinReduceChecker.class);
   }
@@ -322,11 +327,13 @@ public class TestJoinDatamerge extends TestCase {
     }
     return product;
   }
-  
+
+  @Test
   public void testSimpleOverride() throws Exception {
     joinAs("override", OverrideMapChecker.class, OverrideReduceChecker.class);
   }
 
+  @Test
   public void testNestedJoin() throws Exception {
     // outer(inner(S1,...,Sn),outer(S1,...Sn))
     final int SOURCES = 3;
@@ -422,6 +429,7 @@ public class TestJoinDatamerge extends TestCase {
 
   }
 
+  @Test
   public void testEmptyJoin() throws Exception {
     Configuration conf = new Configuration();
     Path base = cluster.getFileSystem().makeQualified(new Path("/empty"));

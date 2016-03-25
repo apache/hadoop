@@ -23,11 +23,12 @@ import org.apache.hadoop.mapred.lib.*;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.lib.fieldsel.FieldSelectionHelper;
 import org.apache.hadoop.mapreduce.lib.fieldsel.TestMRFieldSelection;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 
-import junit.framework.TestCase;
 import java.text.NumberFormat;
 
-public class TestFieldSelection extends TestCase {
+public class TestFieldSelection {
 
 private static NumberFormat idFormat = NumberFormat.getInstance();
   static {
@@ -35,6 +36,7 @@ private static NumberFormat idFormat = NumberFormat.getInstance();
     idFormat.setGroupingUsed(false);
   }
 
+  @Test
   public void testFieldSelection() throws Exception {
     launch();
   }

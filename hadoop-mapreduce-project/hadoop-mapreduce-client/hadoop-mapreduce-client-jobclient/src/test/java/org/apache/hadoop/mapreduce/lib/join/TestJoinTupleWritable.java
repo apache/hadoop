@@ -24,8 +24,6 @@ import java.io.DataOutputStream;
 import java.util.Arrays;
 import java.util.Random;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.FloatWritable;
@@ -33,8 +31,13 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.junit.Test;
 
-public class TestJoinTupleWritable extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+public class TestJoinTupleWritable {
 
   private TupleWritable makeTuple(Writable[] writs) {
     Writable[] sub1 = { writs[1], writs[2] };
@@ -97,6 +100,7 @@ public class TestJoinTupleWritable extends TestCase {
     return i;
   }
 
+  @Test
   public void testIterable() throws Exception {
     Random r = new Random();
     Writable[] writs = {
@@ -118,6 +122,7 @@ public class TestJoinTupleWritable extends TestCase {
     verifIter(writs, t, 0);
   }
 
+  @Test
   public void testNestedIterable() throws Exception {
     Random r = new Random();
     Writable[] writs = {
@@ -136,6 +141,7 @@ public class TestJoinTupleWritable extends TestCase {
     assertTrue("Bad count", writs.length == verifIter(writs, sTuple, 0));
   }
 
+  @Test
   public void testWritable() throws Exception {
     Random r = new Random();
     Writable[] writs = {
@@ -159,6 +165,7 @@ public class TestJoinTupleWritable extends TestCase {
     assertTrue("Failed to write/read tuple", sTuple.equals(dTuple));
   }
 
+  @Test
   public void testWideWritable() throws Exception {
     Writable[] manyWrits = makeRandomWritables(131);
     
@@ -178,7 +185,8 @@ public class TestJoinTupleWritable extends TestCase {
     assertEquals("All tuple data has not been read from the stream", 
       -1, in.read());
   }
-  
+
+  @Test
   public void testWideWritable2() throws Exception {
     Writable[] manyWrits = makeRandomWritables(71);
     
@@ -201,6 +209,7 @@ public class TestJoinTupleWritable extends TestCase {
    * Tests a tuple writable with more than 64 values and the values set written
    * spread far apart.
    */
+  @Test
   public void testSparseWideWritable() throws Exception {
     Writable[] manyWrits = makeRandomWritables(131);
     
@@ -220,7 +229,8 @@ public class TestJoinTupleWritable extends TestCase {
     assertEquals("All tuple data has not been read from the stream", 
       -1, in.read());
   }
-  
+
+  @Test
   public void testWideTuple() throws Exception {
     Text emptyText = new Text("Should be empty");
     Writable[] values = new Writable[64];
@@ -241,7 +251,8 @@ public class TestJoinTupleWritable extends TestCase {
       }
     }
   }
-  
+
+  @Test
   public void testWideTuple2() throws Exception {
     Text emptyText = new Text("Should be empty");
     Writable[] values = new Writable[64];
@@ -266,6 +277,7 @@ public class TestJoinTupleWritable extends TestCase {
   /**
    * Tests that we can write more than 64 values.
    */
+  @Test
   public void testWideTupleBoundary() throws Exception {
     Text emptyText = new Text("Should not be set written");
     Writable[] values = new Writable[65];

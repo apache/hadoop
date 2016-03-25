@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.mapred;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.StringUtils;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 
-public class TestInputPath extends TestCase {
+public class TestInputPath {
+  @Test
   public void testInputPath() throws Exception {
     JobConf jobConf = new JobConf();
     Path workingDir = jobConf.getWorkingDirectory();

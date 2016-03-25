@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -35,8 +33,11 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.junit.Test;
 
-public class TestTotalOrderPartitioner extends TestCase {
+import static org.junit.Assert.assertEquals;
+
+public class TestTotalOrderPartitioner {
 
   private static final Text[] splitStrings = new Text[] {
     // -inf            // 0
@@ -99,6 +100,7 @@ public class TestTotalOrderPartitioner extends TestCase {
     return p;
   }
 
+  @Test
   public void testTotalOrderMemCmp() throws Exception {
     TotalOrderPartitioner<Text,NullWritable> partitioner =
       new TotalOrderPartitioner<Text,NullWritable>();
@@ -118,6 +120,7 @@ public class TestTotalOrderPartitioner extends TestCase {
     }
   }
 
+  @Test
   public void testTotalOrderBinarySearch() throws Exception {
     TotalOrderPartitioner<Text,NullWritable> partitioner =
       new TotalOrderPartitioner<Text,NullWritable>();
@@ -150,6 +153,7 @@ public class TestTotalOrderPartitioner extends TestCase {
     }
   }
 
+  @Test
   public void testTotalOrderCustomComparator() throws Exception {
     TotalOrderPartitioner<Text,NullWritable> partitioner =
       new TotalOrderPartitioner<Text,NullWritable>();

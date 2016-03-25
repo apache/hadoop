@@ -20,11 +20,6 @@ package org.apache.hadoop.mapreduce.lib.join;
 import java.io.IOException;
 import java.util.List;
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
-import junit.extensions.TestSetup;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -36,8 +31,14 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-public class TestJoinProperties extends TestCase {
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+public class TestJoinProperties {
 
   private static MiniDFSCluster cluster = null;
   final static int SOURCES = 3;
@@ -46,21 +47,19 @@ public class TestJoinProperties extends TestCase {
   static Path[] src;
   static Path base;
 
-  public static Test suite() {
-    TestSetup setup = new TestSetup(new TestSuite(TestJoinProperties.class)) {
-      protected void setUp() throws Exception {
-        Configuration conf = new Configuration();
-        cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-        base = cluster.getFileSystem().makeQualified(new Path("/nested"));
-        src = generateSources(conf);
-      }
-      protected void tearDown() throws Exception {
-        if (cluster != null) {
-          cluster.shutdown();
-        }
-      }
-    };
-    return setup;
+  @BeforeClass
+  public static void setUp() throws Exception {
+    Configuration conf = new Configuration();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+    base = cluster.getFileSystem().makeQualified(new Path("/nested"));
+    src = generateSources(conf);
+  }
+
+  @AfterClass
+  public static void tearDown() throws Exception {
+    if (cluster != null) {
+      cluster.shutdown();
+    }
   }
 
   // Sources from 0 to srcs-2 have IntWritable key and IntWritable value
@@ -233,6 +232,7 @@ public class TestJoinProperties extends TestCase {
   }
 
   // outer(outer(A, B), C) == outer(A,outer(B, C)) == outer(A, B, C)
+  @Test
   public void testOuterAssociativity() throws Exception {
     Configuration conf = new Configuration();
     testExpr1(conf, "outer", TestType.OUTER_ASSOCIATIVITY, 33);
@@ -241,6 +241,7 @@ public class TestJoinProperties extends TestCase {
   }
  
   // inner(inner(A, B), C) == inner(A,inner(B, C)) == inner(A, B, C)
+  @Test
   public void testInnerAssociativity() throws Exception {
     Configuration conf = new Configuration();
     testExpr1(conf, "inner", TestType.INNER_ASSOCIATIVITY, 2);
@@ -249,6 +250,7 @@ public class TestJoinProperties extends TestCase {
   }
 
   // override(inner(A, B), A) == A
+  @Test
   public void testIdentity() throws Exception {
     Configuration conf = new Configuration();
     testExpr4(conf);

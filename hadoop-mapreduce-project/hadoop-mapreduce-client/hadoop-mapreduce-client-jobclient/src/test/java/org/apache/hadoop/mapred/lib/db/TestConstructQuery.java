@@ -19,13 +19,13 @@ package org.apache.hadoop.mapred.lib.db;
 
 import java.io.IOException;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapred.JobConf;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
-public class TestConstructQuery extends TestCase {
-  
+public class TestConstructQuery {
   private String[] fieldNames = new String[] { "id", "name", "value" };
   private String[] nullFieldNames = new String[] { null, null, null };
   private String expected = "INSERT INTO hadoop_output (id,name,value) VALUES (?,?,?);";
@@ -33,15 +33,15 @@ public class TestConstructQuery extends TestCase {
   
   private DBOutputFormat<DBWritable, NullWritable> format 
     = new DBOutputFormat<DBWritable, NullWritable>();
-  
-  public void testConstructQuery() {  
+  @Test
+  public void testConstructQuery() {
     String actual = format.constructQuery("hadoop_output", fieldNames);
     assertEquals(expected, actual);
-    
+
     actual = format.constructQuery("hadoop_output", nullFieldNames);
     assertEquals(nullExpected, actual);
   }
-  
+  @Test
   public void testSetOutput() throws IOException {
     JobConf job = new JobConf();
     DBOutputFormat.setOutput(job, "hadoop_output", fieldNames);

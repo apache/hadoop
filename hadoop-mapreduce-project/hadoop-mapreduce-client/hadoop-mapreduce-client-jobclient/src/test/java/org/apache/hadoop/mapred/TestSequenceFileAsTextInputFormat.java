@@ -18,22 +18,29 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.*;
-import java.util.*;
-import junit.framework.TestCase;
+import org.apache.commons.logging.Log;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
+import org.junit.Test;
 
-import org.apache.commons.logging.*;
+import java.util.BitSet;
+import java.util.Random;
 
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.conf.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
-public class TestSequenceFileAsTextInputFormat extends TestCase {
+public class TestSequenceFileAsTextInputFormat {
   private static final Log LOG = FileInputFormat.LOG;
 
   private static int MAX_LENGTH = 10000;
   private static Configuration conf = new Configuration();
 
+  @Test
   public void testFormat() throws Exception {
     JobConf job = new JobConf(conf);
     FileSystem fs = FileSystem.getLocal(conf);
@@ -111,9 +118,5 @@ public class TestSequenceFileAsTextInputFormat extends TestCase {
       }
 
     }
-  }
-
-  public static void main(String[] args) throws Exception {
-    new TestSequenceFileAsTextInputFormat().testFormat();
   }
 }
