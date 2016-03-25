@@ -15,17 +15,14 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.hadoop.ozone.web.ozShell.bucket;
 
+package org.apache.hadoop.ozone.web.ozShell.keys;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.ozone.web.client.OzoneBucket;
 import org.apache.hadoop.ozone.web.client.OzoneClientException;
-import org.apache.hadoop.ozone.web.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
-import org.codehaus.jackson.map.ObjectMapper;
 
 import java.io.IOException;
 import java.net.URI;
@@ -34,18 +31,18 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
- * Executes Info bucket.
+ * Executes Info Object.
  */
-public class InfoBucketHandler extends Handler {
+public class InfoKeyHandler extends Handler {
+  private String userName;
   private String volumeName;
   private String bucketName;
-  private String rootName;
+  private String keyName;
 
   /**
    * Executes the Client Calls.
    *
    * @param cmd - CommandLine
-   *
    * @throws IOException
    * @throws OzoneException
    * @throws URISyntaxException
@@ -53,45 +50,44 @@ public class InfoBucketHandler extends Handler {
   @Override
   protected void execute(CommandLine cmd)
       throws IOException, OzoneException, URISyntaxException {
-    if (!cmd.hasOption(Shell.INFO_BUCKET)) {
-      throw new OzoneClientException(
-          "Incorrect call : infoBucket is missing");
+    if (!cmd.hasOption(Shell.INFO_KEY)) {
+      throw new OzoneClientException("Incorrect call : infoKey is missing");
     }
 
-    String ozoneURIString = cmd.getOptionValue(Shell.INFO_BUCKET);
+
+    if (cmd.hasOption(Shell.USER)) {
+      userName = cmd.getOptionValue(Shell.USER);
+    } else {
+      userName = System.getProperty("user.name");
+    }
+
+
+    String ozoneURIString = cmd.getOptionValue(Shell.INFO_KEY);
     URI ozoneURI = verifyURI(ozoneURIString);
     Path path = Paths.get(ozoneURI.getPath());
-
-    if (path.getNameCount() < 2) {
+    if (path.getNameCount() < 3) {
       throw new OzoneClientException(
-          "volume and bucket name required in info Bucket");
+          "volume/bucket/key name required in infoKey");
     }
 
     volumeName = path.getName(0).toString();
     bucketName = path.getName(1).toString();
+    keyName = path.getName(2).toString();
+
 
     if (cmd.hasOption(Shell.VERBOSE)) {
       System.out.printf("Volume Name : %s%n", volumeName);
       System.out.printf("Bucket Name : %s%n", bucketName);
-    }
-
-    if (cmd.hasOption(Shell.RUNAS)) {
-      rootName = "hdfs";
-    } else {
-      rootName = System.getProperty("user.name");
+      System.out.printf("Key Name : %s%n", keyName);
     }
 
     client.setEndPointURI(ozoneURI);
-    client.setUserAuth(rootName);
+    client.setUserAuth(userName);
 
-    OzoneVolume vol = client.getVolume(volumeName);
-    OzoneBucket bucket = vol.getBucket(bucketName);
 
-    ObjectMapper mapper = new ObjectMapper();
-    Object json =
-        mapper.readValue(bucket.getBucketInfo().toJsonString(), Object.class);
-    System.out.printf("%s%n", mapper.writerWithDefaultPrettyPrinter()
-        .writeValueAsString(json));
+//    OzoneVolume vol = client.getVolume(volumeName);
+//    OzoneBucket bucket = vol.createBucket(bucketName);
+
+    throw new OzoneClientException("Not supported yet");
   }
-
 }

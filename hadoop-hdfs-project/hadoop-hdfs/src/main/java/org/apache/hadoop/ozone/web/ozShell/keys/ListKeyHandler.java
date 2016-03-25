@@ -15,12 +15,13 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.hadoop.ozone.web.ozShell.bucket;
 
+package org.apache.hadoop.ozone.web.ozShell.keys;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.ozone.web.client.OzoneBucket;
 import org.apache.hadoop.ozone.web.client.OzoneClientException;
+import org.apache.hadoop.ozone.web.client.OzoneKey;
 import org.apache.hadoop.ozone.web.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
@@ -32,20 +33,20 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 
 /**
- * Executes Info bucket.
+ * Executes List Keys.
  */
-public class InfoBucketHandler extends Handler {
+public class ListKeyHandler extends Handler {
+  private String userName;
   private String volumeName;
   private String bucketName;
-  private String rootName;
 
   /**
    * Executes the Client Calls.
    *
    * @param cmd - CommandLine
-   *
    * @throws IOException
    * @throws OzoneException
    * @throws URISyntaxException
@@ -53,45 +54,52 @@ public class InfoBucketHandler extends Handler {
   @Override
   protected void execute(CommandLine cmd)
       throws IOException, OzoneException, URISyntaxException {
-    if (!cmd.hasOption(Shell.INFO_BUCKET)) {
-      throw new OzoneClientException(
-          "Incorrect call : infoBucket is missing");
+
+    if (!cmd.hasOption(Shell.LIST_KEY)) {
+      throw new OzoneClientException("Incorrect call : listKey is missing");
     }
 
-    String ozoneURIString = cmd.getOptionValue(Shell.INFO_BUCKET);
+    String ozoneURIString = cmd.getOptionValue(Shell.LIST_KEY);
     URI ozoneURI = verifyURI(ozoneURIString);
     Path path = Paths.get(ozoneURI.getPath());
-
     if (path.getNameCount() < 2) {
-      throw new OzoneClientException(
-          "volume and bucket name required in info Bucket");
+      throw new OzoneClientException("volume/bucket is required in listKey");
     }
 
     volumeName = path.getName(0).toString();
     bucketName = path.getName(1).toString();
 
+
     if (cmd.hasOption(Shell.VERBOSE)) {
       System.out.printf("Volume Name : %s%n", volumeName);
-      System.out.printf("Bucket Name : %s%n", bucketName);
+      System.out.printf("bucket Name : %s%n", bucketName);
     }
 
-    if (cmd.hasOption(Shell.RUNAS)) {
-      rootName = "hdfs";
+    if (cmd.hasOption(Shell.USER)) {
+      userName = cmd.getOptionValue(Shell.USER);
     } else {
-      rootName = System.getProperty("user.name");
+      userName = System.getProperty("user.name");
     }
+
 
     client.setEndPointURI(ozoneURI);
-    client.setUserAuth(rootName);
+    client.setUserAuth(userName);
+
 
     OzoneVolume vol = client.getVolume(volumeName);
     OzoneBucket bucket = vol.getBucket(bucketName);
+    List<OzoneKey> keys = bucket.listKeys();
 
     ObjectMapper mapper = new ObjectMapper();
-    Object json =
-        mapper.readValue(bucket.getBucketInfo().toJsonString(), Object.class);
-    System.out.printf("%s%n", mapper.writerWithDefaultPrettyPrinter()
-        .writeValueAsString(json));
+
+
+    for (OzoneKey key : keys) {
+      Object json =
+          mapper.readValue(key.getObjectInfo().toJsonString(), Object.class);
+      System.out.printf("%s%n", mapper.writerWithDefaultPrettyPrinter()
+          .writeValueAsString(json));
+    }
+
   }
 
 }
