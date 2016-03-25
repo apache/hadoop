@@ -379,6 +379,8 @@ public class FileSystemTimelineWriter extends TimelineWriter{
       this.stream = createLogFileStream(fs, logPath);
       this.jsonGenerator = new JsonFactory().createJsonGenerator(stream);
       this.jsonGenerator.setPrettyPrinter(new MinimalPrettyPrinter("\n"));
+      this.jsonGenerator.configure(
+          JsonGenerator.Feature.FLUSH_PASSED_TO_STREAM, false);
       this.lastModifiedTime = Time.monotonicNow();
     }
 
