@@ -3199,7 +3199,7 @@ The Cluster Reservation API can be used to list reservations. When listing reser
 |:---- |:---- |:---- |
 | acceptance-time | long | Time that the reservation was accepted |
 | resource-allocations | array of ResourceAllocationInfo(JSON) / zero or more ResourceAllocationInfo objects(XML) | Resource allocation information for the reservation |
-| reservation-id | A single ReservationId object | The unique reservation identifier |
+| reservation-id | A single ReservationId string | The unique reservation identifier |
 | reservation-definition | A single ReservationDefinition Object | A set of constraints representing the need for resources over time of a user |
 | user | string | User who made the reservation |
 
@@ -3211,21 +3211,14 @@ The Cluster Reservation API can be used to list reservations. When listing reser
 | startTime | long | Start time that the resource is allocated for |
 | endTime | long | End time that the resource is allocated for |
 
-### elements of the  *resource* object
+### Elements of the  *resource* object
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
 | memory | int | The memory allocated for the reservation allocation |
 | vCores | int | The number of cores allocated for the reservation allocation |
 
-### Elements of the *reservation-id* object
-
-| Item | Data Type | Description |
-|:---- |:---- |:---- |
-| cluster-timestamp | long | Timestamp representing the time the reservation was created |
-| reservation-id | long | The id of the reservation that was listed |
-
-Elements of the *reservation-definition* object
+### Elements of the *reservation-definition* object
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
@@ -3234,14 +3227,14 @@ Elements of the *reservation-definition* object
 | reservation-name | string | A mnemonic name of the reservaiton (not a valid identifier). |
 | reservation-requests | object | A list of "stages" or phases of this reservation, each describing resource requirements and duration |
 
-Elements of the *reservation-requests* object
+### Elements of the *reservation-requests* object
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
 | reservation-request-interpreter | int | A numeric choice of how to interpret the set of ReservationRequest: 0 is an ANY, 1 for ALL, 2 for ORDER, 3 for ORDER\_NO\_GAP |
 | reservation-request | object | The description of the resource and time capabilities for a phase/stage of this reservation |
 
-Elements of the *reservation-request* object
+### Elements of the *reservation-request* object
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
@@ -3305,10 +3298,7 @@ Response Body:
         "endTime": "1465542252000"
       }
     ],
-    "reservation-id": {
-      "cluster-timestamp": "1455133859510",
-      "reservation-id": "6"
-    },
+    "reservation-id": "reservation_1458852875788_0002",
     "reservation-definition": {
       "arrival": "1465541532000",
       "deadline": "1465542252000",
@@ -3370,10 +3360,7 @@ Response Body:
             <startTime>1465542251000</startTime>
             <endTime>1465542252000</endTime>
         </resource-allocations>
-        <reservation-id>
-            <cluster-timestamp>1455228059846</cluster-timestamp>
-            <reservation-id>1</reservation-id>
-        </reservation-id>
+        <reservation-id>reservation_1458852875788_0002</reservation-id>
         <reservation-definition>
             <arrival>1465541532000</arrival>
             <deadline>1465542252000</deadline>
