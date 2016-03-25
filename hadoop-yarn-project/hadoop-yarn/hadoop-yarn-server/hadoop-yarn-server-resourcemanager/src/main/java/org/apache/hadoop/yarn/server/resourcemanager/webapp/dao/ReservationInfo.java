@@ -44,7 +44,7 @@ public class ReservationInfo {
   private List<ResourceAllocationInfo> resourceAllocations = new ArrayList<>();
 
   @XmlElement(name = "reservation-id")
-  private ReservationIdInfo reservationId;
+  private String reservationId;
 
   @XmlElement(name = "reservation-definition")
   private ReservationDefinitionInfo reservationDefinition;
@@ -55,7 +55,6 @@ public class ReservationInfo {
     user = "";
 
     reservationDefinition = new ReservationDefinitionInfo();
-    reservationId = new ReservationIdInfo();
   }
 
   public ReservationInfo(ReservationAllocationState allocation, boolean
@@ -74,7 +73,7 @@ public class ReservationInfo {
       }
     }
 
-    reservationId = new ReservationIdInfo(allocation.getReservationId());
+    reservationId = allocation.getReservationId().toString();
     reservationDefinition = new ReservationDefinitionInfo(
             allocation.getReservationDefinition());
   }
@@ -95,7 +94,7 @@ public class ReservationInfo {
     return resourceAllocations;
   }
 
-  public ReservationIdInfo getReservationId() {
+  public String getReservationId() {
     return reservationId;
   }
 
