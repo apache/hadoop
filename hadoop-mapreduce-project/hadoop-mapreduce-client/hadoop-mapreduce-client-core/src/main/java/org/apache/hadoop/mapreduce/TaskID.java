@@ -63,6 +63,7 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
   public static final String TASK_ID_REGEX = TASK + "_(\\d+)_(\\d+)_" +
       CharTaskTypeMaps.allTaskTypes + "_(\\d+)";
   public static final Pattern taskIdPattern = Pattern.compile(TASK_ID_REGEX);
+
   static {
     idFormat.setGroupingUsed(false);
     idFormat.setMinimumIntegerDigits(6);
@@ -72,7 +73,8 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
   private TaskType type;
   
   /**
-   * Constructs a TaskID object from given {@link JobID}.  
+   * Constructs a TaskID object from given {@link JobID}.
+   *
    * @param jobId JobID that this tip belongs to 
    * @param type the {@link TaskType} of the task 
    * @param id the tip number
@@ -88,6 +90,7 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
   
   /**
    * Constructs a TaskInProgressId object from given parts.
+   *
    * @param jtIdentifier jobTracker identifier
    * @param jobId job number 
    * @param type the TaskType 
@@ -99,6 +102,7 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
 
   /**
    * Constructs a TaskID object from given {@link JobID}.
+   *
    * @param jobId JobID that this tip belongs to
    * @param isMap whether the tip is a map
    * @param id the tip number
@@ -110,6 +114,7 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
 
   /**
    * Constructs a TaskInProgressId object from given parts.
+   *
    * @param jtIdentifier jobTracker identifier
    * @param jobId job number
    * @param isMap whether the tip is a map
@@ -120,23 +125,37 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
     this(new JobID(jtIdentifier, jobId), isMap, id);
   }
   
+  /**
+   * Default constructor for Writable. Sets the task type to
+   * {@link TaskType#REDUCE}, the ID to 0, and the job ID to an empty job ID.
+   */
   public TaskID() { 
-    jobId = new JobID();
+    this(new JobID(), TaskType.REDUCE, 0);
   }
   
-  /** Returns the {@link JobID} object that this tip belongs to */
+  /**
+   * Returns the {@link JobID} object that this tip belongs to.
+   *
+   * @return the JobID object
+   */
   public JobID getJobID() {
     return jobId;
   }
   
-  /**Returns whether this TaskID is a map ID */
+  /**
+   * Returns whether this TaskID is a map ID.
+   *
+   * @return whether this TaskID is a map ID
+   */
   @Deprecated
   public boolean isMap() {
     return type == TaskType.MAP;
   }
     
   /**
-   * Get the type of the task
+   * Get the type of the task.
+   *
+   * @return the type of the task
    */
   public TaskType getTaskType() {
     return type;
@@ -151,8 +170,14 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
     return this.type == that.type && this.jobId.equals(that.jobId);
   }
 
-  /**Compare TaskInProgressIds by first jobIds, then by tip numbers. Reduces are 
-   * defined as greater then maps.*/
+  /**
+   * Compare TaskInProgressIds by first jobIds, then by tip numbers.
+   * Reducers are defined as greater than mappers.
+   *
+   * @param o the TaskID against which to compare
+   * @return 0 if equal, positive if this TaskID is greater, and negative if
+   * this TaskID is less
+   */
   @Override
   public int compareTo(ID o) {
     TaskID that = (TaskID)o;
@@ -174,6 +199,7 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
 
   /**
    * Add the unique string to the given builder.
+   *
    * @param builder the builder to append to
    * @return the builder that was passed in
    */
@@ -204,7 +230,10 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
     WritableUtils.writeEnum(out, type);
   }
   
-  /** Construct a TaskID object from given string 
+  /**
+   * Construct a TaskID object from given string.
+   *
+   * @param str the target string
    * @return constructed TaskID object or null if the given String is null
    * @throws IllegalArgumentException if the given string is malformed
    */
@@ -224,7 +253,8 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
     throw new IllegalArgumentException(exceptionMsg);
   }
   /**
-   * Gets the character representing the {@link TaskType}
+   * Gets the character representing the {@link TaskType}.
+   *
    * @param type the TaskType
    * @return the character
    */
@@ -232,7 +262,8 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
     return CharTaskTypeMaps.getRepresentingCharacter(type);
   }
   /**
-   * Gets the {@link TaskType} corresponding to the character
+   * Gets the {@link TaskType} corresponding to the character.
+   *
    * @param c the character
    * @return the TaskType
    */
@@ -240,6 +271,12 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
     return CharTaskTypeMaps.getTaskType(c);
   }
   
+  /**
+   * Returns a string of characters describing all possible {@link TaskType}
+   * values
+   *
+   * @return a string of all task type characters
+   */
   public static String getAllTaskTypes() {
     return CharTaskTypeMaps.allTaskTypes;
   }
