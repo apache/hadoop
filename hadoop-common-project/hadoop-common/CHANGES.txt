@@ -76,6 +76,9 @@ Release 2.7.3 - UNRELEASED
 
     HADOOP-12688. Fix deadlinks in Compatibility.md. (Gabor Liptak via aajisaka)
 
+    HADOOP-12958. PhantomReference for filesystem statistics can trigger OOM
+    (Sangjin Lee via jlowe)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES

@@ -20,7 +20,7 @@ package org.apache.hadoop.fs;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.ref.PhantomReference;
+import java.lang.ref.WeakReference;
 import java.lang.ref.ReferenceQueue;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -2950,7 +2950,7 @@ public abstract class FileSystem extends Configured implements Closeable {
 
     /**
      * Set of all thread-local data areas.  Protected by the Statistics lock.
-     * The references to the statistics data are kept using phantom references
+     * The references to the statistics data are kept using weak references
      * to the associated threads. Proper clean-up is performed by the cleaner
      * thread when the threads are garbage collected.
      */
@@ -3003,11 +3003,11 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
 
     /**
-     * A phantom reference to a thread that also includes the data associated
+     * A weak reference to a thread that also includes the data associated
      * with that thread. On the thread being garbage collected, it is enqueued
      * to the reference queue for clean-up.
      */
-    private class StatisticsDataReference extends PhantomReference<Thread> {
+    private class StatisticsDataReference extends WeakReference<Thread> {
       private final StatisticsData data;
 
       public StatisticsDataReference(StatisticsData data, Thread thread) {
