@@ -41,10 +41,10 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -89,9 +89,9 @@ public class KMS {
         keyVersion.getVersionName(), null);
   }
 
-  private static URI getKeyURI(String name) throws URISyntaxException {
-    return new URI(KMSRESTConstants.SERVICE_VERSION + "/" +
-        KMSRESTConstants.KEY_RESOURCE + "/" + name);
+  private static URI getKeyURI(String domain, String keyName) {
+    return UriBuilder.fromPath("{a}/{b}/{c}")
+        .build(domain, KMSRESTConstants.KEY_RESOURCE, keyName);
   }
 
   @POST
@@ -151,9 +151,9 @@ public class KMS {
     String requestURL = KMSMDCFilter.getURL();
     int idx = requestURL.lastIndexOf(KMSRESTConstants.KEYS_RESOURCE);
     requestURL = requestURL.substring(0, idx);
-    String keyURL = requestURL + KMSRESTConstants.KEY_RESOURCE + "/" + name;
-    return Response.created(getKeyURI(name)).type(MediaType.APPLICATION_JSON).
-        header("Location", keyURL).entity(json).build();
+    return Response.created(getKeyURI(KMSRESTConstants.SERVICE_VERSION, name))
+        .type(MediaType.APPLICATION_JSON)
+        .header("Location", getKeyURI(requestURL, name)).entity(json).build();
   }
 
   @DELETE
