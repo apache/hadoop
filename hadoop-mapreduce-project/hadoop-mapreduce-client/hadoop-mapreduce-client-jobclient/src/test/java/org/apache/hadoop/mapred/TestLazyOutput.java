@@ -35,14 +35,15 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.lib.LazyOutputFormat;
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.assertTrue;
 
 /**
  * A JUnit test to test the Map-Reduce framework's feature to create part
  * files only if there is an explicit output.collect. This helps in preventing
  * 0 byte files
  */
-public class TestLazyOutput extends TestCase {
+public class TestLazyOutput {
   private static final int NUM_HADOOP_SLAVES = 3;
   private static final int NUM_MAPS_PER_NODE = 2;
   private static final Path INPUT = new Path("/testlazy/input");
@@ -132,7 +133,7 @@ public class TestLazyOutput extends TestCase {
     }
   }
 
-
+  @Test
   public void testLazyOutput() throws Exception {
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;

@@ -19,17 +19,18 @@
 package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.mapreduce.TaskCounter;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class TestReduceFetch extends TestReduceFetchFromPartialMem {
-
-  static {
-    setSuite(TestReduceFetch.class);
-  }
 
   /**
    * Verify that all segments are read from disk
    * @throws Exception might be thrown
    */
+  @Test
   public void testReduceFromDisk() throws Exception {
     final int MAP_TASKS = 8;
     JobConf job = mrCluster.createJobConf();
@@ -53,6 +54,7 @@ public class TestReduceFetch extends TestReduceFetchFromPartialMem {
    * Verify that no segment hits disk.
    * @throws Exception might be thrown
    */
+  @Test
   public void testReduceFromMem() throws Exception {
     final int MAP_TASKS = 3;
     JobConf job = mrCluster.createJobConf();

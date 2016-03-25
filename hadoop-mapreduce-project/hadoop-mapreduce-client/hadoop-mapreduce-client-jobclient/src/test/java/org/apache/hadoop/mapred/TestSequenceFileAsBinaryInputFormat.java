@@ -18,19 +18,26 @@
 
 package org.apache.hadoop.mapred;
 
+import org.apache.commons.logging.Log;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
+import org.junit.Test;
+
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.io.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
-import junit.framework.TestCase;
-import org.apache.commons.logging.*;
-
-public class TestSequenceFileAsBinaryInputFormat extends TestCase {
+public class TestSequenceFileAsBinaryInputFormat {
   private static final Log LOG = FileInputFormat.LOG;
   private static final int RECORDS = 10000;
 
+  @Test
   public void testBinary() throws IOException {
     JobConf job = new JobConf();
     FileSystem fs = FileSystem.getLocal(job);

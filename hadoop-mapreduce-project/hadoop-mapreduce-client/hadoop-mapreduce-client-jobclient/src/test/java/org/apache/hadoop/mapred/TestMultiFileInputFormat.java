@@ -21,17 +21,17 @@ import java.io.IOException;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Random;
-
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
-public class TestMultiFileInputFormat extends TestCase{
+public class TestMultiFileInputFormat {
 
   private static JobConf job = new JobConf();
 
@@ -79,7 +79,8 @@ public class TestMultiFileInputFormat extends TestCase{
     FileInputFormat.setInputPaths(job, multiFileDir);
     return multiFileDir;
   }
-  
+
+  @Test
   public void testFormat() throws IOException {
     LOG.info("Test started");
     LOG.info("Max split count           = " + MAX_SPLIT_COUNT);
@@ -122,7 +123,8 @@ public class TestMultiFileInputFormat extends TestCase{
     }
     LOG.info("Test Finished");
   }
-  
+
+  @Test
   public void testFormatWithLessPathsThanSplits() throws Exception {
     MultiFileInputFormat<Text,Text> format = new DummyMultiFileInputFormat();
     FileSystem fs = FileSystem.getLocal(job);     
@@ -134,10 +136,5 @@ public class TestMultiFileInputFormat extends TestCase{
     // Test with 2 path and 4 splits
     initFiles(fs, 2, 500);
     assertEquals(2, format.getSplits(job, 4).length);
-  }
-  
-  public static void main(String[] args) throws Exception{
-    TestMultiFileInputFormat test = new TestMultiFileInputFormat();
-    test.testFormat();
   }
 }

@@ -32,21 +32,25 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.mapred.*;
 
-import junit.framework.TestCase;
 import org.apache.commons.logging.*;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 
-public class TestSequenceFileMergeProgress extends TestCase {
+public class TestSequenceFileMergeProgress {
   private static final Log LOG = FileInputFormat.LOG;
   private static final int RECORDS = 10000;
-  
+
+  @Test
   public void testMergeProgressWithNoCompression() throws IOException {
     runTest(SequenceFile.CompressionType.NONE);
   }
 
+  @Test
   public void testMergeProgressWithRecordCompression() throws IOException {
     runTest(SequenceFile.CompressionType.RECORD);
   }
 
+  @Test
   public void testMergeProgressWithBlockCompression() throws IOException {
     runTest(SequenceFile.CompressionType.BLOCK);
   }
@@ -92,7 +96,7 @@ public class TestSequenceFileMergeProgress extends TestCase {
       count++;
     }
     assertEquals(RECORDS, count);
-    assertEquals(1.0f, rIter.getProgress().get());
+    assertEquals(1.0f, rIter.getProgress().get(), 0.0000);
   }
 
 }

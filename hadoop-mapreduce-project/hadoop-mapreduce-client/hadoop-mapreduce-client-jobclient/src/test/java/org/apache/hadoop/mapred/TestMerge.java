@@ -44,8 +44,8 @@ import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.io.serializer.Serializer;
 
 import org.apache.hadoop.mapred.Task.TaskReporter;
-
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 
 @SuppressWarnings(value={"unchecked", "deprecation"})
 /**
@@ -56,7 +56,7 @@ import junit.framework.TestCase;
  * framework's merge on the reduce side will merge the partitions created to
  * generate the final output which is sorted on the key.
  */
-public class TestMerge extends TestCase {
+public class TestMerge {
   private static final int NUM_HADOOP_DATA_NODES = 2;
   // Number of input files is same as the number of mappers.
   private static final int NUM_MAPPERS = 10;
@@ -69,6 +69,7 @@ public class TestMerge extends TestCase {
   // Where output goes.
   private static final Path OUTPUT = new Path("/testplugin/output");
 
+  @Test
   public void testMerge() throws Exception {
     MiniDFSCluster dfsCluster = null;
     MiniMRClientCluster mrCluster = null;

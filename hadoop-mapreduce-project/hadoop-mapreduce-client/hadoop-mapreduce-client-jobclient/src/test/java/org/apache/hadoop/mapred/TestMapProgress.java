@@ -22,8 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,6 +38,8 @@ import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.split.JobSplitWriter;
 import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.junit.Test;
+import static org.junit.Assert.assertTrue;
 
 /**
  *  Validates map phase progress.
@@ -55,7 +55,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  *  once mapTask.run() is finished. Sort phase progress in map task is not
  *  validated here.
  */
-public class TestMapProgress extends TestCase {
+public class TestMapProgress {
   public static final Log LOG = LogFactory.getLog(TestMapProgress.class);
   private static String TEST_ROOT_DIR;
   static {
@@ -234,7 +234,8 @@ public class TestMapProgress extends TestCase {
   /**
    *  Validates map phase progress after each record is processed by map task
    *  using custom task reporter.
-   */ 
+   */
+  @Test
   public void testMapProgress() throws Exception {
     JobConf job = new JobConf();
     fs = FileSystem.getLocal(job);

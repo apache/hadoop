@@ -18,20 +18,23 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.*;
-import junit.framework.TestCase;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapred.MRCaching.TestResult;
 import org.junit.Ignore;
+import org.junit.Test;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
 
 /**
  * A JUnit test to test caching with DFS
  * 
  */
 @Ignore
-public class TestMiniMRDFSCaching extends TestCase {
+public class TestMiniMRDFSCaching {
 
+  @Test
   public void testWithDFS() throws IOException {
     MiniMRCluster mr = null;
     MiniDFSCluster dfs = null;
@@ -69,10 +72,5 @@ public class TestMiniMRDFSCaching extends TestCase {
         mr.shutdown();
       }
     }
-  }
-
-  public static void main(String[] argv) throws Exception {
-    TestMiniMRDFSCaching td = new TestMiniMRDFSCaching();
-    td.testWithDFS();
   }
 }
