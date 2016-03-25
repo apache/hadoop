@@ -21,8 +21,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
@@ -35,13 +33,16 @@ import org.apache.hadoop.mapred.JobConfigurable;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.junit.Test;
+import static org.junit.Assert.assertTrue;
 
-public class TestWrappedRecordReaderClassloader extends TestCase {
+public class TestWrappedRecordReaderClassloader {
   /**
    * Tests the class loader set by {@link JobConf#setClassLoader(ClassLoader)}
    * is inherited by any {@link WrappedRecordReader}s created by
    * {@link CompositeRecordReader}
    */
+  @Test
   public void testClassLoader() throws Exception {
     JobConf job = new JobConf();
     Fake_ClassLoader classLoader = new Fake_ClassLoader();

@@ -18,11 +18,12 @@
 
 package org.apache.hadoop.mapreduce.lib.input;
 
-import java.io.IOException;
-import java.util.Random;
-
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.io.*;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
@@ -31,12 +32,18 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
+import org.junit.Test;
 
-import junit.framework.TestCase;
+import java.io.IOException;
+import java.util.Random;
 
-public class TestMRSequenceFileAsBinaryInputFormat extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+public class TestMRSequenceFileAsBinaryInputFormat {
   private static final int RECORDS = 10000;
 
+  @Test
   public void testBinary() throws IOException, InterruptedException {
     Job job = Job.getInstance();
     FileSystem fs = FileSystem.getLocal(job.getConfiguration());

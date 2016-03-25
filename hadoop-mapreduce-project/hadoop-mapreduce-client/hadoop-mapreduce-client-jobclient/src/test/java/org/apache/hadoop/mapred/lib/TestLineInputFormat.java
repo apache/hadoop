@@ -20,13 +20,14 @@ package org.apache.hadoop.mapred.lib;
 
 import java.io.*;
 import java.util.*;
-import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 
-public class TestLineInputFormat extends TestCase {
+public class TestLineInputFormat {
   private static int MAX_LENGTH = 200;
   
   private static JobConf defaultConf = new JobConf();
@@ -43,7 +44,7 @@ public class TestLineInputFormat extends TestCase {
   private static Path workDir = 
     new Path(new Path(System.getProperty("test.build.data", "."), "data"),
              "TestLineInputFormat");
-  
+  @Test
   public void testFormat() throws Exception {
     JobConf job = new JobConf();
     Path file = new Path(workDir, "test.txt");

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.mapreduce.v2;
 
-import junit.framework.TestCase;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -28,17 +27,22 @@ import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.net.InetAddress;
 
-public class TestNonExistentJob extends TestCase {
+import static org.junit.Assert.assertNull;
+
+public class TestNonExistentJob {
 
   private MiniDFSCluster dfsCluster = null;
   private MiniMRCluster mrCluster = null;
 
-  protected void setUp() throws Exception {
-    super.setUp();
+  @Before
+  public void setUp() throws Exception {
     if (System.getProperty("hadoop.log.dir") == null) {
       System.setProperty("hadoop.log.dir", "/tmp");
     }
@@ -78,17 +82,17 @@ public class TestNonExistentJob extends TestCase {
     return mrCluster.createJobConf();
   }
 
-  @Override
-  protected void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     if (mrCluster != null) {
       mrCluster.shutdown();
     }
     if (dfsCluster != null) {
       dfsCluster.shutdown();
     }
-    super.tearDown();
   }
 
+  @Test
   public void testGetInvalidJob() throws Exception {
     RunningJob runJob = new JobClient(getJobConf()).getJob(JobID.forName("job_0_0"));
     assertNull(runJob);
