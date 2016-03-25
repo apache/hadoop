@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.ozone.web.ozShell.bucket;
 
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.ozone.web.client.OzoneBucket;
 import org.apache.hadoop.ozone.web.client.OzoneClientException;
@@ -34,37 +33,28 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
- * Executes Info bucket.
+ * Allows users to add and remove acls and from a bucket.
  */
-public class InfoBucketHandler extends Handler {
+public class UpdateBucketHandler extends Handler {
   private String volumeName;
   private String bucketName;
   private String rootName;
 
-  /**
-   * Executes the Client Calls.
-   *
-   * @param cmd - CommandLine
-   *
-   * @throws IOException
-   * @throws OzoneException
-   * @throws URISyntaxException
-   */
   @Override
   protected void execute(CommandLine cmd)
       throws IOException, OzoneException, URISyntaxException {
-    if (!cmd.hasOption(Shell.INFO_BUCKET)) {
+    if (!cmd.hasOption(Shell.UPDATE_BUCKET)) {
       throw new OzoneClientException(
-          "Incorrect call : infoBucket is missing");
+          "Incorrect call : updateBucket is missing");
     }
 
-    String ozoneURIString = cmd.getOptionValue(Shell.INFO_BUCKET);
+    String ozoneURIString = cmd.getOptionValue(Shell.UPDATE_BUCKET);
     URI ozoneURI = verifyURI(ozoneURIString);
     Path path = Paths.get(ozoneURI.getPath());
 
     if (path.getNameCount() < 2) {
       throw new OzoneClientException(
-          "volume and bucket name required in info Bucket");
+          "volume and bucket name required in update bucket");
     }
 
     volumeName = path.getName(0).toString();
@@ -85,6 +75,18 @@ public class InfoBucketHandler extends Handler {
     client.setUserAuth(rootName);
 
     OzoneVolume vol = client.getVolume(volumeName);
+    if (cmd.hasOption(Shell.ADD_ACLS)) {
+      String aclString = cmd.getOptionValue(Shell.ADD_ACLS);
+      String[] aclArray = aclString.split(",");
+      vol.addAcls(bucketName, aclArray);
+    }
+
+    if (cmd.hasOption(Shell.REMOVE_ACLS)) {
+      String aclString = cmd.getOptionValue(Shell.REMOVE_ACLS);
+      String[] aclArray = aclString.split(",");
+      vol.removeAcls(bucketName, aclArray);
+    }
+
     OzoneBucket bucket = vol.getBucket(bucketName);
 
     ObjectMapper mapper = new ObjectMapper();
@@ -93,5 +95,4 @@ public class InfoBucketHandler extends Handler {
     System.out.printf("%s%n", mapper.writerWithDefaultPrettyPrinter()
         .writeValueAsString(json));
   }
-
 }
