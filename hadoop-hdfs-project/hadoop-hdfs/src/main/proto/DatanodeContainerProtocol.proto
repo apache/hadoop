@@ -168,7 +168,13 @@ message KeyValue {
 message ContainerData {
   required string name = 1;
   repeated KeyValue metadata = 2;
-  optional string containerPath = 3;
+  optional string dbPath = 3;
+  optional string containerPath = 4;
+}
+
+message ContainerMeta {
+  required string fileName = 1;
+  required string hash = 2;
 }
 
 // Container Messages.

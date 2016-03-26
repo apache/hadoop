@@ -41,6 +41,9 @@ public final class OzoneConfigKeys {
       "dfs.objectstore.trace.enabled";
   public static final boolean DFS_OBJECTSTORE_TRACE_ENABLED_DEFAULT = false;
 
+  public static final String DFS_OZONE_METADATA_DIRS =
+      "dfs.ozone.metadata.dirs";
+
 
   /**
    * There is no need to instantiate this class.

@@ -25,7 +25,7 @@ import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
-import org.apache.hadoop.ozone.web.utils.OzoneConsts;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;

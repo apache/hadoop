@@ -24,7 +24,7 @@ import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.headers.Header;
 import org.apache.hadoop.ozone.web.interfaces.UserAuth;
-import org.apache.hadoop.ozone.web.utils.OzoneConsts;
+import org.apache.hadoop.ozone.OzoneConsts;
 
 import javax.ws.rs.core.HttpHeaders;
 import java.util.List;

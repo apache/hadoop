@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.container.common.utils.LevelDBStore;
 import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
@@ -37,7 +38,7 @@ import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.response.VolumeOwner;
-import org.apache.hadoop.ozone.web.utils.OzoneConsts;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.iq80.leveldb.DBException;
 import org.apache.commons.codec.digest.DigestUtils;
 
@@ -125,8 +126,8 @@ public final class OzoneMetadataManager {
   private static final String USER_DB = "/user.db";
   private static final String META_DB = "/metadata.db";
   private static OzoneMetadataManager bm = null;
-  private OzoneLevelDBStore userDB;
-  private OzoneLevelDBStore metadataDB;
+  private LevelDBStore userDB;
+  private LevelDBStore metadataDB;
   private ReadWriteLock lock;
   private Charset encoding = Charset.forName("UTF-8");
   private String storageRoot;
@@ -154,8 +155,8 @@ public final class OzoneMetadataManager {
     }
 
     try {
-      userDB = new OzoneLevelDBStore(new File(storageRoot + USER_DB), true);
-      metadataDB = new OzoneLevelDBStore(new File(storageRoot + META_DB), true);
+      userDB = new LevelDBStore(new File(storageRoot + USER_DB), true);
+      metadataDB = new LevelDBStore(new File(storageRoot + META_DB), true);
       inProgressObjects = new ConcurrentHashMap<>();
     } catch (IOException ex) {
       LOG.error("Cannot open db :" + ex.getMessage());

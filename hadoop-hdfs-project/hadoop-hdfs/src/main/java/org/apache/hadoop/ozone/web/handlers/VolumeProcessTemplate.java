@@ -41,10 +41,10 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.NoSuchFileException;
 
 import static java.net.HttpURLConnection.HTTP_OK;
-import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_COMPONENT;
-import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_RESOURCE;
-import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_REQUEST;
-import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_USER;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_COMPONENT;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_RESOURCE;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_REQUEST;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_USER;
 
 
 /**

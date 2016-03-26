@@ -20,18 +20,35 @@ package org.apache.hadoop.ozone.container.common.interfaces;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.util.RwLock;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.Pipeline;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
+
 
 /**
  * Interface for container operations.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public interface ContainerManager {
+public interface ContainerManager extends RwLock {
+
+  /**
+   * Init call that sets up a container Manager.
+   *
+   * @param config  - Configuration.
+   * @param containerDirs - List of Metadata Container locations.
+   * @param dataset - FSDataset.
+   * @throws IOException
+   */
+  void init(Configuration config, List<Path> containerDirs,
+            FsDatasetSpi dataset)
+      throws IOException;
 
   /**
    * Creates a container with the given name.
@@ -56,20 +73,28 @@ public interface ContainerManager {
   /**
    * As simple interface for container Iterations.
    *
-   * @param start - Starting index
+   * @param prevKey - Starting KeyValue
    * @param count - how many to return
    * @param data  - Actual containerData
    * @throws IOException
    */
-  void listContainer(long start, long count, List<ContainerData> data)
+  void listContainer(String prevKey, long count, List<ContainerData> data)
       throws IOException;
 
   /**
    * Get metadata about a specific container.
    *
    * @param containerName - Name of the container
-   * @return ContainerData
+   * @return ContainerData - Container Data.
    * @throws IOException
    */
   ContainerData readContainer(String containerName) throws IOException;
+
+  /**
+   * Supports clean shutdown of container.
+   *
+   * @throws IOException
+   */
+  void shutdown() throws IOException;
+
 }

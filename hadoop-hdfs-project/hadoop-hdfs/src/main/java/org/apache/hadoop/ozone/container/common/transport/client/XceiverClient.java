@@ -26,10 +26,10 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.container.common.helpers.Pipeline;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +42,7 @@ import java.io.IOException;
 public class XceiverClient {
   static final Logger LOG = LoggerFactory.getLogger(XceiverClient.class);
   private final Pipeline pipeline;
-  private final OzoneConfiguration config;
+  private final Configuration config;
   private ChannelFuture channelFuture;
   private Bootstrap b;
   private EventLoopGroup group;
@@ -53,7 +53,7 @@ public class XceiverClient {
    * @param pipeline - Pipeline that defines the machines.
    * @param config -- Ozone Config
    */
-  public XceiverClient(Pipeline pipeline, OzoneConfiguration config) {
+  public XceiverClient(Pipeline pipeline, Configuration config) {
     Preconditions.checkNotNull(pipeline);
     Preconditions.checkNotNull(config);
     this.pipeline = pipeline;

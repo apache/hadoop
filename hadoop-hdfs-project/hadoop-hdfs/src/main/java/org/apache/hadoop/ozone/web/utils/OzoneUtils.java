@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.web.utils;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;

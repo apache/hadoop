@@ -29,13 +29,12 @@ import java.util.Date;
 import java.util.Locale;
 import javax.ws.rs.core.HttpHeaders;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.web.headers.Header;
-import org.apache.hadoop.ozone.web.utils.OzoneConsts;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.util.Time;
 
 import org.apache.http.HttpResponse;

@@ -44,10 +44,11 @@ import static org.apache.hadoop.ozone.web.exceptions.ErrorTable.INVALID_BUCKET_N
 import static org.apache.hadoop.ozone.web.exceptions.ErrorTable.INVALID_REQUEST;
 import static org.apache.hadoop.ozone.web.exceptions.ErrorTable.SERVER_ERROR;
 import static org.apache.hadoop.ozone.web.exceptions.ErrorTable.newError;
-import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_COMPONENT;
-import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_REQUEST;
-import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_RESOURCE;
-import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_USER;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_COMPONENT;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_RESOURCE;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_REQUEST;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_USER;
+
 
 /**
  * This class abstracts way the repetitive tasks in  Key handling code.

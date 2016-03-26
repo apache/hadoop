@@ -25,7 +25,7 @@ import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.headers.Header;
 import org.apache.hadoop.ozone.web.interfaces.Bucket;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
-import org.apache.hadoop.ozone.web.utils.OzoneConsts;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.slf4j.MDC;
 
@@ -37,7 +37,7 @@ import java.io.IOException;
 
 import static java.net.HttpURLConnection.HTTP_CREATED;
 import static java.net.HttpURLConnection.HTTP_OK;
-import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_FUNCTION;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_FUNCTION;
 
 
 /**

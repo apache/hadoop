@@ -26,8 +26,8 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 
 /**
@@ -47,7 +47,7 @@ public final class XceiverServer {
    *
    * @param conf - Configuration
    */
-  public XceiverServer(OzoneConfiguration conf,
+  public XceiverServer(Configuration conf,
                        ContainerDispatcher dispatcher) {
     Preconditions.checkNotNull(conf);
     this.port = conf.getInt(OzoneConfigKeys.DFS_OZONE_CONTAINER_IPC_PORT,

@@ -16,43 +16,45 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.web.localstorage;
+package org.apache.hadoop.ozone.container.common.utils;
 
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.DB;
+import org.iq80.leveldb.DBIterator;
 import org.iq80.leveldb.Options;
 
 import java.io.File;
 import java.io.IOException;
 
 /**
- * OzoneLevelDBStore is used by the local
- * OzoneStore which is used in testing.
+ * LevelDB interface.
  */
-class OzoneLevelDBStore {
+public class LevelDBStore {
   private DB db;
+  private final File dbFile;
 
   /**
    * Opens a DB file.
    *
-   * @param dbPath - DB File path
+   * @param dbPath          - DB File path
    * @param createIfMissing - Create if missing
-   *
    * @throws IOException
    */
-  OzoneLevelDBStore(File dbPath, boolean createIfMissing) throws IOException {
+  public LevelDBStore(File dbPath, boolean createIfMissing) throws
+      IOException {
     Options options = new Options();
     options.createIfMissing(createIfMissing);
     db = JniDBFactory.factory.open(dbPath, options);
     if (db == null) {
       throw new IOException("Db is null");
     }
+    this.dbFile = dbPath;
   }
 
   /**
    * Puts a Key into file.
    *
-   * @param key - key
+   * @param key   - key
    * @param value - value
    */
   public void put(byte[] key, byte[] value) {
@@ -63,7 +65,6 @@ class OzoneLevelDBStore {
    * Get Key.
    *
    * @param key key
-   *
    * @return value
    */
   public byte[] get(byte[] key) {
@@ -87,4 +88,37 @@ class OzoneLevelDBStore {
   public void close() throws IOException {
     db.close();
   }
+
+  /**
+   * Returns true if the DB is empty.
+   *
+   * @return boolean
+   * @throws IOException
+   */
+  public boolean isEmpty() throws IOException {
+    DBIterator iter = db.iterator();
+    try {
+      iter.seekToFirst();
+      return iter.hasNext();
+    } finally {
+      iter.close();
+    }
+  }
+
+  /**
+   * Returns Java File Object that points to the DB.
+   * @return File
+   */
+  public File getDbFile() {
+    return dbFile;
+  }
+
+  /**
+   * Returns the actual levelDB object.
+   * @return DB handle.
+   */
+  public DB getDB() {
+    return db;
+  }
+
 }

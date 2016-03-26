@@ -35,8 +35,9 @@ public class ContainerData {
 
   private final String containerName;
   private final Map<String, String> metadata;
-
-  private String path;
+  private String dbPath;  // Path to Level DB Store.
+  // Path to Physical file system where container and checksum are stored.
+  private String containerFilePath;
 
   /**
    * Constructs a  ContainerData Object.
@@ -63,8 +64,13 @@ public class ContainerData {
     }
 
     if (protoData.hasContainerPath()) {
-      data.setPath(protoData.getContainerPath());
+      data.setContainerPath(protoData.getContainerPath());
     }
+
+    if (protoData.hasDbPath()) {
+      data.setDBPath(protoData.getDbPath());
+    }
+
     return data;
   }
 
@@ -77,9 +83,15 @@ public class ContainerData {
     ContainerProtos.ContainerData.Builder builder = ContainerProtos
         .ContainerData.newBuilder();
     builder.setName(this.getContainerName());
-    if (this.getPath() != null) {
-      builder.setContainerPath(this.getPath());
+
+    if (this.getDBPath() != null) {
+      builder.setDbPath(this.getDBPath());
     }
+
+    if (this.getContainerPath() != null) {
+      builder.setContainerPath(this.getContainerPath());
+    }
+
     for (Map.Entry<String, String> entry : metadata.entrySet()) {
       ContainerProtos.KeyValue.Builder keyValBuilder =
           ContainerProtos.KeyValue.newBuilder();
@@ -144,8 +156,8 @@ public class ContainerData {
    *
    * @return - path
    */
-  public String getPath() {
-    return path;
+  public String getDBPath() {
+    return dbPath;
   }
 
   /**
@@ -153,8 +165,8 @@ public class ContainerData {
    *
    * @param path - String.
    */
-  public void setPath(String path) {
-    this.path = path;
+  public void setDBPath(String path) {
+    this.dbPath = path;
   }
 
   /**
@@ -167,4 +179,21 @@ public class ContainerData {
   public String getName() {
     return getContainerName();
   }
+
+  /**
+   * Get container file path.
+   * @return - Physical path where container file and checksum is stored.
+   */
+  public String getContainerPath() {
+    return containerFilePath;
+  }
+
+  /**
+   * Set container Path.
+   * @param containerFilePath - File path.
+   */
+  public void setContainerPath(String containerFilePath) {
+    this.containerFilePath = containerFilePath;
+  }
+
 }
