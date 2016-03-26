@@ -27,7 +27,7 @@ import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.interfaces.UserAuth;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.ListKeys;
-import org.apache.hadoop.ozone.web.utils.OzoneConsts;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 
 import org.slf4j.Logger;
@@ -47,10 +47,11 @@ import java.util.LinkedList;
 import java.util.List;
 
 import static java.net.HttpURLConnection.HTTP_OK;
-import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_COMPONENT;
-import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_RESOURCE;
-import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_REQUEST;
-import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_USER;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_COMPONENT;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_RESOURCE;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_REQUEST;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_USER;
+
 
 
 

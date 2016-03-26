@@ -19,7 +19,7 @@ package org.apache.hadoop.ozone.web.handlers;
 
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ozone.web.request.OzoneAcl;
-import org.apache.hadoop.ozone.web.utils.OzoneConsts;
+import org.apache.hadoop.ozone.OzoneConsts;
 
 import java.util.LinkedList;
 import java.util.List;

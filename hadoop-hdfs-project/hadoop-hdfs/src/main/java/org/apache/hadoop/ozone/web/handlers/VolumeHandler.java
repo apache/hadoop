@@ -38,7 +38,7 @@ import java.io.IOException;
 
 import static java.net.HttpURLConnection.HTTP_CREATED;
 import static java.net.HttpURLConnection.HTTP_OK;
-import static org.apache.hadoop.ozone.web.utils.OzoneConsts.OZONE_FUNCTION;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_FUNCTION;
 
 /**
  * VolumeHandler handles volume specific HTTP calls.

@@ -188,6 +188,8 @@ import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SaslPropertiesResolver;
 import org.apache.hadoop.security.SecurityUtil;
@@ -365,6 +367,7 @@ public class DataNode extends ReconfigurableBase
   private final String confVersion;
   private final long maxNumberOfBlocksToLog;
   private final boolean pipelineSupportECN;
+  private final boolean ozoneEnabled;
 
   private final List<String> usersWithLocalPathAccess;
   private final boolean connectToDnViaHostname;
@@ -387,6 +390,7 @@ public class DataNode extends ReconfigurableBase
   private static final int NUM_CORES = Runtime.getRuntime()
       .availableProcessors();
   private static final double CONGESTION_RATIO = 1.5;
+  private OzoneContainer ozoneServer;
 
   private static Tracer createTracer(Configuration conf) {
     return new Tracer.Builder("DataNode").
@@ -417,6 +421,7 @@ public class DataNode extends ReconfigurableBase
     this.connectToDnViaHostname = false;
     this.blockScanner = new BlockScanner(this, conf);
     this.pipelineSupportECN = false;
+    this.ozoneEnabled = false;
     this.checkDiskErrorInterval =
         ThreadLocalRandom.current().nextInt(5000, (int) (5000 * 1.25));
     initOOBTimeout();
@@ -451,6 +456,9 @@ public class DataNode extends ReconfigurableBase
     this.pipelineSupportECN = conf.getBoolean(
         DFSConfigKeys.DFS_PIPELINE_ECN_ENABLED,
         DFSConfigKeys.DFS_PIPELINE_ECN_ENABLED_DEFAULT);
+    this.ozoneEnabled = conf.getBoolean(OzoneConfigKeys
+        .DFS_OBJECTSTORE_ENABLED_KEY, OzoneConfigKeys
+        .DFS_OBJECTSTORE_ENABLED_DEFAULT);
 
     confVersion = "core-" +
         conf.get("hadoop.common.configuration.version", "UNSPECIFIED") +
@@ -1540,6 +1548,15 @@ public class DataNode extends ReconfigurableBase
     data.addBlockPool(nsInfo.getBlockPoolID(), conf);
     blockScanner.enableBlockPoolId(bpos.getBlockPoolId());
     initDirectoryScanner(conf);
+    if(this.ozoneEnabled) {
+      try {
+        ozoneServer = new OzoneContainer(conf, this.getFSDataset());
+        ozoneServer.start();
+        LOG.info("Ozone container server started.");
+      } catch (Exception ex) {
+        LOG.error("Unable to start Ozone. ex: {}", ex.toString());
+      }
+    }
   }
 
   List<BPOfferService> getAllBpOs() {
@@ -1828,6 +1845,17 @@ public class DataNode extends ReconfigurableBase
    */
   public void shutdown() {
     stopMetricsLogger();
+
+    if(this.ozoneEnabled) {
+      if(ozoneServer != null) {
+        try {
+          ozoneServer.stop();
+        } catch (Exception e) {
+          LOG.error("Error is ozone shutdown. ex {}", e.toString());
+        }
+      }
+    }
+
     if (plugins != null) {
       for (ServicePlugin p : plugins) {
         try {

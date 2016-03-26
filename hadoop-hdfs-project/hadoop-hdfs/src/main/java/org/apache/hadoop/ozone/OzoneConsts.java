@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.web.utils;
+package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
@@ -52,6 +52,20 @@ public final class OzoneConsts {
   public static final String OZONE_RESOURCE = "resource";
   public static final String OZONE_USER = "user";
   public static final String OZONE_REQUEST = "request";
+
+  public static final String CONTAINER_EXTENSION = ".container";
+  public static final String CONTAINER_META = ".meta";
+
+  //  container storage is in the following format.
+  //  Data Volume basePath/containers/<containerName>/metadata and
+  //  Data Volume basePath/containers/<containerName>/data/...
+  public static final String CONTAINER_PREFIX  = "containers";
+  public static final String CONTAINER_META_PATH = "metadata";
+  public static final String CONTAINER_DATA_PATH = "data";
+  public static final String CONTAINER_ROOT_PREFIX = "repository";
+
+  public static final String CONTAINER_DB = "container.db";
+
 
 
   /**

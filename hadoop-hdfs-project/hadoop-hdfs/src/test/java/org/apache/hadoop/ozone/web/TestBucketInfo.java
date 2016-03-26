@@ -22,7 +22,7 @@ package org.apache.hadoop.ozone.web;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ozone.web.request.OzoneAcl;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
-import org.apache.hadoop.ozone.web.utils.OzoneConsts;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.junit.Test;
 
 import java.io.IOException;
