@@ -26,13 +26,11 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.StripedBlockInfo;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BaseHeaderProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.CachingStrategyProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ClientOperationHeaderProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferTraceInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumProto;
-import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockGroupChecksumProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpCopyBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpReadBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpReplaceBlockProto;
@@ -112,9 +110,6 @@ public abstract class Receiver implements DataTransferProtocol {
       break;
     case BLOCK_CHECKSUM:
       opBlockChecksum(in);
-      break;
-    case BLOCK_GROUP_CHECKSUM:
-      opStripedBlockChecksum(in);
       break;
     case TRANSFER_BLOCK:
       opTransferBlock(in);
@@ -293,29 +288,6 @@ public abstract class Receiver implements DataTransferProtocol {
         PBHelperClient.convert(proto.getHeader().getToken()));
     } finally {
       if (traceScope != null) traceScope.close();
-    }
-  }
-
-  /** Receive OP_STRIPED_BLOCK_CHECKSUM. */
-  private void opStripedBlockChecksum(DataInputStream dis) throws IOException {
-    OpBlockGroupChecksumProto proto =
-        OpBlockGroupChecksumProto.parseFrom(vintPrefixed(dis));
-    TraceScope traceScope = continueTraceSpan(proto.getHeader(),
-        proto.getClass().getSimpleName());
-    StripedBlockInfo stripedBlockInfo = new StripedBlockInfo(
-        PBHelperClient.convert(proto.getHeader().getBlock()),
-        PBHelperClient.convert(proto.getDatanodes()),
-        PBHelperClient.convertTokens(proto.getBlockTokensList()),
-        PBHelperClient.convertErasureCodingPolicy(proto.getEcPolicy())
-    );
-
-    try {
-      blockGroupChecksum(stripedBlockInfo,
-          PBHelperClient.convert(proto.getHeader().getToken()));
-    } finally {
-      if (traceScope != null) {
-        traceScope.close();
-      }
     }
   }
 }

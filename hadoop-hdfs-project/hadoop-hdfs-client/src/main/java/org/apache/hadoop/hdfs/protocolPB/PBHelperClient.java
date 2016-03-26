@@ -553,25 +553,15 @@ public class PBHelperClient {
           proto.getCorrupt(),
           cachedLocs.toArray(new DatanodeInfo[cachedLocs.size()]));
       List<TokenProto> tokenProtos = proto.getBlockTokensList();
-      Token<BlockTokenIdentifier>[] blockTokens =
-          convertTokens(tokenProtos);
+      Token<BlockTokenIdentifier>[] blockTokens = new Token[indices.length];
+      for (int i = 0; i < indices.length; i++) {
+        blockTokens[i] = convert(tokenProtos.get(i));
+      }
       ((LocatedStripedBlock) lb).setBlockTokens(blockTokens);
     }
     lb.setBlockToken(convert(proto.getBlockToken()));
 
     return lb;
-  }
-
-  static public Token<BlockTokenIdentifier>[] convertTokens(
-      List<TokenProto> tokenProtos) {
-
-    @SuppressWarnings("unchecked")
-    Token<BlockTokenIdentifier>[] blockTokens = new Token[tokenProtos.size()];
-    for (int i = 0; i < blockTokens.length; i++) {
-      blockTokens[i] = convert(tokenProtos.get(i));
-    }
-
-    return blockTokens;
   }
 
   static public DatanodeInfo convert(DatanodeInfoProto di) {
@@ -825,22 +815,14 @@ public class PBHelperClient {
       byte[] indices = sb.getBlockIndices();
       builder.setBlockIndices(PBHelperClient.getByteString(indices));
       Token<BlockTokenIdentifier>[] blockTokens = sb.getBlockTokens();
-      builder.addAllBlockTokens(convert(blockTokens));
+      for (int i = 0; i < indices.length; i++) {
+        builder.addBlockTokens(PBHelperClient.convert(blockTokens[i]));
+      }
     }
 
     return builder.setB(PBHelperClient.convert(b.getBlock()))
         .setBlockToken(PBHelperClient.convert(b.getBlockToken()))
         .setCorrupt(b.isCorrupt()).setOffset(b.getStartOffset()).build();
-  }
-
-  public static List<TokenProto> convert(
-      Token<BlockTokenIdentifier>[] blockTokens) {
-    List<TokenProto> results = new ArrayList<>(blockTokens.length);
-    for (Token<BlockTokenIdentifier> bt : blockTokens) {
-      results.add(convert(bt));
-    }
-
-    return results;
   }
 
   public static BlockStoragePolicy convert(BlockStoragePolicyProto proto) {
@@ -2516,16 +2498,6 @@ public class PBHelperClient {
         .setSchema(convertECSchema(policy.getSchema()))
         .setCellSize(policy.getCellSize())
         .setId(policy.getId());
-    return builder.build();
-  }
-
-  public static HdfsProtos.DatanodeInfosProto convertToProto(
-      DatanodeInfo[] datanodeInfos) {
-    HdfsProtos.DatanodeInfosProto.Builder builder =
-        HdfsProtos.DatanodeInfosProto.newBuilder();
-    for (DatanodeInfo datanodeInfo : datanodeInfos) {
-      builder.addDatanodes(PBHelperClient.convert(datanodeInfo));
-    }
     return builder.build();
   }
 }
