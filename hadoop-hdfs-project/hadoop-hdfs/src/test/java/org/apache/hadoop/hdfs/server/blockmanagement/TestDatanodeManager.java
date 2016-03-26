@@ -383,9 +383,9 @@ public class TestDatanodeManager {
 
     DatanodeManager dm = mockDatanodeManager(fsn, new Configuration());
     HostFileManager hm = new HostFileManager();
-    HostFileManager.HostSet noNodes = new HostFileManager.HostSet();
-    HostFileManager.HostSet oneNode = new HostFileManager.HostSet();
-    HostFileManager.HostSet twoNodes = new HostFileManager.HostSet();
+    HostSet noNodes = new HostSet();
+    HostSet oneNode = new HostSet();
+    HostSet twoNodes = new HostSet();
     DatanodeRegistration dr1 = new DatanodeRegistration(
       new DatanodeID("127.0.0.1", "127.0.0.1", "someStorageID-123",
           12345, 12345, 12345, 12345),
@@ -402,7 +402,7 @@ public class TestDatanodeManager {
     oneNode.add(entry("127.0.0.1:23456"));
 
     hm.refresh(twoNodes, noNodes);
-    Whitebox.setInternalState(dm, "hostFileManager", hm);
+    Whitebox.setInternalState(dm, "hostConfigManager", hm);
 
     // Register two data nodes to simulate them coming up.
     // We need to add two nodes, because if we have only one node, removing it
