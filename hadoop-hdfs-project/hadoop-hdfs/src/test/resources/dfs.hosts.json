@@ -1,0 +1,5 @@
+{"hostName": "host1"}
+{"hostName": "host2", "upgradeDomain": "ud0"}
+{"hostName": "host3", "adminState": "DECOMMISSIONED"}
+{"hostName": "host4", "upgradeDomain": "ud2", "adminState": "DECOMMISSIONED"}
+{"hostName": "host5", "port": 8090}
