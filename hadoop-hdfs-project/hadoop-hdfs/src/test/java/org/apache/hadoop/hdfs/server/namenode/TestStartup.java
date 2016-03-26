@@ -29,14 +29,12 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -56,6 +54,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.hdfs.util.HostsFileWriter;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -568,27 +567,15 @@ public class TestStartup {
   @Test
   public void testNNRestart() throws IOException, InterruptedException {
     MiniDFSCluster cluster = null;
-    FileSystem localFileSys;
-    Path hostsFile;
-    Path excludeFile;
     int HEARTBEAT_INTERVAL = 1; // heartbeat interval in seconds
-    // Set up the hosts/exclude files.
-    localFileSys = FileSystem.getLocal(config);
-    Path workingDir = localFileSys.getWorkingDirectory();
-    Path dir = new Path(workingDir, "build/test/data/work-dir/restartnn");
-    hostsFile = new Path(dir, "hosts");
-    excludeFile = new Path(dir, "exclude");
 
-    // Setup conf
-    config.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
-    writeConfigFile(localFileSys, excludeFile, null);
-    config.set(DFSConfigKeys.DFS_HOSTS, hostsFile.toUri().getPath());
-    // write into hosts file
-    ArrayList<String>list = new ArrayList<String>();
+    HostsFileWriter hostsFileWriter = new HostsFileWriter();
+    hostsFileWriter.initialize(config, "work-dir/restartnn");
+
     byte b[] = {127, 0, 0, 1};
     InetAddress inetAddress = InetAddress.getByAddress(b);
-    list.add(inetAddress.getHostName());
-    writeConfigFile(localFileSys, hostsFile, list);
+    hostsFileWriter.initIncludeHosts(new String[] {inetAddress.getHostName()});
+
     int numDatanodes = 1;
     
     try {
@@ -613,37 +600,12 @@ public class TestStartup {
       fail(StringUtils.stringifyException(e));
       throw e;
     } finally {
-      cleanupFile(localFileSys, excludeFile.getParent());
       if (cluster != null) {
         cluster.shutdown();
       }
+      hostsFileWriter.cleanup();
     }
   }
-  
-  private void writeConfigFile(FileSystem localFileSys, Path name,
-      ArrayList<String> nodes) throws IOException {
-    // delete if it already exists
-    if (localFileSys.exists(name)) {
-      localFileSys.delete(name, true);
-    }
-
-    FSDataOutputStream stm = localFileSys.create(name);
-    if (nodes != null) {
-      for (Iterator<String> it = nodes.iterator(); it.hasNext();) {
-        String node = it.next();
-        stm.writeBytes(node);
-        stm.writeBytes("\n");
-      }
-    }
-    stm.close();
-  }
-  
-  private void cleanupFile(FileSystem fileSys, Path name) throws IOException {
-    assertTrue(fileSys.exists(name));
-    fileSys.delete(name, true);
-    assertTrue(!fileSys.exists(name));
-  }
-
 
   @Test(timeout = 120000)
   public void testXattrConfiguration() throws Exception {

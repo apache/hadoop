@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.top.TopConf;
+import org.apache.hadoop.hdfs.util.HostsFileWriter;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.NoMlockCacheManipulator;
 import org.apache.hadoop.net.ServerSocketUtil;
@@ -44,9 +45,9 @@ import org.mortbay.util.ajax.JSON;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.io.File;
-import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -236,8 +237,8 @@ public class TestNameNodeMXBean {
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1);
     MiniDFSCluster cluster = null;
-    FileSystem localFileSys = null;
-    Path dir = null;
+    HostsFileWriter hostsFileWriter = new HostsFileWriter();
+    hostsFileWriter.initialize(conf, "temp/TestNameNodeMXBean");
 
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
@@ -249,18 +250,12 @@ public class TestNameNodeMXBean {
       ObjectName mxbeanName = new ObjectName(
         "Hadoop:service=NameNode,name=NameNodeInfo");
 
-      // Define include file to generate deadNodes metrics
-      localFileSys = FileSystem.getLocal(conf);
-      Path workingDir = localFileSys.getWorkingDirectory();
-      dir = new Path(workingDir,"build/test/data/temp/TestNameNodeMXBean");
-      Path includeFile = new Path(dir, "include");
-      assertTrue(localFileSys.mkdirs(dir));
-      StringBuilder includeHosts = new StringBuilder();
+      List<String> hosts = new ArrayList<>();
       for(DataNode dn : cluster.getDataNodes()) {
-        includeHosts.append(dn.getDisplayName()).append("\n");
+        hosts.add(dn.getDisplayName());
       }
-      DFSTestUtil.writeFile(localFileSys, includeFile, includeHosts.toString());
-      conf.set(DFSConfigKeys.DFS_HOSTS, includeFile.toUri().getPath());
+      hostsFileWriter.initIncludeHosts(hosts.toArray(
+          new String[hosts.size()]));
       fsn.getBlockManager().getDatanodeManager().refreshNodes(conf);
 
       cluster.stopDataNode(0);
@@ -282,12 +277,10 @@ public class TestNameNodeMXBean {
         assertTrue(deadNode.containsKey("xferaddr"));
       }
     } finally {
-      if ((localFileSys != null) && localFileSys.exists(dir)) {
-        FileUtils.deleteQuietly(new File(dir.toUri().getPath()));
-      }
       if (cluster != null) {
         cluster.shutdown();
       }
+      hostsFileWriter.cleanup();
     }
   }
 

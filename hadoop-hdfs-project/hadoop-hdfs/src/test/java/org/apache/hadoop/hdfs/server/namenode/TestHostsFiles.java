@@ -20,11 +20,10 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.assertTrue;
 
 import java.lang.management.ManagementFactory;
-import java.io.File;
+import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,7 +33,13 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.CombinedHostFileManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.HostConfigManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.HostFileManager;
+import org.apache.hadoop.hdfs.util.HostsFileWriter;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -43,9 +48,21 @@ import javax.management.ObjectName;
  * DFS_HOSTS and DFS_HOSTS_EXCLUDE tests
  * 
  */
+@RunWith(Parameterized.class)
 public class TestHostsFiles {
   private static final Log LOG =
     LogFactory.getLog(TestHostsFiles.class.getName());
+  private Class hostFileMgrClass;
+
+  public TestHostsFiles(Class hostFileMgrClass) {
+    this.hostFileMgrClass = hostFileMgrClass;
+  }
+
+  @Parameterized.Parameters
+  public static Iterable<Object[]> data() {
+    return Arrays.asList(new Object[][]{
+        {HostFileManager.class}, {CombinedHostFileManager.class}});
+  }
 
   /*
    * Return a configuration object with low timeouts for testing and 
@@ -72,6 +89,10 @@ public class TestHostsFiles {
 
     // Indicates we have multiple racks
     conf.set(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY, "xyz");
+
+    // Host file manager
+    conf.setClass(DFSConfigKeys.DFS_NAMENODE_HOSTS_PROVIDER_CLASSNAME_KEY,
+        hostFileMgrClass, HostConfigManager.class);
     return conf;
   }
 
@@ -80,18 +101,8 @@ public class TestHostsFiles {
     Configuration conf = getConf();
     short REPLICATION_FACTOR = 2;
     final Path filePath = new Path("/testFile");
-
-    // Configure an excludes file
-    FileSystem localFileSys = FileSystem.getLocal(conf);
-    Path workingDir = new Path(MiniDFSCluster.getBaseDirectory());
-    Path dir = new Path(workingDir, "temp/decommission");
-    Path excludeFile = new Path(dir, "exclude");
-    Path includeFile = new Path(dir, "include");
-    assertTrue(localFileSys.mkdirs(dir));
-    DFSTestUtil.writeFile(localFileSys, excludeFile, "");
-    DFSTestUtil.writeFile(localFileSys, includeFile, "");
-    conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
-    conf.set(DFSConfigKeys.DFS_HOSTS, includeFile.toUri().getPath());
+    HostsFileWriter hostsFileWriter = new HostsFileWriter();
+    hostsFileWriter.initialize(conf, "temp/decommission");
 
     // Two blocks and four racks
     String racks[] = {"/rack1", "/rack1", "/rack2", "/rack2"};
@@ -112,9 +123,8 @@ public class TestHostsFiles {
       BlockLocation locs[] = fs.getFileBlockLocations(
           fs.getFileStatus(filePath), 0, Long.MAX_VALUE);
       String name = locs[0].getNames()[0];
-      String names = name + "\n" + "localhost:42\n";
-      LOG.info("adding '" + names + "' to exclude file " + excludeFile.toUri().getPath());
-      DFSTestUtil.writeFile(localFileSys, excludeFile, name);
+      LOG.info("adding '" + name + "' to decommission");
+      hostsFileWriter.initExcludeHost(name);
       ns.getBlockManager().getDatanodeManager().refreshNodes(conf);
       DFSTestUtil.waitForDecommission(fs, name);
 
@@ -131,9 +141,7 @@ public class TestHostsFiles {
       if (cluster != null) {
         cluster.shutdown();
       }
-      if (localFileSys.exists(dir)) {
-        FileUtils.deleteQuietly(new File(dir.toUri().getPath()));
-      }
+      hostsFileWriter.cleanup();
     }
   }
 
@@ -141,20 +149,10 @@ public class TestHostsFiles {
   public void testHostsIncludeForDeadCount() throws Exception {
     Configuration conf = getConf();
 
-    // Configure an excludes file
-    FileSystem localFileSys = FileSystem.getLocal(conf);
-    Path workingDir = new Path(MiniDFSCluster.getBaseDirectory());
-    Path dir = new Path(workingDir, "temp/decommission");
-    Path excludeFile = new Path(dir, "exclude");
-    Path includeFile = new Path(dir, "include");
-    assertTrue(localFileSys.mkdirs(dir));
-    StringBuilder includeHosts = new StringBuilder();
-    includeHosts.append("localhost:52").append("\n").append("127.0.0.1:7777")
-        .append("\n");
-    DFSTestUtil.writeFile(localFileSys, excludeFile, "");
-    DFSTestUtil.writeFile(localFileSys, includeFile, includeHosts.toString());
-    conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
-    conf.set(DFSConfigKeys.DFS_HOSTS, includeFile.toUri().getPath());
+    HostsFileWriter hostsFileWriter = new HostsFileWriter();
+    hostsFileWriter.initialize(conf, "temp/decommission");
+    hostsFileWriter.initIncludeHosts(new String[]
+        {"localhost:52","127.0.0.1:7777"});
 
     MiniDFSCluster cluster = null;
     try {
@@ -174,9 +172,7 @@ public class TestHostsFiles {
       if (cluster != null) {
         cluster.shutdown();
       }
-      if (localFileSys.exists(dir)) {
-        FileUtils.deleteQuietly(new File(dir.toUri().getPath()));
-      }
+      hostsFileWriter.cleanup();
     }
   }
 }
