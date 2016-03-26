@@ -74,7 +74,6 @@ message OpReadBlockProto {
   optional CachingStrategyProto cachingStrategy = 5;
 }
 
-
 message ChecksumProto {
   required ChecksumTypeProto type = 1;
   required uint32 bytesPerChecksum = 2;
@@ -147,6 +146,14 @@ message OpCopyBlockProto {
 
 message OpBlockChecksumProto { 
   required BaseHeaderProto header = 1;
+}
+
+message OpBlockGroupChecksumProto {
+  required BaseHeaderProto header = 1;
+  required DatanodeInfosProto datanodes = 2;
+  // each internal block has a block token
+  repeated hadoop.common.TokenProto blockTokens = 3;
+  required ErasureCodingPolicyProto ecPolicy = 4;
 }
 
 /**
