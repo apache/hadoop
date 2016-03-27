@@ -53,10 +53,6 @@ public class TestReservationSystem extends
   private Configuration conf;
   private RMContext mockRMContext;
 
-  public TestReservationSystem(SchedulerType type) {
-    super(type);
-  }
-
   @Before
   public void setUp() throws IOException {
     scheduler = initializeScheduler();
