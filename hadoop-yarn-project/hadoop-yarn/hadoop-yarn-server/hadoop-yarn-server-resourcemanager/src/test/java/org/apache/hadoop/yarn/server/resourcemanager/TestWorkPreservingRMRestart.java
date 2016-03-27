@@ -89,7 +89,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.Dom
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.Records;
-import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -100,22 +99,14 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import com.google.common.base.Supplier;
 
-
 @SuppressWarnings({"rawtypes", "unchecked"})
-@RunWith(value = Parameterized.class)
 public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase {
 
   private YarnConfiguration conf;
   MockRM rm1 = null;
   MockRM rm2 = null;
-
-  public TestWorkPreservingRMRestart(SchedulerType type) {
-    super(type);
-  }
 
   @Before
   public void setup() throws UnknownHostException {

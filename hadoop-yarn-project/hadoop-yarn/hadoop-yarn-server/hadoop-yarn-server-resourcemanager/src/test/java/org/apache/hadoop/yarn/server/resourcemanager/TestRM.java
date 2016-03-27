@@ -91,10 +91,6 @@ public class TestRM extends ParameterizedSchedulerTestBase {
 
   private YarnConfiguration conf;
 
-  public TestRM(SchedulerType type) {
-    super(type);
-  }
-
   @Before
   public void setup() {
     conf = getConf();
