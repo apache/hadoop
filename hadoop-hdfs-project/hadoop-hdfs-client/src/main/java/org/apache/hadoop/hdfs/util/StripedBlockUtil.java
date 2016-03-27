@@ -76,6 +76,18 @@ public class StripedBlockUtil {
   public static final Logger LOG = LoggerFactory.getLogger(StripedBlockUtil.class);
 
   /**
+   * Parses a striped block group into individual blocks.
+   * @param bg The striped block group
+   * @param ecPolicy The erasure coding policy
+   * @return An array of the blocks in the group
+   */
+  public static LocatedBlock[] parseStripedBlockGroup(LocatedStripedBlock bg,
+                                               ErasureCodingPolicy ecPolicy) {
+    return parseStripedBlockGroup(bg, ecPolicy.getCellSize(),
+        ecPolicy.getNumDataUnits(), ecPolicy.getNumParityUnits());
+  }
+
+  /**
    * This method parses a striped block group into individual blocks.
    *
    * @param bg The striped block group

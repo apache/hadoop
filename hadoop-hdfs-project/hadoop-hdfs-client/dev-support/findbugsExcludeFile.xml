@@ -8,6 +8,7 @@
       <Class name="org.apache.hadoop.hdfs.protocol.LocatedBlock"/>
       <Class name="org.apache.hadoop.hdfs.protocol.BlockStoragePolicy"/>
       <Class name="org.apache.hadoop.hdfs.protocol.CorruptFileBlocks"/>
+      <Class name="org.apache.hadoop.hdfs.protocol.StripedBlockInfo"/>
       <Class name="org.apache.hadoop.hdfs.protocol.DirectoryListing"/>
       <Class name="org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier"/>
       <Class name="org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey"/>
