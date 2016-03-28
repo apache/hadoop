@@ -117,8 +117,15 @@
 
   <!-- Object cast is based on the event type -->
   <Match>
-    <Class name="org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher$ApplicationEventHandler" />
-     <Bug pattern="BC_UNCONFIRMED_CAST" />
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher" />
+    <Method name="publishApplicationEvent" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher" />
+    <Method name="publishLocalizationEvent" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
   </Match>
 
   <Match>

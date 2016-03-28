@@ -69,4 +69,12 @@ public class ContainerMetricsConstants {
 
   public static final String ALLOCATED_HOST_HTTP_ADDRESS_ENTITY_INFO =
       "YARN_CONTAINER_ALLOCATED_HOST_HTTP_ADDRESS";
+
+  // Event of this type will be emitted by NM.
+  public static final String LOCALIZATION_START_EVENT_TYPE =
+      "YARN_NM_CONTAINER_LOCALIZATION_STARTED";
+
+  // Event of this type will be emitted by NM.
+  public static final String LOCALIZATION_FINISHED_EVENT_TYPE =
+      "YARN_NM_CONTAINER_LOCALIZATION_FINISHED";
 }

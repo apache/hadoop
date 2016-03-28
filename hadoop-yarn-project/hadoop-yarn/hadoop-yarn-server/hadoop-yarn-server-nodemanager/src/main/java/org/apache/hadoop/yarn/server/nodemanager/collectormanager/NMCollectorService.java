@@ -29,7 +29,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -42,6 +41,7 @@ import org.apache.hadoop.yarn.server.api.records.AppCollectorsMap;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
+import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 
 /**
  * Service that handles collector information. It is used only if the timeline
@@ -116,10 +116,10 @@ public class NMCollectorService extends CompositeService implements
         String collectorAddr = collector.getCollectorAddr();
         newCollectorsMap.put(appId, collectorAddr);
         // set registered collector address to TimelineClient.
-        TimelineClient client =
-            context.getApplications().get(appId).getTimelineClient();
-        if (client != null) {
-          client.setTimelineServiceAddress(collectorAddr);
+        NMTimelinePublisher nmTimelinePublisher =
+            context.getNMTimelinePublisher();
+        if (nmTimelinePublisher != null) {
+          nmTimelinePublisher.setTimelineServiceAddress(appId, collectorAddr);
         }
       }
       ((NodeManager.NMContext)context).addRegisteredCollectors(
