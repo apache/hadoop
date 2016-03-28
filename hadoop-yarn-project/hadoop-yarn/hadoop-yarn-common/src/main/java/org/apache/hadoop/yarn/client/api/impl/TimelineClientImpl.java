@@ -429,9 +429,8 @@ public class TimelineClientImpl extends TimelineClient {
         URI uri = constructResURI(getConfig(), timelineServiceAddress, true);
         putObjects(uri, path, params, obj);
         needRetry = false;
-      } catch (Exception e) {
-        // TODO only handle exception for timelineServiceAddress being updated.
-        // skip retry for other exceptions.
+      } catch (IOException e) {
+        // handle exception for timelineServiceAddress being updated.
         checkRetryWithSleep(retries, e);
         retries--;
       }
@@ -458,29 +457,27 @@ public class TimelineClientImpl extends TimelineClient {
    * @param retries
    * @param e
    */
-  private void checkRetryWithSleep(int retries, Exception e) throws
-      YarnException, IOException {
+  private void checkRetryWithSleep(int retries, IOException e)
+      throws YarnException, IOException {
     if (retries > 0) {
       try {
         Thread.sleep(this.serviceRetryInterval);
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
+        throw new YarnException("Interrupted while retrying to connect to ATS");
       }
     } else {
-      LOG.error("TimelineClient has reached to max retry times :" +
-          this.maxServiceRetries + " for service address: " +
-          timelineServiceAddress);
-      if (e instanceof YarnException) {
-        throw (YarnException)e;
-      } else if (e instanceof IOException) {
-        throw (IOException)e;
-      } else {
-        throw new YarnException(e);
-      }
+      StringBuilder msg =
+          new StringBuilder("TimelineClient has reached to max retry times : ");
+      msg.append(this.maxServiceRetries);
+      msg.append(" for service address: ");
+      msg.append(timelineServiceAddress);
+      LOG.error(msg.toString());
+      throw new IOException(msg.toString(), e);
     }
   }
 
-  private void putObjects(
+  protected void putObjects(
       URI base, String path, MultivaluedMap<String, String> params, Object obj)
           throws IOException, YarnException {
     ClientResponse resp;
@@ -636,17 +633,19 @@ public class TimelineClientImpl extends TimelineClient {
 
   /**
    * Poll TimelineServiceAddress for maximum of retries times if it is null.
+   *
    * @param retries
    * @return the left retry times
+   * @throws IOException
    */
-  private int pollTimelineServiceAddress(int retries) {
+  private int pollTimelineServiceAddress(int retries) throws YarnException {
     while (timelineServiceAddress == null && retries > 0) {
       try {
         Thread.sleep(this.serviceRetryInterval);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
+        throw new YarnException("Interrupted while trying to connect ATS");
       }
-      // timelineServiceAddress = getTimelineServiceAddress();
       retries--;
     }
     return retries;

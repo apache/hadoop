@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,22 +35,32 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 
 public class TestTimelineClientV2Impl {
   private static final Log LOG =
       LogFactory.getLog(TestTimelineClientV2Impl.class);
   private TestV2TimelineClient client;
   private static long TIME_TO_SLEEP = 150;
+  private static final String EXCEPTION_MSG = "Exception in the content";
 
   @Before
   public void setup() {
-    YarnConfiguration conf = new YarnConfiguration();
+    conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 1.0f);
     conf.setInt(YarnConfiguration.NUMBER_OF_ASYNC_ENTITIES_TO_MERGE, 3);
-    client = createTimelineClient(conf);
+    if (!currTestName.getMethodName()
+        .contains("testRetryOnConnectionFailure")) {
+      client = createTimelineClient(conf);
+    }
   }
+
+  @Rule
+  public TestName currTestName = new TestName();
+  private YarnConfiguration conf;
 
   private TestV2TimelineClient createTimelineClient(YarnConfiguration conf) {
     ApplicationId id = ApplicationId.newInstance(0, 0);
@@ -59,9 +70,34 @@ public class TestTimelineClientV2Impl {
     return client;
   }
 
-  private class TestV2TimelineClient extends TimelineClientImpl {
+  private class TestV2TimelineClientForExceptionHandling
+      extends TimelineClientImpl {
+    public TestV2TimelineClientForExceptionHandling(ApplicationId id) {
+      super(id);
+    }
+
+    protected boolean throwYarnException;
+
+    public void setThrowYarnException(boolean throwYarnException) {
+      this.throwYarnException = throwYarnException;
+    }
+
+    @Override
+    protected void putObjects(URI base, String path,
+        MultivaluedMap<String, String> params, Object obj)
+            throws IOException, YarnException {
+      if (throwYarnException) {
+        throw new YarnException(EXCEPTION_MSG);
+      } else {
+        throw new IOException(
+            "Failed to get the response from the timeline server.");
+      }
+    }
+  }
+
+  private class TestV2TimelineClient
+      extends TestV2TimelineClientForExceptionHandling {
     private boolean sleepBeforeReturn;
-    private boolean throwException;
 
     private List<TimelineEntities> publishedEntities;
 
@@ -73,10 +109,6 @@ public class TestTimelineClientV2Impl {
 
     public void setSleepBeforeReturn(boolean sleepBeforeReturn) {
       this.sleepBeforeReturn = sleepBeforeReturn;
-    }
-
-    public void setThrowException(boolean throwException) {
-      this.throwException = throwException;
     }
 
     public int getNumOfTimelineEntitiesPublished() {
@@ -91,7 +123,7 @@ public class TestTimelineClientV2Impl {
     protected void putObjects(String path,
         MultivaluedMap<String, String> params, Object obj)
             throws IOException, YarnException {
-      if (throwException) {
+      if (throwYarnException) {
         throw new YarnException("ActualException");
       }
       publishedEntities.add((TimelineEntities) obj);
@@ -103,6 +135,45 @@ public class TestTimelineClientV2Impl {
         }
       }
     }
+  }
+
+  @Test
+  public void testExceptionMultipleRetry() {
+    TestV2TimelineClientForExceptionHandling client =
+        new TestV2TimelineClientForExceptionHandling(
+            ApplicationId.newInstance(0, 0));
+    int maxRetries = 2;
+    conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
+        maxRetries);
+    client.init(conf);
+    client.start();
+    client.setTimelineServiceAddress("localhost:12345");
+    try {
+      client.putEntities(new TimelineEntity());
+    } catch (IOException e) {
+      Assert.fail("YARN exception is expected");
+    } catch (YarnException e) {
+      Throwable cause = e.getCause();
+      Assert.assertTrue("IOException is expected",
+          cause instanceof IOException);
+      Assert.assertTrue("YARN exception is expected",
+          cause.getMessage().contains(
+              "TimelineClient has reached to max retry times : " + maxRetries));
+    }
+
+    client.setThrowYarnException(true);
+    try {
+      client.putEntities(new TimelineEntity());
+    } catch (IOException e) {
+      Assert.fail("YARN exception is expected");
+    } catch (YarnException e) {
+      Throwable cause = e.getCause();
+      Assert.assertTrue("YARN exception is expected",
+          cause instanceof YarnException);
+      Assert.assertTrue("YARN exception is expected",
+          cause.getMessage().contains(EXCEPTION_MSG));
+    }
+    client.stop();
   }
 
   @Test
@@ -189,7 +260,7 @@ public class TestTimelineClientV2Impl {
 
   @Test
   public void testExceptionCalls() throws Exception {
-    client.setThrowException(true);
+    client.setThrowYarnException(true);
     try {
       client.putEntitiesAsync(generateEntity("1"));
     } catch (YarnException e) {

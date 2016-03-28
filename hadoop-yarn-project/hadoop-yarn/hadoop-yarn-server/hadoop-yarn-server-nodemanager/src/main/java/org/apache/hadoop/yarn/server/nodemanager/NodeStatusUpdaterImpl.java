@@ -55,7 +55,6 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
-import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -89,6 +88,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
+import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -983,9 +983,11 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                 LOG.debug("Sync a new collector address: " + collectorAddr +
                     " for application: " + appId + " from RM.");
               }
-              TimelineClient client = application.getTimelineClient();
-              if (client != null) {
-                client.setTimelineServiceAddress(collectorAddr);
+              NMTimelinePublisher nmTimelinePublisher =
+                  context.getNMTimelinePublisher();
+              if (nmTimelinePublisher != null) {
+                nmTimelinePublisher.setTimelineServiceAddress(
+                    application.getAppId(), collectorAddr);
               }
             }
           }

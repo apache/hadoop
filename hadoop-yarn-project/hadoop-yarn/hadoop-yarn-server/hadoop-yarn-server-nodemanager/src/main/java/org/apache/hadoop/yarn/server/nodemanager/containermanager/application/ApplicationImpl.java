@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppStartedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
@@ -83,7 +84,6 @@ public class ApplicationImpl implements Application {
   private final ReadLock readLock;
   private final WriteLock writeLock;
   private final Context context;
-  private TimelineClient timelineClient;
 
   private static final Log LOG = LogFactory.getLog(ApplicationImpl.class);
 
@@ -143,7 +143,7 @@ public class ApplicationImpl implements Application {
       }
       this.flowContext = flowContext;
       if (YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
-        createAndStartTimelineClient(conf);
+        context.getNMTimelinePublisher().createTimelineClient(appId);
       }
     }
   }
@@ -175,13 +175,6 @@ public class ApplicationImpl implements Application {
     }
   }
 
-  private void createAndStartTimelineClient(Configuration conf) {
-    // create and start timeline client
-    this.timelineClient = TimelineClient.createTimelineClient(appId);
-    timelineClient.init(conf);
-    timelineClient.start();
-  }
-
   @Override
   public String getUser() {
     return user.toString();
@@ -192,11 +185,6 @@ public class ApplicationImpl implements Application {
     return appId;
   }
   
-  @Override
-  public TimelineClient getTimelineClient() {
-    return timelineClient;
-  }
-
   @Override
   public ApplicationState getApplicationState() {
     this.readLock.lock();
@@ -575,9 +563,10 @@ public class ApplicationImpl implements Application {
         registeredCollectors.remove(app.getAppId());
       }
       // stop timelineClient when application get finished.
-      TimelineClient timelineClient = app.getTimelineClient();
-      if (timelineClient != null) {
-        timelineClient.stop();
+      NMTimelinePublisher nmTimelinePublisher =
+          app.context.getNMTimelinePublisher();
+      if (nmTimelinePublisher != null) {
+        nmTimelinePublisher.stopTimelineClient(app.getAppId());
       }
     }
   }

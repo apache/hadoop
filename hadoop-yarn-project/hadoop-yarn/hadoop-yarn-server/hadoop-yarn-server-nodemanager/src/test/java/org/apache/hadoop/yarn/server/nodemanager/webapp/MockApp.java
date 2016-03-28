@@ -101,9 +101,4 @@ public class MockApp implements Application {
   public long getFlowRunId() {
     return flowRunId;
   }
-  
-  @Override
-  public TimelineClient getTimelineClient() {
-    return timelineClient;
-  }
 }
