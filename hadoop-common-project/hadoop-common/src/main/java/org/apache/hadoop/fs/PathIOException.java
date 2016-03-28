@@ -33,6 +33,7 @@ public class PathIOException extends IOException {
   // uris with no authority
   private String operation;
   private String path;
+  private String fullyQualifiedPath;
   private String targetPath;
 
   /**
@@ -68,6 +69,11 @@ public class PathIOException extends IOException {
     this.path = path;
   }
 
+  public PathIOException withFullyQualifiedPath(String fqPath) {
+    fullyQualifiedPath = fqPath;
+    return this;
+  }
+
   /** Format:
    * cmd: {operation} `path' {to `target'}: error string
    */
@@ -84,6 +90,9 @@ public class PathIOException extends IOException {
     message.append(": " + super.getMessage());
     if (getCause() != null) {
       message.append(": " + getCause().getMessage());
+    }
+    if (fullyQualifiedPath != null && !fullyQualifiedPath.equals(path)) {
+      message.append(": ").append(formatPath(fullyQualifiedPath));
     }
     return message.toString();
   }
