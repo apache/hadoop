@@ -46,6 +46,9 @@ Release 2.7.3 - UNRELEASED
 
     HDFS-9860. Backport HDFS-9638 to branch-2.7. (Wei-Chiu Chuang via aajisaka)
 
+    HDFS-8101. DFSClient use of non-constant DFSConfigKeys pulls in WebHDFS
+    classes at runtime. (Sean Busbey via atm)
+
   OPTIMIZATIONS
 
     HDFS-8845. DiskChecker should not traverse the entire tree (Chang Li via
@@ -166,9 +169,6 @@ Release 2.7.2 - 2016-01-25
     values() since it creates a temporary array. (Staffan Friberg via yliu)
 
     HDFS-9574. Reduce client failures during datanode restart (kihwal)
-
-    HDFS-8101. DFSClient use of non-constant DFSConfigKeys pulls in WebHDFS
-    classes at runtime. (Sean Busbey via atm)
 
   OPTIMIZATIONS
 
