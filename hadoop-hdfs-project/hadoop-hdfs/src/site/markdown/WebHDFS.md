@@ -65,7 +65,6 @@ WebHDFS REST API
         * [Rename Snapshot](#Rename_Snapshot)
     * [Delegation Token Operations](#Delegation_Token_Operations)
         * [Get Delegation Token](#Get_Delegation_Token)
-        * [Get Delegation Tokens](#Get_Delegation_Tokens)
         * [Renew Delegation Token](#Renew_Delegation_Token)
         * [Cancel Delegation Token](#Cancel_Delegation_Token)
     * [Error Responses](#Error_Responses)
@@ -89,7 +88,6 @@ WebHDFS REST API
         * [RemoteException JSON Schema](#RemoteException_JSON_Schema)
         * [Token JSON Schema](#Token_JSON_Schema)
             * [Token Properties](#Token_Properties)
-        * [Tokens JSON Schema](#Tokens_JSON_Schema)
     * [HTTP Query Parameter Dictionary](#HTTP_Query_Parameter_Dictionary)
         * [ACL Spec](#ACL_Spec)
         * [XAttr Name](#XAttr_Name)
@@ -148,7 +146,6 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`GETFILECHECKSUM`](#Get_File_Checksum) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileChecksum)
     * [`GETHOMEDIRECTORY`](#Get_Home_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getHomeDirectory)
     * [`GETDELEGATIONTOKEN`](#Get_Delegation_Token) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getDelegationToken)
-    * [`GETDELEGATIONTOKENS`](#Get_Delegation_Tokens) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getDelegationTokens)
     * [`GETXATTRS`](#Get_an_XAttr) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getXAttr)
     * [`GETXATTRS`](#Get_multiple_XAttrs) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getXAttrs)
     * [`GETXATTRS`](#Get_all_XAttrs) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getXAttrs)
@@ -1033,32 +1030,6 @@ Delegation Token Operations
 
 See also: [`renewer`](#Renewer), [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getDelegationToken, [`kind`](#Token_Kind), [`service`](#Token_Service)
 
-### Get Delegation Tokens
-
-* Submit a HTTP GET request.
-
-        curl -i "http://<HOST>:<PORT>/webhdfs/v1/?op=GETDELEGATIONTOKENS&renewer=<USER>"
-
-    The client receives a response with a [`Tokens` JSON object](#Tokens_JSON_Schema):
-
-        HTTP/1.1 200 OK
-        Content-Type: application/json
-        Transfer-Encoding: chunked
-
-        {
-          "Tokens":
-          {
-            "Token":
-            [
-              {
-                "urlString":"KAAKSm9i ..."
-              }
-            ]
-          }
-        }
-
-See also: [`renewer`](#Renewer), [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getDelegationTokens
-
 ### Renew Delegation Token
 
 * Submit a HTTP PUT request.
@@ -1655,7 +1626,7 @@ See also: [`Token` Properties](#Token_Properties), [`GETDELEGATIONTOKEN`](#Get_D
 
 #### Token Properties
 
-JavaScript syntax is used to define `tokenProperties` so that it can be referred in both `Token` and `Tokens` JSON schemas.
+JavaScript syntax is used to define `tokenProperties` so that it can be referred in `Token` JSON schema.
 
 ```json
 var tokenProperties =
@@ -1673,33 +1644,7 @@ var tokenProperties =
 }
 ```
 
-### Tokens JSON Schema
-
-A `Tokens` JSON object represents an array of `Token` JSON objects.
-
-```json
-{
-  "name"      : "Tokens",
-  "properties":
-  {
-    "Tokens":
-    {
-      "type"      : "object",
-      "properties":
-      {
-        "Token":
-        {
-          "description": "An array of Token",
-          "type"       : "array",
-          "items"      : "Token": tokenProperties      //See Token Properties
-        }
-      }
-    }
-  }
-}
-```
-
-See also: [`Token` Properties](#Token_Properties), [`GETDELEGATIONTOKENS`](#Get_Delegation_Tokens), the note in [Delegation](#Delegation).
+See also: [`Token` Properties](#Token_Properties), the note in [Delegation](#Delegation).
 
 HTTP Query Parameter Dictionary
 -------------------------------
@@ -2013,7 +1958,7 @@ See also: [`RENAME`](#Rename_a_FileDirectory)
 | Valid Values | Any valid username. |
 | Syntax | Any string. |
 
-See also: [`GETDELEGATIONTOKEN`](#Get_Delegation_Token), [`GETDELEGATIONTOKENS`](#Get_Delegation_Tokens)
+See also: [`GETDELEGATIONTOKEN`](#Get_Delegation_Token)
 
 ### Replication
 

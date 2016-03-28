@@ -331,7 +331,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
     }
     return total;
   }
-  
+
   @Override
   @SuppressWarnings("deprecation")
   public long getCumulativeVmem(int olderThanAge) {
@@ -358,7 +358,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
     }
     return isAvailable ? totalPages * PAGE_SIZE : UNAVAILABLE; // convert # pages to byte
   }
-  
+
   @Override
   @SuppressWarnings("deprecation")
   public long getCumulativeRssmem(int olderThanAge) {
@@ -409,13 +409,11 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
               }
             }
           }
-        
           if (LOG.isDebugEnabled()) {
             LOG.debug(procMemInfo.toString());
           }
         }
       }
-      
     }
     if (total > 0) {
       total *= KB_TO_BYTES; // convert to bytes

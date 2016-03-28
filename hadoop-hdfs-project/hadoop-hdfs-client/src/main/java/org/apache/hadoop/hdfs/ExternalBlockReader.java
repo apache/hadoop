@@ -110,11 +110,6 @@ public final class ExternalBlockReader implements BlockReader {
   }
 
   @Override
-  public boolean isLocal() {
-    return accessor.isLocal();
-  }
-
-  @Override
   public boolean isShortCircuit() {
     return accessor.isShortCircuit();
   }
@@ -128,5 +123,10 @@ public final class ExternalBlockReader implements BlockReader {
   @Override
   public DataChecksum getDataChecksum() {
     return null;
+  }
+
+  @Override
+  public int getNetworkDistance() {
+    return accessor.getNetworkDistance();
   }
 }

@@ -70,7 +70,7 @@ function parse_args()
 
 function calculate_classpath
 {
-  hadoop_add_to_classpath_toolspath
+  hadoop_add_to_classpath_tools hadoop-sls
   hadoop_debug "Injecting ${HADOOP_PREFIX}/share/hadoop/tools/sls/html into CLASSPATH"
   hadoop_add_classpath "${HADOOP_PREFIX}/share/hadoop/tools/sls/html"
 }

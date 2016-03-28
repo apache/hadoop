@@ -24,6 +24,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 
+import java.net.InetSocketAddress;
+
 /**
  * This class represents the primary identifier for a Datanode.
  * Datanodes are identified by how they can be contacted (hostname
@@ -326,5 +328,9 @@ public class DatanodeID implements Comparable<DatanodeID> {
         .setIpcPort(this.getIpcPort())
         .setContainerPort(this.getContainerPort())
         .build();
+  }
+
+  public InetSocketAddress getResolvedAddress() {
+    return new InetSocketAddress(this.getIpAddr(), this.getXferPort());
   }
 }

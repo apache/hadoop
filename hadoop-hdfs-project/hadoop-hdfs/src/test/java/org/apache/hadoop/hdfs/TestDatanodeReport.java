@@ -29,11 +29,16 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.server.blockmanagement.CombinedHostFileManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.HostConfigManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.hdfs.util.HostsFileWriter;
 import org.junit.Test;
 
 /**
@@ -43,7 +48,57 @@ public class TestDatanodeReport {
   static final Log LOG = LogFactory.getLog(TestDatanodeReport.class);
   final static private Configuration conf = new HdfsConfiguration();
   final static private int NUM_OF_DATANODES = 4;
-    
+
+  /**
+   * This test verifies upgrade domain is set according to the JSON host file.
+   */
+  @Test
+  public void testDatanodeReportWithUpgradeDomain() throws Exception {
+    conf.setInt(
+        DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500); // 0.5s
+    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
+    conf.setClass(DFSConfigKeys.DFS_NAMENODE_HOSTS_PROVIDER_CLASSNAME_KEY,
+        CombinedHostFileManager.class, HostConfigManager.class);
+    HostsFileWriter hostsFileWriter = new HostsFileWriter();
+    hostsFileWriter.initialize(conf, "temp/datanodeReport");
+
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    final DFSClient client = cluster.getFileSystem().dfs;
+    final String ud1 = "ud1";
+    final String ud2 = "ud2";
+
+    try {
+      //wait until the cluster is up
+      cluster.waitActive();
+
+      DatanodeAdminProperties datanode = new DatanodeAdminProperties();
+      datanode.setHostName(cluster.getDataNodes().get(0).getDatanodeId().getHostName());
+      datanode.setUpgradeDomain(ud1);
+      hostsFileWriter.initIncludeHosts(
+          new DatanodeAdminProperties[]{datanode});
+      client.refreshNodes();
+      DatanodeInfo[] all = client.datanodeReport(DatanodeReportType.ALL);
+      assertEquals(all[0].getUpgradeDomain(), ud1);
+
+      datanode.setUpgradeDomain(null);
+      hostsFileWriter.initIncludeHosts(
+          new DatanodeAdminProperties[]{datanode});
+      client.refreshNodes();
+      all = client.datanodeReport(DatanodeReportType.ALL);
+      assertEquals(all[0].getUpgradeDomain(), null);
+
+      datanode.setUpgradeDomain(ud2);
+      hostsFileWriter.initIncludeHosts(
+          new DatanodeAdminProperties[]{datanode});
+      client.refreshNodes();
+      all = client.datanodeReport(DatanodeReportType.ALL);
+      assertEquals(all[0].getUpgradeDomain(), ud2);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   /**
    * This test attempts to different types of datanode report.
    */

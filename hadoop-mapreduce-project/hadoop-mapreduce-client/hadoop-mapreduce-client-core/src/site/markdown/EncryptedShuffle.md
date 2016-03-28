@@ -40,7 +40,7 @@ To enable encrypted shuffle, set the following properties in core-site.xml of al
 | **Property** | **Default Value** | **Explanation** |
 |:---- |:---- |:---- |
 | `hadoop.ssl.require.client.cert` | `false` | Whether client certificates are required |
-| `hadoop.ssl.hostname.verifier` | `DEFAULT` | The hostname verifier to provide for HttpsURLConnections. Valid values are: **DEFAULT**, **STRICT**, **STRICT\_I6**, **DEFAULT\_AND\_LOCALHOST** and **ALLOW\_ALL** |
+| `hadoop.ssl.hostname.verifier` | `DEFAULT` | The hostname verifier to provide for HttpsURLConnections. Valid values are: **DEFAULT**, **STRICT**, **STRICT\_IE6**, **DEFAULT\_AND\_LOCALHOST** and **ALLOW\_ALL** |
 | `hadoop.ssl.keystores.factory.class` | `org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory` | The KeyStoresFactory implementation to use |
 | `hadoop.ssl.server.conf` | `ssl-server.xml` | Resource file from which ssl server keystore information will be extracted. This file is looked up in the classpath, typically it should be in Hadoop conf/ directory |
 | `hadoop.ssl.client.conf` | `ssl-client.xml` | Resource file from which ssl server keystore information will be extracted. This file is looked up in the classpath, typically it should be in Hadoop conf/ directory |

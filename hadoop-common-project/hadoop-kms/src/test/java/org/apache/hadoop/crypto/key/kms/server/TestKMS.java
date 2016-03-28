@@ -39,11 +39,15 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.login.AppConfigurationEntry;
@@ -69,12 +73,14 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 
 public class TestKMS {
+  private static final Logger LOG = LoggerFactory.getLogger(TestKMS.class);
 
   @Before
   public void cleanUp() {
     // resetting kerberos security
     Configuration conf = new Configuration();
     UserGroupInformation.setConfiguration(conf);
+    GenericTestUtils.setLogLevel(LOG, Level.INFO);
   }
 
   public static File getTestDir() throws Exception {
@@ -378,6 +384,42 @@ public class TestKMS {
   @Test
   public void testStartStopHttpsKerberos() throws Exception {
     testStartStop(true, true);
+  }
+
+  @Test(timeout = 30000)
+  public void testSpecialKeyNames() throws Exception {
+    final String specialKey = "key %^[\n{]}|\"<>\\";
+    Configuration conf = new Configuration();
+    conf.set("hadoop.security.authentication", "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+    File confDir = getTestDir();
+    conf = createBaseKMSConf(confDir);
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + specialKey + ".ALL", "*");
+    writeConf(confDir, conf);
+
+    runServer(null, null, confDir, new KMSCallable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        Configuration conf = new Configuration();
+        URI uri = createKMSUri(getKMSUrl());
+        KeyProvider kp = createProvider(uri, conf);
+        Assert.assertTrue(kp.getKeys().isEmpty());
+        Assert.assertEquals(0, kp.getKeysMetadata().length);
+
+        KeyProvider.Options options = new KeyProvider.Options(conf);
+        options.setCipher("AES/CTR/NoPadding");
+        options.setBitLength(128);
+        options.setDescription("l1");
+        LOG.info("Creating key with name '{}'", specialKey);
+
+        KeyProvider.KeyVersion kv0 = kp.createKey(specialKey, options);
+        Assert.assertNotNull(kv0);
+        Assert.assertEquals(specialKey, kv0.getName());
+        Assert.assertNotNull(kv0.getVersionName());
+        Assert.assertNotNull(kv0.getMaterial());
+        return null;
+      }
+    });
   }
 
   @Test

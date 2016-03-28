@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.StripedBlockInfo;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
@@ -46,7 +47,9 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.BlockChecksumHelper.BlockChecksumComputer;
+import org.apache.hadoop.hdfs.server.datanode.BlockChecksumHelper.AbstractBlockChecksumComputer;
 import org.apache.hadoop.hdfs.server.datanode.BlockChecksumHelper.ReplicatedBlockChecksumComputer;
+import org.apache.hadoop.hdfs.server.datanode.BlockChecksumHelper.BlockGroupNonStripedChecksumComputer;
 import org.apache.hadoop.hdfs.server.datanode.DataNode.ShortCircuitFdsUnsupportedException;
 import org.apache.hadoop.hdfs.server.datanode.DataNode.ShortCircuitFdsVersionException;
 import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry.NewShmInfo;
@@ -913,6 +916,46 @@ class DataXceiver extends Receiver implements Runnable {
       out.flush();
     } catch (IOException ioe) {
       LOG.info("blockChecksum " + block + " received exception " + ioe);
+      incrDatanodeNetworkErrors();
+      throw ioe;
+    } finally {
+      IOUtils.closeStream(out);
+    }
+
+    //update metrics
+    datanode.metrics.addBlockChecksumOp(elapsed());
+  }
+
+  @Override
+  public void blockGroupChecksum(final StripedBlockInfo stripedBlockInfo,
+                                 final Token<BlockTokenIdentifier> blockToken)
+      throws IOException {
+    updateCurrentThreadName("Getting checksum for block group" +
+        stripedBlockInfo.getBlock());
+    final DataOutputStream out = new DataOutputStream(getOutputStream());
+    checkAccess(out, true, stripedBlockInfo.getBlock(), blockToken,
+        Op.BLOCK_GROUP_CHECKSUM, BlockTokenIdentifier.AccessMode.READ);
+
+    AbstractBlockChecksumComputer maker =
+        new BlockGroupNonStripedChecksumComputer(datanode, stripedBlockInfo);
+
+    try {
+      maker.compute();
+
+      //write reply
+      BlockOpResponseProto.newBuilder()
+          .setStatus(SUCCESS)
+          .setChecksumResponse(OpBlockChecksumResponseProto.newBuilder()
+              .setBytesPerCrc(maker.getBytesPerCRC())
+              .setCrcPerBlock(maker.getCrcPerBlock())
+              .setMd5(ByteString.copyFrom(maker.getOutBytes()))
+              .setCrcType(PBHelperClient.convert(maker.getCrcType())))
+          .build()
+          .writeDelimitedTo(out);
+      out.flush();
+    } catch (IOException ioe) {
+      LOG.info("blockChecksum " + stripedBlockInfo.getBlock() +
+          " received exception " + ioe);
       incrDatanodeNetworkErrors();
       throw ioe;
     } finally {

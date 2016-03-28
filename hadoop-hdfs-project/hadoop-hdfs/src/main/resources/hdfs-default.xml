@@ -2607,6 +2607,24 @@
 </property>
 
 <property>
+  <name>dfs.namenode.edekcacheloader.interval.ms</name>
+  <value>1000</value>
+  <description>When KeyProvider is configured, the interval time of warming
+    up edek cache on NN starts up / becomes active. All edeks will be loaded
+    from KMS into provider cache. The edek cache loader will try to warm up the
+    cache until succeed or NN leaves active state.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.edekcacheloader.initial.delay.ms</name>
+  <value>3000</value>
+  <description>When KeyProvider is configured, the time delayed until the first
+    attempt to warm up edek cache on NN start up / become active.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.inotify.max.events.per.rpc</name>
   <value>1000</value>
   <description>Maximum number of events that will be sent to an inotify client
@@ -3002,6 +3020,20 @@
   <description>
     Specify the upper bound of sleep time in milliseconds between
     retries or failovers for WebHDFS client.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.hosts.provider.classname</name>
+  <value>org.apache.hadoop.hdfs.server.blockmanagement.HostFileManager</value>
+  <description>
+    The class that provides access for host files.
+    org.apache.hadoop.hdfs.server.blockmanagement.HostFileManager is used
+    by default which loads files specified by dfs.hosts and dfs.hosts.exclude.
+    If org.apache.hadoop.hdfs.server.blockmanagement.CombinedHostFileManager is
+    used, it will load the JSON file defined in dfs.hosts.
+    To change class name, nn restart is required. "dfsadmin -refreshNodes" only
+    refreshes the configuration files used by the class.
   </description>
 </property>
 </configuration>

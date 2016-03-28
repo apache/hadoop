@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertArrayEquals;
 
 import java.util.ArrayList;
@@ -39,6 +38,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.util.HostsFileWriter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.Test;
@@ -385,17 +385,8 @@ public class TestBlocksWithNotEnoughRacks {
     short REPLICATION_FACTOR = 2;
     final Path filePath = new Path("/testFile");
 
-    // Configure an excludes file
-    FileSystem localFileSys = FileSystem.getLocal(conf);
-    Path workingDir = new Path(MiniDFSCluster.getBaseDirectory());
-    Path dir = new Path(workingDir, "temp/decommission");
-    Path excludeFile = new Path(dir, "exclude");
-    Path includeFile = new Path(dir, "include");
-    assertTrue(localFileSys.mkdirs(dir));
-    DFSTestUtil.writeFile(localFileSys, excludeFile, "");
-    DFSTestUtil.writeFile(localFileSys, includeFile, "");
-    conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
-    conf.set(DFSConfigKeys.DFS_HOSTS, includeFile.toUri().getPath());
+    HostsFileWriter hostsFileWriter = new HostsFileWriter();
+    hostsFileWriter.initialize(conf, "temp/decommission");
 
     // Two blocks and four racks
     String racks[] = {"/rack1", "/rack1", "/rack2", "/rack2"};
@@ -416,7 +407,7 @@ public class TestBlocksWithNotEnoughRacks {
       BlockLocation locs[] = fs.getFileBlockLocations(
           fs.getFileStatus(filePath), 0, Long.MAX_VALUE);
       String name = locs[0].getNames()[0];
-      DFSTestUtil.writeFile(localFileSys, excludeFile, name);
+      hostsFileWriter.initExcludeHost(name);
       ns.getBlockManager().getDatanodeManager().refreshNodes(conf);
       DFSTestUtil.waitForDecommission(fs, name);
 
@@ -424,6 +415,7 @@ public class TestBlocksWithNotEnoughRacks {
       DFSTestUtil.waitForReplication(cluster, b, 2, REPLICATION_FACTOR, 0);
     } finally {
       cluster.shutdown();
+      hostsFileWriter.cleanup();
     }
   }
 
@@ -438,17 +430,8 @@ public class TestBlocksWithNotEnoughRacks {
     short REPLICATION_FACTOR = 5;
     final Path filePath = new Path("/testFile");
 
-    // Configure an excludes file
-    FileSystem localFileSys = FileSystem.getLocal(conf);
-    Path workingDir = new Path(MiniDFSCluster.getBaseDirectory());
-    Path dir = new Path(workingDir, "temp/decommission");
-    Path excludeFile = new Path(dir, "exclude");
-    Path includeFile = new Path(dir, "include");
-    assertTrue(localFileSys.mkdirs(dir));
-    DFSTestUtil.writeFile(localFileSys, excludeFile, "");
-    DFSTestUtil.writeFile(localFileSys, includeFile, "");
-    conf.set(DFSConfigKeys.DFS_HOSTS, includeFile.toUri().getPath());
-    conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
+    HostsFileWriter hostsFileWriter = new HostsFileWriter();
+    hostsFileWriter.initialize(conf, "temp/decommission");
 
     // All hosts are on two racks, only one host on /rack2
     String racks[] = {"/rack1", "/rack2", "/rack1", "/rack1", "/rack1"};
@@ -474,7 +457,7 @@ public class TestBlocksWithNotEnoughRacks {
       for (String top : locs[0].getTopologyPaths()) {
         if (!top.startsWith("/rack2")) {
           String name = top.substring("/rack1".length()+1);
-          DFSTestUtil.writeFile(localFileSys, excludeFile, name);
+          hostsFileWriter.initExcludeHost(name);
           ns.getBlockManager().getDatanodeManager().refreshNodes(conf);
           DFSTestUtil.waitForDecommission(fs, name);
           break;
@@ -486,6 +469,7 @@ public class TestBlocksWithNotEnoughRacks {
       DFSTestUtil.waitForReplication(cluster, b, 2, REPLICATION_FACTOR, 0);
     } finally {
       cluster.shutdown();
+      hostsFileWriter.cleanup();
     }
   }
 }

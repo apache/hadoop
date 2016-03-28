@@ -49,7 +49,7 @@
 # preferred.  Many sites configure these options outside of Hadoop,
 # such as in /etc/profile.d
 
-# The java implementation to use. By default, this environment 
+# The java implementation to use. By default, this environment
 # variable is REQUIRED on ALL platforms except OS X!
 # export JAVA_HOME=
 
@@ -64,15 +64,15 @@
 # path.
 # export HADOOP_CONF_DIR=$HADOOP_PREFIX/etc/hadoop
 
-# The maximum amount of heap to use (Java -Xmx).  If no unit 
-# is provided, it will be converted to MB.  Daemons will 
+# The maximum amount of heap to use (Java -Xmx).  If no unit
+# is provided, it will be converted to MB.  Daemons will
 # prefer any Xmx setting in their respective _OPT variable.
 # There is no default; the JVM will autoscale based upon machine
 # memory size.
 # export HADOOP_HEAPSIZE_MAX=
 
-# The minimum amount of heap to use (Java -Xms).  If no unit 
-# is provided, it will be converted to MB.  Daemons will 
+# The minimum amount of heap to use (Java -Xms).  If no unit
+# is provided, it will be converted to MB.  Daemons will
 # prefer any Xms setting in their respective _OPT variable.
 # There is no default; the JVM will autoscale based upon machine
 # memory size.
@@ -107,8 +107,8 @@ case ${HADOOP_OS_TYPE} in
 esac
 
 # Extra Java runtime options for some Hadoop commands
-# and clients (i.e., hdfs dfs -blah).  These get appended to HADOOP_OPTS for 
-# such commands.  In most cases, # this should be left empty and 
+# and clients (i.e., hdfs dfs -blah).  These get appended to HADOOP_OPTS for
+# such commands.  In most cases, # this should be left empty and
 # let users supply it on the command line.
 # export HADOOP_CLIENT_OPTS=""
 
@@ -146,6 +146,11 @@ esac
 # names starting with a '-' are treated as negative matches. For example,
 # export HADOOP_CLIENT_CLASSLOADER_SYSTEM_CLASSES="-org.apache.hadoop.UserClass,java.,javax.,org.apache.hadoop."
 
+# Enable optional, bundled Hadoop features
+# This is a comma delimited list.  It may NOT be overridden via .hadooprc
+# Entries may be added/removed as needed.
+# export HADOOP_OPTIONAL_TOOLS="@@@HADOOP_OPTIONAL_TOOLS@@@"
+
 ###
 # Options for remote shell connectivity
 ###
@@ -181,7 +186,7 @@ esac
 # non-secure)
 #
 
-# Where (primarily) daemon log files are stored.  # $HADOOP_PREFIX/logs 
+# Where (primarily) daemon log files are stored.  # $HADOOP_PREFIX/logs
 # by default.
 # Java property: hadoop.log.dir
 # export HADOOP_LOG_DIR=${HADOOP_PREFIX}/logs
@@ -201,7 +206,7 @@ esac
 # Java property: hadoop.root.logger
 # export HADOOP_ROOT_LOGGER=INFO,console
 
-# Default log4j setting for daemons spawned explicitly by 
+# Default log4j setting for daemons spawned explicitly by
 # --daemon option of hadoop, hdfs, mapred and yarn command.
 # Java property: hadoop.root.logger
 # export HADOOP_DAEMON_ROOT_LOGGER=INFO,RFA

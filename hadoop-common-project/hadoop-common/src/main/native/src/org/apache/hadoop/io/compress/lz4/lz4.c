@@ -52,7 +52,7 @@
   || defined(__ppc64__) || defined(__ppc64le__) \
   || defined(__PPC64__) || defined(__PPC64LE__) \
   || defined(__ia64) || defined(__itanium__) || defined(_M_IA64) \
-  || defined(__s390x__) )   /* Detects 64 bits mode */
+  || defined(__s390x__) || defined(_LP64))   /* Detects 64 bits mode */
 #  define LZ4_ARCH64 1
 #else
 #  define LZ4_ARCH64 0

@@ -21,6 +21,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
@@ -379,5 +380,19 @@ public class EncryptionZoneManager {
    */
   public int getNumEncryptionZones() {
     return encryptionZones.size();
+  }
+
+  /**
+   * @return a list of all key names.
+   */
+  String[] getKeyNames() {
+    assert dir.hasReadLock();
+    String[] ret = new String[encryptionZones.size()];
+    int index = 0;
+    for (Map.Entry<Long, EncryptionZoneInt> entry : encryptionZones
+        .entrySet()) {
+      ret[index] = entry.getValue().getKeyName();
+    }
+    return ret;
   }
 }

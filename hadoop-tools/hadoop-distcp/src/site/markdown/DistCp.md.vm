@@ -32,7 +32,6 @@ DistCp Guide
      - [Map sizing](#Map_sizing)
      - [Copying Between Versions of HDFS](#Copying_Between_Versions_of_HDFS)
      - [MapReduce and other side-effects](#MapReduce_and_other_side-effects)
-     - [SSL Configurations for HSFTP sources](#SSL_Configurations_for_HSFTP_sources)
  - [Frequently Asked Questions](#Frequently_Asked_Questions)
 
 ---
@@ -232,7 +231,6 @@ Flag              | Description                          | Notes
 `-strategy {dynamic|uniformsize}` | Choose the copy-strategy to be used in DistCp. | By default, uniformsize is used. (i.e. Maps are balanced on the total size of files copied by each map. Similar to legacy.) If "dynamic" is specified, `DynamicInputFormat` is used instead. (This is described in the Architecture section, under InputFormats.)
 `-bandwidth` | Specify bandwidth per map, in MB/second. | Each map will be restricted to consume only the specified bandwidth. This is not always exact. The map throttles back its bandwidth consumption during a copy, such that the **net** bandwidth used tends towards the specified value.
 `-atomic {-tmp <tmp_dir>}` | Specify atomic commit, with optional tmp directory. | `-atomic` instructs DistCp to copy the source data to a temporary target location, and then move the temporary target to the final-location atomically. Data will either be available at final target in a complete and consistent form, or not at all. Optionally, `-tmp` may be used to specify the location of the tmp-target. If not specified, a default is chosen. **Note:** tmp_dir must be on the final target cluster.
-`-mapredSslConf <ssl_conf_file>` | Specify SSL Config file, to be used with HSFTP source | When using the hsftp protocol with a source, the security- related properties may be specified in a config-file and passed to DistCp. \<ssl_conf_file\> needs to be in the classpath.
 `-async` | Run DistCp asynchronously. Quits as soon as the Hadoop Job is launched. | The Hadoop Job-id is logged, for tracking.
 `-diff` | Use snapshot diff report to identify the difference between source and target. |
 `-numListstatusThreads` | Number of threads to use for building file listing | At most 40 threads.
@@ -431,43 +429,6 @@ $H3 MapReduce and other side-effects
     will be killed (unless `-i` is set).
   * If `mapreduce.map.speculative` is set set final and true, the result of the
     copy is undefined.
-
-$H3 SSL Configurations for HSFTP sources
-
-  To use an HSFTP source (i.e. using the hsftp protocol), a SSL configuration
-  file needs to be specified (via the `-mapredSslConf` option). This must
-  specify 3 parameters:
-
-  * `ssl.client.truststore.location`: The local-filesystem location of the
-    trust-store file, containing the certificate for the NameNode.
-  * `ssl.client.truststore.type`: (Optional) The format of the trust-store
-    file.
-  * `ssl.client.truststore.password`: (Optional) Password for the trust-store
-    file.
-
-  The following is an example SSL configuration file:
-
-    <configuration>
-      <property>
-        <name>ssl.client.truststore.location</name>
-        <value>/work/keystore.jks</value>
-        <description>Truststore to be used by clients like distcp. Must be specified.</description>
-      </property>
-
-      <property>
-        <name>ssl.client.truststore.password</name>
-        <value>changeme</value>
-        <description>Optional. Default value is "".</description>
-      </property>
-
-      <property>
-        <name>ssl.client.truststore.type</name>
-        <value>jks</value>
-        <description>Optional. Default value is "jks".</description>
-      </property>
-    </configuration>
-
-  The SSL configuration file must be in the class-path of the DistCp program.
 
 Frequently Asked Questions
 --------------------------

@@ -112,7 +112,23 @@ public class NodeBase implements Node {
   public static String getPath(Node node) {
     return node.getNetworkLocation() + PATH_SEPARATOR_STR + node.getName();
   }
-  
+
+  @Override
+  public boolean equals(Object to) {
+    if (this == to) {
+      return true;
+    }
+    if (!(to instanceof NodeBase)) {
+      return false;
+    }
+    return getPath(this).equals(getPath((NodeBase)to));
+  }
+
+  @Override
+  public int hashCode() {
+    return getPath(this).hashCode();
+  }
+
   /** @return this node's path as its string representation */
   @Override
   public String toString() {

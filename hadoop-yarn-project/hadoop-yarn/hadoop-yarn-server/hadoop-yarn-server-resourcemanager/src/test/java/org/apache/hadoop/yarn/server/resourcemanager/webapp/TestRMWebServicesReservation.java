@@ -714,9 +714,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     testRDLHelper(reservations);
 
-    long reservationId = reservations.getJSONObject("reservation-id")
-            .getLong("reservation-id");
-    assertEquals(id1.getId(), reservationId);
+    String reservationId = reservations.getString("reservation-id");
+    assertEquals(id1.toString(), reservationId);
 
     rm.stop();
   }
@@ -769,9 +768,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     testRDLHelper(reservations);
 
-    long reservationId = reservations.getJSONObject("reservation-id")
-            .getLong("reservation-id");
-    assertEquals(id1.getId(), reservationId);
+    String reservationId = reservations.getString("reservation-id");
+    assertEquals(id1.toString(), reservationId);
 
     assertTrue(reservations.has("resource-allocations"));
 
@@ -804,9 +802,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     testRDLHelper(reservations);
 
-    long reservationId = reservations.getJSONObject("reservation-id")
-            .getLong("reservation-id");
-    assertEquals(id1.getId(), reservationId);
+    String reservationId = reservations.getString("reservation-id");
+    assertEquals(id1.toString(), reservationId);
 
     assertTrue(!reservations.has("resource-allocations"));
 

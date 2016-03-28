@@ -33,6 +33,7 @@ ResourceManager REST API's.
 * [Cluster Application Queue API](#Cluster_Application_Queue_API)
 * [Cluster Application Priority API](#Cluster_Application_Priority_API)
 * [Cluster Delegation Tokens API](#Cluster_Delegation_Tokens_API)
+* [Cluster Reservation API List](#Cluster_Reservation_API_List)
 
 Overview
 --------
@@ -3164,3 +3165,219 @@ Once setup, delegation tokens can be fetched using the web services listed above
       {
         "state":"KILLED"
       }
+
+Cluster Reservation API List
+----------------------------
+
+The Cluster Reservation API can be used to list reservations. When listing reservations the user must specify the constraints in terms of a queue, reservation-id, start time or end time. The user must also specify whether or not to include the full resource allocations of the reservations being listed. The resulting page returns a response containing information related to the reservation such as the acceptance time, the user, the resource allocations, the reservation-id, as well as the reservation definition.
+
+### URI
+
+    * http://<rm http address:port>/ws/v1/cluster/reservation/list
+
+### HTTP Operations Supported
+
+    * GET
+
+### Query Parameters Supported
+
+      * queue - the queue name containing the reservations to be listed. if not set, this value will default to "default".
+      * reservation-id - the reservation-id of the reservation which will be listed. If this parameter is present, start-time and end-time will be ignored.
+      * start-time - reservations that end after this start-time will be listed. If unspecified or invalid, this will default to 0.
+      * end-time - reservations that start after this end-time will be listed. If unspecified or invalid, this will default to Long.MaxValue.
+      * include-resource-allocations - true or false. If true, the resource allocations of the reservation will be included in the response. If false, no resource allocations will be included in the response. This will default to false.
+
+### Elements of the *ReservationListInfo* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| reservations | array of ReservationInfo(JSON) / zero or more ReservationInfo objects(XML) | The reservations that are listed with the given query |
+
+### Elements of the *reservations* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| acceptance-time | long | Time that the reservation was accepted |
+| resource-allocations | array of ResourceAllocationInfo(JSON) / zero or more ResourceAllocationInfo objects(XML) | Resource allocation information for the reservation |
+| reservation-id | A single ReservationId string | The unique reservation identifier |
+| reservation-definition | A single ReservationDefinition Object | A set of constraints representing the need for resources over time of a user |
+| user | string | User who made the reservation |
+
+### Elements of the *resource-allocations* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| resource | A single Resource object | The resources allocated for the reservation allocation |
+| startTime | long | Start time that the resource is allocated for |
+| endTime | long | End time that the resource is allocated for |
+
+### Elements of the  *resource* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| memory | int | The memory allocated for the reservation allocation |
+| vCores | int | The number of cores allocated for the reservation allocation |
+
+### Elements of the *reservation-definition* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| arrival | long | The UTC time representation of the earliest time this reservation can be allocated from. |
+| deadline | long | The UTC time representation of the latest time within which this reservatino can be allocated. |
+| reservation-name | string | A mnemonic name of the reservaiton (not a valid identifier). |
+| reservation-requests | object | A list of "stages" or phases of this reservation, each describing resource requirements and duration |
+
+### Elements of the *reservation-requests* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| reservation-request-interpreter | int | A numeric choice of how to interpret the set of ReservationRequest: 0 is an ANY, 1 for ALL, 2 for ORDER, 3 for ORDER\_NO\_GAP |
+| reservation-request | object | The description of the resource and time capabilities for a phase/stage of this reservation |
+
+### Elements of the *reservation-request* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| duration | long | The duration of a ReservationRequest in milliseconds (amount of consecutive milliseconds a satisfiable allocation for this portion of the reservation should exist for). |
+| num-containers | int | The number of containers required in this phase of the reservation (capture the maximum parallelism of the job(s) in this phase). |
+| min-concurrency | int | The minimum number of containers that must be concurrently allocated to satisfy this allocation (capture min-parallelism, useful to express gang semantics). |
+| capability | object | Allows to specify the size of each container (memory, vCores).|
+
+### GET Response Examples
+
+Get requests can be used to list reservations to the ResourceManager. As mentioned above, information pertaining to the reservation is returned upon success (in the body of the answer). Successful list requests result in a 200 response. Please note that in order to submit a reservation, you must have an authentication filter setup for the HTTP interface. the functionality requires that the username is set in the HttpServletRequest. If no filter is setup, the response will be an "UNAUTHORIZED" response. Please note that this feature is currently in the alpha stage and may change in the future.
+
+**JSON response**
+
+This request return all active reservations within the start time 1455159355000 and 1475160036000. Since include-resource-allocations is set to true, the full set of resource allocations will be included in the response.
+
+HTTP Request:
+
+      GET http://<rm http address:port>/ws/v1/cluster/reservation/list?queue=dedicated&start-time=1455159355000&end-time=1475160036000&include-resource-allocations=true
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+      Transfer-Encoding: chunked
+      Cache-Control: no-cache
+      Content-Encoding: gzip
+      Pragma: no-cache,no-cache
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```json
+{
+  "reservations": {
+    "acceptance-time": "1455160008442",
+    "user": "submitter",
+    "resource-allocations": [
+      {
+        "resource": {
+          "memory": "0",
+          "vCores": "0"
+        },
+        "startTime": "1465541532000",
+        "endTime": "1465542250000"
+      },
+      {
+        "resource": {
+          "memory": "1024",
+          "vCores": "1"
+        },
+        "startTime": "1465542250000",
+        "endTime": "1465542251000"
+      },
+      {
+        "resource": {
+          "memory": "0",
+          "vCores": "0"
+        },
+        "startTime": "1465542251000",
+        "endTime": "1465542252000"
+      }
+    ],
+    "reservation-id": "reservation_1458852875788_0002",
+    "reservation-definition": {
+      "arrival": "1465541532000",
+      "deadline": "1465542252000",
+      "reservation-requests": {
+        "reservation-request-interpreter": "0",
+        "reservation-request": {
+          "capability": {
+            "memory": "1024",
+            "vCores": "1"
+          },
+          "min-concurrency": "1",
+          "num-containers": "1",
+          "duration": "60"
+        }
+      },
+      "reservation-name": "res_1"
+    }
+  }
+}
+```
+
+**XML Response**
+
+HTTP Request:
+
+      GET http://<rm http address:port>/ws/v1/cluster/reservation/list?queue=dedicated&start-time=1455159355000&end-time=1475160036000&include-resource-allocations=true
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Content-length: 395
+      Cache-Control: no-cache
+      Content-Encoding: gzip
+      Pragma: no-cache,no-cache
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```xml
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <reservationListInfo>
+        <reservations>
+        <acceptance-time>1455233661003</acceptance-time>
+        <user>dr.who</user>
+        <resource-allocations>
+            <resource>
+                <memory>0</memory>
+                <vCores>0</vCores>
+            </resource>
+            <startTime>1465541532000</startTime>
+            <endTime>1465542251000</endTime>
+        </resource-allocations>
+        <resource-allocations>
+            <resource>
+                <memory>1024</memory>
+                <vCores>1</vCores>
+            </resource>
+            <startTime>1465542251000</startTime>
+            <endTime>1465542252000</endTime>
+        </resource-allocations>
+        <reservation-id>reservation_1458852875788_0002</reservation-id>
+        <reservation-definition>
+            <arrival>1465541532000</arrival>
+            <deadline>1465542252000</deadline>
+            <reservation-requests>
+                <reservation-request-interpreter>0</reservation-request-interpreter>
+                <reservation-request>
+                    <capability>
+                        <memory>1024</memory>
+                        <vCores>1</vCores>
+                    </capability>
+                    <min-concurrency>1</min-concurrency>
+                    <num-containers>1</num-containers>
+                    <duration>60</duration>
+                </reservation-request>
+            </reservation-requests>
+            <reservation-name>res_1</reservation-name>
+        </reservation-definition>
+    </reservations>
+</reservationListInfo>
+```

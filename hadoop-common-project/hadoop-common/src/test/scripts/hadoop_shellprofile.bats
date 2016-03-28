@@ -66,6 +66,13 @@ _test_hadoop_finalize () {
   [ -z "${unittest}" ]
 }
 
+@test "hadoop_import_shellprofiles (H_O_T)" {
+  HADOOP_OPTIONAL_TOOLS=1,2
+  shellprofilesetup
+  hadoop_import_shellprofiles
+  [ "${HADOOP_TOOLS_OPTIONS}" == " 1  2 " ]
+}
+
 @test "hadoop_add_profile+hadoop_shellprofiles_init" {
   hadoop_add_profile test
   hadoop_shellprofiles_init

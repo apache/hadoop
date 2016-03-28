@@ -29,6 +29,22 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.junit.Assert;
 
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.protobuf.TestProtos;
+import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.KerberosInfo;
+import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.token.TokenInfo;
+import org.apache.hadoop.security.token.TokenSelector;
+import org.junit.Assert;
+
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
@@ -37,6 +53,8 @@ import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
@@ -149,6 +167,89 @@ public class TestRpcBase {
     return count;
   }
 
+  public static class TestTokenIdentifier extends TokenIdentifier {
+    private Text tokenid;
+    private Text realUser;
+    final static Text KIND_NAME = new Text("test.token");
+
+    public TestTokenIdentifier() {
+      this(new Text(), new Text());
+    }
+    public TestTokenIdentifier(Text tokenid) {
+      this(tokenid, new Text());
+    }
+    public TestTokenIdentifier(Text tokenid, Text realUser) {
+      this.tokenid = tokenid == null ? new Text() : tokenid;
+      this.realUser = realUser == null ? new Text() : realUser;
+    }
+    @Override
+    public Text getKind() {
+      return KIND_NAME;
+    }
+    @Override
+    public UserGroupInformation getUser() {
+      if (realUser.toString().isEmpty()) {
+        return UserGroupInformation.createRemoteUser(tokenid.toString());
+      } else {
+        UserGroupInformation realUgi = UserGroupInformation
+            .createRemoteUser(realUser.toString());
+        return UserGroupInformation
+            .createProxyUser(tokenid.toString(), realUgi);
+      }
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+      tokenid.readFields(in);
+      realUser.readFields(in);
+    }
+    @Override
+    public void write(DataOutput out) throws IOException {
+      tokenid.write(out);
+      realUser.write(out);
+    }
+  }
+
+  public static class TestTokenSecretManager extends
+      SecretManager<TestTokenIdentifier> {
+    @Override
+    public byte[] createPassword(TestTokenIdentifier id) {
+      return id.getBytes();
+    }
+
+    @Override
+    public byte[] retrievePassword(TestTokenIdentifier id)
+        throws InvalidToken {
+      return id.getBytes();
+    }
+
+    @Override
+    public TestTokenIdentifier createIdentifier() {
+      return new TestTokenIdentifier();
+    }
+  }
+
+  public static class TestTokenSelector implements
+      TokenSelector<TestTokenIdentifier> {
+    @SuppressWarnings("unchecked")
+    @Override
+    public Token<TestTokenIdentifier> selectToken(Text service,
+                                                  Collection<Token<? extends TokenIdentifier>> tokens) {
+      if (service == null) {
+        return null;
+      }
+      for (Token<? extends TokenIdentifier> token : tokens) {
+        if (TestTokenIdentifier.KIND_NAME.equals(token.getKind())
+            && service.equals(token.getService())) {
+          return (Token<TestTokenIdentifier>) token;
+        }
+      }
+      return null;
+    }
+  }
+
+  @KerberosInfo(serverPrincipal = SERVER_PRINCIPAL_KEY)
+  @TokenInfo(TestTokenSelector.class)
   @ProtocolInfo(protocolName = "org.apache.hadoop.ipc.TestRpcBase$TestRpcService",
       protocolVersion = 1)
   public interface TestRpcService
@@ -267,10 +368,78 @@ public class TestRpcBase {
       } catch (InterruptedException ignore) {}
       return  TestProtos.EmptyResponseProto.newBuilder().build();
     }
+
+    @Override
+    public TestProtos.AuthMethodResponseProto getAuthMethod(
+        RpcController controller, TestProtos.EmptyRequestProto request)
+        throws ServiceException {
+      AuthMethod authMethod = null;
+      try {
+        authMethod = UserGroupInformation.getCurrentUser()
+            .getAuthenticationMethod().getAuthMethod();
+      } catch (IOException e) {
+        throw new ServiceException(e);
+      }
+
+      return TestProtos.AuthMethodResponseProto.newBuilder()
+          .setCode(authMethod.code)
+          .setMechanismName(authMethod.getMechanismName())
+          .build();
+    }
+
+    @Override
+    public TestProtos.AuthUserResponseProto getAuthUser(
+        RpcController controller, TestProtos.EmptyRequestProto request)
+        throws ServiceException {
+      UserGroupInformation authUser = null;
+      try {
+        authUser = UserGroupInformation.getCurrentUser();
+      } catch (IOException e) {
+        throw new ServiceException(e);
+      }
+
+      return TestProtos.AuthUserResponseProto.newBuilder()
+          .setAuthUser(authUser.getUserName())
+          .build();
+    }
+
+    @Override
+    public TestProtos.EchoResponseProto echoPostponed(
+        RpcController controller, TestProtos.EchoRequestProto request)
+        throws ServiceException {
+      Server.Call call = Server.getCurCall().get();
+      call.postponeResponse();
+      postponedCalls.add(call);
+
+      return TestProtos.EchoResponseProto.newBuilder().setMessage(
+          request.getMessage())
+          .build();
+    }
+
+    @Override
+    public TestProtos.EmptyResponseProto sendPostponed(
+        RpcController controller, TestProtos.EmptyRequestProto request)
+        throws ServiceException {
+      Collections.shuffle(postponedCalls);
+      try {
+        for (Server.Call call : postponedCalls) {
+          call.sendResponse();
+        }
+      } catch (IOException e) {
+        throw new ServiceException(e);
+      }
+      postponedCalls.clear();
+
+      return TestProtos.EmptyResponseProto.newBuilder().build();
+    }
   }
 
   protected static TestProtos.EmptyRequestProto newEmptyRequest() {
     return TestProtos.EmptyRequestProto.newBuilder().build();
+  }
+
+  protected static TestProtos.EmptyResponseProto newEmptyResponse() {
+    return TestProtos.EmptyResponseProto.newBuilder().build();
   }
 
   protected static TestProtos.EchoRequestProto newEchoRequest(String msg) {
@@ -290,6 +459,27 @@ public class TestRpcBase {
   protected static TestProtos.SleepRequestProto newSleepRequest(
       int milliSeconds) {
     return TestProtos.SleepRequestProto.newBuilder()
-            .setMilliSeconds(milliSeconds).build();
+        .setMilliSeconds(milliSeconds).build();
+  }
+
+  protected static TestProtos.EchoResponseProto newEchoResponse(String msg) {
+    return TestProtos.EchoResponseProto.newBuilder().setMessage(msg).build();
+  }
+
+  protected static AuthMethod convert(
+      TestProtos.AuthMethodResponseProto authMethodResponse) {
+    String mechanism = authMethodResponse.getMechanismName();
+    if (mechanism.equals(AuthMethod.SIMPLE.getMechanismName())) {
+      return AuthMethod.SIMPLE;
+    } else if (mechanism.equals(AuthMethod.KERBEROS.getMechanismName())) {
+      return AuthMethod.KERBEROS;
+    } else if (mechanism.equals(AuthMethod.TOKEN.getMechanismName())) {
+      return AuthMethod.TOKEN;
+    }
+    return null;
+  }
+
+  protected static String convert(TestProtos.AuthUserResponseProto response) {
+    return response.getAuthUser();
   }
 }

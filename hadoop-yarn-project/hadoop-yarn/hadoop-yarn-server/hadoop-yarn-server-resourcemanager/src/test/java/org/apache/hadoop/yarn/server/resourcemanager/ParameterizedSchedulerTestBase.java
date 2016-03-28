@@ -23,19 +23,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 
-
 import org.junit.Before;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Arrays;
-import java.util.Collection;
 
-@RunWith(Parameterized.class)
 public abstract class ParameterizedSchedulerTestBase {
   protected final static String TEST_DIR =
       new File(System.getProperty("test.build.data", "/tmp")).getAbsolutePath();
@@ -49,31 +43,23 @@ public abstract class ParameterizedSchedulerTestBase {
     CAPACITY, FAIR
   }
 
-  public ParameterizedSchedulerTestBase(SchedulerType type) {
-    schedulerType = type;
-  }
-
   public YarnConfiguration getConf() {
     return conf;
   }
 
-  @Parameterized.Parameters
-  public static Collection<SchedulerType[]> getParameters() {
-    return Arrays.asList(new SchedulerType[][]{
-        {SchedulerType.CAPACITY}, {SchedulerType.FAIR}});
-  }
-
   @Before
-  public void configureScheduler() throws IOException {
+  public void configureScheduler() throws IOException, ClassNotFoundException {
     conf = new YarnConfiguration();
-    switch (schedulerType) {
-      case CAPACITY:
-        conf.set(YarnConfiguration.RM_SCHEDULER,
-            CapacityScheduler.class.getName());
-        break;
-      case FAIR:
-        configureFairScheduler(conf);
-        break;
+
+    Class schedulerClass =
+        conf.getClass(YarnConfiguration.RM_SCHEDULER,
+            Class.forName(YarnConfiguration.DEFAULT_RM_SCHEDULER));
+
+    if (schedulerClass == FairScheduler.class) {
+      schedulerType = SchedulerType.FAIR;
+      configureFairScheduler(conf);
+    } else if (schedulerClass == CapacityScheduler.class) {
+      schedulerType = SchedulerType.CAPACITY;
     }
   }
 

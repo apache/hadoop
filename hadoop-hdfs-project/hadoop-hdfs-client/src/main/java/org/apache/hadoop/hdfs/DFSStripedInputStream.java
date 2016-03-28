@@ -447,9 +447,6 @@ public class DFSStripedInputStream extends DFSInputStream {
           result += ret;
           pos += ret;
         }
-        if (dfsClient.stats != null) {
-          dfsClient.stats.incrementBytesRead(result);
-        }
         return result;
       } finally {
         // Check if need to report block replicas corruption either read

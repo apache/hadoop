@@ -136,10 +136,6 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   private static InetSocketAddress rmAddr;
   private List<MockRM> rms = new ArrayList<MockRM>();
 
-  public TestRMRestart(SchedulerType type) {
-    super(type);
-  }
-
   @Before
   public void setup() throws IOException {
     conf = getConf();

@@ -103,7 +103,9 @@ case "${COMMAND}" in
     echo "YARN_DIR='${YARN_DIR}'"
     echo "YARN_LIB_JARS_DIR='${YARN_LIB_JARS_DIR}'"
     echo "HADOOP_CONF_DIR='${HADOOP_CONF_DIR}'"
-    echo "HADOOP_TOOLS_PATH='${HADOOP_TOOLS_PATH}'"
+    echo "HADOOP_TOOLS_HOME='${HADOOP_TOOLS_HOME}'"
+    echo "HADOOP_TOOLS_DIR='${HADOOP_TOOLS_DIR}'"
+    echo "HADOOP_TOOLS_LIB_JARS_DIR='${HADOOP_TOOLS_LIB_JARS_DIR}'"
     exit 0
   ;;
   jar)

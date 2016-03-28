@@ -137,11 +137,6 @@ public class OptionsParser {
 
     parseBandwidth(command, option);
 
-    if (command.hasOption(DistCpOptionSwitch.SSL_CONF.getSwitch())) {
-      option.setSslConfigurationFile(command.
-          getOptionValue(DistCpOptionSwitch.SSL_CONF.getSwitch()));
-    }
-
     parseNumListStatusThreads(command, option);
 
     parseMaxMaps(command, option);

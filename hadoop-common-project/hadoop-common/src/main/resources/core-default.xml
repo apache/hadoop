@@ -1577,7 +1577,7 @@
   <value>DEFAULT</value>
   <description>
     The hostname verifier to provide for HttpsURLConnections.
-    Valid values are: DEFAULT, STRICT, STRICT_I6, DEFAULT_AND_LOCALHOST and
+    Valid values are: DEFAULT, STRICT, STRICT_IE6, DEFAULT_AND_LOCALHOST and
     ALLOW_ALL
   </description>
 </property>

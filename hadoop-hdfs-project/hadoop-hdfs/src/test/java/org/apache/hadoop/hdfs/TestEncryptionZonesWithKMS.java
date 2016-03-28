@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import static org.junit.Assert.assertTrue;
 
+import com.google.common.base.Supplier;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.apache.hadoop.crypto.key.kms.server.MiniKMS;
 import org.apache.hadoop.security.Credentials;
@@ -26,10 +27,12 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.internal.util.reflection.Whitebox;
 
 import java.io.File;
 import java.util.Arrays;
@@ -71,8 +74,10 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
     final Path zonePath = new Path("/TestEncryptionZone");
     fsWrapper.mkdir(zonePath, FsPermission.getDirDefault(), false);
     dfsAdmin.createEncryptionZone(zonePath, TEST_KEY);
-    assertTrue(((KMSClientProvider)fs.getClient().getKeyProvider()).
-        getEncKeyQueueSize(TEST_KEY) > 0);
+    @SuppressWarnings("unchecked")
+    KMSClientProvider kcp = (KMSClientProvider) Whitebox
+        .getInternalState(cluster.getNamesystem().getProvider(), "extension");
+    assertTrue(kcp.getEncKeyQueueSize(TEST_KEY) > 0);
   }
 
   @Test(timeout = 120000)
@@ -91,5 +96,32 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
     tokens = fs.addDelegationTokens(renewer, creds);
     Assert.assertEquals(0, tokens.length);
     Assert.assertEquals(2, creds.numberOfTokens());
+  }
+
+  @Test(timeout = 120000)
+  public void testWarmupEDEKCacheOnStartup() throws Exception {
+    final Path zonePath = new Path("/TestEncryptionZone");
+    fsWrapper.mkdir(zonePath, FsPermission.getDirDefault(), false);
+    dfsAdmin.createEncryptionZone(zonePath, TEST_KEY);
+
+    @SuppressWarnings("unchecked")
+    KMSClientProvider spy = (KMSClientProvider) Whitebox
+        .getInternalState(cluster.getNamesystem().getProvider(), "extension");
+    assertTrue("key queue is empty after creating encryption zone",
+        spy.getEncKeyQueueSize(TEST_KEY) > 0);
+
+    conf.setInt(
+        DFSConfigKeys.DFS_NAMENODE_EDEKCACHELOADER_INITIAL_DELAY_MS_KEY, 0);
+    cluster.restartNameNode(true);
+
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        final KMSClientProvider kspy = (KMSClientProvider) Whitebox
+            .getInternalState(cluster.getNamesystem().getProvider(),
+                "extension");
+        return kspy.getEncKeyQueueSize(TEST_KEY) > 0;
+      }
+    }, 1000, 60000);
   }
 }

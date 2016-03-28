@@ -212,7 +212,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   final String clientName;
   final SocketFactory socketFactory;
   final ReplaceDatanodeOnFailure dtpReplaceDatanodeOnFailure;
-  final FileSystem.Statistics stats;
+  private final FileSystem.Statistics stats;
   private final String authority;
   private final Random r = new Random();
   private SocketAddress[] localInterfaceAddrs;
@@ -357,7 +357,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         new CachingStrategy(writeDropBehind, readahead);
     this.clientContext = ClientContext.get(
         conf.get(DFS_CLIENT_CONTEXT, DFS_CLIENT_CONTEXT_DEFAULT),
-        dfsClientConf);
+        dfsClientConf, conf);
 
     if (dfsClientConf.getHedgedReadThreadpoolSize() > 0) {
       this.initThreadsNumForHedgedReads(dfsClientConf.
@@ -1704,7 +1704,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   /**
    * Get the checksum of the whole file or a range of the file. Note that the
-   * range always starts from the beginning of the file.
+   * range always starts from the beginning of the file. The file can be
+   * in replicated form, or striped mode. It can be used to checksum and compare
+   * two replicated files, or two striped files, but not applicable for two
+   * files of different block layout forms.
    * @param src The file path
    * @param length the length of the range, i.e., the range is [0, length]
    * @return The checksum
@@ -1717,7 +1720,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
     LocatedBlocks blockLocations = getBlockLocations(src, length);
 
-    FileChecksumHelper.FileChecksumComputer maker =
+    FileChecksumHelper.FileChecksumComputer maker;
+    ErasureCodingPolicy ecPolicy = blockLocations.getErasureCodingPolicy();
+    maker = ecPolicy != null ?
+        new FileChecksumHelper.StripedFileNonStripedChecksumComputer(src,
+            length, blockLocations, namenode, this, ecPolicy) :
         new FileChecksumHelper.ReplicatedFileChecksumComputer(src, length,
             blockLocations, namenode, this);
 
@@ -2737,6 +2744,13 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         IOUtilsClient.cleanup(LOG, peer);
         IOUtils.closeSocket(sock);
       }
+    }
+  }
+
+  void updateFileSystemReadStats(int distance, int nRead) {
+    if (stats != null) {
+      stats.incrementBytesRead(nRead);
+      stats.incrementBytesReadByDistance(distance, nRead);
     }
   }
 

@@ -55,7 +55,7 @@ function parse_args()
 
 function calculate_classpath()
 {
-  hadoop_add_to_classpath_toolspath
+  hadoop_add_to_classpath_tools hadoop-rumen
 }
 
 function run_sls_generator()
