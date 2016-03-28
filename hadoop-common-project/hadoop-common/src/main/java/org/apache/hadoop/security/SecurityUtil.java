@@ -73,16 +73,38 @@ public class SecurityUtil {
   @VisibleForTesting
   static HostResolver hostResolver;
 
+  private static boolean logSlowLookups;
+  private static int slowLookupThresholdMs;
+
   static {
-    Configuration conf = new Configuration();
+    setConfigurationInternal(new Configuration());
+  }
+
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public static void setConfiguration(Configuration conf) {
+    LOG.info("Updating Configuration");
+    setConfigurationInternal(conf);
+  }
+
+  private static void setConfigurationInternal(Configuration conf) {
     boolean useIp = conf.getBoolean(
         CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP,
         CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT);
     setTokenServiceUseIp(useIp);
-  }
 
-  private static boolean logSlowLookups = getLogSlowLookupsEnabled();
-  private static int slowLookupThresholdMs = getSlowLookupThresholdMs();
+    logSlowLookups = conf.getBoolean(
+        CommonConfigurationKeys
+            .HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_ENABLED_KEY,
+        CommonConfigurationKeys
+            .HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_ENABLED_DEFAULT);
+
+    slowLookupThresholdMs = conf.getInt(
+        CommonConfigurationKeys
+            .HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_THRESHOLD_MS_KEY,
+        CommonConfigurationKeys
+            .HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_THRESHOLD_MS_DEFAULT);
+  }
 
   /**
    * For use only by tests and initialization
@@ -90,6 +112,11 @@ public class SecurityUtil {
   @InterfaceAudience.Private
   @VisibleForTesting
   public static void setTokenServiceUseIp(boolean flag) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Setting "
+          + CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP
+          + " to " + flag);
+    }
     useIpForTokenService = flag;
     hostResolver = !useIpForTokenService
         ? new QualifiedHostResolver()
@@ -483,24 +510,6 @@ public class SecurityUtil {
     } catch (InterruptedException ie) {
       throw new IOException(ie);
     }
-  }
-
-  private static boolean getLogSlowLookupsEnabled() {
-    Configuration conf = new Configuration();
-
-    return conf.getBoolean(CommonConfigurationKeys
-            .HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_ENABLED_KEY,
-        CommonConfigurationKeys
-            .HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_ENABLED_DEFAULT);
-  }
-
-  private static int getSlowLookupThresholdMs() {
-    Configuration conf = new Configuration();
-
-    return conf.getInt(CommonConfigurationKeys
-            .HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_THRESHOLD_MS_KEY,
-        CommonConfigurationKeys
-            .HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_THRESHOLD_MS_DEFAULT);
   }
 
   /**
