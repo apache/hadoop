@@ -20,14 +20,12 @@ package org.apache.hadoop.yarn.server.nodemanager.timelineservice;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -39,7 +37,6 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.client.api.impl.TimelineClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 import org.junit.Assert;
@@ -53,20 +50,23 @@ public class TestNMTimelinePublisher {
   public void testContainerResourceUsage() {
     Context context = mock(Context.class);
     @SuppressWarnings("unchecked")
-    ConcurrentMap<ApplicationId, Application> map = mock(ConcurrentMap.class);
-    Application aApp = mock(Application.class);
-    when(map.get(any(ApplicationId.class))).thenReturn(aApp);
-    DummyTimelineClient timelineClient = new DummyTimelineClient();
-    when(aApp.getTimelineClient()).thenReturn(timelineClient);
-    when(context.getApplications()).thenReturn(map);
+    final DummyTimelineClient timelineClient = new DummyTimelineClient();
     when(context.getNodeId()).thenReturn(NodeId.newInstance("localhost", 0));
     when(context.getHttpPort()).thenReturn(0);
-    NMTimelinePublisher publisher = new NMTimelinePublisher(context);
+    NMTimelinePublisher publisher = new NMTimelinePublisher(context) {
+      public void createTimelineClient(ApplicationId appId) {
+        if (!appToClientMap.containsKey(appId)) {
+          appToClientMap.put(appId, timelineClient);
+        }
+      }
+    };
     publisher.init(new Configuration());
     publisher.start();
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    publisher.createTimelineClient(appId);
     Container aContainer = mock(Container.class);
     when(aContainer.getContainerId()).thenReturn(ContainerId.newContainerId(
-        ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1),
+        ApplicationAttemptId.newInstance(appId, 1),
         0L));
     publisher.reportContainerResourceUsage(aContainer, 1024L, 8F);
     verifyPublishedResourceUsageMetrics(timelineClient, 1024L, 8);
@@ -141,7 +141,7 @@ public class TestNMTimelinePublisher {
     private TimelineEntity[] lastPublishedEntities;
 
     @Override
-    public void putEntities(TimelineEntity... entities)
+    public void putEntitiesAsync(TimelineEntity... entities)
         throws IOException, YarnException {
       this.lastPublishedEntities = entities;
     }

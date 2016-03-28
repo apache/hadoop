@@ -17,21 +17,22 @@
  */
 package org.apache.hadoop.yarn.api.records.timelineservice;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.yarn.util.TimelineServiceHelper;
-import org.codehaus.jackson.annotate.JsonSetter;
-
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
+
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.util.TimelineServiceHelper;
+import org.codehaus.jackson.annotate.JsonSetter;
 
 /**
  * The basic timeline entity data structure for timeline service v2. Timeline
@@ -564,6 +565,10 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
   }
 
   public String toString() {
-    return identifier.toString();
+    if (real == null) {
+      return identifier.toString();
+    } else {
+      return real.toString();
+    }
   }
 }
