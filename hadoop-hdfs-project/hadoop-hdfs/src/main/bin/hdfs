@@ -16,7 +16,12 @@
 # limitations under the License.
 
 MYNAME="${BASH_SOURCE-$0}"
+HADOOP_SHELL_EXECNAME="${MYNAME##*/}"
 
+## @description  build up the hdfs command's usage text.
+## @audience     public
+## @stability    stable
+## @replaceable  no
 function hadoop_usage
 {
   hadoop_add_option "--buildpaths" "attempt to add class files from build tree"
@@ -56,7 +61,194 @@ function hadoop_usage
   hadoop_add_subcommand "storagepolicies" "list/get/set block storage policies"
   hadoop_add_subcommand "version" "print the version"
   hadoop_add_subcommand "zkfc" "run the ZK Failover Controller daemon"
-  hadoop_generate_usage "${MYNAME}" false
+  hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" false
+}
+
+## @description  Default command handler for hadoop command
+## @audience     public
+## @stability    stable
+## @replaceable  no
+## @param        CLI arguments
+function hdfscmd_case
+{
+  subcmd=$1
+  shift
+
+  case ${subcmd} in
+    balancer)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.server.balancer.Balancer
+      hadoop_debug "Appending HADOOP_BALANCER_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_BALANCER_OPTS}"
+    ;;
+    cacheadmin)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.CacheAdmin
+    ;;
+    classpath)
+      hadoop_do_classpath_subcommand HADOOP_CLASSNAME "$@"
+    ;;
+    crypto)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.CryptoAdmin
+    ;;
+    datanode)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      # Determine if we're starting a secure datanode, and
+      # if so, redefine appropriate variables
+      if [[ -n "${HADOOP_SECURE_DN_USER}" ]]; then
+        HADOOP_SUBCMD_SECURESERVICE="true"
+        HADOOP_SUBCMD_SECUREUSER="${HADOOP_SECURE_DN_USER}"
+
+        # backward compatiblity
+        HADOOP_SECURE_PID_DIR="${HADOOP_SECURE_PID_DIR:-$HADOOP_SECURE_DN_PID_DIR}"
+        HADOOP_SECURE_LOG_DIR="${HADOOP_SECURE_LOG_DIR:-$HADOOP_SECURE_DN_LOG_DIR}"
+
+        hadoop_debug "Appending HADOOP_DATANODE_OPTS onto HADOOP_OPTS"
+        hadoop_debug "Appending HADOOP_DN_SECURE_EXTRA_OPTS onto HADOOP_OPTS"
+        HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_DATANODE_OPTS} ${HADOOP_DN_SECURE_EXTRA_OPTS}"
+        HADOOP_CLASSNAME="org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter"
+      else
+        hadoop_debug "Appending HADOOP_DATANODE_OPTS onto HADOOP_OPTS"
+        HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_DATANODE_OPTS}"
+        HADOOP_CLASSNAME='org.apache.hadoop.hdfs.server.datanode.DataNode'
+      fi
+    ;;
+    debug)
+      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.tools.DebugAdmin'
+    ;;
+    dfs)
+      HADOOP_CLASSNAME=org.apache.hadoop.fs.FsShell
+      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+    ;;
+    dfsadmin)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DFSAdmin
+      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+    ;;
+    envvars)
+      echo "JAVA_HOME='${JAVA_HOME}'"
+      echo "HADOOP_HDFS_HOME='${HADOOP_HDFS_HOME}'"
+      echo "HDFS_DIR='${HDFS_DIR}'"
+      echo "HDFS_LIB_JARS_DIR='${HDFS_LIB_JARS_DIR}'"
+      echo "HADOOP_CONF_DIR='${HADOOP_CONF_DIR}'"
+      echo "HADOOP_TOOLS_HOME='${HADOOP_TOOLS_HOME}'"
+      echo "HADOOP_TOOLS_DIR='${HADOOP_TOOLS_DIR}'"
+      echo "HADOOP_TOOLS_LIB_JARS_DIR='${HADOOP_TOOLS_LIB_JARS_DIR}'"
+      exit 0
+    ;;
+    erasurecode)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.erasurecode.ECCli
+      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+    ;;
+    fetchdt)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DelegationTokenFetcher
+    ;;
+    fsck)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DFSck
+      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+    ;;
+    getconf)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.GetConf
+    ;;
+    groups)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.GetGroups
+    ;;
+    haadmin)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DFSHAAdmin
+      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+    ;;
+    journalnode)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.qjournal.server.JournalNode'
+      hadoop_debug "Appending HADOOP_JOURNALNODE_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_JOURNALNODE_OPTS}"
+    ;;
+    jmxget)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.JMXGet
+    ;;
+    lsSnapshottableDir)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.snapshot.LsSnapshottableDir
+    ;;
+    mover)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.server.mover.Mover
+      hadoop_debug "Appending HADOOP_MOVER_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_MOVER_OPTS}"
+    ;;
+    namenode)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.server.namenode.NameNode'
+      hadoop_debug "Appending HADOOP_NAMENODE_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_NAMENODE_OPTS}"
+      hadoop_add_param HADOOP_OPTS hdfs.audit.logger "-Dhdfs.audit.logger=${HDFS_AUDIT_LOGGER}"
+    ;;
+    nfs3)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      if [[ -n "${HADOOP_PRIVILEGED_NFS_USER}" ]]; then
+        HADOOP_SUBCMD_SECURESERVICE="true"
+        HADOOP_SUBCMD_SECUREUSER="${HADOOP_PRIVILEGED_NFS_USER}"
+
+        # backward compatiblity
+        HADOOP_SECURE_PID_DIR="${HADOOP_SECURE_PID_DIR:-$HADOOP_SECURE_NFS3_PID_DIR}"
+        HADOOP_SECURE_LOG_DIR="${HADOOP_SECURE_LOG_DIR:-$HADOOP_SECURE_NFS3_LOG_DIR}"
+
+        hadoop_debug "Appending HADOOP_NFS3_OPTS onto HADOOP_OPTS"
+        hadoop_debug "Appending HADOOP_NFS3_SECURE_EXTRA_OPTS onto HADOOP_OPTS"
+        HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_NFS3_OPTS} ${HADOOP_NFS3_SECURE_EXTRA_OPTS}"
+        HADOOP_CLASSNAME=org.apache.hadoop.hdfs.nfs.nfs3.PrivilegedNfsGatewayStarter
+      else
+        hadoop_debug "Appending HADOOP_NFS3_OPTS onto HADOOP_OPTS"
+        HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_NFS3_OPTS}"
+        HADOOP_CLASSNAME=org.apache.hadoop.hdfs.nfs.nfs3.Nfs3
+      fi
+    ;;
+    oev)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer
+    ;;
+    oiv)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewerPB
+    ;;
+    oiv_legacy)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer
+    ;;
+    portmap)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME=org.apache.hadoop.portmap.Portmap
+      hadoop_debug "Appending HADOOP_PORTMAP_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_PORTMAP_OPTS}"
+    ;;
+    secondarynamenode)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode'
+      hadoop_debug "Appending HADOOP_SECONDARYNAMENODE_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_SECONDARYNAMENODE_OPTS}"
+      hadoop_add_param HADOOP_OPTS hdfs.audit.logger "-Dhdfs.audit.logger=${HDFS_AUDIT_LOGGER}"
+    ;;
+    snapshotDiff)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff
+    ;;
+    storagepolicies)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.StoragePolicyAdmin
+    ;;
+    version)
+      HADOOP_CLASSNAME=org.apache.hadoop.util.VersionInfo
+    ;;
+    zkfc)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.tools.DFSZKFailoverController'
+      hadoop_debug "Appending HADOOP_ZKFC_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_ZKFC_OPTS}"
+    ;;
+    *)
+      HADOOP_CLASSNAME="${subcmd}"
+      if ! hadoop_validate_classname "${HADOOP_CLASSNAME}"; then
+        hadoop_exit_with_usage 1
+      fi
+    ;;
+  esac
 }
 
 # let's locate libexec...
@@ -81,232 +273,76 @@ if [[ $# = 0 ]]; then
   hadoop_exit_with_usage 1
 fi
 
-COMMAND=$1
+HADOOP_SUBCMD=$1
 shift
 
-case ${COMMAND} in
-  balancer)
-    supportdaemonization="true"
-    CLASS=org.apache.hadoop.hdfs.server.balancer.Balancer
-    hadoop_debug "Appending HADOOP_BALANCER_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_BALANCER_OPTS}"
-  ;;
-  cacheadmin)
-    CLASS=org.apache.hadoop.hdfs.tools.CacheAdmin
-  ;;
-  classpath)
-    hadoop_do_classpath_subcommand CLASS "$@"
-  ;;
-  crypto)
-    CLASS=org.apache.hadoop.hdfs.tools.CryptoAdmin
-  ;;
-  datanode)
-    supportdaemonization="true"
-    # Determine if we're starting a secure datanode, and
-    # if so, redefine appropriate variables
-    if [[ -n "${HADOOP_SECURE_DN_USER}" ]]; then
-      secure_service="true"
-      secure_user="${HADOOP_SECURE_DN_USER}"
+HADOOP_SUBCMD_ARGS=("$@")
 
-      # backward compatiblity
-      HADOOP_SECURE_PID_DIR="${HADOOP_SECURE_PID_DIR:-$HADOOP_SECURE_DN_PID_DIR}"
-      HADOOP_SECURE_LOG_DIR="${HADOOP_SECURE_LOG_DIR:-$HADOOP_SECURE_DN_LOG_DIR}"
+if declare -f hdfs_subcommand_"${HADOOP_SUBCMD}" >/dev/null 2>&1; then
+  hadoop_debug "Calling dynamically: hdfs_subcommand_${HADOOP_SUBCMD} ${HADOOP_SUBCMD_ARGS[*]}"
+  "hdfs_subcommand_${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"
+else
+  hdfscmd_case "${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"
+fi
 
-      hadoop_debug "Appending HADOOP_DATANODE_OPTS onto HADOOP_OPTS"
-      hadoop_debug "Appending HADOOP_DN_SECURE_EXTRA_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_DATANODE_OPTS} ${HADOOP_DN_SECURE_EXTRA_OPTS}"
-      CLASS="org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter"
-    else
-      hadoop_debug "Appending HADOOP_DATANODE_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_DATANODE_OPTS}"
-      CLASS='org.apache.hadoop.hdfs.server.datanode.DataNode'
-    fi
-  ;;
-  debug)
-    CLASS='org.apache.hadoop.hdfs.tools.DebugAdmin'
-  ;;
-  dfs)
-    CLASS=org.apache.hadoop.fs.FsShell
-    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
-  ;;
-  dfsadmin)
-    CLASS=org.apache.hadoop.hdfs.tools.DFSAdmin
-    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
-  ;;
-  envvars)
-    echo "JAVA_HOME='${JAVA_HOME}'"
-    echo "HADOOP_HDFS_HOME='${HADOOP_HDFS_HOME}'"
-    echo "HDFS_DIR='${HDFS_DIR}'"
-    echo "HDFS_LIB_JARS_DIR='${HDFS_LIB_JARS_DIR}'"
-    echo "HADOOP_CONF_DIR='${HADOOP_CONF_DIR}'"
-    echo "HADOOP_TOOLS_HOME='${HADOOP_TOOLS_HOME}'"
-    echo "HADOOP_TOOLS_DIR='${HADOOP_TOOLS_DIR}'"
-    echo "HADOOP_TOOLS_LIB_JARS_DIR='${HADOOP_TOOLS_LIB_JARS_DIR}'"
-    exit 0
-  ;;
-  erasurecode)
-    CLASS=org.apache.hadoop.hdfs.tools.erasurecode.ECCli
-    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
-  ;;
-  fetchdt)
-    CLASS=org.apache.hadoop.hdfs.tools.DelegationTokenFetcher
-  ;;
-  fsck)
-    CLASS=org.apache.hadoop.hdfs.tools.DFSck
-    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
-  ;;
-  getconf)
-    CLASS=org.apache.hadoop.hdfs.tools.GetConf
-  ;;
-  groups)
-    CLASS=org.apache.hadoop.hdfs.tools.GetGroups
-  ;;
-  haadmin)
-    CLASS=org.apache.hadoop.hdfs.tools.DFSHAAdmin
-    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
-  ;;
-  journalnode)
-    supportdaemonization="true"
-    CLASS='org.apache.hadoop.hdfs.qjournal.server.JournalNode'
-    hadoop_debug "Appending HADOOP_JOURNALNODE_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_JOURNALNODE_OPTS}"
-  ;;
-  jmxget)
-    CLASS=org.apache.hadoop.hdfs.tools.JMXGet
-  ;;
-  lsSnapshottableDir)
-    CLASS=org.apache.hadoop.hdfs.tools.snapshot.LsSnapshottableDir
-  ;;
-  mover)
-    supportdaemonization="true"
-    CLASS=org.apache.hadoop.hdfs.server.mover.Mover
-    hadoop_debug "Appending HADOOP_MOVER_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_MOVER_OPTS}"
-  ;;
-  namenode)
-    supportdaemonization="true"
-    CLASS='org.apache.hadoop.hdfs.server.namenode.NameNode'
-    hadoop_debug "Appending HADOOP_NAMENODE_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_NAMENODE_OPTS}"
-    hadoop_add_param HADOOP_OPTS hdfs.audit.logger "-Dhdfs.audit.logger=${HDFS_AUDIT_LOGGER}"
-  ;;
-  nfs3)
-    supportdaemonization="true"
-    if [[ -n "${HADOOP_PRIVILEGED_NFS_USER}" ]]; then
-      secure_service="true"
-      secure_user="${HADOOP_PRIVILEGED_NFS_USER}"
-
-      # backward compatiblity
-      HADOOP_SECURE_PID_DIR="${HADOOP_SECURE_PID_DIR:-$HADOOP_SECURE_NFS3_PID_DIR}"
-      HADOOP_SECURE_LOG_DIR="${HADOOP_SECURE_LOG_DIR:-$HADOOP_SECURE_NFS3_LOG_DIR}"
-
-      hadoop_debug "Appending HADOOP_NFS3_OPTS onto HADOOP_OPTS"
-      hadoop_debug "Appending HADOOP_NFS3_SECURE_EXTRA_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_NFS3_OPTS} ${HADOOP_NFS3_SECURE_EXTRA_OPTS}"
-      CLASS=org.apache.hadoop.hdfs.nfs.nfs3.PrivilegedNfsGatewayStarter
-    else
-      hadoop_debug "Appending HADOOP_NFS3_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_NFS3_OPTS}"
-      CLASS=org.apache.hadoop.hdfs.nfs.nfs3.Nfs3
-    fi
-  ;;
-  oev)
-    CLASS=org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer
-  ;;
-  oiv)
-    CLASS=org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewerPB
-  ;;
-  oiv_legacy)
-    CLASS=org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer
-  ;;
-  portmap)
-    supportdaemonization="true"
-    CLASS=org.apache.hadoop.portmap.Portmap
-    hadoop_debug "Appending HADOOP_PORTMAP_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_PORTMAP_OPTS}"
-  ;;
-  secondarynamenode)
-    supportdaemonization="true"
-    CLASS='org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode'
-    hadoop_debug "Appending HADOOP_SECONDARYNAMENODE_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_SECONDARYNAMENODE_OPTS}"
-    hadoop_add_param HADOOP_OPTS hdfs.audit.logger "-Dhdfs.audit.logger=${HDFS_AUDIT_LOGGER}"
-  ;;
-  snapshotDiff)
-    CLASS=org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff
-  ;;
-  storagepolicies)
-    CLASS=org.apache.hadoop.hdfs.tools.StoragePolicyAdmin
-  ;;
-  version)
-    CLASS=org.apache.hadoop.util.VersionInfo
-  ;;
-  zkfc)
-    supportdaemonization="true"
-    CLASS='org.apache.hadoop.hdfs.tools.DFSZKFailoverController'
-    hadoop_debug "Appending HADOOP_ZKFC_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_ZKFC_OPTS}"
-  ;;
-  *)
-    CLASS="${COMMAND}"
-    if ! hadoop_validate_classname "${CLASS}"; then
-      hadoop_exit_with_usage 1
-    fi
-  ;;
-esac
-
-hadoop_verify_user "${COMMAND}"
+hadoop_verify_user "${HADOOP_SUBCMD}"
 
 if [[ ${HADOOP_SLAVE_MODE} = true ]]; then
   hadoop_common_slave_mode_execute "${HADOOP_HDFS_HOME}/bin/hdfs" "${HADOOP_USER_PARAMS[@]}"
   exit $?
 fi
 
-if [[ -n "${secure_service}" ]]; then
-  HADOOP_SECURE_USER="${secure_user}"
+if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
+  HADOOP_SECURE_USER="${HADOOP_SUBCMD_SECUREUSER}"
   hadoop_verify_secure_prereq
   hadoop_setup_secure_service
-  priv_outfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.out"
-  priv_errfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.err"
-  priv_pidfile="${HADOOP_PID_DIR}/privileged-${HADOOP_IDENT_STRING}-${COMMAND}.pid"
-  daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.out"
-  daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${COMMAND}.pid"
+  priv_outfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
+  priv_errfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.err"
+  priv_pidfile="${HADOOP_PID_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
+  daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
+  daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
 else
-  daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.out"
-  daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_IDENT_STRING}-${COMMAND}.pid"
+  daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
+  daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
 fi
 
 if [[ "${HADOOP_DAEMON_MODE}" != "default" ]]; then
   # shellcheck disable=SC2034
   HADOOP_ROOT_LOGGER="${HADOOP_DAEMON_ROOT_LOGGER}"
-  if [[ -n "${secure_service}" ]]; then
+  if [[ -n "${HADOOP_SUBCMD_SECURESERVICE}" ]]; then
     # shellcheck disable=SC2034
-    HADOOP_LOGFILE="hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.log"
+    HADOOP_LOGFILE="hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.log"
   else
     # shellcheck disable=SC2034
-    HADOOP_LOGFILE="hadoop-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.log"
+    HADOOP_LOGFILE="hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.log"
   fi
 fi
 
 hadoop_finalize
 
-if [[ -n "${supportdaemonization}" ]]; then
-  if [[ -n "${secure_service}" ]]; then
+if [[ "${HADOOP_SUBCMD_SUPPORTDAEMONIZATION}" = true ]]; then
+  if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
     hadoop_secure_daemon_handler \
-    "${HADOOP_DAEMON_MODE}" "${COMMAND}" "${CLASS}"\
-    "${daemon_pidfile}" "${daemon_outfile}" \
-    "${priv_pidfile}" "${priv_outfile}" "${priv_errfile}" "$@"
+      "${HADOOP_DAEMON_MODE}" \
+      "${HADOOP_SUBCMD}" \
+      "${HADOOP_CLASSNAME}" \
+      "${daemon_pidfile}" \
+      "${daemon_outfile}" \
+      "${priv_pidfile}" \
+      "${priv_outfile}" \
+      "${priv_errfile}" \
+      "${HADOOP_SUBCMD_ARGS[@]}"
   else
-    hadoop_daemon_handler "${HADOOP_DAEMON_MODE}" "${COMMAND}" "${CLASS}"\
-    "${daemon_pidfile}" "${daemon_outfile}" "$@"
+    hadoop_daemon_handler \
+      "${HADOOP_DAEMON_MODE}" \
+      "${HADOOP_SUBCMD}" \
+      "${HADOOP_CLASSNAME}" \
+      "${daemon_pidfile}" \
+      "${daemon_outfile}" \
+      "${HADOOP_SUBCMD_ARGS[@]}"
   fi
   exit $?
 else
   # shellcheck disable=SC2086
-  hadoop_java_exec "${COMMAND}" "${CLASS}" "$@"
+  hadoop_java_exec "${HADOOP_SUBCMD}" "${HADOOP_CLASSNAME}" "${HADOOP_SUBCMD_ARGS[@]}"
 fi

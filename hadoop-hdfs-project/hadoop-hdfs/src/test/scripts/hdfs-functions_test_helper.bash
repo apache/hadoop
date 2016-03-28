@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -17,10 +17,10 @@
 setup() {
 
   TMP="${BATS_TEST_DIRNAME}/../../../target/test-dir/bats.$$.${RANDOM}"
-  mkdir -p ${TMP}
+  mkdir -p "${TMP}"
   TMP=$(cd -P -- "${TMP}" >/dev/null && pwd -P)
   export TMP
-  TESTBINDIR=$(cd -P -- "$(pwd)" >/dev/null && pwd -P)
+  TESTBINDIR="${BATS_TEST_DIRNAME}"
   HADOOP_LIBEXEC_DIR=${TESTBINDIR}/../../main/bin
   HADOOP_LIBEXEC_DIR=$(cd -P -- "${HADOOP_LIBEXEC_DIR}" >/dev/null && pwd -P)
 
@@ -38,7 +38,8 @@ setup() {
   # shellcheck disable=SC2034
   QATESTMODE=true
 
-  . "${BATS_TEST_DIRNAME}/../../main/bin/hadoop-functions.sh"
+  # shellcheck disable=SC1090
+  . "${BATS_TEST_DIRNAME}/../../../../../hadoop-common-project/hadoop-common/src/main/bin/hadoop-functions.sh"
   pushd "${TMP}" >/dev/null
 }
 
