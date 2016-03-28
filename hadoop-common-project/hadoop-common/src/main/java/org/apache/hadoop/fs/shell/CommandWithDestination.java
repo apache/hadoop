@@ -220,7 +220,8 @@ abstract class CommandWithDestination extends FsCommand {
         throw new PathExistsException(dst.toString());
       }
     } else if (!dst.parentExists()) {
-      throw new PathNotFoundException(dst.toString());
+      throw new PathNotFoundException(dst.toString())
+          .withFullyQualifiedPath(dst.path.toUri().toString());
     }
     super.processArguments(args);
   }
