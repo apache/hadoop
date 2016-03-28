@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -512,6 +513,16 @@ public class AMRMProxyService extends AbstractService implements
     return null;
   }
 
+  @Private
+  public InetSocketAddress getBindAddress() {
+    return this.listenerEndpoint;
+  }
+
+  @Private
+  public AMRMProxyTokenSecretManager getSecretManager() {
+    return this.secretManager;
+  }
+
   /**
    * Private class for handling application stop events.
    *
@@ -546,7 +557,8 @@ public class AMRMProxyService extends AbstractService implements
    * ApplicationAttemptId instances.
    *
    */
-  private static class RequestInterceptorChainWrapper {
+  @Private
+  public static class RequestInterceptorChainWrapper {
     private RequestInterceptor rootInterceptor;
     private ApplicationAttemptId applicationAttemptId;
 
