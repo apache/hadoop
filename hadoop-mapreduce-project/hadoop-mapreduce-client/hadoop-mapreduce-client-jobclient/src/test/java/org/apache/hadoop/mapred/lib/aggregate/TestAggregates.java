@@ -22,14 +22,13 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.lib.*;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
 
+import junit.framework.TestCase;
 import java.io.*;
 import java.util.*;
 import java.text.NumberFormat;
 
-public class TestAggregates {
+public class TestAggregates extends TestCase {
 
   private static NumberFormat idFormat = NumberFormat.getInstance();
     static {
@@ -37,7 +36,7 @@ public class TestAggregates {
       idFormat.setGroupingUsed(false);
   }
 
-  @Test
+
   public void testAggregates() throws Exception {
     launch();
   }

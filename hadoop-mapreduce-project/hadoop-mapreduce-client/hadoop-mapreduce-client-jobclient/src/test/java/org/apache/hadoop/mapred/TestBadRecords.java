@@ -40,11 +40,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Ignore;
-import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
 @Ignore
 public class TestBadRecords extends ClusterMapReduceTestCase {
   
@@ -211,8 +206,7 @@ public class TestBadRecords extends ClusterMapReduceTestCase {
     }
     return processed;
   }
-
-  @Test
+  
   public void testBadMapRed() throws Exception {
     JobConf conf = createJobConf();
     conf.setMapperClass(BadMapper.class);

@@ -18,19 +18,15 @@
 
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.lib.MultipleTextOutputFormat;
-import org.junit.Test;
+import java.io.*;
+import junit.framework.TestCase;
 
-import java.io.File;
-import java.io.IOException;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.io.*;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import org.apache.hadoop.mapred.lib.*;
 
-public class TestMultipleTextOutputFormat {
+public class TestMultipleTextOutputFormat extends TestCase {
   private static JobConf defaultConf = new JobConf();
 
   private static FileSystem localFs = null;
@@ -87,8 +83,7 @@ public class TestMultipleTextOutputFormat {
     writeData(rw);
     rw.close(null);
   }
-
-  @Test
+  
   public void testFormat() throws Exception {
     JobConf job = new JobConf();
     job.set(JobContext.TASK_ATTEMPT_ID, attempt);
@@ -149,5 +144,9 @@ public class TestMultipleTextOutputFormat {
     output = UtilsForTests.slurp(expectedFile_2);
     //System.out.printf("File_2 output: %s\n", output);
     assertEquals(output, expectedOutput.toString());
+  }
+
+  public static void main(String[] args) throws Exception {
+    new TestMultipleTextOutputFormat().testFormat();
   }
 }

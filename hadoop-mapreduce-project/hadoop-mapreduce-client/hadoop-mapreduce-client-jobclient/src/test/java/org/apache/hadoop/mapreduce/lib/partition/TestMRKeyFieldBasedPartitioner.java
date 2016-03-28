@@ -19,16 +19,14 @@ package org.apache.hadoop.mapreduce.lib.partition;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
-import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
+import junit.framework.TestCase;
 
-public class TestMRKeyFieldBasedPartitioner {
+public class TestMRKeyFieldBasedPartitioner extends TestCase {
 
   /**
    * Test is key-field-based partitioned works with empty key.
    */
-  @Test
   public void testEmptyKey() throws Exception {
     int numReducers = 10;
     KeyFieldBasedPartitioner<Text, Text> kfbp = 

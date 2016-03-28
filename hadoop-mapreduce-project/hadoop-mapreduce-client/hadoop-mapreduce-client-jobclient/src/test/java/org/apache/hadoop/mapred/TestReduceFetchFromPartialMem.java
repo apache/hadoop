@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.mapred;
 
+import junit.extensions.TestSetup;
+import junit.framework.Test;
+import junit.framework.TestCase;
+import junit.framework.TestSuite;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -26,9 +30,7 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.mapreduce.TaskCounter;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.hadoop.mapreduce.MRConfig;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -37,27 +39,34 @@ import java.util.Arrays;
 import java.util.Formatter;
 import java.util.Iterator;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-public class TestReduceFetchFromPartialMem {
+public class TestReduceFetchFromPartialMem extends TestCase {
 
   protected static MiniMRCluster mrCluster = null;
   protected static MiniDFSCluster dfsCluster = null;
+  protected static TestSuite mySuite;
 
-  @Before
-  public void setUp() throws Exception {
-    Configuration conf = new Configuration();
-    dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    mrCluster = new MiniMRCluster(2,
-      dfsCluster.getFileSystem().getUri().toString(), 1);
+  protected static void setSuite(Class<? extends TestCase> klass) {
+    mySuite  = new TestSuite(klass);
   }
 
-  @After
-  public void tearDown() throws Exception {
-    if (dfsCluster != null) { dfsCluster.shutdown(); }
-    if (mrCluster != null) { mrCluster.shutdown(); }
+  static {
+    setSuite(TestReduceFetchFromPartialMem.class);
+  }
+  
+  public static Test suite() {
+    TestSetup setup = new TestSetup(mySuite) {
+      protected void setUp() throws Exception {
+        Configuration conf = new Configuration();
+        dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+        mrCluster = new MiniMRCluster(2,
+            dfsCluster.getFileSystem().getUri().toString(), 1);
+      }
+      protected void tearDown() throws Exception {
+        if (dfsCluster != null) { dfsCluster.shutdown(); }
+        if (mrCluster != null) { mrCluster.shutdown(); }
+      }
+    };
+    return setup;
   }
 
   private static final String tagfmt = "%04d";
@@ -69,7 +78,6 @@ public class TestReduceFetchFromPartialMem {
   }
 
   /** Verify that at least one segment does not hit disk */
-  @Test
   public void testReduceFromPartialMem() throws Exception {
     final int MAP_TASKS = 7;
     JobConf job = mrCluster.createJobConf();

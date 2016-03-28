@@ -17,14 +17,12 @@
  */
 package org.apache.hadoop.mapred;
 
+import junit.framework.TestCase;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -32,7 +30,7 @@ import java.io.OutputStreamWriter;
 import java.util.Set;
 import java.util.HashSet;
 
-public class TestFileInputFormatPathFilter {
+public class TestFileInputFormatPathFilter extends TestCase {
 
   public static class DummyFileInputFormat extends FileInputFormat {
 
@@ -57,12 +55,12 @@ public class TestFileInputFormatPathFilter {
       new Path(new Path(System.getProperty("test.build.data", "."), "data"),
           "TestFileInputFormatPathFilter");
 
-  @Before
+
   public void setUp() throws Exception {
     tearDown();
     localFs.mkdirs(workDir);
   }
-  @After
+
   public void tearDown() throws Exception {
     if (localFs.exists(workDir)) {
       localFs.delete(workDir, true);
@@ -131,19 +129,18 @@ public class TestFileInputFormatPathFilter {
     assertEquals(createdFiles, computedFiles);
   }
 
-  @Test
   public void testWithoutPathFilterWithoutGlob() throws Exception {
     _testInputFiles(false, false);
   }
-  @Test
+
   public void testWithoutPathFilterWithGlob() throws Exception {
     _testInputFiles(false, true);
   }
-  @Test
+
   public void testWithPathFilterWithoutGlob() throws Exception {
     _testInputFiles(true, false);
   }
-  @Test
+
   public void testWithPathFilterWithGlob() throws Exception {
     _testInputFiles(true, true);
   }

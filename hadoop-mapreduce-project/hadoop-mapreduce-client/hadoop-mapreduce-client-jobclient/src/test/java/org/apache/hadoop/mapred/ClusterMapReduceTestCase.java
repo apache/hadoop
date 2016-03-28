@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.mapred;
 
+import junit.framework.TestCase;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.After;
-import org.junit.Before;
 
 import java.io.IOException;
 import java.util.Map;
@@ -42,7 +41,7 @@ import java.util.Properties;
  * <p/>
  * The DFS filesystem is formated before the testcase starts and after it ends.
  */
-public abstract class ClusterMapReduceTestCase {
+public abstract class ClusterMapReduceTestCase extends TestCase {
   private MiniDFSCluster dfsCluster = null;
   private MiniMRCluster mrCluster = null;
 
@@ -51,8 +50,9 @@ public abstract class ClusterMapReduceTestCase {
    *
    * @throws Exception
    */
-  @Before
-  public void setUp() throws Exception {
+  protected void setUp() throws Exception {
+    super.setUp();
+
     startCluster(true, null);
   }
 
@@ -139,9 +139,9 @@ public abstract class ClusterMapReduceTestCase {
    *
    * @throws Exception
    */
-  @After
-  public void tearDown() throws Exception {
+  protected void tearDown() throws Exception {
     stopCluster();
+    super.tearDown();
   }
 
   /**

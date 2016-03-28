@@ -28,13 +28,13 @@ import org.apache.hadoop.ipc.TestRPC.TestImpl;
 import org.apache.hadoop.ipc.TestRPC.TestProtocol;
 import org.apache.hadoop.mapred.AuditLogger.Keys;
 import org.apache.hadoop.net.NetUtils;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
+
+import junit.framework.TestCase;
 
 /**
  * Tests {@link AuditLogger}.
  */
-public class TestAuditLogger {
+public class TestAuditLogger extends TestCase {
   private static final String USER = "test";
   private static final String OPERATION = "oper";
   private static final String TARGET = "tgt";
@@ -44,7 +44,6 @@ public class TestAuditLogger {
   /**
    * Test the AuditLog format with key-val pair.
    */
-  @Test
   public void testKeyValLogFormat() {
     StringBuilder actLog = new StringBuilder();
     StringBuilder expLog = new StringBuilder();
@@ -115,7 +114,6 @@ public class TestAuditLogger {
   /**
    * Test {@link AuditLogger} without IP set.
    */
-  @Test
   public void testAuditLoggerWithoutIP() throws Exception {
     // test without ip
     testSuccessLogFormat(false);
@@ -139,7 +137,6 @@ public class TestAuditLogger {
   /**
    * Test {@link AuditLogger} with IP set.
    */
-  @Test
   public void testAuditLoggerWithIP() throws Exception {
     Configuration conf = new Configuration();
     // start the IPC server

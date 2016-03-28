@@ -18,24 +18,22 @@
 package org.apache.hadoop.mapreduce.lib.aggregate;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.junit.Test;
 
+import junit.framework.TestCase;
+import java.io.*;
 import java.text.NumberFormat;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-public class TestMapReduceAggregates {
+public class TestMapReduceAggregates extends TestCase {
 
   private static NumberFormat idFormat = NumberFormat.getInstance();
     static {
@@ -43,7 +41,7 @@ public class TestMapReduceAggregates {
       idFormat.setGroupingUsed(false);
   }
 
-  @Test
+
   public void testAggregates() throws Exception {
     launch();
   }
@@ -123,5 +121,12 @@ public class TestMapReduceAggregates {
     assertEquals(expectedOutput.toString(),outdata);
     fs.delete(OUTPUT_DIR, true);
     fs.delete(INPUT_DIR, true);
+  }
+  
+  /**
+   * Launches all the tasks in order.
+   */
+  public static void main(String[] argv) throws Exception {
+    launch();
   }
 }
