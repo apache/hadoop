@@ -28,6 +28,8 @@ import java.io.PrintStream;
 import java.util.Date;
 import java.util.StringTokenizer;
 
+import junit.framework.TestCase;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -37,9 +39,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.*;
 import org.junit.Ignore;
-import org.junit.Test;
 
- /**
+/**
  * Distributed i/o benchmark.
  * <p>
  * This test writes into or reads from a specified number of files.
@@ -67,7 +68,7 @@ import org.junit.Test;
  * </ul>
  */
 @Ignore
-public class DFSCIOTest {
+public class DFSCIOTest extends TestCase {
   // Constants
   private static final Log LOG = LogFactory.getLog(DFSCIOTest.class);
   private static final int TEST_TYPE_READ = 0;
@@ -97,7 +98,6 @@ public class DFSCIOTest {
    * 
    * @throws Exception
    */
-  @Test
   public void testIOs() throws Exception {
     testIOs(10, 10);
   }

@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.mapred;
 
+import java.io.IOException;
+
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -26,17 +30,11 @@ import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.util.Progressable;
-import org.junit.Test;
-
-import java.io.IOException;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 /**
  * This test exercises the ValueIterator.
  */
-public class TestReduceTask {
+public class TestReduceTask extends TestCase {
 
   static class NullProgress implements Progressable {
     public void progress() { }
@@ -121,10 +119,9 @@ public class TestReduceTask {
     }
     assertEquals(vals.length, i);
     // make sure we have progress equal to 1.0
-    assertEquals(1.0f, rawItr.getProgress().get(),0.0000);
+    assertEquals(1.0f, rawItr.getProgress().get());
   }
 
-  @Test
   public void testValueIterator() throws Exception {
     Path tmpDir = new Path("build/test/test.reduce.task");
     Configuration conf = new Configuration();
@@ -132,8 +129,7 @@ public class TestReduceTask {
       runValueIterator(tmpDir, testCase, conf, null);
     }
   }
-
-  @Test
+  
   public void testValueIteratorWithCompression() throws Exception {
     Path tmpDir = new Path("build/test/test.reduce.task.compression");
     Configuration conf = new Configuration();

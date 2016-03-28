@@ -42,11 +42,6 @@ import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.SkipBadRecords;
 import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
-import org.junit.Before;
-import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class TestStreamingBadRecords extends ClusterMapReduceTestCase
 {
@@ -73,8 +68,7 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
     utilTest.redirectIfAntJunit();
   }
 
-  @Before
-  public void setUp() throws Exception {
+  protected void setUp() throws Exception {
     Properties props = new Properties();
     props.setProperty(JTConfig.JT_RETIREJOBS, "false");
     props.setProperty(JTConfig.JT_PERSIST_JOBSTATUS, "false");
@@ -248,7 +242,6 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
   }
   */
 
-  @Test
   public void testNoOp() {
     // Added to avoid warnings when running this disabled test
   }

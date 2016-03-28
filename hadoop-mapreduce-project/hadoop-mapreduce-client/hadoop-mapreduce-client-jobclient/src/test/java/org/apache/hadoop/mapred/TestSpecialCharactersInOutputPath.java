@@ -18,6 +18,12 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.URI;
+
+import junit.framework.TestCase;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -28,20 +34,14 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.util.Progressable;
-import org.junit.Test;
-
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.net.URI;
-
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * A JUnit test to test that jobs' output filenames are not HTML-encoded (cf HADOOP-1795).
  */
-public class TestSpecialCharactersInOutputPath {
+public class TestSpecialCharactersInOutputPath extends TestCase {
   private static final Log LOG =
     LogFactory.getLog(TestSpecialCharactersInOutputPath.class.getName());
   
@@ -96,8 +96,7 @@ public class TestSpecialCharactersInOutputPath {
     LOG.info("job is complete: " + runningJob.isSuccessful());
     return (runningJob.isSuccessful());
   }
-
-  @Test
+  
   public void testJobWithDFS() throws IOException {
     String namenode = null;
     MiniDFSCluster dfs = null;

@@ -17,20 +17,18 @@
  */
 package org.apache.hadoop.mapred;
 
+import java.util.Iterator;
+
+import junit.framework.TestCase;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.SortedRanges.Range;
-import org.junit.Test;
 
-import java.util.Iterator;
-
-import static org.junit.Assert.assertEquals;
-
-public class TestSortedRanges {
-  private static final Log LOG =
+public class TestSortedRanges extends TestCase {
+  private static final Log LOG = 
     LogFactory.getLog(TestSortedRanges.class);
-
-  @Test
+  
   public void testAdd() {
     SortedRanges sr = new SortedRanges();
     sr.add(new Range(2,9));
@@ -68,8 +66,7 @@ public class TestSortedRanges {
     assertEquals(77, it.next().longValue());
     
   }
-
-  @Test
+  
   public void testRemove() {
     SortedRanges sr = new SortedRanges();
     sr.add(new Range(2,19));

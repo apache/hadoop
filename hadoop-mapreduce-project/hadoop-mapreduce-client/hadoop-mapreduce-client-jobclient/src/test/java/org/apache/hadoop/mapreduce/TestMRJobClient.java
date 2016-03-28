@@ -17,23 +17,6 @@
  */
 package org.apache.hadoop.mapreduce;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocatedFileStatus;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.mapred.ClusterMapReduceTestCase;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.apache.hadoop.mapreduce.tools.CLI;
-import org.apache.hadoop.util.ExitUtil;
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
-import org.codehaus.jettison.json.JSONException;
-import org.codehaus.jettison.json.JSONObject;
-import org.junit.Test;
-
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -48,11 +31,23 @@ import java.io.PipedOutputStream;
 import java.io.PrintStream;
 import java.util.Arrays;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
+import org.junit.Assert;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.ClusterMapReduceTestCase;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.mapreduce.tools.CLI;
+import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  test CLI class. CLI class implemented  the Tool interface. 
@@ -108,7 +103,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
       throw new IOException();
     }
   }
-  @Test
+  
   public void testJobSubmissionSpecsAndFiles() throws Exception {
     Configuration conf = createJobConf();
     Job job = MapReduceTestUtil.createJob(conf, getInputDir(), getOutputDir(),
@@ -132,7 +127,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
   /**
    * main test method
    */
-  @Test
+
   public void testJobClient() throws Exception {
     Configuration conf = createJobConf();
     Job job = runJob(conf);
@@ -185,7 +180,8 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
 
     runTool(conf, jc, new String[] { "-fail-task", taid.toString() }, out);
     String answer = new String(out.toByteArray(), "UTF-8");
-    assertTrue(answer.contains("Killed task " + taid + " by failing it"));
+    Assert
+      .assertTrue(answer.contains("Killed task " + taid + " by failing it"));
   }
 
   /**
@@ -203,7 +199,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
 
     runTool(conf, jc, new String[] { "-kill-task", taid.toString() }, out);
     String answer = new String(out.toByteArray(), "UTF-8");
-    assertTrue(answer.contains("Killed task " + taid));
+    Assert.assertTrue(answer.contains("Killed task " + taid));
   }
   
   /**
@@ -690,7 +686,6 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
    * Test -list option displays job name.
    * The name is capped to 20 characters for display.
    */
-  @Test
   public void testJobName() throws Exception {
     Configuration conf = createJobConf();
     CLI jc = createJobClient();

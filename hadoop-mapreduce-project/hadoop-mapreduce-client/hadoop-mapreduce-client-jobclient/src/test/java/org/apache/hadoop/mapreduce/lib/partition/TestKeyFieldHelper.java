@@ -19,17 +19,14 @@ package org.apache.hadoop.mapreduce.lib.partition;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import junit.framework.TestCase;
 
-public class TestKeyFieldHelper {
+public class TestKeyFieldHelper extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestKeyFieldHelper.class);
   /**
    * Test is key-field-helper's parse option.
    */
-  @Test
   public void testparseOption() throws Exception {
     KeyFieldHelper helper = new KeyFieldHelper();
     helper.setKeyFieldSeparator("\t");
@@ -215,7 +212,6 @@ public class TestKeyFieldHelper {
   /**
    * Test is key-field-helper's getWordLengths.
    */
-  @Test
   public void testGetWordLengths() throws Exception {
     KeyFieldHelper helper = new KeyFieldHelper();
     helper.setKeyFieldSeparator("\t");
@@ -274,7 +270,6 @@ public class TestKeyFieldHelper {
   /**
    * Test is key-field-helper's getStartOffset/getEndOffset.
    */
-  @Test
   public void testgetStartEndOffset() throws Exception {
     KeyFieldHelper helper = new KeyFieldHelper();
     helper.setKeyFieldSeparator("\t");

@@ -18,21 +18,17 @@
 
 package org.apache.hadoop.mapred;
 
-import org.apache.commons.logging.Log;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.Text;
-import org.junit.Test;
+import java.io.*;
+import java.util.*;
+import junit.framework.TestCase;
 
-import java.io.IOException;
-import java.util.Random;
+import org.apache.commons.logging.*;
 
-import static org.junit.Assert.assertEquals;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.conf.*;
 
-public class TestSequenceFileInputFilter {
+public class TestSequenceFileInputFilter extends TestCase {
   private static final Log LOG = FileInputFormat.LOG;
 
   private static final int MAX_LENGTH = 15000;
@@ -101,8 +97,7 @@ public class TestSequenceFileInputFilter {
     }
     return count;
   }
-
-  @Test
+  
   public void testRegexFilter() throws Exception {
     // set the filter class
     LOG.info("Testing Regex Filter with patter: \\A10*");
@@ -126,7 +121,6 @@ public class TestSequenceFileInputFilter {
     fs.delete(inDir, true);
   }
 
-  @Test
   public void testPercentFilter() throws Exception {
     LOG.info("Testing Percent Filter with frequency: 1000");
     // set the filter class
@@ -153,8 +147,7 @@ public class TestSequenceFileInputFilter {
     // clean up
     fs.delete(inDir, true);
   }
-
-  @Test
+  
   public void testMD5Filter() throws Exception {
     // set the filter class
     LOG.info("Testing MD5 Filter with frequency: 1000");
@@ -174,5 +167,10 @@ public class TestSequenceFileInputFilter {
     }
     // clean up
     fs.delete(inDir, true);
+  }
+
+  public static void main(String[] args) throws Exception {
+    TestSequenceFileInputFilter filter = new TestSequenceFileInputFilter();
+    filter.testRegexFilter();
   }
 }
