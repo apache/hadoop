@@ -124,11 +124,11 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   private final long rollingMonitorInterval;
   private final boolean logAggregationInRolling;
   private final NodeId nodeId;
-  // This variable is only for testing
-  private final AtomicBoolean waiting = new AtomicBoolean(false);
 
-  // This variable is only for testing
+  // These variables are only for testing
+  private final AtomicBoolean waiting = new AtomicBoolean(false);
   private int logAggregationTimes = 0;
+  private int cleanupOldLogTimes = 0;
 
   private boolean renameTemporaryLogFileFailed = false;
 
@@ -365,8 +365,9 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
 
       // Before upload logs, make sure the number of existing logs
       // is smaller than the configured NM log aggregation retention size.
-      if (uploadedLogsInThisCycle) {
+      if (uploadedLogsInThisCycle && logAggregationInRolling) {
         cleanOldLogs();
+        cleanupOldLogTimes++;
       }
 
       if (writer != null) {
@@ -688,5 +689,10 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   @VisibleForTesting
   public int getLogAggregationTimes() {
     return this.logAggregationTimes;
+  }
+
+  @VisibleForTesting
+  int getCleanupOldLogTimes() {
+    return this.cleanupOldLogTimes;
   }
 }
