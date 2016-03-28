@@ -252,21 +252,6 @@ public class TestOptionsParser {
   }
 
   @Test
-  public void testParseSSLConf() {
-    DistCpOptions options = OptionsParser.parse(new String[] {
-        "hdfs://localhost:8020/source/first",
-        "hdfs://localhost:8020/target/"});
-    Assert.assertNull(options.getSslConfigurationFile());
-
-    options = OptionsParser.parse(new String[] {
-        "-mapredSslConf",
-        "/tmp/ssl-client.xml",
-        "hdfs://localhost:8020/source/first",
-        "hdfs://localhost:8020/target/"});
-    Assert.assertEquals(options.getSslConfigurationFile(), "/tmp/ssl-client.xml");
-  }
-
-  @Test
   public void testParseMaps() {
     DistCpOptions options = OptionsParser.parse(new String[] {
         "hdfs://localhost:8020/source/first",
@@ -402,7 +387,7 @@ public class TestOptionsParser {
     String val = "DistCpOptions{atomicCommit=false, syncFolder=false, "
         + "deleteMissing=false, ignoreFailures=false, overwrite=false, "
         + "skipCRC=false, blocking=true, numListstatusThreads=0, maxMaps=20, "
-        + "mapBandwidth=100.0, sslConfigurationFile='null', "
+        + "mapBandwidth=100.0, "
         + "copyStrategy='uniformsize', preserveStatus=[], "
         + "preserveRawXattrs=false, atomicWorkPath=null, logPath=null, "
         + "sourceFileListing=abc, sourcePaths=null, targetPath=xyz, "

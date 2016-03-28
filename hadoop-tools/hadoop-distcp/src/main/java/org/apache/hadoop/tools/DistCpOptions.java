@@ -49,8 +49,6 @@ public class DistCpOptions {
   private int maxMaps = DistCpConstants.DEFAULT_MAPS;
   private float mapBandwidth = DistCpConstants.DEFAULT_BANDWIDTH_MB;
 
-  private String sslConfigurationFile;
-
   private String copyStrategy = DistCpConstants.UNIFORMSIZE;
 
   private EnumSet<FileAttribute> preserveStatus = EnumSet.noneOf(FileAttribute.class);
@@ -134,7 +132,6 @@ public class DistCpOptions {
       this.numListstatusThreads = that.numListstatusThreads;
       this.maxMaps = that.maxMaps;
       this.mapBandwidth = that.mapBandwidth;
-      this.sslConfigurationFile = that.getSslConfigurationFile();
       this.copyStrategy = that.copyStrategy;
       this.preserveStatus = that.preserveStatus;
       this.preserveRawXattrs = that.preserveRawXattrs;
@@ -378,24 +375,6 @@ public class DistCpOptions {
   public void setMapBandwidth(float mapBandwidth) {
     assert mapBandwidth > 0 : "Bandwidth " + mapBandwidth + " is invalid (should be > 0)";
     this.mapBandwidth = mapBandwidth;
-  }
-
-  /**
-   * Get path where the ssl configuration file is present to use for hftps://
-   *
-   * @return Path on local file system
-   */
-  public String getSslConfigurationFile() {
-    return sslConfigurationFile;
-  }
-
-  /**
-   * Set the SSL configuration file path to use with hftps:// (local path)
-   *
-   * @param sslConfigurationFile - Local ssl config file path
-   */
-  public void setSslConfigurationFile(String sslConfigurationFile) {
-    this.sslConfigurationFile = sslConfigurationFile;
   }
 
   /**
@@ -670,7 +649,6 @@ public class DistCpOptions {
         ", numListstatusThreads=" + numListstatusThreads +
         ", maxMaps=" + maxMaps +
         ", mapBandwidth=" + mapBandwidth +
-        ", sslConfigurationFile='" + sslConfigurationFile + '\'' +
         ", copyStrategy='" + copyStrategy + '\'' +
         ", preserveStatus=" + preserveStatus +
         ", preserveRawXattrs=" + preserveRawXattrs +

@@ -74,15 +74,6 @@ public enum DistCpOptionSwitch {
   DELETE_MISSING(DistCpConstants.CONF_LABEL_DELETE_MISSING,
       new Option("delete", false, "Delete from target, " +
           "files missing in source")),
-
-  /**
-   * Configuration file to use with hftps:// for securely copying
-   * files across clusters. Typically the configuration file contains
-   * truststore/keystore information such as location, password and type
-   */
-  SSL_CONF(DistCpConstants.CONF_LABEL_SSL_CONF,
-      new Option("mapredSslConf", true, "Configuration for ssl config file" +
-          ", to use with hftps://. Must be in the classpath.")),
   /**
    * Number of threads for building source file listing (before map-reduce
    * phase, max one listStatus per thread at a time).

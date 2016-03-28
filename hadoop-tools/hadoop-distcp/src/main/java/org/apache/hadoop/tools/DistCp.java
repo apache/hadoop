@@ -19,7 +19,6 @@
 package org.apache.hadoop.tools;
 
 import java.io.IOException;
-import java.net.URL;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -254,86 +253,8 @@ public class DistCp extends Configured implements Tool {
     job.getConfiguration().set(JobContext.NUM_MAPS,
                   String.valueOf(inputOptions.getMaxMaps()));
 
-    if (inputOptions.getSslConfigurationFile() != null) {
-      setupSSLConfig(job);
-    }
-
     inputOptions.appendToConf(job.getConfiguration());
     return job;
-  }
-
-  /**
-   * Setup ssl configuration on the job configuration to enable hsftp access
-   * from map job. Also copy the ssl configuration file to Distributed cache
-   *
-   * @param job - Reference to job's handle
-   * @throws java.io.IOException - Exception if unable to locate ssl config file
-   */
-  private void setupSSLConfig(Job job) throws IOException  {
-    Configuration configuration = job.getConfiguration();
-    URL sslFileUrl = configuration.getResource(inputOptions
-        .getSslConfigurationFile());
-    if (sslFileUrl == null) {
-      throw new IOException(
-          "Given ssl configuration file doesn't exist in class path : "
-              + inputOptions.getSslConfigurationFile());
-    }
-    Path sslConfigPath = new Path(sslFileUrl.toString());
-
-    addSSLFilesToDistCache(job, sslConfigPath);
-    configuration.set(DistCpConstants.CONF_LABEL_SSL_CONF, sslConfigPath.getName());
-    configuration.set(DistCpConstants.CONF_LABEL_SSL_KEYSTORE, sslConfigPath.getName());
-  }
-
-  /**
-   * Add SSL files to distributed cache. Trust store, key store and ssl config xml
-   *
-   * @param job - Job handle
-   * @param sslConfigPath - ssl Configuration file specified through options
-   * @throws IOException - If any
-   */
-  private void addSSLFilesToDistCache(Job job,
-                                      Path sslConfigPath) throws IOException {
-    Configuration configuration = job.getConfiguration();
-    FileSystem localFS = FileSystem.getLocal(configuration);
-
-    Configuration sslConf = new Configuration(false);
-    sslConf.addResource(sslConfigPath);
-
-    Path localStorePath = getLocalStorePath(sslConf,
-                            DistCpConstants.CONF_LABEL_SSL_TRUST_STORE_LOCATION);
-    job.addCacheFile(localStorePath.makeQualified(localFS.getUri(),
-                                      localFS.getWorkingDirectory()).toUri());
-    configuration.set(DistCpConstants.CONF_LABEL_SSL_TRUST_STORE_LOCATION,
-                      localStorePath.getName());
-
-    localStorePath = getLocalStorePath(sslConf,
-                             DistCpConstants.CONF_LABEL_SSL_KEY_STORE_LOCATION);
-    job.addCacheFile(localStorePath.makeQualified(localFS.getUri(),
-                                      localFS.getWorkingDirectory()).toUri());
-    configuration.set(DistCpConstants.CONF_LABEL_SSL_KEY_STORE_LOCATION,
-                                      localStorePath.getName());
-
-    job.addCacheFile(sslConfigPath.makeQualified(localFS.getUri(),
-                                      localFS.getWorkingDirectory()).toUri());
-
-  }
-
-  /**
-   * Get Local Trust store/key store path
-   *
-   * @param sslConf - Config from SSL Client xml
-   * @param storeKey - Key for either trust store or key store
-   * @return - Path where the store is present
-   * @throws IOException -If any
-   */
-  private Path getLocalStorePath(Configuration sslConf, String storeKey) throws IOException {
-    if (sslConf.get(storeKey) != null) {
-      return new Path(sslConf.get(storeKey));
-    } else {
-      throw new IOException("Store for " + storeKey + " is not set in " +
-          inputOptions.getSslConfigurationFile());
-    }
   }
 
   /**

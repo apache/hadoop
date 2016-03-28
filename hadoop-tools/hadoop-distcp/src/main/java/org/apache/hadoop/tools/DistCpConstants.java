@@ -49,7 +49,6 @@ public class DistCpConstants {
       "distcp.preserve.rawxattrs";
   public static final String CONF_LABEL_SYNC_FOLDERS = "distcp.sync.folders";
   public static final String CONF_LABEL_DELETE_MISSING = "distcp.delete.missing.source";
-  public static final String CONF_LABEL_SSL_CONF = "distcp.keystore.resource";
   public static final String CONF_LABEL_LISTSTATUS_THREADS = "distcp.liststatus.threads";
   public static final String CONF_LABEL_MAX_MAPS = "distcp.max.maps";
   public static final String CONF_LABEL_SOURCE_LISTING = "distcp.source.listing";
@@ -75,9 +74,6 @@ public class DistCpConstants {
 
   /* Total number of paths to copy, includes directories. Unfiltered count */
   public static final String CONF_LABEL_TOTAL_NUMBER_OF_RECORDS = "mapred.number.of.records";
-
-  /* SSL keystore resource */
-  public static final String CONF_LABEL_SSL_KEYSTORE = "dfs.https.client.keystore.resource";
 
   /* If input is based -f <<source listing>>, file containing the src paths */
   public static final String CONF_LABEL_LISTING_FILE_PATH = "distcp.listing.file.path";
@@ -105,18 +101,6 @@ public class DistCpConstants {
 
   /* DistCp CopyListing class override param */
   public static final String CONF_LABEL_COPY_LISTING_CLASS = "distcp.copy.listing.class";
-
-  /**
-   * Conf label for SSL Trust-store location.
-   */
-  public static final String CONF_LABEL_SSL_TRUST_STORE_LOCATION
-      = "ssl.client.truststore.location";
-
-  /**
-   * Conf label for SSL Key-store location.
-   */
-  public static final String CONF_LABEL_SSL_KEY_STORE_LOCATION
-      = "ssl.client.keystore.location";
 
   /**
    * Constants for DistCp return code to shell / consumer of ToolRunner's run
