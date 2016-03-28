@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.resource;
 
+import java.io.InputStream;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,8 +39,6 @@ public class DynamicResourceConfiguration extends Configuration {
 
   private static final Log LOG =
     LogFactory.getLog(DynamicResourceConfiguration.class);
-
-  private static final String DR_CONFIGURATION_FILE = "dynamic-resources.xml";
 
   @Private
   public static final String PREFIX = "yarn.resource.dynamic.";
@@ -63,15 +63,14 @@ public class DynamicResourceConfiguration extends Configuration {
   }
 
   public DynamicResourceConfiguration(Configuration configuration) {
-    this(configuration, true);
+    super(configuration);
+    addResource(YarnConfiguration.DR_CONFIGURATION_FILE);
   }
 
   public DynamicResourceConfiguration(Configuration configuration,
-      boolean useLocalConfigurationProvider) {
+      InputStream drInputStream) {
     super(configuration);
-    if (useLocalConfigurationProvider) {
-      addResource(DR_CONFIGURATION_FILE);
-    }
+    addResource(drInputStream);
   }
 
   private String getNodePrefix(String node) {
