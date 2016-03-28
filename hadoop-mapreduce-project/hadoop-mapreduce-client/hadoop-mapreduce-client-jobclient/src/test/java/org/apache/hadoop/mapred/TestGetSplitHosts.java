@@ -20,11 +20,10 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.net.NetworkTopology;
 
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
+import junit.framework.TestCase;
 
-public class TestGetSplitHosts {
-  @Test
+public class TestGetSplitHosts extends TestCase {
+
   public void testGetSplitHosts() throws Exception {
 
     int numBlocks = 3;

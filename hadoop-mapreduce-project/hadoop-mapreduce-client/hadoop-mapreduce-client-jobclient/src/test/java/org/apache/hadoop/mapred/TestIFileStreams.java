@@ -21,12 +21,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
-import org.junit.Test;
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertEquals;
 
-public class TestIFileStreams {
-  @Test
+import junit.framework.TestCase;
+
+public class TestIFileStreams extends TestCase {
+
   public void testIFileStream() throws Exception {
     final int DLEN = 100;
     DataOutputBuffer dob = new DataOutputBuffer(DLEN + 4);
@@ -43,7 +42,7 @@ public class TestIFileStreams {
     }
     ifis.close();
   }
-  @Test
+
   public void testBadIFileStream() throws Exception {
     final int DLEN = 100;
     DataOutputBuffer dob = new DataOutputBuffer(DLEN + 4);
@@ -74,7 +73,7 @@ public class TestIFileStreams {
     }
     fail("Did not detect bad data in checksum");
   }
-  @Test
+
   public void testBadLength() throws Exception {
     final int DLEN = 100;
     DataOutputBuffer dob = new DataOutputBuffer(DLEN + 4);

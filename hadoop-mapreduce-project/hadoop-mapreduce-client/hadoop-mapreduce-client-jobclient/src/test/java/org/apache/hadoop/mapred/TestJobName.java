@@ -29,13 +29,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-
 public class TestJobName extends ClusterMapReduceTestCase {
 
-  @Test
   public void testComplexName() throws Exception {
     OutputStream os = getFileSystem().create(new Path(getInputDir(),
         "text.txt"));
@@ -70,7 +65,6 @@ public class TestJobName extends ClusterMapReduceTestCase {
     reader.close();
   }
 
-  @Test
   public void testComplexNameWithRegex() throws Exception {
     OutputStream os = getFileSystem().create(new Path(getInputDir(),
         "text.txt"));

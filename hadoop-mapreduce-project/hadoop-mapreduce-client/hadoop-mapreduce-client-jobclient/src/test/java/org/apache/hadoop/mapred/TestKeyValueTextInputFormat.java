@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.*;
 import java.util.*;
+import junit.framework.TestCase;
 
 import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.*;
@@ -27,11 +28,8 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.compress.*;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 
-public class TestKeyValueTextInputFormat {
+public class TestKeyValueTextInputFormat extends TestCase {
   private static final Log LOG =
     LogFactory.getLog(TestKeyValueTextInputFormat.class.getName());
 
@@ -49,7 +47,7 @@ public class TestKeyValueTextInputFormat {
   private static Path workDir = 
     new Path(new Path(System.getProperty("test.build.data", "."), "data"),
              "TestKeyValueTextInputFormat");
-  @Test
+  
   public void testFormat() throws Exception {
     JobConf job = new JobConf();
     Path file = new Path(workDir, "test.txt");
@@ -136,7 +134,7 @@ public class TestKeyValueTextInputFormat {
                                            (str.getBytes("UTF-8")), 
                                            defaultConf);
   }
-  @Test
+  
   public void testUTF8() throws Exception {
     LineReader in = null;
 
@@ -155,7 +153,7 @@ public class TestKeyValueTextInputFormat {
       }
     }
   }
-  @Test
+
   public void testNewLines() throws Exception {
     LineReader in = null;
     try {
@@ -221,8 +219,7 @@ public class TestKeyValueTextInputFormat {
   /**
    * Test using the gzip codec for reading
    */
-  @Test
-  public void testGzip() throws IOException {
+  public static void testGzip() throws IOException {
     JobConf job = new JobConf();
     CompressionCodec gzip = new GzipCodec();
     ReflectionUtils.setConf(gzip, job);

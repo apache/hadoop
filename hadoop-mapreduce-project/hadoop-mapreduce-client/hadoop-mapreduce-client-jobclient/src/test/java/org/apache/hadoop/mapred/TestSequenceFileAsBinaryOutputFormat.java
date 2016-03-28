@@ -18,35 +18,24 @@
 
 package org.apache.hadoop.mapred;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.BooleanWritable;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.DataInputBuffer;
-import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.FloatWritable;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.SequenceFile.CompressionType;
-import org.junit.Test;
-
 import java.io.IOException;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 
-public class TestSequenceFileAsBinaryOutputFormat {
+import junit.framework.TestCase;
+import org.apache.commons.logging.*;
+
+public class TestSequenceFileAsBinaryOutputFormat extends TestCase {
   private static final Log LOG =
       LogFactory.getLog(TestSequenceFileAsBinaryOutputFormat.class.getName());
+
   private static final int RECORDS = 10000;
   // A random task attempt id for testing.
   private static final String attempt = "attempt_200707121733_0001_m_000000_0";
 
-  @Test
   public void testBinary() throws IOException {
     JobConf job = new JobConf();
     FileSystem fs = FileSystem.getLocal(job);
@@ -140,8 +129,7 @@ public class TestSequenceFileAsBinaryOutputFormat {
     assertEquals("Some records not found", RECORDS, count);
   }
 
-  @Test
-  public void testSequenceOutputClassDefaultsToMapRedOutputClass()
+  public void testSequenceOutputClassDefaultsToMapRedOutputClass() 
          throws IOException {
     JobConf job = new JobConf();
     FileSystem fs = FileSystem.getLocal(job);
@@ -175,7 +163,6 @@ public class TestSequenceFileAsBinaryOutputFormat {
                                                                          job));
   }
 
-  @Test
   public void testcheckOutputSpecsForbidRecordCompression() throws IOException {
     JobConf job = new JobConf();
     FileSystem fs = FileSystem.getLocal(job);

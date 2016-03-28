@@ -22,6 +22,11 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Iterator;
 
+import junit.framework.Test;
+import junit.framework.TestCase;
+import junit.framework.TestSuite;
+import junit.extensions.TestSetup;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -49,27 +54,23 @@ import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
 
-public class TestDatamerge {
+public class TestDatamerge extends TestCase {
 
   private static MiniDFSCluster cluster = null;
-
-  @Before
-  public void setUp() throws Exception {
-    Configuration conf = new Configuration();
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-  }
-  @After
-  public void tearDown() throws Exception {
-    if (cluster != null) {
-      cluster.shutdown();
-    }
+  public static Test suite() {
+    TestSetup setup = new TestSetup(new TestSuite(TestDatamerge.class)) {
+      protected void setUp() throws Exception {
+        Configuration conf = new Configuration();
+        cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+      }
+      protected void tearDown() throws Exception {
+        if (cluster != null) {
+          cluster.shutdown();
+        }
+      }
+    };
+    return setup;
   }
 
   private static SequenceFile.Writer[] createWriters(Path testdir,
@@ -245,22 +246,18 @@ public class TestDatamerge {
     base.getFileSystem(job).delete(base, true);
   }
 
-  @Test
   public void testSimpleInnerJoin() throws Exception {
     joinAs("inner", InnerJoinChecker.class);
   }
 
-  @Test
   public void testSimpleOuterJoin() throws Exception {
     joinAs("outer", OuterJoinChecker.class);
   }
 
-  @Test
   public void testSimpleOverride() throws Exception {
     joinAs("override", OverrideChecker.class);
   }
 
-  @Test
   public void testNestedJoin() throws Exception {
     // outer(inner(S1,...,Sn),outer(S1,...Sn))
     final int SOURCES = 3;
@@ -353,7 +350,6 @@ public class TestDatamerge {
 
   }
 
-  @Test
   public void testEmptyJoin() throws Exception {
     JobConf job = new JobConf();
     Path base = cluster.getFileSystem().makeQualified(new Path("/empty"));

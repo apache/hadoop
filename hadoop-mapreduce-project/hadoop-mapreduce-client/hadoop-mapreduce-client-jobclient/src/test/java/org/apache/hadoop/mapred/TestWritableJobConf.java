@@ -18,6 +18,12 @@
 
 package org.apache.hadoop.mapred;
 
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -25,15 +31,8 @@ import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.util.GenericsUtil;
-import org.junit.Test;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-
-import static org.junit.Assert.assertTrue;
-
-public class TestWritableJobConf {
+public class TestWritableJobConf extends TestCase {
 
   private static final Configuration CONF = new Configuration();
 
@@ -79,17 +78,15 @@ public class TestWritableJobConf {
       }
     }
 
-    assertTrue(map1.equals(map2));
+    assertEquals(map1, map2);
   }
 
-  @Test
   public void testEmptyConfiguration() throws Exception {
     JobConf conf = new JobConf();
     Configuration deser = serDeser(conf);
     assertEquals(conf, deser);
   }
 
-  @Test
   public void testNonEmptyConfiguration() throws Exception {
     JobConf conf = new JobConf();
     conf.set("a", "A");
@@ -98,7 +95,6 @@ public class TestWritableJobConf {
     assertEquals(conf, deser);
   }
 
-  @Test
   public void testConfigurationWithDefaults() throws Exception {
     JobConf conf = new JobConf(false);
     conf.set("a", "A");
