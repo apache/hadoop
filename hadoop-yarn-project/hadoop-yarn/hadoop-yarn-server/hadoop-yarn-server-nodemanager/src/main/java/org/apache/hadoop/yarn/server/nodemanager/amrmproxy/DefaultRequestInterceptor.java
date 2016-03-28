@@ -39,6 +39,8 @@ import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Extends the AbstractRequestInterceptor class and provides an implementation
  * that simply forwards the AM requests to the cluster resource manager.
@@ -134,5 +136,10 @@ public final class DefaultRequestInterceptor extends
     // Afterwards we can update the service address for the RPC layer.
     user.addToken(amrmToken);
     amrmToken.setService(ClientRMProxy.getAMRMTokenService(getConf()));
+  }
+
+  @VisibleForTesting
+  public void setRMClient(ApplicationMasterProtocol rmClient) {
+    this.rmClient = rmClient;
   }
 }
