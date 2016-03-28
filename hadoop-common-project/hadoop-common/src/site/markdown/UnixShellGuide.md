@@ -89,7 +89,7 @@ Shell profiles may be installed in either `${HADOOP_CONF_DIR}/shellprofile.d` or
 
 An example of a shell profile is in the libexec directory.
 
-## Shell API
+### Shell API
 
 Apache Hadoop's shell code has a [function library](./UnixShellAPI.html) that is open for administrators and developers to use to assist in their configuration and advanced feature management.  These APIs follow the standard [Apache Hadoop Interface Classification](./InterfaceClassification.html), with one addition: Replaceable.
 
@@ -97,9 +97,7 @@ The shell code allows for core functions to be overridden. However, not all func
 
 In order to replace a function, create a file called `hadoop-user-functions.sh` in the `${HADOOP_CONF_DIR}` directory.  Simply define the new, replacement function in this file and the system will pick it up automatically.  There may be as many replacement functions as needed in this file.  Examples of function replacement are in the `hadoop-user-functions.sh.examples` file.
 
-
 Functions that are marked Public and Stable are safe to use in shell profiles as-is.  Other functions may change in a minor release.
-
 
 ### User-level API Access
 
@@ -112,3 +110,47 @@ hadoop_add_classpath /some/path/custom.jar
 ```
 
 would go into `.hadooprc`
+
+### Dynamic Subcommands
+
+Utilizing the Shell API, it is possible for third parties to add their own subcommands to the primary Hadoop shell scripts (hadoop, hdfs, mapred, yarn).
+
+Prior to executing a subcommand, the primary scripts will check for the existance of a (scriptname)_subcommand_(subcommand) function.  This function gets executed with the parameters set to all remaining command line arguments.  For example, if the following function is defined:
+
+```bash
+function yarn_subcommand_hello
+{
+  echo "$@"
+}
+```
+
+then executing `yarn --debug hello world I see you` will activate script debugging and call the `yarn_subcommand_hello` funciton as:
+
+```bash
+yarn_subcommand_hello world I see you
+```
+
+which will result in the output of:
+
+```bash
+world I see you
+```
+
+It is also possible to add the new subcommands to the usage output. The `hadoop_add_subcommand` function adds text to the usage output.  Utilizing the standard HADOOP_SHELL_EXECNAME variable, we can limit which command gets our new function.
+
+```bash
+if [[ "${HADOOP_SHELL_EXECNAME}" = "yarn" ]]; then
+  hadoop_add_subcommand "hello" "Print some text to the screen"
+fi
+```
+
+This functionality may also be use to override the built-ins.  For example, defining:
+
+```bash
+function hdfs_subcommand_fetchdt
+{
+  ...
+}
+```
+
+... will replace the existing `hdfs fetchdt` subcommand with a custom one.
