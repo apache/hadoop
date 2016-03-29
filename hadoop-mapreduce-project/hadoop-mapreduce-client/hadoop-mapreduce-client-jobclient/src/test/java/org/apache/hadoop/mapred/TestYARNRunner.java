@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.mapred;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
@@ -37,8 +41,6 @@ import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.Map;
-
-import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -113,7 +115,7 @@ import org.mockito.stubbing.Answer;
  * Test YarnRunner and make sure the client side plugin works
  * fine
  */
-public class TestYARNRunner extends TestCase {
+public class TestYARNRunner {
   private static final Log LOG = LogFactory.getLog(TestYARNRunner.class);
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 

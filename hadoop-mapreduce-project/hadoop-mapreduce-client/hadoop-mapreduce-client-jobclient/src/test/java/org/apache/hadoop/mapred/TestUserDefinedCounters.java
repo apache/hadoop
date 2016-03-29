@@ -17,6 +17,15 @@
  */
 package org.apache.hadoop.mapred;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.lib.IdentityMapper;
+import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.junit.Test;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -26,18 +35,10 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.lib.IdentityMapper;
-import org.apache.hadoop.mapred.lib.IdentityReducer;
-
-public class TestUserDefinedCounters extends TestCase {
-  
+public class TestUserDefinedCounters {
   private static String TEST_ROOT_DIR =
     new File(System.getProperty("test.build.data", "/tmp")).toURI()
     .toString().replace(' ', '+')
@@ -75,6 +76,7 @@ public class TestUserDefinedCounters extends TestCase {
     wr.close();
   }
 
+  @Test
   public void testMapReduceJob() throws Exception {
 
     JobConf conf = new JobConf(TestUserDefinedCounters.class);

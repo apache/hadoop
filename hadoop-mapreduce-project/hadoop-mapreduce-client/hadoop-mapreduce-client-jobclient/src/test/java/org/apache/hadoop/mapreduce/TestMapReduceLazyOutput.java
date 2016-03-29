@@ -25,8 +25,6 @@ import java.io.Writer;
 import java.util.Arrays;
 import java.util.List;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -42,13 +40,16 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.LazyOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.junit.Test;
+
+import static org.junit.Assert.assertTrue;
 
 /**
  * A JUnit test to test the Map-Reduce framework's feature to create part
  * files only if there is an explicit output.collect. This helps in preventing
  * 0 byte files
  */
-public class TestMapReduceLazyOutput extends TestCase {
+public class TestMapReduceLazyOutput {
   private static final int NUM_HADOOP_SLAVES = 3;
   private static final int NUM_MAPS_PER_NODE = 2;
   private static final Path INPUT = new Path("/testlazy/input");
@@ -122,7 +123,7 @@ public class TestMapReduceLazyOutput extends TestCase {
     }
   }
 
-
+  @Test
   public void testLazyOutput() throws Exception {
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
