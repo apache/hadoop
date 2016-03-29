@@ -1462,7 +1462,7 @@ public class DFSTestUtil {
             NativeIO.POSIX.getCacheManipulator().getMemlockLimit());
         return true;
       }
-    }, 100, 60000);
+    }, 100, 120000);
     return expectedCacheUsed;
   }
 
