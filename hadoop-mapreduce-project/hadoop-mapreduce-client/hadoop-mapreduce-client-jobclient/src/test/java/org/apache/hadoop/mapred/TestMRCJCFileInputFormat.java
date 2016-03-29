@@ -17,16 +17,6 @@
  */
 package org.apache.hadoop.mapred;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.concurrent.TimeoutException;
-
-import junit.framework.TestCase;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -36,9 +26,21 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
+import org.junit.After;
+import org.junit.Test;
+
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.concurrent.TimeoutException;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @SuppressWarnings("deprecation")
-public class TestMRCJCFileInputFormat extends TestCase {
+public class TestMRCJCFileInputFormat {
 
   Configuration conf = new Configuration();
   MiniDFSCluster dfs = null;
@@ -50,6 +52,7 @@ public class TestMRCJCFileInputFormat extends TestCase {
         .build();
   }
 
+  @Test
   public void testLocality() throws Exception {
     JobConf job = new JobConf(conf);
     dfs = newDFSCluster(job);
@@ -109,6 +112,7 @@ public class TestMRCJCFileInputFormat extends TestCase {
     DFSTestUtil.waitReplication(fs, path, replication);
   }
 
+  @Test
   public void testNumInputs() throws Exception {
     JobConf job = new JobConf(conf);
     dfs = newDFSCluster(job);
@@ -157,6 +161,7 @@ public class TestMRCJCFileInputFormat extends TestCase {
     }
   }
 
+  @Test
   public void testMultiLevelInput() throws Exception {
     JobConf job = new JobConf(conf);
 
@@ -195,6 +200,7 @@ public class TestMRCJCFileInputFormat extends TestCase {
   }
 
   @SuppressWarnings("rawtypes")
+  @Test
   public void testLastInputSplitAtSplitBoundary() throws Exception {
     FileInputFormat fif = new FileInputFormatForTest(1024l * 1024 * 1024,
         128l * 1024 * 1024);
@@ -208,6 +214,7 @@ public class TestMRCJCFileInputFormat extends TestCase {
   }
 
   @SuppressWarnings("rawtypes")
+  @Test
   public void testLastInputSplitExceedingSplitBoundary() throws Exception {
     FileInputFormat fif = new FileInputFormatForTest(1027l * 1024 * 1024,
         128l * 1024 * 1024);
@@ -221,6 +228,7 @@ public class TestMRCJCFileInputFormat extends TestCase {
   }
 
   @SuppressWarnings("rawtypes")
+  @Test
   public void testLastInputSplitSingleSplit() throws Exception {
     FileInputFormat fif = new FileInputFormatForTest(100l * 1024 * 1024,
         128l * 1024 * 1024);
@@ -305,7 +313,7 @@ public class TestMRCJCFileInputFormat extends TestCase {
     DFSTestUtil.waitReplication(fileSys, name, replication);
   }
 
-  @Override
+  @After
   public void tearDown() throws Exception {
     if (dfs != null) {
       dfs.shutdown();

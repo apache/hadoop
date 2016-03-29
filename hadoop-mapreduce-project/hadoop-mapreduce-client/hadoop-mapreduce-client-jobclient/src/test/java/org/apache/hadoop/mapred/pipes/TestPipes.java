@@ -44,10 +44,13 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Ignore;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
-import junit.framework.TestCase;
 @Ignore
-public class TestPipes extends TestCase {
+public class TestPipes {
   private static final Log LOG =
     LogFactory.getLog(TestPipes.class.getName());
   
@@ -66,7 +69,7 @@ public class TestPipes extends TestCase {
     fs.delete(p, true);
     assertFalse("output not cleaned up", fs.exists(p));
   }
-
+  @Test
   public void testPipes() throws IOException {
     if (System.getProperty("compile.c++") == null) {
       LOG.info("compile.c++ is not defined, so skipping TestPipes");

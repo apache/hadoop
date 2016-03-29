@@ -17,15 +17,16 @@
  */
 package org.apache.hadoop.mapreduce.lib.db;
 
-import java.io.IOException;
+import org.junit.Test;
+
 import java.math.BigDecimal;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
-public class TestTextSplitter extends TestCase {
+public class TestTextSplitter {
 
   public String formatArray(Object [] ar) {
     StringBuilder sb = new StringBuilder();
@@ -62,48 +63,56 @@ public class TestTextSplitter extends TestCase {
     }
   }
 
+  @Test
   public void testStringConvertEmpty() {
     TextSplitter splitter = new TextSplitter();
     BigDecimal emptyBigDec = splitter.stringToBigDecimal("");
     assertEquals(BigDecimal.ZERO, emptyBigDec);
   }
 
+  @Test
   public void testBigDecConvertEmpty() {
     TextSplitter splitter = new TextSplitter();
     String emptyStr = splitter.bigDecimalToString(BigDecimal.ZERO);
     assertEquals("", emptyStr);
   }
 
+  @Test
   public void testConvertA() {
     TextSplitter splitter = new TextSplitter();
     String out = splitter.bigDecimalToString(splitter.stringToBigDecimal("A"));
     assertEquals("A", out);
   }
 
+  @Test
   public void testConvertZ() {
     TextSplitter splitter = new TextSplitter();
     String out = splitter.bigDecimalToString(splitter.stringToBigDecimal("Z"));
     assertEquals("Z", out);
   }
 
+  @Test
   public void testConvertThreeChars() {
     TextSplitter splitter = new TextSplitter();
     String out = splitter.bigDecimalToString(splitter.stringToBigDecimal("abc"));
     assertEquals("abc", out);
   }
 
+  @Test
   public void testConvertStr() {
     TextSplitter splitter = new TextSplitter();
     String out = splitter.bigDecimalToString(splitter.stringToBigDecimal("big str"));
     assertEquals("big str", out);
   }
 
+  @Test
   public void testConvertChomped() {
     TextSplitter splitter = new TextSplitter();
     String out = splitter.bigDecimalToString(splitter.stringToBigDecimal("AVeryLongStringIndeed"));
     assertEquals("AVeryLon", out);
   }
 
+  @Test
   public void testAlphabetSplit() throws SQLException {
     // This should give us 25 splits, one per letter.
     TextSplitter splitter = new TextSplitter();
@@ -113,6 +122,7 @@ public class TestTextSplitter extends TestCase {
     assertArrayEquals(expected, splits.toArray(new String [0]));
   }
 
+  @Test
   public void testCommonPrefix() throws SQLException {
     // Splits between 'Hand' and 'Hardy'
     TextSplitter splitter = new TextSplitter();

@@ -27,8 +27,6 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -43,12 +41,15 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.junit.Test;
+
+import static org.junit.Assert.assertTrue;
 
 /**
  * A JUnit test to test the Map-Reduce framework's support for the
  * "mark-reset" functionality in Reduce Values Iterator
  */
-public class TestValueIterReset extends TestCase {
+public class TestValueIterReset {
   private static final int NUM_MAPS = 1;
   private static final int NUM_TESTS = 4;
   private static final int NUM_VALUES = 40;
@@ -518,6 +519,7 @@ public class TestValueIterReset extends TestCase {
     }
   }
 
+  @Test
   public void testValueIterReset() {
     try {
       Configuration conf = new Configuration();

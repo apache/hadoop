@@ -21,15 +21,15 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.UtilsForTests.RandomInputFormat;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.junit.Test;
 
-import junit.framework.TestCase;
 import java.io.*;
 import java.util.*;
 
 /** 
  * TestCollect checks if the collect can handle simultaneous invocations.
  */
-public class TestCollect extends TestCase 
+public class TestCollect
 {
   final static Path OUTPUT_DIR = new Path("build/test/test.collect.output");
   static final int NUM_FEEDERS = 10;
@@ -127,7 +127,7 @@ public class TestCollect extends TestCase
     conf.setNumMapTasks(1);
     conf.setNumReduceTasks(1);
   }
-  
+  @Test
   public void testCollect() throws IOException {
     JobConf conf = new JobConf();
     configure(conf);
@@ -143,10 +143,6 @@ public class TestCollect extends TestCase
       FileSystem fs = FileSystem.get(conf);
       fs.delete(OUTPUT_DIR, true);
     }
-  }
-  
-  public static void main(String[] args) throws IOException {
-    new TestCollect().testCollect();
   }
 }
 

@@ -23,19 +23,18 @@ import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.File;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Test;
 
 /**
  * Test Job History Log Analyzer.
  *
  * @see JHLogAnalyzer
  */
-public class TestJHLA extends TestCase {
+public class TestJHLA {
   private static final Log LOG = LogFactory.getLog(JHLogAnalyzer.class);
   private String historyLog = System.getProperty("test.build.data", 
                                   "build/test/data") + "/history/test.log";
@@ -133,6 +132,7 @@ public class TestJHLA extends TestCase {
   /**
    * Run log analyzer in test mode for file test.log.
    */
+  @Test
   public void testJHLA() {
     String[] args = {"-test", historyLog, "-jobDelimiter", ".!!FILE=.*!!"};
     JHLogAnalyzer.main(args);

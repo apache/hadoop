@@ -18,15 +18,19 @@
 package org.apache.hadoop.mapreduce.lib.fieldsel;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.io.*;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
+import org.junit.Test;
 
-import junit.framework.TestCase;
 import java.text.NumberFormat;
 
-public class TestMRFieldSelection extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+public class TestMRFieldSelection {
 
 private static NumberFormat idFormat = NumberFormat.getInstance();
   static {
@@ -34,6 +38,7 @@ private static NumberFormat idFormat = NumberFormat.getInstance();
     idFormat.setGroupingUsed(false);
   }
 
+  @Test
   public void testFieldSelection() throws Exception {
     launch();
   }
@@ -113,12 +118,5 @@ private static NumberFormat idFormat = NumberFormat.getInstance();
     System.out.println(inputData.toString());
     System.out.println("ExpectedData:");
     System.out.println(expectedOutput.toString());
-  }
-  
-  /**
-   * Launches all the tasks in order.
-   */
-  public static void main(String[] argv) throws Exception {
-    launch();
   }
 }

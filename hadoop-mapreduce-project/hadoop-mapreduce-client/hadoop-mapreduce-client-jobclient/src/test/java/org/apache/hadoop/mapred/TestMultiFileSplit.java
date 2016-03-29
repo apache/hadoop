@@ -27,16 +27,19 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 /**
  * 
  * test MultiFileSplit class
  */
-public class TestMultiFileSplit extends TestCase{
+public class TestMultiFileSplit {
 
+    @Test
     public void testReadWrite() throws Exception {
       MultiFileSplit split = new MultiFileSplit(new JobConf(), new Path[] {new Path("/test/path/1"), new Path("/test/path/2")}, new long[] {100,200});
         
@@ -70,6 +73,7 @@ public class TestMultiFileSplit extends TestCase{
      * test method getLocations
      * @throws IOException
      */
+    @Test
     public void testgetLocations() throws IOException{
         JobConf job= new JobConf();
       

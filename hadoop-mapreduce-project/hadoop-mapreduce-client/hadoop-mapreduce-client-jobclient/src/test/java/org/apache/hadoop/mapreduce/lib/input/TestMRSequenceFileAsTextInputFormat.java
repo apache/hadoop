@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.mapreduce.lib.input;
 
-import java.util.*;
-import junit.framework.TestCase;
-
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.io.*;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
@@ -31,12 +33,19 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
-import org.apache.hadoop.conf.*;
+import org.junit.Test;
 
-public class TestMRSequenceFileAsTextInputFormat extends TestCase {
+import java.util.BitSet;
+import java.util.Random;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+
+public class TestMRSequenceFileAsTextInputFormat {
   private static int MAX_LENGTH = 10000;
   private static Configuration conf = new Configuration();
 
+  @Test
   public void testFormat() throws Exception {
     Job job = Job.getInstance(conf);
     FileSystem fs = FileSystem.getLocal(conf);
@@ -111,9 +120,5 @@ public class TestMRSequenceFileAsTextInputFormat extends TestCase {
       }
 
     }
-  }
-
-  public static void main(String[] args) throws Exception {
-    new TestMRSequenceFileAsTextInputFormat().testFormat();
   }
 }

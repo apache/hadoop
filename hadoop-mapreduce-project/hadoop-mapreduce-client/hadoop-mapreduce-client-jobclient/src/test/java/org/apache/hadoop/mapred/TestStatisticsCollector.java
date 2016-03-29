@@ -19,14 +19,18 @@ package org.apache.hadoop.mapred;
 
 import java.util.Map;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.mapred.StatisticsCollector.TimeWindow;
 import org.apache.hadoop.mapred.StatisticsCollector.Stat;
+import org.junit.Test;
 
-public class TestStatisticsCollector extends TestCase{
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+
+public class TestStatisticsCollector {
 
   @SuppressWarnings("rawtypes")
+  @Test
   public void testMovingWindow() throws Exception {
     StatisticsCollector collector = new StatisticsCollector(1);
     TimeWindow window = new TimeWindow("test", 6, 2);
