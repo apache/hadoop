@@ -19,6 +19,8 @@
 package org.apache.hadoop.ipc;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -218,5 +220,27 @@ public class TestCallQueueManager {
     }
 
     assertEquals(totalCallsConsumed, totalCallsCreated);
+  }
+
+  public static class ExceptionFakeCall {
+
+    public ExceptionFakeCall() {
+      throw new IllegalArgumentException("Exception caused by constructor.!!");
+    }
+  }
+
+  private static final Class<? extends BlockingQueue<ExceptionFakeCall>> exceptionQueueClass = CallQueueManager
+      .convertQueueClass(ExceptionFakeCall.class, ExceptionFakeCall.class);
+
+  @Test
+  public void testInvocationException() throws InterruptedException {
+    try {
+      new CallQueueManager<ExceptionFakeCall>(exceptionQueueClass, 10, "", null);
+      fail();
+    } catch (RuntimeException re) {
+      assertTrue(re.getCause() instanceof IllegalArgumentException);
+      assertEquals("Exception caused by constructor.!!", re.getCause()
+          .getMessage());
+    }
   }
 }
