@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.util.StringUtils;
+
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -146,7 +149,7 @@ public class FSDirectory implements Closeable {
   // be deleted unless they are empty.
   //
   // Each entry in this set must be a normalized path.
-  private final SortedSet<String> protectedDirectories;
+  private volatile SortedSet<String> protectedDirectories;
 
   // lock to protect the directory and BlockMap
   private final ReentrantReadWriteLock dirLock;
@@ -370,14 +373,51 @@ public class FSDirectory implements Closeable {
    */
   @VisibleForTesting
   static SortedSet<String> parseProtectedDirectories(Configuration conf) {
+    return parseProtectedDirectories(conf
+        .getTrimmedStringCollection(FS_PROTECTED_DIRECTORIES));
+  }
+
+  /**
+   * Parse configuration setting dfs.namenode.protected.directories to retrieve
+   * the set of protected directories.
+   *
+   * @param protectedDirsString
+   *          a comma separated String representing a bunch of paths.
+   * @return a TreeSet
+   */
+  @VisibleForTesting
+  static SortedSet<String> parseProtectedDirectories(
+      final String protectedDirsString) {
+    return parseProtectedDirectories(StringUtils
+        .getTrimmedStringCollection(protectedDirsString));
+  }
+
+  private static SortedSet<String> parseProtectedDirectories(
+      final Collection<String> protectedDirs) {
     // Normalize each input path to guard against administrator error.
-    return new TreeSet<>(normalizePaths(
-        conf.getTrimmedStringCollection(FS_PROTECTED_DIRECTORIES),
-        FS_PROTECTED_DIRECTORIES));
+    return new TreeSet<>(
+        normalizePaths(protectedDirs, FS_PROTECTED_DIRECTORIES));
   }
 
   SortedSet<String> getProtectedDirectories() {
     return protectedDirectories;
+  }
+
+  /**
+   * Set directories that cannot be removed unless empty, even by an
+   * administrator.
+   *
+   * @param protectedDirsString
+   *          comma separated list of protected directories
+   */
+  String setProtectedDirectories(String protectedDirsString) {
+    if (protectedDirsString == null) {
+      protectedDirectories = new TreeSet<>();
+    } else {
+      protectedDirectories = parseProtectedDirectories(protectedDirsString);
+    }
+
+    return Joiner.on(",").skipNulls().join(protectedDirectories);
   }
 
   BlockManager getBlockManager() {

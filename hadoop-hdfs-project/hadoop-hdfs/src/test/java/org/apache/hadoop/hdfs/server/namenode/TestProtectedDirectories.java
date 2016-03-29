@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
@@ -28,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -38,8 +40,10 @@ import java.io.IOException;
 import java.util.*;
 
 import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_PROTECTED_DIRECTORIES;
 
 /**
  * Verify that the dfs.namenode.protected.directories setting is respected.
@@ -187,6 +191,46 @@ public class TestProtectedDirectories {
         .addUnprotectedDir("/a/", true));
 
     return matrix;
+  }
+
+  @Test
+  public void testReconfigureProtectedPaths() throws Throwable {
+    Configuration conf = new HdfsConfiguration();
+    Collection<Path> protectedPaths = Arrays.asList(new Path("/a"), new Path(
+        "/b"), new Path("/c"));
+    Collection<Path> unprotectedPaths = Arrays.asList();
+
+    MiniDFSCluster cluster = setupTestCase(conf, protectedPaths,
+        unprotectedPaths);
+
+    SortedSet<String> protectedPathsNew = new TreeSet<>(
+        FSDirectory.normalizePaths(Arrays.asList("/aa", "/bb", "/cc"),
+            FS_PROTECTED_DIRECTORIES));
+
+    String protectedPathsStrNew = "/aa,/bb,/cc";
+
+    NameNode nn = cluster.getNameNode();
+
+    // change properties
+    nn.reconfigureProperty(FS_PROTECTED_DIRECTORIES, protectedPathsStrNew);
+
+    FSDirectory fsDirectory = nn.getNamesystem().getFSDirectory();
+    // verify change
+    assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
+        protectedPathsNew, fsDirectory.getProtectedDirectories());
+
+    assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
+        protectedPathsStrNew, nn.getConf().get(FS_PROTECTED_DIRECTORIES));
+
+    // revert to default
+    nn.reconfigureProperty(FS_PROTECTED_DIRECTORIES, null);
+
+    // verify default
+    assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
+        new TreeSet<String>(), fsDirectory.getProtectedDirectories());
+
+    assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
+        null, nn.getConf().get(FS_PROTECTED_DIRECTORIES));
   }
 
   @Test
