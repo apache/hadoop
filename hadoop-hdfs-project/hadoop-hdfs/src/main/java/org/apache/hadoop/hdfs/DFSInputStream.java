@@ -1187,7 +1187,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
         // chooseDataNode is a commitment. If no node, we go to
         // the NN to reget block locations. Only go here on first read.
         chosenNode = chooseDataNode(block, ignored);
-        bb = ByteBuffer.wrap(buf, offset, len);
+        bb = ByteBuffer.allocate(len);
         Callable<ByteBuffer> getFromDataNodeCallable = getFromOneDataNode(
             chosenNode, block, start, end, bb, corruptedBlockMap);
         Future<ByteBuffer> firstRequest = hedgedService
@@ -1197,7 +1197,9 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
           Future<ByteBuffer> future = hedgedService.poll(
               dfsClient.getHedgedReadTimeout(), TimeUnit.MILLISECONDS);
           if (future != null) {
-            future.get();
+            ByteBuffer result = future.get();
+            System.arraycopy(result.array(), result.position(), buf, offset,
+                len);
             return;
           }
           if (DFSClient.LOG.isDebugEnabled()) {
@@ -1242,13 +1244,9 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
           ByteBuffer result = getFirstToComplete(hedgedService, futures);
           // cancel the rest.
           cancelAll(futures);
-          if (result.array() != buf) { // compare the array pointers
-            dfsClient.getHedgedReadMetrics().incHedgedReadWins();
-            System.arraycopy(result.array(), result.position(), buf, offset,
-                len);
-          } else {
-            dfsClient.getHedgedReadMetrics().incHedgedReadOps();
-          }
+          dfsClient.getHedgedReadMetrics().incHedgedReadWins();
+          System.arraycopy(result.array(), result.position(), buf, offset,
+              len);
           return;
         } catch (InterruptedException ie) {
           // Ignore and retry
