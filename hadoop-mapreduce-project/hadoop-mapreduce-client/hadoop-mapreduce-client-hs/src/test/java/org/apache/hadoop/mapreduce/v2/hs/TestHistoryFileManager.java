@@ -71,8 +71,9 @@ public class TestHistoryFileManager {
     Configuration conf = new HdfsConfiguration();
     Configuration conf2 = new HdfsConfiguration();
     dfsCluster = new MiniDFSCluster.Builder(conf).build();
-    conf2.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR,
-            conf.get(MiniDFSCluster.HDFS_MINIDFS_BASEDIR) + "_2");
+    conf2.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, conf.get(
+        MiniDFSCluster.HDFS_MINIDFS_BASEDIR, MiniDFSCluster.getBaseDirectory())
+        + "_2");
     dfsCluster2 = new MiniDFSCluster.Builder(conf2).build();
   }
 

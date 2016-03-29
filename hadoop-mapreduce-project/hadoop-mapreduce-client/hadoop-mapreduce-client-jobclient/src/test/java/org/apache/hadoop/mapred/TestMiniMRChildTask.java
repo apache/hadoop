@@ -436,8 +436,10 @@ public class TestMiniMRChildTask {
 
       JobConf conf = new JobConf(mr.getConfig());
       // initialize input, output directories
-      Path inDir = new Path("input");
-      Path outDir = new Path("output");
+      Path rootDir = new Path(System.getProperty("test.build.data",
+          "build/test/data"));
+      Path inDir = new Path(rootDir, "input");
+      Path outDir = new Path(rootDir, "output");
       String input = "The input";
 
       // set config to use the ExecutionEnvCheckMapClass map class
@@ -462,9 +464,10 @@ public class TestMiniMRChildTask {
   public void testTaskEnv(){
     try {
       JobConf conf = new JobConf(mr.getConfig());
+      String baseDir = System.getProperty("test.build.data", "build/test/data");
       // initialize input, output directories
-      Path inDir = new Path("testing/wc/input1");
-      Path outDir = new Path("testing/wc/output1");
+      Path inDir = new Path(baseDir + "/testing/wc/input1");
+      Path outDir = new Path(baseDir + "/testing/wc/output1");
       FileSystem outFs = outDir.getFileSystem(conf);
       runTestTaskEnv(conf, inDir, outDir, false);
       outFs.delete(outDir, true);
@@ -485,9 +488,10 @@ public class TestMiniMRChildTask {
   public void testTaskOldEnv(){
     try {
       JobConf conf = new JobConf(mr.getConfig());
+      String baseDir = System.getProperty("test.build.data", "build/test/data");
       // initialize input, output directories
-      Path inDir = new Path("testing/wc/input1");
-      Path outDir = new Path("testing/wc/output1");
+      Path inDir = new Path(baseDir + "/testing/wc/input1");
+      Path outDir = new Path(baseDir + "/testing/wc/output1");
       FileSystem outFs = outDir.getFileSystem(conf);
       runTestTaskEnv(conf, inDir, outDir, true);
       outFs.delete(outDir, true);

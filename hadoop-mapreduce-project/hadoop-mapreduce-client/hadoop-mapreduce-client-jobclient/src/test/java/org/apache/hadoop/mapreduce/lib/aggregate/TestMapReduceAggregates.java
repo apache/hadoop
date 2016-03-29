@@ -53,8 +53,9 @@ public class TestMapReduceAggregates {
     FileSystem fs = FileSystem.get(conf);
     int numOfInputLines = 20;
 
-    Path OUTPUT_DIR = new Path("build/test/output_for_aggregates_test");
-    Path INPUT_DIR = new Path("build/test/input_for_aggregates_test");
+    String baseDir = System.getProperty("test.build.data", "build/test/data");
+    Path OUTPUT_DIR = new Path(baseDir + "/output_for_aggregates_test");
+    Path INPUT_DIR = new Path(baseDir + "/input_for_aggregates_test");
     String inputFile = "input.txt";
     fs.delete(INPUT_DIR, true);
     fs.mkdirs(INPUT_DIR);
