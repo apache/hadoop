@@ -37,8 +37,9 @@ import java.util.Set;
 import java.util.UUID;
 
 public class TestOldCombinerGrouping {
-  private static String TEST_ROOT_DIR =
-      new File("build", UUID.randomUUID().toString()).getAbsolutePath();
+  private static String TEST_ROOT_DIR = new File(System.getProperty(
+      "test.build.data", "build/test/data"), UUID.randomUUID().toString())
+          .getAbsolutePath();
 
   public static class Map implements
       Mapper<LongWritable, Text, Text, LongWritable> {
