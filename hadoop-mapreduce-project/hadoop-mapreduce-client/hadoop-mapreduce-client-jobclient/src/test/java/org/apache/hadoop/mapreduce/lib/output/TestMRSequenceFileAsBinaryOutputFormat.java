@@ -18,12 +18,17 @@
 
 package org.apache.hadoop.mapreduce.lib.output;
 
-import java.io.IOException;
-import java.util.Random;
-
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.io.*;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.BooleanWritable;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapreduce.InputFormat;
@@ -38,16 +43,22 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
+import org.junit.Test;
 
-import junit.framework.TestCase;
-import org.apache.commons.logging.*;
+import java.io.IOException;
+import java.util.Random;
 
-public class TestMRSequenceFileAsBinaryOutputFormat extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+public class TestMRSequenceFileAsBinaryOutputFormat {
   private static final Log LOG =
     LogFactory.getLog(TestMRSequenceFileAsBinaryOutputFormat.class.getName());
 
   private static final int RECORDS = 10000;
-  
+
+  @Test
   public void testBinary() throws IOException, InterruptedException {
     Configuration conf = new Configuration();
     Job job = Job.getInstance(conf);
@@ -144,7 +155,8 @@ public class TestMRSequenceFileAsBinaryOutputFormat extends TestCase {
     assertEquals("Some records not found", RECORDS, count);
   }
 
-  public void testSequenceOutputClassDefaultsToMapRedOutputClass() 
+  @Test
+  public void testSequenceOutputClassDefaultsToMapRedOutputClass()
          throws IOException {
     Job job = Job.getInstance();
     // Setting Random class to test getSequenceFileOutput{Key,Value}Class
@@ -172,7 +184,8 @@ public class TestMRSequenceFileAsBinaryOutputFormat extends TestCase {
       SequenceFileAsBinaryOutputFormat.getSequenceFileOutputValueClass(job));
   }
 
-  public void testcheckOutputSpecsForbidRecordCompression() 
+  @Test
+  public void testcheckOutputSpecsForbidRecordCompression()
       throws IOException {
     Job job = Job.getInstance();
     FileSystem fs = FileSystem.getLocal(job.getConfiguration());

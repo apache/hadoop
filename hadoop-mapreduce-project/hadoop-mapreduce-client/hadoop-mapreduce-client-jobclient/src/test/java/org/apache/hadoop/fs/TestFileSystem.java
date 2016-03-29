@@ -34,8 +34,6 @@ import java.util.HashMap;
 import java.net.InetSocketAddress;
 import java.net.URI;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -50,8 +48,15 @@ import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.lib.LongSumReducer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
+import org.junit.Test;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
 
-public class TestFileSystem extends TestCase {
+
+public class TestFileSystem {
   private static final Log LOG = FileSystem.LOG;
 
   private static Configuration conf = new Configuration();
@@ -66,6 +71,7 @@ public class TestFileSystem extends TestCase {
   private static Path READ_DIR = new Path(ROOT, "fs_read");
   private static Path DATA_DIR = new Path(ROOT, "fs_data");
 
+  @Test
   public void testFs() throws Exception {
     testFs(10 * MEGA, 100, 0);
   }
@@ -90,7 +96,8 @@ public class TestFileSystem extends TestCase {
     fs.delete(READ_DIR, true);
   }
 
-  public static void testCommandFormat() throws Exception {
+  @Test
+  public void testCommandFormat() throws Exception {
     // This should go to TestFsShell.java when it is added.
     CommandFormat cf;
     cf= new CommandFormat("copyToLocal", 2,2,"crc","ignoreCrc");
@@ -488,6 +495,7 @@ public class TestFileSystem extends TestCase {
     }
   }
 
+  @Test
   public void testFsCache() throws Exception {
     {
       long now = System.currentTimeMillis();
@@ -561,6 +569,7 @@ public class TestFileSystem extends TestCase {
         + StringUtils.toUpperCase(add.getHostName()) + ":" + add.getPort()));
   }
 
+  @Test
   public void testFsClose() throws Exception {
     {
       Configuration conf = new Configuration();
@@ -569,6 +578,7 @@ public class TestFileSystem extends TestCase {
     }
   }
 
+  @Test
   public void testFsShutdownHook() throws Exception {
     final Set<FileSystem> closed = Collections.synchronizedSet(new HashSet<FileSystem>());
     Configuration conf = new Configuration();
@@ -600,7 +610,7 @@ public class TestFileSystem extends TestCase {
     assertTrue(closed.contains(fsWithoutAuto));
   }
 
-
+  @Test
   public void testCacheKeysAreCaseInsensitive()
     throws Exception
   {

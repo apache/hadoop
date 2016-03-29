@@ -21,28 +21,29 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.Ignore;
+import org.junit.Test;
+import static org.junit.Assert.assertTrue;
 
 /**
  * check for the job submission  options of 
  * -libjars -files -archives
  */
 @Ignore
-public class TestCommandLineJobSubmission extends TestCase {
-  // Input output paths for this.. 
+public class TestCommandLineJobSubmission {
+  // Input output paths for this..
   // these are all dummy and does not test
   // much in map reduce except for the command line
   // params 
   static final Path input = new Path("/test/input/");
   static final Path output = new Path("/test/output");
   File buildDir = new File(System.getProperty("test.build.data", "/tmp"));
+  @Test
   public void testJobShell() throws Exception {
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;

@@ -18,17 +18,28 @@
 
 package org.apache.hadoop.mapreduce.lib.input;
 
-import java.io.*;
-import java.util.*;
-import junit.framework.TestCase;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MapContext;
+import org.apache.hadoop.mapreduce.MapReduceTestUtil;
+import org.apache.hadoop.mapreduce.RecordReader;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
+import org.junit.Test;
 
-public class TestNLineInputFormat extends TestCase {
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+
+public class TestNLineInputFormat {
   private static int MAX_LENGTH = 200;
   
   private static Configuration conf = new Configuration();
@@ -45,7 +56,8 @@ public class TestNLineInputFormat extends TestCase {
   private static Path workDir = 
     new Path(new Path(System.getProperty("test.build.data", "."), "data"),
              "TestNLineInputFormat");
-  
+
+  @Test
   public void testFormat() throws Exception {
     Job job = Job.getInstance(conf);
     Path file = new Path(workDir, "test.txt");
@@ -115,9 +127,5 @@ public class TestNLineInputFormat extends TestCase {
                      expectedN, count);
       }
     }
-  }
-  
-  public static void main(String[] args) throws Exception {
-    new TestNLineInputFormat().testFormat();
   }
 }

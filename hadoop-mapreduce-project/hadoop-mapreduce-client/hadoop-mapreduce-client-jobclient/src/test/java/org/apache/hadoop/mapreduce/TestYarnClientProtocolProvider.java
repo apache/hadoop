@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce;
 
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -26,7 +27,6 @@ import static org.mockito.Mockito.doNothing;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -44,8 +44,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.junit.Test;
 
-public class TestYarnClientProtocolProvider extends TestCase {
-  
+public class TestYarnClientProtocolProvider {
   private static final RecordFactory recordFactory = RecordFactoryProvider.
       getRecordFactory(null);
   
