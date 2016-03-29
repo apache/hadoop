@@ -19,6 +19,7 @@
 package org.apache.hadoop.ipc;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -70,6 +71,9 @@ public class CallQueueManager<E> {
       return ctor.newInstance(maxLen, ns, conf);
     } catch (RuntimeException e) {
       throw e;
+    } catch (InvocationTargetException e) {
+      throw new RuntimeException(theClass.getName()
+          + " could not be constructed.", e.getCause());
     } catch (Exception e) {
     }
 
@@ -79,6 +83,9 @@ public class CallQueueManager<E> {
       return ctor.newInstance(maxLen);
     } catch (RuntimeException e) {
       throw e;
+    } catch (InvocationTargetException e) {
+      throw new RuntimeException(theClass.getName()
+          + " could not be constructed.", e.getCause());
     } catch (Exception e) {
     }
 
@@ -88,6 +95,9 @@ public class CallQueueManager<E> {
       return ctor.newInstance();
     } catch (RuntimeException e) {
       throw e;
+    } catch (InvocationTargetException e) {
+      throw new RuntimeException(theClass.getName()
+          + " could not be constructed.", e.getCause());
     } catch (Exception e) {
     }
 
