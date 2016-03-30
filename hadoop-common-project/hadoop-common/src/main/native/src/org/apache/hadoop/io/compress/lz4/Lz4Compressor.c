@@ -87,7 +87,9 @@ JNIEXPORT jstring JNICALL
 Java_org_apache_hadoop_io_compress_lz4_Lz4Compressor_getLibraryName(
  JNIEnv *env, jclass class
  ) {
-  return (*env)->NewStringUTF(env, "revision:99");
+  char version_buf[128];
+  snprintf(version_buf, sizeof(version_buf), "revision:%d", LZ4_versionNumber());
+  return (*env)->NewStringUTF(env, version_buf);
 }
 
 JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Compressor_compressBytesDirectHC
