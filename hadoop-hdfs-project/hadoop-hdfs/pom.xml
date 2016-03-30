@@ -353,6 +353,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <include>editlog.proto</include>
                   <include>fsimage.proto</include>
                   <include>DatanodeContainerProtocol.proto</include>
+                  <include>StorageContainerLocationProtocol.proto</include>
                 </includes>
               </source>
               <output>${project.build.directory}/generated-sources/java</output>
