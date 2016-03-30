@@ -86,12 +86,6 @@ public class PreemptableQueue {
     return res == null ? Resources.none() : res;
   }
 
-  @SuppressWarnings("unchecked")
-  public Map<ContainerId, RMContainer> getKillableContainers(String partition) {
-    Map<ContainerId, RMContainer> map = killableContainers.get(partition);
-    return map == null ? Collections.EMPTY_MAP : map;
-  }
-
   public Map<String, Map<ContainerId, RMContainer>> getKillableContainers() {
     return killableContainers;
   }

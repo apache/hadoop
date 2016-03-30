@@ -146,7 +146,7 @@ public class PreemptionManager {
     }
   }
 
-  public Map<String, PreemptableQueue> getShallowCopyOfPreemptableEntities() {
+  public Map<String, PreemptableQueue> getShallowCopyOfPreemptableQueues() {
     try {
       readLock.lock();
       Map<String, PreemptableQueue> map = new HashMap<>();

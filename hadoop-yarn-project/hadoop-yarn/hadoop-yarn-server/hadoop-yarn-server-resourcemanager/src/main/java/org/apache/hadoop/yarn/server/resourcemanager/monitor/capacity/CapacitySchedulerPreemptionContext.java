@@ -15,26 +15,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.resourcemanager.monitor;
 
-import org.apache.hadoop.conf.Configuration;
+package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
+
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
-public interface SchedulingEditPolicy {
+import java.util.Collection;
+import java.util.Set;
 
-  void init(Configuration config, RMContext context,
-      PreemptableResourceScheduler scheduler);
+interface CapacitySchedulerPreemptionContext {
+  CapacityScheduler getScheduler();
 
-  /**
-   * This method is invoked at regular intervals. Internally the policy is
-   * allowed to track containers and affect the scheduler. The "actions"
-   * performed are passed back through an EventHandler.
-   */
-  void editSchedule();
+  TempQueuePerPartition getQueueByPartition(String queueName,
+      String partition);
 
-  long getMonitoringInterval();
+  Collection<TempQueuePerPartition> getQueuePartitions(String queueName);
 
-  String getPolicyName();
+  ResourceCalculator getResourceCalculator();
 
+  RMContext getRMContext();
+
+  boolean isObserveOnly();
+
+  Set<ContainerId> getKillableContainers();
+
+  double getMaxIgnoreOverCapacity();
+
+  double getNaturalTerminationFactor();
+
+  Set<String> getLeafQueueNames();
+
+  Set<String> getAllPartitions();
 }

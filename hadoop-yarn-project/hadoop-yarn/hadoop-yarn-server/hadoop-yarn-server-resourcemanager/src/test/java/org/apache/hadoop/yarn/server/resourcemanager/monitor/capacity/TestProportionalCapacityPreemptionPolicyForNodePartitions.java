@@ -18,29 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy.MONITORING_INTERVAL;
-import static org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy.NATURAL_TERMINATION_FACTOR;
-import static org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy.TOTAL_PREEMPTION_PER_ROUND;
-import static org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy.WAIT_TIME_BEFORE_KILL;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.argThat;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isA;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeSet;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -81,6 +58,25 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeSet;
+
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.argThat;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Matchers.isA;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
   private static final Log LOG =
       LogFactory.getLog(TestProportionalCapacityPreemptionPolicyForNodePartitions.class);
@@ -94,8 +90,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
 
   private ResourceCalculator rc = new DefaultResourceCalculator();
   private Clock mClock = null;
-  private Configuration conf = null;
-  private CapacitySchedulerConfiguration csConf = null;
+  private CapacitySchedulerConfiguration conf = null;
   private CapacityScheduler cs = null;
   private EventHandler<SchedulerEvent> mDisp = null;
   private ProportionalCapacityPreemptionPolicy policy = null;
@@ -107,24 +102,23 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
     org.apache.log4j.Logger.getRootLogger().setLevel(
         org.apache.log4j.Level.DEBUG);
 
-    conf = new Configuration(false);
-    conf.setLong(WAIT_TIME_BEFORE_KILL, 10000);
-    conf.setLong(MONITORING_INTERVAL, 3000);
+    conf = new CapacitySchedulerConfiguration(new Configuration(false));
+    conf.setLong(
+        CapacitySchedulerConfiguration.PREEMPTION_WAIT_TIME_BEFORE_KILL, 10000);
+    conf.setLong(CapacitySchedulerConfiguration.PREEMPTION_MONITORING_INTERVAL,
+        3000);
     // report "ideal" preempt
-    conf.setFloat(TOTAL_PREEMPTION_PER_ROUND, (float) 1.0);
-    conf.setFloat(NATURAL_TERMINATION_FACTOR, (float) 1.0);
-    conf.set(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
-        ProportionalCapacityPreemptionPolicy.class.getCanonicalName());
-    conf.setBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
-    // FairScheduler doesn't support this test,
-    // Set CapacityScheduler as the scheduler for this test.
-    conf.set("yarn.resourcemanager.scheduler.class",
-        CapacityScheduler.class.getName());
+    conf.setFloat(CapacitySchedulerConfiguration.TOTAL_PREEMPTION_PER_ROUND,
+        (float) 1.0);
+    conf.setFloat(
+        CapacitySchedulerConfiguration.PREEMPTION_NATURAL_TERMINATION_FACTOR,
+        (float) 1.0);
 
     mClock = mock(Clock.class);
     cs = mock(CapacityScheduler.class);
     when(cs.getResourceCalculator()).thenReturn(rc);
     when(cs.getPreemptionManager()).thenReturn(new PreemptionManager());
+    when(cs.getConfiguration()).thenReturn(conf);
 
     nlm = mock(RMNodeLabelsManager.class);
     mDisp = mock(EventHandler.class);
@@ -134,11 +128,9 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
     Dispatcher disp = mock(Dispatcher.class);
     when(rmContext.getDispatcher()).thenReturn(disp);
     when(disp.getEventHandler()).thenReturn(mDisp);
-    csConf = new CapacitySchedulerConfiguration();
-    when(cs.getConfiguration()).thenReturn(csConf);
     when(cs.getRMContext()).thenReturn(rmContext);
 
-    policy = new ProportionalCapacityPreemptionPolicy(conf, rmContext, cs, mClock);
+    policy = new ProportionalCapacityPreemptionPolicy(rmContext, cs, mClock);
     partitionToResource = new HashMap<>();
     nodeIdToSchedulerNodes = new HashMap<>();
     nameToCSQueues = new HashMap<>();
@@ -576,7 +568,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
         "c\t" // app3 in c
         + "(1,1,n1,x,20,false)"; // 20x in n1
 
-    csConf.setPreemptionDisabled("root.b", true);
+    conf.setPreemptionDisabled("root.b", true);
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
@@ -901,7 +893,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
     when(cs.getClusterResource()).thenReturn(clusterResource);
     mockApplications(appsConfig);
 
-    policy = new ProportionalCapacityPreemptionPolicy(conf, rmContext, cs,
+    policy = new ProportionalCapacityPreemptionPolicy(rmContext, cs,
         mClock);
   }
 
@@ -1235,7 +1227,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
 
     // Setup preemption disabled
     when(queue.getPreemptionDisabled()).thenReturn(
-        csConf.getPreemptionDisabled(queuePath, false));
+        conf.getPreemptionDisabled(queuePath, false));
 
     nameToCSQueues.put(queueName, queue);
     when(cs.getQueue(eq(queueName))).thenReturn(queue);
