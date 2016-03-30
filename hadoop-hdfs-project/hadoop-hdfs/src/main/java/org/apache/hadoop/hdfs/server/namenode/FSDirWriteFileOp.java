@@ -79,6 +79,10 @@ class FSDirWriteFileOp {
     if (uc == null) {
       return false;
     }
+    if (uc.getUnderConstructionFeature() != null) {
+      DatanodeStorageInfo.decrementBlocksScheduled(uc
+          .getUnderConstructionFeature().getExpectedStorageLocations());
+    }
     fsd.getBlockManager().removeBlockFromMap(uc);
 
     if(NameNode.stateChangeLog.isDebugEnabled()) {
