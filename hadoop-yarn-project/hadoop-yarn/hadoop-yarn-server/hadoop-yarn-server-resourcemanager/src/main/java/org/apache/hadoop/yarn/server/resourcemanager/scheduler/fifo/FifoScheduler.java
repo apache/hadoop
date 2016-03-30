@@ -219,6 +219,18 @@ public class FifoScheduler extends
       // TODO add implementation for FIFO scheduler
       return null;
     }
+
+    @Override
+    public void incReservedResource(String partition, Resource reservedRes) {
+      // TODO add implementation for FIFO scheduler
+
+    }
+
+    @Override
+    public void decReservedResource(String partition, Resource reservedRes) {
+      // TODO add implementation for FIFO scheduler
+
+    }
   };
 
   public FifoScheduler() {

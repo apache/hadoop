@@ -50,7 +50,7 @@ public class QueueCapacities {
   // Usage enum here to make implement cleaner
   private enum CapacityType {
     USED_CAP(0), ABS_USED_CAP(1), MAX_CAP(2), ABS_MAX_CAP(3), CAP(4), ABS_CAP(5),
-      MAX_AM_PERC(6);
+      MAX_AM_PERC(6), RESERVED_CAP(7), ABS_RESERVED_CAP(8);
 
     private int idx;
 
@@ -76,6 +76,8 @@ public class QueueCapacities {
       sb.append("cap=" + capacitiesArr[4] + "%, ");
       sb.append("abs_cap=" + capacitiesArr[5] + "%}");
       sb.append("max_am_perc=" + capacitiesArr[6] + "%}");
+      sb.append("reserved_cap=" + capacitiesArr[7] + "%}");
+      sb.append("abs_reserved_cap=" + capacitiesArr[8] + "%}");
       return sb.toString();
     }
   }
@@ -232,6 +234,40 @@ public class QueueCapacities {
 
   public void setMaxAMResourcePercentage(float value) {
     _set(NL, CapacityType.MAX_AM_PERC, value);
+  }
+
+  /* Reserved Capacity Getter and Setter */
+  public float getReservedCapacity() {
+    return _get(NL, CapacityType.RESERVED_CAP);
+  }
+
+  public float getReservedCapacity(String label) {
+    return _get(label, CapacityType.RESERVED_CAP);
+  }
+
+  public void setReservedCapacity(float value) {
+    _set(NL, CapacityType.RESERVED_CAP, value);
+  }
+
+  public void setReservedCapacity(String label, float value) {
+    _set(label, CapacityType.RESERVED_CAP, value);
+  }
+
+  /* Absolute Reserved Capacity Getter and Setter */
+  public float getAbsoluteReservedCapacity() {
+    return _get(NL, CapacityType.ABS_RESERVED_CAP);
+  }
+
+  public float getAbsoluteReservedCapacity(String label) {
+    return _get(label, CapacityType.ABS_RESERVED_CAP);
+  }
+
+  public void setAbsoluteReservedCapacity(float value) {
+    _set(NL, CapacityType.ABS_RESERVED_CAP, value);
+  }
+
+  public void setAbsoluteReservedCapacity(String label, float value) {
+    _set(label, CapacityType.ABS_RESERVED_CAP, value);
   }
 
   /**

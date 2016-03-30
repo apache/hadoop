@@ -186,6 +186,8 @@ class CSQueueUtils {
       String nodePartition) {
     float absoluteUsedCapacity = 0.0f;
     float usedCapacity = 0.0f;
+    float reservedCapacity = 0.0f;
+    float absoluteReservedCapacity = 0.0f;
 
     if (Resources.greaterThan(rc, totalPartitionResource,
         totalPartitionResource, Resources.none())) {
@@ -207,11 +209,22 @@ class CSQueueUtils {
       usedCapacity =
           Resources.divide(rc, totalPartitionResource, usedResource,
               queueGuranteedResource);
+
+      Resource resResource = queueResourceUsage.getReserved(nodePartition);
+      reservedCapacity =
+          Resources.divide(rc, totalPartitionResource, resResource,
+              queueGuranteedResource);
+      absoluteReservedCapacity =
+          Resources.divide(rc, totalPartitionResource, resResource,
+              totalPartitionResource);
     }
 
     queueCapacities
         .setAbsoluteUsedCapacity(nodePartition, absoluteUsedCapacity);
     queueCapacities.setUsedCapacity(nodePartition, usedCapacity);
+    queueCapacities.setReservedCapacity(nodePartition, reservedCapacity);
+    queueCapacities
+        .setAbsoluteReservedCapacity(nodePartition, absoluteReservedCapacity);
   }
   
   private static Resource getMaxAvailableResourceToQueue(
