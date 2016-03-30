@@ -313,6 +313,16 @@ public class DatanodeStorageInfo {
     }
   }
 
+  /**
+   * Decrement the number of blocks scheduled for each given storage. This will
+   * be called during abandon block or delete of UC block.
+   */
+  public static void decrementBlocksScheduled(DatanodeStorageInfo... storages) {
+    for (DatanodeStorageInfo s : storages) {
+      s.getDatanodeDescriptor().decrementBlocksScheduled(s.getStorageType());
+    }
+  }
+
   @Override
   public boolean equals(Object obj) {
     if (this == obj) {
