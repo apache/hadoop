@@ -78,4 +78,55 @@ public class TestBlocksScheduledCounter {
     out.close();   
     assertEquals(0, dn.getBlocksScheduled());
   }
+
+  /**
+   * Abandon block should decrement the scheduledBlocks count for the dataNode.
+   */
+  @Test
+  public void testScheduledBlocksCounterShouldDecrementOnAbandonBlock()
+      throws Exception {
+    cluster = new MiniDFSCluster.Builder(new HdfsConfiguration()).numDataNodes(
+        2).build();
+
+    cluster.waitActive();
+    fs = cluster.getFileSystem();
+
+    DatanodeManager datanodeManager = cluster.getNamesystem().getBlockManager()
+        .getDatanodeManager();
+    ArrayList<DatanodeDescriptor> dnList = new ArrayList<DatanodeDescriptor>();
+    datanodeManager.fetchDatanodes(dnList, dnList, false);
+    for (DatanodeDescriptor descriptor : dnList) {
+      assertEquals("Blocks scheduled should be 0 for " + descriptor.getName(),
+          0, descriptor.getBlocksScheduled());
+    }
+
+    cluster.getDataNodes().get(0).shutdown();
+    // open a file an write a few bytes:
+    FSDataOutputStream out = fs.create(new Path("/testBlockScheduledCounter"),
+        (short) 2);
+    for (int i = 0; i < 1024; i++) {
+      out.write(i);
+    }
+    // flush to make sure a block is allocated.
+    out.hflush();
+
+    DatanodeDescriptor abandonedDn = datanodeManager.getDatanode(cluster
+        .getDataNodes().get(0).getDatanodeId());
+    assertEquals("for the abandoned dn scheduled counts should be 0", 0,
+        abandonedDn.getBlocksScheduled());
+
+    for (DatanodeDescriptor descriptor : dnList) {
+      if (descriptor.equals(abandonedDn)) {
+        continue;
+      }
+      assertEquals("Blocks scheduled should be 1 for " + descriptor.getName(),
+          1, descriptor.getBlocksScheduled());
+    }
+    // close the file and the counter should go to zero.
+    out.close();
+    for (DatanodeDescriptor descriptor : dnList) {
+      assertEquals("Blocks scheduled should be 0 for " + descriptor.getName(),
+          0, descriptor.getBlocksScheduled());
+    }
+  }
 }
