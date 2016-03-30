@@ -179,23 +179,23 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
   
   @Override
   public void readFields(DataInput in) throws IOException {
-    
+
     // Get the number of "unknown" classes
-    
     newClasses = in.readByte();
-    
+
+    // Get the class loader of the current thread because
+    // Class.forName does not have the job jar in its path
+    ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+
     // Then read in the class names and add them to our tables
-    
     for (int i = 0; i < newClasses; i++) {
       byte id = in.readByte();
       String className = in.readUTF();
       try {
-        addToMap(Class.forName(className), id);
-        
+        addToMap(classLoader.loadClass(className), id);
       } catch (ClassNotFoundException e) {
-        throw new IOException("can't find class: " + className + " because "+
-            e.getMessage());
+        throw new IOException(e);
       }
     }
-  }    
+  }
 }
