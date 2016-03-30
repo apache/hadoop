@@ -875,8 +875,7 @@ public final class ErasureCodingWorker {
         NetUtils.connect(sock, addr, socketTimeout);
         peer = DFSUtilClient.peerFromSocketAndKey(datanode.getSaslClient(),
             sock, datanode.getDataEncryptionKeyFactoryForBlock(b),
-            blockToken, datanodeId);
-        peer.setReadTimeout(socketTimeout);
+            blockToken, datanodeId, socketTimeout);
         success = true;
         return peer;
       } finally {

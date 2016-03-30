@@ -25,6 +25,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.BlockLocation;
@@ -32,12 +36,18 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
+import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.junit.After;
@@ -196,5 +206,43 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
   private void startCluster(HdfsConfiguration conf) throws IOException {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
+  }
+
+  /**
+   * Verifies that peerFromSocketAndKey honors socket read timeouts.
+   */
+  @Test(timeout=60000)
+  public void TestPeerFromSocketAndKeyReadTimeout() throws Exception {
+    HdfsConfiguration conf = createSecureConfig(
+        "authentication,integrity,privacy");
+    AtomicBoolean fallbackToSimpleAuth = new AtomicBoolean(false);
+    SaslDataTransferClient saslClient = new SaslDataTransferClient(
+        conf, DataTransferSaslUtil.getSaslPropertiesResolver(conf),
+        TrustedChannelResolver.getInstance(conf), fallbackToSimpleAuth);
+    DatanodeID fakeDatanodeId = new DatanodeID("127.0.0.1", "localhost",
+        "beefbeef-beef-beef-beef-beefbeefbeef", 1, 2, 3, 4);
+    DataEncryptionKeyFactory dataEncKeyFactory =
+      new DataEncryptionKeyFactory() {
+        @Override
+        public DataEncryptionKey newDataEncryptionKey() {
+          return new DataEncryptionKey(123, "456", new byte[8],
+              new byte[8], 1234567, "fakeAlgorithm");
+        }
+      };
+    ServerSocket serverSocket = null;
+    Socket socket = null;
+    try {
+      serverSocket = new ServerSocket(0, -1);
+      socket = new Socket(serverSocket.getInetAddress(),
+        serverSocket.getLocalPort());
+      Peer peer = DFSUtilClient.peerFromSocketAndKey(saslClient, socket,
+          dataEncKeyFactory, new Token(), fakeDatanodeId, 1);
+      peer.close();
+      Assert.fail("Expected DFSClient#peerFromSocketAndKey to time out.");
+    } catch (SocketTimeoutException e) {
+      GenericTestUtils.assertExceptionContains("Read timed out", e);
+    } finally {
+      IOUtils.cleanup(null, socket, serverSocket);
+    }
   }
 }

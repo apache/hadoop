@@ -952,7 +952,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
                   s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
                   peer = DFSUtilClient.peerFromSocketAndKey(
                         dfs.getSaslDataTransferClient(), s, NamenodeFsck.this,
-                        blockToken, datanodeId);
+                        blockToken, datanodeId, HdfsConstants.READ_TIMEOUT);
                 } finally {
                   if (peer == null) {
                     IOUtils.closeQuietly(s);
