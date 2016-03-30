@@ -55,6 +55,10 @@ public class TestIdentityProviders {
       }
     }
 
+    @Override
+    public int getPriorityLevel() {
+      return 0;
+    }
   }
 
   @Test

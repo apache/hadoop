@@ -654,13 +654,7 @@ public class ProtobufRpcEngine implements RpcEngine {
           String detailedMetricsName = (exception == null) ?
               methodName :
               exception.getClass().getSimpleName();
-          server.rpcMetrics.addRpcQueueTime(qTime);
-          server.rpcMetrics.addRpcProcessingTime(processingTime);
-          server.rpcDetailedMetrics.addProcessingTime(detailedMetricsName,
-              processingTime);
-          if (server.isLogSlowRPC()) {
-            server.logSlowRpcCalls(methodName, processingTime);
-          }
+          server.updateMetrics(detailedMetricsName, qTime, processingTime);
         }
         return new RpcResponseWrapper(result);
       }

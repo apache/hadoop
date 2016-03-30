@@ -34,7 +34,6 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
-import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -502,13 +501,12 @@ public class WritableRpcEngine implements RpcEngine {
             }
           }
         }
-          
 
-          // Invoke the protocol method
-       long startTime = Time.now();
-       int qTime = (int) (startTime-receivedTime);
-       Exception exception = null;
-       try {
+        // Invoke the protocol method
+        long startTime = Time.now();
+        int qTime = (int) (startTime-receivedTime);
+        Exception exception = null;
+        try {
           Method method =
               protocolImpl.protocolClass.getMethod(call.getMethodName(),
               call.getParameterClasses());
@@ -539,27 +537,20 @@ public class WritableRpcEngine implements RpcEngine {
           exception = ioe;
           throw ioe;
         } finally {
-         int processingTime = (int) (Time.now() - startTime);
-         if (LOG.isDebugEnabled()) {
-           String msg = "Served: " + call.getMethodName() +
-               " queueTime= " + qTime +
-               " procesingTime= " + processingTime;
-           if (exception != null) {
-             msg += " exception= " + exception.getClass().getSimpleName();
-           }
-           LOG.debug(msg);
-         }
-         String detailedMetricsName = (exception == null) ?
-             call.getMethodName() :
-             exception.getClass().getSimpleName();
-         server.rpcMetrics.addRpcQueueTime(qTime);
-         server.rpcMetrics.addRpcProcessingTime(processingTime);
-         server.rpcDetailedMetrics.addProcessingTime(detailedMetricsName,
-             processingTime);
-          if (server.isLogSlowRPC()) {
-            server.logSlowRpcCalls(call.getMethodName(), processingTime);
+          int processingTime = (int) (Time.now() - startTime);
+          if (LOG.isDebugEnabled()) {
+            String msg = "Served: " + call.getMethodName() +
+                " queueTime= " + qTime + " procesingTime= " + processingTime;
+            if (exception != null) {
+              msg += " exception= " + exception.getClass().getSimpleName();
+            }
+            LOG.debug(msg);
           }
-       }
+          String detailedMetricsName = (exception == null) ?
+              call.getMethodName() :
+              exception.getClass().getSimpleName();
+          server.updateMetrics(detailedMetricsName, qTime, processingTime);
+        }
       }
     }
   }
