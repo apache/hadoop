@@ -22,8 +22,11 @@
 #include "common/async_stream.h"
 #include "ClientNamenodeProtocol.pb.h"
 #include "common/libhdfs_events_impl.h"
+#include "common/logging.h"
 
 #include "asio.hpp"
+
+#include <exception>
 
 namespace hdfs {
 
@@ -38,9 +41,35 @@ public:
 };
 
 
+struct SocketDeleter {
+  inline void operator()(asio::ip::tcp::socket *sock) {
+    if(sock->is_open()) {
+      /**
+       *  Even though we just checked that the socket is open it's possible
+       *  it isn't in a state where it can properly send or receive.  If that's
+       *  the case asio will turn the underlying error codes from shutdown()
+       *  and close() into unhelpfully named std::exceptions.  Due to the
+       *  relatively innocuous nature of most of these error codes it's better
+       *  to just catch, give a warning, and move on with life.
+       **/
+      try {
+        sock->shutdown(asio::ip::tcp::socket::shutdown_both);
+      } catch (const std::exception &e) {
+        LOG_WARN(kBlockReader, << "Error calling socket->shutdown");
+      }
+      try {
+        sock->close();
+      } catch (const std::exception &e) {
+        LOG_WARN(kBlockReader, << "Error calling socket->close");
+      }
+    }
+    delete sock;
+  }
+};
+
 class DataNodeConnectionImpl : public DataNodeConnection, public std::enable_shared_from_this<DataNodeConnectionImpl>{
 public:
-  std::unique_ptr<asio::ip::tcp::socket> conn_;
+  std::unique_ptr<asio::ip::tcp::socket, SocketDeleter> conn_;
   std::array<asio::ip::tcp::endpoint, 1> endpoints_;
   std::string uuid_;
   LibhdfsEvents *event_handlers_;
