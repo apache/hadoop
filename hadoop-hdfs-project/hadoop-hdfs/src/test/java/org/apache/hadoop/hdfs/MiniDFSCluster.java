@@ -1095,9 +1095,6 @@ public class MiniDFSCluster implements AutoCloseable {
    */
   public static void configureNameNodes(MiniDFSNNTopology nnTopology, boolean federation,
       Configuration conf) throws IOException {
-    Preconditions.checkArgument(nnTopology.countNameNodes() > 0,
-        "empty NN topology: no namenodes specified!");
-
     if (!federation && nnTopology.countNameNodes() == 1) {
       NNConf onlyNN = nnTopology.getOnlyNameNode();
       // we only had one NN, set DEFAULT_NAME for it. If not explicitly

@@ -37,6 +37,16 @@ public final class OzoneConfigKeys {
   public static final String DFS_STORAGE_HANDLER_TYPE_KEY =
       "dfs.storage.handler.type";
   public static final String DFS_STORAGE_HANDLER_TYPE_DEFAULT = "distributed";
+  public static final String DFS_STORAGE_RPC_ADDRESS_KEY =
+      "dfs.storage.rpc-address";
+  public static final int DFS_STORAGE_RPC_DEFAULT_PORT = 50200;
+  public static final String DFS_STORAGE_RPC_ADDRESS_DEFAULT =
+      "0.0.0.0:" + DFS_STORAGE_RPC_DEFAULT_PORT;
+  public static final String DFS_STORAGE_RPC_BIND_HOST_KEY =
+      "dfs.storage.rpc-bind-host";
+  public static final String DFS_STORAGE_HANDLER_COUNT_KEY =
+      "dfs.storage.handler.count";
+  public static final int DFS_STORAGE_HANDLER_COUNT_DEFAULT = 10;
   public static final String DFS_OBJECTSTORE_TRACE_ENABLED_KEY =
       "dfs.objectstore.trace.enabled";
   public static final boolean DFS_OBJECTSTORE_TRACE_ENABLED_DEFAULT = false;
