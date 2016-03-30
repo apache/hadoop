@@ -341,6 +341,14 @@ public abstract class FSQueue implements Queue, Schedulable {
   }
 
   @Override
+  public void incReservedResource(String nodeLabel, Resource resourceToInc) {
+  }
+
+  @Override
+  public void decReservedResource(String nodeLabel, Resource resourceToDec) {
+  }
+
+  @Override
   public Priority getDefaultApplicationPriority() {
     // TODO add implementation for FSParentQueue
     return null;
