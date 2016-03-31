@@ -90,13 +90,21 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /**
    * CallQueue related settings. These are not used directly, but rather
    * combined with a namespace and port. For instance:
-   * IPC_CALLQUEUE_NAMESPACE + ".8020." + IPC_CALLQUEUE_IMPL_KEY
+   * IPC_NAMESPACE + ".8020." + IPC_CALLQUEUE_IMPL_KEY
    */
-  public static final String IPC_CALLQUEUE_NAMESPACE = "ipc";
+  public static final String IPC_NAMESPACE = "ipc";
   public static final String IPC_CALLQUEUE_IMPL_KEY = "callqueue.impl";
-  public static final String IPC_CALLQUEUE_IDENTITY_PROVIDER_KEY = "identity-provider.impl";
+  public static final String IPC_SCHEDULER_IMPL_KEY = "scheduler.impl";
+  public static final String IPC_IDENTITY_PROVIDER_KEY = "identity-provider.impl";
   public static final String IPC_BACKOFF_ENABLE = "backoff.enable";
   public static final boolean IPC_BACKOFF_ENABLE_DEFAULT = false;
+
+  /**
+   * IPC scheduler priority levels.
+   */
+  public static final String IPC_SCHEDULER_PRIORITY_LEVELS_KEY =
+      "scheduler.priority.levels";
+  public static final int IPC_SCHEDULER_PRIORITY_LEVELS_DEFAULT_KEY = 4;
 
   /** This is for specifying the implementation for the mappings from
    * hostnames to the racks they belong to

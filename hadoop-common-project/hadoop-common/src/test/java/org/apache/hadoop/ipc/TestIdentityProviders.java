@@ -19,25 +19,15 @@
 package org.apache.hadoop.ipc;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
-import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Test;
-import org.junit.Before;
-import org.junit.After;
 
 import java.util.List;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.io.Writable;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.conf.Configuration;
@@ -55,16 +45,20 @@ public class TestIdentityProviders {
       }
     }
 
+    @Override
+    public int getPriorityLevel() {
+      return 0;
+    }
   }
 
   @Test
   public void testPluggableIdentityProvider() {
     Configuration conf = new Configuration();
-    conf.set(CommonConfigurationKeys.IPC_CALLQUEUE_IDENTITY_PROVIDER_KEY,
+    conf.set(CommonConfigurationKeys.IPC_IDENTITY_PROVIDER_KEY,
       "org.apache.hadoop.ipc.UserIdentityProvider");
 
     List<IdentityProvider> providers = conf.getInstances(
-      CommonConfigurationKeys.IPC_CALLQUEUE_IDENTITY_PROVIDER_KEY,
+      CommonConfigurationKeys.IPC_IDENTITY_PROVIDER_KEY,
       IdentityProvider.class);
 
     assertTrue(providers.size() == 1);

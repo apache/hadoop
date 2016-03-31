@@ -18,16 +18,28 @@
 
 package org.apache.hadoop.ipc;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.conf.Configuration;
 
 /**
- * Interface which allows extracting information necessary to
- * create schedulable identity strings.
+ * No op default RPC scheduler.
  */
-@InterfaceAudience.Private
-public interface Schedulable {
-  public UserGroupInformation getUserGroupInformation();
+public class DefaultRpcScheduler implements RpcScheduler {
+  @Override
+  public int getPriorityLevel(Schedulable obj) {
+    return 0;
+  }
 
-  int getPriorityLevel();
+  @Override
+  public boolean shouldBackOff(Schedulable obj) {
+    return false;
+  }
+
+  @Override
+  public void addResponseTime(String name, int priorityLevel, int queueTime,
+      int processingTime) {
+  }
+
+  public DefaultRpcScheduler(int priorityLevels, String namespace,
+      Configuration conf) {
+  }
 }

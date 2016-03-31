@@ -27,4 +27,6 @@ public interface DecayRpcSchedulerMXBean {
   String getCallVolumeSummary();
   int getUniqueIdentityCount();
   long getTotalCallVolume();
+  double[] getAverageResponseTime();
+  long[] getResponseTimeCountInLastWindow();
 }
