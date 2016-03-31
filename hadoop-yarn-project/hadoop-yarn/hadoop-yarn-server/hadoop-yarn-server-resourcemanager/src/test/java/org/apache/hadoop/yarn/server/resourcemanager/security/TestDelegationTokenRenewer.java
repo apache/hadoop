@@ -1090,9 +1090,6 @@ public class TestDelegationTokenRenewer {
         new MockNM("127.0.0.1:1234", 15120, rm.getResourceTrackerService());
     nm1.registerNode();
 
-    //MyFS fs = (MyFS)FileSystem.get(conf);
-    //MyToken token1 = fs.getDelegationToken("user123");
-
     // create Token1:
     Text userText1 = new Text("user");
     DelegationTokenIdentifier dtId1 =
