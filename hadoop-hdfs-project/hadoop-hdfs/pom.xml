@@ -381,6 +381,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/test/all-tests</exclude>
             <exclude>src/test/resources/*.tgz</exclude>
             <exclude>src/test/resources/data*</exclude>
+            <exclude>**/*.json</exclude>
             <exclude>src/test/resources/editsStored*</exclude>
             <exclude>src/test/resources/empty-file</exclude>
             <exclude>src/main/webapps/datanode/robots.txt</exclude>
