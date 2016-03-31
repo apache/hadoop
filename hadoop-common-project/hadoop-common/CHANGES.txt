@@ -79,6 +79,9 @@ Release 2.7.3 - UNRELEASED
     HADOOP-12958. PhantomReference for filesystem statistics can trigger OOM
     (Sangjin Lee via jlowe)
 
+    HADOOP-12902. JavaDocs for SignerSecretProvider are out-of-date in
+    AuthenticationFilter. (Gabor Liptak via aajisaka)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES

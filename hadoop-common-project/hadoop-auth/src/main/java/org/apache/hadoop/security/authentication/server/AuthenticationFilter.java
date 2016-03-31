@@ -61,9 +61,9 @@ import java.util.*;
  * <li>[#PREFIX#.]type: simple|kerberos|#CLASS#, 'simple' is short for the
  * {@link PseudoAuthenticationHandler}, 'kerberos' is short for {@link KerberosAuthenticationHandler}, otherwise
  * the full class name of the {@link AuthenticationHandler} must be specified.</li>
- * <li>[#PREFIX#.]signature.secret: when signer.secret.provider is set to
- * "string" or not specified, this is the value for the secret used to sign the
- * HTTP cookie.</li>
+ * <li>[#PREFIX#.]signature.secret.file: when signer.secret.provider is set to
+ * "file" or not specified, this is the location of file including the secret
+ *  used to sign the HTTP cookie.</li>
  * <li>[#PREFIX#.]token.validity: time -in seconds- that the generated token is
  * valid before a new authentication is triggered, default value is
  * <code>3600</code> seconds. This is also used for the rollover interval for
@@ -79,17 +79,16 @@ import java.util.*;
  * </p>
  * <p>
  * Out of the box it provides 3 signer secret provider implementations:
- * "string", "random", and "zookeeper"
+ * "file", "random" and "zookeeper"
  * </p>
  * Additional signer secret providers are supported via the
  * {@link SignerSecretProvider} class.
  * <p>
  * For the HTTP cookies mentioned above, the SignerSecretProvider is used to
  * determine the secret to use for signing the cookies. Different
- * implementations can have different behaviors.  The "string" implementation
- * simply uses the string set in the [#PREFIX#.]signature.secret property
- * mentioned above.  The "random" implementation uses a randomly generated
- * secret that rolls over at the interval specified by the
+ * implementations can have different behaviors. The "file" implementation
+ * loads the secret from a specified file. The "random" implementation uses a
+ * randomly generated secret that rolls over at the interval specified by the
  * [#PREFIX#.]token.validity mentioned above.  The "zookeeper" implementation
  * is like the "random" one, except that it synchronizes the random secret
  * and rollovers between multiple servers; it's meant for HA services.
@@ -97,12 +96,12 @@ import java.util.*;
  * The relevant configuration properties are:
  * <ul>
  * <li>signer.secret.provider: indicates the name of the SignerSecretProvider
- * class to use. Possible values are: "string", "random", "zookeeper", or a
- * classname. If not specified, the "string" implementation will be used with
- * [#PREFIX#.]signature.secret; and if that's not specified, the "random"
+ * class to use. Possible values are: "file", "random", "zookeeper", or a
+ * classname. If not specified, the "file" implementation will be used with
+ * [#PREFIX#.]signature.secret.file; and if that's not specified, the "random"
  * implementation will be used.</li>
- * <li>[#PREFIX#.]signature.secret: When the "string" implementation is
- * specified, this value is used as the secret.</li>
+ * <li>[#PREFIX#.]signature.secret.file: When the "file" implementation is
+ * specified, this content of this file is used as the secret.</li>
  * <li>[#PREFIX#.]token.validity: When the "random" or "zookeeper"
  * implementations are specified, this value is used as the rollover
  * interval.</li>
@@ -163,10 +162,10 @@ public class AuthenticationFilter implements Filter {
   /**
    * Constant for the configuration property that indicates the name of the
    * SignerSecretProvider class to use.
-   * Possible values are: "string", "random", "zookeeper", or a classname.
-   * If not specified, the "string" implementation will be used with
-   * SIGNATURE_SECRET; and if that's not specified, the "random" implementation
-   * will be used.
+   * Possible values are: "file", "random", "zookeeper", or a classname.
+   * If not specified, the "file" implementation will be used with
+   * SIGNATURE_SECRET_FILE; and if that's not specified, the "random"
+   * implementation will be used.
    */
   public static final String SIGNER_SECRET_PROVIDER =
           "signer.secret.provider";
