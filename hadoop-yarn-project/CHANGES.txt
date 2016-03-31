@@ -110,6 +110,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4785. inconsistent value type of the "type" field for LeafQueueInfo 
     in response of RM REST API. (Varun Vasudev via junping_du)
 
+    YARN-4183. Clarify the behavior of timeline service config properties
+    (Naganarasimha G R via sjlee)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
