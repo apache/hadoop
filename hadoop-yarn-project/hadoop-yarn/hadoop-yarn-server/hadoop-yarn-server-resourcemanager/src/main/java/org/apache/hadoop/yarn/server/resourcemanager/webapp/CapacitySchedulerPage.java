@@ -405,8 +405,20 @@ class CapacitySchedulerPage extends RmView {
         CapacitySchedulerInfo sinfo = new CapacitySchedulerInfo(root, cs);
         csqinfo.csinfo = sinfo;
 
-        if (null == nodeLabelsInfo || (nodeLabelsInfo.size() == 1
-            && nodeLabelsInfo.get(0).getLabelName().isEmpty())) {
+        boolean hasAnyLabelLinkedToNM = false;
+        if (null != nodeLabelsInfo) {
+          for (RMNodeLabel label : nodeLabelsInfo) {
+            if (label.getLabelName().length() == 0) {
+              // Skip DEFAULT_LABEL
+              continue;
+            }
+            if (label.getNumActiveNMs() > 0) {
+              hasAnyLabelLinkedToNM = true;
+              break;
+            }
+          }
+        }
+        if (!hasAnyLabelLinkedToNM) {
           used = sinfo.getUsedCapacity() / 100;
           //label is not enabled in the cluster or there's only "default" label,
           ul.li().
