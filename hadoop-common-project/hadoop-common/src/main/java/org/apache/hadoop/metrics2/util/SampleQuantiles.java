@@ -47,7 +47,7 @@ import com.google.common.base.Preconditions;
  * 
  */
 @InterfaceAudience.Private
-public class SampleQuantiles {
+public class SampleQuantiles implements QuantileEstimator {
 
   /**
    * Total number of items in stream
