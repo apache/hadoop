@@ -1626,6 +1626,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return defaultValue;
     }
     vStr = vStr.trim();
+    return getTimeDurationHelper(name, vStr, unit);
+  }
+
+  private long getTimeDurationHelper(String name, String vStr, TimeUnit unit) {
     ParsedTimeDuration vUnit = ParsedTimeDuration.unitFor(vStr);
     if (null == vUnit) {
       LOG.warn("No unit for " + name + "(" + vStr + ") assuming " + unit);
@@ -1634,6 +1638,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       vStr = vStr.substring(0, vStr.lastIndexOf(vUnit.suffix()));
     }
     return unit.convert(Long.parseLong(vStr), vUnit.unit());
+  }
+
+  public long[] getTimeDurations(String name, TimeUnit unit) {
+    String[] strings = getTrimmedStrings(name);
+    long[] durations = new long[strings.length];
+    for (int i = 0; i < strings.length; i++) {
+      durations[i] = getTimeDurationHelper(name, strings[i], unit);
+    }
+    return durations;
   }
 
   /**
