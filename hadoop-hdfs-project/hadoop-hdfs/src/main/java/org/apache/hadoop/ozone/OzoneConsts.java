@@ -65,8 +65,8 @@ public final class OzoneConsts {
   public static final String CONTAINER_ROOT_PREFIX = "repository";
 
   public static final String CONTAINER_DB = "container.db";
-
-
+  public static final String FILE_HASH = "SHA-256";
+  public final static String CHUNK_OVERWRITE = "OverWriteRequested";
 
   /**
    * Supports Bucket Versioning.

@@ -157,7 +157,7 @@ message ContainerCommandResponseProto {
 message Pipeline {
   required string leaderID = 1;
   repeated DatanodeIDProto members = 2;
-  optional string containerName = 3;
+  required string containerName = 3;
 }
 
 message KeyValue {
@@ -244,7 +244,7 @@ message  ReadKeyRequestProto  {
 
 message  ReadKeyResponeProto  {
   repeated KeyValue metadata = 1;
-  repeated chunkInfo chunkData = 2;
+  repeated ChunkInfo chunkData = 2;
 }
 
 message  UpdateKeyRequestProto {
@@ -276,19 +276,19 @@ message  ListKeyResponeProto {
 
 // Chunk Operations
 
-message chunkInfo {
-  required uint64 offset = 1;
-  required uint64 len = 2;
-  optional uint64 checksum = 3;
-  repeated KeyValue metadata = 4;
+message ChunkInfo {
+  required string chunkName = 1;
+  required uint64 offset = 2;
+  required uint64 len = 3;
+  optional string checksum = 4;
+  repeated KeyValue metadata = 5;
 }
 
 message  WriteChunkRequestProto  {
   required Pipeline pipeline = 1;
-  required string containerName = 2;
-  required string keyName = 3;
-  required chunkInfo chunkData = 4;
-  repeated bytes data = 5;
+  required string keyName = 2;
+  required ChunkInfo chunkData = 3;
+  required bytes data = 4;
 }
 
 message  WriteChunkReponseProto {
@@ -296,22 +296,20 @@ message  WriteChunkReponseProto {
 
 message  ReadChunkRequestProto  {
   required Pipeline pipeline = 1;
-  required string containerName = 2;
-  required string keyName = 3;
-  required chunkInfo chunkData = 4;
+  required string keyName = 2;
+  required ChunkInfo chunkData = 3;
 }
 
 message  ReadChunkReponseProto {
   required Pipeline pipeline = 1;
-  required chunkInfo chunkData = 2;
-  repeated bytes data = 3;
+  required ChunkInfo chunkData = 2;
+  required bytes data = 3;
 }
 
 message  DeleteChunkRequestProto {
   required Pipeline pipeline = 1;
-  required string containerName = 2;
-  required string keyName = 3;
-  required chunkInfo chunkData = 4;
+  required string keyName = 2;
+  required ChunkInfo chunkData = 3;
 }
 
 message  DeleteChunkResponseProto {
@@ -319,13 +317,12 @@ message  DeleteChunkResponseProto {
 
 message  ListChunkRequestProto {
   required Pipeline pipeline = 1;
-  required string containerName = 2;
-  required string keyName = 3;
-  required uint64 startOffset = 4;
-  required uint32 count = 5;
+  required string keyName = 2;
+  required string prevChunkName = 3;
+  required uint32 count = 4;
 }
 
 message  ListChunkResponseProto {
-  repeated chunkInfo chunkData = 1;
+  repeated ChunkInfo chunkData = 1;
 }
 

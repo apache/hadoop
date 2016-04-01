@@ -17,5 +17,6 @@
  */
 package org.apache.hadoop.ozone.container.common.helpers;
 /**
- Contains protocol buffer helper classes.
+ Contains protocol buffer helper classes and utilites used in
+ impl.
  **/

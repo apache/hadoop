@@ -21,8 +21,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.container.common.impl.ChunkManagerImpl;
 import org.apache.hadoop.ozone.container.common.impl.ContainerManagerImpl;
 import org.apache.hadoop.ozone.container.common.impl.Dispatcher;
+import org.apache.hadoop.ozone.container.common.interfaces.ChunkManager;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
@@ -48,6 +50,7 @@ public class OzoneContainer {
   private final ContainerDispatcher dispatcher;
   private final ContainerManager manager;
   private final XceiverServer server;
+  private final ChunkManager chunkManager;
 
   /**
    * Creates a network endpoint and enables Ozone container.
@@ -74,6 +77,8 @@ public class OzoneContainer {
 
     manager = new ContainerManagerImpl();
     manager.init(this.ozoneConfig, locations, this.dataSet);
+    this.chunkManager = new ChunkManagerImpl(manager);
+    manager.setChunkManager(this.chunkManager);
 
     this.dispatcher = new Dispatcher(manager);
     server = new XceiverServer(this.ozoneConfig, this.dispatcher);
