@@ -559,6 +559,7 @@ public class TestFileUtil {
    * @return boolean true if the call to FileUtil.copyMerge was successful.
    * @throws IOException if an I/O error occurs.
    */
+  @SuppressWarnings("deprecation")
   private boolean copyMerge(String src, String dst)
       throws IOException {
     Configuration conf = new Configuration();
