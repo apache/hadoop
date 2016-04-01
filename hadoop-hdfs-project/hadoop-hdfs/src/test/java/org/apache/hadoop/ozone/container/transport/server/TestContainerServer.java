@@ -33,6 +33,7 @@ import org.apache.hadoop.ozone.container.common.transport.client.XceiverClient;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerHandler;
 
+import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -45,11 +46,12 @@ public class TestContainerServer {
   @Test
   public void testPipeline() throws IOException {
     EmbeddedChannel channel = null;
+    String containerName = OzoneUtils.getRequestID();
     try {
       channel = new EmbeddedChannel(new XceiverServerHandler(
           new TestContainerDispatcher()));
       ContainerCommandRequestProto request =
-          ContainerTestHelper.getCreateContainerRequest();
+          ContainerTestHelper.getCreateContainerRequest(containerName);
       channel.writeInbound(request);
       Assert.assertTrue(channel.finish());
       ContainerCommandResponseProto response = channel.readOutbound();
@@ -65,9 +67,10 @@ public class TestContainerServer {
   public void testClientServer() throws Exception {
     XceiverServer server = null;
     XceiverClient client = null;
-
+    String containerName = OzoneUtils.getRequestID();
     try {
-      Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline();
+      Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline
+          (containerName);
       OzoneConfiguration conf = new OzoneConfiguration();
       conf.setInt(OzoneConfigKeys.DFS_OZONE_CONTAINER_IPC_PORT,
           pipeline.getLeader().getContainerPort());
@@ -79,7 +82,7 @@ public class TestContainerServer {
       client.connect();
 
       ContainerCommandRequestProto request =
-          ContainerTestHelper.getCreateContainerRequest();
+          ContainerTestHelper.getCreateContainerRequest(containerName);
       ContainerCommandResponseProto response = client.sendCommand(request);
       Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
     } finally {
@@ -96,9 +99,11 @@ public class TestContainerServer {
   public void testClientServerWithContainerDispatcher() throws Exception {
     XceiverServer server = null;
     XceiverClient client = null;
+    String containerName = OzoneUtils.getRequestID();
 
     try {
-      Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline();
+      Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline
+          (containerName);
       OzoneConfiguration conf = new OzoneConfiguration();
       conf.setInt(OzoneConfigKeys.DFS_OZONE_CONTAINER_IPC_PORT,
           pipeline.getLeader().getContainerPort());
@@ -111,7 +116,7 @@ public class TestContainerServer {
       client.connect();
 
       ContainerCommandRequestProto request =
-          ContainerTestHelper.getCreateContainerRequest();
+          ContainerTestHelper.getCreateContainerRequest(containerName);
       ContainerCommandResponseProto response = client.sendCommand(request);
       Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
       Assert.assertEquals(response.getResult(), ContainerProtos.Result.SUCCESS);

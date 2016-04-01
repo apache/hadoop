@@ -23,6 +23,8 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Type;
+import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
+import org.apache.hadoop.ozone.container.common.helpers.ChunkUtils;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.helpers.Pipeline;
@@ -68,6 +70,12 @@ public class Dispatcher implements ContainerDispatcher {
     }
 
 
+    if ((cmdType == Type.WriteChunk) ||
+        (cmdType == Type.ReadChunk) ||
+        (cmdType == Type.DeleteChunk)) {
+      return chunkProcessHandler(msg);
+    }
+
     return ContainerUtils.unsupportedRequest(msg);
   }
 
@@ -81,28 +89,66 @@ public class Dispatcher implements ContainerDispatcher {
   private ContainerCommandResponseProto containerProcessHandler(
       ContainerCommandRequestProto msg) throws IOException {
     try {
-      ContainerData cData = ContainerData.getFromProtBuf(
-          msg.getCreateContainer().getContainerData());
-
-      Pipeline pipeline = Pipeline.getFromProtoBuf(
-          msg.getCreateContainer().getPipeline());
-      Preconditions.checkNotNull(pipeline);
 
       switch (msg.getCmdType()) {
       case CreateContainer:
-        return handleCreateContainer(msg, cData, pipeline);
+        return handleCreateContainer(msg);
 
       case DeleteContainer:
-        return handleDeleteContainer(msg, cData, pipeline);
+        return handleDeleteContainer(msg);
 
       case ListContainer:
+        // TODO : Support List Container.
         return ContainerUtils.unsupportedRequest(msg);
 
       case UpdateContainer:
+        // TODO : Support Update Container.
         return ContainerUtils.unsupportedRequest(msg);
 
       case ReadContainer:
-        return handleReadContainer(msg, cData);
+        return handleReadContainer(msg);
+
+      default:
+        return ContainerUtils.unsupportedRequest(msg);
+      }
+    } catch (IOException ex) {
+      LOG.warn("Container operation failed. " +
+              "Container: {} Operation: {}  trace ID: {} Error: {}",
+          msg.getCreateContainer().getContainerData().getName(),
+          msg.getCmdType().name(),
+          msg.getTraceID(),
+          ex.toString());
+
+      // TODO : Replace with finer error codes.
+      return ContainerUtils.getContainerResponse(msg,
+          ContainerProtos.Result.CONTAINER_INTERNAL_ERROR,
+          ex.toString()).build();
+    }
+  }
+
+  /**
+   * Handles the all chunk related functionality.
+   *
+   * @param msg - command
+   * @return - response
+   * @throws IOException
+   */
+  private ContainerCommandResponseProto chunkProcessHandler(
+      ContainerCommandRequestProto msg) throws IOException {
+    try {
+
+      switch (msg.getCmdType()) {
+      case WriteChunk:
+        return handleWriteChunk(msg);
+
+      case ReadChunk:
+        return handleReadChunk(msg);
+
+      case DeleteChunk:
+        return handleDeleteChunk(msg);
+
+      case ListChunk:
+        return ContainerUtils.unsupportedRequest(msg);
 
       default:
         return ContainerUtils.unsupportedRequest(msg);
@@ -125,13 +171,12 @@ public class Dispatcher implements ContainerDispatcher {
   /**
    * Calls into container logic and returns appropriate response.
    *
-   * @param msg   - Request
-   * @param cData - Container Data object
+   * @param msg - Request
    * @return ContainerCommandResponseProto
    * @throws IOException
    */
   private ContainerCommandResponseProto handleReadContainer(
-      ContainerCommandRequestProto msg, ContainerData cData)
+      ContainerCommandRequestProto msg)
       throws IOException {
 
     if (!msg.hasReadContainer()) {
@@ -139,51 +184,147 @@ public class Dispatcher implements ContainerDispatcher {
           msg.getTraceID());
       return ContainerUtils.malformedRequest(msg);
     }
-    ContainerData container = this.containerManager.readContainer(
-        cData.getContainerName());
+
+    String name = msg.getReadContainer().getName();
+    ContainerData container = this.containerManager.readContainer(name);
     return ContainerUtils.getReadContainerResponse(msg, container);
   }
 
   /**
    * Calls into container logic and returns appropriate response.
    *
-   * @param msg      - Request
-   * @param cData    - ContainerData
-   * @param pipeline - Pipeline is the machines where this container lives.
+   * @param msg - Request
    * @return Response.
    * @throws IOException
    */
   private ContainerCommandResponseProto handleDeleteContainer(
-      ContainerCommandRequestProto msg, ContainerData cData,
-      Pipeline pipeline) throws IOException {
+      ContainerCommandRequestProto msg) throws IOException {
+
     if (!msg.hasDeleteContainer()) {
       LOG.debug("Malformed delete container request. trace ID: {}",
           msg.getTraceID());
       return ContainerUtils.malformedRequest(msg);
     }
-    this.containerManager.deleteContainer(pipeline,
-        cData.getContainerName());
+
+    String name = msg.getDeleteContainer().getName();
+    Pipeline pipeline = Pipeline.getFromProtoBuf(
+        msg.getDeleteContainer().getPipeline());
+    Preconditions.checkNotNull(pipeline);
+
+    this.containerManager.deleteContainer(pipeline, name);
     return ContainerUtils.getContainerResponse(msg);
   }
 
   /**
    * Calls into container logic and returns appropriate response.
    *
-   * @param msg      - Request
-   * @param cData    - ContainerData
-   * @param pipeline - Pipeline is the machines where this container lives.
+   * @param msg - Request
    * @return Response.
    * @throws IOException
    */
   private ContainerCommandResponseProto handleCreateContainer(
-      ContainerCommandRequestProto msg, ContainerData cData,
-      Pipeline pipeline) throws IOException {
+      ContainerCommandRequestProto msg) throws IOException {
     if (!msg.hasCreateContainer()) {
       LOG.debug("Malformed create container request. trace ID: {}",
           msg.getTraceID());
       return ContainerUtils.malformedRequest(msg);
     }
+    ContainerData cData = ContainerData.getFromProtBuf(
+        msg.getCreateContainer().getContainerData());
+    Preconditions.checkNotNull(cData);
+
+    Pipeline pipeline = Pipeline.getFromProtoBuf(
+        msg.getCreateContainer().getPipeline());
+    Preconditions.checkNotNull(pipeline);
+
     this.containerManager.createContainer(pipeline, cData);
     return ContainerUtils.getContainerResponse(msg);
   }
+
+  /**
+   * Calls into chunk manager to write a chunk.
+   *
+   * @param msg - Request.
+   * @return Response.
+   * @throws IOException
+   */
+  private ContainerCommandResponseProto handleWriteChunk(
+      ContainerCommandRequestProto msg) throws IOException {
+    if (!msg.hasWriteChunk()) {
+      LOG.debug("Malformed write chunk request. trace ID: {}",
+          msg.getTraceID());
+      return ContainerUtils.malformedRequest(msg);
+    }
+
+    String keyName = msg.getWriteChunk().getKeyName();
+    Pipeline pipeline = Pipeline.getFromProtoBuf(
+        msg.getWriteChunk().getPipeline());
+    Preconditions.checkNotNull(pipeline);
+
+    ChunkInfo chunkInfo = ChunkInfo.getFromProtoBuf(msg.getWriteChunk()
+        .getChunkData());
+    Preconditions.checkNotNull(chunkInfo);
+    byte[] data = msg.getWriteChunk().getData().toByteArray();
+    this.containerManager.getChunkManager().writeChunk(pipeline, keyName,
+        chunkInfo, data);
+    return ChunkUtils.getChunkResponse(msg);
+  }
+
+  /**
+   * Calls into chunk manager to read a chunk.
+   *
+   * @param msg - Request.
+   * @return - Response.
+   * @throws IOException
+   */
+  private ContainerCommandResponseProto handleReadChunk(
+      ContainerCommandRequestProto msg) throws IOException {
+    if (!msg.hasReadChunk()) {
+      LOG.debug("Malformed read chunk request. trace ID: {}",
+          msg.getTraceID());
+      return ContainerUtils.malformedRequest(msg);
+    }
+
+    String keyName = msg.getReadChunk().getKeyName();
+    Pipeline pipeline = Pipeline.getFromProtoBuf(
+        msg.getReadChunk().getPipeline());
+    Preconditions.checkNotNull(pipeline);
+
+    ChunkInfo chunkInfo = ChunkInfo.getFromProtoBuf(msg.getReadChunk()
+        .getChunkData());
+    Preconditions.checkNotNull(chunkInfo);
+    byte[] data = this.containerManager.getChunkManager().readChunk(pipeline,
+        keyName, chunkInfo);
+    return ChunkUtils.getReadChunkResponse(msg, data, chunkInfo);
+  }
+
+  /**
+   * Calls into chunk manager to write a chunk.
+   *
+   * @param msg - Request.
+   * @return Response.
+   * @throws IOException
+   */
+  private ContainerCommandResponseProto handleDeleteChunk(
+      ContainerCommandRequestProto msg) throws IOException {
+    if (!msg.hasDeleteChunk()) {
+      LOG.debug("Malformed delete chunk request. trace ID: {}",
+          msg.getTraceID());
+      return ContainerUtils.malformedRequest(msg);
+    }
+
+    String keyName = msg.getDeleteChunk().getKeyName();
+    Pipeline pipeline = Pipeline.getFromProtoBuf(
+        msg.getDeleteChunk().getPipeline());
+    Preconditions.checkNotNull(pipeline);
+
+    ChunkInfo chunkInfo = ChunkInfo.getFromProtoBuf(msg.getDeleteChunk()
+        .getChunkData());
+    Preconditions.checkNotNull(chunkInfo);
+
+    this.containerManager.getChunkManager().deleteChunk(pipeline, keyName,
+        chunkInfo);
+    return ChunkUtils.getChunkResponse(msg);
+  }
+
 }

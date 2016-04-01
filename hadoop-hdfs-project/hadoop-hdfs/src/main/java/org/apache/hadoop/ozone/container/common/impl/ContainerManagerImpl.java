@@ -26,9 +26,11 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.helpers.Pipeline;
+import org.apache.hadoop.ozone.container.common.interfaces.ChunkManager;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerLocationManager;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.slf4j.Logger;
@@ -69,6 +71,7 @@ public class ContainerManagerImpl implements ContainerManager {
   // for waiting threads.
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
   private ContainerLocationManager locationManager;
+  private ChunkManager chunkManager;
 
   /**
    * Init call that sets up a container Manager.
@@ -141,7 +144,7 @@ public class ContainerManagerImpl implements ContainerManager {
 
       metaStream = new FileInputStream(metaFileName);
 
-      MessageDigest sha = MessageDigest.getInstance("SHA-256");
+      MessageDigest sha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
 
       dis = new DigestInputStream(containerStream, sha);
 
@@ -238,13 +241,9 @@ public class ContainerManagerImpl implements ContainerManager {
     FileOutputStream metaStream = null;
     Path location = locationManager.getContainerPath();
 
-    File containerFile = location.resolve(containerData
-        .getContainerName().concat(CONTAINER_EXTENSION))
-        .toFile();
-
-    File metadataFile = location.resolve(containerData
-        .getContainerName().concat(CONTAINER_META))
-        .toFile();
+    File containerFile = ContainerUtils.getContainerFile(containerData,
+        location);
+    File metadataFile = ContainerUtils.getMetadataFile(containerData, location);
 
     try {
       ContainerUtils.verifyIsNewContainer(containerFile, metadataFile);
@@ -255,10 +254,11 @@ public class ContainerManagerImpl implements ContainerManager {
 
       containerStream = new FileOutputStream(containerFile);
       metaStream = new FileOutputStream(metadataFile);
-      MessageDigest sha = MessageDigest.getInstance("SHA-256");
+      MessageDigest sha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
 
       dos = new DigestOutputStream(containerStream, sha);
-      containerData.setDBPath(metadataPath.toString());
+      containerData.setDBPath(metadataPath.resolve(OzoneConsts.CONTAINER_DB)
+          .toString());
       containerData.setContainerPath(containerFile.toString());
 
       ContainerProtos.ContainerData protoData = containerData
@@ -292,6 +292,8 @@ public class ContainerManagerImpl implements ContainerManager {
       IOUtils.closeStream(metaStream);
     }
   }
+
+
 
   /**
    * Deletes an existing container.
@@ -368,6 +370,10 @@ public class ContainerManagerImpl implements ContainerManager {
    */
   @Override
   public ContainerData readContainer(String containerName) throws IOException {
+    if(!containerMap.containsKey(containerName)) {
+      throw new IOException("Unable to find the container. Name: "
+          + containerName);
+    }
     return containerMap.get(containerName).getContainer();
   }
 
@@ -444,6 +450,18 @@ public class ContainerManagerImpl implements ContainerManager {
   @Override
   public boolean hasWriteLock() {
     return this.lock.writeLock().isHeldByCurrentThread();
+  }
+
+  /**
+   * Sets the chunk Manager.
+   * @param chunkManager
+   */
+  public void setChunkManager(ChunkManager chunkManager) {
+    this.chunkManager = chunkManager;
+  }
+
+  public ChunkManager getChunkManager() {
+    return this.chunkManager;
   }
 
   /**

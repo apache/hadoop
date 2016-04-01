@@ -59,7 +59,8 @@ public final class ContainerUtils {
   /**
    * Returns a ReadContainer Response.
    *
-   * @param msg Request
+   * @param msg           Request
+   * @param containerData - data
    * @return Response.
    */
   public static ContainerProtos.ContainerCommandResponseProto
@@ -81,7 +82,9 @@ public final class ContainerUtils {
    * We found a command type but no associated payload for the command. Hence
    * return malformed Command as response.
    *
-   * @param msg - Protobuf message.
+   * @param msg     - Protobuf message.
+   * @param result  - result
+   * @param message - Error message.
    * @return ContainerCommandResponseProto - MALFORMED_REQUEST.
    */
   public static ContainerProtos.ContainerCommandResponseProto.Builder
@@ -185,22 +188,95 @@ public final class ContainerUtils {
    * @throws IOException
    */
   public static Path createMetadata(Path containerPath) throws IOException {
+    Logger log = LoggerFactory.getLogger(ContainerManagerImpl.class);
     Preconditions.checkNotNull(containerPath);
-    containerPath = containerPath.resolve(OzoneConsts.CONTAINER_META_PATH);
-    if (!containerPath.toFile().mkdirs()) {
+    Path metadataPath = containerPath.resolve(OzoneConsts.CONTAINER_META_PATH);
+    if (!metadataPath.toFile().mkdirs()) {
+      log.error("Unable to create directory for metadata storage. Path: {}",
+          metadataPath);
       throw new IOException("Unable to create directory for metadata storage." +
-          " Path {}" + containerPath);
+          " Path: " + metadataPath);
     }
-    containerPath = containerPath.resolve(OzoneConsts.CONTAINER_DB);
-    LevelDBStore store = new LevelDBStore(containerPath.toFile(), true);
+    LevelDBStore store =
+        new LevelDBStore(metadataPath.resolve(OzoneConsts.CONTAINER_DB)
+            .toFile(), true);
 
     // we close since the SCM pre-creates containers.
     // we will open and put Db handle into a cache when keys are being created
     // in a container.
 
     store.close();
-    return containerPath;
+
+    Path dataPath = containerPath.resolve(OzoneConsts.CONTAINER_DATA_PATH);
+    if (!dataPath.toFile().mkdirs()) {
+
+      // If we failed to create data directory, we cleanup the
+      // metadata directory completely. That is, we will delete the
+      // whole directory including LevelDB file.
+      log.error("Unable to create directory for data storage. cleaning up the" +
+              " container path: {} dataPath: {}",
+          containerPath, dataPath);
+      FileUtils.deleteDirectory(containerPath.toFile());
+      throw new IOException("Unable to create directory for data storage." +
+          " Path: " + dataPath);
+    }
+    return metadataPath;
   }
+
+  /**
+   * Returns Metadata location.
+   *
+   * @param containerData - Data
+   * @param location      - Path
+   * @return Path
+   */
+  public static File getMetadataFile(ContainerData containerData,
+                                     Path location) {
+    return location.resolve(containerData
+        .getContainerName().concat(CONTAINER_META))
+        .toFile();
+  }
+
+  /**
+   * Returns container file location.
+   * @param containerData  - Data
+   * @param location - Root path
+   * @return Path
+   */
+  public static File getContainerFile(ContainerData containerData,
+                                      Path location) {
+    return location.resolve(containerData
+        .getContainerName().concat(CONTAINER_EXTENSION))
+        .toFile();
+  }
+
+  /**
+   * Container metadata directory -- here is where the level DB lives.
+   * @param cData - cData.
+   * @return Path to the parent directory where the DB lives.
+   */
+  public static Path getMetadataDirectory(ContainerData cData) {
+    Path dbPath = Paths.get(cData.getDBPath());
+    Preconditions.checkNotNull(dbPath);
+    Preconditions.checkState(dbPath.toString().length() > 0);
+    return dbPath.getParent();
+  }
+
+  /**
+   * Returns the path where data or chunks live for a given container.
+   * @param cData - cData container
+   * @return - Path
+   */
+  public static Path getDataDirectory(ContainerData cData) throws IOException {
+    Path path = getMetadataDirectory(cData);
+    Preconditions.checkNotNull(path);
+    path = path.getParent();
+    if(path == null) {
+      throw new IOException("Unable to get Data directory. null path found");
+    }
+    return path.resolve(OzoneConsts.CONTAINER_DATA_PATH);
+  }
+
 
   /**
    * remove Container if it is empty.

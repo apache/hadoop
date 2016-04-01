@@ -58,9 +58,8 @@ public class Pipeline {
     for (HdfsProtos.DatanodeIDProto dataID : pipeline.getMembersList()) {
       newPipeline.addMember(DatanodeID.getFromProtoBuf(dataID));
     }
-    if (pipeline.hasContainerName()) {
-      newPipeline.containerName = newPipeline.getContainerName();
-    }
+
+    newPipeline.setContainerName(pipeline.getContainerName());
     return newPipeline;
   }
 
@@ -105,9 +104,7 @@ public class Pipeline {
       builder.addMembers(datanode.getProtoBufMessage());
     }
     builder.setLeaderID(leaderID);
-    if (this.containerName != null) {
-      builder.setContainerName(this.containerName);
-    }
+    builder.setContainerName(this.containerName);
     return builder.build();
   }
 
@@ -128,5 +125,4 @@ public class Pipeline {
   public void setContainerName(String containerName) {
     this.containerName = containerName;
   }
-
 }
