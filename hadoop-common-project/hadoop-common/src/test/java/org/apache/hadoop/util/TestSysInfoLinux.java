@@ -25,6 +25,7 @@ import java.util.Random;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -63,8 +64,8 @@ public class TestSysInfoLinux {
     }
   }
   private static final FakeLinuxResourceCalculatorPlugin plugin;
-  private static String TEST_ROOT_DIR = new Path(System.getProperty(
-         "test.build.data", "/tmp")).toString().replace(' ', '+');
+  private static String TEST_ROOT_DIR = GenericTestUtils.getTestDir()
+      .getAbsolutePath();
   private static final String FAKE_MEMFILE;
   private static final String FAKE_CPUFILE;
   private static final String FAKE_STATFILE;

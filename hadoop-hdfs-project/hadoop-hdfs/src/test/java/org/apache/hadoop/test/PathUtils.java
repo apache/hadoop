@@ -37,10 +37,8 @@ public class PathUtils {
   }
   
   public static File getTestDir(Class<?> caller, boolean create) {
-    File dir =
-        new File(System.getProperty("test.build.data", "target/test/data")
-            + "/" + RandomStringUtils.randomAlphanumeric(10),
-            caller.getSimpleName());
+    File dir = new File(GenericTestUtils.getRandomizedTestDir(),
+        caller.getSimpleName());
     if (create) {
       dir.mkdirs();
     }

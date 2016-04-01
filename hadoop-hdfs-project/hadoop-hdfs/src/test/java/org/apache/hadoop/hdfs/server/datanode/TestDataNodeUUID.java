@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 import java.io.File;
@@ -69,7 +70,7 @@ public class TestDataNodeUUID {
 
   @Test(timeout = 10000)
   public void testUUIDRegeneration() throws Exception {
-    File baseDir = new File(System.getProperty("test.build.data"));
+    File baseDir = GenericTestUtils.getTestDir();
     File disk1 = new File(baseDir, "disk1");
     File disk2 = new File(baseDir, "disk2");
 

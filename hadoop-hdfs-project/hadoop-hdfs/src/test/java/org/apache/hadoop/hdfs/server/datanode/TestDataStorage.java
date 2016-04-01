@@ -47,8 +47,7 @@ public class TestDataStorage {
   private final static String BUILD_VERSION = "2.0";
   private final static String SOFTWARE_VERSION = "2.0";
   private final static long CTIME = 1;
-  private final static File TEST_DIR =
-      new File(System.getProperty("test.build.data") + "/dstest");
+  private final static File TEST_DIR = GenericTestUtils.getTestDir("dstest");
   private final static StartupOption START_OPT = StartupOption.REGULAR;
 
   private DataNode mockDN = Mockito.mock(DataNode.class);

@@ -32,6 +32,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -50,9 +51,8 @@ public class TestFsShellCopy {
     conf = new Configuration();
     shell = new FsShell(conf);
     lfs = FileSystem.getLocal(conf);
-    testRootDir = lfs.makeQualified(new Path(
-        System.getProperty("test.build.data","test/build/data"),
-        "testFsShellCopy"));
+    testRootDir = lfs.makeQualified(new Path(GenericTestUtils.getTempPath(
+        "testFsShellCopy")));
     
     lfs.mkdirs(testRootDir);
     lfs.setWorkingDirectory(testRootDir);

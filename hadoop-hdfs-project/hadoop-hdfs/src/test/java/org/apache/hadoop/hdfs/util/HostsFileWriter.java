@@ -119,4 +119,12 @@ public class HostsFileWriter {
       FileUtils.deleteQuietly(new File(fullDir.toUri().getPath()));
     }
   }
+
+  public Path getIncludeFile() {
+    return includeFile;
+  }
+
+  public Path getExcludeFile() {
+    return excludeFile;
+  }
 }

@@ -115,9 +115,7 @@ public class TestAppendSnapshotTruncate {
     dfs.mkdirs(dir);
     dfs.allowSnapshot(dir);
 
-    final File localDir = new File(
-        System.getProperty("test.build.data", "target/test/data")
-        + dirPathString);
+    final File localDir = GenericTestUtils.getTestDir(dirPathString);
     if (localDir.exists()) {
       FileUtil.fullyDelete(localDir);
     }

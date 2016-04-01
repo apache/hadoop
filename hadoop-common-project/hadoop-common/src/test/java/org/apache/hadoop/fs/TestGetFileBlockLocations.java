@@ -25,13 +25,14 @@ import java.util.Random;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.GenericTestUtils;
 
 /**
  * Testing the correctness of FileSystem.getFileBlockLocations.
  */
 public class TestGetFileBlockLocations extends TestCase {
-  private static String TEST_ROOT_DIR =
-      System.getProperty("test.build.data", "/tmp/testGetFileBlockLocations");
+  private static String TEST_ROOT_DIR = GenericTestUtils.getTempPath(
+      "testGetFileBlockLocations");
   private static final int FileLength = 4 * 1024 * 1024; // 4MB
   private Configuration conf;
   private Path path;

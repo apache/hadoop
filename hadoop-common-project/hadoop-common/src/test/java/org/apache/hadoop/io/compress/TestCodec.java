@@ -72,6 +72,7 @@ import org.apache.hadoop.io.compress.zlib.BuiltInZlibInflater;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.NativeCodeLoader;
@@ -338,9 +339,9 @@ public class TestCodec {
   private static Path writeSplitTestFile(FileSystem fs, Random rand,
       CompressionCodec codec, long infLen) throws IOException {
     final int REC_SIZE = 1024;
-    final Path wd = new Path(new Path(
-          System.getProperty("test.build.data", "/tmp")).makeQualified(fs),
-        codec.getClass().getSimpleName());
+    final Path wd = new Path(GenericTestUtils.getTempPath(
+        codec.getClass().getSimpleName())).makeQualified(
+            fs.getUri(), fs.getWorkingDirectory());
     final Path file = new Path(wd, "test" + codec.getDefaultExtension());
     final byte[] b = new byte[REC_SIZE];
     final Base64 b64 = new Base64(0, null);
@@ -596,9 +597,8 @@ public class TestCodec {
     FileSystem fs = FileSystem.get(conf);
     LOG.info("Creating MapFiles with " + records  + 
             " records using codec " + clazz.getSimpleName());
-    Path path = new Path(new Path(
-        System.getProperty("test.build.data", "/tmp")),
-      clazz.getSimpleName() + "-" + type + "-" + records);
+    Path path = new Path(GenericTestUtils.getTempPath(
+        clazz.getSimpleName() + "-" + type + "-" + records));
 
     LOG.info("Writing " + path);
     createMapFile(conf, fs, path, clazz.newInstance(), type, records);
@@ -750,8 +750,7 @@ public class TestCodec {
     CodecPool.returnDecompressor(zlibDecompressor);
 
     // Now create a GZip text file.
-    String tmpDir = System.getProperty("test.build.data", "/tmp/");
-    Path f = new Path(new Path(tmpDir), "testGzipCodecRead.txt.gz");
+    Path f = new Path(GenericTestUtils.getTempPath("testGzipCodecRead.txt.gz"));
     BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(
       new GZIPOutputStream(new FileOutputStream(f.toString()))));
     final String msg = "This is the message in the file!";
@@ -802,8 +801,7 @@ public class TestCodec {
     CodecPool.returnDecompressor(zlibDecompressor);
 
     // Now create a GZip text file.
-    String tmpDir = System.getProperty("test.build.data", "/tmp/");
-    Path f = new Path(new Path(tmpDir), "testGzipLongOverflow.bin.gz");
+    Path f = new Path(GenericTestUtils.getTempPath("testGzipLongOverflow.bin.gz"));
     BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(
       new GZIPOutputStream(new FileOutputStream(f.toString()))));
 
@@ -862,9 +860,8 @@ public class TestCodec {
                codec instanceof GzipCodec);
 
     final String msg = "This is the message we are going to compress.";
-    final String tmpDir = System.getProperty("test.build.data", "/tmp/");
-    final String fileName = new Path(new Path(tmpDir),
-        "testGzipCodecWrite.txt.gz").toString();
+    final String fileName = new Path(GenericTestUtils.getTempPath(
+        "testGzipCodecWrite.txt.gz")).toString();
 
     BufferedWriter w = null;
     Compressor gzipCompressor = CodecPool.getCompressor(codec);
