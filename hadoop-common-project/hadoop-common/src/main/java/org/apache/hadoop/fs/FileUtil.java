@@ -381,6 +381,7 @@ public class FileUtil {
 
   }
 
+  @Deprecated
   /** Copy all files in a directory to one output file (merge). */
   public static boolean copyMerge(FileSystem srcFS, Path srcDir,
                                   FileSystem dstFS, Path dstFile,
