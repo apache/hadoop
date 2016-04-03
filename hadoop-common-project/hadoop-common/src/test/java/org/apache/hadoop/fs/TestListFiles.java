@@ -22,11 +22,8 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 
 import static org.junit.Assert.*;
@@ -37,8 +34,8 @@ import org.junit.BeforeClass;
  * This class tests the FileStatus API.
  */
 public class TestListFiles {
-  {
-    ((Log4JLogger)FileSystem.LOG).getLogger().setLevel(Level.ALL);
+  static {
+    GenericTestUtils.setLogLevel(FileSystem.LOG, Level.ALL);
   }
 
   static final long seed = 0xDEADBEEFL;
@@ -53,9 +50,8 @@ public class TestListFiles {
   private static Path FILE3;
 
   static {
-    setTestPaths(new Path(
-      System.getProperty("test.build.data", "build/test/data/work-dir/localfs"),
-      "main_"));
+    setTestPaths(new Path(GenericTestUtils.getTempPath("testlistfiles"),
+        "main_"));
   }
 
   protected static Path getTestDir() {

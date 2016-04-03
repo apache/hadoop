@@ -41,6 +41,8 @@ import org.apache.hadoop.fs.shell.FsCommand;
 import org.apache.hadoop.fs.shell.PathData;
 import org.apache.hadoop.io.IOUtils;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
+
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -63,9 +65,9 @@ public class TestFsShellReturnCode {
     fileSys = FileSystem.get(conf);
     fsShell = new FsShell(conf);
   }
-  
-  private static String TEST_ROOT_DIR = System.getProperty("test.build.data",
-      "build/test/data/testCHReturnCode");
+
+  private static String TEST_ROOT_DIR =
+      GenericTestUtils.getTempPath("testCHReturnCode");
 
   static void writeFile(FileSystem fs, Path name) throws Exception {
     FSDataOutputStream stm = fs.create(name);

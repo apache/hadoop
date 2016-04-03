@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 import java.io.File;
@@ -42,11 +43,11 @@ public class TestDatanodeLayoutUpgrade {
     TestDFSUpgradeFromImage upgrade = new TestDFSUpgradeFromImage();
     upgrade.unpackStorage(HADOOP24_DATANODE, HADOOP_DATANODE_DIR_TXT);
     Configuration conf = new Configuration(TestDFSUpgradeFromImage.upgradeConf);
-    conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
-        new File(System.getProperty("test.build.data"),
+    conf.set(
+        DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, GenericTestUtils.getTestDir(
             "dfs" + File.separator + "data").toURI().toString());
-    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
-        new File(System.getProperty("test.build.data"),
+    conf.set(
+        DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, GenericTestUtils.getTestDir(
             "dfs" + File.separator + "name").toURI().toString());
     upgrade.upgradeAndVerify(new MiniDFSCluster.Builder(conf).numDataNodes(1)
     .manageDataDfsDirs(false).manageNameDfsDirs(false), null);
@@ -61,12 +62,12 @@ public class TestDatanodeLayoutUpgrade {
     TestDFSUpgradeFromImage upgrade = new TestDFSUpgradeFromImage();
     upgrade.unpackStorage(HADOOP_56_DN_LAYOUT, HADOOP_56_DN_LAYOUT_TXT);
     Configuration conf = new Configuration(TestDFSUpgradeFromImage.upgradeConf);
-    conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
-        new File(System.getProperty("test.build.data"), "dfs" + File.separator
-            + "data").toURI().toString());
-    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
-        new File(System.getProperty("test.build.data"), "dfs" + File.separator
-            + "name").toURI().toString());
+    conf.set(
+        DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, GenericTestUtils.getTestDir(
+            "dfs" + File.separator + "data").toURI().toString());
+    conf.set(
+        DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, GenericTestUtils.getTestDir(
+            "dfs" + File.separator + "name").toURI().toString());
     upgrade.upgradeAndVerify(new MiniDFSCluster.Builder(conf).numDataNodes(1)
         .manageDataDfsDirs(false).manageNameDfsDirs(false), null);
   }

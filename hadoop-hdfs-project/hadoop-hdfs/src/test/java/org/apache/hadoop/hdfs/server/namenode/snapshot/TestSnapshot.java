@@ -98,8 +98,8 @@ public class TestSnapshot {
   protected DistributedFileSystem hdfs;
   
   private static final String testDir =
-      System.getProperty("test.build.data", "build/test/data");
-  
+      GenericTestUtils.getTestDir().getAbsolutePath();
+
   @Rule
   public ExpectedException exception = ExpectedException.none();
   

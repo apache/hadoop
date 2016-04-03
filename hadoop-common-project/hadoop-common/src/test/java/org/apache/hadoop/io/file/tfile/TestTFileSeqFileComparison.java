@@ -45,6 +45,7 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.file.tfile.TFile.Reader.Scanner.Entry;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 
 public class TestTFileSeqFileComparison {
@@ -515,9 +516,7 @@ public class TestTFileSeqFileComparison {
   }
 
   private static class MyOptions {
-    String rootDir =
-        System
-            .getProperty("test.build.data", "/tmp/tfile-test");
+    String rootDir = GenericTestUtils.getTestDir().getAbsolutePath();;
     String compress = "gz";
     String format = "tfile";
     int dictSize = 1000;

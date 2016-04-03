@@ -87,8 +87,7 @@ public class TestEditLogFileInputStream {
   @Test(timeout=60000)
   public void testScanCorruptEditLog() throws Exception {
     Configuration conf = new Configuration();
-    File editLog = new File(System.getProperty(
-        "test.build.data", "/tmp"), "testCorruptEditLog");
+    File editLog = new File(GenericTestUtils.getTempPath("testCorruptEditLog"));
 
     LOG.debug("Creating test edit log file: " + editLog);
     EditLogFileOutputStream elos = new EditLogFileOutputStream(conf,

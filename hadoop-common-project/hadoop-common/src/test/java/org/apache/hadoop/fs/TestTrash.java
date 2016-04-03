@@ -34,6 +34,7 @@ import java.util.Set;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 
 /**
@@ -41,9 +42,8 @@ import org.apache.hadoop.util.Time;
  */
 public class TestTrash extends TestCase {
 
-  private final static Path TEST_DIR =
-    new Path(new File(System.getProperty("test.build.data","/tmp")
-          ).toURI().toString().replace(' ', '+'), "testTrash");
+  private final static Path TEST_DIR = new Path(GenericTestUtils.getTempPath(
+      "testTrash"));
 
   protected static Path mkdir(FileSystem fs, Path p) throws IOException {
     assertTrue(fs.mkdirs(p));

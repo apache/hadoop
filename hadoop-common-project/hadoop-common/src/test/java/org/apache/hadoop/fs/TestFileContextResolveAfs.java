@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,9 +35,10 @@ public class TestFileContextResolveAfs {
   static {
     FileSystem.enableSymlinks();
   }
-  private static String TEST_ROOT_DIR_LOCAL
-    = System.getProperty("test.build.data","/tmp");
-  
+
+  private static String TEST_ROOT_DIR_LOCAL =
+      GenericTestUtils.getTestDir().getAbsolutePath();
+
   private FileContext fc;
   private FileSystem localFs;
   

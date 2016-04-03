@@ -433,8 +433,7 @@ public class TestSSLFactory {
       sslConf = KeyStoreTestUtil.createServerSSLConfig(keystore, confPassword,
         confKeyPassword, truststore);
       if (useCredProvider) {
-        File testDir = new File(System.getProperty("test.build.data",
-            "target/test-dir"));
+        File testDir = GenericTestUtils.getTestDir();
         final Path jksPath = new Path(testDir.toString(), "test.jks");
         final String ourUrl =
             JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri();

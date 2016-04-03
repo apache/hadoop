@@ -87,7 +87,7 @@ public class TestDecommissioningStatus {
     // Set up the hosts/exclude files.
     localFileSys = FileSystem.getLocal(conf);
     Path workingDir = localFileSys.getWorkingDirectory();
-    dir = new Path(workingDir, "build/test/data/work-dir/decommission");
+    dir = new Path(workingDir, "target/test/data" + "work-dir/decommission");
     assertTrue(localFileSys.mkdirs(dir));
     excludeFile = new Path(dir, "exclude");
     conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
