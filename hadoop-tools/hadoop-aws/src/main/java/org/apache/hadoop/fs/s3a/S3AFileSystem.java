@@ -788,11 +788,14 @@ public class S3AFileSystem extends FileSystem {
       ObjectListing objects = s3.listObjects(request);
       statistics.incrementReadOps(1);
 
+      Path fQualified = f.makeQualified(uri, workingDir);
+
       while (true) {
         for (S3ObjectSummary summary : objects.getObjectSummaries()) {
           Path keyPath = keyToPath(summary.getKey()).makeQualified(uri, workingDir);
           // Skip over keys that are ourselves and old S3N _$folder$ files
-          if (keyPath.equals(f) || summary.getKey().endsWith(S3N_FOLDER_SUFFIX)) {
+          if (keyPath.equals(fQualified) ||
+              summary.getKey().endsWith(S3N_FOLDER_SUFFIX)) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Ignoring: " + keyPath);
             }
@@ -807,7 +810,7 @@ public class S3AFileSystem extends FileSystem {
           } else {
             result.add(new S3AFileStatus(summary.getSize(),
                 dateToLong(summary.getLastModified()), keyPath,
-                getDefaultBlockSize(f.makeQualified(uri, workingDir))));
+                getDefaultBlockSize(fQualified)));
             if (LOG.isDebugEnabled()) {
               LOG.debug("Adding: fi: " + keyPath);
             }
