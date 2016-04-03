@@ -78,6 +78,11 @@
   </property>
 
   <property>
+    <name>fs.contract.supports-getfilestatus</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <name>fs.contract.supports-seek</name>
     <value>true</value>
   </property>
