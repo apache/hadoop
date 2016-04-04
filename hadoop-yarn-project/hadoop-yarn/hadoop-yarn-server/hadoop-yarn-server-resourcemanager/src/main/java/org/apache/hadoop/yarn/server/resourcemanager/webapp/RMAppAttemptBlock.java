@@ -26,6 +26,7 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
@@ -46,6 +47,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
@@ -75,35 +77,44 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
     }
 
     DIV<Hamlet> div = html.div(_INFO_WRAP);
-    TABLE<DIV<Hamlet>> table =
-        div.h3("Total Outstanding Resource Requests: "
-          + getTotalResource(resourceRequests)).table(
-              "#ResourceRequests");
+    // Requests Table
+    TBODY<TABLE<DIV<Hamlet>>> tbody = div
+        .h3("Total Outstanding Resource Requests: "
+            + getTotalResource(resourceRequests))
+        .table("#resourceRequests").thead().tr().th(".priority", "Priority")
+        .th(".resource", "ResourceName").th(".capacity", "Capability")
+        .th(".containers", "NumContainers")
+        .th(".relaxlocality", "RelaxLocality")
+        .th(".labelexpression", "NodeLabelExpression")._()._().tbody();
 
-    table.tr().
-      th(_TH, "Priority").
-      th(_TH, "ResourceName").
-      th(_TH, "Capability").
-      th(_TH, "NumContainers").
-      th(_TH, "RelaxLocality").
-      th(_TH, "NodeLabelExpression").
-    _();
-
-    boolean odd = false;
-    for (ResourceRequest request : resourceRequests) {
-      if (request.getNumContainers() == 0) {
+    StringBuilder resourceRequestTableData = new StringBuilder("[\n");
+    for (ResourceRequest resourceRequest : resourceRequests) {
+      if (resourceRequest.getNumContainers() == 0) {
         continue;
       }
-      table.tr((odd = !odd) ? _ODD : _EVEN)
-        .td(String.valueOf(request.getPriority()))
-        .td(request.getResourceName())
-        .td(String.valueOf(request.getCapability()))
-        .td(String.valueOf(request.getNumContainers()))
-        .td(String.valueOf(request.getRelaxLocality()))
-        .td(request.getNodeLabelExpression() == null ? "N/A" : request
-            .getNodeLabelExpression())._();
+      resourceRequestTableData.append("[\"")
+          .append(String.valueOf(resourceRequest.getPriority())).append("\",\"")
+          .append(resourceRequest.getResourceName()).append("\",\"")
+          .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils
+              .escapeHtml(String.valueOf(resourceRequest.getCapability()))))
+          .append("\",\"")
+          .append(String.valueOf(resourceRequest.getNumContainers()))
+          .append("\",\"")
+          .append(String.valueOf(resourceRequest.getRelaxLocality()))
+          .append("\",\"")
+          .append(resourceRequest.getNodeLabelExpression() == null ? "N/A"
+              : resourceRequest.getNodeLabelExpression())
+          .append("\"],\n");
     }
-    table._();
+    if (resourceRequestTableData
+        .charAt(resourceRequestTableData.length() - 2) == ',') {
+      resourceRequestTableData.delete(resourceRequestTableData.length() - 2,
+          resourceRequestTableData.length() - 1);
+    }
+    resourceRequestTableData.append("]");
+    html.script().$type("text/javascript")
+        ._("var resourceRequestsTableData=" + resourceRequestTableData)._();
+    tbody._()._();
     div._();
   }
 
