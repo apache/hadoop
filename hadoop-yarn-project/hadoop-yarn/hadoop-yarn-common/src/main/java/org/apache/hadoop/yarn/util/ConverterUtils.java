@@ -122,8 +122,20 @@ public class ConverterUtils {
   public static ApplicationId toApplicationId(RecordFactory recordFactory,
       String appIdStr) {
     Iterator<String> it = _split(appIdStr).iterator();
-    it.next(); // prefix. TODO: Validate application prefix
-    return toApplicationId(recordFactory, it);
+    if (!it.next().equals(APPLICATION_PREFIX)) {
+      throw new IllegalArgumentException("Invalid ApplicationId prefix: "
+          + appIdStr + ". The valid ApplicationId should start with prefix "
+          + APPLICATION_PREFIX);
+    }
+    try {
+      return toApplicationId(recordFactory, it);
+    } catch (NumberFormatException n) {
+      throw new IllegalArgumentException("Invalid ApplicationId: " + appIdStr,
+          n);
+    } catch (NoSuchElementException e) {
+      throw new IllegalArgumentException("Invalid ApplicationId: " + appIdStr,
+          e);
+    }
   }
 
   private static ApplicationId toApplicationId(RecordFactory recordFactory,

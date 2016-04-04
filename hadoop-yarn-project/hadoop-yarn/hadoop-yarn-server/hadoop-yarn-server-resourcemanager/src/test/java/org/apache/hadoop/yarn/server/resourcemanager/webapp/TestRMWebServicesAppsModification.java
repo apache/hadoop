@@ -568,17 +568,21 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     amNodeManager.nodeHeartbeat(true);
     String[] testAppIds = { "application_1391705042196_0001", "random_string" };
-    for (String testAppId : testAppIds) {
+    for (int i = 0; i < testAppIds.length; i++) {
       AppState info = new AppState("KILLED");
       ClientResponse response =
-          this.constructWebResource("apps", testAppId, "state")
+          this.constructWebResource("apps", testAppIds[i], "state")
             .accept(MediaType.APPLICATION_XML)
             .entity(info, MediaType.APPLICATION_XML).put(ClientResponse.class);
       if (!isAuthenticationEnabled()) {
         assertEquals(Status.UNAUTHORIZED, response.getClientResponseStatus());
         continue;
       }
-      assertEquals(Status.NOT_FOUND, response.getClientResponseStatus());
+      if (i == 0) {
+        assertEquals(Status.NOT_FOUND, response.getClientResponseStatus());
+      } else {
+        assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      }
     }
     rm.stop();
   }

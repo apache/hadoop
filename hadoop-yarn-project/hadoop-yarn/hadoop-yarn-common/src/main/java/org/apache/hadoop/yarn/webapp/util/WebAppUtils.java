@@ -33,9 +33,14 @@ import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.RMHAUtils;
+import org.apache.hadoop.yarn.webapp.BadRequestException;
+import org.apache.hadoop.yarn.webapp.NotFoundException;
 
 @Private
 @Evolving
@@ -377,5 +382,22 @@ public class WebAppUtils {
       password = null;
     }
     return password;
+  }
+
+  public static ApplicationId parseApplicationId(RecordFactory recordFactory,
+      String appId) {
+    if (appId == null || appId.isEmpty()) {
+      throw new NotFoundException("appId, " + appId + ", is empty or null");
+    }
+    ApplicationId aid = null;
+    try {
+      aid = ConverterUtils.toApplicationId(recordFactory, appId);
+    } catch (Exception e) {
+      throw new BadRequestException(e);
+    }
+    if (aid == null) {
+      throw new NotFoundException("app with id " + appId + " not found");
+    }
+    return aid;
   }
 }

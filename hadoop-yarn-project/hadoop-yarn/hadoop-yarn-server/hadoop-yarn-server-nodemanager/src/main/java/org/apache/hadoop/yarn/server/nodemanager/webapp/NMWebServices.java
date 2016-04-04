@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.WebApp;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -143,10 +144,7 @@ public class NMWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public AppInfo getNodeApp(@PathParam("appid") String appId) {
     init();
-    ApplicationId id = ConverterUtils.toApplicationId(recordFactory, appId);
-    if (id == null) {
-      throw new NotFoundException("app with id " + appId + " not found");
-    }
+    ApplicationId id = WebAppUtils.parseApplicationId(recordFactory, appId);
     Application app = this.nmContext.getApplications().get(id);
     if (app == null) {
       throw new NotFoundException("app with id " + appId + " not found");
