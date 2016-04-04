@@ -152,6 +152,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9874. Long living DataXceiver threads cause volume shutdown to block.
     (Rushabh Shah via kihwal)
 
+    HDFS-10178. Permanent write failures can happen if pipeline recoveries
+    occur for the first packet (kihwal)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
