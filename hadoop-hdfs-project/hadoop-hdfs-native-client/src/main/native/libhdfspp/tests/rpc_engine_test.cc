@@ -106,8 +106,8 @@ TEST(RpcEngineTest, TestRoundTrip) {
   ::asio::io_service io_service;
   Options options;
   RpcEngine engine(&io_service, options, "foo", "", "protocol", 1);
-  RpcConnectionImpl<MockRPCConnection> *conn =
-      new RpcConnectionImpl<MockRPCConnection>(&engine);
+  auto conn =
+      std::make_shared<RpcConnectionImpl<MockRPCConnection> >(&engine);
   conn->TEST_set_connected(true);
   conn->StartReading();
 
@@ -142,8 +142,8 @@ TEST(RpcEngineTest, TestConnectionResetAndFail) {
   ::asio::io_service io_service;
   Options options;
   RpcEngine engine(&io_service, options, "foo", "", "protocol", 1);
-  RpcConnectionImpl<MockRPCConnection> *conn =
-      new RpcConnectionImpl<MockRPCConnection>(&engine);
+  auto conn =
+      std::make_shared<RpcConnectionImpl<MockRPCConnection> >(&engine);
   conn->TEST_set_connected(true);
   conn->StartReading();
 
@@ -436,8 +436,8 @@ TEST(RpcEngineTest, TestTimeout) {
   Options options;
   options.rpc_timeout = 1;
   RpcEngine engine(&io_service, options, "foo", "", "protocol", 1);
-  RpcConnectionImpl<MockRPCConnection> *conn =
-      new RpcConnectionImpl<MockRPCConnection>(&engine);
+  auto conn =
+      std::make_shared<RpcConnectionImpl<MockRPCConnection> >(&engine);
   conn->TEST_set_connected(true);
   conn->StartReading();
 

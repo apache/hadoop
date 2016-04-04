@@ -34,6 +34,8 @@ template <class NextLayer>
 class RpcConnectionImpl : public RpcConnection {
 public:
   RpcConnectionImpl(RpcEngine *engine);
+  virtual ~RpcConnectionImpl() override;
+
   virtual void Connect(const std::vector<::asio::ip::tcp::endpoint> &server,
                        RpcCallback &handler);
   virtual void ConnectAndFlush(
@@ -49,7 +51,7 @@ public:
 
   NextLayer &next_layer() { return next_layer_; }
 
-  void TEST_set_connected(bool new_value) { connected_ = new_value; }
+  void TEST_set_connected(bool connected) { connected_ = connected ? kConnected : kNotYetConnected; }
 
  private:
   const Options options_;
@@ -66,7 +68,19 @@ RpcConnectionImpl<NextLayer>::RpcConnectionImpl(RpcEngine *engine)
       options_(engine->options()),
       next_layer_(engine->io_service()) {
     LOG_TRACE(kRPC, << "RpcConnectionImpl::RpcConnectionImpl called");
-  }
+}
+
+template <class NextLayer>
+RpcConnectionImpl<NextLayer>::~RpcConnectionImpl() {
+  LOG_DEBUG(kRPC, << "RpcConnectionImpl::~RpcConnectionImpl called &" << (void*)this);
+
+  std::lock_guard<std::mutex> state_lock(connection_state_lock_);
+  if (pending_requests_.size() > 0)
+    LOG_WARN(kRPC, << "RpcConnectionImpl::~RpcConnectionImpl called with items in the pending queue");
+  if (requests_on_fly_.size() > 0)
+    LOG_WARN(kRPC, << "RpcConnectionImpl::~RpcConnectionImpl called with items in the requests_on_fly queue");
+}
+
 
 template <class NextLayer>
 void RpcConnectionImpl<NextLayer>::Connect(
@@ -92,6 +106,16 @@ void RpcConnectionImpl<NextLayer>::ConnectAndFlush(
     CommsError(s);
     return;
   }
+
+  if (connected_ == kConnected) {
+    FlushPendingRequests();
+    return;
+  }
+  if (connected_ != kNotYetConnected) {
+    LOG_WARN(kRPC, << "RpcConnectionImpl::ConnectAndFlush called while connected=" << ToString(connected_));
+    return;
+  }
+  connected_ = kConnecting;
 
   // Take the first endpoint, but remember the alternatives for later
   additional_endpoints_ = server;
@@ -169,8 +193,8 @@ void RpcConnectionImpl<NextLayer>::Handshake(RpcCallback &handler) {
                       [handshake_packet, handler, shared_this, this](
                           const ::asio::error_code &ec, size_t) {
                         Status status = ToStatus(ec);
-                        if (status.ok()) {
-                          connected_ = true;
+                        if (status.ok() && connected_ == kConnecting) {
+                          connected_ = kConnected;
                         }
                         handler(status);
                       });
@@ -208,8 +232,12 @@ void RpcConnectionImpl<NextLayer>::FlushPendingRequests() {
     return;
   }
 
-  if (!connected_) {
+  if (connected_ == kDisconnected) {
+    LOG_WARN(kRPC, << "RpcConnectionImpl::FlushPendingRequests attempted to flush a disconnected connection");
     return;
+  }
+  if (connected_ != kConnected) {
+    LOG_DEBUG(kRPC, << "RpcConnectionImpl::FlushPendingRequests attempted to flush a " << ToString(connected_) << " connection");
   }
 
   // Don't send if we don't need to
@@ -218,19 +246,25 @@ void RpcConnectionImpl<NextLayer>::FlushPendingRequests() {
   }
 
   std::shared_ptr<Request> req = pending_requests_.front();
+  auto weak_req = std::weak_ptr<Request>(req);
   pending_requests_.erase(pending_requests_.begin());
 
   std::shared_ptr<RpcConnection> shared_this = shared_from_this();
+  auto weak_this = std::weak_ptr<RpcConnection>(shared_this);
   std::shared_ptr<std::string> payload = std::make_shared<std::string>();
   req->GetPacket(payload.get());
   if (!payload->empty()) {
+    assert(requests_on_fly_.find(req->call_id()) == requests_on_fly_.end());
     requests_on_fly_[req->call_id()] = req;
     request_over_the_wire_ = req;
 
     req->timer().expires_from_now(
         std::chrono::milliseconds(options_.rpc_timeout));
-    req->timer().async_wait([shared_this, this, req](const ::asio::error_code &ec) {
-        this->HandleRpcTimeout(req, ec);
+    req->timer().async_wait([weak_this, weak_req, this](const ::asio::error_code &ec) {
+        auto timeout_this = weak_this.lock();
+        auto timeout_req = weak_req.lock();
+        if (timeout_this && timeout_req)
+          this->HandleRpcTimeout(timeout_req, ec);
     });
 
     asio::async_write(next_layer_, asio::buffer(*payload),
@@ -320,11 +354,11 @@ void RpcConnectionImpl<NextLayer>::Disconnect() {
   LOG_INFO(kRPC, << "RpcConnectionImpl::Disconnect called");
 
   request_over_the_wire_.reset();
-  if (connected_) {
+  if (connected_ == kConnecting || connected_ == kConnected) {
     next_layer_.cancel();
     next_layer_.close();
   }
-  connected_ = false;
+  connected_ = kDisconnected;
 }
 }
 
