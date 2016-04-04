@@ -782,12 +782,21 @@ public class NetUtils {
               + ": " + exception
               + ";"
               + see("EOFException"));
+    } else if (exception instanceof SocketException) {
+      // Many of the predecessor exceptions are subclasses of SocketException,
+      // so must be handled before this
+      return wrapWithMessage(exception,
+          "Call From "
+              + localHost + " to " + destHost + ":" + destPort
+              + " failed on socket exception: " + exception
+              + ";"
+              + see("SocketException"));
     }
     else {
       return (IOException) new IOException("Failed on local exception: "
-                                               + exception
-                                               + "; Host Details : "
-                                               + getHostDetailsAsString(destHost, destPort, localHost))
+             + exception
+             + "; Host Details : "
+             + getHostDetailsAsString(destHost, destPort, localHost))
           .initCause(exception);
 
     }

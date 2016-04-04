@@ -72,7 +72,7 @@ public class TestNetUtils {
    * This is a regression test for HADOOP-6722.
    */
   @Test
-  public void testAvoidLoopbackTcpSockets() throws Exception {
+  public void testAvoidLoopbackTcpSockets() throws Throwable {
     Configuration conf = new Configuration();
 
     Socket socket = NetUtils.getDefaultSocketFactory(conf)
@@ -88,11 +88,11 @@ public class TestNetUtils {
       fail("Should not have connected");
     } catch (ConnectException ce) {
       System.err.println("Got exception: " + ce);
-      assertTrue(ce.getMessage().contains("resulted in a loopback"));
+      assertInException(ce, "resulted in a loopback");
     } catch (SocketException se) {
       // Some TCP stacks will actually throw their own Invalid argument exception
       // here. This is also OK.
-      assertTrue(se.getMessage().contains("Invalid argument"));
+      assertInException(se, "Invalid argument");
     }
   }
   
@@ -188,15 +188,11 @@ public class TestNetUtils {
   }  
 
   @Test
-  public void testVerifyHostnamesNoException() {
+  public void testVerifyHostnamesNoException() throws UnknownHostException {
     String[] names = {"valid.host.com", "1.com"};
-    try {
-      NetUtils.verifyHostnames(names);
-    } catch (UnknownHostException e) {
-      fail("NetUtils.verifyHostnames threw unexpected UnknownHostException");
-    }
+    NetUtils.verifyHostnames(names);
   }
-  
+
   /** 
    * Test for {@link NetUtils#isLocalAddress(java.net.InetAddress)}
    */
@@ -267,7 +263,18 @@ public class TestNetUtils {
     assertRemoteDetailsIncluded(wrapped);
     assertInException(wrapped, "/EOFException");
   }
-  
+
+  @Test
+  public void testWrapSocketException() throws Throwable {
+    IOException wrapped = verifyExceptionClass(new SocketException("failed"),
+        SocketException.class);
+    assertInException(wrapped, "failed");
+    assertWikified(wrapped);
+    assertInException(wrapped, "localhost");
+    assertRemoteDetailsIncluded(wrapped);
+    assertInException(wrapped, "/SocketException");
+  }
+
   @Test
   public void testGetConnectAddress() throws IOException {
     NetUtils.addStaticResolution("host", "127.0.0.1");
@@ -322,8 +329,8 @@ public class TestNetUtils {
     String message = extractExceptionMessage(e);
     if (!(message.contains(text))) {
       throw new AssertionFailedError("Wrong text in message "
-                                         + "\"" + message + "\""
-                                         + " expected \"" + text + "\"")
+        + "\"" + message + "\""
+        + " expected \"" + text + "\"")
           .initCause(e);
     }
   }
@@ -343,8 +350,8 @@ public class TestNetUtils {
     String message = extractExceptionMessage(e);
     if (message.contains(text)) {
       throw new AssertionFailedError("Wrong text in message "
-                                         + "\"" + message + "\""
-                                         + " did not expect \"" + text + "\"")
+           + "\"" + message + "\""
+           + " did not expect \"" + text + "\"")
           .initCause(e);
     }
   }
@@ -353,15 +360,13 @@ public class TestNetUtils {
                                            Class expectedClass)
       throws Throwable {
     assertNotNull("Null Exception", e);
-    IOException wrapped =
-        NetUtils.wrapException("desthost", DEST_PORT,
-                               "localhost", LOCAL_PORT,
-                               e);
+    IOException wrapped = NetUtils.wrapException("desthost", DEST_PORT,
+         "localhost", LOCAL_PORT, e);
     LOG.info(wrapped.toString(), wrapped);
     if(!(wrapped.getClass().equals(expectedClass))) {
       throw new AssertionFailedError("Wrong exception class; expected "
-                                         + expectedClass
-                                         + " got " + wrapped.getClass() + ": " + wrapped).initCause(wrapped);
+         + expectedClass
+         + " got " + wrapped.getClass() + ": " + wrapped).initCause(wrapped);
     }
     return wrapped;
   }
