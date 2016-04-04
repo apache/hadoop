@@ -662,14 +662,7 @@ public class RMWebServices extends WebServices {
   public AppInfo getApp(@Context HttpServletRequest hsr,
       @PathParam("appid") String appId) {
     init();
-    if (appId == null || appId.isEmpty()) {
-      throw new NotFoundException("appId, " + appId + ", is empty or null");
-    }
-    ApplicationId id;
-    id = ConverterUtils.toApplicationId(recordFactory, appId);
-    if (id == null) {
-      throw new NotFoundException("appId is null");
-    }
+    ApplicationId id = WebAppUtils.parseApplicationId(recordFactory, appId);
     RMApp app = rm.getRMContext().getRMApps().get(id);
     if (app == null) {
       throw new NotFoundException("app with id: " + appId + " not found");
@@ -684,14 +677,7 @@ public class RMWebServices extends WebServices {
       @PathParam("appid") String appId) {
 
     init();
-    if (appId == null || appId.isEmpty()) {
-      throw new NotFoundException("appId, " + appId + ", is empty or null");
-    }
-    ApplicationId id;
-    id = ConverterUtils.toApplicationId(recordFactory, appId);
-    if (id == null) {
-      throw new NotFoundException("appId is null");
-    }
+    ApplicationId id = WebAppUtils.parseApplicationId(recordFactory, appId);
     RMApp app = rm.getRMContext().getRMApps().get(id);
     if (app == null) {
       throw new NotFoundException("app with id: " + appId + " not found");
@@ -1303,19 +1289,7 @@ public class RMWebServices extends WebServices {
   }
 
   private RMApp getRMAppForAppId(String appId) {
-
-    if (appId == null || appId.isEmpty()) {
-      throw new NotFoundException("appId, " + appId + ", is empty or null");
-    }
-    ApplicationId id;
-    try {
-      id = ConverterUtils.toApplicationId(recordFactory, appId);
-    } catch (NumberFormatException e) {
-      throw new NotFoundException("appId is invalid");
-    }
-    if (id == null) {
-      throw new NotFoundException("appId is invalid");
-    }
+    ApplicationId id = WebAppUtils.parseApplicationId(recordFactory, appId);
     RMApp app = rm.getRMContext().getRMApps().get(id);
     if (app == null) {
       throw new NotFoundException("app with id: " + appId + " not found");

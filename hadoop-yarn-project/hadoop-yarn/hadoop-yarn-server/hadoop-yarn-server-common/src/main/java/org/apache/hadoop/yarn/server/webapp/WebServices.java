@@ -429,7 +429,12 @@ public class WebServices {
     if (appId == null || appId.isEmpty()) {
       throw new NotFoundException("appId, " + appId + ", is empty or null");
     }
-    ApplicationId aid = ConverterUtils.toApplicationId(appId);
+    ApplicationId aid = null;
+    try {
+      aid = ConverterUtils.toApplicationId(appId);
+    } catch (Exception e) {
+      throw new BadRequestException(e);
+    }
     if (aid == null) {
       throw new NotFoundException("appId is null");
     }
@@ -442,8 +447,12 @@ public class WebServices {
       throw new NotFoundException("appAttemptId, " + appAttemptId
           + ", is empty or null");
     }
-    ApplicationAttemptId aaid =
-        ConverterUtils.toApplicationAttemptId(appAttemptId);
+    ApplicationAttemptId aaid = null;
+    try {
+      aaid = ConverterUtils.toApplicationAttemptId(appAttemptId);
+    } catch (Exception e) {
+      throw new BadRequestException(e);
+    }
     if (aaid == null) {
       throw new NotFoundException("appAttemptId is null");
     }
@@ -455,7 +464,12 @@ public class WebServices {
       throw new NotFoundException("containerId, " + containerId
           + ", is empty or null");
     }
-    ContainerId cid = ConverterUtils.toContainerId(containerId);
+    ContainerId cid = null;
+    try {
+      cid = ConverterUtils.toContainerId(containerId);
+    } catch (Exception e) {
+      throw new BadRequestException(e);
+    }
     if (cid == null) {
       throw new NotFoundException("containerId is null");
     }
