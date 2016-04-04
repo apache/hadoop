@@ -25,6 +25,8 @@ Release 2.7.3 - UNRELEASED
 
   BUG FIXES
 
+    YARN-4706. UI Hosting Configuration in TimelineServer doc is broken. (Akira AJISAKA via gtcarrera9)
+
     YARN-4326. Fix TestDistributedShell timeout as AHS in MiniYarnCluster no longer 
     binds to default port 8188. (Meng Ding via wangda)
 
