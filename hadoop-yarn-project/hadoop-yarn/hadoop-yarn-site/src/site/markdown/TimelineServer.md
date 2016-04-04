@@ -56,6 +56,7 @@ With the introduction of the timeline server, the Application History Server bec
 the Timeline Server.
 
 Generic information includes application level data such as 
+
 * queue-name, 
 * user information and the like set in the `ApplicationSubmissionContext`,
 * a list of application-attempts that ran for an application
@@ -192,6 +193,7 @@ selected if this policy is `HTTPS_ONLY`.
 #### UI Hosting Configuration
 
 The timeline service can host multiple UIs if enabled. The service can support both static web sites hosted in a directory or war files bundled. The web UI is then hosted on the timeline service HTTP port under the path configured.
+
 | Configuration Property | Description |
 |:---- |:---- |
 | `yarn.timeline-service.ui-names` | Comma separated list of UIs that will be hosted. Defaults to `none`. |
