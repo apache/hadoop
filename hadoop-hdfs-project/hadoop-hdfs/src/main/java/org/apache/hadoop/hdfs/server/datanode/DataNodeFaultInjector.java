@@ -50,5 +50,7 @@ public class DataNodeFaultInjector {
     return false;
   }
 
+  public void stopSendingPacketDownstream() throws IOException {}
+
   public void noRegistration() throws IOException { }
 }
