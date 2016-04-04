@@ -61,7 +61,6 @@ void RpcEngine::Shutdown() {
   LOG_DEBUG(kRPC, << "RpcEngine::Shutdown called");
   io_service_->post([this]() {
     std::lock_guard<std::mutex> state_lock(engine_state_lock_);
-    conn_->Disconnect();
     conn_.reset();
   });
 }
@@ -122,46 +121,32 @@ std::shared_ptr<RpcConnection> RpcEngine::InitializeConnection()
   return result;
 }
 
-
-Status RpcEngine::RawRpc(const std::string &method_name, const std::string &req,
-                         std::shared_ptr<std::string> resp) {
-  LOG_TRACE(kRPC, << "RpcEngine::RawRpc called");
-
-  std::shared_ptr<RpcConnection> conn;
-  {
-    std::lock_guard<std::mutex> state_lock(engine_state_lock_);
-    if (!conn_) {
-        conn_ = InitializeConnection();
-        conn_->ConnectAndFlush(last_endpoints_);
-      }
-    conn = conn_;
-  }
-
-  auto stat = std::make_shared<std::promise<Status>>();
-  std::future<Status> future(stat->get_future());
-  conn->AsyncRawRpc(method_name, req, resp,
-                     [stat](const Status &status) { stat->set_value(status); });
-  return future.get();
-}
-
 void RpcEngine::AsyncRpcCommsError(
     const Status &status,
+    std::shared_ptr<RpcConnection> failedConnection,
     std::vector<std::shared_ptr<Request>> pendingRequests) {
-  LOG_ERROR(kRPC, << "RpcEngine::AsyncRpcCommsError called");
+  LOG_ERROR(kRPC, << "RpcEngine::AsyncRpcCommsError called; conn=" << failedConnection.get() << " reqs=" << pendingRequests.size());
 
-  io_service().post([this, status, pendingRequests]() {
-    RpcCommsError(status, pendingRequests);
+  io_service().post([this, status, failedConnection, pendingRequests]() {
+    RpcCommsError(status, failedConnection, pendingRequests);
   });
 }
 
 void RpcEngine::RpcCommsError(
     const Status &status,
+    std::shared_ptr<RpcConnection> failedConnection,
     std::vector<std::shared_ptr<Request>> pendingRequests) {
   (void)status;
 
-  LOG_ERROR(kRPC, << "RpcEngine::RpcCommsError called");
+  LOG_ERROR(kRPC, << "RpcEngine::RpcCommsError called; conn=" << failedConnection.get() << " reqs=" << pendingRequests.size());
 
   std::lock_guard<std::mutex> state_lock(engine_state_lock_);
+
+  // If the failed connection is the current one, shut it down
+  //    It will be reconnected when there is work to do
+  if (failedConnection == conn_) {
+        conn_.reset();
+  }
 
   auto head_action = optional<RetryAction>();
 
@@ -192,25 +177,35 @@ void RpcEngine::RpcCommsError(
     }
   }
 
-  // Close the connection and retry and requests that might have been sent to
-  //    the NN
-  if (!pendingRequests.empty() &&
-          head_action && head_action->action != RetryAction::FAIL) {
-    conn_ = InitializeConnection();
+  // If we have reqests that need to be re-sent, ensure that we have a connection
+  //   and send the requests to it
+  bool haveRequests = !pendingRequests.empty() &&
+          head_action && head_action->action != RetryAction::FAIL;
 
-    conn_->PreEnqueueRequests(pendingRequests);
-    if (head_action->delayMillis > 0) {
-      retry_timer.expires_from_now(
-          std::chrono::milliseconds(options_.rpc_retry_delay_ms));
-      retry_timer.async_wait([this](asio::error_code ec) {
-        if (!ec) conn_->ConnectAndFlush(last_endpoints_);
-      });
+  if (haveRequests) {
+    bool needNewConnection = !conn_;
+    if (needNewConnection) {
+      conn_ = InitializeConnection();
+      conn_->PreEnqueueRequests(pendingRequests);
+
+      if (head_action->delayMillis > 0) {
+        auto weak_conn = std::weak_ptr<RpcConnection>(conn_);
+        retry_timer.expires_from_now(
+            std::chrono::milliseconds(options_.rpc_retry_delay_ms));
+        retry_timer.async_wait([this, weak_conn](asio::error_code ec) {
+          auto strong_conn = weak_conn.lock();
+          if ( (!ec) && (strong_conn) ) {
+            strong_conn->ConnectAndFlush(last_endpoints_);
+          }
+        });
+      } else {
+        conn_->ConnectAndFlush(last_endpoints_);
+      }
     } else {
-      conn_->ConnectAndFlush(last_endpoints_);
+      // We have an existing connection (which might be closed; we don't know
+      //    until we hold the connection local) and should just add the new requests
+      conn_->AsyncRpc(pendingRequests);
     }
-  } else {
-    // Connection will try again if someone calls AsyncRpc
-    conn_.reset();
   }
 }
 

@@ -125,8 +125,7 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
                 std::shared_ptr<::google::protobuf::MessageLite> resp,
                 const RpcCallback &handler);
 
-  void AsyncRawRpc(const std::string &method_name, const std::string &request,
-                   std::shared_ptr<std::string> resp, RpcCallback &&handler);
+  void AsyncRpc(const std::vector<std::shared_ptr<Request> > & requests);
 
   // Enqueue requests before the connection is connected.  Will be flushed
   //   on connect
@@ -182,7 +181,15 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
 
   // Connection can have deferred connection, especially when we're pausing
   //   during retry
-  bool connected_;
+  enum ConnectedState {
+      kNotYetConnected,
+      kConnecting,
+      kConnected,
+      kDisconnected
+  };
+  static std::string ToString(ConnectedState connected);
+
+  ConnectedState connected_;
   // The request being sent over the wire; will also be in requests_on_fly_
   std::shared_ptr<Request> request_over_the_wire_;
   // Requests to be sent over the wire
@@ -207,6 +214,7 @@ class LockFreeRpcEngine {
 public:
   /* Enqueues a CommsError without acquiring a lock*/
   virtual void AsyncRpcCommsError(const Status &status,
+                      std::shared_ptr<RpcConnection> failedConnection,
                       std::vector<std::shared_ptr<Request>> pendingRequests) = 0;
 
 
@@ -254,19 +262,16 @@ class RpcEngine : public LockFreeRpcEngine {
   Status Rpc(const std::string &method_name,
              const ::google::protobuf::MessageLite *req,
              const std::shared_ptr<::google::protobuf::MessageLite> &resp);
-  /**
-   * Send raw bytes as RPC payload. This is intended to be used in JNI
-   * bindings only.
-   **/
-  Status RawRpc(const std::string &method_name, const std::string &req,
-                std::shared_ptr<std::string> resp);
+
   void Start();
   void Shutdown();
 
   /* Enqueues a CommsError without acquiring a lock*/
   void AsyncRpcCommsError(const Status &status,
+                     std::shared_ptr<RpcConnection> failedConnection,
                      std::vector<std::shared_ptr<Request>> pendingRequests) override;
   void RpcCommsError(const Status &status,
+                     std::shared_ptr<RpcConnection> failedConnection,
                      std::vector<std::shared_ptr<Request>> pendingRequests);
 
 
