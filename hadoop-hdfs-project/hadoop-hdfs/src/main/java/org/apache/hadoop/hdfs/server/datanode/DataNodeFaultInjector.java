@@ -48,6 +48,8 @@ public class DataNodeFaultInjector {
 
   public void sendShortCircuitShmResponse() throws IOException {}
 
+  public void stopSendingPacketDownstream() throws IOException {}
+
   public void noRegistration() throws IOException { }
 
   public void failMirrorConnection() throws IOException { }
