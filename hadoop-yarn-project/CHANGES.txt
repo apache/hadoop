@@ -27,6 +27,9 @@ Release 2.6.5 - UNRELEASED
     YARN-4785. inconsistent value type of the "type" field for LeafQueueInfo in
     response of RM REST API. (Varun Vasudev via junping-du)
 
+    YARN-4773. Log aggregation performs extraneous filesystem operations when
+    rolling log aggregation is disabled (Jun Gong via jlowe)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
