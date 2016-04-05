@@ -45,6 +45,7 @@ import org.apache.hadoop.io.file.tfile.RandomDistribution.DiscreteRNG;
 import org.apache.hadoop.io.file.tfile.TFile.Reader;
 import org.apache.hadoop.io.file.tfile.TFile.Writer;
 import org.apache.hadoop.io.file.tfile.TFile.Reader.Scanner;
+import org.apache.hadoop.test.GenericTestUtils;
 
 /**
  * test the performance for seek.
@@ -246,8 +247,7 @@ public class TestTFileSeek {
     int fsOutputBufferSizeLzo = 1;
     int fsOutputBufferSizeGz = 1;
    
-    String rootDir =
-        System.getProperty("test.build.data", "/tmp/tfile-test");
+    String rootDir = GenericTestUtils.getTestDir().getAbsolutePath();
     String file = "TestTFileSeek";
     String compress = "gz";
     int minKeyLen = 10;

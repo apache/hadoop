@@ -53,6 +53,7 @@ import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
 import org.apache.hadoop.metrics2.impl.TestMetricsConfig;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.Rule;
 import org.junit.rules.TestName;
@@ -68,9 +69,8 @@ import static org.junit.Assert.assertTrue;
 public class RollingFileSystemSinkTestBase {
   protected static final String SINK_PRINCIPAL_KEY = "rfssink.principal";
   protected static final String SINK_KEYTAB_FILE_KEY = "rfssink.keytab";
-  protected static final File ROOT_TEST_DIR =
-      new File(System.getProperty("test.build.data", "target/test"),
-        "RollingFileSystemSinkTest");
+  protected static final File ROOT_TEST_DIR = GenericTestUtils.getTestDir(
+      "RollingFileSystemSinkTest");
   protected static final SimpleDateFormat DATE_FORMAT =
       new SimpleDateFormat("yyyyMMddHH");
   protected static File methodDir;

@@ -32,6 +32,7 @@ import java.util.zip.ZipEntry;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,11 +45,8 @@ public class TestRunJar extends TestCase {
 
   @Override
   @Before
-  protected void setUp()
-      throws Exception {
-    TEST_ROOT_DIR =
-        new File(System.getProperty("test.build.data", "/tmp"), getClass()
-            .getSimpleName());
+  protected void setUp() throws Exception {
+    TEST_ROOT_DIR = GenericTestUtils.getTestDir(getClass().getSimpleName());
     if (!TEST_ROOT_DIR.exists()) {
       TEST_ROOT_DIR.mkdirs();
     }

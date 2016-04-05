@@ -20,7 +20,6 @@ package org.apache.hadoop.test;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
@@ -37,10 +36,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Layout;
@@ -63,6 +62,22 @@ import com.google.common.collect.Sets;
 public abstract class GenericTestUtils {
 
   private static final AtomicInteger sequence = new AtomicInteger();
+
+  /**
+   * system property for test data: {@value}
+   */
+  public static final String SYSPROP_TEST_DATA_DIR = "test.build.data";
+
+  /**
+   * Default path for test data: {@value}
+   */
+  public static final String DEFAULT_TEST_DATA_DIR =
+      "target" + File.separator + "test" + File.separator + "data";
+
+  /**
+   * The default path for using in Hadoop path references: {@value}
+   */
+  public static final String DEFAULT_TEST_DATA_PATH = "target/test/data/";
 
   @SuppressWarnings("unchecked")
   public static void disableLog(Log log) {
@@ -119,7 +134,70 @@ public abstract class GenericTestUtils {
   public static int uniqueSequenceId() {
     return sequence.incrementAndGet();
   }
-  
+
+  /**
+   * Get the (created) base directory for tests.
+   * @return the absolute directory
+   */
+  public static File getTestDir() {
+    String prop = System.getProperty(SYSPROP_TEST_DATA_DIR, DEFAULT_TEST_DATA_DIR);
+    if (prop.isEmpty()) {
+      // corner case: property is there but empty
+      prop = DEFAULT_TEST_DATA_DIR;
+    }
+    File dir = new File(prop).getAbsoluteFile();
+    dir.mkdirs();
+    assertExists(dir);
+    return dir;
+  }
+
+  /**
+   * Get an uncreated directory for tests.
+   * @return the absolute directory for tests. Caller is expected to create it.
+   */
+  public static File getTestDir(String subdir) {
+    return new File(getTestDir(), subdir).getAbsoluteFile();
+  }
+
+  /**
+   * Get an uncreated directory for tests with a randomized alphanumeric
+   * name. This is likely to provide a unique path for tests run in parallel
+   * @return the absolute directory for tests. Caller is expected to create it.
+   */
+  public static File getRandomizedTestDir() {
+    return new File(getRandomizedTempPath()).getAbsoluteFile();
+  }
+
+  /**
+   * Get a temp path. This may or may not be relative; it depends on what the
+   * {@link #SYSPROP_TEST_DATA_DIR} is set to. If unset, it returns a path
+   * under the relative path {@link #DEFAULT_TEST_DATA_PATH}
+   * @param subpath sub path, with no leading "/" character
+   * @return a string to use in paths
+   */
+  public static String getTempPath(String subpath) {
+    String prop = System.getProperty(SYSPROP_TEST_DATA_DIR, DEFAULT_TEST_DATA_PATH);
+    if (prop.isEmpty()) {
+      // corner case: property is there but empty
+      prop = DEFAULT_TEST_DATA_PATH;
+    }
+    if (!prop.endsWith("/")) {
+      prop = prop + "/";
+    }
+    return prop + subpath;
+  }
+
+  /**
+   * Get a temp path. This may or may not be relative; it depends on what the
+   * {@link #SYSPROP_TEST_DATA_DIR} is set to. If unset, it returns a path
+   * under the relative path {@link #DEFAULT_TEST_DATA_PATH}
+   * @param subpath sub path, with no leading "/" character
+   * @return a string to use in paths
+   */
+  public static String getRandomizedTempPath() {
+    return getTempPath(RandomStringUtils.randomAlphanumeric(10));
+  }
+
   /**
    * Assert that a given file exists.
    */
