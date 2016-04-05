@@ -33,6 +33,7 @@ import java.nio.file.Paths;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 /**
@@ -41,8 +42,7 @@ import org.junit.Test;
  */
 public class TestTextCommand {
   private static final File TEST_ROOT_DIR =
-    Paths.get(System.getProperty("test.build.data", "build/test/data"),
-        "testText").toFile();
+      GenericTestUtils.getTestDir("testText");
   private static final String AVRO_FILENAME =
     new File(TEST_ROOT_DIR, "weather.avro").toURI().getPath();
   private static final String TEXT_FILENAME =

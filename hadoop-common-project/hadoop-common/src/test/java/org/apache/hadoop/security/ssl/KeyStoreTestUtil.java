@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
+import org.apache.hadoop.test.GenericTestUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -470,8 +471,7 @@ public class KeyStoreTestUtil {
   }
 
   public static void provisionPasswordsToCredentialProvider() throws Exception {
-    File testDir = new File(System.getProperty("test.build.data",
-        "target/test-dir"));
+    File testDir = GenericTestUtils.getTestDir();
 
     Configuration conf = new Configuration();
     final Path jksPath = new Path(testDir.toString(), "test.jks");

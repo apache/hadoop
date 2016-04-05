@@ -37,7 +37,7 @@ import static org.junit.Assert.*;
 
 public class TestDFVariations {
   private static final String TEST_ROOT_DIR =
-      System.getProperty("test.build.data","build/test/data") + "/TestDFVariations";
+      GenericTestUtils.getTestDir("testdfvariations").getAbsolutePath();
   private static File test_root = null;
 
   @Before

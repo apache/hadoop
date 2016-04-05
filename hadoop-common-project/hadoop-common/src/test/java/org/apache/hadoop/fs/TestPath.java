@@ -26,6 +26,7 @@ import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.AvroTestUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 
 import com.google.common.base.Joiner;
@@ -402,9 +403,8 @@ public class TestPath extends TestCase {
     // This test is not meaningful on Windows where * is disallowed in file name.
     if (Shell.WINDOWS) return;
     FileSystem lfs = FileSystem.getLocal(new Configuration());
-    Path testRoot = lfs.makeQualified(new Path(
-        System.getProperty("test.build.data","test/build/data"),
-        "testPathGlob"));
+    Path testRoot = lfs.makeQualified(
+        new Path(GenericTestUtils.getTempPath("testPathGlob")));
     lfs.delete(testRoot, true);
     lfs.mkdirs(testRoot);
     assertTrue(lfs.isDirectory(testRoot));

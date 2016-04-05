@@ -40,6 +40,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.ssl.SSLFactory;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -51,8 +52,8 @@ import org.junit.Test;
  */
 public class TestSSLHttpServer extends HttpServerFunctionalTest {
 
-  private static final String BASEDIR = System.getProperty("test.build.dir",
-      "target/test-dir") + "/" + TestSSLHttpServer.class.getSimpleName();
+  private static final String BASEDIR =
+      GenericTestUtils.getTempPath(TestSSLHttpServer.class.getSimpleName());
 
   private static final Log LOG = LogFactory.getLog(TestSSLHttpServer.class);
   private static Configuration conf;
