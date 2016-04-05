@@ -114,7 +114,7 @@ min.user.id=1000#Prevent other super-users
 
   `yarn.nodemanager.windows-secure-container-executor.impersonate.allowed` should contain the users that are allowed to create containers in the cluster. These users will be allowed to be impersonated by hadoopwinutilsvc.
 
-  `yarn.nodemanager.windows-secure-container-executor.impersonate.denied` should contain users that are explictly forbiden from creating containers. hadoopwinutilsvc will refuse to impersonate these users.
+  `yarn.nodemanager.windows-secure-container-executor.impersonate.denied` should contain users that are explicitly forbidden from creating containers. hadoopwinutilsvc will refuse to impersonate these users.
 
   `yarn.nodemanager.windows-secure-container-executor.local-dirs` should contain the nodemanager local dirs. hadoopwinutilsvc will allow only file operations under these directories. This should contain the same values as `$yarn.nodemanager.local-dirs, $yarn.nodemanager.log-dirs` but note that hadoopwinutilsvc XML configuration processing does not do substitutions so the value must be the final value. All paths must be absolute and no environment variable substitution will be performed. The paths are compared LOCAL\_INVARIANT case insensitive string comparison, the file path validated must start with one of the paths listed in local-dirs configuration. Use comma as path separator:`,`
 
