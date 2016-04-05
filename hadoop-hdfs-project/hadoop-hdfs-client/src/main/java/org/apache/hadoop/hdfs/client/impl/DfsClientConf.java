@@ -141,7 +141,7 @@ public class DfsClientConf {
 
   public DfsClientConf(Configuration conf) {
     // The hdfsTimeout is currently the same as the ipc timeout
-    hdfsTimeout = Client.getTimeout(conf);
+    hdfsTimeout = Client.getRpcTimeout(conf);
 
     maxRetryAttempts = conf.getInt(
         Retry.MAX_ATTEMPTS_KEY,
