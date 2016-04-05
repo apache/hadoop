@@ -648,6 +648,15 @@ public class YarnConfiguration extends Configuration {
       "NONE";
 
   /**
+   * Timeout(msec) for an untracked node to remain in shutdown or decommissioned
+   * state.
+   */
+  public static final String RM_NODEMANAGER_UNTRACKED_REMOVAL_TIMEOUT_MSEC =
+      RM_PREFIX + "node-removal-untracked.timeout-ms";
+  public static final int
+      DEFAULT_RM_NODEMANAGER_UNTRACKED_REMOVAL_TIMEOUT_MSEC = 60000;
+
+  /**
    * RM proxy users' prefix
    */
   public static final String RM_PROXY_USER_PREFIX = RM_PREFIX + "proxyuser.";
