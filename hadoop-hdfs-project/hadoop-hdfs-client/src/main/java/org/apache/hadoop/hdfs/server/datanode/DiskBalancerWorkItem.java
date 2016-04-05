@@ -22,6 +22,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.htrace.fasterxml.jackson.annotation.JsonInclude;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import java.io.IOException;
@@ -31,12 +32,17 @@ import java.io.IOException;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+@JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class DiskBalancerWorkItem {
   private final long bytesToCopy;
   private long bytesCopied;
   private long errorCount;
   private String errMsg;
   private long blocksCopied;
+
+  private long maxDiskErrors;
+  private long tolerancePercent;
+  private long bandwidth;
 
   /**
    * Constructs a DiskBalancerWorkItem.
@@ -157,4 +163,75 @@ public class DiskBalancerWorkItem {
     return mapper.writeValueAsString(this);
   }
 
+  /**
+   * Sets the Error counts for this step.
+   *
+   * @param errorCount long.
+   */
+  public void setErrorCount(long errorCount) {
+    this.errorCount = errorCount;
+  }
+
+  /**
+   * Number of blocks copied so far.
+   *
+   * @param blocksCopied Blocks copied.
+   */
+  public void setBlocksCopied(long blocksCopied) {
+    this.blocksCopied = blocksCopied;
+  }
+
+  /**
+   * Gets maximum disk errors to tolerate before we fail this copy step.
+   *
+   * @return long.
+   */
+  public long getMaxDiskErrors() {
+    return maxDiskErrors;
+  }
+
+  /**
+   * Sets maximum disk errors to tolerate before we fail this copy step.
+   *
+   * @param maxDiskErrors long
+   */
+  public void setMaxDiskErrors(long maxDiskErrors) {
+    this.maxDiskErrors = maxDiskErrors;
+  }
+
+  /**
+   * Allowed deviation from ideal storage in percentage.
+   *
+   * @return long
+   */
+  public long getTolerancePercent() {
+    return tolerancePercent;
+  }
+
+  /**
+   * Sets the tolerance percentage.
+   *
+   * @param tolerancePercent - tolerance.
+   */
+  public void setTolerancePercent(long tolerancePercent) {
+    this.tolerancePercent = tolerancePercent;
+  }
+
+  /**
+   * Max disk bandwidth to use. MB per second.
+   *
+   * @return - long.
+   */
+  public long getBandwidth() {
+    return bandwidth;
+  }
+
+  /**
+   * Sets max disk bandwidth to use, in MBs per second.
+   *
+   * @param bandwidth - long.
+   */
+  public void setBandwidth(long bandwidth) {
+    this.bandwidth = bandwidth;
+  }
 }

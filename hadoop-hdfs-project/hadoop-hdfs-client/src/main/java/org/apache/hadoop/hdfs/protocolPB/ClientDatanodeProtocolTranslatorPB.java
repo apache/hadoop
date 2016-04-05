@@ -342,22 +342,20 @@ public class ClientDatanodeProtocolTranslatorPB implements
    *               local copies of these plans.
    * @param planVersion - The data format of the plans - for future , not
    *                    used now.
-   * @param bandwidth - Maximum disk bandwidth to consume, setting this value
-   *                  to zero allows datanode to use the value defined in
-   *                  configration.
    * @param plan - Actual plan.
+   * @param skipDateCheck - Skips the date check.
    * @throws IOException
    */
   @Override
   public void submitDiskBalancerPlan(String planID, long planVersion,
-      long bandwidth, String plan) throws IOException {
+      String plan, boolean skipDateCheck) throws IOException {
     try {
       SubmitDiskBalancerPlanRequestProto request =
           SubmitDiskBalancerPlanRequestProto.newBuilder()
               .setPlanID(planID)
               .setPlanVersion(planVersion)
-              .setMaxDiskBandwidth(bandwidth)
               .setPlan(plan)
+              .setIgnoreDateCheck(skipDateCheck)
               .build();
       rpcProxy.submitDiskBalancerPlan(NULL_CONTROLLER, request);
     } catch (ServiceException e) {

@@ -27,7 +27,6 @@ import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel
     .DiskBalancerVolumeSet;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.GreedyPlanner;
-import org.apache.hadoop.hdfs.server.diskbalancer.planner.MoveStep;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.Step;
 import org.junit.Assert;
@@ -48,7 +47,7 @@ public class TestPlanner {
       LoggerFactory.getLogger(TestPlanner.class);
 
   @Test
-  public void TestGreedyPlannerBalanceVolumeSet() throws Exception {
+  public void testGreedyPlannerBalanceVolumeSet() throws Exception {
     URI clusterJson = getClass()
         .getResource("/diskBalancer/data-cluster-3node-3disk.json").toURI();
     ClusterConnector jsonConnector = ConnectorFactory.getCluster(clusterJson,
@@ -65,7 +64,7 @@ public class TestPlanner {
   }
 
   @Test
-  public void TestGreedyPlannerComputePlan() throws Exception {
+  public void testGreedyPlannerComputePlan() throws Exception {
     URI clusterJson = getClass()
         .getResource("/diskBalancer/data-cluster-3node-3disk.json").toURI();
     ClusterConnector jsonConnector = ConnectorFactory.getCluster(clusterJson,
@@ -90,13 +89,13 @@ public class TestPlanner {
   }
 
   @Test
-  public void TestGreedyPlannerNoNodeCluster() throws Exception {
+  public void testGreedyPlannerNoNodeCluster() throws Exception {
     GreedyPlanner planner = new GreedyPlanner(10.0f, null);
     assertNotNull(planner);
   }
 
   @Test
-  public void TestGreedyPlannerNoVolumeTest() throws Exception {
+  public void testGreedyPlannerNoVolumeTest() throws Exception {
     NullConnector nullConnector = new NullConnector();
     DiskBalancerCluster cluster = new DiskBalancerCluster(nullConnector);
     List<NodePlan> planList = cluster.computePlan(10.0f);
@@ -104,7 +103,7 @@ public class TestPlanner {
   }
 
   @Test
-  public void TestGreedyPlannerOneVolumeNoPlanTest() throws Exception {
+  public void testGreedyPlannerOneVolumeNoPlanTest() throws Exception {
     NullConnector nullConnector = new NullConnector();
     DiskBalancerCluster cluster = new DiskBalancerCluster(nullConnector);
 
@@ -127,7 +126,7 @@ public class TestPlanner {
   }
 
   @Test
-  public void TestGreedyPlannerTwoVolume() throws Exception {
+  public void testGreedyPlannerTwoVolume() throws Exception {
     NullConnector nullConnector = new NullConnector();
     DiskBalancerCluster cluster = new DiskBalancerCluster(nullConnector);
 
@@ -166,7 +165,7 @@ public class TestPlanner {
    * That is the plan should say move 10 GB from volume30 to volume10.
    */
   @Test
-  public void TestGreedyPlannerEqualizeData() throws Exception {
+  public void testGreedyPlannerEqualizeData() throws Exception {
     NullConnector nullConnector = new NullConnector();
     DiskBalancerCluster cluster = new DiskBalancerCluster(nullConnector);
 
@@ -201,7 +200,7 @@ public class TestPlanner {
   }
 
   @Test
-  public void TestGreedyPlannerEqualDisksNoMoves() throws Exception {
+  public void testGreedyPlannerEqualDisksNoMoves() throws Exception {
     NullConnector nullConnector = new NullConnector();
     DiskBalancerCluster cluster = new DiskBalancerCluster(nullConnector);
 
@@ -232,7 +231,7 @@ public class TestPlanner {
   }
 
   @Test
-  public void TestGreedyPlannerMoveFromSingleDisk() throws Exception {
+  public void testGreedyPlannerMoveFromSingleDisk() throws Exception {
     NullConnector nullConnector = new NullConnector();
     DiskBalancerCluster cluster = new DiskBalancerCluster(nullConnector);
 
@@ -271,7 +270,7 @@ public class TestPlanner {
   }
 
   @Test
-  public void TestGreedyPlannerThresholdTest() throws Exception {
+  public void testGreedyPlannerThresholdTest() throws Exception {
     NullConnector nullConnector = new NullConnector();
     DiskBalancerCluster cluster = new DiskBalancerCluster(nullConnector);
 
@@ -327,7 +326,7 @@ public class TestPlanner {
   }
 
   @Test
-  public void TestGreedyPlannerPlanWithDifferentDiskSizes() throws Exception {
+  public void testGreedyPlannerPlanWithDifferentDiskSizes() throws Exception {
     NullConnector nullConnector = new NullConnector();
     DiskBalancerCluster cluster = new DiskBalancerCluster(nullConnector);
 
@@ -381,7 +380,7 @@ public class TestPlanner {
   }
 
   @Test
-  public void TestLoadsCorrectClusterConnector() throws Exception {
+  public void testLoadsCorrectClusterConnector() throws Exception {
     ClusterConnector connector = ConnectorFactory.getCluster(getClass()
             .getResource("/diskBalancer/data-cluster-3node-3disk.json").toURI()
         , null);
@@ -392,7 +391,7 @@ public class TestPlanner {
   }
 
   @Test
-  public void TestPlannerScale() throws Exception {
+  public void testPlannerScale() throws Exception {
     final int diskCount = 256; // it is rare to see more than 48 disks
     DiskBalancerTestUtil util = new DiskBalancerTestUtil();
     DiskBalancerVolumeSet vSet =
@@ -428,7 +427,7 @@ public class TestPlanner {
   }
 
   @Test
-  public void TestNodePlanSerialize() throws Exception {
+  public void testNodePlanSerialize() throws Exception {
     final int diskCount = 12;
     DiskBalancerTestUtil util = new DiskBalancerTestUtil();
     DiskBalancerVolumeSet vSet =

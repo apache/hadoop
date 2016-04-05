@@ -3331,11 +3331,11 @@ public class DataNode extends ReconfigurableBase
    */
   @Override
   public void submitDiskBalancerPlan(String planID,
-      long planVersion, long bandwidth, String plan) throws IOException {
+      long planVersion, String plan, boolean skipDateCheck) throws IOException {
 
     checkSuperuserPrivilege();
     // TODO : Support force option
-    this.diskBalancer.submitPlan(planID, planVersion, plan, bandwidth, false);
+    this.diskBalancer.submitPlan(planID, planVersion, plan, skipDateCheck);
   }
 
   /**

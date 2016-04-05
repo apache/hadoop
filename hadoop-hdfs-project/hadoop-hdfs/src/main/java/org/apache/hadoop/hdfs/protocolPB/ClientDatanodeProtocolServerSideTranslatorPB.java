@@ -254,9 +254,9 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       throws ServiceException {
     try {
       impl.submitDiskBalancerPlan(request.getPlanID(),
-          request.hasPlanVersion() ? request.getPlanVersion() : 0,
-          request.hasMaxDiskBandwidth() ? request.getMaxDiskBandwidth() : 0,
-          request.getPlan());
+          request.hasPlanVersion() ? request.getPlanVersion() : 1,
+          request.getPlan(),
+          request.hasIgnoreDateCheck() ? request.getIgnoreDateCheck() : false);
       SubmitDiskBalancerPlanResponseProto response =
           SubmitDiskBalancerPlanResponseProto.newBuilder()
               .build();

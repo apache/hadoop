@@ -157,7 +157,7 @@ message SubmitDiskBalancerPlanRequestProto {
   required string planID = 1; // A hash of the plan like SHA512
   required string plan = 2; // Json String that describes the plan
   optional uint64 planVersion = 3; // Plan version number
-  optional uint64 maxDiskBandwidth = 4; // optional bandwidth control.
+  optional bool ignoreDateCheck = 4; // Ignore date checks on this plan.
 }
 
 /**

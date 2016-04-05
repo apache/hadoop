@@ -50,11 +50,14 @@ import org.junit.rules.ExpectedException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Iterator;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.Result.NO_PLAN;
 import static org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.Result.PLAN_DONE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public class TestDiskBalancerWithMockMover {
@@ -120,7 +123,7 @@ public class TestDiskBalancerWithMockMover {
                                  int version) throws IOException {
     String planJson = plan.toJson();
     String planID = DigestUtils.sha512Hex(planJson);
-    balancer.submitPlan(planID, version, planJson, 10, false);
+    balancer.submitPlan(planID, version, planJson, false);
   }
 
   private void executeSubmitPlan(NodePlan plan, DiskBalancer balancer)
@@ -209,7 +212,7 @@ public class TestDiskBalancerWithMockMover {
     thrown.expect(new DiskBalancerResultVerifier(DiskBalancerException
         .Result.INVALID_PLAN));
 
-    balancer.submitPlan(planID, 1, null, 10, false);
+    balancer.submitPlan(planID, 1, null, false);
   }
 
   @Test
@@ -228,7 +231,7 @@ public class TestDiskBalancerWithMockMover {
     thrown.expect(new DiskBalancerResultVerifier(DiskBalancerException
         .Result.INVALID_PLAN_HASH));
     balancer.submitPlan(planID.replace(planID.charAt(0), repChar),
-        1, planJson, 10, false);
+        1, planJson, false);
 
   }
 
@@ -277,6 +280,34 @@ public class TestDiskBalancerWithMockMover {
         status.getResult());
 
   }
+
+
+  /**
+   * Test Custom bandwidth.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testCustomBandwidth() throws Exception {
+    MockMoverHelper mockMoverHelper = new MockMoverHelper().invoke();
+    NodePlan plan = mockMoverHelper.getPlan();
+    DiskBalancer balancer = mockMoverHelper.getBalancer();
+
+    for(Step step : plan.getVolumeSetPlans()){
+      MoveStep tempStep = (MoveStep) step;
+      tempStep.setBandwidth(100);
+    }
+    executeSubmitPlan(plan, balancer);
+    DiskBalancerWorkStatus status = balancer
+        .queryWorkStatus();
+    assertNotNull(status);
+
+    DiskBalancerWorkStatus.DiskBalancerWorkEntry entry =
+        balancer.queryWorkStatus().getCurrentState().get(0);
+    assertEquals(100L, entry.getWorkItem().getBandwidth());
+
+  }
+
 
   @Before
   public void setUp() throws Exception {

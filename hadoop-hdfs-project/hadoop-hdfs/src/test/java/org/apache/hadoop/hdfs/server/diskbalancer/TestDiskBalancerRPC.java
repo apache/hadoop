@@ -5,9 +5,9 @@
  * licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -30,7 +30,9 @@ import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ConnectorFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.GreedyPlanner;
+import org.apache.hadoop.hdfs.server.diskbalancer.planner.MoveStep;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
+import org.apache.hadoop.hdfs.server.diskbalancer.planner.Step;
 import org.hamcrest.*;
 import org.junit.After;
 import org.junit.Assert;
@@ -76,7 +78,8 @@ public class TestDiskBalancerRPC {
     String planHash = rpcTestHelper.getPlanHash();
     int planVersion = rpcTestHelper.getPlanVersion();
     NodePlan plan = rpcTestHelper.getPlan();
-    dataNode.submitDiskBalancerPlan(planHash, planVersion, 10, plan.toJson());
+    dataNode.submitDiskBalancerPlan(planHash, planVersion, plan.toJson(),
+        false);
   }
 
   @Test
@@ -91,7 +94,8 @@ public class TestDiskBalancerRPC {
     NodePlan plan = rpcTestHelper.getPlan();
     thrown.expect(DiskBalancerException.class);
     thrown.expect(new DiskBalancerResultVerifier(Result.INVALID_PLAN_HASH));
-    dataNode.submitDiskBalancerPlan(planHash, planVersion, 10, plan.toJson());
+    dataNode.submitDiskBalancerPlan(planHash, planVersion, plan.toJson(),
+        false);
   }
 
   @Test
@@ -104,7 +108,8 @@ public class TestDiskBalancerRPC {
     NodePlan plan = rpcTestHelper.getPlan();
     thrown.expect(DiskBalancerException.class);
     thrown.expect(new DiskBalancerResultVerifier(Result.INVALID_PLAN_VERSION));
-    dataNode.submitDiskBalancerPlan(planHash, planVersion, 10, plan.toJson());
+    dataNode.submitDiskBalancerPlan(planHash, planVersion, plan.toJson(),
+        false);
   }
 
   @Test
@@ -116,8 +121,8 @@ public class TestDiskBalancerRPC {
     NodePlan plan = rpcTestHelper.getPlan();
     thrown.expect(DiskBalancerException.class);
     thrown.expect(new DiskBalancerResultVerifier(Result.INVALID_PLAN));
-    dataNode.submitDiskBalancerPlan(planHash, planVersion, 10, "");
-  }
+    dataNode.submitDiskBalancerPlan(planHash, planVersion, "",
+        false);  }
 
   @Test
   public void testCancelPlan() throws Exception {
@@ -126,7 +131,8 @@ public class TestDiskBalancerRPC {
     String planHash = rpcTestHelper.getPlanHash();
     int planVersion = rpcTestHelper.getPlanVersion();
     NodePlan plan = rpcTestHelper.getPlan();
-    dataNode.submitDiskBalancerPlan(planHash, planVersion, 10, plan.toJson());
+    dataNode.submitDiskBalancerPlan(planHash, planVersion, plan.toJson(),
+        false);
     dataNode.cancelDiskBalancePlan(planHash);
   }
 
@@ -189,14 +195,13 @@ public class TestDiskBalancerRPC {
     int planVersion = rpcTestHelper.getPlanVersion();
     NodePlan plan = rpcTestHelper.getPlan();
 
-    dataNode.submitDiskBalancerPlan(planHash, planVersion, 10, plan.toJson());
+    dataNode.submitDiskBalancerPlan(planHash, planVersion, plan.toJson(),
+        false);
     String bandwidthString = dataNode.getDiskBalancerSetting(
         DiskBalancerConstants.DISKBALANCER_BANDWIDTH);
     long value = Long.decode(bandwidthString);
     Assert.assertEquals(10L, value);
   }
-
-
 
   @Test
   public void testQueryPlan() throws Exception {
@@ -206,7 +211,8 @@ public class TestDiskBalancerRPC {
     int planVersion = rpcTestHelper.getPlanVersion();
     NodePlan plan = rpcTestHelper.getPlan();
 
-    dataNode.submitDiskBalancerPlan(planHash, planVersion, 10, plan.toJson());
+    dataNode.submitDiskBalancerPlan(planHash, planVersion, plan.toJson(),
+        false);
     DiskBalancerWorkStatus status = dataNode.queryDiskBalancerPlan();
     Assert.assertTrue(status.getResult() == PLAN_UNDER_PROGRESS ||
         status.getResult() == PLAN_DONE);
@@ -220,7 +226,6 @@ public class TestDiskBalancerRPC {
     DiskBalancerWorkStatus status = dataNode.queryDiskBalancerPlan();
     Assert.assertTrue(status.getResult() == NO_PLAN);
   }
-
 
   private class RpcTestHelper {
     private NodePlan plan;

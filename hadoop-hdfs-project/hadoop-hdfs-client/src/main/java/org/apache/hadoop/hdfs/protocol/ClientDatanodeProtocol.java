@@ -168,8 +168,8 @@ public interface ClientDatanodeProtocol {
   /**
    * Submit a disk balancer plan for execution.
    */
-  void submitDiskBalancerPlan(String planID, long planVersion, long bandwidth,
-                              String plan) throws IOException;
+  void submitDiskBalancerPlan(String planID, long planVersion, String plan,
+                              boolean skipDateCheck) throws IOException;
 
   /**
    * Cancel an executing plan.

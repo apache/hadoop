@@ -65,4 +65,27 @@ public interface Step {
    */
   String getSizeString(long size);
 
+  /**
+   * Returns maximum number of disk erros tolerated.
+   * @return long.
+   */
+  long getMaxDiskErrors();
+
+  /**
+   * Returns tolerance percentage, the good enough value
+   * when we move data from one to disk to another.
+   * @return long.
+   */
+  long getTolerancePercent();
+
+  /**
+   * Returns max disk bandwidth that disk balancer will use.
+   * Expressed in MB/sec. For example, a value like 10
+   * indicates that disk balancer will only move 10 MB / sec
+   * while it is running.
+   * @return long.
+   */
+  long getBandwidth();
+
+
 }
