@@ -168,4 +168,8 @@ public interface RMNode {
       NodeHeartbeatResponse response);
   
   public List<Container> pullNewlyIncreasedContainers();
+
+  long getUntrackedTimeStamp();
+
+  void setUntrackedTimeStamp(long timer);
 }
