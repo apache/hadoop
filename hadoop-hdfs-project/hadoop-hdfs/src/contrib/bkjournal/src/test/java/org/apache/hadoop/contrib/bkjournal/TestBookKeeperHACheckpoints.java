@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.contrib.bkjournal;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -26,6 +28,9 @@ import org.apache.hadoop.hdfs.server.namenode.ha.TestStandbyCheckpoints;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+
+import java.net.BindException;
+import java.util.Random;
 
 /**
  * Runs the same tests as TestStandbyCheckpoints, but
@@ -39,6 +44,9 @@ public class TestBookKeeperHACheckpoints extends TestStandbyCheckpoints {
   private static BKJMUtil bkutil = null;
   static int numBookies = 3;
   static int journalCount = 0;
+  private final Random random = new Random();
+
+  private static final Log LOG = LogFactory.getLog(TestStandbyCheckpoints.class);
 
   @SuppressWarnings("rawtypes")
   @Override
@@ -49,22 +57,34 @@ public class TestBookKeeperHACheckpoints extends TestStandbyCheckpoints {
              BKJMUtil.createJournalURI("/checkpointing" + journalCount++)
              .toString());
     BKJMUtil.addJournalManagerDefinition(conf);
-    MiniDFSNNTopology topology = new MiniDFSNNTopology()
-      .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
-        .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(10001))
-        .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(10002)));
 
-    cluster = new MiniDFSCluster.Builder(conf)
-      .nnTopology(topology)
-      .numDataNodes(1)
-      .manageNameDfsSharedDirs(false)
-      .build();
-    cluster.waitActive();
+    int retryCount = 0;
+    while (true) {
+      try {
+        int basePort = 10060 + random.nextInt(100) * 2;
+        MiniDFSNNTopology topology = new MiniDFSNNTopology()
+          .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
+            .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(basePort))
+            .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(basePort + 1)));
 
-    setNNs();
-    fs = HATestUtil.configureFailoverFs(cluster, conf);
+        cluster = new MiniDFSCluster.Builder(conf)
+          .nnTopology(topology)
+          .numDataNodes(1)
+          .manageNameDfsSharedDirs(false)
+          .build();
+        cluster.waitActive();
 
-    cluster.transitionToActive(0);
+        setNNs();
+        fs = HATestUtil.configureFailoverFs(cluster, conf);
+
+        cluster.transitionToActive(0);
+        ++retryCount;
+        break;
+      } catch (BindException e) {
+        LOG.info("Set up MiniDFSCluster failed due to port conflicts, retry "
+            + retryCount + " times");
+      }
+    }
   }
 
   @BeforeClass
