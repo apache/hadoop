@@ -100,7 +100,11 @@ class MoveCommands {
 
     @Override
     protected void processPath(PathData src, PathData target) throws IOException {
-      if (!src.fs.getUri().equals(target.fs.getUri())) {
+      String srcUri = src.fs.getUri().getScheme() + "://" +
+          src.fs.getUri().getHost();
+      String dstUri = target.fs.getUri().getScheme() + "://" +
+          target.fs.getUri().getHost();
+      if (!srcUri.equals(dstUri)) {
         throw new PathIOException(src.toString(),
             "Does not match target filesystem");
       }
