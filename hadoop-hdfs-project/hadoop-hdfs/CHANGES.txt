@@ -155,6 +155,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-10178. Permanent write failures can happen if pipeline recoveries
     occur for the first packet (kihwal)
 
+    HDFS-9917. IBR accumulate more objects when SNN was down for sometime.
+    (Brahma Reddy Battula via vinayakumarb)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
