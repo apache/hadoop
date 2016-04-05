@@ -118,6 +118,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4773. Log aggregation performs extraneous filesystem operations when
     rolling log aggregation is disabled (Jun Gong via jlowe)
 
+    YARN-4915. Fix typo in YARN Secure Containers documentation
+    (Takashi Ohnishi via iwasakims)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
