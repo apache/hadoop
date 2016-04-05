@@ -239,13 +239,32 @@ public class Client {
    * 
    * @param conf Configuration
    * @return the timeout period in milliseconds. -1 if no timeout value is set
+   * @deprecated use {@link #getRpcTimeout(Configuration)} instead
    */
+  @Deprecated
   final public static int getTimeout(Configuration conf) {
+    int timeout = getRpcTimeout(conf);
+    if (timeout > 0)  {
+      return timeout;
+    }
     if (!conf.getBoolean(CommonConfigurationKeys.IPC_CLIENT_PING_KEY,
         CommonConfigurationKeys.IPC_CLIENT_PING_DEFAULT)) {
       return getPingInterval(conf);
     }
     return -1;
+  }
+
+  /**
+   * The time after which a RPC will timeout.
+   *
+   * @param conf Configuration
+   * @return the timeout period in milliseconds.
+   */
+  public static final int getRpcTimeout(Configuration conf) {
+    int timeout =
+        conf.getInt(CommonConfigurationKeys.IPC_CLIENT_RPC_TIMEOUT_KEY,
+            CommonConfigurationKeys.IPC_CLIENT_RPC_TIMEOUT_DEFAULT);
+    return (timeout < 0) ? 0 : timeout;
   }
   /**
    * set the connection timeout value in configuration
@@ -386,7 +405,7 @@ public class Client {
     private Socket socket = null;                 // connected socket
     private DataInputStream in;
     private DataOutputStream out;
-    private int rpcTimeout;
+    private final int rpcTimeout;
     private int maxIdleTime; //connections will be culled if it was idle for 
     //maxIdleTime msecs
     private final RetryPolicy connectionRetryPolicy;
@@ -394,8 +413,9 @@ public class Client {
     private int maxRetriesOnSocketTimeouts;
     private final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
     private final boolean tcpLowLatency; // if T then use low-delay QoS
-    private boolean doPing; //do we need to send ping message
-    private int pingInterval; // how often sends ping to the server in msecs
+    private final boolean doPing; //do we need to send ping message
+    private final int pingInterval; // how often sends ping to the server
+    private final int soTimeout; // used by ipc ping and rpc timeout
     private ByteArrayOutputStream pingRequest; // ping message
     
     // currently active calls
@@ -434,6 +454,14 @@ public class Client {
         pingHeader.writeDelimitedTo(pingRequest);
       }
       this.pingInterval = remoteId.getPingInterval();
+      if (rpcTimeout > 0) {
+        // effective rpc timeout is rounded up to multiple of pingInterval
+        // if pingInterval < rpcTimeout.
+        this.soTimeout = (doPing && pingInterval < rpcTimeout) ?
+            pingInterval : rpcTimeout;
+      } else {
+        this.soTimeout = pingInterval;
+      }
       this.serviceClass = serviceClass;
       if (LOG.isDebugEnabled()) {
         LOG.debug("The ping interval is " + this.pingInterval + " ms.");
@@ -484,12 +512,12 @@ public class Client {
 
       /* Process timeout exception
        * if the connection is not going to be closed or 
-       * is not configured to have a RPC timeout, send a ping.
-       * (if rpcTimeout is not set to be 0, then RPC should timeout.
-       * otherwise, throw the timeout exception.
+       * the RPC is not timed out yet, send a ping.
        */
-      private void handleTimeout(SocketTimeoutException e) throws IOException {
-        if (shouldCloseConnection.get() || !running.get() || rpcTimeout > 0) {
+      private void handleTimeout(SocketTimeoutException e, int waiting)
+          throws IOException {
+        if (shouldCloseConnection.get() || !running.get() ||
+            (0 < rpcTimeout && rpcTimeout <= waiting)) {
           throw e;
         } else {
           sendPing();
@@ -503,11 +531,13 @@ public class Client {
        */
       @Override
       public int read() throws IOException {
+        int waiting = 0;
         do {
           try {
             return super.read();
           } catch (SocketTimeoutException e) {
-            handleTimeout(e);
+            waiting += soTimeout;
+            handleTimeout(e, waiting);
           }
         } while (true);
       }
@@ -520,11 +550,13 @@ public class Client {
        */
       @Override
       public int read(byte[] buf, int off, int len) throws IOException {
+        int waiting = 0;
         do {
           try {
             return super.read(buf, off, len);
           } catch (SocketTimeoutException e) {
-            handleTimeout(e);
+            waiting += soTimeout;
+            handleTimeout(e, waiting);
           }
         } while (true);
       }
@@ -632,10 +664,7 @@ public class Client {
           }
           
           NetUtils.connect(this.socket, server, connectionTimeout);
-          if (rpcTimeout > 0) {
-            pingInterval = rpcTimeout;  // rpcTimeout overwrites pingInterval
-          }
-          this.socket.setSoTimeout(pingInterval);
+          this.socket.setSoTimeout(soTimeout);
           return;
         } catch (ConnectTimeoutException toe) {
           /* Check for an address change and update the local reference.

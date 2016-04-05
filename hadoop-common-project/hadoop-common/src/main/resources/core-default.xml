@@ -1054,7 +1054,7 @@
   <value>true</value>
   <description>Send a ping to the server when timeout on reading the response,
   if set to true. If no failure is detected, the client retries until at least
-  a byte is read.
+  a byte is read or the time given by ipc.client.rpc-timeout.ms is passed.
   </description>
 </property>
 
@@ -1071,10 +1071,9 @@
   <name>ipc.client.rpc-timeout.ms</name>
   <value>0</value>
   <description>Timeout on waiting response from server, in milliseconds.
-  Currently this timeout works only when ipc.client.ping is set to true
-  because it uses the same facilities with IPC ping.
-  The timeout overrides the ipc.ping.interval and client will throw exception
-  instead of sending ping when the interval is passed.
+  If ipc.client.ping is set to true and this rpc-timeout is greater than
+  the value of ipc.ping.interval, the effective value of the rpc-timeout is
+  rounded up to multiple of ipc.ping.interval.
   </description>
 </property>
 
