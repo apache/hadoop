@@ -258,4 +258,13 @@ class IncrementalBlockReportManager {
       }
     }
   }
+
+  void clearIBRs() {
+    pendingIBRs.clear();
+  }
+
+  @VisibleForTesting
+  int getPendingIBRSize() {
+    return pendingIBRs.size();
+  }
 }

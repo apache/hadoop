@@ -798,6 +798,11 @@ class BPServiceActor implements Runnable {
       // and re-register
       register(nsInfo);
       scheduler.scheduleHeartbeat();
+      // HDFS-9917,Standby NN IBR can be very huge if standby namenode is down
+      // for sometime.
+      if (state == HAServiceState.STANDBY) {
+        ibrManager.clearIBRs();
+      }
     }
   }
 
