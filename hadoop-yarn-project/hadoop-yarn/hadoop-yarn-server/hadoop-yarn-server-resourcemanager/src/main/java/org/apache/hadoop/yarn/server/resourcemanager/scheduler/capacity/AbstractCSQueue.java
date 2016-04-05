@@ -591,6 +591,9 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
     // ResourceUsage has its own lock, no addition lock needs here.
     queueUsage.incUsed(nodeLabel, resourceToInc);
+    CSQueueUtils.updateUsedCapacity(resourceCalculator,
+        labelManager.getResourceByLabel(nodeLabel, Resources.none()),
+        minimumAllocation, queueUsage, queueCapacities, nodeLabel);
     if (null != parent) {
       parent.incUsedResource(nodeLabel, resourceToInc, null);
     }
@@ -604,6 +607,9 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
     // ResourceUsage has its own lock, no addition lock needs here.
     queueUsage.decUsed(nodeLabel, resourceToDec);
+    CSQueueUtils.updateUsedCapacity(resourceCalculator,
+        labelManager.getResourceByLabel(nodeLabel, Resources.none()),
+        minimumAllocation, queueUsage, queueCapacities, nodeLabel);
     if (null != parent) {
       parent.decUsedResource(nodeLabel, resourceToDec, null);
     }
