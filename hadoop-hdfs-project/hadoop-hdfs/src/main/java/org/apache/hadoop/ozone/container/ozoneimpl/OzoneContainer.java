@@ -24,9 +24,11 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.impl.ChunkManagerImpl;
 import org.apache.hadoop.ozone.container.common.impl.ContainerManagerImpl;
 import org.apache.hadoop.ozone.container.common.impl.Dispatcher;
+import org.apache.hadoop.ozone.container.common.impl.KeyManagerImpl;
 import org.apache.hadoop.ozone.container.common.interfaces.ChunkManager;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
+import org.apache.hadoop.ozone.container.common.interfaces.KeyManager;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +53,7 @@ public class OzoneContainer {
   private final ContainerManager manager;
   private final XceiverServer server;
   private final ChunkManager chunkManager;
+  private final KeyManager keyManager;
 
   /**
    * Creates a network endpoint and enables Ozone container.
@@ -79,6 +82,9 @@ public class OzoneContainer {
     manager.init(this.ozoneConfig, locations, this.dataSet);
     this.chunkManager = new ChunkManagerImpl(manager);
     manager.setChunkManager(this.chunkManager);
+
+    this.keyManager = new KeyManagerImpl(manager, ozoneConfig);
+    manager.setKeyManager(this.keyManager);
 
     this.dispatcher = new Dispatcher(manager);
     server = new XceiverServer(this.ozoneConfig, this.dispatcher);

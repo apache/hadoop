@@ -170,9 +170,9 @@ public class ContainerData {
   }
 
   /**
-   * This function serves as the generic key for OzoneCache class. Both
+   * This function serves as the generic key for ContainerCache class. Both
    * ContainerData and ContainerKeyData overrides this function to appropriately
-   * return the right name that can  be used in OzoneCache.
+   * return the right name that can  be used in ContainerCache.
    *
    * @return String Name.
    */
