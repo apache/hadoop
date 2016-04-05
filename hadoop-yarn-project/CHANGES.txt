@@ -115,6 +115,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4183. Clarify the behavior of timeline service config properties
     (Naganarasimha G R via sjlee)
 
+    YARN-4773. Log aggregation performs extraneous filesystem operations when
+    rolling log aggregation is disabled (Jun Gong via jlowe)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES

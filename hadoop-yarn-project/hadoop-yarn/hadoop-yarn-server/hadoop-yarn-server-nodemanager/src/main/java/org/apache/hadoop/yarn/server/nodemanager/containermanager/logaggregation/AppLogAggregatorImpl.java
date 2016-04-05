@@ -284,7 +284,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
 
       // Before upload logs, make sure the number of existing logs
       // is smaller than the configured NM log aggregation retention size.
-      if (uploadedLogsInThisCycle) {
+      if (uploadedLogsInThisCycle && logAggregationInRolling) {
         cleanOldLogs();
       }
 
