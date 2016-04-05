@@ -180,7 +180,7 @@ class CSQueueUtils {
    * Update partitioned resource usage, if nodePartition == null, will update
    * used resource for all partitions of this queue.
    */
-  private static void updateUsedCapacity(final ResourceCalculator rc,
+  public static void updateUsedCapacity(final ResourceCalculator rc,
       final Resource totalPartitionResource, final Resource minimumAllocation,
       ResourceUsage queueResourceUsage, QueueCapacities queueCapacities,
       String nodePartition) {
