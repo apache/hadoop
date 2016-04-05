@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_STATE;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_LABEL;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_STATE;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
@@ -40,7 +40,6 @@ import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
@@ -101,6 +100,7 @@ class NodesPage extends RmView {
           LOG.debug("Unexpected state filter for inactive RM node");
         }
       }
+      StringBuilder nodeTableData = new StringBuilder("[\n");
       for (RMNode ni : rmNodes) {
         if (stateFilter != null) {
           NodeState state = ni.getState();
@@ -129,27 +129,40 @@ class NodesPage extends RmView {
         NodeInfo info = new NodeInfo(ni, sched);
         int usedMemory = (int) info.getUsedMemory();
         int availableMemory = (int) info.getAvailableMemory();
-        TR<TBODY<TABLE<Hamlet>>> row =
-            tbody.tr().td(StringUtils.join(",", info.getNodeLabels()))
-                .td(info.getRack()).td(info.getState()).td(info.getNodeId());
+        nodeTableData.append("[\"")
+            .append(StringUtils.join(",", info.getNodeLabels())).append("\",\"")
+            .append(info.getRack()).append("\",\"").append(info.getState())
+            .append("\",\"").append(info.getNodeId());
         if (isInactive) {
-          row.td()._("N/A")._();
+          nodeTableData.append("\",\"").append("N/A").append("\",\"");
         } else {
           String httpAddress = info.getNodeHTTPAddress();
-          row.td().a("//" + httpAddress, httpAddress)._();
+          nodeTableData.append("\",\"<a ").append("href='" + "//" + httpAddress)
+              .append("'>").append(httpAddress).append("</a>\",").append("\"");
         }
-        row.td().br().$title(String.valueOf(info.getLastHealthUpdate()))._()
-            ._(Times.format(info.getLastHealthUpdate()))._()
-            .td(info.getHealthReport())
-            .td(String.valueOf(info.getNumContainers())).td().br()
-            .$title(String.valueOf(usedMemory))._()
-            ._(StringUtils.byteDesc(usedMemory * BYTES_IN_MB))._().td().br()
-            .$title(String.valueOf(availableMemory))._()
-            ._(StringUtils.byteDesc(availableMemory * BYTES_IN_MB))._()
-            .td(String.valueOf(info.getUsedVirtualCores()))
-            .td(String.valueOf(info.getAvailableVirtualCores()))
-            .td(ni.getNodeManagerVersion())._();
+        nodeTableData.append("<br title='")
+            .append(String.valueOf(info.getLastHealthUpdate())).append("'>")
+            .append(Times.format(info.getLastHealthUpdate())).append("\",\"")
+            .append(info.getHealthReport()).append("\",\"")
+            .append(String.valueOf(info.getNumContainers())).append("\",\"")
+            .append("<br title='").append(String.valueOf(usedMemory))
+            .append("'>").append(StringUtils.byteDesc(usedMemory * BYTES_IN_MB))
+            .append("\",\"").append("<br title='")
+            .append(String.valueOf(availableMemory)).append("'>")
+            .append(StringUtils.byteDesc(availableMemory * BYTES_IN_MB))
+            .append("\",\"").append(String.valueOf(info.getUsedVirtualCores()))
+            .append("\",\"")
+            .append(String.valueOf(info.getAvailableVirtualCores()))
+            .append("\",\"").append(ni.getNodeManagerVersion())
+            .append("\"],\n");
       }
+      if (nodeTableData.charAt(nodeTableData.length() - 2) == ',') {
+        nodeTableData.delete(nodeTableData.length() - 2,
+            nodeTableData.length() - 1);
+      }
+      nodeTableData.append("]");
+      html.script().$type("text/javascript")
+          ._("var nodeTableData=" + nodeTableData)._();
       tbody._()._();
     }
   }
@@ -175,7 +188,9 @@ class NodesPage extends RmView {
   }
 
   private String nodesTableInit() {
-    StringBuilder b = tableInit().append(", aoColumnDefs: [");
+    StringBuilder b = tableInit().append(", 'aaData': nodeTableData")
+        .append(", bDeferRender: true").append(", bProcessing: true")
+        .append(", aoColumnDefs: [");
     b.append("{'bSearchable': false, 'aTargets': [ 7 ]}");
     b.append(", {'sType': 'title-numeric', 'bSearchable': false, "
         + "'aTargets': [ 8, 9 ] }");
