@@ -188,8 +188,7 @@ public class TestNMProxy extends BaseContainerManagerTest {
       Assert.fail("should get socket exception");
     } catch (IOException e) {
       // socket exception should be thrown immediately, without RPC retries.
-      Assert.assertTrue(e.toString().
-          contains("Failed on local exception: java.net.SocketException"));
+      Assert.assertTrue(e instanceof java.net.SocketException);
     }
   }
 
