@@ -22,6 +22,7 @@ import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
 import org.iq80.leveldb.Options;
+import org.iq80.leveldb.WriteOptions;
 
 import java.io.File;
 import java.io.IOException;
@@ -58,7 +59,9 @@ public class LevelDBStore {
    * @param value - value
    */
   public void put(byte[] key, byte[] value) {
-    db.put(key, value);
+    WriteOptions options = new WriteOptions();
+    options.sync(true);
+    db.put(key, value, options);
   }
 
   /**

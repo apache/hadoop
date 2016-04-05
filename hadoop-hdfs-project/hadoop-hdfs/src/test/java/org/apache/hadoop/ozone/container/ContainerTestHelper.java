@@ -20,8 +20,6 @@ package org.apache.hadoop.ozone.container;
 
 import com.google.protobuf.ByteString;
 import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.io.IOExceptionWithCause;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .ContainerCommandRequestProto;
@@ -31,11 +29,15 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.Pipeline;
+import org.apache.hadoop.ozone.container.common.helpers.KeyData;
+import org.junit.Assert;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 
@@ -231,7 +233,7 @@ public class ContainerTestHelper {
    * @return ContainerCommandRequestProto.
    */
   public static ContainerCommandResponseProto
-    getCreateContainerResponse(ContainerCommandRequestProto request) throws
+  getCreateContainerResponse(ContainerCommandRequestProto request) throws
       IOException {
     ContainerProtos.CreateContainerResponseProto.Builder createResponse =
         ContainerProtos.CreateContainerResponseProto.newBuilder();
@@ -244,4 +246,89 @@ public class ContainerTestHelper {
     response.setResult(ContainerProtos.Result.SUCCESS);
     return response.build();
   }
+
+  /**
+   * Returns the PutKeyRequest for test purpose.
+   *
+   * @param writeRequest - Write Chunk Request.
+   * @return - Request
+   */
+  public static ContainerCommandRequestProto getPutKeyRequest(
+      ContainerProtos.WriteChunkRequestProto writeRequest) {
+    ContainerProtos.PutKeyRequestProto.Builder putRequest =
+        ContainerProtos.PutKeyRequestProto.newBuilder();
+
+    putRequest.setPipeline(writeRequest.getPipeline());
+    KeyData keyData = new KeyData(writeRequest.getPipeline().getContainerName(),
+        writeRequest.getKeyName());
+    List<ContainerProtos.ChunkInfo> newList = new LinkedList<>();
+    newList.add(writeRequest.getChunkData());
+    keyData.setChunks(newList);
+    putRequest.setKeyData(keyData.getProtoBufMessage());
+
+    ContainerCommandRequestProto.Builder request =
+        ContainerCommandRequestProto.newBuilder();
+    request.setCmdType(ContainerProtos.Type.PutKey);
+    request.setPutKey(putRequest);
+    return request.build();
+  }
+
+  /**
+   * Gets a GetKeyRequest for test purpose.
+   *
+   * @param putKeyRequest - putKeyRequest.
+   * @return - Request
+   */
+  public static ContainerCommandRequestProto getKeyRequest(
+      ContainerProtos.PutKeyRequestProto putKeyRequest) {
+    ContainerProtos.GetKeyRequestProto.Builder getRequest =
+        ContainerProtos.GetKeyRequestProto.newBuilder();
+    ContainerProtos.KeyData.Builder keyData = ContainerProtos.KeyData
+        .newBuilder();
+    keyData.setContainerName(putKeyRequest.getPipeline().getContainerName());
+    keyData.setName(putKeyRequest.getKeyData().getName());
+    getRequest.setKeyData(keyData);
+    getRequest.setPipeline(putKeyRequest.getPipeline());
+
+    ContainerCommandRequestProto.Builder request =
+        ContainerCommandRequestProto.newBuilder();
+    request.setCmdType(ContainerProtos.Type.GetKey);
+    request.setGetKey(getRequest);
+    return request.build();
+  }
+
+  /**
+   *  Verify the response against the request.
+   * @param request  - Request
+   * @param response  - Response
+   */
+  public static void verifyGetKey(ContainerCommandRequestProto request,
+                             ContainerCommandResponseProto response) {
+    Assert.assertEquals(request.getTraceID(), response.getTraceID());
+    Assert.assertEquals(response.getResult(), ContainerProtos.Result.SUCCESS);
+    ContainerProtos.PutKeyRequestProto putKey = request.getPutKey();
+    ContainerProtos. GetKeyRequestProto getKey = request.getGetKey();
+    Assert.assertEquals(putKey.getKeyData().getChunksCount(),
+                        getKey.getKeyData().getChunksCount());
+  }
+
+
+  /**
+   *
+   * @param putKeyRequest - putKeyRequest.
+   * @return - Request
+   */
+  public static ContainerCommandRequestProto getDeleteKeyRequest(
+      ContainerProtos.PutKeyRequestProto putKeyRequest) {
+    ContainerProtos.DeleteKeyRequestProto.Builder delRequest =
+        ContainerProtos.DeleteKeyRequestProto.newBuilder();
+    delRequest.setPipeline(putKeyRequest.getPipeline());
+    delRequest.setName(putKeyRequest.getKeyData().getName());
+    ContainerCommandRequestProto.Builder request =
+        ContainerCommandRequestProto.newBuilder();
+    request.setCmdType(ContainerProtos.Type.DeleteKey);
+    request.setDeleteKey(delRequest);
+    return request.build();
+  }
+
 }

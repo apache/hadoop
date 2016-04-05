@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.container.common.impl;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
@@ -28,6 +29,7 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
+import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.container.common.utils.LevelDBStore;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
@@ -60,6 +62,7 @@ import static org.apache.hadoop.ozone.container.ContainerTestHelper.getChunk;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper.getData;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper
     .setDataChecksum;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.fail;
 
 /**
@@ -70,6 +73,7 @@ public class TestContainerPersistence {
   static String path;
   static ContainerManagerImpl containerManager;
   static ChunkManagerImpl chunkManager;
+  static KeyManagerImpl keyManager;
   static OzoneConfiguration conf;
   static FsDatasetSpi fsDataSet;
   static MiniDFSCluster cluster;
@@ -103,6 +107,8 @@ public class TestContainerPersistence {
     containerManager = new ContainerManagerImpl();
     chunkManager = new ChunkManagerImpl(containerManager);
     containerManager.setChunkManager(chunkManager);
+    keyManager = new KeyManagerImpl(containerManager, conf);
+    containerManager.setKeyManager(keyManager);
 
   }
 
@@ -176,9 +182,11 @@ public class TestContainerPersistence {
     ContainerData data = new ContainerData(containerName);
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner)", "bilbo");
-    containerManager.createContainer(createSingleNodePipeline(containerName), data);
+    containerManager.createContainer(createSingleNodePipeline(containerName),
+        data);
     try {
-      containerManager.createContainer(createSingleNodePipeline(containerName), data);
+      containerManager.createContainer(createSingleNodePipeline
+          (containerName), data);
       fail("Expected Exception not thrown.");
     } catch (IOException ex) {
       Assert.assertNotNull(ex);
@@ -194,12 +202,14 @@ public class TestContainerPersistence {
     ContainerData data = new ContainerData(containerName1);
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner)", "bilbo");
-    containerManager.createContainer(createSingleNodePipeline(containerName1), data);
+    containerManager.createContainer(createSingleNodePipeline(containerName1)
+        , data);
 
     data = new ContainerData(containerName2);
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner)", "bilbo");
-    containerManager.createContainer(createSingleNodePipeline(containerName2), data);
+    containerManager.createContainer(createSingleNodePipeline(containerName2)
+        , data);
 
 
     Assert.assertTrue(containerManager.getContainerMap()
@@ -218,7 +228,8 @@ public class TestContainerPersistence {
     data = new ContainerData(containerName1);
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner)", "bilbo");
-    containerManager.createContainer(createSingleNodePipeline(containerName1), data);
+    containerManager.createContainer(createSingleNodePipeline(containerName1)
+        , data);
 
     // Assert we still have both containers.
     Assert.assertTrue(containerManager.getContainerMap()
@@ -246,7 +257,8 @@ public class TestContainerPersistence {
       ContainerData data = new ContainerData(containerName);
       data.addMetadata("VOLUME", "shire");
       data.addMetadata("owner)", "bilbo");
-      containerManager.createContainer(createSingleNodePipeline(containerName), data);
+      containerManager.createContainer(createSingleNodePipeline
+          (containerName), data);
       testMap.put(containerName, data);
     }
 
@@ -271,19 +283,10 @@ public class TestContainerPersistence {
     Assert.assertTrue(testMap.isEmpty());
   }
 
-  /**
-   * Writes a single chunk.
-   *
-   * @throws IOException
-   * @throws NoSuchAlgorithmException
-   */
-  @Test
-  public void testWriteChunk() throws IOException, NoSuchAlgorithmException {
+  private ChunkInfo writeChunkHelper(String containerName, String keyName,
+                                     Pipeline pipeline) throws IOException,
+      NoSuchAlgorithmException {
     final int datalen = 1024;
-    String containerName = OzoneUtils.getRequestID();
-    String keyName = OzoneUtils.getRequestID();
-    Pipeline pipeline = createSingleNodePipeline(containerName);
-
     pipeline.setContainerName(containerName);
     ContainerData cData = new ContainerData(containerName);
     cData.addMetadata("VOLUME", "shire");
@@ -293,6 +296,23 @@ public class TestContainerPersistence {
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
     chunkManager.writeChunk(pipeline, keyName, info, data);
+    return info;
+
+  }
+
+  /**
+   * Writes a single chunk.
+   *
+   * @throws IOException
+   * @throws NoSuchAlgorithmException
+   */
+  @Test
+  public void testWriteChunk() throws IOException,
+      NoSuchAlgorithmException {
+    String containerName = OzoneUtils.getRequestID();
+    String keyName = OzoneUtils.getRequestID();
+    Pipeline pipeline = createSingleNodePipeline(containerName);
+    writeChunkHelper(containerName, keyName, pipeline);
   }
 
   /**
@@ -389,7 +409,7 @@ public class TestContainerPersistence {
     chunkManager.writeChunk(pipeline, keyName, info, data);
     try {
       chunkManager.writeChunk(pipeline, keyName, info, data);
-    } catch(IOException ex) {
+    } catch (IOException ex) {
       Assert.assertTrue(ex.getMessage().contains(
           "Rejecting write chunk request. OverWrite flag required."));
     }
@@ -469,4 +489,116 @@ public class TestContainerPersistence {
     exception.expectMessage("Unable to find the chunk file.");
     chunkManager.readChunk(pipeline, keyName, info);
   }
+
+  /**
+   * Tests a put key and read key.
+   *
+   * @throws IOException
+   * @throws NoSuchAlgorithmException
+   */
+  @Test
+  public void testPutKey() throws IOException, NoSuchAlgorithmException {
+    String containerName = OzoneUtils.getRequestID();
+    String keyName = OzoneUtils.getRequestID();
+    Pipeline pipeline = createSingleNodePipeline(containerName);
+    ChunkInfo info = writeChunkHelper(containerName, keyName, pipeline);
+    KeyData keyData = new KeyData(containerName, keyName);
+    List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
+    chunkList.add(info.getProtoBufMessage());
+    keyData.setChunks(chunkList);
+    keyManager.putKey(pipeline, keyData);
+    KeyData readKeyData = keyManager.getKey(keyData);
+    ChunkInfo readChunk =
+        ChunkInfo.getFromProtoBuf(readKeyData.getChunks().get(0));
+    Assert.assertEquals(info.getChecksum(), readChunk.getChecksum());
+  }
+
+  /**
+   * Tests a put key and read key.
+   *
+   * @throws IOException
+   * @throws NoSuchAlgorithmException
+   */
+  @Test
+  public void testPutKeyWithLotsOfChunks() throws IOException,
+      NoSuchAlgorithmException {
+    final int chunkCount = 1024;
+    final int datalen = 1024;
+    String containerName = OzoneUtils.getRequestID();
+    String keyName = OzoneUtils.getRequestID();
+    Pipeline pipeline = createSingleNodePipeline(containerName);
+    List<ChunkInfo> chunkList = new LinkedList<>();
+    ChunkInfo info = writeChunkHelper(containerName, keyName, pipeline);
+    chunkList.add(info);
+    for (int x = 1; x < chunkCount; x++) {
+      info = getChunk(keyName, x, x * datalen, datalen);
+      byte[] data = getData(datalen);
+      setDataChecksum(info, data);
+      chunkManager.writeChunk(pipeline, keyName, info, data);
+      chunkList.add(info);
+    }
+
+    KeyData keyData = new KeyData(containerName, keyName);
+    List<ContainerProtos.ChunkInfo> chunkProtoList = new LinkedList<>();
+    for (ChunkInfo i : chunkList) {
+      chunkProtoList.add(i.getProtoBufMessage());
+    }
+    keyData.setChunks(chunkProtoList);
+    keyManager.putKey(pipeline, keyData);
+    KeyData readKeyData = keyManager.getKey(keyData);
+    ChunkInfo lastChunk = chunkList.get(chunkList.size() - 1);
+    ChunkInfo readChunk =
+        ChunkInfo.getFromProtoBuf(readKeyData.getChunks().get(readKeyData
+            .getChunks().size() - 1));
+    Assert.assertEquals(lastChunk.getChecksum(), readChunk.getChecksum());
+  }
+
+  /**
+   * Deletes a key and tries to read it back.
+   *
+   * @throws IOException
+   * @throws NoSuchAlgorithmException
+   */
+  @Test
+  public void testDeleteKey() throws IOException, NoSuchAlgorithmException {
+    String containerName = OzoneUtils.getRequestID();
+    String keyName = OzoneUtils.getRequestID();
+    Pipeline pipeline = createSingleNodePipeline(containerName);
+    ChunkInfo info = writeChunkHelper(containerName, keyName, pipeline);
+    KeyData keyData = new KeyData(containerName, keyName);
+    List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
+    chunkList.add(info.getProtoBufMessage());
+    keyData.setChunks(chunkList);
+    keyManager.putKey(pipeline, keyData);
+    keyManager.deleteKey(pipeline, keyName);
+    exception.expect(IOException.class);
+    exception.expectMessage("Unable to find the key.");
+    keyManager.getKey(keyData);
+  }
+
+  /**
+   * Tries to Deletes a key twice.
+   *
+   * @throws IOException
+   * @throws NoSuchAlgorithmException
+   */
+  @Test
+  public void testDeleteKeyTwice() throws IOException,
+      NoSuchAlgorithmException {
+    String containerName = OzoneUtils.getRequestID();
+    String keyName = OzoneUtils.getRequestID();
+    Pipeline pipeline = createSingleNodePipeline(containerName);
+    ChunkInfo info = writeChunkHelper(containerName, keyName, pipeline);
+    KeyData keyData = new KeyData(containerName, keyName);
+    List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
+    chunkList.add(info.getProtoBufMessage());
+    keyData.setChunks(chunkList);
+    keyManager.putKey(pipeline, keyData);
+    keyManager.deleteKey(pipeline, keyName);
+    exception.expect(IOException.class);
+    exception.expectMessage("Unable to find the key.");
+    keyManager.deleteKey(pipeline, keyName);
+  }
+
+
 }

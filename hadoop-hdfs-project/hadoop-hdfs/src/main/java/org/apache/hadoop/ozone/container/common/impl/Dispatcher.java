@@ -20,13 +20,17 @@ package org.apache.hadoop.ozone.container.common.impl;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .ContainerCommandRequestProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .ContainerCommandResponseProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Type;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkUtils;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
+import org.apache.hadoop.ozone.container.common.helpers.KeyData;
+import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
 import org.apache.hadoop.ozone.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
@@ -69,6 +73,12 @@ public class Dispatcher implements ContainerDispatcher {
       return containerProcessHandler(msg);
     }
 
+    if ((cmdType == Type.PutKey) ||
+        (cmdType == Type.GetKey) ||
+        (cmdType == Type.DeleteKey) ||
+        (cmdType == Type.ListKey)) {
+      return keyProcessHandler(msg);
+    }
 
     if ((cmdType == Type.WriteChunk) ||
         (cmdType == Type.ReadChunk) ||
@@ -127,6 +137,48 @@ public class Dispatcher implements ContainerDispatcher {
   }
 
   /**
+   * Handles the all key related functionality.
+   *
+   * @param msg - command
+   * @return - response
+   * @throws IOException
+   */
+  private ContainerCommandResponseProto keyProcessHandler(
+      ContainerCommandRequestProto msg) throws IOException {
+    try {
+      switch (msg.getCmdType()) {
+      case PutKey:
+        return handlePutKey(msg);
+
+      case GetKey:
+        return handleGetKey(msg);
+
+      case DeleteKey:
+        return handleDeleteKey(msg);
+
+      case ListKey:
+        return ContainerUtils.unsupportedRequest(msg);
+
+      default:
+        return ContainerUtils.unsupportedRequest(msg);
+
+      }
+    } catch (IOException ex) {
+      LOG.warn("Container operation failed. " +
+              "Container: {} Operation: {}  trace ID: {} Error: {}",
+          msg.getCreateContainer().getContainerData().getName(),
+          msg.getCmdType().name(),
+          msg.getTraceID(),
+          ex.toString());
+
+      // TODO : Replace with finer error codes.
+      return ContainerUtils.getContainerResponse(msg,
+          ContainerProtos.Result.CONTAINER_INTERNAL_ERROR,
+          ex.toString()).build();
+    }
+  }
+
+  /**
    * Handles the all chunk related functionality.
    *
    * @param msg - command
@@ -136,7 +188,6 @@ public class Dispatcher implements ContainerDispatcher {
   private ContainerCommandResponseProto chunkProcessHandler(
       ContainerCommandRequestProto msg) throws IOException {
     try {
-
       switch (msg.getCmdType()) {
       case WriteChunk:
         return handleWriteChunk(msg);
@@ -325,6 +376,75 @@ public class Dispatcher implements ContainerDispatcher {
     this.containerManager.getChunkManager().deleteChunk(pipeline, keyName,
         chunkInfo);
     return ChunkUtils.getChunkResponse(msg);
+  }
+
+  /**
+   * Put Key handler.
+   *
+   * @param msg - Request.
+   * @return - Response.
+   * @throws IOException
+   */
+  private ContainerCommandResponseProto handlePutKey(
+      ContainerCommandRequestProto msg) throws IOException {
+    if(!msg.hasPutKey()){
+      LOG.debug("Malformed put key request. trace ID: {}",
+          msg.getTraceID());
+      return ContainerUtils.malformedRequest(msg);
+    }
+    Pipeline pipeline = Pipeline.getFromProtoBuf(msg.getPutKey().getPipeline());
+    Preconditions.checkNotNull(pipeline);
+    KeyData keyData = KeyData.getFromProtoBuf(msg.getPutKey().getKeyData());
+    Preconditions.checkNotNull(keyData);
+    this.containerManager.getKeyManager().putKey(pipeline, keyData);
+    return KeyUtils.getKeyResponse(msg);
+  }
+
+  /**
+   * Handle Get Key.
+   *
+   * @param msg - Request.
+   * @return - Response.
+   * @throws IOException
+   */
+  private ContainerCommandResponseProto handleGetKey(
+      ContainerCommandRequestProto msg) throws IOException {
+    if(!msg.hasGetKey()){
+      LOG.debug("Malformed get key request. trace ID: {}",
+          msg.getTraceID());
+      return ContainerUtils.malformedRequest(msg);
+    }
+    KeyData keyData = KeyData.getFromProtoBuf(msg.getGetKey().getKeyData());
+    Preconditions.checkNotNull(keyData);
+    KeyData responseData =
+        this.containerManager.getKeyManager().getKey(keyData);
+    return KeyUtils.getKeyDataResponse(msg, responseData);
+  }
+
+  /**
+   * Handle Delete Key.
+   *
+   * @param msg - Request.
+   * @return - Response.
+   * @throws IOException
+   */
+  private ContainerCommandResponseProto handleDeleteKey(
+      ContainerCommandRequestProto msg) throws IOException {
+    if(!msg.hasDeleteKey()){
+      LOG.debug("Malformed delete key request. trace ID: {}",
+          msg.getTraceID());
+      return ContainerUtils.malformedRequest(msg);
+    }
+
+    Pipeline pipeline =
+        Pipeline.getFromProtoBuf(msg.getDeleteKey().getPipeline());
+    Preconditions.checkNotNull(pipeline);
+    String keyName = msg.getDeleteKey().getName();
+    Preconditions.checkNotNull(keyName);
+    Preconditions.checkState(!keyName.isEmpty());
+
+    this.containerManager.getKeyManager().deleteKey(pipeline, keyName);
+    return KeyUtils.getKeyResponse(msg);
   }
 
 }

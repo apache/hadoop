@@ -54,6 +54,10 @@ public final class OzoneConfigKeys {
   public static final String DFS_OZONE_METADATA_DIRS =
       "dfs.ozone.metadata.dirs";
 
+  public static final String DFS_OZONE_KEY_CACHE = "dfs.ozone.key.cache.size";
+  public static final int DFS_OZONE_KEY_CACHE_DEFAULT = 1024;
+
+
 
   /**
    * There is no need to instantiate this class.

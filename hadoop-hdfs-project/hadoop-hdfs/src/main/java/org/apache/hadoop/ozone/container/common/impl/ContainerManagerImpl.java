@@ -33,6 +33,7 @@ import org.apache.hadoop.ozone.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.container.common.interfaces.ChunkManager;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerLocationManager;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
+import org.apache.hadoop.ozone.container.common.interfaces.KeyManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,6 +73,7 @@ public class ContainerManagerImpl implements ContainerManager {
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
   private ContainerLocationManager locationManager;
   private ChunkManager chunkManager;
+  private KeyManager keyManager;
 
   /**
    * Init call that sets up a container Manager.
@@ -462,6 +464,26 @@ public class ContainerManagerImpl implements ContainerManager {
 
   public ChunkManager getChunkManager() {
     return this.chunkManager;
+  }
+
+  /**
+   * Sets the Key Manager.
+   *
+   * @param keyManager - Key Manager.
+   */
+  @Override
+  public void setKeyManager(KeyManager keyManager) {
+    this.keyManager = keyManager;
+  }
+
+  /**
+   * Gets the Key Manager.
+   *
+   * @return KeyManager.
+   */
+  @Override
+  public KeyManager getKeyManager() {
+    return this.keyManager;
   }
 
   /**

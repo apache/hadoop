@@ -135,6 +135,29 @@ public class TestOzoneContainer {
     Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
     Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
 
+    // Put Key
+    ContainerProtos.ContainerCommandRequestProto putKeyRequest =
+        ContainerTestHelper.getPutKeyRequest(writeChunkRequest.getWriteChunk());
+
+    response = client.sendCommand(putKeyRequest);
+    Assert.assertNotNull(response);
+    Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
+    Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+
+    // Get Key
+    request = ContainerTestHelper.getKeyRequest(putKeyRequest.getPutKey());
+    response = client.sendCommand(request);
+    ContainerTestHelper.verifyGetKey(request, response);
+
+
+    // Delete Key
+    request =
+        ContainerTestHelper.getDeleteKeyRequest(putKeyRequest.getPutKey());
+    response = client.sendCommand(request);
+    Assert.assertNotNull(response);
+    Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
+    Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+
     //Delete Chunk
     request = ContainerTestHelper.getDeleteChunkRequest(writeChunkRequest
         .getWriteChunk());

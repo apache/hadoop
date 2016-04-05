@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 
-
 /**
  * Interface for container operations.
  */
@@ -41,9 +40,9 @@ public interface ContainerManager extends RwLock {
   /**
    * Init call that sets up a container Manager.
    *
-   * @param config  - Configuration.
+   * @param config        - Configuration.
    * @param containerDirs - List of Metadata Container locations.
-   * @param dataset - FSDataset.
+   * @param dataset       - FSDataset.
    * @throws IOException
    */
   void init(Configuration config, List<Path> containerDirs,
@@ -74,8 +73,8 @@ public interface ContainerManager extends RwLock {
    * As simple interface for container Iterations.
    *
    * @param prevKey - Starting KeyValue
-   * @param count - how many to return
-   * @param data  - Actual containerData
+   * @param count   - how many to return
+   * @param data    - Actual containerData
    * @throws IOException
    */
   void listContainer(String prevKey, long count, List<ContainerData> data)
@@ -99,15 +98,30 @@ public interface ContainerManager extends RwLock {
 
   /**
    * Sets the Chunk Manager.
+   *
    * @param chunkManager - ChunkManager.
    */
   void setChunkManager(ChunkManager chunkManager);
 
   /**
    * Gets the Chunk Manager.
-   * @return  ChunkManager.
+   *
+   * @return ChunkManager.
    */
   ChunkManager getChunkManager();
 
+  /**
+   * Sets the Key Manager.
+   *
+   * @param keyManager - Key Manager.
+   */
+  void setKeyManager(KeyManager keyManager);
+
+  /**
+   * Gets the Key Manager.
+   *
+   * @return KeyManager.
+   */
+  KeyManager getKeyManager();
 
 }
