@@ -310,7 +310,7 @@
   {#LiveNodes}
   <tr>
     <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{name} ({xferaddr})</td>
-    <td ng-value="{lastContact}">{#helper_relative_time value="{lastContact}"/}</td>
+    <td ng-value="{lastContact}">{lastContact}s</td>
     <td ng-value="{usedPercentage}">
       <div>
         <div style="display:inline-block; float: left; padding-right: 10px;">{capacity|fmt_bytes}</div>
