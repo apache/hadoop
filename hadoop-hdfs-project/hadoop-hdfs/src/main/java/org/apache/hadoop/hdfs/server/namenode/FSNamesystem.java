@@ -1141,6 +1141,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
     } finally {
       startingActiveService = false;
+      blockManager.checkSafeMode();
       writeUnlock();
     }
   }

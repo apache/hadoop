@@ -851,4 +851,39 @@ public class TestHASafeMode {
       cluster.shutdown();
     }
   }
+
+  @Test(timeout = 60000)
+  public void testSafeModeExitAfterTransition() throws Exception {
+    DFSTestUtil.createFile(fs, new Path("/test"), 5 * BLOCK_SIZE, (short) 3,
+        1L);
+    banner("Stopping standby");
+    cluster.shutdownNameNode(1);
+    DFSTestUtil.createFile(fs, new Path("/test2"), 3 * BLOCK_SIZE, (short) 3,
+        1L);
+    // Roll edit logs to be read by standby
+    nn0.getRpcServer().rollEditLog();
+    fs.delete(new Path("/test"), true);
+    // Wait till the blocks are deleted from all DNs
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return cluster.getNamesystem(0).getBlockManager()
+            .getPendingDeletionBlocksCount() == 0;
+      }
+    }, 1000, 10000);
+    restartStandby();
+    // Wait till all the datanodes are registered.
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return cluster.getNamesystem(1).getNumLiveDataNodes() == 3;
+      }
+    }, 1000, 10000);
+    cluster.triggerBlockReports();
+    NameNodeAdapter.abortEditLogs(nn0);
+    cluster.shutdownNameNode(0);
+    banner(nn1.getNamesystem().getSafemode());
+    cluster.transitionToActive(1);
+    assertSafeMode(nn1, 3, 3, 3, 0);
+  }
 }

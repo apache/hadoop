@@ -1787,7 +1787,7 @@ public class BlockManager implements BlockStatsMXBean {
     return bmSafeMode.leaveSafeMode(force);
   }
 
-  void checkSafeMode() {
+  public void checkSafeMode() {
     bmSafeMode.checkSafeMode();
   }
 
