@@ -100,6 +100,15 @@ public class ContainerMetrics implements MetricsSource {
   @Metric
   public MutableGaugeLong localizationDurationMs;
 
+  @Metric
+  public MutableGaugeLong startTime;
+
+  @Metric
+  public MutableGaugeLong finishTime;
+
+  @Metric
+  public MutableGaugeInt exitCode;
+
   static final MetricsInfo RECORD_INFO =
       info("ContainerResource", "Resource limit and usage by container");
 
@@ -275,6 +284,15 @@ public class ContainerMetrics implements MetricsSource {
       long localizationDuration) {
     this.launchDurationMs.set(launchDuration);
     this.localizationDurationMs.set(localizationDuration);
+  }
+
+  public void recordStartTime(long startTime) {
+    this.startTime.set(startTime);
+  }
+
+  public void recordFinishTimeAndExitCode(long finishTime, int exitCode) {
+    this.finishTime.set(finishTime);
+    this.exitCode.set(exitCode);
   }
 
   private synchronized void scheduleTimerTaskIfRequired() {
