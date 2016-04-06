@@ -66,6 +66,7 @@ public class TestBlockManagerSafeMode {
   private static final long BLOCK_THRESHOLD = (long)(BLOCK_TOTAL * THRESHOLD);
   private static final int EXTENSION = 1000; // 1 second
 
+  private FSNamesystem fsn;
   private BlockManager bm;
   private DatanodeManager dn;
   private BlockManagerSafeMode bmSafeMode;
@@ -90,7 +91,7 @@ public class TestBlockManagerSafeMode {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY,
         DATANODE_NUM);
 
-    FSNamesystem fsn = mock(FSNamesystem.class);
+    fsn = mock(FSNamesystem.class);
     doReturn(true).when(fsn).hasWriteLock();
     doReturn(true).when(fsn).hasReadLock();
     doReturn(true).when(fsn).isRunning();
@@ -163,6 +164,17 @@ public class TestBlockManagerSafeMode {
     setBlockSafe(BLOCK_THRESHOLD);
     bmSafeMode.checkSafeMode();
     assertEquals(BMSafeModeStatus.EXTENSION, getSafeModeStatus());
+
+    // should stay in PENDING_THRESHOLD during transitionToActive
+    doReturn(true).when(fsn).inTransitionToActive();
+    Whitebox.setInternalState(bmSafeMode, "extension", 0);
+    setSafeModeStatus(BMSafeModeStatus.PENDING_THRESHOLD);
+    setBlockSafe(BLOCK_THRESHOLD);
+    bmSafeMode.checkSafeMode();
+    assertEquals(BMSafeModeStatus.PENDING_THRESHOLD, getSafeModeStatus());
+    doReturn(false).when(fsn).inTransitionToActive();
+    bmSafeMode.checkSafeMode();
+    assertEquals(BMSafeModeStatus.OFF, getSafeModeStatus());
   }
 
   /**
