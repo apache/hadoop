@@ -24,12 +24,14 @@ import static org.apache.hadoop.yarn.webapp.YarnWebParams.WEB_UI_TYPE;
 
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
+import java.util.Map;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
@@ -143,6 +145,7 @@ public class AppBlock extends HtmlBlock {
           .append(" type: 'PUT',")
           .append(" url: '/ws/v1/cluster/apps/").append(aid).append("/state',")
           .append(" contentType: 'application/json',")
+          .append(getCSRFHeaderString(conf))
           .append(" data: '{\"state\":\"KILLED\"}',")
           .append(" dataType: 'json'")
           .append(" }).done(function(data){")
@@ -368,5 +371,22 @@ public class AppBlock extends HtmlBlock {
   // This will be overrided in RMAppBlock
   protected LogAggregationStatus getLogAggregationStatus() {
     return null;
+  }
+
+  public static String getCSRFHeaderString(Configuration conf) {
+    String ret = "";
+    if (conf.getBoolean(YarnConfiguration.RM_CSRF_ENABLED, false)) {
+      ret = " headers : { '";
+      Map<String, String> filterParams = RestCsrfPreventionFilter
+          .getFilterParams(conf, YarnConfiguration.RM_CSRF_PREFIX);
+      if (filterParams
+          .containsKey(RestCsrfPreventionFilter.CUSTOM_HEADER_PARAM)) {
+        ret += filterParams.get(RestCsrfPreventionFilter.CUSTOM_HEADER_PARAM);
+      } else {
+        ret += RestCsrfPreventionFilter.HEADER_DEFAULT;
+      }
+      ret += "' : 'null' },";
+    }
+    return ret;
   }
 }
