@@ -878,6 +878,9 @@ class BlockReceiver implements Closeable {
   }
   
   public void sendOOB() throws IOException, InterruptedException {
+    if (isDatanode) {
+      return;
+    }
     ((PacketResponder) responder.getRunnable()).sendOOBResponse(PipelineAck
         .getRestartOOBStatus());
   }

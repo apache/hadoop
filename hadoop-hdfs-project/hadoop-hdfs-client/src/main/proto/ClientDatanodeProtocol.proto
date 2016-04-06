@@ -139,6 +139,13 @@ message ShutdownDatanodeRequestProto {
 message ShutdownDatanodeResponseProto {
 }
 
+/** Tell datanode to evict active clients that are writing */
+message EvictWritersRequestProto {
+}
+
+message EvictWritersResponseProto {
+}
+
 /**
  * Ping datanode for liveness and quick info
  */
@@ -238,6 +245,9 @@ service ClientDatanodeProtocolService {
 
   rpc shutdownDatanode(ShutdownDatanodeRequestProto)
       returns(ShutdownDatanodeResponseProto);
+
+  rpc evictWriters(EvictWritersRequestProto)
+      returns(EvictWritersResponseProto);
 
   rpc getDatanodeInfo(GetDatanodeInfoRequestProto)
       returns(GetDatanodeInfoResponseProto);
