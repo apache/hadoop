@@ -62,7 +62,7 @@ public class RestCsrfPreventionFilter implements Filter {
   public static final String CUSTOM_METHODS_TO_IGNORE_PARAM =
       "methods-to-ignore";
   static final String  BROWSER_USER_AGENTS_DEFAULT = "^Mozilla.*,^Opera.*";
-  static final String HEADER_DEFAULT = "X-XSRF-HEADER";
+  public static final String HEADER_DEFAULT = "X-XSRF-HEADER";
   static final String  METHODS_TO_IGNORE_DEFAULT = "GET,OPTIONS,HEAD,TRACE";
   private String  headerName = HEADER_DEFAULT;
   private Set<String> methodsToIgnore = null;

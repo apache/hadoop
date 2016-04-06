@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionQueueCa
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionResourcesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.webapp.AppBlock;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
@@ -357,6 +358,7 @@ class CapacitySchedulerPage extends RmView {
           .append(" type: 'POST',")
           .append(" url: '/ws/v1/cluster/scheduler/logs',")
           .append(" contentType: 'text/plain',")
+          .append(AppBlock.getCSRFHeaderString(rm.getConfig()))
           .append(" data: 'time=' + timePeriod,")
           .append(" dataType: 'text'")
           .append(" }).done(function(data){")
