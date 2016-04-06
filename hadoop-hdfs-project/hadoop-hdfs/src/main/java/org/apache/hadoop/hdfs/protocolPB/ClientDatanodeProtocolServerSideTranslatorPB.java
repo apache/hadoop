@@ -25,6 +25,8 @@ import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.DeleteBlockPoolRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.DeleteBlockPoolResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.EvictWritersRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.EvictWritersResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetBalancerBandwidthRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetBalancerBandwidthResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetBlockLocalPathInfoRequestProto;
@@ -67,6 +69,8 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       StartReconfigurationResponseProto.newBuilder().build();
   private final static TriggerBlockReportResponseProto TRIGGER_BLOCK_REPORT_RESP =
       TriggerBlockReportResponseProto.newBuilder().build();
+  private final static EvictWritersResponseProto EVICT_WRITERS_RESP =
+      EvictWritersResponseProto.newBuilder().build();
   
   private final ClientDatanodeProtocol impl;
 
@@ -140,6 +144,17 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       throw new ServiceException(e);
     }
     return SHUTDOWN_DATANODE_RESP;
+  }
+
+  @Override
+  public EvictWritersResponseProto evictWriters(RpcController unused,
+      EvictWritersRequestProto request) throws ServiceException {
+    try {
+      impl.evictWriters();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return EVICT_WRITERS_RESP;
   }
 
   public GetDatanodeInfoResponseProto getDatanodeInfo(RpcController unused,

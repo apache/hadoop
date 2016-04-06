@@ -122,6 +122,13 @@ public interface ClientDatanodeProtocol {
   void shutdownDatanode(boolean forUpgrade) throws IOException;
 
   /**
+   * Evict clients that are writing to a datanode.
+   *
+   * @throws IOException
+   */
+  void evictWriters() throws IOException;
+
+  /**
    * Obtains datanode info
    *
    * @return software/config version and uptime of the datanode

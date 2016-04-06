@@ -271,6 +271,55 @@ public class TestClientProtocolForPipelineRecovery {
     }
   }
 
+  /**
+   * Test that the writer is kicked out of a node.
+   */
+  @Test
+  public void testEvictWriter() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes((int)3)
+          .build();
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
+      Path file = new Path("testEvictWriter.dat");
+      FSDataOutputStream out = fs.create(file, (short)2);
+      out.write(0x31);
+      out.hflush();
+
+      // get nodes in the pipeline
+      DFSOutputStream dfsOut = (DFSOutputStream)out.getWrappedStream();
+      DatanodeInfo[] nodes = dfsOut.getPipeline();
+      Assert.assertEquals(2, nodes.length);
+      String dnAddr = nodes[1].getIpcAddr(false);
+
+      // evict the writer from the second datanode and wait until
+      // the pipeline is rebuilt.
+      DFSAdmin dfsadmin = new DFSAdmin(conf);
+      final String[] args1 = {"-evictWriters", dnAddr };
+      Assert.assertEquals(0, dfsadmin.run(args1));
+      out.write(0x31);
+      out.hflush();
+
+      // get the new pipline and check the node is not in there.
+      nodes = dfsOut.getPipeline();
+      try {
+        Assert.assertTrue(nodes.length > 0 );
+        for (int i = 0; i < nodes.length; i++) {
+          Assert.assertFalse(dnAddr.equals(nodes[i].getIpcAddr(false)));
+        }
+      } finally {
+        out.close();
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   /** Test restart timeout */
   @Test
   public void testPipelineRecoveryOnRestartFailure() throws Exception {

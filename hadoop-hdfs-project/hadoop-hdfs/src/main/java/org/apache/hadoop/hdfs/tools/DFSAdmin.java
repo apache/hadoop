@@ -1090,6 +1090,10 @@ public class DFSAdmin extends FsShell {
         + "\tclients will timeout and ignore the datanode. In such case, the\n"
         + "\tfast start-up mode will also be disabled.\n";
 
+    String evictWriters = "-evictWriters <datanode_host:ipc_port>\n"
+        + "\tMake the datanode evict all clients that are writing a block.\n"
+        + "\tThis is useful if decommissioning is hung due to slow writers.\n";
+
     String getDatanodeInfo = "-getDatanodeInfo <datanode_host:ipc_port>\n"
         + "\tGet the information about the given datanode. This command can\n"
         + "\tbe used for checking if a datanode is alive.\n";
@@ -1159,6 +1163,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(disallowSnapshot);
     } else if ("shutdownDatanode".equalsIgnoreCase(cmd)) {
       System.out.println(shutdownDatanode);
+    } else if ("evictWriters".equalsIgnoreCase(cmd)) {
+      System.out.println(evictWriters);
     } else if ("getDatanodeInfo".equalsIgnoreCase(cmd)) {
       System.out.println(getDatanodeInfo);
     } else if ("help".equals(cmd)) {
@@ -1193,6 +1199,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(allowSnapshot);
       System.out.println(disallowSnapshot);
       System.out.println(shutdownDatanode);
+      System.out.println(evictWriters);
       System.out.println(getDatanodeInfo);
       System.out.println(triggerBlockReport);
       System.out.println(help);
@@ -2047,6 +2054,8 @@ public class DFSAdmin extends FsShell {
         exitCode = fetchImage(argv, i);
       } else if ("-shutdownDatanode".equals(cmd)) {
         exitCode = shutdownDatanode(argv, i);
+      } else if ("-evictWriters".equals(cmd)) {
+        exitCode = evictWriters(argv, i);
       } else if ("-getDatanodeInfo".equals(cmd)) {
         exitCode = getDatanodeInfo(argv, i);
       } else if ("-reconfig".equals(cmd)) {
@@ -2168,6 +2177,18 @@ public class DFSAdmin extends FsShell {
     }
     dnProxy.shutdownDatanode(upgrade);
     System.out.println("Submitted a shutdown request to datanode " + dn);
+    return 0;
+  }
+
+  private int evictWriters(String[] argv, int i) throws IOException {
+    final String dn = argv[i];
+    ClientDatanodeProtocol dnProxy = getDataNodeProxy(dn);
+    try {
+      dnProxy.evictWriters();
+      System.out.println("Requested writer eviction to datanode " + dn);
+    } catch (IOException ioe) {
+      return -1;
+    }
     return 0;
   }
 
