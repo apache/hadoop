@@ -523,7 +523,7 @@ public class TestDataNodeVolumeFailure {
                     "test-blockpoolid", block.getBlockId())).
       setBlockToken(lblock.getBlockToken()).
       setStartOffset(0).
-      setLength(-1).
+      setLength(0).
       setVerifyChecksum(true).
       setClientName("TestDataNodeVolumeFailure").
       setDatanodeInfo(datanode).

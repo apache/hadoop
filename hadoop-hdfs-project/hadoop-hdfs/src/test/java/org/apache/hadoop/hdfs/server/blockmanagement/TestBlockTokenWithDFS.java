@@ -158,7 +158,7 @@ public class TestBlockTokenWithDFS {
           setBlockToken(lblock.getBlockToken()).
           setInetSocketAddress(targetAddr).
           setStartOffset(0).
-          setLength(-1).
+          setLength(0).
           setVerifyChecksum(true).
           setClientName("TestBlockTokenWithDFS").
           setDatanodeInfo(nodes[0]).
