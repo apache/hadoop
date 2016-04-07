@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 
@@ -45,10 +46,10 @@ import org.mockito.internal.util.reflection.Whitebox;
  * This class tests the local file system via the FileSystem abstraction.
  */
 public class TestLocalFileSystem {
-  private static final String TEST_ROOT_DIR
-    = System.getProperty("test.build.data","build/test/data") + "/work-dir/localfs";
+  private static final File base =
+      GenericTestUtils.getTestDir("work-dir/localfs");
 
-  private final File base = new File(TEST_ROOT_DIR);
+  private static final String TEST_ROOT_DIR = base.getAbsolutePath();
   private final Path TEST_PATH = new Path(TEST_ROOT_DIR, "test-file");
   private Configuration conf;
   private LocalFileSystem fileSys;

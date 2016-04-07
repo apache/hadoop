@@ -24,6 +24,7 @@ import static org.junit.Assert.assertThat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -41,9 +42,8 @@ public class TestFsShellTouch {
     Configuration conf = new Configuration();
     shell = new FsShell(conf);
     lfs = FileSystem.getLocal(conf);
-    testRootDir = lfs.makeQualified(new Path(
-        System.getProperty("test.build.data","test/build/data"),
-        "testFsShell"));
+    testRootDir = lfs.makeQualified(
+        new Path(GenericTestUtils.getTempPath("testFsShell")));
 
     lfs.mkdirs(testRootDir);
     lfs.setWorkingDirectory(testRootDir);

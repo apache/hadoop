@@ -37,6 +37,7 @@ import java.util.zip.ZipEntry;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -45,8 +46,7 @@ import com.google.common.collect.Lists;
 
 public class TestApplicationClassLoader {
   
-  private static File testDir = new File(System.getProperty("test.build.data",
-          System.getProperty("java.io.tmpdir")), "appclassloader");
+  private static File testDir = GenericTestUtils.getTestDir("appclassloader");
   
   @Before
   public void setUp() {
