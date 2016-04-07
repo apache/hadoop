@@ -1744,19 +1744,24 @@ public class TestRecovery {
         expectedJobHistoryEvents.remove(0);
       }  else if (current instanceof JobCounterUpdateEvent) {
         JobCounterUpdateEvent jcue = (JobCounterUpdateEvent) current;
-
-        LOG.info("JobCounterUpdateEvent "
-            + jcue.getCounterUpdates().get(0).getCounterKey()
-            + " " + jcue.getCounterUpdates().get(0).getIncrementValue());
-        if (jcue.getCounterUpdates().get(0).getCounterKey() ==
-            JobCounter.NUM_FAILED_MAPS) {
-          totalFailedMaps += jcue.getCounterUpdates().get(0)
-              .getIncrementValue();
-        } else if (jcue.getCounterUpdates().get(0).getCounterKey() ==
-            JobCounter.TOTAL_LAUNCHED_MAPS) {
-          totalLaunchedMaps += jcue.getCounterUpdates().get(0)
-              .getIncrementValue();
+        boolean containsUpdates = jcue.getCounterUpdates().size() > 0;
+        // there is no updates in a JobCounterUpdateEvent emitted on
+        // TaskAttempt recovery. Check that first.
+        if(containsUpdates) {
+          LOG.info("JobCounterUpdateEvent "
+              + jcue.getCounterUpdates().get(0).getCounterKey()
+              + " " + jcue.getCounterUpdates().get(0).getIncrementValue());
+          if (jcue.getCounterUpdates().get(0).getCounterKey() ==
+              JobCounter.NUM_FAILED_MAPS) {
+            totalFailedMaps += jcue.getCounterUpdates().get(0)
+                .getIncrementValue();
+          } else if (jcue.getCounterUpdates().get(0).getCounterKey() ==
+              JobCounter.TOTAL_LAUNCHED_MAPS) {
+            totalLaunchedMaps += jcue.getCounterUpdates().get(0)
+                .getIncrementValue();
+          }
         }
+
       } else if (current instanceof JobTaskEvent) {
         JobTaskEvent jte = (JobTaskEvent) current;
         assertEquals(jte.getState(), finalState);

@@ -110,6 +110,10 @@ import org.junit.Assert;
 public class MRApp extends MRAppMaster {
   private static final Log LOG = LogFactory.getLog(MRApp.class);
 
+  /**
+   * The available resource of each container allocated.
+   */
+  private Resource resource;
   int maps;
   int reduces;
 
@@ -249,6 +253,7 @@ public class MRApp extends MRAppMaster {
     // the job can reaches the final state when MRAppMaster shuts down.
     this.successfullyUnregistered.set(unregistered);
     this.assignedQueue = assignedQueue;
+    this.resource = Resource.newInstance(1234, 2);
   }
 
   @Override
@@ -587,7 +592,6 @@ public class MRApp extends MRAppMaster {
             ContainerId.newContainerId(getContext().getApplicationAttemptId(),
               containerCount++);
         NodeId nodeId = NodeId.newInstance(NM_HOST, NM_PORT);
-        Resource resource = Resource.newInstance(1234, 2);
         ContainerTokenIdentifier containerTokenIdentifier =
             new ContainerTokenIdentifier(cId, nodeId.toString(), "user",
             resource, System.currentTimeMillis() + 10000, 42, 42,
@@ -708,6 +712,10 @@ public class MRApp extends MRAppMaster {
       throw new IllegalStateException(
           "ClusterInfo can only be set before the App is STARTED");
     }
+  }
+
+  public void setAllocatedContainerResource(Resource resource) {
+    this.resource = resource;
   }
 
   class TestJob extends JobImpl {
