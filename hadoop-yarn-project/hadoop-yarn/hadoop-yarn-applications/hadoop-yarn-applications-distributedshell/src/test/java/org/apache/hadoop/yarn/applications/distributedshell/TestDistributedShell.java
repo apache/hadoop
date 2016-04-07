@@ -372,13 +372,14 @@ public class TestDistributedShell {
     boolean verified = false;
     String errorMessage = "";
     ApplicationId appId = null;
+    ApplicationReport appReport = null;
     while(!verified) {
       List<ApplicationReport> apps = yarnClient.getApplications();
       if (apps.size() == 0 ) {
         Thread.sleep(10);
         continue;
       }
-      ApplicationReport appReport = apps.get(0);
+      appReport = apps.get(0);
       appId = appReport.getApplicationId();
       if(appReport.getHost().equals("N/A")) {
         Thread.sleep(10);
@@ -424,7 +425,7 @@ public class TestDistributedShell {
     if (!isTestingTimelineV2) {
       checkTimelineV1(haveDomain);
     } else {
-      checkTimelineV2(haveDomain, appId, defaultFlow);
+      checkTimelineV2(haveDomain, appId, defaultFlow, appReport);
     }
   }
 
@@ -481,7 +482,7 @@ public class TestDistributedShell {
   }
 
   private void checkTimelineV2(boolean haveDomain, ApplicationId appId,
-      boolean defaultFlow) throws Exception {
+      boolean defaultFlow, ApplicationReport appReport) throws Exception {
     LOG.info("Started checkTimelineV2 ");
     // For PoC check in /tmp/timeline_service_data YARN-3264
     String tmpRoot =
@@ -494,10 +495,13 @@ public class TestDistributedShell {
       String basePath = tmpRoot +
           YarnConfiguration.DEFAULT_RM_CLUSTER_ID + "/" +
           UserGroupInformation.getCurrentUser().getShortUserName() +
-          (defaultFlow ? "/" +
-              TimelineUtils.generateDefaultFlowNameBasedOnAppId(appId) +
-              "/1/1/" : "/test_flow_name/test_flow_version/12345678/") +
-              appId.toString();
+          (defaultFlow ?
+              "/" + appReport.getName() + "/" +
+                  TimelineUtils.DEFAULT_FLOW_VERSION +"/" +
+                  appReport.getStartTime() +"/" :
+              "/test_flow_name/test_flow_version/12345678/") +
+          appId.toString();
+      LOG.info("basePath: " + basePath);
       // for this test, we expect DS_APP_ATTEMPT AND DS_CONTAINER dirs
 
       // Verify DS_APP_ATTEMPT entities posted by the client

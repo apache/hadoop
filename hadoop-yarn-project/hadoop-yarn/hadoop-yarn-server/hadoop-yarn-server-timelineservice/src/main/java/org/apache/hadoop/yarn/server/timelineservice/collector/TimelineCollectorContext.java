@@ -19,12 +19,12 @@
 package org.apache.hadoop.yarn.server.timelineservice.collector;
 
 import org.apache.hadoop.yarn.server.timelineservice.TimelineContext;
+import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 /**
  * Encapsulates context information required by collector during a put.
  */
 public class TimelineCollectorContext extends TimelineContext {
-
   private String flowVersion;
 
   public TimelineCollectorContext() {
@@ -34,7 +34,8 @@ public class TimelineCollectorContext extends TimelineContext {
   public TimelineCollectorContext(String clusterId, String userId,
       String flowName, String flowVersion, Long flowRunId, String appId) {
     super(clusterId, userId, flowName, flowRunId, appId);
-    this.flowVersion = flowVersion;
+    this.flowVersion = flowVersion == null ?
+        TimelineUtils.DEFAULT_FLOW_VERSION : flowVersion;
   }
 
   @Override
