@@ -68,6 +68,8 @@ public final class OzoneConsts {
   public static final String FILE_HASH = "SHA-256";
   public final static String CHUNK_OVERWRITE = "OverWriteRequested";
 
+  public static final int CHUNK_SIZE = 1 * 1024 * 1024; // 1 MB
+
   /**
    * Supports Bucket Versioning.
    */

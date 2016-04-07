@@ -78,6 +78,16 @@ public class OzoneQuota {
   }
 
   /**
+   * Formats a quota as a string.
+   *
+   * @param quota the quota to format
+   * @return string representation of quota
+   */
+  public static String formatQuota(OzoneQuota quota) {
+    return String.valueOf(quota.size) + quota.unit;
+  }
+
+  /**
    * Parses a user provided string and returns the
    * Quota Object.
    *

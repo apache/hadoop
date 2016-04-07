@@ -169,7 +169,8 @@ public final class ChunkUtils {
               StandardOpenOption.SPARSE,
               StandardOpenOption.SYNC);
       lock = file.lock().get();
-      if (!chunkInfo.getChecksum().isEmpty()) {
+      if (chunkInfo.getChecksum() != null &&
+          !chunkInfo.getChecksum().isEmpty()) {
         verifyChecksum(chunkInfo, data, log);
       }
       int size = file.write(ByteBuffer.wrap(data), chunkInfo.getOffset()).get();

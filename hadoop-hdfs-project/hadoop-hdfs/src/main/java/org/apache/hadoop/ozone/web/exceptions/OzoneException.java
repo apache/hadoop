@@ -92,7 +92,7 @@ public class OzoneException extends Exception {
    */
   public OzoneException(long httpCode, String shortMessage, String message) {
     this.shortMessage = shortMessage;
-    this.resource = message;
+    this.message = message;
     this.httpCode = httpCode;
   }
 
