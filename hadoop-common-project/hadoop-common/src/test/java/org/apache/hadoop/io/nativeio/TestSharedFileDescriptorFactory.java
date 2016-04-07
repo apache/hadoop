@@ -31,12 +31,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.GenericTestUtils;
 
 public class TestSharedFileDescriptorFactory {
   static final Log LOG = LogFactory.getLog(TestSharedFileDescriptorFactory.class);
 
-  private static final File TEST_BASE =
-      new File(System.getProperty("test.build.data", "/tmp"));
+  private static final File TEST_BASE = GenericTestUtils.getTestDir();
 
   @Before
   public void setup() throws Exception {

@@ -18,6 +18,7 @@
 package org.apache.hadoop.security.ssl;
 
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -37,9 +38,8 @@ import static org.apache.hadoop.security.ssl.KeyStoreTestUtil.generateKeyPair;
 
 public class TestReloadingX509TrustManager {
 
-  private static final String BASEDIR =
-    System.getProperty("test.build.data", "target/test-dir") + "/" +
-    TestReloadingX509TrustManager.class.getSimpleName();
+  private static final String BASEDIR = GenericTestUtils.getTempPath(
+      TestReloadingX509TrustManager.class.getSimpleName());
 
   private X509Certificate cert1;
   private X509Certificate cert2;
