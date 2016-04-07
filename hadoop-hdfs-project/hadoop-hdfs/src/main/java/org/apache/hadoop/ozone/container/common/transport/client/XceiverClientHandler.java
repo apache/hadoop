@@ -94,7 +94,7 @@ public class XceiverClientHandler extends
     ContainerProtos.ContainerCommandResponseProto response;
     channel.writeAndFlush(request);
     boolean interrupted = false;
-    for (; ; ) {
+    for (;;) {
       try {
         response = responses.take();
         break;

@@ -174,9 +174,12 @@ public class OzoneBucket {
 
       InputStream is = new ByteArrayInputStream(data.getBytes(ENCODING));
       putRequest.setEntity(new InputStreamEntity(is, data.length()));
-      putRequest.setHeader(Header.CONTENT_MD5, DigestUtils.md5Hex(is));
-      putRequest
-          .setHeader(HttpHeaders.CONTENT_LENGTH, Long.toString(data.length()));
+      is.mark(data.length());
+      try {
+        putRequest.setHeader(Header.CONTENT_MD5, DigestUtils.md5Hex(is));
+      } finally {
+        is.reset();
+      }
       executePutKey(putRequest, httpClient);
 
     } catch (IOException | URISyntaxException ex) {

@@ -1846,16 +1846,6 @@ public class DataNode extends ReconfigurableBase
   public void shutdown() {
     stopMetricsLogger();
 
-    if(this.ozoneEnabled) {
-      if(ozoneServer != null) {
-        try {
-          ozoneServer.stop();
-        } catch (Exception e) {
-          LOG.error("Error is ozone shutdown. ex {}", e.toString());
-        }
-      }
-    }
-
     if (plugins != null) {
       for (ServicePlugin p : plugins) {
         try {
@@ -1911,6 +1901,21 @@ public class DataNode extends ReconfigurableBase
         httpServer.close();
       } catch (Exception e) {
         LOG.warn("Exception shutting down DataNode HttpServer", e);
+      }
+    }
+
+    // Stop the object store handler
+    if (this.objectStoreHandler != null) {
+      this.objectStoreHandler.close();
+    }
+
+    if(this.ozoneEnabled) {
+      if(ozoneServer != null) {
+        try {
+          ozoneServer.stop();
+        } catch (Exception e) {
+          LOG.error("Error is ozone shutdown. ex {}", e.toString());
+        }
       }
     }
 

@@ -127,7 +127,7 @@ public class Dispatcher implements ContainerDispatcher {
           msg.getCreateContainer().getContainerData().getName(),
           msg.getCmdType().name(),
           msg.getTraceID(),
-          ex.toString());
+          ex.toString(), ex);
 
       // TODO : Replace with finer error codes.
       return ContainerUtils.getContainerResponse(msg,
@@ -169,7 +169,7 @@ public class Dispatcher implements ContainerDispatcher {
           msg.getCreateContainer().getContainerData().getName(),
           msg.getCmdType().name(),
           msg.getTraceID(),
-          ex.toString());
+          ex.toString(), ex);
 
       // TODO : Replace with finer error codes.
       return ContainerUtils.getContainerResponse(msg,
@@ -210,7 +210,7 @@ public class Dispatcher implements ContainerDispatcher {
           msg.getCreateContainer().getContainerData().getName(),
           msg.getCmdType().name(),
           msg.getTraceID(),
-          ex.toString());
+          ex.toString(), ex);
 
       // TODO : Replace with finer error codes.
       return ContainerUtils.getContainerResponse(msg,

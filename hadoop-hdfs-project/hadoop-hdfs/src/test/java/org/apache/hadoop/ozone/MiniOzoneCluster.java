@@ -23,6 +23,10 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_STORAGE_RPC_ADDRESS_KE
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URISyntaxException;
+import java.util.Random;
+
+import com.google.common.base.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +41,8 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.ozone.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ozone.storage.StorageContainerManager;
+import org.apache.hadoop.ozone.web.client.OzoneClient;
+import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
 
@@ -52,6 +58,8 @@ public class MiniOzoneCluster extends MiniDFSCluster implements Closeable {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(MiniOzoneCluster.class);
+
+  private static final String USER_AUTH = "hdfs";
 
   private final OzoneConfiguration conf;
   private final StorageContainerManager scm;
@@ -126,6 +134,52 @@ public class MiniOzoneCluster extends MiniDFSCluster implements Closeable {
   }
 
   /**
+   * Creates an {@link OzoneClient} connected to this cluster's REST service.
+   * Callers take ownership of the client and must close it when done.
+   *
+   * @return OzoneClient connected to this cluster's REST service
+   * @throws OzoneException if Ozone encounters an error creating the client
+   */
+  public OzoneClient createOzoneClient() throws OzoneException {
+    Preconditions.checkState(!getDataNodes().isEmpty(),
+        "Cannot create OzoneClient if the cluster has no DataNodes.");
+    // An Ozone request may originate at any DataNode, so pick one at random.
+    int dnIndex = new Random().nextInt(getDataNodes().size());
+    String uri = String.format("http://127.0.0.1:%d",
+        getDataNodes().get(dnIndex).getInfoPort());
+    LOG.info("Creating Ozone client to DataNode {} with URI {} and user {}",
+        dnIndex, uri, USER_AUTH);
+    try {
+      return new OzoneClient(uri, USER_AUTH);
+    } catch (URISyntaxException e) {
+      // We control the REST service URI, so it should never be invalid.
+      throw new IllegalStateException("Unexpected URISyntaxException", e);
+    }
+  }
+
+  /**
+   * Creates an RPC proxy connected to this cluster's StorageContainerManager
+   * for accessing container location information.  Callers take ownership of
+   * the proxy and must close it when done.
+   *
+   * @return RPC proxy for accessing container location information
+   * @throws IOException if there is an I/O error
+   */
+  public StorageContainerLocationProtocolClientSideTranslatorPB
+      createStorageContainerLocationClient() throws IOException {
+    long version = RPC.getProtocolVersion(
+        StorageContainerLocationProtocolPB.class);
+    InetSocketAddress address = scm.getStorageContainerLocationRpcAddress();
+    LOG.info(
+        "Creating StorageContainerLocationProtocol RPC client with address {}",
+        address);
+    return new StorageContainerLocationProtocolClientSideTranslatorPB(
+        RPC.getProxy(StorageContainerLocationProtocolPB.class, version,
+        address, UserGroupInformation.getCurrentUser(), conf,
+        NetUtils.getDefaultSocketFactory(conf), Client.getTimeout(conf)));
+  }
+
+  /**
    * Waits for the Ozone cluster to be ready for processing requests.
    */
   public void waitOzoneReady() {
@@ -145,24 +199,5 @@ public class MiniOzoneCluster extends MiniDFSCluster implements Closeable {
             "Interrupted while waiting for Ozone cluster to become ready.");
       }
     }
-  }
-
-  /**
-   * Creates an RPC proxy connected to this cluster's StorageContainerManager
-   * for accessing container location information.  Callers take ownership of
-   * the proxy and must close it when done.
-   *
-   * @return RPC proxy for accessing container location information
-   * @throws IOException if there is an I/O error
-   */
-  protected StorageContainerLocationProtocolClientSideTranslatorPB
-      createStorageContainerLocationClient() throws IOException {
-    long version = RPC.getProtocolVersion(
-        StorageContainerLocationProtocolPB.class);
-    InetSocketAddress address = scm.getStorageContainerLocationRpcAddress();
-    return new StorageContainerLocationProtocolClientSideTranslatorPB(
-        RPC.getProxy(StorageContainerLocationProtocolPB.class, version,
-        address, UserGroupInformation.getCurrentUser(), conf,
-        NetUtils.getDefaultSocketFactory(conf), Client.getTimeout(conf)));
   }
 }
