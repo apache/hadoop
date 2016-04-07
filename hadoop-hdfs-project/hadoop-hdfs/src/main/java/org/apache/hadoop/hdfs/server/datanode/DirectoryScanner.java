@@ -902,8 +902,7 @@ public class DirectoryScanner implements Runnable {
             break;
           }
         }
-        verifyFileLocation(blockFile.getParentFile(), bpFinalizedDir,
-            blockId);
+        verifyFileLocation(blockFile, bpFinalizedDir, blockId);
         report.add(new ScanInfo(blockId, blockFile, metaFile, vol));
       }
       return report;
@@ -913,12 +912,15 @@ public class DirectoryScanner implements Runnable {
      * Verify whether the actual directory location of block file has the
      * expected directory path computed using its block ID.
      */
-    private void verifyFileLocation(File actualBlockDir,
+    private void verifyFileLocation(File actualBlockFile,
         File bpFinalizedDir, long blockId) {
       File blockDir = DatanodeUtil.idToBlockDir(bpFinalizedDir, blockId);
-      if (actualBlockDir.compareTo(blockDir) != 0) {
+      if (actualBlockFile.getParentFile().compareTo(blockDir) != 0) {
+        File expBlockFile = new File(blockDir, actualBlockFile.getName());
         LOG.warn("Block: " + blockId
-            + " has to be upgraded to block ID-based layout");
+            + " has to be upgraded to block ID-based layout. "
+            + "Actual block file path: " + actualBlockFile
+            + ", expected block file path: " + expBlockFile);
       }
     }
 
