@@ -39,7 +39,7 @@ All of the shell commands will accept a common set of options. For some commands
 | SHELL\_OPTION | Description |
 |:---- |:---- |
 | `--buildpaths` | Enables developer versions of jars. |
-| `--config confdir` | Overwrites the default Configuration directory. Default is `$HADOOP_PREFIX/etc/hadoop`. |
+| `--config confdir` | Overwrites the default Configuration directory. Default is `$HADOOP_HOME/etc/hadoop`. |
 | `--daemon mode` | If the command supports daemonization (e.g., `hdfs namenode`), execute in the appropriate mode. Supported modes are `start` to start the process in daemon mode, `stop` to stop the process, and `status` to determine the active status of the process. `status` will return an [LSB-compliant](http://refspecs.linuxbase.org/LSB_3.0.0/LSB-generic/LSB-generic/iniscrptact.html) result code. If no option is provided, commands that support daemonization will run in the foreground. For commands that do not support daemonization, this option is ignored. |
 | `--debug` | Enables shell level configuration debugging information |
 | `--help` | Shell script usage information. |

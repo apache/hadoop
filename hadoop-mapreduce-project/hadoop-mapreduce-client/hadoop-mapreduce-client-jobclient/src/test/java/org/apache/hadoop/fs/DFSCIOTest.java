@@ -28,8 +28,6 @@ import java.io.PrintStream;
 import java.util.Date;
 import java.util.StringTokenizer;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -39,8 +37,9 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.*;
 import org.junit.Ignore;
+import org.junit.Test;
 
-/**
+ /**
  * Distributed i/o benchmark.
  * <p>
  * This test writes into or reads from a specified number of files.
@@ -68,7 +67,7 @@ import org.junit.Ignore;
  * </ul>
  */
 @Ignore
-public class DFSCIOTest extends TestCase {
+public class DFSCIOTest {
   // Constants
   private static final Log LOG = LogFactory.getLog(DFSCIOTest.class);
   private static final int TEST_TYPE_READ = 0;
@@ -98,6 +97,7 @@ public class DFSCIOTest extends TestCase {
    * 
    * @throws Exception
    */
+  @Test
   public void testIOs() throws Exception {
     testIOs(10, 10);
   }
@@ -450,7 +450,7 @@ public class DFSCIOTest extends TestCase {
         }
 
         //Copy the executables over to the remote filesystem
-        String hadoopHome = System.getenv("HADOOP_PREFIX");
+        String hadoopHome = System.getenv("HADOOP_HOME");
         fs.copyFromLocalFile(new Path(hadoopHome + "/libhdfs/libhdfs.so." + HDFS_LIB_VERSION),
                              HDFS_SHLIB);
         fs.copyFromLocalFile(new Path(hadoopHome + "/libhdfs/hdfs_read"), HDFS_READ);

@@ -217,31 +217,46 @@ Start the ResourceManager
 Usage:
 
 ```
-  yarn rmadmin [-refreshQueues]
-               [-refreshNodes]
-               [-refreshUserToGroupsMapping] 
-               [-refreshSuperUserGroupsConfiguration]
-               [-refreshAdminAcls] 
-               [-refreshServiceAcl]
-               [-getGroups [username]]
-               [-transitionToActive [--forceactive] [--forcemanual] <serviceId>]
-               [-transitionToStandby [--forcemanual] <serviceId>]
-               [-failover [--forcefence] [--forceactive] <serviceId1> <serviceId2>]
-               [-getServiceState <serviceId>]
-               [-checkHealth <serviceId>]
-               [-help [cmd]]
+  Usage: yarn rmadmin
+     -refreshQueues
+     -refreshNodes [-g [timeout in seconds]]
+     -refreshNodesResources
+     -refreshSuperUserGroupsConfiguration
+     -refreshUserToGroupsMappings
+     -refreshAdminAcls
+     -refreshServiceAcl
+     -getGroups [username]
+     -addToClusterNodeLabels <"label1(exclusive=true),label2(exclusive=false),label3">
+     -removeFromClusterNodeLabels <label1,label2,label3> (label splitted by ",")
+     -replaceLabelsOnNode <"node1[:port]=label1,label2 node2[:port]=label1,label2">
+     -directlyAccessNodeLabelStore
+     -refreshClusterMaxPriority
+     -updateNodeResource [NodeID] [MemSize] [vCores] ([OvercommitTimeout])
+     -transitionToActive [--forceactive] <serviceId>
+     -transitionToStandby <serviceId>
+     -failover [--forcefence] [--forceactive] <serviceId> <serviceId>
+     -getServiceState <serviceId>
+     -checkHealth <serviceId>
+     -help [cmd]
 ```
 
 | COMMAND\_OPTIONS | Description |
 |:---- |:---- |
 | -refreshQueues | Reload the queues' acls, states and scheduler specific properties. ResourceManager will reload the mapred-queues configuration file. |
 | -refreshNodes | Refresh the hosts information at the ResourceManager. |
-| -refreshUserToGroupsMappings | Refresh user-to-groups mappings. |
+| -refreshNodesResources | Refresh resources of NodeManagers at the ResourceManager. |
 | -refreshSuperUserGroupsConfiguration | Refresh superuser proxy groups mappings. |
+| -refreshUserToGroupsMappings | Refresh user-to-groups mappings. |
 | -refreshAdminAcls | Refresh acls for administration of ResourceManager |
 | -refreshServiceAcl | Reload the service-level authorization policy file ResourceManager will reload the authorization policy file. |
 | -getGroups [username] | Get groups the specified user belongs to. |
-| -transitionToActive [--forceactive] [--forcemanual] \<serviceId\> | Transitions the service into Active state. Try to make the target active without checking that there is no active node if the --forceactive option is used. This command can not be used if automatic failover is enabled. Though you can override this by --forcemanual option, you need caution. |
+| -addToClusterNodeLabels <"label1(exclusive=true),label2(exclusive=false),label3"> | Add to cluster node labels. Default exclusivity is true. |
+| -removeFromClusterNodeLabels <label1,label2,label3> (label splitted by ",") | Remove from cluster node labels. |
+| -replaceLabelsOnNode <"node1[:port]=label1,label2 node2[:port]=label1,label2"> | Replace labels on nodes (please note that we do not support specifying multiple labels on a single host for now.) |
+| -directlyAccessNodeLabelStore | This is DEPRECATED, will be removed in future releases. Directly access node label store, with this option, all node label related operations will not connect RM. Instead, they will access/modify stored node labels directly. By default, it is false (access via RM). AND PLEASE NOTE: if you configured yarn.node-labels.fs-store.root-dir to a local directory (instead of NFS or HDFS), this option will only work when the command run on the machine where RM is running. |
+| -refreshClusterMaxPriority | Refresh cluster max priority |
+| -updateNodeResource [NodeID] [MemSize] [vCores] \([OvercommitTimeout]\) | Update resource on specific node. |
+| -transitionToActive [--forceactive] [--forcemanual] \<serviceId\> | Transitions the service into Active state. Try to make the target active without checking that there is no active node if the --forceactive option is used. This command can not be used if automatic failover is enabled. Though you can override this by --forcemanual option, you need caution. This command can not be used if automatic failover is enabled.|
 | -transitionToStandby [--forcemanual] \<serviceId\> | Transitions the service into Standby state. This command can not be used if automatic failover is enabled. Though you can override this by --forcemanual option, you need caution. |
 | -failover [--forceactive] \<serviceId1\> \<serviceId2\> | Initiate a failover from serviceId1 to serviceId2. Try to failover to the target service even if it is not ready if the --forceactive option is used. This command can not be used if automatic failover is enabled. |
 | -getServiceState \<serviceId\> | Returns the state of the service. |

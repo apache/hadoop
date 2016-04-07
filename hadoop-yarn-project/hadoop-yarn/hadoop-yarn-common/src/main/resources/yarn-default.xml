@@ -1816,8 +1816,12 @@
   </property>
 
   <property>
-    <description>Indicate to clients whether timeline service is enabled or not.
-    If enabled, clients will put entities and events to the timeline server.
+    <description>
+    In the server side it indicates whether timeline service is enabled or not.
+    And in the client side, users can enable it to indicate whether client wants
+    to use timeline service. If it's enabled in the client side along with
+    security, then yarn client tries to fetch the delegation tokens for the
+    timeline server.
     </description>
     <name>yarn.timeline-service.enabled</name>
     <value>false</value>
@@ -1969,7 +1973,10 @@
   </property>
 
   <property>
-    <description>Client policy for whether timeline operations are non-fatal</description>
+    <description>Client policy for whether timeline operations are non-fatal.
+    Should the failure to obtain a delegation token be considered an application
+    failure (option = false),  or should the client attempt to continue to
+    publish information without it (option=true)</description>
     <name>yarn.timeline-service.client.best-effort</name>
     <value>false</value>
   </property>
@@ -2714,5 +2721,18 @@
     </description>
     <name>yarn.timeline-service.webapp.rest-csrf.methods-to-ignore</name>
     <value>GET,OPTIONS,HEAD</value>
+  </property>
+
+  <property>
+    <description>
+    The least amount of time(msec.) an inactive (decommissioned or shutdown) node can
+    stay in the nodes list of the resourcemanager after being declared untracked.
+    A node is marked untracked if and only if it is absent from both include and
+    exclude nodemanager lists on the RM. All inactive nodes are checked twice per
+    timeout interval or every 10 minutes, whichever is lesser, and marked appropriately.
+    The same is done when refreshNodes command (graceful or otherwise) is invoked.
+    </description>
+    <name>yarn.resourcemanager.node-removal-untracked.timeout-ms</name>
+    <value>60000</value>
   </property>
 </configuration>

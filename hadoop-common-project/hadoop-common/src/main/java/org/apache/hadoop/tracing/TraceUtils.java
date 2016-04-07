@@ -32,7 +32,7 @@ import org.apache.htrace.core.HTraceConfiguration;
 @InterfaceAudience.Private
 public class TraceUtils {
   private static List<ConfigurationPair> EMPTY = Collections.emptyList();
-  static final String DEFAULT_HADOOP_PREFIX = "hadoop.htrace.";
+  static final String DEFAULT_HADOOP_TRACE_PREFIX = "hadoop.htrace.";
 
   public static HTraceConfiguration wrapHadoopConf(final String prefix,
         final Configuration conf) {
@@ -52,7 +52,7 @@ public class TraceUtils {
         if (ret != null) {
           return ret;
         }
-        return getInternal(DEFAULT_HADOOP_PREFIX  + key);
+        return getInternal(DEFAULT_HADOOP_TRACE_PREFIX  + key);
       }
 
       @Override

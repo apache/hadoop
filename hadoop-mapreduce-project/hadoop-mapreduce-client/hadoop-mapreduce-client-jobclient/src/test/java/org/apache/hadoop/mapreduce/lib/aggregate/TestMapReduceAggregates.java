@@ -18,22 +18,24 @@
 package org.apache.hadoop.mapreduce.lib.aggregate;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapred.Utils;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.junit.Test;
 
-import junit.framework.TestCase;
-import java.io.*;
 import java.text.NumberFormat;
 
-public class TestMapReduceAggregates extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+public class TestMapReduceAggregates {
 
   private static NumberFormat idFormat = NumberFormat.getInstance();
     static {
@@ -41,7 +43,7 @@ public class TestMapReduceAggregates extends TestCase {
       idFormat.setGroupingUsed(false);
   }
 
-
+  @Test
   public void testAggregates() throws Exception {
     launch();
   }
@@ -51,8 +53,9 @@ public class TestMapReduceAggregates extends TestCase {
     FileSystem fs = FileSystem.get(conf);
     int numOfInputLines = 20;
 
-    Path OUTPUT_DIR = new Path("build/test/output_for_aggregates_test");
-    Path INPUT_DIR = new Path("build/test/input_for_aggregates_test");
+    String baseDir = System.getProperty("test.build.data", "build/test/data");
+    Path OUTPUT_DIR = new Path(baseDir + "/output_for_aggregates_test");
+    Path INPUT_DIR = new Path(baseDir + "/input_for_aggregates_test");
     String inputFile = "input.txt";
     fs.delete(INPUT_DIR, true);
     fs.mkdirs(INPUT_DIR);
@@ -121,12 +124,5 @@ public class TestMapReduceAggregates extends TestCase {
     assertEquals(expectedOutput.toString(),outdata);
     fs.delete(OUTPUT_DIR, true);
     fs.delete(INPUT_DIR, true);
-  }
-  
-  /**
-   * Launches all the tasks in order.
-   */
-  public static void main(String[] argv) throws Exception {
-    launch();
   }
 }

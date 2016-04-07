@@ -78,6 +78,12 @@ static const char* load_functions() {
 
 void load_erasurecode_lib(char* err, size_t err_len) {
   const char* errMsg;
+  const char* library = NULL;
+#ifdef UNIX
+  Dl_info dl_info;
+#else
+  LPTSTR filename = NULL;
+#endif
 
   err[0] = '\0';
 
@@ -111,6 +117,22 @@ void load_erasurecode_lib(char* err, size_t err_len) {
   if (errMsg != NULL) {
     snprintf(err, err_len, "Loading functions from ISA-L failed: %s", errMsg);
   }
+
+#ifdef UNIX
+  if(dladdr(isaLoader->ec_encode_data, &dl_info)) {
+    library = dl_info.dli_fname;
+  }
+#else
+  if (GetModuleFileName(isaLoader->libec, filename, 256) > 0) {
+    library = filename;
+  }
+#endif
+
+  if (library == NULL) {
+    library = HADOOP_ISAL_LIBRARY;
+  }
+
+  isaLoader->libname = strdup(library);
 }
 
 int build_support_erasurecode() {
@@ -119,30 +141,4 @@ int build_support_erasurecode() {
 #else
   return 0;
 #endif
-}
-
-const char* get_library_name() {
-#ifdef UNIX
-  Dl_info dl_info;
-
-  if (isaLoader->ec_encode_data == NULL) {
-    return HADOOP_ISAL_LIBRARY;
-  }
-
-  if(dladdr(isaLoader->ec_encode_data, &dl_info)) {
-    return dl_info.dli_fname;
-  }
-#else
-  LPTSTR filename = NULL;
-
-  if (isaLoader->libec == NULL) {
-    return HADOOP_ISAL_LIBRARY;
-  }
-
-  if (GetModuleFileName(isaLoader->libec, filename, 256) > 0) {
-    return filename;
-  }
-#endif
-
-  return NULL;
 }

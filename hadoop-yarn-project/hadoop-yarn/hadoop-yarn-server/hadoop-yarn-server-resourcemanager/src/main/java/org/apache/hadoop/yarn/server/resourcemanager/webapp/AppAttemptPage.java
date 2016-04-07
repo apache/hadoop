@@ -41,8 +41,10 @@ public class AppAttemptPage extends RmView {
           : join("Application Attempt ",
             $(YarnWebParams.APPLICATION_ATTEMPT_ID)));
 
-    set(DATATABLES_ID, "containers");
+    set(DATATABLES_ID, "containers resourceRequests");
     set(initID(DATATABLES, "containers"), WebPageUtils.containersTableInit());
+    set(initID(DATATABLES, "resourceRequests"),
+        WebPageUtils.resourceRequestsTableInit());
     setTableStyles(html, "containers", ".queue {width:6em}", ".ui {width:8em}");
 
     set(YarnWebParams.WEB_UI_TYPE, YarnWebParams.RM_WEB_UI);

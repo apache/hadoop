@@ -92,7 +92,7 @@ public class TestRefreshCallQueue {
 
   @SuppressWarnings("serial")
   public static class MockCallQueue<E> extends LinkedBlockingQueue<E> {
-    public MockCallQueue(int cap, String ns, Configuration conf) {
+    public MockCallQueue(int levels, int cap, String ns, Configuration conf) {
       super(cap);
       mockQueueConstructions++;
     }

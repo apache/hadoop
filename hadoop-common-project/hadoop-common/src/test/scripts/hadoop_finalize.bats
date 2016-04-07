@@ -100,7 +100,7 @@ load hadoop-functions_test_helper
   hadoop_finalize_hadoop_heap () { true; }
   hadoop_finalize_hadoop_opts () { true; }
   hadoop_translate_cygwin_path () {
-    if [ $1 = HADOOP_PREFIX ]; then
+    if [ $1 = HADOOP_HOME ]; then
       testvar=prefix;
     fi
   }

@@ -36,6 +36,7 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.HostsFileReader;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -68,6 +69,8 @@ public class NodesListManager extends CompositeService implements
   private String excludesFile;
 
   private Resolver resolver;
+  private Timer removalTimer;
+  private int nodeRemovalCheckInterval;
 
   public NodesListManager(RMContext rmContext) {
     super(NodesListManager.class.getName());
@@ -105,7 +108,54 @@ public class NodesListManager extends CompositeService implements
     } catch (IOException ioe) {
       disableHostsFileReader(ioe);
     }
+
+    final int nodeRemovalTimeout =
+        conf.getInt(
+            YarnConfiguration.RM_NODEMANAGER_UNTRACKED_REMOVAL_TIMEOUT_MSEC,
+            YarnConfiguration.
+                DEFAULT_RM_NODEMANAGER_UNTRACKED_REMOVAL_TIMEOUT_MSEC);
+    nodeRemovalCheckInterval = (Math.min(nodeRemovalTimeout/2,
+        600000));
+    removalTimer = new Timer("Node Removal Timer");
+
+    removalTimer.schedule(new TimerTask() {
+      @Override
+      public void run() {
+        long now = Time.monotonicNow();
+        for (Map.Entry<NodeId, RMNode> entry :
+            rmContext.getInactiveRMNodes().entrySet()) {
+          NodeId nodeId = entry.getKey();
+          RMNode rmNode = entry.getValue();
+          if (isUntrackedNode(rmNode.getHostName())) {
+            if (rmNode.getUntrackedTimeStamp() == 0) {
+              rmNode.setUntrackedTimeStamp(now);
+            } else if (now - rmNode.getUntrackedTimeStamp() >
+                  nodeRemovalTimeout) {
+              RMNode result = rmContext.getInactiveRMNodes().remove(nodeId);
+              if (result != null) {
+                ClusterMetrics clusterMetrics = ClusterMetrics.getMetrics();
+                if (rmNode.getState() == NodeState.SHUTDOWN) {
+                  clusterMetrics.decrNumShutdownNMs();
+                } else {
+                  clusterMetrics.decrDecommisionedNMs();
+                }
+                LOG.info("Removed "+result.getHostName() +
+                    " from inactive nodes list");
+              }
+            }
+          } else {
+            rmNode.setUntrackedTimeStamp(0);
+          }
+        }
+      }
+    }, nodeRemovalCheckInterval, nodeRemovalCheckInterval);
+
     super.serviceInit(conf);
+  }
+
+  @Override
+  public void serviceStop() {
+    removalTimer.cancel();
   }
 
   private void printConfiguredHosts() {
@@ -131,10 +181,13 @@ public class NodesListManager extends CompositeService implements
 
     for (NodeId nodeId: rmContext.getRMNodes().keySet()) {
       if (!isValidNode(nodeId.getHost())) {
+        RMNodeEventType nodeEventType = isUntrackedNode(nodeId.getHost()) ?
+            RMNodeEventType.SHUTDOWN : RMNodeEventType.DECOMMISSION;
         this.rmContext.getDispatcher().getEventHandler().handle(
-            new RMNodeEvent(nodeId, RMNodeEventType.DECOMMISSION));
+            new RMNodeEvent(nodeId, nodeEventType));
       }
     }
+    updateInactiveNodes();
   }
 
   private void refreshHostsReader(Configuration yarnConf) throws IOException,
@@ -169,6 +222,16 @@ public class NodesListManager extends CompositeService implements
       rmContext.getInactiveRMNodes().put(nodeId, rmNode);
       rmNode.handle(new RMNodeEvent(nodeId, RMNodeEventType.DECOMMISSION));
     }
+  }
+
+  @VisibleForTesting
+  public int getNodeRemovalCheckInterval() {
+    return nodeRemovalCheckInterval;
+  }
+
+  @VisibleForTesting
+  public void setNodeRemovalCheckInterval(int interval) {
+    this.nodeRemovalCheckInterval = interval;
   }
 
   @VisibleForTesting
@@ -374,6 +437,33 @@ public class NodesListManager extends CompositeService implements
     return hostsReader;
   }
 
+  private void updateInactiveNodes() {
+    long now = Time.monotonicNow();
+    for(Entry<NodeId, RMNode> entry :
+        rmContext.getInactiveRMNodes().entrySet()) {
+      NodeId nodeId = entry.getKey();
+      RMNode rmNode = entry.getValue();
+      if (isUntrackedNode(nodeId.getHost()) &&
+          rmNode.getUntrackedTimeStamp() == 0) {
+        rmNode.setUntrackedTimeStamp(now);
+      }
+    }
+  }
+
+  public boolean isUntrackedNode(String hostName) {
+    boolean untracked;
+    String ip = resolver.resolve(hostName);
+
+    synchronized (hostsReader) {
+      Set<String> hostsList = hostsReader.getHosts();
+      Set<String> excludeList = hostsReader.getExcludedHosts();
+      untracked = !hostsList.isEmpty() &&
+          !hostsList.contains(hostName) && !hostsList.contains(ip) &&
+          !excludeList.contains(hostName) && !excludeList.contains(ip);
+    }
+    return untracked;
+  }
+
   /**
    * Refresh the nodes gracefully
    *
@@ -384,11 +474,13 @@ public class NodesListManager extends CompositeService implements
   public void refreshNodesGracefully(Configuration conf) throws IOException,
       YarnException {
     refreshHostsReader(conf);
-    for (Entry<NodeId, RMNode> entry:rmContext.getRMNodes().entrySet()) {
+    for (Entry<NodeId, RMNode> entry : rmContext.getRMNodes().entrySet()) {
       NodeId nodeId = entry.getKey();
       if (!isValidNode(nodeId.getHost())) {
+        RMNodeEventType nodeEventType = isUntrackedNode(nodeId.getHost()) ?
+            RMNodeEventType.SHUTDOWN : RMNodeEventType.GRACEFUL_DECOMMISSION;
         this.rmContext.getDispatcher().getEventHandler().handle(
-            new RMNodeEvent(nodeId, RMNodeEventType.GRACEFUL_DECOMMISSION));
+            new RMNodeEvent(nodeId, nodeEventType));
       } else {
         // Recommissioning the nodes
         if (entry.getValue().getState() == NodeState.DECOMMISSIONING) {
@@ -397,6 +489,7 @@ public class NodesListManager extends CompositeService implements
         }
       }
     }
+    updateInactiveNodes();
   }
 
   /**
@@ -420,8 +513,11 @@ public class NodesListManager extends CompositeService implements
   public void refreshNodesForcefully() {
     for (Entry<NodeId, RMNode> entry : rmContext.getRMNodes().entrySet()) {
       if (entry.getValue().getState() == NodeState.DECOMMISSIONING) {
+        RMNodeEventType nodeEventType =
+            isUntrackedNode(entry.getKey().getHost()) ?
+            RMNodeEventType.SHUTDOWN : RMNodeEventType.DECOMMISSION;
         this.rmContext.getDispatcher().getEventHandler().handle(
-            new RMNodeEvent(entry.getKey(), RMNodeEventType.DECOMMISSION));
+            new RMNodeEvent(entry.getKey(), nodeEventType));
       }
     }
   }

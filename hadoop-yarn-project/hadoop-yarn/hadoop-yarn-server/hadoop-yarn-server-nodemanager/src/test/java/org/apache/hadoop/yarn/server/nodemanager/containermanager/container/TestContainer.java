@@ -85,6 +85,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEventType;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
@@ -333,6 +334,7 @@ public class TestContainer {
   @Test
   public void testKillOnNew() throws Exception {
     WrappedContainer wc = null;
+
     try {
       wc = new WrappedContainer(13, 314159265358979L, 4344, "yak");
       assertEquals(ContainerState.NEW, wc.c.getContainerState());
@@ -345,6 +347,15 @@ public class TestContainer {
       assertTrue(wc.c.cloneAndGetContainerStatus().getDiagnostics()
           .contains("KillRequest"));
       assertEquals(killed + 1, metrics.getKilledContainers());
+      // check container metrics is generated.
+      ContainerMetrics containerMetrics =
+          ContainerMetrics.forContainer(wc.cId, 1, 5000);
+      Assert.assertEquals(ContainerExitStatus.KILLED_BY_RESOURCEMANAGER,
+          containerMetrics.exitCode.value());
+      Assert.assertTrue(containerMetrics.startTime.value() > 0);
+      Assert.assertTrue(
+          containerMetrics.finishTime.value() > containerMetrics.startTime
+              .value());
     } finally {
       if (wc != null) {
         wc.finished();

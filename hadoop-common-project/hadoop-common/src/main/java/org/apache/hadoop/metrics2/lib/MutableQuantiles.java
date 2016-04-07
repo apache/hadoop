@@ -31,6 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.util.Quantile;
+import org.apache.hadoop.metrics2.util.QuantileEstimator;
 import org.apache.hadoop.metrics2.util.SampleQuantiles;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -54,7 +55,7 @@ public class MutableQuantiles extends MutableMetric {
   private final MetricsInfo[] quantileInfos;
   private final int interval;
 
-  private SampleQuantiles estimator;
+  private QuantileEstimator estimator;
   private long previousCount = 0;
 
   @VisibleForTesting
@@ -132,6 +133,10 @@ public class MutableQuantiles extends MutableMetric {
 
   public int getInterval() {
     return interval;
+  }
+
+  public synchronized void setEstimator(QuantileEstimator quantileEstimator) {
+    this.estimator = quantileEstimator;
   }
 
   /**

@@ -17,24 +17,31 @@
  */
 package org.apache.hadoop.security.ssl;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLSession;
 import java.io.File;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
@@ -42,13 +49,20 @@ import java.util.Collections;
 import java.util.Map;
 
 public class TestSSLFactory {
-
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestSSLFactory.class);
   private static final String BASEDIR =
-    System.getProperty("test.build.dir", "target/test-dir") + "/" +
-    TestSSLFactory.class.getSimpleName();
+      GenericTestUtils.getTempPath(TestSSLFactory.class.getSimpleName());
   private static final String KEYSTORES_DIR =
     new File(BASEDIR).getAbsolutePath();
   private String sslConfsDir;
+  private static final String excludeCiphers = "TLS_ECDHE_RSA_WITH_RC4_128_SHA,"
+      + "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA,"
+      + "SSL_RSA_WITH_DES_CBC_SHA,"
+      + "SSL_DHE_RSA_WITH_DES_CBC_SHA,"
+      + "SSL_RSA_EXPORT_WITH_RC4_40_MD5,"
+      + "SSL_RSA_EXPORT_WITH_DES40_CBC_SHA,"
+      + "SSL_RSA_WITH_RC4_128_MD5";
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -62,7 +76,7 @@ public class TestSSLFactory {
     throws Exception {
     Configuration conf = new Configuration();
     KeyStoreTestUtil.setupSSLConfig(KEYSTORES_DIR, sslConfsDir, conf,
-      clientCert, trustStore);
+      clientCert, trustStore, excludeCiphers);
     return conf;
   }
 
@@ -123,6 +137,120 @@ public class TestSSLFactory {
   @Test(expected = IllegalStateException.class)
   public void serverModeWithClientCertsVerifier() throws Exception {
     serverMode(true, false);
+  }
+
+  private void runDelegatedTasks(SSLEngineResult result, SSLEngine engine)
+    throws Exception {
+    Runnable runnable;
+    if (result.getHandshakeStatus() ==
+        SSLEngineResult.HandshakeStatus.NEED_TASK) {
+      while ((runnable = engine.getDelegatedTask()) != null) {
+        LOG.info("running delegated task...");
+        runnable.run();
+      }
+      SSLEngineResult.HandshakeStatus hsStatus = engine.getHandshakeStatus();
+      if (hsStatus == SSLEngineResult.HandshakeStatus.NEED_TASK) {
+        throw new Exception("handshake shouldn't need additional tasks");
+      }
+    }
+  }
+
+  private static boolean isEngineClosed(SSLEngine engine) {
+    return engine.isOutboundDone() && engine.isInboundDone();
+  }
+
+  private static void checkTransfer(ByteBuffer a, ByteBuffer b)
+    throws Exception {
+    a.flip();
+    b.flip();
+    assertTrue("transfer did not complete", a.equals(b));
+
+    a.position(a.limit());
+    b.position(b.limit());
+    a.limit(a.capacity());
+    b.limit(b.capacity());
+  }
+  @Test
+  public void testServerWeakCiphers() throws Exception {
+    // a simple test case to verify that SSL server rejects weak cipher suites,
+    // inspired by https://docs.oracle.com/javase/8/docs/technotes/guides/
+    //            security/jsse/samples/sslengine/SSLEngineSimpleDemo.java
+
+    // set up a client and a server SSLEngine object, and let them exchange
+    // data over ByteBuffer instead of network socket.
+    GenericTestUtils.setLogLevel(SSLFactory.LOG, Level.DEBUG);
+    final Configuration conf = createConfiguration(true, true);
+
+    SSLFactory serverSSLFactory = new SSLFactory(SSLFactory.Mode.SERVER, conf);
+    SSLFactory clientSSLFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
+
+    serverSSLFactory.init();
+    clientSSLFactory.init();
+
+    SSLEngine serverSSLEngine = serverSSLFactory.createSSLEngine();
+    SSLEngine clientSSLEngine = clientSSLFactory.createSSLEngine();
+    // client selects cipher suites excluded by server
+    clientSSLEngine.setEnabledCipherSuites(excludeCiphers.split(","));
+
+    // use the same buffer size for server and client.
+    SSLSession session = clientSSLEngine.getSession();
+    int appBufferMax = session.getApplicationBufferSize();
+    int netBufferMax = session.getPacketBufferSize();
+
+    ByteBuffer clientOut = ByteBuffer.wrap("client".getBytes());
+    ByteBuffer clientIn = ByteBuffer.allocate(appBufferMax);
+    ByteBuffer serverOut = ByteBuffer.wrap("server".getBytes());
+    ByteBuffer serverIn = ByteBuffer.allocate(appBufferMax);
+
+    // send data from client to server
+    ByteBuffer cTOs = ByteBuffer.allocateDirect(netBufferMax);
+    // send data from server to client
+    ByteBuffer sTOc = ByteBuffer.allocateDirect(netBufferMax);
+
+    boolean dataDone = false;
+    try {
+      /**
+       * Server and client engines call wrap()/unwrap() to perform handshaking,
+       * until both engines are closed.
+       */
+      while (!isEngineClosed(clientSSLEngine) ||
+          !isEngineClosed(serverSSLEngine)) {
+        LOG.info("client wrap " + wrap(clientSSLEngine, clientOut, cTOs));
+        LOG.info("server wrap " + wrap(serverSSLEngine, serverOut, sTOc));
+        cTOs.flip();
+        sTOc.flip();
+        LOG.info("client unwrap " + unwrap(clientSSLEngine, sTOc, clientIn));
+        LOG.info("server unwrap " + unwrap(serverSSLEngine, cTOs, serverIn));
+        cTOs.compact();
+        sTOc.compact();
+        if (!dataDone && (clientOut.limit() == serverIn.position()) &&
+            (serverOut.limit() == clientIn.position())) {
+          checkTransfer(serverOut, clientIn);
+          checkTransfer(clientOut, serverIn);
+
+          LOG.info("closing client");
+          clientSSLEngine.closeOutbound();
+          dataDone = true;
+        }
+      }
+      Assert.fail("The exception was not thrown");
+    } catch (SSLHandshakeException e) {
+      GenericTestUtils.assertExceptionContains("no cipher suites in common", e);
+    }
+  }
+
+  private SSLEngineResult wrap(SSLEngine engine, ByteBuffer from,
+      ByteBuffer to) throws Exception {
+    SSLEngineResult result = engine.wrap(from, to);
+    runDelegatedTasks(result, engine);
+    return result;
+  }
+
+  private SSLEngineResult unwrap(SSLEngine engine, ByteBuffer from,
+      ByteBuffer to) throws Exception {
+    SSLEngineResult result = engine.unwrap(from, to);
+    runDelegatedTasks(result, engine);
+    return result;
   }
 
   @Test
@@ -304,8 +432,7 @@ public class TestSSLFactory {
       sslConf = KeyStoreTestUtil.createServerSSLConfig(keystore, confPassword,
         confKeyPassword, truststore);
       if (useCredProvider) {
-        File testDir = new File(System.getProperty("test.build.data",
-            "target/test-dir"));
+        File testDir = GenericTestUtils.getTestDir();
         final Path jksPath = new Path(testDir.toString(), "test.jks");
         final String ourUrl =
             JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri();

@@ -27,8 +27,8 @@ this="${BASH_SOURCE-$0}"
 bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
 
 # let's locate libexec...
-if [[ -n "${HADOOP_PREFIX}" ]]; then
-  HADOOP_DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
+if [[ -n "${HADOOP_HOME}" ]]; then
+  HADOOP_DEFAULT_LIBEXEC_DIR="${HADOOP_HOME}/libexec"
 else
   HADOOP_DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
 fi
@@ -51,7 +51,7 @@ daemonmode=$1
 shift
 
 if [[ -z "${HADOOP_HDFS_HOME}" ]]; then
-  hdfsscript="${HADOOP_PREFIX}/bin/hdfs"
+  hdfsscript="${HADOOP_HOME}/bin/hdfs"
 else
   hdfsscript="${HADOOP_HDFS_HOME}/bin/hdfs"
 fi

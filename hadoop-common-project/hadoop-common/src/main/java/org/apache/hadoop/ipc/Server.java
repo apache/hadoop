@@ -396,6 +396,15 @@ public abstract class Server {
     return CurCall.get() != null;
   }
 
+  /**
+   * Return the priority level assigned by call queue to an RPC
+   * Returns 0 in case no priority is assigned.
+   */
+  public static int getPriorityLevel() {
+    Call call = CurCall.get();
+    return call != null? call.getPriorityLevel() : 0;
+  }
+
   private String bindAddress; 
   private int port;                               // port we listen on
   private int handlerCount;                       // number of handler threads
@@ -479,6 +488,18 @@ public abstract class Server {
                 " milliseconds to process from client " + client);
       }
       rpcMetrics.incrSlowRpc();
+    }
+  }
+
+  void updateMetrics(String name, int queueTime, int processingTime) {
+    rpcMetrics.addRpcQueueTime(queueTime);
+    rpcMetrics.addRpcProcessingTime(processingTime);
+    rpcDetailedMetrics.addProcessingTime(name, processingTime);
+    callQueue.addResponseTime(name, getPriorityLevel(), queueTime,
+        processingTime);
+
+    if (isLogSlowRPC()) {
+      logSlowRpcCalls(name, processingTime);
     }
   }
 
@@ -578,6 +599,10 @@ public abstract class Server {
     return serviceAuthorizationManager;
   }
 
+  private String getQueueClassPrefix() {
+    return CommonConfigurationKeys.IPC_NAMESPACE + "." + port;
+  }
+
   static Class<? extends BlockingQueue<Call>> getQueueClass(
       String prefix, Configuration conf) {
     String name = prefix + "." + CommonConfigurationKeys.IPC_CALLQUEUE_IMPL_KEY;
@@ -585,8 +610,29 @@ public abstract class Server {
     return CallQueueManager.convertQueueClass(queueClass, Call.class);
   }
 
-  private String getQueueClassPrefix() {
-    return CommonConfigurationKeys.IPC_CALLQUEUE_NAMESPACE + "." + port;
+  static Class<? extends RpcScheduler> getSchedulerClass(
+      String prefix, Configuration conf) {
+    String schedulerKeyname = prefix + "." + CommonConfigurationKeys
+        .IPC_SCHEDULER_IMPL_KEY;
+    Class<?> schedulerClass = conf.getClass(schedulerKeyname, null);
+    // Patch the configuration for legacy fcq configuration that does not have
+    // a separate scheduler setting
+    if (schedulerClass == null) {
+      String queueKeyName = prefix + "." + CommonConfigurationKeys
+          .IPC_CALLQUEUE_IMPL_KEY;
+      Class<?> queueClass = conf.getClass(queueKeyName, null);
+      if (queueClass != null) {
+        if (queueClass.getCanonicalName().equals(
+            FairCallQueue.class.getCanonicalName())) {
+          conf.setClass(schedulerKeyname, DecayRpcScheduler.class,
+              RpcScheduler.class);
+        }
+      }
+    }
+    schedulerClass = conf.getClass(schedulerKeyname,
+        DefaultRpcScheduler.class);
+
+    return CallQueueManager.convertSchedulerClass(schedulerClass);
   }
 
   /*
@@ -595,7 +641,8 @@ public abstract class Server {
   public synchronized void refreshCallQueue(Configuration conf) {
     // Create the next queue
     String prefix = getQueueClassPrefix();
-    callQueue.swapQueue(getQueueClass(prefix, conf), maxQueueSize, prefix, conf);
+    callQueue.swapQueue(getSchedulerClass(prefix, conf),
+        getQueueClass(prefix, conf), maxQueueSize, prefix, conf);
   }
 
   /**
@@ -623,6 +670,8 @@ public abstract class Server {
     private final byte[] clientId;
     private final TraceScope traceScope; // the HTrace scope on the server side
     private final CallerContext callerContext; // the call context
+    private int priorityLevel;
+    // the priority level assigned by scheduler, 0 by default
 
     private Call(Call call) {
       this(call.callId, call.retryCount, call.rpcRequest, call.connection,
@@ -709,7 +758,16 @@ public abstract class Server {
     @Override
     public UserGroupInformation getUserGroupInformation() {
       return connection.user;
-    }    
+    }
+
+    @Override
+    public int getPriorityLevel() {
+      return this.priorityLevel;
+    }
+
+    public void setPriorityLevel(int priorityLevel) {
+      this.priorityLevel = priorityLevel;
+    }
   }
 
   /** Listens on the socket. Creates jobs for the handler threads*/
@@ -2151,6 +2209,9 @@ public abstract class Server {
           rpcRequest, this, ProtoUtil.convert(header.getRpcKind()),
           header.getClientId().toByteArray(), traceScope, callerContext);
 
+      // Save the priority level assignment by the scheduler
+      call.setPriorityLevel(callQueue.getPriorityLevel(call));
+
       if (callQueue.isClientBackoffEnabled()) {
         // if RPC queue is full, we will ask the RPC client to back off by
         // throwing RetriableException. Whether RPC client will honor
@@ -2166,9 +2227,10 @@ public abstract class Server {
 
     private void queueRequestOrAskClientToBackOff(Call call)
         throws WrappedRpcServerException, InterruptedException {
-      // If rpc queue is full, we will ask the client to back off.
-      boolean isCallQueued = callQueue.offer(call);
-      if (!isCallQueued) {
+      // If rpc scheduler indicates back off based on performance
+      // degradation such as response time or rpc queue is full,
+      // we will ask the client to back off.
+      if (callQueue.shouldBackOff(call) || !callQueue.offer(call)) {
         rpcMetrics.incrClientBackoff();
         RetriableException retriableException =
             new RetriableException("Server is too busy.");
@@ -2513,6 +2575,7 @@ public abstract class Server {
     // Setup appropriate callqueue
     final String prefix = getQueueClassPrefix();
     this.callQueue = new CallQueueManager<Call>(getQueueClass(prefix, conf),
+        getSchedulerClass(prefix, conf),
         getClientBackoffEnable(prefix, conf), maxQueueSize, prefix, conf);
 
     this.secretManager = (SecretManager<TokenIdentifier>) secretManager;

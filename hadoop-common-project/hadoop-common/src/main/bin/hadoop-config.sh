@@ -63,6 +63,8 @@ else
   exit 1
 fi
 
+hadoop_deprecate_envvar HADOOP_PREFIX HADOOP_HOME
+
 # allow overrides of the above and pre-defines of the below
 if [[ -n "${HADOOP_COMMON_HOME}" ]] &&
    [[ -e "${HADOOP_COMMON_HOME}/libexec/hadoop-layout.sh" ]]; then
@@ -128,8 +130,8 @@ fi
 hadoop_shellprofiles_init
 
 # get the native libs in there pretty quick
-hadoop_add_javalibpath "${HADOOP_PREFIX}/build/native"
-hadoop_add_javalibpath "${HADOOP_PREFIX}/${HADOOP_COMMON_LIB_NATIVE_DIR}"
+hadoop_add_javalibpath "${HADOOP_HOME}/build/native"
+hadoop_add_javalibpath "${HADOOP_HOME}/${HADOOP_COMMON_LIB_NATIVE_DIR}"
 
 hadoop_shellprofiles_nativelib
 

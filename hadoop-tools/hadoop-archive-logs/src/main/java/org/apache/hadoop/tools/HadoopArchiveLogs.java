@@ -450,7 +450,7 @@ public class HadoopArchiveLogs implements Tool {
   fi
   export HADOOP_CLIENT_OPTS="-Xmx1024m"
   export HADOOP_CLASSPATH=/dist/share/hadoop/tools/lib/hadoop-archive-logs-2.8.0-SNAPSHOT.jar:/dist/share/hadoop/tools/lib/hadoop-archives-2.8.0-SNAPSHOT.jar
-  "$HADOOP_PREFIX"/bin/hadoop org.apache.hadoop.tools.HadoopArchiveLogsRunner -appId "$appId" -user "$user" -workingDir /tmp/logs/archive-logs-work -remoteRootLogDir /tmp/logs -suffix logs
+  "$HADOOP_HOME"/bin/hadoop org.apache.hadoop.tools.HadoopArchiveLogsRunner -appId "$appId" -user "$user" -workingDir /tmp/logs/archive-logs-work -remoteRootLogDir /tmp/logs -suffix logs
    */
   @VisibleForTesting
   void generateScript(File localScript, Path workingDir,
@@ -484,7 +484,7 @@ public class HadoopArchiveLogs implements Tool {
       fw.write("m\"\n");
       fw.write("export HADOOP_CLASSPATH=");
       fw.write(classpath);
-      fw.write("\n\"$HADOOP_PREFIX\"/bin/hadoop ");
+      fw.write("\n\"$HADOOP_HOME\"/bin/hadoop ");
       fw.write(HadoopArchiveLogsRunner.class.getName());
       fw.write(" -appId \"$appId\" -user \"$user\" -workingDir ");
       fw.write(workingDir.toString());

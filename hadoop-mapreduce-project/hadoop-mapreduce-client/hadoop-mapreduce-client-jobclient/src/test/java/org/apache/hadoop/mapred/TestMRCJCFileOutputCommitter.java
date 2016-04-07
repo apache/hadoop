@@ -18,18 +18,25 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.*;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RawLocalFileSystem;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.JobStatus;
+import org.junit.Test;
+
+import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapred.JobContextImpl;
-import org.apache.hadoop.mapred.TaskAttemptContextImpl;
-import org.apache.hadoop.mapreduce.JobStatus;
-
-public class TestMRCJCFileOutputCommitter extends TestCase {
+public class TestMRCJCFileOutputCommitter {
   private static Path outDir = new Path(
      System.getProperty("test.build.data", "/tmp"), "output");
 
@@ -67,6 +74,7 @@ public class TestMRCJCFileOutputCommitter extends TestCase {
   }
 
   @SuppressWarnings("unchecked")
+  @Test
   public void testCommitter() throws Exception {
     JobConf job = new JobConf();
     setConfForFileOutputCommitter(job);
@@ -108,6 +116,7 @@ public class TestMRCJCFileOutputCommitter extends TestCase {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
+  @Test
   public void testAbort() throws IOException {
     JobConf job = new JobConf();
     setConfForFileOutputCommitter(job);
@@ -161,6 +170,7 @@ public class TestMRCJCFileOutputCommitter extends TestCase {
     }
   }
 
+  @Test
   public void testFailAbort() throws IOException {
     JobConf job = new JobConf();
     job.set(FileSystem.FS_DEFAULT_NAME_KEY, "faildel:///");

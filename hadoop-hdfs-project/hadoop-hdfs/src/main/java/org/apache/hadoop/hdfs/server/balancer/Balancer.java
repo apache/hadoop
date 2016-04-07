@@ -583,7 +583,7 @@ public class Balancer {
       final long bytesLeftToMove = init(reports);
       if (bytesLeftToMove == 0) {
         System.out.println("The cluster is balanced. Exiting...");
-        return newResult(ExitStatus.SUCCESS, bytesLeftToMove, -1);
+        return newResult(ExitStatus.SUCCESS, bytesLeftToMove, 0);
       } else {
         LOG.info( "Need to move "+ StringUtils.byteDesc(bytesLeftToMove)
             + " to make the cluster balanced." );

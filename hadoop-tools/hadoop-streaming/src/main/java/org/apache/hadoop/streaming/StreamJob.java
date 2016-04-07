@@ -502,7 +502,7 @@ public class StreamJob implements Tool {
   }
 
   private void printUsage(boolean detailed) {
-    System.out.println("Usage: $HADOOP_PREFIX/bin/hadoop jar hadoop-streaming.jar"
+    System.out.println("Usage: $HADOOP_HOME/bin/hadoop jar hadoop-streaming.jar"
         + " [options]");
     System.out.println("Options:");
     System.out.println("  -input          <path> DFS input file(s) for the Map"
@@ -551,7 +551,7 @@ public class StreamJob implements Tool {
       System.out.println();
       System.out.println("For more details about these options:");
       System.out.println("Use " +
-          "$HADOOP_PREFIX/bin/hadoop jar hadoop-streaming.jar -info");
+          "$HADOOP_HOME/bin/hadoop jar hadoop-streaming.jar -info");
       return;
     }
     System.out.println();
@@ -611,7 +611,7 @@ public class StreamJob implements Tool {
     System.out.println("  -D stream.non.zero.exit.is.failure=false");
     System.out.println("Use a custom hadoop streaming build along with standard"
         + " hadoop install:");
-    System.out.println("  $HADOOP_PREFIX/bin/hadoop jar " +
+    System.out.println("  $HADOOP_HOME/bin/hadoop jar " +
         "/path/my-hadoop-streaming.jar [...]\\");
     System.out.println("    [...] -D stream.shipped.hadoopstreaming=" +
         "/path/my-hadoop-streaming.jar");
@@ -625,7 +625,7 @@ public class StreamJob implements Tool {
     System.out.println("   -cmdenv EXAMPLE_DIR=/home/example/dictionaries/");
     System.out.println();
     System.out.println("Shortcut:");
-    System.out.println("   setenv HSTREAMING \"$HADOOP_PREFIX/bin/hadoop jar " +
+    System.out.println("   setenv HSTREAMING \"$HADOOP_HOME/bin/hadoop jar " +
         "hadoop-streaming.jar\"");
     System.out.println();
     System.out.println("Example: $HSTREAMING -mapper " +
@@ -648,9 +648,9 @@ public class StreamJob implements Tool {
   // --------------------------------------------
 
   protected String getHadoopClientHome() {
-    String h = env_.getProperty("HADOOP_PREFIX"); // standard Hadoop
+    String h = env_.getProperty("HADOOP_HOME"); // standard Hadoop
     if (h == null) {
-      //fail("Missing required environment variable: HADOOP_PREFIX");
+      //fail("Missing required environment variable: HADOOP_HOME");
       h = "UNDEF";
     }
     return h;
@@ -674,8 +674,8 @@ public class StreamJob implements Tool {
     // usually found in: build/contrib or build/hadoop-<version>-dev-streaming.jar
 
     // First try an explicit spec: it's too hard to find our own location in this case:
-    // $HADOOP_PREFIX/bin/hadoop jar /not/first/on/classpath/custom-hadoop-streaming.jar
-    // where findInClasspath() would find the version of hadoop-streaming.jar in $HADOOP_PREFIX
+    // $HADOOP_HOME/bin/hadoop jar /not/first/on/classpath/custom-hadoop-streaming.jar
+    // where findInClasspath() would find the version of hadoop-streaming.jar in $HADOOP_HOME
     String runtimeClasses = config_.get("stream.shipped.hadoopstreaming"); // jar or class dir
 
     if (runtimeClasses == null) {

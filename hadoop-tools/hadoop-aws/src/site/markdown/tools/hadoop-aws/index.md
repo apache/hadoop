@@ -417,6 +417,13 @@ which pass in authentication details to the test runner
 These are both Hadoop XML configuration files, which must be placed into
 `hadoop-tools/hadoop-aws/src/test/resources`.
 
+### `core-site.xml`
+
+This file pre-exists and sources the configurations created
+under `auth-keys.xml`.
+
+For most purposes you will not need to edit this file unless you
+need to apply a specific, non-default property change during the tests.
 
 ### `auth-keys.xml`
 

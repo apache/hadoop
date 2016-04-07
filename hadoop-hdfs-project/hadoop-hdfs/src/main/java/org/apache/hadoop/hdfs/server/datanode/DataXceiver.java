@@ -116,6 +116,7 @@ class DataXceiver extends Receiver implements Runnable {
   private BlockReceiver blockReceiver = null;
   private final int ioFileBufferSize;
   private final int smallBufferSize;
+  private Thread xceiver = null;
 
   /**
    * Client Name used in previous operation. Not available on first request
@@ -178,9 +179,38 @@ class DataXceiver extends Receiver implements Runnable {
   }
 
   public void sendOOB() throws IOException, InterruptedException {
+    BlockReceiver br = getCurrentBlockReceiver();
+    if (br == null) {
+      return;
+    }
+    // This doesn't need to be in a critical section. Althogh the client
+    // can resue the connection to issue a different request, trying sending
+    // an OOB through the recently closed block receiver is harmless.
     LOG.info("Sending OOB to peer: " + peer);
-    if(blockReceiver!=null)
-      blockReceiver.sendOOB();
+    br.sendOOB();
+  }
+
+  public void stopWriter() {
+    // We want to interrupt the xceiver only when it is serving writes.
+    synchronized(this) {
+      if (getCurrentBlockReceiver() == null) {
+        return;
+      }
+      xceiver.interrupt();
+    }
+    LOG.info("Stopped the writer: " + peer);
+  }
+
+  /**
+   * blockReceiver is updated at multiple places. Use the synchronized setter
+   * and getter.
+   */
+  private synchronized void setCurrentBlockReceiver(BlockReceiver br) {
+    blockReceiver = br;
+  }
+
+  private synchronized BlockReceiver getCurrentBlockReceiver() {
+    return blockReceiver;
   }
   
   /**
@@ -192,6 +222,9 @@ class DataXceiver extends Receiver implements Runnable {
     Op op = null;
 
     try {
+      synchronized(this) {
+        xceiver = Thread.currentThread();
+      }
       dataXceiverServer.addPeer(peer, Thread.currentThread(), this);
       peer.setWriteTimeout(datanode.getDnConf().socketWriteTimeout);
       InputStream input = socketIn;
@@ -679,12 +712,12 @@ class DataXceiver extends Receiver implements Runnable {
       if (isDatanode || 
           stage != BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
         // open a block receiver
-        blockReceiver = getBlockReceiver(block, storageType, in,
+        setCurrentBlockReceiver(getBlockReceiver(block, storageType, in,
             peer.getRemoteAddressString(),
             peer.getLocalAddressString(),
             stage, latestGenerationStamp, minBytesRcvd, maxBytesRcvd,
             clientname, srcDataNode, datanode, requestedChecksum,
-            cachingStrategy, allowLazyPersist, pinning);
+            cachingStrategy, allowLazyPersist, pinning));
         replica = blockReceiver.getReplica();
       } else {
         replica = datanode.data.recoverClose(
@@ -853,7 +886,7 @@ class DataXceiver extends Receiver implements Runnable {
       IOUtils.closeStream(replyOut);
       IOUtils.closeSocket(mirrorSock);
       IOUtils.closeStream(blockReceiver);
-      blockReceiver = null;
+      setCurrentBlockReceiver(null);
     }
 
     //update metrics
@@ -1060,7 +1093,6 @@ class DataXceiver extends Receiver implements Runnable {
     DataOutputStream proxyOut = null;
     Status opStatus = SUCCESS;
     String errMsg = null;
-    BlockReceiver blockReceiver = null;
     DataInputStream proxyReply = null;
     boolean IoeDuringCopyBlockOperation = false;
     try {
@@ -1119,11 +1151,11 @@ class DataXceiver extends Receiver implements Runnable {
         DataChecksum remoteChecksum = DataTransferProtoUtil.fromProto(
             checksumInfo.getChecksum());
         // open a block receiver and check if the block does not exist
-        blockReceiver = getBlockReceiver(block, storageType,
+        setCurrentBlockReceiver(getBlockReceiver(block, storageType,
             proxyReply, proxySock.getRemoteSocketAddress().toString(),
             proxySock.getLocalSocketAddress().toString(),
             null, 0, 0, 0, "", null, datanode, remoteChecksum,
-            CachingStrategy.newDropBehind(), false, false);
+            CachingStrategy.newDropBehind(), false, false));
         
         // receive a block
         blockReceiver.receiveBlock(null, null, replyOut, null, 

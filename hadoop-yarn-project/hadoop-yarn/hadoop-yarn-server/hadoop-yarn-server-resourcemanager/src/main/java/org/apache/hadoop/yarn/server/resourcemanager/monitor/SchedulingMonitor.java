@@ -45,10 +45,6 @@ public class SchedulingMonitor extends AbstractService {
     this.rmContext = rmContext;
   }
 
-  public long getMonitorInterval() {
-    return monitorInterval;
-  }
-  
   @VisibleForTesting
   public synchronized SchedulingEditPolicy getSchedulingEditPolicy() {
     return scheduleEditPolicy;

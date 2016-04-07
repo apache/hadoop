@@ -47,7 +47,7 @@ function hadoop_subproject_init
 
   hadoop_deprecate_envvar HADOOP_MAPRED_ROOT_LOGGER HADOOP_ROOT_LOGGER
 
-  HADOOP_MAPRED_HOME="${HADOOP_MAPRED_HOME:-$HADOOP_PREFIX}"
+  HADOOP_MAPRED_HOME="${HADOOP_MAPRED_HOME:-$HADOOP_HOME}"
 
   hadoop_deprecate_envvar HADOOP_MAPRED_IDENT_STRING HADOOP_IDENT_STRING
 }
@@ -62,8 +62,8 @@ if [[ -n "${HADOOP_COMMON_HOME}" ]] &&
   . "${HADOOP_COMMON_HOME}/libexec/hadoop-config.sh"
 elif [[ -e "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]]; then
   . "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
-elif [ -e "${HADOOP_PREFIX}/libexec/hadoop-config.sh" ]; then
-  . "${HADOOP_PREFIX}/libexec/hadoop-config.sh"
+elif [ -e "${HADOOP_HOME}/libexec/hadoop-config.sh" ]; then
+  . "${HADOOP_HOME}/libexec/hadoop-config.sh"
 else
   echo "ERROR: Hadoop common not found." 2>&1
   exit 1

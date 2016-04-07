@@ -18,18 +18,29 @@
 
 package org.apache.hadoop.fs;
 
-import static org.junit.Assert.*;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class TestFsShellCopy {  
+public class TestFsShellCopy {
+  static final Log LOG = LogFactory.getLog(TestFsShellCopy.class);
+
   static Configuration conf;
   static FsShell shell; 
   static LocalFileSystem lfs;
@@ -40,11 +51,11 @@ public class TestFsShellCopy {
     conf = new Configuration();
     shell = new FsShell(conf);
     lfs = FileSystem.getLocal(conf);
-    testRootDir = lfs.makeQualified(new Path(
-        System.getProperty("test.build.data","test/build/data"),
-        "testShellCopy"));
+    testRootDir = lfs.makeQualified(new Path(GenericTestUtils.getTempPath(
+        "testFsShellCopy")));
     
-    lfs.mkdirs(testRootDir);    
+    lfs.mkdirs(testRootDir);
+    lfs.setWorkingDirectory(testRootDir);
     srcPath = new Path(testRootDir, "srcFile");
     dstPath = new Path(testRootDir, "dstFile");
   }
@@ -60,6 +71,16 @@ public class TestFsShellCopy {
     out.writeChars("hi");
     out.close();
     assertTrue(lfs.exists(lfs.getChecksumFile(srcPath)));
+  }
+
+  private void shellRun(int n, String ... args) throws Exception {
+    assertEquals(n, shell.run(args));
+  }
+
+  private int shellRun(String... args) throws Exception {
+    int exitCode = shell.run(args);
+    LOG.info("exit " + exitCode + " - " + StringUtils.join(" ", args));
+    return exitCode;
   }
 
   @Test
@@ -95,10 +116,6 @@ public class TestFsShellCopy {
     assertEquals(expectChecksum, hasChecksum);
   }
 
-  private void shellRun(int n, String ... args) throws Exception {
-    assertEquals(n, shell.run(args));
-  }
-  
   @Test
   public void testCopyFileFromLocal() throws Exception {
     Path testRoot = new Path(testRootDir, "testPutFile");
@@ -570,5 +587,24 @@ public class TestFsShellCopy {
   private String pathAsString(Path p) {
     String s = (p == null) ? Path.CUR_DIR : p.toString();
     return s.isEmpty() ? Path.CUR_DIR : s;
+  }
+
+  /**
+   * Test copy to a path with non-existent parent directory.
+   */
+  @Test
+  public void testCopyNoParent() throws Exception {
+    final String noDirName = "noDir";
+    final Path noDir = new Path(noDirName);
+    lfs.delete(noDir, true);
+    assertThat(lfs.exists(noDir), is(false));
+
+    assertThat("Expected failed put to a path without parent directory",
+        shellRun("-put", srcPath.toString(), noDirName + "/foo"), is(not(0)));
+
+    // Note the trailing '/' in the target path.
+    assertThat("Expected failed copyFromLocal to a non-existent directory",
+        shellRun("-copyFromLocal", srcPath.toString(), noDirName + "/"),
+        is(not(0)));
   }
 }

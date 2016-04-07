@@ -259,8 +259,9 @@ public class ApplicationMaster {
   private String domainId = null;
 
   // Hardcoded path to shell script in launch container's local env
-  private static final String ExecShellStringPath = Client.SCRIPT_PATH + ".sh";
-  private static final String ExecBatScripStringtPath = Client.SCRIPT_PATH
+  private static final String EXEC_SHELL_STRING_PATH = Client.SCRIPT_PATH
+      + ".sh";
+  private static final String EXEC_BAT_SCRIPT_STRING_PATH = Client.SCRIPT_PATH
       + ".bat";
 
   // Hardcoded path to custom log_properties
@@ -1025,8 +1026,8 @@ public class ApplicationMaster {
         LocalResource shellRsrc = LocalResource.newInstance(yarnUrl,
           LocalResourceType.FILE, LocalResourceVisibility.APPLICATION,
           shellScriptPathLen, shellScriptPathTimestamp);
-        localResources.put(Shell.WINDOWS ? ExecBatScripStringtPath :
-            ExecShellStringPath, shellRsrc);
+        localResources.put(Shell.WINDOWS ? EXEC_BAT_SCRIPT_STRING_PATH :
+            EXEC_SHELL_STRING_PATH, shellRsrc);
         shellCommand = Shell.WINDOWS ? windows_command : linux_bash_command;
       }
 
@@ -1037,8 +1038,8 @@ public class ApplicationMaster {
       vargs.add(shellCommand);
       // Set shell script path
       if (!scriptPath.isEmpty()) {
-        vargs.add(Shell.WINDOWS ? ExecBatScripStringtPath
-            : ExecShellStringPath);
+        vargs.add(Shell.WINDOWS ? EXEC_BAT_SCRIPT_STRING_PATH
+            : EXEC_SHELL_STRING_PATH);
       }
 
       // Set args for the shell command if any

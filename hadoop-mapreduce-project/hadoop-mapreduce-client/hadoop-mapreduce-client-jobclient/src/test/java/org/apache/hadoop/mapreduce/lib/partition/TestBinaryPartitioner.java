@@ -22,11 +22,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BinaryComparable;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.junit.Test;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
-public class TestBinaryPartitioner extends TestCase {
+public class TestBinaryPartitioner {
 
+  @Test
   public void testDefaultOffsets() {
     Configuration conf = new Configuration();
     BinaryPartitioner<?> partitioner = 
@@ -50,7 +53,8 @@ public class TestBinaryPartitioner extends TestCase {
     partition2 = partitioner.getPartition(key2, null, 10);
     assertTrue(partition1 != partition2);
   }
-  
+
+  @Test
   public void testCustomOffsets() {
     Configuration conf = new Configuration();
     BinaryComparable key1 = new BytesWritable(new byte[] { 1, 2, 3, 4, 5 }); 
@@ -75,7 +79,8 @@ public class TestBinaryPartitioner extends TestCase {
     partition2 = partitioner.getPartition(key2, null, 10);
     assertEquals(partition1, partition2);
   }
-  
+
+  @Test
   public void testLowerBound() {
     Configuration conf = new Configuration();
     BinaryPartitioner.setLeftOffset(conf, 0);
@@ -87,7 +92,8 @@ public class TestBinaryPartitioner extends TestCase {
     int partition2 = partitioner.getPartition(key2, null, 10);
     assertTrue(partition1 != partition2);
   }
-  
+
+  @Test
   public void testUpperBound() {
     Configuration conf = new Configuration();
     BinaryPartitioner.setRightOffset(conf, 4);

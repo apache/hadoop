@@ -19,6 +19,7 @@
 #include "erasure_code.h"
 #include "gf_util.h"
 #include "erasure_coder.h"
+#include "dump.h"
 
 #include <stdio.h>
 #include <stdlib.h>

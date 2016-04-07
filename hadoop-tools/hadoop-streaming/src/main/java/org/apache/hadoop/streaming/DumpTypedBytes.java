@@ -91,7 +91,7 @@ public class DumpTypedBytes implements Tool {
   }
 
   private void printUsage() {
-    System.out.println("Usage: $HADOOP_PREFIX/bin/hadoop jar hadoop-streaming.jar"
+    System.out.println("Usage: $HADOOP_HOME/bin/hadoop jar hadoop-streaming.jar"
         + " dumptb <glob-pattern>");
     System.out.println("  Dumps all files that match the given pattern to " +
         "standard output as typed bytes.");

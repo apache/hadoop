@@ -27,6 +27,7 @@ setup() {
   # shellcheck disable=SC2034
   HADOOP_SHELL_SCRIPT_DEBUG=true
   unset HADOOP_CONF_DIR
+  # we unset both of these for bw compat
   unset HADOOP_HOME
   unset HADOOP_PREFIX
 

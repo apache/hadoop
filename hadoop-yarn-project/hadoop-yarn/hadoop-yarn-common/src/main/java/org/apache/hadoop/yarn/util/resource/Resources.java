@@ -152,7 +152,7 @@ public class Resources {
   }
 
   /**
-   * Multiply @param rhs by @param by, and add the result to @param lhs
+   * Multiply {@code rhs} by {@code by}, and add the result to {@code lhs}
    * without creating any new {@link Resource} object
    */
   public static Resource multiplyAndAddTo(

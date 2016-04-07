@@ -95,12 +95,12 @@ public class NativeLibraryChecker {
         snappyLibraryName = SnappyCodec.getLibraryName();
       }
 
-      try {
-        isalDetail = ErasureCodeNative.getLoadingFailureReason();
+      isalDetail = ErasureCodeNative.getLoadingFailureReason();
+      if (isalDetail != null) {
+        isalLoaded = false;
+      } else {
         isalDetail = ErasureCodeNative.getLibraryName();
         isalLoaded = true;
-      } catch (UnsatisfiedLinkError e) {
-        isalLoaded = false;
       }
 
       openSslDetail = OpensslCipher.getLoadingFailureReason();

@@ -40,6 +40,7 @@ import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -47,8 +48,7 @@ import static org.junit.Assert.*;
 
 public class TestCredentials {
   private static final String DEFAULT_HMAC_ALGORITHM = "HmacSHA1";
-  private static final File tmpDir =
-    new File(System.getProperty("test.build.data", "/tmp"), "mapred");  
+  private static final File tmpDir = GenericTestUtils.getTestDir("mapred");
     
   @Before
   public void setUp() {

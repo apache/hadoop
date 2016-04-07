@@ -199,7 +199,7 @@ public class TestGenericOptionsParser extends TestCase {
     super.setUp();
     conf = new Configuration();
     localFs = FileSystem.getLocal(conf);
-    testDir = new File(System.getProperty("test.build.data", "/tmp"), "generic");
+    testDir = GenericTestUtils.getTestDir("generic");
     if(testDir.exists())
       localFs.delete(new Path(testDir.toString()), true);
   }

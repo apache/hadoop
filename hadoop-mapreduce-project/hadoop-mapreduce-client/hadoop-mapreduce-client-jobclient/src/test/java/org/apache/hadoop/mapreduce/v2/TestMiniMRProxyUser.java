@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.mapreduce.v2;
 
-import junit.framework.TestCase;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -29,22 +28,25 @@ import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
-import java.net.InetAddress;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.net.InetAddress;
 import java.security.PrivilegedExceptionAction;
 
-public class TestMiniMRProxyUser extends TestCase {
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+public class TestMiniMRProxyUser {
 
   private MiniDFSCluster dfsCluster = null;
   private MiniMRCluster mrCluster = null;
-    
-  protected void setUp() throws Exception {
-    super.setUp();
+
+  @Before
+  public void setUp() throws Exception {
     if (System.getProperty("hadoop.log.dir") == null) {
       System.setProperty("hadoop.log.dir", "/tmp");
     }
@@ -91,15 +93,14 @@ public class TestMiniMRProxyUser extends TestCase {
     return mrCluster.createJobConf();
   }
   
-  @Override
-  protected void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     if (mrCluster != null) {
       mrCluster.shutdown();
     }
     if (dfsCluster != null) {
       dfsCluster.shutdown();
     }
-    super.tearDown();
   }
 
   private void mrRun() throws Exception {
@@ -125,11 +126,13 @@ public class TestMiniMRProxyUser extends TestCase {
     assertTrue(runJob.isComplete());
     assertTrue(runJob.isSuccessful());
   }
-    
+
+  @Test
   public void __testCurrentUser() throws Exception {
    mrRun();
   }  
 
+  @Test
   public void testValidProxyUser() throws Exception {
     UserGroupInformation ugi = UserGroupInformation.createProxyUser("u1", UserGroupInformation.getLoginUser());
     ugi.doAs(new PrivilegedExceptionAction<Void>() {
@@ -142,6 +145,7 @@ public class TestMiniMRProxyUser extends TestCase {
     });
   }
 
+  @Test
   public void ___testInvalidProxyUser() throws Exception {
     UserGroupInformation ugi = UserGroupInformation.createProxyUser("u2", UserGroupInformation.getLoginUser());
     ugi.doAs(new PrivilegedExceptionAction<Void>() {

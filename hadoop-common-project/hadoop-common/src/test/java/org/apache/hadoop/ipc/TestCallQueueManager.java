@@ -19,22 +19,44 @@
 package org.apache.hadoop.ipc;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Test;
 
 public class TestCallQueueManager {
   private CallQueueManager<FakeCall> manager;
+  private Configuration conf = new Configuration();
 
-  public class FakeCall {
+  public class FakeCall implements Schedulable {
     public final int tag; // Can be used for unique identification
-
+    private int priorityLevel;
+    UserGroupInformation fakeUgi = UserGroupInformation.createRemoteUser
+        ("fakeUser");
     public FakeCall(int tag) {
       this.tag = tag;
+    }
+
+    @Override
+    public UserGroupInformation getUserGroupInformation() {
+      return fakeUgi;
+    }
+
+    @Override
+    public int getPriorityLevel() {
+      return priorityLevel;
+    }
+
+    public void setPriorityLevel(int level) {
+      this.priorityLevel = level;
     }
   }
 
@@ -60,7 +82,9 @@ public class TestCallQueueManager {
       try {
         // Fill up to max (which is infinite if maxCalls < 0)
         while (isRunning && (callsAdded < maxCalls || maxCalls < 0)) {
-          cq.put(new FakeCall(this.tag));
+          FakeCall call = new FakeCall(this.tag);
+          call.setPriorityLevel(cq.getPriorityLevel(call));
+          cq.put(call);
           callsAdded++;
         }
       } catch (InterruptedException e) {
@@ -133,7 +157,7 @@ public class TestCallQueueManager {
     t.start();
     t.join(100);
 
-    assertEquals(putter.callsAdded, numberOfPuts);
+    assertEquals(numberOfPuts, putter.callsAdded);
     t.interrupt();
   }
 
@@ -141,23 +165,90 @@ public class TestCallQueueManager {
   private static final Class<? extends BlockingQueue<FakeCall>> queueClass
       = CallQueueManager.convertQueueClass(LinkedBlockingQueue.class, FakeCall.class);
 
+  private static final Class<? extends RpcScheduler> schedulerClass
+      = CallQueueManager.convertSchedulerClass(DefaultRpcScheduler.class);
+
   @Test
   public void testCallQueueCapacity() throws InterruptedException {
-    manager = new CallQueueManager<FakeCall>(queueClass, false, 10, "", null);
+    manager = new CallQueueManager<FakeCall>(queueClass, schedulerClass, false,
+        10, "", conf);
 
     assertCanPut(manager, 10, 20); // Will stop at 10 due to capacity
   }
 
   @Test
   public void testEmptyConsume() throws InterruptedException {
-    manager = new CallQueueManager<FakeCall>(queueClass, false, 10, "", null);
+    manager = new CallQueueManager<FakeCall>(queueClass, schedulerClass, false,
+        10, "", conf);
 
     assertCanTake(manager, 0, 1); // Fails since it's empty
   }
 
+  static Class<? extends BlockingQueue<FakeCall>> getQueueClass(
+      String prefix, Configuration conf) {
+    String name = prefix + "." + CommonConfigurationKeys.IPC_CALLQUEUE_IMPL_KEY;
+    Class<?> queueClass = conf.getClass(name, LinkedBlockingQueue.class);
+    return CallQueueManager.convertQueueClass(queueClass, FakeCall.class);
+  }
+
+  @Test
+  public void testFcqBackwardCompatibility() throws InterruptedException {
+    // Test BackwardCompatibility to ensure existing FCQ deployment still
+    // work without explicitly specifying DecayRpcScheduler
+    Configuration conf = new Configuration();
+    final String ns = CommonConfigurationKeys.IPC_NAMESPACE + ".0";
+
+    final String queueClassName = "org.apache.hadoop.ipc.FairCallQueue";
+    conf.setStrings(ns + "." + CommonConfigurationKeys.IPC_CALLQUEUE_IMPL_KEY,
+        queueClassName);
+
+    // Specify only Fair Call Queue without a scheduler
+    // Ensure the DecayScheduler will be added to avoid breaking.
+    Class<? extends RpcScheduler> scheduler = Server.getSchedulerClass(ns,
+        conf);
+    assertTrue(scheduler.getCanonicalName().
+        equals("org.apache.hadoop.ipc.DecayRpcScheduler"));
+
+    Class<? extends BlockingQueue<FakeCall>> queue =
+        (Class<? extends BlockingQueue<FakeCall>>) getQueueClass(ns, conf);
+    assertTrue(queue.getCanonicalName().equals(queueClassName));
+
+    manager = new CallQueueManager<FakeCall>(queue, scheduler, false,
+        2, "", conf);
+
+    // Default FCQ has 4 levels and the max capacity is 2 x 4
+    assertCanPut(manager, 3, 3);
+  }
+
+  @Test
+  public void testSchedulerWithoutFCQ() throws InterruptedException {
+    Configuration conf = new Configuration();
+    // Test DecayedRpcScheduler without FCQ
+    // Ensure the default LinkedBlockingQueue can work with DecayedRpcScheduler
+    final String ns = CommonConfigurationKeys.IPC_NAMESPACE + ".0";
+    final String schedulerClassName = "org.apache.hadoop.ipc.DecayRpcScheduler";
+    conf.setStrings(ns + "." + CommonConfigurationKeys.IPC_SCHEDULER_IMPL_KEY,
+        schedulerClassName);
+
+    Class<? extends BlockingQueue<FakeCall>> queue =
+        (Class<? extends BlockingQueue<FakeCall>>) getQueueClass(ns, conf);
+    assertTrue(queue.getCanonicalName().equals("java.util.concurrent." +
+        "LinkedBlockingQueue"));
+
+    manager = new CallQueueManager<FakeCall>(queue,
+        Server.getSchedulerClass(ns, conf), false,
+        3, "", conf);
+
+    // LinkedBlockingQueue with a capacity of 3 can put 3 calls
+    assertCanPut(manager, 3, 3);
+    // LinkedBlockingQueue with a capacity of 3 can't put 1 more call
+    assertCanPut(manager, 0, 1);
+  }
+
   @Test(timeout=60000)
   public void testSwapUnderContention() throws InterruptedException {
-    manager = new CallQueueManager<FakeCall>(queueClass, false, 5000, "", null);
+    manager = new CallQueueManager<FakeCall>(queueClass, schedulerClass, false,
+        5000, "", conf);
 
     ArrayList<Putter> producers = new ArrayList<Putter>();
     ArrayList<Taker> consumers = new ArrayList<Taker>();
@@ -186,7 +277,7 @@ public class TestCallQueueManager {
     Thread.sleep(500);
 
     for (int i=0; i < 5; i++) {
-      manager.swapQueue(queueClass, 5000, "", null);
+      manager.swapQueue(schedulerClass, queueClass, 5000, "", conf);
     }
 
     // Stop the producers
@@ -218,5 +309,54 @@ public class TestCallQueueManager {
     }
 
     assertEquals(totalCallsConsumed, totalCallsCreated);
+  }
+
+  public static class ExceptionFakeCall {
+    public ExceptionFakeCall() {
+      throw new IllegalArgumentException("Exception caused by call queue " +
+          "constructor.!!");
+    }
+  }
+
+  public static class ExceptionFakeScheduler {
+    public ExceptionFakeScheduler() {
+      throw new IllegalArgumentException("Exception caused by " +
+          "scheduler constructor.!!");
+    }
+  }
+
+  private static final Class<? extends RpcScheduler>
+      exceptionSchedulerClass = CallQueueManager.convertSchedulerClass(
+      ExceptionFakeScheduler.class);
+
+  private static final Class<? extends BlockingQueue<ExceptionFakeCall>>
+      exceptionQueueClass = CallQueueManager.convertQueueClass(
+      ExceptionFakeCall.class, ExceptionFakeCall.class);
+
+  @Test
+  public void testCallQueueConstructorException() throws InterruptedException {
+    try {
+      new CallQueueManager<ExceptionFakeCall>(exceptionQueueClass,
+          schedulerClass, false, 10, "", new Configuration());
+      fail();
+    } catch (RuntimeException re) {
+      assertTrue(re.getCause() instanceof IllegalArgumentException);
+      assertEquals("Exception caused by call queue constructor.!!", re
+          .getCause()
+          .getMessage());
+    }
+  }
+
+  @Test
+  public void testSchedulerConstructorException() throws InterruptedException {
+    try {
+      new CallQueueManager<FakeCall>(queueClass, exceptionSchedulerClass,
+          false, 10, "", new Configuration());
+      fail();
+    } catch (RuntimeException re) {
+      assertTrue(re.getCause() instanceof IllegalArgumentException);
+      assertEquals("Exception caused by scheduler constructor.!!", re.getCause()
+          .getMessage());
+    }
   }
 }

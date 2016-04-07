@@ -72,7 +72,8 @@ class Touch extends FsCommand {
     @Override
     protected void processNonexistentPath(PathData item) throws IOException {
       if (!item.parentExists()) {
-        throw new PathNotFoundException(item.toString());
+        throw new PathNotFoundException(item.toString())
+            .withFullyQualifiedPath(item.path.toUri().toString());
       }
       touchz(item);
     }

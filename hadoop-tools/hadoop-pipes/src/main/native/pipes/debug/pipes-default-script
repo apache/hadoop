@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
 #   You may obtain a copy of the License at
@@ -9,6 +10,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-core=`find . -name 'core*'`
+core=$(find . -name 'core*')
 #Only pipes programs have 5th argument as program name.
-gdb -quiet $5 -c $core -x $HADOOP_PREFIX/src/c++/pipes/debug/pipes-default-gdb-commands.txt 
+gdb -quiet "${5}" -c "${core}" -x "${HADOOP_HOME}/src/c++/pipes/debug/pipes-default-gdb-commands.txt"

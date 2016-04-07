@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionQueueCa
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionResourcesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.webapp.AppBlock;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
@@ -357,6 +358,7 @@ class CapacitySchedulerPage extends RmView {
           .append(" type: 'POST',")
           .append(" url: '/ws/v1/cluster/scheduler/logs',")
           .append(" contentType: 'text/plain',")
+          .append(AppBlock.getCSRFHeaderString(rm.getConfig()))
           .append(" data: 'time=' + timePeriod,")
           .append(" dataType: 'text'")
           .append(" }).done(function(data){")
@@ -405,8 +407,20 @@ class CapacitySchedulerPage extends RmView {
         CapacitySchedulerInfo sinfo = new CapacitySchedulerInfo(root, cs);
         csqinfo.csinfo = sinfo;
 
-        if (null == nodeLabelsInfo || (nodeLabelsInfo.size() == 1
-            && nodeLabelsInfo.get(0).getLabelName().isEmpty())) {
+        boolean hasAnyLabelLinkedToNM = false;
+        if (null != nodeLabelsInfo) {
+          for (RMNodeLabel label : nodeLabelsInfo) {
+            if (label.getLabelName().length() == 0) {
+              // Skip DEFAULT_LABEL
+              continue;
+            }
+            if (label.getNumActiveNMs() > 0) {
+              hasAnyLabelLinkedToNM = true;
+              break;
+            }
+          }
+        }
+        if (!hasAnyLabelLinkedToNM) {
           used = sinfo.getUsedCapacity() / 100;
           //label is not enabled in the cluster or there's only "default" label,
           ul.li().

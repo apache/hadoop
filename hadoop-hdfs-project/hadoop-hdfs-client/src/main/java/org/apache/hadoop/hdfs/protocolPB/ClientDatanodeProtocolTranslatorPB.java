@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.DeleteBlockPoolRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.EvictWritersRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetBalancerBandwidthRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetBalancerBandwidthResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetBlockLocalPathInfoRequestProto;
@@ -97,6 +98,8 @@ public class ClientDatanodeProtocolTranslatorPB implements
   private static final GetBalancerBandwidthRequestProto
       VOID_GET_BALANCER_BANDWIDTH =
       GetBalancerBandwidthRequestProto.newBuilder().build();
+  private final static EvictWritersRequestProto VOID_EVICT_WRITERS =
+      EvictWritersRequestProto.newBuilder().build();
 
   public ClientDatanodeProtocolTranslatorPB(DatanodeID datanodeid,
       Configuration conf, int socketTimeout, boolean connectToDnViaHostname,
@@ -238,6 +241,15 @@ public class ClientDatanodeProtocolTranslatorPB implements
         .newBuilder().setForUpgrade(forUpgrade).build();
     try {
       rpcProxy.shutdownDatanode(NULL_CONTROLLER, request);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void evictWriters() throws IOException {
+    try {
+      rpcProxy.evictWriters(NULL_CONTROLLER, VOID_EVICT_WRITERS);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

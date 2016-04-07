@@ -169,7 +169,7 @@ public class TestDockerContainerExecutorWithMocks {
     String appSubmitter = "nobody";
     String appId = "APP_ID";
     String containerId = "CONTAINER_ID";
-    String testImage = "testrepo.com/test-image rm -rf $HADOOP_PREFIX/*";
+    String testImage = "testrepo.com/test-image rm -rf $HADOOP_HOME/*";
 
     Container container = mock(Container.class, RETURNS_DEEP_STUBS);
     ContainerId cId = mock(ContainerId.class, RETURNS_DEEP_STUBS);

@@ -215,7 +215,7 @@ Three daemons are required to provide NFS service: rpcbind (or portmap), mountd 
 
 2.  Start Hadoop's portmap (needs root privileges):
 
-        [root]> $HADOOP_PREFIX/bin/hdfs --daemon start portmap
+        [root]> $HADOOP_HOME/bin/hdfs --daemon start portmap
 
 3.  Start mountd and nfsd.
 
@@ -224,12 +224,12 @@ Three daemons are required to provide NFS service: rpcbind (or portmap), mountd 
     While in secure mode, any user can start NFS gateway
     as long as the user has read access to the Kerberos keytab defined in "nfs.keytab.file".
 
-        [hdfs]$ $HADOOP_PREFIX/bin/hdfs --daemon start nfs3
+        [hdfs]$ $HADOOP_HOME/bin/hdfs --daemon start nfs3
 
 4.  Stop NFS gateway services.
 
-        [hdfs]$ $HADOOP_PREFIX/bin/hdfs --daemon stop nfs3
-        [root]> $HADOOP_PREFIX/bin/hdfs --daemon stop portmap
+        [hdfs]$ $HADOOP_HOME/bin/hdfs --daemon stop nfs3
+        [root]> $HADOOP_HOME/bin/hdfs --daemon stop portmap
 
 Optionally, you can forgo running the Hadoop-provided portmap daemon and instead use the system portmap daemon on all operating systems if you start the NFS Gateway as root. This will allow the HDFS NFS Gateway to work around the aforementioned bug and still register using the system portmap daemon. To do so, just start the NFS gateway daemon as you normally would, but make sure to do so as the "root" user, and also set the "HADOOP\_PRIVILEGED\_NFS\_USER" environment variable to an unprivileged user. In this mode the NFS Gateway will start as root to perform its initial registration with the system portmap, and then will drop privileges back to the user specified by the HADOOP\_PRIVILEGED\_NFS\_USER afterward and for the rest of the duration of the lifetime of the NFS Gateway process. Note that if you choose this route, you should skip steps 1 and 2 above.
 

@@ -19,7 +19,9 @@ package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.*;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.log4j.Level;
 import org.apache.hadoop.util.Shell;
 
 import java.io.*;
@@ -31,19 +33,11 @@ import junit.framework.*;
  * This class tests the local file system via the FileSystem abstraction.
  */
 public class TestLocalFileSystemPermission extends TestCase {
-  static final String TEST_PATH_PREFIX = new Path(System.getProperty(
-      "test.build.data", "/tmp")).toString().replace(' ', '_')
-      + "/" + TestLocalFileSystemPermission.class.getSimpleName() + "_";
+  static final String TEST_PATH_PREFIX = GenericTestUtils.getTempPath(
+      TestLocalFileSystemPermission.class.getSimpleName());
 
-  {
-    try {
-      ((org.apache.commons.logging.impl.Log4JLogger)FileSystem.LOG).getLogger()
-      .setLevel(org.apache.log4j.Level.DEBUG);
-    }
-    catch(Exception e) {
-      System.out.println("Cannot change log level\n"
-          + StringUtils.stringifyException(e));
-    }
+  static {
+    GenericTestUtils.setLogLevel(FileSystem.LOG, Level.DEBUG);
   }
 
   private Path writeFile(FileSystem fs, String name) throws IOException {

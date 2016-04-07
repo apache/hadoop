@@ -44,6 +44,14 @@ public abstract class ResourceUtilization implements
     return utilization;
   }
 
+  @Public
+  @Unstable
+  public static ResourceUtilization newInstance(
+      ResourceUtilization resourceUtil) {
+    return newInstance(resourceUtil.getPhysicalMemory(),
+        resourceUtil.getVirtualMemory(), resourceUtil.getCPU());
+  }
+
   /**
    * Get used <em>virtual memory</em>.
    *
@@ -146,5 +154,19 @@ public abstract class ResourceUtilization implements
     this.setPhysicalMemory(this.getPhysicalMemory() + pmem);
     this.setVirtualMemory(this.getVirtualMemory() + vmem);
     this.setCPU(this.getCPU() + cpu);
+  }
+
+  /**
+   * Subtract utilization from the current one.
+   * @param pmem Physical memory to be subtracted.
+   * @param vmem Virtual memory to be subtracted.
+   * @param cpu CPU utilization to be subtracted.
+   */
+  @Public
+  @Unstable
+  public void subtractFrom(int pmem, int vmem, float cpu) {
+    this.setPhysicalMemory(this.getPhysicalMemory() - pmem);
+    this.setVirtualMemory(this.getVirtualMemory() - vmem);
+    this.setCPU(this.getCPU() - cpu);
   }
 }

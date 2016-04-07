@@ -233,7 +233,7 @@ class ReplicaMap {
    * Give access to mutex used for synchronizing ReplicasMap
    * @return object used as lock
    */
-  Object getMutext() {
+  Object getMutex() {
     return mutex;
   }
 }

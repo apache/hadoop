@@ -534,7 +534,31 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
     return true;
   }
-  
+
+  @Override
+  public void incReservedResource(String partition, Resource reservedRes) {
+    if (partition == null) {
+      partition = RMNodeLabelsManager.NO_LABEL;
+    }
+
+    queueUsage.incReserved(partition, reservedRes);
+    if(null != parent){
+      parent.incReservedResource(partition, reservedRes);
+    }
+  }
+
+  @Override
+  public void decReservedResource(String partition, Resource reservedRes) {
+    if (partition == null) {
+      partition = RMNodeLabelsManager.NO_LABEL;
+    }
+
+    queueUsage.decReserved(partition, reservedRes);
+    if(null != parent){
+      parent.decReservedResource(partition, reservedRes);
+    }
+  }
+
   @Override
   public void incPendingResource(String nodeLabel, Resource resourceToInc) {
     if (nodeLabel == null) {
@@ -567,6 +591,9 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
     // ResourceUsage has its own lock, no addition lock needs here.
     queueUsage.incUsed(nodeLabel, resourceToInc);
+    CSQueueUtils.updateUsedCapacity(resourceCalculator,
+        labelManager.getResourceByLabel(nodeLabel, Resources.none()),
+        minimumAllocation, queueUsage, queueCapacities, nodeLabel);
     if (null != parent) {
       parent.incUsedResource(nodeLabel, resourceToInc, null);
     }
@@ -580,6 +607,9 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
     // ResourceUsage has its own lock, no addition lock needs here.
     queueUsage.decUsed(nodeLabel, resourceToDec);
+    CSQueueUtils.updateUsedCapacity(resourceCalculator,
+        labelManager.getResourceByLabel(nodeLabel, Resources.none()),
+        minimumAllocation, queueUsage, queueCapacities, nodeLabel);
     if (null != parent) {
       parent.decUsedResource(nodeLabel, resourceToDec, null);
     }

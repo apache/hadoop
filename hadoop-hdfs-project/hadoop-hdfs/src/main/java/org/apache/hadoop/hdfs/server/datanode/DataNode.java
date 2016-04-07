@@ -3027,6 +3027,13 @@ public class DataNode extends ReconfigurableBase
   }
 
   @Override //ClientDatanodeProtocol
+  public void evictWriters() throws IOException {
+    checkSuperuserPrivilege();
+    LOG.info("Evicting all writers.");
+    xserver.stopWriters();
+  }
+
+  @Override //ClientDatanodeProtocol
   public DatanodeLocalInfo getDatanodeInfo() {
     long uptime = ManagementFactory.getRuntimeMXBean().getUptime()/1000;
     return new DatanodeLocalInfo(VersionInfo.getVersion(),

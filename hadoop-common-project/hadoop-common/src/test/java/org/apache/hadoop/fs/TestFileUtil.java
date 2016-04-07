@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.fs;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.*;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
@@ -49,7 +48,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.tools.tar.TarEntry;
 import org.apache.tools.tar.TarOutputStream;
 
-import javax.print.attribute.URISyntax;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
@@ -58,9 +56,7 @@ import static org.mockito.Mockito.when;
 public class TestFileUtil {
   private static final Log LOG = LogFactory.getLog(TestFileUtil.class);
 
-  private static final String TEST_ROOT_DIR = System.getProperty(
-      "test.build.data", "/tmp") + "/fu";
-  private static final File TEST_DIR = new File(TEST_ROOT_DIR);
+  private static final File TEST_DIR = GenericTestUtils.getTestDir("fu");
   private static final String FILE = "x";
   private static final String LINK = "y";
   private static final String DIR = "dir";
@@ -526,60 +522,6 @@ public class TestFileUtil {
     validateAndSetWritablePermissions(false, ret);
   }
   
-  @Test (timeout = 30000)
-  public void testCopyMergeSingleDirectory() throws IOException {
-    setupDirs();
-    boolean copyMergeResult = copyMerge("partitioned", "tmp/merged");
-    Assert.assertTrue("Expected successful copyMerge result.", copyMergeResult);
-    File merged = new File(TEST_DIR, "tmp/merged");
-    Assert.assertTrue("File tmp/merged must exist after copyMerge.",
-        merged.exists());
-    BufferedReader rdr = new BufferedReader(new FileReader(merged));
-
-    try {
-      Assert.assertEquals("Line 1 of merged file must contain \"foo\".",
-          "foo", rdr.readLine());
-      Assert.assertEquals("Line 2 of merged file must contain \"bar\".",
-          "bar", rdr.readLine());
-      Assert.assertNull("Expected end of file reading merged file.",
-          rdr.readLine());
-    }
-    finally {
-      rdr.close();
-    }
-  }
-
-  /**
-   * Calls FileUtil.copyMerge using the specified source and destination paths.
-   * Both source and destination are assumed to be on the local file system.
-   * The call will not delete source on completion and will not add an
-   * additional string between files.
-   * @param src String non-null source path.
-   * @param dst String non-null destination path.
-   * @return boolean true if the call to FileUtil.copyMerge was successful.
-   * @throws IOException if an I/O error occurs.
-   */
-  private boolean copyMerge(String src, String dst)
-      throws IOException {
-    Configuration conf = new Configuration();
-    FileSystem fs = FileSystem.getLocal(conf);
-    final boolean result;
-
-    try {
-      Path srcPath = new Path(TEST_ROOT_DIR, src);
-      Path dstPath = new Path(TEST_ROOT_DIR, dst);
-      boolean deleteSource = false;
-      String addString = null;
-      result = FileUtil.copyMerge(fs, srcPath, fs, dstPath, deleteSource, conf,
-          addString);
-    }
-    finally {
-      fs.close();
-    }
-
-    return result;
-  }
-
   /**
    * Test that getDU is able to handle cycles caused due to symbolic links
    * and that directory sizes are not added to the final calculated size
@@ -1019,10 +961,10 @@ public class TestFileUtil {
   @Test (timeout = 30000)
   public void testUntar() throws IOException {
     String tarGzFileName = System.getProperty("test.cache.data",
-        "build/test/cache") + "/test-untar.tgz";
+        "target/test/cache") + "/test-untar.tgz";
     String tarFileName = System.getProperty("test.cache.data",
         "build/test/cache") + "/test-untar.tar";
-    String dataDir = System.getProperty("test.build.data", "build/test/data");
+    File dataDir = GenericTestUtils.getTestDir();
     File untarDir = new File(dataDir, "untarDir");
 
     doUntarAndVerify(new File(tarGzFileName), untarDir);

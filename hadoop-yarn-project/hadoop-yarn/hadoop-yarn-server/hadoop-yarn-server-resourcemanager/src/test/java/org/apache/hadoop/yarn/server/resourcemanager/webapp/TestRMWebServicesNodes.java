@@ -272,8 +272,10 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
       RMNode rmNode = rm.getRMContext().getInactiveRMNodes().get(nodeId);
       WebServicesTestUtils.checkStringMatch("nodeHTTPAddress", "",
           info.getString("nodeHTTPAddress"));
-      WebServicesTestUtils.checkStringMatch("state", rmNode.getState()
-          .toString(), info.getString("state"));
+      if (rmNode != null) {
+        WebServicesTestUtils.checkStringMatch("state",
+            rmNode.getState().toString(), info.getString("state"));
+      }
     }
   }
   
@@ -304,8 +306,10 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     RMNode rmNode = rm.getRMContext().getInactiveRMNodes().get(nodeId);
     WebServicesTestUtils.checkStringMatch("nodeHTTPAddress", "",
         info.getString("nodeHTTPAddress"));
-    WebServicesTestUtils.checkStringMatch("state",
-        rmNode.getState().toString(), info.getString("state"));
+    if (rmNode != null) {
+      WebServicesTestUtils.checkStringMatch("state",
+          rmNode.getState().toString(), info.getString("state"));
+    }
   }
 
   @Test

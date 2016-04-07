@@ -18,14 +18,16 @@
 
 package org.apache.hadoop.mapred;
 
+import org.junit.Test;
+
 import java.io.IOException;
-import junit.framework.TestCase;
 
 /**
  * A Unit-test to test bringup and shutdown of Mini Map-Reduce Cluster.
  */
-public class TestMiniMRBringup extends TestCase {
+public class TestMiniMRBringup {
 
+  @Test
   public void testBringUp() throws IOException {
     MiniMRCluster mr = null;
     try {

@@ -256,6 +256,12 @@ class DataXceiverServer implements Runnable {
       }
     }
   }
+
+  public synchronized void stopWriters() {
+    for (Peer p : peers.keySet()) {
+      peersXceiver.get(p).stopWriter();
+    }
+  }
   
   // Notify all peers of the shutdown and restart.
   // datanode.shouldRun should still be true and datanode.restarting should

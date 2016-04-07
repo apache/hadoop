@@ -78,6 +78,7 @@ typedef void (__cdecl *__d_ec_encode_data_update)(int, int, int, int, unsigned c
 typedef struct __IsaLibLoader {
   // The loaded library handle
   void* libec;
+  char* libname;
 
   __d_gf_mul gf_mul;
   __d_gf_inv gf_inv;
@@ -132,11 +133,6 @@ static FARPROC WINAPI myDlsym(HMODULE handle, LPCSTR symbol) {
  * Return 0 if not support, 1 otherwise.
  */
 int build_support_erasurecode();
-
-/**
- * Get the library name possibly of full path.
- */
-const char* get_library_name();
 
 /**
  * Initialize and load erasure code library, returning error message if any.

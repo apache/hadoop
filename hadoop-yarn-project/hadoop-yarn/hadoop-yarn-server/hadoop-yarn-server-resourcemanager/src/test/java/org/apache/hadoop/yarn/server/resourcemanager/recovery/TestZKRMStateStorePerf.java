@@ -91,7 +91,9 @@ public class TestZKRMStateStorePerf extends RMStateStoreTestBase
     if (appTokenMgr != null) {
       appTokenMgr.stop();
     }
-    curatorTestingServer.stop();
+    if (curatorTestingServer != null) {
+      curatorTestingServer.stop();
+    }
   }
 
   private void initStore(String hostPort) {
@@ -99,8 +101,9 @@ public class TestZKRMStateStorePerf extends RMStateStoreTestBase
     RMContext rmContext = mock(RMContext.class);
 
     conf = new YarnConfiguration();
-    conf.set(YarnConfiguration.RM_ZK_ADDRESS,
-        optHostPort.or(curatorTestingServer.getConnectString()));
+    conf.set(YarnConfiguration.RM_ZK_ADDRESS, optHostPort
+        .or((curatorTestingServer == null) ? "" : curatorTestingServer
+            .getConnectString()));
     conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
 
     store = new ZKRMStateStore();

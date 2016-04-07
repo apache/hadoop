@@ -22,6 +22,7 @@
 
 #include "org_apache_hadoop.h"
 #include "jni_common.h"
+#include "isal_load.h"
 #include "org_apache_hadoop_io_erasurecode_ErasureCodeNative.h"
 
 #ifdef UNIX
@@ -37,9 +38,11 @@ Java_org_apache_hadoop_io_erasurecode_ErasureCodeNative_loadLibrary
 JNIEXPORT jstring JNICALL
 Java_org_apache_hadoop_io_erasurecode_ErasureCodeNative_getLibraryName
 (JNIEnv *env, jclass myclass) {
-  char* libName = get_library_name();
-  if (libName == NULL) {
-    libName = "Unavailable";
+  if (isaLoader == NULL) {
+    THROW(env, "java/lang/UnsatisfiedLinkError",
+                             "Unavailable: library not loaded yet");
+    return (jstring)NULL;
   }
-  return (*env)->NewStringUTF(env, libName);
+
+  return (*env)->NewStringUTF(env, isaLoader->libname);
 }

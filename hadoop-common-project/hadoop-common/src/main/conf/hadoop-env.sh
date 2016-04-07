@@ -55,14 +55,14 @@
 
 # Location of Hadoop.  By default, Hadoop will attempt to determine
 # this location based upon its execution path.
-# export HADOOP_PREFIX=
+# export HADOOP_HOME=
 
 # Location of Hadoop's configuration information.  i.e., where this
 # file is probably living. Many sites will also set this in the
 # same location where JAVA_HOME is defined.  If this is not defined
 # Hadoop will attempt to locate it based upon its execution
 # path.
-# export HADOOP_CONF_DIR=$HADOOP_PREFIX/etc/hadoop
+# export HADOOP_CONF_DIR=${HADOOP_HOME}/etc/hadoop
 
 # The maximum amount of heap to use (Java -Xmx).  If no unit
 # is provided, it will be converted to MB.  Daemons will
@@ -186,10 +186,10 @@ esac
 # non-secure)
 #
 
-# Where (primarily) daemon log files are stored.  # $HADOOP_PREFIX/logs
-# by default.
+# Where (primarily) daemon log files are stored.
+# ${HADOOP_HOME}/logs by default.
 # Java property: hadoop.log.dir
-# export HADOOP_LOG_DIR=${HADOOP_PREFIX}/logs
+# export HADOOP_LOG_DIR=${HADOOP_HOME}/logs
 
 # A string representing this instance of hadoop. $USER by default.
 # This is used in writing log and pid files, so keep that in mind!

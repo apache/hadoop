@@ -56,6 +56,7 @@ With the introduction of the timeline server, the Application History Server bec
 the Timeline Server.
 
 Generic information includes application level data such as 
+
 * queue-name, 
 * user information and the like set in the `ApplicationSubmissionContext`,
 * a list of application-attempts that ran for an application
@@ -141,7 +142,7 @@ and cluster operators.
 
 | Configuration Property | Description |
 |:---- |:---- |
-| `yarn.timeline-service.enabled` | Indicate to clients whether Timeline service is enabled or not. If enabled, the `TimelineClient` library used by applications will post entities and events to the Timeline server. Defaults to `false`. |
+| `yarn.timeline-service.enabled` | In the server side it indicates whether timeline service is enabled or not. And in the client side, users can enable it to indicate whether client wants to use timeline service. If it's enabled in the client side along with security, then yarn client tries to fetch the delegation tokens for the timeline server. Defaults to `false`. |
 | `yarn.resourcemanager.system-metrics-publisher.enabled` | The setting that controls whether or not YARN system metrics are published on the timeline server by RM. Defaults to `false`. |
 | `yarn.timeline-service.generic-application-history.enabled` | Indicate to clients whether to query generic application data from timeline history-service or not. If not enabled then application data is queried only from Resource Manager. Defaults to `false`. |
 
@@ -150,7 +151,7 @@ and cluster operators.
 | Configuration Property | Description |
 |:---- |:---- |
 | `yarn.timeline-service.store-class` | Store class name for timeline store. Defaults to `org.apache.hadoop.yarn.server.timeline.LeveldbTimelineStore`. |
-| `yarn.timeline-service.leveldb-timeline-store.path` | Store file name for leveldb timeline store. Defaults to `${hadoop.tmp.dir}/yarn/timelin`e. |
+| `yarn.timeline-service.leveldb-timeline-store.path` | Store file name for leveldb timeline store. Defaults to `${hadoop.tmp.dir}/yarn/timeline`. |
 | `yarn.timeline-service.leveldb-timeline-store.ttl-interval-ms` | Length of time to wait between deletion cycles of leveldb timeline store in milliseconds. Defaults to `300000`. |
 | `yarn.timeline-service.leveldb-timeline-store.read-cache-size` | Size of read cache for uncompressed blocks for leveldb timeline store in bytes. Defaults to `104857600`. |
 | `yarn.timeline-service.leveldb-timeline-store.start-time-read-cache-size` | Size of cache for recently read entity start times for leveldb timeline store in number of entities. Defaults to `10000`. |
@@ -192,6 +193,7 @@ selected if this policy is `HTTPS_ONLY`.
 #### UI Hosting Configuration
 
 The timeline service can host multiple UIs if enabled. The service can support both static web sites hosted in a directory or war files bundled. The web UI is then hosted on the timeline service HTTP port under the path configured.
+
 | Configuration Property | Description |
 |:---- |:---- |
 | `yarn.timeline-service.ui-names` | Comma separated list of UIs that will be hosted. Defaults to `none`. |
@@ -215,7 +217,7 @@ to `kerberos`, after which the following configuration options are available:
 | `yarn.timeline-service.delegation.key.update-interval` | Defaults to `86400000` (1 day). |
 | `yarn.timeline-service.delegation.token.renew-interval` | Defaults to `86400000` (1 day). |
 | `yarn.timeline-service.delegation.token.max-lifetime` | Defaults to `604800000` (7 days). |
-| `yarn.timeline-service.best-effort` | Should the failure to obtain a delegation token be considered an application failure (option = false),  or should the client attempt to continue to publish information without it (option=true). Default: `false` |
+| `yarn.timeline-service.client.best-effort` | Should the failure to obtain a delegation token be considered an application failure (option = false),  or should the client attempt to continue to publish information without it (option=true). Default: `false` |
 
 #### Enabling the timeline service and the generic history service
 

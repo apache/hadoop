@@ -179,7 +179,7 @@ public class ReliabilityTest extends Configured implements Tool {
   
   private String normalizeCommandPath(String command) {
     final String hadoopHome;
-    if ((hadoopHome = System.getenv("HADOOP_PREFIX")) != null) {
+    if ((hadoopHome = System.getenv("HADOOP_HOME")) != null) {
       command = hadoopHome + "/" + command;
     }
     return command;

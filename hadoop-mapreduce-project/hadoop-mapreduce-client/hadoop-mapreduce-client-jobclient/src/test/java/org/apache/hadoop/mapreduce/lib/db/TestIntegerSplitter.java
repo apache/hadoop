@@ -17,15 +17,15 @@
  */
 package org.apache.hadoop.mapreduce.lib.db;
 
-import java.io.IOException;
-import java.math.BigDecimal;
+import org.junit.Test;
+
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
-public class TestIntegerSplitter extends TestCase {
+public class TestIntegerSplitter {
   private long [] toLongArray(List<Long> in) {
     long [] out = new long[in.size()];
     for (int i = 0; i < in.size(); i++) {
@@ -70,12 +70,14 @@ public class TestIntegerSplitter extends TestCase {
     }
   }
 
+  @Test
   public void testEvenSplits() throws SQLException {
     List<Long> splits = new IntegerSplitter().split(10, 0, 100);
     long [] expected = { 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100 };
     assertLongArrayEquals(expected, toLongArray(splits));
   }
 
+  @Test
   public void testOddSplits() throws SQLException {
     List<Long> splits = new IntegerSplitter().split(10, 0, 95);
     long [] expected = { 0, 9, 18, 27, 36, 45, 54, 63, 72, 81, 90, 95 };
@@ -83,12 +85,14 @@ public class TestIntegerSplitter extends TestCase {
 
   }
 
+  @Test
   public void testSingletonSplit() throws SQLException {
     List<Long> splits = new IntegerSplitter().split(1, 5, 5);
     long [] expected = { 5, 5 };
     assertLongArrayEquals(expected, toLongArray(splits));
   }
 
+  @Test
   public void testSingletonSplit2() throws SQLException {
     // Same test, but overly-high numSplits
     List<Long> splits = new IntegerSplitter().split(5, 5, 5);
@@ -96,6 +100,7 @@ public class TestIntegerSplitter extends TestCase {
     assertLongArrayEquals(expected, toLongArray(splits));
   }
 
+  @Test
   public void testTooManySplits() throws SQLException {
     List<Long> splits = new IntegerSplitter().split(5, 3, 5);
     long [] expected = { 3, 4, 5 };

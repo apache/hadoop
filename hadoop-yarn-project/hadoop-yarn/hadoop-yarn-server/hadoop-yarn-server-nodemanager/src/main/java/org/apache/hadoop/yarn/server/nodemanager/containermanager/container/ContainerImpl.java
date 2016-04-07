@@ -65,6 +65,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.sharedcache.SharedCacheUploadEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.sharedcache.SharedCacheUploadEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerContainerFinishedEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerStartMonitoringEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerStopMonitoringEvent;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -100,6 +101,7 @@ public class ContainerImpl implements Container {
   private boolean wasLaunched;
   private long containerLocalizationStartTime;
   private long containerLaunchStartTime;
+  private ContainerMetrics containerMetrics;
   private static Clock clock = SystemClock.getInstance();
 
   /** The NM-wide configuration - not specific to this container */
@@ -147,6 +149,21 @@ public class ContainerImpl implements Container {
     this.readLock = readWriteLock.readLock();
     this.writeLock = readWriteLock.writeLock();
     this.context = context;
+    boolean containerMetricsEnabled =
+        conf.getBoolean(YarnConfiguration.NM_CONTAINER_METRICS_ENABLE,
+            YarnConfiguration.DEFAULT_NM_CONTAINER_METRICS_ENABLE);
+
+    if (containerMetricsEnabled) {
+      long flushPeriod =
+          conf.getLong(YarnConfiguration.NM_CONTAINER_METRICS_PERIOD_MS,
+              YarnConfiguration.DEFAULT_NM_CONTAINER_METRICS_PERIOD_MS);
+      long unregisterDelay = conf.getLong(
+          YarnConfiguration.NM_CONTAINER_METRICS_UNREGISTER_DELAY_MS,
+          YarnConfiguration.DEFAULT_NM_CONTAINER_METRICS_UNREGISTER_DELAY_MS);
+      containerMetrics = ContainerMetrics
+          .forContainer(containerId, flushPeriod, unregisterDelay);
+      containerMetrics.recordStartTime(clock.getTime());
+    }
 
     stateMachine = stateMachineFactory.make(this);
   }
@@ -989,6 +1006,11 @@ public class ContainerImpl implements Container {
     @SuppressWarnings("unchecked")
     public void transition(ContainerImpl container, ContainerEvent event) {
       container.metrics.releaseContainer(container.resource);
+      if (container.containerMetrics != null) {
+        container.containerMetrics
+            .recordFinishTimeAndExitCode(clock.getTime(), container.exitCode);
+        container.containerMetrics.finished();
+      }
       container.sendFinishedEvents();
       //if the current state is NEW it means the CONTAINER_INIT was never 
       // sent for the event, thus no need to send the CONTAINER_STOP

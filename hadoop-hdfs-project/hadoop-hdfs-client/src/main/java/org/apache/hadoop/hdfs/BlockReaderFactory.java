@@ -150,7 +150,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
   private ClientContext clientContext;
 
   /**
-   * Number of bytes to read.  -1 indicates no limit.
+   * Number of bytes to read. Must be set to a non-negative value.
    */
   private long length = -1;
 
@@ -341,6 +341,8 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
    */
   public BlockReader build() throws IOException {
     Preconditions.checkNotNull(configuration);
+    Preconditions
+        .checkState(length >= 0, "Length must be set to a non-negative value");
     BlockReader reader = tryToCreateExternalBlockReader();
     if (reader != null) {
       return reader;

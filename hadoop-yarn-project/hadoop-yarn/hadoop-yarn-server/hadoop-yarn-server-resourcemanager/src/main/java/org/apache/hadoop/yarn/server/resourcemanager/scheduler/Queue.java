@@ -118,4 +118,24 @@ public interface Queue {
    * @return default application priority
    */
   public Priority getDefaultApplicationPriority();
+
+  /**
+   * Increment Reserved Capacity
+   *
+   * @param partition
+   *          asked by application
+   * @param reservedRes
+   *          reserved resource asked
+   */
+  public void incReservedResource(String partition, Resource reservedRes);
+
+  /**
+   * Decrement Reserved Capacity
+   *
+   * @param partition
+   *          asked by application
+   * @param reservedRes
+   *          reserved resource asked
+   */
+  public void decReservedResource(String partition, Resource reservedRes);
 }

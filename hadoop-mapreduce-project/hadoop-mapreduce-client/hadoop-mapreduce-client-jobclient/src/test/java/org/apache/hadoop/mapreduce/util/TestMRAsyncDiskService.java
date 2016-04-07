@@ -20,8 +20,6 @@ package org.apache.hadoop.mapreduce.util;
 import java.io.File;
 import java.io.IOException;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -30,20 +28,27 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapreduce.util.MRAsyncDiskService;
+import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * A test for MRAsyncDiskService.
  */
-public class TestMRAsyncDiskService extends TestCase {
+public class TestMRAsyncDiskService {
 
   public static final Log LOG = LogFactory.getLog(TestMRAsyncDiskService.class);
   
   private static String TEST_ROOT_DIR = new Path(System.getProperty(
       "test.build.data", "/tmp")).toString();
   
-  @Override
-  protected void setUp() {
+  @Before
+  public void setUp() {
     FileUtil.fullyDelete(new File(TEST_ROOT_DIR));
   }
 

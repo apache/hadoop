@@ -639,34 +639,32 @@ public class AdminService extends CompositeService implements
     try {
       Configuration conf = getConfig();
       Configuration configuration = new Configuration(conf);
-      DynamicResourceConfiguration newconf;
+      DynamicResourceConfiguration newConf;
 
-      InputStream DRInputStream =
-        this.rmContext.getConfigurationProvider()
-        .getConfigurationInputStream(configuration,
-          YarnConfiguration.DR_CONFIGURATION_FILE);
-      if (DRInputStream != null) {
-        configuration.addResource(DRInputStream);
-        newconf = new DynamicResourceConfiguration(configuration, false);
+      InputStream drInputStream =
+          this.rmContext.getConfigurationProvider().getConfigurationInputStream(
+              configuration, YarnConfiguration.DR_CONFIGURATION_FILE);
+
+      if (drInputStream != null) {
+        newConf = new DynamicResourceConfiguration(configuration,
+            drInputStream);
       } else {
-        newconf = new DynamicResourceConfiguration(configuration, true);
+        newConf = new DynamicResourceConfiguration(configuration);
       }
 
-      if (newconf.getNodes() == null || newconf.getNodes().length == 0) {
-        RMAuditLogger.logSuccess(user.getShortUserName(), argName,
-            "AdminService");
-        return response;
-      } else {
+      if (newConf.getNodes() != null && newConf.getNodes().length != 0) {
         Map<NodeId, ResourceOption> nodeResourceMap =
-          newconf.getNodeResourceMap();
-
+            newConf.getNodeResourceMap();
         UpdateNodeResourceRequest updateRequest =
-          UpdateNodeResourceRequest.newInstance(nodeResourceMap);
+            UpdateNodeResourceRequest.newInstance(nodeResourceMap);
         updateNodeResource(updateRequest);
-        RMAuditLogger.logSuccess(user.getShortUserName(), argName,
-          "AdminService");
-        return response;
       }
+      // refresh dynamic resource in ResourceTrackerService
+      this.rmContext.getResourceTrackerService().
+          updateDynamicResourceConfiguration(newConf);
+      RMAuditLogger.logSuccess(user.getShortUserName(), argName,
+              "AdminService");
+      return response;
     } catch (IOException ioe) {
       throw logAndWrapException(ioe, user.getShortUserName(), argName, msg);
     }

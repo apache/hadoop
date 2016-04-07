@@ -36,7 +36,6 @@ import static org.junit.Assert.assertEquals;
  * @see TestDelegatingInputFormat
  */
 public class TestMultipleInputs {
-
   @Test
   public void testAddInputPathWithFormat() {
     final JobConf conf = new JobConf();
@@ -49,7 +48,6 @@ public class TestMultipleInputs {
     assertEquals(KeyValueTextInputFormat.class, inputs.get(new Path("/bar"))
        .getClass());
   }
-
   @Test
   public void testAddInputPathWithMapper() {
     final JobConf conf = new JobConf();

@@ -587,12 +587,14 @@ public class DFSUtilClient {
   public static Peer peerFromSocketAndKey(
         SaslDataTransferClient saslClient, Socket s,
         DataEncryptionKeyFactory keyFactory,
-        Token<BlockTokenIdentifier> blockToken, DatanodeID datanodeId)
-        throws IOException {
+        Token<BlockTokenIdentifier> blockToken, DatanodeID datanodeId,
+        int socketTimeoutMs) throws IOException {
     Peer peer = null;
     boolean success = false;
     try {
       peer = peerFromSocket(s);
+      peer.setReadTimeout(socketTimeoutMs);
+      peer.setWriteTimeout(socketTimeoutMs);
       peer = saslClient.peerSend(peer, keyFactory, blockToken, datanodeId);
       success = true;
       return peer;

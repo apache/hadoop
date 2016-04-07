@@ -26,8 +26,6 @@ import java.io.Writer;
 import java.util.Iterator;
 import java.util.StringTokenizer;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -36,8 +34,11 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.serializer.JavaSerializationComparator;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.junit.Test;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
-public class TestJavaSerialization extends TestCase {
+public class TestJavaSerialization {
 
   private static String TEST_ROOT_DIR =
     new File(System.getProperty("test.build.data", "/tmp")).toURI()
@@ -90,7 +91,7 @@ public class TestJavaSerialization extends TestCase {
     wr.write("b a\n");
     wr.close();
   }
-  
+  @Test
   public void testMapReduceJob() throws Exception {
 
     JobConf conf = new JobConf(TestJavaSerialization.class);
@@ -149,6 +150,7 @@ public class TestJavaSerialization extends TestCase {
    * coupled to Writable types, if so, the job will fail.
    *
    */
+  @Test
   public void testWriteToSequencefile() throws Exception {
     JobConf conf = new JobConf(TestJavaSerialization.class);
     conf.setJobName("JavaSerialization");

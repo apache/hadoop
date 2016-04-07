@@ -271,6 +271,55 @@ public class TestClientProtocolForPipelineRecovery {
     }
   }
 
+  /**
+   * Test that the writer is kicked out of a node.
+   */
+  @Test
+  public void testEvictWriter() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes((int)3)
+          .build();
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
+      Path file = new Path("testEvictWriter.dat");
+      FSDataOutputStream out = fs.create(file, (short)2);
+      out.write(0x31);
+      out.hflush();
+
+      // get nodes in the pipeline
+      DFSOutputStream dfsOut = (DFSOutputStream)out.getWrappedStream();
+      DatanodeInfo[] nodes = dfsOut.getPipeline();
+      Assert.assertEquals(2, nodes.length);
+      String dnAddr = nodes[1].getIpcAddr(false);
+
+      // evict the writer from the second datanode and wait until
+      // the pipeline is rebuilt.
+      DFSAdmin dfsadmin = new DFSAdmin(conf);
+      final String[] args1 = {"-evictWriters", dnAddr };
+      Assert.assertEquals(0, dfsadmin.run(args1));
+      out.write(0x31);
+      out.hflush();
+
+      // get the new pipline and check the node is not in there.
+      nodes = dfsOut.getPipeline();
+      try {
+        Assert.assertTrue(nodes.length > 0 );
+        for (int i = 0; i < nodes.length; i++) {
+          Assert.assertFalse(dnAddr.equals(nodes[i].getIpcAddr(false)));
+        }
+      } finally {
+        out.close();
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   /** Test restart timeout */
   @Test
   public void testPipelineRecoveryOnRestartFailure() throws Exception {
@@ -373,6 +422,59 @@ public class TestClientProtocolForPipelineRecovery {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  /**
+   * Test to make sure the checksum is set correctly after pipeline
+   * recovery transfers 0 byte partial block. If fails the test case
+   * will say "java.io.IOException: Failed to replace a bad datanode
+   * on the existing pipeline due to no more good datanodes being
+   * available to try."  This indicates there was a real failure
+   * after the staged failure.
+   */
+  @Test
+  public void testZeroByteBlockRecovery() throws Exception {
+    // Make the first datanode fail once. With 3 nodes and a block being
+    // created with 2 replicas, anything more than this planned failure
+    // will cause a test failure.
+    DataNodeFaultInjector dnFaultInjector = new DataNodeFaultInjector() {
+      int tries = 1;
+      @Override
+      public void stopSendingPacketDownstream() throws IOException {
+        if (tries > 0) {
+          tries--;
+          try {
+            Thread.sleep(60000);
+          } catch (InterruptedException ie) {
+            throw new IOException("Interrupted while sleeping. Bailing out.");
+          }
+        }
+      }
+    };
+    DataNodeFaultInjector oldDnInjector = DataNodeFaultInjector.get();
+    DataNodeFaultInjector.set(dnFaultInjector);
+
+    Configuration conf = new HdfsConfiguration();
+    conf.set(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, "1000");
+    conf.set(HdfsClientConfigKeys.
+        BlockWrite.ReplaceDatanodeOnFailure.POLICY_KEY, "ALWAYS");
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      cluster.waitActive();
+
+      FileSystem fs = cluster.getFileSystem();
+      FSDataOutputStream out = fs.create(new Path("noheartbeat.dat"), (short)2);
+      out.write(0x31);
+      out.hflush();
+      out.close();
+
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      DataNodeFaultInjector.set(oldDnInjector);
     }
   }
 }

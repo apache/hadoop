@@ -47,7 +47,6 @@ import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.yarn.api.records.DecommissionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -202,7 +201,7 @@ public class TestRMAdminService {
   }
 
   @Test
-  public void testAdminRefreshNodesResourcesWithFileSystemBasedConfigurationProvider()
+  public void testRefreshNodesResourceWithFileSystemBasedConfigurationProvider()
       throws IOException, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
@@ -237,6 +236,75 @@ public class TestRMAdminService {
     RMNode niAfter = rm.getRMContext().getRMNodes().get(nid);
     Resource resourceAfter = niAfter.getTotalCapability();
     Assert.assertEquals("<memory:4096, vCores:4>", resourceAfter.toString());
+  }
+
+  @Test
+  public void testResourcePersistentForNMRegistrationWithNewResource()
+      throws IOException, YarnException {
+    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
+
+    //upload default configurations
+    uploadDefaultConfiguration();
+
+    try {
+      rm = new MockRM(configuration);
+      rm.init(configuration);
+      rm.start();
+      rm.registerNode("h1:1234", 5120);
+    } catch(Exception ex) {
+      fail("Should not get any exceptions");
+    }
+
+    NodeId nid = ConverterUtils.toNodeId("h1:1234");
+    RMNode ni = rm.getRMContext().getRMNodes().get(nid);
+    Resource resource = ni.getTotalCapability();
+    Assert.assertEquals("<memory:5120, vCores:5>", resource.toString());
+
+    DynamicResourceConfiguration drConf =
+        new DynamicResourceConfiguration();
+    drConf.set("yarn.resource.dynamic.nodes", "h1:1234");
+    drConf.set("yarn.resource.dynamic.h1:1234.vcores", "4");
+    drConf.set("yarn.resource.dynamic.h1:1234.memory", "4096");
+    uploadConfiguration(drConf, "dynamic-resources.xml");
+
+    rm.adminService.refreshNodesResources(
+        RefreshNodesResourcesRequest.newInstance());
+
+    try {
+      // register the same node again with a different resource.
+      // validate this won't work as resource cached in RM side.
+      rm.registerNode("h1:1234", 8192, 8);
+    } catch (Exception ex) {
+      fail("Should not get any exceptions");
+    }
+
+    RMNode niAfter = rm.getRMContext().getRMNodes().get(nid);
+    Resource resourceAfter = niAfter.getTotalCapability();
+    Assert.assertEquals("<memory:4096, vCores:4>", resourceAfter.toString());
+
+    // Replace original dr file with an empty dr file, and validate node
+    // registration with new resources will take effective now.
+    deleteOnRemoteFileSystem("dynamic-resources.xml");
+    DynamicResourceConfiguration emptyDRConf =
+        new DynamicResourceConfiguration();
+
+    uploadConfiguration(emptyDRConf, "dynamic-resources.xml");
+    rm.adminService.refreshNodesResources(
+        RefreshNodesResourcesRequest.newInstance());
+    try {
+      // register the same node third time, this time the register resource
+      // should work.
+      rm.registerNode("h1:1234", 8192, 8);
+    } catch (Exception ex) {
+      fail("Should not get any exceptions");
+    }
+
+    niAfter = rm.getRMContext().getRMNodes().get(nid);
+    resourceAfter = niAfter.getTotalCapability();
+    // new resource in registration should take effective as we empty
+    // dynamic resource file already.
+    Assert.assertEquals("<memory:8192, vCores:8>", resourceAfter.toString());
   }
 
   @Test
@@ -1004,6 +1072,11 @@ public class TestRMAdminService {
     String csConfFile = writeConfigurationXML(conf, confFileName);
     // upload the file into Remote File System
     uploadToRemoteFileSystem(new Path(csConfFile));
+  }
+
+  private void deleteOnRemoteFileSystem(String fileName)
+      throws IOException {
+    fs.delete(new Path(workingPath, fileName));
   }
 
   private void uploadDefaultConfiguration() throws IOException {

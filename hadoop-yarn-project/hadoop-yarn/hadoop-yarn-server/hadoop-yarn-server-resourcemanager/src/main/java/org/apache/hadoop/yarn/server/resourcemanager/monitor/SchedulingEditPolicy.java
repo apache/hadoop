@@ -23,7 +23,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResour
 
 public interface SchedulingEditPolicy {
 
-  public void init(Configuration config, RMContext context,
+  void init(Configuration config, RMContext context,
       PreemptableResourceScheduler scheduler);
 
   /**
@@ -31,10 +31,10 @@ public interface SchedulingEditPolicy {
    * allowed to track containers and affect the scheduler. The "actions"
    * performed are passed back through an EventHandler.
    */
-  public void editSchedule();
+  void editSchedule();
 
-  public long getMonitoringInterval();
+  long getMonitoringInterval();
 
-  public String getPolicyName();
+  String getPolicyName();
 
 }

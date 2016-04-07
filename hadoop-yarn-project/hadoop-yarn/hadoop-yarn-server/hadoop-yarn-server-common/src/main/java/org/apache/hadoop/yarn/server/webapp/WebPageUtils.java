@@ -95,4 +95,10 @@ public class WebPageUtils {
       .append(", 'mRender': parseHadoopID }]").toString();
   }
 
+  public static String resourceRequestsTableInit() {
+    return tableInit().append(", 'aaData': resourceRequestsTableData")
+        .append(", bDeferRender: true").append(", bProcessing: true}")
+        .toString();
+  }
+
 }

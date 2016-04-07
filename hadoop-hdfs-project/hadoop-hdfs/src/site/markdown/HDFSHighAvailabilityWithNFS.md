@@ -475,7 +475,7 @@ There are also several other configuration parameters which may be set to contro
 
 After the configuration keys have been added, the next step is to initialize required state in ZooKeeper. You can do so by running the following command from one of the NameNode hosts.
 
-    [hdfs]$ $HADOOP_PREFIX/bin/zkfc -formatZK
+    [hdfs]$ $HADOOP_HOME/bin/zkfc -formatZK
 
 This will create a znode in ZooKeeper inside of which the automatic failover system stores its data.
 
@@ -487,7 +487,7 @@ Since automatic failover has been enabled in the configuration, the `start-dfs.s
 
 If you manually manage the services on your cluster, you will need to manually start the `zkfc` daemon on each of the machines that runs a NameNode. You can start the daemon by running:
 
-    [hdfs]$ $HADOOP_PREFIX/bin/hdfs --daemon start zkfc
+    [hdfs]$ $HADOOP_HOME/bin/hdfs --daemon start zkfc
 
 ### Securing access to ZooKeeper
 

@@ -294,14 +294,14 @@ public class TestHadoopArchiveLogs {
     Assert.assertTrue(lines[14].startsWith("export HADOOP_CLASSPATH="));
     if (proxy) {
       Assert.assertEquals(
-          "\"$HADOOP_PREFIX\"/bin/hadoop org.apache.hadoop.tools." +
+          "\"$HADOOP_HOME\"/bin/hadoop org.apache.hadoop.tools." +
               "HadoopArchiveLogsRunner -appId \"$appId\" -user \"$user\" " +
               "-workingDir " + workingDir.toString() + " -remoteRootLogDir " +
               remoteRootLogDir.toString() + " -suffix " + suffix,
           lines[15]);
     } else {
       Assert.assertEquals(
-          "\"$HADOOP_PREFIX\"/bin/hadoop org.apache.hadoop.tools." +
+          "\"$HADOOP_HOME\"/bin/hadoop org.apache.hadoop.tools." +
               "HadoopArchiveLogsRunner -appId \"$appId\" -user \"$user\" " +
               "-workingDir " + workingDir.toString() + " -remoteRootLogDir " +
               remoteRootLogDir.toString() + " -suffix " + suffix + " -noProxy",

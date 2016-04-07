@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 
+import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
@@ -26,10 +27,15 @@ import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
@@ -157,5 +163,55 @@ public class TestContainerMetrics {
     assertTrue(metrics3 == ContainerMetrics.forContainer(
         system, containerId3, 1, 0));
     system.shutdown();
+  }
+
+  /**
+   * Run a test to submit values for actual memory usage and see if the
+   * histogram comes out correctly.
+   * @throws Exception
+   */
+  @Test
+  public void testContainerMetricsHistogram() throws Exception {
+
+    // submit 2 values - 1024 and 2048. 75th, 90th, 95th and 99th percentiles
+    // will be 2048. 50th percentile will be 1536((1024+2048)/2)
+    // if we keep recording 1024 and 2048 in a loop, the 50th percentile
+    // will tend closer to 2048
+    Map<String, Long> expectedValues = new HashMap<>();
+    expectedValues.put("PMemUsageMBHistogram50thPercentileMBs", 1536L);
+    expectedValues.put("PMemUsageMBHistogram75thPercentileMBs", 2048L);
+    expectedValues.put("PMemUsageMBHistogram90thPercentileMBs", 2048L);
+    expectedValues.put("PMemUsageMBHistogram95thPercentileMBs", 2048L);
+    expectedValues.put("PMemUsageMBHistogram99thPercentileMBs", 2048L);
+    expectedValues.put("PCpuUsagePercentHistogram50thPercentilePercents", 0L);
+    expectedValues.put("PCpuUsagePercentHistogram75thPercentilePercents", 0L);
+    expectedValues.put("PCpuUsagePercentHistogram90thPercentilePercents", 0L);
+    expectedValues.put("PCpuUsagePercentHistogram95thPercentilePercents", 0L);
+    expectedValues.put("PCpuUsagePercentHistogram99thPercentilePercents", 0L);
+    Set<String> testResults = new HashSet<>();
+    int delay = 10;
+    int rolloverDelay = 1000;
+    MetricsCollectorImpl collector = new MetricsCollectorImpl();
+    ContainerId containerId = mock(ContainerId.class);
+    ContainerMetrics metrics =
+        ContainerMetrics.forContainer(containerId, delay, 0);
+
+    metrics.recordMemoryUsage(1024);
+    metrics.recordMemoryUsage(2048);
+    Thread.sleep(rolloverDelay + 10);
+    metrics.getMetrics(collector, true);
+    for (MetricsRecord record : collector.getRecords()) {
+      for (AbstractMetric metric : record.metrics()) {
+        String metricName = metric.name();
+        if (expectedValues.containsKey(metricName)) {
+          Long expectedValue = expectedValues.get(metricName);
+          Assert.assertEquals(
+              "Metric " + metricName + " doesn't have expected value",
+              expectedValue, metric.value());
+          testResults.add(metricName);
+        }
+      }
+    }
+    Assert.assertEquals(expectedValues.keySet(), testResults);
   }
 }

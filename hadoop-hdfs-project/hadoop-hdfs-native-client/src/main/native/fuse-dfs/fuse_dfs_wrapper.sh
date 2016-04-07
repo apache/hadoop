@@ -16,12 +16,12 @@
 # limitations under the License.
 #
 
-if [ "$HADOOP_PREFIX" = "" ]; then
-  echo "HADOOP_PREFIX is empty. Set it to the root directory of Hadoop source code"
+if [ "$HADOOP_HOME" = "" ]; then
+  echo "HADOOP_HOME is empty. Set it to the root directory of Hadoop source code"
   exit 1
 fi
-export FUSEDFS_PATH="$HADOOP_PREFIX/hadoop-hdfs-project/hadoop-hdfs-native-client/target/main/native/fuse-dfs"
-export LIBHDFS_PATH="$HADOOP_PREFIX/hadoop-hdfs-project/hadoop-hdfs-native-client/target/usr/local/lib"
+export FUSEDFS_PATH="$HADOOP_HOME/hadoop-hdfs-project/hadoop-hdfs-native-client/target/main/native/fuse-dfs"
+export LIBHDFS_PATH="$HADOOP_HOME/hadoop-hdfs-project/hadoop-hdfs-native-client/target/usr/local/lib"
 
 if [ "$OS_ARCH" = "" ]; then
 export OS_ARCH=amd64
@@ -38,12 +38,12 @@ fi
 while IFS= read -r -d '' file
 do
   export CLASSPATH=$CLASSPATH:$file
-done < <(find "$HADOOP_PREFIX/hadoop-client" -name "*.jar" -print0)
+done < <(find "$HADOOP_HOME/hadoop-client" -name "*.jar" -print0)
 
 while IFS= read -r -d '' file
 do
   export CLASSPATH=$CLASSPATH:$file
-done < <(find "$HADOOP_PREFIX/hhadoop-hdfs-project" -name "*.jar" -print0)
+done < <(find "$HADOOP_HOME/hhadoop-hdfs-project" -name "*.jar" -print0)
 
 export CLASSPATH=$HADOOP_CONF_DIR:$CLASSPATH
 export PATH=$FUSEDFS_PATH:$PATH

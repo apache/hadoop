@@ -16,10 +16,10 @@
 load hadoop-functions_test_helper
 
 create_fake_dirs () {
-  HADOOP_PREFIX=${TMP}
+  HADOOP_HOME=${TMP}
   for j in conf etc/hadoop; do
-    mkdir -p "${HADOOP_PREFIX}/${j}"
-    echo "unittest=${j}" > "${HADOOP_PREFIX}/${j}/hadoop-env.sh"
+    mkdir -p "${HADOOP_HOME}/${j}"
+    echo "unittest=${j}" > "${HADOOP_HOME}/${j}/hadoop-env.sh"
   done
 }
 
@@ -32,27 +32,27 @@ create_fake_dirs () {
 @test "hadoop_find_confdir (bw compat: conf)" {
   create_fake_dirs
   hadoop_find_confdir
-  echo ">${HADOOP_CONF_DIR}< >${HADOOP_PREFIX}/conf<"
-  [ "${HADOOP_CONF_DIR}" = ${HADOOP_PREFIX}/conf ]
+  echo ">${HADOOP_CONF_DIR}< >${HADOOP_HOME}/conf<"
+  [ "${HADOOP_CONF_DIR}" = ${HADOOP_HOME}/conf ]
 }
 
 @test "hadoop_find_confdir (etc/hadoop)" {
   create_fake_dirs
-  rm -rf "${HADOOP_PREFIX}/conf"
+  rm -rf "${HADOOP_HOME}/conf"
   hadoop_find_confdir
-  [ "${HADOOP_CONF_DIR}" = ${HADOOP_PREFIX}/etc/hadoop ]
+  [ "${HADOOP_CONF_DIR}" = ${HADOOP_HOME}/etc/hadoop ]
 }
 
 @test "hadoop_verify_confdir (negative) " {
   create_fake_dirs
-  HADOOP_CONF_DIR=${HADOOP_PREFIX}/conf
+  HADOOP_CONF_DIR=${HADOOP_HOME}/conf
   run hadoop_verify_confdir
   [ -n "${output}" ]
 }
 
 @test "hadoop_verify_confdir (positive) " {
   create_fake_dirs
-  HADOOP_CONF_DIR=${HADOOP_PREFIX}/conf
+  HADOOP_CONF_DIR=${HADOOP_HOME}/conf
   touch "${HADOOP_CONF_DIR}/log4j.properties"
   run hadoop_verify_confdir
   [ -z "${output}" ]
@@ -60,7 +60,7 @@ create_fake_dirs () {
 
 @test "hadoop_exec_hadoopenv (positive) " {
   create_fake_dirs
-  HADOOP_CONF_DIR=${HADOOP_PREFIX}/conf
+  HADOOP_CONF_DIR=${HADOOP_HOME}/conf
   hadoop_exec_hadoopenv
   [ -n "${HADOOP_ENV_PROCESSED}" ]
   [ "${unittest}" = conf ]
@@ -68,7 +68,7 @@ create_fake_dirs () {
 
 @test "hadoop_exec_hadoopenv (negative) " {
   create_fake_dirs
-  HADOOP_CONF_DIR=${HADOOP_PREFIX}/conf
+  HADOOP_CONF_DIR=${HADOOP_HOME}/conf
   HADOOP_ENV_PROCESSED=true
   hadoop_exec_hadoopenv
   [ -z "${unittest}" ]
@@ -76,7 +76,7 @@ create_fake_dirs () {
 
 @test "hadoop_exec_userfuncs" {
   create_fake_dirs
-  HADOOP_CONF_DIR=${HADOOP_PREFIX}/conf
+  HADOOP_CONF_DIR=${HADOOP_HOME}/conf
   echo "unittest=userfunc" > "${HADOOP_CONF_DIR}/hadoop-user-functions.sh"
   hadoop_exec_userfuncs
   [ "${unittest}" = "userfunc" ]

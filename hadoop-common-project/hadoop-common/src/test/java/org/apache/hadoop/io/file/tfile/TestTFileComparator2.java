@@ -27,13 +27,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.file.tfile.TFile.Writer;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
 public class TestTFileComparator2 {
-  private static final String ROOT = System.getProperty("test.build.data",
-      "/tmp/tfile-test");
+  private static String ROOT = GenericTestUtils.getTestDir().getAbsolutePath();
   private static final String name = "test-tfile-comparator2";
   private final static int BLOCK_SIZE = 512;
   private static final String VALUE = "value";
