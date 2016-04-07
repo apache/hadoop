@@ -566,8 +566,8 @@ public class TestFileUtil {
     final boolean result;
 
     try {
-      Path srcPath = new Path(TEST_ROOT_DIR, src);
-      Path dstPath = new Path(TEST_ROOT_DIR, dst);
+      Path srcPath = new Path(TEST_DIR.getAbsolutePath(), src);
+      Path dstPath = new Path(TEST_DIR.getAbsolutePath(), dst);
       boolean deleteSource = false;
       String addString = null;
       result = FileUtil.copyMerge(fs, srcPath, fs, dstPath, deleteSource, conf,
