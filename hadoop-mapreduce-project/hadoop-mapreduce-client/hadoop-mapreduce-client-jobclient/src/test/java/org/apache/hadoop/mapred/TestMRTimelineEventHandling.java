@@ -20,15 +20,12 @@ package org.apache.hadoop.mapred;
 
 import java.io.File;
 import java.io.IOException;
-
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -38,9 +35,9 @@ import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
@@ -48,7 +45,6 @@ import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timelineservice.collector.PerNodeTimelineCollectorsAuxService;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
-
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -205,7 +201,7 @@ public class TestMRTimelineEventHandling {
       ApplicationReport appReport = apps.get(0);
       firstAppId = appReport.getApplicationId();
 
-      checkNewTimelineEvent(firstAppId);
+      checkNewTimelineEvent(firstAppId, appReport);
 
       LOG.info("Run 2nd job which should be failed.");
       job = UtilsForTests.runJobFail(new JobConf(conf), inDir, outDir);
@@ -214,11 +210,10 @@ public class TestMRTimelineEventHandling {
       
       apps = yarnClient.getApplications(appStates);
       Assert.assertEquals(apps.size(), 2);
-      
-      ApplicationId secAppId = null;
-      secAppId = apps.get(0).getApplicationId() == firstAppId ? 
-          apps.get(1).getApplicationId() : apps.get(0).getApplicationId();
-      checkNewTimelineEvent(firstAppId);
+
+      appReport = apps.get(0).getApplicationId().equals(firstAppId) ?
+          apps.get(0) : apps.get(1);
+      checkNewTimelineEvent(firstAppId, appReport);
 
     } finally {
       if (cluster != null) {
@@ -235,7 +230,8 @@ public class TestMRTimelineEventHandling {
     }
   }
   
-  private void checkNewTimelineEvent(ApplicationId appId) throws IOException {
+  private void checkNewTimelineEvent(ApplicationId appId,
+      ApplicationReport appReport) throws IOException {
     String tmpRoot =
         FileSystemTimelineWriterImpl.DEFAULT_TIMELINE_SERVICE_STORAGE_DIR_ROOT
             + "/entities/";
@@ -243,15 +239,18 @@ public class TestMRTimelineEventHandling {
     File tmpRootFolder = new File(tmpRoot);
     
     Assert.assertTrue(tmpRootFolder.isDirectory());
-    String basePath = tmpRoot + YarnConfiguration.DEFAULT_RM_CLUSTER_ID + "/" +
-        UserGroupInformation.getCurrentUser().getShortUserName() +
-        "/" + TimelineUtils.generateDefaultFlowNameBasedOnAppId(appId) +
-        "/1/1/" + appId.toString();
+    String basePath = tmpRoot + YarnConfiguration.DEFAULT_RM_CLUSTER_ID +
+        "/" + UserGroupInformation.getCurrentUser().getShortUserName() +
+        "/" + appReport.getName() +
+        "/" + TimelineUtils.DEFAULT_FLOW_VERSION +
+        "/" + appReport.getStartTime() +
+        "/" + appId.toString();
     // for this test, we expect MAPREDUCE_JOB and MAPREDUCE_TASK dirs
     String outputDirJob = basePath + "/MAPREDUCE_JOB/";
 
     File entityFolder = new File(outputDirJob);
-    Assert.assertTrue("Job output directory: " + outputDirJob + " is not exist.",
+    Assert.assertTrue("Job output directory: " + outputDirJob +
+        " does not exist.",
         entityFolder.isDirectory());
 
     // check for job event file
@@ -260,13 +259,15 @@ public class TestMRTimelineEventHandling {
 
     String jobEventFilePath = outputDirJob + jobEventFileName;
     File jobEventFile = new File(jobEventFilePath);
-    Assert.assertTrue("jobEventFilePath: " + jobEventFilePath + " is not exist.",
+    Assert.assertTrue("jobEventFilePath: " + jobEventFilePath +
+        " does not exist.",
         jobEventFile.exists());
 
     // check for task event file
     String outputDirTask = basePath + "/MAPREDUCE_TASK/";
     File taskFolder = new File(outputDirTask);
-    Assert.assertTrue("Task output directory: " + outputDirTask + " is not exist.",
+    Assert.assertTrue("Task output directory: " + outputDirTask +
+        " does not exist.",
         taskFolder.isDirectory());
     
     String taskEventFileName = appId.toString().replaceAll("application", "task")
@@ -274,14 +275,15 @@ public class TestMRTimelineEventHandling {
 
     String taskEventFilePath = outputDirTask + taskEventFileName;
     File taskEventFile = new File(taskEventFilePath);
-    Assert.assertTrue("taskEventFileName: " + taskEventFilePath + " is not exist.",
+    Assert.assertTrue("taskEventFileName: " + taskEventFilePath +
+        " does not exist.",
         taskEventFile.exists());
     
     // check for task attempt event file
     String outputDirTaskAttempt = basePath + "/MAPREDUCE_TASK_ATTEMPT/";
     File taskAttemptFolder = new File(outputDirTaskAttempt);
     Assert.assertTrue("TaskAttempt output directory: " + outputDirTaskAttempt + 
-        " is not exist.", taskAttemptFolder.isDirectory());
+        " does not exist.", taskAttemptFolder.isDirectory());
     
     String taskAttemptEventFileName = appId.toString().replaceAll(
         "application", "attempt") + "_m_000000_0" + 
@@ -291,7 +293,7 @@ public class TestMRTimelineEventHandling {
         taskAttemptEventFileName;
     File taskAttemptEventFile = new File(taskAttemptEventFilePath);
     Assert.assertTrue("taskAttemptEventFileName: " + taskAttemptEventFilePath +
-        " is not exist.", taskAttemptEventFile.exists());
+        " does not exist.", taskAttemptEventFile.exists());
   }
 
   @Test

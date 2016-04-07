@@ -164,18 +164,30 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
         getNMCollectorService().getTimelineCollectorContext(request);
     String userId = response.getUserId();
     if (userId != null && !userId.isEmpty()) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Setting the user in the context: " + userId);
+      }
       collector.getTimelineEntityContext().setUserId(userId);
     }
     String flowName = response.getFlowName();
     if (flowName != null && !flowName.isEmpty()) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Setting the flow name: " + flowName);
+      }
       collector.getTimelineEntityContext().setFlowName(flowName);
     }
     String flowVersion = response.getFlowVersion();
     if (flowVersion != null && !flowVersion.isEmpty()) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Setting the flow version: " + flowVersion);
+      }
       collector.getTimelineEntityContext().setFlowVersion(flowVersion);
     }
     long flowRunId = response.getFlowRunId();
     if (flowRunId != 0L) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Setting the flow run id: " + flowRunId);
+      }
       collector.getTimelineEntityContext().setFlowRunId(flowRunId);
     }
   }
