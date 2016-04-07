@@ -83,8 +83,6 @@ public class TestSystemMetricsPublisherForV2 {
 
   private static TimelineServiceV2Publisher metricsPublisher;
   private static DrainDispatcher dispatcher = new DrainDispatcher();
-  private static final String DEFAULT_FLOW_VERSION = "1";
-  private static final long DEFAULT_FLOW_RUN = 1;
 
   private static ConcurrentMap<ApplicationId, RMApp> rmAppsMapInContext;
 
@@ -316,16 +314,14 @@ public class TestSystemMetricsPublisherForV2 {
 
   private String getTimelineEntityDir(RMApp app) {
     String outputDirApp =
-        testRootDir.getAbsolutePath()+"/"
-            + FileSystemTimelineWriterImpl.ENTITIES_DIR
-            + "/"
-            + YarnConfiguration.DEFAULT_RM_CLUSTER_ID
-            + "/"
-            + app.getUser()
-            + "/"
-            + TimelineUtils.generateDefaultFlowNameBasedOnAppId(app
-                .getApplicationId()) + "/" + DEFAULT_FLOW_VERSION + "/"
-            + DEFAULT_FLOW_RUN + "/" + app.getApplicationId();
+        testRootDir.getAbsolutePath() + "/"
+            + FileSystemTimelineWriterImpl.ENTITIES_DIR + "/"
+            + YarnConfiguration.DEFAULT_RM_CLUSTER_ID + "/"
+            + app.getUser() + "/"
+            + app.getName() + "/"
+            + TimelineUtils.DEFAULT_FLOW_VERSION + "/"
+            + app.getStartTime() + "/"
+            + app.getApplicationId();
     return outputDirApp;
   }
 

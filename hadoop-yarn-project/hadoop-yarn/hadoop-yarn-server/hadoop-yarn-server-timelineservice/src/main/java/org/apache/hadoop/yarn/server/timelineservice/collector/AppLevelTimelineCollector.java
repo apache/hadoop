@@ -18,14 +18,14 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.collector;
 
-import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+
+import com.google.common.base.Preconditions;
 
 /**
  * Service that handles writes to the timeline service and writes them to the
@@ -54,13 +54,6 @@ public class AppLevelTimelineCollector extends TimelineCollector {
     // context info from NM.
     // Current user usually is not the app user, but keep this field non-null
     context.setUserId(UserGroupInformation.getCurrentUser().getShortUserName());
-    // Use app ID to generate a default flow name for orphan app
-    context.setFlowName(
-        TimelineUtils.generateDefaultFlowNameBasedOnAppId(appId));
-    // Set the flow version to string 1 if it's an orphan app
-    context.setFlowVersion("1");
-    // Set the flow run ID to 1 if it's an orphan app
-    context.setFlowRunId(1L);
     context.setAppId(appId.toString());
     super.serviceInit(conf);
   }

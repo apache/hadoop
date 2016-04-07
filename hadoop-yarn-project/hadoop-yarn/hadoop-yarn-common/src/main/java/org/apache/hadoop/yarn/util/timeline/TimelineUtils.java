@@ -49,6 +49,7 @@ public class TimelineUtils {
       "TIMELINE_FLOW_VERSION_TAG";
   public static final String FLOW_RUN_ID_TAG_PREFIX =
       "TIMELINE_FLOW_RUN_ID_TAG";
+  public final static String DEFAULT_FLOW_VERSION = "1";
 
   private static ObjectMapper mapper;
 
@@ -162,9 +163,12 @@ public class TimelineUtils {
     return SecurityUtil.buildTokenService(timelineServiceAddr);
   }
 
-  public static String generateDefaultFlowNameBasedOnAppId(
+  public static String generateDefaultFlowName(String appName,
       ApplicationId appId) {
-    return "flow_" + appId.getClusterTimestamp() + "_" + appId.getId();
+    return (appName != null &&
+        !appName.equals(YarnConfiguration.DEFAULT_APPLICATION_NAME)) ?
+        appName :
+        "flow_" + appId.getClusterTimestamp() + "_" + appId.getId();
   }
 
   /**
