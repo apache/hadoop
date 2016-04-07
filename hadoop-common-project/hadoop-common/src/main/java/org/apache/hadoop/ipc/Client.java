@@ -62,6 +62,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -96,6 +97,7 @@ import org.apache.htrace.core.Tracer;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.CodedOutputStream;
 
@@ -107,7 +109,7 @@ import com.google.protobuf.CodedOutputStream;
  */
 @InterfaceAudience.LimitedPrivate(value = { "Common", "HDFS", "MapReduce", "Yarn" })
 @InterfaceStability.Evolving
-public class Client {
+public class Client implements AutoCloseable {
   
   public static final Log LOG = LogFactory.getLog(Client.class);
 
@@ -116,6 +118,20 @@ public class Client {
 
   private static final ThreadLocal<Integer> callId = new ThreadLocal<Integer>();
   private static final ThreadLocal<Integer> retryCount = new ThreadLocal<Integer>();
+  private static final ThreadLocal<Future<?>> returnValue = new ThreadLocal<>();
+  private static final ThreadLocal<Boolean> asynchronousMode =
+      new ThreadLocal<Boolean>() {
+        @Override
+        protected Boolean initialValue() {
+          return false;
+        }
+      };
+
+  @SuppressWarnings("unchecked")
+  @Unstable
+  public static <T> Future<T> getReturnValue() {
+    return (Future<T>) returnValue.get();
+  }
 
   /** Set call id and retry count for the next call. */
   public static void setCallIdAndRetryCount(int cid, int rc) {
@@ -1354,8 +1370,8 @@ public class Client {
       ConnectionId remoteId, int serviceClass,
       AtomicBoolean fallbackToSimpleAuth) throws IOException {
     final Call call = createCall(rpcKind, rpcRequest);
-    Connection connection = getConnection(remoteId, call, serviceClass,
-      fallbackToSimpleAuth);
+    final Connection connection = getConnection(remoteId, call, serviceClass,
+        fallbackToSimpleAuth);
     try {
       connection.sendRpcRequest(call);                 // send the rpc request
     } catch (RejectedExecutionException e) {
@@ -1366,6 +1382,51 @@ public class Client {
       throw new IOException(e);
     }
 
+    if (isAsynchronousMode()) {
+      Future<Writable> returnFuture = new AbstractFuture<Writable>() {
+        @Override
+        public Writable get() throws InterruptedException, ExecutionException {
+          try {
+            set(getRpcResponse(call, connection));
+          } catch (IOException ie) {
+            setException(ie);
+          }
+          return super.get();
+        }
+      };
+
+      returnValue.set(returnFuture);
+      return null;
+    } else {
+      return getRpcResponse(call, connection);
+    }
+  }
+
+  /**
+   * Check if RPC is in asynchronous mode or not.
+   *
+   * @returns true, if RPC is in asynchronous mode, otherwise false for
+   *          synchronous mode.
+   */
+  @Unstable
+  static boolean isAsynchronousMode() {
+    return asynchronousMode.get();
+  }
+
+  /**
+   * Set RPC to asynchronous or synchronous mode.
+   *
+   * @param async
+   *          true, RPC will be in asynchronous mode, otherwise false for
+   *          synchronous mode
+   */
+  @Unstable
+  public static void setAsynchronousMode(boolean async) {
+    asynchronousMode.set(async);
+  }
+
+  private Writable getRpcResponse(final Call call, final Connection connection)
+      throws IOException {
     synchronized (call) {
       while (!call.done) {
         try {
@@ -1639,5 +1700,11 @@ public class Client {
    */
   public static int nextCallId() {
     return callIdCounter.getAndIncrement() & 0x7FFFFFFF;
+  }
+
+  @Override
+  @Unstable
+  public void close() throws Exception {
+    stop();
   }
 }

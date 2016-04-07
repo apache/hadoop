@@ -99,7 +99,7 @@ public class TestIPC {
     LogFactory.getLog(TestIPC.class);
   
   private static Configuration conf;
-  final static private int PING_INTERVAL = 1000;
+  final static int PING_INTERVAL = 1000;
   final static private int MIN_SLEEP_TIME = 1000;
   /**
    * Flag used to turn off the fault injection behavior
@@ -114,7 +114,7 @@ public class TestIPC {
     Client.setPingInterval(conf, PING_INTERVAL);
   }
 
-  private static final Random RANDOM = new Random();
+  static final Random RANDOM = new Random();
 
   private static final String ADDRESS = "0.0.0.0";
 
@@ -148,22 +148,33 @@ public class TestIPC {
         RPC.RPC_SERVICE_CLASS_DEFAULT, null);
   }
 
-  private static class TestServer extends Server {
+  static class TestServer extends Server {
     // Tests can set callListener to run a piece of code each time the server
     // receives a call.  This code executes on the server thread, so it has
     // visibility of that thread's thread-local storage.
-    private Runnable callListener;
+    Runnable callListener;
     private boolean sleep;
     private Class<? extends Writable> responseClass;
 
     public TestServer(int handlerCount, boolean sleep) throws IOException {
       this(handlerCount, sleep, LongWritable.class, null);
     }
-    
+
+    public TestServer(int handlerCount, boolean sleep, Configuration conf)
+        throws IOException {
+      this(handlerCount, sleep, LongWritable.class, null, conf);
+    }
+
     public TestServer(int handlerCount, boolean sleep,
         Class<? extends Writable> paramClass,
-        Class<? extends Writable> responseClass) 
-      throws IOException {
+        Class<? extends Writable> responseClass) throws IOException {
+      this(handlerCount, sleep, paramClass, responseClass, conf);
+    }
+
+    public TestServer(int handlerCount, boolean sleep,
+        Class<? extends Writable> paramClass,
+        Class<? extends Writable> responseClass, Configuration conf)
+        throws IOException {
       super(ADDRESS, 0, paramClass, handlerCount, conf);
       this.sleep = sleep;
       this.responseClass = responseClass;
@@ -1070,7 +1081,7 @@ public class TestIPC {
     assertRetriesOnSocketTimeouts(conf, 4);
   }
 
-  private static class CallInfo {
+  static class CallInfo {
     int id = RpcConstants.INVALID_CALL_ID;
     int retry = RpcConstants.INVALID_RETRY_COUNT;
   }
@@ -1125,7 +1136,7 @@ public class TestIPC {
   }
   
   /** A dummy protocol */
-  private interface DummyProtocol {
+  interface DummyProtocol {
     @Idempotent
     public void dummyRun() throws IOException;
   }
