@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 
 import org.apache.sshd.SshServer;
@@ -54,7 +55,7 @@ public class TestSFTPFileSystem {
 
   private static final String TEST_SFTP_DIR = "testsftp";
   private static final String TEST_ROOT_DIR =
-    System.getProperty("test.build.data", "build/test/data");
+      GenericTestUtils.getTestDir().getAbsolutePath();
 
   @Rule public TestName name = new TestName();
 

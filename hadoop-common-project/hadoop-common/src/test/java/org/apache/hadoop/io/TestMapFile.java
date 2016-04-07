@@ -37,6 +37,7 @@ import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Progressable;
 import org.junit.Assert;
 import org.junit.Before;
@@ -48,9 +49,8 @@ import static org.mockito.Mockito.*;
 
 public class TestMapFile {
   
-  private static final Path TEST_DIR = new Path(
-      System.getProperty("test.build.data", "/tmp"),
-      TestMapFile.class.getSimpleName());
+  private static final Path TEST_DIR = new Path(GenericTestUtils.getTempPath(
+      TestMapFile.class.getSimpleName()));
   
   private static Configuration conf = new Configuration();
 

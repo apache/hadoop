@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 public class TestSequenceFileSync {
@@ -52,8 +53,8 @@ public class TestSequenceFileSync {
   public void testLowSyncpoint() throws IOException {
     final Configuration conf = new Configuration();
     final FileSystem fs = FileSystem.getLocal(conf);
-    final Path path = new Path(System.getProperty("test.build.data", "/tmp"),
-      "sequencefile.sync.test");
+    final Path path = new Path(GenericTestUtils.getTempPath(
+        "sequencefile.sync.test"));
     final IntWritable input = new IntWritable();
     final Text val = new Text();
     SequenceFile.Writer writer = new SequenceFile.Writer(fs, conf, path,

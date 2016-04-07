@@ -24,6 +24,7 @@ import java.io.*;
 import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.conf.*;
 import org.junit.Test;
@@ -38,9 +39,8 @@ import static org.junit.Assert.fail;
 public class TestArrayFile {
   private static final Log LOG = LogFactory.getLog(TestArrayFile.class);
   
-  private static final Path TEST_DIR = new Path(
-      System.getProperty("test.build.data", "/tmp"),
-      TestMapFile.class.getSimpleName());
+  private static final Path TEST_DIR = new Path(GenericTestUtils.getTempPath(
+      TestMapFile.class.getSimpleName()));
   private static String TEST_FILE = new Path(TEST_DIR, "test.array").toString();
 
   @Test

@@ -38,6 +38,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.TrashPolicyDefault.Emptier;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.Before;
 import org.junit.Test;
@@ -47,9 +48,8 @@ import org.junit.Test;
  */
 public class TestTrash extends TestCase {
 
-  private final static Path TEST_DIR =
-    new Path(new File(System.getProperty("test.build.data","/tmp")
-          ).toURI().toString().replace(' ', '+'), "testTrash");
+  private final static Path TEST_DIR = new Path(GenericTestUtils.getTempPath(
+      "testTrash"));
 
   @Before
   public void setUp() throws IOException {

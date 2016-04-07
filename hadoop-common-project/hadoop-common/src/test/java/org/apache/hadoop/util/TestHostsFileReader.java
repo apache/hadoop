@@ -23,6 +23,7 @@ import java.io.FileWriter;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.*;
 import static org.junit.Assert.*;
 
@@ -33,8 +34,7 @@ import static org.junit.Assert.*;
 public class TestHostsFileReader {
 
   // Using /test/build/data/tmp directory to store temprory files
-  final String HOSTS_TEST_DIR = new File(System.getProperty(
-          "test.build.data", "/tmp")).getAbsolutePath();
+  final String HOSTS_TEST_DIR = GenericTestUtils.getTestDir().getAbsolutePath();
   File EXCLUDES_FILE = new File(HOSTS_TEST_DIR, "dfs.exclude");
   File INCLUDES_FILE = new File(HOSTS_TEST_DIR, "dfs.include");
   String excludesFile = HOSTS_TEST_DIR + "/dfs.exclude";

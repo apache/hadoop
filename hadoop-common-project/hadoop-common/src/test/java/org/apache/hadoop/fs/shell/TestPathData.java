@@ -29,14 +29,15 @@ import java.util.Arrays;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestPathData {
-  private static final String TEST_ROOT_DIR = 
-      System.getProperty("test.build.data","build/test/data") + "/testPD";
+  private static final String TEST_ROOT_DIR =
+      GenericTestUtils.getTestDir("testPD").getAbsolutePath();
   protected Configuration conf;
   protected FileSystem fs;
   protected Path testDir;

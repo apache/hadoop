@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
-
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -44,9 +44,8 @@ import static org.junit.Assert.*;
  */
 public class TestViewfsFileStatus {
 
-  private static final File TEST_DIR =
-    new File(System.getProperty("test.build.data", "/tmp"),
-          TestViewfsFileStatus.class.getSimpleName());
+  private static final File TEST_DIR = GenericTestUtils.getTestDir(
+      TestViewfsFileStatus.class.getSimpleName());
 
   @Test
   public void testFileStatusSerialziation()

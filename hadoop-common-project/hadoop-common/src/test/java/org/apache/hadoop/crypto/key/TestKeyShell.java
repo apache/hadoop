@@ -26,6 +26,7 @@ import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.ProviderUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -48,8 +49,8 @@ public class TestKeyShell {
   public void setup() throws Exception {
     outContent.reset();
     errContent.reset();
-    final File tmpDir = new File(System.getProperty("test.build.data", "target"),
-        UUID.randomUUID().toString());
+    final File tmpDir = GenericTestUtils.getTestDir(UUID.randomUUID()
+        .toString());
     if (!tmpDir.mkdirs()) {
       throw new IOException("Unable to create " + tmpDir);
     }

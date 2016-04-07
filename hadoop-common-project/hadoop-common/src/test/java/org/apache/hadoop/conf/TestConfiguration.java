@@ -48,6 +48,8 @@ import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.test.GenericTestUtils;
+
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 import static org.junit.Assert.fail;
 
@@ -341,8 +343,7 @@ public class TestConfiguration extends TestCase {
     Configuration conf = new Configuration();
     String[] dirs = new String[]{"a", "b", "c"};
     for (int i = 0; i < dirs.length; i++) {
-      dirs[i] = new Path(System.getProperty("test.build.data"), dirs[i])
-          .toString();
+      dirs[i] = new Path(GenericTestUtils.getTempPath(dirs[i])).toString();
     }
     conf.set("dirs", StringUtils.join(dirs, ","));
     for (int i = 0; i < 1000; i++) {
@@ -358,8 +359,7 @@ public class TestConfiguration extends TestCase {
     Configuration conf = new Configuration();
     String[] dirs = new String[]{"a", "b", "c"};
     for (int i = 0; i < dirs.length; i++) {
-      dirs[i] = new Path(System.getProperty("test.build.data"), dirs[i])
-          .toString();
+      dirs[i] = new Path(GenericTestUtils.getTempPath(dirs[i])).toString();
     }
     conf.set("dirs", StringUtils.join(dirs, ","));
     for (int i = 0; i < 1000; i++) {

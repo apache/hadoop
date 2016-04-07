@@ -19,6 +19,7 @@
 package org.apache.hadoop.util;
 
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -79,8 +80,8 @@ public class TestJarFinder {
 
   @Test
   public void testExistingManifest() throws Exception {
-    File dir = new File(System.getProperty("test.build.dir", "target/test-dir"),
-                        TestJarFinder.class.getName() + "-testExistingManifest");
+    File dir = GenericTestUtils
+        .getTestDir(TestJarFinder.class.getName() + "-testExistingManifest");
     delete(dir);
     dir.mkdirs();
 
@@ -107,8 +108,8 @@ public class TestJarFinder {
 
   @Test
   public void testNoManifest() throws Exception {
-    File dir = new File(System.getProperty("test.build.dir", "target/test-dir"),
-                        TestJarFinder.class.getName() + "-testNoManifest");
+    File dir = GenericTestUtils
+        .getTestDir(TestJarFinder.class.getName() + "-testNoManifest");
     delete(dir);
     dir.mkdirs();
     File propsFile = new File(dir, "props.properties");

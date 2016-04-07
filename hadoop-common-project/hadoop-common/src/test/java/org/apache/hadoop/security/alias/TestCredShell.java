@@ -31,14 +31,15 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.ProviderUtils;
+import org.apache.hadoop.test.GenericTestUtils;
+
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestCredShell {
   private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
   private final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
-  private static final File tmpDir =
-      new File(System.getProperty("test.build.data", "/tmp"), "creds");
+  private static final File tmpDir = GenericTestUtils.getTestDir("creds");
 
   /* The default JCEKS provider - for testing purposes */
   private String jceksProvider;

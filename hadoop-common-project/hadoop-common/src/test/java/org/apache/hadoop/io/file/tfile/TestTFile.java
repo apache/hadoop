@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.file.tfile.TFile.Reader;
 import org.apache.hadoop.io.file.tfile.TFile.Writer;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.io.file.tfile.TFile.Reader.Scanner;
 import org.junit.After;
 import org.junit.Before;
@@ -43,8 +44,7 @@ import static org.junit.Assert.assertFalse;
  * 
  */
 public class TestTFile {
-  private static String ROOT =
-      System.getProperty("test.build.data", "/tmp/tfile-test");
+  private static String ROOT = GenericTestUtils.getTempPath("tfile-test");
   private FileSystem fs;
   private Configuration conf;
   private static final int minBlockSize = 512;

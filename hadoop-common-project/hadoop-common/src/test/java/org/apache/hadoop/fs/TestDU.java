@@ -26,11 +26,11 @@ import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.test.GenericTestUtils;
 
 /** This test makes sure that "DU" does not get to run on each call to getUsed */
 public class TestDU extends TestCase {
-  final static private File DU_DIR = new File(
-      System.getProperty("test.build.data","/tmp"), "dutmp");
+  final static private File DU_DIR = GenericTestUtils.getTestDir("dutmp");
 
   @Override
   public void setUp() {

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.*;
 
 import java.io.BufferedReader;
@@ -58,9 +59,7 @@ import static org.mockito.Mockito.when;
 public class TestFileUtil {
   private static final Log LOG = LogFactory.getLog(TestFileUtil.class);
 
-  private static final String TEST_ROOT_DIR = System.getProperty(
-      "test.build.data", "/tmp") + "/fu";
-  private static final File TEST_DIR = new File(TEST_ROOT_DIR);
+  private static final File TEST_DIR = GenericTestUtils.getTestDir("fu");
   private static final String FILE = "x";
   private static final String LINK = "y";
   private static final String DIR = "dir";
@@ -567,8 +566,8 @@ public class TestFileUtil {
     final boolean result;
 
     try {
-      Path srcPath = new Path(TEST_ROOT_DIR, src);
-      Path dstPath = new Path(TEST_ROOT_DIR, dst);
+      Path srcPath = new Path(TEST_DIR.getAbsolutePath(), src);
+      Path dstPath = new Path(TEST_DIR.getAbsolutePath(), dst);
       boolean deleteSource = false;
       String addString = null;
       result = FileUtil.copyMerge(fs, srcPath, fs, dstPath, deleteSource, conf,
@@ -1020,10 +1019,10 @@ public class TestFileUtil {
   @Test (timeout = 30000)
   public void testUntar() throws IOException {
     String tarGzFileName = System.getProperty("test.cache.data",
-        "build/test/cache") + "/test-untar.tgz";
+        "target/test/cache") + "/test-untar.tgz";
     String tarFileName = System.getProperty("test.cache.data",
         "build/test/cache") + "/test-untar.tar";
-    String dataDir = System.getProperty("test.build.data", "build/test/data");
+    File dataDir = GenericTestUtils.getTestDir();
     File untarDir = new File(dataDir, "untarDir");
 
     doUntarAndVerify(new File(tarGzFileName), untarDir);

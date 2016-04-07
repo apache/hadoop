@@ -43,8 +43,8 @@ public class TestSequenceFileAppend {
 
   private static Configuration conf;
   private static FileSystem fs;
-  private static Path ROOT_PATH = new Path(System.getProperty(
-      "test.build.data", "build/test/data"));
+  private static Path ROOT_PATH =
+      new Path(GenericTestUtils.getTestDir().getAbsolutePath());
 
   @BeforeClass
   public static void setUp() throws Exception {

@@ -52,8 +52,7 @@ public class TestSSLFactory {
   private static final Logger LOG = LoggerFactory
       .getLogger(TestSSLFactory.class);
   private static final String BASEDIR =
-    System.getProperty("test.build.dir", "target/test-dir") + "/" +
-    TestSSLFactory.class.getSimpleName();
+      GenericTestUtils.getTempPath(TestSSLFactory.class.getSimpleName());
   private static final String KEYSTORES_DIR =
     new File(BASEDIR).getAbsolutePath();
   private String sslConfsDir;
@@ -433,8 +432,7 @@ public class TestSSLFactory {
       sslConf = KeyStoreTestUtil.createServerSSLConfig(keystore, confPassword,
         confKeyPassword, truststore);
       if (useCredProvider) {
-        File testDir = new File(System.getProperty("test.build.data",
-            "target/test-dir"));
+        File testDir = GenericTestUtils.getTestDir();
         final Path jksPath = new Path(testDir.toString(), "test.jks");
         final String ourUrl =
             JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri();

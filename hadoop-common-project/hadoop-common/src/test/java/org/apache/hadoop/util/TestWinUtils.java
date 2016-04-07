@@ -32,6 +32,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,8 +45,8 @@ import static org.hamcrest.CoreMatchers.*;
 public class TestWinUtils {
 
   private static final Log LOG = LogFactory.getLog(TestWinUtils.class);
-  private static File TEST_DIR = new File(System.getProperty("test.build.data",
-      "target"+File.pathSeparator + "tmp"), TestWinUtils.class.getSimpleName());
+  private static File TEST_DIR = GenericTestUtils.getTestDir(
+      TestWinUtils.class.getSimpleName());
 
   String winutils;
 

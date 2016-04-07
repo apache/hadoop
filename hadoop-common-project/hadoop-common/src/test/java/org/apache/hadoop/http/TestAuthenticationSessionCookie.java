@@ -19,6 +19,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Test;
 import org.mortbay.log.Log;
@@ -35,8 +36,8 @@ import java.net.HttpCookie;
 import java.util.List;
 
 public class TestAuthenticationSessionCookie {
-  private static final String BASEDIR = System.getProperty("test.build.dir",
-          "target/test-dir") + "/" + TestHttpCookieFlag.class.getSimpleName();
+  private static final String BASEDIR =
+      GenericTestUtils.getTempPath(TestHttpCookieFlag.class.getSimpleName());
   private static boolean isCookiePersistent;
   private static final long TOKEN_VALIDITY_SEC = 1000;
   private static long expires;

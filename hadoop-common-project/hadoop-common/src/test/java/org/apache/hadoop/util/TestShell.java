@@ -35,6 +35,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.test.GenericTestUtils;
+
 import static org.apache.hadoop.util.Shell.*;
 import org.junit.Assume;
 import org.junit.Before;
@@ -53,7 +55,7 @@ public class TestShell extends Assert {
   @Rule
   public TestName methodName = new TestName();
 
-  private File rootTestDir = new File(System.getProperty("test.build.data", "target/"));
+  private File rootTestDir = GenericTestUtils.getTestDir();
 
   /**
    * A filename generated uniquely for each test method. The file

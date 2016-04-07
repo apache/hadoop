@@ -31,6 +31,8 @@ import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.apache.hadoop.test.GenericTestUtils;
+
 /**
  * Finds the Jar for a class. If the class is in a directory in the
  * classpath, it creates a Jar on the fly with the contents of the directory
@@ -152,7 +154,7 @@ public class JarFinder {
             klassName = klassName.replace(".", "/") + ".class";
             path = path.substring(0, path.length() - klassName.length());
             File baseDir = new File(path);
-            File testDir = new File(System.getProperty("test.build.dir", "target/test-dir"));
+            File testDir = GenericTestUtils.getTestDir();
             testDir = testDir.getAbsoluteFile();
             if (!testDir.exists()) {
               testDir.mkdirs();

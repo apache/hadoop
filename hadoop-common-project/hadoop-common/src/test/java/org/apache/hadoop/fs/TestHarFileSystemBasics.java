@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.junit.After;
 import org.junit.Assert;
@@ -45,8 +46,8 @@ import static org.junit.Assert.*;
  */
 public class TestHarFileSystemBasics {
 
-  private static final String ROOT_PATH = System.getProperty("test.build.data",
-      "build/test/data");
+  private static final String ROOT_PATH =
+      GenericTestUtils.getTempPath("testharfilesystembasics");
   private static final Path rootPath;
   static {
     String root = new Path(new File(ROOT_PATH).getAbsolutePath(), "localfs")

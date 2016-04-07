@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -42,8 +43,8 @@ import org.junit.Test;
 public class TestClasspath {
 
   private static final Log LOG = LogFactory.getLog(TestClasspath.class);
-  private static final File TEST_DIR = new File(
-    System.getProperty("test.build.data", "/tmp"), "TestClasspath");
+  private static final File TEST_DIR = GenericTestUtils.getTestDir(
+      "TestClasspath");
   private static final Charset UTF8 = Charset.forName("UTF-8");
 
   static {

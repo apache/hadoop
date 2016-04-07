@@ -47,7 +47,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
-
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -139,8 +139,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
   
   @Test
   public void testExtractPassword() throws IOException {
-    File testDir = new File(System.getProperty("test.build.data", 
-                                               "target/test-dir"));
+    File testDir = GenericTestUtils.getTestDir();
     testDir.mkdirs();
     File secretFile = new File(testDir, "secret.txt");
     Writer writer = new FileWriter(secretFile);
@@ -154,8 +153,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
 
   @Test
   public void testConfGetPassword() throws Exception {
-    File testDir = new File(System.getProperty("test.build.data",
-                                               "target/test-dir"));
+    File testDir = GenericTestUtils.getTestDir();
     Configuration conf = new Configuration();
     final Path jksPath = new Path(testDir.toString(), "test.jks");
     final String ourUrl =

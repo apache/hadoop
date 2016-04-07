@@ -24,6 +24,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ZKUtil.BadAclFormatException;
 import org.apache.hadoop.util.ZKUtil.ZKAuthInfo;
 import org.apache.zookeeper.ZooDefs.Perms;
@@ -34,8 +35,8 @@ import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 
 public class TestZKUtil {
-  private static final String TEST_ROOT_DIR = System.getProperty(
-      "test.build.data", "/tmp") + "/TestZKUtil";
+  private static final String TEST_ROOT_DIR = GenericTestUtils.getTempPath(
+      "TestZKUtil");
   private static final File TEST_FILE = new File(TEST_ROOT_DIR,
       "test-file");
   

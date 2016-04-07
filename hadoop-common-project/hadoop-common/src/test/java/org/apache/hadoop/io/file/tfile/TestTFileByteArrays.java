@@ -35,6 +35,7 @@ import org.apache.hadoop.io.file.tfile.TFile.Reader;
 import org.apache.hadoop.io.file.tfile.TFile.Writer;
 import org.apache.hadoop.io.file.tfile.TFile.Reader.Location;
 import org.apache.hadoop.io.file.tfile.TFile.Reader.Scanner;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,8 +47,7 @@ import org.junit.Test;
  * 
  */
 public class TestTFileByteArrays {
-  private static String ROOT =
-      System.getProperty("test.build.data", "/tmp/tfile-test");
+  private static String ROOT = GenericTestUtils.getTestDir().getAbsolutePath();
   private final static int BLOCK_SIZE = 512;
   private final static int BUF_SIZE = 64;
   private final static int K = 1024;

@@ -44,9 +44,8 @@ import static org.junit.Assert.assertFalse;
 
 public class TestReloadingX509TrustManager {
 
-  private static final String BASEDIR =
-    System.getProperty("test.build.data", "target/test-dir") + "/" +
-    TestReloadingX509TrustManager.class.getSimpleName();
+  private static final String BASEDIR = GenericTestUtils.getTempPath(
+      TestReloadingX509TrustManager.class.getSimpleName());
 
   private X509Certificate cert1;
   private X509Certificate cert2;
