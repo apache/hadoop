@@ -230,22 +230,23 @@ public class TestReconstructStripedFile {
   private int generateErrors(Map<ExtendedBlock, DataNode> corruptTargets,
       ReconstructionType type)
     throws IOException {
-    int stoppedDN = 0;
-    for (Map.Entry<ExtendedBlock, DataNode> target : corruptTargets.entrySet()) {
-      if (stoppedDN == 0 || type != ReconstructionType.DataOnly
+    int stoppedDNs = 0;
+    for (Map.Entry<ExtendedBlock, DataNode> target :
+        corruptTargets.entrySet()) {
+      if (stoppedDNs == 0 || type != ReconstructionType.DataOnly
           || random.nextBoolean()) {
         // stop at least one DN to trigger reconstruction
         LOG.info("Note: stop DataNode " + target.getValue().getDisplayName()
             + " with internal block " + target.getKey());
         shutdownDataNode(target.getValue());
-        stoppedDN++;
+        stoppedDNs++;
       } else { // corrupt the data on the DN
         LOG.info("Note: corrupt data on " + target.getValue().getDisplayName()
             + " with internal block " + target.getKey());
         cluster.corruptReplica(target.getValue(), target.getKey());
       }
     }
-    return stoppedDN;
+    return stoppedDNs;
   }
 
   /**
