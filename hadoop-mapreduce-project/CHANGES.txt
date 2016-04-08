@@ -64,6 +64,9 @@ Release 2.7.3 - UNRELEASED
     MAPREDUCE-6580. Test failure: TestMRJobsWithProfiler.
     (Eric Badger via aajisaka)
 
+    MAPREDUCE-6302. Preempt reducers after a configurable timeout 
+    irrespective of headroom. (kasha via wangda)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES

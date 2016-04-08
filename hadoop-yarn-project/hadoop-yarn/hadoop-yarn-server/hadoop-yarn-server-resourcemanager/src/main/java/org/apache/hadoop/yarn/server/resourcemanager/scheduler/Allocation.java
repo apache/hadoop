@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NMToken;
@@ -30,11 +31,11 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 public class Allocation {
   
   final List<Container> containers;
-  final Resource resourceLimit;
   final Set<ContainerId> strictContainers;
   final Set<ContainerId> fungibleContainers;
   final List<ResourceRequest> fungibleResources;
   final List<NMToken> nmTokens;
+  private Resource resourceLimit;
 
   public Allocation(List<Container> containers, Resource resourceLimit,
       Set<ContainerId> strictContainers, Set<ContainerId> fungibleContainers,
@@ -78,4 +79,8 @@ public class Allocation {
     return nmTokens;
   }
 
+  @VisibleForTesting
+  public void setResourceLimit(Resource resource) {
+    this.resourceLimit = resource;
+  }
 }

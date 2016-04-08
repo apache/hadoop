@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 
 /**
@@ -382,7 +383,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   }
 
   protected Resource getAvailableResources() {
-    return availableResources;
+    return availableResources == null ? Resources.none() : availableResources;
   }
   
   protected void addContainerReq(ContainerRequest req) {

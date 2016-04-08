@@ -427,7 +427,7 @@ public class TestRMContainerAllocator {
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
             0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
     final MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
-        appAttemptId, mockJob);
+        appAttemptId, mockJob, new SystemClock());
     // add resources to scheduler
     dispatcher.await();
 
@@ -561,6 +561,69 @@ public class TestRMContainerAllocator {
         assignedRequests.preemptionWaitingReduces.size());
   }
 
+  @Test(timeout = 30000)
+  public void testUnconditionalPreemptReducers() throws Exception {
+    LOG.info("Running testForcePreemptReducers");
+
+    int forcePreemptThresholdSecs = 2;
+    Configuration conf = new Configuration();
+    conf.setInt(MRJobConfig.MR_JOB_REDUCER_PREEMPT_DELAY_SEC,
+        2 * forcePreemptThresholdSecs);
+    conf.setInt(MRJobConfig.MR_JOB_REDUCER_UNCONDITIONAL_PREEMPT_DELAY_SEC,
+        forcePreemptThresholdSecs);
+
+    MyResourceManager rm = new MyResourceManager(conf);
+    rm.start();
+    rm.getMyFifoScheduler().forceResourceLimit(Resource.newInstance(8192, 8));
+    DrainDispatcher dispatcher = (DrainDispatcher) rm.getRMContext()
+        .getDispatcher();
+
+    // Submit the application
+    RMApp app = rm.submitApp(1024);
+    dispatcher.await();
+
+    MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
+    amNodeManager.nodeHeartbeat(true);
+    dispatcher.await();
+
+    ApplicationAttemptId appAttemptId = app.getCurrentAppAttempt()
+        .getAppAttemptId();
+    rm.sendAMLaunched(appAttemptId);
+    dispatcher.await();
+
+    JobId jobId = MRBuilderUtils.newJobId(appAttemptId.getApplicationId(), 0);
+    Job mockJob = mock(Job.class);
+    when(mockJob.getReport()).thenReturn(
+        MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
+            0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
+    ControlledClock clock = new ControlledClock(null);
+    clock.setTime(1);
+    MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
+        appAttemptId, mockJob, clock);
+    allocator.setMapResourceRequest(BuilderUtils.newResource(1024, 1));
+    allocator.setReduceResourceRequest(BuilderUtils.newResource(1024, 1));
+    RMContainerAllocator.AssignedRequests assignedRequests =
+        allocator.getAssignedRequests();
+    RMContainerAllocator.ScheduledRequests scheduledRequests =
+        allocator.getScheduledRequests();
+    ContainerRequestEvent event1 =
+        createReq(jobId, 1, 2048, new String[] { "h1" }, false, false);
+    scheduledRequests.maps.put(mock(TaskAttemptId.class),
+        new RMContainerRequestor.ContainerRequest(event1, null, clock.getTime()));
+    assignedRequests.reduces.put(mock(TaskAttemptId.class),
+        mock(Container.class));
+
+    clock.setTime(clock.getTime() + 1);
+    allocator.preemptReducesIfNeeded();
+    Assert.assertEquals("The reducer is preeempted too soon", 0,
+        assignedRequests.preemptionWaitingReduces.size());
+
+    clock.setTime(clock.getTime() + 1000 * forcePreemptThresholdSecs);
+    allocator.preemptReducesIfNeeded();
+    Assert.assertEquals("The reducer is not preeempted", 1,
+        assignedRequests.preemptionWaitingReduces.size());
+  }
+
   @Test
   public void testMapReduceScheduling() throws Exception {
 
@@ -591,7 +654,7 @@ public class TestRMContainerAllocator {
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
             0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
     MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
-        appAttemptId, mockJob);
+        appAttemptId, mockJob, new SystemClock());
 
     // add resources to scheduler
     MockNM nodeManager1 = rm.registerNode("h1:1234", 1024);
@@ -1483,6 +1546,7 @@ public class TestRMContainerAllocator {
     List<ContainerId> lastRelease = null;
     List<String> lastBlacklistAdditions;
     List<String> lastBlacklistRemovals;
+    Resource forceResourceLimit = null;
     
     // override this to copy the objects otherwise FifoScheduler updates the
     // numContainers in same objects as kept by RMContainerAllocator
@@ -1502,9 +1566,18 @@ public class TestRMContainerAllocator {
       lastRelease = release;
       lastBlacklistAdditions = blacklistAdditions;
       lastBlacklistRemovals = blacklistRemovals;
-      return super.allocate(
+      Allocation allocation = super.allocate(
           applicationAttemptId, askCopy, release, 
           blacklistAdditions, blacklistRemovals);
+      if (forceResourceLimit != null) {
+        // Test wants to force the non-default resource limit
+        allocation.setResourceLimit(forceResourceLimit);
+      }
+      return allocation;
+    }
+
+    public void forceResourceLimit(Resource resource) {
+      this.forceResourceLimit = resource;
     }
   }
 
@@ -2470,7 +2543,7 @@ public class TestRMContainerAllocator {
             0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
     final MockScheduler mockScheduler = new MockScheduler(appAttemptId);
     MyContainerAllocator allocator = new MyContainerAllocator(null, conf,
-        appAttemptId, mockJob) {
+        appAttemptId, mockJob, new SystemClock()) {
           @Override
           protected void register() {
           }
