@@ -57,34 +57,7 @@ import org.slf4j.LoggerFactory;
  * {@link org.apache.hadoop.security.authentication.server.AuthenticationFilter}
  * for more details.
  * <p>
- * The supported configuration properties are:
- * <ul>
- * <li>signer.secret.provider.zookeeper.connection.string: indicates the
- * ZooKeeper connection string to connect with.</li>
- * <li>signer.secret.provider.zookeeper.path: indicates the ZooKeeper path
- * to use for storing and retrieving the secrets.  All ZKSignerSecretProviders
- * that need to coordinate should point to the same path.</li>
- * <li>signer.secret.provider.zookeeper.auth.type: indicates the auth type to
- * use.  Supported values are "none" and "sasl".  The default value is "none"
- * </li>
- * <li>signer.secret.provider.zookeeper.kerberos.keytab: set this to the path
- * with the Kerberos keytab file.  This is only required if using Kerberos.</li>
- * <li>signer.secret.provider.zookeeper.kerberos.principal: set this to the
- * Kerberos principal to use.  This only required if using Kerberos.</li>
- * <li>signer.secret.provider.zookeeper.disconnect.on.close: when set to "true",
- * ZKSignerSecretProvider will close the ZooKeeper connection on shutdown.  The
- * default is "true". Only set this to "false" if a custom Curator client is
- * being provided and the disconnection is being handled elsewhere.</li>
- * </ul>
- *
- * The following attribute in the ServletContext can also be set if desired:
- * <ul>
- * <li>signer.secret.provider.zookeeper.curator.client: A CuratorFramework
- * client object can be passed here. If given, the "zookeeper" implementation
- * will use this Curator client instead of creating its own, which is useful if
- * you already have a Curator client or want more control over its
- * configuration.</li>
- * </ul>
+ * Details of the configurations are listed on <a href="../../../../../../../Configuration.html">Configuration Page</a>
  */
 @InterfaceStability.Unstable
 @InterfaceAudience.Private

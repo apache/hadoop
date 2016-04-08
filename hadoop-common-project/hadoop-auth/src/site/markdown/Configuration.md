@@ -34,12 +34,11 @@ Hadoop Auth uses SLF4J-API for logging. Auth Maven POM dependencies define the S
 *   `[PREFIX.]type`: the authentication type keyword (`simple` or \
     `kerberos`) or a Authentication handler implementation.
 
-*   `[PREFIX.]signature.secret`: When `signer.secret.provider` is set to
-    `string` or not specified, this is the value for the secret used to sign
-    the HTTP cookie.
+*   `[PREFIX.]signature.secret.file`: When `signer.secret.provider` is set to
+    `file`, this is the location of file including the secret used to sign the HTTP cookie.
 
 *   `[PREFIX.]token.validity`: The validity -in seconds- of the generated
-    authentication token. The default value is `3600` seconds. This is also
+    authentication token. The default value is `36000` seconds. This is also
     used for the rollover interval when `signer.secret.provider` is set to
     `random` or `zookeeper`.
 
@@ -50,10 +49,11 @@ Hadoop Auth uses SLF4J-API for logging. Auth Maven POM dependencies define the S
     authentication token.
 
 *   `signer.secret.provider`: indicates the name of the SignerSecretProvider
-    class to use. Possible values are: `string`, `random`,
-    `zookeeper`, or a classname. If not specified, the `string`
+    class to use. Possible values are: `file`, `random`,
+    `zookeeper`, or a classname. If not specified, the `file`
     implementation will be used; and failing that, the `random`
-    implementation will be used.
+    implementation will be used. If "file" is to be used, one need to specify
+    `signature.secret.file` and point to the secret file.
 
 ### Kerberos Configuration
 
@@ -232,24 +232,25 @@ The SignerSecretProvider is used to provide more advanced behaviors for the secr
 These are the relevant configuration properties:
 
 *   `signer.secret.provider`: indicates the name of the
-    SignerSecretProvider class to use. Possible values are: "string",
-    "random", "zookeeper", or a classname. If not specified, the "string"
+    SignerSecretProvider class to use. Possible values are: "file",
+    "random", "zookeeper", or a classname. If not specified, the "file"
     implementation will be used; and failing that, the "random" implementation
-    will be used.
+    will be used. If "file" is to be used, one need to specify `signature.secret.file`
+    and point to the secret file.
 
-*   `[PREFIX.]signature.secret`: When `signer.secret.provider` is set
-    to `string` or not specified, this is the value for the secret used to
+*   `[PREFIX.]signature.secret.file`: When `signer.secret.provider` is set
+    to `file` or not specified, this is the value for the secret used to
     sign the HTTP cookie.
 
 *   `[PREFIX.]token.validity`: The validity -in seconds- of the generated
-    authentication token. The default value is `3600` seconds. This is
+    authentication token. The default value is `36000` seconds. This is
     also used for the rollover interval when `signer.secret.provider` is
     set to `random` or `zookeeper`.
 
 The following configuration properties are specific to the `zookeeper` implementation:
 
 *   `signer.secret.provider.zookeeper.connection.string`: Indicates the
-    ZooKeeper connection string to connect with.
+    ZooKeeper connection string to connect with. The default value is `localhost:2181`
 
 *   `signer.secret.provider.zookeeper.path`: Indicates the ZooKeeper path
     to use for storing and retrieving the secrets. All servers
@@ -266,6 +267,17 @@ The following configuration properties are specific to the `zookeeper` implement
 *   `signer.secret.provider.zookeeper.kerberos.principal`: Set this to the
     Kerberos principal to use. This only required if using Kerberos.
 
+*   `signer.secret.provider.zookeeper.disconnect.on.shutdown`: Whether to close the
+    ZooKeeper connection when the provider is shutdown. The default value is `true`.
+    Only set this to `false` if a custom Curator client is being provided and
+    the disconnection is being handled elsewhere.
+
+The following attribute in the ServletContext can also be set if desired:
+*   `signer.secret.provider.zookeeper.curator.client`: A CuratorFramework client
+    object can be passed here. If given, the "zookeeper" implementation will use
+    this Curator client instead of creating its own, which is useful if you already
+    have a Curator client or want more control over its configuration.
+
 **Example**:
 
 ```xml
@@ -276,11 +288,11 @@ The following configuration properties are specific to the `zookeeper` implement
             <!-- AuthenticationHandler configs not shown -->
             <init-param>
                 <param-name>signer.secret.provider</param-name>
-                <param-value>string</param-value>
+                <param-value>file</param-value>
             </init-param>
             <init-param>
-                <param-name>signature.secret</param-name>
-                <param-value>my_secret</param-value>
+                <param-name>signature.secret.file</param-name>
+                <param-value>/myapp/secret_file</param-value>
             </init-param>
         </filter>
 
@@ -333,10 +345,6 @@ The following configuration properties are specific to the `zookeeper` implement
             <init-param>
                 <param-name>signer.secret.provider.zookeeper.path</param-name>
                 <param-value>/myapp/secrets</param-value>
-            </init-param>
-            <init-param>
-                <param-name>signer.secret.provider.zookeeper.use.kerberos.acls</param-name>
-                <param-value>true</param-value>
             </init-param>
             <init-param>
                 <param-name>signer.secret.provider.zookeeper.kerberos.keytab</param-name>

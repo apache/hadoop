@@ -40,85 +40,26 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
- * <p>The {@link AuthenticationFilter} enables protecting web application
+ * The {@link AuthenticationFilter} enables protecting web application
  * resources with different (pluggable)
  * authentication mechanisms and signer secret providers.
- * </p>
  * <p>
- * Out of the box it provides 2 authentication mechanisms: Pseudo and Kerberos SPNEGO.
- * </p>
  * Additional authentication mechanisms are supported via the {@link AuthenticationHandler} interface.
  * <p>
  * This filter delegates to the configured authentication handler for authentication and once it obtains an
  * {@link AuthenticationToken} from it, sets a signed HTTP cookie with the token. For client requests
  * that provide the signed HTTP cookie, it verifies the validity of the cookie, extracts the user information
  * and lets the request proceed to the target resource.
- * </p>
- * The supported configuration properties are:
- * <ul>
- * <li>config.prefix: indicates the prefix to be used by all other configuration properties, the default value
- * is no prefix. See below for details on how/why this prefix is used.</li>
- * <li>[#PREFIX#.]type: simple|kerberos|#CLASS#, 'simple' is short for the
- * {@link PseudoAuthenticationHandler}, 'kerberos' is short for {@link KerberosAuthenticationHandler}, otherwise
- * the full class name of the {@link AuthenticationHandler} must be specified.</li>
- * <li>[#PREFIX#.]signature.secret.file: when signer.secret.provider is set to
- * "file" or not specified, this is the location of file including the secret
- *  used to sign the HTTP cookie.</li>
- * <li>[#PREFIX#.]token.validity: time -in seconds- that the generated token is
- * valid before a new authentication is triggered, default value is
- * <code>3600</code> seconds. This is also used for the rollover interval for
- * the "random" and "zookeeper" SignerSecretProviders.</li>
- * <li>[#PREFIX#.]cookie.domain: domain to use for the HTTP cookie that stores the authentication token.</li>
- * <li>[#PREFIX#.]cookie.path: path to use for the HTTP cookie that stores the authentication token.</li>
- * </ul>
  * <p>
  * The rest of the configuration properties are specific to the {@link AuthenticationHandler} implementation and the
  * {@link AuthenticationFilter} will take all the properties that start with the prefix #PREFIX#, it will remove
  * the prefix from it and it will pass them to the the authentication handler for initialization. Properties that do
  * not start with the prefix will not be passed to the authentication handler initialization.
- * </p>
  * <p>
- * Out of the box it provides 3 signer secret provider implementations:
- * "file", "random" and "zookeeper"
- * </p>
- * Additional signer secret providers are supported via the
- * {@link SignerSecretProvider} class.
- * <p>
- * For the HTTP cookies mentioned above, the SignerSecretProvider is used to
- * determine the secret to use for signing the cookies. Different
- * implementations can have different behaviors. The "file" implementation
- * loads the secret from a specified file. The "random" implementation uses a
- * randomly generated secret that rolls over at the interval specified by the
- * [#PREFIX#.]token.validity mentioned above.  The "zookeeper" implementation
- * is like the "random" one, except that it synchronizes the random secret
- * and rollovers between multiple servers; it's meant for HA services.
- * </p>
- * The relevant configuration properties are:
- * <ul>
- * <li>signer.secret.provider: indicates the name of the SignerSecretProvider
- * class to use. Possible values are: "file", "random", "zookeeper", or a
- * classname. If not specified, the "file" implementation will be used with
- * [#PREFIX#.]signature.secret.file; and if that's not specified, the "random"
- * implementation will be used.</li>
- * <li>[#PREFIX#.]signature.secret.file: When the "file" implementation is
- * specified, this content of this file is used as the secret.</li>
- * <li>[#PREFIX#.]token.validity: When the "random" or "zookeeper"
- * implementations are specified, this value is used as the rollover
- * interval.</li>
- * </ul>
+ * Details of the configurations are listed on <a href="../../../../../../../Configuration.html">Configuration Page</a>
  * <p>
  * The "zookeeper" implementation has additional configuration properties that
  * must be specified; see {@link ZKSignerSecretProvider} for details.
- * </p>
- * For subclasses of AuthenticationFilter that want additional control over the
- * SignerSecretProvider, they can use the following attribute set in the
- * ServletContext:
- * <ul>
- * <li>signer.secret.provider.object: A SignerSecretProvider implementation can
- * be passed here that will be used instead of the signer.secret.provider
- * configuration property. Note that the class should already be
- * initialized.</li>
- * </ul>
  */
 
 @InterfaceAudience.Private
