@@ -137,6 +137,8 @@ public class S3AInputStream extends FSInputStream {
       LOG.info("Got socket exception while trying to read from stream, trying to recover " + e);
       reopen(pos);
       byteRead = wrappedStream.read();
+    } catch (EOFException e) {
+      return -1;
     }
 
     if (byteRead >= 0) {
@@ -215,5 +217,43 @@ public class S3AInputStream extends FSInputStream {
   @Override
   public boolean markSupported() {
     return false;
+  }
+
+  /**
+   * Subclass {@code readFully()} operation which only seeks at the start
+   * of the series of operations; seeking back at the end.
+   *
+   * This is significantly higher performance if multiple read attempts are
+   * needed to fetch the data, as it does not break the HTTP connection.
+   *
+   * To maintain thread safety requirements, this operation is synchronized
+   * for the duration of the sequence.
+   * {@inheritDoc}
+   *
+   */
+  @Override
+  public void readFully(long position, byte[] buffer, int offset, int length)
+      throws IOException {
+    validatePositionedReadArgs(position, buffer, offset, length);
+    if (length == 0) {
+      return;
+    }
+    int nread = 0;
+    synchronized (this) {
+      long oldPos = getPos();
+      try {
+        seek(position);
+        while (nread < length) {
+          int nbytes = read(buffer, offset + nread, length - nread);
+          if (nbytes < 0) {
+            throw new EOFException(FSExceptionMessages.EOF_IN_READ_FULLY);
+          }
+          nread += nbytes;
+        }
+
+      } finally {
+        seek(oldPos);
+      }
+    }
   }
 }

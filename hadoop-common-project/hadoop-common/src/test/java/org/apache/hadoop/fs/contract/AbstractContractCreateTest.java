@@ -123,7 +123,7 @@ public abstract class AbstractContractCreateTest extends
     } catch (AssertionError failure) {
       if (isSupported(IS_BLOBSTORE)) {
         // file/directory hack surfaces here
-        throw new AssumptionViolatedException(failure.toString()).initCause(failure);
+        throw new AssumptionViolatedException(failure.toString(), failure);
       }
       // else: rethrow
       throw failure;
@@ -163,13 +163,11 @@ public abstract class AbstractContractCreateTest extends
   public void testCreatedFileIsImmediatelyVisible() throws Throwable {
     describe("verify that a newly created file exists as soon as open returns");
     Path path = path("testCreatedFileIsImmediatelyVisible");
-    FSDataOutputStream out = null;
-    try {
-      out = getFileSystem().create(path,
+    try(FSDataOutputStream out = getFileSystem().create(path,
                                    false,
                                    4096,
                                    (short) 1,
-                                   1024);
+                                   1024)) {
       if (!getFileSystem().exists(path)) {
 
         if (isSupported(IS_BLOBSTORE)) {
@@ -180,8 +178,6 @@ public abstract class AbstractContractCreateTest extends
         assertPathExists("expected path to be visible before anything written",
                          path);
       }
-    } finally {
-      IOUtils.closeStream(out);
     }
   }
 }

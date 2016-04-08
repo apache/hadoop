@@ -53,7 +53,7 @@ public abstract class AbstractContractConcatTest extends AbstractFSContractTestB
     target = new Path(testPath, "target");
 
     byte[] block = dataset(TEST_FILE_LEN, 0, 255);
-    createFile(getFileSystem(), srcFile, false, block);
+    createFile(getFileSystem(), srcFile, true, block);
     touch(getFileSystem(), zeroByteFile);
   }
 

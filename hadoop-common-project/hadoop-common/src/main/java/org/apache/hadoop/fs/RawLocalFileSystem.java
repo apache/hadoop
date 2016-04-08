@@ -157,6 +157,8 @@ public class RawLocalFileSystem extends FileSystem {
     
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
+      // parameter check
+      validatePositionedReadArgs(position, b, off, len);
       try {
         int value = fis.read(b, off, len);
         if (value > 0) {
@@ -172,6 +174,12 @@ public class RawLocalFileSystem extends FileSystem {
     @Override
     public int read(long position, byte[] b, int off, int len)
       throws IOException {
+      // parameter check
+      validatePositionedReadArgs(position, b, off, len);
+      if (len == 0) {
+        return 0;
+      }
+
       ByteBuffer bb = ByteBuffer.wrap(b, off, len);
       try {
         int value = fis.getChannel().read(bb, position);
