@@ -284,7 +284,15 @@ The answer to "What is your first and last name?" (i.e. "CN") must be the hostna
 
 NOTE: You need to restart the KMS for the configuration changes to take effect.
 
-$H4 KMS Access Control
+$H4 ACLs (Access Control Lists)
+
+KMS supports ACLs (Access Control Lists) for fine-grained permission control.
+
+Two levels of ACLs exist in KMS: KMS ACLs and Key ACLs. KMS ACLs control access at KMS operation level, and precede Key ACLs. In particular, only if permission is granted at KMS ACLs level, shall the permission check against Key ACLs be performed.
+
+The configuration and usage of KMS ACLs and Key ACLs are described in the sections below.
+
+$H5 KMS ACLs
 
 KMS ACLs configuration are defined in the KMS `etc/hadoop/kms-acls.xml` configuration file. This file is hot-reloaded when it changes.
 
@@ -452,7 +460,7 @@ A user accessing KMS is first checked for inclusion in the Access Control List f
 </configuration>
 ```
 
-$H4 Key Access Control
+$H5 Key ACLs
 
 KMS supports access control for all non-read operations at the Key level. All Key Access operations are classified as :
 
@@ -466,9 +474,9 @@ These can be defined in the KMS `etc/hadoop/kms-acls.xml` as follows
 
 For all keys for which a key access has not been explicitly configured, It is possible to configure a default key access control for a subset of the operation types.
 
-It is also possible to configure a "whitelist" key ACL for a subset of the operation types. The whitelist key ACL is a whitelist in addition to the explicit or default per-key ACL. That is, if no per-key ACL is explicitly set, a user will be granted access if they are present in the default per-key ACL or the whitelist key ACL. If a per-key ACL is explicitly set, a user will be granted access if they are present in the per-key ACL or the whitelist key ACL.
+It is also possible to configure a "whitelist" key ACL for a subset of the operation types. The whitelist key ACL grants access to the key, in addition to the explicit or default per-key ACL. That is, if no per-key ACL is explicitly set, a user will be granted access if they are present in the default per-key ACL or the whitelist key ACL. If a per-key ACL is explicitly set, a user will be granted access if they are present in the per-key ACL or the whitelist key ACL.
 
-If no ACL is configured for a specific key AND no default ACL is configured AND no root key ACL is configured for the requested operation, then access will be DENIED.
+If no ACL is configured for a specific key AND no default ACL is configured AND no whitelist key ACL is configured for the requested operation, then access will be DENIED.
 
 **NOTE:** The default and whitelist key ACL does not support `ALL` operation qualifier.
 
@@ -575,7 +583,11 @@ If no ACL is configured for a specific key AND no default ACL is configured AND 
 
 $H3 KMS Delegation Token Configuration
 
-KMS delegation token secret manager can be configured with the following properties:
+KMS supports delegation tokens to authenticate to the key providers from processes without Kerberos credentials.
+
+KMS delegation token authentication extends the default Hadoop authentication. See [Hadoop Auth](../hadoop-auth/index.html) page for more details.
+
+Additionally, KMS delegation token secret manager can be configured with the following properties:
 
 ```xml
   <property>
@@ -590,7 +602,7 @@ KMS delegation token secret manager can be configured with the following propert
     <name>hadoop.kms.authentication.delegation-token.max-lifetime.sec</name>
     <value>604800</value>
     <description>
-      Maximum lifetime of a delagation token, in seconds. Default value 7 days.
+      Maximum lifetime of a delegation token, in seconds. Default value 7 days.
     </description>
   </property>
 
@@ -598,7 +610,7 @@ KMS delegation token secret manager can be configured with the following propert
     <name>hadoop.kms.authentication.delegation-token.renew-interval.sec</name>
     <value>86400</value>
     <description>
-      Renewal interval of a delagation token, in seconds. Default value 1 day.
+      Renewal interval of a delegation token, in seconds. Default value 1 day.
     </description>
   </property>
 
@@ -640,7 +652,7 @@ $H4 HTTP Authentication Signature
 
 KMS uses Hadoop Authentication for HTTP authentication. Hadoop Authentication issues a signed HTTP Cookie once the client has authenticated successfully. This HTTP Cookie has an expiration time, after which it will trigger a new authentication sequence. This is done to avoid triggering the authentication on every HTTP request of a client.
 
-A KMS instance must verify the HTTP Cookie signatures signed by other KMS instances. To do this all KMS instances must share the signing secret.
+A KMS instance must verify the HTTP Cookie signatures signed by other KMS instances. To do this, all KMS instances must share the signing secret. Please see [SignerSecretProvider Configuration](../hadoop-auth/Configuration.html#SignerSecretProvider_Configuration) for detailed description and configuration examples. Note that KMS configurations need to be prefixed with `hadoop.kms.authentication`, as shown in the example below.
 
 This secret sharing can be done using a Zookeeper service which is configured in KMS with the following properties in the `kms-site.xml`:
 
@@ -650,8 +662,9 @@ This secret sharing can be done using a Zookeeper service which is configured in
     <value>zookeeper</value>
     <description>
       Indicates how the secret to sign the authentication cookies will be
-      stored. Options are 'random' (default), 'string' and 'zookeeper'.
+      stored. Options are 'random' (default), 'file' and 'zookeeper'.
       If using a setup with multiple KMS instances, 'zookeeper' should be used.
+      If using file, signature.secret.file should be configured and point to the secret file.
     </description>
   </property>
   <property>
@@ -659,7 +672,7 @@ This secret sharing can be done using a Zookeeper service which is configured in
     <value>/hadoop-kms/hadoop-auth-signature-secret</value>
     <description>
       The Zookeeper ZNode path where the KMS instances will store and retrieve
-      the secret from.
+      the secret from. All KMS instances that need to coordinate should point to the same path.
     </description>
   </property>
   <property>
@@ -696,7 +709,11 @@ This secret sharing can be done using a Zookeeper service which is configured in
 
 $H4 Delegation Tokens
 
-TBD
+Similar to HTTP authentication, KMS uses Hadoop Authentication for delegation tokens too.
+
+Under HA, A KMS instance must verify the delegation token given by another KMS instance, by checking the shared secret used to sign the delegation token. To do this, all KMS instances must be able to retrieve the shared secret from ZooKeeper.
+
+Please see the examples given in HTTP Authentication section to configure ZooKeeper for secret sharing.
 
 $H3 KMS HTTP REST API
 
