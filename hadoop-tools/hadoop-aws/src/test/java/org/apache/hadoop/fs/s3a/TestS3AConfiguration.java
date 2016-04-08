@@ -123,6 +123,7 @@ public class TestS3AConfiguration {
   @Test
   public void testProxyPortWithoutHost() throws Exception {
     conf = new Configuration();
+    conf.unset(Constants.PROXY_HOST);
     conf.setInt(Constants.MAX_ERROR_RETRIES, 2);
     conf.setInt(Constants.PROXY_PORT, 1);
     try {
@@ -140,6 +141,7 @@ public class TestS3AConfiguration {
   @Test
   public void testAutomaticProxyPortSelection() throws Exception {
     conf = new Configuration();
+    conf.unset(Constants.PROXY_PORT);
     conf.setInt(Constants.MAX_ERROR_RETRIES, 2);
     conf.set(Constants.PROXY_HOST, "127.0.0.1");
     conf.set(Constants.SECURE_CONNECTIONS, "true");
