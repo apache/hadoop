@@ -284,6 +284,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         return;
       }
       this.isStopped = true;
+      sendOutofBandHeartBeat();
       try {
         statusUpdater.join();
         registerWithRM();
