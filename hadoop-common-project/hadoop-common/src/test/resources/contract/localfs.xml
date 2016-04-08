@@ -100,7 +100,7 @@ case sensitivity and permission options are determined at run time from OS type
     <value>true</value>
   </property>
 
-  <!-- checksum FS doesn't allow seeing past EOF -->
+  <!-- checksum FS doesn't allow seeking past EOF -->
   <property>
     <name>fs.contract.rejects-seek-past-eof</name>
     <value>true</value>

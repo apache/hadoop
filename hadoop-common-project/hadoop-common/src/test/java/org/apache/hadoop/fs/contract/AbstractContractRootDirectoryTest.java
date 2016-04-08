@@ -51,7 +51,7 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     Path dir = new Path("/testmkdirdepth1");
     assertPathDoesNotExist("directory already exists", dir);
     fs.mkdirs(dir);
-    ContractTestUtils.assertIsDirectory(getFileSystem(), dir);
+    assertIsDirectory(dir);
     assertPathExists("directory already exists", dir);
     assertDeleted(dir, true);
   }
@@ -61,10 +61,10 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     //extra sanity checks here to avoid support calls about complete loss of data
     skipIfUnsupported(TEST_ROOT_TESTS_ENABLED);
     Path root = new Path("/");
-    ContractTestUtils.assertIsDirectory(getFileSystem(), root);
+    assertIsDirectory(root);
     boolean deleted = getFileSystem().delete(root, true);
     LOG.info("rm / of empty dir result is {}", deleted);
-    ContractTestUtils.assertIsDirectory(getFileSystem(), root);
+    assertIsDirectory(root);
   }
 
   @Test
@@ -75,7 +75,7 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     String touchfile = "/testRmNonEmptyRootDirNonRecursive";
     Path file = new Path(touchfile);
     ContractTestUtils.touch(getFileSystem(), file);
-    ContractTestUtils.assertIsDirectory(getFileSystem(), root);
+    assertIsDirectory(root);
     try {
       boolean deleted = getFileSystem().delete(root, false);
       fail("non recursive delete should have raised an exception," +
@@ -86,7 +86,7 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     } finally {
       getFileSystem().delete(file, false);
     }
-    ContractTestUtils.assertIsDirectory(getFileSystem(), root);
+    assertIsDirectory(root);
   }
 
   @Test
@@ -94,11 +94,11 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     //extra sanity checks here to avoid support calls about complete loss of data
     skipIfUnsupported(TEST_ROOT_TESTS_ENABLED);
     Path root = new Path("/");
-    ContractTestUtils.assertIsDirectory(getFileSystem(), root);
+    assertIsDirectory(root);
     Path file = new Path("/testRmRootRecursive");
     ContractTestUtils.touch(getFileSystem(), file);
     boolean deleted = getFileSystem().delete(root, true);
-    ContractTestUtils.assertIsDirectory(getFileSystem(), root);
+    assertIsDirectory(root);
     LOG.info("rm -rf / result is {}", deleted);
     if (deleted) {
       assertPathDoesNotExist("expected file to be deleted", file);

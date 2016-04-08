@@ -57,7 +57,7 @@ public abstract class AbstractFSContractTestBase extends Assert
   public static final int DEFAULT_TEST_TIMEOUT = 180 * 1000;
 
   /**
-   * The FS contract used for these tets
+   * The FS contract used for these tests
    */
   private AbstractFSContract contract;
 
