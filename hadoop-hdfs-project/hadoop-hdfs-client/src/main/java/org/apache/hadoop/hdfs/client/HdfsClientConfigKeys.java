@@ -97,12 +97,6 @@ public interface HdfsClientConfigKeys {
   int     DFS_CLIENT_CACHED_CONN_RETRY_DEFAULT = 3;
   String  DFS_CLIENT_CONTEXT = "dfs.client.context";
   String  DFS_CLIENT_CONTEXT_DEFAULT = "default";
-  String  DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS =
-      "dfs.client.file-block-storage-locations.num-threads";
-  int     DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS_DEFAULT = 10;
-  String  DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS =
-      "dfs.client.file-block-storage-locations.timeout.millis";
-  int     DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS_DEFAULT = 1000;
   String  DFS_CLIENT_USE_LEGACY_BLOCKREADER =
       "dfs.client.use.legacy.blockreader";
   boolean DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT = false;

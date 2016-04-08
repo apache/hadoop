@@ -1197,24 +1197,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   @Deprecated
   public static final String  DFS_CLIENT_CONTEXT_DEFAULT =
       HdfsClientConfigKeys.DFS_CLIENT_CONTEXT_DEFAULT;
-  @Deprecated
-  public static final String
-      DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS =
-      HdfsClientConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS;
-  @Deprecated
-  public static final int
-      DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS_DEFAULT =
-      HdfsClientConfigKeys
-          .DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS_DEFAULT;
-  @Deprecated
-  public static final String
-      DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS =
-      HdfsClientConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS;
-  @Deprecated
-  public static final int
-      DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS_DEFAULT =
-      HdfsClientConfigKeys
-          .DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS_DEFAULT;
 
   @Deprecated
   public static final String  DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY =
