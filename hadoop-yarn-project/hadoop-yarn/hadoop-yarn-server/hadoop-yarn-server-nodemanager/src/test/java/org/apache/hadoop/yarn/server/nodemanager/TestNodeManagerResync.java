@@ -108,6 +108,7 @@ public class TestNodeManagerResync {
   static final String user = "nobody";
   private FileContext localFS;
   private CyclicBarrier syncBarrier;
+  private CyclicBarrier updateBarrier;
   private AtomicBoolean assertionFailedInThread = new AtomicBoolean(false);
   private AtomicBoolean isNMShutdownCalled = new AtomicBoolean(false);
   private final NodeManagerEvent resyncEvent =
@@ -125,6 +126,7 @@ public class TestNodeManagerResync {
     remoteLogsDir.mkdirs();
     nmLocalDir.mkdirs();
     syncBarrier = new CyclicBarrier(2);
+    updateBarrier = new CyclicBarrier(2);
   }
 
   @After
@@ -803,9 +805,11 @@ public class TestNodeManagerResync {
                 .getContainerStatuses(gcsRequest).getContainerStatuses().get(0);
             assertEquals(Resource.newInstance(1024, 1),
                 containerStatus.getCapability());
+            updateBarrier.await();
             // Call the actual rebootNodeStatusUpdaterAndRegisterWithRM().
             // This function should be synchronized with
             // increaseContainersResource().
+            updateBarrier.await();
             super.rebootNodeStatusUpdaterAndRegisterWithRM();
             // Check status after registerWithRM
             containerStatus = getContainerManager()
@@ -831,17 +835,24 @@ public class TestNodeManagerResync {
         List<Token> increaseTokens = new ArrayList<Token>();
         // Add increase request.
         Resource targetResource = Resource.newInstance(4096, 2);
-        try {
-          increaseTokens.add(getContainerToken(targetResource));
-          IncreaseContainersResourceRequest increaseRequest =
-              IncreaseContainersResourceRequest.newInstance(increaseTokens);
-          IncreaseContainersResourceResponse increaseResponse =
-              getContainerManager()
-                  .increaseContainersResource(increaseRequest);
-          Assert.assertEquals(
-              1, increaseResponse.getSuccessfullyIncreasedContainers()
-                  .size());
-          Assert.assertTrue(increaseResponse.getFailedRequests().isEmpty());
+        try{
+          try {
+            updateBarrier.await();
+            increaseTokens.add(getContainerToken(targetResource));
+            IncreaseContainersResourceRequest increaseRequest =
+                IncreaseContainersResourceRequest.newInstance(increaseTokens);
+            IncreaseContainersResourceResponse increaseResponse =
+                getContainerManager()
+                    .increaseContainersResource(increaseRequest);
+            Assert.assertEquals(
+                1, increaseResponse.getSuccessfullyIncreasedContainers()
+                    .size());
+            Assert.assertTrue(increaseResponse.getFailedRequests().isEmpty());
+          } catch (Exception e) {
+            e.printStackTrace();
+          } finally {
+            updateBarrier.await();
+          }
         } catch (Exception e) {
           e.printStackTrace();
         }
