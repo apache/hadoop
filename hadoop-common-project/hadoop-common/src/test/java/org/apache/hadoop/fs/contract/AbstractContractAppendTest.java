@@ -52,11 +52,8 @@ public abstract class AbstractContractAppendTest extends AbstractFSContractTestB
   public void testAppendToEmptyFile() throws Throwable {
     touch(getFileSystem(), target);
     byte[] dataset = dataset(256, 'a', 'z');
-    FSDataOutputStream outputStream = getFileSystem().append(target);
-    try {
+    try (FSDataOutputStream outputStream = getFileSystem().append(target)) {
       outputStream.write(dataset);
-    } finally {
-      outputStream.close();
     }
     byte[] bytes = ContractTestUtils.readDataset(getFileSystem(), target,
                                                  dataset.length);

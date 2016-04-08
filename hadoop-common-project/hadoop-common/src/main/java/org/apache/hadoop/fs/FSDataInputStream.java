@@ -18,18 +18,21 @@
  */
 package org.apache.hadoop.fs;
 
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.FileDescriptor;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.ByteBufferPool;
-import org.apache.hadoop.fs.ByteBufferUtil;
 import org.apache.hadoop.util.IdentityHashStore;
 
 /** Utility that wraps a {@link FSInputStream} in a {@link DataInputStream}
- * and buffers input through a {@link BufferedInputStream}. */
+ * and buffers input through a {@link java.io.BufferedInputStream}. */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class FSDataInputStream extends DataInputStream
@@ -97,6 +100,7 @@ public class FSDataInputStream extends DataInputStream
    * @param buffer    buffer into which data is read
    * @param offset    offset into the buffer in which data is written
    * @param length    the number of bytes to read
+   * @throws IOException IO problems
    * @throws EOFException If the end of stream is reached while reading.
    *                      If an exception is thrown an undetermined number
    *                      of bytes in the buffer may have been written. 

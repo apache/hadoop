@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
 import org.junit.internal.AssumptionViolatedException;
 import org.slf4j.Logger;
@@ -432,9 +433,7 @@ public class ContractTestUtils extends Assert {
    * @throws AssertionError with the text and throwable -always
    */
   public static void fail(String text, Throwable thrown) {
-    AssertionError e = new AssertionError(text);
-    e.initCause(thrown);
-    throw e;
+    throw new AssertionError(text, thrown);
   }
 
   /**
@@ -509,10 +508,14 @@ public class ContractTestUtils extends Assert {
                                  boolean overwrite,
                                  byte[] data) throws IOException {
     FSDataOutputStream stream = fs.create(path, overwrite);
-    if (data != null && data.length > 0) {
-      stream.write(data);
+    try {
+      if (data != null && data.length > 0) {
+        stream.write(data);
+      }
+      stream.close();
+    } finally {
+      IOUtils.closeStream(stream);
     }
-    stream.close();
   }
 
   /**
@@ -574,13 +577,10 @@ public class ContractTestUtils extends Assert {
   public static String readBytesToString(FileSystem fs,
                                   Path path,
                                   int length) throws IOException {
-    FSDataInputStream in = fs.open(path);
-    try {
+    try (FSDataInputStream in = fs.open(path)) {
       byte[] buf = new byte[length];
       in.readFully(0, buf);
       return toChar(buf);
-    } finally {
-      in.close();
     }
   }
 
@@ -786,8 +786,7 @@ public class ContractTestUtils extends Assert {
 
     long totalBytesRead = 0;
     int nextExpectedNumber = 0;
-    final InputStream inputStream = fs.open(path);
-    try {
+    try (InputStream inputStream = fs.open(path)) {
       while (true) {
         final int bytesRead = inputStream.read(testBuffer);
         if (bytesRead < 0) {
@@ -814,8 +813,6 @@ public class ContractTestUtils extends Assert {
         throw new IOException("Expected to read " + expectedSize +
             " bytes but only received " + totalBytesRead);
       }
-    } finally {
-      inputStream.close();
     }
   }
 

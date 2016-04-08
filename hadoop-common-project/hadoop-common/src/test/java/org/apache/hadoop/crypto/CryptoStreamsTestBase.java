@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.crypto;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -29,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.ByteBufferReadable;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.HasEnhancedByteBufferAccess;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.ReadOption;
@@ -339,7 +341,7 @@ public abstract class CryptoStreamsTestBase {
     try {
       ((PositionedReadable) in).readFully(pos, result);
       Assert.fail("Read fully exceeds maximum length should fail.");
-    } catch (IOException e) {
+    } catch (EOFException e) {
     }
   }
   
@@ -365,9 +367,9 @@ public abstract class CryptoStreamsTestBase {
     try {
       seekCheck(in, -3);
       Assert.fail("Seek to negative offset should fail.");
-    } catch (IllegalArgumentException e) {
-      GenericTestUtils.assertExceptionContains("Cannot seek to negative " +
-          "offset", e);
+    } catch (EOFException e) {
+      GenericTestUtils.assertExceptionContains(
+          FSExceptionMessages.NEGATIVE_SEEK, e);
     }
     Assert.assertEquals(pos, ((Seekable) in).getPos());
     
