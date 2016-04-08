@@ -18,19 +18,20 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import java.util.Comparator;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerHealth;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
-
-import java.util.Comparator;
 
 /**
  * Read-only interface to {@link CapacityScheduler} context.
@@ -72,4 +73,11 @@ public interface CapacitySchedulerContext {
   SchedulerHealth getSchedulerHealth();
 
   long getLastNodeUpdateTime();
+
+  /**
+   * @return QueueCapacities root queue of the Capacity Scheduler Queue, root
+   *         queue used capacities for different labels are same as that of the
+   *         cluster.
+   */
+  ResourceUsage getClusterResourceUsage();
 }

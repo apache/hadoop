@@ -986,14 +986,21 @@ public class LeafQueue extends AbstractCSQueue {
 
   protected Resource getHeadroom(User user, Resource queueCurrentLimit,
       Resource clusterResource, FiCaSchedulerApp application) {
-    return getHeadroom(user, queueCurrentLimit, clusterResource,
-        computeUserLimit(application, clusterResource, user,
-            RMNodeLabelsManager.NO_LABEL,
-            SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY));
+    return getHeadroom(user, queueCurrentLimit, clusterResource, application,
+        RMNodeLabelsManager.NO_LABEL);
   }
-  
-  private Resource getHeadroom(User user, Resource currentResourceLimit,
-      Resource clusterResource, Resource userLimit) {
+
+  protected Resource getHeadroom(User user, Resource queueCurrentLimit,
+      Resource clusterResource, FiCaSchedulerApp application,
+      String partition) {
+    return getHeadroom(user, queueCurrentLimit, clusterResource,
+        computeUserLimit(application, clusterResource, user, partition,
+            SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), partition);
+  }
+
+  private Resource getHeadroom(User user,
+      Resource currentPartitionResourceLimit, Resource clusterResource,
+      Resource userLimitResource, String partition) {
     /** 
      * Headroom is:
      *    min(
@@ -1010,15 +1017,33 @@ public class LeafQueue extends AbstractCSQueue {
      *
      * >> min (userlimit - userConsumed,   queueMaxCap - queueUsedResources) << 
      *
+     * sum of queue max capacities of multiple queue's will be greater than the
+     * actual capacity of a given partition, hence we need to ensure that the
+     * headroom is not greater than the available resource for a given partition
+     *
+     * headroom = min (unused resourcelimit of a label, calculated headroom )
      */
-    Resource headroom = 
-      Resources.componentwiseMin(
-        Resources.subtract(userLimit, user.getUsed()),
-        Resources.subtract(currentResourceLimit, queueUsage.getUsed())
-        );
+    currentPartitionResourceLimit =
+        partition.equals(RMNodeLabelsManager.NO_LABEL)
+            ? currentPartitionResourceLimit
+            : getQueueMaxResource(partition, clusterResource);
+
+    Resource headroom = Resources.componentwiseMin(
+        Resources.subtract(userLimitResource, user.getUsed(partition)),
+        Resources.subtract(currentPartitionResourceLimit,
+            queueUsage.getUsed(partition)));
     // Normalize it before return
     headroom =
         Resources.roundDown(resourceCalculator, headroom, minimumAllocation);
+
+    //headroom = min (unused resourcelimit of a label, calculated headroom )
+    Resource clusterPartitionResource =
+        labelManager.getResourceByLabel(partition, clusterResource);
+    Resource clusterFreePartitionResource =
+        Resources.subtract(clusterPartitionResource,
+            csContext.getClusterResourceUsage().getUsed(partition));
+    headroom = Resources.min(resourceCalculator, clusterPartitionResource,
+        clusterFreePartitionResource, headroom);
     return headroom;
   }
   
@@ -1045,10 +1070,10 @@ public class LeafQueue extends AbstractCSQueue {
             nodePartition, schedulingMode);
 
     setQueueResourceLimitsInfo(clusterResource);
-    
+
     Resource headroom =
         getHeadroom(queueUser, cachedResourceLimitsForHeadroom.getLimit(),
-            clusterResource, userLimit);
+            clusterResource, userLimit, nodePartition);
     
     if (LOG.isDebugEnabled()) {
       LOG.debug("Headroom calculation for user " + user + ": " + 
