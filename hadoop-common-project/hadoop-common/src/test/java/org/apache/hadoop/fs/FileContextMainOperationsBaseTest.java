@@ -272,7 +272,8 @@ public abstract class FileContextMainOperationsBaseTest  {
       // expected
     }
   } 
-  
+
+  @Test
   public void testListStatusThrowsExceptionForNonExistentFile()
                                                     throws Exception {
     try {
