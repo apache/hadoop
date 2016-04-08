@@ -285,17 +285,28 @@
 </property>
 
 
-<property>
-  <name>mapreduce.job.reducer.preempt.delay.sec</name>
-  <value>0</value>
-  <description>The threshold in terms of seconds after which an unsatisfied mapper 
-  request triggers reducer preemption to free space. Default 0 implies that the 
-  reduces should be preempted immediately after allocation if there is currently no
-  room for newly allocated mappers.
-  </description>
-</property>
+  <property>
+    <name>mapreduce.job.reducer.preempt.delay.sec</name>
+    <value>0</value>
+    <description>The threshold (in seconds) after which an unsatisfied
+      mapper request triggers reducer preemption when there is no anticipated
+      headroom. If set to 0 or a negative value, the reducer is preempted as
+      soon as lack of headroom is detected. Default is 0.
+    </description>
+  </property>
 
-<property>
+  <property>
+    <name>mapreduce.job.reducer.unconditional-preempt.delay.sec</name>
+    <value>300</value>
+    <description>The threshold (in seconds) after which an unsatisfied
+      mapper request triggers a forced reducer preemption irrespective of the
+      anticipated headroom. By default, it is set to 5 mins. Setting it to 0
+      leads to immediate reducer preemption. Setting to -1 disables this
+      preemption altogether.
+    </description>
+  </property>
+
+  <property>
     <name>mapreduce.job.max.split.locations</name>
     <value>10</value>
     <description>The max number of block locations to store for each split for 
