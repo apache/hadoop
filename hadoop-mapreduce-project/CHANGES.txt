@@ -20,6 +20,9 @@ Release 2.7.3 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-6633. AM should retry map attempts if the reduce task encounters
+    commpression related errors (Rushabh Shah via epayne)
+
     MAPREDUCE-4785. TestMRApp occasionally fails (haibochen via rkanter)
 
     MAPREDUCE-6540. TestMRTimelineEventHandling fails (sjlee)
