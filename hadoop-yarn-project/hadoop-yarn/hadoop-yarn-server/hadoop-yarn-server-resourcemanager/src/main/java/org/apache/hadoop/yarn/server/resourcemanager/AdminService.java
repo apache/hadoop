@@ -682,7 +682,11 @@ public class AdminService extends CompositeService implements
     return conf;
   }
 
-  private void refreshAll() throws ServiceFailedException {
+  /*
+   * Visibility could be private for test its made as default
+   */
+  @VisibleForTesting
+  void refreshAll() throws ServiceFailedException {
     try {
       refreshQueues(RefreshQueuesRequest.newInstance());
       refreshNodes(RefreshNodesRequest.newInstance(DecommissionType.NORMAL));
