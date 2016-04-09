@@ -537,7 +537,7 @@ class Fetcher<K,V> extends Thread {
             + " len: " + compressedLength + " to " + mapOutput.getDescription());
         mapOutput.shuffle(host, is, compressedLength, decompressedLength,
             metrics, reporter);
-      } catch (java.lang.InternalError e) {
+      } catch (java.lang.InternalError | Exception e) {
         LOG.warn("Failed to shuffle for fetcher#"+id, e);
         throw new IOException(e);
       }
