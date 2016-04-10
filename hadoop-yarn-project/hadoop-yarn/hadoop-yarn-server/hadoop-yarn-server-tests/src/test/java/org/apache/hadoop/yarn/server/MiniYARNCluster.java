@@ -462,7 +462,7 @@ public class MiniYARNCluster extends CompositeService {
     @Override
     protected synchronized void serviceStart() throws Exception {
       startResourceManager(index);
-      if(index == 0) {
+      if(index == 0 && resourceManagers[index].getRMContext().isHAEnabled()) {
         resourceManagers[index].getRMContext().getRMAdminService()
           .transitionToActive(new HAServiceProtocol.StateChangeRequestInfo(
             HAServiceProtocol.RequestSource.REQUEST_BY_USER_FORCED));
