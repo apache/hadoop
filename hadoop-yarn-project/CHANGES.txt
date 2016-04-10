@@ -124,6 +124,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4917. Fix typos in documentation of Capacity Scheduler.
     (Takashi Ohnishi via iwasakims)
 
+    YARN-4938. MiniYarnCluster should not request transitionToActive to RM
+    on non-HA environment. (Eric Badger via aajisaka)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
