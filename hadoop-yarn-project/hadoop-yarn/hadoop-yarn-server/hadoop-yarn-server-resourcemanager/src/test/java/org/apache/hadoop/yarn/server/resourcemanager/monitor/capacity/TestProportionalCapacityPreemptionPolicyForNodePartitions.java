@@ -929,12 +929,12 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
         throw new IllegalArgumentException("Format to define container is:"
             + "(priority,resource,host,expression,repeat,reserved)");
       }
-      Priority pri = Priority.newInstance(Integer.valueOf(values[0]));
+      Priority pri = Priority.newInstance(Integer.parseInt(values[0]));
       Resource res = parseResourceFromString(values[1]);
       NodeId host = NodeId.newInstance(values[2], 1);
       String exp = values[3];
-      int repeat = Integer.valueOf(values[4]);
-      boolean reserved = Boolean.valueOf(values[5]);
+      int repeat = Integer.parseInt(values[4]);
+      boolean reserved = Boolean.parseBoolean(values[5]);
 
       for (int i = 0; i < repeat; i++) {
         Container c = mock(Container.class);
@@ -1068,7 +1068,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
       Resource res = parseResourceFromString(p.substring(p.indexOf("=") + 1,
           p.indexOf(",")));
      boolean exclusivity =
-          Boolean.valueOf(p.substring(p.indexOf(",") + 1, p.length()));
+          Boolean.parseBoolean(p.substring(p.indexOf(",") + 1, p.length()));
       when(nlm.getResourceByLabel(eq(partitionName), any(Resource.class)))
           .thenReturn(res);
       when(nlm.isExclusiveNodeLabel(eq(partitionName))).thenReturn(exclusivity);
@@ -1088,10 +1088,10 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
     String[] resource = p.split(":");
     Resource res = Resources.createResource(0);
     if (resource.length == 1) {
-      res = Resources.createResource(Integer.valueOf(resource[0]));
+      res = Resources.createResource(Integer.parseInt(resource[0]));
     } else {
-      res = Resources.createResource(Integer.valueOf(resource[0]),
-          Integer.valueOf(resource[1]));
+      res = Resources.createResource(Integer.parseInt(resource[0]),
+          Integer.parseInt(resource[1]));
     }
     return res;
   }

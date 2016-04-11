@@ -1017,7 +1017,7 @@ public class ContainerLaunch implements Callable<Integer> {
         //variable can be set to indicate that distcache entries should come
         //first
 
-        boolean preferLocalizedJars = Boolean.valueOf(
+        boolean preferLocalizedJars = Boolean.parseBoolean(
           environment.get(Environment.CLASSPATH_PREPEND_DISTCACHE.name())
           );
 

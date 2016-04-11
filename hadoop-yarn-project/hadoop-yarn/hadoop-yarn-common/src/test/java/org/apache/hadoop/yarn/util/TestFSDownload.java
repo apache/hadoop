@@ -431,7 +431,7 @@ public class TestFSDownload {
     try {
       for (Map.Entry<LocalResource,Future<Path>> p : pending.entrySet()) {
         Path localized = p.getValue().get();
-        assertEquals(sizes[Integer.valueOf(localized.getName())], p.getKey()
+        assertEquals(sizes[Integer.parseInt(localized.getName())], p.getKey()
             .getSize());
 
         FileStatus status = files.getFileStatus(localized.getParent());
