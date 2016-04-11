@@ -73,6 +73,9 @@ Release 2.7.4 - UNRELEASED
     YARN-6310. OutputStreams in AggregatedLogFormat.LogWriter can be left
     open upon exceptions (Haibo Chen via jlowe)
 
+    YARN-4562. YARN WebApp ignores the configuration passed to it for keystore
+    settings (Sergey Shelukhin via vvasudev)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
