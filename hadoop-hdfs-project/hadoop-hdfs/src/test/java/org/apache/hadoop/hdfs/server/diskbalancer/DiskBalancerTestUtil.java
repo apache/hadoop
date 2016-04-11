@@ -19,6 +19,9 @@ package org.apache.hadoop.hdfs.server.diskbalancer;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.NullConnector;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
@@ -26,6 +29,7 @@ import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolumeSet;
 import org.apache.hadoop.util.Time;
 
+import java.io.IOException;
 import java.util.Random;
 import java.util.UUID;
 
@@ -53,7 +57,6 @@ public class DiskBalancerTestUtil {
    * Returns a random string.
    *
    * @param length - Number of chars in the string
-   *
    * @return random String
    */
   private String getRandomName(int length) {
@@ -122,7 +125,6 @@ public class DiskBalancerTestUtil {
    * Creates a Random Volume for testing purpose.
    *
    * @param type - StorageType
-   *
    * @return DiskBalancerVolume
    */
   public DiskBalancerVolume createRandomVolume(StorageType type) {
@@ -142,11 +144,9 @@ public class DiskBalancerTestUtil {
   /**
    * Creates a RandomVolumeSet.
    *
-   * @param type -Storage Type
+   * @param type      - Storage Type
    * @param diskCount - How many disks you need.
-   *
    * @return volumeSet
-   *
    * @throws Exception
    */
   public DiskBalancerVolumeSet createRandomVolumeSet(StorageType type,
@@ -168,9 +168,7 @@ public class DiskBalancerTestUtil {
    *
    * @param diskTypes - Storage types needed in the Node
    * @param diskCount - Disk count - that many disks of each type is created
-   *
    * @return DataNode
-   *
    * @throws Exception
    */
   public DiskBalancerDataNode createRandomDataNode(StorageType[] diskTypes,
@@ -195,11 +193,9 @@ public class DiskBalancerTestUtil {
    * Creates a RandomCluster.
    *
    * @param dataNodeCount - How many nodes you need
-   * @param diskTypes - StorageTypes you need in each node
-   * @param diskCount - How many disks you need of each type.
-   *
+   * @param diskTypes     - StorageTypes you need in each node
+   * @param diskCount     - How many disks you need of each type.
    * @return Cluster
-   *
    * @throws Exception
    */
   public DiskBalancerCluster createRandCluster(int dataNodeCount,
@@ -224,4 +220,48 @@ public class DiskBalancerTestUtil {
     return cluster;
   }
 
+  /**
+   * Returns the number of blocks on a volume.
+   *
+   * @param source - Source Volume.
+   * @return Number of Blocks.
+   * @throws IOException
+   */
+  public static int getBlockCount(FsVolumeSpi source) throws IOException {
+    int count = 0;
+    for (String blockPoolID : source.getBlockPoolList()) {
+      FsVolumeSpi.BlockIterator sourceIter =
+          source.newBlockIterator(blockPoolID, "TestDiskBalancerSource");
+      while (!sourceIter.atEnd()) {
+        ExtendedBlock block = sourceIter.nextBlock();
+        if (block != null) {
+          count++;
+        }
+      }
+    }
+    return count;
+  }
+
+  /**
+   * Moves all blocks to the destination volume.
+   *
+   * @param fsDataset - Dataset
+   * @param source    - Source Volume.
+   * @param dest      - Destination Volume.
+   * @throws IOException
+   */
+  public static void moveAllDataToDestVolume(FsDatasetSpi fsDataset,
+    FsVolumeSpi source, FsVolumeSpi dest) throws IOException {
+
+    for (String blockPoolID : source.getBlockPoolList()) {
+      FsVolumeSpi.BlockIterator sourceIter =
+          source.newBlockIterator(blockPoolID, "TestDiskBalancerSource");
+      while (!sourceIter.atEnd()) {
+        ExtendedBlock block = sourceIter.nextBlock();
+        if (block != null) {
+          fsDataset.moveBlockAcrossVolumes(block, dest);
+        }
+      }
+    }
+  }
 }

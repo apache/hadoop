@@ -19,35 +19,39 @@ package org.apache.hadoop.hdfs.server.diskbalancer;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus;
-import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerException.*;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
+import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerException.Result;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ClusterConnector;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ConnectorFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.GreedyPlanner;
-import org.apache.hadoop.hdfs.server.diskbalancer.planner.MoveStep;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
-import org.apache.hadoop.hdfs.server.diskbalancer.planner.Step;
-import org.hamcrest.*;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.codehaus.jackson.map.ObjectMapper;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 import static org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.Result.NO_PLAN;
 import static org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.Result.PLAN_DONE;
 import static org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.Result.PLAN_UNDER_PROGRESS;
+import static org.junit.Assert.assertTrue;
 
 public class TestDiskBalancerRPC {
   @Rule
@@ -226,6 +230,45 @@ public class TestDiskBalancerRPC {
     DiskBalancerWorkStatus status = dataNode.queryDiskBalancerPlan();
     Assert.assertTrue(status.getResult() == NO_PLAN);
   }
+
+  @Test
+  public void testMoveBlockAcrossVolume() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    final int DEFAULT_BLOCK_SIZE = 100;
+    conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, DEFAULT_BLOCK_SIZE);
+    String fileName = "/tmp.txt";
+    Path filePath = new Path(fileName);
+    final int numDatanodes = 1;
+    final int dnIndex = 0;
+    cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(numDatanodes).build();
+    FsVolumeImpl source = null;
+    FsVolumeImpl dest = null;
+    try {
+      cluster.waitActive();
+      Random r = new Random();
+      FileSystem fs = cluster.getFileSystem(dnIndex);
+      DFSTestUtil.createFile(fs, filePath, 10 * 1024,
+          (short) 1, r.nextLong());
+      DataNode dnNode = cluster.getDataNodes().get(dnIndex);
+      FsDatasetSpi.FsVolumeReferences refs =
+          dnNode.getFSDataset().getFsVolumeReferences();
+      try {
+        source = (FsVolumeImpl) refs.get(0);
+        dest = (FsVolumeImpl) refs.get(1);
+        DiskBalancerTestUtil.moveAllDataToDestVolume(dnNode.getFSDataset(),
+            source, dest);
+        assertTrue(DiskBalancerTestUtil.getBlockCount(source) == 0);
+      } finally {
+        refs.close();
+      }
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
 
   private class RpcTestHelper {
     private NodePlan plan;
