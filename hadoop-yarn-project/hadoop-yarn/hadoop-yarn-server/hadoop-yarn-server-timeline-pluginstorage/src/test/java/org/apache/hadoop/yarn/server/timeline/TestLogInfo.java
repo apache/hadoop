@@ -18,6 +18,8 @@ package org.apache.hadoop.yarn.server.timeline;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileContextTestHelper;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -60,6 +62,8 @@ public class TestLogInfo {
   private Configuration config = new YarnConfiguration();
   private MiniDFSCluster hdfsCluster;
   private FileSystem fs;
+  private FileContext fc;
+  private FileContextTestHelper fileContextTestHelper = new FileContextTestHelper("/tmp/TestLogInfo");
   private ObjectMapper objMapper;
 
   private JsonFactory jsonFactory = new JsonFactory();
@@ -77,7 +81,8 @@ public class TestLogInfo {
     HdfsConfiguration hdfsConfig = new HdfsConfiguration();
     hdfsCluster = new MiniDFSCluster.Builder(hdfsConfig).numDataNodes(1).build();
     fs = hdfsCluster.getFileSystem();
-    Path testAppDirPath = new Path(TEST_ROOT_DIR, TEST_ATTEMPT_DIR_NAME);
+    fc = FileContext.getFileContext(hdfsCluster.getURI(0), config);
+    Path testAppDirPath = getTestRootPath(TEST_ATTEMPT_DIR_NAME);
     fs.mkdirs(testAppDirPath, new FsPermission(FILE_LOG_DIR_PERMISSIONS));
     objMapper = PluginStoreTestUtils.createObjectMapper();
 
@@ -146,7 +151,7 @@ public class TestLogInfo {
     EntityLogInfo testLogInfo = new EntityLogInfo(TEST_ATTEMPT_DIR_NAME,
         TEST_ENTITY_FILE_NAME,
         UserGroupInformation.getLoginUser().getUserName());
-    testLogInfo.parseForStore(tdm, TEST_ROOT_DIR, true, jsonFactory, objMapper,
+    testLogInfo.parseForStore(tdm, getTestRootPath(), true, jsonFactory, objMapper,
         fs);
     // Verify for the first batch
     PluginStoreTestUtils.verifyTestEntities(tdm);
@@ -157,9 +162,8 @@ public class TestLogInfo {
     TimelineEntities entityList = new TimelineEntities();
     entityList.addEntity(entityNew);
     writeEntitiesLeaveOpen(entityList,
-        new Path(new Path(TEST_ROOT_DIR, TEST_ATTEMPT_DIR_NAME),
-            TEST_ENTITY_FILE_NAME));
-    testLogInfo.parseForStore(tdm, TEST_ROOT_DIR, true, jsonFactory, objMapper,
+        new Path(getTestRootPath(TEST_ATTEMPT_DIR_NAME), TEST_ENTITY_FILE_NAME));
+    testLogInfo.parseForStore(tdm, getTestRootPath(), true, jsonFactory, objMapper,
         fs);
     // Verify the newly added data
     TimelineEntity entity3 = tdm.getEntity(entityNew.getEntityType(),
@@ -182,9 +186,9 @@ public class TestLogInfo {
         TEST_BROKEN_FILE_NAME,
         UserGroupInformation.getLoginUser().getUserName());
     // Try parse, should not fail
-    testLogInfo.parseForStore(tdm, TEST_ROOT_DIR, true, jsonFactory, objMapper,
+    testLogInfo.parseForStore(tdm, getTestRootPath(), true, jsonFactory, objMapper,
         fs);
-    domainLogInfo.parseForStore(tdm, TEST_ROOT_DIR, true, jsonFactory, objMapper,
+    domainLogInfo.parseForStore(tdm, getTestRootPath(), true, jsonFactory, objMapper,
         fs);
     tdm.close();
   }
@@ -196,7 +200,7 @@ public class TestLogInfo {
     DomainLogInfo domainLogInfo = new DomainLogInfo(TEST_ATTEMPT_DIR_NAME,
         TEST_DOMAIN_FILE_NAME,
         UserGroupInformation.getLoginUser().getUserName());
-    domainLogInfo.parseForStore(tdm, TEST_ROOT_DIR, true, jsonFactory, objMapper,
+    domainLogInfo.parseForStore(tdm, getTestRootPath(), true, jsonFactory, objMapper,
         fs);
     // Verify domain data
     TimelineDomain resultDomain = tdm.getDomain("domain_1",
@@ -248,6 +252,14 @@ public class TestLogInfo {
     jsonGeneratorLocal.setPrettyPrinter(new MinimalPrettyPrinter("\n"));
     objMapper.writeValue(jsonGeneratorLocal, domain);
     outStreamDomain.hflush();
+  }
+
+  private Path getTestRootPath() {
+    return fileContextTestHelper.getTestRootPath(fc);
+  }
+
+  private Path getTestRootPath(String pathString) {
+    return fileContextTestHelper.getTestRootPath(fc, pathString);
   }
 
 }
