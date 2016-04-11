@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.timeline;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileContextTestHelper;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -75,16 +76,16 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
       = new Path(System.getProperty("test.build.data",
           System.getProperty("java.io.tmpdir")),
       TestEntityGroupFSTimelineStore.class.getSimpleName());
-  private static final Path TEST_APP_DIR_PATH
-      = new Path(TEST_ROOT_DIR, TEST_APP_DIR_NAME);
-  private static final Path TEST_ATTEMPT_DIR_PATH
-      = new Path(TEST_APP_DIR_PATH, TEST_ATTEMPT_DIR_NAME);
-  private static final Path TEST_DONE_DIR_PATH
-      = new Path(TEST_ROOT_DIR, "done");
+  private static Path testAppDirPath;
+  private static Path testAttemptDirPath;
+  private static Path testDoneDirPath;
 
   private static Configuration config = new YarnConfiguration();
   private static MiniDFSCluster hdfsCluster;
   private static FileSystem fs;
+  private static FileContext fc;
+  private static FileContextTestHelper fileContextTestHelper =
+      new FileContextTestHelper("/tmp/TestEntityGroupFSTimelineStore");
   private EntityGroupFSTimelineStore store;
   private TimelineEntity entityNew;
 
@@ -98,13 +99,17 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
         YarnConfiguration
             .TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_SUMMARY_ENTITY_TYPES,
         "YARN_APPLICATION,YARN_APPLICATION_ATTEMPT,YARN_CONTAINER");
-    config.set(YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_DONE_DIR,
-        TEST_DONE_DIR_PATH.toString());
     config.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, TEST_ROOT_DIR.toString());
     HdfsConfiguration hdfsConfig = new HdfsConfiguration();
     hdfsCluster
         = new MiniDFSCluster.Builder(hdfsConfig).numDataNodes(1).build();
     fs = hdfsCluster.getFileSystem();
+    fc = FileContext.getFileContext(hdfsCluster.getURI(0), config);
+    testAppDirPath = getTestRootPath(TEST_APPLICATION_ID.toString());
+    testAttemptDirPath = new Path(testAppDirPath, TEST_ATTEMPT_DIR_NAME);
+    testDoneDirPath = getTestRootPath("done");
+    config.set(YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_DONE_DIR, testDoneDirPath.toString());
+
   }
 
   @Before
@@ -123,7 +128,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
   @After
   public void tearDown() throws Exception {
     store.stop();
-    fs.delete(TEST_APP_DIR_PATH, true);
+    fs.delete(testAppDirPath, true);
   }
 
   @AfterClass
@@ -137,7 +142,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
   @Test
   public void testAppLogsScanLogs() throws Exception {
     EntityGroupFSTimelineStore.AppLogs appLogs =
-        store.new AppLogs(TEST_APPLICATION_ID, TEST_APP_DIR_PATH,
+        store.new AppLogs(TEST_APPLICATION_ID, testAppDirPath,
         AppState.COMPLETED);
     appLogs.scanForLogs();
     List<LogInfo> summaryLogs = appLogs.getSummaryLogs();
@@ -160,20 +165,20 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
   @Test
   public void testMoveToDone() throws Exception {
     EntityGroupFSTimelineStore.AppLogs appLogs =
-        store.new AppLogs(TEST_APPLICATION_ID, TEST_APP_DIR_PATH,
+        store.new AppLogs(TEST_APPLICATION_ID, testAppDirPath,
         AppState.COMPLETED);
     Path pathBefore = appLogs.getAppDirPath();
     appLogs.moveToDone();
     Path pathAfter = appLogs.getAppDirPath();
     assertNotEquals(pathBefore, pathAfter);
-    assertTrue(pathAfter.toString().contains(TEST_DONE_DIR_PATH.toString()));
+    assertTrue(pathAfter.toString().contains(testDoneDirPath.toString()));
   }
 
   @Test
   public void testParseSummaryLogs() throws Exception {
     TimelineDataManager tdm = PluginStoreTestUtils.getTdmWithMemStore(config);
     EntityGroupFSTimelineStore.AppLogs appLogs =
-        store.new AppLogs(TEST_APPLICATION_ID, TEST_APP_DIR_PATH,
+        store.new AppLogs(TEST_APPLICATION_ID, testAppDirPath,
         AppState.COMPLETED);
     appLogs.scanForLogs();
     appLogs.parseSummaryLogs(tdm);
@@ -185,14 +190,14 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     // Create test dirs and files
     // Irrelevant file, should not be reclaimed
     Path irrelevantFilePath = new Path(
-        TEST_DONE_DIR_PATH, "irrelevant.log");
+            testDoneDirPath, "irrelevant.log");
     FSDataOutputStream stream = fs.create(irrelevantFilePath);
     stream.close();
     // Irrelevant directory, should not be reclaimed
-    Path irrelevantDirPath = new Path(TEST_DONE_DIR_PATH, "irrelevant");
+    Path irrelevantDirPath = new Path(testDoneDirPath, "irrelevant");
     fs.mkdirs(irrelevantDirPath);
 
-    Path doneAppHomeDir = new Path(new Path(TEST_DONE_DIR_PATH, "0000"), "001");
+    Path doneAppHomeDir = new Path(new Path(testDoneDirPath, "0000"), "001");
     // First application, untouched after creation
     Path appDirClean = new Path(doneAppHomeDir, TEST_APP_DIR_NAME);
     Path attemptDirClean = new Path(appDirClean, TEST_ATTEMPT_DIR_NAME);
@@ -222,7 +227,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     fs.mkdirs(dirPathEmpty);
 
     // Should retain all logs after this run
-    store.cleanLogs(TEST_DONE_DIR_PATH, fs, 10000);
+    store.cleanLogs(testDoneDirPath, fs, 10000);
     assertTrue(fs.exists(irrelevantDirPath));
     assertTrue(fs.exists(irrelevantFilePath));
     assertTrue(fs.exists(filePath));
@@ -239,7 +244,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     // Touch the third application by creating a new dir
     fs.mkdirs(new Path(dirPathHold, "holdByMe"));
 
-    store.cleanLogs(TEST_DONE_DIR_PATH, fs, 1000);
+    store.cleanLogs(testDoneDirPath, fs, 1000);
 
     // Verification after the second cleaner call
     assertTrue(fs.exists(irrelevantDirPath));
@@ -261,7 +266,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
             YarnConfiguration.TIMELINE_SERVICE_ENTITY_GROUP_PLUGIN_CLASSES));
     // Load data and cache item, prepare timeline store by making a cache item
     EntityGroupFSTimelineStore.AppLogs appLogs =
-        store.new AppLogs(TEST_APPLICATION_ID, TEST_APP_DIR_PATH,
+        store.new AppLogs(TEST_APPLICATION_ID, testAppDirPath,
         AppState.COMPLETED);
     EntityCacheItem cacheItem = new EntityCacheItem(config, fs);
     cacheItem.setAppLogs(appLogs);
@@ -291,7 +296,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
   public void testSummaryRead() throws Exception {
     // Load data
     EntityGroupFSTimelineStore.AppLogs appLogs =
-        store.new AppLogs(TEST_APPLICATION_ID, TEST_APP_DIR_PATH,
+        store.new AppLogs(TEST_APPLICATION_ID, testAppDirPath,
         AppState.COMPLETED);
     TimelineDataManager tdm
         = PluginStoreTestUtils.getTdmWithStore(config, store);
@@ -314,7 +319,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
   private void createTestFiles() throws IOException {
     TimelineEntities entities = PluginStoreTestUtils.generateTestEntities();
     PluginStoreTestUtils.writeEntities(entities,
-        new Path(TEST_ATTEMPT_DIR_PATH, TEST_SUMMARY_LOG_FILE_NAME), fs);
+        new Path(testAttemptDirPath, TEST_SUMMARY_LOG_FILE_NAME), fs);
 
     entityNew = PluginStoreTestUtils
         .createEntity("id_3", "type_3", 789l, null, null,
@@ -322,11 +327,15 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     TimelineEntities entityList = new TimelineEntities();
     entityList.addEntity(entityNew);
     PluginStoreTestUtils.writeEntities(entityList,
-        new Path(TEST_ATTEMPT_DIR_PATH, TEST_ENTITY_LOG_FILE_NAME), fs);
+        new Path(testAttemptDirPath, TEST_ENTITY_LOG_FILE_NAME), fs);
 
     FSDataOutputStream out = fs.create(
-        new Path(TEST_ATTEMPT_DIR_PATH, TEST_DOMAIN_LOG_FILE_NAME));
+        new Path(testAttemptDirPath, TEST_DOMAIN_LOG_FILE_NAME));
     out.close();
+  }
+
+  private static Path getTestRootPath(String pathString) {
+    return fileContextTestHelper.getTestRootPath(fc, pathString);
   }
 
 }
