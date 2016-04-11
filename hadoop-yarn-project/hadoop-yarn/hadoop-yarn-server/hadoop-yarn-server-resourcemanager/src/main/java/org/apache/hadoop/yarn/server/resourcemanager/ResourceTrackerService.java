@@ -320,8 +320,7 @@ public class ResourceTrackerService extends AbstractService implements
     }
 
     // Check if this node is a 'valid' node
-    if (!this.nodesListManager.isValidNode(host) ||
-        this.nodesListManager.isUntrackedNode(host)) {
+    if (!this.nodesListManager.isValidNode(host)) {
       String message =
           "Disallowed NodeManager from  " + host
               + ", Sending SHUTDOWN signal to the NodeManager.";
@@ -452,9 +451,8 @@ public class ResourceTrackerService extends AbstractService implements
 
     // 1. Check if it's a valid (i.e. not excluded) node, if not, see if it is
     // in decommissioning.
-    if ((!this.nodesListManager.isValidNode(nodeId.getHost()) &&
-        !isNodeInDecommissioning(nodeId)) ||
-        this.nodesListManager.isUntrackedNode(nodeId.getHost())) {
+    if (!this.nodesListManager.isValidNode(nodeId.getHost())
+        && !isNodeInDecommissioning(nodeId)) {
       String message =
           "Disallowed NodeManager nodeId: " + nodeId + " hostname: "
               + nodeId.getHost();
