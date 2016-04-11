@@ -223,16 +223,27 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         any(UserGroupInformation.class));
     verify(delSrvc).delete(eq(user), eq((Path) null),
       eq(new Path(app1LogDir.getAbsolutePath())));
-    delSrvc.stop();
     
     String containerIdStr = ConverterUtils.toString(container11);
     File containerLogDir = new File(app1LogDir, containerIdStr);
+    int count = 0;
+    int maxAttempts = 50;
     for (String fileType : new String[] { "stdout", "stderr", "syslog" }) {
       File f = new File(containerLogDir, fileType);
-      Assert.assertFalse("check "+f, f.exists());
+      count = 0;
+      while ((f.exists()) && (count < maxAttempts)) {
+        count++;
+        Thread.sleep(100);
+      }
+      Assert.assertFalse("File [" + f + "] was not deleted", f.exists());
     }
-
-    Assert.assertFalse(app1LogDir.exists());
+    count = 0;
+    while ((app1LogDir.exists()) && (count < maxAttempts)) {
+      count++;
+      Thread.sleep(100);
+    }
+    Assert.assertFalse("Directory [" + app1LogDir + "] was not deleted",
+      app1LogDir.exists());
 
     Path logFilePath =
         logAggregationService.getRemoteNodeLogFileForApp(application1,
