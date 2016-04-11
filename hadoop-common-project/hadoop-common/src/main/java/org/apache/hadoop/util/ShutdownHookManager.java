@@ -81,7 +81,7 @@ public class ShutdownHookManager {
                 LOG.error("ShutdownHookManger shutdown forcefully.");
                 EXECUTOR.shutdownNow();
               }
-              LOG.info("ShutdownHookManger complete shutdown.");
+              LOG.debug("ShutdownHookManger complete shutdown.");
             } catch (InterruptedException ex) {
               LOG.error("ShutdownHookManger interrupted while waiting for " +
                   "termination.", ex);
