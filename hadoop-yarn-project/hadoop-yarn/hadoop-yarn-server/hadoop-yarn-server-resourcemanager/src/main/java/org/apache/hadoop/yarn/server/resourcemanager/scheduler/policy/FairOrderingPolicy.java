@@ -89,7 +89,8 @@ public class FairOrderingPolicy<S extends SchedulableEntity> extends AbstractCom
   @Override
   public void configure(Map<String, String> conf) {
     if (conf.containsKey(ENABLE_SIZE_BASED_WEIGHT)) {
-      sizeBasedWeight = Boolean.valueOf(conf.get(ENABLE_SIZE_BASED_WEIGHT));
+      sizeBasedWeight =
+        Boolean.parseBoolean(conf.get(ENABLE_SIZE_BASED_WEIGHT));
     }
   }
 

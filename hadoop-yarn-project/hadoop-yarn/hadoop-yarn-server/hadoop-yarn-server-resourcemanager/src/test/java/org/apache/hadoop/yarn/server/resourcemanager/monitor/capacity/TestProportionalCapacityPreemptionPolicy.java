@@ -1032,10 +1032,10 @@ public class TestProportionalCapacityPreemptionPolicy {
     for (int i = 0; i < resData.length; i++) {
       String[] resource = resData[i].split(":");
       if (resource.length == 1) {
-        resourceList.add(Resource.newInstance(Integer.valueOf(resource[0]), 0));
+        resourceList.add(Resource.newInstance(Integer.parseInt(resource[0]), 0));
       } else {
-        resourceList.add(Resource.newInstance(Integer.valueOf(resource[0]),
-            Integer.valueOf(resource[1])));
+        resourceList.add(Resource.newInstance(Integer.parseInt(resource[0]),
+            Integer.parseInt(resource[1])));
       }
     }
     return resourceList.toArray(new Resource[resourceList.size()]);

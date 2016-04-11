@@ -772,7 +772,7 @@ public class RegistrySecurity extends AbstractService {
    * @return true if the SASL client system property is set.
    */
   public static boolean isClientSASLEnabled() {
-    return Boolean.valueOf(System.getProperty(
+    return Boolean.parseBoolean(System.getProperty(
         ZookeeperConfigOptions.PROP_ZK_ENABLE_SASL_CLIENT, "true"));
   }
 
@@ -862,7 +862,7 @@ public class RegistrySecurity extends AbstractService {
     String sasl =
         System.getProperty(PROP_ZK_ENABLE_SASL_CLIENT,
             DEFAULT_ZK_ENABLE_SASL_CLIENT);
-    boolean saslEnabled = Boolean.valueOf(sasl);
+    boolean saslEnabled = Boolean.parseBoolean(sasl);
     builder.append(describeProperty(PROP_ZK_ENABLE_SASL_CLIENT,
         DEFAULT_ZK_ENABLE_SASL_CLIENT));
     if (saslEnabled) {
