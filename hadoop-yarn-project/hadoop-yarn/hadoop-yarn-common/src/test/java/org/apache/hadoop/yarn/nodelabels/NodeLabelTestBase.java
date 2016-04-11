@@ -140,7 +140,7 @@ public class NodeLabelTestBase {
       int idx = str.indexOf(':');
       NodeId id =
           NodeId.newInstance(str.substring(0, idx),
-              Integer.valueOf(str.substring(idx + 1)));
+              Integer.parseInt(str.substring(idx + 1)));
       return id;
     } else {
       return NodeId.newInstance(str, CommonNodeLabelsManager.WILDCARD_PORT);

@@ -165,13 +165,12 @@ public abstract class ContainerId implements Comparable<ContainerId>{
 
   @Override
   public int compareTo(ContainerId other) {
-    if (this.getApplicationAttemptId().compareTo(
-        other.getApplicationAttemptId()) == 0) {
-      return Long.valueOf(getContainerId())
-          .compareTo(Long.valueOf(other.getContainerId()));
+    int result = this.getApplicationAttemptId().compareTo(
+        other.getApplicationAttemptId());
+    if (result == 0) {
+      return Long.compare(getContainerId(), other.getContainerId());
     } else {
-      return this.getApplicationAttemptId().compareTo(
-          other.getApplicationAttemptId());
+      return result;
     }
   }
 

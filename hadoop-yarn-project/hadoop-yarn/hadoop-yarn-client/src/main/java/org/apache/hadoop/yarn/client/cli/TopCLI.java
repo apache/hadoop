@@ -238,7 +238,7 @@ public class TopCLI extends YarnCLI {
         @Override
         public int
             compare(ApplicationInformation a1, ApplicationInformation a2) {
-          return Long.valueOf(a1.usedMemory).compareTo(a2.usedMemory);
+          return Long.compare(a1.usedMemory, a2.usedMemory);
         }
       };
   public static final Comparator<ApplicationInformation> ReservedMemoryComparator =
@@ -246,7 +246,7 @@ public class TopCLI extends YarnCLI {
         @Override
         public int
             compare(ApplicationInformation a1, ApplicationInformation a2) {
-          return Long.valueOf(a1.reservedMemory).compareTo(a2.reservedMemory);
+          return Long.compare(a1.reservedMemory, a2.reservedMemory);
         }
       };
   public static final Comparator<ApplicationInformation> UsedVCoresComparator =
@@ -270,7 +270,7 @@ public class TopCLI extends YarnCLI {
         @Override
         public int
             compare(ApplicationInformation a1, ApplicationInformation a2) {
-          return Long.valueOf(a1.vcoreSeconds).compareTo(a2.vcoreSeconds);
+          return Long.compare(a1.vcoreSeconds, a2.vcoreSeconds);
         }
       };
   public static final Comparator<ApplicationInformation> MemorySecondsComparator =
@@ -278,7 +278,7 @@ public class TopCLI extends YarnCLI {
         @Override
         public int
             compare(ApplicationInformation a1, ApplicationInformation a2) {
-          return Long.valueOf(a1.memorySeconds).compareTo(a2.memorySeconds);
+          return Long.compare(a1.memorySeconds, a2.memorySeconds);
         }
       };
   public static final Comparator<ApplicationInformation> ProgressComparator =
@@ -294,7 +294,7 @@ public class TopCLI extends YarnCLI {
         @Override
         public int
             compare(ApplicationInformation a1, ApplicationInformation a2) {
-          return Long.valueOf(a1.runningTime).compareTo(a2.runningTime);
+          return Long.compare(a1.runningTime, a2.runningTime);
         }
       };
   public static final Comparator<ApplicationInformation> AppNameComparator =

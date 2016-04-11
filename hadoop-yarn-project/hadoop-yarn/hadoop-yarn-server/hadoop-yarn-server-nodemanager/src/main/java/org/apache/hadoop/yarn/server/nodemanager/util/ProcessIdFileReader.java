@@ -79,7 +79,7 @@ public class ProcessIdFileReader {
             else {
               // Otherwise, find first line containing a numeric pid.
               try {
-                Long pid = Long.valueOf(temp);
+                long pid = Long.parseLong(temp);
                 if (pid > 0) {
                   processId = temp;
                   break;

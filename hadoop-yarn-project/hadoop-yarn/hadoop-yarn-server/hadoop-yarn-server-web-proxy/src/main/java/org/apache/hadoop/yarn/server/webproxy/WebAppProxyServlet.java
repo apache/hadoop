@@ -310,7 +310,7 @@ public class WebAppProxyServlet extends HttpServlet {
       String userApprovedParamS = 
         req.getParameter(ProxyUriUtils.PROXY_APPROVAL_PARAM);
       boolean userWasWarned = false;
-      boolean userApproved = Boolean.valueOf(userApprovedParamS);
+      boolean userApproved = Boolean.parseBoolean(userApprovedParamS);
       boolean securityEnabled = isSecurityEnabled();
       final String remoteUser = req.getRemoteUser();
       final String pathInfo = req.getPathInfo();
@@ -342,7 +342,7 @@ public class WebAppProxyServlet extends HttpServlet {
           for (Cookie c : cookies) {
             if (cookieName.equals(c.getName())) {
               userWasWarned = true;
-              userApproved = userApproved || Boolean.valueOf(c.getValue());
+              userApproved = userApproved || Boolean.parseBoolean(c.getValue());
               break;
             }
           }
