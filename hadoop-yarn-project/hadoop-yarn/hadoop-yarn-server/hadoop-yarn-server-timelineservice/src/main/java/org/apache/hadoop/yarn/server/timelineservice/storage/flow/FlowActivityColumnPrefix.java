@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TypedBufferedMutator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.ValueConverter;
 
 /**
  * Identifies partially qualified columns for the {@link FlowActivityTable}.
@@ -50,6 +51,7 @@ public enum FlowActivityColumnPrefix
    */
   private final String columnPrefix;
   private final byte[] columnPrefixBytes;
+  private final boolean compoundColQual;
 
   private final AggregationOperation aggOp;
 
@@ -64,6 +66,12 @@ public enum FlowActivityColumnPrefix
   private FlowActivityColumnPrefix(
       ColumnFamily<FlowActivityTable> columnFamily, String columnPrefix,
       AggregationOperation aggOp) {
+    this(columnFamily, columnPrefix, aggOp, false);
+  }
+
+  private FlowActivityColumnPrefix(
+      ColumnFamily<FlowActivityTable> columnFamily, String columnPrefix,
+      AggregationOperation aggOp, boolean compoundColQual) {
     column = new ColumnHelper<FlowActivityTable>(columnFamily);
     this.columnFamily = columnFamily;
     this.columnPrefix = columnPrefix;
@@ -75,6 +83,7 @@ public enum FlowActivityColumnPrefix
           .encode(columnPrefix));
     }
     this.aggOp = aggOp;
+    this.compoundColQual = compoundColQual;
   }
 
   /**
@@ -98,6 +107,16 @@ public enum FlowActivityColumnPrefix
 
   public byte[] getColumnPrefixBytes() {
     return columnPrefixBytes.clone();
+  }
+
+  @Override
+  public byte[] getColumnFamilyBytes() {
+    return columnFamily.getBytes();
+  }
+
+  @Override
+  public ValueConverter getValueConverter() {
+    return column.getValueConverter();
   }
 
   public AggregationOperation getAttribute() {
@@ -250,5 +269,21 @@ public enum FlowActivityColumnPrefix
         attributes, this.aggOp);
     column.store(rowKey, tableMutator, columnQualifier, null, inputValue,
         combinedAttributes);
+  }
+
+  @Override
+  public byte[] getCompoundColQualBytes(String qualifier,
+      byte[]...components) {
+    if (!compoundColQual) {
+      return ColumnHelper.getColumnQualifier(null, qualifier);
+    }
+    return ColumnHelper.getCompoundColumnQualifierBytes(qualifier, components);
+  }
+
+  @Override
+  public Map<?, Object> readResultsHavingCompoundColumnQualifiers(Result result)
+      throws IOException {
+    // There are no compound column qualifiers for flow activity table.
+    return null;
   }
 }

@@ -363,6 +363,22 @@ public class ColumnHelper<T> {
   }
 
   /**
+   * Create a compound column qualifier by combining qualifier and components.
+   *
+   * @param qualifier Column QUalifier.
+   * @param components Other components.
+   * @return a byte array representing compound column qualifier.
+   */
+  public static byte[] getCompoundColumnQualifierBytes(String qualifier,
+      byte[]...components) {
+    byte[] colQualBytes = Bytes.toBytes(Separator.VALUES.encode(qualifier));
+    for (int i = 0; i < components.length; i++) {
+      colQualBytes = Separator.VALUES.join(colQualBytes, components[i]);
+    }
+    return colQualBytes;
+  }
+
+  /**
    * @param columnPrefixBytes The byte representation for the column prefix.
    *          Should not contain {@link Separator#QUALIFIERS}.
    * @param qualifier for the remainder of the column.

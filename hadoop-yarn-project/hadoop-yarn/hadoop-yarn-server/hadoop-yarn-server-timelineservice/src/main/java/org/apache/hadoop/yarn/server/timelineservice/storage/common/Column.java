@@ -60,4 +60,21 @@ public interface Column<T> {
    */
   Object readResult(Result result) throws IOException;
 
+  /**
+   * Returns column family name(as bytes) associated with this column.
+   * @return a byte array encoding column family for this column qualifier.
+   */
+  byte[] getColumnFamilyBytes();
+
+  /**
+   * Get byte representation for this column qualifier.
+   * @return a byte array representing column qualifier.
+   */
+  byte[] getColumnQualifierBytes();
+
+  /**
+   * Returns value converter implementation associated with this column.
+   * @return a {@link ValueConverter} implementation.
+   */
+  ValueConverter getValueConverter();
 }

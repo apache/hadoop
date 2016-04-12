@@ -221,7 +221,7 @@ public class TestTimelineReaderWebServices {
       assertTrue("UID should be present",
           entity.getInfo().containsKey(TimelineReaderManager.UID_KEY));
       // Includes UID.
-      assertEquals(2, entity.getInfo().size());
+      assertEquals(3, entity.getInfo().size());
       // No events will be returned as events are not part of fields.
       assertEquals(0, entity.getEvents().size());
     } finally {
@@ -247,7 +247,7 @@ public class TestTimelineReaderWebServices {
       assertTrue("UID should be present",
           entity.getInfo().containsKey(TimelineReaderManager.UID_KEY));
       // Includes UID.
-      assertEquals(2, entity.getInfo().size());
+      assertEquals(3, entity.getInfo().size());
       assertEquals(2, entity.getEvents().size());
     } finally {
       client.destroy();
@@ -443,10 +443,8 @@ public class TestTimelineReaderWebServices {
           resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
       assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
       assertNotNull(entities);
-      assertEquals(2, entities.size());
-      assertTrue("Entities with id_1 and id_3 should have been present" +
-          " in response.",
-          entities.contains(newEntity("app", "id_1")) &&
+      assertEquals(1, entities.size());
+      assertTrue("Entity with id_3 should have been present in response.",
           entities.contains(newEntity("app", "id_3")));
     } finally {
       client.destroy();

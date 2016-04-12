@@ -154,6 +154,14 @@ class TestFlowDataGenerator {
     metrics.add(m2);
 
     entity.addMetrics(metrics);
+    TimelineEvent event = new TimelineEvent();
+    event.setId(ApplicationMetricsConstants.CREATED_EVENT_TYPE);
+    long endTs = 1439379885000L;
+    event.setTimestamp(endTs);
+    String expKey = "foo_event_greater";
+    String expVal = "test_app_greater";
+    event.addInfo(expKey, expVal);
+    entity.addEvent(event);
     return entity;
   }
 
@@ -178,6 +186,14 @@ class TestFlowDataGenerator {
     m1.setValues(metricValues);
     metrics.add(m1);
     entity.addMetrics(metrics);
+    TimelineEvent event = new TimelineEvent();
+    event.setId(ApplicationMetricsConstants.CREATED_EVENT_TYPE);
+    long endTs = 1439379885000L;
+    event.setTimestamp(endTs);
+    String expKey = "foo_event_greater";
+    String expVal = "test_app_greater";
+    event.addInfo(expKey, expVal);
+    entity.addEvent(event);
     return entity;
   }
 

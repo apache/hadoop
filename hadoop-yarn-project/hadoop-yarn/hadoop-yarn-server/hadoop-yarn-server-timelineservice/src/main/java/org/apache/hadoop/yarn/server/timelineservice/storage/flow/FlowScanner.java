@@ -200,6 +200,7 @@ class FlowScanner implements RegionScanner, Closeable {
     int addedCnt = 0;
     long currentTimestamp = System.currentTimeMillis();
     ValueConverter converter = null;
+
     while (cellLimit <= 0 || addedCnt < cellLimit) {
       cell = peekAtNextCell(cellLimit);
       if (cell == null) {

@@ -18,65 +18,54 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader.filter;
 
+import java.util.Set;
+
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
 /**
- * Filter class which represents filter to be applied based on key-value pair
- * and the relation between them represented by different relational operators.
+ * Filter class which represents filter to be applied based on multiple values
+ * for a key and these values being equal or not equal to values in back-end
+ * store.
  */
 @Private
 @Unstable
-public class TimelineCompareFilter extends TimelineFilter {
-
+public class TimelineKeyValuesFilter extends TimelineFilter {
   private final TimelineCompareOp compareOp;
   private final String key;
-  private final Object value;
-  // If comparison operator is NOT_EQUAL, this flag decides if we should return
-  // the entity if key does not exist.
-  private final boolean keyMustExist;
-
-  public TimelineCompareFilter(TimelineCompareOp op, String key, Object val,
-       boolean keyMustExistFlag) {
+  private final Set<Object> values;
+  public TimelineKeyValuesFilter(TimelineCompareOp op, String key,
+      Set<Object> values) {
+    if (op != TimelineCompareOp.EQUAL && op != TimelineCompareOp.NOT_EQUAL) {
+      throw new IllegalArgumentException("TimelineCompareOp for multi value "
+          + "equality filter should be EQUAL or NOT_EQUAL");
+    }
     this.compareOp = op;
     this.key = key;
-    this.value = val;
-    if (op == TimelineCompareOp.NOT_EQUAL) {
-      this.keyMustExist = keyMustExistFlag;
-    } else {
-      this.keyMustExist = true;
-    }
-  }
-
-  public TimelineCompareFilter(TimelineCompareOp op, String key, Object val) {
-    this(op, key, val, true);
+    this.values = values;
   }
 
   @Override
   public TimelineFilterType getFilterType() {
-    return TimelineFilterType.COMPARE;
-  }
-
-  public TimelineCompareOp getCompareOp() {
-    return compareOp;
+    return TimelineFilterType.KEY_VALUES;
   }
 
   public String getKey() {
     return key;
   }
 
-  public Object getValue() {
-    return value;
+  public Set<Object> getValues() {
+    return values;
   }
 
-  public boolean getKeyMustExist() {
-    return keyMustExist;
+  public TimelineCompareOp getCompareOp() {
+    return compareOp;
   }
 
   @Override
   public String toString() {
-    return String.format("%s (%s, %s:%s:%b)",
+    return String.format("%s (%s, %s:%s)",
         this.getClass().getSimpleName(), this.compareOp.name(),
-        this.key, this.value, this.keyMustExist);
+        this.key, (values == null) ? "" : values.toString());
   }
 }
