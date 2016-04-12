@@ -28,7 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 
-/** This test makes sure that "DU" does not get to run on each call to getUsed */ 
+/** This test makes sure that "DU" does not get to run on each call to getUsed */
 public class TestDU extends TestCase {
   final static private File DU_DIR = GenericTestUtils.getTestDir("dutmp");
 
@@ -42,7 +42,7 @@ public class TestDU extends TestCase {
   public void tearDown() throws IOException {
       FileUtil.fullyDelete(DU_DIR);
   }
-    
+
   private void createFile(File newFile, int size) throws IOException {
     // write random data so that filesystems with compression enabled (e.g., ZFS)
     // can't compress the file
@@ -54,18 +54,18 @@ public class TestDU extends TestCase {
     RandomAccessFile file = new RandomAccessFile(newFile, "rws");
 
     file.write(data);
-      
+
     file.getFD().sync();
     file.close();
   }
 
   /**
    * Verify that du returns expected used space for a file.
-   * We assume here that if a file system crates a file of size 
+   * We assume here that if a file system crates a file of size
    * that is a multiple of the block size in this file system,
    * then the used size for the file will be exactly that size.
    * This is true for most file systems.
-   * 
+   *
    * @throws IOException
    * @throws InterruptedException
    */
@@ -78,28 +78,29 @@ public class TestDU extends TestCase {
     createFile(file, writtenSize);
 
     Thread.sleep(5000); // let the metadata updater catch up
-    
-    DU du = new DU(file, 10000);
-    du.start();
+
+    DU du = new DU(file, 10000, -1);
+    du.init();
     long duSize = du.getUsed();
-    du.shutdown();
+    du.close();
 
     assertTrue("Invalid on-disk size",
         duSize >= writtenSize &&
         writtenSize <= (duSize + slack));
-    
-    //test with 0 interval, will not launch thread 
-    du = new DU(file, 0);
-    du.start();
+
+    //test with 0 interval, will not launch thread
+    du = new DU(file, 0, -1);
+    du.init();
     duSize = du.getUsed();
-    du.shutdown();
-    
+    du.close();
+
     assertTrue("Invalid on-disk size",
         duSize >= writtenSize &&
         writtenSize <= (duSize + slack));
-    
-    //test without launching thread 
-    du = new DU(file, 10000);
+
+    //test without launching thread
+    du = new DU(file, 10000, -1);
+    du.init();
     duSize = du.getUsed();
 
     assertTrue("Invalid on-disk size",
@@ -111,8 +112,8 @@ public class TestDU extends TestCase {
     assertTrue(file.createNewFile());
     Configuration conf = new Configuration();
     conf.setLong(CommonConfigurationKeys.FS_DU_INTERVAL_KEY, 10000L);
-    DU du = new DU(file, conf);
-    du.decDfsUsed(Long.MAX_VALUE);
+    DU du = new DU(file, 10000L, -1);
+    du.incDfsUsed(-Long.MAX_VALUE);
     long duSize = du.getUsed();
     assertTrue(String.valueOf(duSize), duSize >= 0L);
   }
@@ -121,7 +122,7 @@ public class TestDU extends TestCase {
     File file = new File(DU_DIR, "dataX");
     createFile(file, 8192);
     DU du = new DU(file, 3000, 1024);
-    du.start();
+    du.init();
     assertTrue("Initial usage setting not honored", du.getUsed() == 1024);
 
     // wait until the first du runs.
@@ -131,4 +132,7 @@ public class TestDU extends TestCase {
 
     assertTrue("Usage didn't get updated", du.getUsed() == 8192);
   }
+
+
+
 }
