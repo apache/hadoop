@@ -1101,7 +1101,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     // construct a RBW replica with the new GS
     File blkfile = replicaInfo.getBlockFile();
     FsVolumeImpl v = (FsVolumeImpl)replicaInfo.getVolume();
-    if (v.getAvailable() < estimateBlockLen - replicaInfo.getNumBytes()) {
+    long bytesReserved = estimateBlockLen - replicaInfo.getNumBytes();
+    if (v.getAvailable() < bytesReserved) {
       throw new DiskOutOfSpaceException("Insufficient space for appending to "
           + replicaInfo);
     }
@@ -1109,7 +1110,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     File oldmeta = replicaInfo.getMetaFile();
     ReplicaBeingWritten newReplicaInfo = new ReplicaBeingWritten(
         replicaInfo.getBlockId(), replicaInfo.getNumBytes(), newGS,
-        v, newBlkFile.getParentFile(), Thread.currentThread(), estimateBlockLen);
+        v, newBlkFile.getParentFile(), Thread.currentThread(), bytesReserved);
     File newmeta = newReplicaInfo.getMetaFile();
 
     // rename meta file to rbw directory
@@ -1145,7 +1146,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     
     // Replace finalized replica by a RBW replica in replicas map
     volumeMap.add(bpid, newReplicaInfo);
-    v.reserveSpaceForRbw(estimateBlockLen - replicaInfo.getNumBytes());
+    v.reserveSpaceForRbw(bytesReserved);
     return newReplicaInfo;
   }
 
