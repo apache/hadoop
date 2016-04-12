@@ -120,7 +120,8 @@ Return the data at the current position.
 ### <a name="InputStream.read.buffer[]"></a> `InputStream.read(buffer[], offset, length)`
 
 Read `length` bytes of data into the destination buffer, starting at offset
-`offset`
+`offset`. The source of the data is the current position of the stream,
+as implicitly set in `pos`
 
 #### Preconditions
 
@@ -129,6 +130,7 @@ Read `length` bytes of data into the destination buffer, starting at offset
     length >= 0
     offset < len(buffer)
     length <= len(buffer) - offset
+    pos >= 0 else raise EOFException, IOException
 
 Exceptions that may be raised on precondition failure are
 
@@ -136,20 +138,39 @@ Exceptions that may be raised on precondition failure are
     ArrayIndexOutOfBoundsException
     RuntimeException
 
+Not all filesystems check the `isOpen` state.
+
 #### Postconditions
 
     if length == 0 :
       result = 0
 
-    elseif pos > len(data):
-      result -1
+    else if pos > len(data):
+      result = -1
 
     else
       let l = min(length, len(data)-length) :
-          buffer' = buffer where forall i in [0..l-1]:
-              buffer'[o+i] = data[pos+i]
-          FSDIS' = (pos+l, data, true)
-          result = l
+        buffer' = buffer where forall i in [0..l-1]:
+           buffer'[o+i] = data[pos+i]
+        FSDIS' = (pos+l, data, true)
+        result = l
+
+The `java.io` API states that if the amount of data to be read (i.e. `length`)
+then the call must block until the amount of data available is greater than
+zero —that is, until there is some data. The call is not required to return
+when the buffer is full, or indeed block until there is no data left in
+the stream.
+
+That is, rather than `l` being simply defined as `min(length, len(data)-length)`,
+it strictly is an integer in the range `1..min(length, len(data)-length)`.
+While the caller may expect for as much as the buffer as possible to be filled
+in, it is within the specification for an implementation to always return
+a smaller number, perhaps only ever 1 byte.
+
+What is critical is that unless the destination buffer size is 0, the call
+must block until at least one byte is returned. Thus, for any data source
+of length greater than zero, repeated invocations of this `read()` operation
+will eventually read all the data.
 
 ### <a name="Seekable.seek"></a>`Seekable.seek(s)`
 
