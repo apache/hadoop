@@ -17,227 +17,73 @@
  */
 package org.apache.hadoop.fs;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.Shell;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicLong;
 
-/** Filesystem disk space usage statistics.  Uses the unix 'du' program*/
+/** Filesystem disk space usage statistics.  Uses the unix 'du' program */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
-public class DU extends Shell {
-  private String  dirPath;
+public class DU extends CachingGetSpaceUsed {
+  private DUShell duShell;
 
-  private AtomicLong used = new AtomicLong();
-  private volatile boolean shouldRun = true;
-  private Thread refreshUsed;
-  private IOException duException = null;
-  private long refreshInterval;
-  
-  /**
-   * Keeps track of disk usage.
-   * @param path the path to check disk usage in
-   * @param interval refresh the disk usage at this interval
-   * @throws IOException if we fail to refresh the disk usage
-   */
-  public DU(File path, long interval) throws IOException {
-    this(path, interval, -1L);
+  @VisibleForTesting
+   public DU(File path, long interval, long initialUsed) throws IOException {
+    super(path, interval, initialUsed);
   }
-  
-  /**
-   * Keeps track of disk usage.
-   * @param path the path to check disk usage in
-   * @param interval refresh the disk usage at this interval
-   * @param initialUsed use this value until next refresh
-   * @throws IOException if we fail to refresh the disk usage
-   */
-  public DU(File path, long interval, long initialUsed) throws IOException { 
-    super(0);
 
-    //we set the Shell interval to 0 so it will always run our command
-    //and use this one to set the thread sleep interval
-    this.refreshInterval = interval;
-    this.dirPath = path.getCanonicalPath();
+  public DU(CachingGetSpaceUsed.Builder builder) throws IOException {
+    this(builder.getPath(), builder.getInterval(), builder.getInitialUsed());
+  }
 
-    //populate the used variable if the initial value is not specified.
-    if (initialUsed < 0) {
-      run();
-    } else {
-      this.used.set(initialUsed);
+  @Override
+  protected synchronized void refresh() {
+    if (duShell == null) {
+      duShell = new DUShell();
+    }
+    try {
+      duShell.startRefresh();
+    } catch (IOException ioe) {
+      LOG.warn("Could not get disk usage information", ioe);
     }
   }
 
-  /**
-   * Keeps track of disk usage.
-   * @param path the path to check disk usage in
-   * @param conf configuration object
-   * @throws IOException if we fail to refresh the disk usage
-   */
-  public DU(File path, Configuration conf) throws IOException {
-    this(path, conf, -1L);
-  }
-
-  /**
-   * Keeps track of disk usage.
-   * @param path the path to check disk usage in
-   * @param conf configuration object
-   * @param initialUsed use it until the next refresh.
-   * @throws IOException if we fail to refresh the disk usage
-   */
-  public DU(File path, Configuration conf, long initialUsed)
-      throws IOException {
-    this(path, conf.getLong(CommonConfigurationKeys.FS_DU_INTERVAL_KEY,
-                CommonConfigurationKeys.FS_DU_INTERVAL_DEFAULT), initialUsed);
-  }
-    
-  
-
-  /**
-   * This thread refreshes the "used" variable.
-   * 
-   * Future improvements could be to not permanently
-   * run this thread, instead run when getUsed is called.
-   **/
-  class DURefreshThread implements Runnable {
-    
+  private final class DUShell extends Shell  {
+    void startRefresh() throws IOException {
+      run();
+    }
     @Override
-    public void run() {
-      
-      while(shouldRun) {
+    public String toString() {
+      return
+          "du -sk " + getDirPath() + "\n" + used.get() + "\t" + getDirPath();
+    }
 
-        try {
-          Thread.sleep(refreshInterval);
-          
-          try {
-            //update the used variable
-            DU.this.run();
-          } catch (IOException e) {
-            synchronized (DU.this) {
-              //save the latest exception so we can return it in getUsed()
-              duException = e;
-            }
-            
-            LOG.warn("Could not get disk usage information", e);
-          }
-        } catch (InterruptedException e) {
-        }
+    @Override
+    protected String[] getExecString() {
+      return new String[]{"du", "-sk", getDirPath()};
+    }
+
+    @Override
+    protected void parseExecResult(BufferedReader lines) throws IOException {
+      String line = lines.readLine();
+      if (line == null) {
+        throw new IOException("Expecting a line not the end of stream");
       }
-    }
-  }
-  
-  /**
-   * Decrease how much disk space we use.
-   * @param value decrease by this value
-   */
-  public void decDfsUsed(long value) {
-    used.addAndGet(-value);
-  }
-
-  /**
-   * Increase how much disk space we use.
-   * @param value increase by this value
-   */
-  public void incDfsUsed(long value) {
-    used.addAndGet(value);
-  }
-  
-  /**
-   * @return disk space used 
-   * @throws IOException if the shell command fails
-   */
-  public long getUsed() throws IOException {
-    //if the updating thread isn't started, update on demand
-    if(refreshUsed == null) {
-      run();
-    } else {
-      synchronized (DU.this) {
-        //if an exception was thrown in the last run, rethrow
-        if(duException != null) {
-          IOException tmp = duException;
-          duException = null;
-          throw tmp;
-        }
+      String[] tokens = line.split("\t");
+      if (tokens.length == 0) {
+        throw new IOException("Illegal du output");
       }
+      setUsed(Long.parseLong(tokens[0]) * 1024);
     }
-    
-    return Math.max(used.longValue(), 0L);
+
   }
 
-  /**
-   * @return the path of which we're keeping track of disk usage
-   */
-  public String getDirPath() {
-    return dirPath;
-  }
-
-
-  /**
-   * Override to hook in DUHelper class. Maybe this can be used more
-   * generally as well on Unix/Linux based systems
-   */
-  @Override
-  protected void run() throws IOException {
-    if (WINDOWS) {
-      used.set(DUHelper.getFolderUsage(dirPath));
-      return;
-    }
-    super.run();
-  }
-  
-  /**
-   * Start the disk usage checking thread.
-   */
-  public void start() {
-    //only start the thread if the interval is sane
-    if(refreshInterval > 0) {
-      refreshUsed = new Thread(new DURefreshThread(), 
-          "refreshUsed-"+dirPath);
-      refreshUsed.setDaemon(true);
-      refreshUsed.start();
-    }
-  }
-  
-  /**
-   * Shut down the refreshing thread.
-   */
-  public void shutdown() {
-    this.shouldRun = false;
-    
-    if(this.refreshUsed != null) {
-      this.refreshUsed.interrupt();
-    }
-  }
-  
-  @Override
-  public String toString() {
-    return
-      "du -sk " + dirPath +"\n" +
-      used + "\t" + dirPath;
-  }
-
-  @Override
-  protected String[] getExecString() {
-    return new String[] {"du", "-sk", dirPath};
-  }
-  
-  @Override
-  protected void parseExecResult(BufferedReader lines) throws IOException {
-    String line = lines.readLine();
-    if (line == null) {
-      throw new IOException("Expecting a line not the end of stream");
-    }
-    String[] tokens = line.split("\t");
-    if(tokens.length == 0) {
-      throw new IOException("Illegal du output");
-    }
-    this.used.set(Long.parseLong(tokens[0])*1024);
-  }
 
   public static void main(String[] args) throws Exception {
     String path = ".";
@@ -245,6 +91,10 @@ public class DU extends Shell {
       path = args[0];
     }
 
-    System.out.println(new DU(new File(path), new Configuration()).toString());
+    GetSpaceUsed du = new GetSpaceUsed.Builder().setPath(new File(path))
+                                                .setConf(new Configuration())
+                                                .build();
+    String duResult = du.toString();
+    System.out.println(duResult);
   }
 }
