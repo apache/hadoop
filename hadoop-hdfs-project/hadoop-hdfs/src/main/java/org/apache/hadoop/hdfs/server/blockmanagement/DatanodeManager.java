@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringStr
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.*;
 import org.apache.hadoop.net.NetworkTopology.InvalidTopologyException;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import java.io.IOException;
@@ -368,49 +370,110 @@ public class DatanodeManager {
 
   }
   
-  /** Sort the located blocks by the distance to the target host. */
-  public void sortLocatedBlocks(final String targethost,
-      final List<LocatedBlock> locatedblocks) {
-    //sort the blocks
+  /**
+   * Sort the non-striped located blocks by the distance to the target host.
+   *
+   * For striped blocks, it will only move decommissioned/stale nodes to the
+   * bottom. For example, assume we have storage list:
+   * d0, d1, d2, d3, d4, d5, d6, d7, d8, d9
+   * mapping to block indices:
+   * 0, 1, 2, 3, 4, 5, 6, 7, 8, 2
+   *
+   * Here the internal block b2 is duplicated, locating in d2 and d9. If d2 is
+   * a decommissioning node then should switch d2 and d9 in the storage list.
+   * After sorting locations, will update corresponding block indices
+   * and block tokens.
+   */
+  public void sortLocatedBlocks(final String targetHost,
+      final List<LocatedBlock> locatedBlocks) {
+    Comparator<DatanodeInfo> comparator = avoidStaleDataNodesForRead ?
+        new DFSUtil.DecomStaleComparator(staleInterval) :
+        DFSUtil.DECOM_COMPARATOR;
+    // sort located block
+    for (LocatedBlock lb : locatedBlocks) {
+      if (lb.isStriped()) {
+        sortLocatedStripedBlock(lb, comparator);
+      } else {
+        sortLocatedBlock(lb, targetHost, comparator);
+      }
+    }
+  }
+
+  /**
+   * Move decommissioned/stale datanodes to the bottom. After sorting it will
+   * update block indices and block tokens respectively.
+   *
+   * @param lb located striped block
+   * @param comparator dn comparator
+   */
+  private void sortLocatedStripedBlock(final LocatedBlock lb,
+      Comparator<DatanodeInfo> comparator) {
+    DatanodeInfo[] di = lb.getLocations();
+    HashMap<DatanodeInfo, Byte> locToIndex = new HashMap<>();
+    HashMap<DatanodeInfo, Token<BlockTokenIdentifier>> locToToken =
+        new HashMap<>();
+    LocatedStripedBlock lsb = (LocatedStripedBlock) lb;
+    for (int i = 0; i < di.length; i++) {
+      locToIndex.put(di[i], lsb.getBlockIndices()[i]);
+      locToToken.put(di[i], lsb.getBlockTokens()[i]);
+    }
+    // Move decommissioned/stale datanodes to the bottom
+    Arrays.sort(di, comparator);
+
+    // must update cache since we modified locations array
+    lb.updateCachedStorageInfo();
+
+    // must update block indices and block tokens respectively
+    for (int i = 0; i < di.length; i++) {
+      lsb.getBlockIndices()[i] = locToIndex.get(di[i]);
+      lsb.getBlockTokens()[i] = locToToken.get(di[i]);
+    }
+  }
+
+  /**
+   * Move decommissioned/stale datanodes to the bottom. Also, sort nodes by
+   * network distance.
+   *
+   * @param lb located block
+   * @param targetHost target host
+   * @param comparator dn comparator
+   */
+  private void sortLocatedBlock(final LocatedBlock lb, String targetHost,
+      Comparator<DatanodeInfo> comparator) {
     // As it is possible for the separation of node manager and datanode, 
     // here we should get node but not datanode only .
-    Node client = getDatanodeByHost(targethost);
+    Node client = getDatanodeByHost(targetHost);
     if (client == null) {
       List<String> hosts = new ArrayList<> (1);
-      hosts.add(targethost);
+      hosts.add(targetHost);
       List<String> resolvedHosts = dnsToSwitchMapping.resolve(hosts);
       if (resolvedHosts != null && !resolvedHosts.isEmpty()) {
         String rName = resolvedHosts.get(0);
         if (rName != null) {
           client = new NodeBase(rName + NodeBase.PATH_SEPARATOR_STR +
-            targethost);
+            targetHost);
         }
       } else {
         LOG.error("Node Resolution failed. Please make sure that rack " +
           "awareness scripts are functional.");
       }
     }
-    
-    Comparator<DatanodeInfo> comparator = avoidStaleDataNodesForRead ?
-        new DFSUtil.DecomStaleComparator(staleInterval) : 
-        DFSUtil.DECOM_COMPARATOR;
-        
-    for (LocatedBlock b : locatedblocks) {
-      DatanodeInfo[] di = b.getLocations();
-      // Move decommissioned/stale datanodes to the bottom
-      Arrays.sort(di, comparator);
-      
-      int lastActiveIndex = di.length - 1;
-      while (lastActiveIndex > 0 && isInactive(di[lastActiveIndex])) {
-          --lastActiveIndex;
-      }
-      int activeLen = lastActiveIndex + 1;      
-      networktopology.sortByDistance(client, b.getLocations(), activeLen);
-      // must update cache since we modified locations array
-      b.updateCachedStorageInfo();
+
+    DatanodeInfo[] di = lb.getLocations();
+    // Move decommissioned/stale datanodes to the bottom
+    Arrays.sort(di, comparator);
+
+    // Sort nodes by network distance only for located blocks
+    int lastActiveIndex = di.length - 1;
+    while (lastActiveIndex > 0 && isInactive(di[lastActiveIndex])) {
+      --lastActiveIndex;
     }
+    int activeLen = lastActiveIndex + 1;
+    networktopology.sortByDistance(client, lb.getLocations(), activeLen);
+
+    // must update cache since we modified locations array
+    lb.updateCachedStorageInfo();
   }
-  
 
   /** @return the datanode descriptor for the host. */
   public DatanodeDescriptor getDatanodeByHost(final String host) {
