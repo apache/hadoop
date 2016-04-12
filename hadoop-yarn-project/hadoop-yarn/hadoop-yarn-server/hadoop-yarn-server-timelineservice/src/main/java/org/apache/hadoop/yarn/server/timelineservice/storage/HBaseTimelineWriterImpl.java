@@ -407,36 +407,39 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
                   "! Using the current timestamp");
               eventTimestamp = System.currentTimeMillis();
             }
-            byte[] columnQualifierFirst =
-                Bytes.toBytes(Separator.VALUES.encode(eventId));
-            byte[] columnQualifierWithTsBytes = Separator.VALUES.
-                join(columnQualifierFirst, Bytes.toBytes(
-                    TimelineStorageUtils.invertLong(eventTimestamp)));
+            byte[] eventTs =
+                Bytes.toBytes(TimelineStorageUtils.invertLong(eventTimestamp));
             Map<String, Object> eventInfo = event.getInfo();
             if ((eventInfo == null) || (eventInfo.size() == 0)) {
-              // add separator since event key is empty
-              byte[] compoundColumnQualifierBytes =
-                  Separator.VALUES.join(columnQualifierWithTsBytes,
-                      null);
               if (isApplication) {
+                byte[] compoundColumnQualifierBytes =
+                    ApplicationColumnPrefix.EVENT.
+                        getCompoundColQualBytes(eventId, eventTs, null);
                 ApplicationColumnPrefix.EVENT.store(rowKey, applicationTable,
                     compoundColumnQualifierBytes, null,
-                      TimelineStorageUtils.EMPTY_BYTES);
+                    TimelineStorageUtils.EMPTY_BYTES);
               } else {
+                byte[] compoundColumnQualifierBytes =
+                    EntityColumnPrefix.EVENT.
+                        getCompoundColQualBytes(eventId, eventTs, null);
                 EntityColumnPrefix.EVENT.store(rowKey, entityTable,
                     compoundColumnQualifierBytes, null,
-                      TimelineStorageUtils.EMPTY_BYTES);
+                    TimelineStorageUtils.EMPTY_BYTES);
               }
             } else {
               for (Map.Entry<String, Object> info : eventInfo.entrySet()) {
                 // eventId?infoKey
-                byte[] compoundColumnQualifierBytes =
-                    Separator.VALUES.join(columnQualifierWithTsBytes,
-                        Bytes.toBytes(info.getKey()));
+                byte[] infoKey = Bytes.toBytes(info.getKey());
                 if (isApplication) {
+                  byte[] compoundColumnQualifierBytes =
+                      ApplicationColumnPrefix.EVENT.
+                          getCompoundColQualBytes(eventId, eventTs, infoKey);
                   ApplicationColumnPrefix.EVENT.store(rowKey, applicationTable,
                       compoundColumnQualifierBytes, null, info.getValue());
                 } else {
+                  byte[] compoundColumnQualifierBytes =
+                      EntityColumnPrefix.EVENT.
+                          getCompoundColQualBytes(eventId, eventTs, infoKey);
                   EntityColumnPrefix.EVENT.store(rowKey, entityTable,
                       compoundColumnQualifierBytes, null, info.getValue());
                 }

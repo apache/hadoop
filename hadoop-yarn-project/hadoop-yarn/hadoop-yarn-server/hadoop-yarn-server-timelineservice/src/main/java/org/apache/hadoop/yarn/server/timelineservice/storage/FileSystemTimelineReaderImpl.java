@@ -296,39 +296,39 @@ public class FileSystemTimelineReaderImpl extends AbstractService
           continue;
         }
         if (filters.getRelatesTo() != null &&
-            !filters.getRelatesTo().isEmpty() &&
-            !TimelineStorageUtils.matchRelations(
-            entity.getRelatesToEntities(), filters.getRelatesTo())) {
+            !filters.getRelatesTo().getFilterList().isEmpty() &&
+            !TimelineStorageUtils.matchRelatesTo(entity,
+            filters.getRelatesTo())) {
           continue;
         }
         if (filters.getIsRelatedTo()  != null &&
-            !filters.getIsRelatedTo().isEmpty() &&
-            !TimelineStorageUtils.matchRelations(
-            entity.getIsRelatedToEntities(), filters.getIsRelatedTo())) {
+            !filters.getIsRelatedTo().getFilterList().isEmpty() &&
+            !TimelineStorageUtils.matchIsRelatedTo(entity,
+            filters.getIsRelatedTo())) {
           continue;
         }
         if (filters.getInfoFilters() != null &&
-            !filters.getInfoFilters().isEmpty() &&
-            !TimelineStorageUtils.matchFilters(
-            entity.getInfo(), filters.getInfoFilters())) {
+            !filters.getInfoFilters().getFilterList().isEmpty() &&
+            !TimelineStorageUtils.matchInfoFilters(entity,
+            filters.getInfoFilters())) {
           continue;
         }
         if (filters.getConfigFilters() != null &&
-            !filters.getConfigFilters().isEmpty() &&
-            !TimelineStorageUtils.matchFilters(
-            entity.getConfigs(), filters.getConfigFilters())) {
+            !filters.getConfigFilters().getFilterList().isEmpty() &&
+            !TimelineStorageUtils.matchConfigFilters(entity,
+            filters.getConfigFilters())) {
           continue;
         }
         if (filters.getMetricFilters() != null &&
-            !filters.getMetricFilters().isEmpty() &&
-            !TimelineStorageUtils.matchMetricFilters(
-            entity.getMetrics(), filters.getMetricFilters())) {
+            !filters.getMetricFilters().getFilterList().isEmpty() &&
+            !TimelineStorageUtils.matchMetricFilters(entity,
+            filters.getMetricFilters())) {
           continue;
         }
         if (filters.getEventFilters() != null &&
-            !filters.getEventFilters().isEmpty() &&
-            !TimelineStorageUtils.matchEventFilters(
-            entity.getEvents(), filters.getEventFilters())) {
+            !filters.getEventFilters().getFilterList().isEmpty() &&
+            !TimelineStorageUtils.matchEventFilters(entity,
+            filters.getEventFilters())) {
           continue;
         }
         TimelineEntity entityToBeReturned = createEntityToBeReturned(

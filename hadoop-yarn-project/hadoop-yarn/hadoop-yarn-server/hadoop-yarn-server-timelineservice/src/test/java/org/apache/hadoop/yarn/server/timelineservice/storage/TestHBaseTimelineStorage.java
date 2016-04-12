@@ -23,6 +23,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -52,10 +53,14 @@ import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineCompareFilter;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineCompareOp;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyValueFilter;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineExistsFilter;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelinePrefixFilter;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList.Operator;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyValuesFilter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationColumn;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationColumnPrefix;
@@ -74,9 +79,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 
 /**
  * Various tests to test writing entities to HBase and reading them back from
@@ -113,30 +115,29 @@ public class TestHBaseTimelineStorage {
     String id = "application_1111111111_2222";
     entity.setId(id);
     entity.setType(TimelineEntityType.YARN_APPLICATION.toString());
-    Long cTime = 1425016501000L;
+    Long cTime = 1425016502000L;
     entity.setCreatedTime(cTime);
     // add the info map in Timeline Entity
     Map<String, Object> infoMap = new HashMap<String, Object>();
-    infoMap.put("infoMapKey1", "infoMapValue1");
-    infoMap.put("infoMapKey2", 10);
+    infoMap.put("infoMapKey1", "infoMapValue2");
+    infoMap.put("infoMapKey2", 20);
+    infoMap.put("infoMapKey3", 85.85);
     entity.addInfo(infoMap);
     // add the isRelatedToEntity info
-    String key = "task";
-    String value = "is_related_to_entity_id_here";
     Set<String> isRelatedToSet = new HashSet<String>();
-    isRelatedToSet.add(value);
+    isRelatedToSet.add("relatedto1");
     Map<String, Set<String>> isRelatedTo = new HashMap<String, Set<String>>();
-    isRelatedTo.put(key, isRelatedToSet);
+    isRelatedTo.put("task", isRelatedToSet);
     entity.setIsRelatedToEntities(isRelatedTo);
     // add the relatesTo info
-    key = "container";
-    value = "relates_to_entity_id_here";
     Set<String> relatesToSet = new HashSet<String>();
-    relatesToSet.add(value);
-    value = "relates_to_entity_id_here_Second";
-    relatesToSet.add(value);
+    relatesToSet.add("relatesto1");
+    relatesToSet.add("relatesto3");
     Map<String, Set<String>> relatesTo = new HashMap<String, Set<String>>();
-    relatesTo.put(key, relatesToSet);
+    relatesTo.put("container", relatesToSet);
+    Set<String> relatesToSet11 = new HashSet<String>();
+    relatesToSet11.add("relatesto4");
+    relatesTo.put("container1", relatesToSet11);
     entity.setRelatesToEntities(relatesTo);
     // add some config entries
     Map<String, String> conf = new HashMap<String, String>();
@@ -166,8 +167,8 @@ public class TestHBaseTimelineStorage {
     metrics.add(m12);
     entity.addMetrics(metrics);
     TimelineEvent event = new TimelineEvent();
-    event.setId("event1");
-    event.setTimestamp(ts - 2000);
+    event.setId("start_event");
+    event.setTimestamp(ts);
     entity.addEvent(event);
     te.addEntity(entity);
 
@@ -176,7 +177,7 @@ public class TestHBaseTimelineStorage {
     String id1 = "application_1111111111_3333";
     entity1.setId(id1);
     entity1.setType(TimelineEntityType.YARN_APPLICATION.toString());
-    entity1.setCreatedTime(cTime);
+    entity1.setCreatedTime(cTime + 20L);
 
     // add the info map in Timeline Entity
     Map<String, Object> infoMap1 = new HashMap<String, Object>();
@@ -185,23 +186,22 @@ public class TestHBaseTimelineStorage {
     entity1.addInfo(infoMap1);
 
     // add the isRelatedToEntity info
-    String key1 = "task";
-    String value1 = "is_related_to_entity_id_here";
     Set<String> isRelatedToSet1 = new HashSet<String>();
-    isRelatedToSet1.add(value1);
+    isRelatedToSet1.add("relatedto3");
+    isRelatedToSet1.add("relatedto5");
     Map<String, Set<String>> isRelatedTo1 = new HashMap<String, Set<String>>();
-    isRelatedTo1.put(key, isRelatedToSet1);
+    isRelatedTo1.put("task1", isRelatedToSet1);
+    Set<String> isRelatedToSet11 = new HashSet<String>();
+    isRelatedToSet11.add("relatedto4");
+    isRelatedTo1.put("task2", isRelatedToSet11);
     entity1.setIsRelatedToEntities(isRelatedTo1);
 
     // add the relatesTo info
-    key1 = "container";
-    value1 = "relates_to_entity_id_here";
     Set<String> relatesToSet1 = new HashSet<String>();
-    relatesToSet1.add(value1);
-    value1 = "relates_to_entity_id_here_Second";
-    relatesToSet1.add(value1);
+    relatesToSet1.add("relatesto1");
+    relatesToSet1.add("relatesto2");
     Map<String, Set<String>> relatesTo1 = new HashMap<String, Set<String>>();
-    relatesTo1.put(key1, relatesToSet1);
+    relatesTo1.put("container", relatesToSet1);
     entity1.setRelatesToEntities(relatesTo1);
 
     // add some config entries
@@ -226,6 +226,14 @@ public class TestHBaseTimelineStorage {
     m2.setValues(metricValues1);
     metrics1.add(m2);
     entity1.addMetrics(metrics1);
+    TimelineEvent event11 = new TimelineEvent();
+    event11.setId("end_event");
+    event11.setTimestamp(ts);
+    entity1.addEvent(event11);
+    TimelineEvent event12 = new TimelineEvent();
+    event12.setId("update_event");
+    event12.setTimestamp(ts - 10);
+    entity1.addEvent(event12);
     te1.addEntity(entity1);
 
     TimelineEntities te2 = new TimelineEntities();
@@ -233,7 +241,22 @@ public class TestHBaseTimelineStorage {
     String id2 = "application_1111111111_4444";
     entity2.setId(id2);
     entity2.setType(TimelineEntityType.YARN_APPLICATION.toString());
-    entity2.setCreatedTime(cTime);
+    entity2.setCreatedTime(cTime + 40L);
+    TimelineEvent event21 = new TimelineEvent();
+    event21.setId("update_event");
+    event21.setTimestamp(ts - 20);
+    entity2.addEvent(event21);
+    Set<String> isRelatedToSet2 = new HashSet<String>();
+    isRelatedToSet2.add("relatedto3");
+    Map<String, Set<String>> isRelatedTo2 = new HashMap<String, Set<String>>();
+    isRelatedTo2.put("task1", isRelatedToSet2);
+    entity2.setIsRelatedToEntities(isRelatedTo2);
+    Map<String, Set<String>> relatesTo3 = new HashMap<String, Set<String>>();
+    Set<String> relatesToSet14 = new HashSet<String>();
+    relatesToSet14.add("relatesto7");
+    relatesTo3.put("container2", relatesToSet14);
+    entity2.setRelatesToEntities(relatesTo3);
+
     te2.addEntity(entity2);
     HBaseTimelineWriterImpl hbi = null;
     try {
@@ -267,31 +290,30 @@ public class TestHBaseTimelineStorage {
     String type = "world";
     entity.setId(id);
     entity.setType(type);
-    Long cTime = 1425016501000L;
+    Long cTime = 1425016502000L;
     entity.setCreatedTime(cTime);
     // add the info map in Timeline Entity
     Map<String, Object> infoMap = new HashMap<String, Object>();
-    infoMap.put("infoMapKey1", "infoMapValue1");
-    infoMap.put("infoMapKey2", 10);
+    infoMap.put("infoMapKey1", "infoMapValue2");
+    infoMap.put("infoMapKey2", 20);
+    infoMap.put("infoMapKey3", 71.4);
     entity.addInfo(infoMap);
     // add the isRelatedToEntity info
-    String key = "task";
-    String value = "is_related_to_entity_id_here";
     Set<String> isRelatedToSet = new HashSet<String>();
-    isRelatedToSet.add(value);
+    isRelatedToSet.add("relatedto1");
     Map<String, Set<String>> isRelatedTo = new HashMap<String, Set<String>>();
-    isRelatedTo.put(key, isRelatedToSet);
+    isRelatedTo.put("task", isRelatedToSet);
     entity.setIsRelatedToEntities(isRelatedTo);
 
     // add the relatesTo info
-    key = "container";
-    value = "relates_to_entity_id_here";
     Set<String> relatesToSet = new HashSet<String>();
-    relatesToSet.add(value);
-    value = "relates_to_entity_id_here_Second";
-    relatesToSet.add(value);
+    relatesToSet.add("relatesto1");
+    relatesToSet.add("relatesto3");
     Map<String, Set<String>> relatesTo = new HashMap<String, Set<String>>();
-    relatesTo.put(key, relatesToSet);
+    relatesTo.put("container", relatesToSet);
+    Set<String> relatesToSet11 = new HashSet<String>();
+    relatesToSet11.add("relatesto4");
+    relatesTo.put("container1", relatesToSet11);
     entity.setRelatesToEntities(relatesTo);
 
     // add some config entries
@@ -312,7 +334,7 @@ public class TestHBaseTimelineStorage {
     metricValues.put(ts - 80000, 300000000);
     metricValues.put(ts - 60000, 400000000);
     metricValues.put(ts - 40000, 50000000000L);
-    metricValues.put(ts - 20000, 60000000000L);
+    metricValues.put(ts - 20000, 70000000000L);
     m1.setType(Type.TIME_SERIES);
     m1.setValues(metricValues);
     metrics.add(m1);
@@ -322,13 +344,17 @@ public class TestHBaseTimelineStorage {
     m12.addValue(ts, 50);
     metrics.add(m12);
     entity.addMetrics(metrics);
+    TimelineEvent event = new TimelineEvent();
+    event.setId("start_event");
+    event.setTimestamp(ts);
+    entity.addEvent(event);
     te.addEntity(entity);
 
     TimelineEntity entity1 = new TimelineEntity();
     String id1 = "hello1";
     entity1.setId(id1);
     entity1.setType(type);
-    entity1.setCreatedTime(cTime);
+    entity1.setCreatedTime(cTime + 20L);
 
     // add the info map in Timeline Entity
     Map<String, Object> infoMap1 = new HashMap<String, Object>();
@@ -336,24 +362,34 @@ public class TestHBaseTimelineStorage {
     infoMap1.put("infoMapKey2", 10);
     entity1.addInfo(infoMap1);
 
+    // add event.
+    TimelineEvent event11 = new TimelineEvent();
+    event11.setId("end_event");
+    event11.setTimestamp(ts);
+    entity1.addEvent(event11);
+    TimelineEvent event12 = new TimelineEvent();
+    event12.setId("update_event");
+    event12.setTimestamp(ts - 10);
+    entity1.addEvent(event12);
+
+
     // add the isRelatedToEntity info
-    String key1 = "task";
-    String value1 = "is_related_to_entity_id_here";
     Set<String> isRelatedToSet1 = new HashSet<String>();
-    isRelatedToSet1.add(value1);
+    isRelatedToSet1.add("relatedto3");
+    isRelatedToSet1.add("relatedto5");
     Map<String, Set<String>> isRelatedTo1 = new HashMap<String, Set<String>>();
-    isRelatedTo1.put(key, isRelatedToSet1);
+    isRelatedTo1.put("task1", isRelatedToSet1);
+    Set<String> isRelatedToSet11 = new HashSet<String>();
+    isRelatedToSet11.add("relatedto4");
+    isRelatedTo1.put("task2", isRelatedToSet11);
     entity1.setIsRelatedToEntities(isRelatedTo1);
 
     // add the relatesTo info
-    key1 = "container";
-    value1 = "relates_to_entity_id_here";
     Set<String> relatesToSet1 = new HashSet<String>();
-    relatesToSet1.add(value1);
-    value1 = "relates_to_entity_id_here_Second";
-    relatesToSet1.add(value1);
+    relatesToSet1.add("relatesto1");
+    relatesToSet1.add("relatesto2");
     Map<String, Set<String>> relatesTo1 = new HashMap<String, Set<String>>();
-    relatesTo1.put(key1, relatesToSet1);
+    relatesTo1.put("container", relatesToSet1);
     entity1.setRelatesToEntities(relatesTo1);
 
     // add some config entries
@@ -384,7 +420,21 @@ public class TestHBaseTimelineStorage {
     String id2 = "hello2";
     entity2.setId(id2);
     entity2.setType(type);
-    entity2.setCreatedTime(cTime);
+    entity2.setCreatedTime(cTime + 40L);
+    TimelineEvent event21 = new TimelineEvent();
+    event21.setId("update_event");
+    event21.setTimestamp(ts - 20);
+    entity2.addEvent(event21);
+    Set<String> isRelatedToSet2 = new HashSet<String>();
+    isRelatedToSet2.add("relatedto3");
+    Map<String, Set<String>> isRelatedTo2 = new HashMap<String, Set<String>>();
+    isRelatedTo2.put("task1", isRelatedToSet2);
+    entity2.setIsRelatedToEntities(isRelatedTo2);
+    Map<String, Set<String>> relatesTo3 = new HashMap<String, Set<String>>();
+    Set<String> relatesToSet14 = new HashSet<String>();
+    relatesToSet14.add("relatesto7");
+    relatesTo3.put("container2", relatesToSet14);
+    entity2.setRelatesToEntities(relatesTo3);
     te.addEntity(entity2);
     HBaseTimelineWriterImpl hbi = null;
     try {
@@ -1113,19 +1163,585 @@ public class TestHBaseTimelineStorage {
 
   @Test
   public void testReadEntities() throws Exception {
-    TimelineEntity e1 = reader.getEntity(
+    TimelineEntity entity = reader.getEntity(
         new TimelineReaderContext("cluster1", "user1", "some_flow_name",
         1002345678919L, "application_1231111111_1111","world", "hello"),
         new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
-    assertNotNull(e1);
-    assertEquals(3, e1.getConfigs().size());
-    assertEquals(1, e1.getIsRelatedToEntities().size());
-    Set<TimelineEntity> es1 = reader.getEntities(
+    assertNotNull(entity);
+    assertEquals(3, entity.getConfigs().size());
+    assertEquals(1, entity.getIsRelatedToEntities().size());
+    Set<TimelineEntity> entities = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "some_flow_name",
         1002345678919L, "application_1231111111_1111","world",
         null), new TimelineEntityFilters(),
         new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
-    assertEquals(3, es1.size());
+    assertEquals(3, entities.size());
+    int cfgCnt = 0;
+    int metricCnt = 0;
+    int infoCnt = 0;
+    int eventCnt = 0;
+    int relatesToCnt = 0;
+    int isRelatedToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      cfgCnt += (timelineEntity.getConfigs() == null) ? 0 :
+          timelineEntity.getConfigs().size();
+      metricCnt += (timelineEntity.getMetrics() == null) ? 0 :
+          timelineEntity.getMetrics().size();
+      infoCnt += (timelineEntity.getInfo() == null) ? 0 :
+          timelineEntity.getInfo().size();
+      eventCnt += (timelineEntity.getEvents() == null) ? 0 :
+          timelineEntity.getEvents().size();
+      relatesToCnt += (timelineEntity.getRelatesToEntities() == null) ? 0 :
+          timelineEntity.getRelatesToEntities().size();
+      isRelatedToCnt += (timelineEntity.getIsRelatedToEntities() == null) ? 0 :
+          timelineEntity.getIsRelatedToEntities().size();
+    }
+    assertEquals(5, cfgCnt);
+    assertEquals(3, metricCnt);
+    assertEquals(5, infoCnt);
+    assertEquals(4, eventCnt);
+    assertEquals(4, relatesToCnt);
+    assertEquals(4, isRelatedToCnt);
+  }
+
+  @Test
+  public void testFilterEntitiesByCreatedTime() throws Exception {
+    Set<TimelineEntity> entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, 1425016502000L, 1425016502040L, null,
+        null, null, null, null, null), new TimelineDataToRetrieve());
+    assertEquals(3, entities.size());
+    for (TimelineEntity entity : entities) {
+      if (!entity.getId().equals("hello") && !entity.getId().equals("hello1") &&
+          !entity.getId().equals("hello2")) {
+        Assert.fail("Entities with ids' hello, hello1 and hello2 should be" +
+           " present");
+      }
+    }
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, 1425016502015L, null, null, null, null,
+        null, null, null), new TimelineDataToRetrieve());
+    assertEquals(2, entities.size());
+    for (TimelineEntity entity : entities) {
+      if (!entity.getId().equals("hello1") &&
+          !entity.getId().equals("hello2")) {
+        Assert.fail("Entities with ids' hello1 and hello2 should be present");
+      }
+    }
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, 1425016502015L, null, null, null,
+        null, null, null), new TimelineDataToRetrieve());
+     assertEquals(1, entities.size());
+     for (TimelineEntity entity : entities) {
+       if (!entity.getId().equals("hello")) {
+         Assert.fail("Entity with id hello should be present");
+       }
+     }
+  }
+
+  @Test
+  public void testReadEntitiesRelationsAndEventFiltersDefaultView()
+      throws Exception {
+    TimelineFilterList eventFilter = new TimelineFilterList();
+    eventFilter.addFilter(new TimelineExistsFilter(TimelineCompareOp.NOT_EQUAL,
+        "end_event"));
+    TimelineFilterList relatesTo = new TimelineFilterList(Operator.OR);
+    relatesTo.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container2",
+        new HashSet<Object>(Arrays.asList("relatesto7"))));
+    relatesTo.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container1",
+        new HashSet<Object>(Arrays.asList("relatesto4"))));
+    TimelineFilterList isRelatedTo = new TimelineFilterList();
+    isRelatedTo.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task1",
+        new HashSet<Object>(Arrays.asList("relatedto3"))));
+    isRelatedTo.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.NOT_EQUAL, "task1",
+        new HashSet<Object>(Arrays.asList("relatedto5"))));
+    Set<TimelineEntity> entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, relatesTo, isRelatedTo,
+        null, null, null, eventFilter), new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    int eventCnt = 0;
+    int isRelatedToCnt = 0;
+    int relatesToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      eventCnt += timelineEntity.getEvents().size();
+      isRelatedToCnt += timelineEntity.getIsRelatedToEntities().size();
+      relatesToCnt += timelineEntity.getRelatesToEntities().size();
+      if (!timelineEntity.getId().equals("hello2")) {
+        Assert.fail("Entity id should have been hello2");
+      }
+    }
+    assertEquals(0, eventCnt);
+    assertEquals(0, isRelatedToCnt);
+    assertEquals(0, relatesToCnt);
+  }
+
+  @Test
+  public void testReadEntitiesEventFilters() throws Exception {
+    TimelineFilterList ef = new TimelineFilterList();
+    ef.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.EQUAL, "update_event"));
+    ef.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.NOT_EQUAL, "end_event"));
+    Set<TimelineEntity> entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        null, ef),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+    assertEquals(1, entities.size());
+    int eventCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      eventCnt += timelineEntity.getEvents().size();
+      if (!timelineEntity.getId().equals("hello2")) {
+        Assert.fail("Entity id should have been hello2");
+      }
+    }
+    assertEquals(1, eventCnt);
+
+    TimelineFilterList ef1 = new TimelineFilterList();
+    ef1.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.EQUAL, "update_event"));
+    ef1.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.NOT_EQUAL, "end_event"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        null, ef1),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    eventCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      eventCnt += timelineEntity.getEvents().size();
+      if (!timelineEntity.getId().equals("hello2")) {
+        Assert.fail("Entity id should have been hello2");
+      }
+    }
+    assertEquals(0, eventCnt);
+
+    TimelineFilterList ef2 = new TimelineFilterList();
+    ef2.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.NOT_EQUAL, "end_event"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        null, ef2),
+        new TimelineDataToRetrieve());
+    assertEquals(2, entities.size());
+    eventCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      eventCnt += timelineEntity.getEvents().size();
+      if (!timelineEntity.getId().equals("hello") &&
+          !timelineEntity.getId().equals("hello2")) {
+        Assert.fail("Entity ids' should have been hello and hello2");
+      }
+    }
+    assertEquals(0, eventCnt);
+
+    TimelineFilterList ef3 = new TimelineFilterList();
+    ef3.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.EQUAL, "update_event"));
+    ef3.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.EQUAL, "dummy_event"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        null, ef3),
+        new TimelineDataToRetrieve());
+    assertEquals(0, entities.size());
+
+    TimelineFilterList list1 = new TimelineFilterList();
+    list1.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.EQUAL, "update_event"));
+    list1.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.EQUAL, "dummy_event"));
+    TimelineFilterList list2 = new TimelineFilterList();
+    list2.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.EQUAL, "start_event"));
+    TimelineFilterList ef4 = new TimelineFilterList(Operator.OR, list1, list2);
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        null, ef4),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    eventCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      eventCnt += timelineEntity.getEvents().size();
+      if (!timelineEntity.getId().equals("hello")) {
+        Assert.fail("Entity id should have been hello");
+      }
+    }
+    assertEquals(0, eventCnt);
+
+    TimelineFilterList ef5 = new TimelineFilterList();
+    ef5.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.NOT_EQUAL, "update_event"));
+    ef5.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.NOT_EQUAL, "end_event"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        null, ef5),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    eventCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      eventCnt += timelineEntity.getEvents().size();
+      if (!timelineEntity.getId().equals("hello")) {
+          Assert.fail("Entity id should have been hello");
+        }
+    }
+    assertEquals(0, eventCnt);
+  }
+
+  @Test
+  public void testReadEntitiesIsRelatedTo() throws Exception {
+    TimelineFilterList irt = new TimelineFilterList(Operator.OR);
+    irt.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task",
+        new HashSet<Object>(Arrays.asList("relatedto1"))));
+    irt.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task2",
+        new HashSet<Object>(Arrays.asList("relatedto4"))));
+    Set<TimelineEntity> entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, irt, null, null, null,
+        null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+    assertEquals(2, entities.size());
+    int isRelatedToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      isRelatedToCnt += timelineEntity.getIsRelatedToEntities().size();
+      if (!timelineEntity.getId().equals("hello") &&
+          !timelineEntity.getId().equals("hello1")) {
+        Assert.fail("Entity ids' should have been hello and hello1");
+      }
+    }
+    assertEquals(3, isRelatedToCnt);
+
+    TimelineFilterList irt1 = new TimelineFilterList();
+    irt1.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task1",
+        new HashSet<Object>(Arrays.asList("relatedto3"))));
+    irt1.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.NOT_EQUAL, "task1",
+        new HashSet<Object>(Arrays.asList("relatedto5"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111", "world", null),
+        new TimelineEntityFilters(null, null, null, null, irt1, null, null,
+        null, null),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    isRelatedToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      isRelatedToCnt += timelineEntity.getIsRelatedToEntities().size();
+      if (!timelineEntity.getId().equals("hello2")) {
+        Assert.fail("Entity id should have been hello2");
+      }
+    }
+    assertEquals(0, isRelatedToCnt);
+
+    TimelineFilterList irt2 = new TimelineFilterList(Operator.OR);
+    irt2.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task",
+        new HashSet<Object>(Arrays.asList("relatedto1"))));
+    irt2.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task2",
+        new HashSet<Object>(Arrays.asList("relatedto4"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111", "world", null),
+        new TimelineEntityFilters(null, null, null, null, irt2, null, null,
+        null, null),
+        new TimelineDataToRetrieve());
+    assertEquals(2, entities.size());
+    isRelatedToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      isRelatedToCnt += timelineEntity.getIsRelatedToEntities().size();
+      if (!timelineEntity.getId().equals("hello") &&
+          !timelineEntity.getId().equals("hello1")) {
+        Assert.fail("Entity ids' should have been hello and hello1");
+      }
+    }
+    assertEquals(0, isRelatedToCnt);
+
+    TimelineFilterList irt3 = new TimelineFilterList();
+    irt3.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task1",
+        new HashSet<Object>(Arrays.asList("relatedto3", "relatedto5"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111", "world", null),
+        new TimelineEntityFilters(null, null, null, null, irt3, null, null,
+        null, null),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    isRelatedToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      isRelatedToCnt += timelineEntity.getIsRelatedToEntities().size();
+      if (!timelineEntity.getId().equals("hello1")) {
+        Assert.fail("Entity id should have been hello1");
+      }
+    }
+    assertEquals(0, isRelatedToCnt);
+
+    TimelineFilterList irt4 = new TimelineFilterList();
+    irt4.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task1",
+        new HashSet<Object>(Arrays.asList("relatedto3"))));
+    irt4.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "dummy_task",
+        new HashSet<Object>(Arrays.asList("relatedto5"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111", "world", null),
+        new TimelineEntityFilters(null, null, null, null, irt4, null, null,
+        null, null),
+        new TimelineDataToRetrieve());
+    assertEquals(0, entities.size());
+
+    TimelineFilterList irt5 = new TimelineFilterList();
+    irt5.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task1",
+        new HashSet<Object>(Arrays.asList("relatedto3", "relatedto7"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111", "world", null),
+        new TimelineEntityFilters(null, null, null, null, irt5, null, null,
+        null, null),
+        new TimelineDataToRetrieve());
+    assertEquals(0, entities.size());
+
+    TimelineFilterList list1 = new TimelineFilterList();
+    list1.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task",
+        new HashSet<Object>(Arrays.asList("relatedto1"))));
+    list1.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "dummy_task",
+        new HashSet<Object>(Arrays.asList("relatedto4"))));
+    TimelineFilterList list2 = new TimelineFilterList();
+    list2.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task2",
+        new HashSet<Object>(Arrays.asList("relatedto4"))));
+    TimelineFilterList irt6 = new TimelineFilterList(Operator.OR, list1, list2);
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111", "world", null),
+        new TimelineEntityFilters(null, null, null, null, irt6, null, null,
+        null, null),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    isRelatedToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      isRelatedToCnt += timelineEntity.getIsRelatedToEntities().size();
+      if (!timelineEntity.getId().equals("hello1")) {
+        Assert.fail("Entity id should have been hello1");
+      }
+    }
+    assertEquals(0, isRelatedToCnt);
+  }
+
+  @Test
+  public void testReadEntitiesRelatesTo() throws Exception {
+    TimelineFilterList rt = new TimelineFilterList(Operator.OR);
+    rt.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container2",
+        new HashSet<Object>(Arrays.asList("relatesto7"))));
+    rt.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container1",
+        new HashSet<Object>(Arrays.asList("relatesto4"))));
+    Set<TimelineEntity> entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, rt, null, null, null, null,
+        null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+    assertEquals(2, entities.size());
+    int relatesToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      relatesToCnt += timelineEntity.getRelatesToEntities().size();
+      if (!timelineEntity.getId().equals("hello") &&
+          !timelineEntity.getId().equals("hello2")) {
+        Assert.fail("Entity ids' should have been hello and hello2");
+      }
+    }
+    assertEquals(3, relatesToCnt);
+
+    TimelineFilterList rt1 = new TimelineFilterList();
+    rt1.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container",
+        new HashSet<Object>(Arrays.asList("relatesto1"))));
+    rt1.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.NOT_EQUAL, "container",
+        new HashSet<Object>(Arrays.asList("relatesto3"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111", "world", null),
+        new TimelineEntityFilters(null, null, null, rt1, null, null, null, null,
+        null),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    relatesToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      relatesToCnt += timelineEntity.getRelatesToEntities().size();
+      if (!timelineEntity.getId().equals("hello1")) {
+        Assert.fail("Entity id should have been hello1");
+      }
+    }
+    assertEquals(0, relatesToCnt);
+
+    TimelineFilterList rt2 = new TimelineFilterList(Operator.OR);
+    rt2.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container2",
+        new HashSet<Object>(Arrays.asList("relatesto7"))));
+    rt2.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container1",
+        new HashSet<Object>(Arrays.asList("relatesto4"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111", "world", null),
+        new TimelineEntityFilters(null, null, null, rt2, null, null, null, null,
+        null),
+        new TimelineDataToRetrieve());
+    assertEquals(2, entities.size());
+    relatesToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      relatesToCnt += timelineEntity.getRelatesToEntities().size();
+      if (!timelineEntity.getId().equals("hello") &&
+          !timelineEntity.getId().equals("hello2")) {
+        Assert.fail("Entity ids' should have been hello and hello2");
+      }
+    }
+    assertEquals(0, relatesToCnt);
+
+    TimelineFilterList rt3 = new TimelineFilterList();
+    rt3.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container",
+        new HashSet<Object>(Arrays.asList("relatesto1", "relatesto3"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111", "world", null),
+        new TimelineEntityFilters(null, null, null, rt3, null, null, null, null,
+        null),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    relatesToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      relatesToCnt += timelineEntity.getRelatesToEntities().size();
+      if (!timelineEntity.getId().equals("hello")) {
+        Assert.fail("Entity id should have been hello");
+      }
+    }
+    assertEquals(0, relatesToCnt);
+
+    TimelineFilterList rt4 = new TimelineFilterList();
+    rt4.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container",
+        new HashSet<Object>(Arrays.asList("relatesto1"))));
+    rt4.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "dummy_container",
+        new HashSet<Object>(Arrays.asList("relatesto5"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111", "world", null),
+        new TimelineEntityFilters(null, null, null, rt4, null, null, null, null,
+        null),
+        new TimelineDataToRetrieve());
+    assertEquals(0, entities.size());
+
+    TimelineFilterList rt5 = new TimelineFilterList();
+    rt5.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container",
+        new HashSet<Object>(Arrays.asList("relatedto1", "relatesto8"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111", "world", null),
+        new TimelineEntityFilters(null, null, null, rt5, null, null, null, null,
+        null),
+        new TimelineDataToRetrieve());
+    assertEquals(0, entities.size());
+
+    TimelineFilterList list1 = new TimelineFilterList();
+    list1.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container2",
+        new HashSet<Object>(Arrays.asList("relatesto7"))));
+    list1.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "dummy_container",
+        new HashSet<Object>(Arrays.asList("relatesto4"))));
+    TimelineFilterList list2 = new TimelineFilterList();
+    list2.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container1",
+        new HashSet<Object>(Arrays.asList("relatesto4"))));
+    TimelineFilterList rt6 = new TimelineFilterList(Operator.OR, list1, list2);
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111", "world", null),
+        new TimelineEntityFilters(null, null, null, rt6, null, null, null, null,
+        null),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    relatesToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      relatesToCnt += timelineEntity.getRelatesToEntities().size();
+      if (!timelineEntity.getId().equals("hello")) {
+        Assert.fail("Entity id should have been hello");
+      }
+    }
+    assertEquals(0, relatesToCnt);
+
+    TimelineFilterList list3 = new TimelineFilterList();
+    list3.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container",
+        new HashSet<Object>(Arrays.asList("relatesto1"))));
+    list3.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container1",
+        new HashSet<Object>(Arrays.asList("relatesto4"))));
+    TimelineFilterList list4 = new TimelineFilterList();
+    list4.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container",
+        new HashSet<Object>(Arrays.asList("relatesto1"))));
+    list4.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container",
+        new HashSet<Object>(Arrays.asList("relatesto2"))));
+    TimelineFilterList combinedList =
+        new TimelineFilterList(Operator.OR, list3, list4);
+    TimelineFilterList rt7 = new TimelineFilterList(Operator.AND, combinedList,
+        new TimelineKeyValuesFilter(
+        TimelineCompareOp.NOT_EQUAL, "container",
+        new HashSet<Object>(Arrays.asList("relatesto3"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111", "world", null),
+        new TimelineEntityFilters(null, null, null, rt7, null, null, null, null,
+        null),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    relatesToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      relatesToCnt += timelineEntity.getRelatesToEntities().size();
+      if (!timelineEntity.getId().equals("hello1")) {
+        Assert.fail("Entity id should have been hello1");
+      }
+    }
+    assertEquals(0, relatesToCnt);
   }
 
   @Test
@@ -1177,7 +1793,7 @@ public class TestHBaseTimelineStorage {
       infoCnt += entity.getInfo().size();
     }
     assertEquals(0, infoCnt);
-    assertEquals(2, isRelatedToCnt);
+    assertEquals(4, isRelatedToCnt);
     assertEquals(3, metricsCnt);
   }
 
@@ -1200,13 +1816,122 @@ public class TestHBaseTimelineStorage {
     int cfgCnt = 0;
     for (TimelineEntity entity : es1) {
       cfgCnt += entity.getConfigs().size();
+      for (String confKey : entity.getConfigs().keySet()) {
+        assertTrue("Config key returned should start with cfg_",
+            confKey.startsWith("cfg_"));
+      }
     }
     assertEquals(3, cfgCnt);
   }
 
   @Test
+  public void testReadEntitiesConfigFilters() throws Exception {
+    TimelineFilterList list1 = new TimelineFilterList();
+    list1.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "cfg_param1", "value1"));
+    list1.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "cfg_param2", "value2"));
+    TimelineFilterList list2 = new TimelineFilterList();
+    list2.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "cfg_param1", "value3"));
+    list2.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "config_param2", "value2"));
+    TimelineFilterList confFilterList =
+        new TimelineFilterList(Operator.OR, list1, list2);
+    Set<TimelineEntity> entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null,
+        confFilterList, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+    assertEquals(2, entities.size());
+    int cfgCnt = 0;
+    for (TimelineEntity entity : entities) {
+      cfgCnt += entity.getConfigs().size();
+    }
+    assertEquals(5, cfgCnt);
+
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null,
+        confFilterList, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+    assertEquals(2, entities.size());
+    cfgCnt = 0;
+    for (TimelineEntity entity : entities) {
+      cfgCnt += entity.getConfigs().size();
+    }
+    assertEquals(5, cfgCnt);
+
+    TimelineFilterList confFilterList1 = new TimelineFilterList(
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.NOT_EQUAL, "cfg_param1", "value1"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null,
+        confFilterList1, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+    assertEquals(1, entities.size());
+    cfgCnt = 0;
+    for (TimelineEntity entity : entities) {
+      cfgCnt += entity.getConfigs().size();
+    }
+    assertEquals(3, cfgCnt);
+
+    TimelineFilterList confFilterList2 = new TimelineFilterList(
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.NOT_EQUAL, "cfg_param1", "value1"),
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.NOT_EQUAL, "config_param2", "value2"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null,
+        confFilterList2, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+    assertEquals(0, entities.size());
+
+    TimelineFilterList confFilterList3 = new TimelineFilterList(
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "dummy_config", "value1"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null,
+        confFilterList3, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+    assertEquals(0, entities.size());
+
+    TimelineFilterList confFilterList4 = new TimelineFilterList(
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.NOT_EQUAL, "dummy_config", "value1"));
+    entities = reader.getEntities(
+            new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+            1002345678919L, "application_1231111111_1111","world", null),
+            new TimelineEntityFilters(null, null, null, null, null, null,
+            confFilterList4, null, null),
+            new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+    assertEquals(0, entities.size());
+
+    TimelineFilterList confFilterList5 = new TimelineFilterList(
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.NOT_EQUAL, "dummy_config", "value1", false));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null,
+        confFilterList5, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+    assertEquals(3, entities.size());
+  }
+
+  @Test
   public void testReadEntitiesConfigFilterPrefix() throws Exception {
-    Map<String, String> confFilters = ImmutableMap.of("cfg_param1","value1");
+    TimelineFilterList confFilterList = new TimelineFilterList();
+    confFilterList.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "cfg_param1", "value1"));
     TimelineFilterList list =
         new TimelineFilterList(Operator.OR,
             new TimelinePrefixFilter(TimelineCompareOp.EQUAL, "cfg_"));
@@ -1214,12 +1939,47 @@ public class TestHBaseTimelineStorage {
         new TimelineReaderContext("cluster1", "user1", "some_flow_name",
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, null,
-        confFilters, null, null),
+        confFilterList, null, null),
         new TimelineDataToRetrieve(list, null, null));
     assertEquals(1, entities.size());
     int cfgCnt = 0;
     for (TimelineEntity entity : entities) {
       cfgCnt += entity.getConfigs().size();
+      for (String confKey : entity.getConfigs().keySet()) {
+        assertTrue("Config key returned should start with cfg_",
+            confKey.startsWith("cfg_"));
+      }
+    }
+    assertEquals(2, cfgCnt);
+    TimelineFilterList list1 = new TimelineFilterList();
+    list1.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "cfg_param1", "value1"));
+    list1.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "cfg_param2", "value2"));
+    TimelineFilterList list2 = new TimelineFilterList();
+    list2.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "cfg_param1", "value3"));
+    list2.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "config_param2", "value2"));
+    TimelineFilterList confFilterList1 =
+        new TimelineFilterList(Operator.OR, list1, list2);
+    TimelineFilterList confsToRetrieve =
+        new TimelineFilterList(Operator.OR,
+            new TimelinePrefixFilter(TimelineCompareOp.EQUAL, "config_"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null,
+        confFilterList1, null, null),
+        new TimelineDataToRetrieve(confsToRetrieve, null, null));
+    assertEquals(2, entities.size());
+    cfgCnt = 0;
+    for (TimelineEntity entity : entities) {
+      cfgCnt += entity.getConfigs().size();
+      for (String confKey : entity.getConfigs().keySet()) {
+        assertTrue("Config key returned should start with config_",
+            confKey.startsWith("config_"));
+       }
     }
     assertEquals(2, cfgCnt);
   }
@@ -1243,47 +2003,356 @@ public class TestHBaseTimelineStorage {
     int metricCnt = 0;
     for (TimelineEntity entity : es1) {
       metricCnt += entity.getMetrics().size();
+      for (TimelineMetric metric : entity.getMetrics()) {
+        assertTrue("Metric Id returned should start with MAP1_",
+            metric.getId().startsWith("MAP1_"));
+      }
     }
     assertEquals(2, metricCnt);
   }
 
   @Test
+  public void testReadEntitiesMetricFilters() throws Exception {
+    TimelineFilterList list1 = new TimelineFilterList();
+    list1.addFilter(new TimelineCompareFilter(
+        TimelineCompareOp.GREATER_OR_EQUAL, "MAP1_SLOT_MILLIS", 50000000900L));
+    TimelineFilterList list2 = new TimelineFilterList();
+    list2.addFilter(new TimelineCompareFilter(
+        TimelineCompareOp.LESS_THAN, "MAP_SLOT_MILLIS", 80000000000L));
+    list2.addFilter(new TimelineCompareFilter(
+        TimelineCompareOp.EQUAL, "MAP1_BYTES", 50));
+    TimelineFilterList metricFilterList =
+        new TimelineFilterList(Operator.OR, list1, list2);
+    Set<TimelineEntity> entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        metricFilterList, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+    assertEquals(2, entities.size());
+    int metricCnt = 0;
+    for (TimelineEntity entity : entities) {
+      metricCnt += entity.getMetrics().size();
+    }
+    assertEquals(3, metricCnt);
+
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        metricFilterList, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+    assertEquals(2, entities.size());
+    metricCnt = 0;
+    for (TimelineEntity entity : entities) {
+      metricCnt += entity.getMetrics().size();
+    }
+    assertEquals(3, metricCnt);
+
+    TimelineFilterList metricFilterList1 = new TimelineFilterList(
+        new TimelineCompareFilter(
+        TimelineCompareOp.LESS_OR_EQUAL, "MAP_SLOT_MILLIS", 80000000000L),
+        new TimelineCompareFilter(
+        TimelineCompareOp.NOT_EQUAL, "MAP1_BYTES", 30));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        metricFilterList1, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+    assertEquals(1, entities.size());
+    metricCnt = 0;
+    for (TimelineEntity entity : entities) {
+      metricCnt += entity.getMetrics().size();
+    }
+    assertEquals(2, metricCnt);
+
+    TimelineFilterList metricFilterList2 = new TimelineFilterList(
+        new TimelineCompareFilter(
+        TimelineCompareOp.LESS_THAN, "MAP_SLOT_MILLIS", 40000000000L),
+        new TimelineCompareFilter(
+        TimelineCompareOp.NOT_EQUAL, "MAP1_BYTES", 30));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        metricFilterList2, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+    assertEquals(0, entities.size());
+
+    TimelineFilterList metricFilterList3 = new TimelineFilterList(
+        new TimelineCompareFilter(
+        TimelineCompareOp.EQUAL, "dummy_metric", 5));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        metricFilterList3, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+    assertEquals(0, entities.size());
+
+    TimelineFilterList metricFilterList4 = new TimelineFilterList(
+        new TimelineCompareFilter(
+        TimelineCompareOp.NOT_EQUAL, "dummy_metric", 5));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        metricFilterList4, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+    assertEquals(0, entities.size());
+
+    TimelineFilterList metricFilterList5 = new TimelineFilterList(
+        new TimelineCompareFilter(
+        TimelineCompareOp.NOT_EQUAL, "dummy_metric", 5, false));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        metricFilterList5, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+    assertEquals(3, entities.size());
+  }
+
+  @Test
   public void testReadEntitiesMetricFilterPrefix() throws Exception {
-    Set<String> metricFilters = ImmutableSet.of("MAP1_SLOT_MILLIS");
+    TimelineFilterList metricFilterList = new TimelineFilterList();
+    metricFilterList.addFilter(new TimelineCompareFilter(
+        TimelineCompareOp.GREATER_OR_EQUAL, "MAP1_SLOT_MILLIS", 0L));
     TimelineFilterList list =
         new TimelineFilterList(Operator.OR,
             new TimelinePrefixFilter(TimelineCompareOp.EQUAL, "MAP1_"));
     Set<TimelineEntity> entities = reader.getEntities(
-        new TimelineReaderContext("cluster1","user1", "some_flow_name",
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
-        metricFilters, null),
+        metricFilterList, null),
         new TimelineDataToRetrieve(null, list, null));
     assertEquals(1, entities.size());
     int metricCnt = 0;
     for (TimelineEntity entity : entities) {
       metricCnt += entity.getMetrics().size();
+      for (TimelineMetric metric : entity.getMetrics()) {
+        assertTrue("Metric Id returned should start with MAP1_",
+            metric.getId().startsWith("MAP1_"));
+      }
     }
     assertEquals(1, metricCnt);
+
+    TimelineFilterList list1 = new TimelineFilterList();
+    list1.addFilter(new TimelineCompareFilter(
+        TimelineCompareOp.GREATER_OR_EQUAL, "MAP1_SLOT_MILLIS", 50000000900L));
+    TimelineFilterList list2 = new TimelineFilterList();
+    list2.addFilter(new TimelineCompareFilter(
+        TimelineCompareOp.LESS_THAN, "MAP_SLOT_MILLIS", 80000000000L));
+    list2.addFilter(new TimelineCompareFilter(
+        TimelineCompareOp.EQUAL, "MAP1_BYTES", 50));
+    TimelineFilterList metricFilterList1 =
+        new TimelineFilterList(Operator.OR, list1, list2);
+    TimelineFilterList metricsToRetrieve = new TimelineFilterList(Operator.OR,
+        new TimelinePrefixFilter(TimelineCompareOp.EQUAL, "MAP1_"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        metricFilterList1, null),
+        new TimelineDataToRetrieve(
+        null, metricsToRetrieve, EnumSet.of(Field.METRICS)));
+    assertEquals(2, entities.size());
+    metricCnt = 0;
+    for (TimelineEntity entity : entities) {
+      metricCnt += entity.getMetrics().size();
+      for (TimelineMetric metric : entity.getMetrics()) {
+        assertTrue("Metric Id returned should start with MAP1_",
+            metric.getId().startsWith("MAP1_"));
+      }
+    }
+    assertEquals(2, metricCnt);
+  }
+
+  @Test
+  public void testReadEntitiesInfoFilters() throws Exception {
+    TimelineFilterList list1 = new TimelineFilterList();
+    list1.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "infoMapKey3", 71.4));
+    list1.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "infoMapKey1", "infoMapValue2"));
+    TimelineFilterList list2 = new TimelineFilterList();
+    list2.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "infoMapKey1", "infoMapValue1"));
+    list2.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "infoMapKey2", 10));
+    TimelineFilterList infoFilterList =
+        new TimelineFilterList(Operator.OR, list1, list2);
+    Set<TimelineEntity> entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, infoFilterList,
+        null, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+    assertEquals(2, entities.size());
+    int infoCnt = 0;
+    for (TimelineEntity entity : entities) {
+      infoCnt += entity.getInfo().size();
+    }
+    assertEquals(5, infoCnt);
+
+    TimelineFilterList infoFilterList1 = new TimelineFilterList(
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.NOT_EQUAL, "infoMapKey1", "infoMapValue1"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, infoFilterList1,
+        null, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+    assertEquals(1, entities.size());
+    infoCnt = 0;
+    for (TimelineEntity entity : entities) {
+      infoCnt += entity.getInfo().size();
+    }
+    assertEquals(3, infoCnt);
+
+    TimelineFilterList infoFilterList2 = new TimelineFilterList(
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.NOT_EQUAL, "infoMapKey1", "infoMapValue2"),
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.NOT_EQUAL, "infoMapKey3", 71.4));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, infoFilterList2,
+        null, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+    assertEquals(0, entities.size());
+
+    TimelineFilterList infoFilterList3 = new TimelineFilterList(
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "dummy_info", "some_value"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, infoFilterList3,
+        null, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+    assertEquals(0, entities.size());
+
+    TimelineFilterList infoFilterList4 = new TimelineFilterList(
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.NOT_EQUAL, "dummy_info", "some_value"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, infoFilterList4,
+        null, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+    assertEquals(0, entities.size());
+
+    TimelineFilterList infoFilterList5 = new TimelineFilterList(
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.NOT_EQUAL, "dummy_info", "some_value", false));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, "application_1231111111_1111","world", null),
+        new TimelineEntityFilters(null, null, null, null, null, infoFilterList5,
+        null, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+    assertEquals(3, entities.size());
   }
 
   @Test
   public void testReadApps() throws Exception {
-    TimelineEntity e1 = reader.getEntity(
+    TimelineEntity entity = reader.getEntity(
         new TimelineReaderContext("cluster1", "user1", "some_flow_name",
         1002345678919L, "application_1111111111_2222",
         TimelineEntityType.YARN_APPLICATION.toString(), null),
         new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
-    assertNotNull(e1);
-    assertEquals(3, e1.getConfigs().size());
-    assertEquals(1, e1.getIsRelatedToEntities().size());
-    Set<TimelineEntity> es1 = reader.getEntities(
+    assertNotNull(entity);
+    assertEquals(3, entity.getConfigs().size());
+    assertEquals(1, entity.getIsRelatedToEntities().size());
+    Set<TimelineEntity> entities = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "some_flow_name",
         1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
         null),
         new TimelineEntityFilters(),
         new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
-    assertEquals(3, es1.size());
+    assertEquals(3, entities.size());
+    int cfgCnt = 0;
+    int metricCnt = 0;
+    int infoCnt = 0;
+    int eventCnt = 0;
+    int relatesToCnt = 0;
+    int isRelatedToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      cfgCnt += (timelineEntity.getConfigs() == null) ? 0 :
+          timelineEntity.getConfigs().size();
+      metricCnt += (timelineEntity.getMetrics() == null) ? 0 :
+          timelineEntity.getMetrics().size();
+      infoCnt += (timelineEntity.getInfo() == null) ? 0 :
+          timelineEntity.getInfo().size();
+      eventCnt += (timelineEntity.getEvents() == null) ? 0 :
+          timelineEntity.getEvents().size();
+      relatesToCnt += (timelineEntity.getRelatesToEntities() == null) ? 0 :
+          timelineEntity.getRelatesToEntities().size();
+      isRelatedToCnt += (timelineEntity.getIsRelatedToEntities() == null) ? 0 :
+          timelineEntity.getIsRelatedToEntities().size();
+    }
+    assertEquals(5, cfgCnt);
+    assertEquals(3, metricCnt);
+    assertEquals(5, infoCnt);
+    assertEquals(4, eventCnt);
+    assertEquals(4, relatesToCnt);
+    assertEquals(4, isRelatedToCnt);
+  }
+
+  @Test
+  public void testFilterAppsByCreatedTime() throws Exception {
+    Set<TimelineEntity> entities = reader.getEntities(
+       new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+       1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+       null),
+       new TimelineEntityFilters(null, 1425016502000L, 1425016502040L, null,
+       null, null, null, null, null),
+       new TimelineDataToRetrieve());
+    assertEquals(3, entities.size());
+    for (TimelineEntity entity : entities) {
+      if (!entity.getId().equals("application_1111111111_2222") &&
+          !entity.getId().equals("application_1111111111_3333") &&
+          !entity.getId().equals("application_1111111111_4444")) {
+        Assert.fail("Entities with ids' application_1111111111_2222, " +
+           "application_1111111111_3333 and application_1111111111_4444" +
+            " should be present");
+      }
+    }
+    entities =  reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, 1425016502015L, null, null, null, null,
+        null, null, null),
+        new TimelineDataToRetrieve());
+    assertEquals(2, entities.size());
+    for (TimelineEntity entity : entities) {
+      if (!entity.getId().equals("application_1111111111_3333") &&
+          !entity.getId().equals("application_1111111111_4444")) {
+        Assert.fail("Apps with ids' application_1111111111_3333 and" +
+            " application_1111111111_4444 should be present");
+      }
+    }
+    entities =  reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, 1425016502015L, null, null, null,
+        null, null, null),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    for (TimelineEntity entity : entities) {
+      if (!entity.getId().equals("application_1111111111_2222")) {
+        Assert.fail("App with id application_1111111111_2222 should" +
+            " be present");
+      }
+    }
   }
 
   @Test
@@ -1339,8 +2408,646 @@ public class TestHBaseTimelineStorage {
       infoCnt += entity.getInfo().size();
     }
     assertEquals(0, infoCnt);
-    assertEquals(2, isRelatedToCnt);
+    assertEquals(4, isRelatedToCnt);
     assertEquals(3, metricsCnt);
+  }
+
+  @Test
+  public void testReadAppsIsRelatedTo() throws Exception {
+    TimelineFilterList irt = new TimelineFilterList(Operator.OR);
+    irt.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task",
+        new HashSet<Object>(Arrays.asList("relatedto1"))));
+    irt.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task2",
+        new HashSet<Object>(Arrays.asList("relatedto4"))));
+    Set<TimelineEntity> entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, irt, null, null, null,
+        null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+    assertEquals(2, entities.size());
+    int isRelatedToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      isRelatedToCnt += timelineEntity.getIsRelatedToEntities().size();
+      if (!timelineEntity.getId().equals("application_1111111111_2222") &&
+          !timelineEntity.getId().equals("application_1111111111_3333")) {
+        Assert.fail("Entity ids' should have been application_1111111111_2222"
+            + " and application_1111111111_3333");
+      }
+    }
+    assertEquals(3, isRelatedToCnt);
+
+    TimelineFilterList irt1 = new TimelineFilterList();
+    irt1.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task1",
+        new HashSet<Object>(Arrays.asList("relatedto3"))));
+    irt1.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.NOT_EQUAL, "task1",
+        new HashSet<Object>(Arrays.asList("relatedto5"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, irt1, null, null, null,
+        null),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    isRelatedToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      isRelatedToCnt += timelineEntity.getIsRelatedToEntities().size();
+      if (!timelineEntity.getId().equals("application_1111111111_4444")) {
+        Assert.fail("Entity id should have been application_1111111111_4444");
+      }
+    }
+    assertEquals(0, isRelatedToCnt);
+
+    TimelineFilterList irt2 = new TimelineFilterList(Operator.OR);
+    irt2.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task",
+        new HashSet<Object>(Arrays.asList("relatedto1"))));
+    irt2.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task2",
+        new HashSet<Object>(Arrays.asList("relatedto4"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, irt2, null, null, null,
+        null),
+        new TimelineDataToRetrieve());
+    assertEquals(2, entities.size());
+    isRelatedToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      isRelatedToCnt += timelineEntity.getIsRelatedToEntities().size();
+      if (!timelineEntity.getId().equals("application_1111111111_2222") &&
+          !timelineEntity.getId().equals("application_1111111111_3333")) {
+        Assert.fail("Entity ids' should have been application_1111111111_2222"
+            + " and application_1111111111_3333");
+      }
+    }
+    assertEquals(0, isRelatedToCnt);
+
+    TimelineFilterList irt3 = new TimelineFilterList();
+    irt3.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task1",
+        new HashSet<Object>(Arrays.asList("relatedto3", "relatedto5"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, irt3, null, null, null,
+        null),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    isRelatedToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      isRelatedToCnt += timelineEntity.getIsRelatedToEntities().size();
+      if (!timelineEntity.getId().equals("application_1111111111_3333")) {
+        Assert.fail("Entity id should have been application_1111111111_3333");
+      }
+    }
+    assertEquals(0, isRelatedToCnt);
+
+    TimelineFilterList irt4 = new TimelineFilterList();
+    irt4.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task1",
+        new HashSet<Object>(Arrays.asList("relatedto3"))));
+    irt4.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "dummy_task",
+        new HashSet<Object>(Arrays.asList("relatedto5"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, irt4, null, null, null,
+        null),
+        new TimelineDataToRetrieve());
+    assertEquals(0, entities.size());
+
+    TimelineFilterList irt5 = new TimelineFilterList();
+    irt5.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task1",
+        new HashSet<Object>(Arrays.asList("relatedto3", "relatedto7"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, irt5, null, null, null,
+        null),
+        new TimelineDataToRetrieve());
+    assertEquals(0, entities.size());
+
+    TimelineFilterList list1 = new TimelineFilterList();
+    list1.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task",
+        new HashSet<Object>(Arrays.asList("relatedto1"))));
+    list1.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "dummy_task",
+        new HashSet<Object>(Arrays.asList("relatedto4"))));
+    TimelineFilterList list2 = new TimelineFilterList();
+    list2.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task2",
+        new HashSet<Object>(Arrays.asList("relatedto4"))));
+    TimelineFilterList irt6 = new TimelineFilterList(Operator.OR, list1, list2);
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, irt6, null, null, null,
+        null),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    isRelatedToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      isRelatedToCnt += timelineEntity.getIsRelatedToEntities().size();
+      if (!timelineEntity.getId().equals("application_1111111111_3333")) {
+        Assert.fail("Entity id should have been application_1111111111_3333");
+      }
+    }
+    assertEquals(0, isRelatedToCnt);
+  }
+
+
+  @Test
+  public void testReadAppsRelatesTo() throws Exception {
+    TimelineFilterList rt = new TimelineFilterList(Operator.OR);
+    rt.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container2",
+        new HashSet<Object>(Arrays.asList("relatesto7"))));
+    rt.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container1",
+        new HashSet<Object>(Arrays.asList("relatesto4"))));
+    Set<TimelineEntity> entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, rt, null, null, null, null,
+        null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+    assertEquals(2, entities.size());
+    int relatesToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      relatesToCnt += timelineEntity.getRelatesToEntities().size();
+      if (!timelineEntity.getId().equals("application_1111111111_2222") &&
+          !timelineEntity.getId().equals("application_1111111111_4444")) {
+        Assert.fail("Entity ids' should have been application_1111111111_2222"
+            + " and application_1111111111_4444");
+      }
+    }
+    assertEquals(3, relatesToCnt);
+
+    TimelineFilterList rt1 = new TimelineFilterList();
+    rt1.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container",
+        new HashSet<Object>(Arrays.asList("relatesto1"))));
+    rt1.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.NOT_EQUAL, "container",
+        new HashSet<Object>(Arrays.asList("relatesto3"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, rt1, null, null, null, null,
+        null),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    relatesToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      relatesToCnt += timelineEntity.getRelatesToEntities().size();
+      if (!timelineEntity.getId().equals("application_1111111111_3333")) {
+        Assert.fail("Entity id should have been application_1111111111_3333");
+      }
+    }
+    assertEquals(0, relatesToCnt);
+
+    TimelineFilterList rt2 = new TimelineFilterList(Operator.OR);
+    rt2.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container2",
+        new HashSet<Object>(Arrays.asList("relatesto7"))));
+    rt2.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container1",
+        new HashSet<Object>(Arrays.asList("relatesto4"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, rt2, null, null, null, null,
+        null),
+        new TimelineDataToRetrieve());
+    assertEquals(2, entities.size());
+    relatesToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      relatesToCnt += timelineEntity.getRelatesToEntities().size();
+      if (!timelineEntity.getId().equals("application_1111111111_2222") &&
+          !timelineEntity.getId().equals("application_1111111111_4444")) {
+        Assert.fail("Entity ids' should have been application_1111111111_2222"
+            + " and application_1111111111_4444");
+      }
+    }
+    assertEquals(0, relatesToCnt);
+
+    TimelineFilterList rt3 = new TimelineFilterList();
+    rt3.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container",
+        new HashSet<Object>(Arrays.asList("relatesto1", "relatesto3"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, rt3, null, null, null, null,
+        null),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    relatesToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      relatesToCnt += timelineEntity.getRelatesToEntities().size();
+      if (!timelineEntity.getId().equals("application_1111111111_2222")) {
+        Assert.fail("Entity id should have been application_1111111111_2222");
+      }
+    }
+    assertEquals(0, relatesToCnt);
+
+    TimelineFilterList rt4 = new TimelineFilterList();
+    rt4.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container",
+        new HashSet<Object>(Arrays.asList("relatesto1"))));
+    rt4.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "dummy_container",
+        new HashSet<Object>(Arrays.asList("relatesto5"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, rt4, null, null, null, null,
+        null),
+        new TimelineDataToRetrieve());
+    assertEquals(0, entities.size());
+
+    TimelineFilterList rt5 = new TimelineFilterList();
+    rt5.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container",
+        new HashSet<Object>(Arrays.asList("relatedto1", "relatesto8"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, rt5, null, null, null, null,
+        null),
+        new TimelineDataToRetrieve());
+    assertEquals(0, entities.size());
+
+    TimelineFilterList list1 = new TimelineFilterList();
+    list1.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container2",
+        new HashSet<Object>(Arrays.asList("relatesto7"))));
+    list1.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "dummy_container",
+        new HashSet<Object>(Arrays.asList("relatesto4"))));
+    TimelineFilterList list2 = new TimelineFilterList();
+    list2.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container1",
+        new HashSet<Object>(Arrays.asList("relatesto4"))));
+    TimelineFilterList rt6 = new TimelineFilterList(Operator.OR, list1, list2);
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, rt6, null, null, null, null,
+        null),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    relatesToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      relatesToCnt += timelineEntity.getRelatesToEntities().size();
+      if (!timelineEntity.getId().equals("application_1111111111_2222")) {
+        Assert.fail("Entity id should have been application_1111111111_2222");
+      }
+    }
+    assertEquals(0, relatesToCnt);
+
+    TimelineFilterList list3 = new TimelineFilterList();
+    list3.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container",
+        new HashSet<Object>(Arrays.asList("relatesto1"))));
+    list3.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container1",
+        new HashSet<Object>(Arrays.asList("relatesto4"))));
+    TimelineFilterList list4 = new TimelineFilterList();
+    list4.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container",
+        new HashSet<Object>(Arrays.asList("relatesto1"))));
+    list4.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container",
+        new HashSet<Object>(Arrays.asList("relatesto2"))));
+    TimelineFilterList combinedList =
+        new TimelineFilterList(Operator.OR, list3, list4);
+    TimelineFilterList rt7 = new TimelineFilterList(Operator.AND, combinedList,
+        new TimelineKeyValuesFilter(
+        TimelineCompareOp.NOT_EQUAL, "container",
+        new HashSet<Object>(Arrays.asList("relatesto3"))));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, rt7, null, null, null, null,
+        null),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    relatesToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      relatesToCnt += timelineEntity.getRelatesToEntities().size();
+      if (!timelineEntity.getId().equals("application_1111111111_3333")) {
+        Assert.fail("Entity id should have been application_1111111111_3333");
+      }
+    }
+    assertEquals(0, relatesToCnt);
+  }
+
+  @Test
+  public void testReadAppsRelationsAndEventFiltersDefaultView()
+      throws Exception {
+    TimelineFilterList eventFilter = new TimelineFilterList();
+    eventFilter.addFilter(new TimelineExistsFilter(TimelineCompareOp.NOT_EQUAL,
+        "end_event"));
+    TimelineFilterList relatesTo = new TimelineFilterList(Operator.OR);
+    relatesTo.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container2",
+        new HashSet<Object>(Arrays.asList("relatesto7"))));
+    relatesTo.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "container1",
+        new HashSet<Object>(Arrays.asList("relatesto4"))));
+    TimelineFilterList isRelatedTo = new TimelineFilterList();
+    isRelatedTo.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.EQUAL, "task1",
+        new HashSet<Object>(Arrays.asList("relatedto3"))));
+    isRelatedTo.addFilter(new TimelineKeyValuesFilter(
+        TimelineCompareOp.NOT_EQUAL, "task1",
+        new HashSet<Object>(Arrays.asList("relatedto5"))));
+    Set<TimelineEntity> entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, relatesTo, isRelatedTo,
+        null, null, null, eventFilter),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    int eventCnt = 0;
+    int isRelatedToCnt = 0;
+    int relatesToCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      eventCnt += timelineEntity.getEvents().size();
+      isRelatedToCnt += timelineEntity.getIsRelatedToEntities().size();
+      relatesToCnt += timelineEntity.getRelatesToEntities().size();
+      if (!timelineEntity.getId().equals("application_1111111111_4444")) {
+        Assert.fail("Entity id should have been application_1111111111_4444");
+      }
+    }
+    assertEquals(0, eventCnt);
+    assertEquals(0, isRelatedToCnt);
+    assertEquals(0, relatesToCnt);
+  }
+
+  @Test
+  public void testReadAppsConfigFilters() throws Exception {
+    TimelineFilterList list1 = new TimelineFilterList();
+    list1.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "cfg_param1", "value1"));
+    list1.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "cfg_param2", "value2"));
+    TimelineFilterList list2 = new TimelineFilterList();
+    list2.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "cfg_param1", "value3"));
+    list2.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "config_param2", "value2"));
+    TimelineFilterList confFilterList =
+        new TimelineFilterList(Operator.OR, list1, list2);
+    Set<TimelineEntity> entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null,
+        confFilterList, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+    assertEquals(2, entities.size());
+    int cfgCnt = 0;
+    for (TimelineEntity entity : entities) {
+      cfgCnt += entity.getConfigs().size();
+    }
+    assertEquals(5, cfgCnt);
+
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null,
+        confFilterList, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+    assertEquals(2, entities.size());
+    cfgCnt = 0;
+    for (TimelineEntity entity : entities) {
+      cfgCnt += entity.getConfigs().size();
+    }
+    assertEquals(5, cfgCnt);
+
+    TimelineFilterList confFilterList1 = new TimelineFilterList(
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.NOT_EQUAL, "cfg_param1", "value1"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null,
+        confFilterList1, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+    assertEquals(1, entities.size());
+    cfgCnt = 0;
+    for (TimelineEntity entity : entities) {
+      cfgCnt += entity.getConfigs().size();
+    }
+    assertEquals(3, cfgCnt);
+
+    TimelineFilterList confFilterList2 = new TimelineFilterList(
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.NOT_EQUAL, "cfg_param1", "value1"),
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.NOT_EQUAL, "config_param2", "value2"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null,
+        confFilterList2, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+    assertEquals(0, entities.size());
+
+    TimelineFilterList confFilterList3 = new TimelineFilterList(
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "dummy_config", "value1"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null,
+        confFilterList3, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+    assertEquals(0, entities.size());
+
+    TimelineFilterList confFilterList4 = new TimelineFilterList(
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.NOT_EQUAL, "dummy_config", "value1"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null,
+        confFilterList4, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+    assertEquals(0, entities.size());
+
+    TimelineFilterList confFilterList5 = new TimelineFilterList(
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.NOT_EQUAL, "dummy_config", "value1", false));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null,
+        confFilterList5, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+    assertEquals(3, entities.size());
+  }
+
+  @Test
+  public void testReadAppsEventFilters() throws Exception {
+    TimelineFilterList ef = new TimelineFilterList();
+    ef.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.EQUAL, "update_event"));
+    ef.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.NOT_EQUAL, "end_event"));
+    Set<TimelineEntity> entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        null, ef),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+    assertEquals(1, entities.size());
+    int eventCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      eventCnt += timelineEntity.getEvents().size();
+      if (!timelineEntity.getId().equals("application_1111111111_4444")) {
+        Assert.fail("Entity id should have been application_1111111111_4444");
+      }
+    }
+    assertEquals(1, eventCnt);
+
+    TimelineFilterList ef1 = new TimelineFilterList();
+    ef1.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.EQUAL, "update_event"));
+    ef1.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.NOT_EQUAL, "end_event"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        null, ef1), new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    eventCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      eventCnt += timelineEntity.getEvents().size();
+      if (!timelineEntity.getId().equals("application_1111111111_4444")) {
+        Assert.fail("Entity id should have been application_1111111111_4444");
+      }
+    }
+    assertEquals(0, eventCnt);
+
+    TimelineFilterList ef2 = new TimelineFilterList();
+    ef2.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.NOT_EQUAL, "end_event"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        null, ef2),
+        new TimelineDataToRetrieve());
+    assertEquals(2, entities.size());
+    eventCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      eventCnt += timelineEntity.getEvents().size();
+      if (!timelineEntity.getId().equals("application_1111111111_2222") &&
+          !timelineEntity.getId().equals("application_1111111111_4444")) {
+        Assert.fail("Entity ids' should have been application_1111111111_2222"
+            + " and application_1111111111_4444");
+      }
+    }
+    assertEquals(0, eventCnt);
+
+    TimelineFilterList ef3 = new TimelineFilterList();
+    ef3.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.EQUAL, "update_event"));
+    ef3.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.EQUAL, "dummy_event"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        null, ef3),
+        new TimelineDataToRetrieve());
+    assertEquals(0, entities.size());
+
+    TimelineFilterList list1 = new TimelineFilterList();
+    list1.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.EQUAL, "update_event"));
+    list1.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.EQUAL, "dummy_event"));
+    TimelineFilterList list2 = new TimelineFilterList();
+    list2.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.EQUAL, "start_event"));
+    TimelineFilterList ef4 = new TimelineFilterList(Operator.OR, list1, list2);
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        null, ef4),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    eventCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      eventCnt += timelineEntity.getEvents().size();
+      if (!timelineEntity.getId().equals("application_1111111111_2222")) {
+        Assert.fail("Entity id should have been application_1111111111_2222");
+      }
+    }
+    assertEquals(0, eventCnt);
+
+    TimelineFilterList ef5 = new TimelineFilterList();
+    ef5.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.NOT_EQUAL, "update_event"));
+    ef5.addFilter(new TimelineExistsFilter(
+        TimelineCompareOp.NOT_EQUAL, "end_event"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        null, ef5),
+        new TimelineDataToRetrieve());
+    assertEquals(1, entities.size());
+    eventCnt = 0;
+    for (TimelineEntity timelineEntity : entities) {
+      eventCnt += timelineEntity.getEvents().size();
+      if (!timelineEntity.getId().equals("application_1111111111_2222")) {
+          Assert.fail("Entity id should have been application_1111111111_2222");
+        }
+    }
+    assertEquals(0, eventCnt);
   }
 
   @Test
@@ -1364,13 +3071,19 @@ public class TestHBaseTimelineStorage {
     int cfgCnt = 0;
     for (TimelineEntity entity : es1) {
       cfgCnt += entity.getConfigs().size();
+      for (String confKey : entity.getConfigs().keySet()) {
+        assertTrue("Config key returned should start with cfg_",
+            confKey.startsWith("cfg_"));
+      }
     }
     assertEquals(3, cfgCnt);
   }
 
   @Test
   public void testReadAppsConfigFilterPrefix() throws Exception {
-    Map<String, String> confFilters = ImmutableMap.of("cfg_param1","value1");
+    TimelineFilterList confFilterList = new TimelineFilterList();
+    confFilterList.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "cfg_param1", "value1"));
     TimelineFilterList list =
         new TimelineFilterList(Operator.OR,
             new TimelinePrefixFilter(TimelineCompareOp.EQUAL, "cfg_"));
@@ -1379,14 +3092,161 @@ public class TestHBaseTimelineStorage {
         1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
         null),
         new TimelineEntityFilters(null, null, null, null, null, null,
-        confFilters, null, null),
+        confFilterList, null, null),
         new TimelineDataToRetrieve(list, null, null));
     assertEquals(1, entities.size());
     int cfgCnt = 0;
     for (TimelineEntity entity : entities) {
       cfgCnt += entity.getConfigs().size();
+      for (String confKey : entity.getConfigs().keySet()) {
+        assertTrue("Config key returned should start with cfg_",
+            confKey.startsWith("cfg_"));
+      }
     }
     assertEquals(2, cfgCnt);
+
+    TimelineFilterList list1 = new TimelineFilterList();
+    list1.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "cfg_param1", "value1"));
+    list1.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "cfg_param2", "value2"));
+    TimelineFilterList list2 = new TimelineFilterList();
+    list2.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "cfg_param1", "value3"));
+    list2.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "config_param2", "value2"));
+    TimelineFilterList confsToRetrieve =
+        new TimelineFilterList(Operator.OR,
+            new TimelinePrefixFilter(TimelineCompareOp.EQUAL, "config_"));
+    TimelineFilterList confFilterList1 =
+        new TimelineFilterList(Operator.OR, list1, list2);
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null,
+        confFilterList1, null, null),
+        new TimelineDataToRetrieve(confsToRetrieve, null, null));
+    assertEquals(2, entities.size());
+    cfgCnt = 0;
+    for (TimelineEntity entity : entities) {
+      cfgCnt += entity.getConfigs().size();
+      for (String confKey : entity.getConfigs().keySet()) {
+        assertTrue("Config key returned should start with config_",
+            confKey.startsWith("config_"));
+      }
+    }
+    assertEquals(2, cfgCnt);
+  }
+
+  @Test
+  public void testReadAppsMetricFilters() throws Exception {
+    TimelineFilterList list1 = new TimelineFilterList();
+    list1.addFilter(new TimelineCompareFilter(
+        TimelineCompareOp.GREATER_OR_EQUAL, "MAP1_SLOT_MILLIS", 50000000900L));
+    TimelineFilterList list2 = new TimelineFilterList();
+    list2.addFilter(new TimelineCompareFilter(
+        TimelineCompareOp.LESS_THAN, "MAP_SLOT_MILLIS", 80000000000L));
+    list2.addFilter(new TimelineCompareFilter(
+        TimelineCompareOp.EQUAL, "MAP1_BYTES", 50));
+    TimelineFilterList metricFilterList =
+        new TimelineFilterList(Operator.OR, list1, list2);
+    Set<TimelineEntity> entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        metricFilterList, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+    assertEquals(2, entities.size());
+    int metricCnt = 0;
+    for (TimelineEntity entity : entities) {
+      metricCnt += entity.getMetrics().size();
+    }
+    assertEquals(3, metricCnt);
+
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        metricFilterList, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+    assertEquals(2, entities.size());
+    metricCnt = 0;
+    for (TimelineEntity entity : entities) {
+      metricCnt += entity.getMetrics().size();
+    }
+    assertEquals(3, metricCnt);
+
+    TimelineFilterList metricFilterList1 = new TimelineFilterList(
+        new TimelineCompareFilter(
+        TimelineCompareOp.LESS_OR_EQUAL, "MAP_SLOT_MILLIS", 80000000000L),
+        new TimelineCompareFilter(
+        TimelineCompareOp.NOT_EQUAL, "MAP1_BYTES", 30));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        metricFilterList1, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+    assertEquals(1, entities.size());
+    metricCnt = 0;
+    for (TimelineEntity entity : entities) {
+      metricCnt += entity.getMetrics().size();
+    }
+    assertEquals(2, metricCnt);
+
+    TimelineFilterList metricFilterList2 = new TimelineFilterList(
+        new TimelineCompareFilter(
+        TimelineCompareOp.LESS_THAN, "MAP_SLOT_MILLIS", 40000000000L),
+        new TimelineCompareFilter(
+        TimelineCompareOp.NOT_EQUAL, "MAP1_BYTES", 30));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        metricFilterList2, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+    assertEquals(0, entities.size());
+
+    TimelineFilterList metricFilterList3 = new TimelineFilterList(
+        new TimelineCompareFilter(
+        TimelineCompareOp.EQUAL, "dummy_metric", 5));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        metricFilterList3, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+    assertEquals(0, entities.size());
+
+    TimelineFilterList metricFilterList4 = new TimelineFilterList(
+        new TimelineCompareFilter(
+        TimelineCompareOp.NOT_EQUAL, "dummy_metric", 5));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        metricFilterList4, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+    assertEquals(0, entities.size());
+
+    TimelineFilterList metricFilterList5 = new TimelineFilterList(
+        new TimelineCompareFilter(
+        TimelineCompareOp.NOT_EQUAL, "dummy_metric", 5, false));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        metricFilterList5, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+    assertEquals(3, entities.size());
   }
 
   @Test
@@ -1410,6 +3270,10 @@ public class TestHBaseTimelineStorage {
     int metricCnt = 0;
     for (TimelineEntity entity : es1) {
       metricCnt += entity.getMetrics().size();
+      for (TimelineMetric metric : entity.getMetrics()) {
+        assertTrue("Metric Id returned should start with MAP1_",
+            metric.getId().startsWith("MAP1_"));
+      }
     }
     assertEquals(2, metricCnt);
   }
@@ -1419,13 +3283,15 @@ public class TestHBaseTimelineStorage {
     TimelineFilterList list =
         new TimelineFilterList(Operator.OR,
             new TimelinePrefixFilter(TimelineCompareOp.EQUAL, "MAP1_"));
-    Set<String> metricFilters = ImmutableSet.of("MAP1_SLOT_MILLIS");
+    TimelineFilterList metricFilterList = new TimelineFilterList();
+    metricFilterList.addFilter(new TimelineCompareFilter(
+        TimelineCompareOp.GREATER_OR_EQUAL, "MAP1_SLOT_MILLIS", 0L));
     Set<TimelineEntity> entities = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "some_flow_name",
         1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
         null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
-        metricFilters, null),
+        metricFilterList, null),
         new TimelineDataToRetrieve(null, list, null));
     int metricCnt = 0;
     assertEquals(1, entities.size());
@@ -1433,6 +3299,132 @@ public class TestHBaseTimelineStorage {
       metricCnt += entity.getMetrics().size();
     }
     assertEquals(1, metricCnt);
+
+    TimelineFilterList list1 = new TimelineFilterList();
+    list1.addFilter(new TimelineCompareFilter(
+        TimelineCompareOp.GREATER_OR_EQUAL, "MAP1_SLOT_MILLIS", 50000000900L));
+    TimelineFilterList list2 = new TimelineFilterList();
+    list2.addFilter(new TimelineCompareFilter(
+        TimelineCompareOp.LESS_THAN, "MAP_SLOT_MILLIS", 80000000000L));
+    list2.addFilter(new TimelineCompareFilter(
+        TimelineCompareOp.EQUAL, "MAP1_BYTES", 50));
+    TimelineFilterList metricsToRetrieve = new TimelineFilterList(Operator.OR,
+        new TimelinePrefixFilter(TimelineCompareOp.EQUAL, "MAP1_"));
+    TimelineFilterList metricFilterList1 =
+        new TimelineFilterList(Operator.OR, list1, list2);
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        metricFilterList1, null),
+        new TimelineDataToRetrieve(null, metricsToRetrieve, null));
+    metricCnt = 0;
+    assertEquals(2, entities.size());
+    for (TimelineEntity entity : entities) {
+      metricCnt += entity.getMetrics().size();
+      for (TimelineMetric metric : entity.getMetrics()) {
+        assertTrue("Metric Id returned should start with MAP1_",
+            metric.getId().startsWith("MAP1_"));
+      }
+    }
+    assertEquals(2, metricCnt);
+  }
+
+  @Test
+  public void testReadAppsInfoFilters() throws Exception {
+    TimelineFilterList list1 = new TimelineFilterList();
+    list1.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "infoMapKey3", 85.85));
+    list1.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "infoMapKey1", "infoMapValue2"));
+    TimelineFilterList list2 = new TimelineFilterList();
+    list2.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "infoMapKey1", "infoMapValue1"));
+    list2.addFilter(new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "infoMapKey2", 10));
+    TimelineFilterList infoFilterList =
+        new TimelineFilterList(Operator.OR, list1, list2);
+    Set<TimelineEntity> entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, infoFilterList,
+        null, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+    assertEquals(2, entities.size());
+    int infoCnt = 0;
+    for (TimelineEntity entity : entities) {
+      infoCnt += entity.getInfo().size();
+    }
+    assertEquals(5, infoCnt);
+
+    TimelineFilterList infoFilterList1 = new TimelineFilterList(
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.NOT_EQUAL, "infoMapKey1", "infoMapValue1"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, infoFilterList1,
+        null, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+    assertEquals(1, entities.size());
+    infoCnt = 0;
+    for (TimelineEntity entity : entities) {
+      infoCnt += entity.getInfo().size();
+    }
+    assertEquals(3, infoCnt);
+
+    TimelineFilterList infoFilterList2 = new TimelineFilterList(
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.NOT_EQUAL, "infoMapKey1", "infoMapValue2"),
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.NOT_EQUAL, "infoMapKey3", 85.85));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, infoFilterList2,
+        null, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+    assertEquals(0, entities.size());
+
+    TimelineFilterList infoFilterList3 = new TimelineFilterList(
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.EQUAL, "dummy_info", "some_value"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, infoFilterList3,
+        null, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+    assertEquals(0, entities.size());
+
+    TimelineFilterList infoFilterList4 = new TimelineFilterList(
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.NOT_EQUAL, "dummy_info", "some_value"));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, infoFilterList4,
+        null, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+    assertEquals(0, entities.size());
+
+    TimelineFilterList infoFilterList5 = new TimelineFilterList(
+        new TimelineKeyValueFilter(
+        TimelineCompareOp.NOT_EQUAL, "dummy_info", "some_value", false));
+    entities = reader.getEntities(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+        1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
+        null),
+        new TimelineEntityFilters(null, null, null, null, null, infoFilterList5,
+        null, null, null),
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+    assertEquals(3, entities.size());
   }
 
   @AfterClass

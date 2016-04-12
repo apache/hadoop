@@ -148,7 +148,7 @@ public class TestHBaseStorageFlowRunCompaction {
     }
 
     // check flow run for one flow many apps
-    checkFlowRunTable(cluster, user, flow, runid, c1, 3);
+    checkFlowRunTable(cluster, user, flow, runid, c1, 4);
   }
 
 

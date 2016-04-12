@@ -20,15 +20,19 @@ package org.apache.hadoop.yarn.server.timelineservice.reader;
 
 import java.io.IOException;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineCompareFilter;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineCompareOp;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyValueFilter;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineExistsFilter;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyValuesFilter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 
 /**
@@ -87,7 +91,7 @@ final class TimelineReaderWebServicesUtils {
         parseKeyStrValuesStr(isRelatedTo, COMMA_DELIMITER, COLON_DELIMITER),
         parseKeyStrValueObj(infofilters, COMMA_DELIMITER, COLON_DELIMITER),
         parseKeyStrValueStr(conffilters, COMMA_DELIMITER, COLON_DELIMITER),
-        parseValuesStr(metricfilters, COMMA_DELIMITER),
+        parseMetricFilters(metricfilters, COMMA_DELIMITER),
         parseValuesStr(eventfilters, COMMA_DELIMITER));
   }
 
@@ -114,22 +118,26 @@ final class TimelineReaderWebServicesUtils {
    * @param delimiter string is delimited by this delimiter.
    * @return set of strings.
    */
-  static Set<String> parseValuesStr(String str, String delimiter) {
+  static TimelineFilterList parseValuesStr(String str, String delimiter) {
     if (str == null || str.isEmpty()) {
       return null;
     }
-    Set<String> strSet = new HashSet<String>();
+    TimelineFilterList filterList = new TimelineFilterList();
     String[] strs = str.split(delimiter);
     for (String aStr : strs) {
-      strSet.add(aStr.trim());
+      filterList.addFilter(new TimelineExistsFilter(TimelineCompareOp.EQUAL,
+          aStr.trim()));
     }
-    return strSet;
+    return filterList;
   }
 
-  @SuppressWarnings("unchecked")
-  private static <T> void parseKeyValues(Map<String, T> map, String str,
+  private static TimelineFilterList parseKeyValues(String str,
       String pairsDelim, String keyValuesDelim, boolean stringValue,
       boolean multipleValues) {
+    if (str == null) {
+      return null;
+    }
+    TimelineFilterList list = new TimelineFilterList();
     String[] pairs = str.split(pairsDelim);
     for (String pair : pairs) {
       if (pair == null || pair.trim().isEmpty()) {
@@ -143,23 +151,28 @@ final class TimelineReaderWebServicesUtils {
         try {
           Object value =
               GenericObjectMapper.OBJECT_READER.readValue(pairStrs[1].trim());
-          map.put(pairStrs[0].trim(), (T) value);
+          list.addFilter(new TimelineKeyValueFilter(TimelineCompareOp.EQUAL,
+              pairStrs[0].trim(), value));
         } catch (IOException e) {
-          map.put(pairStrs[0].trim(), (T) pairStrs[1].trim());
+          list.addFilter(new TimelineKeyValueFilter(TimelineCompareOp.EQUAL,
+              pairStrs[0].trim(), pairStrs[1].trim()));
         }
       } else {
         String key = pairStrs[0].trim();
         if (multipleValues) {
-          Set<String> values = new HashSet<String>();
+          Set<Object> values = new HashSet<Object>();
           for (int i = 1; i < pairStrs.length; i++) {
             values.add(pairStrs[i].trim());
           }
-          map.put(key, (T) values);
+          list.addFilter(new TimelineKeyValuesFilter(
+              TimelineCompareOp.EQUAL, key, values));
         } else {
-          map.put(key, (T) pairStrs[1].trim());
+          list.addFilter(new TimelineKeyValueFilter(TimelineCompareOp.EQUAL,
+              key, pairStrs[1].trim()));
         }
       }
     }
+    return list;
   }
 
   /**
@@ -175,14 +188,9 @@ final class TimelineReaderWebServicesUtils {
    * @param keyValuesDelim values for a key are delimited by this delimiter.
    * @return a map of key-values with each key having a set of values.
    */
-  static Map<String, Set<String>> parseKeyStrValuesStr(String str,
-      String pairsDelim, String keyValuesDelim) {
-    if (str == null) {
-      return null;
-    }
-    Map<String, Set<String>> map = new HashMap<String, Set<String>>();
-    parseKeyValues(map, str, pairsDelim, keyValuesDelim, true, true);
-    return map;
+  static TimelineFilterList parseKeyStrValuesStr(String str, String pairsDelim,
+      String keyValuesDelim) {
+    return parseKeyValues(str, pairsDelim, keyValuesDelim, true, true);
   }
 
   /**
@@ -195,14 +203,9 @@ final class TimelineReaderWebServicesUtils {
    * @param keyValDelim key and value are delimited by this delimiter.
    * @return a map of key-value pairs with both key and value being strings.
    */
-  static Map<String, String> parseKeyStrValueStr(String str,
-      String pairsDelim, String keyValDelim) {
-    if (str == null) {
-      return null;
-    }
-    Map<String, String> map = new HashMap<String, String>();
-    parseKeyValues(map, str, pairsDelim, keyValDelim, true, false);
-    return map;
+  static TimelineFilterList parseKeyStrValueStr(String str, String pairsDelim,
+      String keyValDelim) {
+    return parseKeyValues(str, pairsDelim, keyValDelim, true, false);
   }
 
   /**
@@ -216,14 +219,9 @@ final class TimelineReaderWebServicesUtils {
    * @return a map of key-value pairs with key being a string and value, any
    *     object.
    */
-  static Map<String, Object> parseKeyStrValueObj(String str,
-      String pairsDelim, String keyValDelim) {
-    if (str == null) {
-      return null;
-    }
-    Map<String, Object> map = new HashMap<String, Object>();
-    parseKeyValues(map, str, pairsDelim, keyValDelim, false, false);
-    return map;
+  static TimelineFilterList parseKeyStrValueObj(String str, String pairsDelim,
+      String keyValDelim) {
+    return parseKeyValues(str, pairsDelim, keyValDelim, false, false);
   }
 
   /**
@@ -245,6 +243,20 @@ final class TimelineReaderWebServicesUtils {
       fieldList.add(Field.valueOf(s.trim().toUpperCase()));
     }
     return fieldList;
+  }
+
+  static TimelineFilterList parseMetricFilters(String str,
+      String delimiter) {
+    if (str == null || str.isEmpty()) {
+      return null;
+    }
+    TimelineFilterList list = new TimelineFilterList();
+    String[] strs = str.split(delimiter);
+    for (String aStr : strs) {
+      list.addFilter(new TimelineCompareFilter(
+          TimelineCompareOp.GREATER_OR_EQUAL, aStr.trim(), 0L));
+    }
+    return list;
   }
 
   /**

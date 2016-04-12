@@ -53,6 +53,14 @@ public class TimelineFilterList extends TimelineFilter {
     this(Operator.AND, filters);
   }
 
+  public TimelineFilterList() {
+    this(Operator.AND);
+  }
+
+  public TimelineFilterList(Operator op) {
+    this.operator = op;
+  }
+
   public TimelineFilterList(Operator op, TimelineFilter...filters) {
     this.operator = op;
     this.filterList = new ArrayList<TimelineFilter>(Arrays.asList(filters));
@@ -87,5 +95,11 @@ public class TimelineFilterList extends TimelineFilter {
 
   public void addFilter(TimelineFilter filter) {
     filterList.add(filter);
+  }
+
+  @Override
+  public String toString() {
+    return String.format("TimelineFilterList %s (%d): %s",
+        this.operator, this.filterList.size(), this.filterList.toString());
   }
 }

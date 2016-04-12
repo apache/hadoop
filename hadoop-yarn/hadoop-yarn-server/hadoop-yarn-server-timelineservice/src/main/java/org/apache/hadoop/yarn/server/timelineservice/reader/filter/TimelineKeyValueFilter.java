@@ -22,47 +22,27 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
 /**
- * Abstract base class extended to implement timeline filters.
+ * Filter class which represents filter to be applied based on key-value pair
+ * being equal or not to the values in back-end store.
  */
 @Private
 @Unstable
-public abstract class TimelineFilter {
-
-  /**
-   * Lists the different filter types.
-   */
-  @Private
-  @Unstable
-  public enum TimelineFilterType {
-    /**
-     * Combines multiple filters.
-     */
-    LIST,
-    /**
-     * Filter which is used for key-value comparison.
-     */
-    COMPARE,
-    /**
-     * Filter which is used for checking key-value equality.
-     */
-    KEY_VALUE,
-    /**
-     * Filter which is used for checking key-multiple values equality.
-     */
-    KEY_VALUES,
-    /**
-     * Filter which matches prefix for a config or a metric.
-     */
-    PREFIX,
-    /**
-     * Filter which checks existence of a value.
-     */
-    EXISTS
+public class TimelineKeyValueFilter extends TimelineCompareFilter {
+  public TimelineKeyValueFilter(TimelineCompareOp op, String key, Object val,
+      boolean keyMustExistFlag) {
+    super(op, key, val, keyMustExistFlag);
+    if (op != TimelineCompareOp.EQUAL && op != TimelineCompareOp.NOT_EQUAL) {
+      throw new IllegalArgumentException("TimelineCompareOp for equality"
+          + " filter should be EQUAL or NOT_EQUAL");
+    }
   }
 
-  public abstract TimelineFilterType getFilterType();
+  public TimelineKeyValueFilter(TimelineCompareOp op, String key, Object val) {
+    this(op, key, val, true);
+  }
 
-  public String toString() {
-    return this.getClass().getSimpleName();
+  @Override
+  public TimelineFilterType getFilterType() {
+    return TimelineFilterType.KEY_VALUE;
   }
 }

@@ -53,4 +53,10 @@ public class TimelinePrefixFilter extends TimelineFilter {
   public TimelineCompareOp getCompareOp() {
     return compareOp;
   }
+
+  @Override
+  public String toString() {
+    return String.format("%s (%s %s)",
+        this.getClass().getSimpleName(), this.compareOp.name(), this.prefix);
+  }
 }

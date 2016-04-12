@@ -24,8 +24,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Column;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnFamily;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.GenericConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TypedBufferedMutator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.ValueConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
 
 /**
@@ -41,7 +44,8 @@ public enum ApplicationColumn implements Column<ApplicationTable> {
   /**
    * When the application was created.
    */
-  CREATED_TIME(ApplicationColumnFamily.INFO, "created_time"),
+  CREATED_TIME(ApplicationColumnFamily.INFO, "created_time",
+      LongConverter.getInstance()),
 
   /**
    * The version of the flow that this app belongs to.
@@ -55,12 +59,17 @@ public enum ApplicationColumn implements Column<ApplicationTable> {
 
   private ApplicationColumn(ColumnFamily<ApplicationTable> columnFamily,
       String columnQualifier) {
+    this(columnFamily, columnQualifier, GenericConverter.getInstance());
+  }
+
+  private ApplicationColumn(ColumnFamily<ApplicationTable> columnFamily,
+      String columnQualifier, ValueConverter converter) {
     this.columnFamily = columnFamily;
     this.columnQualifier = columnQualifier;
     // Future-proof by ensuring the right column prefix hygiene.
     this.columnQualifierBytes =
         Bytes.toBytes(Separator.SPACE.encode(columnQualifier));
-    this.column = new ColumnHelper<ApplicationTable>(columnFamily);
+    this.column = new ColumnHelper<ApplicationTable>(columnFamily, converter);
   }
 
   /**
@@ -79,6 +88,21 @@ public enum ApplicationColumn implements Column<ApplicationTable> {
 
   public Object readResult(Result result) throws IOException {
     return column.readResult(result, columnQualifierBytes);
+  }
+
+  @Override
+  public byte[] getColumnQualifierBytes() {
+    return columnQualifierBytes.clone();
+  }
+
+  @Override
+  public byte[] getColumnFamilyBytes() {
+    return columnFamily.getBytes();
+  }
+
+  @Override
+  public ValueConverter getValueConverter() {
+    return column.getValueConverter();
   }
 
   /**
