@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
@@ -75,10 +76,21 @@ public class ApplicationPage extends NMView implements YarnWebParams {
 
     @Override
     protected void render(Block html) {
-      ApplicationId applicationID =
-          ConverterUtils.toApplicationId(this.recordFactory,
-              $(APPLICATION_ID));
+      ApplicationId applicationID = null;
+      try {
+        applicationID = ConverterUtils.toApplicationId(this.recordFactory,
+            $(APPLICATION_ID));
+      } catch (IllegalArgumentException e) {
+        html.p()._("Invalid Application Id " + $(APPLICATION_ID))._();
+        return;
+      }
+      DIV<Hamlet> div = html.div("#content");
       Application app = this.nmContext.getApplications().get(applicationID);
+      if (app == null) {
+        div.h1("Unknown application with id " + applicationID
+            + ". Application might have been completed")._();
+        return;
+      }
       AppInfo info = new AppInfo(app);
       info("Application's information")
             ._("ApplicationId", info.getId())
