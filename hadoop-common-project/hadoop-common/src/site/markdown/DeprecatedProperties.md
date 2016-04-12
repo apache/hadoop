@@ -51,6 +51,7 @@ The following table lists the configuration property names that are deprecated i
 | dfs.secondary.http.address | dfs.namenode.secondary.http-address |
 | dfs.socket.timeout | dfs.client.socket-timeout |
 | dfs.umaskmode | fs.permissions.umask-mode |
+| dfs.web.ugi | hadoop.http.staticuser.user |
 | dfs.write.packet.size | dfs.client-write-packet-size |
 | fs.checkpoint.dir | dfs.namenode.checkpoint.dir |
 | fs.checkpoint.edits.dir | dfs.namenode.checkpoint.edits.dir |
