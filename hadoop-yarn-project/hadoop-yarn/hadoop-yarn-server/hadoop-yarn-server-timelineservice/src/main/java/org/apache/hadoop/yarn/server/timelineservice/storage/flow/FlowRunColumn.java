@@ -86,10 +86,12 @@ public enum FlowRunColumn implements Column<FlowRunTable> {
     return columnQualifier;
   }
 
+  @Override
   public byte[] getColumnQualifierBytes() {
     return columnQualifierBytes.clone();
   }
 
+  @Override
   public byte[] getColumnFamilyBytes() {
     return columnFamily.getBytes();
   }
@@ -144,6 +146,7 @@ public enum FlowRunColumn implements Column<FlowRunTable> {
     return null;
   }
 
+  @Override
   public ValueConverter getValueConverter() {
     return column.getValueConverter();
   }

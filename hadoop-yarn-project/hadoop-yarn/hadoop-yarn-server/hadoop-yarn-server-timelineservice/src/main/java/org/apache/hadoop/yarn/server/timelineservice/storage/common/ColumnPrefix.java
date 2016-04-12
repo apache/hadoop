@@ -112,6 +112,18 @@ public interface ColumnPrefix<T> {
       readResultsWithTimestamps(Result result) throws IOException;
 
   /**
+   * @param result from which to read columns
+   * @return the latest values of columns in the column family. The column
+   *         qualifier is returned as a list of parts, each part a byte[]. This
+   *         is to facilitate returning byte arrays of values that were not
+   *         Strings. If they can be treated as Strings, you should use
+   *         {@link #readResults(Result)} instead.
+   * @throws IOException if any problem occurs while reading results.
+   */
+  Map<?, Object> readResultsHavingCompoundColumnQualifiers(Result result)
+      throws IOException;
+
+  /**
    * @param qualifierPrefix Column qualifier or prefix of qualifier.
    * @return a byte array encoding column prefix and qualifier/prefix passed.
    */
@@ -122,4 +134,27 @@ public interface ColumnPrefix<T> {
    * @return a byte array encoding column prefix and qualifier/prefix passed.
    */
   byte[] getColumnPrefixBytes(byte[] qualifierPrefix);
+
+  /**
+   * Returns column family name(as bytes) associated with this column prefix.
+   * @return a byte array encoding column family for this prefix.
+   */
+  byte[] getColumnFamilyBytes();
+
+  /**
+   * Returns value converter implementation associated with this column prefix.
+   * @return a {@link ValueConverter} implementation.
+   */
+  ValueConverter getValueConverter();
+
+  /**
+   * Get compound column qualifier bytes if the column qualifier is a compound
+   * qualifier. Returns the qualifier passed as bytes if the column is not a
+   * compound column qualifier.
+   *
+   * @param qualifier Column Qualifier.
+   * @param components Other components.
+   * @return byte array representing compound column qualifier.
+   */
+  byte[] getCompoundColQualBytes(String qualifier, byte[]...components);
 }

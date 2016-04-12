@@ -52,6 +52,7 @@ public enum FlowRunColumnPrefix implements ColumnPrefix<FlowRunTable> {
    */
   private final String columnPrefix;
   private final byte[] columnPrefixBytes;
+  private final boolean compoundColQual;
 
   private final AggregationOperation aggOp;
 
@@ -65,6 +66,12 @@ public enum FlowRunColumnPrefix implements ColumnPrefix<FlowRunTable> {
    */
   private FlowRunColumnPrefix(ColumnFamily<FlowRunTable> columnFamily,
       String columnPrefix, AggregationOperation fra, ValueConverter converter) {
+    this(columnFamily, columnPrefix, fra, converter, false);
+  }
+
+  private FlowRunColumnPrefix(ColumnFamily<FlowRunTable> columnFamily,
+      String columnPrefix, AggregationOperation fra, ValueConverter converter,
+      boolean compoundColQual) {
     column = new ColumnHelper<FlowRunTable>(columnFamily, converter);
     this.columnFamily = columnFamily;
     this.columnPrefix = columnPrefix;
@@ -76,6 +83,7 @@ public enum FlowRunColumnPrefix implements ColumnPrefix<FlowRunTable> {
           .encode(columnPrefix));
     }
     this.aggOp = fra;
+    this.compoundColQual = compoundColQual;
   }
 
   /**
@@ -101,6 +109,7 @@ public enum FlowRunColumnPrefix implements ColumnPrefix<FlowRunTable> {
         this.columnPrefixBytes, qualifierPrefix);
   }
 
+  @Override
   public byte[] getColumnFamilyBytes() {
     return columnFamily.getBytes();
   }
@@ -222,6 +231,7 @@ public enum FlowRunColumnPrefix implements ColumnPrefix<FlowRunTable> {
     return null;
   }
 
+  @Override
   public ValueConverter getValueConverter() {
     return column.getValueConverter();
   }
@@ -255,6 +265,22 @@ public enum FlowRunColumnPrefix implements ColumnPrefix<FlowRunTable> {
     }
 
     // Default to null
+    return null;
+  }
+
+  @Override
+  public byte[] getCompoundColQualBytes(String qualifier,
+      byte[]...components) {
+    if (!compoundColQual) {
+      return ColumnHelper.getColumnQualifier(null, qualifier);
+    }
+    return ColumnHelper.getCompoundColumnQualifierBytes(qualifier, components);
+  }
+
+  @Override
+  public Map<?, Object> readResultsHavingCompoundColumnQualifiers(Result result)
+      throws IOException {
+    // There are no compound column qualifiers for flow run table.
     return null;
   }
 }

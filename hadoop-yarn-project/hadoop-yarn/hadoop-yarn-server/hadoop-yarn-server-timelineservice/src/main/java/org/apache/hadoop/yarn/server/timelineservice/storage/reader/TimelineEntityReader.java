@@ -107,11 +107,60 @@ public abstract class TimelineEntityReader {
   /**
    * Creates a {@link FilterList} based on fields, confs and metrics to
    * retrieve. This filter list will be set in Scan/Get objects to trim down
-   * results fetched from HBase back-end storage.
+   * results fetched from HBase back-end storage. This is called only for
+   * multiple entity reads.
    *
    * @return a {@link FilterList} object.
+   * @throws IOException if any problem occurs while creating filter list.
    */
-  protected abstract FilterList constructFilterListBasedOnFields();
+  protected abstract FilterList constructFilterListBasedOnFields()
+      throws IOException;
+
+  /**
+   * Creates a {@link FilterList} based on info, config and metric filters. This
+   * filter list will be set in HBase Get to trim down results fetched from
+   * HBase back-end storage.
+   *
+   * @return a {@link FilterList} object.
+   * @throws IOException if any problem occurs while creating filter list.
+   */
+  protected abstract FilterList constructFilterListBasedOnFilters()
+      throws IOException;
+
+  /**
+   * Combines filter lists created based on fields and based on filters.
+   *
+   * @return a {@link FilterList} object if it can be constructed. Returns null,
+   * if filter list cannot be created either on the basis of filters or on the
+   * basis of fields.
+   * @throws IOException if any problem occurs while creating filter list.
+   */
+  private FilterList createFilterList() throws IOException {
+    FilterList listBasedOnFilters = constructFilterListBasedOnFilters();
+    boolean hasListBasedOnFilters = listBasedOnFilters != null &&
+        !listBasedOnFilters.getFilters().isEmpty();
+    FilterList listBasedOnFields = constructFilterListBasedOnFields();
+    boolean hasListBasedOnFields = listBasedOnFields != null &&
+        !listBasedOnFields.getFilters().isEmpty();
+    // If filter lists based on both filters and fields can be created,
+    // combine them in a new filter list and return it.
+    // If either one of them has been created, return that filter list.
+    // Return null, if none of the filter lists can be created. This indicates
+    // that no filter list needs to be added to HBase Scan as filters are not
+    // specified for the query or only the default view of entity needs to be
+    // returned.
+    if (hasListBasedOnFilters && hasListBasedOnFields) {
+      FilterList list = new FilterList();
+      list.addFilter(listBasedOnFilters);
+      list.addFilter(listBasedOnFields);
+      return list;
+    } else if (hasListBasedOnFilters) {
+      return listBasedOnFilters;
+    } else if (hasListBasedOnFields) {
+      return listBasedOnFields;
+    }
+    return null;
+  }
 
   protected TimelineReaderContext getContext() {
     return context;
@@ -123,6 +172,16 @@ public abstract class TimelineEntityReader {
 
   protected TimelineEntityFilters getFilters() {
     return filters;
+  }
+
+  /**
+   * Create a {@link TimelineEntityFilters} object with default values for
+   * filters.
+   */
+  protected void createFiltersIfNull() {
+    if (filters == null) {
+      filters = new TimelineEntityFilters();
+    }
   }
 
   /**
@@ -140,6 +199,9 @@ public abstract class TimelineEntityReader {
     augmentParams(hbaseConf, conn);
 
     FilterList filterList = constructFilterListBasedOnFields();
+    if (LOG.isDebugEnabled() && filterList != null) {
+      LOG.debug("FilterList created for get is - " + filterList);
+    }
     Result result = getResult(hbaseConf, conn, filterList);
     if (result == null || result.isEmpty()) {
       // Could not find a matching row.
@@ -166,7 +228,10 @@ public abstract class TimelineEntityReader {
     augmentParams(hbaseConf, conn);
 
     NavigableSet<TimelineEntity> entities = new TreeSet<>();
-    FilterList filterList = constructFilterListBasedOnFields();
+    FilterList filterList = createFilterList();
+    if (LOG.isDebugEnabled() && filterList != null) {
+      LOG.debug("FilterList created for scan is - " + filterList);
+    }
     ResultScanner results = getResults(hbaseConf, conn, filterList);
     try {
       for (Result result : results) {

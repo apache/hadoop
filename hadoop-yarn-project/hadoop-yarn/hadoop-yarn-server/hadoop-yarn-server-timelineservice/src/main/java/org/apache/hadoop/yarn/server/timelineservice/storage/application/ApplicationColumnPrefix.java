@@ -56,7 +56,7 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
   /**
    * Lifecycle events for an application.
    */
-  EVENT(ApplicationColumnFamily.INFO, "e"),
+  EVENT(ApplicationColumnFamily.INFO, "e", true),
 
   /**
    * Config column stores configuration with config key as the column name.
@@ -78,6 +78,7 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
    */
   private final String columnPrefix;
   private final byte[] columnPrefixBytes;
+  private final boolean compoundColQual;
 
   /**
    * Private constructor, meant to be used by the enum definition.
@@ -87,7 +88,18 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
    */
   private ApplicationColumnPrefix(ColumnFamily<ApplicationTable> columnFamily,
       String columnPrefix) {
-    this(columnFamily, columnPrefix, GenericConverter.getInstance());
+    this(columnFamily, columnPrefix, false, GenericConverter.getInstance());
+  }
+
+  private ApplicationColumnPrefix(ColumnFamily<ApplicationTable> columnFamily,
+      String columnPrefix, boolean compoundColQual) {
+    this(columnFamily, columnPrefix, compoundColQual,
+        GenericConverter.getInstance());
+  }
+
+  private ApplicationColumnPrefix(ColumnFamily<ApplicationTable> columnFamily,
+      String columnPrefix, ValueConverter converter) {
+    this(columnFamily, columnPrefix, false, converter);
   }
 
   /**
@@ -99,7 +111,7 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
    * this column prefix.
    */
   private ApplicationColumnPrefix(ColumnFamily<ApplicationTable> columnFamily,
-      String columnPrefix, ValueConverter converter) {
+      String columnPrefix, boolean compoundColQual, ValueConverter converter) {
     column = new ColumnHelper<ApplicationTable>(columnFamily, converter);
     this.columnFamily = columnFamily;
     this.columnPrefix = columnPrefix;
@@ -110,6 +122,7 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
       this.columnPrefixBytes =
           Bytes.toBytes(Separator.SPACE.encode(columnPrefix));
     }
+    this.compoundColQual = compoundColQual;
   }
 
   /**
@@ -129,6 +142,20 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
   public byte[] getColumnPrefixBytes(String qualifierPrefix) {
     return ColumnHelper.getColumnQualifier(
         this.columnPrefixBytes, qualifierPrefix);
+  }
+
+  @Override
+  public byte[] getColumnFamilyBytes() {
+    return columnFamily.getBytes();
+  }
+
+  @Override
+  public byte[] getCompoundColQualBytes(String qualifier,
+      byte[]...components) {
+    if (!compoundColQual) {
+      return ColumnHelper.getColumnQualifier(null, qualifier);
+    }
+    return ColumnHelper.getCompoundColumnQualifierBytes(qualifier, components);
   }
 
   /*
@@ -194,6 +221,10 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
     byte[] columnQualifier =
         ColumnHelper.getColumnQualifier(this.columnPrefixBytes, qualifier);
     return column.readResult(result, columnQualifier);
+  }
+
+  public ValueConverter getValueConverter() {
+    return column.getValueConverter();
   }
 
   /*
