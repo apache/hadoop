@@ -235,6 +235,16 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     assertEquals("text/html; charset=utf-8", conn.getContentType());
   }
 
+  @Test
+  public void testHttpResonseContainsXFrameOptions() throws IOException {
+    URL url = new URL(baseUrl, "");
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.connect();
+
+    String xfoHeader = conn.getHeaderField("X-FRAME-OPTIONS");
+    assertTrue("X-FRAME-OPTIONS is absent in the header", xfoHeader != null);
+  }
+
   /**
    * Dummy filter that mimics as an authentication filter. Obtains user identity
    * from the request parameter user.name. Wraps around the request so that
