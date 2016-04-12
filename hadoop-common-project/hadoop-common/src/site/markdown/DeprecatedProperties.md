@@ -33,6 +33,7 @@ The following table lists the configuration property names that are deprecated i
 | dfs.http.address | dfs.namenode.http-address |
 | dfs.https.address | dfs.namenode.https-address |
 | dfs.https.client.keystore.resource | dfs.client.https.keystore.resource |
+| dfs.https.enable | dfs.http.policy |
 | dfs.https.need.client.auth | dfs.client.https.need-auth |
 | dfs.max.objects | dfs.namenode.max.objects |
 | dfs.max-repl-streams | dfs.namenode.replication.max-streams |
@@ -51,6 +52,7 @@ The following table lists the configuration property names that are deprecated i
 | dfs.secondary.http.address | dfs.namenode.secondary.http-address |
 | dfs.socket.timeout | dfs.client.socket-timeout |
 | dfs.umaskmode | fs.permissions.umask-mode |
+| dfs.web.ugi | hadoop.http.staticuser.user |
 | dfs.write.packet.size | dfs.client-write-packet-size |
 | fs.checkpoint.dir | dfs.namenode.checkpoint.dir |
 | fs.checkpoint.edits.dir | dfs.namenode.checkpoint.edits.dir |
