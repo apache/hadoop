@@ -4240,10 +4240,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       setManualAndResourceLowSafeMode(!resourcesLow, resourcesLow);
       NameNode.stateChangeLog.info("STATE* Safe mode is ON.\n" +
           getSafeModeTip());
-      if (isEditlogOpenForWrite) {
-        getEditLog().logSyncAll();
-      }
-      NameNode.stateChangeLog.info("STATE* Safe mode is ON" + getSafeModeTip());
     } finally {
       writeUnlock();
     }
