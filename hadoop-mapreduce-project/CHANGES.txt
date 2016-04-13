@@ -67,6 +67,9 @@ Release 2.7.3 - UNRELEASED
     MAPREDUCE-6302. Preempt reducers after a configurable timeout 
     irrespective of headroom. (kasha via wangda)
 
+    MAPREDUCE-6670. TestJobListCache#testEviction sometimes fails on Windows
+    with timeout. (Gergely Novák via junping_du)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
