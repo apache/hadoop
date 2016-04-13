@@ -81,7 +81,6 @@ public class TestBlockReplacement {
     long bytesToSend = TOTAL_BYTES; 
     long start = Time.monotonicNow();
     DataTransferThrottler throttler = new DataTransferThrottler(bandwidthPerSec);
-    long totalBytes = 0L;
     long bytesSent = 1024*512L; // 0.5MB
     throttler.throttle(bytesSent);
     bytesToSend -= bytesSent;
@@ -93,7 +92,7 @@ public class TestBlockReplacement {
     } catch (InterruptedException ignored) {}
     throttler.throttle(bytesToSend);
     long end = Time.monotonicNow();
-    assertTrue(totalBytes*1000/(end-start)<=bandwidthPerSec);
+    assertTrue(TOTAL_BYTES * 1000 / (end - start) <= bandwidthPerSec);
   }
   
   @Test
