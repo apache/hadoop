@@ -29,13 +29,15 @@ import java.util.List;
 public interface KeyManager {
   /**
    * Puts or overwrites a key.
+   *
    * @param pipeline - Pipeline.
-   * @param data - Key Data.
+   * @param data     - Key Data.
    */
   void putKey(Pipeline pipeline, KeyData data) throws IOException;
 
   /**
    * Gets an existing key.
+   *
    * @param data - Key Data.
    * @return Key Data.
    */
@@ -43,21 +45,26 @@ public interface KeyManager {
 
   /**
    * Deletes an existing Key.
-   * @param pipeline  - Pipeline.
-   * @param keyName Key Data.
+   *
+   * @param pipeline - Pipeline.
+   * @param keyName  Key Data.
    */
   void deleteKey(Pipeline pipeline, String keyName) throws IOException;
 
   /**
    * List keys in a container.
+   *
    * @param pipeline - pipeline.
-   * @param prefix - Prefix in needed.
-   * @param prevKey - Key to Start from, EMPTY_STRING to begin.
-   * @param count - Number of keys to return.
+   * @param prefix   - Prefix in needed.
+   * @param prevKey  - Key to Start from, EMPTY_STRING to begin.
+   * @param count    - Number of keys to return.
    * @return List of Keys that match the criteria.
    */
   List<KeyData> listKey(Pipeline pipeline, String prefix, String prevKey, int
       count);
 
-
+  /**
+   * Shutdown keyManager.
+   */
+  void shutdown();
 }

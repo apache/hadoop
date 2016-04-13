@@ -92,20 +92,4 @@ public class ContainerCache extends LRUMap {
       lock.unlock();
     }
   }
-
-  /**
-   * Remove an entry from the cache.
-   *
-   * @param containerName - Name of the container.
-   */
-  public void removeDB(String containerName) {
-    Preconditions.checkNotNull(containerName);
-    Preconditions.checkState(!containerName.isEmpty());
-    lock.lock();
-    try {
-      this.remove(containerName);
-    } finally {
-      lock.unlock();
-    }
-  }
 }

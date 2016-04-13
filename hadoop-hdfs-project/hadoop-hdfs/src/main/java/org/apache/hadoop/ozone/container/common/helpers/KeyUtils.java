@@ -19,8 +19,11 @@ package org.apache.hadoop.ozone.container.common.helpers;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
+import org.apache.hadoop.ozone.container.common.impl.KeyManagerImpl;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
 import org.apache.hadoop.ozone.container.common.utils.LevelDBStore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -69,6 +72,27 @@ public final class KeyUtils {
       cache.putDB(container.getContainerName(), db);
     }
     return db;
+  }
+
+  /**
+   * Shutdown all DB Handles.
+   *
+   * @param cache - Cache for DB Handles.
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked")
+  public static void shutdownCache(ContainerCache cache)  {
+    Logger log = LoggerFactory.getLogger(KeyManagerImpl.class);
+    LevelDBStore[] handles = new LevelDBStore[cache.values().size()];
+    cache.values().toArray(handles);
+    Preconditions.checkState(handles.length == cache.values().size());
+    for (LevelDBStore db : handles) {
+      try {
+        db.close();
+      } catch (IOException ex) {
+        log.error("error closing db. error {}", ex);
+      }
+    }
   }
 
   /**
