@@ -31,6 +31,8 @@ public final class Header {
   public static final String OZONE_QUOTA_TB = "TB";
   public static final String OZONE_QUOTA_REMOVE = "remove";
   public static final String OZONE_QUOTA_UNDEFINED = "undefined";
+  public static final String OZONE_EMPTY_STRING="";
+  public static final String OZONE_DEFAULT_LIST_SIZE = "1000";
 
   public static final String OZONE_USER = "x-ozone-user";
   public static final String OZONE_SIMPLE_AUTHENTICATION_SCHEME = "OZONE";
@@ -57,8 +59,10 @@ public final class Header {
   public static final String OZONE_LIST_QUERY_TAG ="info";
   public static final String OZONE_QUOTA_QUERY_TAG ="quota";
   public static final String CONTENT_MD5 = "Content-MD5";
-
-
+  public static final String OZONE_LIST_QUERY_PREFIX="prefix";
+  public static final String OZONE_LIST_QUERY_MAXKEYS="max-keys";
+  public static final String OZONE_LIST_QUERY_PREVKEY="prev-key";
+  public static final String OZONE_LIST_QUERY_ROOTSCAN="root-scan";
 
   private Header() {
     // Never constructed.

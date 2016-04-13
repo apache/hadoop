@@ -108,7 +108,7 @@ public interface Bucket {
    * @param info - Information type needed
    * @param prefix - Prefix for the keys to be fetched
    * @param maxKeys - MaxNumber of Keys to Return
-   * @param startPage - Continuation Token
+   * @param prevKey - Continuation Token
    * @param req - Http request
    * @param headers - Http headers
    *
@@ -122,10 +122,14 @@ public interface Bucket {
   Response listBucket(@PathParam("volume") String volume,
                       @PathParam("bucket") String bucket,
                       @DefaultValue(Header.OZONE_LIST_QUERY_KEY)
-                      @QueryParam("info") String info,
-                      @QueryParam("prefix") String prefix,
-                      @DefaultValue("1000") @QueryParam("max-keys") int maxKeys,
-                      @QueryParam("start-page") String startPage,
+                      @QueryParam(Header.OZONE_LIST_QUERY_TAG)
+                      String info,
+                      @QueryParam(Header.OZONE_LIST_QUERY_PREFIX)
+                      String prefix,
+                      @QueryParam(Header.OZONE_LIST_QUERY_MAXKEYS)
+                      int maxKeys,
+                      @QueryParam(Header.OZONE_LIST_QUERY_PREVKEY)
+                      String prevKey,
                       @Context Request req, @Context UriInfo uriInfo,
                       @Context HttpHeaders headers) throws OzoneException;
 

@@ -48,7 +48,6 @@ import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.KeyArgs;
 import org.apache.hadoop.ozone.web.handlers.ListArgs;
-import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
@@ -121,7 +120,7 @@ public final class DistributedStorageHandler implements StorageHandler {
   }
 
   @Override
-  public ListVolumes listVolumes(UserArgs args)
+  public ListVolumes listVolumes(ListArgs args)
       throws IOException, OzoneException {
     throw new UnsupportedOperationException("listVolumes not implemented");
   }
@@ -204,7 +203,7 @@ public final class DistributedStorageHandler implements StorageHandler {
   }
 
   @Override
-  public ListBuckets listBuckets(VolumeArgs args)
+  public ListBuckets listBuckets(ListArgs args)
       throws IOException, OzoneException {
     throw new UnsupportedOperationException("listBuckets not implemented");
   }

@@ -20,16 +20,14 @@ package org.apache.hadoop.ozone.web.client;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.headers.Header;
 import org.apache.hadoop.ozone.web.request.OzoneAcl;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.KeyInfo;
 import org.apache.hadoop.ozone.web.response.ListKeys;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.http.HttpEntity;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
@@ -39,8 +37,6 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.FileEntity;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.protocol.HTTP;
-import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
 
 import javax.ws.rs.core.HttpHeaders;
@@ -512,18 +508,6 @@ public class OzoneBucket {
       if (entity != null) {
         EntityUtils.consumeQuietly(entity);
       }
-    }
-  }
-
-  /**
-   * used to fix the content-length issue with protocol class.
-   */
-  private static class ContentLengthHeaderRemover implements
-      HttpRequestInterceptor {
-    @Override
-    public void process(HttpRequest request, HttpContext context)
-        throws IOException {
-      request.removeHeaders(HTTP.CONTENT_LEN);
     }
   }
 }

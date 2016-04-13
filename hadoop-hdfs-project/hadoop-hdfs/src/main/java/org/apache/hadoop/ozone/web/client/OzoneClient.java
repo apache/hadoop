@@ -193,15 +193,35 @@ public class OzoneClient implements Closeable {
    * @param onBehalfOf - User Name of the user if it is not the caller. for
    *                   example, an admin wants to list some other users
    *                   volumes.
+   * @param prefix     - Return only volumes that match this prefix.
+   * @param maxKeys    - Maximum number of results to return, if the result set
+   *                   is smaller than requested size, it means that list is
+   *                   complete.
+   * @param prevKey    - The last key that client got, server will continue
+   *                   returning results from that point.
    * @return List of Volumes
    * @throws OzoneException
    */
-  public List<OzoneVolume> listVolumes(String onBehalfOf)
-      throws OzoneException {
+  public List<OzoneVolume> listVolumes(String onBehalfOf, String prefix, int
+      maxKeys, OzoneVolume prevKey) throws OzoneException {
     try {
       DefaultHttpClient httpClient = new DefaultHttpClient();
 
       URIBuilder builder = new URIBuilder(endPointURI);
+      if (prefix != null) {
+        builder.addParameter(Header.OZONE_LIST_QUERY_PREFIX, prefix);
+      }
+
+      if (maxKeys > 0) {
+        builder.addParameter(Header.OZONE_LIST_QUERY_MAXKEYS, Integer
+            .toString(maxKeys));
+      }
+
+      if (prevKey != null) {
+        builder.addParameter(Header.OZONE_LIST_QUERY_PREVKEY,
+            prevKey.getOwnerName() + "/" + prevKey.getVolumeName());
+      }
+
       builder.setPath("/").build();
 
       HttpGet httpget = getHttpGet(builder.toString());
@@ -216,11 +236,64 @@ public class OzoneClient implements Closeable {
   }
 
   /**
-   * delete a given volume.
+   * List volumes of the current user or if onBehalfof is not null lists volume
+   * owned by that user. You need admin privilege to read other users volume
+   * lists.
    *
-   * @param volumeName - volume to be deleted.
-   * @throws OzoneException - Ozone Exception
+   * @param onBehalfOf - Name of the user you want to get volume list
+   * @return - Volume list.
+   * @throws OzoneException
    */
+  public List<OzoneVolume> listVolumes(String onBehalfOf)
+      throws OzoneException {
+    return listVolumes(onBehalfOf, null, 1000, null);
+  }
+
+  /**
+   * List all volumes in a cluster. This can be invoked only by an Admin.
+   *
+   * @param prefix  - Returns only volumes that match this prefix.
+   * @param maxKeys - Maximum niumber of keys to return
+   * @param prevKey - Last Ozone Volume from the last Iteration.
+   * @return List of Volumes
+   * @throws OzoneException
+   */
+  public List<OzoneVolume> listAllVolumes(String prefix, int maxKeys,
+      OzoneVolume prevKey) throws OzoneException {
+    try {
+      DefaultHttpClient httpClient = new DefaultHttpClient();
+
+      URIBuilder builder = new URIBuilder(endPointURI);
+      if (prefix != null) {
+        builder.addParameter(Header.OZONE_LIST_QUERY_PREFIX, prefix);
+      }
+
+      if (maxKeys > 0) {
+        builder.addParameter(Header.OZONE_LIST_QUERY_MAXKEYS, Integer
+            .toString(maxKeys));
+      }
+
+      if (prevKey != null) {
+        builder.addParameter(Header.OZONE_LIST_QUERY_PREVKEY,
+            prevKey.getOwnerName()+ "/" + prevKey.getVolumeName());
+      }
+
+      builder.addParameter(Header.OZONE_LIST_QUERY_ROOTSCAN, "true");
+      builder.setPath("/").build();
+      HttpGet httpget = getHttpGet(builder.toString());
+      return executeListVolume(httpget, httpClient);
+
+    } catch (IOException | URISyntaxException ex) {
+      throw new OzoneClientException(ex.getMessage());
+    }
+  }
+
+    /**
+     * delete a given volume.
+     *
+     * @param volumeName - volume to be deleted.
+     * @throws OzoneException - Ozone Exception
+     */
   public void deleteVolume(String volumeName) throws OzoneException {
     try {
       DefaultHttpClient httpClient = new DefaultHttpClient();

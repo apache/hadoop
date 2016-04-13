@@ -24,7 +24,6 @@ import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.KeyArgs;
 import org.apache.hadoop.ozone.web.handlers.ListArgs;
-import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.ListBuckets;
@@ -98,14 +97,14 @@ public interface StorageHandler {
   /**
    * Returns the List of Volumes owned by the specific user.
    *
-   * @param args - UserArgs
+   * @param args - ListArgs
    *
    * @return - List of Volumes
    *
    * @throws IOException
    * @throws OzoneException
    */
-  ListVolumes listVolumes(UserArgs args) throws IOException, OzoneException;
+  ListVolumes listVolumes(ListArgs args) throws IOException, OzoneException;
 
   /**
    * Deletes an Empty Volume.
@@ -190,13 +189,14 @@ public interface StorageHandler {
   /**
    * Returns all Buckets of a specified Volume.
    *
-   * @param args --User Args
+   * @param listArgs -- List Args.
    *
    * @return ListAllBuckets
    *
    * @throws OzoneException
    */
-  ListBuckets listBuckets(VolumeArgs args) throws IOException, OzoneException;
+  ListBuckets listBuckets(ListArgs listArgs) throws
+      IOException, OzoneException;
 
 
   /**

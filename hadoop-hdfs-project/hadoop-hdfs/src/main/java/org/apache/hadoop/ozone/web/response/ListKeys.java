@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.ozone.web.response;
 
+import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.ListArgs;
 import org.codehaus.jackson.annotate.JsonAutoDetect;
 import org.codehaus.jackson.annotate.JsonMethod;
@@ -57,7 +59,8 @@ public class ListKeys {
    * @param truncated is truncated
    */
   public ListKeys(ListArgs args, boolean truncated) {
-    this.name = args.getBucketName();
+    Preconditions.checkState(args.getArgs() instanceof  BucketArgs);
+    this.name = ((BucketArgs) args.getArgs()).getBucketName();
     this.prefix = args.getPrefix();
     this.maxKeys = args.getMaxKeys();
     this.truncated = truncated;

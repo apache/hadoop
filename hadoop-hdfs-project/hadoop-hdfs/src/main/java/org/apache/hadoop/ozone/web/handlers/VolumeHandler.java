@@ -198,41 +198,74 @@ public class VolumeHandler implements Volume {
   }
 
   /**
-   * Returns Volume info. This API can be invoked either
-   * by admin or the owner
+   * Returns Volume info. This API can be invoked either by admin or the owner
    *
-   * @param volume - Storage Volume Name
-   * @param req - Http Req
-   * @param uriInfo - http URI
-   * @param headers - Http headers  @return - Response
-   *
+   * @param volume  - Storage Volume Name
+   * @param info    - Info attribute
+   * @param prefix  - Prefix key
+   * @param maxKeys - Max results
+   * @param prevKey - PrevKey
+   * @param req     - Http Req
+   * @param uriInfo - UriInfo.
+   * @param headers - Http headers
+   * @return
    * @throws OzoneException
    */
   @Override
-  public Response getVolumeInfo(String volume, final String info, Request req,
+  public Response getVolumeInfo(String volume, final String info,
+                                final String prefix,
+                                final int maxKeys,
+                                final String prevKey,
+                                final boolean rootScan,
+                                Request req,
                                 final UriInfo uriInfo, HttpHeaders headers)
       throws OzoneException {
-    MDC.put(OZONE_FUNCTION, "getVolumeInfo");
+
     return new VolumeProcessTemplate() {
       @Override
       public Response doProcess(VolumeArgs args)
           throws IOException, OzoneException {
 
         switch (info) {
-          case Header.OZONE_LIST_QUERY_BUCKET:
-            return getBucketsInVolume(args); // Return list of Buckets
-          case Header.OZONE_LIST_QUERY_VOLUME:
-            return getVolumeInfoResponse(args); // Return volume info
-          case Header.OZONE_LIST_QUERY_SERVICE:
-            return getVolumesByUser(args); // Return list of volumes
-          default:
-            LOG.debug("Unrecognized query param : {} ", info);
-            OzoneException ozoneException =
-                ErrorTable.newError(ErrorTable.INVALID_QUERY_PARAM, args);
-            ozoneException.setMessage("Unrecognized query param : " + info);
-            throw ozoneException;
+        case Header.OZONE_LIST_QUERY_BUCKET:
+          MDC.put(OZONE_FUNCTION, "ListBucket");
+          return getBucketsInVolume(args, prefix, maxKeys, prevKey);
+        case Header.OZONE_LIST_QUERY_VOLUME:
+          MDC.put(OZONE_FUNCTION, "InfoVolume");
+          assertNoListParamPresent(uriInfo, args);
+          return getVolumeInfoResponse(args); // Return volume info
+        case Header.OZONE_LIST_QUERY_SERVICE:
+          MDC.put(OZONE_FUNCTION, "ListVolume");
+          return getVolumesByUser(args, prefix, maxKeys, prevKey, rootScan);
+        default:
+          LOG.debug("Unrecognized query param : {} ", info);
+          OzoneException ozoneException =
+              ErrorTable.newError(ErrorTable.INVALID_QUERY_PARAM, args);
+          ozoneException.setMessage("Unrecognized query param : " + info);
+          throw ozoneException;
         }
       }
     }.handleCall(volume, req, uriInfo, headers);
+  }
+
+  /**
+   * Asserts no list query param is present during this call.
+   *
+   * @param uriInfo - UriInfo.   - UriInfo
+   * @param args    - Volume Args - VolumeArgs.
+   * @throws OzoneException
+   */
+  private void assertNoListParamPresent(final UriInfo uriInfo, VolumeArgs
+      args) throws
+      OzoneException {
+
+    String prefix = uriInfo.getQueryParameters().getFirst("prefix");
+    String maxKeys = uriInfo.getQueryParameters().getFirst("max_keys");
+    String prevKey = uriInfo.getQueryParameters().getFirst("prev_key");
+    if ((prefix != null && !prefix.equals(Header.OZONE_EMPTY_STRING)) ||
+        (maxKeys != null && !maxKeys.equals(Header.OZONE_DEFAULT_LIST_SIZE)) ||
+        (prevKey != null && !prevKey.equals(Header.OZONE_EMPTY_STRING))) {
+      throw ErrorTable.newError(ErrorTable.INVALID_QUERY_PARAM, args);
+    }
   }
 }

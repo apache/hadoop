@@ -66,7 +66,7 @@ public interface Volume {
   @POST
   Response createVolume(@PathParam("volume") String volume,
                         @DefaultValue(Header.OZONE_QUOTA_UNDEFINED)
-                        @QueryParam("quota") String quota,
+                        @QueryParam(Header.OZONE_QUOTA_QUERY_TAG) String quota,
                         @Context Request req,
                         @Context UriInfo uriInfo,
                         @Context HttpHeaders headers)
@@ -94,7 +94,7 @@ public interface Volume {
   @PUT
   Response updateVolume(@PathParam("volume") String volume,
                         @DefaultValue(Header.OZONE_QUOTA_UNDEFINED)
-                        @QueryParam("quota") String quota,
+                        @QueryParam(Header.OZONE_QUOTA_QUERY_TAG) String quota,
                         @Context Request req,
                         @Context UriInfo uriInfo,
                         @Context HttpHeaders headers)
@@ -132,7 +132,16 @@ public interface Volume {
   @GET
   Response getVolumeInfo(@PathParam("volume") String volume,
                          @DefaultValue(Header.OZONE_LIST_QUERY_BUCKET)
-                         @QueryParam("info") String info,
+                         @QueryParam(Header.OZONE_LIST_QUERY_TAG)
+                         String info,
+                         @QueryParam(Header.OZONE_LIST_QUERY_PREFIX)
+                         String prefix,
+                         @QueryParam(Header.OZONE_LIST_QUERY_MAXKEYS)
+                         int keys,
+                         @QueryParam(Header.OZONE_LIST_QUERY_PREVKEY)
+                         String prevKey,
+                         @QueryParam(Header.OZONE_LIST_QUERY_ROOTSCAN)
+                         boolean rootScan,
                          @Context Request req,
                          @Context UriInfo uriInfo,
                          @Context HttpHeaders headers)

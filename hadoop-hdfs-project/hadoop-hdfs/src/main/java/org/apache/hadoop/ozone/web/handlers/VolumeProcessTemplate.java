@@ -197,76 +197,68 @@ public abstract class VolumeProcessTemplate {
     return OzoneUtils.getResponse(args, HTTP_OK, info.toJsonString());
   }
 
-
   /**
    * Returns all the volumes belonging to a user.
    *
    * @param user - userArgs
-   *
    * @return - Response
-   *
    * @throws OzoneException
    * @throws IOException
    */
-  Response getVolumesByUser(UserArgs user) throws OzoneException, IOException {
-    StorageHandler fs = StorageHandlerBuilder.getStorageHandler();
-    ListVolumes volumes = fs.listVolumes(user);
-    return OzoneUtils.getResponse(user, HTTP_OK, volumes.toJsonString());
-  }
+  Response getVolumesByUser(UserArgs user, String prefix, int maxKeys,
+      String prevKey, boolean rootScan) throws OzoneException, IOException {
 
-
-  /**
-   * This call can also be invoked by Admins of the system where they can
-   * get the list of buckets of any user.
-   *
-   * User makes a call like
-   * GET / HTTP/1.1
-   * Host: ozone.self
-   *
-   * @param args - volumeArgs
-   *
-   * @return Response - A list of buckets owned this user
-   *
-   * @throws OzoneException
-   */
-  Response getVolumesByUser(VolumeArgs args) throws OzoneException {
-    String validatedUser = args.getUserName();
+    String validatedUser = user.getUserName();
     try {
       UserAuth auth = UserHandlerBuilder.getAuthHandler();
-      if (auth.isAdmin(args)) {
-        validatedUser = auth.getOzoneUser(args);
+      if(rootScan && !auth.isAdmin(user)) {
+        throw ErrorTable.newError(ErrorTable.UNAUTHORIZED, user);
+      }
+      if (auth.isAdmin(user)) {
+        validatedUser = auth.getOzoneUser(user);
         if (validatedUser == null) {
-          validatedUser = auth.getUser(args);
+          validatedUser = auth.getUser(user);
         }
       }
 
-      UserArgs user =
-          new UserArgs(validatedUser, args.getRequestID(), args.getHostName(),
-                       args.getRequest(), args.getUri(), args.getHeaders());
-      return getVolumesByUser(user);
+      UserArgs onBehalfOf =
+          new UserArgs(validatedUser, user.getRequestID(), user.getHostName(),
+              user.getRequest(), user.getUri(), user.getHeaders());
+
+      StorageHandler fs = StorageHandlerBuilder.getStorageHandler();
+      ListArgs<UserArgs> listArgs = new ListArgs<>(onBehalfOf, prefix,
+          maxKeys, prevKey);
+      listArgs.setRootScan(rootScan);
+      ListVolumes volumes = fs.listVolumes(listArgs);
+      return OzoneUtils.getResponse(user, HTTP_OK, volumes.toJsonString());
     } catch (IOException ex) {
       LOG.debug("unable to get the volume list for the user. Ex: {}", ex);
       OzoneException exp = ErrorTable.newError(ErrorTable.SERVER_ERROR,
-          args, ex);
+          user, ex);
       exp.setMessage("unable to get the volume list for the user");
       throw exp;
     }
   }
 
-
   /**
    * Returns a list of Buckets in a Volume.
    *
+   * @param args    - VolumeArgs
+   * @param prefix  - Prefix to Match
+   * @param maxKeys - Max results to return.
+   * @param prevKey - PrevKey
    * @return List of Buckets
-   *
    * @throws OzoneException
    */
-  Response getBucketsInVolume(VolumeArgs args) throws OzoneException {
+  Response getBucketsInVolume(VolumeArgs args, String prefix, int maxKeys,
+                              String prevKey) throws OzoneException {
     try {
       // UserAuth auth = UserHandlerBuilder.getAuthHandler();
       // TODO : Check ACLS.
       StorageHandler fs = StorageHandlerBuilder.getStorageHandler();
-      ListBuckets bucketList = fs.listBuckets(args);
+      ListArgs<VolumeArgs> listArgs = new ListArgs<>(args, prefix,
+          maxKeys, prevKey);
+      ListBuckets bucketList = fs.listBuckets(listArgs);
       return OzoneUtils.getResponse(args, HTTP_OK, bucketList.toJsonString());
     } catch (IOException ex) {
       LOG.debug("unable to get the bucket list for the specified volume." +
