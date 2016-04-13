@@ -34,6 +34,8 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -229,9 +231,22 @@ public class TestDataNodeVolumeFailureToleration {
         prepareDirToFail(dirs[i]);
       }
       restartDatanodes(volumesTolerated, manageDfsDirs);
-      assertEquals(expectedBPServiceState, cluster.getDataNodes().get(0)
-          .isBPServiceAlive(cluster.getNamesystem().getBlockPoolId()));
+    } catch (DiskErrorException e) {
+      GenericTestUtils.assertExceptionContains("Invalid value configured for "
+          + "dfs.datanode.failed.volumes.tolerated", e);
     } finally {
+      boolean bpServiceState;
+      // If the datanode not registered successfully,
+      // because the invalid value configured for tolerated volumes
+      if (cluster.getDataNodes().size() == 0) {
+        bpServiceState = false;
+      } else {
+        bpServiceState =
+            cluster.getDataNodes().get(0)
+                    .isBPServiceAlive(cluster.getNamesystem().getBlockPoolId());
+      }
+      assertEquals(expectedBPServiceState, bpServiceState);
+
       for (File dir : dirs) {
         FileUtil.chmod(dir.toString(), "755");
       }
