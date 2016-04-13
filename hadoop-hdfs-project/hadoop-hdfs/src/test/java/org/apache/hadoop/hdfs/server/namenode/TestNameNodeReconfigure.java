@@ -34,6 +34,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
@@ -50,13 +52,60 @@ public class TestNameNodeReconfigure {
   public void setUp() throws IOException {
     Configuration conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).build();
+    cluster.waitActive();
+  }
+
+  @Test
+  public void testReconfigureCallerContextEnabled()
+      throws ReconfigurationException {
+    final NameNode nameNode = cluster.getNameNode();
+    final FSNamesystem nameSystem = nameNode.getNamesystem();
+
+    // try invalid values
+    nameNode.reconfigureProperty(HADOOP_CALLER_CONTEXT_ENABLED_KEY, "text");
+    assertEquals(HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value", false,
+        nameSystem.getCallerContextEnabled());
+    assertEquals(
+        HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value",
+        false,
+        nameNode.getConf().getBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY,
+            HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT));
+
+    // enable CallerContext
+    nameNode.reconfigureProperty(HADOOP_CALLER_CONTEXT_ENABLED_KEY, "true");
+    assertEquals(HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value", true,
+        nameSystem.getCallerContextEnabled());
+    assertEquals(
+        HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value",
+        true,
+        nameNode.getConf().getBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY,
+            HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT));
+
+    // disable CallerContext
+    nameNode.reconfigureProperty(HADOOP_CALLER_CONTEXT_ENABLED_KEY, "false");
+    assertEquals(HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value", false,
+        nameSystem.getCallerContextEnabled());
+    assertEquals(
+        HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value",
+        false,
+        nameNode.getConf().getBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY,
+            HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT));
+
+    // revert to default
+    nameNode.reconfigureProperty(HADOOP_CALLER_CONTEXT_ENABLED_KEY, null);
+
+    // verify default
+    assertEquals(HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value", false,
+        nameSystem.getCallerContextEnabled());
+    assertEquals(HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value", null,
+        nameNode.getConf().get(HADOOP_CALLER_CONTEXT_ENABLED_KEY));
   }
 
   /**
    * Test that we can modify configuration properties.
    */
   @Test
-  public void testReconfigure() throws ReconfigurationException {
+  public void testReconfigureHearbeatCheck1() throws ReconfigurationException {
     final NameNode nameNode = cluster.getNameNode();
     final DatanodeManager datanodeManager = nameNode.namesystem
         .getBlockManager().getDatanodeManager();
