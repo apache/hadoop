@@ -25,7 +25,6 @@ import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.KeyArgs;
 import org.apache.hadoop.ozone.web.handlers.ListArgs;
-import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
@@ -152,12 +151,12 @@ public class LocalStorageHandler implements StorageHandler {
   /**
    * Returns the List of Volumes owned by the specific user.
    *
-   * @param args - UserArgs
+   * @param args - ListArgs
    * @return - List of Volumes
    * @throws IOException
    */
   @Override
-  public ListVolumes listVolumes(UserArgs args)
+  public ListVolumes listVolumes(ListArgs args)
       throws IOException, OzoneException {
     OzoneMetadataManager oz =
         OzoneMetadataManager.getOzoneMetadataManager(conf);
@@ -255,7 +254,7 @@ public class LocalStorageHandler implements StorageHandler {
    * @throws OzoneException
    */
   @Override
-  public ListBuckets listBuckets(VolumeArgs args)
+  public ListBuckets listBuckets(ListArgs args)
       throws IOException, OzoneException {
     OzoneMetadataManager oz =
         OzoneMetadataManager.getOzoneMetadataManager(conf);

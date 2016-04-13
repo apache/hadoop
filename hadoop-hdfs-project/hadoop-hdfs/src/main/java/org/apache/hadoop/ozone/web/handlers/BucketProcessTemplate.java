@@ -313,7 +313,8 @@ public abstract class BucketProcessTemplate {
   Response getBucketKeysList(ListArgs args) throws IOException, OzoneException {
     StorageHandler fs = StorageHandlerBuilder.getStorageHandler();
     ListKeys objects = fs.listKeys(args);
-    return OzoneUtils.getResponse(args, HTTP_OK, objects.toJsonString());
+    return OzoneUtils.getResponse(args.getArgs(), HTTP_OK,
+        objects.toJsonString());
   }
 
 }

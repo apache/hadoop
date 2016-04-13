@@ -331,19 +331,21 @@ public class ContainerManagerImpl implements ContainerManager {
    * time. It is possible that using this iteration you can miss certain
    * container from the listing.
    *
-   * @param prevKey - Previous Key Value or empty String.
+   * @param prefix  -  Return keys that match this prefix.
    * @param count   - how many to return
+   * @param prevKey - Previous Key Value or empty String.
    * @param data    - Actual containerData
    * @throws IOException
    */
   @Override
-  public void listContainer(String prevKey, long count,
+  public void listContainer(String prefix, long count, String prevKey,
                             List<ContainerData> data) throws IOException {
+    // TODO : Support list with Prefix and PrevKey
     Preconditions.checkNotNull(data);
     readLock();
     try {
       ConcurrentNavigableMap<String, ContainerStatus> map = null;
-      if (prevKey.length() == 0) {
+      if (prevKey == null || prevKey.isEmpty()) {
         map = containerMap.tailMap(containerMap.firstKey(), true);
       } else {
         map = containerMap.tailMap(prevKey, false);

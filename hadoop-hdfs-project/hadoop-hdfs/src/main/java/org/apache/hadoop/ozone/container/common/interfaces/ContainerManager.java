@@ -72,12 +72,14 @@ public interface ContainerManager extends RwLock {
   /**
    * As simple interface for container Iterations.
    *
-   * @param prevKey - Starting KeyValue
+   * @param prefix - Return only values matching this prefix
    * @param count   - how many to return
+   * @param prevKey - Previous key - Server returns results from this point.
    * @param data    - Actual containerData
    * @throws IOException
    */
-  void listContainer(String prevKey, long count, List<ContainerData> data)
+  void listContainer(String prefix, long count, String prevKey,
+                     List<ContainerData> data)
       throws IOException;
 
   /**

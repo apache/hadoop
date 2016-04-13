@@ -266,7 +266,7 @@ public class TestContainerPersistence {
     String prevKey = "";
     List<ContainerData> results = new LinkedList<>();
     while (counter < count) {
-      containerManager.listContainer(prevKey, step, results);
+      containerManager.listContainer(null, step, prevKey, results);
       for (int y = 0; y < results.size(); y++) {
         testMap.remove(results.get(y).getContainerName());
       }

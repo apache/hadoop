@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.web.client;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -29,9 +30,11 @@ import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -65,6 +68,7 @@ public class TestVolume {
     String path = p.getPath().concat(TestVolume.class.getSimpleName());
     path += conf.getTrimmed(OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT,
         OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT_DEFAULT);
+    FileUtils.deleteDirectory(new File(path));
 
     conf.set(OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT, path);
     conf.setBoolean(OzoneConfigKeys.DFS_OBJECTSTORE_ENABLED_KEY, true);
@@ -158,4 +162,55 @@ public class TestVolume {
     assertTrue(ovols.size() >= 10);
   }
 
+  @Test
+  public void testListVolumePagination() throws OzoneException, IOException {
+    final int volCount = 2000;
+    final int step = 100;
+    client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
+    for (int x = 0; x < volCount; x++) {
+      String volumeName = OzoneUtils.getRequestID().toLowerCase();
+      OzoneVolume vol = client.createVolume(volumeName, "frodo", "100TB");
+      assertNotNull(vol);
+    }
+    OzoneVolume prevKey = null;
+    int count = 0;
+    int pagecount = 0;
+    while (count < volCount) {
+      List<OzoneVolume> ovols = client.listVolumes("frodo", null, step,
+          prevKey);
+      count += ovols.size();
+      prevKey = ovols.get(ovols.size() - 1);
+      pagecount++;
+    }
+    Assert.assertEquals(volCount / step, pagecount);
+  }
+
+
+  @Test
+  public void testListAllVolumes() throws OzoneException, IOException {
+    final int volCount = 200;
+    final int step = 10;
+    client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
+    for (int x = 0; x < volCount; x++) {
+      String userName = "frodo" + x;
+      String volumeName = "vol"+ x;
+      OzoneVolume vol = client.createVolume(volumeName, userName, "100TB");
+      assertNotNull(vol);
+    }
+    OzoneVolume prevKey = null;
+    int count = 0;
+    int pagecount = 0;
+    while (count < volCount) {
+      List<OzoneVolume> ovols = client.listAllVolumes(null, step,
+          prevKey);
+      count += ovols.size();
+      if(ovols.size() > 0) {
+        prevKey = ovols.get(ovols.size() - 1);
+      }
+      pagecount++;
+    }
+    // becasue we are querying an existing ozone store, there will
+    // be volumes created by other tests too. So we should get more page counts.
+    Assert.assertEquals(volCount / step , pagecount);
+  }
 }

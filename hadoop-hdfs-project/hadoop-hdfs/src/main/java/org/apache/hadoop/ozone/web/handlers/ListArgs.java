@@ -20,10 +20,12 @@ package org.apache.hadoop.ozone.web.handlers;
 /**
  * Supports listing keys with pagination.
  */
-public class ListArgs extends BucketArgs {
-  private String startPage;
+public class ListArgs<T extends UserArgs> {
+  private String prevKey;
   private String prefix;
   private int maxKeys;
+  private boolean rootScan;
+  private T args;
 
   /**
    * Constructor for ListArgs.
@@ -31,14 +33,14 @@ public class ListArgs extends BucketArgs {
    * @param args      - BucketArgs
    * @param prefix    Prefix to start Query from
    * @param maxKeys   Max result set
-   * @param startPage - Page token
+   * @param prevKey - Page token
    */
-  public ListArgs(BucketArgs args, String prefix, int maxKeys,
-                  String startPage) {
-    super(args);
+  public ListArgs(T args, String prefix, int maxKeys,
+                  String prevKey) {
+    setArgs(args);
     setPrefix(prefix);
     setMaxKeys(maxKeys);
-    setStartPage(startPage);
+    setPrevKey(prevKey);
   }
 
   /**
@@ -46,8 +48,9 @@ public class ListArgs extends BucketArgs {
    *
    * @param args - List Args
    */
-  public ListArgs(ListArgs args) {
-    this(args, args.getPrefix(), args.getMaxKeys(), args.getStartPage());
+  public ListArgs(T args, ListArgs listArgs) {
+    this(args, listArgs.getPrefix(), listArgs.getMaxKeys(),
+        listArgs.getPrevKey());
   }
 
   /**
@@ -55,17 +58,17 @@ public class ListArgs extends BucketArgs {
    *
    * @return String
    */
-  public String getStartPage() {
-    return startPage;
+  public String getPrevKey() {
+    return prevKey;
   }
 
   /**
    * Sets page token.
    *
-   * @param startPage - Page token
+   * @param prevKey - Page token
    */
-  public void setStartPage(String startPage) {
-    this.startPage = startPage;
+  public void setPrevKey(String prevKey) {
+    this.prevKey = prevKey;
   }
 
   /**
@@ -103,4 +106,37 @@ public class ListArgs extends BucketArgs {
   public void setPrefix(String prefix) {
     this.prefix = prefix;
   }
+
+  /**
+   * Gets args.
+   * @return  T
+   */
+  public T getArgs() {
+    return args;
+  }
+
+  /**
+   * Sets  args.
+   * @param args T
+   */
+  public void setArgs(T args) {
+    this.args = args;
+  }
+
+  /**
+   * Checks if we are doing a rootScan.
+   * @return - RootScan.
+   */
+  public boolean isRootScan() {
+    return rootScan;
+  }
+
+  /**
+   * Sets the RootScan property.
+   * @param rootScan - Boolean.
+   */
+  public void setRootScan(boolean rootScan) {
+    this.rootScan = rootScan;
+  }
+
 }

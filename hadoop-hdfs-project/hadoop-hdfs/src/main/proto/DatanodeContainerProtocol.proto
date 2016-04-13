@@ -209,8 +209,9 @@ message  DeleteContainerResponseProto {
 
 message  ListContainerRequestProto {
   required Pipeline pipeline = 1;
-  optional string prevKey = 2;  // if this is not set query from start.
+  optional string prefix = 2;
   required uint32 count = 3; // Max Results to return
+  optional string prevKey = 4;  // if this is not set query from start.
 }
 
 message  ListContainerResponseProto {
