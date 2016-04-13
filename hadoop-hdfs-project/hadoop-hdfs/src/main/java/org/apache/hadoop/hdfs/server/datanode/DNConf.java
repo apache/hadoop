@@ -114,6 +114,9 @@ public class DNConf {
   // Allow LAZY_PERSIST writes from non-local clients?
   private final boolean allowNonLocalLazyPersist;
 
+  private final int volFailuresTolerated;
+  private final int volsConfigured;
+
   public DNConf(Configuration conf) {
     this.conf = conf;
     socketTimeout = conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY,
@@ -238,6 +241,13 @@ public class DNConf {
     this.bpReadyTimeout = conf.getLong(
         DFS_DATANODE_BP_READY_TIMEOUT_KEY,
         DFS_DATANODE_BP_READY_TIMEOUT_DEFAULT);
+
+    this.volFailuresTolerated =
+        conf.getInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY,
+            DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_DEFAULT);
+    String[] dataDirs =
+        conf.getTrimmedStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
+    this.volsConfigured = (dataDirs == null) ? 0 : dataDirs.length;
   }
 
   // We get minimumNameNodeVersion via a method so it can be mocked out in tests.
@@ -335,5 +345,13 @@ public class DNConf {
    */
   public long getLifelineIntervalMs() {
     return lifelineIntervalMs;
+  }
+
+  public int getVolFailuresTolerated() {
+    return volFailuresTolerated;
+  }
+
+  public int getVolsConfigured() {
+    return volsConfigured;
   }
 }
