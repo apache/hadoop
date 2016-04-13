@@ -65,4 +65,9 @@ public interface ChunkManager {
 
   // TODO : Support list operations.
 
+  /**
+   * Shutdown the chunkManager.
+   */
+  void shutdown();
+
 }

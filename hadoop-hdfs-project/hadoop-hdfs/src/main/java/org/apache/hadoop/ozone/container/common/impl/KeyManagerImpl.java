@@ -142,4 +142,13 @@ public class KeyManagerImpl implements KeyManager {
     // TODO :
     return null;
   }
+
+  /**
+   * Shutdown keyManager.
+   */
+  @Override
+  public void shutdown() {
+    Preconditions.checkState(this.containerManager.hasWriteLock());
+    KeyUtils.shutdownCache(containerCache);
+  }
 }

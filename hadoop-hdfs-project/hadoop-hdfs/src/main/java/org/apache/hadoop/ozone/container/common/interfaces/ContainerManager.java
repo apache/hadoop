@@ -94,7 +94,7 @@ public interface ContainerManager extends RwLock {
    *
    * @throws IOException
    */
-  void shutdown() throws IOException;
+  void shutdown();
 
   /**
    * Sets the Chunk Manager.

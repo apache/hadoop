@@ -146,4 +146,15 @@ public class ChunkManagerImpl implements ChunkManager {
       containerManager.readUnlock();
     }
   }
+
+  /**
+   * Shutdown the chunkManager.
+   *
+   * In the chunkManager we haven't acquired any resources, so nothing to do
+   * here. This call is made with containerManager Writelock held.
+   */
+  @Override
+  public void shutdown() {
+    Preconditions.checkState(this.containerManager.hasWriteLock());
+  }
 }

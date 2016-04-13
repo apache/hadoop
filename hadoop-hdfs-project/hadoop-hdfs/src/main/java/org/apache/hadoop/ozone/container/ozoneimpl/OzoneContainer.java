@@ -100,10 +100,48 @@ public class OzoneContainer {
 
   /**
    * Stops the ozone container.
-   * @throws Exception
+   *
+   * Shutdown logic is not very obvious from the following code.
+   * if you need to  modify the logic, please keep these comments in mind.
+   * Here is the shutdown sequence.
+   *
+   * 1. We shutdown the network ports.
+   *
+   * 2. Now we need to wait for all requests in-flight to finish.
+   *
+   * 3. The container manager lock is a read-write lock with "Fairness" enabled.
+   *
+   * 4. This means that the waiting threads are served in a "first-come-first
+   * -served" manner. Please note that this applies to waiting threads only.
+   *
+   * 5. Since write locks are exclusive, if we are waiting to get a lock it
+   * implies that we are waiting for in-flight operations to complete.
+   *
+   * 6. if there are other write operations waiting on the reader-writer lock,
+   * fairness guarantees that they will proceed before the shutdown lock
+   * request.
+   *
+   * 7. Since all operations either take a reader or writer lock of container
+   * manager, we are guaranteed that we are the last operation since we have
+   * closed the network port, and we wait until close is successful.
+   *
+   * 8. We take the writer lock and call shutdown on each of the managers in
+   * reverse order. That is chunkManager, keyManager and containerManager is
+   * shutdown.
+   *
    */
-  public void stop() throws  Exception {
+  public void stop() {
+    LOG.info("Attempting to stop container services.");
     server.stop();
+    try {
+      this.manager.writeLock();
+      this.chunkManager.shutdown();
+      this.keyManager.shutdown();
+      this.manager.shutdown();
+      LOG.info("container services shutdown complete.");
+    } finally {
+      this.manager.writeUnlock();
+    }
   }
 
   /**

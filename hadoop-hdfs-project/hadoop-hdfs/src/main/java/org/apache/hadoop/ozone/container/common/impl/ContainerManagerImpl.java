@@ -385,8 +385,9 @@ public class ContainerManagerImpl implements ContainerManager {
    * @throws IOException
    */
   @Override
-  public void shutdown() throws IOException {
-
+  public void shutdown() {
+    Preconditions.checkState(this.hasWriteLock());
+    this.containerMap.clear();
   }
 
 

@@ -78,7 +78,7 @@ public final class XceiverServer {
    *
    * @throws Exception
    */
-  public void stop() throws Exception {
+  public void stop() {
     if (bossGroup != null) {
       bossGroup.shutdownGracefully();
     }
