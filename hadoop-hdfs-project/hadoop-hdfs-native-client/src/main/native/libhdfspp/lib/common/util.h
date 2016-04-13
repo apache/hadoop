@@ -28,6 +28,7 @@
 #include <google/protobuf/message_lite.h>
 #include <google/protobuf/io/coded_stream.h>
 
+
 namespace hdfs {
 
 static inline Status ToStatus(const ::asio::error_code &ec) {
@@ -38,32 +39,30 @@ static inline Status ToStatus(const ::asio::error_code &ec) {
   }
 }
 
-static inline int DelimitedPBMessageSize(
-    const ::google::protobuf::MessageLite *msg) {
+// Determine size of buffer that needs to be allocated in order to serialize msg
+// in delimited format
+static inline int DelimitedPBMessageSize(const ::google::protobuf::MessageLite *msg) {
   size_t size = msg->ByteSize();
   return ::google::protobuf::io::CodedOutputStream::VarintSize32(size) + size;
 }
 
-static inline void ReadDelimitedPBMessage(
-    ::google::protobuf::io::CodedInputStream *in,
-    ::google::protobuf::MessageLite *msg) {
-  uint32_t size = 0;
-  in->ReadVarint32(&size);
-  auto limit = in->PushLimit(size);
-  msg->ParseFromCodedStream(in);
-  in->PopLimit(limit);
-}
+// Construct msg from the input held in the CodedInputStream
+// return false on failure, otherwise return true
+bool ReadDelimitedPBMessage(::google::protobuf::io::CodedInputStream *in,
+                            ::google::protobuf::MessageLite *msg);
+
+// Serialize msg into a delimited form (java protobuf compatible)
+// err, if not null, will be set to false on failure
+std::string SerializeDelimitedProtobufMessage(const ::google::protobuf::MessageLite *msg,
+                                              bool *err);
 
 std::string Base64Encode(const std::string &src);
 
-/*
- * Returns a new high-entropy client name
- */
+// Return a new high-entropy client name
 std::string GetRandomClientName();
 
-/* Returns true if _someone_ is holding the lock (not necessarily this thread,
- * but a std::mutex doesn't track which thread is holding the lock)
- */
+// Returns true if _someone_ is holding the lock (not necessarily this thread,
+// but a std::mutex doesn't track which thread is holding the lock)
 template<class T>
 bool lock_held(T & mutex) {
   bool result = !mutex.try_lock();
@@ -71,8 +70,6 @@ bool lock_held(T & mutex) {
     mutex.unlock();
   return result;
 }
-
-
 
 }
 

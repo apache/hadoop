@@ -27,6 +27,7 @@
 #include <asio/read.hpp>
 #include <asio/write.hpp>
 #include <asio/ip/tcp.hpp>
+#include <memory>
 
 namespace hdfs {
 namespace asio_continuation {
@@ -36,7 +37,7 @@ using namespace continuation;
 template <class Stream, class MutableBufferSequence>
 class ReadContinuation : public Continuation {
 public:
-  ReadContinuation(Stream *stream, const MutableBufferSequence &buffer)
+  ReadContinuation(std::shared_ptr<Stream>& stream, const MutableBufferSequence &buffer)
       : stream_(stream), buffer_(buffer) {}
   virtual void Run(const Next &next) override {
     auto handler =
@@ -45,14 +46,16 @@ public:
   }
 
 private:
-  Stream *stream_;
+  // prevent construction from raw ptr
+  ReadContinuation(Stream *stream, MutableBufferSequence &buffer);
+  std::shared_ptr<Stream> stream_;
   MutableBufferSequence buffer_;
 };
 
 template <class Stream, class ConstBufferSequence>
 class WriteContinuation : public Continuation {
 public:
-  WriteContinuation(Stream *stream, const ConstBufferSequence &buffer)
+  WriteContinuation(std::shared_ptr<Stream>& stream, const ConstBufferSequence &buffer)
       : stream_(stream), buffer_(buffer) {}
 
   virtual void Run(const Next &next) override {
@@ -62,7 +65,9 @@ public:
   }
 
 private:
-  Stream *stream_;
+  // prevent construction from raw ptr
+  WriteContinuation(Stream *stream, ConstBufferSequence &buffer);
+  std::shared_ptr<Stream> stream_;
   ConstBufferSequence buffer_;
 };
 
@@ -117,13 +122,13 @@ private:
 };
 
 template <class Stream, class ConstBufferSequence>
-static inline Continuation *Write(Stream *stream,
+static inline Continuation *Write(std::shared_ptr<Stream> stream,
                                   const ConstBufferSequence &buffer) {
   return new WriteContinuation<Stream, ConstBufferSequence>(stream, buffer);
 }
 
 template <class Stream, class MutableBufferSequence>
-static inline Continuation *Read(Stream *stream,
+static inline Continuation *Read(std::shared_ptr<Stream> stream,
                                  const MutableBufferSequence &buffer) {
   return new ReadContinuation<Stream, MutableBufferSequence>(stream, buffer);
 }

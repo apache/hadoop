@@ -94,13 +94,14 @@ struct WriteDelimitedPBMessageContinuation : Continuation {
       : stream_(stream), msg_(msg) {}
 
   virtual void Run(const Next &next) override {
-    namespace pbio = google::protobuf::io;
-    int size = msg_->ByteSize();
-    buf_.reserve(pbio::CodedOutputStream::VarintSize32(size) + size);
-    pbio::StringOutputStream ss(&buf_);
-    pbio::CodedOutputStream os(&ss);
-    os.WriteVarint32(size);
-    msg_->SerializeToCodedStream(&os);
+    bool success = true;
+    buf_ = SerializeDelimitedProtobufMessage(msg_, &success);
+
+    if(!success) {
+      next(Status::Error("Unable to serialize protobuf message."));
+      return;
+    }
+
     asio::async_write(*stream_, asio::buffer(buf_), [next](const asio::error_code &ec, size_t) { next(ToStatus(ec)); } );
   }
 

@@ -117,7 +117,7 @@ void DataTransferSaslStream<Stream>::Handshake(const Handler &next) {
 
   DataTransferSaslStreamUtil::PrepareInitialHandshake(&s->req0);
 
-  m->Push(Write(stream_.get(), kMagicNumberBuffer))
+  m->Push(Write(stream_, kMagicNumberBuffer))
       .Push(WriteDelimitedPBMessage(stream_, &s->req0))
       .Push(new ReadSaslMessage(stream_, &s->resp0))
       .Push(new Authenticator(&authenticator_, &s->resp0, &s->req1))
