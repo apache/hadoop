@@ -60,6 +60,8 @@ Release 2.6.5 - UNRELEASED
     YARN-4573. Fix test failure in TestRMAppTransitions#testAppRunningKill and
     testAppKilledKilled. (Takashi Ohnishi via rohithsharmaks)
 
+    YARN-4794. Deadlock in NMClientImpl (Jian He via Rohith Sharma K S)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
