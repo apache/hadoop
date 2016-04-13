@@ -20,6 +20,7 @@
 #include "common/continuation/continuation.h"
 #include "common/continuation/asio.h"
 #include "common/logging.h"
+#include "common/util.h"
 
 #include <future>
 
@@ -55,6 +56,9 @@ ReadBlockProto(const std::string &client_name, bool verify_checksum,
   return p;
 }
 
+
+static int8_t unsecured_request_block_header[3] = {0, kDataTransferVersion, Operation::kReadBlock};
+
 void BlockReaderImpl::AsyncRequestBlock(
     const std::string &client_name,
     const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
@@ -78,17 +82,24 @@ void BlockReaderImpl::AsyncRequestBlock(
   auto m = continuation::Pipeline<State>::Create(cancel_state_);
   State *s = &m->state();
 
-  s->header.insert(s->header.begin(),
-                   {0, kDataTransferVersion, Operation::kReadBlock});
-  s->request = std::move(ReadBlockProto(client_name, options_.verify_checksum,
-                                        dn_->token_.get(), block, length, offset));
+  s->request = ReadBlockProto(client_name, options_.verify_checksum,
+                              dn_->token_.get(), block, length, offset);
+
+  s->header = std::string((const char*)unsecured_request_block_header, 3);
+
+  bool serialize_success = true;
+  s->header += SerializeDelimitedProtobufMessage(&s->request, &serialize_success);
+
+  if(!serialize_success) {
+    handler(Status::Error("Unable to serialize protobuf message"));
+    return;
+  }
 
   auto read_pb_message =
       new continuation::ReadDelimitedPBMessageContinuation<AsyncStream, 16384>(
           dn_, &s->response);
 
-  m->Push(asio_continuation::Write(dn_.get(), asio::buffer(s->header)))
-      .Push(asio_continuation::WriteDelimitedPBMessage(dn_, &s->request))
+  m->Push(asio_continuation::Write(dn_, asio::buffer(s->header)))
       .Push(read_pb_message);
 
   m->Run([this, handler, offset](const Status &status, const State &s) {    Status stat = status;

@@ -18,12 +18,44 @@
 
 #include "common/util.h"
 
+#include <google/protobuf/io/zero_copy_stream_impl_lite.h>
+
 namespace hdfs {
 
+bool ReadDelimitedPBMessage(::google::protobuf::io::CodedInputStream *in,
+                            ::google::protobuf::MessageLite *msg) {
+  uint32_t size = 0;
+  in->ReadVarint32(&size);
+  auto limit = in->PushLimit(size);
+  bool res = msg->ParseFromCodedStream(in);
+  in->PopLimit(limit);
+
+  return res;
+}
+
+
+std::string SerializeDelimitedProtobufMessage(const ::google::protobuf::MessageLite *msg,
+                                              bool *err) {
+  namespace pbio = ::google::protobuf::io;
+
+  std::string buf;
+
+  int size = msg->ByteSize();
+  buf.reserve(pbio::CodedOutputStream::VarintSize32(size) + size);
+  pbio::StringOutputStream ss(&buf);
+  pbio::CodedOutputStream os(&ss);
+  os.WriteVarint32(size);
+
+  if(err)
+    *err = msg->SerializeToCodedStream(&os);
+
+  return buf;
+}
+
+
 std::string GetRandomClientName() {
-  unsigned char buf[6] = {
-      0,
-  };
+  unsigned char buf[6];
+
   RAND_pseudo_bytes(buf, sizeof(buf));
 
   std::stringstream ss;
