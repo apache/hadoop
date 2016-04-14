@@ -19,10 +19,14 @@
 package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.S3ClientOptions;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
+
 import org.apache.commons.lang.StringUtils;
 import com.amazonaws.AmazonClientException;
 import org.apache.hadoop.conf.Configuration;
-
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -30,17 +34,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.net.URI;
-import java.io.IOException;
+import java.lang.reflect.Field;
 
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
-
+import org.apache.http.HttpStatus;
 import org.junit.rules.TemporaryFolder;
 
 public class TestS3AConfiguration {
@@ -353,5 +359,40 @@ public class TestS3AConfiguration {
     assertEquals("AccessKey incorrect.", "123", creds.getAccessKey());
     assertEquals("SecretKey incorrect.", "456", creds.getAccessSecret());
 
+  }
+
+  @Test
+  public void shouldBeAbleToSwitchOnS3PathStyleAccessViaConfigProperty() throws Exception {
+
+    conf = new Configuration();
+    conf.set(Constants.PATH_STYLE_ACCESS, Boolean.toString(true));
+    assertTrue(conf.getBoolean(Constants.PATH_STYLE_ACCESS, false));
+
+    try {
+      fs = S3ATestUtils.createTestFileSystem(conf);
+      final Object object = getClientOptionsField(fs.getAmazonS3Client(), "clientOptions");
+      assertNotNull(object);
+      assertTrue("Unexpected type found for clientOptions!", object instanceof S3ClientOptions);
+      assertTrue("Expected to find path style access to be switched on!", ((S3ClientOptions) object).isPathStyleAccess());
+      byte[] file = ContractTestUtils.toAsciiByteArray("test file");
+      ContractTestUtils.writeAndRead(fs, new Path("/path/style/access/testFile"), file, file.length, conf.getInt(Constants.FS_S3A_BLOCK_SIZE, file.length), false, true);
+    } catch (final AmazonS3Exception e) {
+      LOG.error("Caught exception: ", e);
+      // Catch/pass standard path style access behaviour when live bucket
+      // isn't in the same region as the s3 client default. See
+      // http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html
+      assertEquals(e.getStatusCode(), HttpStatus.SC_MOVED_PERMANENTLY);
+    }
+  }
+
+  private Object getClientOptionsField(AmazonS3Client s3client, String field)
+      throws NoSuchFieldException, IllegalAccessException {
+    final Field clientOptionsProps = s3client.getClass().getDeclaredField(field);
+    assertNotNull(clientOptionsProps);
+    if (!clientOptionsProps.isAccessible()) {
+      clientOptionsProps.setAccessible(true);
+    }
+    final Object object = clientOptionsProps.get(s3client);
+    return object;
   }
 }
