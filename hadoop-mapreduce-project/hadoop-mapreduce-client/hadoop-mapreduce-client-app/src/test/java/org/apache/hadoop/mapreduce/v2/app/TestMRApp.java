@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.base.Supplier;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -56,13 +57,19 @@ import org.apache.hadoop.mapreduce.v2.app.job.impl.TaskAttemptImpl;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherEvent;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerRemoteLaunchEvent;
+import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
+import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
+import org.apache.hadoop.mapreduce.v2.app.rm.ContainerRequestEvent;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.event.AsyncDispatcher;
+import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * Tests the state machine of MR App.
@@ -201,13 +208,18 @@ public class TestMRApp {
   @Test
   public void testUpdatedNodes() throws Exception {
     int runCount = 0;
+    Dispatcher disp = Mockito.spy(new AsyncDispatcher());
     MRApp app = new MRAppWithHistory(2, 2, false, this.getClass().getName(),
-        true, ++runCount);
+        true, ++runCount, disp);
     Configuration conf = new Configuration();
     // after half of the map completion, reduce will start
     conf.setFloat(MRJobConfig.COMPLETED_MAPS_FOR_REDUCE_SLOWSTART, 0.5f);
     // uberization forces full slowstart (1.0), so disable that
     conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
+
+    ContainerAllocEventHandler handler = new ContainerAllocEventHandler();
+    disp.register(ContainerAllocator.EventType.class, handler);
+
     final Job job1 = app.submit(conf);
     app.waitForState(job1, JobState.RUNNING);
     Assert.assertEquals("Num tasks not correct", 4, job1.getTasks().size());
@@ -285,6 +297,12 @@ public class TestMRApp {
     events = job1.getTaskAttemptCompletionEvents(0, 100);
     Assert.assertEquals("Expecting 2 more completion events for killed", 4,
         events.length);
+    // 2 map task attempts which were killed above should be requested from
+    // container allocator with the previous map task marked as failed. If
+    // this happens allocator will request the container for this mapper from
+    // RM at a higher priority of 5(i.e. with a priority equivalent to that of
+    // a fail fast map).
+    handler.waitForFailedMapContainerReqEvents(2);
 
     // all maps must be back to running
     app.waitForState(mapTask1, TaskState.RUNNING);
@@ -324,7 +342,7 @@ public class TestMRApp {
     // rerun
     // in rerun the 1st map will be recovered from previous run
     app = new MRAppWithHistory(2, 2, false, this.getClass().getName(), false,
-        ++runCount);
+        ++runCount, (Dispatcher)new AsyncDispatcher());
     conf = new Configuration();
     conf.setBoolean(MRJobConfig.MR_AM_JOB_RECOVERY_ENABLE, true);
     conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
@@ -418,6 +436,25 @@ public class TestMRApp {
 
     // job succeeds
     app.waitForState(job2, JobState.SUCCEEDED);
+  }
+
+  private final class ContainerAllocEventHandler
+      implements EventHandler<ContainerAllocatorEvent> {
+    private AtomicInteger failedMapContainerReqEventCnt = new AtomicInteger(0);
+    @Override
+    public void handle(ContainerAllocatorEvent event) {
+      if (event.getType() == ContainerAllocator.EventType.CONTAINER_REQ &&
+          ((ContainerRequestEvent)event).getEarlierAttemptFailed()) {
+        failedMapContainerReqEventCnt.incrementAndGet();
+      }
+    }
+    public void waitForFailedMapContainerReqEvents(int count)
+        throws InterruptedException {
+      while(failedMapContainerReqEventCnt.get() != count) {
+        Thread.sleep(50);
+      }
+      failedMapContainerReqEventCnt.set(0);
+    }
   }
 
   private static void waitFor(Supplier<Boolean> predicate, int
@@ -590,9 +627,17 @@ public class TestMRApp {
   }
 
   private final class MRAppWithHistory extends MRApp {
+    private Dispatcher dispatcher;
     public MRAppWithHistory(int maps, int reduces, boolean autoComplete,
-        String testName, boolean cleanOnStart, int startCount) {
+        String testName, boolean cleanOnStart, int startCount,
+        Dispatcher disp) {
       super(maps, reduces, autoComplete, testName, cleanOnStart, startCount);
+      this.dispatcher = disp;
+    }
+
+    @Override
+    protected Dispatcher createDispatcher() {
+      return dispatcher;
     }
 
     @Override
