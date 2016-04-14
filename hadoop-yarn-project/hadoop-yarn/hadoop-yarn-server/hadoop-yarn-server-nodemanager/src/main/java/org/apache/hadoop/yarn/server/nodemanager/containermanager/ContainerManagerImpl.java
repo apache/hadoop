@@ -296,19 +296,7 @@ public class ContainerManagerImpl extends CompositeService implements
         if (LOG.isDebugEnabled()) {
           LOG.debug("Recovering container with state: " + rcs);
         }
-
         recoverContainer(rcs);
-      }
-
-      String diagnostic = "Application marked finished during recovery";
-      for (ApplicationId appId : appsState.getFinishedApplications()) {
-
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Application marked finished during recovery: " + appId);
-        }
-
-        dispatcher.getEventHandler().handle(
-            new ApplicationFinishEvent(appId, diagnostic));
       }
     } else {
       LOG.info("Not a recoverable state store. Nothing to recover.");
@@ -1331,11 +1319,6 @@ public class ContainerManagerImpl extends CompositeService implements
           diagnostic = "Application killed on shutdown";
         } else if (appsFinishedEvent.getReason() == CMgrCompletedAppsEvent.Reason.BY_RESOURCEMANAGER) {
           diagnostic = "Application killed by ResourceManager";
-        }
-        try {
-          this.context.getNMStateStore().storeFinishedApplication(appID);
-        } catch (IOException e) {
-          LOG.error("Unable to update application state in store", e);
         }
         this.dispatcher.getEventHandler().handle(
             new ApplicationFinishEvent(appID,
