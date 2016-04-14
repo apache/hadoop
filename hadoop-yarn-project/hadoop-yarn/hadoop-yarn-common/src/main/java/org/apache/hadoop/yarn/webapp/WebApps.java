@@ -270,7 +270,7 @@ public class WebApps {
         }
 
         if (httpScheme.equals(WebAppUtils.HTTPS_PREFIX)) {
-          WebAppUtils.loadSslConfiguration(builder);
+          WebAppUtils.loadSslConfiguration(builder, conf);
         }
 
         HttpServer2 server = builder.build();

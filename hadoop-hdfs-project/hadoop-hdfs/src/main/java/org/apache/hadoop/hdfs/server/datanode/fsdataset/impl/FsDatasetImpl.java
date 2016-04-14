@@ -268,24 +268,15 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     this.smallBufferSize = DFSUtilClient.getSmallBufferSize(conf);
     // The number of volumes required for operation is the total number
     // of volumes minus the number of failed volumes we can tolerate.
-    volFailuresTolerated =
-      conf.getInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY,
-                  DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_DEFAULT);
+    volFailuresTolerated = datanode.getDnConf().getVolFailuresTolerated();
 
-    String[] dataDirs = conf.getTrimmedStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
     Collection<StorageLocation> dataLocations = DataNode.getStorageLocations(conf);
     List<VolumeFailureInfo> volumeFailureInfos = getInitialVolumeFailureInfos(
         dataLocations, storage);
 
-    int volsConfigured = (dataDirs == null) ? 0 : dataDirs.length;
+    int volsConfigured = datanode.getDnConf().getVolsConfigured();
     int volsFailed = volumeFailureInfos.size();
 
-    if (volFailuresTolerated < 0 || volFailuresTolerated >= volsConfigured) {
-      throw new DiskErrorException("Invalid value configured for "
-          + "dfs.datanode.failed.volumes.tolerated - " + volFailuresTolerated
-          + ". Value configured is either less than 0 or >= "
-          + "to the number of configured volumes (" + volsConfigured + ").");
-    }
     if (volsFailed > volFailuresTolerated) {
       throw new DiskErrorException("Too many failed volumes - "
           + "current valid volumes: " + storage.getNumStorageDirs() 
@@ -1159,7 +1150,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     // construct a RBW replica with the new GS
     File blkfile = replicaInfo.getBlockFile();
     FsVolumeImpl v = (FsVolumeImpl)replicaInfo.getVolume();
-    if (v.getAvailable() < estimateBlockLen - replicaInfo.getNumBytes()) {
+    long bytesReserved = estimateBlockLen - replicaInfo.getNumBytes();
+    if (v.getAvailable() < bytesReserved) {
       throw new DiskOutOfSpaceException("Insufficient space for appending to "
           + replicaInfo);
     }
@@ -1167,7 +1159,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     File oldmeta = replicaInfo.getMetaFile();
     ReplicaBeingWritten newReplicaInfo = new ReplicaBeingWritten(
         replicaInfo.getBlockId(), replicaInfo.getNumBytes(), newGS,
-        v, newBlkFile.getParentFile(), Thread.currentThread(), estimateBlockLen);
+        v, newBlkFile.getParentFile(), Thread.currentThread(), bytesReserved);
     File newmeta = newReplicaInfo.getMetaFile();
 
     // rename meta file to rbw directory
@@ -1203,7 +1195,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     
     // Replace finalized replica by a RBW replica in replicas map
     volumeMap.add(bpid, newReplicaInfo);
-    v.reserveSpaceForReplica(estimateBlockLen - replicaInfo.getNumBytes());
+    v.reserveSpaceForReplica(bytesReserved);
     return newReplicaInfo;
   }
 

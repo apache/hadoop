@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.StringTokenizer;
 
 import org.apache.commons.io.input.BoundedInputStream;
+import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -128,6 +129,9 @@ public abstract class ByteRangeInputStream extends FSInputStream {
   @VisibleForTesting
   protected InputStreamAndFileLength openInputStream(long startOffset)
       throws IOException {
+    if (startOffset < 0) {
+      throw new EOFException("Negative Position");
+    }
     // Use the original url if no resolved url exists, eg. if
     // it's the first time a request is made.
     final boolean resolved = resolvedURL.getURL() != null;
@@ -224,6 +228,10 @@ public abstract class ByteRangeInputStream extends FSInputStream {
   @Override
   public int read(long position, byte[] buffer, int offset, int length)
       throws IOException {
+    validatePositionedReadArgs(position, buffer, offset, length);
+    if (length == 0) {
+      return 0;
+    }
     try (InputStream in = openInputStream(position).in) {
       return in.read(buffer, offset, length);
     }
@@ -232,17 +240,21 @@ public abstract class ByteRangeInputStream extends FSInputStream {
   @Override
   public void readFully(long position, byte[] buffer, int offset, int length)
       throws IOException {
-    final InputStreamAndFileLength fin = openInputStream(position);
-    if (fin.length != null && length + position > fin.length) {
-      throw new EOFException("The length to read " + length
-          + " exceeds the file length " + fin.length);
+    validatePositionedReadArgs(position, buffer, offset, length);
+    if (length == 0) {
+      return;
     }
+    final InputStreamAndFileLength fin = openInputStream(position);
     try {
+      if (fin.length != null && length + position > fin.length) {
+        throw new EOFException("The length to read " + length
+            + " exceeds the file length " + fin.length);
+      }
       int nread = 0;
       while (nread < length) {
         int nbytes = fin.in.read(buffer, offset + nread, length - nread);
         if (nbytes < 0) {
-          throw new EOFException("End of file reached before reading fully.");
+          throw new EOFException(FSExceptionMessages.EOF_IN_READ_FULLY);
         }
         nread += nbytes;
       }

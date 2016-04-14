@@ -725,6 +725,8 @@ public class NativeAzureFileSystem extends FileSystem {
       // Return to the caller with the result.
       //
         return result;
+      } catch(EOFException e) {
+        return -1;
       } catch(IOException e) {
 
         Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
@@ -773,7 +775,7 @@ public class NativeAzureFileSystem extends FileSystem {
           pos += result;
         }
 
-        if (null != statistics) {
+        if (null != statistics && result > 0) {
           statistics.incrementBytesRead(result);
         }
 

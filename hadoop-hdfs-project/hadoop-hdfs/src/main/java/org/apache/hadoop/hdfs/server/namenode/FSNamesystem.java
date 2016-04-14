@@ -184,7 +184,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeException;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
@@ -901,6 +900,36 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           entryExpiryNanos);
     }
     return null;
+  }
+
+  /**
+   * Locate DefaultAuditLogger, if any, to enable/disable CallerContext.
+   *
+   * @param value
+   *          true, enable CallerContext, otherwise false to disable it.
+   */
+  void setCallerContextEnabled(final boolean value) {
+    for (AuditLogger logger : auditLoggers) {
+      if (logger instanceof DefaultAuditLogger) {
+        ((DefaultAuditLogger) logger).setCallerContextEnabled(value);
+        break;
+      }
+    }
+  }
+
+  /**
+   * Get the value indicating if CallerContext is enabled.
+   *
+   * @return true, if CallerContext is enabled, otherwise false, if it's
+   *         disabled.
+   */
+  boolean getCallerContextEnabled() {
+    for (AuditLogger logger : auditLoggers) {
+      if (logger instanceof DefaultAuditLogger) {
+        return ((DefaultAuditLogger) logger).getCallerContextEnabled();
+      }
+    }
+    return false;
   }
 
   private List<AuditLogger> initAuditLoggers(Configuration conf) {
@@ -1779,25 +1808,28 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
 
     LocatedBlocks blocks = res.blocks;
+    sortLocatedBlocks(clientMachine, blocks);
+    return blocks;
+  }
+
+  private void sortLocatedBlocks(String clientMachine, LocatedBlocks blocks) {
     if (blocks != null) {
       List<LocatedBlock> blkList = blocks.getLocatedBlocks();
-      if (blkList == null || blkList.size() == 0 ||
-          blkList.get(0) instanceof LocatedStripedBlock) {
-        // no need to sort locations for striped blocks
-        return blocks;
+      if (blkList == null || blkList.size() == 0) {
+        // simply return, block list is empty
+        return;
       }
-      blockManager.getDatanodeManager().sortLocatedBlocks(
-          clientMachine, blkList);
+      blockManager.getDatanodeManager().sortLocatedBlocks(clientMachine,
+          blkList);
 
       // lastBlock is not part of getLocatedBlocks(), might need to sort it too
       LocatedBlock lastBlock = blocks.getLastLocatedBlock();
       if (lastBlock != null) {
         ArrayList<LocatedBlock> lastBlockList = Lists.newArrayList(lastBlock);
-        blockManager.getDatanodeManager().sortLocatedBlocks(
-            clientMachine, lastBlockList);
+        blockManager.getDatanodeManager().sortLocatedBlocks(clientMachine,
+            lastBlockList);
       }
     }
-    return blocks;
   }
 
   /**
@@ -4279,10 +4311,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       setManualAndResourceLowSafeMode(!resourcesLow, resourcesLow);
       NameNode.stateChangeLog.info("STATE* Safe mode is ON.\n" +
           getSafeModeTip());
-      if (isEditlogOpenForWrite) {
-        getEditLog().logSyncAll();
-      }
-      NameNode.stateChangeLog.info("STATE* Safe mode is ON" + getSafeModeTip());
     } finally {
       writeUnlock();
     }
@@ -6850,12 +6878,32 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           }
         };
 
-    private boolean isCallerContextEnabled;
+    private volatile boolean isCallerContextEnabled;
     private int callerContextMaxLen;
     private int callerSignatureMaxLen;
 
     private boolean logTokenTrackingId;
     private Set<String> debugCmdSet = new HashSet<String>();
+
+    /**
+     * Enable or disable CallerContext.
+     *
+     * @param value
+     *          true, enable CallerContext, otherwise false to disable it.
+     */
+    void setCallerContextEnabled(final boolean value) {
+      isCallerContextEnabled = value;
+    }
+
+    /**
+     * Get the value indicating if CallerContext is enabled.
+     *
+     * @return true, if CallerContext is enabled, otherwise false, if it's
+     *         disabled.
+     */
+    boolean getCallerContextEnabled() {
+      return isCallerContextEnabled;
+    }
 
     @Override
     public void initialize(Configuration conf) {

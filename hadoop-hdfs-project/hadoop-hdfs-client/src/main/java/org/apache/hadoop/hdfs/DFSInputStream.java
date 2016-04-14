@@ -972,6 +972,10 @@ public class DFSInputStream extends FSInputStream
   @Override
   public synchronized int read(@Nonnull final byte buf[], int off, int len)
       throws IOException {
+    validatePositionedReadArgs(pos, buf, off, len);
+    if (len == 0) {
+      return 0;
+    }
     ReaderStrategy byteArrayReader = new ByteArrayStrategy(buf);
     try (TraceScope scope =
              dfsClient.newReaderTraceScope("DFSInputStream#byteArrayRead",
@@ -1423,6 +1427,10 @@ public class DFSInputStream extends FSInputStream
   @Override
   public int read(long position, byte[] buffer, int offset, int length)
       throws IOException {
+    validatePositionedReadArgs(position, buffer, offset, length);
+    if (length == 0) {
+      return 0;
+    }
     try (TraceScope scope = dfsClient.
         newReaderTraceScope("DFSInputStream#byteArrayPread",
             src, position, length)) {

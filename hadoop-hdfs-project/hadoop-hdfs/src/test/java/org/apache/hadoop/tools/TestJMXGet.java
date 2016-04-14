@@ -111,9 +111,6 @@ public class TestJMXGet {
         jmx.getValue("NumLiveDataNodes")));
     assertGauge("CorruptBlocks", Long.parseLong(jmx.getValue("CorruptBlocks")),
                 getMetrics("FSNamesystem"));
-    DFSTestUtil.waitForMetric(jmx, "NumOpenConnections", numDatanodes);
-    assertEquals(numDatanodes, Integer.parseInt(
-        jmx.getValue("NumOpenConnections")));
 
     cluster.shutdown();
     MBeanServerConnection mbsc = ManagementFactory.getPlatformMBeanServer();

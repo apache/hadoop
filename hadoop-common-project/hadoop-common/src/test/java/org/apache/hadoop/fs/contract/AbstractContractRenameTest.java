@@ -26,8 +26,7 @@ import org.junit.Test;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 
 /**
  * Test creating files, overwrite options &c
@@ -46,9 +45,9 @@ public abstract class AbstractContractRenameTest extends
     boolean rename = rename(renameSrc, renameTarget);
     assertTrue("rename("+renameSrc+", "+ renameTarget+") returned false",
         rename);
-    ContractTestUtils.assertListStatusFinds(getFileSystem(),
+    assertListStatusFinds(getFileSystem(),
         renameTarget.getParent(), renameTarget);
-    ContractTestUtils.verifyFileContents(getFileSystem(), renameTarget, data);
+    verifyFileContents(getFileSystem(), renameTarget, data);
   }
 
   @Test
@@ -129,7 +128,7 @@ public abstract class AbstractContractRenameTest extends
     }
     // verify that the destination file is as expected based on the expected
     // outcome
-    ContractTestUtils.verifyFileContents(getFileSystem(), destFile,
+    verifyFileContents(getFileSystem(), destFile,
         destUnchanged? destData: srcData);
   }
 
@@ -154,7 +153,7 @@ public abstract class AbstractContractRenameTest extends
     Path renamedSrc = new Path(destDir, sourceSubdir);
     assertIsFile(destFilePath);
     assertIsDirectory(renamedSrc);
-    ContractTestUtils.verifyFileContents(fs, destFilePath, destDateset);
+    verifyFileContents(fs, destFilePath, destDateset);
     assertTrue("rename returned false though the contents were copied", rename);
   }
 
@@ -172,10 +171,10 @@ public abstract class AbstractContractRenameTest extends
       boolean rename = rename(renameSrc, renameTarget);
       if (renameCreatesDestDirs) {
         assertTrue(rename);
-        ContractTestUtils.verifyFileContents(getFileSystem(), renameTarget, data);
+        verifyFileContents(getFileSystem(), renameTarget, data);
       } else {
         assertFalse(rename);
-        ContractTestUtils.verifyFileContents(getFileSystem(), renameSrc, data);
+        verifyFileContents(getFileSystem(), renameSrc, data);
       }
     } catch (FileNotFoundException e) {
        // allowed unless that rename flag is set
@@ -191,36 +190,36 @@ public abstract class AbstractContractRenameTest extends
     final Path finalDir = new Path(renameTestDir, "dest");
     FileSystem fs = getFileSystem();
     boolean renameRemoveEmptyDest = isSupported(RENAME_REMOVE_DEST_IF_EMPTY_DIR);
-    ContractTestUtils.rm(fs, renameTestDir, true, false);
+    rm(fs, renameTestDir, true, false);
 
     fs.mkdirs(srcDir);
     fs.mkdirs(finalDir);
-    ContractTestUtils.writeTextFile(fs, new Path(srcDir, "source.txt"),
+    writeTextFile(fs, new Path(srcDir, "source.txt"),
         "this is the file in src dir", false);
-    ContractTestUtils.writeTextFile(fs, new Path(srcSubDir, "subfile.txt"),
+    writeTextFile(fs, new Path(srcSubDir, "subfile.txt"),
         "this is the file in src/sub dir", false);
 
-    ContractTestUtils.assertPathExists(fs, "not created in src dir",
+    assertPathExists("not created in src dir",
         new Path(srcDir, "source.txt"));
-    ContractTestUtils.assertPathExists(fs, "not created in src/sub dir",
+    assertPathExists("not created in src/sub dir",
         new Path(srcSubDir, "subfile.txt"));
 
     fs.rename(srcDir, finalDir);
     // Accept both POSIX rename behavior and CLI rename behavior
     if (renameRemoveEmptyDest) {
       // POSIX rename behavior
-      ContractTestUtils.assertPathExists(fs, "not renamed into dest dir",
+      assertPathExists("not renamed into dest dir",
           new Path(finalDir, "source.txt"));
-      ContractTestUtils.assertPathExists(fs, "not renamed into dest/sub dir",
+      assertPathExists("not renamed into dest/sub dir",
           new Path(finalDir, "sub/subfile.txt"));
     } else {
       // CLI rename behavior
-      ContractTestUtils.assertPathExists(fs, "not renamed into dest dir",
+      assertPathExists("not renamed into dest dir",
           new Path(finalDir, "src1/source.txt"));
-      ContractTestUtils.assertPathExists(fs, "not renamed into dest/sub dir",
+      assertPathExists("not renamed into dest/sub dir",
           new Path(finalDir, "src1/sub/subfile.txt"));
     }
-    ContractTestUtils.assertPathDoesNotExist(fs, "not deleted",
+    assertPathDoesNotExist("not deleted",
         new Path(srcDir, "source.txt"));
   }
 }

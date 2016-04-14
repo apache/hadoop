@@ -927,6 +927,20 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.justFinishedContainers = attempt.getJustFinishedContainersReference();
     this.finishedContainersSentToAM =
         attempt.getFinishedContainersSentToAMReference();
+    // container complete msg was moved from justFinishedContainers to
+    // finishedContainersSentToAM in ApplicationMasterService#allocate,
+    // if am crashed and not received this response, we should resend
+    // this msg again after am restart
+    if (!this.finishedContainersSentToAM.isEmpty()) {
+      for (NodeId nodeId : this.finishedContainersSentToAM.keySet()) {
+        List<ContainerStatus> containerStatuses =
+            this.finishedContainersSentToAM.get(nodeId);
+        this.justFinishedContainers.putIfAbsent(nodeId,
+            new ArrayList<ContainerStatus>());
+        this.justFinishedContainers.get(nodeId).addAll(containerStatuses);
+      }
+      this.finishedContainersSentToAM.clear();
+    }
   }
 
   private void recoverAppAttemptCredentials(Credentials appAttemptTokens,
@@ -1845,13 +1859,13 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     } else {
       LOG.warn("No ContainerStatus in containerFinishedEvent");
     }
-    finishedContainersSentToAM.putIfAbsent(nodeId,
-      new ArrayList<ContainerStatus>());
-    appAttempt.finishedContainersSentToAM.get(nodeId).add(
-      containerFinishedEvent.getContainerStatus());
 
     if (!appAttempt.getSubmissionContext()
-      .getKeepContainersAcrossApplicationAttempts()) {
+        .getKeepContainersAcrossApplicationAttempts()) {
+      finishedContainersSentToAM.putIfAbsent(nodeId,
+          new ArrayList<ContainerStatus>());
+      appAttempt.finishedContainersSentToAM.get(nodeId).add(
+          containerFinishedEvent.getContainerStatus());
       appAttempt.sendFinishedContainersToNM();
     } else {
       appAttempt.sendFinishedAMContainerToNM(nodeId,

@@ -572,4 +572,64 @@ public class TestSpaceReservation {
       return numFailures;
     }
   }
+
+  @Test(timeout = 30000)
+  public void testReservedSpaceForAppend() throws Exception {
+    final short replication = 3;
+    startCluster(BLOCK_SIZE, replication, -1);
+    final String methodName = GenericTestUtils.getMethodName();
+    final Path file = new Path("/" + methodName + ".01.dat");
+
+    // Write 1 byte to the file and kill the writer.
+    FSDataOutputStream os = fs.create(file, replication);
+    os.write(new byte[1024]);
+    os.close();
+
+    final Path file2 = new Path("/" + methodName + ".02.dat");
+
+    // Write 1 byte to the file and keep it open.
+    FSDataOutputStream os2 = fs.create(file2, replication);
+    os2.write(new byte[1]);
+    os2.hflush();
+    int expectedFile2Reserved = BLOCK_SIZE - 1;
+    checkReservedSpace(expectedFile2Reserved);
+
+    // append one byte and verify reservedspace before and after closing
+    os = fs.append(file);
+    os.write(new byte[1]);
+    os.hflush();
+    int expectedFile1Reserved = BLOCK_SIZE - 1025;
+    checkReservedSpace(expectedFile2Reserved + expectedFile1Reserved);
+    os.close();
+    checkReservedSpace(expectedFile2Reserved);
+
+    // append one byte and verify reservedspace before and after abort
+    os = fs.append(file);
+    os.write(new byte[1]);
+    os.hflush();
+    expectedFile1Reserved--;
+    checkReservedSpace(expectedFile2Reserved + expectedFile1Reserved);
+    DFSTestUtil.abortStream(((DFSOutputStream) os.getWrappedStream()));
+    checkReservedSpace(expectedFile2Reserved);
+  }
+
+  private void checkReservedSpace(final long expectedReserved) throws TimeoutException,
+      InterruptedException, IOException {
+    for (final DataNode dn : cluster.getDataNodes()) {
+      try (FsDatasetSpi.FsVolumeReferences volumes = dn.getFSDataset()
+          .getFsVolumeReferences()) {
+        final FsVolumeImpl volume = (FsVolumeImpl) volumes.get(0);
+        GenericTestUtils.waitFor(new Supplier<Boolean>() {
+          @Override
+          public Boolean get() {
+            LOG.info(
+                "dn " + dn.getDisplayName() + " space : " + volume
+                    .getReservedForReplicas() + ", Expected ReservedSpace :"
+                    + expectedReserved);
+            return (volume.getReservedForReplicas() == expectedReserved);
+          }
+        }, 100, 3000);
+      }
+    }
+  }
 }

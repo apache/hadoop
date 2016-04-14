@@ -181,20 +181,22 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
   public void readFields(DataInput in) throws IOException {
     
     // Get the number of "unknown" classes
-    
     newClasses = in.readByte();
-    
+
+    // Use the classloader of the current thread to load classes instead of the
+    // system-classloader so as to support both client-only and inside-a-MR-job
+    // use-cases. The context-loader by default eventually falls back to the
+    // system one, so there should be no cases where changing this is an issue.
+    ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+
     // Then read in the class names and add them to our tables
-    
     for (int i = 0; i < newClasses; i++) {
       byte id = in.readByte();
       String className = in.readUTF();
       try {
-        addToMap(Class.forName(className), id);
-        
+        addToMap(classLoader.loadClass(className), id);
       } catch (ClassNotFoundException e) {
-        throw new IOException("can't find class: " + className + " because "+
-            e.getMessage());
+        throw new IOException(e);
       }
     }
   }    

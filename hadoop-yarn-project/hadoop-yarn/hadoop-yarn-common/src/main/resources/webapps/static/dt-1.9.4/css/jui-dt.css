@@ -109,8 +109,8 @@ table.display thead th div.DataTables_sort_wrapper span {
 
 .dataTables_wrapper {
 	position: relative;
-	min-height: 302px;
-	_height: 302px;
+	min-height: 35px;
+	_height: 35px;
 	clear: both;
 }
 

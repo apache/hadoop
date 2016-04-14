@@ -164,28 +164,26 @@ public abstract class ChecksumFs extends FilterFs {
     public int available() throws IOException {
       return datas.available() + super.available();
     }
-    
+
     @Override
     public int read(long position, byte[] b, int off, int len)
       throws IOException, UnresolvedLinkException {
       // parameter check
-      if ((off | len | (off + len) | (b.length - (off + len))) < 0) {
-        throw new IndexOutOfBoundsException();
-      } else if (len == 0) {
+      validatePositionedReadArgs(position, b, off, len);
+      if (len == 0) {
         return 0;
       }
-      if (position<0) {
-        throw new IllegalArgumentException(
-            "Parameter position can not to be negative");
-      }
 
-      ChecksumFSInputChecker checker = new ChecksumFSInputChecker(fs, file);
-      checker.seek(position);
-      int nread = checker.read(b, off, len);
-      checker.close();
+      int nread;
+      try (ChecksumFSInputChecker checker =
+               new ChecksumFSInputChecker(fs, file)) {
+        checker.seek(position);
+        nread = checker.read(b, off, len);
+        checker.close();
+      }
       return nread;
     }
-    
+
     @Override
     public void close() throws IOException {
       datas.close();
