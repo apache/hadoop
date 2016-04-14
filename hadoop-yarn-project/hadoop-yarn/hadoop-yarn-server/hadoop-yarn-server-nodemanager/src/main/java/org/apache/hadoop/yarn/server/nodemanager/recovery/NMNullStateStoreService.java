@@ -59,10 +59,6 @@ public class NMNullStateStoreService extends NMStateStoreService {
   }
 
   @Override
-  public void storeFinishedApplication(ApplicationId appId) {
-  }
-
-  @Override
   public void removeApplication(ApplicationId appId) throws IOException {
   }
 

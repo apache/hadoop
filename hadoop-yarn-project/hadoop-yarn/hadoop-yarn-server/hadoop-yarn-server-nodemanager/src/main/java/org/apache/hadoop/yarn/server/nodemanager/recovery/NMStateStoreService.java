@@ -52,15 +52,11 @@ public abstract class NMStateStoreService extends AbstractService {
 
   public static class RecoveredApplicationsState {
     List<ContainerManagerApplicationProto> applications;
-    List<ApplicationId> finishedApplications;
 
     public List<ContainerManagerApplicationProto> getApplications() {
       return applications;
     }
 
-    public List<ApplicationId> getFinishedApplications() {
-      return finishedApplications;
-    }
   }
 
   public enum RecoveredContainerStatus {
@@ -257,14 +253,6 @@ public abstract class NMStateStoreService extends AbstractService {
    */
   public abstract void storeApplication(ApplicationId appId,
       ContainerManagerApplicationProto p) throws IOException;
-
-  /**
-   * Record that an application has finished
-   * @param appId the application ID
-   * @throws IOException
-   */
-  public abstract void storeFinishedApplication(ApplicationId appId)
-      throws IOException;
 
   /**
    * Remove records corresponding to an application
