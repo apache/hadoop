@@ -347,6 +347,7 @@ Usage:
               [-fetchImage <local directory>]
               [-shutdownDatanode <datanode_host:ipc_port> [upgrade]]
               [-getDatanodeInfo <datanode_host:ipc_port>]
+              [-evictWriters <datanode_host:ipc_port>]
               [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]
               [-help [cmd]]
 
@@ -380,6 +381,7 @@ Usage:
 | `-disallowSnapshot` \<snapshotDir\> | Disallowing snapshots of a directory to be created. All snapshots of the directory must be deleted before disallowing snapshots. See the [HDFS Snapshot Documentation](./HdfsSnapshots.html) for more information. |
 | `-fetchImage` \<local directory\> | Downloads the most recent fsimage from the NameNode and saves it in the specified local directory. |
 | `-shutdownDatanode` \<datanode\_host:ipc\_port\> [upgrade] | Submit a shutdown request for the given datanode. See [Rolling Upgrade document](./HdfsRollingUpgrade.html#dfsadmin_-shutdownDatanode) for the detail. |
+| `-evictWriters` \<datanode\_host:ipc\_port\> | Make the datanode evict all clients that are writing a block. This is useful if decommissioning is hung due to slow writers. |
 | `-getDatanodeInfo` \<datanode\_host:ipc\_port\> | Get the information about the given datanode. See [Rolling Upgrade document](./HdfsRollingUpgrade.html#dfsadmin_-getDatanodeInfo) for the detail. |
 | `-triggerBlockReport` `[-incremental]` \<datanode\_host:ipc\_port\> | Trigger a block report for the given datanode. If 'incremental' is specified, it will be otherwise, it will be a full block report. |
 | `-help` [cmd] | Displays help for the given command or all commands if none is specified. |
