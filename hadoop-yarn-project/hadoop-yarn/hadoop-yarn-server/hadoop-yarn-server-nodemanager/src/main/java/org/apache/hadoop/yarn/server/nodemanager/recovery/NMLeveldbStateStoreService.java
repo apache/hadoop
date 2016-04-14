@@ -81,6 +81,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   private static final String APPLICATIONS_KEY_PREFIX =
       "ContainerManager/applications/";
+  @Deprecated
   private static final String FINISHED_APPS_KEY_PREFIX =
       "ContainerManager/finishedApps/";
 
@@ -339,20 +340,6 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         state.applications.add(
             ContainerManagerApplicationProto.parseFrom(entry.getValue()));
       }
-
-      state.finishedApplications = new ArrayList<ApplicationId>();
-      keyPrefix = FINISHED_APPS_KEY_PREFIX;
-      iter.seek(bytes(keyPrefix));
-      while (iter.hasNext()) {
-        Entry<byte[], byte[]> entry = iter.next();
-        String key = asString(entry.getKey());
-        if (!key.startsWith(keyPrefix)) {
-          break;
-        }
-        ApplicationId appId =
-            ConverterUtils.toApplicationId(key.substring(keyPrefix.length()));
-        state.finishedApplications.add(appId);
-      }
     } catch (DBException e) {
       throw new IOException(e);
     } finally {
@@ -360,6 +347,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         iter.close();
       }
     }
+
+    cleanupDeprecatedFinishedApps();
 
     return state;
   }
@@ -376,25 +365,12 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   }
 
   @Override
-  public void storeFinishedApplication(ApplicationId appId)
-      throws IOException {
-    String key = FINISHED_APPS_KEY_PREFIX + appId;
-    try {
-      db.put(bytes(key), new byte[0]);
-    } catch (DBException e) {
-      throw new IOException(e);
-    }
-  }
-
-  @Override
   public void removeApplication(ApplicationId appId)
       throws IOException {
     try {
       WriteBatch batch = db.createWriteBatch();
       try {
         String key = APPLICATIONS_KEY_PREFIX + appId;
-        batch.delete(bytes(key));
-        key = FINISHED_APPS_KEY_PREFIX + appId;
         batch.delete(bytes(key));
         db.write(batch);
       } finally {
@@ -910,6 +886,52 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       db.delete(bytes(key));
     } catch (DBException e) {
       throw new IOException(e);
+    }
+  }
+
+  @SuppressWarnings("deprecation")
+  private void cleanupDeprecatedFinishedApps() {
+    try {
+      cleanupKeysWithPrefix(FINISHED_APPS_KEY_PREFIX);
+    } catch (Exception e) {
+      LOG.warn("cleanup keys with prefix " + FINISHED_APPS_KEY_PREFIX +
+              " from leveldb failed", e);
+    }
+  }
+
+  private void cleanupKeysWithPrefix(String prefix) throws IOException {
+    WriteBatch batch = null;
+    LeveldbIterator iter = null;
+    try {
+      iter = new LeveldbIterator(db);
+      try {
+        batch = db.createWriteBatch();
+        iter.seek(bytes(prefix));
+        while (iter.hasNext()) {
+          byte[] key = iter.next().getKey();
+          String keyStr = asString(key);
+          if (!keyStr.startsWith(prefix)) {
+            break;
+          }
+          batch.delete(key);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("cleanup " + keyStr + " from leveldb");
+          }
+        }
+        db.write(batch);
+      } catch (DBException e) {
+        throw new IOException(e);
+      } finally {
+        if (batch != null) {
+          batch.close();
+        }
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    } finally {
+      if (iter != null) {
+        iter.close();
+      }
     }
   }
 

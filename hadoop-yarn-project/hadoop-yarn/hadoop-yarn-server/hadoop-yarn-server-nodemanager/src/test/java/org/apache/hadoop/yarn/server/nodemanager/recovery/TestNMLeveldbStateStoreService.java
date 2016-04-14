@@ -174,7 +174,6 @@ public class TestNMLeveldbStateStoreService {
     // test empty when no state
     RecoveredApplicationsState state = stateStore.loadApplicationsState();
     assertTrue(state.getApplications().isEmpty());
-    assertTrue(state.getFinishedApplications().isEmpty());
 
     // store an application and verify recovered
     final ApplicationId appId1 = ApplicationId.newInstance(1234, 1);
@@ -188,10 +187,8 @@ public class TestNMLeveldbStateStoreService {
     state = stateStore.loadApplicationsState();
     assertEquals(1, state.getApplications().size());
     assertEquals(appProto1, state.getApplications().get(0));
-    assertTrue(state.getFinishedApplications().isEmpty());
 
-    // finish an application and add a new one
-    stateStore.storeFinishedApplication(appId1);
+    // add a new app
     final ApplicationId appId2 = ApplicationId.newInstance(1234, 2);
     builder = ContainerManagerApplicationProto.newBuilder();
     builder.setId(((ApplicationIdPBImpl) appId2).getProto());
@@ -203,18 +200,13 @@ public class TestNMLeveldbStateStoreService {
     assertEquals(2, state.getApplications().size());
     assertTrue(state.getApplications().contains(appProto1));
     assertTrue(state.getApplications().contains(appProto2));
-    assertEquals(1, state.getFinishedApplications().size());
-    assertEquals(appId1, state.getFinishedApplications().get(0));
 
     // test removing an application
-    stateStore.storeFinishedApplication(appId2);
     stateStore.removeApplication(appId2);
     restartStateStore();
     state = stateStore.loadApplicationsState();
     assertEquals(1, state.getApplications().size());
     assertEquals(appProto1, state.getApplications().get(0));
-    assertEquals(1, state.getFinishedApplications().size());
-    assertEquals(appId1, state.getFinishedApplications().get(0));
   }
 
   @Test

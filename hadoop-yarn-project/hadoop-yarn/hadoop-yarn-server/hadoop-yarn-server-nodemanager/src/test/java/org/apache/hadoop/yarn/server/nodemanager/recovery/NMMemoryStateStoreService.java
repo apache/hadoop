@@ -43,7 +43,6 @@ import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 
 public class NMMemoryStateStoreService extends NMStateStoreService {
   private Map<ApplicationId, ContainerManagerApplicationProto> apps;
-  private Set<ApplicationId> finishedApps;
   private Map<ContainerId, RecoveredContainerState> containerStates;
   private Map<TrackerKey, TrackerState> trackerStates;
   private Map<Integer, DeletionServiceDeleteTaskProto> deleteTasks;
@@ -58,7 +57,6 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   @Override
   protected void initStorage(Configuration conf) {
     apps = new HashMap<ApplicationId, ContainerManagerApplicationProto>();
-    finishedApps = new HashSet<ApplicationId>();
     containerStates = new HashMap<ContainerId, RecoveredContainerState>();
     nmTokenState = new RecoveredNMTokensState();
     nmTokenState.applicationMasterKeys =
@@ -85,7 +83,6 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
     RecoveredApplicationsState state = new RecoveredApplicationsState();
     state.applications = new ArrayList<ContainerManagerApplicationProto>(
         apps.values());
-    state.finishedApplications = new ArrayList<ApplicationId>(finishedApps);
     return state;
   }
 
@@ -98,15 +95,9 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   }
 
   @Override
-  public synchronized void storeFinishedApplication(ApplicationId appId) {
-    finishedApps.add(appId);
-  }
-
-  @Override
   public synchronized void removeApplication(ApplicationId appId)
       throws IOException {
     apps.remove(appId);
-    finishedApps.remove(appId);
   }
 
   @Override
@@ -383,7 +374,6 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
       throws IOException {
     logDeleterState.remove(appId);
   }
-
 
   private static class TrackerState {
     Map<Path, LocalResourceProto> inProgressMap =
