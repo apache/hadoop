@@ -18,15 +18,15 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import java.util.Map;
-import java.util.LinkedHashMap;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsTag;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Helpers to create interned metrics info
@@ -34,7 +34,7 @@ import org.apache.hadoop.metrics2.MetricsTag;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class Interns {
-  private static final Log LOG = LogFactory.getLog(Interns.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Interns.class);
 
   // A simple intern cache with two keys
   // (to avoid creating new (combined) key objects for lookup)
@@ -47,7 +47,7 @@ public class Interns {
       protected boolean removeEldestEntry(Map.Entry<K1, Map<K2, V>> e) {
         boolean overflow = expireKey1At(size());
         if (overflow && !gotOverflow) {
-          LOG.warn("Metrics intern cache overflow at "+ size() +" for "+ e);
+          LOG.info("Metrics intern cache overflow at {} for {}", size(), e);
           gotOverflow = true;
         }
         return overflow;
@@ -67,7 +67,7 @@ public class Interns {
           @Override protected boolean removeEldestEntry(Map.Entry<K2, V> e) {
             boolean overflow = expireKey2At(size());
             if (overflow && !gotOverflow) {
-              LOG.warn("Metrics intern cache overflow at "+ size() +" for "+ e);
+              LOG.info("Metrics intern cache overflow at {} for {}", size(), e);
               gotOverflow = true;
             }
             return overflow;
