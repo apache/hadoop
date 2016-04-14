@@ -135,6 +135,13 @@ public interface FsDatasetTestUtils {
      * @throws IOException I/O error.
      */
     void truncateMeta(long newSize) throws IOException;
+
+    /**
+     * Make the replica unreachable, perhaps by renaming it to an
+     * invalid file name.
+     * @throws IOException On I/O error.
+     */
+    void makeUnreachable() throws IOException;
   }
 
   /**
