@@ -766,6 +766,13 @@
 </property>
 
 <property>
+  <name>fs.s3a.path.style.access</name>
+  <description>Enable S3 path style access ie disabling the default virtual hosting behaviour.
+    Useful for S3A-compliant storage providers as it removes the need to set up DNS for virtual hosting.
+  </description>
+</property>
+
+<property>
   <name>fs.s3a.proxy.host</name>
   <description>Hostname of the (optional) proxy server for S3 connections.</description>
 </property>
