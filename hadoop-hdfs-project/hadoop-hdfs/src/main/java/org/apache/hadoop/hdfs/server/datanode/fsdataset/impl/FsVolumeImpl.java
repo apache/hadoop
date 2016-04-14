@@ -697,6 +697,18 @@ public class FsVolumeImpl implements FsVolumeSpi {
             } else {
               ExtendedBlock block =
                   new ExtendedBlock(bpid, Block.filename2id(state.curEntry));
+              File expectedBlockDir = DatanodeUtil.idToBlockDir(
+                  new File("."), block.getBlockId());
+              File actualBlockDir = Paths.get(".",
+                  state.curFinalizedDir, state.curFinalizedSubDir).toFile();
+              if (!expectedBlockDir.equals(actualBlockDir)) {
+                LOG.error("nextBlock({}, {}): block id {} found in invalid " +
+                    "directory.  Expected directory: {}.  " +
+                    "Actual directory: {}", storageID, bpid,
+                    block.getBlockId(), expectedBlockDir.getPath(),
+                    actualBlockDir.getPath());
+                continue;
+              }
               LOG.trace("nextBlock({}, {}): advancing to {}",
                   storageID, bpid, block);
               return block;

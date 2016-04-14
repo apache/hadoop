@@ -414,7 +414,7 @@ public class VolumeScanner extends Thread {
       Block b = volume.getDataset().getStoredBlock(
           cblock.getBlockPoolId(), cblock.getBlockId());
       if (b == null) {
-        LOG.info("FileNotFound while finding block {} on volume {}",
+        LOG.info("Replica {} was not found in the VolumeMap for volume {}",
             cblock, volume.getBasePath());
       } else {
         block = new ExtendedBlock(cblock.getBlockPoolId(), b);
