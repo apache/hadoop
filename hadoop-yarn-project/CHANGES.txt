@@ -130,6 +130,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4924. NM recovery race can lead to container not cleaned up.
     (sandflee via jlowe)
 
+    YARN-4940. yarn node -list -all failed if RM start with decommissioned
+    node (sandflee via jlowe)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES

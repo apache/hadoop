@@ -28,6 +28,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
@@ -277,7 +279,7 @@ public class TestClientRMService {
       Assert.assertTrue(report.getNodeLabels() != null
           && report.getNodeLabels().isEmpty());
     }
-    
+
     rpc.stopProxy(client, conf);
     rm.close();
   }
@@ -1515,5 +1517,50 @@ public class TestClientRMService {
 
     rpc.stopProxy(client, conf);
     rm.close();
+  }
+
+  private void createExcludeFile(String filename) throws IOException {
+    File file = new File(filename);
+    if (file.exists()) {
+      file.delete();
+    }
+
+    FileOutputStream out = new FileOutputStream(file);
+    out.write("decommisssionedHost".getBytes());
+    out.close();
+  }
+
+  @Test
+  public void testRMStartWithDecommissionedNode() throws Exception {
+    String excludeFile = "excludeFile";
+    createExcludeFile(excludeFile);
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
+        excludeFile);
+    MockRM rm = new MockRM(conf) {
+      protected ClientRMService createClientRMService() {
+        return new ClientRMService(this.rmContext, scheduler,
+            this.rmAppManager, this.applicationACLsManager, this.queueACLsManager,
+            this.getRMContext().getRMDelegationTokenSecretManager());
+      };
+    };
+    rm.start();
+
+    YarnRPC rpc = YarnRPC.create(conf);
+    InetSocketAddress rmAddress = rm.getClientRMService().getBindAddress();
+    LOG.info("Connecting to ResourceManager at " + rmAddress);
+    ApplicationClientProtocol client =
+        (ApplicationClientProtocol) rpc
+            .getProxy(ApplicationClientProtocol.class, rmAddress, conf);
+
+    // Make call
+    GetClusterNodesRequest request =
+        GetClusterNodesRequest.newInstance(EnumSet.allOf(NodeState.class));
+    List<NodeReport> nodeReports = client.getClusterNodes(request).getNodeReports();
+    Assert.assertEquals(1, nodeReports.size());
+
+    rm.stop();
+    rpc.stopProxy(client, conf);
+    new File(excludeFile).delete();
   }
 }
