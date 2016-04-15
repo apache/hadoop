@@ -327,7 +327,11 @@ public class KerberosAuthenticator implements Authenticator {
         }
       });
     } catch (PrivilegedActionException ex) {
-      throw new AuthenticationException(ex.getException());
+      if (ex.getException() instanceof IOException) {
+        throw (IOException) ex.getException();
+      } else {
+        throw new AuthenticationException(ex.getException());
+      }
     } catch (LoginException ex) {
       throw new AuthenticationException(ex);
     }
