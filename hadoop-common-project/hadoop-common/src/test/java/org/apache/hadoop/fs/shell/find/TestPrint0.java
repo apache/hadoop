@@ -23,15 +23,20 @@ import static org.mockito.Mockito.*;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.shell.PathData;
-import org.junit.Test;
 
 import java.io.PrintStream;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.junit.Before;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
+import org.junit.Test;
 
 public class TestPrint0 {
   private FileSystem mockFs;
+
+  @Rule
+  public Timeout globalTimeout = new Timeout(10000);
 
   @Before
   public void resetMock() throws IOException {
@@ -39,7 +44,7 @@ public class TestPrint0 {
   }
 
   // test the full path is printed to stdout with a '\0'
-  @Test(timeout = 1000)
+  @Test
   public void testPrint() throws IOException {
     Print.Print0 print = new Print.Print0();
     PrintStream out = mock(PrintStream.class);

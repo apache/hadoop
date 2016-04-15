@@ -39,11 +39,12 @@ import org.apache.hadoop.fs.shell.find.FindOptions;
 import org.apache.hadoop.fs.shell.find.Result;
 import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
 import org.junit.rules.Timeout;
+import org.junit.Test;
 import org.mockito.InOrder;
 
 public class TestFind {
+
   @Rule
   public Timeout timeout = new Timeout(10000);
 
