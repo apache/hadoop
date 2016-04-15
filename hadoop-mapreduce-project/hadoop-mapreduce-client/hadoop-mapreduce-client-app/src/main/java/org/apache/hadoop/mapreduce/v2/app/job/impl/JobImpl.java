@@ -1346,7 +1346,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           if (TaskType.MAP == id.getTaskId().getTaskType()) {
             // reschedule only map tasks because their outputs maybe unusable
             LOG.info(mesg + ". AttemptId:" + id);
-            eventHandler.handle(new TaskAttemptKillEvent(id, mesg));
+            // Kill the attempt and indicate that next map attempt should be
+            // rescheduled (i.e. considered as a fast fail map).
+            eventHandler.handle(new TaskAttemptKillEvent(id, mesg, true));
           }
         }
       }
