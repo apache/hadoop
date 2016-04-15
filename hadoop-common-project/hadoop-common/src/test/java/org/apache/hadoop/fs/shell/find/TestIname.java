@@ -25,11 +25,16 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.shell.PathData;
 import org.junit.Before;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
 import org.junit.Test;
 
 public class TestIname {
   private FileSystem mockFs;
   private Name.Iname name;
+
+  @Rule
+  public Timeout globalTimeout = new Timeout(10000);
 
   @Before
   public void resetMock() throws IOException {
@@ -44,7 +49,7 @@ public class TestIname {
   }
 
   // test a matching name (same case)
-  @Test(timeout = 1000)
+  @Test
   public void applyMatch() throws IOException {
     setup("name");
     PathData item = new PathData("/directory/path/name", mockFs.getConf());
@@ -52,7 +57,7 @@ public class TestIname {
   }
 
   // test a non-matching name
-  @Test(timeout = 1000)
+  @Test
   public void applyNotMatch() throws IOException {
     setup("name");
     PathData item = new PathData("/directory/path/notname", mockFs.getConf());
@@ -60,7 +65,7 @@ public class TestIname {
   }
 
   // test a matching name (different case)
-  @Test(timeout = 1000)
+  @Test
   public void applyMixedCase() throws IOException {
     setup("name");
     PathData item = new PathData("/directory/path/NaMe", mockFs.getConf());
@@ -68,7 +73,7 @@ public class TestIname {
   }
 
   // test a matching glob pattern (same case)
-  @Test(timeout = 1000)
+  @Test
   public void applyGlob() throws IOException {
     setup("n*e");
     PathData item = new PathData("/directory/path/name", mockFs.getConf());
@@ -76,7 +81,7 @@ public class TestIname {
   }
 
   // test a matching glob pattern (different case)
-  @Test(timeout = 1000)
+  @Test
   public void applyGlobMixedCase() throws IOException {
     setup("n*e");
     PathData item = new PathData("/directory/path/NaMe", mockFs.getConf());
@@ -84,7 +89,7 @@ public class TestIname {
   }
 
   // test a non-matching glob pattern
-  @Test(timeout = 1000)
+  @Test
   public void applyGlobNotMatch() throws IOException {
     setup("n*e");
     PathData item = new PathData("/directory/path/notmatch", mockFs.getConf());

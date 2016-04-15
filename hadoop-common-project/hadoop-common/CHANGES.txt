@@ -85,6 +85,9 @@ Release 2.7.3 - UNRELEASED
     HADOOP-12613. TestFind.processArguments occasionally fails.
     (Wei-Chiu Chuang via stevel)
 
+    HADOOP-12989. Some tests in org.apache.hadoop.fs.shell.find occasionally
+    time out. (Takashi Ohnishi via aajisaka)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
