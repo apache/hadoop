@@ -320,6 +320,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-6291. FSImage may be left unclosed in BootstrapStandby#doRun()
     (Sanghyun Yun via vinayakumarb)
 
+    HADOOP-13026 Should not wrap IOExceptions into a AuthenticationException in
+    KerberosAuthenticator. Xuan Gong via stevel
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
