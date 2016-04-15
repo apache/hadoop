@@ -786,8 +786,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       if (previousRMNode != null) {
         rmNode.updateMetricsForRejoinedNode(previousRMNode.getState());
       } else {
-        NodesListManager.UnknownNodeId unknownNodeId =
-            new NodesListManager.UnknownNodeId(nodeId.getHost());
+        NodeId unknownNodeId =
+            NodesListManager.createUnknownNodeId(nodeId.getHost());
         previousRMNode =
             rmNode.context.getInactiveRMNodes().remove(unknownNodeId);
         if (previousRMNode != null) {
