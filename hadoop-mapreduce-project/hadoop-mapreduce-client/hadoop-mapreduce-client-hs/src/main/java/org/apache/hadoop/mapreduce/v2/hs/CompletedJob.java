@@ -142,6 +142,7 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     report.setFinishTime(jobInfo.getFinishTime());
     report.setJobName(jobInfo.getJobname());
     report.setUser(jobInfo.getUsername());
+    report.setDiagnostics(jobInfo.getErrorInfo());
 
     if ( getTotalMaps() == 0 ) {
       report.setMapProgress(1.0f);
@@ -334,6 +335,12 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     }
   }
 
+  protected JobHistoryParser createJobHistoryParser(Path historyFileAbsolute)
+      throws IOException {
+    return new JobHistoryParser(historyFileAbsolute.getFileSystem(conf),
+                historyFileAbsolute);
+  }
+
   //History data is leisurely loaded when task level data is requested
   protected synchronized void loadFullHistoryData(boolean loadTasks,
       Path historyFileAbsolute) throws IOException {
@@ -346,7 +353,7 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
       JobHistoryParser parser = null;
       try {
         final FileSystem fs = historyFileAbsolute.getFileSystem(conf);
-        parser = new JobHistoryParser(fs, historyFileAbsolute);
+        parser = createJobHistoryParser(historyFileAbsolute);
         final Path jobConfPath = new Path(historyFileAbsolute.getParent(),
             JobHistoryUtils.getIntermediateConfFileName(jobId));
         final Configuration conf = new Configuration();

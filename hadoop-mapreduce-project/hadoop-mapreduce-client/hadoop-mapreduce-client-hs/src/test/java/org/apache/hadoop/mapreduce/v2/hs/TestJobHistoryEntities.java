@@ -19,8 +19,10 @@ package org.apache.hadoop.mapreduce.v2.hs;
 
 import static org.junit.Assert.assertEquals;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +30,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -231,4 +235,27 @@ public class TestJobHistoryEntities {
 
   }
 
+  @Test (timeout=30000)
+  public void testCompletedJobWithDiagnostics() throws Exception {
+    final String jobError = "Job Diagnostics";
+    JobInfo jobInfo = spy(new JobInfo());
+    when(jobInfo.getErrorInfo()).thenReturn(jobError);
+    when(jobInfo.getJobStatus()).thenReturn(JobState.FAILED.toString());
+    when(jobInfo.getAMInfos()).thenReturn(Collections.<JobHistoryParser.AMInfo>emptyList());
+    final JobHistoryParser mockParser = mock(JobHistoryParser.class);
+    when(mockParser.parse()).thenReturn(jobInfo);
+    HistoryFileInfo info = mock(HistoryFileInfo.class);
+    when(info.getConfFile()).thenReturn(fullConfPath);
+    when(info.getHistoryFile()).thenReturn(fullHistoryPath);
+    CompletedJob job =
+      new CompletedJob(conf, jobId, fullHistoryPath, loadTasks, "user",
+          info, jobAclsManager) {
+            @Override
+            protected JobHistoryParser createJobHistoryParser(
+                Path historyFileAbsolute) throws IOException {
+               return mockParser;
+            }
+    };
+    assertEquals(jobError, job.getReport().getDiagnostics());
+  }
 }
