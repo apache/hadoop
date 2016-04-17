@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.yarn.applications.distributedshell;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -27,6 +31,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,14 +51,24 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.ServerSocketUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
+import org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster;
+import org.apache.hadoop.yarn.client.api.impl.DirectTimelineWriter;
+import org.apache.hadoop.yarn.client.api.impl.TimelineClientImpl;
+import org.apache.hadoop.yarn.client.api.impl.TimelineWriter;
+import org.apache.hadoop.yarn.client.api.impl.TestTimelineClient;
+import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.client.api.YarnClient;
+
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -61,6 +76,7 @@ import org.apache.hadoop.yarn.server.timeline.PluginStoreTestUtils;
 import org.apache.hadoop.yarn.server.timeline.NameValuePair;
 import org.apache.hadoop.yarn.server.timeline.TimelineVersion;
 import org.apache.hadoop.yarn.server.timeline.TimelineVersionWatcher;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -68,6 +84,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
+
+import com.sun.jersey.api.client.ClientHandlerException;
 
 public class TestDistributedShell {
 
@@ -77,6 +95,7 @@ public class TestDistributedShell {
   protected MiniYARNCluster yarnCluster = null;
   protected MiniDFSCluster hdfsCluster = null;
   private FileSystem fs = null;
+  private TimelineWriter spyTimelineWriter;
   protected YarnConfiguration conf = null;
   private static final int NUM_NMS = 1;
   private static final float DEFAULT_TIMELINE_VERSION = 1.0f;
@@ -862,6 +881,37 @@ public class TestDistributedShell {
       Assert.assertTrue("The throw exception is not expected",
           e.getMessage().contains("No shell command or shell script specified " +
           "to be executed by application master"));
+    }
+  }
+
+  @Test
+  public void testDSTimelineClientWithConnectionRefuse() throws Exception {
+    ApplicationMaster am = new ApplicationMaster();
+
+    TimelineClientImpl client = new TimelineClientImpl() {
+      @Override
+      protected TimelineWriter createTimelineWriter(Configuration conf,
+          UserGroupInformation authUgi, com.sun.jersey.api.client.Client client,
+          URI resURI) throws IOException {
+        TimelineWriter timelineWriter =
+            new DirectTimelineWriter(authUgi, client, resURI);
+        spyTimelineWriter = spy(timelineWriter);
+        return spyTimelineWriter;
+      }
+    };
+    client.init(conf);
+    client.start();
+    TestTimelineClient.mockEntityClientResponse(spyTimelineWriter, null,
+        false, true);
+    try {
+      UserGroupInformation ugi = mock(UserGroupInformation.class);
+      when(ugi.getShortUserName()).thenReturn("user1");
+      // verify no ClientHandlerException get thrown out.
+      am.publishContainerEndEvent(client, ContainerStatus.newInstance(
+          BuilderUtils.newContainerId(1, 1, 1, 1), ContainerState.COMPLETE, "",
+          1), "domainId", ugi);
+    } finally {
+      client.stop();
     }
   }
 
