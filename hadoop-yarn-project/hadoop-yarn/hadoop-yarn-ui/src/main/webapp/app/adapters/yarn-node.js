@@ -16,25 +16,18 @@
  * limitations under the License.
  */
 
-import DS from 'ember-data';
+import AbstractAdapter from './abstract';
 
-export default DS.JSONAPIAdapter.extend({
-  headers: {
-    Accept: 'application/json'
-  },
-  host: 'http://localhost:1337/',
-  namespace: 'ws/v1/node',
+export default AbstractAdapter.extend({
+
+  address: "localBaseAddress",
+  restNameSpace: "node",
+  serverName: "NM",
 
   urlForFindRecord(id, modelName, snapshot) {
-    this.host = this.host + id;
+    this.host = this.get("host") + id;
     var url = this._buildURL();
     return url;
   },
-  ajax(url, method, hash) {
-    hash = hash || {};
-    hash.crossDomain = true;
-    hash.xhrFields = {withCredentials: true};
-    hash.targetServer = "NM";
-    return this._super(url, method, hash);
-  }
+
 });

@@ -16,23 +16,15 @@
  * limitations under the License.
  */
 
-import DS from 'ember-data';
-import Config from 'yarn-ui/config';
+import AbstractAdapter from './abstract';
 
-export default DS.JSONAPIAdapter.extend({
-  headers: {
-    Accept: 'application/json'
-  },
-  host: 'http://localhost:1337/' + Config.RM_HOST + ':' + Config.RM_PORT, // configurable
-  namespace: 'ws/v1/cluster/metrics', // common const
+export default AbstractAdapter.extend({
+  address: "rmWebAddress",
+  restNameSpace: "metrics",
+  serverName: "RM",
+
+  // Any cluster-metric specific adapter changes must be added here
   pathForType(modelName) {
     return ''; // move to some common place, return path by modelname.
   },
-  ajax(url, method, hash) {
-    hash = hash || {};
-    hash.crossDomain = true;
-    hash.xhrFields = {withCredentials: true};
-    hash.targetServer = "RM";
-    return this._super(url, method, hash); 
-  }
 });

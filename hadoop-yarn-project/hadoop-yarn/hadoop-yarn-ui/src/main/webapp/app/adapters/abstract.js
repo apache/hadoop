@@ -15,24 +15,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 import Ember from 'ember';
-import Resolver from 'ember-resolver';
-import loadInitializers from 'ember/load-initializers';
-import config from './config/environment';
-import Sorter from 'yarn-ui/utils/sorter';
 
-var App;
+export default DS.JSONAPIAdapter.extend({
+  address: null, //Must be set by inheriting classes
+  restNameSpace: null, //Must be set by inheriting classes
+  serverName: null, //Must be set by inheriting classes
 
-Ember.MODEL_FACTORY_INJECTIONS = true;
+  headers: {
+    Accept: 'application/json'
+  },
 
-App = Ember.Application.extend({
-  modulePrefix: config.modulePrefix,
-  podModulePrefix: config.podModulePrefix,
-  Resolver
+  host: Ember.computed("address", function () {
+    var address = this.get("address");
+    return this.get(`hosts.${address}`);
+  }),
+
+  namespace: Ember.computed("restNameSpace", function () {
+    var serverName = this.get("restNameSpace");
+    return this.get(`env.app.namespaces.${serverName}`);
+  }),
+
+  ajax: function(url, method, options) {
+    options = options || {};
+    options.crossDomain = true;
+    options.xhrFields = {
+      withCredentials: true
+    };
+    options.targetServer = this.get('serverName');
+    return this._super(url, method, options);
+  }
 });
-
-loadInitializers(App, config.modulePrefix);
-Sorter.initDataTableSorter();
-
-export default App;

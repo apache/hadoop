@@ -16,9 +16,17 @@
  * limitations under the License.
  */
 
-/**
- * Host and port configurations
- */
-
-export default {
+module.exports = { // Yarn UI App configurations
+    hosts: {
+      localBaseAddress: "localhost:1337",
+      timelineWebAddress: "localhost:8188",
+      rmWebAddress: "localhost:8088",
+      protocolScheme: "http:"
+    },
+    namespaces: {
+      timeline: 'ws/v1/applicationhistory',
+      cluster: 'ws/v1/cluster',
+      metrics: 'ws/v1/cluster/metrics',
+      node: 'ws/v1/node'
+    },
 };

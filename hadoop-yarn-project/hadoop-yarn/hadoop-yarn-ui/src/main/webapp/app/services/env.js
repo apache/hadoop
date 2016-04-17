@@ -1,3 +1,4 @@
+/*global more*/
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,22 +18,42 @@
  */
 
 import Ember from 'ember';
-import Resolver from 'ember-resolver';
-import loadInitializers from 'ember/load-initializers';
-import config from './config/environment';
-import Sorter from 'yarn-ui/utils/sorter';
 
-var App;
+import environment from '../config/environment';
 
-Ember.MODEL_FACTORY_INJECTIONS = true;
+var MoreObject = more.Object;
 
-App = Ember.Application.extend({
-  modulePrefix: config.modulePrefix,
-  podModulePrefix: config.podModulePrefix,
-  Resolver
+export default Ember.Service.extend({
+  ENV: null,
+
+  init: function () {
+    this.collateConfigs();
+  },
+
+  collateConfigs: function () {
+    var collatedENV = {
+          APP: {}
+        },
+    ENV = window.ENV;
+
+    MoreObject.merge(collatedENV, environment);
+
+    if(ENV) {
+      MoreObject.merge(collatedENV.APP, ENV);
+    }
+
+    this.setComputedENVs(collatedENV);
+
+    this.set("ENV", collatedENV);
+  },
+
+  setComputedENVs: function (env) {
+    var navigator = window.navigator;
+    env.isIE = navigator.userAgent.indexOf('MSIE') !== -1 || navigator.appVersion.indexOf('Trident/') > 0;
+    console.log('In setComputedENVs', env.isIE);
+  },
+
+  app: Ember.computed("ENV.APP", function () {
+    return this.get("ENV.APP");
+  })
 });
-
-loadInitializers(App, config.modulePrefix);
-Sorter.initDataTableSorter();
-
-export default App;

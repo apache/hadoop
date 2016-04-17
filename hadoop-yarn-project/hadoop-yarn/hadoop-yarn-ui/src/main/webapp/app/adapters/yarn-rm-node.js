@@ -16,15 +16,13 @@
  * limitations under the License.
  */
 
-import DS from 'ember-data';
-import Config from 'yarn-ui/config';
+import AbstractAdapter from './abstract';
 
-export default DS.JSONAPIAdapter.extend({
-  headers: {
-    Accept: 'application/json'
-  },
-  host: 'http://localhost:1337/' + Config.RM_HOST + ':' + Config.RM_PORT,
-  namespace: 'ws/v1/cluster',
+export default AbstractAdapter.extend({
+  address: "rmWebAddress",
+  restNameSpace: "cluster",
+  serverName: "RM",
+
   pathForType(modelName) {
     return 'nodes';
   },
@@ -35,11 +33,4 @@ export default DS.JSONAPIAdapter.extend({
     return url;
   },
 
-  ajax(url, method, hash) {
-    hash = hash || {};
-    hash.crossDomain = true;
-    hash.xhrFields = {withCredentials: true};
-    hash.targetServer = "RM";
-    return this._super(url, method, hash);
-  }
 });
