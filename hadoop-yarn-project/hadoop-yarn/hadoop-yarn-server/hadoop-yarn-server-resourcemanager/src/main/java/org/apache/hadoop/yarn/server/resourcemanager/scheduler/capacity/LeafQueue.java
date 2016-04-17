@@ -1441,13 +1441,6 @@ public class LeafQueue extends AbstractCSQueue {
         // Book-keeping
         if (removed) {
 
-          // track reserved resource for metrics, for normal container
-          // getReservedResource will be null.
-          Resource reservedRes = rmContainer.getReservedResource();
-          if (reservedRes != null && !reservedRes.equals(Resources.none())) {
-            decReservedResource(node.getPartition(), reservedRes);
-          }
-
           // Inform the ordering policy
           orderingPolicy.containerReleased(application, rmContainer);
           
