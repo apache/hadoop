@@ -18,30 +18,32 @@
 
 import DS from 'ember-data';
 import Converter from 'yarn-ui/utils/converter';
-import Config from 'yarn-ui/config';
 
 export default DS.JSONAPIAdapter.extend({
   headers: {
     Accept: 'application/json'
   },
-  rmHost: 'http://localhost:1337/' + Config.RM_HOST + ':' + Config.RM_PORT,
-  tsHost: 'http://localhost:1337/' + Config.TS_HOST + ':' + Config.TS_PORT,
+
   host: function() {
     return undefined
   }.property(),
-  rmNamespace: 'ws/v1/cluster',
-  tsNamespace: 'ws/v1/applicationhistory',
+
   namespace: function() {
     return undefined
   }.property(),
 
   urlForQuery(query, modelName) {
+    var rmHosts = this.get(`hosts.rmWebAddress`);
+    var tsHosts = this.get(`hosts.timelineWebAddress`);
+    var rmNamespaces = this.get(`env.app.namespaces.cluster`);
+    var tsNamespaces = this.get(`env.app.namespaces.timeline`);
+
     if (query.is_rm) {
-      this.set("host", this.rmHost);
-      this.set("namespace", this.rmNamespace);
+      this.set("host", rmHosts);
+      this.set("namespace", rmNamespaces);
     } else {
-      this.set("host", this.tsHost);
-      this.set("namespace", this.tsNamespace);
+      this.set("host", tsHosts);
+      this.set("namespace", tsNamespaces);
     }
 
     var url = this._buildURL();

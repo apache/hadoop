@@ -16,9 +16,13 @@
  * limitations under the License.
  */
 
-/**
- * Host and port configurations
- */
+export function initialize( application ) {
+   application.inject('controller', 'hosts', 'service:hosts');
+   application.inject('route', 'hosts', 'service:hosts');
+   application.inject('adapter', 'hosts', 'service:hosts');
+}
 
 export default {
+  name: 'hosts',
+  initialize
 };
