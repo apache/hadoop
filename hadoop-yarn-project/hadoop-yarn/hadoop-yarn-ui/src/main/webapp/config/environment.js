@@ -18,6 +18,8 @@
 
 /* jshint node: true */
 
+const DEFAULT_CONFIG = require('./default-config');
+
 module.exports = function(environment) {
   var ENV = {
     modulePrefix: 'yarn-ui',
@@ -31,9 +33,12 @@ module.exports = function(environment) {
       }
     },
 
-    APP: {
-      // Here you can pass flags/options to your application instance
-      // when it is created
+    APP: DEFAULT_CONFIG,
+    contentSecurityPolicy: {
+      'connect-src': "* 'self'",
+      'child-src': "'self' 'unsafe-inline'",
+      'style-src': "'self' 'unsafe-inline'",
+      'script-src': "'self' 'unsafe-inline'"
     }
   };
 

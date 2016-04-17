@@ -28,8 +28,14 @@ export default DS.RESTAdapter.extend({
   headers: {
     Accept: 'text/plain'
   },
-  host: 'http://localhost:1337/',
-  namespace: 'ws/v1/node',
+
+  host: Ember.computed("address", function () {
+    return this.get(`hosts.localBaseAddress`);
+  }),
+
+  namespace: Ember.computed("restNameSpace", function () {
+    return this.get(`env.app.namespaces.node`);
+  }),
 
   urlForFindRecord(id, modelName, snapshot) {
     var splits = Converter.splitForContainerLogs(id);

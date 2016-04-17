@@ -16,16 +16,13 @@
  * limitations under the License.
  */
 
-import DS from 'ember-data';
+import AbstractAdapter from './abstract';
 import Converter from 'yarn-ui/utils/converter';
-import Config from 'yarn-ui/config';
 
-export default DS.JSONAPIAdapter.extend({
-  headers: {
-    Accept: 'application/json'
-  },
-  host: 'http://localhost:1337/' + Config.RM_HOST + ':' + Config.RM_PORT, // configurable
-  namespace: 'ws/v1/cluster', // common const
+export default AbstractAdapter.extend({
+  address: "rmWebAddress",
+  restNameSpace: "cluster",
+  serverName: "RM",
 
   urlForQuery(query, modelName) {
     var url = this._buildURL();
@@ -36,15 +33,8 @@ export default DS.JSONAPIAdapter.extend({
     var url = this._buildURL();
     var url = url + '/apps/' + 
            Converter.attemptIdToAppId(id) + "/appattempts/" + id;
-    console.log(url);
+    console.log('app-attempt url:',url);
     return url;
-  },
-
-  ajax(url, method, hash) {
-    hash = {};
-    hash.crossDomain = true;
-    hash.xhrFields = {withCredentials: true};
-    hash.targetServer = "RM";
-    return this._super(url, method, hash); 
   }
+
 });
