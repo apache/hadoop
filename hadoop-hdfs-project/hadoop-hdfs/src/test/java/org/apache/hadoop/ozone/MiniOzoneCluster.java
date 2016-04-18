@@ -18,7 +18,7 @@
 package org.apache.hadoop.ozone;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_STORAGE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_LOCATION_RPC_ADDRESS_KEY;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -109,7 +109,7 @@ public class MiniOzoneCluster extends MiniDFSCluster implements Closeable {
       // MiniDFSCluster expects to find the default file system configured with
       // an HDFS URI.
       conf.set(FS_DEFAULT_NAME_KEY, "hdfs://127.0.0.1:0");
-      conf.set(DFS_STORAGE_RPC_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(DFS_CONTAINER_LOCATION_RPC_ADDRESS_KEY, "127.0.0.1:0");
       StorageContainerManager scm = new StorageContainerManager(conf);
       scm.start();
       return new MiniOzoneCluster(this, scm);

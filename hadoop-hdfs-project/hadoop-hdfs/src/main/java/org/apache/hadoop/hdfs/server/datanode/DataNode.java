@@ -48,8 +48,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_DEF
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_OBJECTSTORE_ENABLED_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_OBJECTSTORE_ENABLED_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -188,7 +188,6 @@ import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SaslPropertiesResolver;
@@ -456,9 +455,8 @@ public class DataNode extends ReconfigurableBase
     this.pipelineSupportECN = conf.getBoolean(
         DFSConfigKeys.DFS_PIPELINE_ECN_ENABLED,
         DFSConfigKeys.DFS_PIPELINE_ECN_ENABLED_DEFAULT);
-    this.ozoneEnabled = conf.getBoolean(OzoneConfigKeys
-        .DFS_OBJECTSTORE_ENABLED_KEY, OzoneConfigKeys
-        .DFS_OBJECTSTORE_ENABLED_DEFAULT);
+    this.ozoneEnabled = conf.getBoolean(OZONE_ENABLED,
+        OZONE_ENABLED_DEFAULT);
 
     confVersion = "core-" +
         conf.get("hadoop.common.configuration.version", "UNSPECIFIED") +
@@ -1294,7 +1292,7 @@ public class DataNode extends ReconfigurableBase
     // global DN settings
     registerMXBean();
     initDataXceiver(conf);
-    initObjectStoreHandler(conf);
+    initObjectStoreHandler();
     startInfoServer(conf);
     pauseMonitor = new JvmPauseMonitor();
     pauseMonitor.init(conf);
@@ -1331,12 +1329,10 @@ public class DataNode extends ReconfigurableBase
    * Initializes the object store handler.  This must be called before
    * initialization of the HTTP server.
    *
-   * @param config configuration
    * @throws IOException if there is an I/O error
    */
-  private void initObjectStoreHandler(Configuration config) throws IOException {
-    if (config.getBoolean(DFS_OBJECTSTORE_ENABLED_KEY,
-        DFS_OBJECTSTORE_ENABLED_DEFAULT)) {
+  private void initObjectStoreHandler() throws IOException {
+    if (this.ozoneEnabled) {
       this.objectStoreHandler = new ObjectStoreHandler(conf);
       LOG.info("ozone is enabled.");
     }

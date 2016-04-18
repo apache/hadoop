@@ -72,7 +72,7 @@ public class TestContainerServer {
       Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline
           (containerName);
       OzoneConfiguration conf = new OzoneConfiguration();
-      conf.setInt(OzoneConfigKeys.DFS_OZONE_CONTAINER_IPC_PORT,
+      conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
           pipeline.getLeader().getContainerPort());
 
       server = new XceiverServer(conf, new TestContainerDispatcher());
@@ -105,7 +105,7 @@ public class TestContainerServer {
       Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline
           (containerName);
       OzoneConfiguration conf = new OzoneConfiguration();
-      conf.setInt(OzoneConfigKeys.DFS_OZONE_CONTAINER_IPC_PORT,
+      conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
           pipeline.getLeader().getContainerPort());
 
       server = new XceiverServer(conf, new Dispatcher(

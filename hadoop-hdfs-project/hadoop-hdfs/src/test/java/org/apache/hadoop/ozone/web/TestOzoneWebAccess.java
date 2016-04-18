@@ -59,8 +59,8 @@ public class TestOzoneWebAccess {
   /**
    * Create a MiniDFSCluster for testing.
    *
-   * Ozone is made active by setting DFS_OBJECTSTORE_ENABLED_KEY = true and
-   * DFS_STORAGE_HANDLER_TYPE_KEY = "local" , which uses a local directory to
+   * Ozone is made active by setting OZONE_ENABLED = true and
+   * OZONE_HANDLER_TYPE_KEY = "local" , which uses a local directory to
    * emulate Ozone backend.
    *
    * @throws IOException
@@ -71,9 +71,9 @@ public class TestOzoneWebAccess {
 
     URL p = conf.getClass().getResource("");
     String path = p.getPath().concat(TestOzoneWebAccess.class.getSimpleName());
-    conf.set(OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT, path);
-    conf.setBoolean(OzoneConfigKeys.DFS_OBJECTSTORE_ENABLED_KEY, true);
-    conf.set(OzoneConfigKeys.DFS_STORAGE_HANDLER_TYPE_KEY, "local");
+    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
+    conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
+    conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY, "local");
 
     cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitActive();

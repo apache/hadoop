@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_OBJECTSTORE_TRACE_ENABLED_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_OBJECTSTORE_TRACE_ENABLED_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_STORAGE_HANDLER_TYPE_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_STORAGE_HANDLER_TYPE_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_STORAGE_RPC_ADDRESS_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_STORAGE_RPC_ADDRESS_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_STORAGE_RPC_BIND_HOST_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_STORAGE_RPC_DEFAULT_PORT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_TRACE_ENABLED_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_TRACE_ENABLED_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_HANDLER_TYPE_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_LOCATION_RPC_ADDRESS_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_LOCATION_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_LOCATION_RPC_BIND_HOST_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_LOCATION_RPC_DEFAULT_PORT;
 import static com.sun.jersey.api.core.ResourceConfig.PROPERTY_CONTAINER_REQUEST_FILTERS;
 import static com.sun.jersey.api.core.ResourceConfig.FEATURE_TRACE;
 
@@ -77,12 +77,12 @@ public final class ObjectStoreHandler implements Closeable {
    * @throws IOException if there is an I/O error
    */
   public ObjectStoreHandler(Configuration conf) throws IOException {
-    String shType = conf.getTrimmed(DFS_STORAGE_HANDLER_TYPE_KEY,
-        DFS_STORAGE_HANDLER_TYPE_DEFAULT);
+    String shType = conf.getTrimmed(OZONE_HANDLER_TYPE_KEY,
+        OZONE_HANDLER_TYPE_DEFAULT);
     LOG.info("ObjectStoreHandler initializing with {}: {}",
-        DFS_STORAGE_HANDLER_TYPE_KEY, shType);
-    boolean ozoneTrace = conf.getBoolean(DFS_OBJECTSTORE_TRACE_ENABLED_KEY,
-        DFS_OBJECTSTORE_TRACE_ENABLED_DEFAULT);
+        OZONE_HANDLER_TYPE_KEY, shType);
+    boolean ozoneTrace = conf.getBoolean(OZONE_TRACE_ENABLED_KEY,
+        OZONE_TRACE_ENABLED_DEFAULT);
     final StorageHandler storageHandler;
 
     // Initialize Jersey container for object store web application.
@@ -92,8 +92,10 @@ public final class ObjectStoreHandler implements Closeable {
       long version =
           RPC.getProtocolVersion(StorageContainerLocationProtocolPB.class);
       InetSocketAddress address = conf.getSocketAddr(
-          DFS_STORAGE_RPC_BIND_HOST_KEY, DFS_STORAGE_RPC_ADDRESS_KEY,
-          DFS_STORAGE_RPC_ADDRESS_DEFAULT, DFS_STORAGE_RPC_DEFAULT_PORT);
+          DFS_CONTAINER_LOCATION_RPC_BIND_HOST_KEY,
+          DFS_CONTAINER_LOCATION_RPC_ADDRESS_KEY,
+          DFS_CONTAINER_LOCATION_RPC_ADDRESS_DEFAULT,
+          DFS_CONTAINER_LOCATION_RPC_DEFAULT_PORT);
       this.storageContainerLocationClient =
           new StorageContainerLocationProtocolClientSideTranslatorPB(
               RPC.getProxy(StorageContainerLocationProtocolPB.class, version,
@@ -108,7 +110,7 @@ public final class ObjectStoreHandler implements Closeable {
       } else {
         throw new IllegalArgumentException(
             String.format("Unrecognized value for %s: %s",
-                DFS_STORAGE_HANDLER_TYPE_KEY, shType));
+                OZONE_HANDLER_TYPE_KEY, shType));
       }
     }
     ApplicationAdapter aa =

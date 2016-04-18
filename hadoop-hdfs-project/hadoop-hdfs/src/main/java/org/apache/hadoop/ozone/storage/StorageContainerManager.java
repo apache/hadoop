@@ -27,11 +27,11 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_STORAGE_HANDLER_COUNT_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_STORAGE_HANDLER_COUNT_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_STORAGE_RPC_ADDRESS_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_STORAGE_RPC_ADDRESS_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_STORAGE_RPC_BIND_HOST_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_HANDLER_COUNT_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_LOCATION_HANDLER_COUNT_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_LOCATION_RPC_ADDRESS_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_LOCATION_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_LOCATION_RPC_BIND_HOST_KEY;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -190,16 +190,18 @@ public class StorageContainerManager
             new StorageContainerLocationProtocolServerSideTranslatorPB(this));
 
     InetSocketAddress storageRpcAddr = NetUtils.createSocketAddr(
-        conf.getTrimmed(DFS_STORAGE_RPC_ADDRESS_KEY,
-            DFS_STORAGE_RPC_ADDRESS_DEFAULT), -1, DFS_STORAGE_RPC_ADDRESS_KEY);
+        conf.getTrimmed(DFS_CONTAINER_LOCATION_RPC_ADDRESS_KEY,
+            DFS_CONTAINER_LOCATION_RPC_ADDRESS_DEFAULT),
+        -1, DFS_CONTAINER_LOCATION_RPC_ADDRESS_KEY);
 
     storageRpcServer = startRpcServer(conf, storageRpcAddr,
         StorageContainerLocationProtocolPB.class, storageProtoPbService,
-        DFS_STORAGE_RPC_BIND_HOST_KEY,
-        DFS_STORAGE_HANDLER_COUNT_KEY,
-        DFS_STORAGE_HANDLER_COUNT_DEFAULT);
+        DFS_CONTAINER_LOCATION_RPC_BIND_HOST_KEY,
+        DFS_CONTAINER_LOCATION_HANDLER_COUNT_KEY,
+        DFS_CONTAINER_HANDLER_COUNT_DEFAULT);
     storageRpcAddress = updateListenAddress(conf,
-        DFS_STORAGE_RPC_ADDRESS_KEY, storageRpcAddr, storageRpcServer);
+        DFS_CONTAINER_LOCATION_RPC_ADDRESS_KEY,
+        storageRpcAddr, storageRpcServer);
     LOG.info(buildRpcServerStartMessage(
         "StorageContainerLocationProtocol RPC server", storageRpcAddress));
   }
