@@ -27,7 +27,9 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.ConnectException;
+import java.net.SocketTimeoutException;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -234,6 +236,8 @@ public class TestTimelineClient {
     UserGroupInformation.setConfiguration(conf);
 
     TimelineClientImpl client = createTimelineClient(conf);
+    TimelineClientImpl clientFake =
+        createTimelineClientFakeTimelineClientRetryOp(conf);
     TestTimlineDelegationTokenSecretManager dtManager =
         new TestTimlineDelegationTokenSecretManager();
     try {
@@ -278,8 +282,24 @@ public class TestTimelineClient {
       } catch (RuntimeException ce) {
         assertException(client, ce);
       }
+
+      // Test DelegationTokenOperationsRetry on SocketTimeoutException
+      try {
+        TimelineDelegationTokenIdentifier timelineDT =
+            new TimelineDelegationTokenIdentifier(
+                new Text("tester"), new Text("tester"), new Text("tester"));
+        clientFake.cancelDelegationToken(
+            new Token<TimelineDelegationTokenIdentifier>(timelineDT.getBytes(),
+                dtManager.createPassword(timelineDT),
+                timelineDT.getKind(),
+                new Text("0.0.0.0:8188")));
+        assertFail();
+      } catch (RuntimeException ce) {
+        assertException(clientFake, ce);
+      }
     } finally {
       client.stop();
+      clientFake.stop();
       dtManager.stopThreads();
     }
   }
@@ -298,7 +318,7 @@ public class TestTimelineClient {
         client.connectionRetry.getRetired());
   }
 
-  private static ClientResponse mockEntityClientResponse(
+  public static ClientResponse mockEntityClientResponse(
       TimelineWriter spyTimelineWriter, ClientResponse.Status status,
       boolean hasError, boolean hasRuntimeError) {
     ClientResponse response = mock(ClientResponse.class);
@@ -386,6 +406,27 @@ public class TestTimelineClient {
             new DirectTimelineWriter(authUgi, client, resURI);
         spyTimelineWriter = spy(timelineWriter);
         return spyTimelineWriter;
+      }
+    };
+    client.init(conf);
+    client.start();
+    return client;
+  }
+
+  private TimelineClientImpl createTimelineClientFakeTimelineClientRetryOp(
+      YarnConfiguration conf) {
+    TimelineClientImpl client = new TimelineClientImpl() {
+
+      @Override
+      public TimelineClientRetryOp
+          createTimelineClientRetryOpForOperateDelegationToken(
+              final PrivilegedExceptionAction<?> action) throws IOException {
+        TimelineClientRetryOpForOperateDelegationToken op =
+            spy(new TimelineClientRetryOpForOperateDelegationToken(
+            UserGroupInformation.getCurrentUser(), action));
+        doThrow(new SocketTimeoutException("Test socketTimeoutException"))
+            .when(op).run();
+        return op;
       }
     };
     client.init(conf);

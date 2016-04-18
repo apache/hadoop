@@ -74,6 +74,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
@@ -133,7 +134,7 @@ import com.google.protobuf.Message.Builder;
  * 
  * @see Client
  */
-@InterfaceAudience.LimitedPrivate(value = { "Common", "HDFS", "MapReduce", "Yarn" })
+@Public
 @InterfaceStability.Evolving
 public abstract class Server {
   private final boolean authorize;
@@ -439,7 +440,7 @@ public abstract class Server {
 
   /**
    * Checks if LogSlowRPC is set true.
-   * @return
+   * @return true, if LogSlowRPC is set true, false, otherwise.
    */
   protected boolean isLogSlowRPC() {
     return logSlowRPC;

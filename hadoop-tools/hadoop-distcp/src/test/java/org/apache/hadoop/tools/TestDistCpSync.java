@@ -674,4 +674,42 @@ public class TestDistCpSync {
 
     testAndVerify(numCreatedModified);
   }
+
+  private void initData9(Path dir) throws Exception {
+    final Path foo = new Path(dir, "foo");
+    final Path foo_f1 = new Path(foo, "f1");
+
+    DFSTestUtil.createFile(dfs, foo_f1, BLOCK_SIZE, DATA_NUM, 0L);
+  }
+
+  private void changeData9(Path dir) throws Exception {
+    final Path foo = new Path(dir, "foo");
+    final Path foo_f2 = new Path(foo, "f2");
+
+    DFSTestUtil.createFile(dfs, foo_f2, BLOCK_SIZE, DATA_NUM, 0L);
+  }
+
+  /**
+   * Test a case where the source path is relative.
+   */
+  @Test
+  public void testSync9() throws Exception {
+
+    // use /user/$USER/source for source directory
+    Path sourcePath = new Path(dfs.getWorkingDirectory(), "source");
+    initData9(sourcePath);
+    initData9(target);
+    dfs.allowSnapshot(sourcePath);
+    dfs.allowSnapshot(target);
+    dfs.createSnapshot(sourcePath, "s1");
+    dfs.createSnapshot(target, "s1");
+    changeData9(sourcePath);
+    dfs.createSnapshot(sourcePath, "s2");
+
+    String[] args = new String[]{"-update","-diff", "s1", "s2",
+                                   "source", target.toString()};
+    new DistCp(conf, OptionsParser.parse(args)).execute();
+    verifyCopy(dfs.getFileStatus(sourcePath),
+                 dfs.getFileStatus(target), false);
+  }
 }

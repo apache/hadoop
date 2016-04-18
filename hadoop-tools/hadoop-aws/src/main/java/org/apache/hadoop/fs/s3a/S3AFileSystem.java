@@ -38,6 +38,7 @@ import com.amazonaws.auth.AWSCredentialsProviderChain;
 
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.S3ClientOptions;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.DeleteObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
@@ -243,6 +244,15 @@ public class S3AFileSystem extends FileSystem {
         LOG.error(msg);
         throw new IllegalArgumentException(msg, e);
       }
+    }
+    enablePathStyleAccessIfRequired(conf);
+  }
+
+  private void enablePathStyleAccessIfRequired(Configuration conf) {
+    final boolean pathStyleAccess = conf.getBoolean(PATH_STYLE_ACCESS, false);
+    if (pathStyleAccess) {
+      LOG.debug("Enabling path style access!");
+      s3.setS3ClientOptions(new S3ClientOptions().withPathStyleAccess(true));
     }
   }
 

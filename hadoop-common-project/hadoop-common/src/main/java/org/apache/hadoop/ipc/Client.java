@@ -61,6 +61,7 @@ import javax.security.sasl.Sasl;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -107,7 +108,7 @@ import com.google.protobuf.CodedOutputStream;
  * 
  * @see Server
  */
-@InterfaceAudience.LimitedPrivate(value = { "Common", "HDFS", "MapReduce", "Yarn" })
+@Public
 @InterfaceStability.Evolving
 public class Client implements AutoCloseable {
   

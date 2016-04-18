@@ -60,14 +60,14 @@ public class TestLoadBalancingKMSClientProvider {
             providers[2].getKMSUrl()));
 
     kp = new KMSClientProvider.Factory().createProvider(new URI(
-        "kms://http@host1;host2;host3:16000/kms/foo"), conf);
+        "kms://http@host1;host2;host3:9600/kms/foo"), conf);
     assertTrue(kp instanceof LoadBalancingKMSClientProvider);
     providers =
         ((LoadBalancingKMSClientProvider) kp).getProviders();
     assertEquals(3, providers.length);
-    assertEquals(Sets.newHashSet("http://host1:16000/kms/foo/v1/",
-        "http://host2:16000/kms/foo/v1/",
-        "http://host3:16000/kms/foo/v1/"),
+    assertEquals(Sets.newHashSet("http://host1:9600/kms/foo/v1/",
+        "http://host2:9600/kms/foo/v1/",
+        "http://host3:9600/kms/foo/v1/"),
         Sets.newHashSet(providers[0].getKMSUrl(),
             providers[1].getKMSUrl(),
             providers[2].getKMSUrl()));

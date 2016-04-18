@@ -427,6 +427,7 @@ public class DFSAdmin extends FsShell {
     "\t[-allowSnapshot <snapshotDir>]\n" +
     "\t[-disallowSnapshot <snapshotDir>]\n" +
     "\t[-shutdownDatanode <datanode_host:ipc_port> [upgrade]]\n" +
+    "\t[-evictWriters <datanode_host:ipc_port>]\n" +
     "\t[-getDatanodeInfo <datanode_host:ipc_port>]\n" +
     "\t[-metasave filename]\n" +
     "\t[-triggerBlockReport [-incremental] <datanode_host:ipc_port>]\n" +
@@ -1829,6 +1830,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-shutdownDatanode".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-shutdownDatanode <datanode_host:ipc_port> [upgrade]]");
+    } else if ("-evictWriters".equals(cmd)) {
+      System.err.println("Usage: hdfs dfsadmin"
+          + " [-evictWriters <datanode_host:ipc_port>]");
     } else if ("-getDatanodeInfo".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-getDatanodeInfo <datanode_host:ipc_port>]");

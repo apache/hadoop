@@ -179,11 +179,15 @@ public class TestGetBlocks {
     final int DEFAULT_BLOCK_SIZE = 1024;
 
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
+    CONF.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY,
+      DEFAULT_BLOCK_SIZE);
+
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(
         REPLICATION_FACTOR).build();
     try {
       cluster.waitActive();
-      long fileLen = 2 * DEFAULT_BLOCK_SIZE;
+      // the third block will not be visible to getBlocks
+      long fileLen = 2 * DEFAULT_BLOCK_SIZE + 1;
       DFSTestUtil.createFile(cluster.getFileSystem(), new Path("/tmp.txt"),
           fileLen, REPLICATION_FACTOR, 0L);
 
@@ -196,7 +200,7 @@ public class TestGetBlocks {
             DFSUtilClient.getNNAddress(CONF), CONF);
         locatedBlocks = dfsclient.getNamenode()
             .getBlockLocations("/tmp.txt", 0, fileLen).getLocatedBlocks();
-        assertEquals(2, locatedBlocks.size());
+        assertEquals(3, locatedBlocks.size());
         notWritten = false;
         for (int i = 0; i < 2; i++) {
           dataNodes = locatedBlocks.get(i).getLocations();

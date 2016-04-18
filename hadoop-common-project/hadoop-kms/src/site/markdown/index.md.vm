@@ -32,7 +32,7 @@ KMS is a Java web-application and it runs using a pre-configured Tomcat bundled 
 KMS Client Configuration
 ------------------------
 
-The KMS client `KeyProvider` uses the **kms** scheme, and the embedded URL must be the URL of the KMS. For example, for a KMS running on `http://localhost:16000/kms`, the KeyProvider URI is `kms://http@localhost:16000/kms`. And, for a KMS running on `https://localhost:16000/kms`, the KeyProvider URI is `kms://https@localhost:16000/kms`
+The KMS client `KeyProvider` uses the **kms** scheme, and the embedded URL must be the URL of the KMS. For example, for a KMS running on `http://localhost:9600/kms`, the KeyProvider URI is `kms://http@localhost:9600/kms`. And, for a KMS running on `https://localhost:9600/kms`, the KeyProvider URI is `kms://https@localhost:9600/kms`
 
 KMS
 ---
@@ -178,7 +178,7 @@ $H3 Embedded Tomcat Configuration
 
 To configure the embedded Tomcat go to the `share/hadoop/kms/tomcat/conf`.
 
-KMS pre-configures the HTTP and Admin ports in Tomcat's `server.xml` to 16000 and 16001.
+KMS pre-configures the HTTP and Admin ports in Tomcat's `server.xml` to 9600 and 9601.
 
 Tomcat logs are also preconfigured to go to Hadoop's `logs/` directory.
 

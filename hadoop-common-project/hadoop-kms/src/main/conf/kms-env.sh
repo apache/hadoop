@@ -24,7 +24,7 @@
 
 # The HTTP port used by KMS
 #
-# export KMS_HTTP_PORT=16000
+# export KMS_HTTP_PORT=9600
 
 # The Admin port used by KMS
 #

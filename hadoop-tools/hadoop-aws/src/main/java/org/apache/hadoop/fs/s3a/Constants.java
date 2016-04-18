@@ -28,13 +28,17 @@ public class Constants {
   // number of simultaneous connections to s3
   public static final String MAXIMUM_CONNECTIONS = "fs.s3a.connection.maximum";
   public static final int DEFAULT_MAXIMUM_CONNECTIONS = 15;
-  
+
   // connect to s3 over ssl?
   public static final String SECURE_CONNECTIONS = "fs.s3a.connection.ssl.enabled";
   public static final boolean DEFAULT_SECURE_CONNECTIONS = true;
 
   //use a custom endpoint?
   public static final String ENDPOINT = "fs.s3a.endpoint";
+
+  //Enable path style access? Overrides default virtual hosting
+  public static final String PATH_STYLE_ACCESS = "fs.s3a.path.style.access";
+
   //connect to s3 through a proxy server?
   public static final String PROXY_HOST = "fs.s3a.proxy.host";
   public static final String PROXY_PORT = "fs.s3a.proxy.port";
@@ -50,7 +54,7 @@ public class Constants {
   // seconds until we give up trying to establish a connection to s3
   public static final String ESTABLISH_TIMEOUT = "fs.s3a.connection.establish.timeout";
   public static final int DEFAULT_ESTABLISH_TIMEOUT = 50000;
-  
+
   // seconds until we give up on a connection to s3
   public static final String SOCKET_TIMEOUT = "fs.s3a.connection.timeout";
   public static final int DEFAULT_SOCKET_TIMEOUT = 200000;
@@ -74,7 +78,7 @@ public class Constants {
   // size of each of or multipart pieces in bytes
   public static final String MULTIPART_SIZE = "fs.s3a.multipart.size";
   public static final long DEFAULT_MULTIPART_SIZE = 104857600; // 100 MB
-  
+
   // minimum size in bytes before we start a multipart uploads or copy
   public static final String MIN_MULTIPART_THRESHOLD = "fs.s3a.multipart.threshold";
   public static final long DEFAULT_MIN_MULTIPART_THRESHOLD = Integer.MAX_VALUE;

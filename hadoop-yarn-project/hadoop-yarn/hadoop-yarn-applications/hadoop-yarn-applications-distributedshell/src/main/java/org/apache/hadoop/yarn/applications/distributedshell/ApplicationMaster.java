@@ -104,6 +104,7 @@ import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.log4j.LogManager;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.sun.jersey.api.client.ClientHandlerException;
 
 /**
  * An ApplicationMaster for executing shell commands on a set of launched
@@ -1149,13 +1150,14 @@ public class ApplicationMaster {
           putContainerEntity(timelineClient,
               container.getId().getApplicationAttemptId(),
               entity));
-    } catch (YarnException | IOException e) {
+    } catch (YarnException | IOException | ClientHandlerException e) {
       LOG.error("Container start event could not be published for "
           + container.getId().toString(), e);
     }
   }
 
-  private void publishContainerEndEvent(
+  @VisibleForTesting
+  void publishContainerEndEvent(
       final TimelineClient timelineClient, ContainerStatus container,
       String domainId, UserGroupInformation ugi) {
     final TimelineEntity entity = new TimelineEntity();
@@ -1177,7 +1179,7 @@ public class ApplicationMaster {
           putContainerEntity(timelineClient,
               container.getContainerId().getApplicationAttemptId(),
               entity));
-    } catch (YarnException | IOException e) {
+    } catch (YarnException | IOException | ClientHandlerException e) {
       LOG.error("Container end event could not be published for "
           + container.getContainerId().toString(), e);
     }
@@ -1212,7 +1214,7 @@ public class ApplicationMaster {
     try {
       TimelinePutResponse response = timelineClient.putEntities(entity);
       processTimelineResponseErrors(response);
-    } catch (YarnException | IOException e) {
+    } catch (YarnException | IOException | ClientHandlerException e) {
       LOG.error("App Attempt "
           + (appEvent.equals(DSEvent.DS_APP_ATTEMPT_START) ? "start" : "end")
           + " event could not be published for "

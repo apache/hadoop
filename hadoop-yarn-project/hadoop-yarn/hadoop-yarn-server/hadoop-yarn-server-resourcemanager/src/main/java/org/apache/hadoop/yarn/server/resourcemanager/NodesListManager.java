@@ -163,7 +163,7 @@ public class NodesListManager extends CompositeService implements
   private void setDecomissionedNMs() {
     Set<String> excludeList = hostsReader.getExcludedHosts();
     for (final String host : excludeList) {
-      UnknownNodeId nodeId = new UnknownNodeId(host);
+      NodeId nodeId = createUnknownNodeId(host);
       RMNodeImpl rmNode = new RMNodeImpl(nodeId,
           rmContext, host, -1, -1, new UnknownNode(host), null, null);
       rmContext.getInactiveRMNodes().put(nodeId, rmNode);
@@ -430,38 +430,8 @@ public class NodesListManager extends CompositeService implements
    * A NodeId instance needed upon startup for populating inactive nodes Map.
    * It only knows the hostname/ip and marks the port to -1 or invalid.
    */
-  public static class UnknownNodeId extends NodeId {
-
-    private String host;
-
-    public UnknownNodeId(String host) {
-      this.host = host;
-    }
-
-    @Override
-    public String getHost() {
-      return this.host;
-    }
-
-    @Override
-    protected void setHost(String hst) {
-
-    }
-
-    @Override
-    public int getPort() {
-      return -1;
-    }
-
-    @Override
-    protected void setPort(int port) {
-
-    }
-
-    @Override
-    protected void build() {
-
-    }
+  public static NodeId createUnknownNodeId(String host) {
+    return NodeId.newInstance(host, -1);
   }
 
   /**

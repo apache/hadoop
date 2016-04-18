@@ -914,13 +914,13 @@ public class DirectoryScanner implements Runnable {
      */
     private void verifyFileLocation(File actualBlockFile,
         File bpFinalizedDir, long blockId) {
-      File blockDir = DatanodeUtil.idToBlockDir(bpFinalizedDir, blockId);
-      if (actualBlockFile.getParentFile().compareTo(blockDir) != 0) {
-        File expBlockFile = new File(blockDir, actualBlockFile.getName());
-        LOG.warn("Block: " + blockId
-            + " has to be upgraded to block ID-based layout. "
-            + "Actual block file path: " + actualBlockFile
-            + ", expected block file path: " + expBlockFile);
+      File expectedBlockDir =
+          DatanodeUtil.idToBlockDir(bpFinalizedDir, blockId);
+      File actualBlockDir = actualBlockFile.getParentFile();
+      if (actualBlockDir.compareTo(expectedBlockDir) != 0) {
+        LOG.warn("Block: " + blockId +
+            " found in invalid directory.  Expected directory: " +
+            expectedBlockDir + ".  Actual directory: " + actualBlockDir);
       }
     }
 

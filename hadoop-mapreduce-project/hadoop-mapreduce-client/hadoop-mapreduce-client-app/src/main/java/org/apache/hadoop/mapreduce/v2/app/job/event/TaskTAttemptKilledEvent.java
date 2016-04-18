@@ -20,28 +20,18 @@ package org.apache.hadoop.mapreduce.v2.app.job.event;
 
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 
+/**
+ * Task Attempt killed event.
+ */
+public class TaskTAttemptKilledEvent extends TaskTAttemptEvent {
 
-public class TaskAttemptKillEvent extends TaskAttemptEvent {
-
-  private final String message;
-  // Next map attempt will be rescheduled(i.e. updated in ask with higher
-  // priority equivalent to that of a fast fail map)
+  // Next map attempt will be rescheduled(i.e. updated in ask with
+  // higher priority equivalent to that of a fast fail map)
   private final boolean rescheduleAttempt;
 
-  public TaskAttemptKillEvent(TaskAttemptId attemptID,
-      String message, boolean rescheduleAttempt) {
-    super(attemptID, TaskAttemptEventType.TA_KILL);
-    this.message = message;
+  public TaskTAttemptKilledEvent(TaskAttemptId id, boolean rescheduleAttempt) {
+    super(id, TaskEventType.T_ATTEMPT_KILLED);
     this.rescheduleAttempt = rescheduleAttempt;
-  }
-
-  public TaskAttemptKillEvent(TaskAttemptId attemptID,
-      String message) {
-    this(attemptID, message, false);
-  }
-
-  public String getMessage() {
-    return message;
   }
 
   public boolean getRescheduleAttempt() {
