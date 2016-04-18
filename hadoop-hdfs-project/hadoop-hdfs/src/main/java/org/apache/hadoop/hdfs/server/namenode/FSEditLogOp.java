@@ -1113,7 +1113,8 @@ public abstract class FSEditLogOp {
     
     @Override void fromXml(Stanza st) throws InvalidXmlException {
       this.path = st.getValue("PATH");
-      List<Stanza> blocks = st.getChildren("BLOCK");
+      List<Stanza> blocks = st.hasChildren("BLOCK") ?
+          st.getChildren("BLOCK") : new ArrayList<Stanza>();
       this.blocks = new Block[blocks.size()];
       for (int i = 0; i < blocks.size(); i++) {
         this.blocks[i] = FSEditLogOp.blockFromXml(blocks.get(i));

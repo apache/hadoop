@@ -1267,6 +1267,18 @@ public class DFSTestUtil {
     // OP_APPEND 47
     FSDataOutputStream s2 = filesystem.append(pathFileCreate, 4096, null);
     s2.close();
+
+    // OP_UPDATE_BLOCKS 25
+    final String updateBlockFile = "/update_blocks";
+    FSDataOutputStream fout = filesystem.create(new Path(updateBlockFile), true, 4096, (short)1, 4096L);
+    fout.write(1);
+    fout.hflush();
+    long fileId = ((DFSOutputStream)fout.getWrappedStream()).getFileId();
+    DFSClient dfsclient = DFSClientAdapter.getDFSClient(filesystem);
+    LocatedBlocks blocks = dfsclient.getNamenode().getBlockLocations(updateBlockFile, 0, Integer.MAX_VALUE);
+    dfsclient.getNamenode().abandonBlock(blocks.get(0).getBlock(), fileId, updateBlockFile, dfsclient.clientName);
+    fout.close();
+
     // OP_SET_STORAGE_POLICY 45
     filesystem.setStoragePolicy(pathFileCreate,
         HdfsConstants.HOT_STORAGE_POLICY_NAME);
