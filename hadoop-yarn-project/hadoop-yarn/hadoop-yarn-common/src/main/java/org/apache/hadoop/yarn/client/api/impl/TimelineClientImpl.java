@@ -24,6 +24,7 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
@@ -116,7 +117,9 @@ public class TimelineClientImpl extends TimelineClient {
   TimelineClientConnectionRetry connectionRetry;
 
   // Abstract class for an operation that should be retried by timeline client
-  private static abstract class TimelineClientRetryOp {
+  @Private
+  @VisibleForTesting
+  public static abstract class TimelineClientRetryOp {
     // The operation that should be retried
     public abstract Object run() throws IOException;
     // The method to indicate if we should retry given the incoming exception
@@ -449,27 +452,8 @@ public class TimelineClientImpl extends TimelineClient {
       final PrivilegedExceptionAction<?> action)
       throws IOException, YarnException {
     // Set up the retry operation
-    TimelineClientRetryOp tokenRetryOp = new TimelineClientRetryOp() {
-
-      @Override
-      public Object run() throws IOException {
-        // Try pass the request, if fail, keep retrying
-        authUgi.checkTGTAndReloginFromKeytab();
-        try {
-          return authUgi.doAs(action);
-        } catch (UndeclaredThrowableException e) {
-          throw new IOException(e.getCause());
-        } catch (InterruptedException e) {
-          throw new IOException(e);
-        }
-      }
-
-      @Override
-      public boolean shouldRetryOn(Exception e) {
-        // Only retry on connection exceptions
-        return (e instanceof ConnectException);
-      }
-    };
+    TimelineClientRetryOp tokenRetryOp =
+        createTimelineClientRetryOpForOperateDelegationToken(action);
 
     return connectionRetry.retryOn(tokenRetryOp);
   }
@@ -680,4 +664,50 @@ public class TimelineClientImpl extends TimelineClient {
   public void setTimelineWriter(TimelineWriter writer) {
     this.timelineWriter = writer;
   }
+
+  @Private
+  @VisibleForTesting
+  public TimelineClientRetryOp
+      createTimelineClientRetryOpForOperateDelegationToken(
+          final PrivilegedExceptionAction<?> action) throws IOException {
+    return new TimelineClientRetryOpForOperateDelegationToken(
+        this.authUgi, action);
+  }
+
+  @Private
+  @VisibleForTesting
+  public class TimelineClientRetryOpForOperateDelegationToken
+      extends TimelineClientRetryOp {
+
+    private final UserGroupInformation authUgi;
+    private final PrivilegedExceptionAction<?> action;
+
+    public TimelineClientRetryOpForOperateDelegationToken(
+        UserGroupInformation authUgi, PrivilegedExceptionAction<?> action) {
+      this.authUgi = authUgi;
+      this.action = action;
+    }
+
+    @Override
+    public Object run() throws IOException {
+      // Try pass the request, if fail, keep retrying
+      authUgi.checkTGTAndReloginFromKeytab();
+      try {
+        return authUgi.doAs(action);
+      } catch (UndeclaredThrowableException e) {
+        throw new IOException(e.getCause());
+      } catch (InterruptedException e) {
+        throw new IOException(e);
+      }
+    }
+
+    @Override
+    public boolean shouldRetryOn(Exception e) {
+      // retry on connection exceptions
+      // and SocketTimeoutException
+      return (e instanceof ConnectException
+          || e instanceof SocketTimeoutException);
+    }
+  }
+
 }
