@@ -153,8 +153,11 @@ public class TestShortCircuitLocalRead {
     //Read a small number of bytes first.
     int nread = stm.read(actual, 0, 3);
     nread += stm.read(actual, nread, 2);
-    //Read across chunk boundary
-    nread += stm.read(actual, nread, 517);
+    int len = 517;
+    if (actual.length - nread >= len) {
+      //Read across chunk boundary
+      nread += stm.read(actual, nread, len);
+    }
     checkData(actual, readOffset, expected, nread, "A few bytes");
     //Now read rest of it
     while (nread < actual.length) {
