@@ -179,29 +179,19 @@ public class TestGetBlocks {
 
     final short REPLICATION_FACTOR = (short) 2;
     final int DEFAULT_BLOCK_SIZE = 1024;
-    final Random r = new Random();
 
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
+    CONF.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY,
+      DEFAULT_BLOCK_SIZE);
+
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(
         REPLICATION_FACTOR).build();
     try {
       cluster.waitActive();
-
-      // create a file with two blocks
-      FileSystem fs = cluster.getFileSystem();
-      FSDataOutputStream out = fs.create(new Path("/tmp.txt"),
-          REPLICATION_FACTOR);
-      byte[] data = new byte[1024];
-      long fileLen = 2 * DEFAULT_BLOCK_SIZE;
-      long bytesToWrite = fileLen;
-      while (bytesToWrite > 0) {
-        r.nextBytes(data);
-        int bytesToWriteNext = (1024 < bytesToWrite) ? 1024
-            : (int) bytesToWrite;
-        out.write(data, 0, bytesToWriteNext);
-        bytesToWrite -= bytesToWriteNext;
-      }
-      out.close();
+      // the third block will not be visible to getBlocks
+      long fileLen = 2 * DEFAULT_BLOCK_SIZE + 1;
+      DFSTestUtil.createFile(cluster.getFileSystem(), new Path("/tmp.txt"),
+          fileLen, REPLICATION_FACTOR, 0L);
 
       // get blocks & data nodes
       List<LocatedBlock> locatedBlocks;
@@ -212,7 +202,7 @@ public class TestGetBlocks {
             DFSUtilClient.getNNAddress(CONF), CONF);
         locatedBlocks = dfsclient.getNamenode()
             .getBlockLocations("/tmp.txt", 0, fileLen).getLocatedBlocks();
-        assertEquals(2, locatedBlocks.size());
+        assertEquals(3, locatedBlocks.size());
         notWritten = false;
         for (int i = 0; i < 2; i++) {
           dataNodes = locatedBlocks.get(i).getLocations();
