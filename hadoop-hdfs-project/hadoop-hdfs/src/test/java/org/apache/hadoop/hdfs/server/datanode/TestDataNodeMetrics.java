@@ -257,10 +257,9 @@ public class TestDataNodeMetrics {
    * and reading causes totalReadTime to move.
    * @throws Exception
    */
-  @Test(timeout=60000)
+  @Test(timeout=120000)
   public void testDataNodeTimeSpend() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    SimulatedFSDataset.setFactory(conf);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       final FileSystem fs = cluster.getFileSystem();
@@ -283,6 +282,7 @@ public class TestDataNodeMetrics {
             DFSTestUtil.createFile(fs, new Path("/time.txt." + x.get()),
                 LONG_FILE_LEN, (short) 1, Time.monotonicNow());
             DFSTestUtil.readFile(fs, new Path("/time.txt." + x.get()));
+            fs.delete(new Path("/time.txt." + x.get()), true);
           } catch (IOException ioe) {
             LOG.error("Caught IOException while ingesting DN metrics", ioe);
             return false;
@@ -293,7 +293,7 @@ public class TestDataNodeMetrics {
           return endWriteValue > startWriteValue
               && endReadValue > startReadValue;
         }
-      }, 30, 30000);
+      }, 30, 60000);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
