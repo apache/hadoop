@@ -53,8 +53,8 @@ public class TestVolume {
   /**
    * Create a MiniDFSCluster for testing.
    * <p>
-   * Ozone is made active by setting DFS_OBJECTSTORE_ENABLED_KEY = true and
-   * DFS_STORAGE_HANDLER_TYPE_KEY = "local" , which uses a local directory to
+   * Ozone is made active by setting OZONE_ENABLED = true and
+   * OZONE_HANDLER_TYPE_KEY = "local" , which uses a local directory to
    * emulate Ozone backend.
    *
    * @throws IOException
@@ -66,14 +66,14 @@ public class TestVolume {
 
     URL p = conf.getClass().getResource("");
     String path = p.getPath().concat(TestVolume.class.getSimpleName());
-    path += conf.getTrimmed(OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT,
-        OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT_DEFAULT);
+    path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
+        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
     FileUtils.deleteDirectory(new File(path));
 
-    conf.set(OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT, path);
-    conf.setBoolean(OzoneConfigKeys.DFS_OBJECTSTORE_ENABLED_KEY, true);
-    conf.set(OzoneConfigKeys.DFS_STORAGE_HANDLER_TYPE_KEY, "local");
-    conf.setBoolean(OzoneConfigKeys.DFS_OBJECTSTORE_TRACE_ENABLED_KEY, true);
+    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
+    conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
+    conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY, "local");
+    conf.setBoolean(OzoneConfigKeys.OZONE_TRACE_ENABLED_KEY, true);
     Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);
 
     cluster = new MiniDFSCluster.Builder(conf).build();

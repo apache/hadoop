@@ -83,8 +83,8 @@ public class XceiverClient implements Closeable {
     // port.
     int port = leader.getContainerPort();
     if (port == 0) {
-      port = config.getInt(OzoneConfigKeys.DFS_OZONE_CONTAINER_IPC_PORT,
-          OzoneConfigKeys.DFS_OZONE_CONTAINER_IPC_PORT_DEFAULT);
+      port = config.getInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
+          OzoneConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);
     }
     LOG.debug("Connecting to server Port : " + port);
     channelFuture = b.connect(leader.getHostName(), port).sync();

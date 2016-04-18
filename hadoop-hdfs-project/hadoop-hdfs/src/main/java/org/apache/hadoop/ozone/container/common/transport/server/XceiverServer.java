@@ -50,8 +50,8 @@ public final class XceiverServer {
   public XceiverServer(Configuration conf,
                        ContainerDispatcher dispatcher) {
     Preconditions.checkNotNull(conf);
-    this.port = conf.getInt(OzoneConfigKeys.DFS_OZONE_CONTAINER_IPC_PORT,
-        OzoneConfigKeys.DFS_OZONE_CONTAINER_IPC_PORT_DEFAULT);
+    this.port = conf.getInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
+        OzoneConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);
     this.storageContainer = dispatcher;
   }
 

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.ozone.container.ozoneimpl;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
@@ -26,16 +25,11 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.container.common.helpers.Pipeline;
-import org.apache.hadoop.ozone.container.common.impl.ContainerManagerImpl;
 import org.apache.hadoop.ozone.container.common.transport.client.XceiverClient;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.File;
-import java.io.IOException;
 import java.net.URL;
 
 public class TestOzoneContainer {
@@ -46,14 +40,14 @@ public class TestOzoneContainer {
     URL p = conf.getClass().getResource("");
     String path = p.getPath().concat(
         TestOzoneContainer.class.getSimpleName());
-    path += conf.getTrimmed(OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT,
-        OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT_DEFAULT);
-    conf.set(OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT, path);
+    path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
+        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
+    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
 
     // We don't start Ozone Container via data node, we will do it
     // independently in our test path.
-    conf.setBoolean(OzoneConfigKeys.DFS_OBJECTSTORE_ENABLED_KEY, false);
-    conf.set(OzoneConfigKeys.DFS_STORAGE_HANDLER_TYPE_KEY, "local");
+    conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, false);
+    conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY, "local");
 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitActive();
@@ -61,7 +55,7 @@ public class TestOzoneContainer {
 
     Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline
         (containerName);
-    conf.setInt(OzoneConfigKeys.DFS_OZONE_CONTAINER_IPC_PORT,
+    conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
         pipeline.getLeader().getContainerPort());
     OzoneContainer container = new OzoneContainer(conf, cluster.getDataNodes
         ().get(0).getFSDataset());
@@ -88,17 +82,17 @@ public class TestOzoneContainer {
     URL p = conf.getClass().getResource("");
     String path = p.getPath().concat(
         TestOzoneContainer.class.getSimpleName());
-    path += conf.getTrimmed(OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT,
-        OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT_DEFAULT);
-    conf.set(OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT, path);
+    path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
+        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
+    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
 
     // Start ozone container Via Datanode create.
-    conf.setBoolean(OzoneConfigKeys.DFS_OBJECTSTORE_ENABLED_KEY, true);
-    conf.set(OzoneConfigKeys.DFS_STORAGE_HANDLER_TYPE_KEY, "local");
+    conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
+    conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY, "local");
 
     Pipeline pipeline =
         ContainerTestHelper.createSingleNodePipeline(containerName);
-    conf.setInt(OzoneConfigKeys.DFS_OZONE_CONTAINER_IPC_PORT,
+    conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
         pipeline.getLeader().getContainerPort());
 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();

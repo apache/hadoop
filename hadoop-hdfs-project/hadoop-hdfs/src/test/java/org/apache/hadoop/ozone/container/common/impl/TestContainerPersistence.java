@@ -88,11 +88,11 @@ public class TestContainerPersistence {
     URL p = conf.getClass().getResource("");
     path = p.getPath().concat(
         TestContainerPersistence.class.getSimpleName());
-    path += conf.getTrimmed(OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT,
-        OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT_DEFAULT);
-    conf.set(OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT, path);
-    conf.setBoolean(OzoneConfigKeys.DFS_OBJECTSTORE_ENABLED_KEY, true);
-    conf.set(OzoneConfigKeys.DFS_STORAGE_HANDLER_TYPE_KEY, "local");
+    path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
+        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
+    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
+    conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
+    conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY, "local");
 
     File containerDir = new File(path);
     if (containerDir.exists()) {

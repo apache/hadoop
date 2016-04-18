@@ -25,37 +25,37 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public final class OzoneConfigKeys {
-  public static final String DFS_OZONE_CONTAINER_IPC_PORT =
-      "dfs.ozone.container.ipc";
-  public static final int DFS_OZONE_CONTAINER_IPC_PORT_DEFAULT =  50011;
-  public static final String DFS_STORAGE_LOCAL_ROOT =
-      "dfs.ozone.localstorage.root";
-  public static final String DFS_STORAGE_LOCAL_ROOT_DEFAULT = "/tmp/ozone";
-  public static final String DFS_OBJECTSTORE_ENABLED_KEY =
-      "dfs.objectstore.enabled";
-  public static final boolean DFS_OBJECTSTORE_ENABLED_DEFAULT = false;
-  public static final String DFS_STORAGE_HANDLER_TYPE_KEY =
-      "dfs.storage.handler.type";
-  public static final String DFS_STORAGE_HANDLER_TYPE_DEFAULT = "distributed";
-  public static final String DFS_STORAGE_RPC_ADDRESS_KEY =
-      "dfs.storage.rpc-address";
-  public static final int DFS_STORAGE_RPC_DEFAULT_PORT = 50200;
-  public static final String DFS_STORAGE_RPC_ADDRESS_DEFAULT =
-      "0.0.0.0:" + DFS_STORAGE_RPC_DEFAULT_PORT;
-  public static final String DFS_STORAGE_RPC_BIND_HOST_KEY =
-      "dfs.storage.rpc-bind-host";
-  public static final String DFS_STORAGE_HANDLER_COUNT_KEY =
-      "dfs.storage.handler.count";
-  public static final int DFS_STORAGE_HANDLER_COUNT_DEFAULT = 10;
-  public static final String DFS_OBJECTSTORE_TRACE_ENABLED_KEY =
-      "dfs.objectstore.trace.enabled";
-  public static final boolean DFS_OBJECTSTORE_TRACE_ENABLED_DEFAULT = false;
+  public static final String DFS_CONTAINER_IPC_PORT =
+      "dfs.container.ipc";
+  public static final int DFS_CONTAINER_IPC_PORT_DEFAULT =  50011;
+  public static final String OZONE_LOCALSTORAGE_ROOT =
+      "ozone.localstorage.root";
+  public static final String OZONE_LOCALSTORAGE_ROOT_DEFAULT = "/tmp/ozone";
+  public static final String OZONE_ENABLED =
+      "ozone.enabled";
+  public static final boolean OZONE_ENABLED_DEFAULT = false;
+  public static final String OZONE_HANDLER_TYPE_KEY =
+      "ozone.handler.type";
+  public static final String OZONE_HANDLER_TYPE_DEFAULT = "distributed";
+  public static final String DFS_CONTAINER_LOCATION_RPC_ADDRESS_KEY =
+      "dfs.container.location.rpc-address";
+  public static final int DFS_CONTAINER_LOCATION_RPC_DEFAULT_PORT = 50200;
+  public static final String DFS_CONTAINER_LOCATION_RPC_ADDRESS_DEFAULT =
+      "0.0.0.0:" + DFS_CONTAINER_LOCATION_RPC_DEFAULT_PORT;
+  public static final String DFS_CONTAINER_LOCATION_RPC_BIND_HOST_KEY =
+      "dfs.container.rpc-bind-host";
+  public static final String DFS_CONTAINER_LOCATION_HANDLER_COUNT_KEY =
+      "dfs.container.handler.count";
+  public static final int DFS_CONTAINER_HANDLER_COUNT_DEFAULT = 10;
+  public static final String OZONE_TRACE_ENABLED_KEY =
+      "ozone.trace.enabled";
+  public static final boolean OZONE_TRACE_ENABLED_DEFAULT = false;
 
-  public static final String DFS_OZONE_METADATA_DIRS =
-      "dfs.ozone.metadata.dirs";
+  public static final String OZONE_METADATA_DIRS =
+      "ozone.metadata.dirs";
 
-  public static final String DFS_OZONE_KEY_CACHE = "dfs.ozone.key.cache.size";
-  public static final int DFS_OZONE_KEY_CACHE_DEFAULT = 1024;
+  public static final String OZONE_KEY_CACHE = "ozone.key.cache.size";
+  public static final int OZONE_KEY_CACHE_DEFAULT = 1024;
 
 
 

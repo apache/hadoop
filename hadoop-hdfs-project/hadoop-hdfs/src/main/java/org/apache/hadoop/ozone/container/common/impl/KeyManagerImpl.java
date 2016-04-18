@@ -50,8 +50,8 @@ public class KeyManagerImpl implements KeyManager {
   public KeyManagerImpl(ContainerManager containerManager, Configuration conf) {
     Preconditions.checkNotNull(containerManager);
     Preconditions.checkNotNull(conf);
-    int cacheSize = conf.getInt(OzoneConfigKeys.DFS_OZONE_KEY_CACHE,
-        OzoneConfigKeys.DFS_OZONE_KEY_CACHE_DEFAULT);
+    int cacheSize = conf.getInt(OzoneConfigKeys.OZONE_KEY_CACHE,
+        OzoneConfigKeys.OZONE_KEY_CACHE_DEFAULT);
     this.containerManager = containerManager;
     containerCache = new ContainerCache(cacheSize, LOAD_FACTOR, true);
   }

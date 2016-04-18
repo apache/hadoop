@@ -54,9 +54,9 @@ public class TestOzoneRestWithMiniCluster {
   @BeforeClass
   public static void init() throws Exception {
     conf = new OzoneConfiguration();
-    conf.setBoolean(OzoneConfigKeys.DFS_OBJECTSTORE_ENABLED_KEY, true);
-    conf.set(OzoneConfigKeys.DFS_STORAGE_HANDLER_TYPE_KEY, "distributed");
-    conf.setBoolean(OzoneConfigKeys.DFS_OBJECTSTORE_TRACE_ENABLED_KEY, true);
+    conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
+    conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY, "distributed");
+    conf.setBoolean(OzoneConfigKeys.OZONE_TRACE_ENABLED_KEY, true);
     cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitOzoneReady();
     ozoneClient = cluster.createOzoneClient();

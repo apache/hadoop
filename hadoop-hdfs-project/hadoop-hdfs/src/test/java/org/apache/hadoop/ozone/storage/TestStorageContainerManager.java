@@ -47,9 +47,9 @@ public class TestStorageContainerManager {
   @BeforeClass
   public static void init() throws IOException {
     conf = new OzoneConfiguration();
-    conf.setBoolean(OzoneConfigKeys.DFS_OBJECTSTORE_ENABLED_KEY, true);
-    conf.set(OzoneConfigKeys.DFS_STORAGE_HANDLER_TYPE_KEY, "distributed");
-    conf.setBoolean(OzoneConfigKeys.DFS_OBJECTSTORE_TRACE_ENABLED_KEY, true);
+    conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
+    conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY, "distributed");
+    conf.setBoolean(OzoneConfigKeys.OZONE_TRACE_ENABLED_KEY, true);
   }
 
   @After

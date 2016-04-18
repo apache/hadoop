@@ -146,8 +146,8 @@ public final class OzoneMetadataManager {
 
     lock = new ReentrantReadWriteLock();
     storageRoot =
-        conf.getTrimmed(OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT,
-            OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT_DEFAULT);
+        conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
+            OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
 
     File file = new File(storageRoot + OBJECT_DIR);
 
