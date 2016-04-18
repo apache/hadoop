@@ -104,6 +104,7 @@ void NameNodeOperations::GetBlockLocations(const std::string & path,
 
       if (locations.has_lastblock() && locations.lastblock().b().numbytes()) {
         file_info->blocks_.push_back(locations.lastblock());
+        file_info->file_length_ += locations.lastblock().b().numbytes();
       }
 
       handler(stat, file_info);
