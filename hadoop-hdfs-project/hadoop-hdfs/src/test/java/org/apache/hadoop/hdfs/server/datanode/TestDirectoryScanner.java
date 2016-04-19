@@ -560,7 +560,7 @@ public class TestDirectoryScanner {
    *
    * @throws Exception thrown on unexpected failure
    */
-  @Test (timeout=300000)
+  @Test (timeout=600000)
   public void testThrottling() throws Exception {
     Configuration conf = new Configuration(CONF);
 
