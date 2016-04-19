@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.util.Time.monotonicNow;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -38,8 +40,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
@@ -74,7 +76,8 @@ import com.google.protobuf.CodedOutputStream;
  */
 @InterfaceAudience.Private
 public final class FSImageFormatProtobuf {
-  private static final Log LOG = LogFactory.getLog(FSImageFormatProtobuf.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(FSImageFormatProtobuf.class);
 
   public static final class LoaderContext {
     private String[] stringTable;
@@ -179,7 +182,7 @@ public final class FSImageFormatProtobuf {
       try {
         loadInternal(raFile, fin);
         long end = Time.monotonicNow();
-        LOG.info("Loaded FSImage in " + (end - start) / 1000 + " seconds.");
+        LOG.info("Loaded FSImage in {} seconds.", (end - start) / 1000);
       } finally {
         fin.close();
         raFile.close();
@@ -285,7 +288,7 @@ public final class FSImageFormatProtobuf {
         }
           break;
         default:
-          LOG.warn("Unrecognized section " + n);
+          LOG.warn("Unrecognized section {}", n);
           break;
         }
       }
@@ -423,7 +426,11 @@ public final class FSImageFormatProtobuf {
       FileOutputStream fout = new FileOutputStream(file);
       fileChannel = fout.getChannel();
       try {
+        LOG.info("Saving image file {} using {}", file, compression);
+        long startTime = monotonicNow();
         saveInternal(fout, compression, file.getAbsolutePath());
+        LOG.info("Image file {} of size {} bytes saved in {} seconds.", file,
+            file.length(), (monotonicNow() - startTime) / 1000);
       } finally {
         fout.close();
       }
