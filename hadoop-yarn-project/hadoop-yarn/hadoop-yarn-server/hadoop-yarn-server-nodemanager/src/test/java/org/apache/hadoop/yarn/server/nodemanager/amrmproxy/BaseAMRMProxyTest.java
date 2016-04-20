@@ -683,5 +683,10 @@ public abstract class BaseAMRMProxyTest {
     public NodeStatusUpdater getNodeStatusUpdater() {
       return null;
     }
+
+    @Override
+    public QueuingContext getQueuingContext() {
+      return null;
+    }
   }
 }

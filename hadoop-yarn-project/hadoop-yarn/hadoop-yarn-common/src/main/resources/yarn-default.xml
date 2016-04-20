@@ -965,6 +965,13 @@
   </property>
 
   <property>
+    <description>Enable Queuing of OPPORTUNISTIC containers on the
+      nodemanager.</description>
+    <name>yarn.nodemanager.container-queuing-enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>
       Number of seconds after an application finishes before the nodemanager's 
       DeletionService will delete the application's localized file directory

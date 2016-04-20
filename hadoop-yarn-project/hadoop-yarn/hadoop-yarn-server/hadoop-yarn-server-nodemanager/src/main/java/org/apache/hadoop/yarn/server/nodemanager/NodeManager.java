@@ -57,11 +57,13 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.queuing.QueuingContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.ConfigurationNodeLabelsProvider;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
@@ -170,8 +172,14 @@ public class NodeManager extends CompositeService
       ContainerExecutor exec, DeletionService del,
       NodeStatusUpdater nodeStatusUpdater, ApplicationACLsManager aclsManager,
       LocalDirsHandlerService dirsHandler) {
-    return new ContainerManagerImpl(context, exec, del, nodeStatusUpdater,
-      metrics, dirsHandler);
+    if (getConfig().getBoolean(YarnConfiguration.NM_CONTAINER_QUEUING_ENABLED,
+        YarnConfiguration.NM_CONTAINER_QUEUING_ENABLED_DEFAULT)) {
+      return new QueuingContainerManagerImpl(context, exec, del,
+          nodeStatusUpdater, metrics, dirsHandler);
+    } else {
+      return new ContainerManagerImpl(context, exec, del, nodeStatusUpdater,
+          metrics, dirsHandler);
+    }
   }
 
   protected WebServer createWebServer(Context nmContext,
@@ -461,6 +469,8 @@ public class NodeManager extends CompositeService
         logAggregationReportForApps;
     private NodeStatusUpdater nodeStatusUpdater;
 
+    private final QueuingContext queuingContext;
+
     public NMContext(NMContainerTokenSecretManager containerTokenSecretManager,
         NMTokenSecretManagerInNM nmTokenSecretManager,
         LocalDirsHandlerService dirsHandler, ApplicationACLsManager aclsManager,
@@ -475,6 +485,7 @@ public class NodeManager extends CompositeService
       this.stateStore = stateStore;
       this.logAggregationReportForApps = new ConcurrentLinkedQueue<
           LogAggregationReport>();
+      this.queuingContext = new QueuingNMContext();
     }
 
     /**
@@ -595,8 +606,35 @@ public class NodeManager extends CompositeService
     public void setNodeStatusUpdater(NodeStatusUpdater nodeStatusUpdater) {
       this.nodeStatusUpdater = nodeStatusUpdater;
     }
+
+    @Override
+    public QueuingContext getQueuingContext() {
+      return this.queuingContext;
+    }
   }
 
+  /**
+   * Class that keeps the context for containers queued at the NM.
+   */
+  public static class QueuingNMContext implements Context.QueuingContext {
+    protected final ConcurrentMap<ContainerId, ContainerTokenIdentifier>
+        queuedContainers = new ConcurrentSkipListMap<>();
+
+    protected final ConcurrentMap<ContainerTokenIdentifier, String>
+        killedQueuedContainers = new ConcurrentHashMap<>();
+
+    @Override
+    public ConcurrentMap<ContainerId, ContainerTokenIdentifier>
+        getQueuedContainers() {
+      return this.queuedContainers;
+    }
+
+    @Override
+    public ConcurrentMap<ContainerTokenIdentifier, String>
+        getKilledQueuedContainers() {
+      return this.killedQueuedContainers;
+    }
+  }
 
   /**
    * @return the node health checker

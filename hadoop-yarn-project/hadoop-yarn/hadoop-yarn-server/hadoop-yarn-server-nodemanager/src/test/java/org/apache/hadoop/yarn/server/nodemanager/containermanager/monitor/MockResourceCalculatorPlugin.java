@@ -22,6 +22,10 @@ import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 
 public class MockResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
+  public MockResourceCalculatorPlugin() {
+    super(null);
+  }
+
   @Override
   public long getVirtualMemorySize() {
     return 0;

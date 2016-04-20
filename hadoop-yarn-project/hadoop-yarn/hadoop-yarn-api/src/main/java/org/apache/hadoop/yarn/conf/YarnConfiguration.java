@@ -659,6 +659,11 @@ public class YarnConfiguration extends Configuration {
   /** Prefix for all node manager configs.*/
   public static final String NM_PREFIX = "yarn.nodemanager.";
 
+  /** Enable Queuing of <code>OPPORTUNISTIC</code> containers. */
+  public static final String NM_CONTAINER_QUEUING_ENABLED = NM_PREFIX
+      + "container-queuing-enabled";
+  public static final boolean NM_CONTAINER_QUEUING_ENABLED_DEFAULT = false;
+
   /** Environment variables that will be sent to containers.*/
   public static final String NM_ADMIN_USER_ENV = NM_PREFIX + "admin-env";
   public static final String DEFAULT_NM_ADMIN_USER_ENV = "MALLOC_ARENA_MAX=$MALLOC_ARENA_MAX";

@@ -453,7 +453,8 @@ public class ContainerImpl implements Container {
     this.readLock.lock();
     try {
       return BuilderUtils.newContainerStatus(this.containerId,
-        getCurrentState(), diagnostics.toString(), exitCode, getResource());
+          getCurrentState(), diagnostics.toString(), exitCode, getResource(),
+          this.containerTokenIdentifier.getExecutionType());
     } finally {
       this.readLock.unlock();
     }
