@@ -42,6 +42,8 @@ import org.apache.hadoop.hdfs.server.datanode.ReplicaUnderRecovery;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaWaitingToBeRecovered;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeReferences;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.log4j.Level;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -464,5 +466,14 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
       throw new IOException(
           String.format("Block pool directory %s exists", bpDir));
     }
+  }
+
+  /**
+   * Change the log level used by FsDatasetImpl.
+   *
+   * @param level the level to set
+   */
+  public static void setFsDatasetImplLogLevel(Level level) {
+    GenericTestUtils.setLogLevel(FsDatasetImpl.LOG, level);
   }
 }
