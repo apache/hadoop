@@ -506,6 +506,14 @@
   </description>
 </property>
 
+<property>
+  <name>io.erasurecode.codec.rs-default.rawcoder</name>
+  <value>org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory</value>
+  <description>
+    Raw coder implementation for the rs-default codec.
+  </description>
+</property>
+
 <!-- file system properties -->
 
 <property>

@@ -96,8 +96,10 @@ Deployment
 ### Configuration keys
 
   The codec implementation for Reed-Solomon and XOR can be configured with the following client and DataNode configuration keys:
-  `io.erasurecode.codec.rs.rawcoder` and `io.erasurecode.codec.xor.rawcoder`.
-  The default implementations for both of these codecs are pure Java.
+  `io.erasurecode.codec.rs-default.rawcoder` for the default RS codec,
+  `io.erasurecode.codec.rs-legacy.rawcoder` for the legacy RS codec,
+  `io.erasurecode.codec.xor.rawcoder` for the XOR codec.
+  The default implementations for all of these codecs are pure Java.
 
   Erasure coding background recovery work on the DataNodes can also be tuned via the following configuration parameters:
 

@@ -54,8 +54,9 @@ public class RSErasureEncoder extends AbstractErasureEncoder {
 
   private RawErasureEncoder checkCreateRSRawEncoder() {
     if (rawEncoder == null) {
+      // TODO: we should create the raw coder according to codec.
       rawEncoder = CodecUtil.createRSRawEncoder(getConf(),
-              getNumDataUnits(), getNumParityUnits());
+          getNumDataUnits(), getNumParityUnits());
     }
     return rawEncoder;
   }

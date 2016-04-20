@@ -216,7 +216,7 @@ class StripedReconstructor implements Runnable {
   private void initDecoderIfNecessary() {
     if (decoder == null) {
       decoder = CodecUtil.createRSRawDecoder(conf, ecPolicy.getNumDataUnits(),
-          ecPolicy.getNumParityUnits());
+          ecPolicy.getNumParityUnits(), ecPolicy.getCodecName());
     }
   }
 
