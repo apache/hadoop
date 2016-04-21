@@ -580,6 +580,28 @@ public class TestAllocationFileLoaderService {
     allocLoader.reloadAllocations();
   }
 
+  /**
+   * Verify that defaultQueueSchedulingMode can't accept FIFO as a value.
+   */
+  @Test (expected = AllocationConfigurationException.class)
+  public void testDefaultQueueSchedulingModeIsFIFO() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<defaultQueueSchedulingPolicy>fifo</defaultQueueSchedulingPolicy>");
+    out.println("</allocations>");
+    out.close();
+
+    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    allocLoader.init(conf);
+    ReloadListener confHolder = new ReloadListener();
+    allocLoader.setReloadListener(confHolder);
+    allocLoader.reloadAllocations();
+  }
+
   @Test
   public void testReservableQueue() throws Exception {
     Configuration conf = new Configuration();
