@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.ReservationACL;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -331,6 +332,11 @@ public class AllocationFileLoaderService extends AbstractService {
         } else if ("defaultQueueSchedulingPolicy".equals(element.getTagName())
             || "defaultQueueSchedulingMode".equals(element.getTagName())) {
           String text = ((Text)element.getFirstChild()).getData().trim();
+          if (text.equalsIgnoreCase(FifoPolicy.NAME)) {
+            throw new AllocationConfigurationException("Bad fair scheduler "
+              + "config file: defaultQueueSchedulingPolicy or "
+              + "defaultQueueSchedulingMode can't be FIFO.");
+          }
           defaultSchedPolicy = SchedulingPolicy.parse(text);
         } else if ("queuePlacementPolicy".equals(element.getTagName())) {
           placementPolicyElement = element;
