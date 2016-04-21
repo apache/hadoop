@@ -104,6 +104,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -2328,6 +2329,8 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     // start RM
     MockRM rm1 = new MockRM(conf, memStore);
     rm1.start();
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
     nm1.registerNode();
@@ -2338,10 +2341,12 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     nm1.nodeHeartbeat(am0.getApplicationAttemptId(), 1,
         ContainerState.COMPLETE);
     am0.waitForState(RMAppAttemptState.FAILED);
+    TestSchedulerUtils.waitSchedulerApplicationAttemptStopped(cs,
+        am0.getApplicationAttemptId());
+
     for (int i = 0; i < 4; i++) {
       am0 = MockRM.launchAM(app0, rm1, nm1);
       am0.registerAppAttempt();
-      CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
       // get scheduler app
       FiCaSchedulerApp schedulerAppAttempt = cs.getSchedulerApplications()
           .get(app0.getApplicationId()).getCurrentAppAttempt();
@@ -2349,6 +2354,8 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
       cs.markContainerForKillable(schedulerAppAttempt.getRMContainer(
           app0.getCurrentAppAttempt().getMasterContainer().getId()));
       am0.waitForState(RMAppAttemptState.FAILED);
+      TestSchedulerUtils.waitSchedulerApplicationAttemptStopped(cs,
+          am0.getApplicationAttemptId());
     }
     am0 = MockRM.launchAM(app0, rm1, nm1);
     am0.registerAppAttempt();
