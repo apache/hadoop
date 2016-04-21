@@ -75,6 +75,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
@@ -773,6 +775,27 @@ public class TestSchedulerUtils {
       rmContext.getNodeLabelManager().removeFromClusterNodeLabels(
           Arrays.asList("x", "y"));
     }
+  }
+
+  public static void waitSchedulerApplicationAttemptStopped(CapacityScheduler cs,
+      ApplicationAttemptId attemptId) throws InterruptedException {
+    FiCaSchedulerApp schedulerApp = cs.getApplicationAttempt(attemptId);
+    if (null == schedulerApp) {
+      return;
+    }
+
+    // Wait at most 5 secs to make sure SchedulerApplicationAttempt stopped
+    int tick = 0;
+    while (tick < 100) {
+      if (schedulerApp.isStopped()) {
+        return;
+      }
+      tick++;
+      Thread.sleep(50);
+    }
+
+    // Only print, don't throw exception
+    System.err.println("Failed to wait scheduler application attempt stopped.");
   }
 
   public static SchedulerApplication<SchedulerApplicationAttempt>

@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerStat
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -568,6 +569,9 @@ public class TestAMRestart {
     scheduler.markContainerForKillable(scheduler.getRMContainer(amContainer));
 
     am1.waitForState(RMAppAttemptState.FAILED);
+    TestSchedulerUtils.waitSchedulerApplicationAttemptStopped(scheduler,
+        am1.getApplicationAttemptId());
+
     Assert.assertTrue(! attempt1.shouldCountTowardsMaxAttemptRetry());
     rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
     ApplicationStateData appState =
@@ -584,6 +588,9 @@ public class TestAMRestart {
     scheduler.markContainerForKillable(scheduler.getRMContainer(amContainer2));
 
     am2.waitForState(RMAppAttemptState.FAILED);
+    TestSchedulerUtils.waitSchedulerApplicationAttemptStopped(scheduler,
+        am2.getApplicationAttemptId());
+
     Assert.assertTrue(! attempt2.shouldCountTowardsMaxAttemptRetry());
     rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
     MockAM am3 =
@@ -604,6 +611,9 @@ public class TestAMRestart {
     nm1.nodeHeartbeat(conts, true);
 
     am3.waitForState(RMAppAttemptState.FAILED);
+    TestSchedulerUtils.waitSchedulerApplicationAttemptStopped(scheduler,
+        am3.getApplicationAttemptId());
+
     Assert.assertTrue(! attempt3.shouldCountTowardsMaxAttemptRetry());
     Assert.assertEquals(ContainerExitStatus.DISKS_FAILED,
       appState.getAttempt(am3.getApplicationAttemptId())
@@ -623,6 +633,9 @@ public class TestAMRestart {
     // This will mimic ContainerExitStatus.ABORT
     nm1.nodeHeartbeat(false);
     am4.waitForState(RMAppAttemptState.FAILED);
+    TestSchedulerUtils.waitSchedulerApplicationAttemptStopped(scheduler,
+        am4.getApplicationAttemptId());
+
     Assert.assertTrue(! attempt4.shouldCountTowardsMaxAttemptRetry());
     Assert.assertEquals(ContainerExitStatus.ABORTED,
       appState.getAttempt(am4.getApplicationAttemptId())
@@ -637,6 +650,9 @@ public class TestAMRestart {
     nm2
       .nodeHeartbeat(am5.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
     am5.waitForState(RMAppAttemptState.FAILED);
+    TestSchedulerUtils.waitSchedulerApplicationAttemptStopped(scheduler,
+        am5.getApplicationAttemptId());
+
     Assert.assertTrue(attempt5.shouldCountTowardsMaxAttemptRetry());
 
     // AM should not be restarted.
