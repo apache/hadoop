@@ -2249,6 +2249,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public List<String> listReconfigurableProperties() throws IOException {
     checkNNStartup();
     namesystem.checkSuperuserPrivilege();
-    return NameNode.RECONFIGURABLE_PROPERTIES;
+    return Lists.newArrayList(nn.getReconfigurableProperties());
   }
 }
