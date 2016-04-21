@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppRepor
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.junit.Assert;
@@ -1260,7 +1261,18 @@ public class TestNodeLabelContainerAllocation {
       totalWaitTick--;
     }
   }
-  
+
+  private void waitSchedulerNodeHasUpdatedLabels(CapacityScheduler cs,
+      MockNM nm, String partition) throws InterruptedException {
+    FiCaSchedulerNode node = cs.getNode(nm.getNodeId());
+    int totalWaitTick = 20; // wait 2 sec at most.
+    while (!node.getLabels().contains(partition)
+        && totalWaitTick > 0) {
+      Thread.sleep(100);
+      totalWaitTick--;
+    }
+  }
+
   @Test
   public void testQueueUsedCapacitiesUpdate()
           throws Exception {
@@ -1450,11 +1462,13 @@ public class TestNodeLabelContainerAllocation {
     // Add nm3/nm4, double resource for both partitioned/non-partitioned
     // resource, used capacity should be 1/2 of before
     mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h3", 0), toSet("x")));
-    rm.registerNode("h3:1234", 10 * GB); // label = x
-    rm.registerNode("h4:1234", 10 * GB); // label = <empty>
-    
+    MockNM nm3 = rm.registerNode("h3:1234", 10 * GB); // label = x
+    MockNM nm4 = rm.registerNode("h4:1234", 10 * GB); // label = <empty>
+
     waitSchedulerNodeJoined(rm, 4);
-    
+    waitSchedulerNodeHasUpdatedLabels(cs, nm3, "x");
+    waitSchedulerNodeHasUpdatedLabels(cs, nm4, "");
+
     checkQueueUsedCapacity("a", cs, "x", 0.3f, 0.15f);
     checkQueueUsedCapacity("a", cs, "", 0.3f, 0.15f);
     checkQueueUsedCapacity("a1", cs, "x", 0.4f, 0.1f);
@@ -1502,7 +1516,7 @@ public class TestNodeLabelContainerAllocation {
 
     rm.close();
   }
-  
+
   @Test
   public void testOrderOfAllocationOnPartitions()
           throws Exception {
