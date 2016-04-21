@@ -2837,7 +2837,15 @@ public abstract class Server {
   public int getCallQueueLen() {
     return callQueue.size();
   }
-  
+
+  public boolean isClientBackoffEnabled() {
+    return callQueue.isClientBackoffEnabled();
+  }
+
+  public void setClientBackoffEnabled(boolean value) {
+    callQueue.setClientBackoffEnabled(value);
+  }
+
   /**
    * The maximum size of the rpc call queue of this server.
    * @return The maximum size of the rpc call queue.
