@@ -41,10 +41,13 @@ import org.apache.hadoop.util.ToolRunner;
 public class MRBench extends Configured implements Tool{
   
   private static final Log LOG = LogFactory.getLog(MRBench.class);
+  private static final String DEFAULT_INPUT_SUB = "mr_input";
+  private static final String DEFAULT_OUTPUT_SUB = "mr_output";
+
   private static Path BASE_DIR =
     new Path(System.getProperty("test.build.data","/benchmarks/MRBench"));
-  private static Path INPUT_DIR = new Path(BASE_DIR, "mr_input");
-  private static Path OUTPUT_DIR = new Path(BASE_DIR, "mr_output");
+  private static Path INPUT_DIR = new Path(BASE_DIR, DEFAULT_INPUT_SUB);
+  private static Path OUTPUT_DIR = new Path(BASE_DIR, DEFAULT_OUTPUT_SUB);
   
   public static enum Order {RANDOM, ASCENDING, DESCENDING}; 
   
@@ -243,6 +246,8 @@ public class MRBench extends Configured implements Tool{
         numRuns = Integer.parseInt(args[++i]);
       } else if (args[i].equals("-baseDir")) {
         BASE_DIR = new Path(args[++i]);
+        INPUT_DIR = new Path(BASE_DIR, DEFAULT_INPUT_SUB);
+        OUTPUT_DIR = new Path(BASE_DIR, DEFAULT_OUTPUT_SUB);
       } else if (args[i].equals("-maps")) {
         numMaps = Integer.parseInt(args[++i]);
       } else if (args[i].equals("-reduces")) {
@@ -283,14 +288,15 @@ public class MRBench extends Configured implements Tool{
     Path inputFile = new Path(INPUT_DIR, "input_" + (new Random()).nextInt() + ".txt");
     generateTextFile(fs, inputFile, inputLines, inputSortOrder);
 
-    // setup test output directory
-    fs.mkdirs(BASE_DIR); 
     ArrayList<Long> execTimes = new ArrayList<Long>();
     try {
       execTimes = runJobInSequence(jobConf, numRuns);
     } finally {
-      // delete output -- should we really do this?
-      fs.delete(BASE_DIR, true);
+      // delete all generated data -- should we really do this?
+      // we don't know how much of the path was created for the run but this
+      // cleans up as much as we can
+      fs.delete(OUTPUT_DIR, true);
+      fs.delete(INPUT_DIR, true);
     }
     
     if (verbose) {
