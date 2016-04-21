@@ -369,14 +369,20 @@ extends ContainerLaunchContext {
           public void remove() {
             throw new UnsupportedOperationException();
           }
-          
+
           @Override
           public StringStringMapProto next() {
             String key = keyIter.next();
-            return StringStringMapProto.newBuilder().setKey(key).setValue(
-                (environment.get(key))).build();
+            String value = environment.get(key);
+
+            if (value == null) {
+              value = "";
+            }
+
+            return StringStringMapProto.newBuilder().setKey(key)
+                .setValue((value)).build();
           }
-          
+
           @Override
           public boolean hasNext() {
             return keyIter.hasNext();
