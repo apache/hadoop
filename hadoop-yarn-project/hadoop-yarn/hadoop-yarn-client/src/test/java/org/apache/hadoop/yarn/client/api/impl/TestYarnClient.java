@@ -208,12 +208,15 @@ public class TestYarnClient {
   }
 
   @Test (timeout = 30000)
-  public void testSubmitIncorrectQueue() throws IOException {
+  public void testSubmitIncorrectQueueToCapacityScheduler() throws IOException {
     MiniYARNCluster cluster = new MiniYARNCluster("testMRAMTokens", 1, 1, 1);
     YarnClient rmClient = null;
     try {
-      cluster.init(new YarnConfiguration());
-	     cluster.start();
+      YarnConfiguration conf = new YarnConfiguration();
+      conf.set(YarnConfiguration.RM_SCHEDULER,
+        CapacityScheduler.class.getName());
+      cluster.init(conf);
+      cluster.start();
       final Configuration yarnConf = cluster.getConfig();
       rmClient = YarnClient.createYarnClient();
       rmClient.init(yarnConf);
