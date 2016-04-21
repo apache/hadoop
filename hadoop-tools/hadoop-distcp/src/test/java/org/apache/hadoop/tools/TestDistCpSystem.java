@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.tools;
 
+import static org.hamcrest.core.Is.is;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
@@ -32,6 +34,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.util.ToolRunner;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  * A JUnit test for copying files recursively.
@@ -201,4 +205,34 @@ public class TestDistCpSystem extends TestCase {
     testPreserveUserHelper(srcfiles, dstfiles, true, true, true);
   }
 
+  @Test
+  public void testSourceRoot() throws Exception {
+    MiniDFSCluster cluster = null;
+    Configuration conf = new Configuration();
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
+
+      String rootStr = fs.makeQualified(new Path("/")).toString();
+
+      // Case 1. The target does not exist.
+
+      String tgtStr = fs.makeQualified(new Path("/nodir")).toString();
+      String[] args = new String[]{ rootStr, tgtStr };
+      Assert.assertThat(ToolRunner.run(conf, new DistCp(), args), is(0));
+
+      // Case 2. The target exists.
+
+      Path tgtPath2 = new Path("/dir");
+      assertTrue(fs.mkdirs(tgtPath2));
+      String tgtStr2 = fs.makeQualified(tgtPath2).toString();
+      String[] args2 = new String[]{ rootStr, tgtStr2 };
+      Assert.assertThat(ToolRunner.run(conf, new DistCp(), args2), is(0));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 }
