@@ -454,13 +454,19 @@ public class Balancer {
         final C c = candidates.next();
         if (!c.hasSpaceForScheduling()) {
           candidates.remove();
-        } else if (matcher.match(dispatcher.getCluster(),
-            g.getDatanodeInfo(), c.getDatanodeInfo())) {
+        } else if (matchStorageGroups(c, g, matcher)) {
           return c;
         }
       }
     }
     return null;
+  }
+
+  private boolean matchStorageGroups(StorageGroup left, StorageGroup right,
+      Matcher matcher) {
+    return left.getStorageType() == right.getStorageType()
+        && matcher.match(dispatcher.getCluster(),
+            left.getDatanodeInfo(), right.getDatanodeInfo());
   }
 
   /* reset all fields in a balancer preparing for the next iteration */
