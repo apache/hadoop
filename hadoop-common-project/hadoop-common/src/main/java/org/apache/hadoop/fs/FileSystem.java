@@ -2666,7 +2666,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @param src file or directory path.
    * @throws IOException
    */
-  public void unsetStoragePolicy(Path src) throws IOException {
+  public void unsetStoragePolicy(final Path src) throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
         + " doesn't support unsetStoragePolicy");
   }

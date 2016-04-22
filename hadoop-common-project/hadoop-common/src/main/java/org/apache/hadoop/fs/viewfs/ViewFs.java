@@ -749,6 +749,14 @@ public class ViewFs extends AbstractFileSystem {
     res.targetFileSystem.setStoragePolicy(res.remainingPath, policyName);
   }
 
+  @Override
+  public void unsetStoragePolicy(final Path src)
+      throws IOException {
+    InodeTree.ResolveResult<AbstractFileSystem> res =
+        fsState.resolve(getUriPath(src), true);
+    res.targetFileSystem.unsetStoragePolicy(res.remainingPath);
+  }
+
   /**
    * Retrieve the storage policy for a given file or directory.
    *
