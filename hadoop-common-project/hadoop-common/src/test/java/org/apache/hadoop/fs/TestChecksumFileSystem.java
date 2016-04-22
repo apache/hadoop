@@ -18,8 +18,11 @@
 
 package org.apache.hadoop.fs;
 
+import java.util.Arrays;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.permission.FsPermission;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.*;
@@ -256,5 +259,21 @@ public class TestChecksumFileSystem {
     assertTrue(localFs.exists(localFs.getChecksumFile(srcPath)));
     assertTrue(localFs.rename(srcPath, dstPath));
     assertTrue(localFs.exists(localFs.getChecksumFile(realDstPath)));
+  }
+
+  @Test
+  public void testSetPermissionCrc() throws Exception {
+    FileSystem rawFs = localFs.getRawFileSystem();
+    Path p = new Path(TEST_ROOT_DIR, "testCrcPermissions");
+    localFs.createNewFile(p);
+    Path crc = localFs.getChecksumFile(p);
+    assert(rawFs.exists(crc));
+
+    for (short mode : Arrays.asList((short)0666, (short)0660, (short)0600)) {
+      FsPermission perm = new FsPermission(mode);
+      localFs.setPermission(p, perm);
+      assertEquals(perm, localFs.getFileStatus(p).getPermission());
+      assertEquals(perm, rawFs.getFileStatus(crc).getPermission());
+    }
   }
 }

@@ -48,6 +48,9 @@ Release 2.6.5 - UNRELEASED
     HADOOP-13579. Fix source-level compatibility after HADOOP-11252.
     (Tsuyoshi Ozawa via aajisaka)
 
+    HADOOP-13052. ChecksumFileSystem mishandles crc file permissions.
+    (Daryn Sharp via kihwal)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
