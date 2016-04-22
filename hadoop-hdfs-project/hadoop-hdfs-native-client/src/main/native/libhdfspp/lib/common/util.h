@@ -21,15 +21,21 @@
 #include "hdfspp/status.h"
 
 #include <sstream>
+#include <mutex>
+#include <string>
 
 #include <asio/error_code.hpp>
 #include <openssl/rand.h>
 
 #include <google/protobuf/message_lite.h>
 #include <google/protobuf/io/coded_stream.h>
-
+#include <asio.hpp>
 
 namespace hdfs {
+
+// typedefs based on code that's repeated everywhere
+typedef std::lock_guard<std::mutex> mutex_guard;
+
 
 static inline Status ToStatus(const ::asio::error_code &ec) {
   if (ec) {
@@ -70,6 +76,11 @@ bool lock_held(T & mutex) {
     mutex.unlock();
   return result;
 }
+
+// Shutdown and close a socket safely; will check if the socket is open and
+// catch anything thrown by asio.
+// Returns a string containing error message on failure, otherwise an empty string.
+std::string SafeDisconnect(asio::ip::tcp::socket *sock);
 
 }
 
