@@ -82,6 +82,34 @@ bool lock_held(T & mutex) {
 // Returns a string containing error message on failure, otherwise an empty string.
 std::string SafeDisconnect(asio::ip::tcp::socket *sock);
 
+
+
+// The following helper function is used for classes that look like the following:
+//
+// template <typename socket_like_object>
+// class ObjectThatHoldsSocket {
+//   socket_like_object sock_;
+//   void DoSomethingWithAsioTcpSocket();
+// }
+//
+// The trick here is that ObjectThatHoldsSocket may be templated on a mock socket
+// in mock tests.  If you have a method that explicitly needs to call some asio
+// method unrelated to the mock test you need a way of making sure socket_like_object
+// is, in fact, an asio::ip::tcp::socket.  Otherwise the mocks need to implement
+// lots of no-op boilerplate.  This will return the value of the input param if
+// it's a asio socket, and nullptr if it's anything else.
+
+template <typename sock_t>
+inline asio::ip::tcp::socket *get_asio_socket_ptr(sock_t *s) {
+  (void)s;
+  return nullptr;
+}
+template<>
+inline asio::ip::tcp::socket *get_asio_socket_ptr<asio::ip::tcp::socket>
+                                            (asio::ip::tcp::socket *s) {
+  return s;
+}
+
 }
 
 #endif
