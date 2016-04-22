@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.timelineservice.ContainerEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetricOperation;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity.Identifier;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
@@ -119,12 +120,15 @@ public class NMTimelinePublisher extends CompositeService {
       if (pmemUsage != ResourceCalculatorProcessTree.UNAVAILABLE) {
         TimelineMetric memoryMetric = new TimelineMetric();
         memoryMetric.setId(ContainerMetric.MEMORY.toString());
+        memoryMetric.setRealtimeAggregationOp(TimelineMetricOperation.SUM);
         memoryMetric.addValue(currentTimeMillis, pmemUsage);
         entity.addMetric(memoryMetric);
       }
       if (cpuUsagePercentPerCore != ResourceCalculatorProcessTree.UNAVAILABLE) {
         TimelineMetric cpuMetric = new TimelineMetric();
         cpuMetric.setId(ContainerMetric.CPU.toString());
+        // TODO: support average
+        cpuMetric.setRealtimeAggregationOp(TimelineMetricOperation.SUM);
         cpuMetric.addValue(currentTimeMillis,
             Math.round(cpuUsagePercentPerCore));
         entity.addMetric(cpuMetric);

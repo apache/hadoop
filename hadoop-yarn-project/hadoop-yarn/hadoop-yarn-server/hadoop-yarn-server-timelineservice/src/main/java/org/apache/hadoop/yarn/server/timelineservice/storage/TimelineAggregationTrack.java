@@ -24,5 +24,5 @@ package org.apache.hadoop.yarn.server.timelineservice.storage;
  *
  */
 public enum TimelineAggregationTrack {
-  FLOW, USER, QUEUE
+  APP, FLOW, USER, QUEUE
 }

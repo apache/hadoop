@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetricOperation;
 import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
@@ -539,6 +540,26 @@ public class TestHBaseTimelineStorage {
     metrics.add(m1);
     entity.addMetrics(metrics);
 
+    // add aggregated metrics
+    TimelineEntity aggEntity = new TimelineEntity();
+    String type = TimelineEntityType.YARN_APPLICATION.toString();
+    aggEntity.setId(appId);
+    aggEntity.setType(type);
+    long cTime2 = 1425016502000L;
+    long mTime2 = 1425026902000L;
+    aggEntity.setCreatedTime(cTime2);
+
+    TimelineMetric aggMetric = new TimelineMetric();
+    aggMetric.setId("MEM_USAGE");
+    Map<Long, Number> aggMetricValues = new HashMap<Long, Number>();
+    ts = System.currentTimeMillis();
+    aggMetricValues.put(ts - 120000, 102400000);
+    aggMetric.setType(Type.SINGLE_VALUE);
+    aggMetric.setRealtimeAggregationOp(TimelineMetricOperation.SUM);
+    aggMetric.setValues(aggMetricValues);
+    Set<TimelineMetric> aggMetrics = new HashSet<>();
+    aggMetrics.add(aggMetric);
+    entity.addMetrics(aggMetrics);
     te.addEntity(entity);
 
     HBaseTimelineWriterImpl hbi = null;
@@ -564,7 +585,7 @@ public class TestHBaseTimelineStorage {
       Result result = new ApplicationTable().getResult(c1, conn, get);
 
       assertTrue(result != null);
-      assertEquals(15, result.size());
+      assertEquals(16, result.size());
 
       // check the row key
       byte[] row1 = result.getRow();
@@ -652,10 +673,17 @@ public class TestHBaseTimelineStorage {
       assertEquals(conf, conf2);
 
       Set<TimelineMetric> metrics2 = e1.getMetrics();
-      assertEquals(metrics, metrics2);
+      assertEquals(2, metrics2.size());
       for (TimelineMetric metric2 : metrics2) {
         Map<Long, Number> metricValues2 = metric2.getValues();
-        matchMetrics(metricValues, metricValues2);
+        assertTrue(metric2.getId().equals("MAP_SLOT_MILLIS") ||
+            metric2.getId().equals("MEM_USAGE"));
+        if (metric2.getId().equals("MAP_SLOT_MILLIS")) {
+          matchMetrics(metricValues, metricValues2);
+        }
+        if (metric2.getId().equals("MEM_USAGE")) {
+          matchMetrics(aggMetricValues, metricValues2);
+        }
       }
     } finally {
       if (hbi != null) {
@@ -724,7 +752,6 @@ public class TestHBaseTimelineStorage {
     m1.setValues(metricValues);
     metrics.add(m1);
     entity.addMetrics(metrics);
-
     te.addEntity(entity);
 
     HBaseTimelineWriterImpl hbi = null;
