@@ -64,13 +64,13 @@ public class TestTimelineServiceRecords {
         metric1.getValues().entrySet().iterator();
     Map.Entry<Long, Number> entry = itr.next();
     Assert.assertEquals(new Long(3L), entry.getKey());
-    Assert.assertEquals(new Double(3.0D), entry.getValue());
+    Assert.assertEquals(3.0D, entry.getValue());
     entry = itr.next();
     Assert.assertEquals(new Long(2L), entry.getKey());
-    Assert.assertEquals(new Integer(2), entry.getValue());
+    Assert.assertEquals(2, entry.getValue());
     entry = itr.next();
     Assert.assertEquals(new Long(1L), entry.getKey());
-    Assert.assertEquals(new Float(1.0F), entry.getValue());
+    Assert.assertEquals(1.0F, entry.getValue());
     Assert.assertFalse(itr.hasNext());
     entity.addMetric(metric1);
 
