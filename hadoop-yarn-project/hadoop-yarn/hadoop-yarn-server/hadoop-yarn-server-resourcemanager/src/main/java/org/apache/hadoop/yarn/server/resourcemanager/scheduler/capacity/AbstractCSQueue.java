@@ -434,14 +434,12 @@ public abstract class AbstractCSQueue implements CSQueue {
        * limit-set-by-parent)
        */
       Resource queueMaxResource =
-          Resources.multiplyAndNormalizeDown(resourceCalculator,
-              labelManager.getResourceByLabel(nodePartition, clusterResource),
-              queueCapacities.getAbsoluteMaximumCapacity(nodePartition), minimumAllocation);
+          getQueueMaxResource(nodePartition, clusterResource);
       if (nodePartition.equals(RMNodeLabelsManager.NO_LABEL)) {
         return Resources.min(resourceCalculator, clusterResource,
             queueMaxResource, currentResourceLimits.getLimit());
       }
-      return queueMaxResource;  
+      return queueMaxResource;
     } else if (schedulingMode == SchedulingMode.IGNORE_PARTITION_EXCLUSIVITY) {
       // When we doing non-exclusive resource allocation, maximum capacity of
       // all queues on this label equals to total resource with the label.
@@ -450,7 +448,14 @@ public abstract class AbstractCSQueue implements CSQueue {
     
     return Resources.none();
   }
-  
+
+  Resource getQueueMaxResource(String nodePartition, Resource clusterResource) {
+    return Resources.multiplyAndNormalizeDown(resourceCalculator,
+        labelManager.getResourceByLabel(nodePartition, clusterResource),
+        queueCapacities.getAbsoluteMaximumCapacity(nodePartition),
+        minimumAllocation);
+  }
+
   synchronized boolean canAssignToThisQueue(Resource clusterResource,
       String nodePartition, ResourceLimits currentResourceLimits,
       Resource resourceCouldBeUnreserved, SchedulingMode schedulingMode) {

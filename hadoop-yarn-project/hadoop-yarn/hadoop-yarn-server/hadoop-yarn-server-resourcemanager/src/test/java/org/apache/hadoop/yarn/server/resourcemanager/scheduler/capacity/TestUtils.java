@@ -159,7 +159,7 @@ public class TestUtils {
   
   public static ResourceRequest createResourceRequest(
       String resourceName, int memory, int numContainers, boolean relaxLocality,
-      Priority priority, RecordFactory recordFactory) {
+      Priority priority, RecordFactory recordFactory, String labelExpression) {
     ResourceRequest request = 
         recordFactory.newRecordInstance(ResourceRequest.class);
     Resource capability = Resources.createResource(memory, 1);
@@ -169,10 +169,18 @@ public class TestUtils {
     request.setCapability(capability);
     request.setRelaxLocality(relaxLocality);
     request.setPriority(priority);
-    request.setNodeLabelExpression(RMNodeLabelsManager.NO_LABEL);
+    request.setNodeLabelExpression(labelExpression);
     return request;
   }
   
+  public static ResourceRequest createResourceRequest(
+      String resourceName, int memory, int numContainers, boolean relaxLocality,
+ Priority priority,
+      RecordFactory recordFactory) {
+    return createResourceRequest(resourceName, memory, numContainers,
+        relaxLocality, priority, recordFactory, RMNodeLabelsManager.NO_LABEL);
+  }
+
   public static ApplicationId getMockApplicationId(int appId) {
     return ApplicationId.newInstance(0L, appId);
   }

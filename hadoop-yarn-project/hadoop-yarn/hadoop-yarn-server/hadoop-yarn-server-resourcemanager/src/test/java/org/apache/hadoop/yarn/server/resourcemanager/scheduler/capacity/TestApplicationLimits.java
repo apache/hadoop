@@ -17,23 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -52,6 +35,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
@@ -63,6 +47,23 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 public class TestApplicationLimits {
   
@@ -577,8 +578,12 @@ public class TestApplicationLimits {
     when(csContext.getClusterResource()).thenReturn(clusterResource);
     
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
-    CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
-        queues, queues, TestUtils.spyHook);
+    CSQueue rootQueue = CapacityScheduler.parseQueue(csContext, csConf, null,
+        "root", queues, queues, TestUtils.spyHook);
+
+    ResourceUsage queueCapacities = rootQueue.getQueueResourceUsage();
+    when(csContext.getClusterResourceUsage())
+        .thenReturn(queueCapacities);
 
     // Manipulate queue 'a'
     LeafQueue queue = TestLeafQueue.stubLeafQueue((LeafQueue)queues.get(A));
@@ -655,8 +660,7 @@ public class TestApplicationLimits {
     queue.assignContainers(clusterResource, node_0, new ResourceLimits(
         clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY); // Schedule to compute
     assertEquals(expectedHeadroom, app_0_0.getHeadroom());
-    // TODO, need fix headroom in future patch
-    //  assertEquals(expectedHeadroom, app_0_1.getHeadroom());// no change
+    assertEquals(expectedHeadroom, app_0_1.getHeadroom());// no change
     
     // Submit first application from user_1, check  for new headroom
     final ApplicationAttemptId appAttemptId_1_0 = 
@@ -677,9 +681,8 @@ public class TestApplicationLimits {
         clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY); // Schedule to compute
     expectedHeadroom = Resources.createResource(10*16*GB / 2, 1); // changes
     assertEquals(expectedHeadroom, app_0_0.getHeadroom());
-    // TODO, need fix headroom in future patch
-//    assertEquals(expectedHeadroom, app_0_1.getHeadroom());
-//    assertEquals(expectedHeadroom, app_1_0.getHeadroom());
+    assertEquals(expectedHeadroom, app_0_1.getHeadroom());
+    assertEquals(expectedHeadroom, app_1_0.getHeadroom());
 
     // Now reduce cluster size and check for the smaller headroom
     clusterResource = Resources.createResource(90*16*GB);
@@ -687,9 +690,8 @@ public class TestApplicationLimits {
         clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY); // Schedule to compute
     expectedHeadroom = Resources.createResource(9*16*GB / 2, 1); // changes
     assertEquals(expectedHeadroom, app_0_0.getHeadroom());
-    // TODO, need fix headroom in future patch
-//    assertEquals(expectedHeadroom, app_0_1.getHeadroom());
-//    assertEquals(expectedHeadroom, app_1_0.getHeadroom());
+    assertEquals(expectedHeadroom, app_0_1.getHeadroom());
+    assertEquals(expectedHeadroom, app_1_0.getHeadroom());
   }
   
 
