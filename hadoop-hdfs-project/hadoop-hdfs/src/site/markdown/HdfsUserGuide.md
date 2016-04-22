@@ -121,7 +121,7 @@ The rest of this document assumes the user is able to set up and run a HDFS with
 Web Interface
 -------------
 
-NameNode and DataNode each run an internal web server in order to display basic information about the current status of the cluster. With the default configuration, the NameNode front page is at `http://namenode-name:50070/`. It lists the DataNodes in the cluster and basic statistics of the cluster. The web interface can also be used to browse the file system (using "Browse the file system" link on the NameNode front page).
+NameNode and DataNode each run an internal web server in order to display basic information about the current status of the cluster. With the default configuration, the NameNode front page is at `http://namenode-name:9870/`. It lists the DataNodes in the cluster and basic statistics of the cluster. The web interface can also be used to browse the file system (using "Browse the file system" link on the NameNode front page).
 
 Shell Commands
 --------------

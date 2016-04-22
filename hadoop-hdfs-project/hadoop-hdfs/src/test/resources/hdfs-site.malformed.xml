@@ -30,7 +30,7 @@ JIRA - HDFS 7684
 
 <property>
   <name>dfs.namenode.secondary.http-address</name>
-  <value>0.0.0.0:50090    </value>
+  <value>0.0.0.0:9868    </value>
   <description>
     The secondary namenode http server address and port.
   </description>
@@ -38,7 +38,7 @@ JIRA - HDFS 7684
 
 <property>
   <name>dfs.namenode.secondary.https-address</name>
-  <value>0.0.0.0:50091     </value>
+  <value>0.0.0.0:9869     </value>
   <description>
     The secondary namenode HTTPS server address and port.
   </description>
@@ -46,7 +46,7 @@ JIRA - HDFS 7684
 
 <property>
   <name>dfs.datanode.address</name>
-  <value>0.0.0.0:50010    </value>
+  <value>0.0.0.0:9866    </value>
   <description>
     The datanode server address and port for data transfer.
   </description>
@@ -54,7 +54,7 @@ JIRA - HDFS 7684
 
 <property>
   <name>dfs.datanode.http.address</name>
-  <value>0.0.0.0:50075    </value>
+  <value>0.0.0.0:9864    </value>
   <description>
     The datanode http server address and port.
   </description>
@@ -62,7 +62,7 @@ JIRA - HDFS 7684
 
 <property>
   <name>dfs.datanode.ipc.address</name>
-  <value>0.0.0.0:50020  </value>
+  <value>0.0.0.0:9867  </value>
   <description>
     The datanode ipc server address and port.
   </description>
@@ -76,7 +76,7 @@ JIRA - HDFS 7684
 
 <property>
   <name>dfs.namenode.http-address</name>
-  <value>0.0.0.0:50070    </value>
+  <value>0.0.0.0:9870    </value>
   <description>
     The address and the base port where the dfs namenode web ui will listen on.
   </description>
@@ -84,13 +84,13 @@ JIRA - HDFS 7684
 
 <property>
   <name>dfs.datanode.https.address</name>
-  <value>0.0.0.0:50475     </value>
+  <value>0.0.0.0:9865     </value>
   <description>The datanode secure http server address and port.</description>
 </property>
 
 <property>
   <name>dfs.namenode.https-address</name>
-  <value>0.0.0.0:50470    </value>
+  <value>0.0.0.0:9871    </value>
   <description>The namenode secure http server address and port.</description>
 </property>
 

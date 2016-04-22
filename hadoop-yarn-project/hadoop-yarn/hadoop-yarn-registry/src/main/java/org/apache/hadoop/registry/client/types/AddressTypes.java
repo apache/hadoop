@@ -34,7 +34,7 @@ public interface AddressTypes {
    * The host/domain name and port are set as separate strings in the address
    * list, e.g.
    * <pre>
-   *   ["namenode.example.org", "50070"]
+   *   ["namenode.example.org", "9870"]
    * </pre>
    */
   public static final String ADDRESS_HOSTNAME_AND_PORT = "host/port";

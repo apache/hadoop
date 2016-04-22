@@ -28,7 +28,7 @@
 <property><!--Loaded from job.xml--><name>yarn.nodemanager.resource.memory-mb</name><value>8192</value></property>
 <property><!--Loaded from job.xml--><name>io.map.index.interval</name><value>128</value></property>
 <property><!--Loaded from job.xml--><name>s3.client-write-packet-size</name><value>65536</value></property>
-<property><!--Loaded from job.xml--><name>dfs.namenode.http-address</name><value>0.0.0.0:50070</value></property>
+<property><!--Loaded from job.xml--><name>dfs.namenode.http-address</name><value>0.0.0.0:9870</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.task.files.preserve.failedtasks</name><value>false</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.job.reduce.class</name><value>org.apache.hadoop.mapreduce.SleepJob$SleepReducer</value></property>
 <property><!--Loaded from job.xml--><name>hadoop.hdfs.configuration.version</name><value>1</value></property>
@@ -48,7 +48,7 @@
 <property><!--Loaded from job.xml--><name>s3native.blocksize</name><value>67108864</value></property>
 <property><!--Loaded from job.xml--><name>dfs.namenode.edits.dir</name><value>${dfs.namenode.name.dir}</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.job.map.class</name><value>org.apache.hadoop.mapreduce.SleepJob$SleepMapper</value></property>
-<property><!--Loaded from job.xml--><name>dfs.datanode.http.address</name><value>0.0.0.0:50075</value></property>
+<property><!--Loaded from job.xml--><name>dfs.datanode.http.address</name><value>0.0.0.0:9864</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.jobtracker.jobhistory.task.numberprogresssplits</name><value>12</value></property>
 <property><!--Loaded from job.xml--><name>yarn.acl.enable</name><value>true</value></property>
 <property><!--Loaded from job.xml--><name>yarn.nodemanager.localizer.fetch.thread-count</name><value>4</value></property>
@@ -156,7 +156,7 @@
 <property><!--Loaded from job.xml--><name>dfs.datanode.data.dir</name><value>file:///home/user/hadoop-user/dfs/data</value></property>
 <property><!--Loaded from job.xml--><name>dfs.namenode.replication.interval</name><value>3</value></property>
 <property><!--Loaded from job.xml--><name>fs.file.impl</name><value>org.apache.hadoop.fs.LocalFileSystem</value></property>
-<property><!--Loaded from job.xml--><name>dfs.namenode.https-address</name><value>0.0.0.0:50470</value></property>
+<property><!--Loaded from job.xml--><name>dfs.namenode.https-address</name><value>0.0.0.0:9871</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.task.skip.start.attempts</name><value>2</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.jobtracker.persist.jobstatus.dir</name><value>/jobtracker/jobsInfo</value></property>
 <property><!--Loaded from job.xml--><name>ipc.client.kill.max</name><value>10</value></property>
@@ -255,7 +255,7 @@
 <property><!--Loaded from job.xml--><name>kfs.blocksize</name><value>67108864</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.job.ubertask.maxmaps</name><value>9</value></property>
 <property><!--Loaded from job.xml--><name>yarn.nodemanager.heartbeat.interval-ms</name><value>1000</value></property>
-<property><!--Loaded from job.xml--><name>dfs.namenode.secondary.http-address</name><value>0.0.0.0:50090</value></property>
+<property><!--Loaded from job.xml--><name>dfs.namenode.secondary.http-address</name><value>0.0.0.0:9868</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.job.userlog.retain.hours</name><value>24</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.task.timeout</name><value>600000</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.jobhistory.loadedjobs.cache.size</name><value>1</value></property>
@@ -318,9 +318,9 @@
 <property><!--Loaded from job.xml--><name>fs.s3n.block.size</name><value>67108864</value></property>
 <property><!--Loaded from job.xml--><name>fs.ftp.host</name><value>0.0.0.0</value></property>
 <property><!--Loaded from job.xml--><name>hadoop.security.group.mapping</name><value>org.apache.hadoop.security.ShellBasedUnixGroupsMapping</value></property>
-<property><!--Loaded from job.xml--><name>dfs.datanode.address</name><value>0.0.0.0:50010</value></property>
+<property><!--Loaded from job.xml--><name>dfs.datanode.address</name><value>0.0.0.0:9866</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.map.skip.maxrecords</name><value>0</value></property>
-<property><!--Loaded from job.xml--><name>dfs.datanode.https.address</name><value>0.0.0.0:50475</value></property>
+<property><!--Loaded from job.xml--><name>dfs.datanode.https.address</name><value>0.0.0.0:9865</value></property>
 <property><!--Loaded from job.xml--><name>fs.s3.impl</name><value>org.apache.hadoop.fs.s3.S3FileSystem</value></property>
 <property><!--Loaded from job.xml--><name>file.replication</name><value>1</value></property>
 <property><!--Loaded from job.xml--><name>yarn.resourcemanager.resource-tracker.address</name><value>0.0.0.0:8025</value></property>
@@ -379,7 +379,7 @@
 <property><!--Loaded from job.xml--><name>mapreduce.tasktracker.dns.nameserver</name><value>default</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.map.output.compress</name><value>false</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.job.counters.limit</name><value>120</value></property>
-<property><!--Loaded from job.xml--><name>dfs.datanode.ipc.address</name><value>0.0.0.0:50020</value></property>
+<property><!--Loaded from job.xml--><name>dfs.datanode.ipc.address</name><value>0.0.0.0:9867</value></property>
 <property><!--Loaded from job.xml--><name>fs.webhdfs.impl</name><value>org.apache.hadoop.hdfs.web.WebHdfsFileSystem</value></property>
 <property><!--Loaded from job.xml--><name>fs.swebhdfs.impl</name><value>org.apache.hadoop.hdfs.web.SWebHdfsFileSystem</value></property>
 <property><!--Loaded from job.xml--><name>yarn.nodemanager.delete.debug-delay-sec</name><value>0</value></property>

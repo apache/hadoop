@@ -318,7 +318,7 @@ Once the Hadoop cluster is up and running check the web-ui of the components as 
 
 | Daemon | Web Interface | Notes |
 |:---- |:---- |:---- |
-| NameNode | http://nn_host:port/ | Default HTTP port is 50070. |
+| NameNode | http://nn_host:port/ | Default HTTP port is 9870. |
 | ResourceManager | http://rm_host:port/ | Default HTTP port is 8088. |
 | MapReduce JobHistory Server | http://jhs_host:port/ | Default HTTP port is 19888. |
 

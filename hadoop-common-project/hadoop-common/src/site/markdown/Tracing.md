@@ -63,7 +63,7 @@ You need to run the command against all servers if you want to update the config
       ID  CLASS
       1   org.apache.htrace.core.LocalFileSpanReceiver
 
-      $ hadoop trace -list -host 192.168.56.2:50020
+      $ hadoop trace -list -host 192.168.56.2:9867
       ID  CLASS
       1   org.apache.htrace.core.LocalFileSpanReceiver
 

@@ -52,7 +52,7 @@ import org.apache.hadoop.util.ExitUtil;
  * hadoop:service=NameNode,name=FSNamesystemState (static)
  * hadoop:service=NameNode,name=NameNodeActivity (dynamic)
  * hadoop:service=NameNode,name=RpcActivityForPort9000 (dynamic)
- * hadoop:service=DataNode,name=RpcActivityForPort50020 (dynamic)
+ * hadoop:service=DataNode,name=RpcActivityForPort9867 (dynamic)
  * hadoop:name=service=DataNode,FSDatasetState-UndefinedStorageId663800459
  * (static)
  * hadoop:service=DataNode,name=DataNodeActivity-UndefinedStorageId-520845215

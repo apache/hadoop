@@ -685,8 +685,8 @@ public abstract class FileSystem extends Configured implements Closeable {
       return new BlockLocation[0];
 
     }
-    String[] name = { "localhost:50010" };
-    String[] host = { "localhost" };
+    String[] name = {"localhost:9866"};
+    String[] host = {"localhost"};
     return new BlockLocation[] {
       new BlockLocation(name, host, 0, file.getLen()) };
   }
