@@ -29,7 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Helpers to create interned metrics info
+ * Helpers to create interned metrics info.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -109,9 +109,9 @@ public class Interns {
   }
 
   /**
-   * Get a metric info object
-   * @param name
-   * @param description
+   * Get a metric info object.
+   * @param name Name of metric info object
+   * @param description Description of metric info object
    * @return an interned metric info object
    */
   public static MetricsInfo info(String name, String description) {
@@ -143,7 +143,7 @@ public class Interns {
   }
 
   /**
-   * Get a metrics tag
+   * Get a metrics tag.
    * @param info  of the tag
    * @param value of the tag
    * @return an interned metrics tag
@@ -153,7 +153,7 @@ public class Interns {
   }
 
   /**
-   * Get a metrics tag
+   * Get a metrics tag.
    * @param name  of the tag
    * @param description of the tag
    * @param value of the tag
