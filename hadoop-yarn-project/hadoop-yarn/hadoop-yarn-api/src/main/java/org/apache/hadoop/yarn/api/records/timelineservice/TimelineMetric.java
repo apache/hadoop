@@ -19,12 +19,13 @@ package org.apache.hadoop.yarn.api.records.timelineservice;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import java.util.Comparator;
+import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -48,13 +49,13 @@ public class TimelineMetric {
 
   private Type type;
   private String id;
-  private Comparator<Long> reverseComparator = new Comparator<Long>() {
-    @Override
-    public int compare(Long l1, Long l2) {
-      return l2.compareTo(l1);
-    }
-  };
-  private TreeMap<Long, Number> values = new TreeMap<>(reverseComparator);
+  // By default, not to do any aggregation operations. This field will NOT be
+  // persisted (like a "transient" member).
+  private TimelineMetricOperation realtimeAggregationOp
+      = TimelineMetricOperation.NOP;
+
+  private TreeMap<Long, Number> values
+      = new TreeMap<>(Collections.reverseOrder());
 
   public TimelineMetric() {
     this(Type.SINGLE_VALUE);
@@ -83,6 +84,26 @@ public class TimelineMetric {
     this.id = metricId;
   }
 
+  /**
+   * Get the real time aggregation operation of this metric.
+   *
+   * @return Real time aggregation operation
+   */
+  public TimelineMetricOperation getRealtimeAggregationOp() {
+    return realtimeAggregationOp;
+  }
+
+  /**
+   * Set the real time aggregation operation of this metric.
+   *
+   * @param op A timeline metric operation that the metric should perform on
+   *           real time aggregations
+   */
+  public void setRealtimeAggregationOp(
+      final TimelineMetricOperation op) {
+    this.realtimeAggregationOp = op;
+  }
+
   // required by JAXB
   @InterfaceAudience.Private
   @XmlElement(name = "values")
@@ -98,8 +119,8 @@ public class TimelineMetric {
     if (type == Type.SINGLE_VALUE) {
       overwrite(vals);
     } else {
-      if (values != null) {
-        this.values = new TreeMap<Long, Number>(reverseComparator);
+      if (vals != null) {
+        this.values = new TreeMap<>(Collections.reverseOrder());
         this.values.putAll(vals);
       } else {
         this.values = null;
@@ -166,11 +187,100 @@ public class TimelineMetric {
 
   @Override
   public String toString() {
-    String str = "{id:" + id + ", type:" + type;
-    if (!values.isEmpty()) {
-      str += ", values:" + values;
-    }
-    str += "}";
-    return str;
+    return "{id: " + id + ", type: " + type +
+        ", realtimeAggregationOp: " +
+        realtimeAggregationOp + "; " + values.toString() +
+        "}";
   }
+
+  /**
+   * Get the latest timeline metric as single value type.
+   *
+   * @param metric Incoming timeline metric
+   * @return The latest metric in the incoming metric
+   */
+  public static TimelineMetric getLatestSingleValueMetric(
+      TimelineMetric metric) {
+    if (metric.getType() == Type.SINGLE_VALUE) {
+      return metric;
+    } else {
+      TimelineMetric singleValueMetric = new TimelineMetric(Type.SINGLE_VALUE);
+      Long firstKey = metric.values.firstKey();
+      if (firstKey != null) {
+        Number firstValue = metric.values.get(firstKey);
+        singleValueMetric.addValue(firstKey, firstValue);
+      }
+      return singleValueMetric;
+    }
+  }
+
+  /**
+   * Get single data timestamp of the metric.
+   *
+   * @return the single data timestamp
+   */
+  public long getSingleDataTimestamp() {
+    if (this.type == Type.SINGLE_VALUE) {
+      if (values.size() == 0) {
+        throw new YarnRuntimeException("Values for this timeline metric is " +
+            "empty.");
+      } else {
+        return values.firstKey();
+      }
+    } else {
+      throw new YarnRuntimeException("Type for this timeline metric is not " +
+          "SINGLE_VALUE.");
+    }
+  }
+
+  /**
+   * Get single data value of the metric.
+   *
+   * @return the single data value
+   */
+  public Number getSingleDataValue() {
+    if (this.type == Type.SINGLE_VALUE) {
+      if (values.size() == 0) {
+        return null;
+      } else {
+        return values.get(values.firstKey());
+      }
+    } else {
+      throw new YarnRuntimeException("Type for this timeline metric is not " +
+          "SINGLE_VALUE.");
+    }
+  }
+
+  /**
+   * Aggregate an incoming metric to the base aggregated metric with the given
+   * operation state in a stateless fashion. The assumption here is
+   * baseAggregatedMetric and latestMetric should be single value data if not
+   * null.
+   *
+   * @param incomingMetric Incoming timeline metric to aggregate
+   * @param baseAggregatedMetric Base timeline metric
+   * @return Result metric after aggregation
+   */
+  public static TimelineMetric aggregateTo(TimelineMetric incomingMetric,
+      TimelineMetric baseAggregatedMetric) {
+    return aggregateTo(incomingMetric, baseAggregatedMetric, null);
+  }
+
+  /**
+   * Aggregate an incoming metric to the base aggregated metric with the given
+   * operation state. The assumption here is baseAggregatedMetric and
+   * latestMetric should be single value data if not null.
+   *
+   * @param incomingMetric Incoming timeline metric to aggregate
+   * @param baseAggregatedMetric Base timeline metric
+   * @param state Operation state
+   * @return Result metric after aggregation
+   */
+  public static TimelineMetric aggregateTo(TimelineMetric incomingMetric,
+      TimelineMetric baseAggregatedMetric, Map<Object, Object> state) {
+    TimelineMetricOperation operation
+        = incomingMetric.getRealtimeAggregationOp();
+    return operation.aggregate(incomingMetric, baseAggregatedMetric, state);
+  }
+
 }
