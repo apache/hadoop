@@ -151,7 +151,11 @@ void RpcConnectionImpl<NextLayer>::ConnectComplete(const ::asio::error_code &ec)
       HandshakeComplete(s);
     });
   } else {
-    next_layer_.close();
+    std::string err = SafeDisconnect(get_asio_socket_ptr(&next_layer_));
+    if(!err.empty()) {
+      LOG_INFO(kRPC, << "Rpc connection failed to connect to endpoint, error closing connection: " << err);
+    }
+
     if (!additional_endpoints_.empty()) {
       // If we have additional endpoints, keep trying until we either run out or
       //    hit one
@@ -355,8 +359,8 @@ void RpcConnectionImpl<NextLayer>::Disconnect() {
 
   request_over_the_wire_.reset();
   if (connected_ == kConnecting || connected_ == kConnected) {
-    next_layer_.cancel();
-    next_layer_.close();
+    // Don't print out errors, we were expecting a disconnect here
+    SafeDisconnect(get_asio_socket_ptr(&next_layer_));
   }
   connected_ = kDisconnected;
 }

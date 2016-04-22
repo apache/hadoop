@@ -56,8 +56,13 @@ void DataNodeConnectionImpl::Connect(
 }
 
 void DataNodeConnectionImpl::Cancel() {
-  mutex_guard state_lock(state_lock_);
-  std::string err = SafeDisconnect(conn_.get());
+  std::string err;
+
+  { // scope the lock for disconnect only, log has it's own lock
+    mutex_guard state_lock(state_lock_);
+    err = SafeDisconnect(conn_.get());
+  }
+
   if(!err.empty()) {
     LOG_WARN(kBlockReader, << "Error disconnecting socket in DataNodeConnectionImpl::Cancel, " << err);
   }
