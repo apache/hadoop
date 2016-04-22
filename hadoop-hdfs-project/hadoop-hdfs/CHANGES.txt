@@ -158,6 +158,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-10239. Fsshell mv fails if port usage doesn't match in src and
     destination paths (Kuhu Shukla via kihwal)
 
+    HDFS-9555. LazyPersistFileScrubber should still sleep if there are errors
+    in the clear progress (Phil Yang via kihwal)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
