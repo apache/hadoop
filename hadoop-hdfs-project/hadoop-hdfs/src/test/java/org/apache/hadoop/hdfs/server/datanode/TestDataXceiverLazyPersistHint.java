@@ -171,12 +171,13 @@ public class TestDataXceiverLazyPersistHint {
     conf.setBoolean(
         DFS_DATANODE_NON_LOCAL_LAZY_PERSIST,
         nonLocalLazyPersist == NonLocalLazyPersist.ALLOWED);
-    DNConf dnConf = new DNConf(conf);
+
     DatanodeRegistration mockDnReg = mock(DatanodeRegistration.class);
     DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
     DataNode mockDn = mock(DataNode.class);
-    when(mockDn.getDnConf()).thenReturn(dnConf);
     when(mockDn.getConf()).thenReturn(conf);
+    DNConf dnConf = new DNConf(mockDn);
+    when(mockDn.getDnConf()).thenReturn(dnConf);
     when(mockDn.getMetrics()).thenReturn(mockMetrics);
     when(mockDn.getDNRegistrationForBP("Dummy-pool")).thenReturn(mockDnReg);
     return mockDn;

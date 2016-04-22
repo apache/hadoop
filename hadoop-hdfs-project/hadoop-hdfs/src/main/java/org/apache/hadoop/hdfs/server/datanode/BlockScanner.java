@@ -165,6 +165,10 @@ public class BlockScanner {
     }
   }
 
+  public BlockScanner(DataNode datanode) {
+    this(datanode, datanode.getConf());
+  }
+
   public BlockScanner(DataNode datanode, Configuration conf) {
     this.datanode = datanode;
     this.conf = new Conf(conf);
