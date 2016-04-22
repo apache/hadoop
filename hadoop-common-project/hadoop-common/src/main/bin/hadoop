@@ -33,7 +33,6 @@ function hadoop_usage
   hadoop_add_subcommand "daemonlog" "get/set the log level for each daemon"
   hadoop_add_subcommand "distch" "distributed metadata changer"
   hadoop_add_subcommand "distcp" "copy file or directories recursively"
-  hadoop_add_subcommand "dtutil" "operations related to delegation tokens"
   hadoop_add_subcommand "envvars" "display computed Hadoop environment variables"
   hadoop_add_subcommand "fs" "run a generic filesystem user client"
   hadoop_add_subcommand "jar <jar>" "run a jar file. NOTE: please use \"yarn jar\" to launch YARN applications, not this command."
@@ -139,9 +138,6 @@ case ${COMMAND} in
   distcp)
     CLASS=org.apache.hadoop.tools.DistCp
     hadoop_add_to_classpath_tools hadoop-distcp
-  ;;
-  dtutil)
-    CLASS=org.apache.hadoop.security.token.DtUtilShell
   ;;
   envvars)
     echo "JAVA_HOME='${JAVA_HOME}'"
