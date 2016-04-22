@@ -2696,6 +2696,23 @@ public class FileContext {
   }
 
   /**
+   * Unset the storage policy set for a given file or directory.
+   * @param src file or directory path.
+   * @throws IOException
+   */
+  public void unsetStoragePolicy(final Path src) throws IOException {
+    final Path absF = fixRelativePart(src);
+    new FSLinkResolver<Void>() {
+      @Override
+      public Void next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        fs.unsetStoragePolicy(src);
+        return null;
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
    * Query the effective storage policy ID for the given file or directory.
    *
    * @param src file or directory path.

@@ -1236,6 +1236,17 @@ public abstract class AbstractFileSystem {
         + " doesn't support setStoragePolicy");
   }
 
+
+  /**
+   * Unset the storage policy set for a given file or directory.
+   * @param src file or directory path.
+   * @throws IOException
+   */
+  public void unsetStoragePolicy(final Path src) throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support unsetStoragePolicy");
+  }
+
   /**
    * Retrieve the storage policy for a given file or directory.
    *
