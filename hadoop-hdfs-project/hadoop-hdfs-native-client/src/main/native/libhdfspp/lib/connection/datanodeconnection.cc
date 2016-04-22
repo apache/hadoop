@@ -47,6 +47,7 @@ DataNodeConnectionImpl::DataNodeConnectionImpl(asio::io_service * io_service,
 void DataNodeConnectionImpl::Connect(
              std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) {
   // Keep the DN from being freed until we're done
+  mutex_guard state_lock(state_lock_);
   auto shared_this = shared_from_this();
   asio::async_connect(*conn_, endpoints_.begin(), endpoints_.end(),
           [shared_this, handler](const asio::error_code &ec, std::array<asio::ip::tcp::endpoint, 1>::iterator it) {
@@ -55,7 +56,11 @@ void DataNodeConnectionImpl::Connect(
 }
 
 void DataNodeConnectionImpl::Cancel() {
-  conn_.reset();
+  mutex_guard state_lock(state_lock_);
+  std::string err = SafeDisconnect(conn_.get());
+  if(!err.empty()) {
+    LOG_WARN(kBlockReader, << "Error disconnecting socket in DataNodeConnectionImpl::Cancel, " << err);
+  }
 }
 
 

@@ -19,6 +19,7 @@
 #include "common/util.h"
 
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
+#include <exception>
 
 namespace hdfs {
 
@@ -62,6 +63,36 @@ std::string GetRandomClientName() {
   ss << "libhdfs++_"
      << Base64Encode(std::string(reinterpret_cast<char *>(buf), sizeof(buf)));
   return ss.str();
+}
+
+std::string SafeDisconnect(asio::ip::tcp::socket *sock) {
+  std::string err;
+  if(sock && sock->is_open()) {
+    /**
+     *  Even though we just checked that the socket is open it's possible
+     *  it isn't in a state where it can properly send or receive.  If that's
+     *  the case asio will turn the underlying error codes from shutdown()
+     *  and close() into unhelpfully named std::exceptions.  Due to the
+     *  relatively innocuous nature of most of these error codes it's better
+     *  to just catch and return a flag so the caller can log failure.
+     **/
+
+    try {
+      sock->shutdown(asio::ip::tcp::socket::shutdown_both);
+    } catch (const std::exception &e) {
+      err = std::string("shutdown() threw") + e.what();
+    }
+
+    try {
+      sock->close();
+    } catch (const std::exception &e) {
+      // don't append if shutdown() already failed, first failure is the useful one
+      if(err.empty())
+        err = std::string("close() threw") + e.what();
+    }
+
+  }
+  return err;
 }
 
 }
