@@ -641,8 +641,10 @@ public class WebHdfsFileSystem extends FileSystem
             node = url.getAuthority();
           }
           try {
-              ioe = ioe.getClass().getConstructor(String.class)
-                    .newInstance(node + ": " + ioe.getMessage());
+            IOException newIoe = ioe.getClass().getConstructor(String.class)
+                .newInstance(node + ": " + ioe.getMessage());
+            newIoe.setStackTrace(ioe.getStackTrace());
+            ioe = newIoe;
           } catch (NoSuchMethodException | SecurityException 
                    | InstantiationException | IllegalAccessException
                    | IllegalArgumentException | InvocationTargetException e) {
