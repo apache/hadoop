@@ -82,6 +82,17 @@
        <Bug pattern="REC_CATCH_EXCEPTION" />
      </Match>
 
+    <!--
+     we don't need to synchronize out in newStreamForAppend method because
+     out.streamer cannot be touched by other threads. It is false-positive.
+    -->
+    <Match>
+        <Class name="org.apache.hadoop.hdfs.DFSOutputStream" />
+        <Method name="newStreamForAppend" />
+        <Field name="streamer" />
+        <Bug pattern="IS2_INCONSISTENT_SYNC" />
+    </Match>
+
      <!--
       lastAppliedTxid is carefully unsynchronized in the BackupNode in a couple spots.
       See the comments in BackupImage for justification.
