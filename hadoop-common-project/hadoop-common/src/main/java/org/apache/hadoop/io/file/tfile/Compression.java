@@ -82,9 +82,9 @@ final class Compression {
       public synchronized boolean isSupported() {
         if (!checked) {
           checked = true;
-          String extClazz =
-              (conf.get(CONF_LZO_CLASS) == null ? System
-                  .getProperty(CONF_LZO_CLASS) : null);
+          String extClazzConf = conf.get(CONF_LZO_CLASS);
+          String extClazz = (extClazzConf != null) ?
+              extClazzConf : System.getProperty(CONF_LZO_CLASS);
           String clazz = (extClazz != null) ? extClazz : defaultClazz;
           try {
             LOG.info("Trying to load Lzo codec class: " + clazz);
