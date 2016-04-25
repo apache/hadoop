@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.client.impl;
 
 import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitFdResponse.USE_RECEIPT_VERIFICATION;
 
@@ -34,7 +34,15 @@ import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
+import org.apache.hadoop.hdfs.BlockReader;
+import org.apache.hadoop.hdfs.ClientContext;
+import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSInputStream;
+import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.ExtendedBlockId;
+import org.apache.hadoop.hdfs.RemotePeerFactory;
+import org.apache.hadoop.hdfs.ReplicaAccessor;
+import org.apache.hadoop.hdfs.ReplicaAccessorBuilder;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf.ShortCircuitConf;
 import org.apache.hadoop.hdfs.net.DomainPeer;
 import org.apache.hadoop.hdfs.net.Peer;
@@ -646,7 +654,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
   }
 
   /**
-   * Get a RemoteBlockReader that communicates over a UNIX domain socket.
+   * Get a BlockReaderRemote that communicates over a UNIX domain socket.
    *
    * @return The new BlockReader, or null if we failed to create the block
    * reader.
@@ -709,7 +717,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
   }
 
   /**
-   * Get a RemoteBlockReader that communicates over a TCP socket.
+   * Get a BlockReaderRemote that communicates over a TCP socket.
    *
    * @return The new BlockReader.  We will not return null, but instead throw
    *         an exception if this fails.
@@ -837,13 +845,13 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
   private BlockReader getRemoteBlockReader(Peer peer) throws IOException {
     int networkDistance = clientContext.getNetworkDistance(datanode);
     if (conf.getShortCircuitConf().isUseLegacyBlockReader()) {
-      return RemoteBlockReader.newBlockReader(fileName,
+      return BlockReaderRemote.newBlockReader(fileName,
           block, token, startOffset, length, conf.getIoBufferSize(),
           verifyChecksum, clientName, peer, datanode,
           clientContext.getPeerCache(), cachingStrategy, tracer,
           networkDistance);
     } else {
-      return RemoteBlockReader2.newBlockReader(
+      return BlockReaderRemote2.newBlockReader(
           fileName, block, token, startOffset, length,
           verifyChecksum, clientName, peer, datanode,
           clientContext.getPeerCache(), cachingStrategy, tracer,

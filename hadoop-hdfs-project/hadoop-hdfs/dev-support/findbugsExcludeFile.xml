@@ -133,7 +133,7 @@
 
      <!-- Don't complain about LocalDatanodeInfo's anonymous class -->
      <Match>
-       <Class name="org.apache.hadoop.hdfs.BlockReaderLocal$LocalDatanodeInfo$1" />
+       <Class name="org.apache.hadoop.hdfs.client.impl.BlockReaderLocal$LocalDatanodeInfo$1" />
        <Bug pattern="SE_BAD_FIELD_INNER_CLASS" />
      </Match>
      <!-- Only one method increments numFailedVolumes and it is synchronized -->

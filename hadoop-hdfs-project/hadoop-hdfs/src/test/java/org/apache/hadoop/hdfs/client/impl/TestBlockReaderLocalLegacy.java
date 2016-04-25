@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.client.impl;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -30,6 +30,13 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSInputStream;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
@@ -52,7 +59,7 @@ public class TestBlockReaderLocalLegacy {
     DFSInputStream.tcpReadsDisabledForTesting = true;
     DomainSocket.disableBindPathValidation();
   }
-  
+
   private static HdfsConfiguration getConfiguration(
       TemporarySocketDirectory socketDir) throws IOException {
     HdfsConfiguration conf = new HdfsConfiguration();
@@ -84,7 +91,7 @@ public class TestBlockReaderLocalLegacy {
   public void testStablePositionAfterCorruptRead() throws Exception {
     final short REPL_FACTOR = 1;
     final long FILE_LENGTH = 512L;
-    
+
     HdfsConfiguration conf = getConfiguration(null);
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();

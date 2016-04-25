@@ -15,11 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.client.impl;
 
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 
-public class TestRemoteBlockReader extends TestBlockReaderBase {
+public class TestBlockReaderRemote extends TestBlockReaderBase {
 
   HdfsConfiguration createConf() {
     HdfsConfiguration conf = new HdfsConfiguration();
