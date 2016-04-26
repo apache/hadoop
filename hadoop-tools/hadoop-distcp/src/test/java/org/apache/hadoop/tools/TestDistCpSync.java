@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.tools;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -31,6 +32,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.tools.mapred.CopyMapper;
 import org.junit.After;
 import org.junit.Assert;
@@ -711,5 +713,30 @@ public class TestDistCpSync {
     new DistCp(conf, OptionsParser.parse(args)).execute();
     verifyCopy(dfs.getFileStatus(sourcePath),
                  dfs.getFileStatus(target), false);
+  }
+
+  @Test
+  public void testSyncSnapshotTimeStampChecking() throws Exception {
+    initData(source);
+    initData(target);
+    dfs.allowSnapshot(source);
+    dfs.allowSnapshot(target);
+    dfs.createSnapshot(source, "s2");
+    dfs.createSnapshot(target, "s1");
+    // Sleep one second to make snapshot s1 created later than s2
+    Thread.sleep(1000);
+    dfs.createSnapshot(source, "s1");
+
+    boolean threwException = false;
+    try {
+      DistCpSync distCpSync = new DistCpSync(options, conf);
+      // do the sync
+      distCpSync.sync();
+    } catch (HadoopIllegalArgumentException e) {
+      threwException = true;
+      GenericTestUtils.assertExceptionContains(
+          "Snapshot s2 should be newer than s1", e);
+    }
+    Assert.assertTrue(threwException);
   }
 }

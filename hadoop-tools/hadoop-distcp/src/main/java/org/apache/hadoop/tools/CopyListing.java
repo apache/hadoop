@@ -268,6 +268,10 @@ public abstract class CopyListing extends Configured {
     public InvalidInputException(String message) {
       super(message);
     }
+
+    public InvalidInputException(String message, Throwable cause) {
+      super(message, cause);
+    }
   }
 
   public static class AclsNotSupportedException extends RuntimeException {
