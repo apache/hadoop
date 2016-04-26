@@ -164,7 +164,7 @@ public class RequestHedgingProxyProvider<T> extends
       return successfulProxy;
     }
     Map<String, ProxyInfo<T>> targetProxyInfos = new HashMap<>();
-    StringBuilder combinedInfo = new StringBuilder('[');
+    StringBuilder combinedInfo = new StringBuilder("[");
     for (int i = 0; i < proxies.size(); i++) {
       ProxyInfo<T> pInfo = super.getProxy();
       incrementProxyIndex();
