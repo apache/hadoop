@@ -856,7 +856,7 @@
 
 <property>
   <name>dfs.datanode.balance.bandwidthPerSec</name>
-  <value>1048576</value>
+  <value>10m</value>
   <description>
         Specifies the maximum amount of bandwidth that each datanode
         can utilize for the balancing purpose in term of
@@ -3409,7 +3409,7 @@
 
 <property>
   <name>dfs.datanode.balance.max.concurrent.moves</name>
-  <value>5</value>
+  <value>50</value>
   <description>
     Maximum number of threads for Datanode balancer pending moves.  This
     value is reconfigurable via the "dfsadmin -reconfig" command.
