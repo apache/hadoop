@@ -528,6 +528,7 @@ public class TestFifoScheduler {
   
   @Test
   public void testResourceOverCommit() throws Exception {
+    int waitCount;
     MockRM rm = new MockRM(conf);
     rm.start();
     
@@ -580,9 +581,18 @@ public class TestFifoScheduler {
         UpdateNodeResourceRequest.newInstance(nodeResourceMap);
     AdminService as = rm.adminService;
     as.updateNodeResource(request);
+    waitCount = 0;
+    while (waitCount++ != 20) {
+      report_nm1 = rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
+      if (report_nm1.getAvailableResource().getMemory() != 0) {
+        break;
+      }
+      LOG.info("Waiting for RMNodeResourceUpdateEvent to be handled... Tried "
+          + waitCount + " times already..");
+      Thread.sleep(1000);
+    }
     
     // Now, the used resource is still 4 GB, and available resource is minus value.
-    report_nm1 = rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
     Assert.assertEquals(4 * GB, report_nm1.getUsedResource().getMemory());
     Assert.assertEquals(-2 * GB, report_nm1.getAvailableResource().getMemory());
     
@@ -590,7 +600,7 @@ public class TestFifoScheduler {
     ContainerStatus containerStatus = BuilderUtils.newContainerStatus(
         c1.getId(), ContainerState.COMPLETE, "", 0);
     nm1.containerStatus(containerStatus);
-    int waitCount = 0;
+    waitCount = 0;
     while (attempt1.getJustFinishedContainers().size() < 1
         && waitCount++ != 20) {
       LOG.info("Waiting for containers to be finished for app 1... Tried "
