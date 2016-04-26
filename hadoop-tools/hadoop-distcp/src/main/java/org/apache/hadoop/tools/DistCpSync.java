@@ -17,14 +17,18 @@
  */
 package org.apache.hadoop.tools;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.tools.CopyListing.InvalidInputException;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -91,6 +95,28 @@ class DistCpSync {
           inputOptions.getToSnapshot())));
       return false;
     }
+
+    final String from = getSnapshotName(inputOptions.getFromSnapshot());
+    final String to = getSnapshotName(inputOptions.getToSnapshot());
+
+    try {
+      final FileStatus fromSnapshotStat =
+          sfs.getFileStatus(getSourceSnapshotPath(sourceDir, from));
+
+      final FileStatus toSnapshotStat =
+          sfs.getFileStatus(getSourceSnapshotPath(sourceDir, to));
+
+      // If toSnapshot isn't current dir then do a time check
+      if (!to.equals("")
+          && fromSnapshotStat.getModificationTime() > toSnapshotStat
+              .getModificationTime()) {
+        throw new HadoopIllegalArgumentException("Snapshot " + to
+            + " should be newer than " + from);
+      }
+    } catch (FileNotFoundException nfe) {
+      throw new InvalidInputException("Input snapshot is not found", nfe);
+    }
+
     return true;
   }
 
