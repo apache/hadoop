@@ -178,7 +178,8 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
      */
     public ContainerRequest(Resource capability, String[] nodes, String[] racks,
         Priority priority, boolean relaxLocality, String nodeLabelsExpression) {
-      this(capability, nodes, racks, priority, relaxLocality, null,
+      this(capability, nodes, racks, priority, relaxLocality,
+          nodeLabelsExpression,
           ExecutionType.GUARANTEED);
     }
           
