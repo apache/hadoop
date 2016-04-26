@@ -77,11 +77,12 @@ public class TestContainerMetrics {
     collector.clear();
 
     metrics.getMetrics(collector, true);
-    assertEquals(ERR, 0, collector.getRecords().size());
+    assertEquals(ERR, 1, collector.getRecords().size());
+    collector.clear();
 
     Thread.sleep(110);
     metrics.getMetrics(collector, true);
-    assertEquals(ERR, 0, collector.getRecords().size());
+    assertEquals(ERR, 1, collector.getRecords().size());
   }
 
   @Test
@@ -134,7 +135,7 @@ public class TestContainerMetrics {
   public void testContainerMetricsFinished() throws InterruptedException {
     MetricsSystemImpl system = new MetricsSystemImpl();
     system.init("test");
-    MetricsCollectorImpl collector = new MetricsCollectorImpl();
+
     ApplicationId appId = ApplicationId.newInstance(1234, 3);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 4);
