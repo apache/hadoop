@@ -156,7 +156,7 @@ public class TestMetaSave {
       line = reader.readLine();
       assertTrue(line.equals("Mis-replicated blocks that have been postponed:"));
       line = reader.readLine();
-      assertTrue(line.equals("Metasave: Blocks being replicated: 0"));
+      assertTrue(line.equals("Metasave: Blocks being reconstructed: 0"));
       line = reader.readLine();
       assertTrue(line.equals("Metasave: Blocks 2 waiting deletion from 1 datanodes."));
      //skip 2 lines to reach HDFS-9033 scenario.

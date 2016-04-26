@@ -537,15 +537,16 @@ public class TestBlockManager {
     list_all.add(new ArrayList<BlockInfo>()); // for priority 0
     list_all.add(list_p1); // for priority 1
 
-    assertEquals("Block not initially pending replication", 0,
-        bm.pendingReplications.getNumReplicas(block));
+    assertEquals("Block not initially pending reconstruction", 0,
+        bm.pendingReconstruction.getNumReplicas(block));
     assertEquals(
-        "computeBlockReconstructionWork should indicate replication is needed",
+        "computeBlockReconstructionWork should indicate reconstruction is needed",
         1, bm.computeReconstructionWorkForBlocks(list_all));
-    assertTrue("replication is pending after work is computed",
-        bm.pendingReplications.getNumReplicas(block) > 0);
+    assertTrue("reconstruction is pending after work is computed",
+        bm.pendingReconstruction.getNumReplicas(block) > 0);
 
-    LinkedListMultimap<DatanodeStorageInfo, BlockTargetPair> repls = getAllPendingReplications();
+    LinkedListMultimap<DatanodeStorageInfo, BlockTargetPair> repls =
+        getAllPendingReconstruction();
     assertEquals(1, repls.size());
     Entry<DatanodeStorageInfo, BlockTargetPair> repl =
       repls.entries().iterator().next();
@@ -559,7 +560,7 @@ public class TestBlockManager {
     return pipeline;
   }
 
-  private LinkedListMultimap<DatanodeStorageInfo, BlockTargetPair> getAllPendingReplications() {
+  private LinkedListMultimap<DatanodeStorageInfo, BlockTargetPair> getAllPendingReconstruction() {
     LinkedListMultimap<DatanodeStorageInfo, BlockTargetPair> repls =
       LinkedListMultimap.create();
     for (DatanodeDescriptor dn : nodes) {
@@ -574,8 +575,8 @@ public class TestBlockManager {
   }
 
   /**
-   * Test that a source node for a highest-priority replication is chosen even if all available
-   * source nodes have reached their replication limits.
+   * Test that a source node for a highest-priority reconstruction is chosen
+   * even if all available source nodes have reached their replication limits.
    */
   @Test
   public void testHighestPriReplSrcChosenDespiteMaxReplLimit() throws Exception {

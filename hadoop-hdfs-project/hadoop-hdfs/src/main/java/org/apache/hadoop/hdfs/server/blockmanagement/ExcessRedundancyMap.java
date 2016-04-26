@@ -28,22 +28,26 @@ import org.slf4j.Logger;
 import com.google.common.annotations.VisibleForTesting;
 
 /**
- * Maps a datnode to the set of excess replicas.
+ * Maps a datnode to the set of excess redundancy details.
  *
  * This class is thread safe.
  */
-class ExcessReplicaMap {
+class ExcessRedundancyMap {
   public static final Logger blockLog = NameNode.blockStateChangeLog;
 
   private final Map<String, LightWeightHashSet<BlockInfo>> map =new HashMap<>();
   private final AtomicLong size = new AtomicLong(0L);
 
-  /** @return the number of replicas in this map. */
+  /**
+   * @return the number of redundancies in this map.
+   */
   long size() {
     return size.get();
   }
 
-  /** @return the number of replicas corresponding to the given datanode. */
+  /**
+   * @return the number of redundancies corresponding to the given datanode.
+   */
   @VisibleForTesting
   synchronized int getSize4Testing(String dnUuid) {
     final LightWeightHashSet<BlockInfo> set = map.get(dnUuid);
@@ -56,7 +60,7 @@ class ExcessReplicaMap {
   }
 
   /**
-   * @return does this map contains a replica corresponding to the given
+   * @return does this map contains a redundancy corresponding to the given
    *         datanode and the given block?
    */
   synchronized boolean contains(DatanodeDescriptor dn, BlockInfo blk) {
@@ -65,7 +69,9 @@ class ExcessReplicaMap {
   }
 
   /**
-   * Add the replica of the given block stored in the given datanode to the map.
+   * Add the redundancy of the given block stored in the given datanode to the
+   * map.
+   *
    * @return true if the block is added.
    */
   synchronized boolean add(DatanodeDescriptor dn, BlockInfo blk) {
@@ -77,13 +83,15 @@ class ExcessReplicaMap {
     final boolean added = set.add(blk);
     if (added) {
       size.incrementAndGet();
-      blockLog.debug("BLOCK* ExcessReplicaMap.add({}, {})", dn, blk);
+      blockLog.debug("BLOCK* ExcessRedundancyMap.add({}, {})", dn, blk);
     }
     return added;
   }
 
   /**
-   * Remove the replica corresponding to the given datanode and the given block.
+   * Remove the redundancy corresponding to the given datanode and the given
+   * block.
+   *
    * @return true if the block is removed.
    */
   synchronized boolean remove(DatanodeDescriptor dn, BlockInfo blk) {
@@ -95,7 +103,7 @@ class ExcessReplicaMap {
     final boolean removed = set.remove(blk);
     if (removed) {
       size.decrementAndGet();
-      blockLog.debug("BLOCK* ExcessReplicaMap.remove({}, {})", dn, blk);
+      blockLog.debug("BLOCK* ExcessRedundancyMap.remove({}, {})", dn, blk);
 
       if (set.isEmpty()) {
         map.remove(dn.getDatanodeUuid());

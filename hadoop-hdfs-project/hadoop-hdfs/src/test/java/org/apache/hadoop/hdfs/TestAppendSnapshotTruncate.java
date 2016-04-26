@@ -85,7 +85,7 @@ public class TestAppendSnapshotTruncate {
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, SHORT_HEARTBEAT);
     conf.setLong(
-        DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, 1);
+        DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY, 1);
     conf.setBoolean(ReplaceDatanodeOnFailure.BEST_EFFORT_KEY, true);
     cluster = new MiniDFSCluster.Builder(conf)
         .format(true)

@@ -216,8 +216,8 @@ public interface HdfsClientConfigKeys {
     String DFS_NAMENODE_REPLICATION_INTERVAL_KEY =
         "dfs.namenode.replication.interval";
     String DFS_NAMENODE_REPLICATION_MIN_KEY = "dfs.namenode.replication.min";
-    String DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY =
-        "dfs.namenode.replication.pending.timeout-sec";
+    String DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY =
+        "dfs.namenode.reconstruction.pending.timeout-sec";
     String DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY =
         "dfs.namenode.replication.max-streams";
     String DFS_PERMISSIONS_ENABLED_KEY = "dfs.permissions.enabled";

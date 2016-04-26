@@ -3790,10 +3790,10 @@
 </property>
 
 <property>
-  <name>dfs.namenode.replication.pending.timeout-sec</name>
+  <name>dfs.namenode.reconstruction.pending.timeout-sec</name>
   <value>-1</value>
   <description>
-    Timeout in seconds for block replication.  If this value is 0 or less,
+    Timeout in seconds for block reconstruction.  If this value is 0 or less,
     then it will default to 5 minutes.
   </description>
 </property>

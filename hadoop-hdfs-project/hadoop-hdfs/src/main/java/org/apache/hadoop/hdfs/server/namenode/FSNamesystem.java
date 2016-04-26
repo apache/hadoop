@@ -4469,7 +4469,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Override // FSNamesystemMBean
   @Metric
   public long getPendingReplicationBlocks() {
-    return blockManager.getPendingReplicationBlocksCount();
+    return blockManager.getPendingReconstructionBlocksCount();
   }
 
   @Override // FSNamesystemMBean

@@ -209,7 +209,7 @@ public class TestReconstructStripedBlocks {
           cellSize, NUM_DATA_BLOCKS, NUM_PARITY_BLOCKS);
 
       assertEquals(0, getNumberOfBlocksToBeErasureCoded(cluster));
-      assertEquals(0, bm.getPendingReplicationBlocksCount());
+      assertEquals(0, bm.getPendingReconstructionBlocksCount());
 
       // missing 1 block, so 1 task should be scheduled
       DatanodeInfo dn0 = lbs[0].getLocations()[0];
@@ -217,7 +217,7 @@ public class TestReconstructStripedBlocks {
       cluster.setDataNodeDead(dn0);
       BlockManagerTestUtil.getComputedDatanodeWork(bm);
       assertEquals(1, getNumberOfBlocksToBeErasureCoded(cluster));
-      assertEquals(1, bm.getPendingReplicationBlocksCount());
+      assertEquals(1, bm.getPendingReconstructionBlocksCount());
 
       // missing another block, but no new task should be scheduled because
       // previous task isn't finished.
@@ -226,7 +226,7 @@ public class TestReconstructStripedBlocks {
       cluster.setDataNodeDead(dn1);
       BlockManagerTestUtil.getComputedDatanodeWork(bm);
       assertEquals(1, getNumberOfBlocksToBeErasureCoded(cluster));
-      assertEquals(1, bm.getPendingReplicationBlocksCount());
+      assertEquals(1, bm.getPendingReconstructionBlocksCount());
     } finally {
       cluster.shutdown();
     }

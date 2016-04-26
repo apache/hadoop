@@ -33,20 +33,20 @@ import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
 
 /***************************************************
- * PendingReplicationBlocks does the bookkeeping of all
- * blocks that are getting replicated.
+ * PendingReconstructionBlocks does the bookkeeping of all
+ * blocks that gains stronger redundancy.
  *
  * It does the following:
- * 1)  record blocks that are getting replicated at this instant.
- * 2)  a coarse grain timer to track age of replication request
- * 3)  a thread that periodically identifies replication-requests
+ * 1)  record blocks that gains stronger redundancy at this instant.
+ * 2)  a coarse grain timer to track age of reconstruction request
+ * 3)  a thread that periodically identifies reconstruction-requests
  *     that never made it.
  *
  ***************************************************/
-class PendingReplicationBlocks {
+class PendingReconstructionBlocks {
   private static final Logger LOG = BlockManager.LOG;
 
-  private final Map<BlockInfo, PendingBlockInfo> pendingReplications;
+  private final Map<BlockInfo, PendingBlockInfo> pendingReconstructions;
   private final ArrayList<BlockInfo> timedOutItems;
   Daemon timerThread = null;
   private volatile boolean fsRunning = true;
@@ -58,29 +58,29 @@ class PendingReplicationBlocks {
   private long timeout = 5 * 60 * 1000;
   private final static long DEFAULT_RECHECK_INTERVAL = 5 * 60 * 1000;
 
-  PendingReplicationBlocks(long timeoutPeriod) {
+  PendingReconstructionBlocks(long timeoutPeriod) {
     if ( timeoutPeriod > 0 ) {
       this.timeout = timeoutPeriod;
     }
-    pendingReplications = new HashMap<>();
+    pendingReconstructions = new HashMap<>();
     timedOutItems = new ArrayList<>();
   }
 
   void start() {
-    timerThread = new Daemon(new PendingReplicationMonitor());
+    timerThread = new Daemon(new PendingReconstructionMonitor());
     timerThread.start();
   }
 
   /**
-   * Add a block to the list of pending Replications
+   * Add a block to the list of pending reconstructions
    * @param block The corresponding block
    * @param targets The DataNodes where replicas of the block should be placed
    */
   void increment(BlockInfo block, DatanodeDescriptor... targets) {
-    synchronized (pendingReplications) {
-      PendingBlockInfo found = pendingReplications.get(block);
+    synchronized (pendingReconstructions) {
+      PendingBlockInfo found = pendingReconstructions.get(block);
       if (found == null) {
-        pendingReplications.put(block, new PendingBlockInfo(targets));
+        pendingReconstructions.put(block, new PendingBlockInfo(targets));
       } else {
         found.incrementReplicas(targets);
         found.setTimeStamp();
@@ -89,58 +89,58 @@ class PendingReplicationBlocks {
   }
 
   /**
-   * One replication request for this block has finished.
-   * Decrement the number of pending replication requests
+   * One reconstruction request for this block has finished.
+   * Decrement the number of pending reconstruction requests
    * for this block.
-   * 
-   * @param dn The DataNode that finishes the replication
+   *
+   * @param dn The DataNode that finishes the reconstruction
    */
   void decrement(BlockInfo block, DatanodeDescriptor dn) {
-    synchronized (pendingReplications) {
-      PendingBlockInfo found = pendingReplications.get(block);
+    synchronized (pendingReconstructions) {
+      PendingBlockInfo found = pendingReconstructions.get(block);
       if (found != null) {
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("Removing pending replication for " + block);
-        }
+        LOG.debug("Removing pending reconstruction for {}", block);
         found.decrementReplicas(dn);
         if (found.getNumReplicas() <= 0) {
-          pendingReplications.remove(block);
+          pendingReconstructions.remove(block);
         }
       }
     }
   }
 
   /**
-   * Remove the record about the given block from pendingReplications.
-   * @param block The given block whose pending replication requests need to be
-   *              removed
+   * Remove the record about the given block from pending reconstructions.
+   *
+   * @param block
+   *          The given block whose pending reconstruction requests need to be
+   *          removed
    */
   void remove(BlockInfo block) {
-    synchronized (pendingReplications) {
-      pendingReplications.remove(block);
+    synchronized (pendingReconstructions) {
+      pendingReconstructions.remove(block);
     }
   }
 
   public void clear() {
-    synchronized (pendingReplications) {
-      pendingReplications.clear();
+    synchronized (pendingReconstructions) {
+      pendingReconstructions.clear();
       timedOutItems.clear();
     }
   }
 
   /**
-   * The total number of blocks that are undergoing replication
+   * The total number of blocks that are undergoing reconstruction.
    */
   int size() {
-    return pendingReplications.size();
-  } 
+    return pendingReconstructions.size();
+  }
 
   /**
-   * How many copies of this block is pending replication?
+   * How many copies of this block is pending reconstruction?.
    */
   int getNumReplicas(BlockInfo block) {
-    synchronized (pendingReplications) {
-      PendingBlockInfo found = pendingReplications.get(block);
+    synchronized (pendingReconstructions) {
+      PendingBlockInfo found = pendingReconstructions.get(block);
       if (found != null) {
         return found.getNumReplicas();
       }
@@ -149,8 +149,8 @@ class PendingReplicationBlocks {
   }
 
   /**
-   * Returns a list of blocks that have timed out their 
-   * replication requests. Returns null if no blocks have
+   * Returns a list of blocks that have timed out their
+   * reconstruction requests. Returns null if no blocks have
    * timed out.
    */
   BlockInfo[] getTimedOutBlocks() {
@@ -166,11 +166,11 @@ class PendingReplicationBlocks {
   }
 
   /**
-   * An object that contains information about a block that 
-   * is being replicated. It records the timestamp when the 
-   * system started replicating the most recent copy of this
-   * block. It also records the list of Datanodes where the 
-   * replication requests are in progress.
+   * An object that contains information about a block that
+   * is being reconstructed. It records the timestamp when the
+   * system started reconstructing the most recent copy of this
+   * block. It also records the list of Datanodes where the
+   * reconstruction requests are in progress.
    */
   static class PendingBlockInfo {
     private long timeStamp;
@@ -211,20 +211,18 @@ class PendingReplicationBlocks {
 
   /*
    * A periodic thread that scans for blocks that never finished
-   * their replication request.
+   * their reconstruction request.
    */
-  class PendingReplicationMonitor implements Runnable {
+  class PendingReconstructionMonitor implements Runnable {
     @Override
     public void run() {
       while (fsRunning) {
         long period = Math.min(DEFAULT_RECHECK_INTERVAL, timeout);
         try {
-          pendingReplicationCheck();
+          pendingReconstructionCheck();
           Thread.sleep(period);
         } catch (InterruptedException ie) {
-          if(LOG.isDebugEnabled()) {
-            LOG.debug("PendingReplicationMonitor thread is interrupted.", ie);
-          }
+          LOG.debug("PendingReconstructionMonitor thread is interrupted.", ie);
         }
       }
     }
@@ -232,14 +230,12 @@ class PendingReplicationBlocks {
     /**
      * Iterate through all items and detect timed-out items
      */
-    void pendingReplicationCheck() {
-      synchronized (pendingReplications) {
+    void pendingReconstructionCheck() {
+      synchronized (pendingReconstructions) {
         Iterator<Map.Entry<BlockInfo, PendingBlockInfo>> iter =
-                                    pendingReplications.entrySet().iterator();
+            pendingReconstructions.entrySet().iterator();
         long now = monotonicNow();
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("PendingReplicationMonitor checking Q");
-        }
+        LOG.debug("PendingReconstructionMonitor checking Q");
         while (iter.hasNext()) {
           Map.Entry<BlockInfo, PendingBlockInfo> entry = iter.next();
           PendingBlockInfo pendingBlock = entry.getValue();
@@ -248,7 +244,7 @@ class PendingReplicationBlocks {
             synchronized (timedOutItems) {
               timedOutItems.add(block);
             }
-            LOG.warn("PendingReplicationMonitor timed out " + block);
+            LOG.warn("PendingReconstructionMonitor timed out " + block);
             iter.remove();
           }
         }
@@ -257,7 +253,7 @@ class PendingReplicationBlocks {
   }
 
   /*
-   * Shuts down the pending replication monitor thread.
+   * Shuts down the pending reconstruction monitor thread.
    * Waits for the thread to exit.
    */
   void stop() {
@@ -274,16 +270,16 @@ class PendingReplicationBlocks {
    * Iterate through all items and print them.
    */
   void metaSave(PrintWriter out) {
-    synchronized (pendingReplications) {
-      out.println("Metasave: Blocks being replicated: " +
-                  pendingReplications.size());
+    synchronized (pendingReconstructions) {
+      out.println("Metasave: Blocks being reconstructed: " +
+                  pendingReconstructions.size());
       for (Map.Entry<BlockInfo, PendingBlockInfo> entry :
-          pendingReplications.entrySet()) {
+          pendingReconstructions.entrySet()) {
         PendingBlockInfo pendingBlock = entry.getValue();
         Block block = entry.getKey();
         out.println(block +
             " StartTime: " + new Time(pendingBlock.timeStamp) +
-            " NumReplicaInProgress: " +
+            " NumReconstructInProgress: " +
             pendingBlock.getNumReplicas());
       }
     }

@@ -541,7 +541,7 @@ public class DecommissionManager {
         // pending
         if (blockManager.isNeededReconstruction(block, liveReplicas)) {
           if (!blockManager.neededReconstruction.contains(block) &&
-              blockManager.pendingReplications.getNumReplicas(block) == 0 &&
+              blockManager.pendingReconstruction.getNumReplicas(block) == 0 &&
               blockManager.isPopulatingReplQueues()) {
             // Process these blocks only when active NN is out of safe mode.
             blockManager.neededReconstruction.add(block,
