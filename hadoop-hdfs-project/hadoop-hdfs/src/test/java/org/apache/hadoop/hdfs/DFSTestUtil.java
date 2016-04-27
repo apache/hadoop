@@ -1932,7 +1932,7 @@ public class DFSTestUtil {
       String clientName, ExtendedBlock previous, int len)
       throws Exception {
     fs.getClient().namenode.addBlock(file, clientName, previous, null,
-        fileNode.getId(), null);
+        fileNode.getId(), null, null);
 
     final BlockInfo lastBlock = fileNode.getLastBlock();
     final int groupSize = fileNode.getPreferredBlockReplication();

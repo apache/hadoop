@@ -140,7 +140,7 @@ public class TestDefaultBlockPlacementPolicy {
           clientMachine, clientMachine, EnumSet.of(CreateFlag.CREATE), true,
           REPLICATION_FACTOR, DEFAULT_BLOCK_SIZE, null, false);
       LocatedBlock locatedBlock = nameNodeRpc.addBlock(src, clientMachine,
-          null, null, fileStatus.getFileId(), null);
+          null, null, fileStatus.getFileId(), null, null);
 
       assertEquals("Block should be allocated sufficient locations",
           REPLICATION_FACTOR, locatedBlock.getLocations().length);

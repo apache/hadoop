@@ -55,7 +55,7 @@ class ReplicationWork {
       targets = blockplacement.chooseTarget(bc.getName(),
           additionalReplRequired, srcNode, liveReplicaStorages, false,
           excludedNodes, block.getNumBytes(),
-          storagePolicySuite.getPolicy(bc.getStoragePolicyID()));
+          storagePolicySuite.getPolicy(bc.getStoragePolicyID()), null);
     } finally {
       srcNode.decrementPendingReplicationWithoutTargets();
     }
