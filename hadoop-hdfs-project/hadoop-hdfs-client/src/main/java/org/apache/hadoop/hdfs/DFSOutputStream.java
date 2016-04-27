@@ -117,6 +117,7 @@ public class DFSOutputStream extends FSOutputSummer
   private long initialFileSize = 0; // at time of file open
   private final short blockReplication; // replication factor of file
   protected boolean shouldSyncBlock = false; // force blocks to disk upon close
+  private final EnumSet<AddBlockFlag> addBlockFlags;
   protected final AtomicReference<CachingStrategy> cachingStrategy;
   private FileEncryptionInfo fileEncryptionInfo;
 
@@ -179,6 +180,7 @@ public class DFSOutputStream extends FSOutputSummer
   }
 
   private DFSOutputStream(DFSClient dfsClient, String src,
+      EnumSet<CreateFlag> flag,
       Progressable progress, HdfsFileStatus stat, DataChecksum checksum) {
     super(getChecksum4Compute(checksum, stat));
     this.dfsClient = dfsClient;
@@ -189,6 +191,10 @@ public class DFSOutputStream extends FSOutputSummer
     this.fileEncryptionInfo = stat.getFileEncryptionInfo();
     this.cachingStrategy = new AtomicReference<>(
         dfsClient.getDefaultWriteCachingStrategy());
+    this.addBlockFlags = EnumSet.noneOf(AddBlockFlag.class);
+    if (flag.contains(CreateFlag.NO_LOCAL_WRITE)) {
+      this.addBlockFlags.add(AddBlockFlag.NO_LOCAL_WRITE);
+    }
     if (progress != null) {
       DFSClient.LOG.debug("Set non-null progress callback on DFSOutputStream "
           +"{}", src);
@@ -212,7 +218,7 @@ public class DFSOutputStream extends FSOutputSummer
   protected DFSOutputStream(DFSClient dfsClient, String src,
       HdfsFileStatus stat, EnumSet<CreateFlag> flag, Progressable progress,
       DataChecksum checksum, String[] favoredNodes, boolean createStreamer) {
-    this(dfsClient, src, progress, stat, checksum);
+    this(dfsClient, src, flag, progress, stat, checksum);
     this.shouldSyncBlock = flag.contains(CreateFlag.SYNC_BLOCK);
 
     computePacketChunkSize(dfsClient.getConf().getWritePacketSize(),
@@ -220,7 +226,8 @@ public class DFSOutputStream extends FSOutputSummer
 
     if (createStreamer) {
       streamer = new DataStreamer(stat, null, dfsClient, src, progress,
-          checksum, cachingStrategy, byteArrayManager, favoredNodes);
+          checksum, cachingStrategy, byteArrayManager, favoredNodes,
+          addBlockFlags);
     }
   }
 
@@ -289,7 +296,7 @@ public class DFSOutputStream extends FSOutputSummer
       EnumSet<CreateFlag> flags, Progressable progress, LocatedBlock lastBlock,
       HdfsFileStatus stat, DataChecksum checksum, String[] favoredNodes)
       throws IOException {
-    this(dfsClient, src, progress, stat, checksum);
+    this(dfsClient, src, flags, progress, stat, checksum);
     initialFileSize = stat.getLen(); // length of file when opened
     this.shouldSyncBlock = flags.contains(CreateFlag.SYNC_BLOCK);
 
@@ -310,7 +317,8 @@ public class DFSOutputStream extends FSOutputSummer
           bytesPerChecksum);
       streamer = new DataStreamer(stat,
           lastBlock != null ? lastBlock.getBlock() : null, dfsClient, src,
-          progress, checksum, cachingStrategy, byteArrayManager, favoredNodes);
+          progress, checksum, cachingStrategy, byteArrayManager, favoredNodes,
+          addBlockFlags);
     }
   }
 
@@ -844,6 +852,10 @@ public class DFSOutputStream extends FSOutputSummer
     return initialFileSize;
   }
 
+  protected EnumSet<AddBlockFlag> getAddBlockFlags() {
+    return addBlockFlags;
+  }
+
   /**
    * @return the FileEncryptionInfo for this stream, or null if not encrypted.
    */
@@ -916,7 +928,8 @@ public class DFSOutputStream extends FSOutputSummer
 
   static LocatedBlock addBlock(DatanodeInfo[] excludedNodes,
       DFSClient dfsClient, String src, ExtendedBlock prevBlock, long fileId,
-      String[] favoredNodes) throws IOException {
+      String[] favoredNodes, EnumSet<AddBlockFlag> allocFlags)
+      throws IOException {
     final DfsClientConf conf = dfsClient.getConf();
     int retries = conf.getNumBlockWriteLocateFollowingRetry();
     long sleeptime = conf.getBlockWriteLocateFollowingInitialDelayMs();
@@ -924,7 +937,7 @@ public class DFSOutputStream extends FSOutputSummer
     while (true) {
       try {
         return dfsClient.namenode.addBlock(src, dfsClient.clientName, prevBlock,
-            excludedNodes, fileId, favoredNodes);
+            excludedNodes, fileId, favoredNodes, allocFlags);
       } catch (RemoteException e) {
         IOException ue = e.unwrapRemoteException(FileNotFoundException.class,
             AccessControlException.class,

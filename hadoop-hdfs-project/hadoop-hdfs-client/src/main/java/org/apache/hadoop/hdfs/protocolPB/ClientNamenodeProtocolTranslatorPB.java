@@ -404,7 +404,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
   @Override
   public LocatedBlock addBlock(String src, String clientName,
       ExtendedBlock previous, DatanodeInfo[] excludeNodes, long fileId,
-      String[] favoredNodes) throws IOException {
+      String[] favoredNodes, EnumSet<AddBlockFlag> addBlockFlags)
+      throws IOException {
     AddBlockRequestProto.Builder req = AddBlockRequestProto.newBuilder()
         .setSrc(src).setClientName(clientName).setFileId(fileId);
     if (previous != null)
@@ -413,6 +414,10 @@ public class ClientNamenodeProtocolTranslatorPB implements
       req.addAllExcludeNodes(PBHelperClient.convert(excludeNodes));
     if (favoredNodes != null) {
       req.addAllFavoredNodes(Arrays.asList(favoredNodes));
+    }
+    if (addBlockFlags != null) {
+      req.addAllFlags(PBHelperClient.convertAddBlockFlags(
+          addBlockFlags));
     }
     try {
       return PBHelperClient.convertLocatedBlockProto(

@@ -269,7 +269,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
       List<DatanodeDescriptor> favoredNodes) {
     return replicator.chooseTarget(filename, numOfReplicas, writer,
       excludedNodes, BLOCK_SIZE, favoredNodes,
-      TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
+      TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY, null);
   }
 
   /**
@@ -351,7 +351,8 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     Set<Node> excludedNodes = new HashSet<>();
     excludedNodes.add(dataNodes[1]);
     targets = repl.chooseTarget(filename, 4, dataNodes[0], chosenNodes, false, 
-        excludedNodes, BLOCK_SIZE, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
+        excludedNodes, BLOCK_SIZE, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY,
+        null);
     assertEquals(targets.length, 4);
     assertEquals(storages[0], targets[0]);
 
@@ -369,7 +370,8 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     excludedNodes.add(dataNodes[1]); 
     chosenNodes.add(storages[2]);
     targets = repl.chooseTarget(filename, 1, dataNodes[0], chosenNodes, true,
-        excludedNodes, BLOCK_SIZE, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
+        excludedNodes, BLOCK_SIZE, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY,
+        null);
     System.out.println("targets=" + Arrays.asList(targets));
     assertEquals(2, targets.length);
     //make sure that the chosen node is in the target.

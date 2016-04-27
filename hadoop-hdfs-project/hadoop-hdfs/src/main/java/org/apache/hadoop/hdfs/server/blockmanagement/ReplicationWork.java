@@ -47,7 +47,8 @@ class ReplicationWork extends BlockReconstructionWork {
           getBc().getName(), getAdditionalReplRequired(), getSrcNodes()[0],
           getLiveReplicaStorages(), false, excludedNodes,
           getBlock().getNumBytes(),
-          storagePolicySuite.getPolicy(getBc().getStoragePolicyID()));
+          storagePolicySuite.getPolicy(getBc().getStoragePolicyID()),
+          null);
       setTargets(chosenTargets);
     } finally {
       getSrcNodes()[0].decrementPendingReplicationWithoutTargets();

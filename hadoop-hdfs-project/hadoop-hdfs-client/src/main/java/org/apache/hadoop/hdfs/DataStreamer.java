@@ -32,6 +32,7 @@ import java.net.Socket;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -412,13 +413,15 @@ class DataStreamer extends Daemon {
 
   protected final LoadingCache<DatanodeInfo, DatanodeInfo> excludedNodes;
   private final String[] favoredNodes;
+  private final EnumSet<AddBlockFlag> addBlockFlags;
 
   private DataStreamer(HdfsFileStatus stat, ExtendedBlock block,
                        DFSClient dfsClient, String src,
                        Progressable progress, DataChecksum checksum,
                        AtomicReference<CachingStrategy> cachingStrategy,
                        ByteArrayManager byteArrayManage,
-                       boolean isAppend, String[] favoredNodes) {
+                       boolean isAppend, String[] favoredNodes,
+                       EnumSet<AddBlockFlag> flags) {
     this.block = block;
     this.dfsClient = dfsClient;
     this.src = src;
@@ -430,11 +433,11 @@ class DataStreamer extends Daemon {
     this.isLazyPersistFile = isLazyPersist(stat);
     this.isAppend = isAppend;
     this.favoredNodes = favoredNodes;
-
     final DfsClientConf conf = dfsClient.getConf();
     this.dfsclientSlowLogThresholdMs = conf.getSlowIoWarningThresholdMs();
     this.excludedNodes = initExcludedNodes(conf.getExcludedNodesCacheExpiry());
     this.errorState = new ErrorState(conf.getDatanodeRestartTimeout());
+    this.addBlockFlags = flags;
   }
 
   /**
@@ -443,9 +446,10 @@ class DataStreamer extends Daemon {
   DataStreamer(HdfsFileStatus stat, ExtendedBlock block, DFSClient dfsClient,
                String src, Progressable progress, DataChecksum checksum,
                AtomicReference<CachingStrategy> cachingStrategy,
-               ByteArrayManager byteArrayManage, String[] favoredNodes) {
+               ByteArrayManager byteArrayManage, String[] favoredNodes,
+               EnumSet<AddBlockFlag> flags) {
     this(stat, block, dfsClient, src, progress, checksum, cachingStrategy,
-        byteArrayManage, false, favoredNodes);
+        byteArrayManage, false, favoredNodes, flags);
     stage = BlockConstructionStage.PIPELINE_SETUP_CREATE;
   }
 
@@ -459,7 +463,7 @@ class DataStreamer extends Daemon {
                AtomicReference<CachingStrategy> cachingStrategy,
                ByteArrayManager byteArrayManage) {
     this(stat, lastBlock.getBlock(), dfsClient, src, progress, checksum, cachingStrategy,
-        byteArrayManage, true, null);
+        byteArrayManage, true, null, null);
     stage = BlockConstructionStage.PIPELINE_SETUP_APPEND;
     bytesSent = block.getNumBytes();
     accessToken = lastBlock.getBlockToken();
@@ -1679,7 +1683,7 @@ class DataStreamer extends Daemon {
   private LocatedBlock locateFollowingBlock(DatanodeInfo[] excludedNodes)
       throws IOException {
     return DFSOutputStream.addBlock(excludedNodes, dfsClient, src, block,
-        stat.getFileId(), favoredNodes);
+        stat.getFileId(), favoredNodes, addBlockFlags);
   }
 
   /**

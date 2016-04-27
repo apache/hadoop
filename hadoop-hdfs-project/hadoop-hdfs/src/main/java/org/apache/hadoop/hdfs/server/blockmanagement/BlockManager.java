@@ -48,6 +48,7 @@ import javax.management.ObjectName;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSUtilClient;
@@ -1782,7 +1783,7 @@ public class BlockManager implements BlockStatsMXBean {
       DatanodeDescriptor clientnode, Set<Node> excludes, long blocksize) {
     return placementPolicies.getPolicy(false).chooseTarget(src, 1, clientnode,
         Collections.<DatanodeStorageInfo>emptyList(), false, excludes,
-        blocksize, storagePolicySuite.getDefaultPolicy());
+        blocksize, storagePolicySuite.getDefaultPolicy(), null);
   }
 
   /** Choose target for getting additional datanodes for an existing pipeline. */
@@ -1797,7 +1798,7 @@ public class BlockManager implements BlockStatsMXBean {
     final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(storagePolicyID);
     final BlockPlacementPolicy blockplacement = placementPolicies.getPolicy(isStriped);
     return blockplacement.chooseTarget(src, numAdditionalNodes, clientnode,
-        chosen, true, excludes, blocksize, storagePolicy);
+        chosen, true, excludes, blocksize, storagePolicy, null);
   }
 
   /**
@@ -1814,14 +1815,15 @@ public class BlockManager implements BlockStatsMXBean {
       final long blocksize,
       final List<String> favoredNodes,
       final byte storagePolicyID,
-      final boolean isStriped) throws IOException {
+      final boolean isStriped,
+      final EnumSet<AddBlockFlag> flags) throws IOException {
     List<DatanodeDescriptor> favoredDatanodeDescriptors = 
         getDatanodeDescriptors(favoredNodes);
     final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(storagePolicyID);
     final BlockPlacementPolicy blockplacement = placementPolicies.getPolicy(isStriped);
     final DatanodeStorageInfo[] targets = blockplacement.chooseTarget(src,
         numOfReplicas, client, excludedNodes, blocksize, 
-        favoredDatanodeDescriptors, storagePolicy);
+        favoredDatanodeDescriptors, storagePolicy, flags);
     if (targets.length < minReplication) {
       throw new IOException("File " + src + " could only be replicated to "
           + targets.length + " nodes instead of minReplication (="

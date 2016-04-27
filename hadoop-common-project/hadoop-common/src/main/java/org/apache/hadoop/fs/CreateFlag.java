@@ -103,7 +103,14 @@ public enum CreateFlag {
    * Append data to a new block instead of the end of the last partial block.
    * This is only useful for APPEND.
    */
-  NEW_BLOCK((short) 0x20);
+  NEW_BLOCK((short) 0x20),
+
+  /**
+   * Advise that a block replica NOT be written to the local DataNode where
+   * 'local' means the same host as the client is being run on.
+   */
+  @InterfaceAudience.LimitedPrivate({"HBase"})
+  NO_LOCAL_WRITE((short) 0x40);
 
   private final short mode;
 

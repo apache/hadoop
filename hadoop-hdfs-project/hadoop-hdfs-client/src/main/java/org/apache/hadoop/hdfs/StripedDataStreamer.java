@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -52,9 +53,10 @@ public class StripedDataStreamer extends DataStreamer {
                       Progressable progress, DataChecksum checksum,
                       AtomicReference<CachingStrategy> cachingStrategy,
                       ByteArrayManager byteArrayManage, String[] favoredNodes,
-                      short index, Coordinator coordinator) {
+                      short index, Coordinator coordinator,
+                      final EnumSet<AddBlockFlag> flags) {
     super(stat, null, dfsClient, src, progress, checksum, cachingStrategy,
-        byteArrayManage, favoredNodes);
+        byteArrayManage, favoredNodes, flags);
     this.index = index;
     this.coordinator = coordinator;
   }

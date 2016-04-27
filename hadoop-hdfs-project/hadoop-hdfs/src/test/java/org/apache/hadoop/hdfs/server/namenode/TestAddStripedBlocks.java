@@ -285,7 +285,7 @@ public class TestAddStripedBlocks {
       FSDirectory fsdir = cluster.getNamesystem().getFSDirectory();
       INodeFile fileNode = fsdir.getINode4Write(file.toString()).asFile();
       cluster.getNamesystem().getAdditionalBlock(file.toString(),
-          fileNode.getId(), dfs.getClient().getClientName(), null, null, null);
+          fileNode.getId(), dfs.getClient().getClientName(), null, null, null, null);
       BlockInfo lastBlock = fileNode.getLastBlock();
 
       DatanodeStorageInfo[] locs = lastBlock.getUnderConstructionFeature()
