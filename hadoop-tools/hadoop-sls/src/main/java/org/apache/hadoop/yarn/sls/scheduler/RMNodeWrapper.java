@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.QueuedContainersStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode
@@ -177,6 +178,10 @@ public class RMNodeWrapper implements RMNode {
   public List<Container> pullNewlyIncreasedContainers() {
     // TODO Auto-generated method stub
     return Collections.EMPTY_LIST;
+  }
+
+  public QueuedContainersStatus getQueuedContainersStatus() {
+    return null;
   }
 
   @Override

@@ -338,6 +338,23 @@ public class YarnConfiguration extends Configuration {
   public static final int DIST_SCHEDULING_CONTAINER_TOKEN_EXPIRY_MS_DEFAULT =
       600000;
 
+  /** K least loaded nodes to be provided to the LocalScheduler of a
+   * NodeManager for Distributed Scheduling */
+  public static final String DIST_SCHEDULING_TOP_K =
+      YARN_PREFIX + "distributed-scheduling.top-k";
+  public static final int DIST_SCHEDULING_TOP_K_DEFAULT = 10;
+
+  /** Frequency for computing Top K Best Nodes */
+  public static final String DIST_SCHEDULING_TOP_K_COMPUTE_INT_MS =
+      YARN_PREFIX + "distributed-scheduling.top-k-compute-interval-ms";
+  public static final long DIST_SCHEDULING_TOP_K_COMPUTE_INT_MS_DEFAULT = 1000;
+
+  /** Comparator for determining Node Load for Distributed Scheduling */
+  public static final String DIST_SCHEDULING_TOP_K_COMPARATOR =
+      YARN_PREFIX + "distributed-scheduling.top-k-comparator";
+  public static final String DIST_SCHEDULING_TOP_K_COMPARATOR_DEFAULT =
+      "QUEUE_LENGTH";
+
   /**
    * Enable/disable intermediate-data encryption at YARN level. For now, this
    * only is used by the FileSystemRMStateStore to setup right file-system

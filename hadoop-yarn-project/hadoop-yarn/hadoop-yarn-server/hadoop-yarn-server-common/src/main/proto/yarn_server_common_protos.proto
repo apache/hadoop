@@ -39,6 +39,12 @@ message NodeStatusProto {
   optional ResourceUtilizationProto containers_utilization = 6;
   optional ResourceUtilizationProto node_utilization = 7;
   repeated ContainerProto increased_containers = 8;
+  optional QueuedContainersStatusProto queued_container_status = 9;
+}
+
+message QueuedContainersStatusProto {
+  optional int32 estimated_queue_wait_time = 1;
+  optional int32 wait_queue_length = 2;
 }
 
 message MasterKeyProto {

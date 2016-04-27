@@ -72,6 +72,11 @@ public class TestDistributedSchedulingService {
       public AMLivelinessMonitor getAMLivelinessMonitor() {
         return null;
       }
+
+      @Override
+      public Configuration getYarnConfiguration() {
+        return new YarnConfiguration();
+      }
     };
     DistributedSchedulingService service =
         new DistributedSchedulingService(rmContext, null) {

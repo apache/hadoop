@@ -469,7 +469,7 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
           + "will be added to the queued containers.");
 
       AllocatedContainerInfo allocatedContInfo = new AllocatedContainerInfo(
-          token, rcs.getStartRequest(), token.getExecutionType(),
+          token, null, rcs.getStartRequest(), token.getExecutionType(),
               token.getResource(), getConfig());
 
       this.context.getQueuingContext().getQueuedContainers().put(

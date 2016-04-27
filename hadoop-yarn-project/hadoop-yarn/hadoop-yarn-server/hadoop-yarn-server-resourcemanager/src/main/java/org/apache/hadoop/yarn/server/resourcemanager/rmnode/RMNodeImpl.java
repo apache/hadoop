@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.QueuedContainersStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManagerEvent;
@@ -126,6 +127,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private ResourceUtilization containersUtilization;
   /* Resource utilization for the node. */
   private ResourceUtilization nodeUtilization;
+
+  /* Container Queue Information for the node.. Used by Distributed Scheduler */
+  private QueuedContainersStatus queuedContainersStatus;
 
   private final ContainerAllocationExpirer containerAllocationExpirer;
   /* set of containers that have just launched */
@@ -1130,7 +1134,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     public NodeState transition(RMNodeImpl rmNode, RMNodeEvent event) {
 
       RMNodeStatusEvent statusEvent = (RMNodeStatusEvent) event;
-
+      rmNode.setQueuedContainersStatus(statusEvent.getContainerQueueInfo());
       NodeHealthStatus remoteNodeHealthStatus = updateRMNodeFromStatusEvents(
           rmNode, statusEvent);
       NodeState initialState = rmNode.getState();
@@ -1401,5 +1405,27 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   @Override
   public void setUntrackedTimeStamp(long ts) {
     this.timeStamp = ts;
+  }
+
+  @Override
+  public QueuedContainersStatus getQueuedContainersStatus() {
+    this.readLock.lock();
+
+    try {
+      return this.queuedContainersStatus;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  public void setQueuedContainersStatus(QueuedContainersStatus
+      queuedContainersStatus) {
+    this.writeLock.lock();
+
+    try {
+      this.queuedContainersStatus = queuedContainersStatus;
+    } finally {
+      this.writeLock.unlock();
+    }
   }
 }

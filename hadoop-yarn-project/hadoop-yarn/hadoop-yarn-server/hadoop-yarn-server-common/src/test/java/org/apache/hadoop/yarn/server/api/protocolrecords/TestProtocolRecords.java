@@ -39,8 +39,14 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NMContainerStatusPBImpl;
+
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb
+    .NodeHeartbeatRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodeHeartbeatResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterNodeManagerRequestPBImpl;
+
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.api.records.QueuedContainersStatus;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
@@ -130,5 +136,29 @@ public class TestProtocolRecords {
         new NodeHeartbeatResponsePBImpl(
           ((NodeHeartbeatResponsePBImpl) record).getProto());
     Assert.assertEquals(appCredentials, proto.getSystemCredentialsForApps());
+  }
+
+  @Test
+  public void testNodeHeartBeatRequest() throws IOException {
+    NodeHeartbeatRequest record =
+        Records.newRecord(NodeHeartbeatRequest.class);
+    NodeStatus nodeStatus =
+        Records.newRecord(NodeStatus.class);
+    QueuedContainersStatus queuedContainersStatus = Records.newRecord
+        (QueuedContainersStatus.class);
+    queuedContainersStatus.setEstimatedQueueWaitTime(123);
+    queuedContainersStatus.setWaitQueueLength(321);
+    nodeStatus.setQueuedContainersStatus(queuedContainersStatus);
+    record.setNodeStatus(nodeStatus);
+
+    NodeHeartbeatRequestPBImpl pb = new
+        NodeHeartbeatRequestPBImpl(
+        ((NodeHeartbeatRequestPBImpl) record).getProto());
+
+    Assert.assertEquals(123,
+        pb.getNodeStatus()
+            .getQueuedContainersStatus().getEstimatedQueueWaitTime());
+    Assert.assertEquals(321,
+        pb.getNodeStatus().getQueuedContainersStatus().getWaitQueueLength());
   }
 }
