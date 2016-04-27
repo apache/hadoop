@@ -169,8 +169,10 @@ public class TestMetaSave {
       assertTrue(line.equals("Metasave: Blocks being replicated: 0"));
       line = reader.readLine();
       assertTrue(line.equals("Metasave: Blocks 2 waiting deletion from 1 datanodes."));
-     //skip 2 lines to reach HDFS-9033 scenario.
+      //skip 2 lines to reach HDFS-9033 scenario.
       line = reader.readLine();
+      line = reader.readLine();
+      // skip 1 line for Corrupt Blocks section.
       line = reader.readLine();
       line = reader.readLine();
       assertTrue(line.equals("Metasave: Number of datanodes: 2"));
