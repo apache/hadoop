@@ -119,7 +119,8 @@ public class Client implements AutoCloseable {
 
   private static final ThreadLocal<Integer> callId = new ThreadLocal<Integer>();
   private static final ThreadLocal<Integer> retryCount = new ThreadLocal<Integer>();
-  private static final ThreadLocal<Future<?>> returnValue = new ThreadLocal<>();
+  private static final ThreadLocal<Future<?>>
+      RETURN_RPC_RESPONSE = new ThreadLocal<>();
   private static final ThreadLocal<Boolean> asynchronousMode =
       new ThreadLocal<Boolean>() {
         @Override
@@ -130,8 +131,8 @@ public class Client implements AutoCloseable {
 
   @SuppressWarnings("unchecked")
   @Unstable
-  public static <T> Future<T> getReturnValue() {
-    return (Future<T>) returnValue.get();
+  public static <T> Future<T> getReturnRpcResponse() {
+    return (Future<T>) RETURN_RPC_RESPONSE.get();
   }
 
   /** Set call id and retry count for the next call. */
@@ -1398,7 +1399,7 @@ public class Client implements AutoCloseable {
         }
       };
 
-      returnValue.set(returnFuture);
+      RETURN_RPC_RESPONSE.set(returnFuture);
       return null;
     } else {
       return getRpcResponse(call, connection);
@@ -1412,7 +1413,7 @@ public class Client implements AutoCloseable {
    *          synchronous mode.
    */
   @Unstable
-  static boolean isAsynchronousMode() {
+  public static boolean isAsynchronousMode() {
     return asynchronousMode.get();
   }
 
