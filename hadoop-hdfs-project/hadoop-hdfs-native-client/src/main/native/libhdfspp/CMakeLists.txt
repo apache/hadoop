@@ -68,7 +68,7 @@ endif(DOXYGEN_FOUND)
 function (copy_on_demand input_src_glob input_dest_dir)
   get_filename_component(src_glob ${input_src_glob} REALPATH)
   get_filename_component(dest_dir ${input_dest_dir} REALPATH)
-  get_filename_component(src_dir ${src_glob} DIRECTORY)
+  get_filename_component(src_dir ${src_glob} PATH)
   message(STATUS "Syncing ${src_glob} to ${dest_dir}")
 
   file(GLOB_RECURSE src_files ${src_glob})
