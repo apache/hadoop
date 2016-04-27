@@ -43,11 +43,15 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Run a Hadoop job jar. */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class RunJar {
+
+  private static final Logger LOG = LoggerFactory.getLogger(RunJar.class);
 
   /** Pattern that matches any string */
   public static final Pattern MATCH_ANY = Pattern.compile(".*");
@@ -93,6 +97,7 @@ public class RunJar {
     throws IOException {
     JarFile jar = new JarFile(jarFile);
     try {
+      int numOfFailedLastModifiedSet = 0;
       Enumeration<JarEntry> entries = jar.entries();
       while (entries.hasMoreElements()) {
         final JarEntry entry = entries.nextElement();
@@ -108,10 +113,17 @@ public class RunJar {
             } finally {
               out.close();
             }
+            if (!file.setLastModified(entry.getTime())) {
+              numOfFailedLastModifiedSet++;
+            }
           } finally {
             in.close();
           }
         }
+      }
+      if (numOfFailedLastModifiedSet > 0) {
+        LOG.warn("Could not set last modfied time for {} file(s)",
+                numOfFailedLastModifiedSet);
       }
     } finally {
       jar.close();
