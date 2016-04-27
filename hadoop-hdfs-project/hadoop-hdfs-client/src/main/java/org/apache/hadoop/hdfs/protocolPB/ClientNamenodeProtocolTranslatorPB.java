@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
@@ -384,7 +385,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
   @Override
   public LocatedBlock addBlock(String src, String clientName,
       ExtendedBlock previous, DatanodeInfo[] excludeNodes, long fileId,
-      String[] favoredNodes) throws IOException {
+      String[] favoredNodes, EnumSet<AddBlockFlag> addBlockFlags)
+      throws IOException {
     AddBlockRequestProto.Builder req = AddBlockRequestProto.newBuilder()
         .setSrc(src).setClientName(clientName).setFileId(fileId);
     if (previous != null)
@@ -393,6 +395,10 @@ public class ClientNamenodeProtocolTranslatorPB implements
       req.addAllExcludeNodes(PBHelperClient.convert(excludeNodes));
     if (favoredNodes != null) {
       req.addAllFavoredNodes(Arrays.asList(favoredNodes));
+    }
+    if (addBlockFlags != null) {
+      req.addAllFlags(PBHelperClient.convertAddBlockFlags(
+          addBlockFlags));
     }
     try {
       return PBHelperClient.convert(rpcProxy.addBlock(null, req.build()).getBlock());

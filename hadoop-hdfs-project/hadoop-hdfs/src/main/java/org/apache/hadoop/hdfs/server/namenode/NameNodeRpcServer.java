@@ -47,6 +47,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
+import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.ContentSummary;
@@ -812,11 +813,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override
   public LocatedBlock addBlock(String src, String clientName,
       ExtendedBlock previous, DatanodeInfo[] excludedNodes, long fileId,
-      String[] favoredNodes)
+      String[] favoredNodes, EnumSet<AddBlockFlag> addBlockFlags)
       throws IOException {
     checkNNStartup();
     LocatedBlock locatedBlock = namesystem.getAdditionalBlock(src, fileId,
-        clientName, previous, excludedNodes, favoredNodes);
+        clientName, previous, excludedNodes, favoredNodes, addBlockFlags);
     if (locatedBlock != null) {
       metrics.incrAddBlockOps();
     }
@@ -1123,7 +1124,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     DatanodeInfo results[] = namesystem.datanodeReport(type);
     return results;
   }
-    
+
   @Override // ClientProtocol
   public DatanodeStorageReport[] getDatanodeStorageReport(
       DatanodeReportType type) throws IOException {

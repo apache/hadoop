@@ -113,7 +113,7 @@ public class TestBlockPlacementPolicyRackFaultTolerant {
 
         //test chooseTarget for new file
         LocatedBlock locatedBlock = nameNodeRpc.addBlock(src, clientMachine,
-            null, null, fileStatus.getFileId(), null);
+            null, null, fileStatus.getFileId(), null, null);
         doTestLocatedBlock(replication, locatedBlock);
 
         //test chooseTarget for existing file.
@@ -143,7 +143,7 @@ public class TestBlockPlacementPolicyRackFaultTolerant {
 
     //test chooseTarget for new file
     LocatedBlock locatedBlock = nameNodeRpc.addBlock(src, clientMachine,
-        null, null, fileStatus.getFileId(), null);
+        null, null, fileStatus.getFileId(), null, null);
     doTestLocatedBlock(20, locatedBlock);
 
     DatanodeInfo[] locs = locatedBlock.getLocations();

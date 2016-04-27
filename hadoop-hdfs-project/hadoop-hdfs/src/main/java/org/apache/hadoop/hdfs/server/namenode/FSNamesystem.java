@@ -147,6 +147,7 @@ import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.CryptoCodec;
 import org.apache.hadoop.crypto.key.KeyProvider.Metadata;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
@@ -2424,7 +2425,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   LocatedBlock getAdditionalBlock(
       String src, long fileId, String clientName, ExtendedBlock previous,
-      DatanodeInfo[] excludedNodes, String[] favoredNodes) throws IOException {
+      DatanodeInfo[] excludedNodes, String[] favoredNodes,
+      EnumSet<AddBlockFlag> flags) throws IOException {
     NameNode.stateChangeLog.debug("BLOCK* getAdditionalBlock: {} inodeId {}" +
         " for {}", src, fileId, clientName);
 
@@ -2449,7 +2451,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
 
     DatanodeStorageInfo[] targets = FSDirWriteFileOp.chooseTargetForNewBlock(
-        blockManager, src, excludedNodes, favoredNodes, r);
+        blockManager, src, excludedNodes, favoredNodes, flags, r);
 
     checkOperation(OperationCategory.WRITE);
     writeLock();
