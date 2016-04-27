@@ -114,6 +114,31 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
     configurationPrefixToSkipCompare
         .add(YarnConfiguration.NM_CPU_RESOURCE_ENABLED);
 
+    // Ignore Distributed Scheduling Related Configurations.
+    // Since it is still a "work in progress" feature
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.DIST_SCHEDULING_ENABLED);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.DIST_SCHEDULING_INCR_MEMORY);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.DIST_SCHEDULING_INCR_VCORES);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.DIST_SCHEDULING_MAX_MEMORY);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.DIST_SCHEDULING_MAX_VCORES);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.DIST_SCHEDULING_CONTAINER_TOKEN_EXPIRY_MS);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.DIST_SCHEDULING_MIN_MEMORY);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.DIST_SCHEDULING_MIN_VCORES);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.DIST_SCHEDULING_TOP_K);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.DIST_SCHEDULING_TOP_K_COMPUTE_INT_MS);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.DIST_SCHEDULING_TOP_K_COMPARATOR);
+
     // Set by container-executor.cfg
     configurationPrefixToSkipCompare.add(YarnConfiguration.NM_USER_HOME_DIR);
 
