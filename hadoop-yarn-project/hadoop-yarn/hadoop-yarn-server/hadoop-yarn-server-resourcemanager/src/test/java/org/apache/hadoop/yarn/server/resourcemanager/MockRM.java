@@ -105,7 +105,10 @@ public class MockRM extends ResourceManager {
 
   static final Logger LOG = Logger.getLogger(MockRM.class);
   static final String ENABLE_WEBAPP = "mockrm.webapp.enabled";
-  
+  private static final int SECOND = 1000;
+  private static final int TIMEOUT_MS_FOR_CONTAINER_AND_NODE = 10 * SECOND;
+  private static final int WAIT_MS_PER_LOOP = 10;
+
   final private boolean useNullRMNodeLabelsManager;
 
   public MockRM() {
@@ -618,6 +621,35 @@ public class MockRM extends ResourceManager {
     RMNodeImpl node = (RMNodeImpl) getRMContext().getRMNodes().get(
         nm.getNodeId());
     node.handle(new RMNodeEvent(nm.getNodeId(), RMNodeEventType.EXPIRE));
+  }
+
+  /**
+   * Wait until a node has reached a specified state. The timeout is 10 seconds.
+   *
+   * @param nodeId the id of a node
+   * @param finalState the node state waited
+   * @throws InterruptedException if interrupted while waiting for the state
+   *           transition
+   */
+  public void waitForState(NodeId nodeId, NodeState finalState)
+      throws InterruptedException {
+    RMNode node = getRMContext().getRMNodes().get(nodeId);
+    Assert.assertNotNull("node shouldn't be null", node);
+    int timeWaiting = 0;
+    while (!finalState.equals(node.getState())) {
+      if (timeWaiting >= TIMEOUT_MS_FOR_CONTAINER_AND_NODE) {
+        break;
+      }
+
+      System.out.println("Node State is : " + node.getState()
+          + " Waiting for state : " + finalState);
+      Thread.sleep(WAIT_MS_PER_LOOP);
+      timeWaiting += WAIT_MS_PER_LOOP;
+    }
+
+    System.out.println("Node State is : " + node.getState());
+    Assert.assertEquals("Node state is not correct (timedout)", finalState,
+        node.getState());
   }
 
   public void NMwaitForState(NodeId nodeid, NodeState finalState)
