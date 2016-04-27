@@ -109,6 +109,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.LightWeightGSet;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 
@@ -611,6 +612,48 @@ public class BlockManager implements BlockStatsMXBean {
 
     // Dump blocks that are waiting to be deleted
     invalidateBlocks.dump(out);
+
+    //Dump corrupt blocks and their storageIDs
+    Set<Block> corruptBlocks = corruptReplicas.getCorruptBlocks();
+    out.println("Corrupt Blocks:");
+    for(Block block : corruptBlocks) {
+      Collection<DatanodeDescriptor> corruptNodes =
+          corruptReplicas.getNodes(block);
+      if (corruptNodes == null) {
+        LOG.warn(block.getBlockId() +
+            " is corrupt but has no associated node.");
+        continue;
+      }
+      int numNodesToFind = corruptNodes.size();
+      for (DatanodeStorageInfo storage : blocksMap.getStorages(block)) {
+        DatanodeDescriptor node = storage.getDatanodeDescriptor();
+        if (corruptNodes.contains(node)) {
+          String storageId = storage.getStorageID();
+          DatanodeStorageInfo storageInfo = node.getStorageInfo(storageId);
+          State state = (storageInfo == null) ? null : storageInfo.getState();
+          out.println("Block=" + block.getBlockId() + "\tNode=" + node.getName()
+              + "\tStorageID=" + storageId + "\tStorageState=" + state
+              + "\tTotalReplicas=" +
+              blocksMap.numNodes(block)
+              + "\tReason=" + corruptReplicas.getCorruptReason(block, node));
+          numNodesToFind--;
+          if (numNodesToFind == 0) {
+            break;
+          }
+        }
+      }
+      if (numNodesToFind > 0) {
+        String[] corruptNodesList = new String[corruptNodes.size()];
+        int i = 0;
+        for (DatanodeDescriptor d : corruptNodes) {
+          corruptNodesList[i] = d.getHostName();
+          i++;
+        }
+        out.println(block.getBlockId() + " corrupt on " +
+            StringUtils.join(",", corruptNodesList) + " but not all nodes are" +
+            "found in its block locations");
+      }
+    }
 
     // Dump all datanodes
     getDatanodeManager().datanodeDump(out);
