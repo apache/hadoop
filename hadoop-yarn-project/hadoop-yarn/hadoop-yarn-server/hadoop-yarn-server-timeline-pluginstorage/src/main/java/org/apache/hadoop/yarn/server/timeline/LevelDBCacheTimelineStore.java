@@ -78,7 +78,7 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
   }
 
   @Override
-  protected void serviceInit(Configuration conf) throws Exception {
+  protected synchronized void serviceInit(Configuration conf) throws Exception {
     configuration = conf;
     Options options = new Options();
     options.createIfMissing(true);
