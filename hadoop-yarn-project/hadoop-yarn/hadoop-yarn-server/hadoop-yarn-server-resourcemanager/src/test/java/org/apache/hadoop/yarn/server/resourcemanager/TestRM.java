@@ -134,7 +134,7 @@ public class TestRM extends ParameterizedSchedulerTestBase {
     am.registerAppAttempt();
     am.unregisterAppAttempt();
     nm1.nodeHeartbeat(attempt.getAppAttemptId(), 1, ContainerState.COMPLETE);
-    am.waitForState(RMAppAttemptState.FINISHED);
+    rm.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FINISHED);
     rm.stop();
   }
 
@@ -191,7 +191,7 @@ public class TestRM extends ParameterizedSchedulerTestBase {
 
     am.unregisterAppAttempt();
     nm1.nodeHeartbeat(attempt.getAppAttemptId(), 1, ContainerState.COMPLETE);
-    am.waitForState(RMAppAttemptState.FINISHED);
+    rm.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FINISHED);
 
     rm.stop();
   }
@@ -398,7 +398,7 @@ public class TestRM extends ParameterizedSchedulerTestBase {
       }
       nm1.nodeHeartbeat(am.getApplicationAttemptId(), 1,
         ContainerState.COMPLETE);
-      am.waitForState(RMAppAttemptState.FINISHED);
+      rm.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FINISHED);
       Assert.assertFalse(nmTokenSecretManager
           .isApplicationAttemptRegistered(attempt.getAppAttemptId()));
     } finally {
@@ -498,7 +498,7 @@ public class TestRM extends ParameterizedSchedulerTestBase {
     RMApp app2 = rm1.submitApp(200);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
     nm1.nodeHeartbeat(am2.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
-    am2.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am2.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     rm1.waitForState(app2.getApplicationId(), RMAppState.FAILED);
 
     // a killed app
@@ -545,7 +545,7 @@ public class TestRM extends ParameterizedSchedulerTestBase {
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
     nm1
       .nodeHeartbeat(am2.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
-    am2.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am2.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     rm1.waitForState(app2.getApplicationId(), RMAppState.ACCEPTED);
 
     // before new attempt is launched, the app report returns the invalid AM
@@ -610,7 +610,7 @@ public class TestRM extends ParameterizedSchedulerTestBase {
     // a failed app
     RMApp application = rm.submitApp(200);
     MockAM am = MockRM.launchAM(application, rm, nm1);
-    am.waitForState(RMAppAttemptState.LAUNCHED);
+    rm.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.LAUNCHED);
     nm1.nodeHeartbeat(am.getApplicationAttemptId(), 1, ContainerState.RUNNING);
     rm.waitForState(application.getApplicationId(), RMAppState.ACCEPTED);
 

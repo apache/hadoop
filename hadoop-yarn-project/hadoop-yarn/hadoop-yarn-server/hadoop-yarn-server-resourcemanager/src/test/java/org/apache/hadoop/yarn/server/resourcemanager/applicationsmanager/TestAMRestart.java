@@ -117,7 +117,6 @@ public class TestAMRestart {
     nm1.nodeHeartbeat(true);
     ContainerId containerId5 =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 5);
-    rm1.waitForContainerAllocated(nm1, containerId5);
     rm1.waitForState(nm1, containerId5, RMContainerState.ALLOCATED);
 
     // 6th container is in Reserved state.
@@ -140,7 +139,7 @@ public class TestAMRestart {
 
     // fail the AM by sending CONTAINER_FINISHED event without registering.
     nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
-    am1.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FAILED);
 
     // wait for some time. previous AM's running containers should still remain
     // in scheduler even though am failed
@@ -325,7 +324,7 @@ public class TestAMRestart {
     
     // fail am1
     nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
-    am1.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
 
     // restart the am
@@ -364,7 +363,7 @@ public class TestAMRestart {
 
     // fail am2.
     nm1.nodeHeartbeat(am2.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
-    am2.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am2.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
 
     // restart am
@@ -486,7 +485,7 @@ public class TestAMRestart {
         BuilderUtils.newContainerStatus(amContainer, ContainerState.COMPLETE,
             "", exitStatus, Resources.createResource(200));
     currentNode.containerStatus(containerStatus);
-    am1.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
 
     // restart the am
@@ -568,7 +567,7 @@ public class TestAMRestart {
     // Preempt the first attempt;
     scheduler.markContainerForKillable(scheduler.getRMContainer(amContainer));
 
-    am1.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     TestSchedulerUtils.waitSchedulerApplicationAttemptStopped(scheduler,
         am1.getApplicationAttemptId());
 
@@ -587,7 +586,7 @@ public class TestAMRestart {
         ContainerId.newContainerId(am2.getApplicationAttemptId(), 1);
     scheduler.markContainerForKillable(scheduler.getRMContainer(amContainer2));
 
-    am2.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am2.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     TestSchedulerUtils.waitSchedulerApplicationAttemptStopped(scheduler,
         am2.getApplicationAttemptId());
 
@@ -610,7 +609,7 @@ public class TestAMRestart {
       Collections.singletonList(containerStatus));
     nm1.nodeHeartbeat(conts, true);
 
-    am3.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am3.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     TestSchedulerUtils.waitSchedulerApplicationAttemptStopped(scheduler,
         am3.getApplicationAttemptId());
 
@@ -632,7 +631,7 @@ public class TestAMRestart {
     // nm1 heartbeats to report unhealthy
     // This will mimic ContainerExitStatus.ABORT
     nm1.nodeHeartbeat(false);
-    am4.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am4.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     TestSchedulerUtils.waitSchedulerApplicationAttemptStopped(scheduler,
         am4.getApplicationAttemptId());
 
@@ -649,7 +648,7 @@ public class TestAMRestart {
     // fail the AM normally
     nm2
       .nodeHeartbeat(am5.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
-    am5.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am5.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     TestSchedulerUtils.waitSchedulerApplicationAttemptStopped(scheduler,
         am5.getApplicationAttemptId());
 
@@ -694,7 +693,7 @@ public class TestAMRestart {
     // Forcibly preempt the am container;
     scheduler.markContainerForKillable(scheduler.getRMContainer(amContainer));
 
-    am1.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     Assert.assertTrue(! attempt1.shouldCountTowardsMaxAttemptRetry());
     rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
 
@@ -821,30 +820,33 @@ public class TestAMRestart {
     // Fail current attempt normally
     nm1.nodeHeartbeat(am.getApplicationAttemptId(),
       1, ContainerState.COMPLETE);
-    am.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     // launch the second attempt
     rm1.waitForState(app.getApplicationId(), RMAppState.ACCEPTED);
     Assert.assertEquals(2, app.getAppAttempts().size());
     Assert.assertTrue(((RMAppAttemptImpl) app.getCurrentAppAttempt())
       .mayBeLastAttempt());
     MockAM am_2 = MockRM.launchAndRegisterAM(app, rm1, nm1);
-    am_2.waitForState(RMAppAttemptState.RUNNING);
+    rm1.waitForState(am_2.getApplicationAttemptId(), RMAppAttemptState.RUNNING);
     nm1.nodeHeartbeat(am_2.getApplicationAttemptId(),
       1, ContainerState.COMPLETE);
-    am_2.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am_2.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     // current app should be failed.
     rm1.waitForState(app.getApplicationId(), RMAppState.FAILED);
 
     ControlledClock clock = new ControlledClock();
     // set window size to 10s
-    RMAppImpl app1 = (RMAppImpl)rm1.submitApp(200, 10000);;
+    RMAppImpl app1 = (RMAppImpl)rm1.submitApp(200, 10000);
     app1.setSystemClock(clock);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     // Fail attempt1 normally
     nm1.nodeHeartbeat(am1.getApplicationAttemptId(),
       1, ContainerState.COMPLETE);
-    am1.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FAILED);
+    //Wait to make sure attempt1 be removed in State Store
+    //TODO explore a better way than sleeping for a while (YARN-4929)
+    Thread.sleep(15 * 1000);
 
     // launch the second attempt
     rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
@@ -853,14 +855,14 @@ public class TestAMRestart {
     RMAppAttempt attempt2 = app1.getCurrentAppAttempt();
     Assert.assertTrue(((RMAppAttemptImpl) attempt2).mayBeLastAttempt());
     MockAM am2 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
-    am2.waitForState(RMAppAttemptState.RUNNING);
+    rm1.waitForState(am2.getApplicationAttemptId(), RMAppAttemptState.RUNNING);
 
     // wait for 10 seconds
     clock.setTime(System.currentTimeMillis() + 10*1000);
     // Fail attempt2 normally
     nm1.nodeHeartbeat(am2.getApplicationAttemptId(),
       1, ContainerState.COMPLETE);
-    am2.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am2.getApplicationAttemptId(), RMAppAttemptState.FAILED);
 
     // can launch the third attempt successfully
     rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
@@ -868,7 +870,7 @@ public class TestAMRestart {
     RMAppAttempt attempt3 = app1.getCurrentAppAttempt();
     clock.reset();
     MockAM am3 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
-    am3.waitForState(RMAppAttemptState.RUNNING);
+    rm1.waitForState(am3.getApplicationAttemptId(), RMAppAttemptState.RUNNING);
 
     // Restart rm.
     @SuppressWarnings("resource")
@@ -889,6 +891,9 @@ public class TestAMRestart {
     nm1.registerNode(Collections.singletonList(status), null);
 
     rm2.waitForState(attempt3.getAppAttemptId(), RMAppAttemptState.FAILED);
+    //Wait to make sure attempt3 be removed in State Store
+    //TODO explore a better way than sleeping for a while (YARN-4929)
+    Thread.sleep(15 * 1000);
     Assert.assertEquals(2, app1State.getAttemptCount());
 
     rm2.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
@@ -902,7 +907,7 @@ public class TestAMRestart {
     // Fail attempt4 normally
     nm1
       .nodeHeartbeat(am4.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
-    am4.waitForState(RMAppAttemptState.FAILED);
+    rm2.waitForState(am4.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     Assert.assertEquals(2, app1State.getAttemptCount());
 
     // can launch the 5th attempt successfully
@@ -911,12 +916,12 @@ public class TestAMRestart {
     MockAM am5 =
         rm2.waitForNewAMToLaunchAndRegister(app1.getApplicationId(), 5, nm1);
     clock.reset();
-    am5.waitForState(RMAppAttemptState.RUNNING);
+    rm2.waitForState(am5.getApplicationAttemptId(), RMAppAttemptState.RUNNING);
 
     // Fail attempt5 normally
     nm1
       .nodeHeartbeat(am5.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
-    am5.waitForState(RMAppAttemptState.FAILED);
+    rm2.waitForState(am5.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     Assert.assertEquals(2, app1State.getAttemptCount());
 
     rm2.waitForState(app1.getApplicationId(), RMAppState.FAILED);
@@ -989,7 +994,7 @@ public class TestAMRestart {
     // fail the AM by sending CONTAINER_FINISHED event without registering.
     nm1.nodeHeartbeat(
         am1.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
-    am1.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FAILED);
 
     // wait for app to start a new attempt.
     rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);

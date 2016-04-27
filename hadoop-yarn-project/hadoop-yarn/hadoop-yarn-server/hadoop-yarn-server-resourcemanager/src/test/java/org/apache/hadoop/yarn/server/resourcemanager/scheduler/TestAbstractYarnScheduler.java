@@ -475,7 +475,6 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       nm2.nodeHeartbeat(true);
       ContainerId containerId3 =
           ContainerId.newContainerId(am1.getApplicationAttemptId(), 3);
-      rm1.waitForContainerAllocated(nm2, containerId3);
       rm1.waitForState(nm2, containerId3, RMContainerState.ALLOCATED);
 
       // NodeManager restart
@@ -563,7 +562,6 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       node.nodeHeartbeat(true);
       ContainerId allocatedContainerID =
           ContainerId.newContainerId(applicationAttemptOneID, 3);
-      rm.waitForContainerAllocated(node, allocatedContainerID);
       rm.waitForState(node, allocatedContainerID, RMContainerState.ALLOCATED);
       RMContainer allocatedContainer =
           rm.getResourceScheduler().getRMContainer(allocatedContainerID);
@@ -576,8 +574,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
       // AM crashes, and a new app-attempt gets created
       node.nodeHeartbeat(applicationAttemptOneID, 1, ContainerState.COMPLETE);
-      rm.waitForContainerState(am1ContainerID, RMContainerState.COMPLETED,
-          30 * 1000);
+      rm.waitForState(node, am1ContainerID, RMContainerState.COMPLETED, 30 * 1000);
       RMAppAttempt rmAppAttempt2 = MockRM.waitForAttemptScheduled(rmApp, rm);
       ApplicationAttemptId applicationAttemptTwoID =
           rmAppAttempt2.getAppAttemptId();

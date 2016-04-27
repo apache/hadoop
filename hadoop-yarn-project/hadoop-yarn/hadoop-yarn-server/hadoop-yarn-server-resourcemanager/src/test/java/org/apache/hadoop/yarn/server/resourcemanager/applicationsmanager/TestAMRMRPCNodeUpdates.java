@@ -96,7 +96,7 @@ public class TestAMRMRPCNodeUpdates {
   
   private void syncNodeLost(MockNM nm) throws Exception {
     rm.sendNodeStarted(nm);
-    rm.NMwaitForState(nm.getNodeId(), NodeState.RUNNING);
+    rm.waitForState(nm.getNodeId(), NodeState.RUNNING);
     rm.sendNodeLost(nm);
     dispatcher.await();
   }

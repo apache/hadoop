@@ -191,7 +191,7 @@ public class TestApplicationMasterLauncher {
 
     //complete the AM container to finish the app normally
     nm1.nodeHeartbeat(attempt.getAppAttemptId(), 1, ContainerState.COMPLETE);
-    am.waitForState(RMAppAttemptState.FINISHED);
+    rm.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FINISHED);
 
     waitCount = 0;
     while (containerManager.cleanedup == false && waitCount++ < 20) {
@@ -200,7 +200,7 @@ public class TestApplicationMasterLauncher {
     }
     Assert.assertTrue(containerManager.cleanedup);
 
-    am.waitForState(RMAppAttemptState.FINISHED);
+    rm.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FINISHED);
     rm.stop();
   }
 
@@ -249,14 +249,13 @@ public class TestApplicationMasterLauncher {
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 5120);
 
     RMApp app = rm.submitApp(2000);
-    final ApplicationAttemptId appAttemptId = app.getCurrentAppAttempt()
-        .getAppAttemptId();
 
     // kick the scheduling
     nm1.nodeHeartbeat(true);
     dispatcher.await();
 
-    rm.waitForState(appAttemptId, RMAppAttemptState.LAUNCHED, 500);
+    MockRM.waitForState(app.getCurrentAppAttempt(),
+      RMAppAttemptState.LAUNCHED, 500);
   }
 
   @SuppressWarnings("unused")
@@ -309,7 +308,7 @@ public class TestApplicationMasterLauncher {
     am.unregisterAppAttempt();
     nm1.nodeHeartbeat(attempt.getAppAttemptId(), 1,
         ContainerState.COMPLETE);
-    am.waitForState(RMAppAttemptState.FINISHED);
+    rm.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FINISHED);
 
     try {
       amrs = am.allocate(new ArrayList<ResourceRequest>(),

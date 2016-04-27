@@ -122,7 +122,7 @@ public class TestApplicationCleanup {
     am.unregisterAppAttempt();
     NodeHeartbeatResponse resp = nm1.nodeHeartbeat(attempt.getAppAttemptId(), 1,
         ContainerState.COMPLETE);
-    am.waitForState(RMAppAttemptState.FINISHED);
+    rm.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FINISHED);
 
     //currently only containers are cleaned via this
     //AM container is cleaned via container launcher

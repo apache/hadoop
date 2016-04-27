@@ -133,13 +133,13 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     MockNM nm1 = rm.registerNode("h1:1234", 5120);
     MockNM nm2 = rm.registerNode("h2:1235", 5121);
     rm.sendNodeStarted(nm1);
-    rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
-    rm.NMwaitForState(nm2.getNodeId(), NodeState.NEW);
+    rm.waitForState(nm1.getNodeId(), NodeState.RUNNING);
+    rm.waitForState(nm2.getNodeId(), NodeState.NEW);
 
     MockNM nm3 = rm.registerNode("h3:1236", 5122);
-    rm.NMwaitForState(nm3.getNodeId(), NodeState.NEW);
+    rm.waitForState(nm3.getNodeId(), NodeState.NEW);
     rm.sendNodeStarted(nm3);
-    rm.NMwaitForState(nm3.getNodeId(), NodeState.RUNNING);
+    rm.waitForState(nm3.getNodeId(), NodeState.RUNNING);
     RMNodeImpl node = (RMNodeImpl) rm.getRMContext().getRMNodes()
         .get(nm3.getNodeId());
     NodeHealthStatus nodeHealth = NodeHealthStatus.newInstance(false,
@@ -147,7 +147,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     NodeStatus nodeStatus = NodeStatus.newInstance(nm3.getNodeId(), 1,
       new ArrayList<ContainerStatus>(), null, nodeHealth, null, null, null);
     node.handle(new RMNodeStatusEvent(nm3.getNodeId(), nodeStatus, null));
-    rm.NMwaitForState(nm3.getNodeId(), NodeState.UNHEALTHY);
+    rm.waitForState(nm3.getNodeId(), NodeState.UNHEALTHY);
 
     ClientResponse response =
         r.path("ws").path("v1").path("cluster").path("nodes")
@@ -169,8 +169,8 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     MockNM nm1 = rm.registerNode("h1:1234", 5120);
     MockNM nm2 = rm.registerNode("h2:1235", 5121);
     rm.sendNodeStarted(nm1);
-    rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
-    rm.NMwaitForState(nm2.getNodeId(), NodeState.NEW);
+    rm.waitForState(nm1.getNodeId(), NodeState.RUNNING);
+    rm.waitForState(nm2.getNodeId(), NodeState.NEW);
 
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("nodes").queryParam("states", NodeState.NEW.toString())
@@ -250,8 +250,8 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     MockNM nm2 = rm.registerNode("h2:1234", 5120);
     rm.sendNodeStarted(nm1);
     rm.sendNodeStarted(nm2);
-    rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
-    rm.NMwaitForState(nm2.getNodeId(), NodeState.RUNNING);
+    rm.waitForState(nm1.getNodeId(), NodeState.RUNNING);
+    rm.waitForState(nm2.getNodeId(), NodeState.RUNNING);
     rm.sendNodeLost(nm1);
     rm.sendNodeLost(nm2);
 
@@ -284,8 +284,8 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     MockNM nm2 = rm.registerNode("h2:1234", 5120);
     rm.sendNodeStarted(nm1);
     rm.sendNodeStarted(nm2);
-    rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
-    rm.NMwaitForState(nm2.getNodeId(), NodeState.RUNNING);
+    rm.waitForState(nm1.getNodeId(), NodeState.RUNNING);
+    rm.waitForState(nm2.getNodeId(), NodeState.RUNNING);
     rm.sendNodeLost(nm1);
     rm.sendNodeLost(nm2);
 
@@ -314,8 +314,8 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     MockNM nm1 = rm.registerNode("h1:1234", 5120);
     MockNM nm2 = rm.registerNode("h2:1235", 5121);
     rm.sendNodeStarted(nm1);
-    rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
-    rm.NMwaitForState(nm2.getNodeId(), NodeState.NEW);
+    rm.waitForState(nm1.getNodeId(), NodeState.RUNNING);
+    rm.waitForState(nm2.getNodeId(), NodeState.NEW);
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("nodes").queryParam("states", "running")
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
@@ -334,8 +334,8 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     MockNM nm1 = rm.registerNode("h1:1234", 5120);
     MockNM nm2 = rm.registerNode("h2:1235", 5121);
     rm.sendNodeStarted(nm1);
-    rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
-    rm.NMwaitForState(nm2.getNodeId(), NodeState.NEW);
+    rm.waitForState(nm1.getNodeId(), NodeState.RUNNING);
+    rm.waitForState(nm2.getNodeId(), NodeState.NEW);
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("nodes").queryParam("states", "UNHEALTHY")
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
@@ -352,8 +352,8 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     MockNM nm2 = rm.registerNode("h2:1235", 5121);
     rm.sendNodeStarted(nm1);
     rm.sendNodeStarted(nm2);
-    rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
-    rm.NMwaitForState(nm2.getNodeId(), NodeState.RUNNING);
+    rm.waitForState(nm1.getNodeId(), NodeState.RUNNING);
+    rm.waitForState(nm2.getNodeId(), NodeState.RUNNING);
 
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path(path).accept(media).get(ClientResponse.class);
@@ -623,8 +623,8 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     MockNM nm3 = rm.registerNode("h3:1236", 5122);
     rm.sendNodeStarted(nm1);
     rm.sendNodeStarted(nm3);
-    rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
-    rm.NMwaitForState(nm2.getNodeId(), NodeState.NEW);
+    rm.waitForState(nm1.getNodeId(), NodeState.RUNNING);
+    rm.waitForState(nm2.getNodeId(), NodeState.NEW);
     rm.sendNodeLost(nm3);
 
     ClientResponse response = r.path("ws").path("v1").path("cluster")
@@ -645,7 +645,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     WebResource r = resource();
     MockNM nm1 = rm.registerNode("h1:1234", 5120);
     rm.sendNodeStarted(nm1);
-    rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
+    rm.waitForState(nm1.getNodeId(), NodeState.RUNNING);
 
     RMNodeImpl node = (RMNodeImpl) rm.getRMContext().getRMNodes()
         .get(nm1.getNodeId());
@@ -659,7 +659,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
         new ArrayList<ContainerStatus>(), null, nodeHealth, containerResource,
         nodeResource, null);
     node.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeStatus, null));
-    rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
+    rm.waitForState(nm1.getNodeId(), NodeState.RUNNING);
 
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("nodes").accept(MediaType.APPLICATION_JSON)

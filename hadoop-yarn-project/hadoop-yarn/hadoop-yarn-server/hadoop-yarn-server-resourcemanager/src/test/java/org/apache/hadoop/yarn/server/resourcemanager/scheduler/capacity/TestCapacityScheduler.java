@@ -1093,7 +1093,7 @@ public class TestCapacityScheduler {
     ContainerId containerId2 =
         ContainerId.newContainerId(applicationAttemptId, 2);
     Assert.assertTrue(rm.waitForState(nm1, containerId2,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
 
     // Acquire the container
     allocateRequest = AllocateRequest.newInstance(1, 0.0f, null, null, null);
@@ -2579,7 +2579,7 @@ public class TestCapacityScheduler {
       ContainerId containerId =
           ContainerId.newContainerId(am.getApplicationAttemptId(), cId);
       Assert.assertTrue(rm.waitForState(nm, containerId,
-          RMContainerState.ALLOCATED, 10 * 1000));
+          RMContainerState.ALLOCATED));
     }
   }
 
@@ -2816,10 +2816,10 @@ public class TestCapacityScheduler {
     ContainerId containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     Assert.assertTrue(rm.waitForState(nm1, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     containerId = ContainerId.newContainerId(am1.getApplicationAttemptId(), 3);
     Assert.assertTrue(rm.waitForState(nm2, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     
     checkPendingResource(rm, "a1", 0 * GB, null);
     checkPendingResource(rm, "a", 0 * GB, null);
@@ -3161,7 +3161,7 @@ public class TestCapacityScheduler {
     ContainerId containerId3 =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 3);
     Assert.assertTrue(rm.waitForState(nm1, containerId3,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     // Acquire them
     am1.allocate(null, null);
     sentRMContainerLaunched(rm,

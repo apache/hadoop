@@ -254,7 +254,7 @@ public class TestContainerResizing {
     ContainerId containerId2 =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     Assert.assertTrue(rm1.waitForState(nm1, containerId2,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     // Acquire them, and NM report RUNNING
     am1.allocate(null, null);
     sentRMContainerLaunched(rm1, containerId2);
@@ -359,7 +359,7 @@ public class TestContainerResizing {
     ContainerId containerId2 =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     Assert.assertTrue(rm1.waitForState(nm1, containerId2,
-            RMContainerState.ALLOCATED, 10 * 1000));
+            RMContainerState.ALLOCATED));
     // Acquire them, and NM report RUNNING
     am1.allocate(null, null);
     sentRMContainerLaunched(rm1, containerId2);
@@ -436,7 +436,7 @@ public class TestContainerResizing {
     ContainerId containerId2 =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     Assert.assertTrue(rm1.waitForState(nm1, containerId2,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     // Acquire them, and NM report RUNNING
     am1.allocate(null, null);
     sentRMContainerLaunched(rm1, containerId2);
@@ -547,7 +547,7 @@ public class TestContainerResizing {
     ContainerId containerId2 =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     Assert.assertTrue(rm1.waitForState(nm1, containerId2,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     // Acquire them, and NM report RUNNING
     am1.allocate(null, null);
     sentRMContainerLaunched(rm1, containerId2);
@@ -659,11 +659,12 @@ public class TestContainerResizing {
     ContainerId containerId2 =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     Assert.assertTrue(rm1.waitForState(nm1, containerId2,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     // Acquire them, and NM report RUNNING
     am1.allocate(null, null);
     sentRMContainerLaunched(rm1, containerId2);
-    rm1.waitForContainerState(containerId2, RMContainerState.RUNNING);
+    rm1.waitForState(Arrays.asList(nm1, nm2), containerId2,
+         RMContainerState.RUNNING);
 
     // am1 asks to change its AM container from 2GB to 8GB
     am1.sendContainerResizingRequest(Arrays.asList(
@@ -757,8 +758,7 @@ public class TestContainerResizing {
     ContainerId containerId2 =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     Assert.assertTrue(
-        rm1.waitForState(nm1, containerId2, RMContainerState.ALLOCATED,
-            10 * 1000));
+        rm1.waitForState(nm1, containerId2, RMContainerState.ALLOCATED));
     // Acquire them, and NM report RUNNING
     am1.allocate(null, null);
     sentRMContainerLaunched(rm1, containerId2);
@@ -834,7 +834,7 @@ public class TestContainerResizing {
     ContainerId lastContainerId = ContainerId.newContainerId(
         am.getApplicationAttemptId(), startContainerId + nContainer - 1);
     Assert.assertTrue(rm.waitForState(nm, lastContainerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     // Acquire them, and NM report RUNNING
     am.allocate(null, null);
 
@@ -842,7 +842,7 @@ public class TestContainerResizing {
         + nContainer; cId++) {
       sentRMContainerLaunched(rm,
           ContainerId.newContainerId(am.getApplicationAttemptId(), cId));
-      rm.waitForContainerState(
+      rm.waitForState(nm,
           ContainerId.newContainerId(am.getApplicationAttemptId(), cId),
           RMContainerState.RUNNING);
     }
