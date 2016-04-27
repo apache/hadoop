@@ -212,6 +212,7 @@ public class LogsCLI extends Configured implements Tool {
       appOwner = UserGroupInformation.getCurrentUser().getShortUserName();
     }
 
+    boolean appStateKnown = true;
     YarnApplicationState appState = YarnApplicationState.NEW;
     try {
       appState = getApplicationState(appId);
@@ -222,6 +223,7 @@ public class LogsCLI extends Configured implements Tool {
         return -1;
       }
     } catch (IOException | YarnException e) {
+      appStateKnown = false;
       System.err.println("Unable to get ApplicationState."
           + " Attempting to fetch logs directly from the filesystem.");
     }
@@ -270,7 +272,8 @@ public class LogsCLI extends Configured implements Tool {
     if (containerIdStr != null) {
       // if we provide the node address and the application is in the final
       // state, we could directly get logs from HDFS.
-      if (nodeAddress != null && isApplicationFinished(appState)) {
+      if (nodeAddress != null && (!appStateKnown ||
+          isApplicationFinished(appState))) {
         // if user specified "ALL" as the logFiles param, pass null
         // to logCliHelper so that it fetches all the logs
         List<String> logs;
@@ -284,48 +287,57 @@ public class LogsCLI extends Configured implements Tool {
         return logCliHelper.dumpAContainersLogsForALogType(appIdStr,
             containerIdStr, nodeAddress, appOwner, logs);
       }
+      String nodeHttpAddress = null;
+      String nodeId = null;
       try {
         // If the nodeAddress is not provided, we will try to get
         // the ContainerReport. In the containerReport, we could get
         // nodeAddress and nodeHttpAddress
         ContainerReport report = getContainerReport(containerIdStr);
-        String nodeHttpAddress =
+        nodeHttpAddress =
             report.getNodeHttpAddress().replaceFirst(
               WebAppUtils.getHttpSchemePrefix(getConf()), "");
-        String nodeId = report.getAssignedNode().toString();
-        // If the application is not in the final state,
-        // we will provide the NodeHttpAddress and get the container logs
-        // by calling NodeManager webservice.
-        if (!isApplicationFinished(appState)) {
-          if (logFiles == null || logFiles.length == 0) {
-            logFiles = new String[] { "syslog" };
-          }
-          printContainerLogsFromRunningApplication(getConf(), appIdStr,
-            containerIdStr, nodeHttpAddress, nodeId, logFiles, logCliHelper,
-            appOwner);
-        } else {
+        nodeId = report.getAssignedNode().toString();
+      } catch (IOException | YarnException ex) {
+        if (!appStateKnown || isApplicationFinished(appState)) {
           String [] requestedLogFiles = logFiles;
           if(fetchAllLogFiles(logFiles)) {
             requestedLogFiles = null;
           }
-          // If the application is in the final state, we will directly
-          // get the container logs from HDFS.
-          printContainerLogsForFinishedApplication(appIdStr, containerIdStr,
-            nodeId, requestedLogFiles, logCliHelper, appOwner);
+          return printContainerLogsForFinishedApplicationWithoutNodeId(
+              appIdStr, containerIdStr, requestedLogFiles, logCliHelper,
+              appOwner);
+        } else if (!isApplicationFinished(appState)) {
+          System.err.println("Unable to get logs for this container:"
+              + containerIdStr + "for the application:" + appId);
+          System.out.println("The application: " + appId + " is still running, "
+              + "and we can not get Container report for the container: "
+              + containerIdStr +". Please try later or after the application "
+              + "finishes.");
+          return -1;
         }
-        return resultCode;
-      } catch (IOException | YarnException ex) {
-        System.err.println("Unable to get logs for this container:"
-            + containerIdStr + "for the application:" + appId);
-        if (!getConf().getBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
-          YarnConfiguration.DEFAULT_APPLICATION_HISTORY_ENABLED)) {
-          System.out.println("Please enable the application history service. Or ");
-        }
-        System.out.println("Using "
-            + "yarn logs -applicationId <appId> -containerId <containerId> "
-            + "--nodeAddress <nodeHttpAddress> to get the container logs");
-        return -1;
       }
+      // If the application is not in the final state,
+      // we will provide the NodeHttpAddress and get the container logs
+      // by calling NodeManager webservice.
+      if (!isApplicationFinished(appState)) {
+        if (logFiles == null || logFiles.length == 0) {
+          logFiles = new String[] {"syslog"};
+        }
+        printContainerLogsFromRunningApplication(getConf(), appIdStr,
+            containerIdStr, nodeHttpAddress, nodeId, logFiles, logCliHelper,
+            appOwner);
+      } else {
+        String[] requestedLogFiles = logFiles;
+        if(fetchAllLogFiles(logFiles)) {
+          requestedLogFiles = null;
+        }
+        // If the application is in the final state, we will directly
+        // get the container logs from HDFS.
+        printContainerLogsForFinishedApplication(appIdStr, containerIdStr,
+            nodeId, requestedLogFiles, logCliHelper, appOwner);
+      }
+      return resultCode;
     } else {
       if (nodeAddress == null) {
         resultCode =
@@ -506,7 +518,7 @@ public class LogsCLI extends Configured implements Tool {
     }
     // for the case, we have already uploaded partial logs in HDFS
     logCliHelper.dumpAContainersLogsForALogType(appId, containerIdStr, nodeId,
-      appOwner, Arrays.asList(requestedLogFiles));
+        appOwner, Arrays.asList(requestedLogFiles), false);
   }
 
   private void printContainerLogsForFinishedApplication(String appId,
@@ -517,6 +529,17 @@ public class LogsCLI extends Configured implements Tool {
     System.out.println(StringUtils.repeat("=", containerString.length()));
     logCliHelper.dumpAContainersLogsForALogType(appId, containerId,
       nodeAddress, appOwner, logFiles != null ? Arrays.asList(logFiles) : null);
+  }
+
+  private int printContainerLogsForFinishedApplicationWithoutNodeId(
+      String appId, String containerId, String[] logFiles,
+      LogCLIHelpers logCliHelper, String appOwner) throws IOException {
+    String containerString = "\n\nContainer: " + containerId;
+    System.out.println(containerString);
+    System.out.println(StringUtils.repeat("=", containerString.length()));
+    return logCliHelper.dumpAContainersLogsForALogTypeWithoutNodeId(appId,
+        containerId, appOwner, logFiles != null ?
+        Arrays.asList(logFiles) : null);
   }
 
   private ContainerReport getContainerReport(String containerIdStr)

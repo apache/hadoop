@@ -57,7 +57,17 @@ public class LogCLIHelpers implements Configurable {
   @Private
   @VisibleForTesting
   public int dumpAContainersLogsForALogType(String appId, String containerId,
-      String nodeId, String jobOwner, List<String> logType) throws IOException {
+      String nodeId, String jobOwner, List<String> logType)
+      throws IOException {
+    return dumpAContainersLogsForALogType(appId, containerId, nodeId, jobOwner,
+        logType, true);
+  }
+
+  @Private
+  @VisibleForTesting
+  public int dumpAContainersLogsForALogType(String appId, String containerId,
+      String nodeId, String jobOwner, List<String> logType,
+      boolean outputFailure) throws IOException {
     Path remoteRootLogDir = new Path(getConf().get(
         YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
@@ -113,13 +123,70 @@ public class LogCLIHelpers implements Configurable {
         }
       }
     }
-    if (!foundContainerLogs) {
+    if (!foundContainerLogs && outputFailure) {
       containerLogNotFound(containerId);
       return -1;
     }
     return 0;
   }
 
+  @Private
+  public int dumpAContainersLogsForALogTypeWithoutNodeId(String appId,
+      String containerId, String jobOwner, List<String> logType)
+    throws IOException {
+    Path remoteRootLogDir = new Path(getConf().get(
+        YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+        YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
+    ApplicationId applicationId = ConverterUtils.toApplicationId(appId);
+    String user = jobOwner;
+    String logDirSuffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(
+        getConf());
+    Path remoteAppLogDir = LogAggregationUtils.getRemoteAppLogDir(
+        remoteRootLogDir, applicationId, user, logDirSuffix);
+    RemoteIterator<FileStatus> nodeFiles;
+    try {
+      Path qualifiedLogDir =
+          FileContext.getFileContext(getConf()).makeQualified(remoteAppLogDir);
+      nodeFiles = FileContext.getFileContext(qualifiedLogDir.toUri(),
+          getConf()).listStatus(remoteAppLogDir);
+    } catch (FileNotFoundException fnf) {
+      logDirNotExist(remoteAppLogDir.toString());
+      return -1;
+    }
+    boolean foundContainerLogs = false;
+    while(nodeFiles.hasNext()) {
+      FileStatus thisNodeFile = nodeFiles.next();
+      if (!thisNodeFile.getPath().getName().endsWith(
+          LogAggregationUtils.TMP_FILE_SUFFIX)) {
+        AggregatedLogFormat.LogReader reader = null;
+        try {
+          reader =
+              new AggregatedLogFormat.LogReader(getConf(),
+              thisNodeFile.getPath());
+          if (logType == null) {
+            if (dumpAContainerLogs(containerId, reader, System.out,
+                thisNodeFile.getModificationTime()) > -1) {
+              foundContainerLogs = true;
+            }
+          } else {
+            if (dumpAContainerLogsForALogType(containerId, reader, System.out,
+                thisNodeFile.getModificationTime(), logType) > -1) {
+              foundContainerLogs = true;
+            }
+          }
+        } finally {
+          if (reader != null) {
+            reader.close();
+          }
+        }
+      }
+    }
+    if (!foundContainerLogs) {
+      containerLogNotFound(containerId);
+      return -1;
+    }
+    return 0;
+  }
   @Private
   public int dumpAContainerLogs(String containerIdStr,
       AggregatedLogFormat.LogReader reader, PrintStream out,
