@@ -74,31 +74,18 @@ public class MockAM {
     this.amRMProtocol = amRMProtocol;
   }
 
-  public void waitForState(RMAppAttemptState finalState) throws Exception {
+  /**
+   * Wait until an attempt has reached a specified state.
+   * The timeout is 40 seconds.
+   * @param finalState the attempt state waited
+   * @throws InterruptedException
+   *         if interrupted while waiting for the state transition
+   */
+  private void waitForState(RMAppAttemptState finalState)
+      throws InterruptedException {
     RMApp app = context.getRMApps().get(attemptId.getApplicationId());
     RMAppAttempt attempt = app.getRMAppAttempt(attemptId);
-    final int timeoutMsecs = 40000;
-    final int minWaitMsecs = 1000;
-    final int waitMsPerLoop = 500;
-    int loop = 0;
-    while (!finalState.equals(attempt.getAppAttemptState())
-        && waitMsPerLoop * loop < timeoutMsecs) {
-      LOG.info("AppAttempt : " + attemptId + " State is : " +
-          attempt.getAppAttemptState() + " Waiting for state : " +
-          finalState);
-      Thread.yield();
-      Thread.sleep(waitMsPerLoop);
-      loop++;
-    }
-    int waitedMsecs = waitMsPerLoop * loop;
-    if (minWaitMsecs > waitedMsecs) {
-      Thread.sleep(minWaitMsecs - waitedMsecs);
-    }
-    LOG.info("Attempt State is : " + attempt.getAppAttemptState());
-    if (waitedMsecs >= timeoutMsecs) {
-      Assert.fail("Attempt state is not correct (timedout): expected: "
-          + finalState + " actual: " + attempt.getAppAttemptState());
-    }
+    MockRM.waitForState(attempt, finalState);
   }
 
   public RegisterApplicationMasterResponse registerAppAttempt()

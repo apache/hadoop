@@ -188,7 +188,7 @@ public class TestClientRMService {
     MockNM lostNode = rm.registerNode("host2:1235", 1024);
     rm.sendNodeStarted(lostNode);
     lostNode.nodeHeartbeat(true);
-    rm.NMwaitForState(lostNode.getNodeId(), NodeState.RUNNING);
+    rm.waitForState(lostNode.getNodeId(), NodeState.RUNNING);
     rm.sendNodeLost(lostNode);
 
     // Create a client.
@@ -214,7 +214,7 @@ public class TestClientRMService {
 
     // Now make the node unhealthy.
     node.nodeHeartbeat(false);
-    rm.NMwaitForState(node.getNodeId(), NodeState.UNHEALTHY);
+    rm.waitForState(node.getNodeId(), NodeState.UNHEALTHY);
 
     // Call again
     nodeReports = client.getClusterNodes(request).getNodeReports();

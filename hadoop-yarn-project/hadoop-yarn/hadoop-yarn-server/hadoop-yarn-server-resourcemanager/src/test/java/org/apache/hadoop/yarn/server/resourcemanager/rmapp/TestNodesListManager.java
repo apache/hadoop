@@ -85,7 +85,7 @@ public class TestNodesListManager {
     am.registerAppAttempt();
     am.unregisterAppAttempt();
     nm1.nodeHeartbeat(attempt.getAppAttemptId(), 1, ContainerState.COMPLETE);
-    am.waitForState(RMAppAttemptState.FINISHED);
+    rm.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FINISHED);
 
     // Create submitted App
     RMApp subrmApp = rm.submitApp(200);

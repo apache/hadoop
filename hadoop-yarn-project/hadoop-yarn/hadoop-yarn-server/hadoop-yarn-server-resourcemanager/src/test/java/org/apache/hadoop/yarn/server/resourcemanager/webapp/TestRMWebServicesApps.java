@@ -1460,7 +1460,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     while (true) {
       // fail the AM by sending CONTAINER_FINISHED event without registering.
       amNodeManager.nodeHeartbeat(am.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
-      am.waitForState(RMAppAttemptState.FAILED);
+      rm.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FAILED);
       if (numAttempt == maxAppAttempts) {
         rm.waitForState(app1.getApplicationId(), RMAppState.FAILED);
         break;

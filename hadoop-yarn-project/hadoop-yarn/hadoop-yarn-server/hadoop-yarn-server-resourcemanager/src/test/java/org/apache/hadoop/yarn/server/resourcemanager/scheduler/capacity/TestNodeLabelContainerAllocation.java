@@ -180,13 +180,13 @@ public class TestNodeLabelContainerAllocation {
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     am1.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "");
     Assert.assertTrue(rm1.waitForState(nm3, containerId,
-          RMContainerState.ALLOCATED, 10 * 1000));
+          RMContainerState.ALLOCATED));
     // Cannot allocate 2nd label=empty container
     containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 3);
     am1.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "");
     Assert.assertFalse(rm1.waitForState(nm3, containerId,
-          RMContainerState.ALLOCATED, 10 * 1000));
+          RMContainerState.ALLOCATED));
 
     // A has default user limit = 100, so it can use all resource in label = x
     // We can allocate floor(8000 / 1024) = 7 containers
@@ -195,7 +195,7 @@ public class TestNodeLabelContainerAllocation {
           ContainerId.newContainerId(am1.getApplicationAttemptId(), id);
       am1.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "x");
       Assert.assertTrue(rm1.waitForState(nm1, containerId,
-          RMContainerState.ALLOCATED, 10 * 1000));
+          RMContainerState.ALLOCATED));
     }
     rm1.close();
   }
@@ -270,7 +270,7 @@ public class TestNodeLabelContainerAllocation {
     containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2L);
     Assert.assertTrue(rm1.waitForState(nm2, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     checkTaskContainersHost(am1.getApplicationAttemptId(), containerId, rm1,
         "h2");
 
@@ -285,9 +285,9 @@ public class TestNodeLabelContainerAllocation {
     am2.allocate("*", 1024, 1, new ArrayList<ContainerId>());
     containerId = ContainerId.newContainerId(am2.getApplicationAttemptId(), 2);
     Assert.assertFalse(rm1.waitForState(nm4, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     Assert.assertFalse(rm1.waitForState(nm5, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     
     // launch an app to queue b2
     RMApp app3 = rm1.submitApp(1024, "app", "user", null, "b2");
@@ -298,9 +298,9 @@ public class TestNodeLabelContainerAllocation {
     am3.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "y");
     containerId = ContainerId.newContainerId(am3.getApplicationAttemptId(), 2);
     Assert.assertFalse(rm1.waitForState(nm1, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     Assert.assertTrue(rm1.waitForState(nm3, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     checkTaskContainersHost(am3.getApplicationAttemptId(), containerId, rm1,
         "h3");
     
@@ -309,7 +309,7 @@ public class TestNodeLabelContainerAllocation {
     am3.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "z");
     containerId = ContainerId.newContainerId(am3.getApplicationAttemptId(), 3L);
     Assert.assertTrue(rm1.waitForState(nm4, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     checkTaskContainersHost(am3.getApplicationAttemptId(), containerId, rm1,
         "h4");
 
@@ -349,9 +349,9 @@ public class TestNodeLabelContainerAllocation {
     containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     Assert.assertFalse(rm1.waitForState(nm2, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     Assert.assertTrue(rm1.waitForState(nm1, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     checkTaskContainersHost(am1.getApplicationAttemptId(), containerId, rm1,
         "h1");
 
@@ -364,9 +364,9 @@ public class TestNodeLabelContainerAllocation {
     am2.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "y");
     containerId = ContainerId.newContainerId(am2.getApplicationAttemptId(), 2);
     Assert.assertFalse(rm1.waitForState(nm1, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     Assert.assertTrue(rm1.waitForState(nm2, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     checkTaskContainersHost(am2.getApplicationAttemptId(), containerId, rm1,
         "h2");
     
@@ -379,9 +379,9 @@ public class TestNodeLabelContainerAllocation {
     am3.allocate("*", 1024, 1, new ArrayList<ContainerId>());
     containerId = ContainerId.newContainerId(am3.getApplicationAttemptId(), 2);
     Assert.assertFalse(rm1.waitForState(nm2, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     Assert.assertTrue(rm1.waitForState(nm3, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     checkTaskContainersHost(am3.getApplicationAttemptId(), containerId, rm1,
         "h3");
 
@@ -425,9 +425,9 @@ public class TestNodeLabelContainerAllocation {
     containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     Assert.assertFalse(rm1.waitForState(nm3, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     Assert.assertTrue(rm1.waitForState(nm1, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     checkTaskContainersHost(am1.getApplicationAttemptId(), containerId, rm1,
         "h1");
 
@@ -440,9 +440,9 @@ public class TestNodeLabelContainerAllocation {
     am2.allocate("*", 1024, 1, new ArrayList<ContainerId>());
     containerId = ContainerId.newContainerId(am2.getApplicationAttemptId(), 2);
     Assert.assertFalse(rm1.waitForState(nm3, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     Assert.assertTrue(rm1.waitForState(nm2, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     checkTaskContainersHost(am2.getApplicationAttemptId(), containerId, rm1,
         "h2");
     
@@ -455,9 +455,9 @@ public class TestNodeLabelContainerAllocation {
     am3.allocate("*", 1024, 1, new ArrayList<ContainerId>());
     containerId = ContainerId.newContainerId(am3.getApplicationAttemptId(), 2);
     Assert.assertFalse(rm1.waitForState(nm2, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     Assert.assertTrue(rm1.waitForState(nm3, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     checkTaskContainersHost(am3.getApplicationAttemptId(), containerId, rm1,
         "h3");
 
@@ -780,7 +780,7 @@ public class TestNodeLabelContainerAllocation {
     am1.allocate("*", 1 * GB, 1, 1, new ArrayList<ContainerId>(), "");
     am1.allocate("*", 1 * GB, 1, 2, new ArrayList<ContainerId>(), "y");
     Assert.assertTrue(rm1.waitForState(nm1, nextContainerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     
     // Check pending resource for am2, priority=1 doesn't get allocated before
     // priority=2 allocated
@@ -834,7 +834,7 @@ public class TestNodeLabelContainerAllocation {
       nextContainerId =
           ContainerId.newContainerId(am1.getApplicationAttemptId(), i);
       Assert.assertTrue(rm1.waitForState(Arrays.asList(nm1, nm2),
-          nextContainerId, RMContainerState.ALLOCATED, 10 * 1000));
+          nextContainerId, RMContainerState.ALLOCATED));
     }
     // no more container allocated on nm1
     checkLaunchedContainerNumOnNode(rm1, nm1.getNodeId(), 0);

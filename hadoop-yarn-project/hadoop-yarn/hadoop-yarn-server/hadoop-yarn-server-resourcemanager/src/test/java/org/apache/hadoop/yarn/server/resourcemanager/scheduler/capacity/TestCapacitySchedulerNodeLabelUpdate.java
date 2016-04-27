@@ -181,7 +181,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     // request a container.
     am1.allocate("*", GB, 1, new ArrayList<ContainerId>(), "x");
     containerId = ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
-    rm.waitForState(nm1, containerId, RMContainerState.ALLOCATED, 10 * 1000);
+    rm.waitForState(nm1, containerId, RMContainerState.ALLOCATED);
     appResourceUsageReport =
         rm.getResourceScheduler().getAppResourceUsageReport(
             am1.getApplicationAttemptId());
@@ -242,7 +242,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     containerId1 = ContainerId.newContainerId(am1.getApplicationAttemptId(), 1);
     containerId2 = ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     Assert.assertTrue(rm.waitForState(nm1, containerId2,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     
     // check used resource:
     // queue-a used x=1G, ""=1G
@@ -415,12 +415,12 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     ContainerId containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     Assert.assertTrue(rm.waitForState(nm1, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     am1.allocate("*", GB, 1, new ArrayList<ContainerId>());
     containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 3);
     Assert.assertTrue(rm.waitForState(nm2, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     
     // app2
     RMApp app2 = rm.submitApp(GB, "app", "u2", null, "a");
@@ -431,7 +431,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     containerId =
         ContainerId.newContainerId(am2.getApplicationAttemptId(), 3);
     Assert.assertTrue(rm.waitForState(nm1, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     
     // check used resource:
     // queue-a used x=1G, ""=1G
@@ -513,7 +513,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     ContainerId.newContainerId(am1.getApplicationAttemptId(), 1);
     containerId2 = ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     Assert.assertTrue(rm.waitForState(nm1, containerId2,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
 
     // check used resource:
     // queue-a used x=2G
