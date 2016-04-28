@@ -28,7 +28,7 @@ import java.util.Map;
  * between a set of Nodes.
  */
 public class DiskBalancerDataNode implements Comparable<DiskBalancerDataNode> {
-  private float nodeDataDensity;
+  private double nodeDataDensity;
   private Map<String, DiskBalancerVolumeSet> volumeSets;
   private String dataNodeUUID;
   private String dataNodeIP;
@@ -159,17 +159,17 @@ public class DiskBalancerDataNode implements Comparable<DiskBalancerDataNode> {
   public int compareTo(DiskBalancerDataNode that) {
     Preconditions.checkNotNull(that);
 
-    if (Float.compare(this.nodeDataDensity - that.getNodeDataDensity(), 0)
+    if (Double.compare(this.nodeDataDensity - that.getNodeDataDensity(), 0)
         < 0) {
       return -1;
     }
 
-    if (Float.compare(this.nodeDataDensity - that.getNodeDataDensity(), 0)
+    if (Double.compare(this.nodeDataDensity - that.getNodeDataDensity(), 0)
         == 0) {
       return 0;
     }
 
-    if (Float.compare(this.nodeDataDensity - that.getNodeDataDensity(), 0)
+    if (Double.compare(this.nodeDataDensity - that.getNodeDataDensity(), 0)
         > 0) {
       return 1;
     }
@@ -190,7 +190,7 @@ public class DiskBalancerDataNode implements Comparable<DiskBalancerDataNode> {
    *
    * @return float
    */
-  public float getNodeDataDensity() {
+  public double getNodeDataDensity() {
     return nodeDataDensity;
   }
 
@@ -201,7 +201,7 @@ public class DiskBalancerDataNode implements Comparable<DiskBalancerDataNode> {
    * spread across a set of volumes inside the node.
    */
   public void computeNodeDensity() {
-    float sum = 0;
+    double sum = 0;
     int volcount = 0;
     for (DiskBalancerVolumeSet vset : volumeSets.values()) {
       for (DiskBalancerVolume vol : vset.getVolumes()) {
@@ -249,6 +249,7 @@ public class DiskBalancerDataNode implements Comparable<DiskBalancerDataNode> {
       vSet = volumeSets.get(volumeSetKey);
     } else {
       vSet = new DiskBalancerVolumeSet(volume.isTransient());
+      vSet.setStorageType(volumeSetKey);
       volumeSets.put(volumeSetKey, vSet);
     }
 

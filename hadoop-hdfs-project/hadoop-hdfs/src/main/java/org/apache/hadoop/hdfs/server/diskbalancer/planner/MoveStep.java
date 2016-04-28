@@ -38,7 +38,7 @@ import org.apache.htrace.fasterxml.jackson.annotation.JsonInclude;
 public class MoveStep implements Step {
   private DiskBalancerVolume sourceVolume;
   private DiskBalancerVolume destinationVolume;
-  private float idealStorage;
+  private double idealStorage;
   private long bytesToMove;
   private String volumeSetID;
 
@@ -55,7 +55,7 @@ public class MoveStep implements Step {
    * @param bytesToMove       - number of bytes to move
    * @param volumeSetID       - a diskBalancer generated id.
    */
-  public MoveStep(DiskBalancerVolume sourceVolume, float idealStorage,
+  public MoveStep(DiskBalancerVolume sourceVolume, double idealStorage,
                   DiskBalancerVolume destinationVolume, long bytesToMove,
                   String volumeSetID) {
     this.destinationVolume = destinationVolume;
@@ -98,7 +98,7 @@ public class MoveStep implements Step {
    * @return float
    */
   @Override
-  public float getIdealStorage() {
+  public double getIdealStorage() {
     return idealStorage;
   }
 
@@ -146,7 +146,7 @@ public class MoveStep implements Step {
    *
    * @param idealStorage - ideal Storage
    */
-  public void setIdealStorage(float idealStorage) {
+  public void setIdealStorage(double idealStorage) {
     this.idealStorage = idealStorage;
   }
 
@@ -199,6 +199,7 @@ public class MoveStep implements Step {
    * move operation is aborted.
    * @return  long.
    */
+  @Override
   public long getMaxDiskErrors() {
     return maxDiskErrors;
   }
@@ -208,6 +209,7 @@ public class MoveStep implements Step {
    * step is aborted.
    * @param maxDiskErrors - long
    */
+  @Override
   public void setMaxDiskErrors(long maxDiskErrors) {
     this.maxDiskErrors = maxDiskErrors;
   }
@@ -223,6 +225,7 @@ public class MoveStep implements Step {
    *
    * @return tolerance percentage.
    */
+  @Override
   public long getTolerancePercent() {
     return tolerancePercent;
   }
@@ -231,6 +234,7 @@ public class MoveStep implements Step {
    * Sets the tolerance percentage.
    * @param tolerancePercent  - long
    */
+  @Override
   public void setTolerancePercent(long tolerancePercent) {
     this.tolerancePercent = tolerancePercent;
   }
@@ -241,6 +245,7 @@ public class MoveStep implements Step {
    * datanode while data node is in use.
    * @return  long.
    */
+  @Override
   public long getBandwidth() {
     return bandwidth;
   }
@@ -250,6 +255,7 @@ public class MoveStep implements Step {
    * @param bandwidth  - Long, MB / Sec of data to be moved between
    *                   source and destinatin volume.
    */
+  @Override
   public void setBandwidth(long bandwidth) {
     this.bandwidth = bandwidth;
   }

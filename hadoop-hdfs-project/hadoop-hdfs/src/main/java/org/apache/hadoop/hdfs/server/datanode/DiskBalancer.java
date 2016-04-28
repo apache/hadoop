@@ -23,7 +23,9 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.DiskBalancerWorkEntry;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus
+    .DiskBalancerWorkEntry;
 import org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.Result;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -39,6 +41,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.HashMap;
+import java.util.List;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -48,18 +52,21 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
+
 /**
  * Worker class for Disk Balancer.
- * <p/>
+ * <p>
  * Here is the high level logic executed by this class. Users can submit disk
  * balancing plans using submitPlan calls. After a set of sanity checks the plan
  * is admitted and put into workMap.
- * <p/>
+ * <p>
  * The executePlan launches a thread that picks up work from workMap and hands
  * it over to the BlockMover#copyBlocks function.
- * <p/>
+ * <p>
  * Constraints :
- * <p/>
+ * <p>
  * Only one plan can be executing in a datanode at any given time. This is
  * ensured by checking the future handle of the worker thread in submitPlan.
  */
@@ -127,11 +134,12 @@ public class DiskBalancer {
    * Shutdown the executor.
    */
   private void shutdownExecutor() {
+    final int secondsTowait = 10;
     scheduler.shutdown();
     try {
-      if(!scheduler.awaitTermination(10, TimeUnit.SECONDS)) {
+      if (!scheduler.awaitTermination(secondsTowait, TimeUnit.SECONDS)) {
         scheduler.shutdownNow();
-        if (!scheduler.awaitTermination(10, TimeUnit.SECONDS)) {
+        if (!scheduler.awaitTermination(secondsTowait, TimeUnit.SECONDS)) {
           LOG.error("Disk Balancer : Scheduler did not terminate.");
         }
       }
@@ -207,6 +215,7 @@ public class DiskBalancer {
 
   /**
    * Cancels a running plan.
+   *
    * @param planID - Hash of the plan to cancel.
    * @throws DiskBalancerException
    */
@@ -297,7 +306,7 @@ public class DiskBalancer {
    * @throws DiskBalancerException
    */
   private NodePlan verifyPlan(String planID, long planVersion, String plan,
-                               boolean force) throws DiskBalancerException {
+                              boolean force) throws DiskBalancerException {
 
     Preconditions.checkState(lock.isHeldByCurrentThread());
     verifyPlanVersion(planVersion);
@@ -372,8 +381,8 @@ public class DiskBalancer {
         (TimeUnit.HOURS.toMillis(
             DiskBalancerConstants.DISKBALANCER_VALID_PLAN_HOURS))) < now) {
       String hourString = "Plan was generated more than " +
-           Integer.toString(DiskBalancerConstants.DISKBALANCER_VALID_PLAN_HOURS)
-          +  " hours ago.";
+          Integer.toString(DiskBalancerConstants.DISKBALANCER_VALID_PLAN_HOURS)
+          + " hours ago.";
       LOG.error("Disk Balancer - " + hourString);
       throw new DiskBalancerException(hourString,
           DiskBalancerException.Result.OLD_PLAN_SUBMITTED);
@@ -484,14 +493,14 @@ public class DiskBalancer {
   /**
    * Insert work items to work map.
    *
-   * @param source      - Source vol
-   * @param dest        - destination volume
-   * @param step        - Move Step
+   * @param source - Source vol
+   * @param dest   - destination volume
+   * @param step   - Move Step
    */
   private void createWorkPlan(FsVolumeSpi source, FsVolumeSpi dest,
                               Step step) throws DiskBalancerException {
 
-    if(source.getStorageID().equals(dest.getStorageID())) {
+    if (source.getStorageID().equals(dest.getStorageID())) {
       LOG.info("Disk Balancer - source & destination volumes are same.");
       throw new DiskBalancerException("source and destination volumes are " +
           "same.", DiskBalancerException.Result.INVALID_MOVE);
@@ -604,13 +613,15 @@ public class DiskBalancer {
 
   /**
    * Actual DataMover class for DiskBalancer.
-   * <p/>
+   * <p>
    */
   public static class DiskBalancerMover implements BlockMover {
     private final FsDatasetSpi dataset;
     private long diskBandwidth;
     private long blockTolerance;
     private long maxDiskErrors;
+    private int poolIndex;
+    private AtomicBoolean shouldRun;
 
     /**
      * Constructs diskBalancerMover.
@@ -620,6 +631,7 @@ public class DiskBalancer {
      */
     public DiskBalancerMover(FsDatasetSpi dataset, Configuration conf) {
       this.dataset = dataset;
+      shouldRun = new AtomicBoolean(false);
 
       this.diskBandwidth = conf.getLong(
           DFSConfigKeys.DFS_DISK_BALANCER_MAX_DISK_THRUPUT,
@@ -659,6 +671,222 @@ public class DiskBalancer {
     }
 
     /**
+     * Sets Diskmover copyblocks into runnable state.
+     */
+    @Override
+    public void setRunnable() {
+      this.shouldRun.set(true);
+    }
+
+    /**
+     * Signals copy block to exit.
+     */
+    @Override
+    public void setExitFlag() {
+      this.shouldRun.set(false);
+    }
+
+    /**
+     * Returns the shouldRun boolean flag.
+     */
+    public boolean shouldRun() {
+      return this.shouldRun.get();
+    }
+
+    /**
+     * Checks if a given block is less than needed size to meet our goal.
+     *
+     * @param blockSize - block len
+     * @param item      - Work item
+     * @return true if this block meets our criteria, false otherwise.
+     */
+    private boolean isLessThanNeeded(long blockSize,
+                                     DiskBalancerWorkItem item) {
+      long bytesToCopy = item.getBytesToCopy() - item.getBytesCopied();
+      bytesToCopy = bytesToCopy +
+          ((bytesToCopy * getBlockTolerancePercentage(item)) / 100);
+      return (blockSize <= bytesToCopy) ? true : false;
+    }
+
+    /**
+     * Returns the default block tolerance if the plan does not have value of
+     * tolerance specified.
+     *
+     * @param item - DiskBalancerWorkItem
+     * @return long
+     */
+    private long getBlockTolerancePercentage(DiskBalancerWorkItem item) {
+      return item.getTolerancePercent() <= 0 ? this.blockTolerance :
+          item.getTolerancePercent();
+    }
+
+    /**
+     * Inflates bytesCopied and returns true or false. This allows us to stop
+     * copying if we have reached close enough.
+     *
+     * @param item DiskBalancerWorkItem
+     * @return -- false if we need to copy more, true if we are done
+     */
+    private boolean isCloseEnough(DiskBalancerWorkItem item) {
+      long temp = item.getBytesCopied() +
+          ((item.getBytesCopied() * getBlockTolerancePercentage(item)) / 100);
+      return (item.getBytesToCopy() >= temp) ? false : true;
+    }
+
+    /**
+     * Returns disk bandwidth associated with this plan, if none is specified
+     * returns the global default.
+     *
+     * @param item DiskBalancerWorkItem.
+     * @return MB/s - long
+     */
+    private long getDiskBandwidth(DiskBalancerWorkItem item) {
+      return item.getBandwidth() <= 0 ? this.diskBandwidth : item
+          .getBandwidth();
+    }
+
+    /**
+     * Computes sleep delay needed based on the block that just got copied. we
+     * copy using a burst mode, that is we let the copy proceed in full
+     * throttle. Once a copy is done, we compute how many bytes have been
+     * transferred and try to average it over the user specified bandwidth. In
+     * other words, This code implements a poor man's token bucket algorithm for
+     * traffic shaping.
+     *
+     * @param bytesCopied - byteCopied.
+     * @param timeUsed    in milliseconds
+     * @param item        DiskBalancerWorkItem
+     * @return sleep delay in Milliseconds.
+     */
+    private long computeDelay(long bytesCopied, long timeUsed,
+                              DiskBalancerWorkItem item) {
+
+      // we had an overflow, ignore this reading and continue.
+      if (timeUsed == 0) {
+        return 0;
+      }
+      final int megaByte = 1024 * 1024;
+      long bytesInMB = bytesCopied / megaByte;
+      long lastThroughput = bytesInMB / SECONDS.convert(timeUsed,
+          TimeUnit.MILLISECONDS);
+      long delay = (bytesInMB / getDiskBandwidth(item)) - lastThroughput;
+      return (delay <= 0) ? 0 : MILLISECONDS.convert(delay, TimeUnit.SECONDS);
+    }
+
+    /**
+     * Returns maximum errors to tolerate for the specific plan or the default.
+     *
+     * @param item - DiskBalancerWorkItem
+     * @return maximum error counts to tolerate.
+     */
+    private long getMaxError(DiskBalancerWorkItem item) {
+      return item.getMaxDiskErrors() <= 0 ? this.maxDiskErrors :
+          item.getMaxDiskErrors();
+    }
+
+    /**
+     * Gets the next block that we can copy, returns null if we cannot find a
+     * block that fits our parameters or if have run out of blocks.
+     *
+     * @param iter Block Iter
+     * @param item - Work item
+     * @return Extended block or null if no copyable block is found.
+     */
+    private ExtendedBlock getBlockToCopy(FsVolumeSpi.BlockIterator iter,
+                                         DiskBalancerWorkItem item) {
+      while (!iter.atEnd() && item.getErrorCount() < getMaxError(item)) {
+        try {
+          ExtendedBlock block = iter.nextBlock();
+
+          // A valid block is a finalized block, we iterate until we get
+          // finalized blocks
+          if (!this.dataset.isValidBlock(block)) {
+            continue;
+          }
+
+          // We don't look for the best, we just do first fit
+          if (isLessThanNeeded(block.getNumBytes(), item)) {
+            return block;
+          }
+
+        } catch (IOException e) {
+          item.incErrorCount();
+        }
+      }
+
+      if (item.getErrorCount() >= getMaxError(item)) {
+        item.setErrMsg("Error count exceeded.");
+        LOG.info("Maximum error count exceeded. Error count: {} Max error:{} "
+            , item.getErrorCount(), item.getMaxDiskErrors());
+      }
+
+      return null;
+    }
+
+    /**
+     * Opens all Block pools on a given volume.
+     *
+     * @param source    Source
+     * @param poolIters List of PoolIters to maintain.
+     */
+    private void openPoolIters(FsVolumeSpi source, List<FsVolumeSpi
+        .BlockIterator> poolIters) {
+      Preconditions.checkNotNull(source);
+      Preconditions.checkNotNull(poolIters);
+
+      for (String blockPoolID : source.getBlockPoolList()) {
+        poolIters.add(source.newBlockIterator(blockPoolID,
+            "DiskBalancerSource"));
+      }
+    }
+
+    /**
+     * Returns the next block that we copy from all the block pools. This
+     * function looks across all block pools to find the next block to copy.
+     *
+     * @param poolIters - List of BlockIterators
+     * @return ExtendedBlock.
+     */
+    ExtendedBlock getNextBlock(List<FsVolumeSpi.BlockIterator> poolIters,
+                               DiskBalancerWorkItem item) {
+      Preconditions.checkNotNull(poolIters);
+      int currentCount = 0;
+      ExtendedBlock block = null;
+      while (block == null && currentCount < poolIters.size()) {
+        currentCount++;
+        poolIndex = poolIndex++ % poolIters.size();
+        FsVolumeSpi.BlockIterator currentPoolIter = poolIters.get(poolIndex);
+        block = getBlockToCopy(currentPoolIter, item);
+      }
+
+      if (block == null) {
+        try {
+          item.setErrMsg("No source blocks found to move.");
+          LOG.error("No movable source blocks found. {}", item.toJson());
+        } catch (IOException e) {
+          LOG.error("Unable to get json from Item.");
+        }
+      }
+      return block;
+    }
+
+    /**
+     * Close all Pool Iters.
+     *
+     * @param poolIters List of BlockIters
+     */
+    private void closePoolIters(List<FsVolumeSpi.BlockIterator> poolIters) {
+      Preconditions.checkNotNull(poolIters);
+      for (FsVolumeSpi.BlockIterator iter : poolIters) {
+        try {
+          iter.close();
+        } catch (IOException ex) {
+          LOG.error("Error closing a block pool iter. ex: {}", ex);
+        }
+      }
+    }
+
+    /**
      * Copies blocks from a set of volumes.
      *
      * @param pair - Source and Destination Volumes.
@@ -666,23 +894,110 @@ public class DiskBalancer {
      */
     @Override
     public void copyBlocks(VolumePair pair, DiskBalancerWorkItem item) {
+      FsVolumeSpi source = pair.getSource();
+      FsVolumeSpi dest = pair.getDest();
+      List<FsVolumeSpi.BlockIterator> poolIters = new LinkedList<>();
 
-    }
+      if (source.isTransientStorage() || dest.isTransientStorage()) {
+        return;
+      }
 
-    /**
-     * Begin the actual copy operations. This is useful in testing.
-     */
-    @Override
-    public void setRunnable() {
+      try {
+        openPoolIters(source, poolIters);
+        if (poolIters.size() == 0) {
+          LOG.error("No block pools found on volume. volume : {}. Exiting.",
+              source.getBasePath());
+          return;
+        }
 
-    }
+        while (shouldRun()) {
+          try {
 
-    /**
-     * Tells copyBlocks to exit from the copy routine.
-     */
-    @Override
-    public void setExitFlag() {
+            // Check for the max error count constraint.
+            if (item.getErrorCount() > getMaxError(item)) {
+              LOG.error("Exceeded the max error count. source {}, dest: {} " +
+                      "error count: {}", source.getBasePath(),
+                  dest.getBasePath(), item.getErrorCount());
+              this.setExitFlag();
+              continue;
+            }
 
+            // Check for the block tolerance constraint.
+            if (isCloseEnough(item)) {
+              LOG.info("Copy from {} to {} done. copied {} bytes and {} " +
+                      "blocks.",
+                  source.getBasePath(), dest.getBasePath(),
+                  item.getBytesCopied(), item.getBlocksCopied());
+              this.setExitFlag();
+              continue;
+            }
+
+            ExtendedBlock block = getNextBlock(poolIters, item);
+            // we are not able to find any blocks to copy.
+            if (block == null) {
+              this.setExitFlag();
+              LOG.error("No source blocks, exiting the copy. Source: {}, " +
+                      "dest:{}", source.getBasePath(), dest.getBasePath());
+              continue;
+            }
+
+            // check if someone told us exit, treat this as an interruption
+            // point
+            // for the thread, since both getNextBlock and moveBlocAcrossVolume
+            // can take some time.
+            if (!shouldRun()) {
+              continue;
+            }
+
+            long timeUsed;
+            // There is a race condition here, but we will get an IOException
+            // if dest has no space, which we handle anyway.
+            if (dest.getAvailable() > item.getBytesToCopy()) {
+              long begin = System.nanoTime();
+              this.dataset.moveBlockAcrossVolumes(block, dest);
+              long now = System.nanoTime();
+              timeUsed = (now - begin) > 0 ? now - begin : 0;
+            } else {
+
+              // Technically it is possible for us to find a smaller block and
+              // make another copy, but opting for the safer choice of just
+              // exiting here.
+              LOG.error("Destination volume: {} does not have enough space to" +
+                  " accommodate a block. Block Size: {} Exiting from" +
+                  " copyBlocks.", dest.getBasePath(), block.getNumBytes());
+              this.setExitFlag();
+              continue;
+            }
+
+            LOG.debug("Moved block with size {} from  {} to {}",
+                block.getNumBytes(), source.getBasePath(),
+                dest.getBasePath());
+
+            item.incCopiedSoFar(block.getNumBytes());
+            item.incBlocksCopied();
+
+            // Check for the max throughput constraint.
+            // We sleep here to keep the promise that we will not
+            // copy more than Max MB/sec. we sleep enough time
+            // to make sure that our promise is good on average.
+            // Because we sleep, if a shutdown or cancel call comes in
+            // we exit via Thread Interrupted exception.
+            Thread.sleep(computeDelay(block.getNumBytes(), timeUsed, item));
+
+          } catch (IOException ex) {
+            LOG.error("Exception while trying to copy blocks. error: {}", ex);
+            item.incErrorCount();
+          } catch (InterruptedException e) {
+            LOG.error("Copy Block Thread interrupted, exiting the copy.");
+            Thread.currentThread().interrupt();
+            item.incErrorCount();
+            this.setExitFlag();
+          }
+        }
+      } finally {
+        // Close all Iters.
+        closePoolIters(poolIters);
+      }
     }
 
     /**

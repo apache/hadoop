@@ -38,7 +38,7 @@ public class DiskBalancerVolume {
   private String uuid;
   private boolean failed;
   private boolean isTransient;
-  private float volumeDataDensity;
+  private double volumeDataDensity;
   private boolean skip = false;
   private boolean isReadOnly;
 
@@ -69,7 +69,7 @@ public class DiskBalancerVolume {
    *
    * @return float.
    */
-  public float getVolumeDataDensity() {
+  public double getVolumeDataDensity() {
     return volumeDataDensity;
   }
 
@@ -78,7 +78,7 @@ public class DiskBalancerVolume {
    *
    * @param volDataDensity - density
    */
-  public void setVolumeDataDensity(float volDataDensity) {
+  public void setVolumeDataDensity(double volDataDensity) {
     this.volumeDataDensity = volDataDensity;
   }
 

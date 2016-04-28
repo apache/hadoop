@@ -21,11 +21,9 @@ import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ClusterConnector;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ConnectorFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.NullConnector;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
-import org.apache.hadoop.hdfs.server.diskbalancer.datamodel
-    .DiskBalancerDataNode;
+import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
-import org.apache.hadoop.hdfs.server.diskbalancer.datamodel
-    .DiskBalancerVolumeSet;
+import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolumeSet;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.GreedyPlanner;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.Step;
@@ -143,9 +141,9 @@ public class TestPlanner {
     cluster.readClusterInfo();
     Assert.assertEquals(1, cluster.getNodes().size());
 
-    GreedyPlanner planner = new GreedyPlanner(10.0f, node);
-    NodePlan plan = new NodePlan(node.getDataNodeName(), node.getDataNodePort
-        ());
+    GreedyPlanner planner = new GreedyPlanner(5.0f, node);
+    NodePlan plan = new NodePlan(node.getDataNodeUUID(),
+        node.getDataNodePort());
     planner.balanceVolumeSet(node, node.getVolumeSets().get("SSD"), plan);
 
     // We should have only one planned move from
@@ -184,8 +182,8 @@ public class TestPlanner {
     cluster.readClusterInfo();
     Assert.assertEquals(1, cluster.getNodes().size());
 
-    GreedyPlanner planner = new GreedyPlanner(10.0f, node);
-    NodePlan plan = new NodePlan(node.getDataNodeName(), node.getDataNodePort
+    GreedyPlanner planner = new GreedyPlanner(5.0f, node);
+    NodePlan plan = new NodePlan(node.getDataNodeUUID(), node.getDataNodePort
         ());
     planner.balanceVolumeSet(node, node.getVolumeSets().get("SSD"), plan);
 
@@ -262,11 +260,10 @@ public class TestPlanner {
     assertEquals(2, plan.getVolumeSetPlans().size());
     Step step = plan.getVolumeSetPlans().get(0);
     assertEquals("volume100", step.getSourceVolume().getPath());
-    assertEquals("33.3 G", step.getSizeString(step.getBytesToMove()));
-
+    assertTrue(step.getSizeString(step.getBytesToMove()).matches("33.[2|3|4] G"));
     step = plan.getVolumeSetPlans().get(1);
     assertEquals("volume100", step.getSourceVolume().getPath());
-    assertEquals("33.3 G", step.getSizeString(step.getBytesToMove()));
+    assertTrue(step.getSizeString(step.getBytesToMove()).matches("33.[2|3|4] G"));
   }
 
   @Test
@@ -318,11 +315,12 @@ public class TestPlanner {
 
     Step step = newPlan.getVolumeSetPlans().get(0);
     assertEquals("volume100", step.getSourceVolume().getPath());
-    assertEquals("18.8 G", step.getSizeString(step.getBytesToMove()));
+    assertTrue(step.getSizeString(step.getBytesToMove()).matches("18.[6|7|8] G"));
 
     step = newPlan.getVolumeSetPlans().get(1);
     assertEquals("volume100", step.getSourceVolume().getPath());
-    assertEquals("18.8 G", step.getSizeString(step.getBytesToMove()));
+    assertTrue(step.getSizeString(step.getBytesToMove()).matches("18.[6|7|8] G"));
+
   }
 
   @Test
@@ -364,7 +362,7 @@ public class TestPlanner {
 
       if (step.getDestinationVolume().getPath().equals("volume0-1")) {
         assertEquals("volume100", step.getSourceVolume().getPath());
-        assertEquals("28.6 G",
+        assertEquals("28.5 G",
             step.getSizeString(step.getBytesToMove()));
       }
 

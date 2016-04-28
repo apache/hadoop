@@ -53,7 +53,7 @@ public class DiskBalancerVolumeSet {
   private String storageType;
   private String setID;
 
-  private float idealUsed;
+  private double idealUsed;
 
 
   /**
@@ -142,19 +142,32 @@ public class DiskBalancerVolumeSet {
     }
 
     if (totalCapacity != 0) {
-      this.idealUsed = totalUsed / (float) totalCapacity;
+      this.idealUsed = truncateDecimals(totalUsed /
+          (double) totalCapacity);
     }
 
     for (DiskBalancerVolume volume : volumes) {
       if (!volume.isFailed() && !volume.isSkip()) {
-        float dfsUsedRatio =
-            volume.getUsed() / (float) volume.computeEffectiveCapacity();
+        double dfsUsedRatio =
+            truncateDecimals(volume.getUsed() /
+                (double) volume.computeEffectiveCapacity());
+
         volume.setVolumeDataDensity(this.idealUsed - dfsUsedRatio);
         sortedQueue.add(volume);
       }
     }
   }
 
+  /**
+   * Truncate to 4 digits since uncontrolled precision is some times
+   * counter intitive to what users expect.
+   * @param value - double.
+   * @return double.
+   */
+  private double truncateDecimals(double value) {
+    final int multiplier = 10000;
+    return (double) ((long) (value * multiplier)) / multiplier;
+  }
   private void skipMisConfiguredVolume(DiskBalancerVolume volume) {
     //probably points to some sort of mis-configuration. Log this and skip
     // processing this volume.
@@ -255,7 +268,7 @@ public class DiskBalancerVolumeSet {
    * @return true if balancing is needed false otherwise.
    */
   public boolean isBalancingNeeded(float thresholdPercentage) {
-    float threshold = thresholdPercentage / 100.0f;
+    double threshold = thresholdPercentage / 100.0d;
 
     if(volumes == null || volumes.size() <= 1) {
       // there is nothing we can do with a single volume.
@@ -265,7 +278,10 @@ public class DiskBalancerVolumeSet {
 
     for (DiskBalancerVolume vol : volumes) {
       boolean notSkip = !vol.isFailed() && !vol.isTransient() && !vol.isSkip();
-      if ((Math.abs(vol.getVolumeDataDensity()) > threshold) && notSkip) {
+      Double absDensity =
+          truncateDecimals(Math.abs(vol.getVolumeDataDensity()));
+
+      if ((absDensity > threshold) && notSkip) {
         return true;
       }
     }
@@ -306,7 +322,7 @@ public class DiskBalancerVolumeSet {
    */
 
   @JsonIgnore
-  public float getIdealUsed() {
+  public double getIdealUsed() {
     return this.idealUsed;
   }
 
@@ -319,8 +335,8 @@ public class DiskBalancerVolumeSet {
      */
     @Override
     public int compare(DiskBalancerVolume first, DiskBalancerVolume second) {
-      return Float
-          .compare(second.getVolumeDataDensity(), first.getVolumeDataDensity());
+      return Double.compare(second.getVolumeDataDensity(),
+          first.getVolumeDataDensity());
     }
   }
 }

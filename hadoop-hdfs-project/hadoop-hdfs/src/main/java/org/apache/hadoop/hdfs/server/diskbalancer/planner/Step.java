@@ -42,7 +42,7 @@ public interface Step {
    *
    * @return idealStorage
    */
-  float getIdealStorage();
+  double getIdealStorage();
 
   /**
    * Gets Source Volume.
@@ -86,6 +86,24 @@ public interface Step {
    * @return long.
    */
   long getBandwidth();
+
+  /**
+   * Sets Tolerance percent on a specific step.
+   * @param tolerancePercent - tolerance in percentage.
+   */
+  void setTolerancePercent(long tolerancePercent);
+
+  /**
+   * Set Bandwidth on a specific step.
+   * @param bandwidth - in MB/s
+   */
+  void setBandwidth(long bandwidth);
+
+  /**
+   * Set maximum errors to tolerate before disk balancer step fails.
+   * @param maxDiskErrors - error count.
+   */
+  void setMaxDiskErrors(long maxDiskErrors);
 
 
 }

@@ -3324,8 +3324,6 @@ public class DataNode extends ReconfigurableBase
    * @param planID  - Hash value of the plan.
    * @param planVersion - Plan version, reserved for future use. We have only
    *                    version 1 now.
-   * @param bandwidth - Max disk bandwidth to use, 0 means use value defined
-   *                  in the configration.
    * @param plan - Actual plan
    * @throws IOException
    */
