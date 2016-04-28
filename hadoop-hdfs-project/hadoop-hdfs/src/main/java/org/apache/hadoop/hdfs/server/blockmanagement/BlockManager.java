@@ -856,8 +856,8 @@ public class BlockManager {
     }
 
     final int numNodes = blocksMap.numNodes(blk);
-    final boolean isCorrupt = numCorruptNodes == numNodes;
-    final int numMachines = isCorrupt ? numNodes: numNodes - numCorruptNodes;
+    final boolean isCorrupt = numCorruptReplicas == numNodes;
+    final int numMachines = isCorrupt ? numNodes: numNodes - numCorruptReplicas;
     final DatanodeStorageInfo[] machines = new DatanodeStorageInfo[numMachines];
     int j = 0;
     if (numMachines > 0) {
@@ -1155,11 +1155,23 @@ public class BlockManager {
           + " as corrupt because datanode " + dn + " (" + dn.getDatanodeUuid()
           + ") does not exist");
     }
-    
+
+    DatanodeStorageInfo storage = null;
+    if (storageID != null) {
+      storage = node.getStorageInfo(storageID);
+    }
+    if (storage == null) {
+      storage = storedBlock.findStorageInfo(node);
+    }
+
+    if (storage == null) {
+      blockLog.debug("BLOCK* findAndMarkBlockAsCorrupt: {} not found on {}",
+          blk, dn);
+      return;
+    }
     markBlockAsCorrupt(new BlockToMarkCorrupt(storedBlock,
             blk.getGenerationStamp(), reason, Reason.CORRUPTION_REPORTED),
-        storageID == null ? null : node.getStorageInfo(storageID),
-        node);
+        storage, node);
   }
 
   /**

@@ -164,6 +164,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-10245. Fix the findbugs warnings in branch-2.7.
     (Brahma Reddy Battula via aajisaka)
 
+    HDFS-9958. BlockManager#createLocatedBlocks can throw NPE for corruptBlocks
+    on failed storages. (Kuhu Shukla via kihwal)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
