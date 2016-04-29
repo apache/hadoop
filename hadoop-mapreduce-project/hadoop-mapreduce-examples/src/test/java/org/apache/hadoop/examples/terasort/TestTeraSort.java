@@ -43,14 +43,14 @@ public class TestTeraSort extends HadoopTestCase {
 
   @After
   public void tearDown() throws Exception {
-    getFileSystem().delete(new Path(TEST_DIR), true);
+    getFileSystem().delete(TEST_DIR, true);
     super.tearDown();
   }
   
   // Input/Output paths for sort
-  private static final String TEST_DIR = 
-    new File(System.getProperty("test.build.data", "/tmp"), "terasort")
-    .getAbsolutePath();
+  private static final Path TEST_DIR = new Path(new File(
+    System.getProperty("test.build.data", "/tmp"), "terasort")
+    .getAbsoluteFile().toURI().toString());
   private static final Path SORT_INPUT_PATH = new Path(TEST_DIR, "sortin");
   private static final Path SORT_OUTPUT_PATH = new Path(TEST_DIR, "sortout");
   private static final Path TERA_OUTPUT_PATH = new Path(TEST_DIR, "validate");
