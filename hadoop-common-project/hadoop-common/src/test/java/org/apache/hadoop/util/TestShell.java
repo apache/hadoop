@@ -18,6 +18,7 @@
 package org.apache.hadoop.util;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.security.alias.AbstractJavaKeyStoreProvider;
 import org.junit.Assert;
 
 import java.io.BufferedReader;
@@ -29,6 +30,8 @@ import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -144,6 +147,40 @@ public class TestShell extends Assert {
     }
     shellFile.delete();
     assertTrue("Script did not timeout" , shexc.isTimedOut());
+  }
+
+  @Test
+  public void testEnvVarsWithInheritance() throws Exception {
+    Assume.assumeFalse(WINDOWS);
+    testEnvHelper(true);
+  }
+
+  @Test
+  public void testEnvVarsWithoutInheritance() throws Exception {
+    Assume.assumeFalse(WINDOWS);
+    testEnvHelper(false);
+  }
+
+  private void testEnvHelper(boolean inheritParentEnv) throws Exception {
+    Map<String, String> customEnv = new HashMap<>();
+    customEnv.put("AAA" + System.currentTimeMillis(), "AAA");
+    customEnv.put("BBB" + System.currentTimeMillis(), "BBB");
+    customEnv.put("CCC" + System.currentTimeMillis(), "CCC");
+    Shell.ShellCommandExecutor command = new ShellCommandExecutor(
+        new String[]{"env"}, null, customEnv, 0L, inheritParentEnv);
+    command.execute();
+    String[] varsArr = command.getOutput().split("\n");
+    Map<String, String> vars = new HashMap<>();
+    for (String var : varsArr) {
+      int eqIndex = var.indexOf('=');
+      vars.put(var.substring(0, eqIndex), var.substring(eqIndex + 1));
+    }
+    Map<String, String> expectedEnv = new HashMap<>();
+    expectedEnv.putAll(customEnv);
+    if (inheritParentEnv) {
+      expectedEnv.putAll(System.getenv());
+    }
+    assertEquals(expectedEnv, vars);
   }
   
   private static int countTimerThreads() {
