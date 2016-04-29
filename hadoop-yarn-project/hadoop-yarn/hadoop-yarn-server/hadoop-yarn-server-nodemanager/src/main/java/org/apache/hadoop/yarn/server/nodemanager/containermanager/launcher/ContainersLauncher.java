@@ -118,6 +118,16 @@ public class ContainersLauncher extends AbstractService
         containerLauncher.submit(launch);
         running.put(containerId, launch);
         break;
+      case RELAUNCH_CONTAINER:
+        app = context.getApplications().get(
+                containerId.getApplicationAttemptId().getApplicationId());
+
+        ContainerRelaunch relaunch =
+            new ContainerRelaunch(context, getConfig(), dispatcher, exec, app,
+                event.getContainer(), dirsHandler, containerManager);
+        containerLauncher.submit(relaunch);
+        running.put(containerId, relaunch);
+        break;
       case RECOVER_CONTAINER:
         app = context.getApplications().get(
             containerId.getApplicationAttemptId().getApplicationId());

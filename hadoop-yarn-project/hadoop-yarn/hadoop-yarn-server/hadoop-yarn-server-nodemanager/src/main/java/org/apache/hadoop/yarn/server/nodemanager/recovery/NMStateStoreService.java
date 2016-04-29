@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerRetryContext;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
@@ -72,6 +73,9 @@ public abstract class NMStateStoreService extends AbstractService {
     String diagnostics = "";
     StartContainerRequest startRequest;
     Resource capability;
+    private int remainingRetryAttempts = ContainerRetryContext.RETRY_INVALID;
+    private String workDir;
+    private String logDir;
 
     public RecoveredContainerStatus getStatus() {
       return status;
@@ -97,6 +101,30 @@ public abstract class NMStateStoreService extends AbstractService {
       return capability;
     }
 
+    public int getRemainingRetryAttempts() {
+      return remainingRetryAttempts;
+    }
+
+    public void setRemainingRetryAttempts(int retryAttempts) {
+      this.remainingRetryAttempts = retryAttempts;
+    }
+
+    public String getWorkDir() {
+      return workDir;
+    }
+
+    public void setWorkDir(String workDir) {
+      this.workDir = workDir;
+    }
+
+    public String getLogDir() {
+      return logDir;
+    }
+
+    public void setLogDir(String logDir) {
+      this.logDir = logDir;
+    }
+
     @Override
     public String toString() {
       return new StringBuffer("Status: ").append(getStatus())
@@ -105,6 +133,9 @@ public abstract class NMStateStoreService extends AbstractService {
           .append(", Diagnostics: ").append(getDiagnostics())
           .append(", Capability: ").append(getCapability())
           .append(", StartRequest: ").append(getStartRequest())
+          .append(", RemainingRetryAttempts: ").append(remainingRetryAttempts)
+          .append(", WorkDir: ").append(workDir)
+          .append(", LogDir: ").append(logDir)
           .toString();
     }
   }
@@ -322,6 +353,34 @@ public abstract class NMStateStoreService extends AbstractService {
    */
   public abstract void storeContainerDiagnostics(ContainerId containerId,
       StringBuilder diagnostics) throws IOException;
+
+  /**
+   * Record remaining retry attempts for a container.
+   * @param containerId the container ID
+   * @param remainingRetryAttempts the remain retry times when container
+   *                               fails to run
+   * @throws IOException
+   */
+  public abstract void storeContainerRemainingRetryAttempts(
+      ContainerId containerId, int remainingRetryAttempts) throws IOException;
+
+  /**
+   * Record working directory for a container.
+   * @param containerId the container ID
+   * @param workDir the working directory
+   * @throws IOException
+   */
+  public abstract void storeContainerWorkDir(
+      ContainerId containerId, String workDir) throws IOException;
+
+  /**
+   * Record log directory for a container.
+   * @param containerId the container ID
+   * @param logDir the log directory
+   * @throws IOException
+   */
+  public abstract void storeContainerLogDir(
+      ContainerId containerId, String logDir) throws IOException;
 
   /**
    * Remove records corresponding to a container
