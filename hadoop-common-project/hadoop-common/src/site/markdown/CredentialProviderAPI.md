@@ -122,3 +122,38 @@ Utilizing the credential command will often be for provisioning a password or se
 Example: `hadoop credential create ssl.server.keystore.password jceks://file/tmp/test.jceks`
 
 In order to indicate a particular provider type and location, the user must provide the `hadoop.security.credential.provider.path` configuration element in core-site.xml or use the command line option `-provider` on each of the credential management commands. This provider path is a comma-separated list of URLs that indicates the type and location of a list of providers that should be consulted. For example, the following path: `user:///,jceks://file/tmp/test.jceks,jceks://hdfs@nn1.example.com/my/path/test.jceks` indicates that the current user's credentials file should be consulted through the User Provider, that the local file located at `/tmp/test.jceks` is a Java Keystore Provider and that the file located within HDFS at `nn1.example.com/my/path/test.jceks` is also a store for a Java Keystore Provider.
+
+#### Provider Types
+
+1. The `UserProvider`, which is representd by the provider URI `user:///`, is used to retrieve credentials from a user's Credentials file. This file is used to store various tokens, secrets and passwords that are needed by executing jobs and applications.
+2. The `JavaKeyStoreProvider`, which is represented by the provider URI `jceks://file|hdfs/path-to-keystore`, is used to retrieve credentials from a Java keystore. The underlying use of the Hadoop filesystem abstraction allows credentials to be stored on the local filesystem or within HDFS.
+3. The `LocalJavaKeyStoreProvider`, which is represented by the provider URI `localjceks://file/path-to-keystore`, is used to access credentials from a Java keystore that is must be stored on the local filesystem. This is needed for credentials that would result in a recursive dependency on accessing HDFS. Anytime that your credential is required to gain access to HDFS we can't depend on getting a credential out of HDFS to do so.
+
+#### Keystore Passwords
+
+Keystores in Java are generally protected by passwords. The primary method of protection of the keystore-based credential providers are OS level file permissions and any other policy based access protection that may exist for the target filesystem. While the password is not a primary source of protection, it is very important to understand the mechanics required and options available for managing these passwords. It is also very important to understand all the parties that will need access to the password used to protect the keystores in order to consume them at runtime.
+
+##### Options
+| Option | Description | Notes |
+|:---- |:---- |:---|
+|Default password |This is a harcoded password of "none". |This is a hardcoded password in an open source project and as such has obvious disadvantages. However, the mechanics section will show that it is simpler and consequently nearly as secure as the other more complex options.|
+|Environment variable|`HADOOP_CREDSTORE_PASSWORD`|This option uses an environment variable to communicate the password that should be used when interrogating all of the keystores that are configured in the `hadoop.security.credential.provider.path` configuration property. All of the keystore based providers in the path will need to be protected by the same password.|
+|Password-file|`hadoop.security.credstore.java-keystore-provider.password-file`|This option uses a "side file" that has its location configured in the `hadoop.security.credstore.java-keystore-provider.password-file` configuration property to communicate the password that should be used when interrogating all of the keystores that are configured in the `hadoop.security.credential.provider.path` configuration property.|
+
+##### Mechanics
+Extremely important to consider that *all* of the runtime consumers of the credential being protected (mapreduce jobs/applications) will need to have access to the password used to protect the keystore providers. Communicating this password can be done a number of ways and they are described in the Options section above.
+
+|Keystore Password| Description|Sync Required|Clear Text|File Permissions|
+|:---- |:---- |:---|:---|:---|
+|Default Password|Hardcoded password is the default. Essentially, when using the default password for all keystore-based credential stores, we are leveraging the file permissions to protect the credential store and the keystore password is just a formality of persisting the keystore.|No|Yes|No (documented)|
+|Environment Variable|`HADOOP_CREDSTORE_PASSWORD` Environment variable must be set to the custom password for all keystores that may be configured in the provider path of any process that needs to access credentials from a keystore-based credential provider. There is only one env variable for the entire path of comma separated providers. It is difficult to know the passwords required for each keystore and it is suggested that the same be used for all keystore-based credential providers to avoid this issue. Setting the environment variable will likely require it to be set from a script or some other clear text storage mechanism. Environment variables for running processes are available from various unix commands.|Yes|Yes|No|
+|Password File|`hadoop.security.credstore.java-keystore-provider.password-file` configuration property must be set to the location of the "side file" that contains the custom password for all keystores that may be configured in the provider path. Any process that needs to access credentials from a keystore-based credential provider will need to have this configuration property set to the appropriate file location. There is only one password-file for the entire path of comma separated providers. It is difficult to know the passwords required for each keystore and it is therefore suggested that the same be used for all keystore-based credential providers to avoid this issue. Password-files are additional files that need to be managed, store the password in clear text and need file permissions to be set such that only those that need access to them have it. If file permissions are set inappropriately the password to access the keystores is available in clear text.|Yes|Yes|Yes|
+
+The use of the default password means that no additional communication/synchronization to runtime consumers needs to be done. The default password is known but file permissions are the primary protection of the keystore.
+
+When file permissions are thwarted, unlike "side files", there are no standard tools that can expose the protected credentials - even with the password known. Keytool requires a password that is six characters or more and doesn't know how to retrieve general secrets from a keystore. It is also limited to PKI keypairs. Editors will not review the secrets stored within the keystore, nor will `cat`, `more` or any other standard tools. This is why the keystore providers are better than "side file" storage of credentials.
+
+That said, it is trivial for someone to write code to access the credentials stored within a keystore-based credential provider using the API. Again, when using the default password, the password is merely a formality of persisting the keystore. The *only* protection is file  permissions and OS level access policy.
+
+Users may decide to use a password "side file" to store the password for the keystores themselves and this is supported. It is just really important to be aware of the mechanics required for this level of correctness.
+

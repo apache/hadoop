@@ -121,6 +121,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerResourceChangeRequest;
+import org.apache.hadoop.yarn.api.records.ContainerRetryContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
@@ -165,6 +166,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ContainerLaunchContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerReportPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerResourceChangeRequestPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerRetryContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerStatusPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.LocalResourcePBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NMTokenPBImpl;
@@ -199,6 +201,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ContainerLaunchContextProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerResourceChangeRequestProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerRetryContextProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
@@ -354,7 +357,7 @@ public class TestPBImplRecords {
       return rand.nextBoolean();
     } else if (type.equals(byte.class)) {
       return bytes[rand.nextInt(4)];
-    } else if (type.equals(int.class)) {
+    } else if (type.equals(int.class) || type.equals(Integer.class)) {
       return rand.nextInt(1000000);
     } else if (type.equals(long.class)) {
       return Long.valueOf(rand.nextInt(1000000));
@@ -478,6 +481,7 @@ public class TestPBImplRecords {
     generateByNewInstance(ApplicationResourceUsageReport.class);
     generateByNewInstance(ApplicationReport.class);
     generateByNewInstance(Container.class);
+    generateByNewInstance(ContainerRetryContext.class);
     generateByNewInstance(ContainerLaunchContext.class);
     generateByNewInstance(ApplicationSubmissionContext.class);
     generateByNewInstance(ContainerReport.class);
@@ -966,6 +970,12 @@ public class TestPBImplRecords {
   // ignore cause ApplicationIdPBImpl is immutable
   public void testContainerIdPBImpl() throws Exception {
     validatePBImplRecord(ContainerIdPBImpl.class, ContainerIdProto.class);
+  }
+
+  @Test
+  public void testContainerRetryPBImpl() throws Exception {
+    validatePBImplRecord(ContainerRetryContextPBImpl.class,
+        ContainerRetryContextProto.class);
   }
 
   @Test

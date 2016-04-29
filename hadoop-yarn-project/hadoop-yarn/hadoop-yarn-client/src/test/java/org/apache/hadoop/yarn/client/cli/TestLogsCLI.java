@@ -317,6 +317,21 @@ public class TestLogsCLI {
         "Hello container_0_0001_01_000003 in syslog!"));
     sysOutStream.reset();
 
+    YarnClient mockYarnClientWithException =
+        createMockYarnClientWithException();
+    cli = new LogsCLIForTest(mockYarnClientWithException);
+    cli.setConf(configuration);
+
+    exitCode =
+        cli.run(new String[] { "-applicationId", appId.toString(),
+            "-containerId", containerId3.toString() });
+    assertTrue(exitCode == 0);
+    assertTrue(sysOutStream.toString().contains(
+        "Hello container_0_0001_01_000003 in syslog!"));
+    assertTrue(sysOutStream.toString().contains(
+        "Hello container_0_0001_01_000003 in stdout!"));
+    sysOutStream.reset();
+
     fs.delete(new Path(remoteLogRootDir), true);
     fs.delete(new Path(rootLogDir), true);
   }
@@ -436,6 +451,16 @@ public class TestLogsCLI {
     doReturn(appState).when(mockAppReport).getYarnApplicationState();
     doReturn(mockAppReport).when(mockClient).getApplicationReport(
         any(ApplicationId.class));
+    return mockClient;
+  }
+
+  private YarnClient createMockYarnClientWithException()
+      throws YarnException, IOException {
+    YarnClient mockClient = mock(YarnClient.class);
+    doThrow(new YarnException()).when(mockClient).getApplicationReport(
+        any(ApplicationId.class));
+    doThrow(new YarnException()).when(mockClient).getContainerReport(
+        any(ContainerId.class));
     return mockClient;
   }
 

@@ -54,6 +54,7 @@ public class RSErasureDecoder extends AbstractErasureDecoder {
 
   private RawErasureDecoder checkCreateRSRawDecoder() {
     if (rsRawDecoder == null) {
+      // TODO: we should create the raw coder according to codec.
       rsRawDecoder = CodecUtil.createRSRawDecoder(getConf(),
           getNumDataUnits(), getNumParityUnits());
     }

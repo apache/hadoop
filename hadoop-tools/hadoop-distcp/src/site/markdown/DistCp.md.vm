@@ -63,8 +63,8 @@ $H3 Basic Usage
 
   The most common invocation of DistCp is an inter-cluster copy:
 
-    bash$ hadoop distcp hdfs://nn1:8020/foo/bar \
-    hdfs://nn2:8020/bar/foo
+    bash$ hadoop distcp hdfs://nn1:9820/foo/bar \
+    hdfs://nn2:9820/bar/foo
 
   This will expand the namespace under `/foo/bar` on nn1 into a temporary file,
   partition its contents among a set of map tasks, and start a copy on each
@@ -72,19 +72,19 @@ $H3 Basic Usage
 
   One can also specify multiple source directories on the command line:
 
-    bash$ hadoop distcp hdfs://nn1:8020/foo/a \
-    hdfs://nn1:8020/foo/b \
-    hdfs://nn2:8020/bar/foo
+    bash$ hadoop distcp hdfs://nn1:9820/foo/a \
+    hdfs://nn1:9820/foo/b \
+    hdfs://nn2:9820/bar/foo
 
   Or, equivalently, from a file using the -f option:
 
-    bash$ hadoop distcp -f hdfs://nn1:8020/srclist \
-    hdfs://nn2:8020/bar/foo
+    bash$ hadoop distcp -f hdfs://nn1:9820/srclist \
+    hdfs://nn2:9820/bar/foo
 
   Where `srclist` contains
 
-    hdfs://nn1:8020/foo/a
-    hdfs://nn1:8020/foo/b
+    hdfs://nn1:9820/foo/a
+    hdfs://nn1:9820/foo/b
 
   When copying from multiple sources, DistCp will abort the copy with an error
   message if two sources collide, but collisions at the destination are
@@ -126,35 +126,35 @@ $H3 Update and Overwrite
   Consider a copy from `/source/first/` and `/source/second/` to `/target/`,
   where the source paths have the following contents:
 
-    hdfs://nn1:8020/source/first/1
-    hdfs://nn1:8020/source/first/2
-    hdfs://nn1:8020/source/second/10
-    hdfs://nn1:8020/source/second/20
+    hdfs://nn1:9820/source/first/1
+    hdfs://nn1:9820/source/first/2
+    hdfs://nn1:9820/source/second/10
+    hdfs://nn1:9820/source/second/20
 
   When DistCp is invoked without `-update` or `-overwrite`, the DistCp defaults
   would create directories `first/` and `second/`, under `/target`. Thus:
 
-    distcp hdfs://nn1:8020/source/first hdfs://nn1:8020/source/second hdfs://nn2:8020/target
+    distcp hdfs://nn1:9820/source/first hdfs://nn1:9820/source/second hdfs://nn2:9820/target
 
   would yield the following contents in `/target`:
 
-    hdfs://nn2:8020/target/first/1
-    hdfs://nn2:8020/target/first/2
-    hdfs://nn2:8020/target/second/10
-    hdfs://nn2:8020/target/second/20
+    hdfs://nn2:9820/target/first/1
+    hdfs://nn2:9820/target/first/2
+    hdfs://nn2:9820/target/second/10
+    hdfs://nn2:9820/target/second/20
 
   When either `-update` or `-overwrite` is specified, the **contents** of the
   source-directories are copied to target, and not the source directories
   themselves. Thus:
 
-    distcp -update hdfs://nn1:8020/source/first hdfs://nn1:8020/source/second hdfs://nn2:8020/target
+    distcp -update hdfs://nn1:9820/source/first hdfs://nn1:9820/source/second hdfs://nn2:9820/target
 
   would yield the following contents in `/target`:
 
-    hdfs://nn2:8020/target/1
-    hdfs://nn2:8020/target/2
-    hdfs://nn2:8020/target/10
-    hdfs://nn2:8020/target/20
+    hdfs://nn2:9820/target/1
+    hdfs://nn2:9820/target/2
+    hdfs://nn2:9820/target/10
+    hdfs://nn2:9820/target/20
 
   By extension, if both source folders contained a file with the same name
   (say, `0`), then both sources would map an entry to `/target/0` at the
@@ -162,27 +162,27 @@ $H3 Update and Overwrite
 
   Now, consider the following copy operation:
 
-    distcp hdfs://nn1:8020/source/first hdfs://nn1:8020/source/second hdfs://nn2:8020/target
+    distcp hdfs://nn1:9820/source/first hdfs://nn1:9820/source/second hdfs://nn2:9820/target
 
   With sources/sizes:
 
-    hdfs://nn1:8020/source/first/1 32
-    hdfs://nn1:8020/source/first/2 32
-    hdfs://nn1:8020/source/second/10 64
-    hdfs://nn1:8020/source/second/20 32
+    hdfs://nn1:9820/source/first/1 32
+    hdfs://nn1:9820/source/first/2 32
+    hdfs://nn1:9820/source/second/10 64
+    hdfs://nn1:9820/source/second/20 32
 
   And destination/sizes:
 
-    hdfs://nn2:8020/target/1 32
-    hdfs://nn2:8020/target/10 32
-    hdfs://nn2:8020/target/20 64
+    hdfs://nn2:9820/target/1 32
+    hdfs://nn2:9820/target/10 32
+    hdfs://nn2:9820/target/20 64
 
   Will effect:
 
-    hdfs://nn2:8020/target/1 32
-    hdfs://nn2:8020/target/2 32
-    hdfs://nn2:8020/target/10 64
-    hdfs://nn2:8020/target/20 32
+    hdfs://nn2:9820/target/1 32
+    hdfs://nn2:9820/target/2 32
+    hdfs://nn2:9820/target/10 64
+    hdfs://nn2:9820/target/20 32
 
   `1` is skipped because the file-length and contents match. `2` is copied
   because it doesn't exist at the target. `10` and `20` are overwritten since
@@ -232,7 +232,7 @@ Flag              | Description                          | Notes
 `-bandwidth` | Specify bandwidth per map, in MB/second. | Each map will be restricted to consume only the specified bandwidth. This is not always exact. The map throttles back its bandwidth consumption during a copy, such that the **net** bandwidth used tends towards the specified value.
 `-atomic {-tmp <tmp_dir>}` | Specify atomic commit, with optional tmp directory. | `-atomic` instructs DistCp to copy the source data to a temporary target location, and then move the temporary target to the final-location atomically. Data will either be available at final target in a complete and consistent form, or not at all. Optionally, `-tmp` may be used to specify the location of the tmp-target. If not specified, a default is chosen. **Note:** tmp_dir must be on the final target cluster.
 `-async` | Run DistCp asynchronously. Quits as soon as the Hadoop Job is launched. | The Hadoop Job-id is logged, for tracking.
-`-diff` | Use snapshot diff report to identify the difference between source and target. |
+`-diff <fromSnapshot> <toSnapshot>` | Use snapshot diff report between given two snapshots to identify the difference between source and target. | This option is valid only with `-update` option and the following conditions should be satisfied. 1. Both the source and target FileSystem must be DistributedFileSystem. 2. Two snapshots (e.g., s1 and s2) have been created on the source FS. The diff between these two snapshots will be copied to the target FS. 3. The target has the same snapshot s1. No changes have been made on the target since s1. All the files/directories in the target are the same with source.s1. |
 `-numListstatusThreads` | Number of threads to use for building file listing | At most 40 threads.
 `-skipcrccheck` | Whether to skip CRC checks between source and target paths. |
 

@@ -40,6 +40,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_BACKOFF_ENABLE_DEFAULT;
 
 public class TestNameNodeReconfigure {
 
@@ -63,33 +64,15 @@ public class TestNameNodeReconfigure {
 
     // try invalid values
     nameNode.reconfigureProperty(HADOOP_CALLER_CONTEXT_ENABLED_KEY, "text");
-    assertEquals(HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value", false,
-        nameSystem.getCallerContextEnabled());
-    assertEquals(
-        HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value",
-        false,
-        nameNode.getConf().getBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY,
-            HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT));
+    verifyReconfigureCallerContextEnabled(nameNode, nameSystem, false);
 
     // enable CallerContext
     nameNode.reconfigureProperty(HADOOP_CALLER_CONTEXT_ENABLED_KEY, "true");
-    assertEquals(HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value", true,
-        nameSystem.getCallerContextEnabled());
-    assertEquals(
-        HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value",
-        true,
-        nameNode.getConf().getBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY,
-            HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT));
+    verifyReconfigureCallerContextEnabled(nameNode, nameSystem, true);
 
     // disable CallerContext
     nameNode.reconfigureProperty(HADOOP_CALLER_CONTEXT_ENABLED_KEY, "false");
-    assertEquals(HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value", false,
-        nameSystem.getCallerContextEnabled());
-    assertEquals(
-        HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value",
-        false,
-        nameNode.getConf().getBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY,
-            HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT));
+    verifyReconfigureCallerContextEnabled(nameNode, nameSystem, false);
 
     // revert to default
     nameNode.reconfigureProperty(HADOOP_CALLER_CONTEXT_ENABLED_KEY, null);
@@ -101,11 +84,63 @@ public class TestNameNodeReconfigure {
         nameNode.getConf().get(HADOOP_CALLER_CONTEXT_ENABLED_KEY));
   }
 
+  void verifyReconfigureCallerContextEnabled(final NameNode nameNode,
+      final FSNamesystem nameSystem, boolean expected) {
+    assertEquals(HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value",
+        expected, nameNode.getNamesystem().getCallerContextEnabled());
+    assertEquals(
+        HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value",
+        expected,
+        nameNode.getConf().getBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY,
+            HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT));
+  }
+
   /**
-   * Test that we can modify configuration properties.
+   * Test to reconfigure enable/disable IPC backoff
    */
   @Test
-  public void testReconfigureHearbeatCheck1() throws ReconfigurationException {
+  public void testReconfigureIPCBackoff() throws ReconfigurationException {
+    final NameNode nameNode = cluster.getNameNode();
+    NameNodeRpcServer nnrs = (NameNodeRpcServer) nameNode.getRpcServer();
+
+    String ipcClientRPCBackoffEnable = NameNode.buildBackoffEnableKey(nnrs
+        .getClientRpcServer().getPort());
+
+    // try invalid values
+    verifyReconfigureIPCBackoff(nameNode, nnrs, ipcClientRPCBackoffEnable,
+        false);
+
+    // enable IPC_CLIENT_RPC_BACKOFF
+    nameNode.reconfigureProperty(ipcClientRPCBackoffEnable, "true");
+    verifyReconfigureIPCBackoff(nameNode, nnrs, ipcClientRPCBackoffEnable,
+        true);
+
+    // disable IPC_CLIENT_RPC_BACKOFF
+    nameNode.reconfigureProperty(ipcClientRPCBackoffEnable, "false");
+    verifyReconfigureIPCBackoff(nameNode, nnrs, ipcClientRPCBackoffEnable,
+        false);
+
+    // revert to default
+    nameNode.reconfigureProperty(ipcClientRPCBackoffEnable, null);
+    assertEquals(ipcClientRPCBackoffEnable + " has wrong value", false,
+        nnrs.getClientRpcServer().isClientBackoffEnabled());
+    assertEquals(ipcClientRPCBackoffEnable + " has wrong value", null,
+        nameNode.getConf().get(ipcClientRPCBackoffEnable));
+  }
+
+  void verifyReconfigureIPCBackoff(final NameNode nameNode,
+      final NameNodeRpcServer nnrs, String property, boolean expected) {
+    assertEquals(property + " has wrong value", expected, nnrs
+        .getClientRpcServer().isClientBackoffEnabled());
+    assertEquals(property + " has wrong value", expected, nameNode.getConf()
+        .getBoolean(property, IPC_BACKOFF_ENABLE_DEFAULT));
+  }
+
+  /**
+   * Test to reconfigure interval of heart beat check and re-check.
+   */
+  @Test
+  public void testReconfigureHearbeatCheck() throws ReconfigurationException {
     final NameNode nameNode = cluster.getNameNode();
     final DatanodeManager datanodeManager = nameNode.namesystem
         .getBlockManager().getDatanodeManager();

@@ -72,6 +72,10 @@ public final class ErasureCodingPolicy {
     return schema.getNumParityUnits();
   }
 
+  public String getCodecName() {
+    return schema.getCodecName();
+  }
+
   public byte getId() {
     return id;
   }

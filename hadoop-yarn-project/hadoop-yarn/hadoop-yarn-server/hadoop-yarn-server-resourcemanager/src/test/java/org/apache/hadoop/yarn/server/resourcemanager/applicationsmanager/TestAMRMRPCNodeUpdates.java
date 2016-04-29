@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
 
+import org.apache.hadoop.yarn.event.EventDispatcher;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -65,10 +66,11 @@ public class TestAMRMRPCNodeUpdates {
       }
       @Override
       protected EventHandler<SchedulerEvent> createSchedulerEventDispatcher() {
-        return new SchedulerEventDispatcher(this.scheduler) {
+        return new EventDispatcher<SchedulerEvent>(this.scheduler,
+            this.scheduler.getClass().getName()) {
           @Override
           public void handle(SchedulerEvent event) {
-            scheduler.handle(event);
+            super.handle(event);
           }
         };
       }
@@ -96,7 +98,7 @@ public class TestAMRMRPCNodeUpdates {
   
   private void syncNodeLost(MockNM nm) throws Exception {
     rm.sendNodeStarted(nm);
-    rm.NMwaitForState(nm.getNodeId(), NodeState.RUNNING);
+    rm.waitForState(nm.getNodeId(), NodeState.RUNNING);
     rm.sendNodeLost(nm);
     dispatcher.await();
   }

@@ -369,8 +369,12 @@ public class SimpleCopyListing extends CopyListing {
       boolean specialHandling = (options.getSourcePaths().size() == 1 && !targetPathExists) ||
           options.shouldSyncFolder() || options.shouldOverwrite();
 
-      return specialHandling && sourceStatus.isDirectory() ? sourceStatus.getPath() :
-          sourceStatus.getPath().getParent();
+      if ((specialHandling && sourceStatus.isDirectory()) ||
+          sourceStatus.getPath().isRoot()) {
+        return sourceStatus.getPath();
+      } else {
+        return sourceStatus.getPath().getParent();
+      }
     }
   }
 

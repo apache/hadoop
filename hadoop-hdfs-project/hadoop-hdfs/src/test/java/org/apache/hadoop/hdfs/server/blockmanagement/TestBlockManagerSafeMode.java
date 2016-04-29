@@ -124,57 +124,101 @@ public class TestBlockManagerSafeMode {
 
   /**
    * Test the state machine transition.
+   *
+   * We use separate test methods instead of a single one because the mocked
+   * {@link #fsn} is accessed concurrently by the current thread and the
+   * <code>smmthread</code> thread in the {@link BlockManagerSafeMode}. Stubbing
+   * or verification of a shared mock from different threads is NOT the proper
+   * way of testing, which leads to intermittent behavior. Meanwhile, previous
+   * state transition may have side effects that should be reset before next
+   * test case. For example, in {@link BlockManagerSafeMode}, there is a safe
+   * mode monitor thread, which is created when BlockManagerSafeMode is
+   * constructed. It will start the first time the safe mode enters extension
+   * stage and will stop if the safe mode leaves to OFF state. Across different
+   * test cases, this thread should be reset.
    */
-  @Test(timeout = 30000)
-  public void testCheckSafeMode() {
-    bmSafeMode.activate(BLOCK_TOTAL);
-
+  @Test(timeout = 10000)
+  public void testCheckSafeMode1() {
     // stays in PENDING_THRESHOLD: pending block threshold
+    bmSafeMode.activate(BLOCK_TOTAL);
     setSafeModeStatus(BMSafeModeStatus.PENDING_THRESHOLD);
     for (long i = 0; i < BLOCK_THRESHOLD; i++) {
       setBlockSafe(i);
       bmSafeMode.checkSafeMode();
       assertEquals(BMSafeModeStatus.PENDING_THRESHOLD, getSafeModeStatus());
     }
+  }
 
-    // PENDING_THRESHOLD -> EXTENSION
+  /** Check safe mode transition from PENDING_THRESHOLD to EXTENSION. */
+  @Test(timeout = 10000)
+  public void testCheckSafeMode2() {
+    bmSafeMode.activate(BLOCK_TOTAL);
     Whitebox.setInternalState(bmSafeMode, "extension", Integer.MAX_VALUE);
     setSafeModeStatus(BMSafeModeStatus.PENDING_THRESHOLD);
     setBlockSafe(BLOCK_THRESHOLD);
     bmSafeMode.checkSafeMode();
     assertEquals(BMSafeModeStatus.EXTENSION, getSafeModeStatus());
+  }
 
-    // PENDING_THRESHOLD -> OFF
+  /** Check safe mode transition from PENDING_THRESHOLD to OFF. */
+  @Test(timeout = 10000)
+  public void testCheckSafeMode3() {
+    bmSafeMode.activate(BLOCK_TOTAL);
     Whitebox.setInternalState(bmSafeMode, "extension", 0);
     setSafeModeStatus(BMSafeModeStatus.PENDING_THRESHOLD);
     setBlockSafe(BLOCK_THRESHOLD);
     bmSafeMode.checkSafeMode();
     assertEquals(BMSafeModeStatus.OFF, getSafeModeStatus());
+  }
 
-    // stays in EXTENSION
+  /** Check safe mode stays in EXTENSION pending threshold. */
+  @Test(timeout = 10000)
+  public void testCheckSafeMode4() {
+    bmSafeMode.activate(BLOCK_TOTAL);
     setBlockSafe(0);
     setSafeModeStatus(BMSafeModeStatus.EXTENSION);
     Whitebox.setInternalState(bmSafeMode, "extension", 0);
     bmSafeMode.checkSafeMode();
     assertEquals(BMSafeModeStatus.EXTENSION, getSafeModeStatus());
+  }
 
-    // stays in EXTENSION: pending extension period
+  /** Check safe mode stays in EXTENSION pending extension period. */
+  @Test(timeout = 10000)
+  public void testCheckSafeMode5() {
+    bmSafeMode.activate(BLOCK_TOTAL);
     Whitebox.setInternalState(bmSafeMode, "extension", Integer.MAX_VALUE);
     setSafeModeStatus(BMSafeModeStatus.EXTENSION);
     setBlockSafe(BLOCK_THRESHOLD);
     bmSafeMode.checkSafeMode();
     assertEquals(BMSafeModeStatus.EXTENSION, getSafeModeStatus());
+  }
 
-    // should stay in PENDING_THRESHOLD during transitionToActive
+  /** Check it will not leave safe mode during NN transitionToActive. */
+  @Test(timeout = 10000)
+  public void testCheckSafeMode6() {
     doReturn(true).when(fsn).inTransitionToActive();
+    bmSafeMode.activate(BLOCK_TOTAL);
     Whitebox.setInternalState(bmSafeMode, "extension", 0);
     setSafeModeStatus(BMSafeModeStatus.PENDING_THRESHOLD);
     setBlockSafe(BLOCK_THRESHOLD);
     bmSafeMode.checkSafeMode();
     assertEquals(BMSafeModeStatus.PENDING_THRESHOLD, getSafeModeStatus());
+  }
+
+  /** Check smmthread will leave safe mode if NN is not in transitionToActive.*/
+  @Test(timeout = 10000)
+  public void testCheckSafeMode7() throws Exception {
     doReturn(false).when(fsn).inTransitionToActive();
+    bmSafeMode.activate(BLOCK_TOTAL);
+    Whitebox.setInternalState(bmSafeMode, "extension", 5);
+    setBlockSafe(BLOCK_THRESHOLD);
     bmSafeMode.checkSafeMode();
-    assertEquals(BMSafeModeStatus.OFF, getSafeModeStatus());
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return getSafeModeStatus() == BMSafeModeStatus.OFF;
+      }
+    }, 100, 10000);
   }
 
   /**

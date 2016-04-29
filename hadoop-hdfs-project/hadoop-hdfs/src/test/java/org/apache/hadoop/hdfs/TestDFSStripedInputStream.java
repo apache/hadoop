@@ -218,7 +218,7 @@ public class TestDFSStripedInputStream {
     }
 
     RawErasureDecoder rawDecoder = CodecUtil.createRSRawDecoder(conf,
-        DATA_BLK_NUM, PARITY_BLK_NUM);
+        DATA_BLK_NUM, PARITY_BLK_NUM, ecPolicy.getCodecName());
 
     // Update the expected content for decoded data
     int[] missingBlkIdx = new int[PARITY_BLK_NUM];

@@ -30,6 +30,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <name>Apache Hadoop HDFS Client</name>
   <packaging>jar</packaging>
 
+  <properties>
+    <hadoop.component>hdfs</hadoop.component>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>com.squareup.okhttp</groupId>

@@ -55,6 +55,18 @@ public interface Container extends EventHandler<ContainerEvent> {
 
   NMContainerStatus getNMContainerStatus();
 
+  boolean isRetryContextSet();
+
+  boolean shouldRetry(int errorCode);
+
+  String getWorkDir();
+
+  void setWorkDir(String workDir);
+
+  String getLogDir();
+
+  void setLogDir(String logDir);
+
   String toString();
 
 }

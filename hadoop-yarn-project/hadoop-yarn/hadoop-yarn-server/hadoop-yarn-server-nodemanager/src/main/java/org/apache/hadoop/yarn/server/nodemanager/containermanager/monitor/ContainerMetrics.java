@@ -121,11 +121,10 @@ public class ContainerMetrics implements MetricsSource {
   final MetricsSystem metricsSystem;
 
   // Metrics publishing status
-  private long flushPeriodMs;
+  private final long flushPeriodMs;
+  private final long unregisterDelayMs;
   private boolean flushOnPeriod = false; // true if period elapsed
   private boolean finished = false; // true if container finished
-  private boolean unregister = false; // unregister
-  private long unregisterDelayMs;
   private Timer timer; // lazily initialized
 
   /**
@@ -227,17 +226,11 @@ public class ContainerMetrics implements MetricsSource {
   @Override
   public synchronized void getMetrics(MetricsCollector collector, boolean all) {
     //Container goes through registered -> finished -> unregistered.
-    if (unregister) {
-      return;
-    }
-
     if (finished || flushOnPeriod) {
       registry.snapshot(collector.addRecord(registry.info()), all);
     }
 
-    if (finished) {
-      this.unregister = true;
-    } else if (flushOnPeriod) {
+    if (!finished && flushOnPeriod) {
       flushOnPeriod = false;
       scheduleTimerTaskIfRequired();
     }
@@ -301,6 +294,7 @@ public class ContainerMetrics implements MetricsSource {
       if (timer == null) {
         this.timer = new Timer("Metrics flush checker", true);
       }
+
       TimerTask timerTask = new TimerTask() {
         @Override
         public void run() {
@@ -311,6 +305,7 @@ public class ContainerMetrics implements MetricsSource {
           }
         }
       };
+
       timer.schedule(timerTask, flushPeriodMs);
     }
   }

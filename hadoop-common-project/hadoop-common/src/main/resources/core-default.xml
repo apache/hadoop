@@ -506,6 +506,14 @@
   </description>
 </property>
 
+<property>
+  <name>io.erasurecode.codec.rs-default.rawcoder</name>
+  <value>org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory</value>
+  <description>
+    Raw coder implementation for the rs-default codec.
+  </description>
+</property>
+
 <!-- file system properties -->
 
 <property>
@@ -859,7 +867,10 @@
 <property>
   <name>fs.s3a.multipart.threshold</name>
   <value>2147483647</value>
-  <description>Threshold before uploads or copies use parallel multipart operations.</description>
+  <description>How big (in bytes) to split upload or copy operations up into.
+    This also controls the partition size in renamed files, as rename() involves
+    copying the source file(s)
+  </description>
 </property>
 
 <property>
@@ -1099,6 +1110,17 @@
      various services. If this value is set to true then we log requests that
      fall into 99th percentile as well as increment RpcSlowCalls counter.
     </description>
+</property>
+
+<property>
+  <name>ipc.maximum.data.length</name>
+  <value>67108864</value>
+  <description>This indicates the maximum IPC message length (bytes) that can be
+    accepted by the server. Messages larger than this value are rejected by
+    server immediately. This setting should rarely need to be changed. It merits
+    investigating whether the cause of long RPC messages can be fixed instead,
+    e.g. by splitting into smaller messages.
+  </description>
 </property>
 
 <!-- Proxy Configuration -->

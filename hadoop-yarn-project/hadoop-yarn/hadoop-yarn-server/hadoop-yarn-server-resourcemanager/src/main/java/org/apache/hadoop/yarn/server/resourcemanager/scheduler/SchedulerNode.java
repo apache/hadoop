@@ -154,11 +154,13 @@ public abstract class SchedulerNode {
 
     launchedContainers.put(container.getId(), rmContainer);
 
-    LOG.info("Assigned container " + container.getId() + " of capacity "
-        + container.getResource() + " on host " + rmNode.getNodeAddress()
-        + ", which has " + numContainers + " containers, "
-        + getAllocatedResource() + " used and " + getUnallocatedResource()
-        + " available after allocation");
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Assigned container " + container.getId() + " of capacity "
+              + container.getResource() + " on host " + rmNode.getNodeAddress()
+              + ", which has " + numContainers + " containers, "
+              + getAllocatedResource() + " used and " + getUnallocatedResource()
+              + " available after allocation");
+    }
   }
 
   /**
@@ -175,11 +177,13 @@ public abstract class SchedulerNode {
       addUnallocatedResource(deltaResource);
     }
 
-    LOG.info((increase ? "Increased" : "Decreased") + " container "
-        + containerId + " of capacity " + deltaResource + " on host "
-        + rmNode.getNodeAddress() + ", which has " + numContainers
-        + " containers, " + getAllocatedResource() + " used and "
-        + getUnallocatedResource() + " available after allocation");
+    if (LOG.isDebugEnabled()) {
+      LOG.debug((increase ? "Increased" : "Decreased") + " container "
+              + containerId + " of capacity " + deltaResource + " on host "
+              + rmNode.getNodeAddress() + ", which has " + numContainers
+              + " containers, " + getAllocatedResource() + " used and "
+              + getUnallocatedResource() + " available after allocation");
+    }
   }
   
   /**
@@ -261,11 +265,13 @@ public abstract class SchedulerNode {
       updateResource(container);
     }
 
-    LOG.info("Released container " + container.getId() + " of capacity "
-        + container.getResource() + " on host " + rmNode.getNodeAddress()
-        + ", which currently has " + numContainers + " containers, "
-        + getAllocatedResource() + " used and " + getUnallocatedResource()
-        + " available" + ", release resources=" + true);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Released container " + container.getId() + " of capacity "
+              + container.getResource() + " on host " + rmNode.getNodeAddress()
+              + ", which currently has " + numContainers + " containers, "
+              + getAllocatedResource() + " used and " + getUnallocatedResource()
+              + " available" + ", release resources=" + true);
+    }
   }
 
   /**

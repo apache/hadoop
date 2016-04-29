@@ -135,12 +135,14 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     rmContainer.handle(
         new RMContainerFinishedEvent(
             containerId,
-            containerStatus, 
+            containerStatus,
             event)
-        );
-    LOG.info("Completed container: " + rmContainer.getContainerId() + 
-        " in state: " + rmContainer.getState() + " event:" + event);
-    
+    );
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Completed container: " + rmContainer.getContainerId() +
+              " in state: " + rmContainer.getState() + " event:" + event);
+    }
+
     // Remove from the list of containers
     liveContainers.remove(rmContainer.getContainerId());
 

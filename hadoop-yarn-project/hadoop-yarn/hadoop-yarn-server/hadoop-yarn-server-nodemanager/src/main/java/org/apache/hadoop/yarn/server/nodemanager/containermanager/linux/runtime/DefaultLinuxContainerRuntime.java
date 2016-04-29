@@ -102,7 +102,7 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
     try {
       privilegedOperationExecutor.executePrivilegedOperation(prefixCommands,
             launchOp, null, container.getLaunchContext().getEnvironment(),
-            false);
+            false, false);
     } catch (PrivilegedOperationException e) {
       LOG.warn("Launch container failed. Exception: ", e);
 
@@ -134,7 +134,7 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
 
       executor.executePrivilegedOperation(null,
           signalOp, null, container.getLaunchContext().getEnvironment(),
-          false);
+          false, true);
     } catch (PrivilegedOperationException e) {
       //Don't log the failure here. Some kinds of signaling failures are
       // acceptable. Let the calling executor decide what to do.

@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.http.lib.StaticUserWebFilter;
+import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
@@ -39,7 +40,6 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitUtil;
@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.event.EventDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
@@ -118,8 +119,6 @@ import java.security.PrivilegedExceptionAction;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * The ResourceManager is the main class that is a set of components.
@@ -133,6 +132,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
    * Priority of the ResourceManager shutdown hook.
    */
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
+
+  /**
+   * Used for generation of various ids.
+   */
+  public static final int EPOCH_BIT_SHIFT = 40;
 
   private static final Log LOG = LogFactory.getLog(ResourceManager.class);
   private static long clusterTimeStamp = System.currentTimeMillis();
@@ -170,7 +174,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   private WebApp webApp;
   private AppReportFetcher fetcher = null;
   protected ResourceTrackerService resourceTracker;
-  private JvmPauseMonitor pauseMonitor;
+  private JvmMetrics jvmMetrics;
   private boolean curatorEnabled = false;
   private CuratorFramework curator;
   private final String zkRootNodePassword =
@@ -283,7 +287,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     rmContext.setYarnConfiguration(conf);
     
-    createAndInitActiveServices();
+    createAndInitActiveServices(false);
 
     webAppAddress = WebAppUtils.getWebAppBindURL(this.conf,
                       YarnConfiguration.RM_BIND_HOST,
@@ -365,7 +369,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected EventHandler<SchedulerEvent> createSchedulerEventDispatcher() {
-    return new SchedulerEventDispatcher(this.scheduler);
+    return new EventDispatcher(this.scheduler, "SchedulerEventDispatcher");
   }
 
   protected Dispatcher createDispatcher() {
@@ -488,6 +492,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     private ContainerAllocationExpirer containerAllocationExpirer;
     private ResourceManager rm;
     private RMActiveServiceContext activeServiceContext;
+    private boolean fromActive = false;
 
     RMActiveServices(ResourceManager rm) {
       super("RMActiveServices");
@@ -595,11 +600,17 @@ public class ResourceManager extends CompositeService implements Recoverable {
       addService(resourceTracker);
       rmContext.setResourceTrackerService(resourceTracker);
 
-      DefaultMetricsSystem.initialize("ResourceManager");
-      JvmMetrics jm = JvmMetrics.initSingleton("ResourceManager", null);
-      pauseMonitor = new JvmPauseMonitor();
+      MetricsSystem ms = DefaultMetricsSystem.initialize("ResourceManager");
+      if (fromActive) {
+        JvmMetrics.reattach(ms, jvmMetrics);
+        UserGroupInformation.reattachMetrics();
+      } else {
+        jvmMetrics = JvmMetrics.initSingleton("ResourceManager", null);
+      }
+
+      JvmPauseMonitor pauseMonitor = new JvmPauseMonitor();
       addService(pauseMonitor);
-      jm.setPauseMonitor(pauseMonitor);
+      jvmMetrics.setPauseMonitor(pauseMonitor);
 
       // Initialize the Reservation system
       if (conf.getBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE,
@@ -716,108 +727,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
               ") but none specified (" +
               YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES + ")");
         }
-      }
-    }
-  }
-
-  @Private
-  public static class SchedulerEventDispatcher extends AbstractService
-      implements EventHandler<SchedulerEvent> {
-
-    private final ResourceScheduler scheduler;
-    private final BlockingQueue<SchedulerEvent> eventQueue =
-      new LinkedBlockingQueue<SchedulerEvent>();
-    private volatile int lastEventQueueSizeLogged = 0;
-    private final Thread eventProcessor;
-    private volatile boolean stopped = false;
-    private boolean shouldExitOnError = false;
-
-    public SchedulerEventDispatcher(ResourceScheduler scheduler) {
-      super(SchedulerEventDispatcher.class.getName());
-      this.scheduler = scheduler;
-      this.eventProcessor = new Thread(new EventProcessor());
-      this.eventProcessor.setName("ResourceManager Event Processor");
-    }
-
-    @Override
-    protected void serviceInit(Configuration conf) throws Exception {
-      this.shouldExitOnError =
-          conf.getBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY,
-            Dispatcher.DEFAULT_DISPATCHER_EXIT_ON_ERROR);
-      super.serviceInit(conf);
-    }
-
-    @Override
-    protected void serviceStart() throws Exception {
-      this.eventProcessor.start();
-      super.serviceStart();
-    }
-
-    private final class EventProcessor implements Runnable {
-      @Override
-      public void run() {
-
-        SchedulerEvent event;
-
-        while (!stopped && !Thread.currentThread().isInterrupted()) {
-          try {
-            event = eventQueue.take();
-          } catch (InterruptedException e) {
-            LOG.error("Returning, interrupted : " + e);
-            return; // TODO: Kill RM.
-          }
-
-          try {
-            scheduler.handle(event);
-          } catch (Throwable t) {
-            // An error occurred, but we are shutting down anyway.
-            // If it was an InterruptedException, the very act of 
-            // shutdown could have caused it and is probably harmless.
-            if (stopped) {
-              LOG.warn("Exception during shutdown: ", t);
-              break;
-            }
-            LOG.fatal("Error in handling event type " + event.getType()
-                + " to the scheduler", t);
-            if (shouldExitOnError
-                && !ShutdownHookManager.get().isShutdownInProgress()) {
-              LOG.info("Exiting, bbye..");
-              System.exit(-1);
-            }
-          }
-        }
-      }
-    }
-
-    @Override
-    protected void serviceStop() throws Exception {
-      this.stopped = true;
-      this.eventProcessor.interrupt();
-      try {
-        this.eventProcessor.join();
-      } catch (InterruptedException e) {
-        throw new YarnRuntimeException(e);
-      }
-      super.serviceStop();
-    }
-
-    @Override
-    public void handle(SchedulerEvent event) {
-      try {
-        int qSize = eventQueue.size();
-        if (qSize != 0 && qSize % 1000 == 0
-            && lastEventQueueSizeLogged != qSize) {
-          lastEventQueueSizeLogged = qSize;
-          LOG.info("Size of scheduler event-queue is " + qSize);
-        }
-        int remCapacity = eventQueue.remainingCapacity();
-        if (remCapacity < 1000) {
-          LOG.info("Very low remaining capacity on scheduler event queue: "
-              + remCapacity);
-        }
-        this.eventQueue.put(event);
-      } catch (InterruptedException e) {
-        LOG.info("Interrupted. Trying to exit gracefully.");
       }
     }
   }
@@ -1081,9 +990,13 @@ public class ResourceManager extends CompositeService implements Recoverable {
   /**
    * Helper method to create and init {@link #activeServices}. This creates an
    * instance of {@link RMActiveServices} and initializes it.
+   *
+   * @param fromActive Indicates if the call is from the active state transition
+   *                   or the RM initialization.
    */
-  protected void createAndInitActiveServices() {
+  protected void createAndInitActiveServices(boolean fromActive) {
     activeServices = new RMActiveServices(this);
+    activeServices.fromActive = fromActive;
     activeServices.init(conf);
   }
 
@@ -1114,7 +1027,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     QueueMetrics.clearQueueMetrics();
     if (initialize) {
       resetDispatcher();
-      createAndInitActiveServices();
+      createAndInitActiveServices(true);
     }
   }
 
@@ -1226,6 +1139,23 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected ApplicationMasterService createApplicationMasterService() {
+    if (this.rmContext.getYarnConfiguration().getBoolean(
+        YarnConfiguration.DIST_SCHEDULING_ENABLED,
+        YarnConfiguration.DIST_SCHEDULING_ENABLED_DEFAULT)) {
+      DistributedSchedulingService distributedSchedulingService = new
+          DistributedSchedulingService(this.rmContext, scheduler);
+      EventDispatcher distSchedulerEventDispatcher =
+          new EventDispatcher(distributedSchedulingService,
+              DistributedSchedulingService.class.getName());
+      // Add an event dispoatcher for the DistributedSchedulingService
+      // to handle node updates/additions and removals.
+      // Since the SchedulerEvent is currently a super set of theses,
+      // we register interest for it..
+      addService(distSchedulerEventDispatcher);
+      rmDispatcher.register(SchedulerEventType.class,
+          distSchedulerEventDispatcher);
+      return distributedSchedulingService;
+    }
     return new ApplicationMasterService(this.rmContext, scheduler);
   }
 

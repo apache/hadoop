@@ -185,7 +185,7 @@ public class DFSStripedInputStream extends DFSInputStream {
     readingService =
         new ExecutorCompletionService<>(dfsClient.getStripedReadsThreadPool());
     decoder = CodecUtil.createRSRawDecoder(dfsClient.getConfiguration(),
-        dataBlkNum, parityBlkNum);
+        dataBlkNum, parityBlkNum, ecPolicy.getCodecName());
     if (DFSClient.LOG.isDebugEnabled()) {
       DFSClient.LOG.debug("Creating an striped input stream for file " + src);
     }

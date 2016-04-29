@@ -162,6 +162,10 @@ message AbandonBlockRequestProto {
 message AbandonBlockResponseProto { // void response
 }
 
+enum AddBlockFlagProto {
+  NO_LOCAL_WRITE = 1; // avoid writing to local node.
+}
+
 message AddBlockRequestProto {
   required string src = 1;
   required string clientName = 2;
@@ -169,6 +173,7 @@ message AddBlockRequestProto {
   repeated DatanodeInfoProto excludeNodes = 4;
   optional uint64 fileId = 5 [default = 0];  // default as a bogus id
   repeated string favoredNodes = 6; //the set of datanodes to use for the block
+  repeated AddBlockFlagProto flags = 7; // default to empty.
 }
 
 message AddBlockResponseProto {

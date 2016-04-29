@@ -41,6 +41,8 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ContainerRetryContext;
+import org.apache.hadoop.yarn.api.records.ContainerRetryPolicy;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -50,6 +52,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
+import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
@@ -71,6 +74,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.Contai
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerStatus;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
@@ -98,11 +102,17 @@ public class ContainerImpl implements Container {
   private final String user;
   private int exitCode = ContainerExitStatus.INVALID;
   private final StringBuilder diagnostics;
+  private final int diagnosticsMaxSize;
   private boolean wasLaunched;
   private long containerLocalizationStartTime;
   private long containerLaunchStartTime;
   private ContainerMetrics containerMetrics;
   private static Clock clock = SystemClock.getInstance();
+  private final ContainerRetryContext containerRetryContext;
+  // remaining retries to relaunch container if needed
+  private int remainingRetryAttempts;
+  private String workDir;
+  private String logDir;
 
   /** The NM-wide configuration - not specific to this container */
   private final Configuration daemonConf;
@@ -138,6 +148,16 @@ public class ContainerImpl implements Container {
     this.dispatcher = dispatcher;
     this.stateStore = context.getNMStateStore();
     this.launchContext = launchContext;
+    if (launchContext != null
+        && launchContext.getContainerRetryContext() != null) {
+      this.containerRetryContext = launchContext.getContainerRetryContext();
+    } else {
+      this.containerRetryContext = ContainerRetryContext.NEVER_RETRY_CONTEXT;
+    }
+    this.remainingRetryAttempts = containerRetryContext.getMaxRetries();
+    this.diagnosticsMaxSize = conf.getInt(
+        YarnConfiguration.NM_CONTAINER_DIAGNOSTICS_MAXIMUM_SIZE,
+        YarnConfiguration.DEFAULT_NM_CONTAINER_DIAGNOSTICS_MAXIMUM_SIZE);
     this.containerTokenIdentifier = containerTokenIdentifier;
     this.containerId = containerTokenIdentifier.getContainerID();
     this.resource = containerTokenIdentifier.getResource();
@@ -172,22 +192,24 @@ public class ContainerImpl implements Container {
   public ContainerImpl(Configuration conf, Dispatcher dispatcher,
       ContainerLaunchContext launchContext, Credentials creds,
       NodeManagerMetrics metrics,
-      ContainerTokenIdentifier containerTokenIdentifier,
-      RecoveredContainerStatus recoveredStatus, int exitCode,
-      String diagnostics, boolean wasKilled, Resource recoveredCapability,
-      Context context) {
+      ContainerTokenIdentifier containerTokenIdentifier, Context context,
+      RecoveredContainerState rcs) {
     this(conf, dispatcher, launchContext, creds, metrics,
         containerTokenIdentifier, context);
-    this.recoveredStatus = recoveredStatus;
-    this.exitCode = exitCode;
-    this.recoveredAsKilled = wasKilled;
-    this.diagnostics.append(diagnostics);
+    this.recoveredStatus = rcs.getStatus();
+    this.exitCode = rcs.getExitCode();
+    this.recoveredAsKilled = rcs.getKilled();
+    this.diagnostics.append(rcs.getDiagnostics());
+    Resource recoveredCapability = rcs.getCapability();
     if (recoveredCapability != null
         && !this.resource.equals(recoveredCapability)) {
       // resource capability had been updated before NM was down
       this.resource = Resource.newInstance(recoveredCapability.getMemory(),
           recoveredCapability.getVirtualCores());
     }
+    this.remainingRetryAttempts = rcs.getRemainingRetryAttempts();
+    this.workDir = rcs.getWorkDir();
+    this.logDir = rcs.getLogDir();
   }
 
   private static final ContainerDiagnosticsUpdateTransition UPDATE_DIAGNOSTICS_TRANSITION =
@@ -267,9 +289,10 @@ public class ContainerImpl implements Container {
         ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS,
         new ExitedWithSuccessTransition(true))
     .addTransition(ContainerState.RUNNING,
-        ContainerState.EXITED_WITH_FAILURE,
+        EnumSet.of(ContainerState.RELAUNCHING,
+            ContainerState.EXITED_WITH_FAILURE),
         ContainerEventType.CONTAINER_EXITED_WITH_FAILURE,
-        new ExitedWithFailureTransition(true))
+        new RetryFailureTransition())
     .addTransition(ContainerState.RUNNING, ContainerState.RUNNING,
        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
        UPDATE_DIAGNOSTICS_TRANSITION)
@@ -278,6 +301,19 @@ public class ContainerImpl implements Container {
     .addTransition(ContainerState.RUNNING, ContainerState.EXITED_WITH_FAILURE,
         ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
         new KilledExternallyTransition())
+
+    // From RELAUNCHING State
+    .addTransition(ContainerState.RELAUNCHING, ContainerState.RUNNING,
+        ContainerEventType.CONTAINER_LAUNCHED, new LaunchTransition())
+    .addTransition(ContainerState.RELAUNCHING,
+        ContainerState.EXITED_WITH_FAILURE,
+        ContainerEventType.CONTAINER_EXITED_WITH_FAILURE,
+        new ExitedWithFailureTransition(true))
+    .addTransition(ContainerState.RELAUNCHING, ContainerState.RELAUNCHING,
+        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
+        UPDATE_DIAGNOSTICS_TRANSITION)
+    .addTransition(ContainerState.RELAUNCHING, ContainerState.KILLING,
+        ContainerEventType.KILL_CONTAINER, new KillTransition())
 
     // From CONTAINER_EXITED_WITH_SUCCESS State
     .addTransition(ContainerState.EXITED_WITH_SUCCESS, ContainerState.DONE,
@@ -382,6 +418,7 @@ public class ContainerImpl implements Container {
     case LOCALIZATION_FAILED:
     case LOCALIZED:
     case RUNNING:
+    case RELAUNCHING:
     case EXITED_WITH_SUCCESS:
     case EXITED_WITH_FAILURE:
     case KILLING:
@@ -408,7 +445,8 @@ public class ContainerImpl implements Container {
   public Map<Path,List<String>> getLocalizedResources() {
     this.readLock.lock();
     try {
-      if (ContainerState.LOCALIZED == getContainerState()) {
+      if (ContainerState.LOCALIZED == getContainerState()
+          || ContainerState.RELAUNCHING == getContainerState()) {
         return localizedResources;
       } else {
         return null;
@@ -453,7 +491,8 @@ public class ContainerImpl implements Container {
     this.readLock.lock();
     try {
       return BuilderUtils.newContainerStatus(this.containerId,
-        getCurrentState(), diagnostics.toString(), exitCode, getResource());
+          getCurrentState(), diagnostics.toString(), exitCode, getResource(),
+          this.containerTokenIdentifier.getExecutionType());
     } finally {
       this.readLock.unlock();
     }
@@ -500,6 +539,26 @@ public class ContainerImpl implements Container {
     }
   }
 
+  @Override
+  public String getWorkDir() {
+    return workDir;
+  }
+
+  @Override
+  public void setWorkDir(String workDir) {
+    this.workDir = workDir;
+  }
+
+  @Override
+  public String getLogDir() {
+    return logDir;
+  }
+
+  @Override
+  public void setLogDir(String logDir) {
+    this.logDir = logDir;
+  }
+
   @SuppressWarnings("unchecked")
   private void sendFinishedEvents() {
     // Inform the application
@@ -522,6 +581,14 @@ public class ContainerImpl implements Container {
       launcherEvent = ContainersLauncherEventType.RECOVER_CONTAINER;
     }
     containerLaunchStartTime = clock.getTime();
+    dispatcher.getEventHandler().handle(
+        new ContainersLauncherEvent(this, launcherEvent));
+  }
+
+  @SuppressWarnings("unchecked") // dispatcher not typed
+  private void sendRelaunchEvent() {
+    ContainersLauncherEventType launcherEvent =
+        ContainersLauncherEventType.RELAUNCH_CONTAINER;
     dispatcher.getEventHandler().handle(
         new ContainersLauncherEvent(this, launcherEvent));
   }
@@ -550,6 +617,9 @@ public class ContainerImpl implements Container {
   private void addDiagnostics(String... diags) {
     for (String s : diags) {
       this.diagnostics.append(s);
+    }
+    if (isRetryContextSet() && diagnostics.length() > diagnosticsMaxSize) {
+      diagnostics.delete(0, diagnostics.length() - diagnosticsMaxSize);
     }
     try {
       stateStore.storeContainerDiagnostics(containerId, diagnostics);
@@ -873,6 +943,100 @@ public class ContainerImpl implements Container {
 
       container.cleanup();
     }
+  }
+
+  /**
+   * Transition to EXITED_WITH_FAILURE or LOCALIZED state upon
+   * CONTAINER_EXITED_WITH_FAILURE state.
+   **/
+  @SuppressWarnings("unchecked")  // dispatcher not typed
+  static class RetryFailureTransition implements
+      MultipleArcTransition<ContainerImpl, ContainerEvent, ContainerState> {
+
+    @Override
+    public ContainerState transition(final ContainerImpl container,
+        ContainerEvent event) {
+      ContainerExitEvent exitEvent = (ContainerExitEvent) event;
+      container.exitCode = exitEvent.getExitCode();
+      if (exitEvent.getDiagnosticInfo() != null) {
+        if (container.containerRetryContext.getRetryPolicy()
+            != ContainerRetryPolicy.NEVER_RETRY) {
+          int n = container.containerRetryContext.getMaxRetries()
+              - container.remainingRetryAttempts;
+          container.addDiagnostics("Diagnostic message from attempt "
+              + n + " : ", "\n");
+        }
+        container.addDiagnostics(exitEvent.getDiagnosticInfo(), "\n");
+      }
+
+      if (container.shouldRetry(container.exitCode)) {
+        if (container.remainingRetryAttempts > 0) {
+          container.remainingRetryAttempts--;
+          try {
+            container.stateStore.storeContainerRemainingRetryAttempts(
+                container.getContainerId(), container.remainingRetryAttempts);
+          } catch (IOException e) {
+            LOG.warn(
+                "Unable to update remainingRetryAttempts in state store for "
+                + container.getContainerId(), e);
+          }
+        }
+        LOG.info("Relaunching Container " + container.getContainerId()
+            + ". Remaining retry attempts(after relaunch) : "
+            + container.remainingRetryAttempts
+            + ". Interval between retries is "
+            + container.containerRetryContext.getRetryInterval() + "ms");
+        container.wasLaunched  = false;
+        container.metrics.endRunningContainer();
+        if (container.containerRetryContext.getRetryInterval() == 0) {
+          container.sendRelaunchEvent();
+        } else {
+          // wait for some time, then send launch event
+          new Thread() {
+            @Override
+            public void run() {
+              try {
+                Thread.sleep(
+                    container.containerRetryContext.getRetryInterval());
+                container.sendRelaunchEvent();
+              } catch (InterruptedException e) {
+                return;
+              }
+            }
+          }.start();
+        }
+        return ContainerState.RELAUNCHING;
+      } else {
+        new ExitedWithFailureTransition(true).transition(container, event);
+        return ContainerState.EXITED_WITH_FAILURE;
+      }
+    }
+  }
+
+  @Override
+  public boolean isRetryContextSet() {
+    return containerRetryContext.getRetryPolicy()
+        != ContainerRetryPolicy.NEVER_RETRY;
+  }
+
+  @Override
+  public boolean shouldRetry(int errorCode) {
+    if (errorCode == ExitCode.SUCCESS.getExitCode()
+        || errorCode == ExitCode.FORCE_KILLED.getExitCode()
+        || errorCode == ExitCode.TERMINATED.getExitCode()) {
+      return false;
+    }
+
+    ContainerRetryPolicy retryPolicy = containerRetryContext.getRetryPolicy();
+    if (retryPolicy == ContainerRetryPolicy.RETRY_ON_ALL_ERRORS
+        || (retryPolicy == ContainerRetryPolicy.RETRY_ON_SPECIFIC_ERROR_CODES
+            && containerRetryContext.getErrorCodes() != null
+            && containerRetryContext.getErrorCodes().contains(errorCode))) {
+      return remainingRetryAttempts > 0
+          || remainingRetryAttempts == ContainerRetryContext.RETRY_FOREVER;
+    }
+
+    return false;
   }
 
   /**

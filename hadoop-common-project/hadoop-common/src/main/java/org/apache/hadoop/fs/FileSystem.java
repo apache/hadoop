@@ -685,8 +685,8 @@ public abstract class FileSystem extends Configured implements Closeable {
       return new BlockLocation[0];
 
     }
-    String[] name = { "localhost:50010" };
-    String[] host = { "localhost" };
+    String[] name = {"localhost:9866"};
+    String[] host = {"localhost"};
     return new BlockLocation[] {
       new BlockLocation(name, host, 0, file.getLen()) };
   }
@@ -1244,7 +1244,6 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Renames Path src to Path dst
    * <ul>
-   * <li
    * <li>Fails if src is a file and dst is a directory.
    * <li>Fails if src is a directory and dst is a file.
    * <li>Fails if the parent of dst does not exist or is a file.
@@ -2663,7 +2662,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @param src file or directory path.
    * @throws IOException
    */
-  public void unsetStoragePolicy(Path src) throws IOException {
+  public void unsetStoragePolicy(final Path src) throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
         + " doesn't support unsetStoragePolicy");
   }

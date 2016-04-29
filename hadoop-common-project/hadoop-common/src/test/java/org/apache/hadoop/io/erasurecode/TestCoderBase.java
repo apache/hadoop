@@ -112,7 +112,7 @@ public abstract class TestCoderBase {
   protected void prepare(Configuration conf, int numDataUnits,
                          int numParityUnits, int[] erasedDataIndexes,
                          int[] erasedParityIndexes, boolean usingFixedData) {
-    this.conf = conf;
+    this.conf = conf != null ? conf : new Configuration();
     this.numDataUnits = numDataUnits;
     this.numParityUnits = numParityUnits;
     this.erasedDataIndexes = erasedDataIndexes != null ?

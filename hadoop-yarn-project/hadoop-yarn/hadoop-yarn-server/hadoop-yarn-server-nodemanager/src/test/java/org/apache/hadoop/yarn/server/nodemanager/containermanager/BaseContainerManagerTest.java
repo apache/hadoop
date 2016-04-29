@@ -110,7 +110,7 @@ public abstract class BaseContainerManagerTest {
   protected Configuration conf = new YarnConfiguration();
   protected Context context = new NMContext(new NMContainerTokenSecretManager(
     conf), new NMTokenSecretManagerInNM(), null,
-    new ApplicationACLsManager(conf), new NMNullStateStoreService()) {
+    new ApplicationACLsManager(conf), new NMNullStateStoreService(), false) {
     public int getHttpPort() {
       return HTTP_PORT;
     };
@@ -280,21 +280,22 @@ public abstract class BaseContainerManagerTest {
     list.add(containerID);
     GetContainerStatusesRequest request =
         GetContainerStatusesRequest.newInstance(list);
-    ContainerStatus containerStatus =
-        containerManager.getContainerStatuses(request).getContainerStatuses()
-          .get(0);
+    ContainerStatus containerStatus = null;
     int timeoutSecs = 0;
-      while (!containerStatus.getState().equals(finalState)
-          && timeoutSecs++ < timeOutMax) {
-          Thread.sleep(1000);
-          LOG.info("Waiting for container to get into state " + finalState
-              + ". Current state is " + containerStatus.getState());
-          containerStatus = containerManager.getContainerStatuses(request).getContainerStatuses().get(0);
-        }
-        LOG.info("Container state is " + containerStatus.getState());
-        Assert.assertEquals("ContainerState is not correct (timedout)",
-            finalState, containerStatus.getState());
-      }
+    do {
+      Thread.sleep(2000);
+      containerStatus =
+          containerManager.getContainerStatuses(request)
+              .getContainerStatuses().get(0);
+      LOG.info("Waiting for container to get into state " + finalState
+          + ". Current state is " + containerStatus.getState());
+      timeoutSecs += 2;
+    } while (!containerStatus.getState().equals(finalState)
+        && timeoutSecs < timeOutMax);
+    LOG.info("Container state is " + containerStatus.getState());
+    Assert.assertEquals("ContainerState is not correct (timedout)",
+          finalState, containerStatus.getState());
+  }
 
   static void waitForApplicationState(ContainerManagerImpl containerManager,
       ApplicationId appID, ApplicationState finalState)
@@ -328,19 +329,24 @@ public abstract class BaseContainerManagerTest {
           org.apache.hadoop.yarn.server.nodemanager.containermanager
           .container.ContainerState finalState, int timeOutMax)
               throws InterruptedException, YarnException, IOException {
-    Container container =
-        containerManager.getContext().getContainers().get(containerID);
+    Container container = null;
     org.apache.hadoop.yarn.server.nodemanager
-        .containermanager.container.ContainerState currentState =
-            container.getContainerState();
+        .containermanager.container.ContainerState currentState = null;
     int timeoutSecs = 0;
-    while (!currentState.equals(finalState)
-        && timeoutSecs++ < timeOutMax) {
-      Thread.sleep(1000);
-      LOG.info("Waiting for NM container to get into state " + finalState
-          + ". Current state is " + currentState);
-      currentState = container.getContainerState();
-    }
+    do {
+      Thread.sleep(2000);
+      container =
+          containerManager.getContext().getContainers().get(containerID);
+      if (container != null) {
+        currentState = container.getContainerState();
+      }
+      if (currentState != null) {
+        LOG.info("Waiting for NM container to get into state " + finalState
+            + ". Current state is " + currentState);
+      }
+      timeoutSecs += 2;
+    } while (!currentState.equals(finalState)
+        && timeoutSecs++ < timeOutMax);
     LOG.info("Container state is " + currentState);
     Assert.assertEquals("ContainerState is not correct (timedout)",
         finalState, currentState);

@@ -472,8 +472,8 @@ public class BackupNode extends NameNode {
      * {@link BlockManager.ReplicationMonitor} protected by SafeMode.
      * {@link HeartbeatManager.Monitor} protected by SafeMode.
      * {@link DecommissionManager.Monitor} need to prohibit refreshNodes().
-     * {@link PendingReplicationBlocks.PendingReplicationMonitor} harmless,
-     * because ReplicationMonitor is muted.
+     * {@link PendingReconstructionBlocks.PendingReconstructionMonitor}
+     * harmless, because ReplicationMonitor is muted.
      */
     @Override
     public void startActiveServices() throws IOException {

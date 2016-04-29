@@ -166,7 +166,7 @@ public class TestWorkPreservingRMRestartForNodeLabel {
     containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     Assert.assertTrue(rm1.waitForState(nm1, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     checkRMContainerLabelExpression(ContainerId.newContainerId(
         am1.getApplicationAttemptId(), 1), rm1, "x");
     checkRMContainerLabelExpression(ContainerId.newContainerId(
@@ -181,7 +181,7 @@ public class TestWorkPreservingRMRestartForNodeLabel {
     am2.allocate("*", 1024, 1, new ArrayList<ContainerId>());
     containerId = ContainerId.newContainerId(am2.getApplicationAttemptId(), 2);
     Assert.assertTrue(rm1.waitForState(nm2, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     checkRMContainerLabelExpression(ContainerId.newContainerId(
         am2.getApplicationAttemptId(), 1), rm1, "y");
     checkRMContainerLabelExpression(ContainerId.newContainerId(
@@ -196,7 +196,7 @@ public class TestWorkPreservingRMRestartForNodeLabel {
     am3.allocate("*", 1024, 1, new ArrayList<ContainerId>());
     containerId = ContainerId.newContainerId(am3.getApplicationAttemptId(), 2);
     Assert.assertTrue(rm1.waitForState(nm3, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     checkRMContainerLabelExpression(ContainerId.newContainerId(
         am3.getApplicationAttemptId(), 1), rm1, "");
     checkRMContainerLabelExpression(ContainerId.newContainerId(

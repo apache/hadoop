@@ -109,7 +109,7 @@
       <description>setPolicy : set erasure coding policy on a directory to encode files</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
-        <ec-admin-command>-fs NAMENODE -setPolicy -p RS-6-3-64k /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -p RS-DEFAULT-6-3-64k /ecdir</ec-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /ecdir</command>
@@ -179,7 +179,7 @@
       <description>getPolicy : get EC policy information at specified path, which doesn't have an EC policy</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
-        <ec-admin-command>-fs NAMENODE -setPolicy -p RS-6-3-64k /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -p RS-DEFAULT-6-3-64k /ecdir</ec-admin-command>
         <ec-admin-command>-fs NAMENODE -getPolicy /ecdir</ec-admin-command>
       </test-commands>
       <cleanup-commands>
@@ -188,7 +188,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>ErasureCodingPolicy=[Name=RS-6-3-64k</expected-output>
+          <expected-output>ErasureCodingPolicy=[Name=RS-DEFAULT-6-3-64k</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -197,7 +197,7 @@
       <description>getPolicy : get EC policy information at specified path, which doesn't have an EC policy</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
-        <ec-admin-command>-fs NAMENODE -setPolicy -p RS-6-3-64k /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -p RS-DEFAULT-6-3-64k /ecdir</ec-admin-command>
         <command>-fs NAMENODE -touchz /ecdir/ecfile</command>
         <ec-admin-command>-fs NAMENODE -getPolicy /ecdir/ecfile</ec-admin-command>
       </test-commands>
@@ -208,7 +208,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>ErasureCodingPolicy=[Name=RS-6-3-64k</expected-output>
+          <expected-output>ErasureCodingPolicy=[Name=RS-DEFAULT-6-3-64k</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -223,7 +223,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>RS-6-3</expected-output>
+          <expected-output>RS-DEFAULT-6-3</expected-output>
         </comparator>
       </comparators>
     </test>

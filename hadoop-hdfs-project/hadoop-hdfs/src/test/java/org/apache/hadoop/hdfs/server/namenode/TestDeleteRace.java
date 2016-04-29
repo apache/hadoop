@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.FileNotFoundException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -123,10 +125,11 @@ public class TestDeleteRace {
                                       boolean returnChosenNodes,
                                       Set<Node> excludedNodes,
                                       long blocksize,
-                                      final BlockStoragePolicy storagePolicy) {
+                                      final BlockStoragePolicy storagePolicy,
+                                      EnumSet<AddBlockFlag> flags) {
       DatanodeStorageInfo[] results = super.chooseTarget(srcPath,
           numOfReplicas, writer, chosenNodes, returnChosenNodes, excludedNodes,
-          blocksize, storagePolicy);
+          blocksize, storagePolicy, flags);
       try {
         Thread.sleep(3000);
       } catch (InterruptedException e) {}

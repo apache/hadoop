@@ -184,7 +184,7 @@ public class ProportionalCapacityPreemptionPolicy
   }
 
   @Override
-  public void editSchedule() {
+  public synchronized void editSchedule() {
     CSQueue root = scheduler.getRootQueue();
     Resource clusterResources = Resources.clone(scheduler.getClusterResource());
     containerBasedPreemptOrKill(root, clusterResources);
@@ -192,7 +192,8 @@ public class ProportionalCapacityPreemptionPolicy
 
   @SuppressWarnings("unchecked")
   private void preemptOrkillSelectedContainerAfterWait(
-      Map<ApplicationAttemptId, Set<RMContainer>> selectedCandidates) {
+      Map<ApplicationAttemptId, Set<RMContainer>> selectedCandidates,
+      long currentTime) {
     // preempt (or kill) the selected containers
     for (Map.Entry<ApplicationAttemptId, Set<RMContainer>> e : selectedCandidates
         .entrySet()) {
@@ -204,8 +205,8 @@ public class ProportionalCapacityPreemptionPolicy
       for (RMContainer container : e.getValue()) {
         // if we tried to preempt this for more than maxWaitTime
         if (preemptionCandidates.get(container) != null
-            && preemptionCandidates.get(container) + maxWaitTime < clock
-            .getTime()) {
+            && preemptionCandidates.get(container)
+                + maxWaitTime <= currentTime) {
           // kill it
           rmContext.getDispatcher().getEventHandler().handle(
               new ContainerPreemptEvent(appAttemptId, container,
@@ -221,7 +222,7 @@ public class ProportionalCapacityPreemptionPolicy
           rmContext.getDispatcher().getEventHandler().handle(
               new ContainerPreemptEvent(appAttemptId, container,
                   SchedulerEventType.MARK_CONTAINER_FOR_PREEMPTION));
-          preemptionCandidates.put(container, clock.getTime());
+          preemptionCandidates.put(container, currentTime);
         }
       }
     }
@@ -243,13 +244,15 @@ public class ProportionalCapacityPreemptionPolicy
     }
   }
 
-  private void cleanupStaledPreemptionCandidates() {
+  private void cleanupStaledPreemptionCandidates(long currentTime) {
     // Keep the preemptionCandidates list clean
     for (Iterator<RMContainer> i = preemptionCandidates.keySet().iterator();
          i.hasNext(); ) {
       RMContainer id = i.next();
       // garbage collect containers that are irrelevant for preemption
-      if (preemptionCandidates.get(id) + 2 * maxWaitTime < clock.getTime()) {
+      // And avoid preempt selected containers for *this execution*
+      // or within 1 ms
+      if (preemptionCandidates.get(id) + 2 * maxWaitTime < currentTime) {
         i.remove();
       }
     }
@@ -335,11 +338,13 @@ public class ProportionalCapacityPreemptionPolicy
     // containers. The bottom line is, we shouldn't preempt a queue which is already
     // below its guaranteed resource.
 
+    long currentTime = clock.getTime();
+
     // preempt (or kill) the selected containers
-    preemptOrkillSelectedContainerAfterWait(toPreempt);
+    preemptOrkillSelectedContainerAfterWait(toPreempt, currentTime);
 
     // cleanup staled preemption candidates
-    cleanupStaledPreemptionCandidates();
+    cleanupStaledPreemptionCandidates(currentTime);
   }
 
   @Override

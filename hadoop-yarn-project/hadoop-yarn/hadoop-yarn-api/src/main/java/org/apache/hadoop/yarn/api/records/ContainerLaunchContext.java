@@ -24,6 +24,7 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.AuxiliaryService;
@@ -46,6 +47,7 @@ import org.apache.hadoop.yarn.util.Records;
  *   <li>Optional, application-specific binary service data.</li>
  *   <li>Environment variables for the launched process.</li>
  *   <li>Command to launch the container.</li>
+ *   <li>Retry strategy when container exits with failure.</li>
  * </ul>
  * 
  * @see ContainerManagementProtocol#startContainers(org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest)
@@ -61,6 +63,18 @@ public abstract class ContainerLaunchContext {
       Map<String, String> environment, List<String> commands,
       Map<String, ByteBuffer> serviceData,  ByteBuffer tokens,
       Map<ApplicationAccessType, String> acls) {
+    return newInstance(localResources, environment, commands, serviceData,
+        tokens, acls, null);
+  }
+
+  @Public
+  @Unstable
+  public static ContainerLaunchContext newInstance(
+      Map<String, LocalResource> localResources,
+      Map<String, String> environment, List<String> commands,
+      Map<String, ByteBuffer> serviceData, ByteBuffer tokens,
+      Map<ApplicationAccessType, String> acls,
+      ContainerRetryContext containerRetryContext) {
     ContainerLaunchContext container =
         Records.newRecord(ContainerLaunchContext.class);
     container.setLocalResources(localResources);
@@ -69,6 +83,7 @@ public abstract class ContainerLaunchContext {
     container.setServiceData(serviceData);
     container.setTokens(tokens);
     container.setApplicationACLs(acls);
+    container.setContainerRetryContext(containerRetryContext);
     return container;
   }
 
@@ -195,4 +210,22 @@ public abstract class ContainerLaunchContext {
   @Public
   @Stable
   public abstract  void setApplicationACLs(Map<ApplicationAccessType, String> acls);
+
+  /**
+   * Get the <code>ContainerRetryContext</code> to relaunch container.
+   * @return <code>ContainerRetryContext</code> to relaunch container.
+   */
+  @Public
+  @Unstable
+  public abstract ContainerRetryContext getContainerRetryContext();
+
+  /**
+   * Set the <code>ContainerRetryContext</code> to relaunch container.
+   * @param containerRetryContext <code>ContainerRetryContext</code> to
+   *                              relaunch container.
+   */
+  @Public
+  @Unstable
+  public abstract void setContainerRetryContext(
+      ContainerRetryContext containerRetryContext);
 }

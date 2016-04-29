@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -173,8 +174,8 @@ public class TestContainersMonitorResourceChange {
     assertTrue(containerEventHandler
         .isContainerKilled(getContainerId(1)));
     // create container 2
-    containersMonitor.handle(new ContainerStartMonitoringEvent(
-        getContainerId(2), 2202009L, 1048576L, 1, 0, 0));
+    containersMonitor.handle(new ContainerStartMonitoringEvent(getContainerId(
+        2), 2202009L, 1048576L, 1, 0, 0));
     // verify that this container is properly tracked
     assertNotNull(getProcessTreeInfo(getContainerId(2)));
     assertEquals(1048576L, getProcessTreeInfo(getContainerId(2))
@@ -215,8 +216,8 @@ public class TestContainersMonitorResourceChange {
     // now waiting for the next monitor cycle
     Thread.sleep(1000);
     // create a container with id 3
-    containersMonitor.handle(new ContainerStartMonitoringEvent(
-        getContainerId(3), 2202009L, 1048576L, 1, 0, 0));
+    containersMonitor.handle(new ContainerStartMonitoringEvent(getContainerId(
+        3), 2202009L, 1048576L, 1, 0, 0));
     // Verify that this container has been tracked
     assertNotNull(getProcessTreeInfo(getContainerId(3)));
     // trigger a change resource event, check limit after change

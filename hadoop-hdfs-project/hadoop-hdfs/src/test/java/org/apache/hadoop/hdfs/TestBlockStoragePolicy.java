@@ -1237,12 +1237,12 @@ public class TestBlockStoragePolicy {
 
     DatanodeStorageInfo[] targets = replicator.chooseTarget("/foo", 3,
         dataNodes[0], Collections.<DatanodeStorageInfo>emptyList(), false,
-        new HashSet<Node>(), 0, policy1);
+        new HashSet<Node>(), 0, policy1, null);
     System.out.println(Arrays.asList(targets));
     Assert.assertEquals(3, targets.length);
     targets = replicator.chooseTarget("/foo", 3,
         dataNodes[0], Collections.<DatanodeStorageInfo>emptyList(), false,
-        new HashSet<Node>(), 0, policy2);
+        new HashSet<Node>(), 0, policy2, null);
     System.out.println(Arrays.asList(targets));
     Assert.assertEquals(3, targets.length);
   }
@@ -1284,7 +1284,7 @@ public class TestBlockStoragePolicy {
 
     DatanodeStorageInfo[] targets = replicator.chooseTarget("/foo", 3,
         dataNodes[0], Collections.<DatanodeStorageInfo>emptyList(), false,
-        new HashSet<Node>(), 0, policy);
+        new HashSet<Node>(), 0, policy, null);
     System.out.println(policy.getName() + ": " + Arrays.asList(targets));
     Assert.assertEquals(2, targets.length);
     Assert.assertEquals(StorageType.SSD, targets[0].getStorageType());

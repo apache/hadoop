@@ -142,15 +142,15 @@ The order in which you set these configurations is unimportant, but the values y
 
         <property>
           <name>dfs.namenode.rpc-address.mycluster.nn1</name>
-          <value>machine1.example.com:8020</value>
+          <value>machine1.example.com:9820</value>
         </property>
         <property>
           <name>dfs.namenode.rpc-address.mycluster.nn2</name>
-          <value>machine2.example.com:8020</value>
+          <value>machine2.example.com:9820</value>
         </property>
         <property>
           <name>dfs.namenode.rpc-address.mycluster.nn3</name>
-          <value>machine3.example.com:8020</value>
+          <value>machine3.example.com:9820</value>
         </property>
 
     **Note:** You may similarly configure the "**servicerpc-address**" setting if
@@ -163,15 +163,15 @@ The order in which you set these configurations is unimportant, but the values y
 
         <property>
           <name>dfs.namenode.http-address.mycluster.nn1</name>
-          <value>machine1.example.com:50070</value>
+          <value>machine1.example.com:9870</value>
         </property>
         <property>
           <name>dfs.namenode.http-address.mycluster.nn2</name>
-          <value>machine2.example.com:50070</value>
+          <value>machine2.example.com:9870</value>
         </property>
         <property>
           <name>dfs.namenode.http-address.mycluster.nn3</name>
-          <value>machine3.example.com:50070</value>
+          <value>machine3.example.com:9870</value>
         </property>
 
     **Note:** If you have Hadoop's security features enabled, you should also set

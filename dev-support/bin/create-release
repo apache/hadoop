@@ -1,0 +1,623 @@
+#!/usr/bin/env bash
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+if [[ -z "${BASH_VERSINFO[0]}" ]] \
+   || [[ "${BASH_VERSINFO[0]}" -lt 3 ]] \
+   || [[ "${BASH_VERSINFO[0]}" -eq 3 && "${BASH_VERSINFO[1]}" -lt 2 ]]; then
+  echo "bash v3.2+ is required. Sorry."
+  exit 1
+fi
+
+function centered_text
+{
+  local text="$*"
+  local spacing=$(( (75+${#text}) /2 ))
+  printf "%*s\n"  ${spacing} "${text}"
+}
+
+function big_console_header
+{
+  printf "\n\n"
+  echo "****************************************************************************"
+  centered_text "${@}"
+  echo "****************************************************************************"
+  printf "\n\n"
+}
+
+## @description  Given a filename or dir, return the absolute version of it
+## @audience     public
+## @stability    stable
+## @param        directory
+## @replaceable  no
+## @return       0 success
+## @return       1 failure
+## @return       stdout abspath
+function hadoop_abs
+{
+  declare obj=$1
+  declare dir
+  declare fn
+
+  if [[ ! -e ${obj} ]]; then
+    return 1
+  elif [[ -d ${obj} ]]; then
+    dir=${obj}
+  else
+    dir=$(dirname -- "${obj}")
+    fn=$(basename -- "${obj}")
+    fn="/${fn}"
+  fi
+
+  dir=$(cd -P -- "${dir}" >/dev/null 2>/dev/null && pwd -P)
+  if [[ $? = 0 ]]; then
+    echo "${dir}${fn}"
+    return 0
+  fi
+  return 1
+}
+
+## @description  Print a message to stderr
+## @audience     public
+## @stability    stable
+## @replaceable  no
+## @param        string
+function hadoop_error
+{
+  echo "$*" 1>&2
+}
+
+
+function run_and_redirect
+{
+  declare logfile=$1
+  shift
+  declare res
+
+  echo "\$ ${*} > ${logfile} 2>&1"
+  # to the log
+  {
+    date
+    echo "cd $(pwd)"
+    echo "${*}"
+  } > "${logfile}"
+  # run the actual command
+  "${@}" >> "${logfile}" 2>&1
+  res=$?
+  if [[ ${res} != 0 ]]; then
+    echo
+    echo "Failed!"
+    echo
+    exit "${res}"
+  fi
+}
+
+function hadoop_native_flags
+{
+
+  # modified version of the Yetus personality
+
+  if [[ ${NATIVE} != true ]]; then
+    return
+  fi
+
+  # Based upon HADOOP-11937
+  #
+  # Some notes:
+  #
+  # - getting fuse to compile on anything but Linux
+  #   is always tricky.
+  # - Darwin assumes homebrew is in use.
+  # - HADOOP-12027 required for bzip2 on OS X.
+  # - bzip2 is broken in lots of places.
+  #   e.g, HADOOP-12027 for OS X. so no -Drequire.bzip2
+  #
+
+  case "${OSNAME}" in
+    Linux)
+      # shellcheck disable=SC2086
+      echo -Pnative -Drequire.snappy -Drequire.openssl -Drequire.fuse
+    ;;
+    Darwin)
+      echo \
+      -Pnative -Drequire.snappy  \
+      -Drequire.openssl \
+        -Dopenssl.prefix=/usr/local/opt/openssl/ \
+        -Dopenssl.include=/usr/local/opt/openssl/include \
+        -Dopenssl.lib=/usr/local/opt/openssl/lib
+    ;;
+    *)
+      # shellcheck disable=SC2086
+      echo \
+        -Pnative \
+        -Drequire.snappy -Drequire.openssl \
+        -Drequire.test.libhadoop
+    ;;
+  esac
+}
+
+# Function to probe the exit code of the script commands,
+# and stop in the case of failure with an contextual error
+# message.
+function run()
+{
+  declare res
+  declare logfile
+
+  echo "\$ ${*}"
+  "${@}"
+  res=$?
+  if [[ ${res} != 0 ]]; then
+    echo
+    echo "Failed!"
+    echo
+    exit "${res}"
+  fi
+}
+
+function domd5()
+{
+  run "${MD5SUM}" "${1}" > "${1}.md5"
+}
+
+function header()
+{
+  echo
+  printf "\n\n"
+  echo "============================================================================"
+  echo "============================================================================"
+  centered_text "Hadoop Release Creator"
+  echo "============================================================================"
+  echo "============================================================================"
+  printf "\n\n"
+  echo "Version to create      : ${HADOOP_VERSION}"
+  echo "Release Candidate Label: ${RC_LABEL##-}"
+  echo "Source Version         : ${DEFAULT_HADOOP_VERSION}"
+  printf "\n\n"
+}
+
+function set_defaults
+{
+  BINDIR=$(dirname "${BIN}")
+  BASEDIR=$(hadoop_abs "${BINDIR}/../..")
+
+  ARTIFACTS_DIR="${BASEDIR}/target/artifacts"
+
+  # Extract Hadoop version from ${BASEDIR}/pom.xml
+  DEFAULT_HADOOP_VERSION=$(grep "<version>" "${BASEDIR}/pom.xml" \
+    | head -1 \
+    | sed  -e 's|^ *<version>||' -e 's|</version>.*$||')
+
+  DOCKER=false
+  DOCKERCACHE=false
+  DOCKERFILE="${BASEDIR}/dev-support/docker/Dockerfile"
+  DOCKERRAN=false
+
+  # Extract Java version from ${BASEDIR}/pom.xml
+  # doing this outside of maven means we can do this before
+  # the docker container comes up...
+  JVM_VERSION=$(grep "<javac.version>" "${BASEDIR}/hadoop-project/pom.xml" \
+    | head -1 \
+    | sed  -e 's|^ *<javac.version>||' -e 's|</javac.version>.*$||' -e 's|..||')
+
+  GIT=$(command -v git)
+
+  GPG=$(command -v gpg)
+  GPGAGENT=$(command -v gpg-agent)
+
+  HADOOP_VERSION="${DEFAULT_HADOOP_VERSION}"
+
+  INDOCKER=false
+
+  LOGDIR="${BASEDIR}/patchprocess"
+
+  if [[ -z "${MVN}" ]]; then
+    if [[ -n "${MAVEN_HOME}" ]]; then
+      MVN=${MAVEN_HOME}/bin/mvn
+    else
+      MVN=$(command -v mvn)
+    fi
+  fi
+
+  MD5SUM=$(command -v md5sum)
+  if [[ -z "${MD5SUM}" ]]; then
+    MD5SUM=$(command -v md5)
+  fi
+
+  NATIVE=false
+  OSNAME=$(uname -s)
+
+  PUBKEYFILE="https://dist.apache.org/repos/dist/release/hadoop/common/KEYS"
+}
+
+function startgpgagent
+{
+  if [[ "${SIGN}" = true ]]; then
+    if [[ -n "${GPGAGENT}" && -z "${GPG_AGENT_INFO}" ]]; then
+      echo "starting gpg agent"
+      touch "${LOGDIR}/gpgagent.conf"
+      eval $("${GPGAGENT}" --daemon \
+        --options "${LOGDIR}/gpgagent.conf" \
+        --log-file=${LOGDIR}/create-release-gpgagent.log)
+      GPGAGENTPID=$(echo ${GPG_AGENT_INFO} | cut -f 2 -d:)
+    fi
+  fi
+}
+
+function stopgpgagent
+{
+  if [[ -n "${GPGAGENTPID}" ]]; then
+    kill ${GPGAGENTPID}
+  fi
+}
+
+function usage
+{
+  echo "--artifactsdir=[path]   Path to use to store release bits"
+  echo "--asfrelease            Make an ASF release"
+  echo "--docker                Use Hadoop's Dockerfile for guaranteed environment"
+  echo "--dockercache           Use a Docker-private maven cache"
+  echo "--logdir=[path]         Path to store logs"
+  echo "--mvncache=[path]       Path to the maven cache to use"
+  echo "--native                Also build the native components"
+  echo "--rc-label=[label]      Add this label to the builds"
+  echo "--sign                  Use .gnupg dir to sign the jars"
+  echo "--version=[version]     Use an alternative version string"
+}
+
+function option_parse
+{
+  declare i
+
+  for i in "$@"; do
+    case ${i} in
+      --asfrelease)
+        ASFRELEASE=true
+        NATIVE=true
+        SIGN=true
+      ;;
+      --artifactsdir=*)
+        ARTIFACTS_DIR=${i#*=}
+      ;;
+      --docker)
+        DOCKER=true
+      ;;
+      --dockercache)
+        DOCKERCACHE=true
+      ;;
+      --help)
+        usage
+        exit
+      ;;
+      --indocker)
+        INDOCKER=true
+      ;;
+      --logdir=*)
+        LOGDIR=${i#*=}
+      ;;
+      --mvncache=*)
+        MVNCACHE=${i#*=}
+      ;;
+      --native)
+        NATIVE=true
+      ;;
+      --rc-label=*)
+        RC_LABEL=${i#*=}
+      ;;
+      --sign)
+        SIGN=true
+      ;;
+      --version=*)
+        HADOOP_VERSION=${i#*=}
+      ;;
+    esac
+  done
+
+  if [[ ! -d "${HOME}/.gnupg" ]]; then
+    hadoop_error "ERROR: No .gnupg dir. Disabling signing capability."
+    SIGN=false
+  fi
+
+  DOCKERCMD=$(command -v docker)
+  if [[ "${DOCKER}" = true && -z "${DOCKERCMD}" ]]; then
+      hadoop_error "ERROR: docker binary not found. Disabling docker mode."
+      DOCKER=false
+  fi
+
+  if [[ "${DOCKERCACHE}" = true && "${DOCKER}" = false ]]; then
+    if [[ "${INDOCKER}" = false ]]; then
+      hadoop_error "ERROR: docker mode not enabled. Disabling dockercache."
+    fi
+    DOCKERCACHE=false
+  fi
+
+  if [[ "${DOCKERCACHE}" = true && -n "${MVNCACHE}" ]]; then
+    hadoop_error "ERROR: Cannot set --mvncache and --dockercache simultaneously."
+    exit 1
+  else
+    MVNCACHE=${MVNCACHE:-"${HOME}/.m2"}
+  fi
+
+  if [[ "${ASFRELEASE}" = true ]]; then
+    if [[ "${SIGN}" = false ]]; then
+      hadoop_error "ERROR: --asfrelease requires --sign. Exiting."
+      exit 1
+    fi
+
+    if [[ "${OSNAME}" = Linux ]]; then
+      if [[ "${DOCKER}" = false && "${INDOCKER}" = false ]]; then
+        hadoop_error "ERROR: --asfrelease requires --docker on Linux. Exiting."
+        exit 1
+      elif [[ "${DOCKERCACHE}" = false && "${INDOCKER}" = false ]]; then
+        hadoop_error "ERROR: --asfrelease on Linux requires --dockercache. Exiting."
+        exit 1
+      fi
+    fi
+  fi
+
+  if [[ -n "${MVNCACHE}" ]]; then
+    mkdir -p "${MVNCACHE}"
+    if [[ -d "${MVNCACHE}" ]]; then
+      MVN_ARGS=("-Dmaven.repo.local=${MVNCACHE}")
+    fi
+  fi
+}
+
+function dockermode
+{
+  declare lines
+  declare -a modp
+  declare imgname
+  declare -a extrad
+  declare user_name
+  declare group_id
+
+  if [[ "${DOCKER}" != true ]]; then
+    return
+  fi
+
+  user_name=${SUDO_USER:=$USER}
+  user_id=$(id -u "${user_name}")
+  group_id=$(id -g "${user_name}")
+
+  imgname="hadoop/createrelease:${HADOOP_VERSION}_${RANDOM}"
+
+  if [[ -d "${HOME}/.gnupg" ]]; then
+    extrad+=("-v" "${HOME}/.gnupg:/home/${user_name}/.gnupg")
+  fi
+
+  if [[ -n "${LOGDIR}" ]]; then
+    if [[ ! -d "${LOGDIR}" ]]; then
+      mkdir -p "${LOGDIR}"
+    fi
+    lines=$(hadoop_abs "${LOGDIR}")
+    extrad+=("-v" "${lines}:${lines}")
+  fi
+
+  if [[ -n "${ARTIFACTS_DIR}" ]]; then
+    if [[ ! -d "${ARTIFACTS_DIR}" ]]; then
+      mkdir -p "${ARTIFACTS_DIR}"
+    fi
+    lines=$(hadoop_abs "${ARTIFACTS_DIR}")
+    extrad+=("-v" "${lines}:${lines}")
+  fi
+
+  if [[ "${DOCKERCACHE}" = true ]]; then
+    modp+=("--mvncache=/maven")
+  else
+    lines=$(hadoop_abs "${MVNCACHE}")
+    extrad+=("-v" "${lines}:${lines}")
+  fi
+
+  for lines in "${PARAMS[@]}"; do
+    if [[ "${lines}" != "--docker" ]]; then
+      modp+=("$lines")
+    fi
+  done
+
+  modp+=("--indocker")
+
+  (
+    lines=$(grep -n 'YETUS CUT HERE' "${DOCKERFILE}" | cut -f1 -d:)
+    if [[ -z "${lines}" ]]; then
+      cat "${DOCKERFILE}"
+    else
+      head -n "${lines}" "${DOCKERFILE}"
+    fi
+    # make sure we put some space between, just in case last
+    # line isn't an empty line or whatever
+    printf "\n\n"
+    echo "RUN groupadd --non-unique -g ${group_id} ${user_name}"
+    echo "RUN useradd -g ${group_id} -u ${user_id} -m ${user_name}"
+    echo "RUN chown -R ${user_name} /home/${user_name}"
+    echo "ENV HOME /home/${user_name}"
+    echo "RUN mkdir -p /maven"
+    echo "RUN chown -R ${user_name} /maven"
+
+    # we always force build with the Oracle JDK
+    # but with the correct version
+    echo "ENV JAVA_HOME /usr/lib/jvm/java-${JVM_VERSION}-oracle"
+    echo "USER ${user_name}"
+    printf "\n\n"
+  ) | docker build -t "${imgname}" -
+
+  run docker run -i -t \
+    --privileged \
+    "${extrad[@]}"  \
+    -v "${BASEDIR}:/build/source" \
+    -u "${user_name}" \
+    -w "/build/source" \
+    "${imgname}" \
+    "/build/source/dev-support/bin/create-release" "${modp[@]}"
+
+  DOCKERRAN=true
+}
+
+function makearelease
+{
+  # let's start at the root
+  run cd "${BASEDIR}"
+
+  big_console_header "Cleaning the Source Tree"
+
+  # git clean to clear any remnants from previous build
+  run "${GIT}" clean -xdf
+
+  mkdir -p "${LOGDIR}"
+
+  # mvn clean for sanity
+  run_and_redirect "${LOGDIR}/mvn_clean.log" "${MVN}" "${MVN_ARGS[@]}" clean
+
+  # Create staging dir for release artifacts
+  run mkdir -p "${ARTIFACTS_DIR}"
+
+  big_console_header "Apache RAT Check"
+
+  # Create RAT report
+  run_and_redirect "${LOGDIR}/mvn_apache_rat.log" "${MVN}" "${MVN_ARGS[@]}" apache-rat:check
+
+  big_console_header "Maven Build and Install"
+
+  # Create SRC and BIN tarballs for release,
+  # Using 'install’ goal instead of 'package' so artifacts are available
+  # in the Maven local cache for the site generation
+  #
+  # shellcheck disable=SC2046
+  run_and_redirect "${LOGDIR}/mvn_install.log" \
+    "${MVN}" "${MVN_ARGS[@]}" install -Pdist,src \
+      -DskipTests -Dtar $(hadoop_native_flags)
+
+  big_console_header "Maven Site"
+
+  # Create site for release
+  run_and_redirect "${LOGDIR}/mvn_site.log" "${MVN}" "${MVN_ARGS[@]}" site site:stage -Pdist,src,releasedocs
+
+  big_console_header "Staging the release"
+
+  run mv "${BASEDIR}/target/staging/hadoop-project" "${BASEDIR}/target/r${HADOOP_VERSION}/"
+  run cd "${BASEDIR}/target/"
+  run tar czpf "hadoop-site-${HADOOP_VERSION}.tar.gz" "r${HADOOP_VERSION}"/*
+  run cd "${BASEDIR}"
+
+  # Stage RAT report
+  #shellcheck disable=SC2038
+  find . -name rat.txt | xargs -I% cat % > "${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}-rat.txt"
+
+  # Stage CHANGES and RELEASENOTES files
+  for i in CHANGES RELEASENOTES; do
+    run cp -p \
+        "${BASEDIR}/hadoop-common-project/hadoop-common/src/site/markdown/release/${HADOOP_VERSION}"/${i}*.md \
+        "${ARTIFACTS_DIR}/${i}.md"
+  done
+
+  # Prepare and stage BIN tarball
+  run cd "${BASEDIR}/hadoop-dist/target/"
+  run tar -xzpf "hadoop-${HADOOP_VERSION}.tar.gz"
+  run cp -r "${BASEDIR}/target/r${HADOOP_VERSION}"/* "hadoop-${HADOOP_VERSION}/share/doc/hadoop/"
+  run tar -czpf "hadoop-${HADOOP_VERSION}.tar.gz" "hadoop-${HADOOP_VERSION}"
+  run cd "${BASEDIR}"
+  run mv \
+    "${BASEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}.tar.gz" \
+    "${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}.tar.gz"
+
+  # Stage SRC tarball
+  run mv \
+    "${BASEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}-src.tar.gz" \
+    "${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}-src.tar.gz"
+
+  # Stage SITE tarball
+  run mv \
+     "${BASEDIR}/target/hadoop-site-${HADOOP_VERSION}.tar.gz" \
+    "${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}-site.tar.gz"
+}
+
+function signartifacts
+{
+  declare i
+
+  if [[ "${SIGN}" = false ]]; then
+    for i in ${ARTIFACTS_DIR}/*; do
+      domd5 "${i}"
+    done
+    echo ""
+    echo "Remember to sign the artifacts before staging them on the open"
+    echo ""
+    return
+  fi
+
+  big_console_header "Signing the release"
+
+  for i in ${ARTIFACTS_DIR}/*; do
+    gpg --use-agent --armor --output "${i}.asc" --detach-sig "${i}"
+    gpg --print-mds "${i}" > "${i}.mds"
+    domd5 "${i}"
+  done
+
+  if [[ "${ASFRELEASE}" = true ]]; then
+    echo "Fetching the Apache Hadoop KEYS file..."
+    curl -L "${PUBKEYFILE}" -o "${BASEDIR}/target/KEYS"
+    gpg --import --trustdb "${BASEDIR}/target/testkeysdb" "${BASEDIR}/target/KEYS"
+    gpg --verify --trustdb "${BASEDIR}/target/testkeysdb" \
+      "${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}.tar.gz.asc" \
+        "${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}.tar.gz"
+    if [[ $? != 0 ]]; then
+      hadoop_error "ERROR: GPG key is not present in ${PUBKEYFILE}."
+      hadoop_error "ERROR: This MUST be fixed. Exiting."
+      exit 1
+    fi
+  fi
+}
+
+# find root of the source tree
+BIN=$(hadoop_abs "${BASH_SOURCE:-$0}")
+PARAMS=("$@")
+
+set_defaults
+
+option_parse "${PARAMS[@]}"
+
+dockermode
+
+header
+
+if [[ -n ${RC_LABEL} ]]; then
+  RC_LABEL="-${RC_LABEL}"
+fi
+
+if [[ "${INDOCKER}" = true || "${DOCKERRAN}" = false ]]; then
+
+  startgpgagent
+
+  makearelease
+
+  signartifacts
+
+  stopgpgagent
+fi
+
+if [[ "${INDOCKER}" = true ]]; then
+  exit $?
+fi
+
+if [[ $? == 0 ]]; then
+  echo
+  echo "Congratulations, you have successfully built the release"
+  echo "artifacts for Apache Hadoop ${HADOOP_VERSION}${RC_LABEL}"
+  echo
+  echo "The artifacts for this run are available at ${ARTIFACTS_DIR}:"
+  run ls -1 "${ARTIFACTS_DIR}"
+
+  echo
+fi

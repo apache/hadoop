@@ -163,8 +163,8 @@ public class TestAllowFormat {
     // is configured in HA, then only DFS_NAMENODE_SHARED_EDITS_DIR_KEY
     // is considered.
     String localhost = "127.0.0.1";
-    InetSocketAddress nnAddr1 = new InetSocketAddress(localhost, 8020);
-    InetSocketAddress nnAddr2 = new InetSocketAddress(localhost, 9020);
+    InetSocketAddress nnAddr1 = new InetSocketAddress(localhost, 9820);
+    InetSocketAddress nnAddr2 = new InetSocketAddress(localhost, 9820);
     HATestUtil.setFailoverConfigurations(conf, logicalName, nnAddr1, nnAddr2);
 
     conf.set(DFS_NAMENODE_NAME_DIR_KEY,

@@ -494,9 +494,11 @@ public class FairScheduler extends
         // TODO: Not sure if this ever actually adds this to the list of cleanup
         // containers on the RMNode (see SchedulerNode.releaseContainer()).
         super.completedContainer(container, status, RMContainerEventType.KILL);
-        LOG.info("Killing container" + container +
-            " (after waiting for preemption for " +
-            (getClock().getTime() - time) + "ms)");
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Killing container" + container +
+                  " (after waiting for preemption for " +
+                  (getClock().getTime() - time) + "ms)");
+        }
       }
     } else {
       // track the request in the FSAppAttempt itself
@@ -869,9 +871,11 @@ public class FairScheduler extends
       updateRootQueueMetrics();
     }
 
-    LOG.info("Application attempt " + application.getApplicationAttemptId()
-        + " released container " + container.getId() + " on node: " + node
-        + " with event: " + event);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Application attempt " + application.getApplicationAttemptId()
+              + " released container " + container.getId() + " on node: " + node
+              + " with event: " + event);
+    }
   }
 
   private synchronized void addNode(List<NMContainerStatus> containerReports,

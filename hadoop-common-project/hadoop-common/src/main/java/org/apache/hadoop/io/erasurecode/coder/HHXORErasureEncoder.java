@@ -65,7 +65,7 @@ public class HHXORErasureEncoder extends AbstractErasureEncoder {
   private RawErasureEncoder checkCreateRSRawEncoder() {
     if (rsRawEncoder == null) {
       rsRawEncoder = CodecUtil.createRSRawEncoder(getConf(),
-              getNumDataUnits(), getNumParityUnits());
+          getNumDataUnits(), getNumParityUnits());
     }
     return rsRawEncoder;
   }

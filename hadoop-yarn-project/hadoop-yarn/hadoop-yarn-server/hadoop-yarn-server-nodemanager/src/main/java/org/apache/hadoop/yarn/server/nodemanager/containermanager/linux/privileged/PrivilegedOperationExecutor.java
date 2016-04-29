@@ -133,18 +133,19 @@ public class PrivilegedOperationExecutor {
    * @param workingDir     (optional) working directory for execution
    * @param env            (optional) env of the command will include specified vars
    * @param grabOutput     return (possibly large) shell command output
+   * @param inheritParentEnv inherit the env vars from the parent process
    * @return stdout contents from shell executor - useful for some privileged
    * operations - e.g --tc_read
    * @throws org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException
    */
   public String executePrivilegedOperation(List<String> prefixCommands,
       PrivilegedOperation operation, File workingDir,
-      Map<String, String> env, boolean grabOutput)
+      Map<String, String> env, boolean grabOutput, boolean inheritParentEnv)
       throws PrivilegedOperationException {
     String[] fullCommandArray = getPrivilegedOperationExecutionCommand
         (prefixCommands, operation);
     ShellCommandExecutor exec = new ShellCommandExecutor(fullCommandArray,
-        workingDir, env);
+        workingDir, env, 0L, inheritParentEnv);
 
     try {
       exec.execute();
@@ -199,7 +200,8 @@ public class PrivilegedOperationExecutor {
    */
   public String executePrivilegedOperation(PrivilegedOperation operation,
       boolean grabOutput) throws PrivilegedOperationException {
-    return executePrivilegedOperation(null, operation, null, null, grabOutput);
+    return executePrivilegedOperation(null, operation, null, null, grabOutput,
+        true);
   }
 
   //Utility functions for squashing together operations in supported ways

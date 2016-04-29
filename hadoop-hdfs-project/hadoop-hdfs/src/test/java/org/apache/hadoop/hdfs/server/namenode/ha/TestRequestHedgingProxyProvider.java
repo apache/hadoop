@@ -57,10 +57,10 @@ public class TestRequestHedgingProxyProvider {
         DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + "." + ns, "nn1,nn2");
     conf.set(
         DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY + "." + ns + ".nn1",
-        "machine1.foo.bar:8020");
+        "machine1.foo.bar:9820");
     conf.set(
         DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY + "." + ns + ".nn2",
-        "machine2.foo.bar:8020");
+        "machine2.foo.bar:9820");
   }
 
   @Test
@@ -217,7 +217,7 @@ public class TestRequestHedgingProxyProvider {
     conf.set(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + "." + ns,
             "nn1,nn2,nn3");
     conf.set(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY + "." + ns + ".nn3",
-            "machine3.foo.bar:8020");
+            "machine3.foo.bar:9820");
 
     final AtomicInteger counter = new AtomicInteger(0);
     final int[] isGood = {1};

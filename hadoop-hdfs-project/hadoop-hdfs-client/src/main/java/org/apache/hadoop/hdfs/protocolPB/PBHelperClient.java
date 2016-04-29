@@ -37,6 +37,7 @@ import com.google.protobuf.CodedInputStream;
 import org.apache.hadoop.crypto.CipherOption;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
+import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -97,6 +98,7 @@ import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto.AclEntryTyp
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto.FsActionProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.GetAclStatusResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddBlockFlagProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoExpirationProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
@@ -2527,5 +2529,30 @@ public class PBHelperClient {
       builder.addDatanodes(PBHelperClient.convert(datanodeInfo));
     }
     return builder.build();
+  }
+
+  public static EnumSet<AddBlockFlag> convertAddBlockFlags(
+      List<AddBlockFlagProto> addBlockFlags) {
+    EnumSet<AddBlockFlag> flags =
+        EnumSet.noneOf(AddBlockFlag.class);
+    for (AddBlockFlagProto af : addBlockFlags) {
+      AddBlockFlag flag = AddBlockFlag.valueOf((short)af.getNumber());
+      if (flag != null) {
+        flags.add(flag);
+      }
+    }
+    return flags;
+  }
+
+  public static List<AddBlockFlagProto> convertAddBlockFlags(
+      EnumSet<AddBlockFlag> flags) {
+    List<AddBlockFlagProto> ret = new ArrayList<>();
+    for (AddBlockFlag flag : flags) {
+      AddBlockFlagProto abfp = AddBlockFlagProto.valueOf(flag.getMode());
+      if (abfp != null) {
+        ret.add(abfp);
+      }
+    }
+    return ret;
   }
 }

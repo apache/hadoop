@@ -296,7 +296,7 @@ public class TestDNFencing {
       LOG.info("Getting more replication work computed");
     }
     BlockManager bm1 = nn1.getNamesystem().getBlockManager();
-    while (bm1.getPendingReplicationBlocksCount() > 0) {
+    while (bm1.getPendingReconstructionBlocksCount() > 0) {
       BlockManagerTestUtil.updateState(bm1);
       cluster.triggerHeartbeats();
       Thread.sleep(1000);

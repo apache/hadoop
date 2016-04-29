@@ -82,6 +82,7 @@ enum ContainerStateProto {
   C_NEW = 1;
   C_RUNNING = 2;
   C_COMPLETE = 3;
+  C_QUEUED = 4;
 }
 
 message ContainerProto {
@@ -303,6 +304,7 @@ message ResourceRequestProto {
   optional int32 num_containers = 4;
   optional bool relax_locality = 5 [default = true];
   optional string node_label_expression = 6;
+  optional ExecutionTypeProto executionType = 7 [default = GUARANTEED];
 }
 
 enum AMCommandProto {
@@ -509,6 +511,7 @@ message ContainerLaunchContextProto {
   repeated StringStringMapProto environment = 4;
   repeated string command = 5;
   repeated ApplicationACLMapProto application_ACLs = 6;
+  optional ContainerRetryContextProto container_retry_context = 7;
 }
 
 message ContainerStatusProto {
@@ -531,6 +534,19 @@ message ContainerResourceChangeRequestProto {
   optional ContainerIdProto container_id = 1;
   optional ResourceProto capability = 2;
 } 
+
+message ContainerRetryContextProto {
+  optional ContainerRetryPolicyProto retry_policy = 1 [default = NEVER_RETRY];
+  repeated int32 error_codes = 2;
+  optional int32 max_retries = 3 [default = 0];
+  optional int32 retry_interval = 4 [default = 0];
+}
+
+enum ContainerRetryPolicyProto {
+  NEVER_RETRY = 0;
+  RETRY_ON_ALL_ERRORS = 1;
+  RETRY_ON_SPECIFIC_ERROR_CODES = 2;
+}
 
 ////////////////////////////////////////////////////////////////////////
 ////// From common//////////////////////////////////////////////////////

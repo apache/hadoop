@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 import org.apache.commons.io.FileUtils;
@@ -653,8 +654,8 @@ public class TestFsDatasetImpl {
       out.hflush();
 
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath);
-      FsVolumeImpl volume = (FsVolumeImpl) dataNode.getFSDataset().getVolume(
-          block);
+      final FsVolumeImpl volume = (FsVolumeImpl) dataNode.getFSDataset().
+          getVolume(block);
       File finalizedDir = volume.getFinalizedDir(cluster.getNamesystem()
           .getBlockPoolId());
 
@@ -669,9 +670,11 @@ public class TestFsDatasetImpl {
       // Invoke the synchronous checkDiskError method
       dataNode.getFSDataset().checkDataDir();
       // Sleep for 1 second so that datanode can interrupt and cluster clean up
-      Thread.sleep(1000);
-      assertEquals("There are active threads still referencing volume: "
-          + volume.getBasePath(), 0, volume.getReferenceCount());
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+          @Override public Boolean get() {
+              return volume.getReferenceCount() == 0;
+            }
+          }, 100, 10);
       LocatedBlock lb = DFSTestUtil.getAllBlocks(fs, filePath).get(0);
       DatanodeInfo info = lb.getLocations()[0];
 
@@ -680,7 +683,7 @@ public class TestFsDatasetImpl {
         Assert.fail("This is not a valid code path. "
             + "out.close should have thrown an exception.");
       } catch (IOException ioe) {
-        Assert.assertTrue(ioe.getMessage().contains(info.toString()));
+        GenericTestUtils.assertExceptionContains(info.toString(), ioe);
       }
       finalizedDir.setWritable(true);
       finalizedDir.setExecutable(true);

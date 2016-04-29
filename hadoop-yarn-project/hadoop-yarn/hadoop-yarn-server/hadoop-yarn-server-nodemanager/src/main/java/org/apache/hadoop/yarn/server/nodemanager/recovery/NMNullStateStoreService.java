@@ -100,6 +100,21 @@ public class NMNullStateStoreService extends NMStateStoreService {
   }
 
   @Override
+  public void storeContainerRemainingRetryAttempts(ContainerId containerId,
+      int remainingRetryAttempts) throws IOException {
+  }
+
+  @Override
+  public void storeContainerWorkDir(ContainerId containerId,
+      String workDir) throws IOException {
+  }
+
+  @Override
+  public void storeContainerLogDir(ContainerId containerId,
+      String logDir) throws IOException {
+  }
+
+  @Override
   public void removeContainer(ContainerId containerId) throws IOException {
   }
 

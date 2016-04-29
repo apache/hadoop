@@ -270,7 +270,7 @@ public class TestApplicationMasterService {
       am1.registerAppAttempt();
 
       am1.unregisterAppAttempt(req, false);
-      am1.waitForState(RMAppAttemptState.FINISHING);
+      rm.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FINISHING);
     } finally {
       if (rm != null) {
         rm.stop();
@@ -310,6 +310,9 @@ public class TestApplicationMasterService {
       rm.start();
       MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
       RMApp app1 = rm.submitApp(2048);
+      //Wait to make sure the attempt has the right state
+      //TODO explore a better way than sleeping for a while (YARN-4929)
+      Thread.sleep(1000);
       nm1.nodeHeartbeat(true);
       RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
       MockAM am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());

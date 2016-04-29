@@ -1204,7 +1204,7 @@ public class NNThroughputBenchmark implements Tool {
       for (int i = 0; i < 30; i++) {
         try {
           return clientProto.addBlock(src, clientName,
-              previous, excludeNodes, fileId, favoredNodes);
+              previous, excludeNodes, fileId, favoredNodes, null);
         } catch (NotReplicatedYetException|RemoteException e) {
           if (e instanceof RemoteException) {
             String className = ((RemoteException) e).getClassName();

@@ -104,6 +104,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -462,7 +463,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
 
     // fail the AM by sending CONTAINER_FINISHED event without registering.
     nm1.nodeHeartbeat(am0.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
-    am0.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.FAILED);
 
     ApplicationStateData appState = rmAppState.get(app0.getApplicationId());
     // assert the AM failed state is saved.
@@ -516,7 +517,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     MockAM am1 = launchAM(app1, rm1, nm1);
     nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
     // Fail first AM.
-    am1.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     
     // launch another AM.
     MockAM am2 = launchAM(app1, rm1, nm1);
@@ -687,7 +688,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
         FinishApplicationMasterRequest.newInstance(
           FinalApplicationStatus.SUCCEEDED, "", "");
     am0.unregisterAppAttempt(req, true);
-    am0.waitForState(RMAppAttemptState.FINISHING);
+    rm1.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.FINISHING);
     // app final state is not saved. This guarantees that RMApp cannot be
     // recovered via its own saved state, but only via the event notification
     // from the RMAppAttempt on recovery.
@@ -728,7 +729,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
 
     // fail the AM by sending CONTAINER_FINISHED event without registering.
     nm1.nodeHeartbeat(am0.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
-    am0.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     rm1.waitForState(app0.getApplicationId(), RMAppState.FAILED);
 
     // assert the app/attempt failed state is saved.
@@ -923,7 +924,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     MockAM am1 = launchAM(app1, rm1, nm1);
     // fail the AM by sending CONTAINER_FINISHED event without registering.
     nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
-    am1.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     rm1.waitForState(app1.getApplicationId(), RMAppState.FAILED);
 
     // a killed app.
@@ -1004,7 +1005,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
 
   private MockAM launchAM(RMApp app, MockRM rm, MockNM nm)
       throws Exception {
-    RMAppAttempt attempt = app.getCurrentAppAttempt();
+    RMAppAttempt attempt = MockRM.waitForAttemptScheduled(app, rm);
     nm.nodeHeartbeat(true);
     MockAM am = rm.sendAMLaunched(attempt.getAppAttemptId());
     am.registerAppAttempt();
@@ -1042,9 +1043,9 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     Map<ApplicationId, ApplicationStateData> rmAppState =
         rmState.getApplicationState();
     am.unregisterAppAttempt(req,true);
-    am.waitForState(RMAppAttemptState.FINISHING);
+    rm.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FINISHING);
     nm.nodeHeartbeat(am.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
-    am.waitForState(RMAppAttemptState.FINISHED);
+    rm.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FINISHED);
     rm.waitForState(rmApp.getApplicationId(), RMAppState.FINISHED);
     // check that app/attempt is saved with the final state
     ApplicationStateData appState = rmAppState.get(rmApp.getApplicationId());
@@ -2231,7 +2232,9 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     rm2.waitForState(applicationId, RMAppState.ACCEPTED);
     rm2.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.FAILED);
 
-
+    //Wait to make sure the loadedApp0 has the right number of attempts
+    //TODO explore a better way than sleeping for a while (YARN-4929)
+    Thread.sleep(1000);
     Assert.assertEquals(2, loadedApp0.getAppAttempts().size());
     rm2.waitForState(appAttemptId2, RMAppAttemptState.SCHEDULED);
 
@@ -2328,6 +2331,8 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     // start RM
     MockRM rm1 = new MockRM(conf, memStore);
     rm1.start();
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
     nm1.registerNode();
@@ -2337,18 +2342,22 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     MockAM am0 = MockRM.launchAM(app0, rm1, nm1);
     nm1.nodeHeartbeat(am0.getApplicationAttemptId(), 1,
         ContainerState.COMPLETE);
-    am0.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.FAILED);
+    TestSchedulerUtils.waitSchedulerApplicationAttemptStopped(cs,
+        am0.getApplicationAttemptId());
+
     for (int i = 0; i < 4; i++) {
       am0 = MockRM.launchAM(app0, rm1, nm1);
       am0.registerAppAttempt();
-      CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
       // get scheduler app
       FiCaSchedulerApp schedulerAppAttempt = cs.getSchedulerApplications()
           .get(app0.getApplicationId()).getCurrentAppAttempt();
       // kill app0-attempt
       cs.markContainerForKillable(schedulerAppAttempt.getRMContainer(
           app0.getCurrentAppAttempt().getMasterContainer().getId()));
-      am0.waitForState(RMAppAttemptState.FAILED);
+      rm1.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.FAILED);
+      TestSchedulerUtils.waitSchedulerApplicationAttemptStopped(cs,
+          am0.getApplicationAttemptId());
     }
     am0 = MockRM.launchAM(app0, rm1, nm1);
     am0.registerAppAttempt();
@@ -2427,7 +2436,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
       throws Exception {
     MockAM am = launchAM(app, rm, nm);
     nm.nodeHeartbeat(am.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
-    am.waitForState(RMAppAttemptState.FAILED);
+    rm.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     return am;
   }
 }

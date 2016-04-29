@@ -82,11 +82,11 @@ import org.apache.hadoop.security.UserGroupInformation;
  *
  * <p>Examples:</p>
  * <p><blockquote><pre>
- * $ bin/hadoop dfs -fs darwin:8020 -ls /data
- * list /data directory in dfs with namenode darwin:8020
+ * $ bin/hadoop dfs -fs darwin:9820 -ls /data
+ * list /data directory in dfs with namenode darwin:9820
  * 
- * $ bin/hadoop dfs -D fs.default.name=darwin:8020 -ls /data
- * list /data directory in dfs with namenode darwin:8020
+ * $ bin/hadoop dfs -D fs.default.name=darwin:9820 -ls /data
+ * list /data directory in dfs with namenode darwin:9820
  *     
  * $ bin/hadoop dfs -conf core-site.xml -conf hdfs-site.xml -ls /data
  * list /data directory in dfs with multiple conf files specified.

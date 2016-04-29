@@ -623,7 +623,9 @@ class BlockManagerSafeMode {
      * the extension time has passed.
      */
     private boolean canLeave() {
-      if (timeToLeaveExtension() > 0) {
+      if (namesystem.inTransitionToActive()) {
+        return false;
+      } else if (timeToLeaveExtension() > 0) {
         reportStatus("STATE* Safe mode ON, in safe mode extension.", false);
         return false;
       } else if (!areThresholdsMet()) {

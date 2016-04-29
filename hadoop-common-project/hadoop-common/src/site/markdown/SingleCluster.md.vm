@@ -144,7 +144,7 @@ The following instructions are to run a MapReduce job locally. If you want to ex
 
 3.  Browse the web interface for the NameNode; by default it is available at:
 
-    * NameNode - `http://localhost:50070/`
+    * NameNode - `http://localhost:9870/`
 
 4.  Make the HDFS directories required to execute MapReduce jobs:
 

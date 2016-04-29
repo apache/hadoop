@@ -235,6 +235,15 @@ public class Balancer {
     return v;
   }
 
+  static long getLongBytes(Configuration conf, String key, long defaultValue) {
+    final long v = conf.getLongBytes(key, defaultValue);
+    LOG.info(key + " = " + v + " (default=" + defaultValue + ")");
+    if (v <= 0) {
+      throw new HadoopIllegalArgumentException(key + " = " + v  + " <= " + 0);
+    }
+    return v;
+  }
+
   static int getInt(Configuration conf, String key, int defaultValue) {
     final int v = conf.getInt(key, defaultValue);
     LOG.info(key + " = " + v + " (default=" + defaultValue + ")");
@@ -266,10 +275,10 @@ public class Balancer {
         DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
         DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT);
 
-    final long getBlocksSize = getLong(conf,
+    final long getBlocksSize = getLongBytes(conf,
         DFSConfigKeys.DFS_BALANCER_GETBLOCKS_SIZE_KEY,
         DFSConfigKeys.DFS_BALANCER_GETBLOCKS_SIZE_DEFAULT);
-    final long getBlocksMinBlockSize = getLong(conf,
+    final long getBlocksMinBlockSize = getLongBytes(conf,
         DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY,
         DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_DEFAULT);
 
@@ -284,10 +293,10 @@ public class Balancer {
     this.sourceNodes = p.getSourceNodes();
     this.runDuringUpgrade = p.getRunDuringUpgrade();
 
-    this.maxSizeToMove = getLong(conf,
+    this.maxSizeToMove = getLongBytes(conf,
         DFSConfigKeys.DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY,
         DFSConfigKeys.DFS_BALANCER_MAX_SIZE_TO_MOVE_DEFAULT);
-    this.defaultBlockSize = getLong(conf,
+    this.defaultBlockSize = getLongBytes(conf,
         DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
         DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
   }
@@ -525,13 +534,19 @@ public class Balancer {
         final C c = candidates.next();
         if (!c.hasSpaceForScheduling()) {
           candidates.remove();
-        } else if (matcher.match(dispatcher.getCluster(),
-            g.getDatanodeInfo(), c.getDatanodeInfo())) {
+        } else if (matchStorageGroups(c, g, matcher)) {
           return c;
         }
       }
     }
     return null;
+  }
+
+  private boolean matchStorageGroups(StorageGroup left, StorageGroup right,
+      Matcher matcher) {
+    return left.getStorageType() == right.getStorageType()
+        && matcher.match(dispatcher.getCluster(),
+            left.getDatanodeInfo(), right.getDatanodeInfo());
   }
 
   /* reset all fields in a balancer preparing for the next iteration */

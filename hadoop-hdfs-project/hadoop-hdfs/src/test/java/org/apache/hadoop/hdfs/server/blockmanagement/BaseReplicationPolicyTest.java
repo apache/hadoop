@@ -156,6 +156,6 @@ abstract public class BaseReplicationPolicyTest {
      Set<Node> excludedNodes) {
     return replicator.chooseTarget(filename, numOfReplicas, writer,
         chosenNodes, false, excludedNodes, BLOCK_SIZE,
-        TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
+        TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY, null);
   }
 }

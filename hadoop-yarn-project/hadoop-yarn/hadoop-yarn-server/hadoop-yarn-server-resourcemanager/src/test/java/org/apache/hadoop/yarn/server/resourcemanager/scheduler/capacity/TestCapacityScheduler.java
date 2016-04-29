@@ -813,6 +813,7 @@ public class TestCapacityScheduler {
 
   @Test
   public void testResourceOverCommit() throws Exception {
+    int waitCount;
     Configuration conf = new Configuration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
@@ -867,9 +868,18 @@ public class TestCapacityScheduler {
         UpdateNodeResourceRequest.newInstance(nodeResourceMap);
     AdminService as = ((MockRM)rm).getAdminService();
     as.updateNodeResource(request);
-    
+
+    waitCount = 0;
+    while (waitCount++ != 20) {
+      report_nm1 = rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
+      if (report_nm1.getAvailableResource().getMemory() != 0) {
+        break;
+      }
+      LOG.info("Waiting for RMNodeResourceUpdateEvent to be handled... Tried "
+          + waitCount + " times already..");
+      Thread.sleep(1000);
+    }
     // Now, the used resource is still 4 GB, and available resource is minus value.
-    report_nm1 = rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
     Assert.assertEquals(4 * GB, report_nm1.getUsedResource().getMemory());
     Assert.assertEquals(-2 * GB, report_nm1.getAvailableResource().getMemory());
     
@@ -877,7 +887,7 @@ public class TestCapacityScheduler {
     ContainerStatus containerStatus = BuilderUtils.newContainerStatus(
         c1.getId(), ContainerState.COMPLETE, "", 0, c1.getResource());
     nm1.containerStatus(containerStatus);
-    int waitCount = 0;
+    waitCount = 0;
     while (attempt1.getJustFinishedContainers().size() < 1
         && waitCount++ != 20) {
       LOG.info("Waiting for containers to be finished for app 1... Tried "
@@ -1083,7 +1093,7 @@ public class TestCapacityScheduler {
     ContainerId containerId2 =
         ContainerId.newContainerId(applicationAttemptId, 2);
     Assert.assertTrue(rm.waitForState(nm1, containerId2,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
 
     // Acquire the container
     allocateRequest = AllocateRequest.newInstance(1, 0.0f, null, null, null);
@@ -2569,7 +2579,7 @@ public class TestCapacityScheduler {
       ContainerId containerId =
           ContainerId.newContainerId(am.getApplicationAttemptId(), cId);
       Assert.assertTrue(rm.waitForState(nm, containerId,
-          RMContainerState.ALLOCATED, 10 * 1000));
+          RMContainerState.ALLOCATED));
     }
   }
 
@@ -2806,10 +2816,10 @@ public class TestCapacityScheduler {
     ContainerId containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     Assert.assertTrue(rm.waitForState(nm1, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     containerId = ContainerId.newContainerId(am1.getApplicationAttemptId(), 3);
     Assert.assertTrue(rm.waitForState(nm2, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     
     checkPendingResource(rm, "a1", 0 * GB, null);
     checkPendingResource(rm, "a", 0 * GB, null);
@@ -3151,7 +3161,7 @@ public class TestCapacityScheduler {
     ContainerId containerId3 =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 3);
     Assert.assertTrue(rm.waitForState(nm1, containerId3,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        RMContainerState.ALLOCATED));
     // Acquire them
     am1.allocate(null, null);
     sentRMContainerLaunched(rm,

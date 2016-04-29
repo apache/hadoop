@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.impl.BlockReaderTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -491,7 +492,8 @@ public class StripedFileTestUtil {
       }
     }
     final RawErasureEncoder encoder =
-        CodecUtil.createRSRawEncoder(conf, dataBytes.length, parityBytes.length);
+        CodecUtil.createRSRawEncoder(conf, dataBytes.length, parityBytes.length,
+            TEST_EC_POLICY.getCodecName());
     encoder.encode(dataBytes, expectedParityBytes);
     for (int i = 0; i < parityBytes.length; i++) {
       if (checkSet.contains(i + dataBytes.length)){

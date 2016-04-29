@@ -64,6 +64,8 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
+
+import org.apache.hadoop.yarn.server.nodemanager.scheduler.LocalScheduler;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
@@ -463,6 +465,12 @@ public class AMRMProxyService extends AbstractService implements
         StringUtils.getStringCollection(configuredInterceptorClassNames);
     for (String item : tempList) {
       interceptorClassNames.add(item.trim());
+    }
+
+    // Make sure LocalScheduler is present at the beginning
+    // of the chain..
+    if (this.nmContext.isDistributedSchedulingEnabled()) {
+      interceptorClassNames.add(0, LocalScheduler.class.getName());
     }
 
     return interceptorClassNames;

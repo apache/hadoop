@@ -112,7 +112,7 @@ public class TestReplicationPolicyConsiderLoad
       DatanodeStorageInfo[] targets = namenode.getNamesystem().getBlockManager()
           .getBlockPlacementPolicy().chooseTarget("testFile.txt", 3,
               writerDn, new ArrayList<DatanodeStorageInfo>(), false, null,
-              1024, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
+              1024, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY, null);
 
       assertEquals(3, targets.length);
       Set<DatanodeStorageInfo> targetSet = new HashSet<>(
@@ -171,7 +171,7 @@ public class TestReplicationPolicyConsiderLoad
       DatanodeStorageInfo[] targets = namenode.getNamesystem().getBlockManager()
           .getBlockPlacementPolicy().chooseTarget("testFile.txt", 3, writerDn,
               new ArrayList<DatanodeStorageInfo>(), false, null,
-              1024, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
+              1024, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY, null);
       for(DatanodeStorageInfo info : targets) {
         assertTrue("The node "+info.getDatanodeDescriptor().getName()+
                 " has higher load and should not have been picked!",

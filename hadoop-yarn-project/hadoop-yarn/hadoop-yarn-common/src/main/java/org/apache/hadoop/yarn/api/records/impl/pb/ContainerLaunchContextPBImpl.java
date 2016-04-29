@@ -29,10 +29,12 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ContainerRetryContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationACLMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerLaunchContextProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerLaunchContextProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerRetryContextProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.StringBytesMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.StringLocalResourceMapProto;
@@ -56,7 +58,8 @@ extends ContainerLaunchContext {
   private Map<String, String> environment = null;
   private List<String> commands = null;
   private Map<ApplicationAccessType, String> applicationACLS = null;
-  
+  private ContainerRetryContext containerRetryContext = null;
+
   public ContainerLaunchContextPBImpl() {
     builder = ContainerLaunchContextProto.newBuilder();
   }
@@ -119,6 +122,10 @@ extends ContainerLaunchContext {
     }
     if (this.applicationACLS != null) {
       addApplicationACLs();
+    }
+    if (this.containerRetryContext != null) {
+      builder.setContainerRetryContext(
+          convertToProtoFormat(this.containerRetryContext));
     }
   }
   
@@ -369,14 +376,20 @@ extends ContainerLaunchContext {
           public void remove() {
             throw new UnsupportedOperationException();
           }
-          
+
           @Override
           public StringStringMapProto next() {
             String key = keyIter.next();
-            return StringStringMapProto.newBuilder().setKey(key).setValue(
-                (environment.get(key))).build();
+            String value = environment.get(key);
+
+            if (value == null) {
+              value = "";
+            }
+
+            return StringStringMapProto.newBuilder().setKey(key)
+                .setValue((value)).build();
           }
-          
+
           @Override
           public boolean hasNext() {
             return keyIter.hasNext();
@@ -456,6 +469,27 @@ extends ContainerLaunchContext {
     this.applicationACLS.putAll(appACLs);
   }
 
+  public ContainerRetryContext getContainerRetryContext() {
+    ContainerLaunchContextProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.containerRetryContext != null) {
+      return this.containerRetryContext;
+    }
+    if (!p.hasContainerRetryContext()) {
+      return null;
+    }
+    this.containerRetryContext = convertFromProtoFormat(
+        p.getContainerRetryContext());
+    return this.containerRetryContext;
+  }
+
+  public void setContainerRetryContext(ContainerRetryContext retryContext) {
+    maybeInitBuilder();
+    if (retryContext == null) {
+      builder.clearContainerRetryContext();
+    }
+    this.containerRetryContext = retryContext;
+  }
+
   private LocalResourcePBImpl convertFromProtoFormat(LocalResourceProto p) {
     return new LocalResourcePBImpl(p);
   }
@@ -463,4 +497,14 @@ extends ContainerLaunchContext {
   private LocalResourceProto convertToProtoFormat(LocalResource t) {
     return ((LocalResourcePBImpl)t).getProto();
   }
-}  
+
+  private ContainerRetryContextPBImpl convertFromProtoFormat(
+      ContainerRetryContextProto p) {
+    return new ContainerRetryContextPBImpl(p);
+  }
+
+  private ContainerRetryContextProto convertToProtoFormat(
+      ContainerRetryContext t) {
+    return ((ContainerRetryContextPBImpl)t).getProto();
+  }
+}

@@ -308,7 +308,7 @@ public class TestContainerResourceUsage {
         app.getCurrentAppAttempt().getMasterContainer().getId();
     nm.nodeHeartbeat(am0.getApplicationAttemptId(),
                       amContainerId.getContainerId(), ContainerState.COMPLETE);
-    am0.waitForState(RMAppAttemptState.FAILED);
+    rm.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.FAILED);
 
     long memorySeconds = 0;
     long vcoreSeconds = 0;
@@ -347,6 +347,8 @@ public class TestContainerResourceUsage {
                                .equals(am0.getApplicationAttemptId()));
 
     // launch the new AM
+    //TODO explore a better way than sleeping for a while (YARN-4929)
+    Thread.sleep(1000);
     nm.nodeHeartbeat(true);
     MockAM am1 = rm.sendAMLaunched(attempt2.getAppAttemptId());
     am1.registerAppAttempt();
@@ -368,7 +370,7 @@ public class TestContainerResourceUsage {
     }
 
     rm.waitForState(app.getApplicationId(), RMAppState.RUNNING);
-    
+
     // Capture running containers for later use by metrics calculations.
     rmContainers = rm.scheduler.getSchedulerAppInfo(attempt2.getAppAttemptId())
                                .getLiveContainers();

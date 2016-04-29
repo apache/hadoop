@@ -29,7 +29,13 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -527,6 +533,22 @@ public class TestBlockManager {
     return blockInfo;
   }
 
+  private BlockInfo addCorruptBlockOnNodes(long blockId,
+      List<DatanodeDescriptor> nodes) throws IOException {
+    long inodeId = ++mockINodeId;
+    final INodeFile bc = TestINodeFile.createINodeFile(inodeId);
+
+    BlockInfo blockInfo = blockOnNodes(blockId, nodes);
+    blockInfo.setReplication((short) 3);
+    blockInfo.setBlockCollectionId(inodeId);
+    Mockito.doReturn(bc).when(fsn).getBlockCollection(inodeId);
+    bm.blocksMap.addBlockCollection(blockInfo, bc);
+    bm.markBlockReplicasAsCorrupt(blockInfo, blockInfo,
+        blockInfo.getGenerationStamp() + 1, blockInfo.getNumBytes(),
+        new DatanodeStorageInfo[]{nodes.get(0).getStorageInfos()[0]});
+    return blockInfo;
+  }
+
   private DatanodeStorageInfo[] scheduleSingleReplication(BlockInfo block) {
     // list for priority 1
     List<BlockInfo> list_p1 = new ArrayList<>();
@@ -537,15 +559,16 @@ public class TestBlockManager {
     list_all.add(new ArrayList<BlockInfo>()); // for priority 0
     list_all.add(list_p1); // for priority 1
 
-    assertEquals("Block not initially pending replication", 0,
-        bm.pendingReplications.getNumReplicas(block));
+    assertEquals("Block not initially pending reconstruction", 0,
+        bm.pendingReconstruction.getNumReplicas(block));
     assertEquals(
-        "computeBlockReconstructionWork should indicate replication is needed",
+        "computeBlockReconstructionWork should indicate reconstruction is needed",
         1, bm.computeReconstructionWorkForBlocks(list_all));
-    assertTrue("replication is pending after work is computed",
-        bm.pendingReplications.getNumReplicas(block) > 0);
+    assertTrue("reconstruction is pending after work is computed",
+        bm.pendingReconstruction.getNumReplicas(block) > 0);
 
-    LinkedListMultimap<DatanodeStorageInfo, BlockTargetPair> repls = getAllPendingReplications();
+    LinkedListMultimap<DatanodeStorageInfo, BlockTargetPair> repls =
+        getAllPendingReconstruction();
     assertEquals(1, repls.size());
     Entry<DatanodeStorageInfo, BlockTargetPair> repl =
       repls.entries().iterator().next();
@@ -559,7 +582,7 @@ public class TestBlockManager {
     return pipeline;
   }
 
-  private LinkedListMultimap<DatanodeStorageInfo, BlockTargetPair> getAllPendingReplications() {
+  private LinkedListMultimap<DatanodeStorageInfo, BlockTargetPair> getAllPendingReconstruction() {
     LinkedListMultimap<DatanodeStorageInfo, BlockTargetPair> repls =
       LinkedListMultimap.create();
     for (DatanodeDescriptor dn : nodes) {
@@ -574,8 +597,8 @@ public class TestBlockManager {
   }
 
   /**
-   * Test that a source node for a highest-priority replication is chosen even if all available
-   * source nodes have reached their replication limits.
+   * Test that a source node for a highest-priority reconstruction is chosen
+   * even if all available source nodes have reached their replication limits.
    */
   @Test
   public void testHighestPriReplSrcChosenDespiteMaxReplLimit() throws Exception {
@@ -1126,6 +1149,42 @@ public class TestBlockManager {
       assertTrue(batched > 0);
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testMetaSaveCorruptBlocks() throws Exception {
+    List<DatanodeStorageInfo> origStorages = getStorages(0, 1);
+    List<DatanodeDescriptor> origNodes = getNodes(origStorages);
+    addCorruptBlockOnNodes(0, origNodes);
+    File file = new File("test.log");
+    PrintWriter out = new PrintWriter(file);
+    bm.metaSave(out);
+    out.flush();
+    FileInputStream fstream = new FileInputStream(file);
+    DataInputStream in = new DataInputStream(fstream);
+    BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+    try {
+      for(int i =0;i<6;i++) {
+        reader.readLine();
+      }
+      String corruptBlocksLine = reader.readLine();
+      assertEquals("Unexpected text in metasave," +
+              "was expecting corrupt blocks section!", 0,
+          corruptBlocksLine.compareTo("Corrupt Blocks:"));
+      corruptBlocksLine = reader.readLine();
+      String regex = "Block=[0-9]+\\tNode=.*\\tStorageID=.*StorageState.*" +
+          "TotalReplicas=.*Reason=GENSTAMP_MISMATCH";
+      assertTrue("Unexpected corrupt block section in metasave!",
+          corruptBlocksLine.matches(regex));
+      corruptBlocksLine = reader.readLine();
+      regex = "Metasave: Number of datanodes.*";
+      assertTrue("Unexpected corrupt block section in metasave!",
+          corruptBlocksLine.matches(regex));
+    } finally {
+      if (reader != null)
+        reader.close();
+      file.delete();
     }
   }
 }

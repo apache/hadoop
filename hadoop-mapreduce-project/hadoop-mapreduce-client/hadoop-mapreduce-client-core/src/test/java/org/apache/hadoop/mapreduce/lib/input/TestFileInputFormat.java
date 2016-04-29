@@ -425,7 +425,7 @@ public class TestFileInputFormat {
     public BlockLocation[] getFileBlockLocations(FileStatus file, long start, long len)
         throws IOException {
       return new BlockLocation[] {
-          new BlockLocation(new String[] { "localhost:50010", "otherhost:50010" },
+          new BlockLocation(new String[] { "localhost:9866", "otherhost:9866" },
               new String[] { "localhost", "otherhost" }, new String[] { "localhost" },
               new String[0], 0, len, false) };    }
 

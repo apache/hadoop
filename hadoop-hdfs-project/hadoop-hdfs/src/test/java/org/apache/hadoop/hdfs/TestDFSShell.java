@@ -567,7 +567,7 @@ public class TestDFSShell {
       cluster = new MiniDFSCluster.Builder(conf)
           .format(true)
           .numDataNodes(2)
-          .nameNodePort(8020)
+          .nameNodePort(HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT)
           .waitSafeMode(true)
           .build();
       FileSystem srcFs = cluster.getFileSystem();

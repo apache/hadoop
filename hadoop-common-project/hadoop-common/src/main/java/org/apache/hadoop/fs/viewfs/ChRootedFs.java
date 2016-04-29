@@ -386,6 +386,12 @@ class ChRootedFs extends AbstractFileSystem {
   }
 
   @Override
+  public void unsetStoragePolicy(final Path src)
+    throws IOException {
+    myFs.unsetStoragePolicy(fullPath(src));
+  }
+
+  @Override
   public BlockStoragePolicySpi getStoragePolicy(final Path src)
       throws IOException {
     return myFs.getStoragePolicy(src);

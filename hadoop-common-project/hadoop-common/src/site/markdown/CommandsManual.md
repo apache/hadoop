@@ -212,7 +212,7 @@ Usage:
 
 Get/Set the log level for a Log identified by a qualified class name in the daemon.
 
-	Example: $ bin/hadoop daemonlog -setlevel 127.0.0.1:50070 org.apache.hadoop.hdfs.server.namenode.NameNode DEBUG
+	Example: $ bin/hadoop daemonlog -setlevel 127.0.0.1:9870 org.apache.hadoop.hdfs.server.namenode.NameNode DEBUG
 
 Files
 -----

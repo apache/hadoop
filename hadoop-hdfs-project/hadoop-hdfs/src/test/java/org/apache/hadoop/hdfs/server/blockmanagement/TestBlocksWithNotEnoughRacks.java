@@ -68,7 +68,7 @@ public class TestBlocksWithNotEnoughRacks {
 
     // Have the NN check for pending replications every second so it
     // quickly schedules additional replicas as they are identified.
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY, 1);
 
     // The DNs report blocks every second.
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
