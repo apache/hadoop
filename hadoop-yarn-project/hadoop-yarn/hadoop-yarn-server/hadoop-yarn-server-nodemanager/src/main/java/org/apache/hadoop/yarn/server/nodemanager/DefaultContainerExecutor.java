@@ -284,7 +284,9 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       return new ShellCommandExecutor(
           command,
           wordDir,
-          environment); 
+          environment,
+          0L,
+          false);
   }
 
   protected LocalWrapperScriptBuilder getLocalWrapperScriptBuilder(
