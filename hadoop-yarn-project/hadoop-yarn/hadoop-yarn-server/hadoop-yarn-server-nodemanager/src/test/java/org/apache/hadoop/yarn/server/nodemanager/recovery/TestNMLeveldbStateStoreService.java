@@ -23,10 +23,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
-import static org.mockito.Mockito.isNull;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.timeout;
-import static org.mockito.Mockito.verify;
 
 import java.io.File;
 import java.io.IOException;
@@ -79,7 +75,6 @@ import org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.BaseNMTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.iq80.leveldb.DB;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -877,26 +872,6 @@ public class TestNMLeveldbStateStoreService {
     restartStateStore();
     state = stateStore.loadLogDeleterState();
     assertTrue(state.getLogDeleterMap().isEmpty());
-  }
-
-  @Test
-  public void testCompactionCycle() throws IOException {
-    final DB mockdb = mock(DB.class);
-    conf.setInt(YarnConfiguration.NM_RECOVERY_COMPACTION_INTERVAL_SECS, 1);
-    NMLeveldbStateStoreService store = new NMLeveldbStateStoreService() {
-      @Override
-      protected void checkVersion() {}
-
-      @Override
-      protected DB openDatabase(Configuration conf) {
-        return mockdb;
-      }
-    };
-    store.init(conf);
-    store.start();
-    verify(mockdb, timeout(10000)).compactRange(
-        (byte[]) isNull(), (byte[]) isNull());
-    store.close();
   }
 
   private static class NMTokenSecretManagerForTest extends
