@@ -167,6 +167,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9958. BlockManager#createLocatedBlocks can throw NPE for corruptBlocks
     on failed storages. (Kuhu Shukla via kihwal)
 
+    HDFS-10347. Namenode report bad block method doesn't log the bad block or
+    datanode. (Rushabh Shah via kihwal)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
