@@ -311,7 +311,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     try {
       privilegedOperationExecutor.executePrivilegedOperation(null,
           launchOp, null, container.getLaunchContext().getEnvironment(),
-          false);
+          false, false);
     } catch (PrivilegedOperationException e) {
       LOG.warn("Launch container failed. Exception: ", e);
 
@@ -340,7 +340,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
       executor.executePrivilegedOperation(null,
           signalOp, null, container.getLaunchContext().getEnvironment(),
-          false);
+          false, true);
     } catch (PrivilegedOperationException e) {
       LOG.warn("Signal container failed. Exception: ", e);
 

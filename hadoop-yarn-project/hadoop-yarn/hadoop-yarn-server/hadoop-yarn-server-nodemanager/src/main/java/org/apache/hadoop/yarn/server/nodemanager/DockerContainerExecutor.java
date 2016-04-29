@@ -284,7 +284,9 @@ public class DockerContainerExecutor extends ContainerExecutor {
       shExec = new ShellCommandExecutor(
         command,
         new File(containerWorkDir.toUri().getPath()),
-        container.getLaunchContext().getEnvironment());      // sanitized env
+        container.getLaunchContext().getEnvironment(),      // sanitized env
+        0L,
+        false);
       if (isContainerActive(containerId)) {
         shExec.execute();
       } else {
