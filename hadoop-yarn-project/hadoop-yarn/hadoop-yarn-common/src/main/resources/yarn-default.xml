@@ -1246,6 +1246,12 @@
     </description>
     <name>yarn.nodemanager.container-metrics.unregister-delay-ms</name>
     <value>10000</value>
+
+    <description>The time in seconds between full compactions of the NM state
+    database. Setting the interval to zero disables the full compaction
+    cycles.</description>
+    <name>yarn.nodemanager.recovery.compaction-interval-secs</name>
+    <value>3600</value>
   </property>
 
   <!--Docker configuration-->
