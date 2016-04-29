@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
+import static org.mockito.Mockito.isNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -26,6 +31,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.iq80.leveldb.DB;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -113,6 +119,23 @@ public class TestLeveldbRMStateStore extends RMStateStoreTestBase {
   public void testReservation() throws Exception {
     LeveldbStateStoreTester tester = new LeveldbStateStoreTester();
     testReservationStateStore(tester);
+  }
+
+  @Test(timeout = 60000)
+  public void testCompactionCycle() throws Exception {
+    final DB mockdb = mock(DB.class);
+    conf.setLong(YarnConfiguration.RM_LEVELDB_COMPACTION_INTERVAL_SECS, 1);
+    LeveldbRMStateStore store = new LeveldbRMStateStore() {
+      @Override
+      protected DB openDatabase() throws Exception {
+        return mockdb;
+      }
+    };
+    store.init(conf);
+    store.start();
+    verify(mockdb, timeout(10000)).compactRange(
+        (byte[]) isNull(), (byte[]) isNull());
+    store.close();
   }
 
   class LeveldbStateStoreTester implements RMStateStoreHelper {
