@@ -28,6 +28,8 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map.Entry;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,6 +39,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -89,6 +92,8 @@ public class LeveldbRMStateStore extends RMStateStore {
       .newInstance(1, 0);
 
   private DB db;
+  private Timer compactionTimer;
+  private long compactionIntervalMsec;
 
   private String getApplicationNodeKey(ApplicationId appId) {
     return RM_APP_ROOT + SEPARATOR + appId;
@@ -114,6 +119,9 @@ public class LeveldbRMStateStore extends RMStateStore {
 
   @Override
   protected void initInternal(Configuration conf) throws Exception {
+    compactionIntervalMsec = conf.getLong(
+        YarnConfiguration.RM_LEVELDB_COMPACTION_INTERVAL_SECS,
+        YarnConfiguration.DEFAULT_RM_LEVELDB_COMPACTION_INTERVAL_SECS) * 1000;
   }
 
   private Path getStorageDir() throws IOException {
@@ -135,6 +143,11 @@ public class LeveldbRMStateStore extends RMStateStore {
 
   @Override
   protected void startInternal() throws Exception {
+    db = openDatabase();
+    startCompactionTimer();
+  }
+
+  protected DB openDatabase() throws Exception {
     Path storeRoot = createStorageDir();
     Options options = new Options();
     options.createIfMissing(false);
@@ -158,10 +171,24 @@ public class LeveldbRMStateStore extends RMStateStore {
         throw e;
       }
     }
+    return db;
+  }
+
+  private void startCompactionTimer() {
+    if (compactionIntervalMsec > 0) {
+      compactionTimer = new Timer(
+          this.getClass().getSimpleName() + " compaction timer", true);
+      compactionTimer.schedule(new CompactionTimerTask(),
+          compactionIntervalMsec, compactionIntervalMsec);
+    }
   }
 
   @Override
   protected void closeInternal() throws Exception {
+    if (compactionTimer != null) {
+      compactionTimer.cancel();
+      compactionTimer = null;
+    }
     if (db != null) {
       db.close();
       db = null;
@@ -679,6 +706,21 @@ public class LeveldbRMStateStore extends RMStateStore {
       }
     }
     return numEntries;
+  }
+
+  private class CompactionTimerTask extends TimerTask {
+    @Override
+    public void run() {
+      long start = Time.monotonicNow();
+      LOG.info("Starting full compaction cycle");
+      try {
+        db.compactRange(null, null);
+      } catch (DBException e) {
+        LOG.error("Error compacting database", e);
+      }
+      long duration = Time.monotonicNow() - start;
+      LOG.info("Full compaction cycle completed in " + duration + " msec");
+    }
   }
 
   private static class LeveldbLogger implements Logger {
