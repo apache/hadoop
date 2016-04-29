@@ -334,6 +334,18 @@ public class TestNMLeveldbStateStoreService {
     assertEquals(containerReq, rcs.getStartRequest());
     assertEquals(diags.toString(), rcs.getDiagnostics());
 
+    // store remainingRetryAttempts, workDir and logDir
+    stateStore.storeContainerRemainingRetryAttempts(containerId, 6);
+    stateStore.storeContainerWorkDir(containerId, "/test/workdir");
+    stateStore.storeContainerLogDir(containerId, "/test/logdir");
+    restartStateStore();
+    recoveredContainers = stateStore.loadContainersState();
+    assertEquals(1, recoveredContainers.size());
+    rcs = recoveredContainers.get(0);
+    assertEquals(6, rcs.getRemainingRetryAttempts());
+    assertEquals("/test/workdir", rcs.getWorkDir());
+    assertEquals("/test/logdir", rcs.getLogDir());
+
     // remove the container and verify not recovered
     stateStore.removeContainer(containerId);
     restartStateStore();

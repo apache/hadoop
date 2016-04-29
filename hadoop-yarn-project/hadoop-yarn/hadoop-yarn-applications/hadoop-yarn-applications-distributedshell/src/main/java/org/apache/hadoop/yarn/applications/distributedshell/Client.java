@@ -169,6 +169,8 @@ public class Client {
 
   private long attemptFailuresValidityInterval = -1;
 
+  private Vector<CharSequence> containerRetryOptions = new Vector<>(5);
+
   // Debug flag
   boolean debugFlag = false;
 
@@ -288,6 +290,18 @@ public class Client {
             + " will be allocated, \"\" means containers"
             + " can be allocated anywhere, if you don't specify the option,"
             + " default node_label_expression of queue will be used.");
+    opts.addOption("container_retry_policy", true,
+        "Retry policy when container fails to run, "
+            + "0: NEVER_RETRY, 1: RETRY_ON_ALL_ERRORS, "
+            + "2: RETRY_ON_SPECIFIC_ERROR_CODES");
+    opts.addOption("container_retry_error_codes", true,
+        "When retry policy is set to RETRY_ON_SPECIFIC_ERROR_CODES, error "
+            + "codes is specified with this option, "
+            + "e.g. --container_retry_error_codes 1,2,3");
+    opts.addOption("container_max_retries", true,
+        "If container could retry, it specifies max retires");
+    opts.addOption("container_retry_interval", true,
+        "Interval between each retry, unit is milliseconds");
   }
 
   /**
@@ -428,6 +442,24 @@ public class Client {
       if (cliParser.hasOption("modify_acls")) {
         modifyACLs = cliParser.getOptionValue("modify_acls");
       }
+    }
+
+    // Get container retry options
+    if (cliParser.hasOption("container_retry_policy")) {
+      containerRetryOptions.add("--container_retry_policy "
+          + cliParser.getOptionValue("container_retry_policy"));
+    }
+    if (cliParser.hasOption("container_retry_error_codes")) {
+      containerRetryOptions.add("--container_retry_error_codes "
+          + cliParser.getOptionValue("container_retry_error_codes"));
+    }
+    if (cliParser.hasOption("container_max_retries")) {
+      containerRetryOptions.add("--container_max_retries "
+          + cliParser.getOptionValue("container_max_retries"));
+    }
+    if (cliParser.hasOption("container_retry_interval")) {
+      containerRetryOptions.add("--container_retry_interval "
+          + cliParser.getOptionValue("container_retry_interval"));
     }
 
     return true;
@@ -638,6 +670,8 @@ public class Client {
     if (debugFlag) {
       vargs.add("--debug");
     }
+
+    vargs.addAll(containerRetryOptions);
 
     vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stdout");
     vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stderr");

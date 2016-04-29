@@ -1582,6 +1582,13 @@
   </property>
 
   <property>
+    <description>Maximum size of contain's diagnostics to keep for relaunching
+      container case.</description>
+    <name>yarn.nodemanager.container-diagnostics-maximum-size</name>
+    <value>10000</value>
+  </property>
+
+  <property>
     <description>Max number of threads in NMClientAsync to process container
     management events</description>
     <name>yarn.client.nodemanager-client-async.thread-pool-max-size</name>

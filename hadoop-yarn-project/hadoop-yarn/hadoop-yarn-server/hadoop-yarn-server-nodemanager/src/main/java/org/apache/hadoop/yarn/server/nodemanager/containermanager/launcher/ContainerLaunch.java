@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.DelayedProcessKiller;
@@ -98,7 +99,7 @@ public class ContainerLaunch implements Callable<Integer> {
 
   protected final Dispatcher dispatcher;
   protected final ContainerExecutor exec;
-  private final Application app;
+  protected final Application app;
   protected final Container container;
   private final Configuration conf;
   private final Context context;
@@ -112,7 +113,7 @@ public class ContainerLaunch implements Callable<Integer> {
 
   protected Path pidFilePath = null;
 
-  private final LocalDirsHandlerService dirsHandler;
+  protected final LocalDirsHandlerService dirsHandler;
 
   public ContainerLaunch(Context context, Configuration configuration,
       Dispatcher dispatcher, ContainerExecutor exec, Application app,
@@ -156,33 +157,19 @@ public class ContainerLaunch implements Callable<Integer> {
   @Override
   @SuppressWarnings("unchecked") // dispatcher not typed
   public Integer call() {
+    if (!validateContainerState()) {
+      return 0;
+    }
+
     final ContainerLaunchContext launchContext = container.getLaunchContext();
-    Map<Path,List<String>> localResources = null;
     ContainerId containerID = container.getContainerId();
     String containerIdStr = ConverterUtils.toString(containerID);
     final List<String> command = launchContext.getCommands();
     int ret = -1;
 
-    // CONTAINER_KILLED_ON_REQUEST should not be missed if the container
-    // is already at KILLING
-    if (container.getContainerState() == ContainerState.KILLING) {
-      dispatcher.getEventHandler().handle(
-          new ContainerExitEvent(containerID,
-              ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
-              Shell.WINDOWS ? ExitCode.FORCE_KILLED.getExitCode() :
-                  ExitCode.TERMINATED.getExitCode(),
-              "Container terminated before launch."));
-      return 0;
-    }
-
     Path containerLogDir;
     try {
-      localResources = container.getLocalizedResources();
-      if (localResources == null) {
-        throw RPCUtil.getRemoteException(
-            "Unable to get local resources when Container " + containerID +
-            " is at " + container.getContainerState());
-      }
+      Map<Path, List<String>> localResources = getLocalizedResources();
 
       final String user = container.getUser();
       // /////////////////////////// Variable expansion
@@ -193,6 +180,7 @@ public class ContainerLaunch implements Callable<Integer> {
           .getRelativeContainerLogDir(appIdStr, containerIdStr);
       containerLogDir =
           dirsHandler.getLogPathForWrite(relativeContainerLogDir, false);
+      recordContainerLogDir(containerID, containerLogDir.toString());
       for (String str : command) {
         // TODO: Should we instead work via symlinks without this grammar?
         newCmds.add(expandEnvironment(str, containerLogDir));
@@ -233,6 +221,7 @@ public class ContainerLaunch implements Callable<Integer> {
               + ContainerLocalizer.APPCACHE + Path.SEPARATOR + appIdStr
               + Path.SEPARATOR + containerIdStr,
               LocalDirAllocator.SIZE_UNKNOWN, false);
+      recordContainerWorkDir(containerID, containerWorkDir.toString());
 
       String pidFileSubpath = getPidFileSubpath(appIdStr, containerIdStr);
 
@@ -241,11 +230,8 @@ public class ContainerLaunch implements Callable<Integer> {
       pidFilePath = dirsHandler.getLocalPathForWrite(pidFileSubpath);
       List<String> localDirs = dirsHandler.getLocalDirs();
       List<String> logDirs = dirsHandler.getLogDirs();
-
-      List<String> containerLogDirs = new ArrayList<String>();
-      for( String logDir : logDirs) {
-        containerLogDirs.add(logDir + Path.SEPARATOR + relativeContainerLogDir);
-      }
+      List<String> containerLocalDirs = getContainerLocalDirs(localDirs);
+      List<String> containerLogDirs = getContainerLogDirs(logDirs);
 
       if (!dirsHandler.areDisksHealthy()) {
         ret = ContainerExitStatus.DISKS_FAILED;
@@ -253,7 +239,6 @@ public class ContainerLaunch implements Callable<Integer> {
             + dirsHandler.getDisksHealthReport(false));
       }
 
-      List<String> containerLocalDirs = new ArrayList<>(localDirs.size());
       try {
         // /////////// Write out the container-script in the nmPrivate space.
         List<Path> appDirs = new ArrayList<Path>(localDirs.size());
@@ -262,14 +247,6 @@ public class ContainerLaunch implements Callable<Integer> {
           Path userdir = new Path(usersdir, user);
           Path appsdir = new Path(userdir, ContainerLocalizer.APPCACHE);
           appDirs.add(new Path(appsdir, appIdStr));
-
-          String containerLocalDir = localDir + Path.SEPARATOR +
-              ContainerLocalizer.USERCACHE + Path.SEPARATOR + user
-              + Path.SEPARATOR
-              + ContainerLocalizer.APPCACHE + Path.SEPARATOR + appIdStr
-              + Path.SEPARATOR;
-
-          containerLocalDirs.add(containerLocalDir);
         }
         containerScriptOutStream =
           lfs.create(nmPrivateContainerScriptPath,
@@ -301,35 +278,19 @@ public class ContainerLaunch implements Callable<Integer> {
         IOUtils.cleanup(LOG, containerScriptOutStream, tokensOutStream);
       }
 
-      // LaunchContainer is a blocking call. We are here almost means the
-      // container is launched, so send out the event.
-      dispatcher.getEventHandler().handle(new ContainerEvent(
-            containerID,
-            ContainerEventType.CONTAINER_LAUNCHED));
-      context.getNMStateStore().storeContainerLaunched(containerID);
-
-      // Check if the container is signalled to be killed.
-      if (!shouldLaunchContainer.compareAndSet(false, true)) {
-        LOG.info("Container " + containerIdStr + " not launched as "
-            + "cleanup already called");
-        ret = ExitCode.TERMINATED.getExitCode();
-      }
-      else {
-        exec.activateContainer(containerID, pidFilePath);
-        ret = exec.launchContainer(new ContainerStartContext.Builder()
-            .setContainer(container)
-            .setLocalizedResources(localResources)
-            .setNmPrivateContainerScriptPath(nmPrivateContainerScriptPath)
-            .setNmPrivateTokensPath(nmPrivateTokensPath)
-            .setUser(user)
-            .setAppId(appIdStr)
-            .setContainerWorkDir(containerWorkDir)
-            .setLocalDirs(localDirs)
-            .setLogDirs(logDirs)
-            .setContainerLocalDirs(containerLocalDirs)
-            .setContainerLogDirs(containerLogDirs)
-            .build());
-      }
+      ret = launchContainer(new ContainerStartContext.Builder()
+          .setContainer(container)
+          .setLocalizedResources(localResources)
+          .setNmPrivateContainerScriptPath(nmPrivateContainerScriptPath)
+          .setNmPrivateTokensPath(nmPrivateTokensPath)
+          .setUser(user)
+          .setAppId(appIdStr)
+          .setContainerWorkDir(containerWorkDir)
+          .setLocalDirs(localDirs)
+          .setLogDirs(logDirs)
+          .setContainerLocalDirs(containerLocalDirs)
+          .setContainerLogDirs(containerLogDirs)
+          .build());
     } catch (Throwable e) {
       LOG.warn("Failed to launch container.", e);
       dispatcher.getEventHandler().handle(new ContainerExitEvent(
@@ -337,46 +298,138 @@ public class ContainerLaunch implements Callable<Integer> {
           e.getMessage()));
       return ret;
     } finally {
-      completed.set(true);
-      exec.deactivateContainer(containerID);
-      try {
-        context.getNMStateStore().storeContainerCompleted(containerID, ret);
-      } catch (IOException e) {
-        LOG.error("Unable to set exit code for container " + containerID);
-      }
+      setContainerCompletedStatus(ret);
     }
 
+    handleContainerExitCode(ret, containerLogDir);
+
+    return ret;
+  }
+
+  @SuppressWarnings("unchecked")
+  protected boolean validateContainerState() {
+    // CONTAINER_KILLED_ON_REQUEST should not be missed if the container
+    // is already at KILLING
+    if (container.getContainerState() == ContainerState.KILLING) {
+      dispatcher.getEventHandler().handle(
+          new ContainerExitEvent(container.getContainerId(),
+              ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
+              Shell.WINDOWS ? ExitCode.FORCE_KILLED.getExitCode() :
+                  ExitCode.TERMINATED.getExitCode(),
+              "Container terminated before launch."));
+      return false;
+    }
+
+    return true;
+  }
+
+  protected List<String> getContainerLogDirs(List<String> logDirs) {
+    List<String> containerLogDirs = new ArrayList<>(logDirs.size());
+    String appIdStr = app.getAppId().toString();
+    String containerIdStr = ConverterUtils.toString(container.getContainerId());
+    String relativeContainerLogDir = ContainerLaunch
+        .getRelativeContainerLogDir(appIdStr, containerIdStr);
+
+    for(String logDir : logDirs) {
+      containerLogDirs.add(logDir + Path.SEPARATOR + relativeContainerLogDir);
+    }
+
+    return containerLogDirs;
+  }
+
+  protected List<String> getContainerLocalDirs(List<String> localDirs) {
+    List<String> containerLocalDirs = new ArrayList<>(localDirs.size());
+    String user = container.getUser();
+    String appIdStr = app.getAppId().toString();
+    String relativeContainerLocalDir = ContainerLocalizer.USERCACHE
+        + Path.SEPARATOR + user + Path.SEPARATOR + ContainerLocalizer.APPCACHE
+        + Path.SEPARATOR + appIdStr + Path.SEPARATOR;
+
+    for (String localDir : localDirs) {
+      containerLocalDirs.add(localDir + Path.SEPARATOR
+          + relativeContainerLocalDir);
+    }
+
+    return containerLocalDirs;
+  }
+
+  protected Map<Path, List<String>> getLocalizedResources()
+      throws YarnException {
+    Map<Path, List<String>> localResources = container.getLocalizedResources();
+    if (localResources == null) {
+      throw RPCUtil.getRemoteException(
+          "Unable to get local resources when Container " + container
+              + " is at " + container.getContainerState());
+    }
+    return localResources;
+  }
+
+  @SuppressWarnings("unchecked")
+  protected int launchContainer(ContainerStartContext ctx) throws IOException {
+    ContainerId containerId = container.getContainerId();
+
+    // LaunchContainer is a blocking call. We are here almost means the
+    // container is launched, so send out the event.
+    dispatcher.getEventHandler().handle(new ContainerEvent(
+        containerId,
+        ContainerEventType.CONTAINER_LAUNCHED));
+    context.getNMStateStore().storeContainerLaunched(containerId);
+
+    // Check if the container is signalled to be killed.
+    if (!shouldLaunchContainer.compareAndSet(false, true)) {
+      LOG.info("Container " + containerId + " not launched as "
+          + "cleanup already called");
+      return ExitCode.TERMINATED.getExitCode();
+    } else {
+      exec.activateContainer(containerId, pidFilePath);
+      return exec.launchContainer(ctx);
+    }
+  }
+
+  protected void setContainerCompletedStatus(int exitCode) {
+    ContainerId containerId = container.getContainerId();
+    completed.set(true);
+    exec.deactivateContainer(containerId);
+    try {
+      if (!container.shouldRetry(exitCode)) {
+        context.getNMStateStore().storeContainerCompleted(containerId,
+            exitCode);
+      }
+    } catch (IOException e) {
+      LOG.error("Unable to set exit code for container " + containerId);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  protected void handleContainerExitCode(int exitCode, Path containerLogDir) {
+    ContainerId containerId = container.getContainerId();
+
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Container " + containerIdStr + " completed with exit code "
-                + ret);
+      LOG.debug("Container " + containerId + " completed with exit code "
+          + exitCode);
     }
 
     StringBuilder diagnosticInfo =
         new StringBuilder("Container exited with a non-zero exit code ");
-    diagnosticInfo.append(ret);
+    diagnosticInfo.append(exitCode);
     diagnosticInfo.append(". ");
-    if (ret == ExitCode.FORCE_KILLED.getExitCode()
-        || ret == ExitCode.TERMINATED.getExitCode()) {
+    if (exitCode == ExitCode.FORCE_KILLED.getExitCode()
+        || exitCode == ExitCode.TERMINATED.getExitCode()) {
       // If the process was killed, Send container_cleanedup_after_kill and
       // just break out of this method.
       dispatcher.getEventHandler().handle(
-            new ContainerExitEvent(containerID,
-                ContainerEventType.CONTAINER_KILLED_ON_REQUEST, ret,
-                diagnosticInfo.toString()));
-      return ret;
-    }
-
-    if (ret != 0) {
-      handleContainerExitWithFailure(containerID, ret, containerLogDir,
+          new ContainerExitEvent(containerId,
+              ContainerEventType.CONTAINER_KILLED_ON_REQUEST, exitCode,
+              diagnosticInfo.toString()));
+    } else if (exitCode != 0) {
+      handleContainerExitWithFailure(containerId, exitCode, containerLogDir,
           diagnosticInfo);
-      return ret;
+    } else {
+      LOG.info("Container " + containerId + " succeeded ");
+      dispatcher.getEventHandler().handle(
+          new ContainerEvent(containerId,
+              ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS));
     }
-
-    LOG.info("Container " + containerIdStr + " succeeded ");
-    dispatcher.getEventHandler().handle(
-        new ContainerEvent(containerID,
-            ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS));
-    return 0;
   }
 
   /**
@@ -389,8 +442,8 @@ public class ContainerLaunch implements Callable<Integer> {
    * @param diagnosticInfo
    */
   @SuppressWarnings("unchecked")
-  private void handleContainerExitWithFailure(ContainerId containerID, int ret,
-      Path containerLogDir, StringBuilder diagnosticInfo) {
+  protected void handleContainerExitWithFailure(ContainerId containerID,
+      int ret, Path containerLogDir, StringBuilder diagnosticInfo) {
     LOG.warn(diagnosticInfo);
 
     String errorFileNamePattern =
@@ -689,7 +742,8 @@ public class ContainerLaunch implements Callable<Integer> {
     return appIdStr + Path.SEPARATOR + containerIdStr;
   }
 
-  private String getContainerPrivateDir(String appIdStr, String containerIdStr) {
+  protected String getContainerPrivateDir(String appIdStr,
+      String containerIdStr) {
     return getAppPrivateDir(appIdStr) + Path.SEPARATOR + containerIdStr
         + Path.SEPARATOR;
   }
@@ -1105,5 +1159,21 @@ public class ContainerLaunch implements Callable<Integer> {
 
   public static String getExitCodeFile(String pidFile) {
     return pidFile + EXIT_CODE_FILE_SUFFIX;
+  }
+
+  private void recordContainerLogDir(ContainerId containerId,
+      String logDir) throws IOException{
+    if (container.isRetryContextSet()) {
+      container.setLogDir(logDir);
+      context.getNMStateStore().storeContainerLogDir(containerId, logDir);
+    }
+  }
+
+  private void recordContainerWorkDir(ContainerId containerId,
+      String workDir) throws IOException{
+    if (container.isRetryContextSet()) {
+      container.setWorkDir(workDir);
+      context.getNMStateStore().storeContainerWorkDir(containerId, workDir);
+    }
   }
 }

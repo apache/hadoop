@@ -408,6 +408,24 @@ public class LocalDirsHandlerService extends AbstractService {
     return lastDisksCheckTime;
   }
 
+  public boolean isGoodLocalDir(String path) {
+    return isInGoodDirs(getLocalDirs(), path);
+  }
+
+  public boolean isGoodLogDir(String path) {
+    return isInGoodDirs(getLogDirs(), path);
+  }
+
+  private boolean isInGoodDirs(List<String> goodDirs, String path) {
+    for (String goodDir : goodDirs) {
+      if (path.startsWith(goodDir)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   /**
    * Set good local dirs and good log dirs in the configuration so that the
    * LocalDirAllocator objects will use this updated configuration only.
@@ -549,6 +567,10 @@ public class LocalDirsHandlerService extends AbstractService {
       boolean checkWrite) throws IOException {
     return localDirsAllocator.getLocalPathForWrite(pathStr, size, getConfig(),
                                                    checkWrite);
+  }
+
+  public Path getLocalPathForRead(String pathStr) throws IOException {
+    return getPathToRead(pathStr, getLocalDirsForRead());
   }
 
   public Path getLogPathForWrite(String pathStr, boolean checkWrite)

@@ -110,6 +110,10 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       "/resourceChanged";
   private static final String CONTAINER_KILLED_KEY_SUFFIX = "/killed";
   private static final String CONTAINER_EXIT_CODE_KEY_SUFFIX = "/exitcode";
+  private static final String CONTAINER_REMAIN_RETRIES_KEY_SUFFIX =
+      "/remainingRetryAttempts";
+  private static final String CONTAINER_WORK_DIR_KEY_SUFFIX = "/workdir";
+  private static final String CONTAINER_LOG_DIR_KEY_SUFFIX = "/logdir";
 
   private static final String CURRENT_MASTER_KEY_SUFFIX = "CurrentMasterKey";
   private static final String PREV_MASTER_KEY_SUFFIX = "PreviousMasterKey";
@@ -247,6 +251,13 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       } else if (suffix.equals(CONTAINER_RESOURCE_CHANGED_KEY_SUFFIX)) {
         rcs.capability = new ResourcePBImpl(
             ResourceProto.parseFrom(entry.getValue()));
+      } else if (suffix.equals(CONTAINER_REMAIN_RETRIES_KEY_SUFFIX)) {
+        rcs.setRemainingRetryAttempts(
+            Integer.parseInt(asString(entry.getValue())));
+      } else if (suffix.equals(CONTAINER_WORK_DIR_KEY_SUFFIX)) {
+        rcs.setWorkDir(asString(entry.getValue()));
+      } else if (suffix.equals(CONTAINER_LOG_DIR_KEY_SUFFIX)) {
+        rcs.setLogDir(asString(entry.getValue()));
       } else {
         throw new IOException("Unexpected container state key: " + key);
       }
@@ -351,6 +362,42 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         + CONTAINER_EXIT_CODE_KEY_SUFFIX;
     try {
       db.put(bytes(key), bytes(Integer.toString(exitCode)));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void storeContainerRemainingRetryAttempts(ContainerId containerId,
+      int remainingRetryAttempts) throws IOException {
+    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_REMAIN_RETRIES_KEY_SUFFIX;
+    try {
+      db.put(bytes(key), bytes(Integer.toString(remainingRetryAttempts)));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void storeContainerWorkDir(ContainerId containerId,
+      String workDir) throws IOException {
+    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_WORK_DIR_KEY_SUFFIX;
+    try {
+      db.put(bytes(key), bytes(workDir));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void storeContainerLogDir(ContainerId containerId,
+      String logDir) throws IOException {
+    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_LOG_DIR_KEY_SUFFIX;
+    try {
+      db.put(bytes(key), bytes(logDir));
     } catch (DBException e) {
       throw new IOException(e);
     }

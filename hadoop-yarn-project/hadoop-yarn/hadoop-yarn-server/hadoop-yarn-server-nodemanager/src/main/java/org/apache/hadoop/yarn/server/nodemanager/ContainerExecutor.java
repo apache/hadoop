@@ -308,6 +308,7 @@ public abstract class ContainerExecutor implements Configurable {
   }
 
   public enum ExitCode {
+    SUCCESS(0),
     FORCE_KILLED(137),
     TERMINATED(143),
     LOST(154);

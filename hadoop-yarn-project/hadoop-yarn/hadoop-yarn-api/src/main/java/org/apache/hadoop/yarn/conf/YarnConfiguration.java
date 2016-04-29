@@ -846,6 +846,14 @@ public class YarnConfiguration extends Configuration {
       NM_PREFIX + "resourcemanager.minimum.version";
   public static final String DEFAULT_NM_RESOURCEMANAGER_MINIMUM_VERSION = "NONE";
 
+  /**
+   * Maximum size of contain's diagnostics to keep for relaunching container
+   * case.
+   **/
+  public static final String NM_CONTAINER_DIAGNOSTICS_MAXIMUM_SIZE =
+      NM_PREFIX + "container-diagnostics-maximum-size";
+  public static final int DEFAULT_NM_CONTAINER_DIAGNOSTICS_MAXIMUM_SIZE = 10000;
+
   /** Interval at which the delayed token removal thread runs */
   public static final String RM_DELAYED_DELEGATION_TOKEN_REMOVAL_INTERVAL_MS =
       RM_PREFIX + "delayed.delegation-token.removal-interval-ms";
