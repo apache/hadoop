@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.ozone.storage;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HANDLER_COUNT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HANDLER_COUNT_KEY;
@@ -154,11 +156,13 @@ public class StorageContainerManager
     RPC.setProtocolEngine(conf, StorageContainerLocationProtocolPB.class,
         ProtobufRpcEngine.class);
 
+    int maxDataLength = conf.getInt(IPC_MAXIMUM_DATA_LENGTH,
+        IPC_MAXIMUM_DATA_LENGTH_DEFAULT);
     BlockingService dnProtoPbService =
         DatanodeProtocolProtos
         .DatanodeProtocolService
         .newReflectiveBlockingService(
-            new DatanodeProtocolServerSideTranslatorPB(this));
+            new DatanodeProtocolServerSideTranslatorPB(this, maxDataLength));
 
     InetSocketAddress serviceRpcAddr = NameNode.getServiceAddress(conf, false);
     serviceRpcServer = startRpcServer(conf, serviceRpcAddr,
