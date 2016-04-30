@@ -89,4 +89,9 @@ create_fake_dirs () {
   [ ${unittest} = "hadooprc" ]
 }
 
-
+@test "hadoop_exec_user_hadoopenv" {
+  HOME=${TMP}
+  echo "unittest=hadoopenv" > "${TMP}/.hadoop-env"
+  hadoop_exec_user_hadoopenv
+  [ ${unittest} = "hadoopenv" ]
+}
