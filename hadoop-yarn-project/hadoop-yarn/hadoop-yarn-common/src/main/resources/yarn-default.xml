@@ -799,9 +799,9 @@
   </property>
 
   <property>
-    <description>The setting that controls whether yarn container metrics is
-    published to the timeline server or not by RM. This configuration setting is
-    for ATS V2.</description>
+    <description>The setting that controls whether yarn container events are
+    published to the timeline service or not by RM. This configuration setting
+    is for ATS V2.</description>
     <name>yarn.rm.system-metrics-publisher.emit-container-events</name>
     <value>false</value>
   </property>
