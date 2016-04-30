@@ -69,7 +69,7 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
   private static final Log LOG =
       LogFactory.getLog(TimelineServiceV2Publisher.class);
   private RMTimelineCollectorManager rmTimelineCollectorManager;
-  private boolean publishContainerMetrics;
+  private boolean publishContainerEvents;
 
   public TimelineServiceV2Publisher(RMContext rmContext) {
     super("TimelineserviceV2Publisher");
@@ -81,14 +81,14 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
     super.serviceInit(conf);
     getDispatcher().register(SystemMetricsEventType.class,
         new TimelineV2EventHandler());
-    publishContainerMetrics = getConfig().getBoolean(
-        YarnConfiguration.RM_PUBLISH_CONTAINER_METRICS_ENABLED,
-        YarnConfiguration.DEFAULT_RM_PUBLISH_CONTAINER_METRICS_ENABLED);
+    publishContainerEvents = getConfig().getBoolean(
+        YarnConfiguration.RM_PUBLISH_CONTAINER_EVENTS_ENABLED,
+        YarnConfiguration.DEFAULT_RM_PUBLISH_CONTAINER_EVENTS_ENABLED);
   }
 
   @VisibleForTesting
-  boolean isPublishContainerMetrics() {
-    return publishContainerMetrics;
+  boolean isPublishContainerEvents() {
+    return publishContainerEvents;
   }
 
   @SuppressWarnings("unchecked")
@@ -305,7 +305,7 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
   @SuppressWarnings("unchecked")
   @Override
   public void containerCreated(RMContainer container, long createdTime) {
-    if (publishContainerMetrics) {
+    if (publishContainerEvents) {
       TimelineEntity entity = createContainerEntity(container.getContainerId());
       entity.setCreatedTime(createdTime);
 
@@ -340,7 +340,7 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
   @SuppressWarnings("unchecked")
   @Override
   public void containerFinished(RMContainer container, long finishedTime) {
-    if (publishContainerMetrics) {
+    if (publishContainerEvents) {
       TimelineEntity entity = createContainerEntity(container.getContainerId());
 
       TimelineEvent tEvent = new TimelineEvent();

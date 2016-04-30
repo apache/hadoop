@@ -140,7 +140,7 @@ public class TestSystemMetricsPublisherForV2 {
     conf.setBoolean(YarnConfiguration.SYSTEM_METRICS_PUBLISHER_ENABLED, true);
     conf.setInt(
         YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE, 2);
-    conf.setBoolean(YarnConfiguration.RM_PUBLISH_CONTAINER_METRICS_ENABLED,
+    conf.setBoolean(YarnConfiguration.RM_PUBLISH_CONTAINER_EVENTS_ENABLED,
         true);
     try {
       conf.set(FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_DIR_ROOT,
@@ -160,12 +160,12 @@ public class TestSystemMetricsPublisherForV2 {
         new TimelineServiceV2Publisher(mock(RMContext.class));
     try {
       Configuration conf = getTimelineV2Conf();
-      conf.setBoolean(YarnConfiguration.RM_PUBLISH_CONTAINER_METRICS_ENABLED,
-          YarnConfiguration.DEFAULT_RM_PUBLISH_CONTAINER_METRICS_ENABLED);
+      conf.setBoolean(YarnConfiguration.RM_PUBLISH_CONTAINER_EVENTS_ENABLED,
+          YarnConfiguration.DEFAULT_RM_PUBLISH_CONTAINER_EVENTS_ENABLED);
       metricsPublisher.init(conf);
       assertFalse(
-          "Default configuration should not publish container Metrics from RM",
-          metricsPublisher.isPublishContainerMetrics());
+          "Default configuration should not publish container events from RM",
+          metricsPublisher.isPublishContainerEvents());
 
       metricsPublisher.stop();
 
@@ -174,10 +174,10 @@ public class TestSystemMetricsPublisherForV2 {
       metricsPublisher.init(conf);
       assertTrue("Expected to have registered event handlers and set ready to "
           + "publish events after init",
-          metricsPublisher.isPublishContainerMetrics());
+          metricsPublisher.isPublishContainerEvents());
       metricsPublisher.start();
-      assertTrue("Expected to publish container Metrics from RM",
-          metricsPublisher.isPublishContainerMetrics());
+      assertTrue("Expected to publish container events from RM",
+          metricsPublisher.isPublishContainerEvents());
     } finally {
       metricsPublisher.stop();
     }
