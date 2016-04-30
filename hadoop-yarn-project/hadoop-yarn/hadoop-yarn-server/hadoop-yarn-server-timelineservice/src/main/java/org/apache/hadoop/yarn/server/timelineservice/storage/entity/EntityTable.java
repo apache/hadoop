@@ -84,7 +84,7 @@ public class EntityTable extends BaseTable<EntityTable> {
       + ".table.metrics.ttl";
 
   /** default value for entity table name. */
-  private static final String DEFAULT_TABLE_NAME = "timelineservice.entity";
+  public static final String DEFAULT_TABLE_NAME = "timelineservice.entity";
 
   /** default TTL is 30 days for metrics timeseries. */
   private static final int DEFAULT_METRICS_TTL = 2592000;

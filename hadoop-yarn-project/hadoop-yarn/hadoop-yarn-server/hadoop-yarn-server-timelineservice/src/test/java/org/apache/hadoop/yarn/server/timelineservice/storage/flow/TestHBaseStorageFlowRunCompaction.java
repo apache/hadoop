@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -85,6 +87,40 @@ public class TestHBaseStorageFlowRunCompaction {
 
   private static void createSchema() throws IOException {
     TimelineSchemaCreator.createAllTables(util.getConfiguration(), false);
+  }
+
+  /** writes non numeric data into flow run table
+   * reads it back
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testWriteNonNumericData() throws Exception {
+    String rowKey = "nonNumericRowKey";
+    String column = "nonNumericColumnName";
+    String value = "nonNumericValue";
+    byte[] rowKeyBytes = Bytes.toBytes(rowKey);
+    byte[] columnNameBytes = Bytes.toBytes(column);
+    byte[] valueBytes = Bytes.toBytes(value);
+    Put p = new Put(rowKeyBytes);
+    p.addColumn(FlowRunColumnFamily.INFO.getBytes(), columnNameBytes,
+        valueBytes);
+    Configuration hbaseConf = util.getConfiguration();
+    TableName table = TableName.valueOf(hbaseConf.get(
+        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME));
+    Connection conn = null;
+    conn = ConnectionFactory.createConnection(hbaseConf);
+    Table flowRunTable = conn.getTable(table);
+    flowRunTable.put(p);
+
+    Get g = new Get(rowKeyBytes);
+    Result r = flowRunTable.get(g);
+    assertNotNull(r);
+    assertTrue(r.size() >= 1);
+    Cell actualValue = r.getColumnLatestCell(
+        FlowRunColumnFamily.INFO.getBytes(), columnNameBytes);
+    assertNotNull(CellUtil.cloneValue(actualValue));
+    assertEquals(Bytes.toString(CellUtil.cloneValue(actualValue)), value);
   }
 
   @Test
