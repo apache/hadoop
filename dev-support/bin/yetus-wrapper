@@ -115,7 +115,7 @@ if [[ $? != 0 ]]; then
 fi
 
 if [[ -n "${CURLBIN}" ]]; then
-  "${CURLBIN}" -s -L -O "${BASEURL}/${TARBALL}.gz"
+  "${CURLBIN}" -f -s -L -O "${BASEURL}/${TARBALL}.gz"
   if [[ $? != 0 ]]; then
     yetus_error "ERROR: yetus-dl: unable to download ${BASEURL}/${TARBALL}.gz"
     exit 1
