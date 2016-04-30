@@ -210,7 +210,7 @@ class FlowScanner implements RegionScanner, Closeable {
       if (comp.compare(currentColumnQualifier, newColumnQualifier) != 0) {
         if (converter != null && isNumericConverter(converter)) {
           addedCnt += emitCells(cells, currentColumnCells, currentAggOp,
-              (NumericValueConverter)converter, currentTimestamp);
+              converter, currentTimestamp);
         }
         resetState(currentColumnCells, alreadySeenAggDim);
         currentColumnQualifier = newColumnQualifier;
@@ -219,6 +219,7 @@ class FlowScanner implements RegionScanner, Closeable {
       }
       // No operation needs to be performed on non numeric converters.
       if (!isNumericConverter(converter)) {
+        currentColumnCells.add(cell);
         nextCell(cellLimit);
         continue;
       }
@@ -228,7 +229,7 @@ class FlowScanner implements RegionScanner, Closeable {
     }
     if (!currentColumnCells.isEmpty()) {
       addedCnt += emitCells(cells, currentColumnCells, currentAggOp,
-          (NumericValueConverter)converter, currentTimestamp);
+          converter, currentTimestamp);
       if (LOG.isDebugEnabled()) {
         if (addedCnt > 0) {
           LOG.debug("emitted cells. " + addedCnt + " for " + this.action
@@ -345,7 +346,7 @@ class FlowScanner implements RegionScanner, Closeable {
    * parameter.
    */
   private int emitCells(List<Cell> cells, SortedSet<Cell> currentColumnCells,
-      AggregationOperation currentAggOp, NumericValueConverter converter,
+      AggregationOperation currentAggOp, ValueConverter converter,
       long currentTimestamp) throws IOException {
     if ((currentColumnCells == null) || (currentColumnCells.size() == 0)) {
       return 0;
@@ -372,12 +373,14 @@ class FlowScanner implements RegionScanner, Closeable {
         cells.addAll(currentColumnCells);
         return currentColumnCells.size();
       case READ:
-        Cell sumCell = processSummation(currentColumnCells, converter);
+        Cell sumCell = processSummation(currentColumnCells,
+            (NumericValueConverter) converter);
         cells.add(sumCell);
         return 1;
       case MAJOR_COMPACTION:
         List<Cell> finalCells = processSummationMajorCompaction(
-            currentColumnCells, converter, currentTimestamp);
+            currentColumnCells, (NumericValueConverter) converter,
+            currentTimestamp);
         cells.addAll(finalCells);
         return finalCells.size();
       default:
