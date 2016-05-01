@@ -78,7 +78,7 @@ public class ServiceTerminatingCallable<V> implements Callable<V> {
   /**
    * Delegates the call to the callable supplied in the constructor,
    * then calls the <code>stop()</code> operation on its owner.
-   * <p>
+   *
    * Any exception is caught, noted and rethrown
    * @return the outcome of the delegated call operation
    * @throws Exception if one was raised.
@@ -91,6 +91,7 @@ public class ServiceTerminatingCallable<V> implements Callable<V> {
       exception = e;
       throw e;
     } finally {
+      // this operation is a no-op if owner==null
       ServiceOperations.stop(owner);
     }
   }

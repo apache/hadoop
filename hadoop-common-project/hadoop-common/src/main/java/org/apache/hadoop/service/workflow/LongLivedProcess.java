@@ -79,7 +79,7 @@ public class LongLivedProcess implements Runnable {
   private final ExecutorService logExecutor;
   
   private ProcessStreamReader processStreamReader;
-  /** list of recent lines, recorded for extraction into reports */
+  /** list of recent lines, recorded for extraction into reports. */
   private final List<String> recentLines = new LinkedList<>();
   // tagged as volatile to stop findbugs complaining
   private volatile int recentLineLimit = RECENT_LINE_LOG_LIMIT;
@@ -104,7 +104,7 @@ public class LongLivedProcess implements Runnable {
   private volatile boolean finished;
 
   /**
-   * Construct a service instance
+   * Construct a service instance.
    * @param name name of the process
    * @param processLog log to log to
    * @param commands list of commands
@@ -470,7 +470,6 @@ public class LongLivedProcess implements Runnable {
    * Lines are fetched from stdout and stderr and logged at info and error
    * respectively.
    */
-
   private final class ProcessStreamReader implements Runnable {
     private final Logger streamLog;
     private final int sleepTime;
@@ -481,7 +480,7 @@ public class LongLivedProcess implements Runnable {
     }
 
     /**
-     * Return a character if there is one, -1 if nothing is ready yet
+     * Return a character if there is one, -1 if nothing is ready yet.
      * @param reader reader
      * @return the value from the reader, or -1 if it is not ready
      * @throws IOException IO problems

@@ -35,11 +35,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Service wrapper for an external program that is launched and can/will
  * terminate.
- * <p>
+ *
  * This service is notified when the subprocess terminates, and stops itself 
  * and converts a non-zero exit code into a failure exception.
- * 
- * <p>
+ *
  * Key Features:
  * <ol>
  *   <li>The property {@link #executionTimeout} can be set to set a limit
@@ -80,7 +79,8 @@ public class WorkflowForkedProcessService
    */
   private static final Logger LOG =
       LoggerFactory.getLogger(WorkflowForkedProcessService.class);
-  public static final String ERROR_PROCESS_NOT_SET = "Process not yet configured";
+  public static final String ERROR_PROCESS_NOT_SET =
+      "Process not yet configured";
 
   private final AtomicBoolean processTerminated = new AtomicBoolean(false);
   private boolean processStarted = false;
@@ -142,7 +142,7 @@ public class WorkflowForkedProcessService
   }
 
   /**
-   * Stopped the forked process
+   * Stopped the forked process.
    */
   private void stopForkedProcess() {
     if (process != null) {
@@ -151,7 +151,7 @@ public class WorkflowForkedProcessService
   }
 
   /**
-   * Set the process log. This may be null for "do not log"
+   * Set the process log. This may be null for "do not log".
    * @param processLog process log
    */
   public void setProcessLog(Logger processLog) {
@@ -186,7 +186,7 @@ public class WorkflowForkedProcessService
   }
 
   @Override // notification from executed process
-  public synchronized void onProcessStarted(LongLivedProcess process) {
+  public synchronized void onProcessStarted(LongLivedProcess ps) {
     LOG.debug("Process has started");
     processStarted = true;
     if (executionTimeout > 0) {

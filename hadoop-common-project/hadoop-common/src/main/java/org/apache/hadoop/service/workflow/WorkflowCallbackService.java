@@ -40,9 +40,10 @@ import java.util.concurrent.TimeUnit;
 public class WorkflowCallbackService<V> extends
       AbstractWorkflowExecutorService {
   protected static final Logger LOG =
-    LoggerFactory.getLogger(WorkflowCallbackService.class);
+      LoggerFactory.getLogger(WorkflowCallbackService.class);
+
   /**
-   * This is the callback
+   * This is the callback.
    */
   private final Callable<V> callback;
   private final int delay;
@@ -52,6 +53,7 @@ public class WorkflowCallbackService<V> extends
 
   /**
    * Create an instance of the service.
+   *
    * @param name service name
    * @param callback callback to invoke
    * @param delay delay -or 0 for no delay
@@ -74,6 +76,12 @@ public class WorkflowCallbackService<V> extends
     return scheduledFuture;
   }
 
+  /**
+   * Starting the service will schedule the callback to be invoked after the
+   * delay passed in. This will be in a separate thread from the one which
+   * has made the {@code Service.start()} call.
+   * @throws Exception
+   */
   @Override
   protected void serviceStart() throws Exception {
     LOG.debug("Notifying {} after a delay of {} millis", callback, delay);
@@ -87,6 +95,7 @@ public class WorkflowCallbackService<V> extends
 
   /**
    * Stop the service.
+   *
    * If there is any exception noted from any executed notification,
    * note the exception in this class
    * @throws Exception exception.

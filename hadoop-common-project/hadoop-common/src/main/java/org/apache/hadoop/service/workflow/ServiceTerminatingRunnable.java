@@ -32,7 +32,7 @@ public class ServiceTerminatingRunnable implements Runnable {
   private Exception exception;
 
   /**
-   * Create an instance
+   * Create an instance.
    * @param owner owning service: may be null
    * @param action action to execute before terminating the service
    */
@@ -44,7 +44,7 @@ public class ServiceTerminatingRunnable implements Runnable {
   }
 
   /**
-   * Get the owning service
+   * Get the owning service.
    * @return the service to receive notification when
    * the runnable completes.
    */

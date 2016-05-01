@@ -44,8 +44,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ServiceThreadFactory implements ThreadFactory {
 
   private static AtomicInteger counter = new AtomicInteger(1);
+
   /**
-   * Default format for thread names: {@value}
+   * Default format for thread names: {@value}.
    */
   public static final String DEFAULT_NAMING_FORMAT = "%s-%03d";
   private final String name;

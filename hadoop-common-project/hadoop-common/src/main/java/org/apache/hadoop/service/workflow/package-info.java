@@ -144,8 +144,9 @@ services.
 <ul>
   <li>
   {@link org.apache.hadoop.service.workflow.ServiceTerminatingRunnable }:
-  A {@link java.lang.Runnable} which runs the runnable supplied in its constructor
-  then signals its owning service to stop once that runnable is completed.
+  A {@link java.lang.Runnable} which runs the runnable supplied in its
+  constructor then signals its owning service to stop once that runnable
+  is completed.
   Any exception raised in the run is stored.
   </li>
 
@@ -164,8 +165,7 @@ services.
   meaningful thread names. It can be used as a parameter to constructors of
   {@link java.util.concurrent.ExecutorService} instances, to ensure that
   log information can tie back text to the related services</li>
-  </ul>
-</li>
+</ul>
 
  */
 
