@@ -20,7 +20,7 @@ package org.apache.hadoop.service.launcher;
 
 /**
  * Standard launcher arguments. These are all from
- * the GenericOptionsParser -simply extracted to constants
+ * the GenericOptionsParser -simply extracted to constants.
  */
 public interface LauncherArguments {
   /**
@@ -45,8 +45,8 @@ public interface LauncherArguments {
   String ARG_CONFCLASS_PREFIXED = "--" + ARG_CONFCLASS;
 
   /**
-   * Error string on a parse failure
-   * <p>
+   * Error string on a parse failure.
+   *
    * {@value}
    */
   String E_PARSE_FAILED = "Failed to parse: ";

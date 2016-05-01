@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-
 /**
 
  This package contains classes, interfaces and exceptions to launch
@@ -269,9 +268,11 @@
  implements {@link org.apache.hadoop.util.ExitCodeProvider#getExitCode()}
 
  <p>
- If an exception does not implement  {@link org.apache.hadoop.util.ExitCodeProvider#getExitCode()},
- it will be wrapped in an {@link org.apache.hadoop.util.ExitUtil.ExitException} with
- the exit code {@link org.apache.hadoop.service.launcher.LauncherExitCodes#EXIT_EXCEPTION_THROWN}.
+ If an exception does not implement
+ {@link org.apache.hadoop.util.ExitCodeProvider#getExitCode()},
+ it will be wrapped in an {@link org.apache.hadoop.util.ExitUtil.ExitException}
+ with the exit code
+ {@link org.apache.hadoop.service.launcher.LauncherExitCodes#EXIT_EXCEPTION_THROWN}.
 
  <p>
  To view the exit code extraction in sequence, it is:
@@ -279,22 +280,30 @@
  <li>If no exception was triggered by a basic service, a
  {@link org.apache.hadoop.service.launcher.ServiceLaunchException} with an
  exit code of 0 s created.</li>
+
  <li>For a LaunchableService, the exit code is the result of {@code execute()}
  Again, a {@link org.apache.hadoop.service.launcher.ServiceLaunchException}
  with a return code of 0 is created.
  </li>
+
  <li>Otherwise, if the exception is an instance of {@code ExitException},
  it is returned as the service terminating exception.</li>
+
  <li>If the exception implements {@link org.apache.hadoop.util.ExitCodeProvider},
  its exit code and {@code getMessage()} value become the exit exception.</li>
- <li>Otherwise, it is wrapped as a {@link org.apache.hadoop.service.launcher.ServiceLaunchException}
- with the exit code {@link org.apache.hadoop.service.launcher.LauncherExitCodes#EXIT_EXCEPTION_THROWN}
+
+ <li>Otherwise, it is wrapped as a
+ {@link org.apache.hadoop.service.launcher.ServiceLaunchException}
+ with the exit code
+ {@link org.apache.hadoop.service.launcher.LauncherExitCodes#EXIT_EXCEPTION_THROWN}
  to indicate that an exception was thrown.</li>
+
  <li>This is finally passed to
  {@link org.apache.hadoop.util.ExitUtil#terminate(ExitUtil.ExitException)},
  by way of
  {@link org.apache.hadoop.service.launcher.ServiceLauncher#exit(ExitUtil.ExitException)};
  a method designed to allow subclasses to override for testing.</li>
+
  <li>The {@link org.apache.hadoop.util.ExitUtil} class then terminates the JVM
  with the specified exit code, printing the {@code toString()} value
  of the exception if the return code is non-zero.</li>
@@ -391,7 +400,8 @@
  services which do not implement the LaunchableService interface. Its one
  weakness is that the configuration is now private to that instance. Some
  YARN services use a single shared configuration instance as a way of propagating
- information between peer services in a {@link org.apache.hadoop.service.CompositeService}.
+ information between peer services in a
+ {@link org.apache.hadoop.service.CompositeService}.
  While a dangerous practice, it does happen.
 
 

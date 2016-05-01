@@ -36,12 +36,13 @@ import java.lang.Thread.UncaughtExceptionHandler;
  * was raised; the behavior on a standard Exception, raised outside 
  * process shutdown, is simply to log it. 
  *
- * (Based on the class YarnUncaughtExceptionHandler)
+ * (Based on the class {@code YarnUncaughtExceptionHandler})
  */
 @SuppressWarnings("UseOfSystemOutOrSystemErr")
 @Public
 @Evolving
-public class HadoopUncaughtExceptionHandler implements UncaughtExceptionHandler {
+public class HadoopUncaughtExceptionHandler
+    implements UncaughtExceptionHandler {
 
   /**
    * Logger.
@@ -50,13 +51,13 @@ public class HadoopUncaughtExceptionHandler implements UncaughtExceptionHandler 
       HadoopUncaughtExceptionHandler.class);
 
   /**
-   * Delegate for simple exceptions
+   * Delegate for simple exceptions.
    */
   private final UncaughtExceptionHandler delegate;
 
   /**
    * Create an instance delegating to the supplied handler if
-   * the exception is considered "simple"
+   * the exception is considered "simple".
    * @param delegate a delegate exception handler.
    */
   public HadoopUncaughtExceptionHandler(UncaughtExceptionHandler delegate) {

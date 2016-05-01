@@ -50,7 +50,6 @@ import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_INTERRUP
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-
 public class InterruptEscalator implements IrqHandler.Interrupted {
   private static final Logger LOG = LoggerFactory.getLogger(
       InterruptEscalator.class);
@@ -135,7 +134,7 @@ public class InterruptEscalator implements IrqHandler.Interrupted {
   }
 
   /**
-   * Register an interrupt handler
+   * Register an interrupt handler.
    * @param signalName signal name
    * @throws IllegalArgumentException if the registration failed
    */
@@ -146,7 +145,7 @@ public class InterruptEscalator implements IrqHandler.Interrupted {
   }
 
   /**
-   * Look up the handler for a signal
+   * Look up the handler for a signal.
    * @param signalName signal name
    * @return a handler if found
    */
@@ -160,7 +159,7 @@ public class InterruptEscalator implements IrqHandler.Interrupted {
   }
 
   /**
-   * Flag set if forced shut down timed out
+   * Flag set if forced shut down timed out.
    * @return true if a shutdown was attempted and it timed out
    */
   public boolean isForcedShutdownTimedOut() {
@@ -168,7 +167,7 @@ public class InterruptEscalator implements IrqHandler.Interrupted {
   }
 
   /**
-   * Flag set if a signal has been received
+   * Flag set if a signal has been received.
    * @return true if there has been one interrupt already.
    */
   public boolean isSignalAlreadyReceived() {
@@ -176,7 +175,7 @@ public class InterruptEscalator implements IrqHandler.Interrupted {
   }
 
   /**
-   * forced shutdown runnable.
+   * Forced shutdown runnable.
    */
   protected static class ServiceForcedShutdown implements Runnable {
 
@@ -192,7 +191,7 @@ public class InterruptEscalator implements IrqHandler.Interrupted {
 
     /**
      * shutdown callback: stop the service and set an atomic boolean
-     * if it stopped within the shutdown time
+     * if it stopped within the shutdown time.
      */
     @Override
     public void run() {
@@ -206,7 +205,7 @@ public class InterruptEscalator implements IrqHandler.Interrupted {
     }
 
     /**
-     * Probe for the service being shutdown
+     * Probe for the service being shutdown.
      * @return true if the service has been shutdown in the runnable
      */
     private boolean getServiceWasShutdown() {

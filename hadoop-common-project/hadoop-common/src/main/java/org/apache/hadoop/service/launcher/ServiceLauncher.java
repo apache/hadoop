@@ -40,13 +40,12 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 /**
  * A class to launch any service by name.
- * <p>
+ *
  * It's designed to be subclassed for custom entry points.
- * <p>
+ *
  * 
  * Workflow:
  * <ol>
@@ -97,11 +96,11 @@ public class ServiceLauncher<S extends Service>
 
   protected static final String USAGE_NAME = "Usage: " + NAME;
   protected static final String USAGE_SERVICE_ARGUMENTS =
-    "service-classname <service arguments>";
+      "service-classname <service arguments>";
 
   /**
    * Usage message.
-   * <p>
+   *
    * {@value}
    */
   public static final String USAGE_MESSAGE =
@@ -117,14 +116,14 @@ public class ServiceLauncher<S extends Service>
 
   /**
    * The launched service.
-   * <p>
+   *
    * Invalid until the service has been created. 
    */
   private volatile S service;
   
   /**
    * Exit code of the service.
-   * <p>
+   *
    * Invalid until a service has
    * executed or stopped, depending on the service type.
    */
@@ -157,12 +156,12 @@ public class ServiceLauncher<S extends Service>
 
   /**
    * List of classnames to load to configuration before creating a
-   * {@link Configuration} instance
+   * {@link Configuration} instance.
    */
   private List<String> confClassnames = new ArrayList<>();
 
   /**
-   * URLs of configurations to load into the configuration instance created
+   * URLs of configurations to load into the configuration instance created.
    */
   private List<URL> confResourceUrls = new ArrayList<>();
 
@@ -201,7 +200,7 @@ public class ServiceLauncher<S extends Service>
 
   /**
    * Get the service.
-   * <p>
+   *
    * Null until
    * {@link #coreServiceLaunch(Configuration, List, boolean, boolean)}
    * has completed
@@ -267,7 +266,7 @@ public class ServiceLauncher<S extends Service>
 
   /**
    * Launch the service and exit.
-   * <p>
+   *
    * <ol>
    * <li>Parse the command line.</li> 
    * <li>Build the service configuration from it.</li>
@@ -359,19 +358,19 @@ public class ServiceLauncher<S extends Service>
   protected Options createOptions() {
     Options options = new Options();
     Option oconf = OptionBuilder.withArgName("configuration file")
-      .hasArg()
-      .withDescription("specify an application configuration file")
-      .withLongOpt(ARG_CONF)
-      .create(ARG_CONF_SHORT);
+        .hasArg()
+        .withDescription("specify an application configuration file")
+        .withLongOpt(ARG_CONF)
+        .create(ARG_CONF_SHORT);
     Option confclass = OptionBuilder.withArgName("configuration classname")
-      .hasArg()
-      .withDescription("Classname of a Hadoop Configuration subclass to load")
-      .withLongOpt(ARG_CONFCLASS)
-      .create(ARG_CONFCLASS_SHORT);
+        .hasArg()
+        .withDescription("Classname of a Hadoop Configuration subclass to load")
+        .withLongOpt(ARG_CONFCLASS)
+        .create(ARG_CONFCLASS_SHORT);
     Option property = OptionBuilder.withArgName("property=value")
-      .hasArg()
-      .withDescription("use value for given property")
-      .create('D');
+        .hasArg()
+        .withDescription("use value for given property")
+        .create('D');
     options.addOption(oconf);
     options.addOption(property);
     options.addOption(confclass);
@@ -380,7 +379,7 @@ public class ServiceLauncher<S extends Service>
 
   /**
    * Override point: create the base configuration for the service.
-   * <p>
+   *
    * Subclasses can override to create HDFS/YARN configurations etc.
    * @return the configuration to use as the service initalizer.
    */
@@ -438,11 +437,11 @@ public class ServiceLauncher<S extends Service>
   /**
    * Launch a service catching all exceptions and downgrading them to exit codes
    * after logging.
-   * <p>
+   *
    * Sets {@link #serviceException} to this value.
    * @param conf configuration to use
-   * @param processedArgs command line after the launcher-specific arguments have
-   * been stripped out.
+   * @param processedArgs command line after the launcher-specific arguments
+   * have been stripped out.
    * @param addShutdownHook should a shutdown hook be added to terminate
    * this service on shutdown. Tests should set this to false.
    * @param execute execute/wait for the service to stop.
@@ -460,15 +459,15 @@ public class ServiceLauncher<S extends Service>
       int exitCode = coreServiceLaunch(conf, processedArgs, addShutdownHook,
           execute);
       if (service != null) {
-        //check to see if the service failed
+        // check to see if the service failed
         Throwable failure = service.getFailureCause();
         if (failure != null) {
-          //the service exited with a failure.
-          //check what state it is in
+          // the service exited with a failure.
+          // check what state it is in
           Service.STATE failureState = service.getFailureState();
           if (failureState == Service.STATE.STOPPED) {
-            //the failure occurred during shutdown, not important enough to bother
-            //the user as it may just scare them
+            // the failure occurred during shutdown, not important enough
+            // to bother the user as it may just scare them
             LOG.debug("Failure during shutdown: {} ", failure, failure);
           } else {
             //throw it for the catch handlers to deal with
@@ -500,16 +499,16 @@ public class ServiceLauncher<S extends Service>
 
   /**
    * Launch the service.
-   * <p>
    *
    * All exceptions that occur are propagated upwards.
-   * <p>
+   *
    * If the method returns a status code, it means that it got as far starting
    * the service, and if it implements {@link LaunchableService}, that the 
    * method {@link LaunchableService#execute()} has completed. 
-   *<p>
-   * After this method returns, the service can be retrieved returned by {@link #getService()}.
-   *<p>
+   *
+   * After this method returns, the service can be retrieved returned by
+   * {@link #getService()}.
+   *
    * @param conf configuration
    * @param processedArgs arguments after the configuration parameters
    * have been stripped out.
@@ -521,8 +520,9 @@ public class ServiceLauncher<S extends Service>
    * @throws InstantiationException not allowed to instantiate it
    * @throws InterruptedException thread interrupted
    * @throws ExitUtil.ExitException any exception defining the status code.
-   * @throws Exception any other failure -if it implements {@link ExitCodeProvider}
-   * then it defines the exit code for any containing exception
+   * @throws Exception any other failure -if it implements
+   * {@link ExitCodeProvider} then it defines the exit code for any
+   * containing exception
    */
 
   protected int coreServiceLaunch(Configuration conf,
@@ -548,8 +548,8 @@ public class ServiceLauncher<S extends Service>
       LOG.debug("Service {} implements LaunchedService", name);
       launchableService = (LaunchableService) service;
       if (launchableService.isInState(Service.STATE.INITED)) {
-        LOG.warn("LaunchedService {}"
-           + " initialized in constructor before CLI arguments passed in",
+        LOG.warn("LaunchedService {}" 
+            + " initialized in constructor before CLI arguments passed in",
             name);
       }
       Configuration newconf = launchableService.bindArgs(configuration,
@@ -597,7 +597,7 @@ public class ServiceLauncher<S extends Service>
 
   /**
    * Instantiate the service defined in <code>serviceClassName</code>.
-   * <p>
+   *
    * Sets the <code>configuration</code> field
    * to the the value of <code>conf</code>,
    * and the <code>service</code> field to the service created.
@@ -644,7 +644,7 @@ public class ServiceLauncher<S extends Service>
 
   /**
    * Convert an exception to an <code>ExitException</code>.
-   * <p>
+   *
    * This process may just be a simple pass through, otherwise a new
    * exception is created with an exit code, the text of the supplied
    * exception, and the supplied exception as an inner cause.
@@ -662,8 +662,7 @@ public class ServiceLauncher<S extends Service>
    */
   protected static ExitUtil.ExitException convertToExitException(
       Throwable thrown) {
-    ExitUtil.ExitException
-        exitException;// other exceptions are converted to ExitExceptions
+    ExitUtil.ExitException exitException;
     // get the exception message
     String message = thrown.toString();
     int exitCode;
@@ -699,7 +698,7 @@ public class ServiceLauncher<S extends Service>
   
   /**
    * Register this class as the handler for the control-C interrupt.
-   * <p>
+   *
    * Subclasses can extend this with extra operations, such as
    * an exception handler:
    * <pre>
@@ -722,7 +721,7 @@ public class ServiceLauncher<S extends Service>
   }
 
   /**
-   * Handler for uncaught exceptions: terminate the service
+   * Handler for uncaught exceptions: terminate the service.
    * @param thread thread
    * @param exception exception
    */
@@ -734,7 +733,7 @@ public class ServiceLauncher<S extends Service>
 
   /**
    * Get the service name via {@link Service#getName()}.
-   * <p>
+   *
    * If the service is not instantiated, the classname is returned instead.
    * @return the service name
    */
@@ -757,7 +756,7 @@ public class ServiceLauncher<S extends Service>
   
   /**
    * Print a warning message.
-   * <p>
+   *
    *   This tries to log to the log's warn() operation.
    *   If the log at that level is disabled it logs to system error
    * @param text warning text
@@ -772,9 +771,9 @@ public class ServiceLauncher<S extends Service>
 
   /**
    * Report an error. 
-   * <p>
+   *
    * This tries to log to <code>LOG.error()</code>
-   * <p>
+   *
    * If that log level is disabled disabled the message
    * is logged to system error along
    * with <code>thrown.toString()</code>
@@ -795,7 +794,7 @@ public class ServiceLauncher<S extends Service>
   
   /**
    * Exit the JVM.
-   * <p>
+   *
    * This is method can be overridden for testing, throwing an 
    * exception instead. Any subclassed method MUST raise an 
    * <code>ExitException</code> instance/subclass.
@@ -809,13 +808,13 @@ public class ServiceLauncher<S extends Service>
 
   /**
    * Exit the JVM using an exception for the exit code and message.
-   * <p>
+   *
    * This is the standard way a launched service exits.
    * An error code of 0 means success -nothing is printed.
-   * <p>
+   *
    * By default, calls
    * {@link ExitUtil#terminate(ExitUtil.ExitException)}.
-   * <p>
+   *
    * This can be subclassed for testing
    * @param ee exit exception
    */
@@ -834,10 +833,10 @@ public class ServiceLauncher<S extends Service>
   /**
    * Extract the command options and apply them to the configuration,
    * building an array of processed arguments to hand down to the service.
-   * <p>
+   *
    * @param conf configuration to update.
-   * @param args main arguments. <code>args[0]</code>is assumed to be the service
-   * classname and is skipped.
+   * @param args main arguments. <code>args[0]</code>is assumed to be
+   * the service classname and is skipped.
    * @return the remaining arguments
    * @throws ExitUtil.ExitException if JVM exiting is disabled.
    */
@@ -854,10 +853,10 @@ public class ServiceLauncher<S extends Service>
 
   /**
    * Extract a {@link Configuration} file from the filename argument. 
-   * <p>
+   *
    * This includes tests that the file exists and is a valid
    * XML Configuration file.
-   * <p>
+   *
    * If the load fails for any reason, the JVM is exited with an error code
    * {@link LauncherExitCodes#EXIT_COMMAND_ARGUMENT_ERROR} and a message.
    * @param filename filename argument
@@ -962,7 +961,7 @@ public class ServiceLauncher<S extends Service>
   }
 
   /**
-   * Verify that all the specified filenames exist
+   * Verify that all the specified filenames exist.
    * @param filenames a list of files
    * @throws ServiceLaunchException if a file is not found
    */
@@ -1015,7 +1014,7 @@ public class ServiceLauncher<S extends Service>
 
   /**
    * This is the JVM entry point for the service launcher.
-   * <p>
+   *
    * Converts the arguments to a list, then invokes {@link #serviceMain(List)}
    * @param args command line arguments.
    */
@@ -1025,7 +1024,7 @@ public class ServiceLauncher<S extends Service>
 
   /**
    * Varargs version of the entry point for testing and other in-JVM use
-   * -hands off to {@link #serviceMain(List)}
+   * -hands off to {@link #serviceMain(List)}.
    * @param args command line arguments.
    */
   public static void serviceMain(String... args) {
@@ -1038,7 +1037,7 @@ public class ServiceLauncher<S extends Service>
    * <ol>
    *   <li>-conf &lt;file&gt; : configuration file</li>
    * </ol>
-   * <p>
+   *
    * Argument 0 MUST be the service classname
    * @param argsList the list of arguments
    */
@@ -1059,9 +1058,10 @@ public class ServiceLauncher<S extends Service>
    * A generic options parser which does not parse any of the traditional
    * Hadoop options.
    */
-  protected static class MinimalGenericOptionsParser extends GenericOptionsParser {
-    public MinimalGenericOptionsParser(Configuration conf, Options options, String[] args)
-        throws IOException {
+  protected static class MinimalGenericOptionsParser
+      extends GenericOptionsParser {
+    public MinimalGenericOptionsParser(Configuration conf,
+        Options options, String[] args) throws IOException {
       super(conf, options, args);
     }
 
