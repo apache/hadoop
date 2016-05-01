@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
-import com.google.common.base.Joiner;
+import java.util.Collections;
+import java.util.Set;
 
 import org.apache.avro.util.Utf8;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -26,8 +27,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 
-import java.util.Collections;
+import com.google.common.base.Joiner;
 
 /**
  * Event to record Failed and Killed completion of jobs
@@ -134,5 +136,10 @@ public class JobUnsuccessfulCompletionEvent implements HistoryEvent {
     tEvent.addInfo("FINISHED_MAPS", getFinishedMaps());
     tEvent.addInfo("FINISHED_REDUCES", getFinishedReduces());
     return tEvent;
+  }
+
+  @Override
+  public Set<TimelineMetric> getTimelineMetrics() {
+    return null;
   }
 }

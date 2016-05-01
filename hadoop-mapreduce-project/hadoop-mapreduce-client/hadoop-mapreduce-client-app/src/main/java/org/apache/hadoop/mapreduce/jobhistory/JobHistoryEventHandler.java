@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
@@ -68,6 +69,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
+import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -1072,6 +1075,15 @@ public class JobHistoryEventHandler extends AbstractService
     return entity;
   }
   
+  // create ApplicationEntity with job finished Metrics from HistoryEvent
+  private org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity
+      createAppEntityWithJobMetrics(HistoryEvent event, JobId jobId) {
+    ApplicationEntity entity = new ApplicationEntity();
+    entity.setId(jobId.getAppId().toString());
+    entity.setMetrics(event.getTimelineMetrics());
+    return entity;
+  }
+
   // create BaseEntity from HistoryEvent with adding other info, like: 
   // timestamp and entityType.
   private org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity 
@@ -1087,6 +1099,10 @@ public class JobHistoryEventHandler extends AbstractService
     entity.setType(entityType);
     if (setCreatedTime) {
       entity.setCreatedTime(timestamp);
+    }
+    Set<TimelineMetric> timelineMetrics = event.getTimelineMetrics();
+    if (timelineMetrics != null) {
+      entity.setMetrics(timelineMetrics);
     }
     return entity;
   }
@@ -1203,10 +1219,17 @@ public class JobHistoryEventHandler extends AbstractService
           " and handled by timeline service.");
       return;
     }
+
+    org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity
+        appEntityWithJobMetrics = null;
     if (taskId == null) {
       // JobEntity
       tEntity = createJobEntity(event, timestamp, jobId,
           MAPREDUCE_JOB_ENTITY_TYPE, setCreatedTime);
+      if (event.getEventType() == EventType.JOB_FINISHED
+          && event.getTimelineMetrics() != null) {
+        appEntityWithJobMetrics = createAppEntityWithJobMetrics(event, jobId);
+      }
     } else {
       if (taskAttemptId == null) {
         // TaskEntity
@@ -1221,7 +1244,11 @@ public class JobHistoryEventHandler extends AbstractService
       }
     }
     try {
-      timelineClient.putEntitiesAsync(tEntity);
+      if (appEntityWithJobMetrics == null) {
+        timelineClient.putEntitiesAsync(tEntity);
+      } else {
+        timelineClient.putEntities(tEntity, appEntityWithJobMetrics);
+      }
     } catch (IOException | YarnException e) {
       LOG.error("Failed to process Event " + event.getEventType()
           + " for the job : " + jobId, e);

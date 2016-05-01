@@ -17,11 +17,14 @@
  */
 package org.apache.hadoop.mapreduce.jobhistory;
 
+import java.util.Set;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 
 /**
  * Event to record the normalized map/reduce requirements.
@@ -81,5 +84,10 @@ public class NormalizedResourceEvent implements HistoryEvent {
     tEvent.addInfo("MEMORY", "" + getMemory());
     tEvent.addInfo("TASK_TYPE", getTaskType());
     return tEvent;
+  }
+
+  @Override
+  public Set<TimelineMetric> getTimelineMetrics() {
+    return null;
   }
 }

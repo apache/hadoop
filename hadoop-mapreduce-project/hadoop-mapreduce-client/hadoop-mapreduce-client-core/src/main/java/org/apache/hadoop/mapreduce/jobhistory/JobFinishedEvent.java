@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
+import java.util.Set;
+
 import org.apache.avro.util.Utf8;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -26,6 +28,7 @@ import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.util.JobHistoryEventUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 
 /**
  * Event to record successful completion of job
@@ -148,14 +151,19 @@ public class JobFinishedEvent  implements HistoryEvent {
     tEvent.addInfo("FAILED_REDUCES", getFailedReduces());
     tEvent.addInfo("FINISHED_MAPS", getFinishedMaps());
     tEvent.addInfo("FINISHED_REDUCES", getFinishedReduces());
-    tEvent.addInfo("MAP_COUNTERS_GROUPS",
-        JobHistoryEventUtils.countersToJSON(getMapCounters()));
-    tEvent.addInfo("REDUCE_COUNTERS_GROUPS",
-        JobHistoryEventUtils.countersToJSON(getReduceCounters()));
-    tEvent.addInfo("TOTAL_COUNTERS_GROUPS",
-        JobHistoryEventUtils.countersToJSON(getTotalCounters()));
     // TODO replace SUCCEEDED with JobState.SUCCEEDED.toString()
     tEvent.addInfo("JOB_STATUS", "SUCCEEDED");
     return tEvent;
+  }
+
+  @Override
+  public Set<TimelineMetric> getTimelineMetrics() {
+    Set<TimelineMetric> jobMetrics = JobHistoryEventUtils
+        .countersToTimelineMetric(getMapCounters(), finishTime);
+    jobMetrics.addAll(JobHistoryEventUtils
+        .countersToTimelineMetric(getReduceCounters(), finishTime));
+    jobMetrics.addAll(JobHistoryEventUtils
+        .countersToTimelineMetric(getTotalCounters(), finishTime));
+    return jobMetrics;
   }
 }
