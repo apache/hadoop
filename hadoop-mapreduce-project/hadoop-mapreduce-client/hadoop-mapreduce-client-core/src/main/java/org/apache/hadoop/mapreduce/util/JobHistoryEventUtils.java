@@ -17,10 +17,13 @@
 */
 package org.apache.hadoop.mapreduce.util;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.CounterGroup;
 import org.apache.hadoop.mapreduce.Counters;
-
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
@@ -51,6 +54,22 @@ public final class JobHistoryEventUtils {
       }
     }
     return nodes;
+  }
+
+  public static Set<TimelineMetric> countersToTimelineMetric(Counters counters,
+      long timestamp) {
+    Set<TimelineMetric> entityMetrics = new HashSet<TimelineMetric>();
+    for (CounterGroup g : counters) {
+      String groupName = g.getName();
+      for (Counter c : g) {
+        String name = groupName + ":" + c.getName();
+        TimelineMetric metric = new TimelineMetric();
+        metric.setId(name);
+        metric.addValue(timestamp, c.getValue());
+        entityMetrics.add(metric);
+      }
+    }
+    return entityMetrics;
   }
 
 }

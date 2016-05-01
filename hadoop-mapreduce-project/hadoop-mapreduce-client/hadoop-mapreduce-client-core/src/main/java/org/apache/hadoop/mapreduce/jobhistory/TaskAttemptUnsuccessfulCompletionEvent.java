@@ -18,8 +18,12 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
+import java.util.Set;
+
+import org.apache.avro.util.Utf8;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.mapred.ProgressSplitsBlock;
 import org.apache.hadoop.mapred.TaskStatus;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
@@ -28,10 +32,7 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.util.JobHistoryEventUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
-
-import org.apache.hadoop.mapred.ProgressSplitsBlock;
-
-import org.apache.avro.util.Utf8;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 
 /**
  * Event to record unsuccessful (Killed/Failed) completion of task attempts
@@ -267,9 +268,13 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
     tEvent.addInfo("SHUFFLE_FINISH_TIME", getFinishTime());
     tEvent.addInfo("SORT_FINISH_TIME", getFinishTime());
     tEvent.addInfo("MAP_FINISH_TIME", getFinishTime());
-    tEvent.addInfo("COUNTERS_GROUPS",
-        JobHistoryEventUtils.countersToJSON(getCounters()));
     return tEvent;
   }
 
+  @Override
+  public Set<TimelineMetric> getTimelineMetrics() {
+    Set<TimelineMetric> metrics = JobHistoryEventUtils
+        .countersToTimelineMetric(getCounters(), finishTime);
+    return metrics;
+  }
 }
