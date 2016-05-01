@@ -18,7 +18,12 @@
 
 package org.apache.hadoop.mapred;
 
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
@@ -38,11 +43,13 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timelineservice.collector.PerNodeTimelineCollectorsAuxService;
+import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.junit.Assert;
@@ -200,7 +207,7 @@ public class TestMRTimelineEventHandling {
       Assert.assertEquals(apps.size(), 1);
       ApplicationReport appReport = apps.get(0);
       firstAppId = appReport.getApplicationId();
-
+      UtilsForTests.waitForAppFinished(job, cluster);
       checkNewTimelineEvent(firstAppId, appReport);
 
       LOG.info("Run 2nd job which should be failed.");
@@ -213,6 +220,7 @@ public class TestMRTimelineEventHandling {
 
       appReport = apps.get(0).getApplicationId().equals(firstAppId) ?
           apps.get(0) : apps.get(1);
+
       checkNewTimelineEvent(firstAppId, appReport);
 
     } finally {
@@ -262,6 +270,27 @@ public class TestMRTimelineEventHandling {
     Assert.assertTrue("jobEventFilePath: " + jobEventFilePath +
         " does not exist.",
         jobEventFile.exists());
+    verifyMetricsWhenEvent(jobEventFile, EventType.JOB_FINISHED.name());
+
+    // for this test, we expect MR job metrics are published in YARN_APPLICATION
+    String outputAppDir = basePath + "/YARN_APPLICATION/";
+    entityFolder = new File(outputAppDir);
+    Assert.assertTrue(
+        "Job output directory: " + outputAppDir +
+        " does not exist.",
+        entityFolder.isDirectory());
+
+    // check for job event file
+    String appEventFileName = appId.toString()
+        + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
+
+    String appEventFilePath = outputAppDir + appEventFileName;
+    File appEventFile = new File(appEventFilePath);
+    Assert.assertTrue(
+        "appEventFilePath: " + appEventFilePath +
+        " does not exist.",
+        appEventFile.exists());
+    verifyMetricsWhenEvent(appEventFile, null);
 
     // check for task event file
     String outputDirTask = basePath + "/MAPREDUCE_TASK/";
@@ -278,6 +307,7 @@ public class TestMRTimelineEventHandling {
     Assert.assertTrue("taskEventFileName: " + taskEventFilePath +
         " does not exist.",
         taskEventFile.exists());
+    verifyMetricsWhenEvent(taskEventFile, EventType.TASK_FINISHED.name());
     
     // check for task attempt event file
     String outputDirTaskAttempt = basePath + "/MAPREDUCE_TASK_ATTEMPT/";
@@ -294,6 +324,48 @@ public class TestMRTimelineEventHandling {
     File taskAttemptEventFile = new File(taskAttemptEventFilePath);
     Assert.assertTrue("taskAttemptEventFileName: " + taskAttemptEventFilePath +
         " does not exist.", taskAttemptEventFile.exists());
+    verifyMetricsWhenEvent(taskAttemptEventFile,
+        EventType.MAP_ATTEMPT_FINISHED.name());
+  }
+
+  private void verifyMetricsWhenEvent(File entityFile, String eventId)
+      throws IOException {
+    BufferedReader reader = null;
+    String strLine;
+    try {
+      reader = new BufferedReader(new FileReader(entityFile));
+      boolean jobMetricsFoundForAppEntity = false;
+      while ((strLine = reader.readLine()) != null) {
+        if (strLine.trim().length() > 0) {
+          org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity =
+              FileSystemTimelineReaderImpl.getTimelineRecordFromJSON(
+                  strLine.trim(),
+                  org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity.class);
+          if (eventId == null) {
+            // Job metrics are published without any events for
+            // ApplicationEntity. There is also possibility that some other
+            // ApplicationEntity is published without events, hence loop all
+            if (entity.getEvents().size() == 0) {
+              jobMetricsFoundForAppEntity = entity.getMetrics().size() > 0;
+              if (jobMetricsFoundForAppEntity) {
+                return;
+              }
+            }
+          } else {
+            for (TimelineEvent event : entity.getEvents()) {
+              if (event.getId().equals(eventId)) {
+                assertTrue(entity.getMetrics().size() > 0);
+                return;
+              }
+            }
+          }
+        }
+      }
+      fail("Expected event : " + eventId + " not found in the file "
+          + entityFile);
+    } finally {
+      reader.close();
+    }
   }
 
   @Test

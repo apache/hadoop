@@ -18,13 +18,15 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
+import java.util.Set;
+
+import org.apache.avro.util.Utf8;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
-
-import org.apache.avro.util.Utf8;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 
 /**
  * Event to record the initialization of a job
@@ -86,5 +88,10 @@ public class JobInitedEvent implements HistoryEvent {
     tEvent.addInfo("TOTAL_REDUCES", getTotalReduces());
     tEvent.addInfo("UBERIZED", getUberized());
     return tEvent;
+  }
+
+  @Override
+  public Set<TimelineMetric> getTimelineMetrics() {
+    return null;
   }
 }

@@ -21,7 +21,9 @@ package org.apache.hadoop.mapreduce.jobhistory;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
+import org.apache.avro.util.Utf8;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapreduce.JobACL;
@@ -29,8 +31,7 @@ import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
-
-import org.apache.avro.util.Utf8;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 
 /**
  * Event to record the submission of a job
@@ -227,6 +228,11 @@ public class JobSubmittedEvent implements HistoryEvent {
     tEvent.addInfo("WORKFLOW_TAGS", getWorkflowTags());
     
     return tEvent;
+  }
+
+  @Override
+  public Set<TimelineMetric> getTimelineMetrics() {
+    return null;
   }
 
 }

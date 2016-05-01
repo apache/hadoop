@@ -18,15 +18,17 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
+import java.util.Set;
+
+import org.apache.avro.util.Utf8;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-
-import org.apache.avro.util.Utf8;
 
 /**
  * Event to record start of a task attempt
@@ -183,5 +185,9 @@ public class AMStartedEvent implements HistoryEvent {
     tEvent.addInfo("START_TIME", getStartTime());
     return tEvent;
   }
-  
+
+  @Override
+  public Set<TimelineMetric> getTimelineMetrics() {
+    return null;
+  }
 }

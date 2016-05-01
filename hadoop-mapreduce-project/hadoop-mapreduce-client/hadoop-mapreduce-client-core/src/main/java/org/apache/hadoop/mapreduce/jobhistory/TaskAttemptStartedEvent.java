@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
+import java.util.Set;
+
+import org.apache.avro.util.Utf8;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
@@ -25,10 +28,9 @@ import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
-
-import org.apache.avro.util.Utf8;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /**
  * Event to record start of a task attempt
@@ -149,6 +151,11 @@ public class TaskAttemptStartedEvent implements HistoryEvent {
     tEvent.addInfo("CONTAINER_ID", getContainerId() == null ?
         "" : getContainerId().toString());
     return tEvent;
+  }
+
+  @Override
+  public Set<TimelineMetric> getTimelineMetrics() {
+    return null;
   }
 
 }
