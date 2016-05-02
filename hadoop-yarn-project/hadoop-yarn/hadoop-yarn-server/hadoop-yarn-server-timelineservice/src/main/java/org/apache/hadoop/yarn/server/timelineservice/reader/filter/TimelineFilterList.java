@@ -98,6 +98,42 @@ public class TimelineFilterList extends TimelineFilter {
   }
 
   @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result =
+        prime * result + ((filterList == null) ? 0 : filterList.hashCode());
+    result =
+        prime * result + ((operator == null) ? 0 : operator.hashCode());
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    TimelineFilterList other = (TimelineFilterList) obj;
+    if (operator != other.operator) {
+      return false;
+    }
+    if (filterList == null) {
+      if (other.filterList != null) {
+        return false;
+      }
+    } else if (!filterList.equals(other.filterList)) {
+      return false;
+    }
+    return true;
+  }
+
+  @Override
   public String toString() {
     return String.format("TimelineFilterList %s (%d): %s",
         this.operator, this.filterList.size(), this.filterList.toString());

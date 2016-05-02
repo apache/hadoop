@@ -31,9 +31,13 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 @Private
 @Unstable
 public class TimelineKeyValuesFilter extends TimelineFilter {
-  private final TimelineCompareOp compareOp;
-  private final String key;
-  private final Set<Object> values;
+  private TimelineCompareOp compareOp;
+  private String key;
+  private Set<Object> values;
+
+  public TimelineKeyValuesFilter() {
+  }
+
   public TimelineKeyValuesFilter(TimelineCompareOp op, String key,
       Set<Object> values) {
     if (op != TimelineCompareOp.EQUAL && op != TimelineCompareOp.NOT_EQUAL) {
@@ -58,6 +62,15 @@ public class TimelineKeyValuesFilter extends TimelineFilter {
     return values;
   }
 
+  public void setKeyAndValues(String keyForValues, Set<Object> vals) {
+    key = keyForValues;
+    values = vals;
+  }
+
+  public void setCompareOp(TimelineCompareOp op) {
+    compareOp = op;
+  }
+
   public TimelineCompareOp getCompareOp() {
     return compareOp;
   }
@@ -67,5 +80,47 @@ public class TimelineKeyValuesFilter extends TimelineFilter {
     return String.format("%s (%s, %s:%s)",
         this.getClass().getSimpleName(), this.compareOp.name(),
         this.key, (values == null) ? "" : values.toString());
+  }
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((compareOp == null) ? 0 : compareOp.hashCode());
+    result = prime * result + ((key == null) ? 0 : key.hashCode());
+    result = prime * result + ((values == null) ? 0 : values.hashCode());
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    TimelineKeyValuesFilter other = (TimelineKeyValuesFilter) obj;
+    if (compareOp != other.compareOp) {
+      return false;
+    }
+    if (key == null) {
+      if (other.key != null) {
+        return false;
+      }
+    } else if (!key.equals(other.key)) {
+      return false;
+    }
+    if (values == null) {
+      if (other.values != null) {
+        return false;
+      }
+    } else if (!values.equals(other.values)) {
+      return false;
+    }
+    return true;
   }
 }

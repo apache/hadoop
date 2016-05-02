@@ -178,6 +178,9 @@ public class TimelineReaderWebServices {
           "Requested Invalid Field." : e.getMessage());
     } else if (e instanceof NotFoundException) {
       throw (NotFoundException)e;
+    } else if (e instanceof TimelineParseException) {
+      throw new BadRequestException(e.getMessage() == null ?
+          "Filter Parsing failed." : e.getMessage());
     } else if (e instanceof BadRequestException) {
       throw (BadRequestException)e;
     } else {
@@ -239,6 +242,14 @@ public class TimelineReaderWebServices {
    *     metricfilters=metricid1, metricid2... (Optional query param).
    * @param eventfilters If specified, matched entities should contain the given
    *     events. This is represented as eventfilters=eventid1, eventid2...
+   * @param confsToRetrieve If specified, defines which configurations to
+   *     retrieve and send back in response. These configs will be retrieved
+   *     irrespective of whether configs are specified in fields to retrieve or
+   *     not.
+   * @param metricsToRetrieve If specified, defines which metrics to retrieve
+   *     and send back in response. These metrics will be retrieved
+   *     irrespective of whether metrics are specified in fields to retrieve or
+   *     not.
    * @param fields Specifies which fields of the entity object to retrieve, see
    *     {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type, id and created time is returned
@@ -270,6 +281,8 @@ public class TimelineReaderWebServices {
       @QueryParam("conffilters") String conffilters,
       @QueryParam("metricfilters") String metricfilters,
       @QueryParam("eventfilters") String eventfilters,
+      @QueryParam("confstoretrieve") String confsToRetrieve,
+      @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
@@ -295,7 +308,7 @@ public class TimelineReaderWebServices {
           limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
           infofilters, conffilters, metricfilters, eventfilters),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          null, null, fields));
+          confsToRetrieve, metricsToRetrieve, fields));
     } catch (Exception e) {
       handleException(e, url, startTime,
           "createdTime start/end or limit or flowrunid");
@@ -354,6 +367,14 @@ public class TimelineReaderWebServices {
    *     metricfilters=metricid1, metricid2... (Optional query param).
    * @param eventfilters If specified, matched entities should contain the given
    *     events. This is represented as eventfilters=eventid1, eventid2...
+   * @param confsToRetrieve If specified, defines which configurations to
+   *     retrieve and send back in response. These configs will be retrieved
+   *     irrespective of whether configs are specified in fields to retrieve or
+   *     not.
+   * @param metricsToRetrieve If specified, defines which metrics to retrieve
+   *     and send back in response. These metrics will be retrieved
+   *     irrespective of whether metrics are specified in fields to retrieve or
+   *     not.
    * @param fields Specifies which fields of the entity object to retrieve, see
    *     {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type, id, created time is returned
@@ -390,11 +411,13 @@ public class TimelineReaderWebServices {
       @QueryParam("conffilters") String conffilters,
       @QueryParam("metricfilters") String metricfilters,
       @QueryParam("eventfilters") String eventfilters,
+      @QueryParam("confstoretrieve") String confsToRetrieve,
+      @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields) {
     return getEntities(req, res, null, appId, entityType, userId, flowName,
         flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
         isRelatedTo, infofilters, conffilters, metricfilters, eventfilters,
-        fields);
+        confsToRetrieve, metricsToRetrieve, fields);
   }
 
   /**
@@ -443,6 +466,14 @@ public class TimelineReaderWebServices {
    *     metricfilters=metricid1, metricid2... (Optional query param).
    * @param eventfilters If specified, matched entities should contain the given
    *     events. This is represented as eventfilters=eventid1, eventid2...
+   * @param confsToRetrieve If specified, defines which configurations to
+   *     retrieve and send back in response. These configs will be retrieved
+   *     irrespective of whether configs are specified in fields to retrieve or
+   *     not.
+   * @param metricsToRetrieve If specified, defines which metrics to retrieve
+   *     and send back in response. These metrics will be retrieved
+   *     irrespective of whether metrics are specified in fields to retrieve or
+   *     not.
    * @param fields Specifies which fields of the entity object to retrieve, see
    *     {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type, id, created time is returned
@@ -480,6 +511,8 @@ public class TimelineReaderWebServices {
       @QueryParam("conffilters") String conffilters,
       @QueryParam("metricfilters") String metricfilters,
       @QueryParam("eventfilters") String eventfilters,
+      @QueryParam("confstoretrieve") String confsToRetrieve,
+      @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
@@ -496,12 +529,11 @@ public class TimelineReaderWebServices {
       entities = timelineReaderManager.getEntities(
           TimelineReaderWebServicesUtils.createTimelineReaderContext(
           clusterId, userId, flowName, flowRunId, appId, entityType, null),
-
           TimelineReaderWebServicesUtils.createTimelineEntityFilters(
           limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
           infofilters, conffilters, metricfilters, eventfilters),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          null, null, fields));
+          confsToRetrieve, metricsToRetrieve, fields));
     } catch (Exception e) {
       handleException(e, url, startTime,
           "createdTime start/end or limit or flowrunid");
@@ -524,6 +556,14 @@ public class TimelineReaderWebServices {
    * @param uId a delimited string containing clusterid, userid, flow name,
    *     flowrun id, app id, entity type and entity id which are extracted from
    *     UID and then used to query backend(Mandatory path param).
+   * @param confsToRetrieve If specified, defines which configurations to
+   *     retrieve and send back in response. These configs will be retrieved
+   *     irrespective of whether configs are specified in fields to retrieve or
+   *     not.
+   * @param metricsToRetrieve If specified, defines which metrics to retrieve
+   *     and send back in response. These metrics will be retrieved
+   *     irrespective of whether metrics are specified in fields to retrieve or
+   *     not.
    * @param fields Specifies which fields of the entity object to retrieve, see
    *     {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type, id, created time is returned
@@ -546,6 +586,8 @@ public class TimelineReaderWebServices {
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
       @PathParam("uid") String uId,
+      @QueryParam("confstoretrieve") String confsToRetrieve,
+      @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
@@ -566,7 +608,7 @@ public class TimelineReaderWebServices {
       }
       entity = timelineReaderManager.getEntity(context,
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          null, null, fields));
+          confsToRetrieve, metricsToRetrieve, fields));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -601,6 +643,14 @@ public class TimelineReaderWebServices {
    *     param).
    * @param flowRunId Run id which should match for the entity(Optional query
    *     param).
+   * @param confsToRetrieve If specified, defines which configurations to
+   *     retrieve and send back in response. These configs will be retrieved
+   *     irrespective of whether configs are specified in fields to retrieve or
+   *     not.
+   * @param metricsToRetrieve If specified, defines which metrics to retrieve
+   *     and send back in response. These metrics will be retrieved
+   *     irrespective of whether metrics are specified in fields to retrieve or
+   *     not.
    * @param fields Specifies which fields of the entity object to retrieve, see
    *     {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type, id, created time is returned
@@ -628,9 +678,11 @@ public class TimelineReaderWebServices {
       @QueryParam("userid") String userId,
       @QueryParam("flowname") String flowName,
       @QueryParam("flowrunid") String flowRunId,
+      @QueryParam("confstoretrieve") String confsToRetrieve,
+      @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields) {
     return getEntity(req, res, null, appId, entityType, entityId, userId,
-        flowName, flowRunId, fields);
+        flowName, flowRunId, confsToRetrieve, metricsToRetrieve, fields);
   }
 
   /**
@@ -653,6 +705,14 @@ public class TimelineReaderWebServices {
    *     param).
    * @param flowRunId Run id which should match for the entity(Optional query
    *     param).
+   * @param confsToRetrieve If specified, defines which configurations to
+   *     retrieve and send back in response. These configs will be retrieved
+   *     irrespective of whether configs are specified in fields to retrieve or
+   *     not.
+   * @param metricsToRetrieve If specified, defines which metrics to retrieve
+   *     and send back in response. These metrics will be retrieved
+   *     irrespective of whether metrics are specified in fields to retrieve or
+   *     not.
    * @param fields Specifies which fields of the entity object to retrieve, see
    *     {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type, id and created time is returned
@@ -681,6 +741,8 @@ public class TimelineReaderWebServices {
       @QueryParam("userid") String userId,
       @QueryParam("flowname") String flowName,
       @QueryParam("flowrunid") String flowRunId,
+      @QueryParam("confstoretrieve") String confsToRetrieve,
+      @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
@@ -698,7 +760,7 @@ public class TimelineReaderWebServices {
           TimelineReaderWebServicesUtils.createTimelineReaderContext(
           clusterId, userId, flowName, flowRunId, appId, entityType, entityId),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          null, null, fields));
+          confsToRetrieve, metricsToRetrieve, fields));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -723,6 +785,8 @@ public class TimelineReaderWebServices {
    * @param uId a delimited string containing clusterid, userid, flow name and
    *     flowrun id which are extracted from UID and then used to query backend
    *     (Mandatory path param).
+   * @param metricsToRetrieve If specified, defines which metrics to retrieve
+   *     and send back in response.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     <cite>FlowRunEntity</cite> instance is returned. By default, all
@@ -741,7 +805,8 @@ public class TimelineReaderWebServices {
   public TimelineEntity getFlowRun(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
-      @PathParam("uid") String uId) {
+      @PathParam("uid") String uId,
+      @QueryParam("metricstoretrieve") String metricsToRetrieve) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
@@ -761,7 +826,8 @@ public class TimelineReaderWebServices {
       }
       context.setEntityType(TimelineEntityType.YARN_FLOW_RUN.toString());
       entity = timelineReaderManager.getEntity(context,
-          new TimelineDataToRetrieve());
+          TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
+          null, metricsToRetrieve, null));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -787,6 +853,8 @@ public class TimelineReaderWebServices {
    * @param flowName Flow name to which the flow run to be queried belongs to(
    *     Mandatory path param).
    * @param flowRunId Id of the flow run to be queried(Mandatory path param).
+   * @param metricsToRetrieve If specified, defines which metrics to retrieve
+   *     and send back in response.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     <cite>FlowRunEntity</cite> instance is returned. By default, all
@@ -807,8 +875,10 @@ public class TimelineReaderWebServices {
       @Context HttpServletResponse res,
       @PathParam("userid") String userId,
       @PathParam("flowname") String flowName,
-      @PathParam("flowrunid") String flowRunId) {
-    return getFlowRun(req, res, null, userId, flowName, flowRunId);
+      @PathParam("flowrunid") String flowRunId,
+      @QueryParam("metricstoretrieve") String metricsToRetrieve) {
+    return getFlowRun(req, res, null, userId, flowName, flowRunId,
+        metricsToRetrieve);
   }
 
   /**
@@ -823,6 +893,8 @@ public class TimelineReaderWebServices {
    * @param flowName Flow name to which the flow run to be queried belongs to(
    *     Mandatory path param).
    * @param flowRunId Id of the flow run to be queried(Mandatory path param).
+   * @param metricsToRetrieve If specified, defines which metrics to retrieve
+   *     and send back in response.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     <cite>FlowRunEntity</cite> instance is returned. By default, all
@@ -845,7 +917,8 @@ public class TimelineReaderWebServices {
       @PathParam("clusterid") String clusterId,
       @PathParam("userid") String userId,
       @PathParam("flowname") String flowName,
-      @PathParam("flowrunid") String flowRunId) {
+      @PathParam("flowrunid") String flowRunId,
+      @QueryParam("metricstoretrieve") String metricsToRetrieve) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
@@ -862,7 +935,8 @@ public class TimelineReaderWebServices {
           TimelineReaderWebServicesUtils.createTimelineReaderContext(
           clusterId, userId, flowName, flowRunId, null,
           TimelineEntityType.YARN_FLOW_RUN.toString(), null),
-          new TimelineDataToRetrieve());
+          TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
+          null, metricsToRetrieve, null));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -894,6 +968,10 @@ public class TimelineReaderWebServices {
    *     created before this timestamp(Optional query param).
    * @param createdTimeEnd If specified, matched flow runs should not be created
    *     after this timestamp(Optional query param).
+   * @param metricsToRetrieve If specified, defines which metrics to retrieve
+   *     and send back in response. These metrics will be retrieved
+   *     irrespective of whether metrics are specified in fields to retrieve or
+   *     not.
    * @param fields Specifies which fields to retrieve, see {@link Field}.
    *     All fields will be retrieved if fields=ALL. Fields other than METRICS
    *     have no meaning for this REST endpoint. If not specified, all fields
@@ -918,6 +996,7 @@ public class TimelineReaderWebServices {
       @QueryParam("limit") String limit,
       @QueryParam("createdtimestart") String createdTimeStart,
       @QueryParam("createdtimeend") String createdTimeEnd,
+      @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
@@ -942,7 +1021,7 @@ public class TimelineReaderWebServices {
           limit, createdTimeStart, createdTimeEnd, null, null, null,
           null, null, null),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          null, null, fields));
+          null, metricsToRetrieve, fields));
     } catch (Exception e) {
       handleException(e, url, startTime, "createdTime start/end or limit");
     }
@@ -970,6 +1049,10 @@ public class TimelineReaderWebServices {
    *     created before this timestamp(Optional query param).
    * @param createdTimeEnd If specified, matched flow runs should not be created
    *     after this timestamp(Optional query param).
+   * @param metricsToRetrieve If specified, defines which metrics to retrieve
+   *     and send back in response. These metrics will be retrieved
+   *     irrespective of whether metrics are specified in fields to retrieve or
+   *     not.
    * @param fields Specifies which fields to retrieve, see {@link Field}.
    *     All fields will be retrieved if fields=ALL. Fields other than METRICS
    *     have no meaning for this REST endpoint. If not specified, all fields
@@ -995,9 +1078,10 @@ public class TimelineReaderWebServices {
       @QueryParam("limit") String limit,
       @QueryParam("createdtimestart") String createdTimeStart,
       @QueryParam("createdtimeend") String createdTimeEnd,
+      @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields) {
     return getFlowRuns(req, res, null, userId, flowName, limit,
-        createdTimeStart, createdTimeEnd, fields);
+        createdTimeStart, createdTimeEnd, metricsToRetrieve, fields);
   }
 
   /**
@@ -1016,6 +1100,10 @@ public class TimelineReaderWebServices {
    *     created before this timestamp(Optional query param).
    * @param createdTimeEnd If specified, matched flow runs should not be created
    *     after this timestamp(Optional query param).
+   * @param metricsToRetrieve If specified, defines which metrics to retrieve
+   *     and send back in response. These metrics will be retrieved
+   *     irrespective of whether metrics are specified in fields to retrieve or
+   *     not.
    * @param fields Specifies which fields to retrieve, see {@link Field}.
    *     All fields will be retrieved if fields=ALL. Fields other than METRICS
    *     have no meaning for this REST endpoint. If not specified, all fields
@@ -1042,6 +1130,7 @@ public class TimelineReaderWebServices {
       @QueryParam("limit") String limit,
       @QueryParam("createdtimestart") String createdTimeStart,
       @QueryParam("createdtimeend") String createdTimeEnd,
+      @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
@@ -1063,7 +1152,7 @@ public class TimelineReaderWebServices {
           limit, createdTimeStart, createdTimeEnd, null, null, null,
           null, null, null),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          null, null, fields));
+          null, metricsToRetrieve, fields));
     } catch (Exception e) {
       handleException(e, url, startTime, "createdTime start/end or limit");
     }
@@ -1204,6 +1293,14 @@ public class TimelineReaderWebServices {
    * @param uId a delimited string containing clusterid, userid, flow name, flow
    *     run id and app id which are extracted from UID and then used to query
    *     backend(Mandatory path param).
+   * @param confsToRetrieve If specified, defines which configurations to
+   *     retrieve and send back in response. These configs will be retrieved
+   *     irrespective of whether configs are specified in fields to retrieve or
+   *     not.
+   * @param metricsToRetrieve If specified, defines which metrics to retrieve
+   *     and send back in response. These metrics will be retrieved
+   *     irrespective of whether metrics are specified in fields to retrieve or
+   *     not.
    * @param fields Specifies which fields of the app entity object to retrieve,
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
@@ -1226,6 +1323,8 @@ public class TimelineReaderWebServices {
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
       @PathParam("uid") String uId,
+      @QueryParam("confstoretrieve") String confsToRetrieve,
+      @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
@@ -1247,7 +1346,7 @@ public class TimelineReaderWebServices {
       context.setEntityType(TimelineEntityType.YARN_APPLICATION.toString());
       entity = timelineReaderManager.getEntity(context,
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          null, null, fields));
+          confsToRetrieve, metricsToRetrieve, fields));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -1277,6 +1376,14 @@ public class TimelineReaderWebServices {
    * @param flowRunId Run id which should match for the app(Optional query
    *     param).
    * @param userId User id which should match for the app(Optional query param).
+   * @param confsToRetrieve If specified, defines which configurations to
+   *     retrieve and send back in response. These configs will be retrieved
+   *     irrespective of whether configs are specified in fields to retrieve or
+   *     not.
+   * @param metricsToRetrieve If specified, defines which metrics to retrieve
+   *     and send back in response. These metrics will be retrieved
+   *     irrespective of whether metrics are specified in fields to retrieve or
+   *     not.
    * @param fields Specifies which fields of the app entity object to retrieve,
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
@@ -1302,8 +1409,11 @@ public class TimelineReaderWebServices {
       @QueryParam("flowname") String flowName,
       @QueryParam("flowrunid") String flowRunId,
       @QueryParam("userid") String userId,
+      @QueryParam("confstoretrieve") String confsToRetrieve,
+      @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields) {
-    return getApp(req, res, null, appId, flowName, flowRunId, userId, fields);
+    return getApp(req, res, null, appId, flowName, flowRunId, userId,
+        confsToRetrieve, metricsToRetrieve, fields);
   }
 
   /**
@@ -1322,6 +1432,14 @@ public class TimelineReaderWebServices {
    * @param flowRunId Run id which should match for the app(Optional query
    *     param).
    * @param userId User id which should match for the app(Optional query param).
+   * @param confsToRetrieve If specified, defines which configurations to
+   *     retrieve and send back in response. These configs will be retrieved
+   *     irrespective of whether configs are specified in fields to retrieve or
+   *     not.
+   * @param metricsToRetrieve If specified, defines which metrics to retrieve
+   *     and send back in response. These metrics will be retrieved
+   *     irrespective of whether metrics are specified in fields to retrieve or
+   *     not.
    * @param fields Specifies which fields of the app entity object to retrieve,
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
@@ -1348,6 +1466,8 @@ public class TimelineReaderWebServices {
       @QueryParam("flowname") String flowName,
       @QueryParam("flowrunid") String flowRunId,
       @QueryParam("userid") String userId,
+      @QueryParam("confstoretrieve") String confsToRetrieve,
+      @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
@@ -1366,7 +1486,7 @@ public class TimelineReaderWebServices {
           clusterId, userId, flowName, flowRunId, appId,
           TimelineEntityType.YARN_APPLICATION.toString(), null),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          null, null, fields));
+          confsToRetrieve, metricsToRetrieve, fields));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -1417,6 +1537,14 @@ public class TimelineReaderWebServices {
    *     (Optional query param).
    * @param eventfilters If specified, matched apps should contain the given
    *     events. This is represented as eventfilters=eventid1, eventid2...
+   * @param confsToRetrieve If specified, defines which configurations to
+   *     retrieve and send back in response. These configs will be retrieved
+   *     irrespective of whether configs are specified in fields to retrieve or
+   *     not.
+   * @param metricsToRetrieve If specified, defines which metrics to retrieve
+   *     and send back in response. These metrics will be retrieved
+   *     irrespective of whether metrics are specified in fields to retrieve or
+   *     not.
    * @param fields Specifies which fields of the app entity object to retrieve,
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
@@ -1447,6 +1575,8 @@ public class TimelineReaderWebServices {
       @QueryParam("conffilters") String conffilters,
       @QueryParam("metricfilters") String metricfilters,
       @QueryParam("eventfilters") String eventfilters,
+      @QueryParam("confstoretrieve") String confsToRetrieve,
+      @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
@@ -1471,7 +1601,7 @@ public class TimelineReaderWebServices {
           limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
           infofilters, conffilters, metricfilters, eventfilters),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          null, null, fields));
+          confsToRetrieve, metricsToRetrieve, fields));
     } catch (Exception e) {
       handleException(e, url, startTime,
           "createdTime start/end or limit or flowrunid");
@@ -1523,6 +1653,14 @@ public class TimelineReaderWebServices {
    *     (Optional query param).
    * @param eventfilters If specified, matched apps should contain the given
    *     events. This is represented as eventfilters=eventid1, eventid2...
+   * @param confsToRetrieve If specified, defines which configurations to
+   *     retrieve and send back in response. These configs will be retrieved
+   *     irrespective of whether configs are specified in fields to retrieve or
+   *     not.
+   * @param metricsToRetrieve If specified, defines which metrics to retrieve
+   *     and send back in response. These metrics will be retrieved
+   *     irrespective of whether metrics are specified in fields to retrieve or
+   *     not.
    * @param fields Specifies which fields of the app entity object to retrieve,
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
@@ -1555,12 +1693,14 @@ public class TimelineReaderWebServices {
       @QueryParam("conffilters") String conffilters,
       @QueryParam("metricfilters") String metricfilters,
       @QueryParam("eventfilters") String eventfilters,
+      @QueryParam("confstoretrieve") String confsToRetrieve,
+      @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields) {
     return getEntities(req, res, null, null,
         TimelineEntityType.YARN_APPLICATION.toString(), userId, flowName,
         flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
         isRelatedTo, infofilters, conffilters, metricfilters, eventfilters,
-        fields);
+        confsToRetrieve, metricsToRetrieve, fields);
   }
 
   /**
@@ -1602,6 +1742,14 @@ public class TimelineReaderWebServices {
    *     (Optional query param).
    * @param eventfilters If specified, matched apps should contain the given
    *     events. This is represented as eventfilters=eventid1, eventid2...
+   * @param confsToRetrieve If specified, defines which configurations to
+   *     retrieve and send back in response. These configs will be retrieved
+   *     irrespective of whether configs are specified in fields to retrieve or
+   *     not.
+   * @param metricsToRetrieve If specified, defines which metrics to retrieve
+   *     and send back in response. These metrics will be retrieved
+   *     irrespective of whether metrics are specified in fields to retrieve or
+   *     not.
    * @param fields Specifies which fields of the app entity object to retrieve,
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
@@ -1636,12 +1784,14 @@ public class TimelineReaderWebServices {
       @QueryParam("conffilters") String conffilters,
       @QueryParam("metricfilters") String metricfilters,
       @QueryParam("eventfilters") String eventfilters,
+      @QueryParam("confstoretrieve") String confsToRetrieve,
+      @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields) {
     return getEntities(req, res, clusterId, null,
         TimelineEntityType.YARN_APPLICATION.toString(), userId, flowName,
         flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
         isRelatedTo, infofilters, conffilters, metricfilters, eventfilters,
-        fields);
+        confsToRetrieve, metricsToRetrieve, fields);
   }
 
   /**
@@ -1680,6 +1830,14 @@ public class TimelineReaderWebServices {
    *     (Optional query param).
    * @param eventfilters If specified, matched apps should contain the given
    *     events. This is represented as eventfilters=eventid1, eventid2...
+   * @param confsToRetrieve If specified, defines which configurations to
+   *     retrieve and send back in response. These configs will be retrieved
+   *     irrespective of whether configs are specified in fields to retrieve or
+   *     not.
+   * @param metricsToRetrieve If specified, defines which metrics to retrieve
+   *     and send back in response. These metrics will be retrieved
+   *     irrespective of whether metrics are specified in fields to retrieve or
+   *     not.
    * @param fields Specifies which fields of the app entity object to retrieve,
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
@@ -1711,11 +1869,14 @@ public class TimelineReaderWebServices {
       @QueryParam("conffilters") String conffilters,
       @QueryParam("metricfilters") String metricfilters,
       @QueryParam("eventfilters") String eventfilters,
+      @QueryParam("confstoretrieve") String confsToRetrieve,
+      @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields) {
     return getEntities(req, res, null, null,
         TimelineEntityType.YARN_APPLICATION.toString(), userId, flowName,
         null, limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
-        infofilters, conffilters, metricfilters, eventfilters, fields);
+        infofilters, conffilters, metricfilters, eventfilters,
+        confsToRetrieve, metricsToRetrieve, fields);
   }
 
   /**
@@ -1756,6 +1917,14 @@ public class TimelineReaderWebServices {
    *     (Optional query param).
    * @param eventfilters If specified, matched apps should contain the given
    *     events. This is represented as eventfilters=eventid1, eventid2...
+   * @param confsToRetrieve If specified, defines which configurations to
+   *     retrieve and send back in response. These configs will be retrieved
+   *     irrespective of whether configs are specified in fields to retrieve or
+   *     not.
+   * @param metricsToRetrieve If specified, defines which metrics to retrieve
+   *     and send back in response. These metrics will be retrieved
+   *     irrespective of whether metrics are specified in fields to retrieve or
+   *     not.
    * @param fields Specifies which fields of the app entity object to retrieve,
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
@@ -1788,10 +1957,13 @@ public class TimelineReaderWebServices {
       @QueryParam("conffilters") String conffilters,
       @QueryParam("metricfilters") String metricfilters,
       @QueryParam("eventfilters") String eventfilters,
+      @QueryParam("confstoretrieve") String confsToRetrieve,
+      @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields) {
     return getEntities(req, res, clusterId, null,
         TimelineEntityType.YARN_APPLICATION.toString(), userId, flowName,
         null, limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
-        infofilters, conffilters, metricfilters, eventfilters, fields);
+        infofilters, conffilters, metricfilters, eventfilters,
+        confsToRetrieve, metricsToRetrieve, fields);
   }
 }

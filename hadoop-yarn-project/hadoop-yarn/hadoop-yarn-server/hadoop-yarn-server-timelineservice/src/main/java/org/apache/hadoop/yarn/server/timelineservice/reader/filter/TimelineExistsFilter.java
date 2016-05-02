@@ -29,8 +29,11 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 @Unstable
 public class TimelineExistsFilter extends TimelineFilter {
 
-  private final TimelineCompareOp compareOp;
-  private final String value;
+  private TimelineCompareOp compareOp;
+  private String value;
+
+  public TimelineExistsFilter() {
+  }
 
   public TimelineExistsFilter(TimelineCompareOp op, String value) {
     this.value = value;
@@ -42,12 +45,54 @@ public class TimelineExistsFilter extends TimelineFilter {
   }
 
   @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((compareOp == null) ? 0 : compareOp.hashCode());
+    result = prime * result + ((value == null) ? 0 : value.hashCode());
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    TimelineExistsFilter other = (TimelineExistsFilter) obj;
+    if (compareOp != other.compareOp) {
+      return false;
+    }
+    if (value == null) {
+      if (other.value != null) {
+        return false;
+      }
+    } else if (!value.equals(other.value)) {
+      return false;
+    }
+    return true;
+  }
+
+  @Override
   public TimelineFilterType getFilterType() {
     return TimelineFilterType.EXISTS;
   }
 
+  public void setValue(String val) {
+    value = val;
+  }
+
   public String getValue() {
     return value;
+  }
+
+  public void setCompareOp(TimelineCompareOp op) {
+    compareOp = op;
   }
 
   public TimelineCompareOp getCompareOp() {
