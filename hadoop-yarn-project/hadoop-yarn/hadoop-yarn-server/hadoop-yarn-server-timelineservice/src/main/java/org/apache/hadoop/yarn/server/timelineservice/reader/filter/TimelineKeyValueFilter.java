@@ -28,6 +28,9 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 @Private
 @Unstable
 public class TimelineKeyValueFilter extends TimelineCompareFilter {
+  public TimelineKeyValueFilter() {
+  }
+
   public TimelineKeyValueFilter(TimelineCompareOp op, String key, Object val,
       boolean keyMustExistFlag) {
     super(op, key, val, keyMustExistFlag);
@@ -44,5 +47,15 @@ public class TimelineKeyValueFilter extends TimelineCompareFilter {
   @Override
   public TimelineFilterType getFilterType() {
     return TimelineFilterType.KEY_VALUE;
+  }
+
+  public void setCompareOp(TimelineCompareOp timelineCompareOp,
+      boolean keyExistFlag) {
+    if (timelineCompareOp != TimelineCompareOp.EQUAL &&
+        timelineCompareOp != TimelineCompareOp.NOT_EQUAL) {
+      throw new IllegalArgumentException("TimelineCompareOp for equality"
+          + " filter should be EQUAL or NOT_EQUAL");
+    }
+    super.setCompareOp(timelineCompareOp, keyExistFlag);
   }
 }

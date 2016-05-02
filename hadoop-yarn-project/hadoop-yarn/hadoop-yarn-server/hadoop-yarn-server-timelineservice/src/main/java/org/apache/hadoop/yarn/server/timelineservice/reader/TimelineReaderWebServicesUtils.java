@@ -18,29 +18,19 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
-import java.io.IOException;
 import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
-import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineCompareFilter;
-import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineCompareOp;
-import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyValueFilter;
-import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineExistsFilter;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
-import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyValuesFilter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 
 /**
  * Set of utility methods to be used by timeline reader web services.
  */
 final class TimelineReaderWebServicesUtils {
-  private static final String COMMA_DELIMITER = ",";
-  private static final String COLON_DELIMITER = ":";
 
   private TimelineReaderWebServicesUtils() {
   }
@@ -56,11 +46,10 @@ final class TimelineReaderWebServicesUtils {
    * @param entityType Entity Type.
    * @param entityId Entity Id.
    * @return a {@link TimelineReaderContext} object.
-   * @throws Exception if any problem occurs during parsing.
    */
   static TimelineReaderContext createTimelineReaderContext(String clusterId,
       String userId, String flowName, String flowRunId, String appId,
-      String entityType, String entityId) throws Exception {
+      String entityType, String entityId) {
     return new TimelineReaderContext(parseStr(clusterId), parseStr(userId),
         parseStr(flowName), parseLongStr(flowRunId), parseStr(appId),
         parseStr(entityType), parseStr(entityId));
@@ -79,20 +68,17 @@ final class TimelineReaderWebServicesUtils {
    * @param metricfilters Entities to return must match these metric filters.
    * @param eventfilters Entities to return must match these event filters.
    * @return a {@link TimelineEntityFilters} object.
-   * @throws Exception if any problem occurs during parsing.
+   * @throws TimelineParseException if any problem occurs during parsing.
    */
   static TimelineEntityFilters createTimelineEntityFilters(String limit,
       String createdTimeStart, String createdTimeEnd, String relatesTo,
       String isRelatedTo, String infofilters, String conffilters,
-      String metricfilters, String eventfilters) throws Exception {
+      String metricfilters, String eventfilters) throws TimelineParseException {
     return new TimelineEntityFilters(parseLongStr(limit),
         parseLongStr(createdTimeStart), parseLongStr(createdTimeEnd),
-        parseKeyStrValuesStr(relatesTo, COMMA_DELIMITER, COLON_DELIMITER),
-        parseKeyStrValuesStr(isRelatedTo, COMMA_DELIMITER, COLON_DELIMITER),
-        parseKeyStrValueObj(infofilters, COMMA_DELIMITER, COLON_DELIMITER),
-        parseKeyStrValueStr(conffilters, COMMA_DELIMITER, COLON_DELIMITER),
-        parseMetricFilters(metricfilters, COMMA_DELIMITER),
-        parseValuesStr(eventfilters, COMMA_DELIMITER));
+        parseRelationFilters(relatesTo), parseRelationFilters(isRelatedTo),
+        parseKVFilters(infofilters, false), parseKVFilters(conffilters, true),
+        parseMetricFilters(metricfilters), parseEventFilters(eventfilters));
   }
 
   /**
@@ -102,12 +88,13 @@ final class TimelineReaderWebServicesUtils {
    * @param metrics metrics to retrieve.
    * @param fields fields to retrieve.
    * @return a {@link TimelineDataToRetrieve} object.
-   * @throws Exception if any problem occurs during parsing.
+   * @throws TimelineParseException if any problem occurs during parsing.
    */
   static TimelineDataToRetrieve createTimelineDataToRetrieve(String confs,
-      String metrics, String fields) throws Exception {
-    return new TimelineDataToRetrieve(
-        null, null, parseFieldsStr(fields, COMMA_DELIMITER));
+      String metrics, String fields) throws TimelineParseException {
+    return new TimelineDataToRetrieve(parseDataToRetrieve(confs),
+        parseDataToRetrieve(metrics), parseFieldsStr(
+            fields, TimelineParseConstants.COMMA_DELIMITER));
   }
 
   /**
@@ -118,110 +105,47 @@ final class TimelineReaderWebServicesUtils {
    * @param delimiter string is delimited by this delimiter.
    * @return set of strings.
    */
-  static TimelineFilterList parseValuesStr(String str, String delimiter) {
-    if (str == null || str.isEmpty()) {
-      return null;
-    }
-    TimelineFilterList filterList = new TimelineFilterList();
-    String[] strs = str.split(delimiter);
-    for (String aStr : strs) {
-      filterList.addFilter(new TimelineExistsFilter(TimelineCompareOp.EQUAL,
-          aStr.trim()));
-    }
-    return filterList;
-  }
-
-  private static TimelineFilterList parseKeyValues(String str,
-      String pairsDelim, String keyValuesDelim, boolean stringValue,
-      boolean multipleValues) {
-    if (str == null) {
-      return null;
-    }
-    TimelineFilterList list = new TimelineFilterList();
-    String[] pairs = str.split(pairsDelim);
-    for (String pair : pairs) {
-      if (pair == null || pair.trim().isEmpty()) {
-        continue;
-      }
-      String[] pairStrs = pair.split(keyValuesDelim);
-      if (pairStrs.length < 2) {
-        continue;
-      }
-      if (!stringValue) {
-        try {
-          Object value =
-              GenericObjectMapper.OBJECT_READER.readValue(pairStrs[1].trim());
-          list.addFilter(new TimelineKeyValueFilter(TimelineCompareOp.EQUAL,
-              pairStrs[0].trim(), value));
-        } catch (IOException e) {
-          list.addFilter(new TimelineKeyValueFilter(TimelineCompareOp.EQUAL,
-              pairStrs[0].trim(), pairStrs[1].trim()));
-        }
-      } else {
-        String key = pairStrs[0].trim();
-        if (multipleValues) {
-          Set<Object> values = new HashSet<Object>();
-          for (int i = 1; i < pairStrs.length; i++) {
-            values.add(pairStrs[i].trim());
-          }
-          list.addFilter(new TimelineKeyValuesFilter(
-              TimelineCompareOp.EQUAL, key, values));
-        } else {
-          list.addFilter(new TimelineKeyValueFilter(TimelineCompareOp.EQUAL,
-              key, pairStrs[1].trim()));
-        }
-      }
-    }
-    return list;
+  static TimelineFilterList parseEventFilters(String expr)
+      throws TimelineParseException {
+    return parseFilters(new TimelineParserForExistFilters(expr,
+        TimelineParseConstants.COMMA_CHAR));
   }
 
   /**
-   * Parse a delimited string and convert it into a map of key-values with each
-   * key having a set of values. Both the key and values are interpreted as
-   * strings.
-   * For instance, if pairsDelim is "," and keyValuesDelim is ":", then the
-   * string should be represented as
-   * "key1:value11:value12:value13,key2:value21,key3:value31:value32".
-   * @param str delimited string represented as multiple keys having multiple
-   *     values.
-   * @param pairsDelim key-values pairs are delimited by this delimiter.
-   * @param keyValuesDelim values for a key are delimited by this delimiter.
-   * @return a map of key-values with each key having a set of values.
+   * Parse relation filters.
+   * @param expr Relation filter expression
+   * @return a {@link TimelineFilterList} object.
+   *
+   * @throws Exception if any problem occurs.
    */
-  static TimelineFilterList parseKeyStrValuesStr(String str, String pairsDelim,
-      String keyValuesDelim) {
-    return parseKeyValues(str, pairsDelim, keyValuesDelim, true, true);
+  static TimelineFilterList parseRelationFilters(String expr)
+      throws TimelineParseException {
+    return parseFilters(new TimelineParserForRelationFilters(expr,
+        TimelineParseConstants.COMMA_CHAR,
+        TimelineParseConstants.COLON_DELIMITER));
+  }
+
+  private static TimelineFilterList parseFilters(TimelineParser parser)
+      throws TimelineParseException {
+    try {
+      return parser.parse();
+    } finally {
+      IOUtils.closeQuietly(parser);
+    }
   }
 
   /**
-   * Parse a delimited string and convert it into a map of key-value pairs with
-   * both the key and value interpreted as strings.
-   * For instance, if pairsDelim is "," and keyValDelim is ":", then the string
-   * should be represented as "key1:value1,key2:value2,key3:value3".
-   * @param str delimited string represented as key-value pairs.
-   * @param pairsDelim key-value pairs are delimited by this delimiter.
-   * @param keyValDelim key and value are delimited by this delimiter.
-   * @return a map of key-value pairs with both key and value being strings.
+   * Parses config and info filters.
+   *
+   * @param expr Expression to be parsed.
+   * @param valueAsString true, if value has to be interpreted as string, false
+   *     otherwise. It is true for config filters and false for info filters.
+   * @return a {@link TimelineFilterList} object.
+   * @throws TimelineParseException if any problem occurs during parsing.
    */
-  static TimelineFilterList parseKeyStrValueStr(String str, String pairsDelim,
-      String keyValDelim) {
-    return parseKeyValues(str, pairsDelim, keyValDelim, true, false);
-  }
-
-  /**
-   * Parse a delimited string and convert it into a map of key-value pairs with
-   * key being a string and value interpreted as any object.
-   * For instance, if pairsDelim is "," and keyValDelim is ":", then the string
-   * should be represented as "key1:value1,key2:value2,key3:value3".
-   * @param str delimited string represented as key-value pairs.
-   * @param pairsDelim key-value pairs are delimited by this delimiter.
-   * @param keyValDelim key and value are delimited by this delimiter.
-   * @return a map of key-value pairs with key being a string and value, any
-   *     object.
-   */
-  static TimelineFilterList parseKeyStrValueObj(String str, String pairsDelim,
-      String keyValDelim) {
-    return parseKeyValues(str, pairsDelim, keyValDelim, false, false);
+  static TimelineFilterList parseKVFilters(String expr, boolean valueAsString)
+      throws TimelineParseException {
+    return parseFilters(new TimelineParserForKVFilters(expr, valueAsString));
   }
 
   /**
@@ -245,18 +169,16 @@ final class TimelineReaderWebServicesUtils {
     return fieldList;
   }
 
-  static TimelineFilterList parseMetricFilters(String str,
-      String delimiter) {
-    if (str == null || str.isEmpty()) {
-      return null;
-    }
-    TimelineFilterList list = new TimelineFilterList();
-    String[] strs = str.split(delimiter);
-    for (String aStr : strs) {
-      list.addFilter(new TimelineCompareFilter(
-          TimelineCompareOp.GREATER_OR_EQUAL, aStr.trim(), 0L));
-    }
-    return list;
+  /**
+   * Parses metric filters.
+   *
+   * @param expr Metric filter expression to be parsed.
+   * @return a {@link TimelineFilterList} object.
+   * @throws TimelineParseException if any problem occurs during parsing.
+   */
+  static TimelineFilterList parseMetricFilters(String expr)
+      throws TimelineParseException {
+    return parseFilters(new TimelineParserForNumericFilters(expr));
   }
 
   /**
@@ -298,5 +220,17 @@ final class TimelineReaderWebServicesUtils {
    */
   static String getUserName(UserGroupInformation callerUGI) {
     return ((callerUGI != null) ? callerUGI.getUserName().trim() : "");
+  }
+
+  /**
+   * Parses confstoretrieve and metricstoretrieve.
+   * @param str String representing confs/metrics to retrieve expression.
+   *
+   * @return a {@link TimelineFilterList} object.
+   * @throws TimelineParseException if any problem occurs during parsing.
+   */
+  static TimelineFilterList parseDataToRetrieve(String expr)
+        throws TimelineParseException {
+    return parseFilters(new TimelineParserForDataToRetrieve(expr));
   }
 }
