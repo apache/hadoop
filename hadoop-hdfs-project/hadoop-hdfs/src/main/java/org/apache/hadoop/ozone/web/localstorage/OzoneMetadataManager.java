@@ -380,8 +380,6 @@ public final class OzoneMetadataManager {
   public ListVolumes listVolumes(ListArgs args) throws OzoneException {
     lock.readLock().lock();
     try {
-      Preconditions.checkState(args.getArgs() instanceof UserArgs);
-
       if (args.isRootScan()) {
         return listAllVolumes(args);
       }
