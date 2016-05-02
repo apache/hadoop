@@ -101,6 +101,32 @@ class ChunkOutputStream extends OutputStream {
   }
 
   @Override
+  public void write(byte[] b, int off, int len) throws IOException {
+    if (b == null) {
+      throw new NullPointerException();
+    }
+    if ((off < 0) || (off > b.length) || (len < 0) ||
+        ((off + len) > b.length) || ((off + len) < 0)) {
+      throw new IndexOutOfBoundsException();
+    }
+    if (len == 0) {
+      return;
+    }
+    checkOpen();
+    while (len > 0) {
+      int writeLen = Math.min(CHUNK_SIZE - buffer.position(), len);
+      int rollbackPosition = buffer.position();
+      int rollbackLimit = buffer.limit();
+      buffer.put(b, off, writeLen);
+      if (buffer.position() == CHUNK_SIZE) {
+        flushBufferToChunk(rollbackPosition, rollbackLimit);
+      }
+      off += writeLen;
+      len -= writeLen;
+    }
+  }
+
+  @Override
   public synchronized void flush() throws IOException {
     checkOpen();
     if (buffer.position() > 0) {
