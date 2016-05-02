@@ -383,6 +383,20 @@ function hadoop_exec_userfuncs
 ## @audience     private
 ## @stability    evolving
 ## @replaceable  yes
+function hadoop_exec_user_hadoopenv
+{
+  if [[ -f "${HOME}/.hadoop-env" ]]; then
+    hadoop_debug "Applying the user's .hadoop-env"
+    # shellcheck disable=SC1090
+    . "${HOME}/.hadoop-env"
+  fi
+}
+
+## @description  Read the user's settings.  This provides for users to
+## @description  run Hadoop Shell API after system bootstrap
+## @audience     private
+## @stability    evolving
+## @replaceable  yes
 function hadoop_exec_hadooprc
 {
   if [[ -f "${HOME}/.hadooprc" ]]; then

@@ -110,7 +110,7 @@ hadoop_exec_userfuncs
 # IMPORTANT! User provided code is now available!
 #
 
-hadoop_exec_hadooprc
+hadoop_exec_user_hadoopenv
 hadoop_verify_confdir
 
 # do all the OS-specific startup bits here
@@ -141,6 +141,10 @@ hadoop_shellprofiles_nativelib
 
 hadoop_add_common_to_classpath
 hadoop_shellprofiles_classpath
+
+# user API commands can now be run since the runtime
+# environment has been configured
+hadoop_exec_hadooprc
 
 #
 # backwards compatibility. new stuff should

@@ -38,6 +38,17 @@ message TokenProto {
   required string service = 4;
 }
 
+message CredentialsKVProto {
+  required string alias = 1;
+  optional hadoop.common.TokenProto token = 2;
+  optional bytes secret = 3;
+}
+
+message CredentialsProto {
+  repeated hadoop.common.CredentialsKVProto tokens = 1;
+  repeated hadoop.common.CredentialsKVProto secrets = 2;
+}
+
 message GetDelegationTokenRequestProto {
   required string renewer = 1;
 }

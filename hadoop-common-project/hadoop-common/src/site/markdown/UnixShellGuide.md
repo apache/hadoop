@@ -16,15 +16,15 @@
 
 <!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
-Much of Hadoop's functionality is controlled via [the shell](CommandsManual.html).  There are several ways to modify the default behavior of how these commands execute.
+Much of Apache Hadoop's functionality is controlled via [the shell](CommandsManual.html).  There are several ways to modify the default behavior of how these commands execute.
 
 ## Important End-User Environment Variables
 
-Hadoop has many environment variables that control various aspects of the software.  (See `hadoop-env.sh` and related files.)  Some of these environment variables are dedicated to helping end users manage their runtime.
+Apache Hadoop has many environment variables that control various aspects of the software.  (See `hadoop-env.sh` and related files.)  Some of these environment variables are dedicated to helping end users manage their runtime.
 
 ### `HADOOP_CLIENT_OPTS`
 
-This environment variable is used for almost all end-user operations.  It can be used to set any Java options as well as any Hadoop options via a system property definition. For example:
+This environment variable is used for almost all end-user operations.  It can be used to set any Java options as well as any Apache Hadoop options via a system property definition. For example:
 
 ```bash
 HADOOP_CLIENT_OPTS="-Xmx1g -Dhadoop.socks.server=localhost:4000" hadoop fs -ls /tmp
@@ -34,7 +34,7 @@ will increase the memory and send this command via a SOCKS proxy server.
 
 ### `HADOOP_USER_CLASSPATH`
 
-The Hadoop scripts have the capability to inject more content into the classpath of the running command by setting this environment variable.  It should be a colon delimited list of directories, files, or wildcard locations.
+The Apache Hadoop scripts have the capability to inject more content into the classpath of the running command by setting this environment variable.  It should be a colon delimited list of directories, files, or wildcard locations.
 
 ```bash
 HADOOP_USER_CLASSPATH=${HOME}/lib/myjars/*.jar hadoop classpath
@@ -44,13 +44,13 @@ A user can provides hints to the location of the paths via the `HADOOP_USER_CLAS
 
 ### Auto-setting of Variables
 
-If a user has a common set of settings, they can be put into the `${HOME}/.hadooprc` file.  This file is always read to initialize and override any variables that the user may want to customize.  It uses bash syntax, similar to the `.bashrc` file:
+If a user has a common set of settings, they can be put into the `${HOME}/.hadoop-env` file.  This file is always read to initialize and override any variables that the user may want to customize.  It uses bash syntax, similar to the `.bashrc` file:
 
 For example:
 
 ```bash
 #
-# my custom Hadoop settings!
+# my custom Apache Hadoop settings!
 #
 
 HADOOP_USER_CLASSPATH=${HOME}/hadoopjars/*
@@ -58,7 +58,7 @@ HADOOP_USER_CLASSPATH_FIRST=yes
 HADOOP_CLIENT_OPTS="-Xmx1g"
 ```
 
-The `.hadooprc` file can also be used to extend functionality and teach Hadoop new tricks.  For example, to run hadoop commands accessing the server referenced in the environment variable `${HADOOP_SERVER}`, the following in the `.hadooprc` will do just that:
+The `.hadoop-env` file can also be used to extend functionality and teach Apache Hadoop new tricks.  For example, to run hadoop commands accessing the server referenced in the environment variable `${HADOOP_SERVER}`, the following in the `.hadoop-env` will do just that:
 
 ```bash
 
@@ -67,13 +67,15 @@ if [[ -n ${HADOOP_SERVER} ]]; then
 fi
 ```
 
+One word of warning:  not all of Unix Shell API routines are available or work correctly in `.hadoop-env`.  See below for more information on `.hadooprc`.
+
 ## Administrator Environment
 
 There are many environment variables that impact how the system operates.  By far, the most important are the series of `_OPTS` variables that control how daemons work.  These variables should contain all of the relevant settings for those daemons.
 
 More, detailed information is contained in `hadoop-env.sh` and the other env.sh files.
 
-Advanced administrators may wish to supplement or do some platform-specific fixes to the existing scripts.  In some systems, this means copying the errant script or creating a custom build with these changes.  Hadoop provides the capabilities to do function overrides so that the existing code base may be changed in place without all of that work.  Replacing functions is covered later under the Shell API documentation.
+Advanced administrators may wish to supplement or do some platform-specific fixes to the existing scripts.  In some systems, this means copying the errant script or creating a custom build with these changes.  Apache Hadoop provides the capabilities to do function overrides so that the existing code base may be changed in place without all of that work.  Replacing functions is covered later under the Shell API documentation.
 
 ## Developer and Advanced Administrator Environment
 
@@ -89,7 +91,7 @@ An example of a shell profile is in the libexec directory.
 
 ## Shell API
 
-Hadoop's shell code has a [function library](./UnixShellAPI.html) that is open for administrators and developers to use to assist in their configuration and advanced feature management.  These APIs follow the standard [Hadoop Interface Classification](./InterfaceClassification.html), with one addition: Replaceable.
+Apache Hadoop's shell code has a [function library](./UnixShellAPI.html) that is open for administrators and developers to use to assist in their configuration and advanced feature management.  These APIs follow the standard [Apache Hadoop Interface Classification](./InterfaceClassification.html), with one addition: Replaceable.
 
 The shell code allows for core functions to be overridden. However, not all functions can be or are safe to be replaced.  If a function is not safe to replace, it will have an attribute of Replaceable: No.  If a function is safe to replace, it will have the attribute of Replaceable: Yes.
 
@@ -98,3 +100,15 @@ In order to replace a function, create a file called `hadoop-user-functions.sh` 
 
 Functions that are marked Public and Stable are safe to use in shell profiles as-is.  Other functions may change in a minor release.
 
+
+### User-level API Access
+
+In addition to `.hadoop-env`, which allows individual users to override `hadoop-env.sh`, user's may also use `.hadooprc`.  This is called after the Apache Hadoop shell environment has been configured and allows the full set of shell API function calls.
+
+For example:
+
+```bash
+hadoop_add_classpath /some/path/custom.jar
+```
+
+would go into `.hadooprc`
