@@ -45,6 +45,13 @@
       <outputDirectory>lib/native</outputDirectory>
     </fileSet>
     <fileSet>
+      <directory>../hadoop-pipes/target/native/examples</directory>
+      <includes>
+        <include>*</include>
+      </includes>
+      <outputDirectory>lib/native/examples</outputDirectory>
+    </fileSet>
+    <fileSet>
       <directory>../hadoop-archives/target</directory>
       <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
       <includes>
