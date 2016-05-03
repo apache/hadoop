@@ -28,6 +28,7 @@ import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -1440,6 +1441,43 @@ public class TestEncryptionZones {
     clientConf.setLong(FS_TRASH_INTERVAL_KEY, 1);
     FsShell shell = new FsShell(clientConf);
     verifyShellDeleteWithTrash(shell, encFile);
+  }
+
+  @Test(timeout = 120000)
+  public void testGetTrashRoots() throws Exception {
+    final HdfsAdmin dfsAdmin =
+        new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+    Path ezRoot1 = new Path("/ez1");
+    fs.mkdirs(ezRoot1);
+    dfsAdmin.createEncryptionZone(ezRoot1, TEST_KEY);
+    Path ezRoot2 = new Path("/ez2");
+    fs.mkdirs(ezRoot2);
+    dfsAdmin.createEncryptionZone(ezRoot2, TEST_KEY);
+    Path ezRoot3 = new Path("/ez3");
+    fs.mkdirs(ezRoot3);
+    dfsAdmin.createEncryptionZone(ezRoot3, TEST_KEY);
+    Collection<FileStatus> trashRootsBegin = fs.getTrashRoots(true);
+    assertEquals("Unexpected getTrashRoots result", 0, trashRootsBegin.size());
+
+    final Path encFile = new Path(ezRoot2, "encFile");
+    final int len = 8192;
+    DFSTestUtil.createFile(fs, encFile, len, (short) 1, 0xFEED);
+    Configuration clientConf = new Configuration(conf);
+    clientConf.setLong(FS_TRASH_INTERVAL_KEY, 1);
+    FsShell shell = new FsShell(clientConf);
+    verifyShellDeleteWithTrash(shell, encFile);
+
+    Collection<FileStatus> trashRootsDelete1 = fs.getTrashRoots(true);
+    assertEquals("Unexpected getTrashRoots result", 1,
+        trashRootsDelete1.size());
+
+    final Path nonEncFile = new Path("/nonEncFile");
+    DFSTestUtil.createFile(fs, nonEncFile, len, (short) 1, 0xFEED);
+    verifyShellDeleteWithTrash(shell, nonEncFile);
+
+    Collection<FileStatus> trashRootsDelete2 = fs.getTrashRoots(true);
+    assertEquals("Unexpected getTrashRoots result", 2,
+        trashRootsDelete2.size());
   }
 
   private void verifyShellDeleteWithTrash(FsShell shell, Path path)
