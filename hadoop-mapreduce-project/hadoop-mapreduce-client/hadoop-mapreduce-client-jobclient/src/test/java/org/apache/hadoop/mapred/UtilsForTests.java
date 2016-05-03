@@ -156,6 +156,14 @@ public class UtilsForTests {
     return buf.toString();
   }
 
+  public static String createConfigValue(int msgSize) {
+    StringBuilder sb = new StringBuilder(msgSize);
+    for (int i=0; i<msgSize; i++) {
+      sb.append('a');
+    }
+    return sb.toString();
+  }
+
   public static String safeGetCanonicalPath(File f) {
     try {
       String s = f.getCanonicalPath();

@@ -1074,7 +1074,16 @@ public class JobHistoryEventHandler extends AbstractService
     entity.setId(jobId.toString());
     return entity;
   }
-  
+
+  private org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity
+      createJobEntity(JobId jobId) {
+    org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity =
+        new org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity();
+    entity.setId(jobId.toString());
+    entity.setType(MAPREDUCE_JOB_ENTITY_TYPE);
+    return entity;
+  }
+
   // create ApplicationEntity with job finished Metrics from HistoryEvent
   private org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity
       createAppEntityWithJobMetrics(HistoryEvent event, JobId jobId) {
@@ -1131,6 +1140,46 @@ public class JobHistoryEventHandler extends AbstractService
     entity.setId(taskAttemptId);
     entity.addIsRelatedToEntity(relatedTaskEntity, taskId);
     return entity;
+  }
+
+  private void publishConfigsOnJobSubmittedEvent(JobSubmittedEvent event,
+      JobId jobId) {
+    if (event.getJobConf() == null) {
+      return;
+    }
+    // Publish job configurations both as job and app entity.
+    // Configs are split into multiple entities if they exceed 100kb in size.
+    org.apache.hadoop.yarn.api.records.timelineservice.
+        TimelineEntity jobEntityForConfigs = createJobEntity(jobId);
+    ApplicationEntity appEntityForConfigs = new ApplicationEntity();
+    String appId = jobId.getAppId().toString();
+    appEntityForConfigs.setId(appId);
+    try {
+      int configSize = 0;
+      for (Map.Entry<String, String> entry : event.getJobConf()) {
+        int size = entry.getKey().length() + entry.getValue().length();
+        configSize += size;
+        if (configSize > JobHistoryEventUtils.ATS_CONFIG_PUBLISH_SIZE_BYTES) {
+          if (jobEntityForConfigs.getConfigs().size() > 0) {
+            timelineClient.putEntities(jobEntityForConfigs);
+            timelineClient.putEntities(appEntityForConfigs);
+            jobEntityForConfigs = createJobEntity(jobId);
+            appEntityForConfigs = new ApplicationEntity();
+            appEntityForConfigs.setId(appId);
+          }
+          configSize = size;
+        }
+        jobEntityForConfigs.addConfig(entry.getKey(), entry.getValue());
+        appEntityForConfigs.addConfig(entry.getKey(), entry.getValue());
+      }
+      if (configSize > 0) {
+        timelineClient.putEntities(jobEntityForConfigs);
+        timelineClient.putEntities(appEntityForConfigs);
+      }
+    } catch (IOException | YarnException e) {
+      LOG.error("Exception while publishing configs on JOB_SUBMITTED Event " +
+          " for the job : " + jobId, e);
+    }
   }
 
   private void processEventForNewTimelineService(HistoryEvent event,
@@ -1252,8 +1301,12 @@ public class JobHistoryEventHandler extends AbstractService
     } catch (IOException | YarnException e) {
       LOG.error("Failed to process Event " + event.getEventType()
           + " for the job : " + jobId, e);
+      return;
     }
-
+    if (event.getEventType() == EventType.JOB_SUBMITTED) {
+      // Publish configs after main job submitted event has been posted.
+      publishConfigsOnJobSubmittedEvent((JobSubmittedEvent)event, jobId);
+    }
   }
 
   private void setSummarySlotSeconds(JobSummary summary, Counters allCounters) {
