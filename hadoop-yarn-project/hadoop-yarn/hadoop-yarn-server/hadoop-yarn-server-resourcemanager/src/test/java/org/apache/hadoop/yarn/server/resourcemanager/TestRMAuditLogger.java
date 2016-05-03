@@ -43,6 +43,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.Keys;
 import org.junit.Assert;
 import org.junit.Before;
@@ -61,6 +62,7 @@ public class TestRMAuditLogger {
   private static final ApplicationId APPID = mock(ApplicationId.class);
   private static final ApplicationAttemptId ATTEMPTID = mock(ApplicationAttemptId.class);
   private static final ContainerId CONTAINERID = mock(ContainerId.class);
+  private static final Resource RESOURCE = mock(Resource.class);
   private static final String CALLER_CONTEXT = "context";
   private static final byte[] CALLER_SIGNATURE = "signature".getBytes();
 
@@ -69,6 +71,7 @@ public class TestRMAuditLogger {
     when(APPID.toString()).thenReturn("app_1");
     when(ATTEMPTID.toString()).thenReturn("app_attempt_1");
     when(CONTAINERID.toString()).thenReturn("container_1");
+    when(RESOURCE.toString()).thenReturn("<memory:1536, vcores:1>");
   }
 
 
@@ -99,10 +102,11 @@ public class TestRMAuditLogger {
     expLog.append("\tTARGET=tgt");
     assertEquals(expLog.toString(), actLog.toString());
   }
-  
+
   private void testSuccessLogFormatHelper(boolean checkIP, ApplicationId appId,
       ApplicationAttemptId attemptId, ContainerId containerId) {
-    testSuccessLogFormatHelper(checkIP, appId, attemptId, containerId, null);
+    testSuccessLogFormatHelper(checkIP, appId, attemptId, containerId, null,
+        null);
   }
 
   /**
@@ -110,9 +114,9 @@ public class TestRMAuditLogger {
    */
   private void testSuccessLogFormatHelper(boolean checkIP, ApplicationId appId,
       ApplicationAttemptId attemptId, ContainerId containerId,
-      CallerContext callerContext) {
+      CallerContext callerContext, Resource resource) {
     String sLog = RMAuditLogger.createSuccessLog(USER, OPERATION, TARGET,
-        appId, attemptId, containerId, callerContext);
+        appId, attemptId, containerId, resource, callerContext);
     StringBuilder expLog = new StringBuilder();
     expLog.append("USER=test\t");
     if (checkIP) {
@@ -130,6 +134,9 @@ public class TestRMAuditLogger {
     if (containerId != null) {
       expLog.append("\tCONTAINERID=container_1");
     }
+    if (resource != null) {
+      expLog.append("\tRESOURCE=<memory:1536, vcores:1>");
+    }
     if (callerContext != null) {
       if (callerContext.getContext() != null) {
         expLog.append("\tCALLERCONTEXT=context");
@@ -146,7 +153,7 @@ public class TestRMAuditLogger {
    */
   private void testSuccessLogNulls(boolean checkIP) {
     String sLog = RMAuditLogger.createSuccessLog(null, null, null, null, 
-        null, null);
+        null, null, null);
     StringBuilder expLog = new StringBuilder();
     expLog.append("USER=null\t");
     if (checkIP) {
@@ -170,22 +177,22 @@ public class TestRMAuditLogger {
     testSuccessLogFormatHelper(checkIP, APPID, null, CONTAINERID);
     testSuccessLogFormatHelper(checkIP, null, ATTEMPTID, CONTAINERID);
     testSuccessLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID);
-    testSuccessLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID, null);
+    testSuccessLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID, null, null);
     testSuccessLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID,
-        new CallerContext.Builder(null).setSignature(null).build());
+        new CallerContext.Builder(null).setSignature(null).build(), RESOURCE);
     testSuccessLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID,
-        new CallerContext.Builder(CALLER_CONTEXT).setSignature(null).build());
+        new CallerContext.Builder(CALLER_CONTEXT).setSignature(null).build(), RESOURCE);
     testSuccessLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID,
-        new CallerContext.Builder(null).setSignature(CALLER_SIGNATURE).build());
+        new CallerContext.Builder(null).setSignature(CALLER_SIGNATURE).build(), RESOURCE);
     testSuccessLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID,
         new CallerContext.Builder(CALLER_CONTEXT).setSignature(CALLER_SIGNATURE)
-            .build());
+            .build(), RESOURCE);
     testSuccessLogNulls(checkIP);
   }
 
   private void testFailureLogFormatHelper(boolean checkIP, ApplicationId appId,
       ApplicationAttemptId attemptId, ContainerId containerId) {
-    testFailureLogFormatHelper(checkIP, appId, attemptId, containerId, null);
+    testFailureLogFormatHelper(checkIP, appId, attemptId, containerId, null, null);
   }
  
   /**
@@ -193,10 +200,10 @@ public class TestRMAuditLogger {
    */
   private void testFailureLogFormatHelper(boolean checkIP, ApplicationId appId,
       ApplicationAttemptId attemptId, ContainerId containerId,
-      CallerContext callerContext) {
+      CallerContext callerContext, Resource resource) {
     String fLog =
       RMAuditLogger.createFailureLog(USER, OPERATION, PERM, TARGET, DESC,
-      appId, attemptId, containerId, callerContext);
+      appId, attemptId, containerId, resource, callerContext);
     StringBuilder expLog = new StringBuilder();
     expLog.append("USER=test\t");
     if (checkIP) {
@@ -214,6 +221,9 @@ public class TestRMAuditLogger {
     }
     if (containerId != null) {
       expLog.append("\tCONTAINERID=container_1");
+    }
+    if (resource != null) {
+      expLog.append("\tRESOURCE=<memory:1536, vcores:1>");
     }
     if (callerContext != null) {
       if (callerContext.getContext() != null) {
@@ -241,14 +251,14 @@ public class TestRMAuditLogger {
     testFailureLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID);
     
     testFailureLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID,
-        new CallerContext.Builder(null).setSignature(null).build());
+        new CallerContext.Builder(null).setSignature(null).build(), RESOURCE);
     testFailureLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID,
-        new CallerContext.Builder(CALLER_CONTEXT).setSignature(null).build());
+        new CallerContext.Builder(CALLER_CONTEXT).setSignature(null).build(), RESOURCE);
     testFailureLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID,
-        new CallerContext.Builder(null).setSignature(CALLER_SIGNATURE).build());
+        new CallerContext.Builder(null).setSignature(CALLER_SIGNATURE).build(), RESOURCE);
     testFailureLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID,
         new CallerContext.Builder(CALLER_CONTEXT).setSignature(CALLER_SIGNATURE)
-            .build());
+            .build(), RESOURCE);
   }
 
   /**

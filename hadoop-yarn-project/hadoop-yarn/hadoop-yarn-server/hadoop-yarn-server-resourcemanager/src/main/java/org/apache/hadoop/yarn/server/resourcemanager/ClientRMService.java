@@ -1620,7 +1620,7 @@ public class ClientRMService extends AbstractService implements
     if (application == null) {
       RMAuditLogger.logFailure(callerUGI.getUserName(),
           AuditConstants.SIGNAL_CONTAINER, "UNKNOWN", "ClientRMService",
-          "Trying to signal an absent container", applicationId, containerId);
+          "Trying to signal an absent container", applicationId, containerId, null);
       throw RPCUtil
           .getRemoteException("Trying to signal an absent container "
               + containerId);
@@ -1644,11 +1644,11 @@ public class ClientRMService extends AbstractService implements
               request));
       RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
           AuditConstants.SIGNAL_CONTAINER, "ClientRMService", applicationId,
-          containerId);
+          containerId, null);
     } else {
       RMAuditLogger.logFailure(callerUGI.getUserName(),
           AuditConstants.SIGNAL_CONTAINER, "UNKNOWN", "ClientRMService",
-          "Trying to signal an absent container", applicationId, containerId);
+          "Trying to signal an absent container", applicationId, containerId, null);
       throw RPCUtil
           .getRemoteException("Trying to signal an absent container "
               + containerId);
