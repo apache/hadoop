@@ -165,12 +165,12 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
     containersToPreempt.remove(containerId);
 
+    Resource containerResource = rmContainer.getContainer().getResource();
     RMAuditLogger.logSuccess(getUser(),
         AuditConstants.RELEASE_CONTAINER, "SchedulerApp",
-        getApplicationId(), containerId);
+        getApplicationId(), containerId, containerResource);
     
     // Update usage metrics 
-    Resource containerResource = rmContainer.getContainer().getResource();
     queue.getMetrics().releaseResources(getUser(), 1, containerResource);
     attemptResourceUsage.decUsed(partition, containerResource);
 
@@ -229,7 +229,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     }
     RMAuditLogger.logSuccess(getUser(),
         AuditConstants.ALLOC_CONTAINER, "SchedulerApp",
-        getApplicationId(), containerId);
+        getApplicationId(), containerId, container.getResource());
     
     return rmContainer;
   }

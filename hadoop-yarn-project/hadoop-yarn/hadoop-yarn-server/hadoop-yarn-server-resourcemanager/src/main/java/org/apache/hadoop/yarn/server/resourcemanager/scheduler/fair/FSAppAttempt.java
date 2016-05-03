@@ -146,12 +146,12 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     // Remove from the list of containers
     liveContainers.remove(rmContainer.getContainerId());
 
+    Resource containerResource = rmContainer.getContainer().getResource();
     RMAuditLogger.logSuccess(getUser(), 
         AuditConstants.RELEASE_CONTAINER, "SchedulerApp", 
-        getApplicationId(), containerId);
+        getApplicationId(), containerId, containerResource);
     
     // Update usage metrics 
-    Resource containerResource = rmContainer.getContainer().getResource();
     queue.getMetrics().releaseResources(getUser(), 1, containerResource);
     this.attemptResourceUsage.decUsed(containerResource);
 
@@ -403,7 +403,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     }
     RMAuditLogger.logSuccess(getUser(), 
         AuditConstants.ALLOC_CONTAINER, "SchedulerApp", 
-        getApplicationId(), container.getId());
+        getApplicationId(), container.getId(), container.getResource());
     
     return rmContainer;
   }
