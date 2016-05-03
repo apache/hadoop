@@ -26,7 +26,9 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
@@ -54,6 +56,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineW
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.junit.Assert;
 import org.junit.Test;
+
+import com.google.common.collect.Sets;
 
 public class TestMRTimelineEventHandling {
 
@@ -191,8 +195,17 @@ public class TestMRTimelineEventHandling {
       Path inDir = new Path("input");
       Path outDir = new Path("output");
       LOG.info("Run 1st job which should be successful.");
+      JobConf successConf = new JobConf(conf);
+      successConf.set("dummy_conf1",
+          UtilsForTests.createConfigValue(51 * 1024));
+      successConf.set("dummy_conf2",
+          UtilsForTests.createConfigValue(51 * 1024));
+      successConf.set("huge_dummy_conf1",
+          UtilsForTests.createConfigValue(101 * 1024));
+      successConf.set("huge_dummy_conf2",
+          UtilsForTests.createConfigValue(101 * 1024));
       RunningJob job =
-          UtilsForTests.runJobSucceed(new JobConf(conf), inDir, outDir);
+          UtilsForTests.runJobSucceed(successConf, inDir, outDir);
       Assert.assertEquals(JobStatus.SUCCEEDED,
           job.getJobStatus().getState().getValue());
 
@@ -270,7 +283,11 @@ public class TestMRTimelineEventHandling {
     Assert.assertTrue("jobEventFilePath: " + jobEventFilePath +
         " does not exist.",
         jobEventFile.exists());
-    verifyMetricsWhenEvent(jobEventFile, EventType.JOB_FINISHED.name());
+    verifyEntity(jobEventFile, EventType.JOB_FINISHED.name(),
+        true, false, null);
+    Set<String> cfgsToCheck = Sets.newHashSet("dummy_conf1", "dummy_conf2",
+        "huge_dummy_conf1", "huge_dummy_conf2");
+    verifyEntity(jobEventFile, null, false, true, cfgsToCheck);
 
     // for this test, we expect MR job metrics are published in YARN_APPLICATION
     String outputAppDir = basePath + "/YARN_APPLICATION/";
@@ -290,7 +307,8 @@ public class TestMRTimelineEventHandling {
         "appEventFilePath: " + appEventFilePath +
         " does not exist.",
         appEventFile.exists());
-    verifyMetricsWhenEvent(appEventFile, null);
+    verifyEntity(appEventFile, null, true, false, null);
+    verifyEntity(appEventFile, null, false, true, cfgsToCheck);
 
     // check for task event file
     String outputDirTask = basePath + "/MAPREDUCE_TASK/";
@@ -307,7 +325,8 @@ public class TestMRTimelineEventHandling {
     Assert.assertTrue("taskEventFileName: " + taskEventFilePath +
         " does not exist.",
         taskEventFile.exists());
-    verifyMetricsWhenEvent(taskEventFile, EventType.TASK_FINISHED.name());
+    verifyEntity(taskEventFile, EventType.TASK_FINISHED.name(),
+        true, false, null);
     
     // check for task attempt event file
     String outputDirTaskAttempt = basePath + "/MAPREDUCE_TASK_ATTEMPT/";
@@ -324,17 +343,30 @@ public class TestMRTimelineEventHandling {
     File taskAttemptEventFile = new File(taskAttemptEventFilePath);
     Assert.assertTrue("taskAttemptEventFileName: " + taskAttemptEventFilePath +
         " does not exist.", taskAttemptEventFile.exists());
-    verifyMetricsWhenEvent(taskAttemptEventFile,
-        EventType.MAP_ATTEMPT_FINISHED.name());
+    verifyEntity(taskAttemptEventFile, EventType.MAP_ATTEMPT_FINISHED.name(),
+        true, false, null);
   }
 
-  private void verifyMetricsWhenEvent(File entityFile, String eventId)
+  /**
+   * Verifies entity by reading the entity file written via FS impl.
+   * @param entityFile File to be read.
+   * @param eventId Event to be checked.
+   * @param chkMetrics If event is not null, this flag determines if metrics
+   *     exist when the event is encountered. If event is null, we merely check
+   *     if metrics exist in the entity file.
+   * @param chkCfg If event is not null, this flag determines if configs
+   *     exist when the event is encountered. If event is null, we merely check
+   *     if configs exist in the entity file.
+   * @param cfgsToVerify a set of configs which should exist in the entity file.
+   * @throws IOException
+   */
+  private void verifyEntity(File entityFile, String eventId,
+      boolean chkMetrics, boolean chkCfg, Set<String> cfgsToVerify)
       throws IOException {
     BufferedReader reader = null;
     String strLine;
     try {
       reader = new BufferedReader(new FileReader(entityFile));
-      boolean jobMetricsFoundForAppEntity = false;
       while ((strLine = reader.readLine()) != null) {
         if (strLine.trim().length() > 0) {
           org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity =
@@ -344,22 +376,56 @@ public class TestMRTimelineEventHandling {
           if (eventId == null) {
             // Job metrics are published without any events for
             // ApplicationEntity. There is also possibility that some other
-            // ApplicationEntity is published without events, hence loop all
-            if (entity.getEvents().size() == 0) {
-              jobMetricsFoundForAppEntity = entity.getMetrics().size() > 0;
-              if (jobMetricsFoundForAppEntity) {
+            // ApplicationEntity is published without events, hence loop till
+            // its found. Same applies to configs.
+            if (chkMetrics && entity.getMetrics().size() > 0) {
+              return;
+            }
+            if (chkCfg && entity.getConfigs().size() > 0) {
+              if (cfgsToVerify == null) {
                 return;
+              } else {
+                // Have configs to verify. Keep on removing configs from the set
+                // of configs to verify as they are found. When the all the
+                // entities have been looped through, we will check if the set
+                // is empty or not(indicating if all configs have been found or
+                // not).
+                for (Iterator<String> itr =
+                    cfgsToVerify.iterator(); itr.hasNext();) {
+                  String config = itr.next();
+                  if (entity.getConfigs().containsKey(config)) {
+                    itr.remove();
+                  }
+                }
+                // All the required configs have been verified, so return.
+                if (cfgsToVerify.isEmpty()) {
+                  return;
+                }
               }
             }
           } else {
             for (TimelineEvent event : entity.getEvents()) {
               if (event.getId().equals(eventId)) {
-                assertTrue(entity.getMetrics().size() > 0);
+                if (chkMetrics) {
+                  assertTrue(entity.getMetrics().size() > 0);
+                }
+                if (chkCfg) {
+                  assertTrue(entity.getConfigs().size() > 0);
+                  if (cfgsToVerify != null) {
+                    for (String cfg : cfgsToVerify) {
+                      assertTrue(entity.getConfigs().containsKey(cfg));
+                    }
+                  }
+                }
                 return;
               }
             }
           }
         }
+      }
+      if (cfgsToVerify != null) {
+        assertTrue(cfgsToVerify.isEmpty());
+        return;
       }
       fail("Expected event : " + eventId + " not found in the file "
           + entityFile);
