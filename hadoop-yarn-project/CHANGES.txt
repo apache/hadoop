@@ -133,6 +133,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4940. yarn node -list -all failed if RM start with decommissioned
     node (sandflee via jlowe)
 
+    YARN-4834. ProcfsBasedProcessTree doesn't track daemonized processes
+    (Nathan Roberts via jlowe)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES

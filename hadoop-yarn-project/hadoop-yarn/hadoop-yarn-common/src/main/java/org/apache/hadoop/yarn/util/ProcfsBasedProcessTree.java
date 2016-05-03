@@ -240,7 +240,16 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
         String pID = entry.getKey();
         if (!pID.equals("1")) {
           ProcessInfo pInfo = entry.getValue();
-          ProcessInfo parentPInfo = allProcessInfo.get(pInfo.getPpid());
+          String ppid = pInfo.getPpid();
+          // If parent is init and process is not session leader,
+          // attach to sessionID
+          if (ppid.equals("1")) {
+              String sid = pInfo.getSessionId().toString();
+              if (!pID.equals(sid)) {
+                 ppid = sid;
+              }
+          }
+          ProcessInfo parentPInfo = allProcessInfo.get(ppid);
           if (parentPInfo != null) {
             parentPInfo.addChild(pInfo);
           }
@@ -595,6 +604,14 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
       pTree.append(" ");
     }
     return pTree.substring(0, pTree.length()) + "]";
+  }
+
+/**
+ * Returns boolean indicating whether pid
+ * is in process tree.
+ */
+  public boolean contains(String pid) {
+    return processTree.containsKey(pid);
   }
 
   /**
