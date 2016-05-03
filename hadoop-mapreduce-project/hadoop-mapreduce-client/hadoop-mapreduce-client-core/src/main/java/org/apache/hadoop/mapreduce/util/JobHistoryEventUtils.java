@@ -36,6 +36,9 @@ public final class JobHistoryEventUtils {
   private JobHistoryEventUtils() {
   }
 
+  // Number of bytes of config which can be published in one shot to ATSv2.
+  public static final int ATS_CONFIG_PUBLISH_SIZE_BYTES = 10 * 1024;
+
   public static JsonNode countersToJSON(Counters counters) {
     ObjectMapper mapper = new ObjectMapper();
     ArrayNode nodes = mapper.createArrayNode();
