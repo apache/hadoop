@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.CloseableReferenceCount;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Timer;
 import org.codehaus.jackson.annotate.JsonProperty;
@@ -118,9 +119,10 @@ public class FsVolumeImpl implements FsVolumeSpi {
       Configuration conf, StorageType storageType) throws IOException {
     this.dataset = dataset;
     this.storageID = storageID;
-    this.reserved = conf.getLong(
+    this.reserved = conf.getLong(DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY
+        + "." + StringUtils.toLowerCase(storageType.toString()), conf.getLong(
         DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY,
-        DFSConfigKeys.DFS_DATANODE_DU_RESERVED_DEFAULT);
+        DFSConfigKeys.DFS_DATANODE_DU_RESERVED_DEFAULT));
     this.reservedForReplicas = new AtomicLong(0L);
     this.currentDir = currentDir;
     File parent = currentDir.getParentFile();
