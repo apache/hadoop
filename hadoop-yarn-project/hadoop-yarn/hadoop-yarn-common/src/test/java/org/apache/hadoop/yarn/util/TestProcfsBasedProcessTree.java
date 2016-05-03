@@ -36,6 +36,7 @@ import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -65,7 +66,7 @@ public class TestProcfsBasedProcessTree {
     TestProcfsBasedProcessTree.class.getName() + "-localDir");
 
   private ShellCommandExecutor shexec = null;
-  private String pidFile, lowestDescendant;
+  private String pidFile, lowestDescendant, lostDescendant;
   private String shellScript;
 
   private static final int N = 6; // Controls the RogueTask
@@ -144,19 +145,17 @@ public class TestProcfsBasedProcessTree {
 
     lowestDescendant =
         TEST_ROOT_DIR + File.separator + "lowestDescendantPidFile";
+    lostDescendant =
+        TEST_ROOT_DIR + File.separator + "lostDescendantPidFile";
 
     // write to shell-script
-    try {
-      FileWriter fWriter = new FileWriter(shellScript);
-      fWriter.write("# rogue task\n" + "sleep 1\n" + "echo hello\n"
-          + "if [ $1 -ne 0 ]\n" + "then\n" + " sh " + shellScript
-          + " $(($1-1))\n" + "else\n" + " echo $$ > " + lowestDescendant + "\n"
-          + " while true\n do\n" + "  sleep 5\n" + " done\n" + "fi");
-      fWriter.close();
-    } catch (IOException ioe) {
-      LOG.info("Error: " + ioe);
-      return;
-    }
+    File file = new File(shellScript);
+    FileUtils.writeStringToFile(file, "# rogue task\n" + "sleep 1\n" + "echo hello\n"
+        + "if [ $1 -ne 0 ]\n" + "then\n" + " sh " + shellScript
+        + " $(($1-1))\n" + "else\n" + " echo $$ > " + lowestDescendant + "\n"
+        + "(sleep 300&\n"
+        + "echo $! > " + lostDescendant + ")\n"
+        + " while true\n do\n" + "  sleep 5\n" + " done\n" + "fi");
 
     Thread t = new RogueTaskThread();
     t.start();
@@ -178,6 +177,12 @@ public class TestProcfsBasedProcessTree {
 
     p.updateProcessTree(); // reconstruct
     LOG.info("ProcessTree: " + p.toString());
+
+    // Verify the orphaned pid is In process tree
+    String lostpid = getPidFromPidFile(lostDescendant);
+    LOG.info("Orphaned pid: " + lostpid);
+    Assert.assertTrue("Child process owned by init escaped process tree.",
+       p.contains(lostpid));
 
     // Get the process-tree dump
     String processTreeDump = p.getProcessTreeDump();
@@ -230,10 +235,12 @@ public class TestProcfsBasedProcessTree {
     
     Assert.assertTrue(
       "vmem for the gone-process is " + p.getVirtualMemorySize()
-          + " . It should be zero.", p.getVirtualMemorySize() == 0);
+          + " . It should be UNAVAILABLE(-1).",
+          p.getVirtualMemorySize() == UNAVAILABLE);
     Assert.assertTrue(
       "vmem (old API) for the gone-process is " + p.getCumulativeVmem()
-          + " . It should be zero.", p.getCumulativeVmem() == 0);
+          + " . It should be UNAVAILABLE(-1).",
+          p.getCumulativeVmem() == UNAVAILABLE);
     Assert.assertTrue(p.toString().equals("[ ]"));
   }
 
@@ -247,7 +254,7 @@ public class TestProcfsBasedProcessTree {
   }
 
   protected void destroyProcessTree(String pid) throws IOException {
-    sendSignal(pid, 9);
+    sendSignal("-"+pid, 9);
   }
 
   /**
@@ -917,7 +924,7 @@ public class TestProcfsBasedProcessTree {
 
   private static void sendSignal(String pid, int signal) throws IOException {
     ShellCommandExecutor shexec = null;
-    String[] arg = { "kill", "-" + signal, pid };
+    String[] arg = { "kill", "-" + signal, "--", pid };
     shexec = new ShellCommandExecutor(arg);
     shexec.execute();
   }
