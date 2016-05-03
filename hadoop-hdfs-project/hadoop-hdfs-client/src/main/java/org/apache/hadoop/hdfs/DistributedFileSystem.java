@@ -2406,6 +2406,9 @@ public class DistributedFileSystem extends FileSystem {
       while (it.hasNext()) {
         Path ezTrashRoot = new Path(it.next().getPath(),
             FileSystem.TRASH_PREFIX);
+        if (!exists(ezTrashRoot)) {
+          continue;
+        }
         if (allUsers) {
           for (FileStatus candidate : listStatus(ezTrashRoot)) {
             if (exists(candidate.getPath())) {
