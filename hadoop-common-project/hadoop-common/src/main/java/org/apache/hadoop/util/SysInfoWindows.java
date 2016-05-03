@@ -59,7 +59,7 @@ public class SysInfoWindows extends SysInfo {
 
   @VisibleForTesting
   long now() {
-    return System.nanoTime();
+    return Time.monotonicNow();
   }
 
   void reset() {
