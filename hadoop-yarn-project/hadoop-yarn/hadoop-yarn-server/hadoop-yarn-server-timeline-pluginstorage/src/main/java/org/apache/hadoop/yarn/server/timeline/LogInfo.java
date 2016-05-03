@@ -98,13 +98,14 @@ abstract class LogInfo {
     ));
   }
 
-  public void parseForStore(TimelineDataManager tdm, Path appDirPath,
+  public long parseForStore(TimelineDataManager tdm, Path appDirPath,
       boolean appCompleted, JsonFactory jsonFactory, ObjectMapper objMapper,
       FileSystem fs) throws IOException {
     LOG.debug("Parsing for log dir {} on attempt {}", appDirPath,
         attemptDirName);
     Path logPath = getPath(appDirPath);
     FileStatus status = fs.getFileStatus(logPath);
+    long numParsed = 0;
     if (status != null) {
       long startTime = Time.monotonicNow();
       try {
@@ -113,6 +114,7 @@ abstract class LogInfo {
             objMapper, fs);
         LOG.info("Parsed {} entities from {} in {} msec",
             count, logPath, Time.monotonicNow() - startTime);
+        numParsed += count;
       } catch (RuntimeException e) {
         // If AppLogs cannot parse this log, it may be corrupted or just empty
         if (e.getCause() instanceof JsonParseException &&
@@ -125,6 +127,7 @@ abstract class LogInfo {
     } else {
       LOG.warn("{} no longer exists. Skip for scanning. ", logPath);
     }
+    return numParsed;
   }
 
   private long parsePath(TimelineDataManager tdm, Path logPath,
