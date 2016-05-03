@@ -68,7 +68,7 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
     this.jobConf = context.getJobConf();
     this.umbilical = context.getUmbilical();
     this.reporter = context.getReporter();
-    this.metrics = new ShuffleClientMetrics(reduceId, jobConf);
+    this.metrics = ShuffleClientMetrics.create();
     this.copyPhase = context.getCopyPhase();
     this.taskStatus = context.getStatus();
     this.reduceTask = context.getReduceTask();

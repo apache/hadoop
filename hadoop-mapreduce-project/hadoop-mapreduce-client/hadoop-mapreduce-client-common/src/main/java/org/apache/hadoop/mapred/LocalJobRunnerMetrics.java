@@ -17,82 +17,50 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.metrics.MetricsContext;
-import org.apache.hadoop.metrics.MetricsRecord;
-import org.apache.hadoop.metrics.MetricsUtil;
-import org.apache.hadoop.metrics.Updater;
-import org.apache.hadoop.metrics.jvm.JvmMetrics;
+import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.annotation.Metric;
+import org.apache.hadoop.metrics2.annotation.Metrics;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.MutableCounterInt;
+import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 
-@SuppressWarnings("deprecation")
-class LocalJobRunnerMetrics implements Updater {
-  private final MetricsRecord metricsRecord;
+import java.util.concurrent.ThreadLocalRandom;
 
-  private int numMapTasksLaunched = 0;
-  private int numMapTasksCompleted = 0;
-  private int numReduceTasksLaunched = 0;
-  private int numReduceTasksCompleted = 0;
-  private int numWaitingMaps = 0;
-  private int numWaitingReduces = 0;
-  
-  public LocalJobRunnerMetrics(JobConf conf) {
-    String sessionId = conf.getSessionId();
-    // Initiate JVM Metrics
-    JvmMetrics.init("JobTracker", sessionId);
-    // Create a record for map-reduce metrics
-    MetricsContext context = MetricsUtil.getContext("mapred");
-    // record name is jobtracker for compatibility 
-    metricsRecord = MetricsUtil.createRecord(context, "jobtracker");
-    metricsRecord.setTag("sessionId", sessionId);
-    context.registerUpdater(this);
+@Metrics(name="LocalJobRunnerMetrics", context="mapred")
+final class LocalJobRunnerMetrics {
+
+  @Metric
+  private MutableCounterInt numMapTasksLaunched;
+  @Metric
+  private MutableCounterInt numMapTasksCompleted;
+  @Metric
+  private MutableCounterInt numReduceTasksLaunched;
+  @Metric
+  private MutableGaugeInt numReduceTasksCompleted;
+
+  private LocalJobRunnerMetrics() {
   }
-    
-  /**
-   * Since this object is a registered updater, this method will be called
-   * periodically, e.g. every 5 seconds.
-   */
-  public void doUpdates(MetricsContext unused) {
-    synchronized (this) {
-      metricsRecord.incrMetric("maps_launched", numMapTasksLaunched);
-      metricsRecord.incrMetric("maps_completed", numMapTasksCompleted);
-      metricsRecord.incrMetric("reduces_launched", numReduceTasksLaunched);
-      metricsRecord.incrMetric("reduces_completed", numReduceTasksCompleted);
-      metricsRecord.incrMetric("waiting_maps", numWaitingMaps);
-      metricsRecord.incrMetric("waiting_reduces", numWaitingReduces);
 
-      numMapTasksLaunched = 0;
-      numMapTasksCompleted = 0;
-      numReduceTasksLaunched = 0;
-      numReduceTasksCompleted = 0;
-      numWaitingMaps = 0;
-      numWaitingReduces = 0;
-    }
-    metricsRecord.update();
+  public static LocalJobRunnerMetrics create() {
+    MetricsSystem ms = DefaultMetricsSystem.initialize("JobTracker");
+    return ms.register("LocalJobRunnerMetrics-" +
+            ThreadLocalRandom.current().nextInt(), null,
+        new LocalJobRunnerMetrics());
   }
 
   public synchronized void launchMap(TaskAttemptID taskAttemptID) {
-    ++numMapTasksLaunched;
-    decWaitingMaps(taskAttemptID.getJobID(), 1);
+    numMapTasksLaunched.incr();
   }
 
-  public synchronized void completeMap(TaskAttemptID taskAttemptID) {
-    ++numMapTasksCompleted;
+  public void completeMap(TaskAttemptID taskAttemptID) {
+    numMapTasksCompleted.incr();
   }
 
   public synchronized void launchReduce(TaskAttemptID taskAttemptID) {
-    ++numReduceTasksLaunched;
-    decWaitingReduces(taskAttemptID.getJobID(), 1);
+    numReduceTasksLaunched.incr();
   }
 
-  public synchronized void completeReduce(TaskAttemptID taskAttemptID) {
-    ++numReduceTasksCompleted;
+  public void completeReduce(TaskAttemptID taskAttemptID) {
+    numReduceTasksCompleted.incr();
   }
-
-  private synchronized void decWaitingMaps(JobID id, int task) {
-    numWaitingMaps -= task;
-  }
-  
-  private synchronized void decWaitingReduces(JobID id, int task){
-    numWaitingReduces -= task;
-  }
-
 }
