@@ -61,7 +61,7 @@ public class EntityCacheItem {
    * Set the application logs to this cache item. The entity group should be
    * associated with this application.
    *
-   * @param incomingAppLogs
+   * @param incomingAppLogs Application logs this cache item mapped to
    */
   public synchronized void setAppLogs(
       EntityGroupFSTimelineStore.AppLogs incomingAppLogs) {
@@ -80,18 +80,21 @@ public class EntityCacheItem {
    * rescan and then load new data. The refresh process is synchronized with
    * other operations on the same cache item.
    *
-   * @param groupId
-   * @param aclManager
-   * @param jsonFactory
-   * @param objMapper
+   * @param groupId Group id of the cache
+   * @param aclManager ACL manager for the timeline storage
+   * @param jsonFactory JSON factory for the storage
+   * @param objMapper Object mapper for the storage
+   * @param metrics Metrics to trace the status of the entity group store
    * @return a {@link org.apache.hadoop.yarn.server.timeline.TimelineStore}
    *         object filled with all entities in the group.
    * @throws IOException
    */
   public synchronized TimelineStore refreshCache(TimelineEntityGroupId groupId,
       TimelineACLsManager aclManager, JsonFactory jsonFactory,
-      ObjectMapper objMapper) throws IOException {
+      ObjectMapper objMapper, EntityGroupFSTimelineStoreMetrics metrics)
+      throws IOException {
     if (needRefresh()) {
+      long startTime = Time.monotonicNow();
       // If an application is not finished, we only update summary logs (and put
       // new entities into summary storage).
       // Otherwise, since the application is done, we can update detail logs.
@@ -106,9 +109,12 @@ public class EntityCacheItem {
               "LeveldbCache." + groupId);
           store.init(config);
           store.start();
+        } else {
+          // Store is not null, the refresh is triggered by stale storage.
+          metrics.incrCacheStaleRefreshes();
         }
         List<LogInfo> removeList = new ArrayList<>();
-        try(TimelineDataManager tdm =
+        try (TimelineDataManager tdm =
                 new TimelineDataManager(store, aclManager)) {
           tdm.init(config);
           tdm.start();
@@ -133,8 +139,10 @@ public class EntityCacheItem {
         appLogs.getDetailLogs().removeAll(removeList);
       }
       updateRefreshTimeToNow();
+      metrics.addCacheRefreshTime(Time.monotonicNow() - startTime);
     } else {
       LOG.debug("Cache new enough, skip refreshing");
+      metrics.incrNoRefreshCacheRead();
     }
     return store;
   }
@@ -142,7 +150,7 @@ public class EntityCacheItem {
   /**
    * Release the cache item for the given group id.
    *
-   * @param groupId
+   * @param groupId the group id that the cache should release
    */
   public synchronized void releaseCache(TimelineEntityGroupId groupId) {
     try {
