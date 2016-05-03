@@ -128,12 +128,17 @@ public class EntityGroupFSTimelineStore extends CompositeService
   private List<TimelineEntityGroupPlugin> cacheIdPlugins;
   private Map<TimelineEntityGroupId, EntityCacheItem> cachedLogs;
 
+  @VisibleForTesting
+  @InterfaceAudience.Private
+  EntityGroupFSTimelineStoreMetrics metrics;
+
   public EntityGroupFSTimelineStore() {
     super(EntityGroupFSTimelineStore.class.getSimpleName());
   }
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
+    metrics = EntityGroupFSTimelineStoreMetrics.create();
     summaryStore = createSummaryStore();
     addService(summaryStore);
 
@@ -171,6 +176,7 @@ public class EntityGroupFSTimelineStore extends CompositeService
               if (cacheItem.getAppLogs().isDone()) {
                 appIdLogMap.remove(groupId.getApplicationId());
               }
+              metrics.incrCacheEvicts();
               return true;
             }
             return false;
@@ -316,6 +322,7 @@ public class EntityGroupFSTimelineStore extends CompositeService
   @InterfaceAudience.Private
   @VisibleForTesting
   int scanActiveLogs() throws IOException {
+    long startTime = Time.monotonicNow();
     RemoteIterator<FileStatus> iter = list(activeRootPath);
     int logsToScanCount = 0;
     while (iter.hasNext()) {
@@ -331,6 +338,7 @@ public class EntityGroupFSTimelineStore extends CompositeService
         LOG.debug("Unable to parse entry {}", name);
       }
     }
+    metrics.addActiveLogDirScanTime(Time.monotonicNow() - startTime);
     return logsToScanCount;
   }
 
@@ -423,6 +431,7 @@ public class EntityGroupFSTimelineStore extends CompositeService
               if (!fs.delete(dirpath, true)) {
                 LOG.error("Unable to remove " + dirpath);
               }
+              metrics.incrLogsDirsCleaned();
             } catch (IOException e) {
               LOG.error("Unable to remove " + dirpath, e);
             }
@@ -588,6 +597,7 @@ public class EntityGroupFSTimelineStore extends CompositeService
     @VisibleForTesting
     synchronized void parseSummaryLogs(TimelineDataManager tdm)
         throws IOException {
+      long startTime = Time.monotonicNow();
       if (!isDone()) {
         LOG.debug("Try to parse summary log for log {} in {}",
             appId, appDirPath);
@@ -605,8 +615,10 @@ public class EntityGroupFSTimelineStore extends CompositeService
       List<LogInfo> removeList = new ArrayList<LogInfo>();
       for (LogInfo log : summaryLogs) {
         if (fs.exists(log.getPath(appDirPath))) {
-          log.parseForStore(tdm, appDirPath, isDone(), jsonFactory,
+          long summaryEntityParsed
+              = log.parseForStore(tdm, appDirPath, isDone(), jsonFactory,
               objMapper, fs);
+          metrics.incrEntitiesReadToSummary(summaryEntityParsed);
         } else {
           // The log may have been removed, remove the log
           removeList.add(log);
@@ -615,6 +627,7 @@ public class EntityGroupFSTimelineStore extends CompositeService
         }
       }
       summaryLogs.removeAll(removeList);
+      metrics.addSummaryLogReadTime(Time.monotonicNow() - startTime);
     }
 
     // scans for new logs and returns the modification timestamp of the
@@ -787,6 +800,7 @@ public class EntityGroupFSTimelineStore extends CompositeService
     @Override
     public void run() {
       LOG.debug("Cleaner starting");
+      long startTime = Time.monotonicNow();
       try {
         cleanLogs(doneRootPath, fs, logRetainMillis);
       } catch (Exception e) {
@@ -796,6 +810,8 @@ public class EntityGroupFSTimelineStore extends CompositeService
         } else {
           LOG.error("Error cleaning files", e);
         }
+      } finally {
+        metrics.addLogCleanTime(Time.monotonicNow() - startTime);
       }
       LOG.debug("Cleaner finished");
     }
@@ -824,11 +840,13 @@ public class EntityGroupFSTimelineStore extends CompositeService
       if (storeForId != null) {
         LOG.debug("Adding {} as a store for the query", storeForId.getName());
         stores.add(storeForId);
+        metrics.incrGetEntityToDetailOps();
       }
     }
     if (stores.size() == 0) {
       LOG.debug("Using summary store for {}", entityType);
       stores.add(this.summaryStore);
+      metrics.incrGetEntityToSummaryOps();
     }
     return stores;
   }
@@ -898,7 +916,7 @@ public class EntityGroupFSTimelineStore extends CompositeService
       AppLogs appLogs = cacheItem.getAppLogs();
       LOG.debug("try refresh cache {} {}", groupId, appLogs.getAppId());
       store = cacheItem.refreshCache(groupId, aclManager, jsonFactory,
-          objMapper);
+          objMapper, metrics);
     } else {
       LOG.warn("AppLogs for group id {} is null", groupId);
     }

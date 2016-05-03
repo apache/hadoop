@@ -26,6 +26,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MutableStat;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -177,12 +179,15 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
   @Test
   public void testParseSummaryLogs() throws Exception {
     TimelineDataManager tdm = PluginStoreTestUtils.getTdmWithMemStore(config);
+    MutableCounterLong scanned = store.metrics.getEntitiesReadToSummary();
+    long beforeScan = scanned.value();
     EntityGroupFSTimelineStore.AppLogs appLogs =
         store.new AppLogs(TEST_APPLICATION_ID, testAppDirPath,
         AppState.COMPLETED);
     appLogs.scanForLogs();
     appLogs.parseSummaryLogs(tdm);
     PluginStoreTestUtils.verifyTestEntities(tdm);
+    assertEquals(beforeScan + 2L, scanned.value());
   }
 
   @Test
@@ -227,6 +232,8 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     fs.mkdirs(dirPathEmpty);
 
     // Should retain all logs after this run
+    MutableCounterLong dirsCleaned = store.metrics.getLogsDirsCleaned();
+    long before = dirsCleaned.value();
     store.cleanLogs(testDoneDirPath, fs, 10000);
     assertTrue(fs.exists(irrelevantDirPath));
     assertTrue(fs.exists(irrelevantFilePath));
@@ -256,6 +263,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     // appDirClean and appDirEmpty should be cleaned up
     assertFalse(fs.exists(appDirClean));
     assertFalse(fs.exists(appDirEmpty));
+    assertEquals(before + 2L, dirsCleaned.value());
   }
 
   @Test
@@ -272,6 +280,12 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     cacheItem.setAppLogs(appLogs);
     store.setCachedLogs(
         EntityGroupPlugInForTest.getStandardTimelineGroupId(), cacheItem);
+    MutableCounterLong detailLogEntityRead =
+        store.metrics.getGetEntityToDetailOps();
+    MutableStat cacheRefresh = store.metrics.getCacheRefresh();
+    long numEntityReadBefore = detailLogEntityRead.value();
+    long cacheRefreshBefore = cacheRefresh.lastStat().numSamples();
+
     // Generate TDM
     TimelineDataManager tdm
         = PluginStoreTestUtils.getTdmWithStore(config, store);
@@ -290,6 +304,9 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     for (TimelineEntity entity : entities.getEntities()) {
       assertEquals(entityNew.getStartTime(), entity.getStartTime());
     }
+    // Verify metrics
+    assertEquals(numEntityReadBefore + 2L, detailLogEntityRead.value());
+    assertEquals(cacheRefreshBefore + 1L, cacheRefresh.lastStat().numSamples());
   }
 
   @Test
@@ -298,6 +315,9 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     EntityGroupFSTimelineStore.AppLogs appLogs =
         store.new AppLogs(TEST_APPLICATION_ID, testAppDirPath,
         AppState.COMPLETED);
+    MutableCounterLong summaryLogEntityRead
+        = store.metrics.getGetEntityToSummaryOps();
+    long numEntityReadBefore = summaryLogEntityRead.value();
     TimelineDataManager tdm
         = PluginStoreTestUtils.getTdmWithStore(config, store);
     appLogs.scanForLogs();
@@ -313,6 +333,8 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     for (TimelineEntity entity : entities.getEntities()) {
       assertEquals((Long) 123l, entity.getStartTime());
     }
+    // Verify metrics
+    assertEquals(numEntityReadBefore + 5L, summaryLogEntityRead.value());
 
   }
 
