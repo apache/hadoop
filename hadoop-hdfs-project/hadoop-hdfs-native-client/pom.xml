@@ -148,7 +148,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                     </exec>
                     <!-- Copy for inclusion in distribution. -->
                     <copy todir="${project.build.directory}/bin">
-                      <fileset dir="${project.build.directory}/native/target/bin/RelWithDebInfo"/>
+                      <fileset dir="${project.build.directory}/native/bin/RelWithDebInfo"/>
                     </copy>
                   </target>
                 </configuration>
