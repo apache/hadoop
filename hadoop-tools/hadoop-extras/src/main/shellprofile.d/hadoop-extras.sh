@@ -15,14 +15,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if [[ "${HADOOP_SHELL_EXECNAME}" = hadoop ]]; then
-  hadoop_add_subcommand "distch" "distributed metadata changer"
-fi
+if ! declare -f hadoop_subcommand_distch >/dev/null 2>/dev/null; then
+
+  if [[ "${HADOOP_SHELL_EXECNAME}" = hadoop ]]; then
+    hadoop_add_subcommand "distch" "distributed metadata changer"
+  fi
+
+  # this can't be indented otherwise shelldocs won't get it
 
 ## @description  distch command for hadoop
 ## @audience     public
 ## @stability    stable
-## @replaceable  no
+## @replaceable  yes
 function hadoop_subcommand_distch
 {
   # shellcheck disable=SC2034
@@ -31,3 +35,5 @@ function hadoop_subcommand_distch
   hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
   HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
 }
+
+fi

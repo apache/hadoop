@@ -15,15 +15,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if [[ "${HADOOP_SHELL_EXECNAME}" = hadoop
-   || "${HADOOP_SHELL_EXECNAME}" = mapred ]]; then
-  hadoop_add_subcommand "archive" "create a Hadoop archive"
-fi
+if ! declare -f hadoop_subcommand_archive >/dev/null 2>/dev/null; then
+
+  if [[ "${HADOOP_SHELL_EXECNAME}" = hadoop ]]; then
+    hadoop_add_subcommand "archive" "create a Hadoop archive"
+  fi
+
+  # this can't be indented otherwise shelldocs won't get it
 
 ## @description  archive command for hadoop (and mapred)
 ## @audience     public
 ## @stability    stable
-## @replaceable  no
+## @replaceable  yes
 function hadoop_subcommand_archive
 {
   # shellcheck disable=SC2034
@@ -31,11 +34,25 @@ function hadoop_subcommand_archive
   hadoop_add_to_classpath_tools hadoop-archives
 }
 
-## @description  archive-logs command for mapred (calls hadoop version)
+fi
+
+if ! declare -f mapred_subcommand_archive >/dev/null 2>/dev/null; then
+
+  if [[ "${HADOOP_SHELL_EXECNAME}" = mapred ]]; then
+    hadoop_add_subcommand "archive" "create a Hadoop archive"
+  fi
+
+  # this can't be indented otherwise shelldocs won't get it
+
+## @description  archive command for mapred (calls hadoop version)
 ## @audience     public
 ## @stability    stable
-## @replaceable  no
+## @replaceable  yes
 function mapred_subcommand_archive
 {
-  hadoop_subcommand_archive
+  # shellcheck disable=SC2034
+  HADOOP_CLASSNAME=org.apache.hadoop.tools.HadoopArchives
+  hadoop_add_to_classpath_tools hadoop-archives
 }
+
+fi

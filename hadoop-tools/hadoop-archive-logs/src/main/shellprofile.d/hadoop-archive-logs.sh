@@ -15,14 +15,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if [[ "${HADOOP_SHELL_EXECNAME}" = mapred ]]; then
-  hadoop_add_subcommand "archive-logs" "combine aggregated logs into hadoop archives"
-fi
+if ! declare -f mapred_subcommand_archive-logs >/dev/null 2>/dev/null; then
+
+  if [[ "${HADOOP_SHELL_EXECNAME}" = mapred ]]; then
+    hadoop_add_subcommand "archive-logs" "combine aggregated logs into hadoop archives"
+  fi
+
+  # this can't be indented otherwise shelldocs won't get it
 
 ## @description  archive-logs command for mapred
 ## @audience     public
 ## @stability    stable
-## @replaceable  no
+## @replaceable  yes
 function mapred_subcommand_archive-logs
 {
   # shellcheck disable=SC2034
@@ -31,3 +35,5 @@ function mapred_subcommand_archive-logs
   hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
   HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
 }
+
+fi
