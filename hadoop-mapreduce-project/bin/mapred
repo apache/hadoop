@@ -67,7 +67,7 @@ function mapredcmd_case
       exit 0
     ;;
     historyserver)
-      supportdaemonization="true"
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME=org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer
       hadoop_debug "Appending HADOOP_JOB_HISTORYSERVER_OPTS onto HADOOP_OPTS"
       HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_JOB_HISTORYSERVER_OPTS}"
@@ -154,9 +154,19 @@ if [[ ${HADOOP_SLAVE_MODE} = true ]]; then
   exit $?
 fi
 
-daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
-daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
-
+if [[ -n "${HADOOP_SUBCMD_SECURESERVICE}" ]]; then
+  HADOOP_SECURE_USER="${HADOOP_SUBCMD_SECUREUSER}"
+  hadoop_verify_secure_prereq
+  hadoop_setup_secure_service
+  priv_outfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
+  priv_errfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.err"
+  priv_pidfile="${HADOOP_PID_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
+  daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
+  daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
+else
+  daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
+  daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
+fi
 
 if [[  "${HADOOP_DAEMON_MODE}" != "default" ]]; then
   # shellcheck disable=SC2034
@@ -168,19 +178,28 @@ fi
 
 hadoop_finalize
 
-if [[ -n "${supportdaemonization}" ]]; then
-  # shellcheck disable=SC2154
-  if [[ -n "${secure_service}" ]]; then
-    # shellcheck disable=SC2154
-    hadoop_secure_daemon_handler "${HADOOP_DAEMON_MODE}" "${HADOOP_SUBCMD}"\
-      "${HADOOP_CLASSNAME}" "${daemon_pidfile}" "${daemon_outfile}" \
-      "${priv_pidfile}" "${priv_outfile}" "${priv_errfile}" "$@"
+if [[ -n "${HADOOP_SUBCMD_SUPPORTDAEMONIZATION}" ]]; then
+  if [[ -n "${HADOOP_SUBCMD_SECURESERVICE}" ]]; then
+    hadoop_secure_daemon_handler \
+      "${HADOOP_DAEMON_MODE}" \
+      "${HADOOP_SUBCMD}" \
+      "${HADOOP_CLASSNAME}" \
+      "${daemon_pidfile}" \
+      "${daemon_outfile}" \
+      "${priv_pidfile}" \
+      "${priv_outfile}" \
+      "${priv_errfile}" \
+      "$@"
   else
-    hadoop_daemon_handler "${HADOOP_DAEMON_MODE}" "${HADOOP_SUBCMD}" "${HADOOP_CLASSNAME}" \
-      "${daemon_pidfile}" "${daemon_outfile}" "$@"
+    hadoop_daemon_handler \
+      "${HADOOP_DAEMON_MODE}" \
+      "${HADOOP_SUBCMD}" \
+      "${HADOOP_CLASSNAME}" \
+      "${daemon_pidfile}" \
+      "${daemon_outfile}" \
+      "$@"
   fi
   exit $?
 else
   hadoop_java_exec "${HADOOP_SUBCMD}" "${HADOOP_CLASSNAME}" "$@"
 fi
-
