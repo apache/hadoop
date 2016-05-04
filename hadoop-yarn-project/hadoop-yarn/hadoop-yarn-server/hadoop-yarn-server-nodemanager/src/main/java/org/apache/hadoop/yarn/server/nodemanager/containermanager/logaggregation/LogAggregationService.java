@@ -375,6 +375,9 @@ public class LogAggregationService extends AbstractService implements
       } else {
         appDirException = (YarnRuntimeException)e;
       }
+      appLogAggregators.remove(appId);
+      closeFileSystems(userUgi);
+      throw appDirException;
     }
 
     // TODO Get the user configuration for the list of containers that need log
@@ -392,10 +395,6 @@ public class LogAggregationService extends AbstractService implements
       }
     };
     this.threadPool.execute(aggregatorWrapper);
-
-    if (appDirException != null) {
-      throw appDirException;
-    }
   }
 
   protected void closeFileSystems(final UserGroupInformation userUgi) {
