@@ -323,7 +323,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   }
 
   /**
-   * Verify the access for /logs, /stacks, /conf, /logLevel and /metrics
+   * Verify the access for /logs, /stacks, /conf, and /logLevel
    * servlets, when authentication filters are set, but authorization is not
    * enabled.
    * @throws Exception 
@@ -349,7 +349,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     myServer.start();
     String serverURL = "http://" + NetUtils.getHostPortString(myServer.getConnectorAddress(0)) + "/";
     for (String servlet : new String[] { "conf", "logs", "stacks",
-        "logLevel", "metrics" }) {
+        "logLevel" }) {
       for (String user : new String[] { "userA", "userB" }) {
         assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(serverURL
             + servlet, user));
@@ -359,8 +359,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   }
 
   /**
-   * Verify the administrator access for /logs, /stacks, /conf, /logLevel and
-   * /metrics servlets.
+   * Verify the administrator access for /logs, /stacks, /conf, and /logLevel
+   * servlets.
    * 
    * @throws Exception
    */
@@ -393,7 +393,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     String serverURL = "http://"
         + NetUtils.getHostPortString(myServer.getConnectorAddress(0)) + "/";
     for (String servlet : new String[] { "conf", "logs", "stacks",
-        "logLevel", "metrics" }) {
+        "logLevel" }) {
       for (String user : new String[] { "userA", "userB", "userC", "userD" }) {
         assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(serverURL
             + servlet, user));
