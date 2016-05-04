@@ -68,24 +68,10 @@ public class LogCLIHelpers implements Configurable {
   public int dumpAContainersLogsForALogType(String appId, String containerId,
       String nodeId, String jobOwner, List<String> logType,
       boolean outputFailure) throws IOException {
-    Path remoteRootLogDir = new Path(getConf().get(
-        YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-        YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
-    String suffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(getConf());
     ApplicationId applicationId = ConverterUtils.toApplicationId(appId);
-    Path remoteAppLogDir = LogAggregationUtils.getRemoteAppLogDir(
-        remoteRootLogDir, applicationId, jobOwner,
-        suffix);
-    RemoteIterator<FileStatus> nodeFiles;
-    try {
-      Path qualifiedLogDir =
-          FileContext.getFileContext(getConf()).makeQualified(
-            remoteAppLogDir);
-      nodeFiles =
-          FileContext.getFileContext(qualifiedLogDir.toUri(), getConf())
-            .listStatus(remoteAppLogDir);
-    } catch (FileNotFoundException fnf) {
-      logDirNotExist(remoteAppLogDir.toString());
+    RemoteIterator<FileStatus> nodeFiles = getRemoteNodeFileDir(
+        applicationId, jobOwner);
+    if (nodeFiles == null) {
       return -1;
     }
     boolean foundContainerLogs = false;
@@ -134,23 +120,10 @@ public class LogCLIHelpers implements Configurable {
   public int dumpAContainersLogsForALogTypeWithoutNodeId(String appId,
       String containerId, String jobOwner, List<String> logType)
     throws IOException {
-    Path remoteRootLogDir = new Path(getConf().get(
-        YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-        YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
     ApplicationId applicationId = ConverterUtils.toApplicationId(appId);
-    String user = jobOwner;
-    String logDirSuffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(
-        getConf());
-    Path remoteAppLogDir = LogAggregationUtils.getRemoteAppLogDir(
-        remoteRootLogDir, applicationId, user, logDirSuffix);
-    RemoteIterator<FileStatus> nodeFiles;
-    try {
-      Path qualifiedLogDir =
-          FileContext.getFileContext(getConf()).makeQualified(remoteAppLogDir);
-      nodeFiles = FileContext.getFileContext(qualifiedLogDir.toUri(),
-          getConf()).listStatus(remoteAppLogDir);
-    } catch (FileNotFoundException fnf) {
-      logDirNotExist(remoteAppLogDir.toString());
+    RemoteIterator<FileStatus> nodeFiles = getRemoteNodeFileDir(
+        applicationId, jobOwner);
+    if (nodeFiles == null) {
       return -1;
     }
     boolean foundContainerLogs = false;
@@ -261,22 +234,9 @@ public class LogCLIHelpers implements Configurable {
   @Private
   public int dumpAllContainersLogs(ApplicationId appId, String appOwner,
       PrintStream out) throws IOException {
-    Path remoteRootLogDir = new Path(getConf().get(
-        YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-        YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
-    String user = appOwner;
-    String logDirSuffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(getConf());
-    // TODO Change this to get a list of files from the LAS.
-    Path remoteAppLogDir = LogAggregationUtils.getRemoteAppLogDir(
-        remoteRootLogDir, appId, user, logDirSuffix);
-    RemoteIterator<FileStatus> nodeFiles;
-    try {
-      Path qualifiedLogDir =
-          FileContext.getFileContext(getConf()).makeQualified(remoteAppLogDir);
-      nodeFiles = FileContext.getFileContext(qualifiedLogDir.toUri(),
-          getConf()).listStatus(remoteAppLogDir);
-    } catch (FileNotFoundException fnf) {
-      logDirNotExist(remoteAppLogDir.toString());
+    RemoteIterator<FileStatus> nodeFiles = getRemoteNodeFileDir(
+        appId, appOwner);
+    if (nodeFiles == null) {
       return -1;
     }
     boolean foundAnyLogs = false;
@@ -324,10 +284,134 @@ public class LogCLIHelpers implements Configurable {
       }
     }
     if (! foundAnyLogs) {
-      emptyLogDir(remoteAppLogDir.toString());
+      emptyLogDir(getRemoteAppLogDir(appId, appOwner).toString());
       return -1;
     }
     return 0;
+  }
+
+  @Private
+  public void printLogMetadata(ApplicationId appId,
+      String containerIdStr, String nodeId, String appOwner,
+      PrintStream out, PrintStream err)
+      throws IOException {
+    boolean getAllContainers = (containerIdStr == null);
+    String nodeIdStr = (nodeId == null) ? null
+        : LogAggregationUtils.getNodeString(nodeId);
+    RemoteIterator<FileStatus> nodeFiles = getRemoteNodeFileDir(
+        appId, appOwner);
+    if (nodeFiles == null) {
+      return;
+    }
+    boolean foundAnyLogs = false;
+    while (nodeFiles.hasNext()) {
+      FileStatus thisNodeFile = nodeFiles.next();
+      if (nodeIdStr != null) {
+        if (!thisNodeFile.getPath().getName().contains(nodeIdStr)) {
+          continue;
+        }
+      }
+      if (!thisNodeFile.getPath().getName()
+          .endsWith(LogAggregationUtils.TMP_FILE_SUFFIX)) {
+        AggregatedLogFormat.LogReader reader =
+            new AggregatedLogFormat.LogReader(getConf(),
+            thisNodeFile.getPath());
+        try {
+          DataInputStream valueStream;
+          LogKey key = new LogKey();
+          valueStream = reader.next(key);
+          while (valueStream != null) {
+            if (getAllContainers || (key.toString().equals(containerIdStr))) {
+              String containerString =
+                  "\n\nContainer: " + key + " on "
+                  + thisNodeFile.getPath().getName();
+              out.println(containerString);
+              out.println("Log Upload Time:"
+                  + thisNodeFile.getModificationTime());
+              out.println(StringUtils.repeat("=", containerString.length()));
+              while (true) {
+                try {
+                  LogReader.readContainerMetaDataAndSkipData(valueStream, out);
+                } catch (EOFException eof) {
+                  break;
+                }
+              }
+              foundAnyLogs = true;
+              if (!getAllContainers) {
+                break;
+              }
+            }
+            // Next container
+            key = new LogKey();
+            valueStream = reader.next(key);
+          }
+        } finally {
+          reader.close();
+        }
+      }
+    }
+    if (!foundAnyLogs) {
+      if (containerIdStr != null && nodeId != null) {
+        err.println("The container " + containerIdStr + " couldn't be found "
+            + "on the node specified: " + nodeId);
+      } else if (nodeId != null) {
+        err.println("Can not find log metadata for any containers on "
+            + nodeId);
+      } else if (containerIdStr != null) {
+        err.println("Can not find log metadata for container: "
+            + containerIdStr);
+      }
+    }
+  }
+
+  @Private
+  public void printNodesList(ApplicationId appId, String appOwner,
+      PrintStream out, PrintStream err) throws IOException {
+    RemoteIterator<FileStatus> nodeFiles = getRemoteNodeFileDir(
+        appId, appOwner);
+    if (nodeFiles == null) {
+      return;
+    }
+    boolean foundNode = false;
+    StringBuilder sb = new StringBuilder();
+    while (nodeFiles.hasNext()) {
+      FileStatus thisNodeFile = nodeFiles.next();
+      sb.append(thisNodeFile.getPath().getName() + "\n");
+      foundNode = true;
+    }
+    if (!foundNode) {
+      err.println("No nodes found that aggregated logs for "
+          + "the application: " + appId);
+    } else {
+      out.println(sb.toString());
+    }
+  }
+
+  private RemoteIterator<FileStatus> getRemoteNodeFileDir(ApplicationId appId,
+      String appOwner) throws IOException {
+    Path remoteAppLogDir = getRemoteAppLogDir(appId, appOwner);
+    RemoteIterator<FileStatus> nodeFiles = null;
+    try {
+      Path qualifiedLogDir =
+          FileContext.getFileContext(getConf()).makeQualified(remoteAppLogDir);
+      nodeFiles = FileContext.getFileContext(qualifiedLogDir.toUri(),
+          getConf()).listStatus(remoteAppLogDir);
+    } catch (FileNotFoundException fnf) {
+      logDirNotExist(remoteAppLogDir.toString());
+    }
+    return nodeFiles;
+  }
+
+  private Path getRemoteAppLogDir(ApplicationId appId, String appOwner) {
+    Path remoteRootLogDir = new Path(getConf().get(
+        YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+        YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
+    String user = appOwner;
+    String logDirSuffix = LogAggregationUtils
+        .getRemoteNodeLogDirSuffix(getConf());
+    // TODO Change this to get a list of files from the LAS.
+    return LogAggregationUtils.getRemoteAppLogDir(
+        remoteRootLogDir, appId, user, logDirSuffix);
   }
 
   @Override
@@ -341,16 +425,16 @@ public class LogCLIHelpers implements Configurable {
   }
 
   private static void containerLogNotFound(String containerId) {
-    System.out.println("Logs for container " + containerId
+    System.err.println("Logs for container " + containerId
       + " are not present in this log-file.");
   }
 
   private static void logDirNotExist(String remoteAppLogDir) {
-    System.out.println(remoteAppLogDir + " does not exist.");
-    System.out.println("Log aggregation has not completed or is not enabled.");
+    System.err.println(remoteAppLogDir + " does not exist.");
+    System.err.println("Log aggregation has not completed or is not enabled.");
   }
 
   private static void emptyLogDir(String remoteAppLogDir) {
-    System.out.println(remoteAppLogDir + " does not have any log files.");
+    System.err.println(remoteAppLogDir + " does not have any log files.");
   }
 }

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.client.cli;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
@@ -166,11 +167,22 @@ public class TestLogsCLI {
     pw.println("                                 runing. Work with -logFiles to get other");
     pw.println("                                 logs.");
     pw.println(" -help                           Displays help for all commands.");
+    pw.println(" -list_nodes                     Show the list of nodes that successfully");
+    pw.println("                                 aggregated logs. This option can only be");
+    pw.println("                                 used with finished applications.");
     pw.println(" -logFiles <Log File Name>       Work with -am/-containerId and specify");
     pw.println("                                 comma-separated value to get specified");
     pw.println("                                 container log files. Use \"ALL\" to fetch");
     pw.println("                                 all the log files for the container.");
     pw.println(" -nodeAddress <Node Address>     NodeAddress in the format nodename:port");
+    pw.println(" -show_meta_info                 Show the log metadata, including log-file");
+    pw.println("                                 names, the size of the log files. You can");
+    pw.println("                                 combine this with --containerId to get");
+    pw.println("                                 log metadata for the specific container,");
+    pw.println("                                 or with --nodeAddress to get log metadata");
+    pw.println("                                 for all the containers on the specific");
+    pw.println("                                 NodeManager. Currently, this option can");
+    pw.println("                                 only be used for finished applications.");
     pw.close();
     String appReportStr = baos.toString("UTF-8");
     Assert.assertEquals(appReportStr, sysOutStream.toString());
@@ -286,10 +298,10 @@ public class TestLogsCLI {
             "-nodeAddress", nodeId.toString(), "-containerId",
             containerId0.toString() });
     assertTrue(exitCode == -1);
-    assertTrue(sysOutStream.toString().contains(
+    assertTrue(sysErrStream.toString().contains(
       "Logs for container " + containerId0.toString()
           + " are not present in this log-file."));
-    sysOutStream.reset();
+    sysErrStream.reset();
 
     // uploaded two logs for container3. The first log is named as syslog.
     // The second one is named as stdout.
@@ -330,6 +342,140 @@ public class TestLogsCLI {
         "Hello container_0_0001_01_000003 in syslog!"));
     assertTrue(sysOutStream.toString().contains(
         "Hello container_0_0001_01_000003 in stdout!"));
+    sysOutStream.reset();
+
+    fs.delete(new Path(remoteLogRootDir), true);
+    fs.delete(new Path(rootLogDir), true);
+  }
+
+  @Test (timeout = 15000)
+  public void testPrintContainerLogMetadata() throws Exception {
+    String remoteLogRootDir = "target/logs/";
+    Configuration configuration = new Configuration();
+    configuration.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
+    configuration
+      .set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogRootDir);
+    configuration.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+    configuration.set(YarnConfiguration.YARN_ADMIN_ACL, "admin");
+    FileSystem fs = FileSystem.get(configuration);
+    String rootLogDir = "target/LocalLogs";
+
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    List<ContainerId> containerIds = new ArrayList<ContainerId>();
+    ContainerId containerId1 = ContainerId.newContainerId(
+        appAttemptId, 1);
+    ContainerId containerId2 = ContainerId.newContainerId(
+        appAttemptId, 2);
+    containerIds.add(containerId1);
+    containerIds.add(containerId2);
+
+    List<NodeId> nodeIds = new ArrayList<NodeId>();
+    NodeId nodeId = NodeId.newInstance("localhost", 1234);
+    nodeIds.add(nodeId);
+    nodeIds.add(nodeId);
+
+    createContainerLogs(configuration, remoteLogRootDir, rootLogDir, fs,
+        appId, containerIds, nodeIds);
+
+    YarnClient mockYarnClient =
+        createMockYarnClient(YarnApplicationState.FINISHED);
+    LogsCLI cli = new LogsCLIForTest(mockYarnClient);
+    cli.setConf(configuration);
+
+    cli.run(new String[] { "-applicationId", appId.toString(),
+        "-show_meta_info" });
+    assertTrue(sysOutStream.toString().contains(
+        "Container: container_0_0001_01_000001 on localhost_"));
+    assertTrue(sysOutStream.toString().contains(
+        "Container: container_0_0001_01_000002 on localhost_"));
+    assertTrue(sysOutStream.toString().contains(
+        "LogType:syslog"));
+    assertTrue(sysOutStream.toString().contains(
+        "LogLength:43"));
+    sysOutStream.reset();
+
+    cli.run(new String[] { "-applicationId", appId.toString(),
+        "-show_meta_info", "-containerId", "container_0_0001_01_000001" });
+    assertTrue(sysOutStream.toString().contains(
+        "Container: container_0_0001_01_000001 on localhost_"));
+    assertFalse(sysOutStream.toString().contains(
+        "Container: container_0_0001_01_000002 on localhost_"));
+    assertTrue(sysOutStream.toString().contains(
+        "LogType:syslog"));
+    assertTrue(sysOutStream.toString().contains(
+        "LogLength:43"));
+    sysOutStream.reset();
+
+    cli.run(new String[] { "-applicationId", appId.toString(),
+        "-show_meta_info", "-nodeAddress", "localhost" });
+    assertTrue(sysOutStream.toString().contains(
+        "Container: container_0_0001_01_000001 on localhost_"));
+    assertTrue(sysOutStream.toString().contains(
+        "Container: container_0_0001_01_000002 on localhost_"));
+    assertTrue(sysOutStream.toString().contains(
+        "LogType:syslog"));
+    assertTrue(sysOutStream.toString().contains(
+        "LogLength:43"));
+    sysOutStream.reset();
+
+    cli.run(new String[] { "-applicationId", appId.toString(),
+        "-show_meta_info", "-nodeAddress", "localhost", "-containerId",
+        "container_1234" });
+    assertTrue(sysErrStream.toString().contains(
+        "The container container_1234 couldn't be found on the node "
+        + "specified: localhost"));
+    sysErrStream.reset();
+
+    fs.delete(new Path(remoteLogRootDir), true);
+    fs.delete(new Path(rootLogDir), true);
+  }
+
+  @Test (timeout = 15000)
+  public void testListNodeInfo() throws Exception {
+    String remoteLogRootDir = "target/logs/";
+    Configuration configuration = new Configuration();
+    configuration.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
+    configuration
+      .set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogRootDir);
+    configuration.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+    configuration.set(YarnConfiguration.YARN_ADMIN_ACL, "admin");
+
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    List<ContainerId> containerIds = new ArrayList<ContainerId>();
+    ContainerId containerId1 = ContainerId.newContainerId(
+        appAttemptId, 1);
+    ContainerId containerId2 = ContainerId.newContainerId(
+        appAttemptId, 2);
+    containerIds.add(containerId1);
+    containerIds.add(containerId2);
+
+    List<NodeId> nodeIds = new ArrayList<NodeId>();
+    NodeId nodeId1 = NodeId.newInstance("localhost1", 1234);
+    NodeId nodeId2 = NodeId.newInstance("localhost2", 2345);
+    nodeIds.add(nodeId1);
+    nodeIds.add(nodeId2);
+
+    String rootLogDir = "target/LocalLogs";
+    FileSystem fs = FileSystem.get(configuration);
+
+    createContainerLogs(configuration, remoteLogRootDir, rootLogDir, fs,
+        appId, containerIds, nodeIds);
+
+    YarnClient mockYarnClient =
+        createMockYarnClient(YarnApplicationState.FINISHED);
+    LogsCLI cli = new LogsCLIForTest(mockYarnClient);
+    cli.setConf(configuration);
+
+    cli.run(new String[] { "-applicationId", appId.toString(),
+        "-list_nodes" });
+    assertTrue(sysOutStream.toString().contains(
+        LogAggregationUtils.getNodeString(nodeId1)));
+    assertTrue(sysOutStream.toString().contains(
+        LogAggregationUtils.getNodeString(nodeId2)));
     sysOutStream.reset();
 
     fs.delete(new Path(remoteLogRootDir), true);
@@ -382,6 +528,46 @@ public class TestLogsCLI {
     sysOutStream.reset();
 
     fs.delete(new Path(remoteLogRootDir), true);
+  }
+
+  private void createContainerLogs(Configuration configuration,
+      String remoteLogRootDir, String rootLogDir, FileSystem fs,
+      ApplicationId appId, List<ContainerId> containerIds,
+      List<NodeId> nodeIds) throws Exception {
+
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+
+    // create local logs
+    Path rootLogDirPath = new Path(rootLogDir);
+    if (fs.exists(rootLogDirPath)) {
+      fs.delete(rootLogDirPath, true);
+    }
+    assertTrue(fs.mkdirs(rootLogDirPath));
+
+    Path appLogsDir = new Path(rootLogDirPath, appId.toString());
+    if (fs.exists(appLogsDir)) {
+      fs.delete(appLogsDir, true);
+    }
+    assertTrue(fs.mkdirs(appLogsDir));
+    List<String> rootLogDirs = Arrays.asList(rootLogDir);
+    List<String> logTypes = new ArrayList<String>();
+    logTypes.add("syslog");
+    // create container logs in localLogDir
+    for (ContainerId containerId : containerIds) {
+      createContainerLogInLocalDir(appLogsDir, containerId, fs, logTypes);
+    }
+    Path path =
+        new Path(remoteLogRootDir + ugi.getShortUserName()
+        + "/logs/application_0_0001");
+
+    if (fs.exists(path)) {
+      fs.delete(path, true);
+    }
+    assertTrue(fs.mkdirs(path));
+    for (int i=0; i<containerIds.size(); i++) {
+      uploadContainerLogIntoRemoteDir(ugi, configuration, rootLogDirs, nodeIds.get(i),
+          containerIds.get(i), path, fs);
+    }
   }
 
   private static void createContainerLogInLocalDir(Path appLogsDir,
