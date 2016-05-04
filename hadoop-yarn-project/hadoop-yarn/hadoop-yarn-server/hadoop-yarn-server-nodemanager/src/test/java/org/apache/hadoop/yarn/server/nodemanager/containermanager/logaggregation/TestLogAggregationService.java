@@ -777,8 +777,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     dispatcher.await();
     ApplicationEvent expectedEvents[] = new ApplicationEvent[]{
-        new ApplicationEvent(appId, 
-        		ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED)
+        new ApplicationEvent(appId,
+            ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED)
     };
     checkEvents(appEventHandler, expectedEvents, false,
         "getType", "getApplicationID", "getDiagnostic");
@@ -794,10 +794,15 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     logAggregationService.stop();
     assertEquals(0, logAggregationService.getNumAggregators());
-    verify(spyDelSrvc).delete(eq(user), any(Path.class),
+    // local log dir shouldn't be deleted given log aggregation cannot
+    // continue due to aggregated log dir creation failure on remoteFS.
+    verify(spyDelSrvc, never()).delete(eq(user), any(Path.class),
         Mockito.<Path>anyVararg());
     verify(logAggregationService).closeFileSystems(
         any(UserGroupInformation.class));
+    // make sure local log dir is not deleted in case log aggregation
+    // service cannot be initiated.
+    assertTrue(appLogDir.exists());
   }
 
   private void writeContainerLogs(File appLogDir, ContainerId containerId,
