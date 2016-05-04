@@ -167,6 +167,10 @@ function hadoopcmd_case
       fi
     ;;
   esac
+
+  # Always respect HADOOP_OPTS and HADOOP_CLIENT_OPTS
+  hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+  HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
 }
 
 # This script runs the hadoop core commands.
@@ -208,10 +212,6 @@ if [[ ${HADOOP_SLAVE_MODE} = true ]]; then
   hadoop_common_slave_mode_execute "${HADOOP_HDFS_HOME}/bin/hdfs" "${HADOOP_USER_PARAMS[@]}"
   exit $?
 fi
-
-# Always respect HADOOP_OPTS and HADOOP_CLIENT_OPTS
-hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
 
 if [[ -n "${HADOOP_SUBCMD_SECURESERVICE}" ]]; then
   HADOOP_SECURE_USER="${HADOOP_SUBCMD_SECUREUSER}"
