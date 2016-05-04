@@ -154,3 +154,25 @@ function hdfs_subcommand_fetchdt
 ```
 
 ... will replace the existing `hdfs fetchdt` subcommand with a custom one.
+
+Some key environment variables related to Dynamic Subcommands:
+
+* HADOOP\_CLASSNAME
+
+This is the name of the Java class to execute.
+
+* HADOOP\_SHELL\_EXECNAME
+
+This is the name of the script that is being executed.  It will be one of hadoop, hdfs, mapred, or yarn.
+
+* HADOOP\_SUBCMD\_SECURESERVICE
+
+If this command should/will be executed as a secure daemon, set this to true.
+
+* HADOOP\_SUBCMD\_SECUREUSER
+
+If this command should/will be executed as a secure daemon, set the user name to be used.
+
+* HADOOP\_SUBCMD\_SUPPORTDAEMONIZATION
+
+If this command can be executed as a daemon, set this to true.
