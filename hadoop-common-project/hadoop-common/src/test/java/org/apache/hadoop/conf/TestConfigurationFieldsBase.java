@@ -125,6 +125,11 @@ public abstract class TestConfigurationFieldsBase {
   private Map<String,String> configurationMemberVariables = null;
 
   /**
+   * Member variable to store Configuration variables for later reference.
+   */
+  private Map<String,String> configurationDefaultVariables = null;
+
+  /**
    * Member variable to store XML properties for later comparison.
    */
   private Map<String,String> xmlKeyValueMap = null;
@@ -146,6 +151,7 @@ public abstract class TestConfigurationFieldsBase {
    */
   protected boolean configDebug = false;
   protected boolean xmlDebug = false;
+  protected boolean defaultDebug = false;
 
   /**
    * Abstract method to be used by subclasses for initializing base
@@ -317,6 +323,79 @@ public abstract class TestConfigurationFieldsBase {
   }
 
   /**
+   * Utility function to extract &quot;public static final&quot; default
+   * member variables from a Configuration type class.
+   *
+   * @param fields The class member variables
+   * @return HashMap containing <DefaultVariableName,DefaultValue> entries
+   */
+  private HashMap<String,String>
+      extractDefaultVariablesFromConfigurationFields(Field[] fields) {
+    // Sanity Check
+    if (fields==null) {
+      return null;
+    }
+
+    HashMap<String,String> retVal = new HashMap<String,String>();
+
+    // Setup regexp for valid properties
+    String propRegex = "^[A-Za-z][A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)+$";
+    Pattern p = Pattern.compile(propRegex);
+
+    // Iterate through class member variables
+    int totalFields = 0;
+    String value;
+    for (Field f : fields) {
+      // Filter out anything that isn't "public static final"
+      if (!Modifier.isStatic(f.getModifiers()) ||
+          !Modifier.isPublic(f.getModifiers()) ||
+          !Modifier.isFinal(f.getModifiers())) {
+        continue;
+      }
+      // Special: Stuff any property beginning with "DEFAULT_" into a
+      // different hash for later processing
+      if (f.getName().startsWith("DEFAULT_") ||
+          f.getName().endsWith("_DEFAULT")) {
+        if (retVal.containsKey(f.getName())) {
+          continue;
+        }
+        try {
+          if (f.getType().getName().equals("java.lang.String")) {
+            String sValue = (String) f.get(null);
+            retVal.put(f.getName(),sValue);
+          } else if (f.getType().getName().equals("short")) {
+            short shValue = (short) f.get(null);
+            retVal.put(f.getName(),Integer.toString(shValue));
+          } else if (f.getType().getName().equals("int")) {
+            int iValue = (int) f.get(null);
+            retVal.put(f.getName(),Integer.toString(iValue));
+          } else if (f.getType().getName().equals("long")) {
+            long lValue = (long) f.get(null);
+            retVal.put(f.getName(),Long.toString(lValue));
+          } else if (f.getType().getName().equals("float")) {
+            float fValue = (float) f.get(null);
+            retVal.put(f.getName(),Float.toString(fValue));
+          } else if (f.getType().getName().equals("double")) {
+            double dValue = (double) f.get(null);
+            retVal.put(f.getName(),Double.toString(dValue));
+          } else if (f.getType().getName().equals("boolean")) {
+            boolean bValue = (boolean) f.get(null);
+            retVal.put(f.getName(),Boolean.toString(bValue));
+          } else {
+            if (defaultDebug) {
+              System.out.println("Config variable " + f.getName() + " has unknown type " + f.getType().getName());
+            }
+          }
+        } catch (IllegalAccessException iaException) {
+          iaException.printStackTrace();
+        }
+      }
+    }
+
+    return retVal;
+  }
+
+  /**
    * Perform set difference operation on keyMap2 from keyMap1.
    *
    * @param keyMap1 The initial set
@@ -369,6 +448,26 @@ public abstract class TestConfigurationFieldsBase {
     }
     xmlKeyValueMap = extractPropertiesFromXml(xmlFilename);
     if (xmlDebug) {
+      System.out.println("");
+      System.out.println("=====");
+      System.out.println("");
+    }
+
+    // Create default configuration variable key/value map
+    if (defaultDebug) {
+      System.out.println("Reading Config property files for defaults");
+      System.out.println("");
+    }
+    configurationDefaultVariables = new HashMap<String,String>();
+    for (Class c : configurationClasses) {
+      Field[] fields = c.getDeclaredFields();
+      Map<String,String> defaultMap =
+          extractDefaultVariablesFromConfigurationFields(fields);
+      if (defaultMap!=null) {
+        configurationDefaultVariables.putAll(defaultMap);
+      }
+    }
+    if (defaultDebug) {
       System.out.println("");
       System.out.println("=====");
       System.out.println("");
@@ -463,5 +562,161 @@ public abstract class TestConfigurationFieldsBase {
     if ( errorIfMissingConfigProps ) {
       assertTrue(configErrorMsg.toString(), missingConfigSize==0);
     }
+  }
+
+  /**
+   * For each property in the XML file, verify that the value matches
+   * up to the default if one exists.
+   */
+  @Test
+  public void testXmlAgainstDefaultValuesInConfigurationClass() {
+    // Error if subclass hasn't set class members
+    assertTrue(xmlFilename!=null);
+    assertTrue(configurationMemberVariables!=null);
+    assertTrue(configurationDefaultVariables!=null);
+
+    HashSet<String> xmlPropertiesWithEmptyValue = new HashSet<String>();
+    HashSet<String> configPropertiesWithNoDefaultConfig = new HashSet<String>();
+    HashMap<String,String> xmlPropertiesMatchingConfigDefault =
+        new HashMap<String,String>();
+    // Ugly solution.  Should have tuple-based solution.
+    HashMap<HashMap<String,String>,HashMap<String,String>> mismatchingXmlConfig =
+        new HashMap<HashMap<String,String>,HashMap<String,String>>();
+
+    for (Map.Entry<String,String> xEntry : xmlKeyValueMap.entrySet()) {
+      String xmlProperty = xEntry.getKey();
+      String xmlDefaultValue = xEntry.getValue();
+      String configProperty = configurationMemberVariables.get(xmlProperty);
+      if (configProperty!=null) {
+        String defaultConfigName = null;
+        String defaultConfigValue = null;
+
+        // Type 1: Prepend DEFAULT_
+        String defaultNameCheck1 = "DEFAULT_" + configProperty;
+        String defaultValueCheck1 = configurationDefaultVariables
+            .get(defaultNameCheck1);
+        // Type 2: Swap _KEY suffix with _DEFAULT suffix
+        String defaultNameCheck2 = null;
+        if (configProperty.endsWith("_KEY")) {
+          defaultNameCheck2 = configProperty
+              .substring(0,configProperty.length()-4) + "_DEFAULT";
+        }
+        String defaultValueCheck2 = configurationDefaultVariables
+            .get(defaultNameCheck2);
+        // Type Last: Append _DEFAULT suffix
+        String defaultNameCheck3 = configProperty + "_DEFAULT";
+        String defaultValueCheck3 = configurationDefaultVariables
+            .get(defaultNameCheck3);
+
+        // Pick the default value that exists
+        if (defaultValueCheck1!=null) {
+          defaultConfigName = defaultNameCheck1;
+          defaultConfigValue = defaultValueCheck1;
+        } else if (defaultValueCheck2!=null) {
+          defaultConfigName = defaultNameCheck2;
+          defaultConfigValue = defaultValueCheck2;
+        } else if (defaultValueCheck3!=null) {
+          defaultConfigName = defaultNameCheck3;
+          defaultConfigValue = defaultValueCheck3;
+        }
+
+        if (defaultConfigValue!=null) {
+          if (xmlDefaultValue==null) {
+            xmlPropertiesWithEmptyValue.add(xmlProperty);
+          } else if (!xmlDefaultValue.equals(defaultConfigValue)) {
+            HashMap<String,String> xmlEntry =
+                new HashMap<String,String>();
+            xmlEntry.put(xmlProperty,xmlDefaultValue);
+            HashMap<String,String> configEntry =
+                new HashMap<String,String>();
+            configEntry.put(defaultConfigName,defaultConfigValue);
+            mismatchingXmlConfig.put(xmlEntry,configEntry);
+           } else {
+            xmlPropertiesMatchingConfigDefault
+                .put(xmlProperty, defaultConfigName);
+          }
+        } else {
+          configPropertiesWithNoDefaultConfig.add(configProperty);
+        }
+      } else {
+      }
+    }
+
+    // Print out any unknown mismatching XML value/Config default value
+    System.out.println(this.xmlFilename + " has " +
+        mismatchingXmlConfig.size() +
+        " properties that do not match the default Config value");
+    if (mismatchingXmlConfig.size()==0) {
+      System.out.println("  (None)");
+    } else {
+       for (Map.Entry<HashMap<String,String>,HashMap<String,String>> xcEntry :
+           mismatchingXmlConfig.entrySet()) {
+         HashMap<String,String> xmlMap = xcEntry.getKey();
+         HashMap<String,String> configMap = xcEntry.getValue();
+         for (Map.Entry<String,String> xmlEntry : xmlMap.entrySet()) {
+           System.out.println("  XML Property: " + xmlEntry.getKey());
+           System.out.println("  XML Value:    " + xmlEntry.getValue());
+         }
+         for (Map.Entry<String,String> configEntry : configMap.entrySet()) {
+           System.out.println("  Config Name:  " + configEntry.getKey());
+           System.out.println("  Config Value: " + configEntry.getValue());
+         }
+         System.out.println("");
+       }
+    }
+    System.out.println();
+
+    // Print out Config properties that have no corresponding DEFAULT_*
+    // variable and cannot do any XML comparison (i.e. probably needs to
+    // be checked by hand)
+    System.out.println("Configuration(s) have " +
+        configPropertiesWithNoDefaultConfig.size() +
+        " properties with no corresponding default member variable.  These" +
+        " will need to be verified manually.");
+    if (configPropertiesWithNoDefaultConfig.size()==0) {
+      System.out.println("  (None)");
+    } else {
+      Iterator<String> cItr = configPropertiesWithNoDefaultConfig.iterator();
+      while (cItr.hasNext()) {
+        System.out.println("  " + cItr.next());
+      }
+    }
+    System.out.println();
+
+    // MAYBE TODO Print out any known mismatching XML value/Config default
+
+    // Print out XML properties that have empty values (i.e. should result
+    // in code-based default)
+    System.out.println(this.xmlFilename + " has " +
+        xmlPropertiesWithEmptyValue.size() + " properties with empty values");
+    if (xmlPropertiesWithEmptyValue.size()==0) {
+      System.out.println("  (None)");
+    } else {
+      Iterator<String> xItr = xmlPropertiesWithEmptyValue.iterator();
+      while (xItr.hasNext()) {
+        System.out.println("  " + xItr.next());
+      }
+    }
+    System.out.println();
+
+    // Print out any matching XML value/Config default value
+    System.out.println(this.xmlFilename + " has " +
+        xmlPropertiesMatchingConfigDefault.size() +
+        " properties which match a corresponding Config variable");
+    if (xmlPropertiesMatchingConfigDefault.size()==0) {
+      System.out.println("  (None)");
+    } else {
+      for (Map.Entry<String,String> xcEntry :
+          xmlPropertiesMatchingConfigDefault.entrySet()) {
+        System.out.println("  " + xcEntry.getKey() + " / " +
+            xcEntry.getValue());
+      }
+    }
+    System.out.println();
+
+    // Test separator
+    System.out.println();
+    System.out.println("=====");
+    System.out.println();
   }
 }
