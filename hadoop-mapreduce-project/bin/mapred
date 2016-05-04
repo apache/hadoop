@@ -24,10 +24,7 @@ HADOOP_SHELL_EXECNAME="${MYNAME##*/}"
 ## @replaceable  no
 function hadoop_usage
 {
-  hadoop_add_subcommand "archive" "create a hadoop archive"
-  hadoop_add_subcommand "archive-logs" "combine aggregated logs into hadoop archives"
   hadoop_add_subcommand "classpath" "prints the class path needed for running mapreduce subcommands"
-  hadoop_add_subcommand "distcp" "copy file or directories recursively"
   hadoop_add_subcommand "envvars" "display computed Hadoop environment variables"
   hadoop_add_subcommand "historyserver" "run job history servers as a standalone daemon"
   hadoop_add_subcommand "hsadmin" "job history server admin interface"
@@ -55,26 +52,8 @@ function mapredcmd_case
       hadoop_error "You may find similar functionality with the \"yarn\" shell command."
       hadoop_exit_with_usage 1
     ;;
-    archive)
-      HADOOP_CLASSNAME=org.apache.hadoop.tools.HadoopArchives
-      hadoop_add_to_classpath_tools hadoop-archives
-      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
-    ;;
-    archive-logs)
-      HADOOP_CLASSNAME=org.apache.hadoop.tools.HadoopArchiveLogs
-      hadoop_add_to_classpath_tools hadoop-archive-logs
-      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
-    ;;
     classpath)
       hadoop_do_classpath_subcommand HADOOP_CLASSNAME "$@"
-    ;;
-    distcp)
-      HADOOP_CLASSNAME=org.apache.hadoop.tools.DistCp
-      hadoop_add_to_classpath_tools hadoop-distcp
-      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
     ;;
     envvars)
       echo "JAVA_HOME='${JAVA_HOME}'"
