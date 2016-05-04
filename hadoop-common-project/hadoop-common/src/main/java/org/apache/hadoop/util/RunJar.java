@@ -23,7 +23,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
@@ -40,7 +39,6 @@ import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
@@ -53,7 +51,7 @@ public class RunJar {
 
   private static final Logger LOG = LoggerFactory.getLogger(RunJar.class);
 
-  /** Pattern that matches any string */
+  /** Pattern that matches any string. */
   public static final Pattern MATCH_ANY = Pattern.compile(".*");
 
   /**
@@ -77,9 +75,20 @@ public class RunJar {
       "HADOOP_CLIENT_CLASSLOADER_SYSTEM_CLASSES";
 
   /**
+   * Buffer size for copy the content of compressed file to new file.
+   */
+  private static final int BUFFER_SIZE = 8_192;
+
+  /**
    * Unpack a jar file into a directory.
    *
    * This version unpacks all files inside the jar regardless of filename.
+   *
+   * @param jarFile the .jar file to unpack
+   * @param toDir the destination directory into which to unpack the jar
+   *
+   * @throws IOException if an I/O error has occurred or toDir
+   * cannot be created and does not already exist
    */
   public static void unJar(File jarFile, File toDir) throws IOException {
     unJar(jarFile, toDir, MATCH_ANY);
@@ -92,46 +101,42 @@ public class RunJar {
    * @param jarFile the .jar file to unpack
    * @param toDir the destination directory into which to unpack the jar
    * @param unpackRegex the pattern to match jar entries against
+   *
+   * @throws IOException if an I/O error has occurred or toDir
+   * cannot be created and does not already exist
    */
   public static void unJar(File jarFile, File toDir, Pattern unpackRegex)
-    throws IOException {
-    JarFile jar = new JarFile(jarFile);
-    try {
+      throws IOException {
+    try (JarFile jar = new JarFile(jarFile)) {
       int numOfFailedLastModifiedSet = 0;
       Enumeration<JarEntry> entries = jar.entries();
       while (entries.hasMoreElements()) {
         final JarEntry entry = entries.nextElement();
         if (!entry.isDirectory() &&
             unpackRegex.matcher(entry.getName()).matches()) {
-          InputStream in = jar.getInputStream(entry);
-          try {
+          try (InputStream in = jar.getInputStream(entry)) {
             File file = new File(toDir, entry.getName());
             ensureDirectory(file.getParentFile());
-            OutputStream out = new FileOutputStream(file);
-            try {
-              IOUtils.copyBytes(in, out, 8192);
-            } finally {
-              out.close();
+            try (OutputStream out = new FileOutputStream(file)) {
+              IOUtils.copyBytes(in, out, BUFFER_SIZE);
             }
             if (!file.setLastModified(entry.getTime())) {
               numOfFailedLastModifiedSet++;
             }
-          } finally {
-            in.close();
           }
         }
       }
       if (numOfFailedLastModifiedSet > 0) {
         LOG.warn("Could not set last modfied time for {} file(s)",
-                numOfFailedLastModifiedSet);
+            numOfFailedLastModifiedSet);
       }
-    } finally {
-      jar.close();
     }
   }
 
   /**
    * Ensure the existence of a given directory.
+   *
+   * @param dir Directory to check
    *
    * @throws IOException if it cannot be created and does not already exist
    */
@@ -169,7 +174,7 @@ public class RunJar {
     JarFile jarFile;
     try {
       jarFile = new JarFile(fileName);
-    } catch(IOException io) {
+    } catch (IOException io) {
       throw new IOException("Error opening job jar: " + fileName)
         .initCause(io);
     }
@@ -193,11 +198,11 @@ public class RunJar {
     ensureDirectory(tmpDir);
 
     final File workDir;
-    try { 
+    try {
       workDir = File.createTempFile("hadoop-unjar", "", tmpDir);
     } catch (IOException ioe) {
-      // If user has insufficient perms to write to tmpDir, default  
-      // "Permission denied" message doesn't specify a filename. 
+      // If user has insufficient perms to write to tmpDir, default
+      // "Permission denied" message doesn't specify a filename.
       System.err.println("Error creating temp dir in java.io.tmpdir "
                          + tmpDir + " due to " + ioe.getMessage());
       System.exit(-1);
@@ -211,12 +216,12 @@ public class RunJar {
     ensureDirectory(workDir);
 
     ShutdownHookManager.get().addShutdownHook(
-      new Runnable() {
-        @Override
-        public void run() {
-          FileUtil.fullyDelete(workDir);
-        }
-      }, SHUTDOWN_HOOK_PRIORITY);
+        new Runnable() {
+          @Override
+          public void run() {
+            FileUtil.fullyDelete(workDir);
+          }
+        }, SHUTDOWN_HOOK_PRIORITY);
 
 
     unJar(file, workDir);
@@ -225,13 +230,13 @@ public class RunJar {
 
     Thread.currentThread().setContextClassLoader(loader);
     Class<?> mainClass = Class.forName(mainClassName, true, loader);
-    Method main = mainClass.getMethod("main", new Class[] {
-      Array.newInstance(String.class, 0).getClass()
-    });
-    String[] newArgs = Arrays.asList(args)
-      .subList(firstArg, args.length).toArray(new String[0]);
+    Method main = mainClass.getMethod("main", String[].class);
+    List<String> newArgsSubList = Arrays.asList(args)
+        .subList(firstArg, args.length);
+    String[] newArgs = newArgsSubList
+        .toArray(new String[newArgsSubList.size()]);
     try {
-      main.invoke(null, new Object[] { newArgs });
+      main.invoke(null, new Object[] {newArgs});
     } catch (InvocationTargetException e) {
       throw e.getTargetException();
     }
@@ -251,10 +256,10 @@ public class RunJar {
     // see if the client classloader is enabled
     if (useClientClassLoader()) {
       StringBuilder sb = new StringBuilder();
-      sb.append(workDir+"/").
+      sb.append(workDir).append("/").
           append(File.pathSeparator).append(file).
-          append(File.pathSeparator).append(workDir+"/classes/").
-          append(File.pathSeparator).append(workDir+"/lib/*");
+          append(File.pathSeparator).append(workDir).append("/classes/").
+          append(File.pathSeparator).append(workDir).append("/lib/*");
       // HADOOP_CLASSPATH is added to the client classpath
       String hadoopClasspath = getHadoopClasspath();
       if (hadoopClasspath != null && !hadoopClasspath.isEmpty()) {
@@ -270,18 +275,18 @@ public class RunJar {
       loader = new ApplicationClassLoader(clientClasspath,
           getClass().getClassLoader(), systemClassesList);
     } else {
-      List<URL> classPath = new ArrayList<URL>();
-      classPath.add(new File(workDir+"/").toURI().toURL());
+      List<URL> classPath = new ArrayList<>();
+      classPath.add(new File(workDir + "/").toURI().toURL());
       classPath.add(file.toURI().toURL());
       classPath.add(new File(workDir, "classes/").toURI().toURL());
       File[] libs = new File(workDir, "lib").listFiles();
       if (libs != null) {
-        for (int i = 0; i < libs.length; i++) {
-          classPath.add(libs[i].toURI().toURL());
+        for (File lib : libs) {
+          classPath.add(lib.toURI().toURL());
         }
       }
       // create a normal parent-delegating classloader
-      loader = new URLClassLoader(classPath.toArray(new URL[0]));
+      loader = new URLClassLoader(classPath.toArray(new URL[classPath.size()]));
     }
     return loader;
   }
