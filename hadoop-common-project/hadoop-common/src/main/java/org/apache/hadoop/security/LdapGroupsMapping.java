@@ -18,15 +18,14 @@
 package org.apache.hadoop.security;
 
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Hashtable;
 import java.util.List;
 
-import javax.naming.CommunicationException;
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
@@ -43,7 +42,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.IOUtils;
 
 /**
  * An implementation of {@link GroupMappingServiceProvider} which
@@ -179,7 +177,7 @@ public class LdapGroupsMapping
   private String groupMemberAttr;
   private String groupNameAttr;
 
-  public static int RECONNECT_RETRY_COUNT = 3;
+  public static final int RECONNECT_RETRY_COUNT = 3;
   
   /**
    * Returns list of groups for a user.
@@ -192,40 +190,26 @@ public class LdapGroupsMapping
    * @return list of groups for a given user
    */
   @Override
-  public synchronized List<String> getGroups(String user) throws IOException {
-    List<String> emptyResults = new ArrayList<String>();
+  public synchronized List<String> getGroups(String user) {
     /*
      * Normal garbage collection takes care of removing Context instances when they are no longer in use. 
      * Connections used by Context instances being garbage collected will be closed automatically.
      * So in case connection is closed and gets CommunicationException, retry some times with new new DirContext/connection. 
      */
-    try {
-      return doGetGroups(user);
-    } catch (CommunicationException e) {
-      LOG.warn("Connection is closed, will try to reconnect");
-    } catch (NamingException e) {
-      LOG.warn("Exception trying to get groups for user " + user + ": "
-          + e.getMessage());
-      return emptyResults;
-    }
-
-    int retryCount = 0;
-    while (retryCount ++ < RECONNECT_RETRY_COUNT) {
-      //reset ctx so that new DirContext can be created with new connection
-      this.ctx = null;
-      
+    for(int retry = 0; retry < RECONNECT_RETRY_COUNT; retry++) {
       try {
         return doGetGroups(user);
-      } catch (CommunicationException e) {
-        LOG.warn("Connection being closed, reconnecting failed, retryCount = " + retryCount);
       } catch (NamingException e) {
-        LOG.warn("Exception trying to get groups for user " + user + ":"
-            + e.getMessage());
-        return emptyResults;
+        LOG.warn("Failed to get groups for user " + user + " (retry=" + retry
+            + ") by " + e);
+        LOG.trace("TRACE", e);
       }
+
+      //reset ctx so that new DirContext can be created with new connection
+      this.ctx = null;
     }
     
-    return emptyResults;
+    return Collections.emptyList();
   }
   
   List<String> doGetGroups(String user) throws NamingException {
@@ -254,6 +238,9 @@ public class LdapGroupsMapping
       }
     }
 
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("doGetGroups(" + user + ") return " + groups);
+    }
     return groups;
   }
 
