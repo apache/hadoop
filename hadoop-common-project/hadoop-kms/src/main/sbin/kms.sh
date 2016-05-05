@@ -29,14 +29,6 @@ function hadoop_usage
   hadoop_generate_usage "${MYNAME}" false
 }
 
-function hadoop_escape() {
-      # Escape special chars for the later sed which saves the text as xml attribute
-      local ret
-      ret=$(sed 's/[\/&]/\\&/g' <<< "$1" | sed 's/&/\&amp;/g' | sed 's/"/\\\&quot;/g' \
-          | sed "s/'/\\\\\&apos;/g" | sed 's/</\\\&lt;/g' | sed 's/>/\\\&gt;/g')
-      echo "$ret"
-}
-
 # let's locate libexec...
 if [[ -n "${HADOOP_HOME}" ]]; then
   HADOOP_DEFAULT_LIBEXEC_DIR="${HADOOP_HOME}/libexec"
@@ -104,8 +96,10 @@ fi
 if [[ -f "${HADOOP_CATALINA_HOME}/conf/ssl-server.xml.conf" ]]; then
   if [[ -n "${KMS_SSL_KEYSTORE_PASS+x}" ]] || [[ -n "${KMS_SSL_TRUSTSTORE_PASS}" ]]; then
       export KMS_SSL_KEYSTORE_PASS=${KMS_SSL_KEYSTORE_PASS:-password}
-      KMS_SSL_KEYSTORE_PASS_ESCAPED=$(hadoop_escape "$KMS_SSL_KEYSTORE_PASS")
-      KMS_SSL_TRUSTSTORE_PASS_ESCAPED=$(hadoop_escape "$KMS_SSL_TRUSTSTORE_PASS")
+      KMS_SSL_KEYSTORE_PASS_ESCAPED=$(hadoop_xml_escape \
+        "$(hadoop_sed_escape "$KMS_SSL_KEYSTORE_PASS")")
+      KMS_SSL_TRUSTSTORE_PASS_ESCAPED=$(hadoop_xml_escape \
+        "$(hadoop_sed_escape "$KMS_SSL_TRUSTSTORE_PASS")")
       sed -e 's/"_kms_ssl_keystore_pass_"/'"\"${KMS_SSL_KEYSTORE_PASS_ESCAPED}\""'/g' \
           -e 's/"_kms_ssl_truststore_pass_"/'"\"${KMS_SSL_TRUSTSTORE_PASS_ESCAPED}\""'/g' \
         "${HADOOP_CATALINA_HOME}/conf/ssl-server.xml.conf" \
