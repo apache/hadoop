@@ -41,7 +41,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -61,7 +60,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -4322,7 +4320,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
           resourceManager
               .getResourceScheduler()
               .getSchedulerNode(resourceEvent.getNodeId())
-              .setTotalResource(resourceEvent.getResourceOption().getResource());
+              .updateTotalResource(resourceEvent.getResourceOption().getResource());
         }
       }
     });

@@ -659,7 +659,7 @@ public abstract class AbstractYarnScheduler
       nodeTracker.removeNode(nm.getNodeID());
 
       // update resource to node
-      node.setTotalResource(newResource);
+      node.updateTotalResource(newResource);
 
       nodeTracker.addNode((N) node);
     } else {
