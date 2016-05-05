@@ -687,7 +687,7 @@ public abstract class AbstractYarnScheduler
       updateMaximumAllocation(node, false);
 
       // update resource to node
-      node.setTotalResource(newResource);
+      node.updateTotalResource(newResource);
 
       nodes.put(nm.getNodeID(), (N)node);
       updateMaximumAllocation(node, true);

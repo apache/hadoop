@@ -21,9 +21,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -40,9 +42,9 @@ public class CapacitySchedulerPreemptionUtils {
 
       //  Only add resToObtainByPartition when actuallyToBePreempted resource >= 0
       if (Resources.greaterThan(context.getResourceCalculator(),
-          clusterResource, qT.actuallyToBePreempted, Resources.none())) {
+          clusterResource, qT.getActuallyToBePreempted(), Resources.none())) {
         resToObtainByPartition.put(qT.partition,
-            Resources.clone(qT.actuallyToBePreempted));
+            Resources.clone(qT.getActuallyToBePreempted()));
       }
     }
 
@@ -61,5 +63,34 @@ public class CapacitySchedulerPreemptionUtils {
       return false;
     }
     return containers.contains(container);
+  }
+
+  public static void deductPreemptableResourcesBasedSelectedCandidates(
+      CapacitySchedulerPreemptionContext context,
+      Map<ApplicationAttemptId, Set<RMContainer>> selectedCandidates) {
+    for (Set<RMContainer> containers : selectedCandidates.values()) {
+      for (RMContainer c : containers) {
+        SchedulerNode schedulerNode = context.getScheduler().getSchedulerNode(
+            c.getAllocatedNode());
+        if (null == schedulerNode) {
+          continue;
+        }
+
+        String partition = schedulerNode.getPartition();
+        String queue = c.getQueueName();
+        TempQueuePerPartition tq = context.getQueueByPartition(queue,
+            partition);
+
+        Resource res = c.getReservedResource();
+        if (null == res) {
+          res = c.getAllocatedResource();
+        }
+
+        if (null != res) {
+          tq.deductActuallyToBePreempted(context.getResourceCalculator(),
+              tq.totalPartitionResource, res);
+        }
+      }
+    }
   }
 }

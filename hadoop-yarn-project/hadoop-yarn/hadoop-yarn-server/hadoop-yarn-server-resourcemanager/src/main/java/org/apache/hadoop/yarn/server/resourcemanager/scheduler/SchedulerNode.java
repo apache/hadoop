@@ -98,12 +98,12 @@ public abstract class SchedulerNode {
    * Set total resources on the node.
    * @param resource total resources on the node.
    */
-  public synchronized void setTotalResource(Resource resource){
+  public synchronized void updateTotalResource(Resource resource){
     this.totalResourceCapability = resource;
     this.availableResource = Resources.subtract(totalResourceCapability,
       this.usedResource);
   }
-  
+
   /**
    * Get the ID of the node which contains both its hostname and port.
    * 
@@ -176,7 +176,7 @@ public abstract class SchedulerNode {
         + " containers, " + getUsedResource() + " used and "
         + getAvailableResource() + " available after allocation");
   }
-  
+
   /**
    * The Scheduler increased container
    */
@@ -184,7 +184,7 @@ public abstract class SchedulerNode {
       Resource deltaResource) {
     changeContainerResource(containerId, deltaResource, true);
   }
-  
+
   /**
    * The Scheduler decreased container
    */
@@ -227,7 +227,8 @@ public abstract class SchedulerNode {
     return false;
   }
 
-  protected synchronized void updateResource(Container container) {
+  protected synchronized void updateResourceForReleasedContainer(
+      Container container) {
     addAvailableResource(container.getResource());
     --numContainers;
   }
@@ -246,7 +247,7 @@ public abstract class SchedulerNode {
 
     /* remove the containers from the nodemanger */
     if (null != launchedContainers.remove(container.getId())) {
-      updateResource(container);
+      updateResourceForReleasedContainer(container);
     }
 
     LOG.info("Released container " + container.getId() + " of capacity "
@@ -303,7 +304,7 @@ public abstract class SchedulerNode {
     return numContainers;
   }
 
-  public synchronized List<RMContainer> getRunningContainers() {
+  public synchronized List<RMContainer> getCopiedListOfRunningContainers() {
     return new ArrayList<RMContainer>(launchedContainers.values());
   }
 
@@ -312,7 +313,7 @@ public abstract class SchedulerNode {
   }
 
   protected synchronized void
-      setReservedContainer(RMContainer reservedContainer) {
+  setReservedContainer(RMContainer reservedContainer) {
     this.reservedContainer = reservedContainer;
   }
 
@@ -330,7 +331,7 @@ public abstract class SchedulerNode {
   public void updateLabels(Set<String> labels) {
     this.labels = labels;
   }
-  
+
   /**
    * Get partition of which the node belongs to, if node-labels of this node is
    * empty or null, it belongs to NO_LABEL partition. And since we only support
@@ -338,7 +339,7 @@ public abstract class SchedulerNode {
    */
   public String getPartition() {
     if (this.labels == null || this.labels.isEmpty()) {
-      return RMNodeLabelsManager.NO_LABEL; 
+      return RMNodeLabelsManager.NO_LABEL;
     } else {
       return this.labels.iterator().next();
     }

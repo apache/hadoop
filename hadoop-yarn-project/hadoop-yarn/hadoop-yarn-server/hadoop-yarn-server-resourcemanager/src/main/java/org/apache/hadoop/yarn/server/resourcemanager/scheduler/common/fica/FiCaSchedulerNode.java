@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicat
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -142,9 +143,9 @@ public class FiCaSchedulerNode extends SchedulerNode {
   }
 
   @Override
-  protected synchronized void updateResource(
+  protected synchronized void updateResourceForReleasedContainer(
       Container container) {
-    super.updateResource(container);
+    super.updateResourceForReleasedContainer(container);
     if (killableContainers.containsKey(container.getId())) {
       Resources.subtractFrom(totalKillableResources, container.getResource());
       killableContainers.remove(container.getId());
@@ -170,6 +171,6 @@ public class FiCaSchedulerNode extends SchedulerNode {
   }
 
   public synchronized Map<ContainerId, RMContainer> getKillableContainers() {
-    return killableContainers;
+    return Collections.unmodifiableMap(killableContainers);
   }
 }

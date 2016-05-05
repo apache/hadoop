@@ -62,6 +62,7 @@ import org.mockito.ArgumentMatcher;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Deque;
@@ -161,6 +162,11 @@ public class TestProportionalCapacityPreemptionPolicy {
     mCS = mock(CapacityScheduler.class);
     when(mCS.getResourceCalculator()).thenReturn(rc);
     lm = mock(RMNodeLabelsManager.class);
+    try {
+      when(lm.isExclusiveNodeLabel(anyString())).thenReturn(true);
+    } catch (IOException e) {
+      // do nothing
+    }
     when(mCS.getConfiguration()).thenReturn(conf);
     rmContext = mock(RMContext.class);
     when(mCS.getRMContext()).thenReturn(rmContext);
@@ -650,6 +656,26 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
+  public void testHierarchicalWithReserved() {
+    int[][] qData = new int[][] {
+        //  /    A   B   C    D   E   F
+        { 200, 100, 50, 50, 100, 10, 90 },  // abs
+        { 200, 200, 200, 200, 200, 200, 200 },  // maxCap
+        { 200, 110, 60, 50,  90, 90,  0 },  // used
+        {  10,   0,  0,  0,  10,  0, 10 },  // pending
+        {  40,  25,  15, 10, 15,  15,  0 },  // reserved
+        {   4,   2,  1,  1,   2,  1,  1 },  // apps
+        {  -1,  -1,  1,  1,  -1,  1,  1 },  // req granularity
+        {   2,   2,  0,  0,   2,  0,  0 },  // subqueues
+    };
+    ProportionalCapacityPreemptionPolicy policy = buildPolicy(qData);
+    policy.editSchedule();
+    // verify capacity taken from A1, not B1 despite B1 being far over
+    // its absolute guaranteed capacity
+    verify(mDisp, times(10)).handle(argThat(new IsPreemptionRequestFor(appA)));
+  }
+
+  @Test
   public void testZeroGuar() {
     int[][] qData = new int[][] {
       //  /    A   B   C    D   E   F
@@ -938,10 +964,40 @@ public class TestProportionalCapacityPreemptionPolicy {
         "queueA").get("");
     assertEquals(0, tempQueueAPartition.untouchableExtra.getMemorySize());
     long extraForQueueA =
-        tempQueueAPartition.current.getMemorySize() - tempQueueAPartition.guaranteed
+        tempQueueAPartition.getUsed().getMemorySize() - tempQueueAPartition.getGuaranteed()
             .getMemorySize();
     assertEquals(extraForQueueA,
         tempQueueAPartition.preemptableExtra.getMemorySize());
+  }
+
+  @Test
+  public void testHierarchicalLarge3LevelsWithReserved() {
+    int[][] qData = new int[][] {
+        //  /    A                      F               I
+        //            B    C                  G    H          J    K
+        //                    D    E
+        { 400, 200,  60, 140, 100, 40,  100,  70,  30, 100,  10,  90 },  // abs
+        { 400, 400, 400, 400, 400, 400, 400, 400, 400, 400, 400, 400 },  // maxCap
+        { 400, 210,  60, 150, 100, 50,  100,  50,  50,  90,  10,   80 },  // used
+        {  10,   0,   0,   0,  0,   0,   0,   0,   0,   0,   0,  10 },  // pending
+        {  50,  30,  20,   10, 5,   5,   0,   0,   0,  10,  10,   0 },  // reserved
+        //          appA     appB appC   appD appE      appF appG
+        {   7,   3,   1,   2,   1,   1,  2,   1,   1,   2,   1,   1 },  // apps
+        {  -1,  -1,   1,   -1,  1,   1,  -1,   1,   1,  -1,   1,   1 },  // req granularity
+        {   3,   2,   0,   2,   0,   0,   2,   0,   0,   2,   0,   0 },  // subqueues
+    };
+    ProportionalCapacityPreemptionPolicy policy = buildPolicy(qData);
+    policy.editSchedule();
+
+    verify(mDisp, times(10)).handle(argThat(new IsPreemptionRequestFor(appC)));
+    assertEquals(10, policy.getQueuePartitions().get("queueE").get("").preemptableExtra.getMemorySize());
+    //2nd level child(E) preempts 10, but parent A has only 9 extra
+    //check the parent can prempt only the extra from > 2 level child
+    TempQueuePerPartition tempQueueAPartition = policy.getQueuePartitions().get("queueA").get("");
+    assertEquals(0, tempQueueAPartition.untouchableExtra.getMemorySize());
+    long extraForQueueA = tempQueueAPartition.getUsed().getMemorySize()
+        - tempQueueAPartition.getGuaranteed().getMemorySize();
+    assertEquals(extraForQueueA,tempQueueAPartition.preemptableExtra.getMemorySize());
   }
 
   static class IsPreemptionRequestFor
@@ -1064,6 +1120,7 @@ public class TestProportionalCapacityPreemptionPolicy {
     ParentQueue root = mockParentQueue(null, queues[0], pqs);
     ResourceUsage resUsage = new ResourceUsage();
     resUsage.setUsed(used[0]);
+    resUsage.setReserved(reserved[0]);
     when(root.getQueueName()).thenReturn(CapacitySchedulerConfiguration.ROOT);
     when(root.getAbsoluteUsedCapacity()).thenReturn(
         Resources.divide(rc, tot, used[0], tot));
@@ -1089,6 +1146,7 @@ public class TestProportionalCapacityPreemptionPolicy {
         q = mockParentQueue(p, queues[i], pqs);
         ResourceUsage resUsagePerQueue = new ResourceUsage();
         resUsagePerQueue.setUsed(used[i]);
+        resUsagePerQueue.setReserved(reserved[i]);
         when(q.getQueueResourceUsage()).thenReturn(resUsagePerQueue);
       } else {
         q = mockLeafQueue(p, tot, i, abs, used, pending, reserved, apps, gran);
@@ -1165,6 +1223,7 @@ public class TestProportionalCapacityPreemptionPolicy {
     ResourceUsage ru = new ResourceUsage();
     ru.setPending(pending[i]);
     ru.setUsed(used[i]);
+    ru.setReserved(reserved[i]);
     when(lq.getQueueResourceUsage()).thenReturn(ru);
     // consider moving where CapacityScheduler::comparator accessible
     final NavigableSet<FiCaSchedulerApp> qApps = new TreeSet<FiCaSchedulerApp>(

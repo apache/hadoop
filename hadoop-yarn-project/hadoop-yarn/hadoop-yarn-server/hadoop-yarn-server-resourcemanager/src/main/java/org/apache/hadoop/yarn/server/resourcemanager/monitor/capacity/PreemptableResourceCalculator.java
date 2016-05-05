@@ -37,7 +37,7 @@ import java.util.Set;
 
 /**
  * Calculate how much resources need to be preempted for each queue,
- * will be used by {@link FifoCandidatesSelector}
+ * will be used by {@link PreemptionCandidatesSelector}
  */
 public class PreemptableResourceCalculator {
   private static final Log LOG =
@@ -45,6 +45,7 @@ public class PreemptableResourceCalculator {
 
   private final CapacitySchedulerPreemptionContext context;
   private final ResourceCalculator rc;
+  private boolean isReservedPreemptionCandidatesSelector;
 
   static class TQComparator implements Comparator<TempQueuePerPartition> {
     private ResourceCalculator rc;
@@ -71,18 +72,31 @@ public class PreemptableResourceCalculator {
     // capacity and therefore considered last for resources.
     private double getIdealPctOfGuaranteed(TempQueuePerPartition q) {
       double pctOver = Integer.MAX_VALUE;
-      if (q != null && Resources.greaterThan(
-          rc, clusterRes, q.guaranteed, Resources.none())) {
-        pctOver =
-            Resources.divide(rc, clusterRes, q.idealAssigned, q.guaranteed);
+      if (q != null && Resources.greaterThan(rc, clusterRes,
+          q.getGuaranteed(),
+          Resources.none())) {
+        pctOver = Resources.divide(rc, clusterRes, q.idealAssigned,
+            q.getGuaranteed());
       }
       return (pctOver);
     }
   }
 
-  public PreemptableResourceCalculator(CapacitySchedulerPreemptionContext preemptionContext) {
+  /**
+   * PreemptableResourceCalculator constructor
+   *
+   * @param preemptionContext preemption policy context
+   * @param isReservedPreemptionCandidatesSelector this will be set by
+   * different implementation of candidate selectors, please refer to
+   * TempQueuePerPartition#offer for details.
+   */
+  public PreemptableResourceCalculator(
+      CapacitySchedulerPreemptionContext preemptionContext,
+      boolean isReservedPreemptionCandidatesSelector) {
     context = preemptionContext;
     rc = preemptionContext.getResourceCalculator();
+    this.isReservedPreemptionCandidatesSelector =
+        isReservedPreemptionCandidatesSelector;
   }
 
   /**
@@ -101,11 +115,11 @@ public class PreemptableResourceCalculator {
       }
     } else {
       for (TempQueuePerPartition q : queues) {
-        Resources.addTo(activeCap, q.guaranteed);
+        Resources.addTo(activeCap, q.getGuaranteed());
       }
       for (TempQueuePerPartition q : queues) {
         q.normalizedGuarantee = Resources.divide(rc, clusterResource,
-            q.guaranteed, activeCap);
+            q.getGuaranteed(), activeCap);
       }
     }
   }
@@ -114,7 +128,8 @@ public class PreemptableResourceCalculator {
   // return the list of all queues that have the same idealAssigned
   // percentage of guaranteed.
   protected Collection<TempQueuePerPartition> getMostUnderservedQueues(
-      PriorityQueue<TempQueuePerPartition> orderedByNeed, TQComparator tqComparator) {
+      PriorityQueue<TempQueuePerPartition> orderedByNeed,
+      TQComparator tqComparator) {
     ArrayList<TempQueuePerPartition> underserved = new ArrayList<>();
     while (!orderedByNeed.isEmpty()) {
       TempQueuePerPartition q1 = orderedByNeed.remove();
@@ -155,15 +170,19 @@ public class PreemptableResourceCalculator {
         tqComparator);
     for (Iterator<TempQueuePerPartition> i = qAlloc.iterator(); i.hasNext();) {
       TempQueuePerPartition q = i.next();
-      if (Resources.greaterThan(rc, tot_guarant, q.current, q.guaranteed)) {
-        q.idealAssigned = Resources.add(q.guaranteed, q.untouchableExtra);
+      Resource used = q.getUsed();
+
+      if (Resources.greaterThan(rc, tot_guarant, used,
+          q.getGuaranteed())) {
+        q.idealAssigned = Resources.add(
+            q.getGuaranteed(), q.untouchableExtra);
       } else {
-        q.idealAssigned = Resources.clone(q.current);
+        q.idealAssigned = Resources.clone(used);
       }
       Resources.subtractFrom(unassigned, q.idealAssigned);
-      // If idealAssigned < (current + pending), q needs more resources, so
+      // If idealAssigned < (allocated + used + pending), q needs more resources, so
       // add it to the list of underserved queues, ordered by need.
-      Resource curPlusPend = Resources.add(q.current, q.pending);
+      Resource curPlusPend = Resources.add(q.getUsed(), q.pending);
       if (Resources.lessThan(rc, tot_guarant, q.idealAssigned, curPlusPend)) {
         orderedByNeed.add(q);
       }
@@ -190,7 +209,8 @@ public class PreemptableResourceCalculator {
         TempQueuePerPartition sub = i.next();
         Resource wQavail = Resources.multiplyAndNormalizeUp(rc,
             unassigned, sub.normalizedGuarantee, Resource.newInstance(1, 1));
-        Resource wQidle = sub.offer(wQavail, rc, tot_guarant);
+        Resource wQidle = sub.offer(wQavail, rc, tot_guarant,
+            isReservedPreemptionCandidatesSelector);
         Resource wQdone = Resources.subtract(wQavail, wQidle);
 
         if (Resources.greaterThan(rc, tot_guarant,
@@ -234,8 +254,8 @@ public class PreemptableResourceCalculator {
     Set<TempQueuePerPartition> zeroGuarQueues = new HashSet<>();
 
     for (TempQueuePerPartition q : qAlloc) {
-      if (Resources
-          .greaterThan(rc, tot_guarant, q.guaranteed, Resources.none())) {
+      if (Resources.greaterThan(rc, tot_guarant,
+          q.getGuaranteed(), Resources.none())) {
         nonZeroGuarQueues.add(q);
       } else {
         zeroGuarQueues.add(q);
@@ -258,19 +278,22 @@ public class PreemptableResourceCalculator {
     // how much preemption is required overall
     Resource totPreemptionNeeded = Resource.newInstance(0, 0);
     for (TempQueuePerPartition t:queues) {
-      if (Resources.greaterThan(rc, tot_guarant, t.current, t.idealAssigned)) {
-        Resources.addTo(totPreemptionNeeded,
-            Resources.subtract(t.current, t.idealAssigned));
+      if (Resources.greaterThan(rc, tot_guarant,
+          t.getUsed(), t.idealAssigned)) {
+        Resources.addTo(totPreemptionNeeded, Resources
+            .subtract(t.getUsed(), t.idealAssigned));
       }
     }
 
-    // if we need to preempt more than is allowed, compute a factor (0<f<1)
-    // that is used to scale down how much we ask back from each queue
+    /**
+     * if we need to preempt more than is allowed, compute a factor (0<f<1)
+     * that is used to scale down how much we ask back from each queue
+     */
     float scalingFactor = 1.0F;
-    if (Resources.greaterThan(rc, tot_guarant,
-        totPreemptionNeeded, totalPreemptionAllowed)) {
-      scalingFactor = Resources.divide(rc, tot_guarant,
-          totalPreemptionAllowed, totPreemptionNeeded);
+    if (Resources.greaterThan(rc,
+        tot_guarant, totPreemptionNeeded, totalPreemptionAllowed)) {
+      scalingFactor = Resources.divide(rc, tot_guarant, totalPreemptionAllowed,
+          totPreemptionNeeded);
     }
 
     // assign to each queue the amount of actual preemption based on local
@@ -278,12 +301,6 @@ public class PreemptableResourceCalculator {
     for (TempQueuePerPartition t : queues) {
       t.assignPreemption(scalingFactor, rc, tot_guarant);
     }
-    if (LOG.isDebugEnabled()) {
-      for (TempQueuePerPartition t : queues) {
-        LOG.debug(t);
-      }
-    }
-
   }
 
   /**
@@ -329,12 +346,31 @@ public class PreemptableResourceCalculator {
       for (TempQueuePerPartition qT : context.getQueuePartitions(queueName)) {
         // we act only if we are violating balance by more than
         // maxIgnoredOverCapacity
-        if (Resources.greaterThan(rc, clusterResource, qT.current,
-            Resources.multiply(qT.guaranteed, 1.0 + context.getMaxIgnoreOverCapacity()))) {
-          // we introduce a dampening factor naturalTerminationFactor that
-          // accounts for natural termination of containers
-          Resource resToObtain = Resources.multiply(qT.toBePreempted,
-              context.getNaturalTerminationFactor());
+        if (Resources.greaterThan(rc, clusterResource,
+            qT.getUsed(), Resources
+                .multiply(qT.getGuaranteed(),
+                    1.0 + context.getMaxIgnoreOverCapacity()))) {
+          /*
+           * We introduce a dampening factor naturalTerminationFactor that
+           * accounts for natural termination of containers.
+           *
+           * This is added to control pace of preemption, let's say:
+           * If preemption policy calculated a queue *should be* preempted 20 GB
+           * And the nature_termination_factor set to 0.1. As a result, preemption
+           * policy will select 20 GB * 0.1 = 2GB containers to be preempted.
+           *
+           * However, it doesn't work for YARN-4390:
+           * For example, if a queue needs to be preempted 20GB for *one single*
+           * large container, preempt 10% of such resource isn't useful.
+           * So to make it simple, only apply nature_termination_factor when
+           * selector is not reservedPreemptionCandidatesSelector.
+           */
+          Resource resToObtain = qT.toBePreempted;
+          if (!isReservedPreemptionCandidatesSelector) {
+            resToObtain = Resources.multiply(qT.toBePreempted,
+                context.getNaturalTerminationFactor());
+          }
+
           // Only add resToObtain when it >= 0
           if (Resources.greaterThan(rc, clusterResource, resToObtain,
               Resources.none())) {
@@ -343,22 +379,39 @@ public class PreemptableResourceCalculator {
                   + " resource-to-obtain=" + resToObtain);
             }
           }
-          qT.actuallyToBePreempted = Resources.clone(resToObtain);
+          qT.setActuallyToBePreempted(Resources.clone(resToObtain));
         } else {
-          qT.actuallyToBePreempted = Resources.none();
+          qT.setActuallyToBePreempted(Resources.none());
+        }
+
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(qT);
         }
       }
+    }
+  }
+
+  private void updatePreemptableExtras(TempQueuePerPartition cur) {
+    if (cur.children == null || cur.children.isEmpty()) {
+      cur.updatePreemptableExtras(rc);
+    } else {
+      for (TempQueuePerPartition child : cur.children) {
+        updatePreemptableExtras(child);
+      }
+      cur.updatePreemptableExtras(rc);
     }
   }
 
   public void computeIdealAllocation(Resource clusterResource,
       Resource totalPreemptionAllowed) {
     for (String partition : context.getAllPartitions()) {
-      TempQueuePerPartition tRoot =
-          context.getQueueByPartition(CapacitySchedulerConfiguration.ROOT, partition);
+      TempQueuePerPartition tRoot = context.getQueueByPartition(
+          CapacitySchedulerConfiguration.ROOT, partition);
+      updatePreemptableExtras(tRoot);
+
       // compute the ideal distribution of resources among queues
       // updates cloned queues state accordingly
-      tRoot.idealAssigned = tRoot.guaranteed;
+      tRoot.idealAssigned = tRoot.getGuaranteed();
       recursivelyComputeIdealAssignment(tRoot, totalPreemptionAllowed);
     }
 

@@ -89,4 +89,6 @@ public interface RMContainer extends EventHandler<RMContainerEvent> {
   boolean hasIncreaseReservation();
   
   void cancelIncreaseReservation();
+
+  String getQueueName();
 }

@@ -59,58 +59,14 @@ import java.util.Set;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class TestCapacitySchedulerPreemption {
-  private static final Log LOG = LogFactory.getLog(
-      TestCapacitySchedulerPreemption.class);
-
-  private final int GB = 1024;
-
-  private Configuration conf;
-
-  RMNodeLabelsManager mgr;
-
-  Clock clock;
-
+public class TestCapacitySchedulerLazyPreemption
+    extends CapacitySchedulerPreemptionTestBase {
+  @Override
   @Before
   public void setUp() throws Exception {
-    conf = new YarnConfiguration();
-    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-        ResourceScheduler.class);
-    conf.setBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
-    conf.setClass(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
-        ProportionalCapacityPreemptionPolicy.class, SchedulingEditPolicy.class);
-    conf = TestUtils.getConfigurationWithMultipleQueues(this.conf);
-
-    // Set preemption related configurations
-    conf.setInt(CapacitySchedulerConfiguration.PREEMPTION_WAIT_TIME_BEFORE_KILL,
-        0);
+    super.setUp();
     conf.setBoolean(CapacitySchedulerConfiguration.LAZY_PREEMPTION_ENALBED,
         true);
-    conf.setFloat(CapacitySchedulerConfiguration.TOTAL_PREEMPTION_PER_ROUND,
-        1.0f);
-    conf.setFloat(
-        CapacitySchedulerConfiguration.PREEMPTION_NATURAL_TERMINATION_FACTOR,
-        1.0f);
-    mgr = new NullRMNodeLabelsManager();
-    mgr.init(this.conf);
-    clock = mock(Clock.class);
-    when(clock.getTime()).thenReturn(0L);
-  }
-
-  private SchedulingEditPolicy getSchedulingEditPolicy(MockRM rm) {
-    RMActiveServices activeServices = rm.getRMActiveService();
-    SchedulingMonitor mon = null;
-    for (Service service : activeServices.getServices()) {
-      if (service instanceof SchedulingMonitor) {
-        mon = (SchedulingMonitor) service;
-        break;
-      }
-    }
-
-    if (mon != null) {
-      return mon.getSchedulingEditPolicy();
-    }
-    return null;
   }
 
   @Test (timeout = 60000)
@@ -171,9 +127,9 @@ public class TestCapacitySchedulerPreemption {
 
     // NM1/NM2 has available resource = 0G
     Assert.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
-        .getAvailableResource().getMemory());
+        .getAvailableResource().getMemorySize());
     Assert.assertEquals(0 * GB, cs.getNode(nm2.getNodeId())
-        .getAvailableResource().getMemory());
+        .getAvailableResource().getMemorySize());
 
     // AM asks for a 1 * GB container
     am2.allocate(Arrays.asList(ResourceRequest
@@ -250,9 +206,9 @@ public class TestCapacitySchedulerPreemption {
 
     // NM1/NM2 has available resource = 0G
     Assert.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
-        .getAvailableResource().getMemory());
+        .getAvailableResource().getMemorySize());
     Assert.assertEquals(0 * GB, cs.getNode(nm2.getNodeId())
-        .getAvailableResource().getMemory());
+        .getAvailableResource().getMemorySize());
 
     // AM asks for a 1 * GB container with unknown host and unknown rack
     am2.allocate(Arrays.asList(ResourceRequest
@@ -341,9 +297,9 @@ public class TestCapacitySchedulerPreemption {
 
     // NM1/NM2 has available resource = 0G
     Assert.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
-        .getAvailableResource().getMemory());
+        .getAvailableResource().getMemorySize());
     Assert.assertEquals(0 * GB, cs.getNode(nm2.getNodeId())
-        .getAvailableResource().getMemory());
+        .getAvailableResource().getMemorySize());
 
     // AM asks for a 1 * GB container for h3 with hard locality,
     // h3 doesn't exist in the cluster
@@ -438,7 +394,7 @@ public class TestCapacitySchedulerPreemption {
 
     // NM1 has available resource = 0G
     Assert.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
-        .getAvailableResource().getMemory());
+        .getAvailableResource().getMemorySize());
     am2.allocate("*", 1 * GB, 1, new ArrayList<ContainerId>());
 
     // Get edit policy and do one update
@@ -538,7 +494,7 @@ public class TestCapacitySchedulerPreemption {
 
     // NM1 has available resource = 0G
     Assert.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
-        .getAvailableResource().getMemory());
+        .getAvailableResource().getMemorySize());
     am2.allocate("*", 3 * GB, 1, new ArrayList<ContainerId>());
 
     // Get edit policy and do one update
@@ -627,9 +583,9 @@ public class TestCapacitySchedulerPreemption {
 
     // NM1/NM2 has available resource = 0G
     Assert.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
-        .getAvailableResource().getMemory());
+        .getAvailableResource().getMemorySize());
     Assert.assertEquals(0 * GB, cs.getNode(nm2.getNodeId())
-        .getAvailableResource().getMemory());
+        .getAvailableResource().getMemorySize());
 
     // AM asks for a 1 * GB container
     am2.allocate(Arrays.asList(ResourceRequest

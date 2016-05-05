@@ -201,6 +201,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         new RMContainerImpl(container, this.getApplicationAttemptId(),
             node.getNodeID(), appSchedulingInfo.getUser(), this.rmContext,
             request.getNodeLabelExpression());
+    ((RMContainerImpl)rmContainer).setQueueName(this.getQueueName());
 
     updateAMContainerDiagnostics(AMState.ASSIGNED, null);
 

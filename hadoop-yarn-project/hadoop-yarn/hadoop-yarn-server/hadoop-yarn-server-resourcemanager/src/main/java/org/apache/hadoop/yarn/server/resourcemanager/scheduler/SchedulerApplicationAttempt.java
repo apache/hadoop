@@ -403,6 +403,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
               node.getNodeID(), appSchedulingInfo.getUser(), rmContext);
       attemptResourceUsage.incReserved(node.getPartition(),
           container.getResource());
+      ((RMContainerImpl)rmContainer).setQueueName(this.getQueueName());
 
       // Reset the re-reservation count
       resetReReservations(priority);
@@ -750,14 +751,17 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   public synchronized void move(Queue newQueue) {
     QueueMetrics oldMetrics = queue.getMetrics();
     QueueMetrics newMetrics = newQueue.getMetrics();
+    String newQueueName = newQueue.getQueueName();
     String user = getUser();
     for (RMContainer liveContainer : liveContainers.values()) {
       Resource resource = liveContainer.getContainer().getResource();
+      ((RMContainerImpl)liveContainer).setQueueName(newQueueName);
       oldMetrics.releaseResources(user, 1, resource);
       newMetrics.allocateResources(user, 1, resource, false);
     }
     for (Map<NodeId, RMContainer> map : reservedContainers.values()) {
       for (RMContainer reservedContainer : map.values()) {
+        ((RMContainerImpl)reservedContainer).setQueueName(newQueueName);
         Resource resource = reservedContainer.getReservedResource();
         oldMetrics.unreserveResource(user, resource);
         newMetrics.reserveResource(user, resource);
