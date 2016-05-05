@@ -19,6 +19,8 @@ package org.apache.hadoop.mapreduce.v2.app.local;
 
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -29,10 +31,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.ClusterInfo;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssignedEvent;
+import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
+import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -46,12 +53,14 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRespo
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
+import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -60,6 +69,7 @@ import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 public class TestLocalContainerAllocator {
 
@@ -168,6 +178,39 @@ public class TestLocalContainerAllocator {
     Assert.assertEquals("AMRM token service not updated",
         new Text(ClientRMProxy.getAMRMTokenService(conf)),
         ugiToken.getService());
+  }
+
+  @Test
+  public void testAllocatedContainerResourceIsNotNull() {
+    ArgumentCaptor<TaskAttemptContainerAssignedEvent> containerAssignedCaptor
+        = ArgumentCaptor.forClass(TaskAttemptContainerAssignedEvent.class);
+    @SuppressWarnings("unchecked")
+    EventHandler<Event> eventHandler = mock(EventHandler.class);
+    AppContext context = mock(AppContext.class) ;
+    when(context.getEventHandler()).thenReturn(eventHandler);
+    ContainerId containerId = ContainerId.fromString(
+        "container_1427562107907_0002_01_000001");
+    LocalContainerAllocator containerAllocator = new LocalContainerAllocator(
+        mock(ClientService.class), context, "localhost", -1, -1, containerId);
+
+    ContainerAllocatorEvent containerAllocatorEvent =
+        createContainerRequestEvent();
+    containerAllocator.handle(containerAllocatorEvent);
+
+    verify(eventHandler, times(1)).handle(containerAssignedCaptor.capture());
+    Container container = containerAssignedCaptor.getValue().getContainer();
+    Resource containerResource = container.getResource();
+    Assert.assertNotNull(containerResource);
+    Assert.assertEquals(containerResource.getMemory(), 0);
+    Assert.assertEquals(containerResource.getVirtualCores(), 0);
+  }
+
+  private static ContainerAllocatorEvent createContainerRequestEvent() {
+    TaskAttemptId taskAttemptId = mock(TaskAttemptId.class);
+    TaskId taskId = mock(TaskId.class);
+    when(taskAttemptId.getTaskId()).thenReturn(taskId);
+    return new ContainerAllocatorEvent(taskAttemptId,
+        ContainerAllocator.EventType.CONTAINER_REQ);
   }
 
   private static class StubbedLocalContainerAllocator
