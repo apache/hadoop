@@ -21,6 +21,7 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.util.*;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.AddBlockFlag;
@@ -643,10 +644,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   /** 
    * Choose <i>numOfReplicas</i> nodes from the racks 
    * that <i>localMachine</i> is NOT on.
-   * if not enough nodes are available, choose the remaining ones 
+   * If not enough nodes are available, choose the remaining ones
    * from the local rack
    */
-    
   protected void chooseRemoteRack(int numOfReplicas,
                                 DatanodeDescriptor localMachine,
                                 Set<Node> excludedNodes,
@@ -702,10 +702,6 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                             boolean avoidStaleNodes,
                             EnumMap<StorageType, Integer> storageTypes)
                             throws NotEnoughReplicasException {
-
-    int numOfAvailableNodes = clusterMap.countNumOfAvailableNodes(
-        scope, excludedNodes);
-    int refreshCounter = numOfAvailableNodes;
     StringBuilder builder = null;
     if (LOG.isDebugEnabled()) {
       builder = debugLoggingBuilder.get();
@@ -714,37 +710,39 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     }
     boolean badTarget = false;
     DatanodeStorageInfo firstChosen = null;
-    while(numOfReplicas > 0 && numOfAvailableNodes > 0) {
-      DatanodeDescriptor chosenNode = chooseDataNode(scope);
-      if (excludedNodes.add(chosenNode)) { //was not in the excluded list
-        if (LOG.isDebugEnabled()) {
-          builder.append("\nNode ").append(NodeBase.getPath(chosenNode)).append(" [");
-        }
-        numOfAvailableNodes--;
-        DatanodeStorageInfo storage = null;
-        if (isGoodDatanode(chosenNode, maxNodesPerRack, considerLoad,
-            results, avoidStaleNodes)) {
-          for (Iterator<Map.Entry<StorageType, Integer>> iter = storageTypes
-              .entrySet().iterator(); iter.hasNext(); ) {
-            Map.Entry<StorageType, Integer> entry = iter.next();
-            storage = chooseStorage4Block(
-                chosenNode, blocksize, results, entry.getKey());
-            if (storage != null) {
-              numOfReplicas--;
-              if (firstChosen == null) {
-                firstChosen = storage;
-              }
-              // add node and related nodes to excludedNode
-              numOfAvailableNodes -=
-                  addToExcludedNodes(chosenNode, excludedNodes);
-              int num = entry.getValue();
-              if (num == 1) {
-                iter.remove();
-              } else {
-                entry.setValue(num - 1);
-              }
-              break;
+    while (numOfReplicas > 0) {
+      DatanodeDescriptor chosenNode = chooseDataNode(scope, excludedNodes);
+      if (chosenNode == null) {
+        break;
+      }
+      Preconditions.checkState(excludedNodes.add(chosenNode), "chosenNode "
+          + chosenNode + " is already in excludedNodes " + excludedNodes);
+      if (LOG.isDebugEnabled()) {
+        builder.append("\nNode ").append(NodeBase.getPath(chosenNode))
+            .append(" [");
+      }
+      DatanodeStorageInfo storage = null;
+      if (isGoodDatanode(chosenNode, maxNodesPerRack, considerLoad,
+          results, avoidStaleNodes)) {
+        for (Iterator<Map.Entry<StorageType, Integer>> iter = storageTypes
+            .entrySet().iterator(); iter.hasNext();) {
+          Map.Entry<StorageType, Integer> entry = iter.next();
+          storage = chooseStorage4Block(
+              chosenNode, blocksize, results, entry.getKey());
+          if (storage != null) {
+            numOfReplicas--;
+            if (firstChosen == null) {
+              firstChosen = storage;
             }
+            // add node (subclasses may also add related nodes) to excludedNode
+            addToExcludedNodes(chosenNode, excludedNodes);
+            int num = entry.getValue();
+            if (num == 1) {
+              iter.remove();
+            } else {
+              entry.setValue(num - 1);
+            }
+            break;
           }
         }
 
@@ -755,16 +753,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         // If no candidate storage was found on this DN then set badTarget.
         badTarget = (storage == null);
       }
-      // Refresh the node count. If the live node count became smaller,
-      // but it is not reflected in this loop, it may loop forever in case
-      // the replicas/rack cannot be satisfied.
-      if (--refreshCounter == 0) {
-        numOfAvailableNodes = clusterMap.countNumOfAvailableNodes(scope,
-            excludedNodes);
-        refreshCounter = numOfAvailableNodes;
-      }
     }
-      
     if (numOfReplicas>0) {
       String detail = enableDebugLogging;
       if (LOG.isDebugEnabled()) {
@@ -785,8 +774,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
    * Choose a datanode from the given <i>scope</i>.
    * @return the chosen node, if there is any.
    */
-  protected DatanodeDescriptor chooseDataNode(final String scope) {
-    return (DatanodeDescriptor) clusterMap.chooseRandom(scope);
+  protected DatanodeDescriptor chooseDataNode(final String scope,
+      final Collection<Node> excludedNodes) {
+    return (DatanodeDescriptor) clusterMap.chooseRandom(scope, excludedNodes);
   }
 
   /**
