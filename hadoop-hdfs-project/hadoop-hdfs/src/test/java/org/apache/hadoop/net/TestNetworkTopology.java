@@ -23,8 +23,11 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,13 +41,18 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 public class TestNetworkTopology {
   private static final Log LOG = LogFactory.getLog(TestNetworkTopology.class);
   private final static NetworkTopology cluster = new NetworkTopology();
   private DatanodeDescriptor dataNodes[];
-  
+
+  @Rule
+  public Timeout testTimeout = new Timeout(30000);
+
   @Before
   public void setupDatanodes() {
     dataNodes = new DatanodeDescriptor[] {
@@ -265,15 +273,17 @@ public class TestNetworkTopology {
    * @return the frequency that nodes were chosen
    */
   private Map<Node, Integer> pickNodesAtRandom(int numNodes,
-      String excludedScope) {
+      String excludedScope, Collection<Node> excludedNodes) {
     Map<Node, Integer> frequency = new HashMap<Node, Integer>();
     for (DatanodeDescriptor dnd : dataNodes) {
       frequency.put(dnd, 0);
     }
 
     for (int j = 0; j < numNodes; j++) {
-      Node random = cluster.chooseRandom(excludedScope);
-      frequency.put(random, frequency.get(random) + 1);
+      Node random = cluster.chooseRandom(excludedScope, excludedNodes);
+      if (random != null) {
+        frequency.put(random, frequency.get(random) + 1);
+      }
     }
     return frequency;
   }
@@ -284,7 +294,7 @@ public class TestNetworkTopology {
   @Test
   public void testChooseRandomExcludedNode() {
     String scope = "~" + NodeBase.getPath(dataNodes[0]);
-    Map<Node, Integer> frequency = pickNodesAtRandom(100, scope);
+    Map<Node, Integer> frequency = pickNodesAtRandom(100, scope, null);
 
     for (Node key : dataNodes) {
       // all nodes except the first should be more than zero
@@ -297,7 +307,7 @@ public class TestNetworkTopology {
    */
   @Test
   public void testChooseRandomExcludedRack() {
-    Map<Node, Integer> frequency = pickNodesAtRandom(100, "~" + "/d2");
+    Map<Node, Integer> frequency = pickNodesAtRandom(100, "~" + "/d2", null);
     // all the nodes on the second rack should be zero
     for (int j = 0; j < dataNodes.length; j++) {
       int freq = frequency.get(dataNodes[j]);
@@ -306,6 +316,59 @@ public class TestNetworkTopology {
       } else {
         assertTrue(freq > 0);
       }
+    }
+  }
+
+  /**
+   * This test checks that chooseRandom works for a list of excluded nodes.
+   */
+  @Test
+  public void testChooseRandomExcludedNodeList() {
+    String scope = "~" + NodeBase.getPath(dataNodes[0]);
+    Set<Node> excludedNodes = new HashSet<>();
+    excludedNodes.add(dataNodes[3]);
+    excludedNodes.add(dataNodes[5]);
+    excludedNodes.add(dataNodes[7]);
+    excludedNodes.add(dataNodes[9]);
+    excludedNodes.add(dataNodes[13]);
+    excludedNodes.add(dataNodes[18]);
+    Map<Node, Integer> frequency = pickNodesAtRandom(100, scope, excludedNodes);
+
+    assertEquals("dn[3] should be excluded", 0,
+        frequency.get(dataNodes[3]).intValue());
+    assertEquals("dn[5] should be exclude18d", 0,
+        frequency.get(dataNodes[5]).intValue());
+    assertEquals("dn[7] should be excluded", 0,
+        frequency.get(dataNodes[7]).intValue());
+    assertEquals("dn[9] should be excluded", 0,
+        frequency.get(dataNodes[9]).intValue());
+    assertEquals("dn[13] should be excluded", 0,
+        frequency.get(dataNodes[13]).intValue());
+    assertEquals("dn[18] should be excluded", 0,
+        frequency.get(dataNodes[18]).intValue());
+    for (Node key : dataNodes) {
+      if (excludedNodes.contains(key)) {
+        continue;
+      }
+      // all nodes except the first should be more than zero
+      assertTrue(frequency.get(key) > 0 || key == dataNodes[0]);
+    }
+  }
+
+  /**
+   * This test checks that chooseRandom works when all nodes are excluded.
+   */
+  @Test
+  public void testChooseRandomExcludeAllNodes() {
+    String scope = "~" + NodeBase.getPath(dataNodes[0]);
+    Set<Node> excludedNodes = new HashSet<>();
+    for (int i = 0; i < dataNodes.length; i++) {
+      excludedNodes.add(dataNodes[i]);
+    }
+    Map<Node, Integer> frequency = pickNodesAtRandom(100, scope, excludedNodes);
+    for (Node key : dataNodes) {
+      // all nodes except the first should be more than zero
+      assertTrue(frequency.get(key) == 0);
     }
   }
 
