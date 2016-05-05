@@ -172,4 +172,7 @@ public interface RMNode {
 
   public QueuedContainersStatus getQueuedContainersStatus();
 
+  long getUntrackedTimeStamp();
+
+  void setUntrackedTimeStamp(long timeStamp);
 }

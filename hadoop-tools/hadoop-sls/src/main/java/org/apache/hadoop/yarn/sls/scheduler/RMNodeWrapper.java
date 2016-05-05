@@ -193,4 +193,13 @@ public class RMNodeWrapper implements RMNode {
   public ResourceUtilization getNodeUtilization() {
     return node.getNodeUtilization();
   }
+
+  @Override
+  public long getUntrackedTimeStamp() {
+    return 0;
+  }
+
+  @Override
+  public void setUntrackedTimeStamp(long timeStamp) {
+  }
 }

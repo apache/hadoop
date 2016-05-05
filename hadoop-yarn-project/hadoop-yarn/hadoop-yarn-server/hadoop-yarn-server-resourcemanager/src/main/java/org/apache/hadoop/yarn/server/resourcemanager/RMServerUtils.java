@@ -87,7 +87,7 @@ public class RMServerUtils {
         acceptedStates.contains(NodeState.LOST) ||
         acceptedStates.contains(NodeState.REBOOTED)) {
       for (RMNode rmNode : context.getInactiveRMNodes().values()) {
-        if (acceptedStates.contains(rmNode.getState())) {
+        if ((rmNode != null) && acceptedStates.contains(rmNode.getState())) {
           results.add(rmNode);
         }
       }

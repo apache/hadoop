@@ -39,6 +39,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -121,6 +122,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private long lastHealthReportTime;
   private String nodeManagerVersion;
 
+  private long timeStamp;
   /* Aggregated resource utilization for the containers. */
   private ResourceUtilization containersUtilization;
   /* Resource utilization for the node. */
@@ -263,6 +265,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
       .addTransition(NodeState.DECOMMISSIONING, NodeState.DECOMMISSIONING,
           RMNodeEventType.CLEANUP_APP, new CleanUpAppTransition())
+      .addTransition(NodeState.DECOMMISSIONING, NodeState.SHUTDOWN,
+          RMNodeEventType.SHUTDOWN,
+          new DeactivateNodeTransition(NodeState.SHUTDOWN))
 
       // TODO (in YARN-3223) update resource when container finished.
       .addTransition(NodeState.DECOMMISSIONING, NodeState.DECOMMISSIONING,
@@ -350,6 +355,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     this.healthReport = "Healthy";
     this.lastHealthReportTime = System.currentTimeMillis();
     this.nodeManagerVersion = nodeManagerVersion;
+    this.timeStamp = 0;
 
     this.latestNodeHeartBeatResponse.setResponseId(0);
 
@@ -1015,7 +1021,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   }
 
   /**
-   * Put a node in deactivated (decommissioned) status.
+   * Put a node in deactivated (decommissioned or shutdown) status.
    * @param rmNode
    * @param finalState
    */
@@ -1032,6 +1038,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     LOG.info("Deactivating Node " + rmNode.nodeId + " as it is now "
         + finalState);
     rmNode.context.getInactiveRMNodes().put(rmNode.nodeId, rmNode);
+    if (rmNode.context.getNodesListManager().isUntrackedNode(rmNode.hostName)) {
+      rmNode.setUntrackedTimeStamp(Time.monotonicNow());
+    }
   }
 
   /**
@@ -1407,5 +1416,15 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     } finally {
       this.writeLock.unlock();
     }
+  }
+
+  @Override
+  public long getUntrackedTimeStamp() {
+    return this.timeStamp;
+  }
+
+  @Override
+  public void setUntrackedTimeStamp(long ts) {
+    this.timeStamp = ts;
   }
 }

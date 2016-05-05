@@ -204,6 +204,15 @@ public class NodeInfo {
     public ResourceUtilization getNodeUtilization() {
       return null;
     }
+
+    @Override
+    public long getUntrackedTimeStamp() {
+      return 0;
+    }
+
+    @Override
+    public void setUntrackedTimeStamp(long timeStamp) {
+    }
   }
 
   public static RMNode newNodeInfo(String rackName, String hostName,
