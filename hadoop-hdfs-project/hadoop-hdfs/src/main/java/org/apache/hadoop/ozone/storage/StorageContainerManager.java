@@ -34,6 +34,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_LOCATION_HAN
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_LOCATION_RPC_ADDRESS_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_LOCATION_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_LOCATION_RPC_BIND_HOST_KEY;
+import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -591,9 +592,14 @@ public class StorageContainerManager
   public static void main(String[] argv) throws IOException {
     StringUtils.startupShutdownMessage(
         StorageContainerManager.class, argv, LOG);
-    StorageContainerManager scm = new StorageContainerManager(
-        new OzoneConfiguration());
-    scm.start();
-    scm.join();
+    try {
+      StorageContainerManager scm = new StorageContainerManager(
+          new OzoneConfiguration());
+      scm.start();
+      scm.join();
+    } catch (Throwable t) {
+      LOG.error("Failed to start the StorageContainerManager.", t);
+      terminate(1, t);
+    }
   }
 }
