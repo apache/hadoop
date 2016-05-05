@@ -378,6 +378,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     RMContainer rmContainer = new RMContainerImpl(container, 
         getApplicationAttemptId(), node.getNodeID(),
         appSchedulingInfo.getUser(), rmContext);
+    ((RMContainerImpl)rmContainer).setQueueName(this.getQueueName());
 
     // Add it to allContainers list.
     newlyAllocatedContainers.add(rmContainer);

@@ -50,7 +50,6 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerResourceChangeRequest;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -1160,7 +1159,7 @@ public class CapacityScheduler extends
     String oldPartition = node.getPartition();
 
     // Update resources of these containers
-    for (RMContainer rmContainer : node.getRunningContainers()) {
+    for (RMContainer rmContainer : node.getCopiedListOfRunningContainers()) {
       FiCaSchedulerApp application =
           getApplicationAttempt(rmContainer.getApplicationAttemptId());
       if (null != application) {
@@ -1509,7 +1508,7 @@ public class CapacityScheduler extends
     }
 
     // Remove running containers
-    List<RMContainer> runningContainers = node.getRunningContainers();
+    List<RMContainer> runningContainers = node.getCopiedListOfRunningContainers();
     for (RMContainer container : runningContainers) {
       super.completedContainer(container,
           SchedulerUtils.createAbnormalContainerStatus(
@@ -1632,6 +1631,11 @@ public class CapacityScheduler extends
   @Lock(Lock.NoLock.class)
   public FiCaSchedulerNode getNode(NodeId nodeId) {
     return nodeTracker.getNode(nodeId);
+  }
+
+  @Lock(Lock.NoLock.class)
+  public List<FiCaSchedulerNode> getAllNodes() {
+    return nodeTracker.getAllNodes();
   }
   
   @Override

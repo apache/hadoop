@@ -3302,7 +3302,7 @@ public class TestCapacityScheduler {
           resourceManager
               .getResourceScheduler()
               .getSchedulerNode(resourceEvent.getNodeId())
-              .setTotalResource(resourceEvent.getResourceOption().getResource());
+              .updateTotalResource(resourceEvent.getResourceOption().getResource());
         }
       }
     });
