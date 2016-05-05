@@ -16,7 +16,7 @@
 
 setup() {
 
-  TMP=../../../target/test-dir/bats.$$.${RANDOM}
+  TMP="${BATS_TEST_DIRNAME}/../../../target/test-dir/bats.$$.${RANDOM}"
   mkdir -p ${TMP}
   TMP=$(cd -P -- "${TMP}" >/dev/null && pwd -P)
   export TMP
@@ -38,7 +38,7 @@ setup() {
   # shellcheck disable=SC2034
   QATESTMODE=true
 
-  . ../../main/bin/hadoop-functions.sh
+  . "${BATS_TEST_DIRNAME}/../../main/bin/hadoop-functions.sh"
   pushd "${TMP}" >/dev/null
 }
 
