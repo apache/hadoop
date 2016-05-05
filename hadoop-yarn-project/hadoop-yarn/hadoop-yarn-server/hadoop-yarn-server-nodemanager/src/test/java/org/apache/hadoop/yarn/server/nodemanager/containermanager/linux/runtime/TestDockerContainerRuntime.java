@@ -49,6 +49,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -83,6 +84,7 @@ public class TestDockerContainerRuntime {
   List<String> logDirs;
   List<String> containerLocalDirs;
   List<String> containerLogDirs;
+  Map<Path,List<String>> localizedResources;
   String resourcesOptions;
   ContainerRuntimeContext.Builder builder;
   String submittingUser = "anakin";
@@ -127,11 +129,14 @@ public class TestDockerContainerRuntime {
     resourcesOptions = "cgroups=none";
     containerLocalDirs = new ArrayList<>();
     containerLogDirs = new ArrayList<>();
+    localizedResources = new HashMap<>();
 
     localDirs.add("/test_local_dir");
     logDirs.add("/test_log_dir");
     containerLocalDirs.add("/test_container_local_dir");
     containerLogDirs.add("/test_container_log_dir");
+    localizedResources.put(new Path("/test_local_dir/test_resource_file"),
+        Collections.singletonList("test_dir/test_resource_file"));
 
     builder = new ContainerRuntimeContext
         .Builder(container);
@@ -149,6 +154,7 @@ public class TestDockerContainerRuntime {
         .setExecutionAttribute(LOG_DIRS, logDirs)
         .setExecutionAttribute(CONTAINER_LOCAL_DIRS, containerLocalDirs)
         .setExecutionAttribute(CONTAINER_LOG_DIRS, containerLogDirs)
+        .setExecutionAttribute(LOCALIZED_RESOURCES, localizedResources)
         .setExecutionAttribute(RESOURCES_OPTIONS, resourcesOptions);
   }
 
@@ -445,4 +451,113 @@ public class TestDockerContainerRuntime {
     //no --cgroup-parent should be added in either case
     Mockito.verifyZeroInteractions(command);
   }
+
+  @Test
+  public void testMountSourceOnly()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException{
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf);
+
+    env.put(
+        DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS,
+        "source");
+
+    try {
+      runtime.launchContainer(builder.build());
+      Assert.fail("Expected a launch container failure due to invalid mount.");
+    } catch (ContainerExecutionException e) {
+      LOG.info("Caught expected exception : " + e);
+    }
+  }
+
+  @Test
+  public void testMountSourceTarget()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException{
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf);
+
+    env.put(
+        DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS,
+        "test_dir/test_resource_file:test_mount");
+
+    runtime.launchContainer(builder.build());
+    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
+    List<String> args = op.getArguments();
+    String dockerCommandFile = args.get(11);
+
+    List<String> dockerCommands = Files.readAllLines(Paths.get
+        (dockerCommandFile), Charset.forName("UTF-8"));
+
+    Assert.assertEquals(1, dockerCommands.size());
+
+    String command = dockerCommands.get(0);
+
+    Assert.assertTrue("Did not find expected " +
+        "/test_local_dir/test_resource_file:test_mount mount in docker " +
+        "run args : " + command,
+        command.contains(" -v /test_local_dir/test_resource_file:test_mount" +
+            ":ro "));
+  }
+
+  @Test
+  public void testMountInvalid()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException{
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf);
+
+    env.put(
+        DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS,
+        "source:target:other");
+
+    try {
+      runtime.launchContainer(builder.build());
+      Assert.fail("Expected a launch container failure due to invalid mount.");
+    } catch (ContainerExecutionException e) {
+      LOG.info("Caught expected exception : " + e);
+    }
+  }
+
+  @Test
+  public void testMountMultiple()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException{
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf);
+
+    env.put(
+        DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS,
+        "test_dir/test_resource_file:test_mount1," +
+            "test_dir/test_resource_file:test_mount2");
+
+    runtime.launchContainer(builder.build());
+    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
+    List<String> args = op.getArguments();
+    String dockerCommandFile = args.get(11);
+
+    List<String> dockerCommands = Files.readAllLines(Paths.get
+        (dockerCommandFile), Charset.forName("UTF-8"));
+
+    Assert.assertEquals(1, dockerCommands.size());
+
+    String command = dockerCommands.get(0);
+
+    Assert.assertTrue("Did not find expected " +
+        "/test_local_dir/test_resource_file:test_mount1 mount in docker " +
+        "run args : " + command,
+        command.contains(" -v /test_local_dir/test_resource_file:test_mount1" +
+            ":ro "));
+    Assert.assertTrue("Did not find expected " +
+        "/test_local_dir/test_resource_file:test_mount2 mount in docker " +
+        "run args : " + command,
+        command.contains(" -v /test_local_dir/test_resource_file:test_mount2" +
+            ":ro "));
+  }
+
 }
