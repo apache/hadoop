@@ -88,6 +88,25 @@ public class TestGlobPaths {
     }
   }
 
+  /**
+   * Test case to ensure that globs work on files with special characters.
+   * Tests with a file pair where one has a \r at end and other does not.
+   */
+  @Test
+  public void testCRInPathGlob() throws IOException {
+    FileStatus[] statuses;
+    Path d1 = new Path(USER_DIR, "dir1");
+    Path fNormal = new Path(d1, "f1");
+    Path fWithCR = new Path(d1, "f1\r");
+    fs.mkdirs(d1);
+    fs.createNewFile(fNormal);
+    fs.createNewFile(fWithCR);
+    statuses = fs.globStatus(new Path(d1, "f1*"));
+    assertEquals("Expected both normal and CR-carrying files in result: ",
+        2, statuses.length);
+    cleanupDFS();
+  }
+
   @Test
   public void testMultiGlob() throws IOException {
     FileStatus[] status;
