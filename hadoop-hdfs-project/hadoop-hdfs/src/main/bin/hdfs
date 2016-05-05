@@ -52,6 +52,7 @@ function hadoop_usage
   hadoop_add_subcommand "oiv_legacy" "apply the offline fsimage viewer to a legacy fsimage"
   hadoop_add_subcommand "oz" "command line interface for ozone"
   hadoop_add_subcommand "portmap" "run a portmap service"
+  hadoop_add_subcommand "scm" "run the Storage Container Manager service"
   hadoop_add_subcommand "secondarynamenode" "run the DFS secondary namenode"
   hadoop_add_subcommand "snapshotDiff" "diff two snapshots of a directory or diff the current directory contents with a snapshot"
   hadoop_add_subcommand "storagepolicies" "list/get/set block storage policies"
@@ -233,6 +234,12 @@ case ${COMMAND} in
     CLASS=org.apache.hadoop.portmap.Portmap
     hadoop_debug "Appending HADOOP_PORTMAP_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_PORTMAP_OPTS}"
+  ;;
+  scm)
+    supportdaemonization="true"
+    CLASS='org.apache.hadoop.ozone.storage.StorageContainerManager'
+    hadoop_debug "Appending HADOOP_SCM_OPTS onto HADOOP_OPTS"
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_SCM_OPTS}"
   ;;
   secondarynamenode)
     supportdaemonization="true"
