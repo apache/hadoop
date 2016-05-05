@@ -85,7 +85,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
     
     // Ldap server is down, no groups should be retrieved
     doTestGetGroups(Arrays.asList(new String[] {}), 
-        1 + LdapGroupsMapping.RECONNECT_RETRY_COUNT); // 1 is the first normal call
+        LdapGroupsMapping.RECONNECT_RETRY_COUNT);
   }
   
   private void doTestGetGroups(List<String> expectedGroups, int searchTimes) throws IOException, NamingException {  
