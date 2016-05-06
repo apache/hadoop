@@ -338,6 +338,7 @@ Usage:
 
       hdfs crypto -createZone -keyName <keyName> -path <path>
       hdfs crypto -listZones
+      hdfs crypto -provisionTrash -path <path>
       hdfs crypto -help <command-name>
 
 See the [HDFS Transparent Encryption Documentation](./TransparentEncryption.html#crypto_command-line_interface) for more information.
