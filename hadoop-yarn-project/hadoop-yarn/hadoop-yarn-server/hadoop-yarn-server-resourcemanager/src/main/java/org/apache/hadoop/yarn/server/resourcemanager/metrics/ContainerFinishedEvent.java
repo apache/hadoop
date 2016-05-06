@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.metrics;
 
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.NodeId;
 
 public class ContainerFinishedEvent extends SystemMetricsEvent {
 
@@ -27,17 +28,20 @@ public class ContainerFinishedEvent extends SystemMetricsEvent {
   private String diagnosticsInfo;
   private int containerExitStatus;
   private ContainerState state;
+  private NodeId allocatedNode;
 
   public ContainerFinishedEvent(
       ContainerId containerId,
       String diagnosticsInfo,
       int containerExitStatus,
       ContainerState state,
-      long finishedTime) {
+      long finishedTime,
+      NodeId allocatedNode) {
     super(SystemMetricsEventType.CONTAINER_FINISHED, finishedTime);
     this.containerId = containerId;
     this.diagnosticsInfo = diagnosticsInfo;
     this.containerExitStatus = containerExitStatus;
+    this.allocatedNode = allocatedNode;
     this.state = state;
   }
 
@@ -62,4 +66,7 @@ public class ContainerFinishedEvent extends SystemMetricsEvent {
     return state;
   }
 
+  public NodeId getAllocatedNode() {
+    return allocatedNode;
+  }
 }
