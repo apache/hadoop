@@ -304,9 +304,7 @@ public class ClientRMService extends AbstractService implements
     return applicationsACLsManager
         .checkAccess(callerUGI, operationPerformed, owner,
             application.getApplicationId()) || queueACLsManager
-        .checkAccess(callerUGI, QueueACL.ADMINISTER_QUEUE,
-            application.getQueue(), application.getApplicationId(),
-            application.getName());
+        .checkAccess(callerUGI, QueueACL.ADMINISTER_QUEUE, application);
   }
 
   ApplicationId getNewApplicationId() {
