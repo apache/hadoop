@@ -136,6 +136,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4834. ProcfsBasedProcessTree doesn't track daemonized processes
     (Nathan Roberts via jlowe)
 
+    YARN-4747. AHS error 500 due to NPE when container start event is missing
+    (Varun Saxena via jlowe)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
