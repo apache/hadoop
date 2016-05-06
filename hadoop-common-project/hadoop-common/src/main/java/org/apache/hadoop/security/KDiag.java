@@ -25,6 +25,7 @@ import org.apache.directory.shared.kerberos.components.EncryptionKey;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ExitUtil;
@@ -52,6 +53,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
 import static org.apache.hadoop.security.UserGroupInformation.*;
@@ -121,6 +123,12 @@ public class KDiag extends Configured implements Tool, Closeable {
   private boolean nofail = false;
   private boolean nologin = false;
   private boolean jaas = false;
+  private boolean checkShortName = false;
+
+  /**
+   * A pattern that recognizes simple/non-simple names. Per KerberosName
+   */
+  private static final Pattern nonSimplePattern = Pattern.compile("[/@]");
 
   /**
    * Flag set to true if a {@link #verify(boolean, String, String, Object...)}
@@ -147,6 +155,8 @@ public class KDiag extends Configured implements Tool, Closeable {
   public static final String ARG_RESOURCE = "--resource";
 
   public static final String ARG_SECURE = "--secure";
+
+  public static final String ARG_VERIFYSHORTNAME = "--verifyshortname";
 
   @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
   public KDiag(Configuration conf,
@@ -191,6 +201,7 @@ public class KDiag extends Configured implements Tool, Closeable {
     nofail = popOption(ARG_NOFAIL, args);
     jaas = popOption(ARG_JAAS, args);
     nologin = popOption(ARG_NOLOGIN, args);
+    checkShortName = popOption(ARG_VERIFYSHORTNAME, args);
 
     // look for list of resources
     String resource;
@@ -236,7 +247,9 @@ public class KDiag extends Configured implements Tool, Closeable {
       + arg(ARG_NOLOGIN, "", "Do not attempt to log in")
       + arg(ARG_OUTPUT, "<file>", "Write output to a file")
       + arg(ARG_RESOURCE, "<resource>", "Load an XML configuration resource")
-      + arg(ARG_SECURE, "", "Require the hadoop configuration to be secure");
+      + arg(ARG_SECURE, "", "Require the hadoop configuration to be secure")
+      + arg(ARG_VERIFYSHORTNAME, ARG_PRINCIPAL + " <principal>",
+      "Verify the short name of the specific principal does not contain '@' or '/'");
   }
 
   private String arg(String name, String params, String meaning) {
@@ -269,6 +282,7 @@ public class KDiag extends Configured implements Tool, Closeable {
     println("%s = %d", ARG_KEYLEN, minKeyLength);
     println("%s = %s", ARG_KEYTAB, keytab);
     println("%s = %s", ARG_PRINCIPAL, principal);
+    println("%s = %s", ARG_VERIFYSHORTNAME, checkShortName);
 
     // Fail fast on a JVM without JCE installed.
     validateKeyLength();
@@ -366,6 +380,10 @@ public class KDiag extends Configured implements Tool, Closeable {
       validateJAAS(jaas);
       validateNTPConf();
 
+      if (checkShortName) {
+        validateShortName();
+      }
+
       if (!nologin) {
         title("Logging in");
         if (keytab != null) {
@@ -417,6 +435,32 @@ public class KDiag extends Configured implements Tool, Closeable {
         "Java Cryptography Extensions are not installed on this JVM."
             + " Maximum supported key length %s - minimum required %d",
         aesLen, minKeyLength);
+  }
+
+  /**
+   * Verify whether auth_to_local rules transform a principal name
+   * <p>
+   * Having a local user name "bar@foo.com" may be harmless, so it is noted at
+   * info. However if what was intended is a transformation to "bar"
+   * it can be difficult to debug, hence this check.
+   */
+  protected void validateShortName() {
+    failif(principal == null, CAT_KERBEROS, "No principal defined");
+
+    try {
+      KerberosName kn = new KerberosName(principal);
+      String result = kn.getShortName();
+      if (nonSimplePattern.matcher(result).find()) {
+        warn(CAT_KERBEROS, principal + " short name: " + result
+                + " still contains @ or /");
+      }
+    } catch (IOException e) {
+      throw new KerberosDiagsFailure(CAT_KERBEROS, e,
+              "Failed to get short name for " + principal, e);
+    } catch (IllegalArgumentException e) {
+      error(CAT_KERBEROS, "KerberosName(" + principal + ") failed: %s\n%s",
+              e, StringUtils.stringifyException(e));
+    }
   }
 
   /**
