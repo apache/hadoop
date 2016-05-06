@@ -62,7 +62,7 @@ Hadoop Streaming
 
 Hadoop streaming is a utility that comes with the Hadoop distribution. The utility allows you to create and run Map/Reduce jobs with any executable or script as the mapper and/or the reducer. For example:
 
-    hadoop jar hadoop-streaming-${project.version}.jar \
+    mapred streaming \
       -input myInputDirs \
       -output myOutputDir \
       -mapper /bin/cat \
@@ -88,7 +88,7 @@ Streaming supports streaming command options as well as [generic command options
 
 **Note:** Be sure to place the generic options before the streaming options, otherwise the command will fail. For an example, see [Making Archives Available to Tasks](#Making_Archives_Available_to_Tasks).
 
-    hadoop command [genericOptions] [streamingOptions]
+    mapred streaming [genericOptions] [streamingOptions]
 
 The Hadoop streaming command options are listed here:
 
@@ -115,7 +115,7 @@ $H3 Specifying a Java Class as the Mapper/Reducer
 
 You can supply a Java class as the mapper and/or the reducer.
 
-    hadoop jar hadoop-streaming-${project.version}.jar \
+    mapred streaming \
       -input myInputDirs \
       -output myOutputDir \
       -inputformat org.apache.hadoop.mapred.KeyValueTextInputFormat \
@@ -128,7 +128,7 @@ $H3 Packaging Files With Job Submissions
 
 You can specify any executable as the mapper and/or the reducer. The executables do not need to pre-exist on the machines in the cluster; however, if they don't, you will need to use "-file" option to tell the framework to pack your executable files as a part of job submission. For example:
 
-    hadoop jar hadoop-streaming-${project.version}.jar \
+    mapred streaming \
       -input myInputDirs \
       -output myOutputDir \
       -mapper myPythonScript.py \
@@ -139,7 +139,7 @@ The above example specifies a user defined Python executable as the mapper. The 
 
 In addition to executable files, you can also package other auxiliary files (such as dictionaries, configuration files, etc) that may be used by the mapper and/or the reducer. For example:
 
-    hadoop jar hadoop-streaming-${project.version}.jar \
+    mapred streaming \
       -input myInputDirs \
       -output myOutputDir \
       -mapper myPythonScript.py \
@@ -216,7 +216,7 @@ $H4 Specifying the Number of Reducers
 
 To specify the number of reducers, for example two, use:
 
-    hadoop jar hadoop-streaming-${project.version}.jar \
+    mapred streaming \
       -D mapreduce.job.reduces=2 \
       -input myInputDirs \
       -output myOutputDir \
@@ -229,7 +229,7 @@ As noted earlier, when the Map/Reduce framework reads a line from the stdout of 
 
 However, you can customize this default. You can specify a field separator other than the tab character (the default), and you can specify the nth (n \>= 1) character rather than the first character in a line (the default) as the separator between the key and value. For example:
 
-    hadoop jar hadoop-streaming-${project.version}.jar \
+    mapred streaming \
       -D stream.map.output.field.separator=. \
       -D stream.num.map.output.key.fields=4 \
       -input myInputDirs \
@@ -279,7 +279,7 @@ User can specify a different symlink name for -archives using \#.
 
 In this example, the input.txt file has two lines specifying the names of the two files: cachedir.jar/cache.txt and cachedir.jar/cache2.txt. "cachedir.jar" is a symlink to the archived directory, which has the files "cache.txt" and "cache2.txt".
 
-    hadoop jar hadoop-streaming-${project.version}.jar \
+    mapred streaming \
                     -archives 'hdfs://hadoop-nn1.example.com/user/me/samples/cachefile/cachedir.jar' \
                     -D mapreduce.job.maps=1 \
                     -D mapreduce.job.reduces=1 \
@@ -325,7 +325,7 @@ $H3 Hadoop Partitioner Class
 
 Hadoop has a library class, [KeyFieldBasedPartitioner](../api/org/apache/hadoop/mapred/lib/KeyFieldBasedPartitioner.html), that is useful for many applications. This class allows the Map/Reduce framework to partition the map outputs based on certain key fields, not the whole keys. For example:
 
-    hadoop jar hadoop-streaming-${project.version}.jar \
+    mapred streaming \
       -D stream.map.output.field.separator=. \
       -D stream.num.map.output.key.fields=4 \
       -D map.output.key.field.separator=. \
@@ -375,7 +375,7 @@ $H3 Hadoop Comparator Class
 
 Hadoop has a library class, [KeyFieldBasedComparator](../api/org/apache/hadoop/mapreduce/lib/partition/KeyFieldBasedComparator.html), that is useful for many applications. This class provides a subset of features provided by the Unix/GNU Sort. For example:
 
-    hadoop jar hadoop-streaming-${project.version}.jar \
+    mapred streaming \
       -D mapreduce.job.output.key.comparator.class=org.apache.hadoop.mapreduce.lib.partition.KeyFieldBasedComparator \
       -D stream.map.output.field.separator=. \
       -D stream.num.map.output.key.fields=4 \
@@ -411,7 +411,7 @@ Hadoop has a library package called [Aggregate](../api/org/apache/hadoop/mapred/
 
 To use Aggregate, simply specify "-reducer aggregate":
 
-    hadoop jar hadoop-streaming-${project.version}.jar \
+    mapred streaming \
       -input myInputDirs \
       -output myOutputDir \
       -mapper myAggregatorForKeyCount.py \
@@ -444,7 +444,7 @@ $H3 Hadoop Field Selection Class
 
 Hadoop has a library class, [FieldSelectionMapReduce](../api/org/apache/hadoop/mapred/lib/FieldSelectionMapReduce.html), that effectively allows you to process text data like the unix "cut" utility. The map function defined in the class treats each input key/value pair as a list of fields. You can specify the field separator (the default is the tab character). You can select an arbitrary list of fields as the map output key, and an arbitrary list of fields as the map output value. Similarly, the reduce function defined in the class treats each input key/value pair as a list of fields. You can select an arbitrary list of fields as the reduce output key, and an arbitrary list of fields as the reduce output value. For example:
 
-    hadoop jar hadoop-streaming-${project.version}.jar \
+    mapred streaming \
       -D mapreduce.map.output.key.field.separator=. \
       -D mapreduce.partition.keypartitioner.options=-k1,2 \
       -D mapreduce.fieldsel.data.field.separator=. \
@@ -495,7 +495,7 @@ Using an alias will not work, but variable substitution is allowed as shown in t
     charlie 80
     dan     75
 
-    $ c2='cut -f2'; hadoop jar hadoop-streaming-${project.version}.jar \
+    $ c2='cut -f2'; mapred streaming \
       -D mapreduce.job.name='Experiment' \
       -input /user/me/samples/student_marks \
       -output /user/me/samples/student_out \
@@ -525,7 +525,7 @@ $H3 How do I specify multiple input directories?
 
 You can specify multiple input directories with multiple '-input' options:
 
-    hadoop jar hadoop-streaming-${project.version}.jar \
+    mapred streaming \
       -input '/user/foo/dir1' -input '/user/foo/dir2' \
         (rest of the command)
 
@@ -541,7 +541,7 @@ $H3 How do I parse XML documents using streaming?
 
 You can use the record reader StreamXmlRecordReader to process XML documents.
 
-    hadoop jar hadoop-streaming-${project.version}.jar \
+    mapred streaming \
       -inputreader "StreamXmlRecord,begin=BEGIN_STRING,end=END_STRING" \
         (rest of the command)
 

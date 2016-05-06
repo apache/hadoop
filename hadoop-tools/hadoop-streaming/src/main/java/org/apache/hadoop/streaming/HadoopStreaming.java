@@ -56,8 +56,7 @@ public class HadoopStreaming {
   }
   
   private static void printUsage() {
-    System.out.println("Usage: $HADOOP_HOME/bin/hadoop jar hadoop-streaming.jar"
-        + " [options]");
+    System.out.println("Usage: mapred streaming [options]");
     System.out.println("Options:");
     System.out.println("  dumptb <glob-pattern> Dumps all files that match the" 
         + " given pattern to ");
