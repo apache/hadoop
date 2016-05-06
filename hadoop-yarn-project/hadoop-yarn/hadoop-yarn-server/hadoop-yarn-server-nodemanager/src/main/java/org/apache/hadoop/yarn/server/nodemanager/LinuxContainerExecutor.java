@@ -228,7 +228,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     }
     buildMainArgs(command, user, appId, locId, nmAddr, localDirs);
     String[] commandArray = command.toArray(new String[command.size()]);
-    ShellCommandExecutor shExec = new ShellCommandExecutor(commandArray);
+    ShellCommandExecutor shExec = new ShellCommandExecutor(commandArray,
+		null, null, 0L, true);
     if (LOG.isDebugEnabled()) {
       LOG.debug("initApplication: " + Arrays.toString(commandArray));
     }
