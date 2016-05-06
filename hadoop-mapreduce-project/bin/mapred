@@ -141,10 +141,12 @@ fi
 HADOOP_SUBCMD=$1
 shift
 
+HADOOP_SUBCMD_ARGS=("$@")
+
 if declare -f mapred_subcommand_"${HADOOP_SUBCMD}" >/dev/null 2>&1; then
-  "mapred_subcommand_${HADOOP_SUBCMD}" "$@"
+  "mapred_subcommand_${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"
 else
-  mapredcmd_case "${HADOOP_SUBCMD}" "$@"
+  mapredcmd_case "${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"
 fi
 
 hadoop_verify_user "${HADOOP_SUBCMD}"
@@ -189,7 +191,7 @@ if [[ -n "${HADOOP_SUBCMD_SUPPORTDAEMONIZATION}" ]]; then
       "${priv_pidfile}" \
       "${priv_outfile}" \
       "${priv_errfile}" \
-      "$@"
+      "${HADOOP_SUBCMD_ARGS[@]}"
   else
     hadoop_daemon_handler \
       "${HADOOP_DAEMON_MODE}" \
@@ -197,9 +199,9 @@ if [[ -n "${HADOOP_SUBCMD_SUPPORTDAEMONIZATION}" ]]; then
       "${HADOOP_CLASSNAME}" \
       "${daemon_pidfile}" \
       "${daemon_outfile}" \
-      "$@"
+      "${HADOOP_SUBCMD_ARGS[@]}"
   fi
   exit $?
 else
-  hadoop_java_exec "${HADOOP_SUBCMD}" "${HADOOP_CLASSNAME}" "$@"
+  hadoop_java_exec "${HADOOP_SUBCMD}" "${HADOOP_CLASSNAME}" "${HADOOP_SUBCMD_ARGS[@]}"
 fi

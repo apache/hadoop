@@ -276,10 +276,12 @@ fi
 HADOOP_SUBCMD=$1
 shift
 
+HADOOP_SUBCMD_ARGS=("$@")
+
 if declare -f hdfs_subcommand_"${HADOOP_SUBCMD}" >/dev/null 2>&1; then
-  "hdfs_subcommand_${HADOOP_SUBCMD}" "$@"
+  "hdfs_subcommand_${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"
 else
-  hdfscmd_case "${HADOOP_SUBCMD}" "$@"
+  hdfscmd_case "${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"
 fi
 
 hadoop_verify_user "${HADOOP_SUBCMD}"
@@ -320,15 +322,26 @@ hadoop_finalize
 if [[ -n "${HADOOP_SUBCMD_SUPPORTDAEMONIZATION}" ]]; then
   if [[ -n "${HADOOP_SUBCMD_SECURESERVICE}" ]]; then
     hadoop_secure_daemon_handler \
-    "${HADOOP_DAEMON_MODE}" "${HADOOP_SUBCMD}" "${HADOOP_CLASSNAME}"\
-    "${daemon_pidfile}" "${daemon_outfile}" \
-    "${priv_pidfile}" "${priv_outfile}" "${priv_errfile}" "$@"
+      "${HADOOP_DAEMON_MODE}" \
+      "${HADOOP_SUBCMD}" \
+      "${HADOOP_CLASSNAME}" \
+      "${daemon_pidfile}" \
+      "${daemon_outfile}" \
+      "${priv_pidfile}" \
+      "${priv_outfile}" \
+      "${priv_errfile}" \
+      "${HADOOP_SUBCMD_ARGS[@]}"
   else
-    hadoop_daemon_handler "${HADOOP_DAEMON_MODE}" "${HADOOP_SUBCMD}" "${HADOOP_CLASSNAME}"\
-    "${daemon_pidfile}" "${daemon_outfile}" "$@"
+    hadoop_daemon_handler \
+      "${HADOOP_DAEMON_MODE}" \
+      "${HADOOP_SUBCMD}" \
+      "${HADOOP_CLASSNAME}" \
+      "${daemon_pidfile}" \
+      "${daemon_outfile}" \
+      "${HADOOP_SUBCMD_ARGS[@]}"
   fi
   exit $?
 else
   # shellcheck disable=SC2086
-  hadoop_java_exec "${HADOOP_SUBCMD}" "${HADOOP_CLASSNAME}" "$@"
+  hadoop_java_exec "${HADOOP_SUBCMD}" "${HADOOP_CLASSNAME}" "${HADOOP_SUBCMD_ARGS[@]}"
 fi

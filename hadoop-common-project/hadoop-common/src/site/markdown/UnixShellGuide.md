@@ -165,6 +165,14 @@ This is the name of the Java class to execute.
 
 This is the name of the script that is being executed.  It will be one of hadoop, hdfs, mapred, or yarn.
 
+* HADOOP\_SUBCMD
+
+This is the subcommand that was passed on the command line.
+
+* HADOOP\_SUBCMD\_ARGS
+
+This array contains the argument list after the Apache Hadoop common argument processing has taken place and is the same list that is passed to the subcommand function as arguments.  For example, if `hadoop --debug subcmd 1 2 3` has been executed on the command line, then `${HADOOP_SUBCMD_ARGS[0]}` will be 1 and `hadoop_subcommand_subcmd` will also have $1 equal to 1.  This array list MAY be modified by subcommand functions to add or delete values from the argument list for further processing.
+
 * HADOOP\_SUBCMD\_SECURESERVICE
 
 If this command should/will be executed as a secure daemon, set this to true.
@@ -176,3 +184,7 @@ If this command should/will be executed as a secure daemon, set the user name to
 * HADOOP\_SUBCMD\_SUPPORTDAEMONIZATION
 
 If this command can be executed as a daemon, set this to true.
+
+* HADOOP\_USER\_PARAMS
+
+This is the full content of the command line, prior to any parsing done. It will contain flags such as `--debug`.  It MAY NOT be manipulated.
