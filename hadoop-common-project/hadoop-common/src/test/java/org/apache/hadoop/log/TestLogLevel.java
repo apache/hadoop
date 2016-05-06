@@ -28,6 +28,7 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.*;
 import org.apache.commons.logging.impl.*;
 import org.apache.log4j.*;
+import org.junit.Assert;
 
 public class TestLogLevel extends TestCase {
   static final PrintStream out = System.out;
@@ -42,12 +43,13 @@ public class TestLogLevel extends TestCase {
       log.debug("log.debug1");
       log.info("log.info1");
       log.error("log.error1");
-      assertTrue(!Level.ERROR.equals(log.getEffectiveLevel()));
+      Assert.assertNotEquals("Get default Log Level which shouldn't be ERROR.",
+          Level.ERROR, log.getEffectiveLevel());
 
       HttpServer2 server = new HttpServer2.Builder().setName("..")
           .addEndpoint(new URI("http://localhost:0")).setFindPort(true)
           .build();
-      
+
       server.start();
       String authority = NetUtils.getHostPortString(server
           .getConnectorAddress(0));
@@ -67,7 +69,8 @@ public class TestLogLevel extends TestCase {
       log.debug("log.debug2");
       log.info("log.info2");
       log.error("log.error2");
-      assertTrue(Level.ERROR.equals(log.getEffectiveLevel()));
+      assertEquals("Try setting log level: ERROR from servlet.", Level.ERROR,
+          log.getEffectiveLevel());
 
       //command line
       String[] args = {"-setlevel", authority, logName, Level.DEBUG.toString()};
@@ -75,7 +78,35 @@ public class TestLogLevel extends TestCase {
       log.debug("log.debug3");
       log.info("log.info3");
       log.error("log.error3");
-      assertTrue(Level.DEBUG.equals(log.getEffectiveLevel()));
+      assertEquals("Try setting log level: DEBUG via command line", Level.DEBUG,
+          log.getEffectiveLevel());
+
+      // Test mixed upper case and lower case in level string.
+      String[] args2 = {"-setlevel", authority, logName, "Info"};
+      LogLevel.main(args2);
+      log.debug("log.debug4");
+      log.info("log.info4");
+      log.error("log.error4");
+      assertEquals("Try setting log level: Info via command line.", Level.INFO,
+          log.getEffectiveLevel());
+
+      // Test "Error" instead of "ERROR" should work for servlet
+      URL newUrl = new URL("http://" + authority + "/logLevel?log=" + logName
+          + "&level=" + "Error");
+      out.println("*** Connecting to " + newUrl);
+      connection = newUrl.openConnection();
+      connection.connect();
+
+      BufferedReader in2 = new BufferedReader(new InputStreamReader(
+          connection.getInputStream()));
+      for(String line; (line = in2.readLine()) != null; out.println(line));
+      in2.close();
+
+      log.debug("log.debug5");
+      log.info("log.info5");
+      log.error("log.error5");
+      assertEquals("Try setting log level: Error via servlet.", Level.ERROR,
+          log.getEffectiveLevel());
     }
     else {
       out.println(testlog.getClass() + " not tested.");
