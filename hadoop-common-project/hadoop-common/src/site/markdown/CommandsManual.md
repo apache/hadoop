@@ -157,6 +157,10 @@ For every subcommand that connects to a service, convenience flags are provided 
 
 This command is documented in the [File System Shell Guide](./FileSystemShell.html). It is a synonym for `hdfs dfs` when HDFS is in use.
 
+### `gridmix`
+
+Gridmix is a benchmark tool for Hadoop cluster. More information can be found in the [Gridmix Guide](../../hadoop-gridmix/GridMix.html).
+
 ### `jar`
 
 Usage: `hadoop jar <jar> [mainClass] args...`

@@ -75,16 +75,16 @@ Jobs submitted by GridMix have names of the form
 Usage
 -----
 
-Basic command-line usage without configuration parameters:
+Gridmix is provided as hadoop subcommand. Basic command-line usage without configuration parameters:
 
 ```
-java org.apache.hadoop.mapred.gridmix.Gridmix [-generate <size>] [-users <users-list>] <iopath> <trace>
+$ hadoop gridmix [-generate <size>] [-users <users-list>] <iopath> <trace>
 ```
 
 Basic command-line usage with configuration parameters:
 
 ```
-java org.apache.hadoop.mapred.gridmix.Gridmix \
+$ hadoop gridmix \
   -Dgridmix.client.submit.threads=10 -Dgridmix.output.directory=foo \
   [-generate <size>] [-users <users-list>] <iopath> <trace>
 ```
@@ -124,18 +124,6 @@ using one of the compression codecs supported by the cluster) or
 uncompressed. Use "-" as the value of this parameter if you
 want to pass an  *uncompressed*  trace via the standard
 input-stream of GridMix.
-
-GridMix expects certain library *JARs* to be present in  the *CLASSPATH*.
-One simple way to run GridMix is to use `hadoop jar` command to run it.
-You also need to add the JAR of Rumen to classpath for both of client and tasks
-as example shown below.
-
-```
-HADOOP_CLASSPATH=$HADOOP_HOME/share/hadoop/tools/lib/hadoop-rumen-2.5.1.jar \
-  $HADOOP_HOME/bin/hadoop jar $HADOOP_HOME/share/hadoop/tools/lib/hadoop-gridmix-2.5.1.jar \
-    -libjars $HADOOP_HOME/share/hadoop/tools/lib/hadoop-rumen-2.5.1.jar \
-    [-generate <size>] [-users <users-list>] <iopath> <trace>
-```
 
 The supported configuration parameters are explained in the
 following sections.

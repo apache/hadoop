@@ -36,6 +36,7 @@ function hadoop_usage
   hadoop_add_subcommand "dtutil" "operations related to delegation tokens"
   hadoop_add_subcommand "envvars" "display computed Hadoop environment variables"
   hadoop_add_subcommand "fs" "run a generic filesystem user client"
+  hadoop_add_subcommand "gridmix" "submit a mix of synthetic job, modeling a profiled from production load"
   hadoop_add_subcommand "jar <jar>" "run a jar file. NOTE: please use \"yarn jar\" to launch YARN applications, not this command."
   hadoop_add_subcommand "jnipath" "prints the java.library.path"
   hadoop_add_subcommand "kerbname" "show auth_to_local principal conversion"
@@ -157,6 +158,11 @@ case ${COMMAND} in
   ;;
   fs)
     CLASS=org.apache.hadoop.fs.FsShell
+  ;;
+  gridmix)
+    CLASS=org.apache.hadoop.mapred.gridmix.Gridmix
+    hadoop_add_to_classpath_tools hadoop-rumen
+    hadoop_add_to_classpath_tools hadoop-gridmix
   ;;
   jar)
     if [[ -n "${YARN_OPTS}" ]] || [[ -n "${YARN_CLIENT_OPTS}" ]]; then
