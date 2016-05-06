@@ -345,6 +345,36 @@ public class TestSystemMetricsPublisher {
   }
 
   @Test(timeout = 10000)
+  public void testPublishHostPortInfoOnContainerFinished() throws Exception {
+    ContainerId containerId =
+        ContainerId.newContainerId(ApplicationAttemptId.newInstance(
+            ApplicationId.newInstance(0, 1), 1), 1);
+    RMContainer container = createRMContainer(containerId);
+    metricsPublisher.containerFinished(container, container.getFinishTime());
+    TimelineEntity entity = null;
+    do {
+      entity =
+          store.getEntity(containerId.toString(),
+              ContainerMetricsConstants.ENTITY_TYPE,
+              EnumSet.allOf(Field.class));
+    } while (entity == null || entity.getEvents().size() < 1);
+    Assert.assertNotNull(entity.getOtherInfo());
+    Assert.assertEquals(2, entity.getOtherInfo().size());
+    Assert.assertNotNull(entity.getOtherInfo().get(
+        ContainerMetricsConstants.ALLOCATED_HOST_ENTITY_INFO));
+    Assert.assertNotNull(entity.getOtherInfo().get(
+        ContainerMetricsConstants.ALLOCATED_PORT_ENTITY_INFO));
+    Assert.assertEquals(
+        container.getAllocatedNode().getHost(),
+        entity.getOtherInfo().get(
+            ContainerMetricsConstants.ALLOCATED_HOST_ENTITY_INFO));
+    Assert.assertEquals(
+        container.getAllocatedNode().getPort(),
+        entity.getOtherInfo().get(
+            ContainerMetricsConstants.ALLOCATED_PORT_ENTITY_INFO));
+  }
+
+  @Test(timeout = 10000)
   public void testPublishContainerMetrics() throws Exception {
     ContainerId containerId =
         ContainerId.newContainerId(ApplicationAttemptId.newInstance(

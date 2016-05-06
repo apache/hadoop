@@ -218,7 +218,7 @@ public class SystemMetricsPublisher extends CompositeService {
               container.getDiagnosticsInfo(),
               container.getContainerExitStatus(),
               container.getContainerState(),
-              finishedTime));
+              finishedTime, container.getAllocatedNode()));
     }
   }
 
@@ -479,6 +479,12 @@ public class SystemMetricsPublisher extends CompositeService {
         event.getContainerExitStatus());
     eventInfo.put(ContainerMetricsConstants.STATE_EVENT_INFO,
         event.getContainerState().toString());
+    Map<String, Object> entityInfo = new HashMap<String, Object>();
+    entityInfo.put(ContainerMetricsConstants.ALLOCATED_HOST_ENTITY_INFO,
+        event.getAllocatedNode().getHost());
+    entityInfo.put(ContainerMetricsConstants.ALLOCATED_PORT_ENTITY_INFO,
+        event.getAllocatedNode().getPort());
+    entity.setOtherInfo(entityInfo);
     tEvent.setEventInfo(eventInfo);
     entity.addEvent(tEvent);
     putEntity(entity);
