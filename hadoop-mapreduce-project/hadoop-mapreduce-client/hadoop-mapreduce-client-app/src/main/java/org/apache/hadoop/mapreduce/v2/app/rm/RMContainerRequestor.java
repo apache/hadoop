@@ -554,4 +554,10 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   public Set<String> getBlacklistedNodes() {
     return blacklistedNodes;
   }
+
+  @Private
+  @VisibleForTesting
+  Set<ResourceRequest> getAsk() {
+    return ask;
+  }
 }
