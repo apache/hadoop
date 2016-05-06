@@ -78,6 +78,9 @@ Release 2.7.3 - UNRELEASED
     MAPREDUCE-5817. Mappers get rescheduled on node transition even after all
     reducers are completed. (Sangjin Lee via kasha)
 
+    MAPREDUCE-6689. MapReduce job can infinitely increase number of reducer
+    resource requests (Wangda Tan via jlowe)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
