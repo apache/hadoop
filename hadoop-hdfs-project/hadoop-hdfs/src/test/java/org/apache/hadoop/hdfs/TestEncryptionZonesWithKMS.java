@@ -73,7 +73,7 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
   public void testCreateEZPopulatesEDEKCache() throws Exception {
     final Path zonePath = new Path("/TestEncryptionZone");
     fsWrapper.mkdir(zonePath, FsPermission.getDirDefault(), false);
-    dfsAdmin.createEncryptionZone(zonePath, TEST_KEY);
+    dfsAdmin.createEncryptionZone(zonePath, TEST_KEY, NO_TRASH);
     @SuppressWarnings("unchecked")
     KMSClientProvider kcp = (KMSClientProvider) Whitebox
         .getInternalState(cluster.getNamesystem().getProvider(), "extension");
@@ -102,7 +102,7 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
   public void testWarmupEDEKCacheOnStartup() throws Exception {
     final Path zonePath = new Path("/TestEncryptionZone");
     fsWrapper.mkdir(zonePath, FsPermission.getDirDefault(), false);
-    dfsAdmin.createEncryptionZone(zonePath, TEST_KEY);
+    dfsAdmin.createEncryptionZone(zonePath, TEST_KEY, NO_TRASH);
 
     @SuppressWarnings("unchecked")
     KMSClientProvider spy = (KMSClientProvider) Whitebox

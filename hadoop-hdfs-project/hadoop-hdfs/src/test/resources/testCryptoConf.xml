@@ -68,6 +68,7 @@
         <command>-fs NAMENODE -mkdir /foo</command>
         <command>-fs NAMENODE -ls /</command>-
         <crypto-admin-command>-createZone -path /foo -keyName myKey</crypto-admin-command>
+        <command>-fs NAMENODE -rmdir /foo/.Trash</command>
         <crypto-admin-command>-createZone -path /foo -keyName myKey</crypto-admin-command>
       </test-commands>
       <cleanup-commands>
@@ -91,7 +92,9 @@
         <crypto-admin-command>-createZone -keyName myKey -path /foo/bar</crypto-admin-command>
       </test-commands>
       <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /foo/bar/.Trash</command>
         <command>-fs NAMENODE -rmdir /foo/bar</command>
+        <command>-fs NAMENODE -rmdir /foo/.Trash</command>
         <command>-fs NAMENODE -rmdir /foo</command>
       </cleanup-commands>
       <comparators>
@@ -180,6 +183,7 @@
         <crypto-admin-command>-createZone -path /foo/bar/baz -keyName myKey</crypto-admin-command>
       </test-commands>
       <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /foo/bar/baz/.Trash</command>
         <command>-fs NAMENODE -rmdir /foo/bar/baz</command>
         <command>-fs NAMENODE -rmdir /foo/bar</command>
         <command>-fs NAMENODE -rmdir /foo/</command>
@@ -205,7 +209,9 @@
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /src/subdir</command>
+        <command>-fs NAMENODE -rmdir /src/.Trash</command>
         <command>-fs NAMENODE -rmdir /src</command>
+        <command>-fs NAMENODE -rmdir /dst/.Trash</command>
         <command>-fs NAMENODE -rmdir /dst</command>
       </cleanup-commands>
       <comparators>
@@ -227,6 +233,7 @@
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /src</command>
+        <command>-fs NAMENODE -rmdir /dst/.Trash</command>
         <command>-fs NAMENODE -rmdir /dst</command>
       </cleanup-commands>
       <comparators>
@@ -249,6 +256,7 @@
         </test-commands>
         <cleanup-commands>
             <command>-fs NAMENODE -rm /src/foo</command>
+            <command>-fs NAMENODE -rmdir /src/.Trash</command>
             <command>-fs NAMENODE -rmdir /src</command>
             <command>-fs NAMENODE -rmdir /dst</command>
         </cleanup-commands>
@@ -269,6 +277,7 @@
         <command>-fs NAMENODE -ls /</command>-
       </test-commands>
       <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /src/.Trash</command>
         <command>-fs NAMENODE -rmdir /src</command>
         <command>-fs NAMENODE -rmdir /dst</command>
       </cleanup-commands>
@@ -292,6 +301,7 @@
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /src/subdir2/subdir1</command>
         <command>-fs NAMENODE -rmdir /src/subdir2</command>
+        <command>-fs NAMENODE -rmdir /src/.Trash</command>
         <command>-fs NAMENODE -rmdir /src</command>
       </cleanup-commands>
       <comparators>
@@ -302,5 +312,81 @@
       </comparators>
     </test>
 
+    <test>
+      <description>Test failure of provisioning a trash dir if the EZ does not exist</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /src</command>
+        <crypto-admin-command>-provisionTrash -path /src</crypto-admin-command>-
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /src</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>/src is not an encryption zone.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test failure of provisioning a trash dir if .Trash exists</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /src</command>
+        <crypto-admin-command>-createZone -path /src -keyName myKey</crypto-admin-command>
+        <crypto-admin-command>-provisionTrash -path /src</crypto-admin-command>-
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm /src/.Trash</command>
+        <command>-fs NAMENODE -rmdir /src</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Will not provision new trash directory for encryption zone /src. Path already exists.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test success of provisioning a trash dir</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /src</command>
+        <crypto-admin-command>-createZone -path /src -keyName myKey</crypto-admin-command>
+        <command>-fs NAMENODE -rmdir /src/.Trash</command>
+        <crypto-admin-command>-provisionTrash -path /src</crypto-admin-command>-
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /src/.Trash</command>
+        <command>-fs NAMENODE -rmdir /src</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Created a trash directory for /src</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test failure of provisioning a trash dir for incorrect EZ directory</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /src</command>
+        <crypto-admin-command>-createZone -path /src -keyName myKey</crypto-admin-command>
+        <command>-fs NAMENODE -mkdir /src/dir1</command>
+        <crypto-admin-command>-provisionTrash -path /src/dir1</crypto-admin-command>-
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /src/dir1</command>
+        <command>-fs NAMENODE -rmdir /src/.Trash</command>
+        <command>-fs NAMENODE -rmdir /src</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>/src/dir1 is not the root of an encryption zone.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
   </tests>
 </configuration>
