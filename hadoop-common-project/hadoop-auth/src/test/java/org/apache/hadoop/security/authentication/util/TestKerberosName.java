@@ -72,23 +72,14 @@ public class TestKerberosName {
     }
   }
 
-  private void checkBadTranslation(String from) {
-    System.out.println("Checking bad translation for " + from);
-    KerberosName nm = new KerberosName(from);
-    try {
-      nm.getShortName();
-      Assert.fail("didn't get exception for " + from);
-    } catch (IOException ie) {
-      // PASS
-    }
-  }
-
   @Test
   public void testAntiPatterns() throws Exception {
     checkBadName("owen/owen/owen@FOO.COM");
     checkBadName("owen@foo/bar.com");
-    checkBadTranslation("foo@ACME.COM");
-    checkBadTranslation("root/joe@FOO.COM");
+
+    // no rules applied, these should pass
+    checkTranslation("foo@ACME.COM", "foo@ACME.COM");
+    checkTranslation("root/joe@FOO.COM", "root/joe@FOO.COM");
   }
 
   @Test

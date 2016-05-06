@@ -476,6 +476,7 @@ KDiag: Diagnose Kerberos Problems
   [--out <file>] : Write output to a file.
   [--resource <resource>] : Load an XML configuration resource.
   [--secure] : Require the hadoop configuration to be secure.
+  [--verifyshortname <principal>]: Verify the short name of the specific principal does not contain '@' or '/'
 ```
 
 #### `--jaas`: Require a JAAS file to be defined in `java.security.auth.login.config`.
@@ -573,6 +574,11 @@ or implicitly set to "simple":
 ```
 
 Needless to say, an application so configured cannot talk to a secure Hadoop cluster.
+
+#### `--verifyshortname &lt;principal>`: validate the short name of a principal
+
+This verifies that the short name of a principal contains neither the `"@"`
+nor `"/"` characters.
 
 ### Example
 
