@@ -170,6 +170,8 @@ Release 2.7.3 - UNRELEASED
     HDFS-10347. Namenode report bad block method doesn't log the bad block or
     datanode. (Rushabh Shah via kihwal)
 
+    HDFS-2043. TestHFlush failing intermittently. (Lin Yiqun via iwasakims)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
