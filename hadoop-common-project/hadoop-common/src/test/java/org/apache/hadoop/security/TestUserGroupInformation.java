@@ -281,10 +281,15 @@ public class TestUserGroupInformation {
     UserGroupInformation.setConfiguration(conf);
     testConstructorSuccess("user1", "user1");
     testConstructorSuccess("user4@OTHER.REALM", "other-user4");
-    // failure test
-    testConstructorFailures("user2@DEFAULT.REALM");
-    testConstructorFailures("user3/cron@DEFAULT.REALM");
-    testConstructorFailures("user5/cron@OTHER.REALM");
+
+    // pass through test, no transformation
+    testConstructorSuccess("user2@DEFAULT.REALM", "user2@DEFAULT.REALM");
+    testConstructorSuccess("user3/cron@DEFAULT.REALM", "user3/cron@DEFAULT.REALM");
+    testConstructorSuccess("user5/cron@OTHER.REALM", "user5/cron@OTHER.REALM");
+
+    // failures
+    testConstructorFailures("user6@example.com@OTHER.REALM");
+    testConstructorFailures("user7@example.com@DEFAULT.REALM");
     testConstructorFailures(null);
     testConstructorFailures("");
   }
@@ -298,10 +303,13 @@ public class TestUserGroupInformation {
 
     testConstructorSuccess("user1", "user1");
     testConstructorSuccess("user2@DEFAULT.REALM", "user2");
-    testConstructorSuccess("user3/cron@DEFAULT.REALM", "user3");    
+    testConstructorSuccess("user3/cron@DEFAULT.REALM", "user3");
+
+    // no rules applied, local name remains the same
+    testConstructorSuccess("user4@OTHER.REALM", "user4@OTHER.REALM");
+    testConstructorSuccess("user5/cron@OTHER.REALM", "user5/cron@OTHER.REALM");
+
     // failure test
-    testConstructorFailures("user4@OTHER.REALM");
-    testConstructorFailures("user5/cron@OTHER.REALM");
     testConstructorFailures(null);
     testConstructorFailures("");
   }
@@ -342,8 +350,9 @@ public class TestUserGroupInformation {
     } catch (IllegalArgumentException e) {
       String expect = (userName == null || userName.isEmpty())
           ? "Null user" : "Illegal principal name "+userName;
-      assertTrue("Did not find "+ expect + " in " + e,
-          e.toString().contains(expect));
+      String expect2 = "Malformed Kerberos name: "+userName;
+      assertTrue("Did not find "+ expect + " or " + expect2 + " in " + e,
+          e.toString().contains(expect) || e.toString().contains(expect2));
     }
   }
 

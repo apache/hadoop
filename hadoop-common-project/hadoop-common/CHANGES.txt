@@ -28,6 +28,9 @@ Release 2.7.6 - UNRELEASED
     HADOOP-14842. Hadoop 2.8.2 release build process get stuck due to java
     issue. Contributed by Junping Du.
 
+    HADOOP-12751. While using kerberos Hadoop incorrectly assumes names with
+    '@' to be non-simple. (Bolke de Bruin via stevel).
+
 Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES

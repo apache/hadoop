@@ -109,12 +109,7 @@ public class TestKerberosAuthenticationHandler
     kn = new KerberosName("bar@BAR");
     Assert.assertEquals("bar", kn.getShortName());
     kn = new KerberosName("bar@FOO");
-    try {
-      kn.getShortName();
-      Assert.fail();
-    }
-    catch (Exception ex) {      
-    }
+    Assert.assertEquals("bar@FOO", kn.getShortName());
   }
 
   @Test(timeout=60000)
