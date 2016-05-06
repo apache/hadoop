@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -30,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.junit.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -112,8 +112,7 @@ public class TestApplicationACLs {
           Configuration conf) {
         QueueACLsManager mockQueueACLsManager = mock(QueueACLsManager.class);
         when(mockQueueACLsManager.checkAccess(any(UserGroupInformation.class),
-            any(QueueACL.class), anyString(), any(ApplicationId.class),
-            anyString())).thenAnswer(new Answer() {
+            any(QueueACL.class), any(RMApp.class))).thenAnswer(new Answer() {
           public Object answer(InvocationOnMock invocation) {
             return isQueueUser;
           }
