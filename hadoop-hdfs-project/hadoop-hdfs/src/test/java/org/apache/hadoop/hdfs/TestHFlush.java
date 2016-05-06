@@ -485,8 +485,14 @@ public class TestHFlush {
         // If we got the exception, we shouldn't have interrupted status anymore.
         assertFalse(Thread.interrupted());
 
-        // Now do a successful close.
-        stm.close();
+        // Do the try-catch in the second stm.close() avoid that streamer was already
+        // closed in other places.
+        try {
+          // Now do a successful close.
+          stm.close();
+        } catch (IOException e) {
+          System.out.println("Got expected exception during second close");
+        }
       }
 
 
