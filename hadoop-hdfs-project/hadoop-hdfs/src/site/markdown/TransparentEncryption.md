@@ -170,7 +170,7 @@ Create a new encryption zone.
 
 | | |
 |:---- |:---- |
-| *path* | The path of the encryption zone to create. It must be an empty directory. |
+| *path* | The path of the encryption zone to create. It must be an empty directory. A trash directory is provisioned under this path.|
 | *keyName* | Name of the key to use for the encryption zone. |
 
 ### <a name="listZones"></a>listZones
@@ -178,6 +178,16 @@ Create a new encryption zone.
 Usage: `[-listZones]`
 
 List all encryption zones. Requires superuser permissions.
+
+### <a name="provisionTrash"></a>provisionTrash
+
+Usage: `[-provisionTrash -path <path>]`
+
+Provision a trash directory for an encryption zone.
+
+| | |
+|:---- |:---- |
+| *path* | The path to the root of the encryption zone. |
 
 <a name="Example_usage"></a>Example usage
 -------------
@@ -222,6 +232,7 @@ This restriction enhances security and eases system management significantly. Al
 
 To comply with the above rule, each encryption zone has its own `.Trash` directory under the "zone directory". E.g., after `hdfs dfs rm /zone/encryptedFile`, `encryptedFile` will be moved to `/zone/.Trash`, instead of the `.Trash` directory under the user's home directory. When the entire encryption zone is deleted, the "zone directory" will be moved to the `.Trash` directory under the user's home directory.
 
+The `crypto` command before Hadoop 2.8.0 does not provision the `.Trash` directory automatically. If an encryption zone is created before Hadoop 2.8.0, and then the cluster is upgraded to Hadoop 2.8.0 or above, the trash directory can be provisioned using `-provisionTrash` option (e.g., `hdfs crypto -provisionTrash -path /zone`).
 <a name="Attack_vectors"></a>Attack vectors
 --------------
 

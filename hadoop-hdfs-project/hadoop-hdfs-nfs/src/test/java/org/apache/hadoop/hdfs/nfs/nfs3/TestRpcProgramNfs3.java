@@ -29,7 +29,6 @@ import java.nio.ByteBuffer;
 import java.util.EnumSet;
 
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
-import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystemTestHelper;
@@ -38,6 +37,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
 import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
@@ -118,6 +118,8 @@ public class TestRpcProgramNfs3 {
   private static final String TEST_KEY = "test_key";
   private static FileSystemTestHelper fsHelper;
   private static File testRootDir;
+  private static final EnumSet<CreateEncryptionZoneFlag> NO_TRASH =
+      EnumSet.of(CreateEncryptionZoneFlag.NO_TRASH);
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -340,7 +342,7 @@ public class TestRpcProgramNfs3 {
 
     final Path zone = new Path("/zone");
     hdfs.mkdirs(zone);
-    dfsAdmin.createEncryptionZone(zone, TEST_KEY);
+    dfsAdmin.createEncryptionZone(zone, TEST_KEY, NO_TRASH);
 
     final byte[] buffer = new byte[len];
     for (int i = 0; i < len; i++) {

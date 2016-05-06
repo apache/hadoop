@@ -56,7 +56,6 @@ public class TrashPolicyDefault extends TrashPolicy {
     LogFactory.getLog(TrashPolicyDefault.class);
 
   private static final Path CURRENT = new Path("Current");
-  private static final Path TRASH = new Path(".Trash/");  
 
   private static final FsPermission PERMISSION =
     new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE);
