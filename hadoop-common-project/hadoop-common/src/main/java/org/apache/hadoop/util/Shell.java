@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.security.alias.AbstractJavaKeyStoreProvider;
 
 /** 
  * A base class for running a Unix command.
@@ -279,6 +280,8 @@ abstract public class Shell {
   /** If or not script timed out*/
   private AtomicBoolean timedOut;
 
+  /** Indicates if the parent env vars should be inherited or not*/
+  protected boolean inheritParentEnv = true;
 
   /** Centralized logic to discover and validate the sanity of the Hadoop 
    *  home directory. Returns either NULL or a directory that exists and 
@@ -466,6 +469,20 @@ abstract public class Shell {
     if (environment != null) {
       builder.environment().putAll(this.environment);
     }
+
+    // Remove all env vars from the Builder to prevent leaking of env vars from
+    // the parent process.
+    if (!inheritParentEnv) {
+      // branch-2: Only do this for HADOOP_CREDSTORE_PASSWORD
+      // Sometimes daemons are configured to use the CredentialProvider feature
+      // and given their jceks password via an environment variable.  We need to
+      // make sure to remove it so it doesn't leak to child processes, which
+      // might be owned by a different user.  For example, the NodeManager
+      // running a User's container.
+      builder.environment().remove(
+          AbstractJavaKeyStoreProvider.CREDENTIAL_PASSWORD_NAME);
+    }
+
     if (dir != null) {
       builder.directory(this.dir);
     }
@@ -683,6 +700,11 @@ abstract public class Shell {
       this(execString, dir, env , 0L);
     }
 
+    public ShellCommandExecutor(String[] execString, File dir,
+                                Map<String, String> env, long timeout) {
+      this(execString, dir, env , timeout, true);
+    }
+
     /**
      * Create a new instance of the ShellCommandExecutor to execute a command.
      * 
@@ -695,10 +717,12 @@ abstract public class Shell {
      *            environment is not modified.
      * @param timeout Specifies the time in milliseconds, after which the
      *                command will be killed and the status marked as timedout.
-     *                If 0, the command will not be timed out. 
+     *                If 0, the command will not be timed out.
+     * @param inheritParentEnv Indicates if the process should inherit the env
+     *                         vars from the parent process or not.
      */
     public ShellCommandExecutor(String[] execString, File dir, 
-        Map<String, String> env, long timeout) {
+        Map<String, String> env, long timeout, boolean inheritParentEnv) {
       command = execString.clone();
       if (dir != null) {
         setWorkingDirectory(dir);
@@ -707,6 +731,7 @@ abstract public class Shell {
         setEnvironment(env);
       }
       timeOutInterval = timeout;
+      this.inheritParentEnv = inheritParentEnv;
     }
         
 

@@ -18,6 +18,7 @@
 package org.apache.hadoop.util;
 
 import junit.framework.TestCase;
+import org.apache.hadoop.security.alias.AbstractJavaKeyStoreProvider;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -27,8 +28,13 @@ import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.hadoop.fs.FileUtil;
+import org.junit.Assume;
+import org.junit.Test;
 
 public class TestShell extends TestCase {
 
@@ -110,6 +116,44 @@ public class TestShell extends TestCase {
     }
     shellFile.delete();
     assertTrue("Script didnt not timeout" , shexc.isTimedOut());
+  }
+
+  @Test
+  public void testEnvVarsWithInheritance() throws Exception {
+    Assume.assumeFalse(Shell.WINDOWS);
+    testEnvHelper(true);
+  }
+
+  @Test
+  public void testEnvVarsWithoutInheritance() throws Exception {
+    Assume.assumeFalse(Shell.WINDOWS);
+    testEnvHelper(false);
+  }
+
+  private void testEnvHelper(boolean inheritParentEnv) throws Exception {
+    Map<String, String> customEnv = Collections.singletonMap(
+        AbstractJavaKeyStoreProvider.CREDENTIAL_PASSWORD_NAME, "foo");
+    Shell.ShellCommandExecutor command = new Shell.ShellCommandExecutor(
+        new String[]{"env"}, null, customEnv, 0L,
+        inheritParentEnv);
+    command.execute();
+    String[] varsArr = command.getOutput().split("\n");
+    Map<String, String> vars = new HashMap<>();
+    for (String var : varsArr) {
+      int eqIndex = var.indexOf('=');
+      vars.put(var.substring(0, eqIndex), var.substring(eqIndex + 1));
+    }
+    Map<String, String> expectedEnv = new HashMap<>();
+    expectedEnv.putAll(System.getenv());
+    if (inheritParentEnv) {
+      expectedEnv.putAll(customEnv);
+    } else {
+      assertFalse("child process environment should not have contained "
+              + AbstractJavaKeyStoreProvider.CREDENTIAL_PASSWORD_NAME,
+          vars.containsKey(
+              AbstractJavaKeyStoreProvider.CREDENTIAL_PASSWORD_NAME));
+    }
+    assertEquals(expectedEnv, vars);
   }
   
   private static int countTimerThreads() {
