@@ -51,6 +51,7 @@
     <kafka.version>0.8.2.1</kafka.version>
     <hbase.version>1.0.1</hbase.version>
     <phoenix.version>4.5.0-SNAPSHOT</phoenix.version>
+    <hbase-compatible-hadoop.version>2.5.1</hbase-compatible-hadoop.version>
 
     <hadoop.assemblies.version>${project.version}</hadoop.assemblies.version>
     <commons-daemon.version>1.0.13</commons-daemon.version>
@@ -473,6 +474,11 @@
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-compress</artifactId>
         <version>1.4.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-csv</artifactId>
+        <version>1.0</version>
       </dependency>
       <dependency>
         <groupId>xmlenc</groupId>
@@ -1050,6 +1056,18 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-common</artifactId>
+        <version>${hbase.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-common</artifactId>
+        <version>${hbase.version}</version>
+        <scope>test</scope>
+        <classifier>tests</classifier>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-client</artifactId>
         <version>${hbase.version}</version>
         <exclusions>
@@ -1059,6 +1077,18 @@
             <artifactId>jdk.tools</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-server</artifactId>
+        <version>${hbase.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-server</artifactId>
+        <version>${hbase.version}</version>
+        <scope>test</scope>
+        <classifier>tests</classifier>
       </dependency>
       <dependency>
         <groupId>org.apache.phoenix</groupId>
