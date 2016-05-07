@@ -316,6 +316,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
           </dependencies>
           <configuration>
             <configLocation>checkstyle/checkstyle.xml</configLocation>
+            <includeTestSourceDirectory>true</includeTestSourceDirectory>
             <failOnViolation>false</failOnViolation>
             <format>xml</format>
             <format>html</format>
