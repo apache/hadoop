@@ -22,22 +22,36 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.compress.Decompressor;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class DecompressorStream extends CompressionInputStream {
+  /**
+   * The maximum input buffer size.
+   */
+  private static final int MAX_INPUT_BUFFER_SIZE = 512;
+  /**
+   * MAX_SKIP_BUFFER_SIZE is used to determine the maximum buffer size to
+   * use when skipping. See {@link java.io.InputStream}.
+   */
+  private static final int MAX_SKIP_BUFFER_SIZE = 2048;
+
+  private byte[] skipBytes;
+  private byte[] oneByte = new byte[1];
+
   protected Decompressor decompressor = null;
   protected byte[] buffer;
   protected boolean eof = false;
   protected boolean closed = false;
   private int lastBytesSent = 0;
 
-  public DecompressorStream(InputStream in, Decompressor decompressor,
-                            int bufferSize)
-  throws IOException {
+  @VisibleForTesting
+  DecompressorStream(InputStream in, Decompressor decompressor,
+                            int bufferSize, int skipBufferSize)
+      throws IOException {
     super(in);
 
     if (decompressor == null) {
@@ -48,11 +62,18 @@ public class DecompressorStream extends CompressionInputStream {
 
     this.decompressor = decompressor;
     buffer = new byte[bufferSize];
+    skipBytes = new byte[skipBufferSize];
+  }
+
+  public DecompressorStream(InputStream in, Decompressor decompressor,
+                            int bufferSize)
+      throws IOException {
+    this(in, decompressor, bufferSize, MAX_SKIP_BUFFER_SIZE);
   }
 
   public DecompressorStream(InputStream in, Decompressor decompressor)
-  throws IOException {
-    this(in, decompressor, 512);
+      throws IOException {
+    this(in, decompressor, MAX_INPUT_BUFFER_SIZE);
   }
 
   /**
@@ -64,8 +85,7 @@ public class DecompressorStream extends CompressionInputStream {
   protected DecompressorStream(InputStream in) throws IOException {
     super(in);
   }
-  
-  private byte[] oneByte = new byte[1];
+
   @Override
   public int read() throws IOException {
     checkStream();
@@ -86,7 +106,7 @@ public class DecompressorStream extends CompressionInputStream {
   }
 
   protected int decompress(byte[] b, int off, int len) throws IOException {
-    int n = 0;
+    int n;
 
     while ((n = decompressor.decompress(b, off, len)) == 0) {
       if (decompressor.needsDictionary()) {
@@ -170,7 +190,6 @@ public class DecompressorStream extends CompressionInputStream {
     decompressor.reset();
   }
 
-  private byte[] skipBytes = new byte[512];
   @Override
   public long skip(long n) throws IOException {
     // Sanity checks
@@ -178,7 +197,7 @@ public class DecompressorStream extends CompressionInputStream {
       throw new IllegalArgumentException("negative skip length");
     }
     checkStream();
-    
+
     // Read 'n' bytes
     int skipped = 0;
     while (skipped < n) {
