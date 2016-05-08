@@ -91,6 +91,9 @@ Release 2.7.3 - UNRELEASED
     HADOOP-13052. ChecksumFileSystem mishandles crc file permissions.
     (Daryn Sharp via kihwal)
 
+    HADOOP-13084. Fix ASF License warnings in branch-2.7.
+    (Brahma Reddy Battula via aajisaka)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES

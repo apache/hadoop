@@ -219,15 +219,16 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
-       <configuration>
+        <configuration>
           <excludes>
             <exclude>.gitattributes</exclude>
             <exclude>.gitignore</exclude>
             <exclude>.git/**</exclude>
             <exclude>.idea/**</exclude>
-	    <exclude>**/build/**</exclude>
-         </excludes>
-       </configuration>
+            <exclude>**/build/**</exclude>
+            <exclude>**/patchprocess/**</exclude>
+          </excludes>
+        </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-site-plugin</artifactId>
