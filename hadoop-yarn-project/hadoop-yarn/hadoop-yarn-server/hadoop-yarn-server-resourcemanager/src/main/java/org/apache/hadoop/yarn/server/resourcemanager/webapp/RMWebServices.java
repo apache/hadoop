@@ -904,9 +904,12 @@ public class RMWebServices {
               + " for post to ..." + operation;
       throw new AuthorizationException(msg);
     }
-
-    rm.getRMContext().getNodeLabelManager()
-        .replaceLabelsOnNode(newLabelsForNode);
+    try {
+      rm.getRMContext().getNodeLabelManager()
+          .replaceLabelsOnNode(newLabelsForNode);
+    } catch (IOException e) {
+      throw new BadRequestException(e);
+    }
 
     return Response.status(Status.OK).build();
   }
@@ -945,8 +948,12 @@ public class RMWebServices {
       throw new AuthorizationException(msg);
     }
     
-    rm.getRMContext().getNodeLabelManager()
-        .addToCluserNodeLabels(newNodeLabels.getNodeLabels());
+    try {
+      rm.getRMContext().getNodeLabelManager()
+          .addToCluserNodeLabels(newNodeLabels.getNodeLabels());
+    } catch (IOException e) {
+      throw new BadRequestException(e);
+    }
             
     return Response.status(Status.OK).build();
 
@@ -972,10 +979,12 @@ public class RMWebServices {
       throw new AuthorizationException(msg);
     }
 
-    rm.getRMContext()
-        .getNodeLabelManager()
-        .removeFromClusterNodeLabels(
-            new HashSet<String>(oldNodeLabels));
+    try {
+      rm.getRMContext().getNodeLabelManager()
+          .removeFromClusterNodeLabels(new HashSet<String>(oldNodeLabels));
+    } catch (IOException e) {
+      throw new BadRequestException(e);
+    }
 
     return Response.status(Status.OK).build();
   }
