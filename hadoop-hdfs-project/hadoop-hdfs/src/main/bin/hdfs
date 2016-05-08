@@ -279,6 +279,7 @@ shift
 HADOOP_SUBCMD_ARGS=("$@")
 
 if declare -f hdfs_subcommand_"${HADOOP_SUBCMD}" >/dev/null 2>&1; then
+  hadoop_debug "Calling dynamically: hdfs_subcommand_${HADOOP_SUBCMD} ${HADOOP_SUBCMD_ARGS[$*]}"
   "hdfs_subcommand_${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"
 else
   hdfscmd_case "${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"

@@ -256,6 +256,7 @@ shift
 HADOOP_SUBCMD_ARGS=("$@")
 
 if declare -f yarn_subcommand_"${HADOOP_SUBCMD}" >/dev/null 2>&1; then
+  hadoop_debug "Calling dynamically: yarn_subcommand_${HADOOP_SUBCMD} ${HADOOP_SUBCMD_ARGS[$*]}"
   "yarn_subcommand_${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"
 else
   yarncmd_case "${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"

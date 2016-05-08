@@ -21,8 +21,9 @@ load hadoop-functions_test_helper
 subcommandsetup () {
   export HADOOP_LIBEXEC_DIR="${TMP}/libexec"
   export HADOOP_CONF_DIR="${TMP}/conf"
-  mkdir -p "${HADOOP_LIBEXEC_DIR}/shellprofile.d" "${HADOOP_CONF_DIR}/shellprofile.d"
-  cat <<-'TOKEN'   > "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
+  mkdir -p "${HADOOP_LIBEXEC_DIR}"
+  echo   ". \"${BATS_TEST_DIRNAME}/../../main/bin/hadoop-functions.sh\"" > "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
+  cat <<-'TOKEN'   >> "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
 
 hadoop_subcommand_sub () {
   echo "unittest"
@@ -42,7 +43,6 @@ hadoop_subcommand_envcheck ()
 }
 TOKEN
   chmod a+rx "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
-
 }
 
 @test "hadoop_subcommand (addition)" {
