@@ -683,7 +683,7 @@ public class TestFsDatasetImpl {
         Assert.fail("This is not a valid code path. "
             + "out.close should have thrown an exception.");
       } catch (IOException ioe) {
-        GenericTestUtils.assertExceptionContains(info.toString(), ioe);
+        GenericTestUtils.assertExceptionContains(info.getXferAddr(), ioe);
       }
       finalizedDir.setWritable(true);
       finalizedDir.setExecutable(true);
