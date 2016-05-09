@@ -172,6 +172,9 @@ Release 2.7.3 - UNRELEASED
 
     HDFS-2043. TestHFlush failing intermittently. (Lin Yiqun via iwasakims)
 
+    HDFS-10372. Fix for failing TestFsDatasetImpl#testCleanShutdownOfVolume.
+    (Rushabh Shah via kihwal)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
