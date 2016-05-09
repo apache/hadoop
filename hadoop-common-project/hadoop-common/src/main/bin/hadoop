@@ -205,11 +205,11 @@ fi
 hadoop_verify_user "${HADOOP_SUBCMD}"
 
 if [[ ${HADOOP_SLAVE_MODE} = true ]]; then
-  hadoop_common_slave_mode_execute "${HADOOP_HDFS_HOME}/bin/hadoop" "${HADOOP_USER_PARAMS[@]}"
+  hadoop_common_slave_mode_execute "${HADOOP_COMMON_HOME}/bin/hadoop" "${HADOOP_USER_PARAMS[@]}"
   exit $?
 fi
 
-if [[ -n "${HADOOP_SUBCMD_SECURESERVICE}" ]]; then
+if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
   HADOOP_SECURE_USER="${HADOOP_SUBCMD_SECUREUSER}"
   hadoop_verify_secure_prereq
   hadoop_setup_secure_service
@@ -237,8 +237,8 @@ fi
 
 hadoop_finalize
 
-if [[ -n "${HADOOP_SUBCMD_SUPPORTDAEMONIZATION}" ]]; then
-  if [[ -n "${HADOOP_SUBCMD_SECURESERVICE}" ]]; then
+if [[ "${HADOOP_SUBCMD_SUPPORTDAEMONIZATION}" = true ]]; then
+  if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
     hadoop_secure_daemon_handler \
       "${HADOOP_DAEMON_MODE}" \
       "${HADOOP_SUBCMD}" \
