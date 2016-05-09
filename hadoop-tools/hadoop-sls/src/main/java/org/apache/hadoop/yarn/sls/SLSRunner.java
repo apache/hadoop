@@ -64,6 +64,7 @@ import org.apache.hadoop.yarn.sls.scheduler.SLSCapacityScheduler;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerWrapper;
 import org.apache.hadoop.yarn.sls.scheduler.TaskRunner;
 import org.apache.hadoop.yarn.sls.utils.SLSUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -316,10 +317,25 @@ public class SLSRunner {
             long taskFinish = Long.parseLong(
                     jsonTask.get("container.end.ms").toString());
             long lifeTime = taskFinish - taskStart;
+
+            // Set memory and vcores from job trace file
+            Resource res = Resources.clone(containerResource);
+            if (jsonTask.containsKey("container.memory")) {
+              int containerMemory = Integer.parseInt(
+                  jsonTask.get("container.memory").toString());
+              res.setMemory(containerMemory);
+            }
+
+            if (jsonTask.containsKey("container.vcores")) {
+              int containerVCores = Integer.parseInt(
+                  jsonTask.get("container.vcores").toString());
+              res.setVirtualCores(containerVCores);
+            }
+
             int priority = Integer.parseInt(
                     jsonTask.get("container.priority").toString());
             String type = jsonTask.get("container.type").toString();
-            containerList.add(new ContainerSimulator(containerResource,
+            containerList.add(new ContainerSimulator(res,
                     lifeTime, hostname, priority, type));
           }
 
