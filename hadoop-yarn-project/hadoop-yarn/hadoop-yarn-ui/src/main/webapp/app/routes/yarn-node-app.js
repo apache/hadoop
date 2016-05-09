@@ -21,7 +21,7 @@ import Ember from 'ember';
 export default Ember.Route.extend({
   model(param) {
     return Ember.RSVP.hash({
-      nodeApp: this.store.queryRecord('yarnNodeApp',
+      nodeApp: this.store.queryRecord('yarn-node-app',
           { nodeAddr : param.node_addr, appId: param.app_id }),
       nodeInfo: { id: param.node_id, addr: param.node_addr }
     });
