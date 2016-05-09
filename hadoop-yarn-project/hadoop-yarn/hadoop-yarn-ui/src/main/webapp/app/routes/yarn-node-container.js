@@ -22,7 +22,7 @@ export default Ember.Route.extend({
   model(param) {
     // Get a specific container running on a specific node.
     return Ember.RSVP.hash({
-      nodeContainer: this.store.queryRecord('yarnNodeContainer',
+      nodeContainer: this.store.queryRecord('yarn-node-container',
           { nodeHttpAddr: param.node_addr, containerId: param.container_id }),
       nodeInfo: { id: param.node_id, addr: param.node_addr }
     });

@@ -47,20 +47,20 @@ export default Ember.Helper.helper(function(params,hash) {
       '<div class="panel-heading"><h4>Node Manager<br>(' + normalizedNodeId + ')</h4></div>'+
       '<div class="panel-body"><ul class="nav nav-pills nav-stacked" id="stacked-menu">' +
       '<ul class="nav nav-pills nav-stacked collapse in"><li';
-  if (hash.path == 'yarnNode') {
+  if (hash.path == 'yarn-node') {
     html = html + ' class="active"';
   }
-  html = html + '><a href="yarnNode/' + hash.nodeId + '/' + hash.nodeAddr +
+  html = html + '><a href="yarn-node/' + hash.nodeId + '/' + hash.nodeAddr +
       '">Node Information</a></li><li';
-  if (hash.path == 'yarnNodeApps') {
+  if (hash.path == 'yarn-node-apps') {
     html = html + ' class="active"';
   }
-  html = html + '><a href="yarnNodeApps/' + hash.nodeId + '/' + hash.nodeAddr +
+  html = html + '><a href="yarn-node-apps/' + hash.nodeId + '/' + hash.nodeAddr +
       '">List of Applications</a></li><li';
-  if (hash.path == 'yarnNodeContainers') {
+  if (hash.path == 'yarn-node-containers') {
     html = html + ' class="active"';
   }
-  html = html + '><a href="yarnNodeContainers/' +hash.nodeId + '/' + hash.nodeAddr +
+  html = html + '><a href="yarn-node-containers/' +hash.nodeId + '/' + hash.nodeAddr +
       '">List of Containers</a></li></ul></ul></div>';
   return Ember.String.htmlSafe(html);
 });

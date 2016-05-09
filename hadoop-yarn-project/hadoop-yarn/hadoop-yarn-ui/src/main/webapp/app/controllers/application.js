@@ -29,25 +29,25 @@ export default Ember.Controller.extend({
   outputMainMenu: function(){
     var path = this.get('currentPath');
     var html = '<li';
-    if (path == 'yarnQueue') {
+    if (path == 'yarn-queue') {
       html = html + ' class="active"';
     }
-    html = html + '><a href="yarnQueue/root">Queues<span class="sr-only">' +
+    html = html + '><a href="yarn-queue/root">Queues<span class="sr-only">' +
         '(current)</span></a></li><li';
-    if (path.lastIndexOf('yarnApp', 0) == 0) {
+    if (path.lastIndexOf('yarn-app', 0) == 0) {
       html = html + ' class="active"';
     }
-    html = html + '><a href="yarnApps">Applications<span class="sr-only">' +
+    html = html + '><a href="yarn-apps">Applications<span class="sr-only">' +
         '(current)</span></a></li><li';
-    if (path == 'clusterOverview') {
+    if (path == 'cluster-overview') {
       html = html + ' class="active"';
     }
-    html = html + '><a href="clusterOverview">Cluster Overview<span class=' +
+    html = html + '><a href="cluster-overview">Cluster Overview<span class=' +
         '"sr-only">(current)</span></a></li><li';
-    if (path.lastIndexOf('yarnNode', 0) == 0) {
+    if (path.lastIndexOf('yarn-node', 0) == 0) {
       html = html + ' class="active"';
     }
-    html = html + '><a href="yarnNodes">Nodes<span class="sr-only">' +
+    html = html + '><a href="yarn-nodes">Nodes<span class="sr-only">' +
         '(current)</span></a></li>';
     return Ember.String.htmlSafe(html);
   }.property('currentPath')
