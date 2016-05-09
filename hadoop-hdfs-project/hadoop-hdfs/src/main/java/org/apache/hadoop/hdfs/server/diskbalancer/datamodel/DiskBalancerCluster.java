@@ -31,12 +31,13 @@ import org.codehaus.jackson.map.ObjectMapper;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -76,6 +77,13 @@ public class DiskBalancerCluster {
 
   @JsonIgnore
   private List<DiskBalancerDataNode> nodesToProcess;
+  @JsonIgnore
+  private final Map<String, DiskBalancerDataNode> ipList;
+  @JsonIgnore
+  private final Map<String, DiskBalancerDataNode> hostNames;
+  @JsonIgnore
+  private final Map<String, DiskBalancerDataNode>  hostUUID;
+
   private float threshold;
 
   /**
@@ -85,7 +93,9 @@ public class DiskBalancerCluster {
     nodes = new LinkedList<>();
     exclusionList = new TreeSet<>();
     inclusionList = new TreeSet<>();
-
+    ipList = new HashMap<>();
+    hostNames = new HashMap<>();
+    hostUUID = new HashMap<>();
   }
 
   /**
@@ -95,10 +105,9 @@ public class DiskBalancerCluster {
    * @throws IOException
    */
   public DiskBalancerCluster(ClusterConnector connector) throws IOException {
+    this();
     Preconditions.checkNotNull(connector);
     clusterConnector = connector;
-    exclusionList = new TreeSet<>();
-    inclusionList = new TreeSet<>();
   }
 
   /**
@@ -119,8 +128,25 @@ public class DiskBalancerCluster {
    */
   public void readClusterInfo() throws Exception {
     Preconditions.checkNotNull(clusterConnector);
-    LOG.info("Using connector : " + clusterConnector.getConnectorInfo());
+    LOG.debug("Using connector : {}" , clusterConnector.getConnectorInfo());
     nodes = clusterConnector.getNodes();
+    for(DiskBalancerDataNode node : nodes) {
+
+      if(node.getDataNodeIP()!= null && !node.getDataNodeIP().isEmpty()) {
+        ipList.put(node.getDataNodeIP(), node);
+      }
+
+      if(node.getDataNodeName() != null && !node.getDataNodeName().isEmpty()) {
+        // TODO : should we support Internationalized Domain Names ?
+        // Disk balancer assumes that host names are ascii. If not
+        // end user can always balance the node via IP address or DataNode UUID.
+        hostNames.put(node.getDataNodeName().toLowerCase(Locale.US), node);
+      }
+
+      if(node.getDataNodeUUID() != null && !node.getDataNodeUUID().isEmpty()) {
+        hostUUID.put(node.getDataNodeUUID(), node);
+      }
+    }
   }
 
   /**
@@ -259,30 +285,6 @@ public class DiskBalancerCluster {
   }
 
   /**
-   * Creates an Output directory for the cluster output.
-   *
-   * @throws IOException - On failure to create an new directory
-   */
-  public void createOutPutDirectory() throws IOException {
-    if (Files.exists(Paths.get(this.getOutput()))) {
-      LOG.error("An output directory already exists at this location. Path : " +
-          this.getOutput());
-      throw new IOException(
-          "An output directory already exists at this location. Path : " +
-              this.getOutput());
-    }
-
-    File f = new File(this.getOutput());
-    if (!f.mkdirs()) {
-      LOG.error("Unable to create the output directory. Path : " + this
-          .getOutput());
-      throw new IOException(
-          "Unable to create the output directory. Path : " + this.getOutput());
-    }
-    LOG.info("Output directory created. Path : " + this.getOutput());
-  }
-
-  /**
    * Compute plan takes a node and constructs a planner that creates a plan that
    * we would like to follow.
    * <p/>
@@ -294,7 +296,7 @@ public class DiskBalancerCluster {
    * @param thresholdPercent - in percentage
    * @return list of NodePlans
    */
-  public List<NodePlan> computePlan(float thresholdPercent) {
+  public List<NodePlan> computePlan(double thresholdPercent) {
     List<NodePlan> planList = new LinkedList<>();
 
     if (nodesToProcess == null) {
@@ -366,11 +368,24 @@ public class DiskBalancerCluster {
    * @return DiskBalancerDataNode.
    */
   public DiskBalancerDataNode getNodeByUUID(String uuid) {
-    for(DiskBalancerDataNode node : this.getNodes()) {
-      if(node.getDataNodeUUID().equals(uuid)) {
-        return node;
-      }
-    }
-    return null;
+    return hostUUID.get(uuid);
+  }
+
+  /**
+   * Returns a node by IP Address.
+   * @param ipAddresss - IP address String.
+   * @return DiskBalancerDataNode.
+   */
+  public DiskBalancerDataNode getNodeByIPAddress(String ipAddresss) {
+    return ipList.get(ipAddresss);
+  }
+
+  /**
+   * Returns a node by hostName.
+   * @param hostName - HostName.
+   * @return DiskBalancerDataNode.
+   */
+  public DiskBalancerDataNode getNodeByName(String hostName) {
+    return hostNames.get(hostName);
   }
 }

@@ -44,7 +44,7 @@ public class GreedyPlanner implements Planner {
   public static final long TB = GB * 1024L;
   private static final Logger LOG =
       LoggerFactory.getLogger(GreedyPlanner.class);
-  private final float threshold;
+  private final double threshold;
 
   /**
    * Constructs a greedy planner.
@@ -52,7 +52,7 @@ public class GreedyPlanner implements Planner {
    * @param threshold - Disk tolerance that we are ok with
    * @param node      - node on which this planner is operating upon
    */
-  public GreedyPlanner(float threshold, DiskBalancerDataNode node) {
+  public GreedyPlanner(double threshold, DiskBalancerDataNode node) {
     this.threshold = threshold;
   }
 

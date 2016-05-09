@@ -220,7 +220,7 @@ public class DiskBalancerDataNode implements Comparable<DiskBalancerDataNode> {
    * @param threshold - Percentage
    * @return true or false
    */
-  public boolean isBalancingNeeded(float threshold) {
+  public boolean isBalancingNeeded(double threshold) {
     for (DiskBalancerVolumeSet vSet : getVolumeSets().values()) {
       if (vSet.isBalancingNeeded(threshold)) {
         return true;

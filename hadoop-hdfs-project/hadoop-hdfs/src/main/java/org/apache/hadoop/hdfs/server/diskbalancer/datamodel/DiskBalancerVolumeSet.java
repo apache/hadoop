@@ -267,7 +267,7 @@ public class DiskBalancerVolumeSet {
    *
    * @return true if balancing is needed false otherwise.
    */
-  public boolean isBalancingNeeded(float thresholdPercentage) {
+  public boolean isBalancingNeeded(double thresholdPercentage) {
     double threshold = thresholdPercentage / 100.0d;
 
     if(volumes == null || volumes.size() <= 1) {
