@@ -20,7 +20,7 @@ import Ember from 'ember';
 
 export default Ember.Route.extend({
   model() {
-    var apps = this.store.findAll('yarnApp');
+    var apps = this.store.findAll('yarn-app');
     return apps;
   }
 });

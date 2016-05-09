@@ -23,7 +23,7 @@ export default Ember.Route.extend({
    * Redirect root URL to cluster overview page.
    */
   beforeModel: function() {
-    this.replaceWith('clusterOverview');
+    this.replaceWith('cluster-overview');
   }
 });
 

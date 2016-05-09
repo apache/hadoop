@@ -36,7 +36,7 @@ export default Ember.Helper.helper(function(params,hash) {
   var html = '<td>';
   var logFilesCommaSeparated = "";
   for (var i = 0; i < logFilesLen; i++) {
-    html = html + '<a href="yarnContainerLog/' + nodeId + '/' +
+    html = html + '<a href="yarn-container-log/' + nodeId + '/' +
         nodeAddr + '/' + containerId + '/' + logFiles[i] + '">' + logFiles[i] +
         '</a>';
     if (i != logFilesLen - 1) {

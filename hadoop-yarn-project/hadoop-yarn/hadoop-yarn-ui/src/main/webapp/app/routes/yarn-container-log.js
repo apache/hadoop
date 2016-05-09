@@ -24,7 +24,7 @@ export default Ember.Route.extend({
     var id = param.node_addr + Constants.PARAM_SEPARATOR + param.container_id +
         Constants.PARAM_SEPARATOR + param.filename;
     return Ember.RSVP.hash({
-      containerLog: this.store.findRecord('yarnContainerLog', id),
+      containerLog: this.store.findRecord('yarn-container-log', id),
       nodeInfo: { id: param.node_id, addr: param.node_addr }
     }).then(function(hash) {
       // Just return as its success.

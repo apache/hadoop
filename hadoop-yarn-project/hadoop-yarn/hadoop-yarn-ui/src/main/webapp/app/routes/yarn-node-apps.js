@@ -22,7 +22,7 @@ export default Ember.Route.extend({
   model(param) {
     // Get all apps running on a specific node. Node is contacted by using node_addr.
     return Ember.RSVP.hash({
-      apps: this.store.query('yarnNodeApp', { nodeAddr: param.node_addr }),
+      apps: this.store.query('yarn-node-app', { nodeAddr: param.node_addr }),
       nodeInfo: { id: param.node_id, addr: param.node_addr }
     });
   }

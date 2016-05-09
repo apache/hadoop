@@ -57,6 +57,6 @@ export default DS.Model.extend({
   }.property(),
 
   link: function() {
-    return "/yarnAppAttempt/" + this.get("id");
+    return "/yarn-app-attempt/" + this.get("id");
   }.property(),
 });

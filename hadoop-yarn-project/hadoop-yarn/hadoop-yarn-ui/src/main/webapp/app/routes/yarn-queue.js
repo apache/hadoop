@@ -22,15 +22,15 @@ export default Ember.Route.extend({
   model(param) {
     return Ember.RSVP.hash({
       selected : param.queue_name,
-      queues: this.store.findAll('yarnQueue'),
+      queues: this.store.findAll('yarn-queue'),
       selectedQueue : undefined,
       apps: undefined, // apps of selected queue
     });
   },
 
   afterModel(model) {
-    model.selectedQueue = this.store.peekRecord('yarnQueue', model.selected);
-    model.apps = this.store.findAll('yarnApp');
+    model.selectedQueue = this.store.peekRecord('yarn-queue', model.selected);
+    model.apps = this.store.findAll('yarn-app');
     model.apps.forEach(function(o) {
       console.log(o);
     })

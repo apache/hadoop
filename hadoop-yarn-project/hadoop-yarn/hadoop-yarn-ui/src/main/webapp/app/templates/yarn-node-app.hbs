@@ -18,7 +18,7 @@
 
 <div class="col-md-12 container-fluid">
   <div class="row">
-    {{node-menu path="yarnNodeApp" nodeAddr=model.nodeInfo.addr nodeId=model.nodeInfo.id}}
+    {{node-menu path="yarn-node-app" nodeAddr=model.nodeInfo.addr nodeId=model.nodeInfo.id}}
     <div class="col-md-10 container-fluid">
       <div class="panel panel-default">
         <div class="panel-heading"><b>Application Information</b></div>
@@ -48,7 +48,7 @@
         <tbody>
           {{#each model.nodeApp.containers as |container|}}
             <tr>
-              <td><a href="yarnNodeContainer/{{model.nodeInfo.id}}/{{model.nodeInfo.addr}}/{{container}}">{{container}}</a></td>
+              <td><a href="yarn-node-container/{{model.nodeInfo.id}}/{{model.nodeInfo.addr}}/{{container}}">{{container}}</a></td>
             </tr>
           {{/each}}
        </tbody>

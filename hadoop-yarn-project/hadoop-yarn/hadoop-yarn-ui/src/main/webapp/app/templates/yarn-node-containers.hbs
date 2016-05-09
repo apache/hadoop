@@ -18,7 +18,7 @@
 
 <div class="col-md-12 container-fluid">
   <div class="row">
-    {{node-menu path="yarnNodeContainers" nodeAddr=model.nodeInfo.addr nodeId=model.nodeInfo.id}}
+    {{node-menu path="yarn-node-containers" nodeAddr=model.nodeInfo.addr nodeId=model.nodeInfo.id}}
     <div class="col-md-10 container-fluid">
       <table id="node-containers-table" class="display table table-striped table-bordered" cellspacing="0" width="100%">
         <thead>
@@ -36,7 +36,7 @@
                 <tr><td colspan="4" align="center">No containers found on this node</td></tr>
               {{else}}
                 <tr>
-                  <td><a href="yarnNodeContainer/{{model.nodeInfo.id}}/{{model.nodeInfo.addr}}/{{container.containerId}}">{{container.containerId}}</a></td>
+                  <td><a href="yarn-node-container/{{model.nodeInfo.id}}/{{model.nodeInfo.addr}}/{{container.containerId}}">{{container.containerId}}</a></td>
                   <td><span class={{container.containerStateStyle}}>{{container.state}}</span></td>
                   <td>{{container.user}}</td>
                   <td>
