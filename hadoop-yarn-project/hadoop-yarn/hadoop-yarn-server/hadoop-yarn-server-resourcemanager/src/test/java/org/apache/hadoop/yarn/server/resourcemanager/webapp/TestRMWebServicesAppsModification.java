@@ -591,11 +591,11 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
         continue;
       }
       if (i == 0) {
-        assertEquals(Status.NOT_FOUND.getStatusCode(),
-            response.getStatusInfo().getStatusCode());
+        assertResponseStatusCode(Status.NOT_FOUND,
+            response.getStatusInfo());
       } else {
-        assertEquals(Status.BAD_REQUEST.getStatusCode(),
-            response.getStatusInfo().getStatusCode());
+        assertResponseStatusCode(Status.BAD_REQUEST,
+            response.getStatusInfo());
       }
     }
     rm.stop();
