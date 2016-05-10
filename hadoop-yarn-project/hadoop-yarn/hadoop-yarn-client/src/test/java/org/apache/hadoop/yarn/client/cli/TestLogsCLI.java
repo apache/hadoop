@@ -42,11 +42,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -55,22 +55,21 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 import org.apache.hadoop.yarn.logaggregation.LogCLIHelpers;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestLogsCLI {
+
   ByteArrayOutputStream sysOutStream;
   private PrintStream sysOut;
-  
+
   ByteArrayOutputStream sysErrStream;
   private PrintStream sysErr;
 
@@ -79,7 +78,7 @@ public class TestLogsCLI {
     sysOutStream = new ByteArrayOutputStream();
     sysOut =  new PrintStream(sysOutStream);
     System.setOut(sysOut);
-    
+
     sysErrStream = new ByteArrayOutputStream();
     sysErr = new PrintStream(sysErrStream);
     System.setErr(sysErr);
@@ -91,16 +90,18 @@ public class TestLogsCLI {
     conf.setClass("fs.file.impl", LocalFileSystem.class, FileSystem.class);
     LogCLIHelpers cliHelper = new LogCLIHelpers();
     cliHelper.setConf(conf);
-    YarnClient mockYarnClient = createMockYarnClient(YarnApplicationState.FINISHED);
+    YarnClient mockYarnClient = createMockYarnClient(
+        YarnApplicationState.FINISHED,
+        UserGroupInformation.getCurrentUser().getShortUserName());
     LogsCLI dumper = new LogsCLIForTest(mockYarnClient);
     dumper.setConf(conf);
-    
+
     // verify dumping a non-existent application's logs returns a failure code
     int exitCode = dumper.run( new String[] {
         "-applicationId", "application_0_0" } );
     assertTrue("Should return an error code", exitCode != 0);
-    
-    // verify dumping a non-existent container log is a failure code 
+
+    // verify dumping a non-existent container log is a failure code
     exitCode = cliHelper.dumpAContainersLogs("application_0_0", "container_0_0",
         "nonexistentnode:1234", "nobody");
     assertTrue("Should return an error code", exitCode != 0);
@@ -109,10 +110,12 @@ public class TestLogsCLI {
   @Test(timeout = 5000l)
   public void testInvalidApplicationId() throws Exception {
     Configuration conf = new YarnConfiguration();
-    YarnClient mockYarnClient = createMockYarnClient(YarnApplicationState.FINISHED);
+    YarnClient mockYarnClient = createMockYarnClient(
+        YarnApplicationState.FINISHED,
+        UserGroupInformation.getCurrentUser().getShortUserName());
     LogsCLI cli = new LogsCLIForTest(mockYarnClient);
     cli.setConf(conf);
-    
+
     int exitCode = cli.run( new String[] { "-applicationId", "not_an_app_id"});
     assertTrue(exitCode == -1);
     assertTrue(sysErrStream.toString().startsWith("Invalid ApplicationId specified"));
@@ -137,7 +140,9 @@ public class TestLogsCLI {
   @Test(timeout = 5000l)
   public void testHelpMessage() throws Exception {
     Configuration conf = new YarnConfiguration();
-    YarnClient mockYarnClient = createMockYarnClient(YarnApplicationState.FINISHED);
+    YarnClient mockYarnClient = createMockYarnClient(
+        YarnApplicationState.FINISHED,
+        UserGroupInformation.getCurrentUser().getShortUserName());
     LogsCLI dumper = new LogsCLIForTest(mockYarnClient);
     dumper.setConf(conf);
 
@@ -187,7 +192,7 @@ public class TestLogsCLI {
     String appReportStr = baos.toString("UTF-8");
     Assert.assertEquals(appReportStr, sysOutStream.toString());
   }
-  
+
   @Test (timeout = 15000)
   public void testFetchApplictionLogs() throws Exception {
     String remoteLogRootDir = "target/logs/";
@@ -200,13 +205,13 @@ public class TestLogsCLI {
     FileSystem fs = FileSystem.get(configuration);
 
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    ApplicationId appId = ApplicationIdPBImpl.newInstance(0, 1);
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
-        ApplicationAttemptIdPBImpl.newInstance(appId, 1);
-    ContainerId containerId0 = ContainerIdPBImpl.newContainerId(appAttemptId, 0);
-    ContainerId containerId1 = ContainerIdPBImpl.newContainerId(appAttemptId, 1);
-    ContainerId containerId2 = ContainerIdPBImpl.newContainerId(appAttemptId, 2);
-    ContainerId containerId3 = ContainerIdPBImpl.newContainerId(appAttemptId, 3);
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId containerId0 = ContainerId.newContainerId(appAttemptId, 0);
+    ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 1);
+    ContainerId containerId2 = ContainerId.newContainerId(appAttemptId, 2);
+    ContainerId containerId3 = ContainerId.newContainerId(appAttemptId, 3);
     NodeId nodeId = NodeId.newInstance("localhost", 1234);
 
     // create local logs
@@ -222,6 +227,7 @@ public class TestLogsCLI {
       fs.delete(appLogsDir, true);
     }
     assertTrue(fs.mkdirs(appLogsDir));
+
     List<String> rootLogDirs = Arrays.asList(rootLogDir);
 
     List<String> logTypes = new ArrayList<String>();
@@ -258,7 +264,8 @@ public class TestLogsCLI {
       containerId3, path, fs);
 
     YarnClient mockYarnClient =
-        createMockYarnClient(YarnApplicationState.FINISHED);
+        createMockYarnClient(
+            YarnApplicationState.FINISHED, ugi.getShortUserName());
     LogsCLI cli = new LogsCLIForTest(mockYarnClient);
     cli.setConf(configuration);
 
@@ -349,6 +356,143 @@ public class TestLogsCLI {
   }
 
   @Test (timeout = 15000)
+  public void testFetchApplictionLogsAsAnotherUser() throws Exception {
+    String remoteLogRootDir = "target/logs/";
+    String rootLogDir = "target/LocalLogs";
+
+    String testUser = "test";
+    UserGroupInformation testUgi = UserGroupInformation
+        .createRemoteUser(testUser);
+
+    Configuration configuration = new Configuration();
+    configuration.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
+    configuration
+        .set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogRootDir);
+    configuration.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+    configuration.set(YarnConfiguration.YARN_ADMIN_ACL, "admin");
+    FileSystem fs = FileSystem.get(configuration);
+
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId containerId = ContainerId
+        .newContainerId(appAttemptId, 1);
+    NodeId nodeId = NodeId.newInstance("localhost", 1234);
+
+    try {
+      Path rootLogDirPath = new Path(rootLogDir);
+      if (fs.exists(rootLogDirPath)) {
+        fs.delete(rootLogDirPath, true);
+      }
+      assertTrue(fs.mkdirs(rootLogDirPath));
+
+      // create local app dir for app
+      final Path appLogsDir = new Path(rootLogDirPath, appId.toString());
+      if (fs.exists(appLogsDir)) {
+        fs.delete(appLogsDir, true);
+      }
+      assertTrue(fs.mkdirs(appLogsDir));
+
+      List<String> rootLogDirs = Arrays.asList(rootLogDir);
+      List<String> logTypes = new ArrayList<String>();
+      logTypes.add("syslog");
+
+      // create container logs in localLogDir for app
+      createContainerLogInLocalDir(appLogsDir, containerId, fs, logTypes);
+
+      // create the remote app dir for app
+      // but for a different user testUser"
+      Path path = new Path(remoteLogRootDir + testUser + "/logs/" + appId);
+      if (fs.exists(path)) {
+        fs.delete(path, true);
+      }
+      assertTrue(fs.mkdirs(path));
+
+      // upload container logs for app into remote dir
+      uploadContainerLogIntoRemoteDir(testUgi, configuration, rootLogDirs,
+          nodeId, containerId, path, fs);
+
+      YarnClient mockYarnClient = createMockYarnClient(
+          YarnApplicationState.FINISHED, testUgi.getShortUserName());
+      LogsCLI cli = new LogsCLIForTest(mockYarnClient);
+      cli.setConf(configuration);
+
+      // Verify that we can get the application logs by specifying
+      // a correct appOwner
+      int exitCode = cli.run(new String[] {
+          "-applicationId", appId.toString(),
+          "-appOwner", testUser});
+      assertTrue(exitCode == 0);
+      assertTrue(sysOutStream.toString().contains(
+          "Hello " + containerId + " in syslog!"));
+      sysOutStream.reset();
+
+      // Verify that we can not get the application logs
+      // if an invalid user is specified
+      exitCode = cli.run(new String[] {
+          "-applicationId", appId.toString(),
+          "-appOwner", "invalid"});
+      assertTrue(exitCode == -1);
+      assertTrue(sysErrStream.toString().contains("Can not find the logs "
+          + "for the application: " + appId.toString()));
+      sysErrStream.reset();
+
+      // Verify that we do not specify appOwner, and can not
+      // get appReport from RM, we still can figure out the appOwner
+      // and can get app logs successfully.
+      YarnClient mockYarnClient2 = createMockYarnClientUnknownApp();
+      cli = new LogsCLIForTest(mockYarnClient2);
+      cli.setConf(configuration);
+      exitCode = cli.run(new String[] {
+          "-applicationId", appId.toString()});
+      assertTrue(exitCode == 0);
+      assertTrue(sysOutStream.toString().contains("Hello "
+          + containerId + " in syslog!"));
+      sysOutStream.reset();
+
+      // Verify that we could get the err message "Can not find the appOwner"
+      // if we do not specify the appOwner, can not get appReport, and
+      // the app does not exist in remote dir.
+      ApplicationId appId2 = ApplicationId.newInstance(
+          System.currentTimeMillis(), 2);
+      exitCode = cli.run(new String[] {
+          "-applicationId", appId2.toString()});
+      assertTrue(exitCode == -1);
+      assertTrue(sysErrStream.toString().contains(
+          "Can not find the appOwner"));
+      sysErrStream.reset();
+
+      // Verify that we could not get appOwner
+      // because we don't have file-system permissions
+      ApplicationId appTest = ApplicationId.newInstance(
+          System.currentTimeMillis(), 1000);
+      String priorityUser = "priority";
+      Path pathWithoutPerm = new Path(remoteLogRootDir + priorityUser
+          + "/logs/" + appTest);
+      if (fs.exists(pathWithoutPerm)) {
+        fs.delete(pathWithoutPerm, true);
+      }
+      // The user will not have read permission for this directory.
+      // To mimic the scenario that the user can not get file status
+      FsPermission permission = FsPermission
+          .createImmutable((short) 01300);
+      assertTrue(fs.mkdirs(pathWithoutPerm, permission));
+
+      exitCode = cli.run(new String[] {
+          "-applicationId", appTest.toString()});
+      assertTrue(exitCode == -1);
+      assertTrue(sysErrStream.toString().contains(
+        "Guessed logs' owner is " + priorityUser + " and current user "
+            + UserGroupInformation.getCurrentUser().getUserName()
+            + " does not have permission to access"));
+      sysErrStream.reset();
+    } finally {
+      fs.delete(new Path(remoteLogRootDir), true);
+      fs.delete(new Path(rootLogDir), true);
+    }
+  }
+
+  @Test (timeout = 15000)
   public void testPrintContainerLogMetadata() throws Exception {
     String remoteLogRootDir = "target/logs/";
     Configuration configuration = new Configuration();
@@ -380,7 +524,8 @@ public class TestLogsCLI {
         appId, containerIds, nodeIds);
 
     YarnClient mockYarnClient =
-        createMockYarnClient(YarnApplicationState.FINISHED);
+        createMockYarnClient(YarnApplicationState.FINISHED,
+        UserGroupInformation.getCurrentUser().getShortUserName());
     LogsCLI cli = new LogsCLIForTest(mockYarnClient);
     cli.setConf(configuration);
 
@@ -466,7 +611,8 @@ public class TestLogsCLI {
         appId, containerIds, nodeIds);
 
     YarnClient mockYarnClient =
-        createMockYarnClient(YarnApplicationState.FINISHED);
+        createMockYarnClient(YarnApplicationState.FINISHED,
+        UserGroupInformation.getCurrentUser().getShortUserName());
     LogsCLI cli = new LogsCLIForTest(mockYarnClient);
     cli.setConf(configuration);
 
@@ -508,7 +654,8 @@ public class TestLogsCLI {
     assertTrue(fs.exists(harPath));
 
     YarnClient mockYarnClient =
-        createMockYarnClient(YarnApplicationState.FINISHED);
+        createMockYarnClient(YarnApplicationState.FINISHED,
+            ugi.getShortUserName());
     LogsCLI cli = new LogsCLIForTest(mockYarnClient);
     cli.setConf(configuration);
     int exitCode = cli.run(new String[]{"-applicationId",
@@ -630,10 +777,12 @@ public class TestLogsCLI {
     writer.close();
   }
 
-  private YarnClient createMockYarnClient(YarnApplicationState appState)
+  private YarnClient createMockYarnClient(YarnApplicationState appState,
+      String user)
       throws YarnException, IOException {
     YarnClient mockClient = mock(YarnClient.class);
     ApplicationReport mockAppReport = mock(ApplicationReport.class);
+    doReturn(user).when(mockAppReport).getUser();
     doReturn(appState).when(mockAppReport).getYarnApplicationState();
     doReturn(mockAppReport).when(mockClient).getApplicationReport(
         any(ApplicationId.class));
@@ -659,9 +808,9 @@ public class TestLogsCLI {
   }
 
   private static class LogsCLIForTest extends LogsCLI {
-    
+
     private YarnClient yarnClient;
-    
+
     public LogsCLIForTest(YarnClient yarnClient) {
       super();
       this.yarnClient = yarnClient;
