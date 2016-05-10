@@ -53,7 +53,7 @@ public class SysInfoLinux extends SysInfo {
    */
   private static final String PROCFS_MEMFILE = "/proc/meminfo";
   private static final Pattern PROCFS_MEMFILE_FORMAT =
-      Pattern.compile("^([a-zA-Z]*):[ \t]*([0-9]*)[ \t]kB");
+      Pattern.compile("^([a-zA-Z_()]*):[ \t]*([0-9]*)[ \t]*(kB)?");
 
   // We need the values for the following keys in meminfo
   private static final String MEMTOTAL_STRING = "MemTotal";
@@ -61,6 +61,12 @@ public class SysInfoLinux extends SysInfo {
   private static final String MEMFREE_STRING = "MemFree";
   private static final String SWAPFREE_STRING = "SwapFree";
   private static final String INACTIVE_STRING = "Inactive";
+  private static final String INACTIVEFILE_STRING = "Inactive(file)";
+  private static final String HARDWARECORRUPTED_STRING = "HardwareCorrupted";
+  private static final String HUGEPAGESTOTAL_STRING = "HugePages_Total";
+  private static final String HUGEPAGESIZE_STRING = "Hugepagesize";
+
+
 
   /**
    * Patterns for parsing /proc/cpuinfo.
@@ -122,7 +128,13 @@ public class SysInfoLinux extends SysInfo {
   private long swapSize = 0;
   private long ramSizeFree = 0;  // free ram space on the machine (kB)
   private long swapSizeFree = 0; // free swap space on the machine (kB)
-  private long inactiveSize = 0; // inactive cache memory (kB)
+  private long inactiveSize = 0; // inactive memory (kB)
+  private long inactiveFileSize = -1; // inactive cache memory, -1 if not there
+  private long hardwareCorruptSize = 0; // RAM corrupt and not available
+  private long hugePagesTotal = 0; // # of hugepages reserved
+  private long hugePageSize = 0; // # size of each hugepage
+
+
   /* number of logical processors on the system. */
   private int numProcessors = 0;
   /* number of physical cores on the system. */
@@ -245,6 +257,14 @@ public class SysInfoLinux extends SysInfo {
             swapSizeFree = Long.parseLong(mat.group(2));
           } else if (mat.group(1).equals(INACTIVE_STRING)) {
             inactiveSize = Long.parseLong(mat.group(2));
+          } else if (mat.group(1).equals(INACTIVEFILE_STRING)) {
+            inactiveFileSize = Long.parseLong(mat.group(2));
+          } else if (mat.group(1).equals(HARDWARECORRUPTED_STRING)) {
+            hardwareCorruptSize = Long.parseLong(mat.group(2));
+          } else if (mat.group(1).equals(HUGEPAGESTOTAL_STRING)) {
+            hugePagesTotal = Long.parseLong(mat.group(2));
+          } else if (mat.group(1).equals(HUGEPAGESIZE_STRING)) {
+            hugePageSize = Long.parseLong(mat.group(2));
           }
         }
         str = in.readLine();
@@ -554,28 +574,31 @@ public class SysInfoLinux extends SysInfo {
   @Override
   public long getPhysicalMemorySize() {
     readProcMemInfoFile();
-    return ramSize * 1024;
+    return (ramSize
+            - hardwareCorruptSize
+            - (hugePagesTotal * hugePageSize)) * 1024;
   }
 
   /** {@inheritDoc} */
   @Override
   public long getVirtualMemorySize() {
-    readProcMemInfoFile();
-    return (ramSize + swapSize) * 1024;
+    return getPhysicalMemorySize() + (swapSize * 1024);
   }
 
   /** {@inheritDoc} */
   @Override
   public long getAvailablePhysicalMemorySize() {
     readProcMemInfoFile(true);
-    return (ramSizeFree + inactiveSize) * 1024;
+    long inactive = inactiveFileSize != -1
+        ? inactiveFileSize
+        : inactiveSize;
+    return (ramSizeFree + inactive) * 1024;
   }
 
   /** {@inheritDoc} */
   @Override
   public long getAvailableVirtualMemorySize() {
-    readProcMemInfoFile(true);
-    return (ramSizeFree + swapSizeFree + inactiveSize) * 1024;
+    return getAvailablePhysicalMemorySize() + (swapSizeFree * 1024);
   }
 
   /** {@inheritDoc} */
