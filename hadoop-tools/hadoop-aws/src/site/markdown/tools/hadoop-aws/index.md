@@ -14,23 +14,28 @@
 
 # Hadoop-AWS module: Integration with Amazon Web Services
 
+<!-- MACRO{toc|fromDepth=0|toDepth=5} -->
+
+## Overview
+
 The `hadoop-aws` module provides support for AWS integration. The generated
 JAR file, `hadoop-aws.jar` also declares a transitive dependency on all
 external artifacts which are needed for this support —enabling downstream
 applications to easily use this support.
 
-Features
+### Features
 
-1. The "classic" `s3:` filesystem for storing objects in Amazon S3 Storage
+1. The "classic" `s3:` filesystem for storing objects in Amazon S3 Storage.
+**NOTE: `s3:` is being phased out. Use `s3n:` or `s3a:` instead.**
 1. The second-generation, `s3n:` filesystem, making it easy to share
-data between hadoop and other applications via the S3 object store
+data between hadoop and other applications via the S3 object store.
 1. The third generation, `s3a:` filesystem. Designed to be a switch in
 replacement for `s3n:`, this filesystem binding supports larger files and promises
 higher performance.
 
 The specifics of using these filesystems are documented below.
 
-## Warning: Object Stores are not filesystems.
+### Warning #1: Object Stores are not filesystems.
 
 Amazon S3 is an example of "an object store". In order to achieve scalability
 and especially high availability, S3 has —as many other cloud object stores have
@@ -47,14 +52,14 @@ recursive file-by-file operations. They take time at least proportional to
 the number of files, during which time partial updates may be visible. If
 the operations are interrupted, the filesystem is left in an intermediate state.
 
-## Warning #2: Because Object stores don't track modification times of directories,
+### Warning #2: Because Object stores don't track modification times of directories,
 features of Hadoop relying on this can have unexpected behaviour. E.g. the
 AggregatedLogDeletionService of YARN will not remove the appropriate logfiles.
 
 For further discussion on these topics, please consult
 [The Hadoop FileSystem API Definition](../../../hadoop-project-dist/hadoop-common/filesystem/index.html).
 
-## Warning #3: your AWS credentials are valuable
+### Warning #3: your AWS credentials are valuable
 
 Your AWS credentials not only pay for services, they offer read and write
 access to the data. Anyone with the credentials can not only read your datasets
@@ -98,6 +103,29 @@ If you do any of these: change your credentials immediately!
 
 ### Other properties
 
+    <property>
+      <name>fs.s3.buffer.dir</name>
+      <value>${hadoop.tmp.dir}/s3</value>
+      <description>Determines where on the local filesystem the s3:/s3n: filesystem
+      should store files before sending them to S3
+      (or after retrieving them from S3).
+      </description>
+    </property>
+
+    <property>
+      <name>fs.s3.maxRetries</name>
+      <value>4</value>
+      <description>The maximum number of retries for reading or writing files to
+        S3, before we signal failure to the application.
+      </description>
+    </property>
+
+    <property>
+      <name>fs.s3.sleepTimeSeconds</name>
+      <value>10</value>
+      <description>The number of seconds to sleep between each S3 retry.
+      </description>
+    </property>
 
     <property>
       <name>fs.s3n.block.size</name>
@@ -135,7 +163,7 @@ If you do any of these: change your credentials immediately!
       <name>fs.s3n.server-side-encryption-algorithm</name>
       <value></value>
       <description>Specify a server-side encryption algorithm for S3.
-      The default is NULL, and the only other currently allowable value is AES256.
+      Unset by default, and the only other currently allowable value is AES256.
       </description>
     </property>
 
@@ -362,10 +390,24 @@ this capability.
     </property>
 
     <property>
+      <name>fs.s3a.server-side-encryption-algorithm</name>
+      <description>Specify a server-side encryption algorithm for s3a: file system.
+        Unset by default, and the only other currently allowable value is AES256.
+      </description>
+    </property>
+
+    <property>
       <name>fs.s3a.buffer.dir</name>
       <value>${hadoop.tmp.dir}/s3a</value>
       <description>Comma separated list of directories that will be used to buffer file
         uploads to. No effect if fs.s3a.fast.upload is true.</description>
+    </property>
+
+    <property>
+      <name>fs.s3a.block.size</name>
+      <value>33554432</value>
+      <description>Block size to use when reading files using s3a: file system.
+      </description>
     </property>
 
     <property>
@@ -409,7 +451,7 @@ settings could cause memory overflow. Up to `fs.s3a.threads.max` parallel
 (part)uploads are active. Furthermore, up to `fs.s3a.max.total.tasks`
 additional part(uploads) can be waiting (and thus memory buffers are created).
 The memory buffer is uploaded as a single upload if it is not larger than
-`fs.s3a.multipart.threshold`. Else, a multi-part upload is initiatated and
+`fs.s3a.multipart.threshold`. Else, a multi-part upload is initiated and
 parts of size `fs.s3a.multipart.size` are used to protect against overflowing
 the available memory. These settings should be tuned to the envisioned
 workflow (some large files, many small ones, ...) and the physical
@@ -509,7 +551,7 @@ Example:
       </property>
     </configuration>
 
-## File `contract-test-options.xml`
+### File `contract-test-options.xml`
 
 The file `hadoop-tools/hadoop-aws/src/test/resources/contract-test-options.xml`
 must be created and configured for the test filesystems.
@@ -521,7 +563,7 @@ The standard S3 authentication details must also be provided. This can be
 through copy-and-paste of the `auth-keys.xml` credentials, or it can be
 through direct XInclude inclusion.
 
-#### s3://
+### s3://
 
 The filesystem name must be defined in the property `fs.contract.test.fs.s3`. 
 
