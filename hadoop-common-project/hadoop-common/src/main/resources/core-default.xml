@@ -656,7 +656,7 @@
 <property>
   <name>fs.s3.buffer.dir</name>
   <value>${hadoop.tmp.dir}/s3</value>
-  <description>Determines where on the local filesystem the S3 filesystem
+  <description>Determines where on the local filesystem the s3:/s3n: filesystem
   should store files before sending them to S3
   (or after retrieving them from S3).
   </description>
@@ -739,7 +739,7 @@
   <name>fs.s3n.server-side-encryption-algorithm</name>
   <value></value>
   <description>Specify a server-side encryption algorithm for S3.
-  The default is NULL, and the only other currently allowable value is AES256.
+  Unset by default, and the only other currently allowable value is AES256.
   </description>
 </property>
 
@@ -903,9 +903,23 @@
 </property>
 
 <property>
+  <name>fs.s3a.server-side-encryption-algorithm</name>
+  <description>Specify a server-side encryption algorithm for s3a: file system.
+    Unset by default, and the only other currently allowable value is AES256.
+  </description>
+</property>
+
+<property>
   <name>fs.s3a.signing-algorithm</name>
   <description>Override the default signing algorithm so legacy
     implementations can still be used</description>
+</property>
+
+<property>
+  <name>fs.s3a.block.size</name>
+  <value>33554432</value>
+  <description>Block size to use when reading files using s3a: file system.
+  </description>
 </property>
 
 <property>
