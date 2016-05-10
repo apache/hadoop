@@ -23,6 +23,8 @@ import org.apache.hadoop.fs.shell.CommandFactory;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.util.ToolRunner;
 
+import java.io.IOException;
+
 /**
  * CLI for the erasure code encoding operations.
  */
@@ -35,6 +37,16 @@ public class ECCli extends FsShell {
   @Override
   protected String getUsagePrefix() {
     return usagePrefix;
+  }
+
+  @Override
+  protected void init() throws IOException {
+    getConf().setQuietMode(true);
+    if (commandFactory == null) {
+      commandFactory = new CommandFactory(getConf());
+      commandFactory.addObject(getHelp(), "-help");
+      registerCommands(commandFactory);
+    }
   }
 
   @Override

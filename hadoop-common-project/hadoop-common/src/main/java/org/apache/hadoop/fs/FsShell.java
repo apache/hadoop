@@ -50,12 +50,12 @@ public class FsShell extends Configured implements Tool {
 
   private FileSystem fs;
   private Trash trash;
+  private Help help;
   protected CommandFactory commandFactory;
 
   private final String usagePrefix =
     "Usage: hadoop fs [generic options]";
 
-  private Tracer tracer;
   static final String SHELL_HTRACE_PREFIX = "fs.shell.htrace.";
 
   /**
@@ -89,6 +89,13 @@ public class FsShell extends Configured implements Tool {
     }
     return this.trash;
   }
+
+  protected Help getHelp() throws IOException {
+    if (this.help == null){
+      this.help = new Help();
+    }
+    return this.help;
+  }
   
   protected void init() throws IOException {
     getConf().setQuietMode(true);
@@ -98,9 +105,6 @@ public class FsShell extends Configured implements Tool {
       commandFactory.addObject(new Usage(), "-usage");
       registerCommands(commandFactory);
     }
-    this.tracer = new Tracer.Builder("FsShell").
-        conf(TraceUtils.wrapHadoopConf(SHELL_HTRACE_PREFIX, getConf())).
-        build();
   }
 
   protected void registerCommands(CommandFactory factory) {
@@ -296,6 +300,9 @@ public class FsShell extends Configured implements Tool {
   public int run(String argv[]) throws Exception {
     // initialize FsShell
     init();
+    Tracer tracer = new Tracer.Builder("FsShell").
+        conf(TraceUtils.wrapHadoopConf(SHELL_HTRACE_PREFIX, getConf())).
+        build();
     int exitCode = -1;
     if (argv.length < 1) {
       printUsage(System.err);

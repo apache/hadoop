@@ -31,6 +31,22 @@
            -->
   <tests>
 
+  <!-- Test usage options -->
+    <test>
+      <description>usage: help for erasure coding command</description>
+      <test-commands>
+        <ec-admin-command>-usage</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>-usage: Unknown command</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
   <!-- Test help options -->
     <test>
       <description>help: help for erasure coding command</description>
