@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import com.google.inject.Guice;
@@ -99,7 +100,10 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     }
   };
 
-  static {
+  @Override
+  @Before
+  public void setUp() throws Exception {
+    super.setUp();
     GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
   }
 
