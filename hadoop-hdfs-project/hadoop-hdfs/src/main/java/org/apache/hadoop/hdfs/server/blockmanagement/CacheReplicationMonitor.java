@@ -166,7 +166,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
         try {
           while (true) {
             if (shutdown) {
-              LOG.debug("Shutting down CacheReplicationMonitor");
+              LOG.info("Shutting down CacheReplicationMonitor");
               return;
             }
             if (completedScanCount < neededScanCount) {
