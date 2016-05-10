@@ -16,9 +16,16 @@ HFTP Guide
 ==========
 
 * [HFTP Guide](#HFTP_Guilde)
+     * [Deprecated](#Deprecated)
      * [Introduction](#Introduction)
      * [Implementation](#Implementation)
      * [Configuration Options](#Configuration_Options)
+
+
+Deprecated
+----------
+HFTP and HSFTP are deprecated in 2.x and will be unavailable in 3.0.
+They have been superseded by [WebHDFS](WebHDFS.html).
 
 
 Introduction
