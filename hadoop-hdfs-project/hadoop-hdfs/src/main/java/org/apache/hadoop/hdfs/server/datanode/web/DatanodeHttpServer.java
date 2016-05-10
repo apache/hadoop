@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.web.webhdfs.DataNodeUGIProvider;
+import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
@@ -97,6 +98,12 @@ public class DatanodeHttpServer implements Closeable {
 
     Configuration confForInfoServer = new Configuration(conf);
     confForInfoServer.setInt(HttpServer2.HTTP_MAX_THREADS, 10);
+
+    // set user pattern based on configuration file
+    UserParam.setUserPattern(conf.get(
+        DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY,
+        DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_DEFAULT));
+
     HttpServer2.Builder builder = new HttpServer2.Builder()
         .setName("datanode")
         .setConf(confForInfoServer)
