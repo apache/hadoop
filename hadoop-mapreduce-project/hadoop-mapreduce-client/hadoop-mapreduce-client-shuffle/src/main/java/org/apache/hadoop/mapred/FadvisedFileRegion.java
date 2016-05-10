@@ -74,7 +74,7 @@ public class FadvisedFileRegion extends DefaultFileRegion {
   @Override
   public long transferTo(WritableByteChannel target, long position)
       throws IOException {
-    if (manageOsCache && readaheadPool != null) {
+    if (readaheadPool != null && readaheadLength > 0) {
       readaheadRequest = readaheadPool.readaheadStream(identifier, fd,
           getPosition() + position, readaheadLength,
           getPosition() + getCount(), readaheadRequest);
