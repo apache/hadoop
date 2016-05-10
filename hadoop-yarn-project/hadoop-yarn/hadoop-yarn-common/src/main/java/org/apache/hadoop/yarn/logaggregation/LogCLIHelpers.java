@@ -23,6 +23,7 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.AccessDeniedException;
 import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
@@ -34,6 +35,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.HarFs;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
@@ -52,6 +55,53 @@ public class LogCLIHelpers implements Configurable {
       String nodeId, String jobOwner) throws IOException {
     return dumpAContainersLogsForALogType(appId, containerId, nodeId, jobOwner,
       null);
+  }
+
+  @Private
+  @VisibleForTesting
+  /**
+   * Return the owner for a given AppId
+   * @param remoteRootLogDir
+   * @param appId
+   * @param bestGuess
+   * @param conf
+   * @return the owner or null
+   * @throws IOException
+   */
+  public static String getOwnerForAppIdOrNull(
+      ApplicationId appId, String bestGuess,
+      Configuration conf) throws IOException {
+    Path remoteRootLogDir = new Path(conf.get(
+        YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+        YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
+    String suffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(conf);
+    Path fullPath = LogAggregationUtils.getRemoteAppLogDir(remoteRootLogDir,
+        appId, bestGuess, suffix);
+    FileContext fc =
+        FileContext.getFileContext(remoteRootLogDir.toUri(), conf);
+    String pathAccess = fullPath.toString();
+    try {
+      if (fc.util().exists(fullPath)) {
+        return bestGuess;
+      }
+      Path toMatch = LogAggregationUtils.
+          getRemoteAppLogDir(remoteRootLogDir, appId, "*", suffix);
+      pathAccess = toMatch.toString();
+      FileStatus[] matching  = fc.util().globStatus(toMatch);
+      if (matching == null || matching.length != 1) {
+        return null;
+      }
+      //fetch the user from the full path /app-logs/user[/suffix]/app_id
+      Path parent = matching[0].getPath().getParent();
+      //skip the suffix too
+      if (suffix != null && !StringUtils.isEmpty(suffix)) {
+        parent = parent.getParent();
+      }
+      return parent.getName();
+    } catch (AccessControlException | AccessDeniedException ex) {
+      logDirNoAccessPermission(pathAccess, bestGuess, ex.getMessage());
+      return null;
+    }
   }
 
   @Private
@@ -93,12 +143,12 @@ public class LogCLIHelpers implements Configurable {
                 thisNodeFile.getPath());
           if (logType == null) {
             if (dumpAContainerLogs(containerId, reader, System.out,
-              thisNodeFile.getModificationTime()) > -1) {
+                thisNodeFile.getModificationTime()) > -1) {
               foundContainerLogs = true;
             }
           } else {
             if (dumpAContainerLogsForALogType(containerId, reader, System.out,
-              thisNodeFile.getModificationTime(), logType) > -1) {
+                thisNodeFile.getModificationTime(), logType) > -1) {
               foundContainerLogs = true;
             }
           }
@@ -182,7 +232,7 @@ public class LogCLIHelpers implements Configurable {
     while (true) {
       try {
         LogReader.readAContainerLogsForALogType(valueStream, out,
-          logUploadedTime);
+            logUploadedTime);
         foundContainerLogs = true;
       } catch (EOFException eof) {
         break;
@@ -249,9 +299,10 @@ public class LogCLIHelpers implements Configurable {
         continue;
       }
       if (!thisNodeFile.getPath().getName()
-        .endsWith(LogAggregationUtils.TMP_FILE_SUFFIX)) {
+          .endsWith(LogAggregationUtils.TMP_FILE_SUFFIX)) {
         AggregatedLogFormat.LogReader reader =
-            new AggregatedLogFormat.LogReader(getConf(), thisNodeFile.getPath());
+            new AggregatedLogFormat.LogReader(getConf(),
+                thisNodeFile.getPath());
         try {
 
           DataInputStream valueStream;
@@ -261,13 +312,14 @@ public class LogCLIHelpers implements Configurable {
           while (valueStream != null) {
 
             String containerString =
-                "\n\nContainer: " + key + " on " + thisNodeFile.getPath().getName();
+                "\n\nContainer: " + key + " on "
+                + thisNodeFile.getPath().getName();
             out.println(containerString);
             out.println(StringUtils.repeat("=", containerString.length()));
             while (true) {
               try {
                 LogReader.readAContainerLogsForALogType(valueStream, out,
-                  thisNodeFile.getModificationTime());
+                    thisNodeFile.getModificationTime());
                 foundAnyLogs = true;
               } catch (EOFException eof) {
                 break;
@@ -283,7 +335,7 @@ public class LogCLIHelpers implements Configurable {
         }
       }
     }
-    if (! foundAnyLogs) {
+    if (!foundAnyLogs) {
       emptyLogDir(getRemoteAppLogDir(appId, appOwner).toString());
       return -1;
     }
@@ -398,6 +450,9 @@ public class LogCLIHelpers implements Configurable {
           getConf()).listStatus(remoteAppLogDir);
     } catch (FileNotFoundException fnf) {
       logDirNotExist(remoteAppLogDir.toString());
+    } catch (AccessControlException | AccessDeniedException ace) {
+      logDirNoAccessPermission(remoteAppLogDir.toString(), appOwner,
+        ace.getMessage());
     }
     return nodeFiles;
   }
@@ -426,7 +481,7 @@ public class LogCLIHelpers implements Configurable {
 
   private static void containerLogNotFound(String containerId) {
     System.err.println("Logs for container " + containerId
-      + " are not present in this log-file.");
+        + " are not present in this log-file.");
   }
 
   private static void logDirNotExist(String remoteAppLogDir) {
@@ -436,5 +491,14 @@ public class LogCLIHelpers implements Configurable {
 
   private static void emptyLogDir(String remoteAppLogDir) {
     System.err.println(remoteAppLogDir + " does not have any log files.");
+  }
+
+  private static void logDirNoAccessPermission(String remoteAppLogDir,
+      String appOwner, String errorMessage) throws IOException {
+    System.err.println("Guessed logs' owner is " + appOwner
+        + " and current user "
+        + UserGroupInformation.getCurrentUser().getUserName() + " does not "
+        + "have permission to access " + remoteAppLogDir
+        + ". Error message found: " + errorMessage);
   }
 }

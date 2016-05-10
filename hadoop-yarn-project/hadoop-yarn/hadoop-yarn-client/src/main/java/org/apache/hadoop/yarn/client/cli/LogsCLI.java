@@ -151,14 +151,12 @@ public class LogsCLI extends Configured implements Tool {
     LogCLIHelpers logCliHelper = new LogCLIHelpers();
     logCliHelper.setConf(getConf());
 
-    if (appOwner == null || appOwner.isEmpty()) {
-      appOwner = UserGroupInformation.getCurrentUser().getShortUserName();
-    }
-
     boolean appStateObtainedSuccessfully = true;
     YarnApplicationState appState = YarnApplicationState.NEW;
+    ApplicationReport appReport = null;
     try {
-      appState = getApplicationState(appId);
+      appReport = getApplicationReport(appId);
+      appState = appReport.getYarnApplicationState();
       if (appState == YarnApplicationState.NEW
           || appState == YarnApplicationState.NEW_SAVING
           || appState == YarnApplicationState.SUBMITTED) {
@@ -169,6 +167,16 @@ public class LogsCLI extends Configured implements Tool {
       appStateObtainedSuccessfully = false;
       System.err.println("Unable to get ApplicationState."
           + " Attempting to fetch logs directly from the filesystem.");
+    }
+
+    if (appOwner == null || appOwner.isEmpty()) {
+      appOwner = guessAppOwner(appReport, appId);
+      if (appOwner == null) {
+        System.err.println("Can not find the appOwner. "
+            + "Please specify the correct appOwner");
+        System.err.println("Could not locate application logs for " + appId);
+        return -1;
+      }
     }
 
     if (showMetaInfo) {
@@ -201,6 +209,10 @@ public class LogsCLI extends Configured implements Tool {
       if (nodeAddress == null) {
         resultCode =
             logCliHelper.dumpAllContainersLogs(appId, appOwner, System.out);
+        if (resultCode == -1) {
+          System.err.println("Can not find the logs for the application: "
+              + appId + " with the appOwner: " + appOwner);
+        }
       } else {
         System.err.println("Should at least provide ContainerId!");
         printHelpMessage(printOpts);
@@ -210,13 +222,12 @@ public class LogsCLI extends Configured implements Tool {
     return resultCode;
   }
 
-  private YarnApplicationState getApplicationState(ApplicationId appId)
+  private ApplicationReport getApplicationReport(ApplicationId appId)
       throws IOException, YarnException {
     YarnClient yarnClient = createYarnClient();
 
     try {
-      ApplicationReport appReport = yarnClient.getApplicationReport(appId);
-      return appReport.getYarnApplicationState();
+      return yarnClient.getApplicationReport(appId);
     } finally {
       yarnClient.close();
     }
@@ -693,11 +704,12 @@ public class LogsCLI extends Configured implements Tool {
             amContainersList, logFiles, logCliHelper, appOwner, true);
       } else {
         System.err.println("Can not get AMContainers logs for "
-            + "the application:" + appId);
-        System.err.println("This application:" + appId + " is finished."
-            + " Please enable the application history service. Or Using "
-            + "yarn logs -applicationId <appId> -containerId <containerId> "
-            + "--nodeAddress <nodeHttpAddress> to get the container logs");
+            + "the application:" + appId + " with the appOwner:" + appOwner);
+        System.err.println("This application:" + appId + " has finished."
+            + " Please enable the application-history service or explicitly"
+            + " use 'yarn logs -applicationId <appId> "
+            + "-containerId <containerId> --nodeAddress <nodeHttpAddress>' "
+            + "to get the container logs.");
         return -1;
       }
     }
@@ -750,7 +762,8 @@ public class LogsCLI extends Configured implements Tool {
             appOwner);
       } else if (!isApplicationFinished(appState)) {
         System.err.println("Unable to get logs for this container:"
-            + containerIdStr + "for the application:" + appIdStr);
+            + containerIdStr + "for the application:" + appIdStr
+            + " with the appOwner: " + appOwner);
         System.err.println("The application: " + appIdStr
             + " is still running, and we can not get Container report "
             + "for the container: " + containerIdStr +". Please try later "
@@ -820,5 +833,19 @@ public class LogsCLI extends Configured implements Tool {
     public boolean isAppFinished() {
       return isAppFinished;
     }
+  }
+
+  private String guessAppOwner(ApplicationReport appReport,
+      ApplicationId appId) throws IOException {
+    String appOwner = null;
+    if (appReport != null) {
+      //always use the app owner from the app report if possible
+      appOwner = appReport.getUser();
+    } else {
+      appOwner = UserGroupInformation.getCurrentUser().getShortUserName();
+      appOwner = LogCLIHelpers.getOwnerForAppIdOrNull(
+          appId, appOwner, getConf());
+    }
+    return appOwner;
   }
 }
