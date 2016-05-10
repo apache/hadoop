@@ -23,10 +23,19 @@ import org.apache.hadoop.fs.contract.AbstractContractSeekTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
+import org.junit.Ignore;
+import org.junit.Test;
+
 public class TestS3ContractSeek extends AbstractContractSeekTest {
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new S3Contract(conf);
+  }
+
+  @Override
+  @Test
+  @Ignore
+  public void testReadFullyZeroByteFile() {
   }
 }
