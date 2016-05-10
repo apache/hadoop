@@ -22,6 +22,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractRootDirectoryTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
+import org.junit.Ignore;
+import org.junit.Test;
+
 /**
  * root dir operations against an S3 bucket
  */
@@ -30,5 +33,17 @@ public class TestS3ContractRootDir extends AbstractContractRootDirectoryTest {
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new S3Contract(conf);
+  }
+
+  @Override
+  @Test
+  @Ignore
+  public void testRmEmptyRootDirNonRecursive() {
+  }
+
+  @Override
+  @Test
+  @Ignore
+  public void testRmRootRecursive() {
   }
 }
