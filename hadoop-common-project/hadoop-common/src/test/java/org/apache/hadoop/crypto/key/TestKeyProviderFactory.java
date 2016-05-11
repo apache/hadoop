@@ -267,7 +267,7 @@ public class TestKeyProviderFactory {
     Path path = ProviderUtils.unnestUri(new URI(ourUrl));
     FileSystem fs = path.getFileSystem(conf);
     FileStatus s = fs.getFileStatus(path);
-    assertTrue(s.getPermission().toString().equals("rwx------"));
+    assertTrue(s.getPermission().toString().equals("rw-------"));
     assertTrue(file + " should exist", file.isFile());
 
     // Corrupt file and Check if JKS can reload from _OLD file

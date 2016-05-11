@@ -121,9 +121,9 @@ public final class LocalJavaKeyStoreProvider extends
   }
 
   @Override
-  protected void initFileSystem(URI uri, Configuration conf)
+  protected void initFileSystem(URI uri)
       throws IOException {
-    super.initFileSystem(uri, conf);
+    super.initFileSystem(uri);
     try {
       file = new File(new URI(getPath().toString()));
       if (LOG.isDebugEnabled()) {
