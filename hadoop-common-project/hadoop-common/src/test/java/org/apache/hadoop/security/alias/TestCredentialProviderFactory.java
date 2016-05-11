@@ -213,7 +213,7 @@ public class TestCredentialProviderFactory {
     Path path = ProviderUtils.unnestUri(new URI(ourUrl));
     FileSystem fs = path.getFileSystem(conf);
     FileStatus s = fs.getFileStatus(path);
-    assertTrue(s.getPermission().toString().equals("rwx------"));
+    assertTrue(s.getPermission().toString().equals("rw-------"));
     assertTrue(file + " should exist", file.isFile());
 
     // check permission retention after explicit change
@@ -235,7 +235,8 @@ public class TestCredentialProviderFactory {
     Path path = ProviderUtils.unnestUri(new URI(ourUrl));
     FileSystem fs = path.getFileSystem(conf);
     FileStatus s = fs.getFileStatus(path);
-    assertTrue("Unexpected permissions: " + s.getPermission().toString(), s.getPermission().toString().equals("rwx------"));
+    assertTrue("Unexpected permissions: " + s.getPermission().toString(),
+        s.getPermission().toString().equals("rw-------"));
     assertTrue(file + " should exist", file.isFile());
 
     // check permission retention after explicit change

@@ -115,6 +115,12 @@ public class TestKeyShell {
     assertEquals(0, rc);
     assertTrue(outContent.toString().contains(keyName + " has been " +
             "successfully created"));
+    assertTrue(outContent.toString()
+        .contains(JavaKeyStoreProvider.NO_PASSWORD_WARN));
+    assertTrue(outContent.toString()
+        .contains(JavaKeyStoreProvider.NO_PASSWORD_INSTRUCTIONS));
+    assertTrue(outContent.toString()
+        .contains(JavaKeyStoreProvider.NO_PASSWORD_CONT));
 
     String listOut = listKeys(ks, false);
     assertTrue(listOut.contains(keyName));
@@ -129,7 +135,7 @@ public class TestKeyShell {
     rc = ks.run(args2);
     assertEquals(0, rc);
     assertTrue(outContent.toString().contains("key1 has been successfully " +
-    		"rolled."));
+        "rolled."));
 
     deleteKey(ks, keyName);
 
@@ -192,8 +198,7 @@ public class TestKeyShell {
     ks.setConf(new Configuration());
     rc = ks.run(args1);
     assertEquals(1, rc);
-    assertTrue(outContent.toString().contains("There are no valid " +
-    		"KeyProviders configured."));
+    assertTrue(outContent.toString().contains(KeyShell.NO_VALID_PROVIDERS));
   }
 
   @Test
@@ -207,7 +212,7 @@ public class TestKeyShell {
     rc = ks.run(args1);
     assertEquals(0, rc);
     assertTrue(outContent.toString().contains("WARNING: you are modifying a " +
-    		"transient provider."));
+        "transient provider."));
   }
   
   @Test
@@ -221,8 +226,23 @@ public class TestKeyShell {
     ks.setConf(config);
     rc = ks.run(args1);
     assertEquals(1, rc);
-    assertTrue(outContent.toString().contains("There are no valid " +
-    		"KeyProviders configured."));
+    assertTrue(outContent.toString().contains(KeyShell.NO_VALID_PROVIDERS));
+  }
+
+  @Test
+  public void testStrict() throws Exception {
+    outContent.reset();
+    int rc = 0;
+    KeyShell ks = new KeyShell();
+    ks.setConf(new Configuration());
+    final String[] args1 = {"create", "hello", "-provider", jceksProvider,
+        "-strict"};
+    rc = ks.run(args1);
+    assertEquals(1, rc);
+    assertTrue(outContent.toString()
+        .contains(JavaKeyStoreProvider.NO_PASSWORD_ERROR));
+    assertTrue(outContent.toString()
+        .contains(JavaKeyStoreProvider.NO_PASSWORD_INSTRUCTIONS));
   }
 
   @Test
