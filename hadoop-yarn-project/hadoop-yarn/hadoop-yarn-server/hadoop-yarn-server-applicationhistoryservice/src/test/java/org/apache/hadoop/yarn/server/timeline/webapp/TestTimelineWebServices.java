@@ -85,6 +85,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
   private static long beforeTime;
 
   private static class WebServletModule extends ServletModule {
+    @SuppressWarnings("unchecked")
     @Override
     protected void configureServlets() {
       bind(YarnJacksonJaxbJsonProvider.class);
