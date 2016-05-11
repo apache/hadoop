@@ -18,20 +18,30 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.metrics;
 
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 
-public enum SystemMetricsEventType {
-  // app events
-  APP_CREATED,
-  APP_FINISHED,
-  APP_ACLS_UPDATED,
-  APP_UPDATED,
-  APP_STATE_UPDATED,
+/**
+ * When the state of this application has been changed, RM would sent
+ * this event to inform Timeline Server for keeping the Application state
+ * consistent.
+ */
+public class ApplicaitonStateUpdatedEvent extends SystemMetricsEvent{
+  private ApplicationId appId;
+  private YarnApplicationState appState;
 
-  // app attempt events
-  APP_ATTEMPT_REGISTERED,
-  APP_ATTEMPT_FINISHED,
+  public ApplicaitonStateUpdatedEvent(ApplicationId appliocationId,
+      YarnApplicationState state, long updatedTime) {
+    super(SystemMetricsEventType.APP_STATE_UPDATED, updatedTime);
+    this.appId = appliocationId;
+    this.appState = state;
+  }
 
-  // container events
-  CONTAINER_CREATED,
-  CONTAINER_FINISHED
+  public ApplicationId getApplicationId() {
+    return appId;
+  }
+
+  public YarnApplicationState getAppState() {
+    return appState;
+  }
 }

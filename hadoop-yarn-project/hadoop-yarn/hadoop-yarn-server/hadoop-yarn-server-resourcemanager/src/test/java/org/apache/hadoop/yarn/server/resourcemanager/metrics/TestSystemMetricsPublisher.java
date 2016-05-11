@@ -106,13 +106,15 @@ public class TestSystemMetricsPublisher {
 
   @Test(timeout = 10000)
   public void testPublishApplicationMetrics() throws Exception {
+    long stateUpdateTimeStamp = System.currentTimeMillis();
     for (int i = 1; i <= 2; ++i) {
       ApplicationId appId = ApplicationId.newInstance(0, i);
       RMApp app = createRMApp(appId);
       metricsPublisher.appCreated(app, app.getStartTime());
       if (i == 1) {
         when(app.getQueue()).thenReturn("new test queue");
-        ApplicationSubmissionContext asc = mock(ApplicationSubmissionContext.class);
+        ApplicationSubmissionContext asc = mock(
+            ApplicationSubmissionContext.class);
         when(asc.getUnmanagedAM()).thenReturn(false);
         when(asc.getPriority()).thenReturn(Priority.newInstance(1));
         when(asc.getNodeLabelExpression()).thenReturn("high-cpu");
@@ -121,7 +123,10 @@ public class TestSystemMetricsPublisher {
       } else {
         metricsPublisher.appUpdated(app, 4L);
       }
-      metricsPublisher.appFinished(app, RMAppState.FINISHED, app.getFinishTime());
+      metricsPublisher.appStateUpdated(app, YarnApplicationState.RUNNING,
+          stateUpdateTimeStamp);
+      metricsPublisher.appFinished(app, RMAppState.FINISHED,
+          app.getFinishTime());
       if (i == 1) {
         metricsPublisher.appACLsUpdated(app, "uers1,user2", 4L);
       } else {
@@ -134,8 +139,8 @@ public class TestSystemMetricsPublisher {
             store.getEntity(appId.toString(),
                 ApplicationMetricsConstants.ENTITY_TYPE,
                 EnumSet.allOf(Field.class));
-        // ensure three events are both published before leaving the loop
-      } while (entity == null || entity.getEvents().size() < 4);
+        // ensure Five events are both published before leaving the loop
+      } while (entity == null || entity.getEvents().size() < 5);
       // verify all the fields
       Assert.assertEquals(ApplicationMetricsConstants.ENTITY_TYPE,
           entity.getEntityType());
@@ -212,6 +217,7 @@ public class TestSystemMetricsPublisher {
       boolean hasUpdatedEvent = false;
       boolean hasFinishedEvent = false;
       boolean hasACLsUpdatedEvent = false;
+      boolean hasStateUpdateEvent = false;
       for (TimelineEvent event : entity.getEvents()) {
         if (event.getEventType().equals(
             ApplicationMetricsConstants.CREATED_EVENT_TYPE)) {
@@ -249,10 +255,21 @@ public class TestSystemMetricsPublisher {
             ApplicationMetricsConstants.ACLS_UPDATED_EVENT_TYPE)) {
           hasACLsUpdatedEvent = true;
           Assert.assertEquals(4L, event.getTimestamp());
+        } else if (event.getEventType().equals(
+              ApplicationMetricsConstants.STATE_UPDATED_EVENT_TYPE)) {
+          hasStateUpdateEvent = true;
+          Assert.assertEquals(event.getTimestamp(), stateUpdateTimeStamp);
+          Assert.assertEquals(YarnApplicationState.RUNNING.toString(), event
+              .getEventInfo().get(
+                   ApplicationMetricsConstants.STATE_EVENT_INFO));
         }
       }
-      Assert.assertTrue(hasCreatedEvent && hasFinishedEvent
-          && hasACLsUpdatedEvent && hasUpdatedEvent);
+      // Do assertTrue verification separately for easier debug
+      Assert.assertTrue(hasCreatedEvent);
+      Assert.assertTrue(hasFinishedEvent);
+      Assert.assertTrue(hasACLsUpdatedEvent);
+      Assert.assertTrue(hasUpdatedEvent);
+      Assert.assertTrue(hasStateUpdateEvent);
     }
   }
 
