@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.io;
 
-import java.io.*;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-/** A reusable {@link DataInput} implementation that reads from an in-memory
- * buffer.
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+
+/** A reusable {@link java.io.DataInput} implementation
+ * that reads from an in-memory buffer.
  *
  * <p>This saves memory over creating a new DataInputStream and
  * ByteArrayInputStream each time data is read.
@@ -56,9 +57,75 @@ public class DataInputBuffer extends DataInputStream {
       this.pos = start;
     }
 
-    public byte[] getData() { return buf; }
-    public int getPosition() { return pos; }
-    public int getLength() { return count; }
+    public byte[] getData() {
+      return buf;
+    }
+
+    public int getPosition() {
+      return pos;
+    }
+
+    public int getLength() {
+      return count;
+    }
+
+    /* functions below comes verbatim from
+     hive.common.io.NonSyncByteArrayInputStream */
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int read() {
+      return (pos < count) ? (buf[pos++] & 0xff) : -1;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int read(byte[] b, int off, int len) {
+      if (b == null) {
+        throw new NullPointerException();
+      } else if (off < 0 || len < 0 || len > b.length - off) {
+        throw new IndexOutOfBoundsException();
+      }
+      if (pos >= count) {
+        return -1;
+      }
+      if (pos + len > count) {
+        len = count - pos;
+      }
+      if (len <= 0) {
+        return 0;
+      }
+      System.arraycopy(buf, pos, b, off, len);
+      pos += len;
+      return len;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public long skip(long n) {
+      if (pos + n > count) {
+        n = count - pos;
+      }
+      if (n < 0) {
+        return 0;
+      }
+      pos += n;
+      return n;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int available() {
+      return count - pos;
+    }
   }
 
   private Buffer buffer;
