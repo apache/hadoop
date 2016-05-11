@@ -819,8 +819,7 @@ public class ContainerManagerImpl extends CompositeService implements
           }
           performContainerPreStartChecks(nmTokenIdentifier, request,
               containerTokenIdentifier);
-          startContainerInternal(nmTokenIdentifier, containerTokenIdentifier,
-              request);
+          startContainerInternal(containerTokenIdentifier, request);
           succeededContainers.add(containerId);
         } catch (YarnException e) {
           failedContainers.put(containerId, SerializedException.newInstance(e));
@@ -916,7 +915,7 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   @SuppressWarnings("unchecked")
-  protected void startContainerInternal(NMTokenIdentifier nmTokenIdentifier,
+  protected void startContainerInternal(
       ContainerTokenIdentifier containerTokenIdentifier,
       StartContainerRequest request) throws YarnException, IOException {
 
