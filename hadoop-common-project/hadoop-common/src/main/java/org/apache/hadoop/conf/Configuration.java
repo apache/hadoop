@@ -2478,6 +2478,27 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     return result.entrySet().iterator();
   }
 
+  /**
+   * Constructs a mapping of configuration and includes all properties that
+   * start with the specified configuration prefix.  Property names in the
+   * mapping are trimmed to remove the configuration prefix.
+   *
+   * @param confPrefix configuration prefix
+   * @return mapping of configuration properties with prefix stripped
+   */
+  public Map<String, String> getPropsWithPrefix(String confPrefix) {
+    Map<String, String> configMap = new HashMap<>();
+    for (Map.Entry<String, String> entry : this) {
+      String name = entry.getKey();
+      if (name.startsWith(confPrefix)) {
+        String value = this.get(name);
+        name = name.substring(confPrefix.length());
+        configMap.put(name, value);
+      }
+    }
+    return configMap;
+  }
+
   private Document parse(DocumentBuilder builder, URL url)
       throws IOException, SAXException {
     if (!quietmode) {
