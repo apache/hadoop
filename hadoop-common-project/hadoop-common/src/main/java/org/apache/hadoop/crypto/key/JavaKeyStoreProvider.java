@@ -44,6 +44,7 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.URI;
 import java.net.URL;
+import java.security.GeneralSecurityException;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -88,7 +89,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 @InterfaceAudience.Private
 public class JavaKeyStoreProvider extends KeyProvider {
   private static final String KEY_METADATA = "KeyMetadata";
-  private static Logger LOG =
+  private static final Logger LOG =
       LoggerFactory.getLogger(JavaKeyStoreProvider.class);
 
   public static final String SCHEME_NAME = "jceks";
@@ -103,8 +104,8 @@ public class JavaKeyStoreProvider extends KeyProvider {
   private final URI uri;
   private final Path path;
   private final FileSystem fs;
-  private final FsPermission permissions;
-  private final KeyStore keyStore;
+  private FsPermission permissions;
+  private KeyStore keyStore;
   private char[] password;
   private boolean changed = false;
   private Lock readLock;
@@ -131,13 +132,28 @@ public class JavaKeyStoreProvider extends KeyProvider {
     this.uri = uri;
     path = ProviderUtils.unnestUri(uri);
     fs = path.getFileSystem(conf);
+    locateKeystore();
+    ReadWriteLock lock = new ReentrantReadWriteLock(true);
+    readLock = lock.readLock();
+    writeLock = lock.writeLock();
+  }
+
+  /**
+   * The password is either found in the environment or in a file. This
+   * routine implements the logic for locating the password in these
+   * locations.
+   * @return The password as a char []; null if not found.
+   * @throws IOException
+   */
+  private char[] locatePassword() throws IOException {
+    char[] pass = null;
     // Get the password file from the conf, if not present from the user's
     // environment var
     if (System.getenv().containsKey(KEYSTORE_PASSWORD_ENV_VAR)) {
-      password = System.getenv(KEYSTORE_PASSWORD_ENV_VAR).toCharArray();
+      pass = System.getenv(KEYSTORE_PASSWORD_ENV_VAR).toCharArray();
     }
-    if (password == null) {
-      String pwFile = conf.get(KEYSTORE_PASSWORD_FILE_KEY);
+    if (pass == null) {
+      String pwFile = getConf().get(KEYSTORE_PASSWORD_FILE_KEY);
       if (pwFile != null) {
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
         URL pwdFile = cl.getResource(pwFile);
@@ -146,14 +162,23 @@ public class JavaKeyStoreProvider extends KeyProvider {
           throw new IOException("Password file does not exists");
         }
         try (InputStream is = pwdFile.openStream()) {
-          password = IOUtils.toString(is).trim().toCharArray();
+          pass = IOUtils.toString(is).trim().toCharArray();
         }
       }
     }
-    if (password == null) {
-      password = KEYSTORE_PASSWORD_DEFAULT;
-    }
+    return pass;
+  }
+
+  /**
+   * Open up and initialize the keyStore.
+   * @throws IOException
+   */
+  private void locateKeystore() throws IOException {
     try {
+      password = locatePassword();
+      if (password == null) {
+        password = KEYSTORE_PASSWORD_DEFAULT;
+      }
       Path oldPath = constructOldPath(path);
       Path newPath = constructNewPath(path);
       keyStore = KeyStore.getInstance(SCHEME_NAME);
@@ -175,19 +200,14 @@ public class JavaKeyStoreProvider extends KeyProvider {
       permissions = perm;
     } catch (KeyStoreException e) {
       throw new IOException("Can't create keystore", e);
-    } catch (NoSuchAlgorithmException e) {
-      throw new IOException("Can't load keystore " + path, e);
-    } catch (CertificateException e) {
+    } catch (GeneralSecurityException e) {
       throw new IOException("Can't load keystore " + path, e);
     }
-    ReadWriteLock lock = new ReentrantReadWriteLock(true);
-    readLock = lock.readLock();
-    writeLock = lock.writeLock();
   }
 
   /**
    * Try loading from the user specified path, else load from the backup
-   * path in case Exception is not due to bad/wrong password
+   * path in case Exception is not due to bad/wrong password.
    * @param path Actual path to load from
    * @param backupPath Backup path (_OLD)
    * @return The permissions of the loaded file
@@ -256,7 +276,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
     if (perm == null) {
       keyStore.load(null, password);
       LOG.debug("KeyStore initialized anew successfully !!");
-      perm = new FsPermission("700");
+      perm = new FsPermission("600");
     }
     return perm;
   }
@@ -319,6 +339,40 @@ public class JavaKeyStoreProvider extends KeyProvider {
   private Path constructOldPath(Path path) {
     Path oldPath = new Path(path.toString() + "_OLD");
     return oldPath;
+  }
+
+  @Override
+  public boolean needsPassword() throws IOException {
+    return (null == locatePassword());
+  }
+
+  @VisibleForTesting
+  public static final String NO_PASSWORD_WARN =
+      "WARNING: You have accepted the use of the default provider password\n" +
+      "by not configuring a password in one of the two following locations:\n";
+  public static final String NO_PASSWORD_ERROR =
+      "ERROR: The provider cannot find a password in the expected " +
+          "locations.\nPlease supply a password using one of the " +
+          "following two mechanisms:\n";
+  @VisibleForTesting public static final String NO_PASSWORD_INSTRUCTIONS =
+          "    o In the environment variable " +
+          KEYSTORE_PASSWORD_ENV_VAR + "\n" +
+          "    o In a file referred to by the configuration entry\n" +
+          "      " + KEYSTORE_PASSWORD_FILE_KEY + ".\n" +
+          "Please review the documentation regarding provider passwords at\n" +
+          "http://hadoop.apache.org/docs/current/hadoop-project-dist/" +
+              "hadoop-common/CredentialProviderAPI.html#Keystore_Passwords\n";
+  @VisibleForTesting public static final String NO_PASSWORD_CONT =
+      "Continuing with the default provider password.\n";
+
+  @Override
+  public String noPasswordWarning() {
+    return NO_PASSWORD_WARN + NO_PASSWORD_INSTRUCTIONS + NO_PASSWORD_CONT;
+  }
+
+  @Override
+  public String noPasswordError() {
+    return NO_PASSWORD_ERROR + NO_PASSWORD_INSTRUCTIONS;
   }
 
   @Override
