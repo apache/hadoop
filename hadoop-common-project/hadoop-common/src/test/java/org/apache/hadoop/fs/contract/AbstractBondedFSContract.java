@@ -73,7 +73,8 @@ public abstract class AbstractBondedFSContract extends AbstractFSContract {
       } catch (URISyntaxException e) {
         throw new IOException("Invalid URI " + fsName);
       } catch (IllegalArgumentException e) {
-        throw new IOException("Invalid URI " + fsName, e);
+        throw new IOException("Unable to initialize filesystem " + fsName
+            + ": " + e, e);
       }
     } else {
       LOG.info("skipping tests as FS name is not defined in "
