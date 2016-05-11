@@ -62,6 +62,11 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.GlobalStorageStatistics;
+import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
+import org.apache.hadoop.fs.StorageStatistics;
+import org.apache.hadoop.hdfs.DFSOpsCountStatistics;
+import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
@@ -142,6 +147,8 @@ public class WebHdfsFileSystem extends FileSystem
   private Set<String> restCsrfMethodsToIgnore;
   private static final ObjectReader READER =
       new ObjectMapper().reader(Map.class);
+
+  private DFSOpsCountStatistics storageStatistics;
 
   /**
    * Return the protocol scheme for the FileSystem.
@@ -240,6 +247,15 @@ public class WebHdfsFileSystem extends FileSystem
         CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT);
     this.initializeRestCsrf(conf);
     this.delegationToken = null;
+
+    storageStatistics = (DFSOpsCountStatistics) GlobalStorageStatistics.INSTANCE
+        .put(DFSOpsCountStatistics.NAME,
+            new StorageStatisticsProvider() {
+              @Override
+              public StorageStatistics provide() {
+                return new DFSOpsCountStatistics();
+              }
+            });
   }
 
   /**
@@ -974,6 +990,7 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public FileStatus getFileStatus(Path f) throws IOException {
     statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_FILE_STATUS);
     return makeQualified(getHdfsFileStatus(f), f);
   }
 
@@ -1003,6 +1020,7 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.MKDIRS);
     final HttpOpParam.Op op = PutOpParam.Op.MKDIRS;
     return new FsPathBooleanRunner(op, f,
         new PermissionParam(applyUMask(permission))
@@ -1015,6 +1033,7 @@ public class WebHdfsFileSystem extends FileSystem
   public void createSymlink(Path destination, Path f, boolean createParent
   ) throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.CREATE_SYM_LINK);
     final HttpOpParam.Op op = PutOpParam.Op.CREATESYMLINK;
     new FsPathRunner(op, f,
         new DestinationParam(makeQualified(destination).toUri().getPath()),
@@ -1025,6 +1044,7 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public boolean rename(final Path src, final Path dst) throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.RENAME);
     final HttpOpParam.Op op = PutOpParam.Op.RENAME;
     return new FsPathBooleanRunner(op, src,
         new DestinationParam(makeQualified(dst).toUri().getPath())
@@ -1036,6 +1056,7 @@ public class WebHdfsFileSystem extends FileSystem
   public void rename(final Path src, final Path dst,
       final Options.Rename... options) throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.RENAME);
     final HttpOpParam.Op op = PutOpParam.Op.RENAME;
     new FsPathRunner(op, src,
         new DestinationParam(makeQualified(dst).toUri().getPath()),
@@ -1047,6 +1068,7 @@ public class WebHdfsFileSystem extends FileSystem
   public void setXAttr(Path p, String name, byte[] value,
       EnumSet<XAttrSetFlag> flag) throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.SET_XATTR);
     final HttpOpParam.Op op = PutOpParam.Op.SETXATTR;
     if (value != null) {
       new FsPathRunner(op, p, new XAttrNameParam(name), new XAttrValueParam(
@@ -1060,6 +1082,8 @@ public class WebHdfsFileSystem extends FileSystem
 
   @Override
   public byte[] getXAttr(Path p, final String name) throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_XATTR);
     final HttpOpParam.Op op = GetOpParam.Op.GETXATTRS;
     return new FsPathResponseRunner<byte[]>(op, p, new XAttrNameParam(name),
         new XAttrEncodingParam(XAttrCodec.HEX)) {
@@ -1116,6 +1140,7 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public void removeXAttr(Path p, String name) throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.REMOVE_XATTR);
     final HttpOpParam.Op op = PutOpParam.Op.REMOVEXATTR;
     new FsPathRunner(op, p, new XAttrNameParam(name)).run();
   }
@@ -1128,6 +1153,7 @@ public class WebHdfsFileSystem extends FileSystem
     }
 
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.SET_OWNER);
     final HttpOpParam.Op op = PutOpParam.Op.SETOWNER;
     new FsPathRunner(op, p,
         new OwnerParam(owner), new GroupParam(group)
@@ -1138,6 +1164,7 @@ public class WebHdfsFileSystem extends FileSystem
   public void setPermission(final Path p, final FsPermission permission
   ) throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.SET_PERMISSION);
     final HttpOpParam.Op op = PutOpParam.Op.SETPERMISSION;
     new FsPathRunner(op, p,new PermissionParam(permission)).run();
   }
@@ -1146,6 +1173,7 @@ public class WebHdfsFileSystem extends FileSystem
   public void modifyAclEntries(Path path, List<AclEntry> aclSpec)
       throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.MODIFY_ACL_ENTRIES);
     final HttpOpParam.Op op = PutOpParam.Op.MODIFYACLENTRIES;
     new FsPathRunner(op, path, new AclPermissionParam(aclSpec)).run();
   }
@@ -1154,6 +1182,7 @@ public class WebHdfsFileSystem extends FileSystem
   public void removeAclEntries(Path path, List<AclEntry> aclSpec)
       throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.REMOVE_ACL_ENTRIES);
     final HttpOpParam.Op op = PutOpParam.Op.REMOVEACLENTRIES;
     new FsPathRunner(op, path, new AclPermissionParam(aclSpec)).run();
   }
@@ -1161,6 +1190,7 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public void removeDefaultAcl(Path path) throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.REMOVE_DEFAULT_ACL);
     final HttpOpParam.Op op = PutOpParam.Op.REMOVEDEFAULTACL;
     new FsPathRunner(op, path).run();
   }
@@ -1168,6 +1198,7 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public void removeAcl(Path path) throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.REMOVE_ACL);
     final HttpOpParam.Op op = PutOpParam.Op.REMOVEACL;
     new FsPathRunner(op, path).run();
   }
@@ -1176,12 +1207,14 @@ public class WebHdfsFileSystem extends FileSystem
   public void setAcl(final Path p, final List<AclEntry> aclSpec)
       throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.SET_ACL);
     final HttpOpParam.Op op = PutOpParam.Op.SETACL;
     new FsPathRunner(op, p, new AclPermissionParam(aclSpec)).run();
   }
 
   public void allowSnapshot(final Path p) throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.ALLOW_SNAPSHOT);
     final HttpOpParam.Op op = PutOpParam.Op.ALLOWSNAPSHOT;
     new FsPathRunner(op, p).run();
   }
@@ -1190,6 +1223,7 @@ public class WebHdfsFileSystem extends FileSystem
   public Path createSnapshot(final Path path, final String snapshotName)
       throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.CREATE_SNAPSHOT);
     final HttpOpParam.Op op = PutOpParam.Op.CREATESNAPSHOT;
     return new FsPathResponseRunner<Path>(op, path,
         new SnapshotNameParam(snapshotName)) {
@@ -1202,6 +1236,7 @@ public class WebHdfsFileSystem extends FileSystem
 
   public void disallowSnapshot(final Path p) throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.DISALLOW_SNAPSHOT);
     final HttpOpParam.Op op = PutOpParam.Op.DISALLOWSNAPSHOT;
     new FsPathRunner(op, p).run();
   }
@@ -1210,6 +1245,7 @@ public class WebHdfsFileSystem extends FileSystem
   public void deleteSnapshot(final Path path, final String snapshotName)
       throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.DELETE_SNAPSHOT);
     final HttpOpParam.Op op = DeleteOpParam.Op.DELETESNAPSHOT;
     new FsPathRunner(op, path, new SnapshotNameParam(snapshotName)).run();
   }
@@ -1218,6 +1254,7 @@ public class WebHdfsFileSystem extends FileSystem
   public void renameSnapshot(final Path path, final String snapshotOldName,
       final String snapshotNewName) throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.RENAME_SNAPSHOT);
     final HttpOpParam.Op op = PutOpParam.Op.RENAMESNAPSHOT;
     new FsPathRunner(op, path, new OldSnapshotNameParam(snapshotOldName),
         new SnapshotNameParam(snapshotNewName)).run();
@@ -1227,6 +1264,7 @@ public class WebHdfsFileSystem extends FileSystem
   public boolean setReplication(final Path p, final short replication
   ) throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.SET_REPLICATION);
     final HttpOpParam.Op op = PutOpParam.Op.SETREPLICATION;
     return new FsPathBooleanRunner(op, p,
         new ReplicationParam(replication)
@@ -1237,6 +1275,7 @@ public class WebHdfsFileSystem extends FileSystem
   public void setTimes(final Path p, final long mtime, final long atime
   ) throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.SET_TIMES);
     final HttpOpParam.Op op = PutOpParam.Op.SETTIMES;
     new FsPathRunner(op, p,
         new ModificationTimeParam(mtime),
@@ -1259,6 +1298,7 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public void concat(final Path trg, final Path [] srcs) throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.CONCAT);
     final HttpOpParam.Op op = PostOpParam.Op.CONCAT;
     new FsPathRunner(op, trg, new ConcatSourcesParam(srcs)).run();
   }
@@ -1268,6 +1308,7 @@ public class WebHdfsFileSystem extends FileSystem
       final boolean overwrite, final int bufferSize, final short replication,
       final long blockSize, final Progressable progress) throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.CREATE);
 
     final HttpOpParam.Op op = PutOpParam.Op.CREATE;
     return new FsPathOutputStreamRunner(op, f, bufferSize,
@@ -1285,6 +1326,7 @@ public class WebHdfsFileSystem extends FileSystem
       final int bufferSize, final short replication, final long blockSize,
       final Progressable progress) throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.CREATE_NON_RECURSIVE);
 
     final HttpOpParam.Op op = PutOpParam.Op.CREATE;
     return new FsPathOutputStreamRunner(op, f, bufferSize,
@@ -1301,6 +1343,7 @@ public class WebHdfsFileSystem extends FileSystem
   public FSDataOutputStream append(final Path f, final int bufferSize,
       final Progressable progress) throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.APPEND);
 
     final HttpOpParam.Op op = PostOpParam.Op.APPEND;
     return new FsPathOutputStreamRunner(op, f, bufferSize,
@@ -1311,6 +1354,7 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public boolean truncate(Path f, long newLength) throws IOException {
     statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.TRUNCATE);
 
     final HttpOpParam.Op op = PostOpParam.Op.TRUNCATE;
     return new FsPathBooleanRunner(op, f, new NewLengthParam(newLength)).run();
@@ -1318,6 +1362,8 @@ public class WebHdfsFileSystem extends FileSystem
 
   @Override
   public boolean delete(Path f, boolean recursive) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.DELETE);
     final HttpOpParam.Op op = DeleteOpParam.Op.DELETE;
     return new FsPathBooleanRunner(op, f,
         new RecursiveParam(recursive)
@@ -1328,6 +1374,7 @@ public class WebHdfsFileSystem extends FileSystem
   public FSDataInputStream open(final Path f, final int bufferSize
   ) throws IOException {
     statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.OPEN);
     return new FSDataInputStream(new WebHdfsInputStream(f, bufferSize));
   }
 
@@ -1427,6 +1474,7 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public FileStatus[] listStatus(final Path f) throws IOException {
     statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.LIST_STATUS);
 
     final HttpOpParam.Op op = GetOpParam.Op.LISTSTATUS;
     return new FsPathResponseRunner<FileStatus[]>(op, f) {
@@ -1522,6 +1570,7 @@ public class WebHdfsFileSystem extends FileSystem
   public BlockLocation[] getFileBlockLocations(final Path p,
       final long offset, final long length) throws IOException {
     statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_FILE_BLOCK_LOCATIONS);
 
     final HttpOpParam.Op op = GetOpParam.Op.GET_BLOCK_LOCATIONS;
     return new FsPathResponseRunner<BlockLocation[]>(op, p,
@@ -1543,6 +1592,7 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public ContentSummary getContentSummary(final Path p) throws IOException {
     statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_CONTENT_SUMMARY);
 
     final HttpOpParam.Op op = GetOpParam.Op.GETCONTENTSUMMARY;
     return new FsPathResponseRunner<ContentSummary>(op, p) {
@@ -1557,6 +1607,7 @@ public class WebHdfsFileSystem extends FileSystem
   public MD5MD5CRC32FileChecksum getFileChecksum(final Path p
   ) throws IOException {
     statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_FILE_CHECKSUM);
 
     final HttpOpParam.Op op = GetOpParam.Op.GETFILECHECKSUM;
     return new FsPathResponseRunner<MD5MD5CRC32FileChecksum>(op, p) {
