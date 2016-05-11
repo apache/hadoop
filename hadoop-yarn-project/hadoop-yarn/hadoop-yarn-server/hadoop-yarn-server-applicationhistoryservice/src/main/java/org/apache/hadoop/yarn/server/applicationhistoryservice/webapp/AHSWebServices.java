@@ -274,12 +274,8 @@ public class AHSWebServices extends WebServices {
     }
   }
 
-  // TODO: YARN-5029. RM would send the update event. We could get
-  // the consistent YarnApplicationState.
-  // Will remove YarnApplicationState.ACCEPTED.
   private boolean isRunningState(YarnApplicationState appState) {
-    return appState == YarnApplicationState.ACCEPTED
-        || appState == YarnApplicationState.RUNNING;
+    return appState == YarnApplicationState.RUNNING;
   }
 
   private boolean isFinishedState(YarnApplicationState appState) {
