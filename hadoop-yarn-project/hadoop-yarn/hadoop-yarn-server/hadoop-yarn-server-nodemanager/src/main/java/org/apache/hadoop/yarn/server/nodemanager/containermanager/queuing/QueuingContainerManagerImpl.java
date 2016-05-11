@@ -101,14 +101,14 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
   }
 
   @Override
-  protected void startContainerInternal(NMTokenIdentifier nmTokenIdentifier,
+  protected void startContainerInternal(
       ContainerTokenIdentifier containerTokenIdentifier,
       StartContainerRequest request) throws YarnException, IOException {
     this.context.getQueuingContext().getQueuedContainers().put(
         containerTokenIdentifier.getContainerID(), containerTokenIdentifier);
 
     AllocatedContainerInfo allocatedContInfo = new AllocatedContainerInfo(
-        containerTokenIdentifier, nmTokenIdentifier, request,
+        containerTokenIdentifier, request,
         containerTokenIdentifier.getExecutionType(), containerTokenIdentifier
             .getResource(), getConfig());
 
@@ -189,7 +189,6 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
     this.context.getQueuingContext().getQueuedContainers().remove(containerId);
     try {
       super.startContainerInternal(
-          allocatedContainerInfo.getNMTokenIdentifier(),
           allocatedContainerInfo.getContainerTokenIdentifier(),
           allocatedContainerInfo.getStartRequest());
     } catch (YarnException | IOException e) {
@@ -467,7 +466,6 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public void handle(ApplicationEvent event) {
       if (event.getType() ==
           ApplicationEventType.APPLICATION_CONTAINER_FINISHED) {
@@ -489,16 +487,14 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
 
   static class AllocatedContainerInfo {
     private final ContainerTokenIdentifier containerTokenIdentifier;
-    private final NMTokenIdentifier nmTokenIdentifier;
     private final StartContainerRequest startRequest;
     private final ExecutionType executionType;
     private final ProcessTreeInfo pti;
 
     AllocatedContainerInfo(ContainerTokenIdentifier containerTokenIdentifier,
-        NMTokenIdentifier nmTokenIdentifier, StartContainerRequest startRequest,
-        ExecutionType executionType, Resource resource, Configuration conf) {
+        StartContainerRequest startRequest, ExecutionType executionType,
+        Resource resource, Configuration conf) {
       this.containerTokenIdentifier = containerTokenIdentifier;
-      this.nmTokenIdentifier = nmTokenIdentifier;
       this.startRequest = startRequest;
       this.executionType = executionType;
       this.pti = createProcessTreeInfo(containerTokenIdentifier
@@ -507,10 +503,6 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
 
     private ContainerTokenIdentifier getContainerTokenIdentifier() {
       return this.containerTokenIdentifier;
-    }
-
-    private NMTokenIdentifier getNMTokenIdentifier() {
-      return this.nmTokenIdentifier;
     }
 
     private StartContainerRequest getStartRequest() {
