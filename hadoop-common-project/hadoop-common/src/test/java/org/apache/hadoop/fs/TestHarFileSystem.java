@@ -219,6 +219,7 @@ public class TestHarFileSystem {
     public Path getTrashRoot(Path path) throws IOException;
 
     public Collection<FileStatus> getTrashRoots(boolean allUsers) throws IOException;
+    StorageStatistics getStorageStatistics();
   }
 
   @Test
