@@ -32,6 +32,10 @@ import javax.servlet.http.HttpServletResponse;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+/**
+ * This class tests the behavior of the RestCsrfPreventionFilter.
+ *
+ */
 public class TestRestCsrfPreventionFilter {
 
   private static final String NON_BROWSER = "java";
@@ -43,7 +47,7 @@ public class TestRestCsrfPreventionFilter {
   private static final String X_CUSTOM_HEADER = "X-CUSTOM_HEADER";
 
   @Test
-  public void testNoHeaderDefaultConfig_badRequest()
+  public void testNoHeaderDefaultConfigBadRequest()
       throws ServletException, IOException {
     // Setup the configuration settings of the server
     FilterConfig filterConfig = Mockito.mock(FilterConfig.class);
@@ -56,7 +60,7 @@ public class TestRestCsrfPreventionFilter {
     // CSRF has not been sent
     HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_DEFAULT)).
-    thenReturn(null);
+      thenReturn(null);
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_USER_AGENT)).
       thenReturn(BROWSER_AGENT);
 
@@ -75,7 +79,7 @@ public class TestRestCsrfPreventionFilter {
   }
 
   @Test
-  public void testNoHeaderCustomAgentConfig_badRequest()
+  public void testNoHeaderCustomAgentConfigBadRequest()
       throws ServletException, IOException {
     // Setup the configuration settings of the server
     FilterConfig filterConfig = Mockito.mock(FilterConfig.class);
@@ -91,7 +95,7 @@ public class TestRestCsrfPreventionFilter {
     // CSRF has not been sent
     HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_DEFAULT)).
-    thenReturn(null);
+      thenReturn(null);
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_USER_AGENT)).
       thenReturn("curl");
 
@@ -110,7 +114,7 @@ public class TestRestCsrfPreventionFilter {
   }
 
   @Test
-  public void testNoHeaderDefaultConfigNonBrowser_goodRequest()
+  public void testNoHeaderDefaultConfigNonBrowserGoodRequest()
       throws ServletException, IOException {
     // Setup the configuration settings of the server
     FilterConfig filterConfig = Mockito.mock(FilterConfig.class);
@@ -123,7 +127,7 @@ public class TestRestCsrfPreventionFilter {
     // CSRF has not been sent
     HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_DEFAULT)).
-    thenReturn(null);
+      thenReturn(null);
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_USER_AGENT)).
       thenReturn(NON_BROWSER);
 
@@ -140,7 +144,7 @@ public class TestRestCsrfPreventionFilter {
   }
 
   @Test
-  public void testHeaderPresentDefaultConfig_goodRequest()
+  public void testHeaderPresentDefaultConfigGoodRequest()
       throws ServletException, IOException {
     // Setup the configuration settings of the server
     FilterConfig filterConfig = Mockito.mock(FilterConfig.class);
@@ -168,7 +172,7 @@ public class TestRestCsrfPreventionFilter {
   }
 
   @Test
-  public void testHeaderPresentCustomHeaderConfig_goodRequest()
+  public void testHeaderPresentCustomHeaderConfigGoodRequest()
       throws ServletException, IOException {
     // Setup the configuration settings of the server
     FilterConfig filterConfig = Mockito.mock(FilterConfig.class);
@@ -197,7 +201,7 @@ public class TestRestCsrfPreventionFilter {
   }
 
   @Test
-  public void testMissingHeaderWithCustomHeaderConfig_badRequest()
+  public void testMissingHeaderWithCustomHeaderConfigBadRequest()
       throws ServletException, IOException {
     // Setup the configuration settings of the server
     FilterConfig filterConfig = Mockito.mock(FilterConfig.class);
@@ -209,7 +213,7 @@ public class TestRestCsrfPreventionFilter {
       thenReturn(null);
     HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_USER_AGENT)).
-    thenReturn(BROWSER_AGENT);
+      thenReturn(BROWSER_AGENT);
 
     // CSRF has not been sent
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_DEFAULT)).
@@ -228,7 +232,7 @@ public class TestRestCsrfPreventionFilter {
   }
 
   @Test
-  public void testMissingHeaderNoMethodsToIgnoreConfig_badRequest()
+  public void testMissingHeaderNoMethodsToIgnoreConfigBadRequest()
       throws ServletException, IOException {
     // Setup the configuration settings of the server
     FilterConfig filterConfig = Mockito.mock(FilterConfig.class);
@@ -239,7 +243,7 @@ public class TestRestCsrfPreventionFilter {
       thenReturn("");
     HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_USER_AGENT)).
-    thenReturn(BROWSER_AGENT);
+      thenReturn(BROWSER_AGENT);
 
     // CSRF has not been sent
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_DEFAULT)).
@@ -260,7 +264,7 @@ public class TestRestCsrfPreventionFilter {
   }
 
   @Test
-  public void testMissingHeaderIgnoreGETMethodConfig_goodRequest()
+  public void testMissingHeaderIgnoreGETMethodConfigGoodRequest()
       throws ServletException, IOException {
     // Setup the configuration settings of the server
     FilterConfig filterConfig = Mockito.mock(FilterConfig.class);
@@ -271,7 +275,7 @@ public class TestRestCsrfPreventionFilter {
       thenReturn("GET");
     HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_USER_AGENT)).
-    thenReturn(BROWSER_AGENT);
+      thenReturn(BROWSER_AGENT);
 
     // CSRF has not been sent
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_DEFAULT)).
@@ -292,7 +296,7 @@ public class TestRestCsrfPreventionFilter {
   }
 
   @Test
-  public void testMissingHeaderMultipleIgnoreMethodsConfig_goodRequest()
+  public void testMissingHeaderMultipleIgnoreMethodsConfigGoodRequest()
       throws ServletException, IOException {
     // Setup the configuration settings of the server
     FilterConfig filterConfig = Mockito.mock(FilterConfig.class);
@@ -303,7 +307,7 @@ public class TestRestCsrfPreventionFilter {
       thenReturn("GET,OPTIONS");
     HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_USER_AGENT)).
-    thenReturn(BROWSER_AGENT);
+      thenReturn(BROWSER_AGENT);
 
     // CSRF has not been sent
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_DEFAULT)).
@@ -324,7 +328,7 @@ public class TestRestCsrfPreventionFilter {
   }
 
   @Test
-  public void testMissingHeaderMultipleIgnoreMethodsConfig_badRequest()
+  public void testMissingHeaderMultipleIgnoreMethodsConfigBadRequest()
       throws ServletException, IOException {
     // Setup the configuration settings of the server
     FilterConfig filterConfig = Mockito.mock(FilterConfig.class);
@@ -335,7 +339,7 @@ public class TestRestCsrfPreventionFilter {
       thenReturn("GET,OPTIONS");
     HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_USER_AGENT)).
-    thenReturn(BROWSER_AGENT);
+      thenReturn(BROWSER_AGENT);
 
     // CSRF has not been sent
     Mockito.when(mockReq.getHeader(RestCsrfPreventionFilter.HEADER_DEFAULT)).

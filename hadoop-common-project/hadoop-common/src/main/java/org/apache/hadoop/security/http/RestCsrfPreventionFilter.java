@@ -18,7 +18,6 @@
 package org.apache.hadoop.security.http;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -228,16 +227,7 @@ public class RestCsrfPreventionFilter implements Filter {
    */
   public static Map<String, String> getFilterParams(Configuration conf,
       String confPrefix) {
-    Map<String, String> filterConfigMap = new HashMap<>();
-    for (Map.Entry<String, String> entry : conf) {
-      String name = entry.getKey();
-      if (name.startsWith(confPrefix)) {
-        String value = conf.get(name);
-        name = name.substring(confPrefix.length());
-        filterConfigMap.put(name, value);
-      }
-    }
-    return filterConfigMap;
+    return conf.getPropsWithPrefix(confPrefix);
   }
 
   /**
