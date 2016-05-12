@@ -20,9 +20,9 @@ package org.apache.hadoop.fs.s3native;
 
 import java.io.IOException;
 
-public class Jets3tNativeS3FileSystemContractTest
+public class TestJets3tNativeS3FileSystemContract
   extends NativeS3FileSystemContractBaseTest {
-  
+
   @Override
   NativeFileSystemStore getNativeFileSystemStore() throws IOException {
     return new Jets3tNativeFileSystemStore();
