@@ -1451,10 +1451,16 @@ public class YarnConfiguration extends Configuration {
     NM_PREFIX + "principal";
   
   public static final String NM_AUX_SERVICES = 
-    NM_PREFIX + "aux-services";
+      NM_PREFIX + "aux-services";
   
   public static final String NM_AUX_SERVICE_FMT =
-    NM_PREFIX + "aux-services.%s.class";
+      NM_PREFIX + "aux-services.%s.class";
+
+  public static final String NM_AUX_SERVICES_CLASSPATH =
+      NM_AUX_SERVICES + ".%s.classpath";
+
+  public static final String NM_AUX_SERVICES_SYSTEM_CLASSES =
+      NM_AUX_SERVICES + ".%s.system-classes";
 
   public static final String NM_USER_HOME_DIR =
       NM_PREFIX + "user-home-dir";
