@@ -54,6 +54,7 @@ public class FairSchedulerQueueInfo {
   private ResourceInfo minResources;
   private ResourceInfo maxResources;
   private ResourceInfo usedResources;
+  private ResourceInfo demandResources;
   private ResourceInfo steadyFairResources;
   private ResourceInfo fairResources;
   private ResourceInfo clusterResources;
@@ -79,6 +80,7 @@ public class FairSchedulerQueueInfo {
     clusterResources = new ResourceInfo(scheduler.getClusterResource());
     
     usedResources = new ResourceInfo(queue.getResourceUsage());
+    demandResources = new ResourceInfo(queue.getDemand());
     fractionMemUsed = (float)usedResources.getMemory() /
         clusterResources.getMemory();
 
@@ -191,6 +193,13 @@ public class FairSchedulerQueueInfo {
   
   public ResourceInfo getUsedResources() {
     return usedResources;
+  }
+
+  /**
+   * @return the demand resource of this queue.
+     */
+  public ResourceInfo getDemandResources() {
+    return demandResources;
   }
 
   /**
