@@ -85,7 +85,7 @@ Apache Hadoop allows for third parties to easily add new features through a vari
 
 Core to this functionality is the concept of a shell profile.  Shell profiles are shell snippets that can do things such as add jars to the classpath, configure Java system properties and more.
 
-Shell profiles may be installed in either `${HADOOP_CONF_DIR}/shellprofile.d` or `${HADOOP_HOME}/libexec/shellprofile.d`.  Shell profiles in the `libexec` directory are part of the base installation and cannot be overriden by the user.  Shell profiles in the configuration directory may be ignored if the end user changes the configuration directory at runtime.
+Shell profiles may be installed in either `${HADOOP_CONF_DIR}/shellprofile.d` or `${HADOOP_HOME}/libexec/shellprofile.d`.  Shell profiles in the `libexec` directory are part of the base installation and cannot be overridden by the user.  Shell profiles in the configuration directory may be ignored if the end user changes the configuration directory at runtime.
 
 An example of a shell profile is in the libexec directory.
 
@@ -115,7 +115,7 @@ would go into `.hadooprc`
 
 Utilizing the Shell API, it is possible for third parties to add their own subcommands to the primary Hadoop shell scripts (hadoop, hdfs, mapred, yarn).
 
-Prior to executing a subcommand, the primary scripts will check for the existance of a (scriptname)_subcommand_(subcommand) function.  This function gets executed with the parameters set to all remaining command line arguments.  For example, if the following function is defined:
+Prior to executing a subcommand, the primary scripts will check for the existence of a (scriptname)_subcommand_(subcommand) function.  This function gets executed with the parameters set to all remaining command line arguments.  For example, if the following function is defined:
 
 ```bash
 function yarn_subcommand_hello
@@ -125,7 +125,7 @@ function yarn_subcommand_hello
 }
 ```
 
-then executing `yarn --debug hello world I see you` will activate script debugging and call the `yarn_subcommand_hello` funciton as:
+then executing `yarn --debug hello world I see you` will activate script debugging and call the `yarn_subcommand_hello` function as:
 
 ```bash
 yarn_subcommand_hello world I see you
@@ -190,4 +190,4 @@ If this command can be executed as a daemon, set this to true.
 
 This is the full content of the command line, prior to any parsing done. It will contain flags such as `--debug`.  It MAY NOT be manipulated.
 
-The Apache Hadoop runtime facilities require functions exit if no further processing is required.  For example, in the hello example above, Java and other facilities were not required so a simple `exit $?` was sufficient.  However, if the function were to utilize `HADOOP\_CLASSNAME`, then program execution must continue so that Java with the Apache Hadoop-specific parameters will be launched against the given Java class. Another example would be in the case of an unrecoverable error.  It is the function's responsbility to print an appropriate message (preferably using the hadoop_error API call) and exit appropriately.
+The Apache Hadoop runtime facilities require functions exit if no further processing is required.  For example, in the hello example above, Java and other facilities were not required so a simple `exit $?` was sufficient.  However, if the function were to utilize `HADOOP\_CLASSNAME`, then program execution must continue so that Java with the Apache Hadoop-specific parameters will be launched against the given Java class. Another example would be in the case of an unrecoverable error.  It is the function's responsibility to print an appropriate message (preferably using the hadoop_error API call) and exit appropriately.
