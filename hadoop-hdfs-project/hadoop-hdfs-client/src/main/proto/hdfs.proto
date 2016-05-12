@@ -92,6 +92,8 @@ message DatanodeInfoProto {
     NORMAL = 0;
     DECOMMISSION_INPROGRESS = 1;
     DECOMMISSIONED = 2;
+    ENTERING_MAINTENANCE = 3;
+    IN_MAINTENANCE = 4;
   }
 
   optional AdminState adminState = 10 [default = NORMAL];
