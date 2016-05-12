@@ -40,7 +40,6 @@ public class TestS3ADeleteManyFiles extends S3AScaleTestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestS3ADeleteManyFiles.class);
 
-
   @Rule
   public Timeout testTimeout = new Timeout(30 * 60 * 1000);
 

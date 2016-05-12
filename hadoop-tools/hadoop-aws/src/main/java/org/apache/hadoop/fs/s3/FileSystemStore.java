@@ -55,13 +55,13 @@ public interface FileSystemStore {
 
   /**
    * Delete everything. Used for testing.
-   * @throws IOException
+   * @throws IOException on any problem
    */
   void purge() throws IOException;
   
   /**
    * Diagnostic method to dump all INodes to the console.
-   * @throws IOException
+   * @throws IOException on any problem
    */
   void dump() throws IOException;
 }
