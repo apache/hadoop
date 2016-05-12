@@ -160,6 +160,13 @@ public interface ApplicationConstants {
     LD_LIBRARY_PATH("LD_LIBRARY_PATH"),
 
     /**
+     * $YARN_RESOURCEMANAGER_APPLICATION_QUEUE
+     * The queue into which the app was submitted/launched.
+     */
+    YARN_RESOURCEMANAGER_APPLICATION_QUEUE(
+        "YARN_RESOURCEMANAGER_APPLICATION_QUEUE"),
+
+    /**
      * $HADOOP_CONF_DIR
      * Final, non-modifiable.
      */
