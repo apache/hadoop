@@ -234,4 +234,13 @@ public class FSDataInputStream extends DataInputStream
           "support unbuffering.");
     }
   }
+
+  /**
+   * String value. Includes the string value of the inner stream
+   * @return the stream
+   */
+  @Override
+  public String toString() {
+    return super.toString() + ": " + in;
+  }
 }

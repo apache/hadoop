@@ -437,6 +437,14 @@ this capability.
       <description>The implementation class of the S3A AbstractFileSystem.</description>
     </property>
 
+    <property>
+      <name>fs.s3a.readahead.range</name>
+      <value>65536</value>
+      <description>Bytes to read ahead during a seek() before closing and
+      re-opening the S3 HTTP connection. This option will be overridden if
+      any call to setReadahead() is made to an open stream.</description>
+    </property>
+
 ### S3AFastOutputStream
  **Warning: NEW in hadoop 2.7. UNSTABLE, EXPERIMENTAL: use at own risk**
 
@@ -647,7 +655,7 @@ Example:
     <configuration>
     
       <include xmlns="http://www.w3.org/2001/XInclude"
-        href="auth-keys.xml"/>
+        href="/home/testuser/.ssh/auth-keys.xml"/>
     
       <property>
         <name>fs.contract.test.fs.s3</name>
@@ -667,7 +675,61 @@ Example:
 
     </configuration>
 
-This example pulls in the `auth-keys.xml` file for the credentials. 
+This example pulls in the `~/.ssh/auth-keys.xml` file for the credentials.
 This provides one single place to keep the keys up to date —and means
 that the file `contract-test-options.xml` does not contain any
-secret credentials itself.
+secret credentials itself. As the auth keys XML file is kept out of the
+source code tree, it is not going to get accidentally committed.
+
+### Running Performance Tests against non-AWS storage infrastructures
+
+
+#### CSV Data source
+
+The `TestS3AInputStreamPerformance` tests require read access to a multi-MB
+text file. The default file for these tests is one published by amazon,
+[s3a://landsat-pds.s3.amazonaws.com/scene_list.gz](http://landsat-pds.s3.amazonaws.com/scene_list.gz).
+This is a gzipped CSV index of other files which amazon serves for open use.
+
+The path to this object is set in the option `fs.s3a.scale.test.csvfile`:
+
+    <property>
+      <name>fs.s3a.scale.test.csvfile</name>
+      <value>s3a://landsat-pds/scene_list.gz</value>
+    </property>
+
+1. If the option is not overridden, the default value is used. This
+is hosted in Amazon's US-east datacenter.
+1. If the property is empty, tests which require it will be skipped.
+1. If the data cannot be read for any reason then the test will fail.
+1. If the property is set to a different path, then that data must be readable
+and "sufficiently" large.
+
+To test on different S3 endpoints, or alternate infrastructures supporting
+the same APIs, the option `fs.s3a.scale.test.csvfile` must therefore be
+set to " ", or an object of at least 10MB is uploaded to the object store, and
+the `fs.s3a.scale.test.csvfile` option set to its path.
+
+      <property>
+        <name>fs.s3a.scale.test.csvfile</name>
+        <value> </value>
+      </property>
+
+
+#### Scale test operation count
+
+Some scale tests perform multiple operations (such as creating many directories).
+
+The exact number of operations to perform is configurable in the option
+`scale.test.operation.count`
+
+      <property>
+        <name>scale.test.operation.count</name>
+        <value>10</value>
+      </property>
+
+Larger values generate more load, and are recommended when testing locally,
+or in batch runs.
+
+Smaller values should result in faster test runs, especially when the object
+store is a long way away.

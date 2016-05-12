@@ -21,7 +21,11 @@ package org.apache.hadoop.fs.s3a;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AnonymousAWSCredentials;
 import com.amazonaws.auth.AWSCredentials;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
+@InterfaceAudience.Private
+@InterfaceStability.Stable
 public class AnonymousAWSCredentialsProvider implements AWSCredentialsProvider {
   public AWSCredentials getCredentials() {
     return new AnonymousAWSCredentials();
