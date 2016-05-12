@@ -81,6 +81,9 @@ Release 2.7.3 - UNRELEASED
     MAPREDUCE-6689. MapReduce job can infinitely increase number of reducer
     resource requests (Wangda Tan via jlowe)
 
+    MAPREDUCE-6513. Job got hanged forever when one NM unstable for some
+    time. Contributed by Varun Saxena & Wangda Tan
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES

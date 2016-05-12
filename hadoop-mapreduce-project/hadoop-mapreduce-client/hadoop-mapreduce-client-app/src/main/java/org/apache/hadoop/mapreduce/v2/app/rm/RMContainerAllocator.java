@@ -887,9 +887,11 @@ public class RMContainerAllocator extends RMContainerRequestor
             LOG.info("Killing taskAttempt:" + tid
                 + " because it is running on unusable node:"
                 + taskAttemptNodeId);
+            // If map, reschedule next task attempt.
+            boolean rescheduleNextAttempt = (i == 0) ? true : false;
             eventHandler.handle(new TaskAttemptKillEvent(tid,
                 "TaskAttempt killed because it ran on unusable node"
-                    + taskAttemptNodeId));
+                    + taskAttemptNodeId, rescheduleNextAttempt));
           }
         }
       }
