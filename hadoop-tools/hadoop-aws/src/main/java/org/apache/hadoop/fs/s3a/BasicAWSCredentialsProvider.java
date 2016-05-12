@@ -23,7 +23,11 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.AWSCredentials;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
+@InterfaceAudience.Private
+@InterfaceStability.Stable
 public class BasicAWSCredentialsProvider implements AWSCredentialsProvider {
   private final String accessKey;
   private final String secretKey;
