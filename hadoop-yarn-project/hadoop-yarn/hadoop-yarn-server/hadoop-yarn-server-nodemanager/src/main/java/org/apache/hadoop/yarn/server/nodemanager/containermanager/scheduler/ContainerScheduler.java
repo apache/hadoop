@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -263,15 +264,15 @@ public class ContainerScheduler extends AbstractService implements
               "Opportunistic container queue is full.");
         }
       }
-//      if (isQueued) {
-//        try {
-//          this.context.getNMStateStore().storeContainerQueued(
-//              container.getContainerId());
-//        } catch (IOException e) {
-//          LOG.warn("Could not store container [" + container.getContainerId()
-//              + "] state. The Container has been queued.", e);
-//        }
-//      }
+      if (isQueued) {
+        try {
+          this.context.getNMStateStore().storeContainerQueued(
+              container.getContainerId());
+        } catch (IOException e) {
+          LOG.warn("Could not store container [" + container.getContainerId()
+              + "] state. The Container has been queued.", e);
+        }
+      }
     }
   }
 

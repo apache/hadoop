@@ -69,6 +69,7 @@ public abstract class NMStateStoreService extends AbstractService {
 
   public enum RecoveredContainerStatus {
     REQUESTED,
+    QUEUED,
     LAUNCHED,
     COMPLETED
   }
@@ -369,6 +370,14 @@ public abstract class NMStateStoreService extends AbstractService {
    */
   public abstract void storeContainer(ContainerId containerId,
       int containerVersion, StartContainerRequest startRequest)
+      throws IOException;
+
+  /**
+   * Record that a container has been queued at the NM
+   * @param containerId the container ID
+   * @throws IOException
+   */
+  public abstract void storeContainerQueued(ContainerId containerId)
       throws IOException;
 
   /**
