@@ -367,10 +367,28 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .setPermission(PBHelperClient.convert(permission))
         .build();
     try {
-      rpcProxy.setPermission(null, req);
+      if (Client.isAsynchronousMode()) {
+        rpcProxy.setPermission(null, req);
+        setReturnValueCallback();
+      } else {
+        rpcProxy.setPermission(null, req);
+      }
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
+  }
+
+  private void setReturnValueCallback() {
+    final Callable<Message> returnMessageCallback = ProtobufRpcEngine
+        .getReturnMessageCallback();
+    Callable<Void> callBack = new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        returnMessageCallback.call();
+        return null;
+      }
+    };
+    RETURN_VALUE_CALLBACK.set(callBack);
   }
 
   @Override
@@ -383,7 +401,12 @@ public class ClientNamenodeProtocolTranslatorPB implements
     if (groupname != null)
       req.setGroupname(groupname);
     try {
-      rpcProxy.setOwner(null, req.build());
+      if (Client.isAsynchronousMode()) {
+        rpcProxy.setOwner(null, req.build());
+        setReturnValueCallback();
+      } else {
+        rpcProxy.setOwner(null, req.build());
+      }
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -513,17 +536,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
     try {
       if (Client.isAsynchronousMode()) {
         rpcProxy.rename2(null, req);
-
-        final Callable<Message> returnMessageCallback = ProtobufRpcEngine
-            .getReturnMessageCallback();
-        Callable<Void> callBack = new Callable<Void>() {
-          @Override
-          public Void call() throws Exception {
-            returnMessageCallback.call();
-            return null;
-          }
-        };
-        RETURN_VALUE_CALLBACK.set(callBack);
+        setReturnValueCallback();
       } else {
         rpcProxy.rename2(null, req);
       }
