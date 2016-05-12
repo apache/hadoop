@@ -46,6 +46,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-8101. DFSClient use of non-constant DFSConfigKeys pulls in WebHDFS
     classes at runtime. (Sean Busbey via atm)
 
+    HDFS-8772. Fix TestStandbyIsHot#testDatanodeRestarts which occasionally fails.
+    (Walter Su via wang).
+
   OPTIMIZATIONS
 
     HDFS-8845. DiskChecker should not traverse the entire tree (Chang Li via
