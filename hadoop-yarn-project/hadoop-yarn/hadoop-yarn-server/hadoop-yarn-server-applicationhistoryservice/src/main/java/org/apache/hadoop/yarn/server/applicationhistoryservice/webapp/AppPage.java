@@ -55,7 +55,7 @@ public class AppPage extends AHSView {
 
   protected String getAttemptsTableColumnDefs() {
     StringBuilder sb = new StringBuilder();
-    return sb.append("[\n").append("{'sType':'string', 'aTargets': [0]")
+    return sb.append("[\n").append("{'sType':'natural', 'aTargets': [0]")
       .append(", 'mRender': parseHadoopID }")
 
       .append("\n, {'sType':'numeric', 'aTargets': [1]")
