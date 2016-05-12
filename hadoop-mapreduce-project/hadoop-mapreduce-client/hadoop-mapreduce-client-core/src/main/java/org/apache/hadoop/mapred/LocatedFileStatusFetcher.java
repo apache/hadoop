@@ -175,7 +175,7 @@ public class LocatedFileStatusFetcher {
   private void registerError(Throwable t) {
     lock.lock();
     try {
-      if (unknownError != null) {
+      if (unknownError == null) {
         unknownError = t;
         condition.signal();
       }
