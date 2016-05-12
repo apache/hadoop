@@ -918,7 +918,6 @@ public class S3AFileSystem extends FileSystem {
       LOG.debug("Making directory: " + f);
     }
 
-
     try {
       FileStatus fileStatus = getFileStatus(f);
 
@@ -929,21 +928,23 @@ public class S3AFileSystem extends FileSystem {
       }
     } catch (FileNotFoundException e) {
       Path fPart = f;
-      do {
+      while (fPart.getParent() != null) {
         try {
           FileStatus fileStatus = getFileStatus(fPart);
           if (fileStatus.isFile()) {
             throw new FileAlreadyExistsException(String.format(
                 "Can't make directory for path '%s' since it is a file.",
                 fPart));
+          } else {
+            return true;
           }
         } catch (FileNotFoundException fnfe) {
+          String key = pathToKey(fPart);
+          createFakeDirectory(bucket, key);
+          fPart = fPart.getParent();
         }
-        fPart = fPart.getParent();
-      } while (fPart != null);
+      }
 
-      String key = pathToKey(f);
-      createFakeDirectory(bucket, key);
       return true;
     }
   }
