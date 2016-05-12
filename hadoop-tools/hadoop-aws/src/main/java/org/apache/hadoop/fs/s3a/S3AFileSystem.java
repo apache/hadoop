@@ -72,6 +72,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.VersionInfo;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 
@@ -191,6 +192,8 @@ public class S3AFileSystem extends FileSystem {
 
     initProxySupport(conf, awsConf, secureConnections);
 
+    initUserAgent(conf, awsConf);
+
     initAmazonS3Client(conf, credentials, awsConf);
 
     maxKeys = conf.getInt(MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS);
@@ -287,6 +290,26 @@ public class S3AFileSystem extends FileSystem {
       LOG.error(msg);
       throw new IllegalArgumentException(msg);
     }
+  }
+
+  /**
+   * Initializes the User-Agent header to send in HTTP requests to the S3
+   * back-end.  We always include the Hadoop version number.  The user also may
+   * set an optional custom prefix to put in front of the Hadoop version number.
+   * The AWS SDK interally appends its own information, which seems to include
+   * the AWS SDK version, OS and JVM version.
+   *
+   * @param conf Hadoop configuration
+   * @param awsConf AWS SDK configuration
+   */
+  private void initUserAgent(Configuration conf, ClientConfiguration awsConf) {
+    String userAgent = "Hadoop " + VersionInfo.getVersion();
+    String userAgentPrefix = conf.getTrimmed(USER_AGENT_PREFIX, "");
+    if (!userAgentPrefix.isEmpty()) {
+      userAgent = userAgentPrefix + ", " + userAgent;
+    }
+    LOG.debug("Using User-Agent: {}", userAgent);
+    awsConf.setUserAgent(userAgent);
   }
 
   private void initAmazonS3Client(Configuration conf,

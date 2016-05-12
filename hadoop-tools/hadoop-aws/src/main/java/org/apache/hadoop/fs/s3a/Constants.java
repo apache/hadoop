@@ -127,4 +127,6 @@ public class Constants {
   public static final String FS_S3A = "s3a";
 
   public static final int S3A_DEFAULT_PORT = -1;
+
+  public static final String USER_AGENT_PREFIX = "fs.s3a.user.agent.prefix";
 }
