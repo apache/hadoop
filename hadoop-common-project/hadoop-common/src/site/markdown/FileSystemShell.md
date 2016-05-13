@@ -27,6 +27,11 @@ Most of the commands in FS shell behave like corresponding Unix commands. Differ
 
 If HDFS is being used, `hdfs dfs` is a synonym.
 
+Relative paths can be used. For HDFS, the current working directory is the
+HDFS home directory `/user/<username>` that often has to be created manually.
+The HDFS home directory can also be implicitly accessed, e.g., when using the
+HDFS trash folder, the `.Trash` directory in the home directory.
+
 See the [Commands Manual](./CommandsManual.html) for generic shell options.
 
 appendToFile
