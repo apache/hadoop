@@ -536,6 +536,13 @@ public class ResourceTrackerService extends AbstractService implements
       }
     }
 
+    // 6. Send Container Queuing Limits back to the Node. This will be used by
+    //    the node to truncate the number of Containers queued for execution.
+    if (this.rmContext.getNodeManagerQueueLimitCalculator() != null) {
+      nodeHeartBeatResponse.setContainerQueuingLimit(
+          this.rmContext.getNodeManagerQueueLimitCalculator()
+              .createContainerQueuingLimit());
+    }
     return nodeHeartBeatResponse;
   }
 

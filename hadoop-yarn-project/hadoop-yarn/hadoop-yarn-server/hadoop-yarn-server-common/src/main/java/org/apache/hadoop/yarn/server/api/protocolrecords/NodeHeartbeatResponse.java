@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 
@@ -78,4 +79,7 @@ public interface NodeHeartbeatResponse {
 
   List<Container> getContainersToDecrease();
   void addAllContainersToDecrease(Collection<Container> containersToDecrease);
+
+  ContainerQueuingLimit getContainerQueuingLimit();
+  void setContainerQueuingLimit(ContainerQueuingLimit containerQueuingLimit);
 }

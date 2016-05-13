@@ -53,7 +53,6 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.Service;
-import org.apache.hadoop.service.ServiceStateChangeListener;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
@@ -95,6 +94,7 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.Containe
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ContainerType;
+import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedContainersEvent;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrDecreaseContainersResourceEvent;
@@ -150,8 +150,7 @@ import com.google.protobuf.ByteString;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class ContainerManagerImpl extends CompositeService implements
-    ServiceStateChangeListener, ContainerManagementProtocol,
-    EventHandler<ContainerManagerEvent> {
+    ContainerManager {
 
   /**
    * Extra duration to wait for applications to be killed on shutdown.
@@ -410,6 +409,7 @@ public class ContainerManagerImpl extends CompositeService implements
     }
   }
 
+  @Override
   public ContainersMonitor getContainersMonitor() {
     return this.containersMonitor;
   }
@@ -1398,6 +1398,7 @@ public class ContainerManagerImpl extends CompositeService implements
     }
   }
 
+  @Override
   public void setBlockNewContainerRequests(boolean blockNewContainerRequests) {
     this.blockNewContainerRequests.set(blockNewContainerRequests);
   }
@@ -1433,5 +1434,10 @@ public class ContainerManagerImpl extends CompositeService implements
 
   protected boolean isServiceStopped() {
     return serviceStopped;
+  }
+
+  @Override
+  public void updateQueuingLimit(ContainerQueuingLimit queuingLimit) {
+    LOG.trace("Implementation does not support queuing of Containers !!");
   }
 }
