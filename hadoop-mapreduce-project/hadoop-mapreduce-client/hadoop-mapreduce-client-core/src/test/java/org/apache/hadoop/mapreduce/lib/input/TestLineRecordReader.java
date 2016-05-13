@@ -617,4 +617,33 @@ public class TestLineRecordReader {
     // Key should be 12 right after "123456789\r\r\n"
     assertEquals(12, key.get());
   }
+
+  @Test
+  public void testBzipWithMultibyteDelimiter() throws IOException {
+    String testFileName = "compressedMultibyteDelimiter.txt.bz2";
+    // firstSplitLength < (headers + blockMarker) will pass always since no
+    // records will be read (in the test file that is byte 0..9)
+    // firstSplitlength > (compressed file length - one compressed block
+    // size + 1) will also always pass since the second split will be empty
+    // (833 bytes is the last block start in the used data file)
+    int firstSplitLength = 100;
+    URL testFileUrl = getClass().getClassLoader().getResource(testFileName);
+    assertNotNull("Cannot find " + testFileName, testFileUrl);
+    File testFile = new File(testFileUrl.getFile());
+    long testFileSize = testFile.length();
+    Path testFilePath = new Path(testFile.getAbsolutePath());
+    assertTrue("Split size is smaller than header length",
+        firstSplitLength > 9);
+    assertTrue("Split size is larger than compressed file size " +
+        testFilePath, testFileSize > firstSplitLength);
+
+    Configuration conf = new Configuration();
+    conf.setInt(org.apache.hadoop.mapreduce.lib.input.
+        LineRecordReader.MAX_LINE_LENGTH, Integer.MAX_VALUE);
+
+    String delimiter = "<E-LINE>\r\r\n";
+    conf.set("textinputformat.record.delimiter", delimiter);
+    testSplitRecordsForFile(conf, firstSplitLength, testFileSize,
+        testFilePath);
+  }
 }
