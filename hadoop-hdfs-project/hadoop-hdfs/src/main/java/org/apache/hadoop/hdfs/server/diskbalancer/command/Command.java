@@ -24,6 +24,7 @@ import org.apache.commons.cli.Option;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -81,8 +82,6 @@ public abstract class Command extends Configured {
   public Command(Configuration conf) {
     super(conf);
     // These arguments are valid for all commands.
-    addValidCommandParameters(DiskBalancer.NAMENODEURI, "Name Node URI or " +
-        "file URI for cluster");
     addValidCommandParameters(DiskBalancer.HELP, "Help for this command");
     addValidCommandParameters("arg", "");
   }
@@ -348,7 +347,22 @@ public abstract class Command extends Configured {
    * @return OutputStream.
    */
   protected FSDataOutputStream create(String fileName) throws IOException {
+    Preconditions.checkNotNull(fileName);
+    if(fs == null) {
+      fs = FileSystem.get(getConf());
+    }
     return fs.create(new Path(this.diskBalancerLogs, fileName));
+  }
+
+  /**
+   * Returns a InputStream to read data.
+   */
+  protected FSDataInputStream open(String fileName) throws IOException {
+    Preconditions.checkNotNull(fileName);
+    if(fs == null) {
+      fs = FileSystem.get(getConf());
+    }
+    return  fs.open(new Path(fileName));
   }
 
   /**

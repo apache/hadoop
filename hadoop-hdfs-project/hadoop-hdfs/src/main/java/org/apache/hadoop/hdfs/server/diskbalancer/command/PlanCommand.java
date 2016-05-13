@@ -24,7 +24,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.tools.DiskBalancer;
-import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
+import org.apache.hadoop.hdfs.server.diskbalancer.datamodel
+    .DiskBalancerDataNode;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.Step;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -54,6 +55,9 @@ public class PlanCommand extends Command {
     this.thresholdPercentage = 1;
     this.bandwidth = 0;
     this.maxError = 0;
+    addValidCommandParameters(DiskBalancer.NAMENODEURI, "Name Node URI or " +
+        "file URI for cluster");
+
     addValidCommandParameters(DiskBalancer.OUTFILE, "Output file");
     addValidCommandParameters(DiskBalancer.BANDWIDTH, "Maximum Bandwidth to " +
         "be used while copying.");
@@ -61,7 +65,6 @@ public class PlanCommand extends Command {
         "we tolerate before diskbalancer starts working.");
     addValidCommandParameters(DiskBalancer.MAXERROR, "Max errors to tolerate " +
         "between 2 disks");
-    addValidCommandParameters(DiskBalancer.NODE, "Name / Address of the node.");
     addValidCommandParameters(DiskBalancer.VERBOSE, "Run plan command in " +
         "verbose mode.");
   }
@@ -79,7 +82,7 @@ public class PlanCommand extends Command {
     Preconditions.checkState(cmd.hasOption(DiskBalancer.PLAN));
     verifyCommandOptions(DiskBalancer.PLAN, cmd);
 
-    if (!cmd.hasOption(DiskBalancer.NODE)) {
+    if (cmd.getOptionValue(DiskBalancer.PLAN) == null) {
       throw new IllegalArgumentException("A node name is required to create a" +
           " plan.");
     }
@@ -101,10 +104,11 @@ public class PlanCommand extends Command {
     }
     setOutputPath(output);
 
-    DiskBalancerDataNode node = getNode(cmd.getOptionValue(DiskBalancer.NODE));
+    // -plan nodename is the command line argument.
+    DiskBalancerDataNode node = getNode(cmd.getOptionValue(DiskBalancer.PLAN));
     if (node == null) {
       throw new IllegalArgumentException("Unable to find the specified node. " +
-          cmd.getOptionValue(DiskBalancer.NODE));
+          cmd.getOptionValue(DiskBalancer.PLAN));
     }
     this.thresholdPercentage = getThresholdPercentage(cmd);
     setNodesToProcess(node);
@@ -115,16 +119,16 @@ public class PlanCommand extends Command {
     LOG.info("Writing plan to : {}", getOutputPath());
     System.out.printf("Writing plan to : %s%n", getOutputPath());
 
-    try(FSDataOutputStream beforeStream = create(String.format(
+    try (FSDataOutputStream beforeStream = create(String.format(
         DiskBalancer.BEFORE_TEMPLATE,
-        cmd.getOptionValue(DiskBalancer.NODE)))) {
+        cmd.getOptionValue(DiskBalancer.PLAN)))) {
       beforeStream.write(getCluster().toJson()
           .getBytes(StandardCharsets.UTF_8));
     }
 
-    try(FSDataOutputStream planStream = create(String.format(
+    try (FSDataOutputStream planStream = create(String.format(
         DiskBalancer.PLAN_TEMPLATE,
-        cmd.getOptionValue(DiskBalancer.NODE)))) {
+        cmd.getOptionValue(DiskBalancer.PLAN)))) {
       planStream.write(getPlan(plans).getBytes(StandardCharsets.UTF_8));
     }
 

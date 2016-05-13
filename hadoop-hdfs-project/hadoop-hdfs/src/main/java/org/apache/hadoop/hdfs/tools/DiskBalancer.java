@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.diskbalancer.command.Command;
+import org.apache.hadoop.hdfs.server.diskbalancer.command.ExecuteCommand;
 import org.apache.hadoop.hdfs.server.diskbalancer.command.PlanCommand;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -48,15 +49,6 @@ import java.net.URISyntaxException;
  */
 public class DiskBalancer extends Configured implements Tool {
   /**
-   * Construct a DiskBalancer.
-   *
-   * @param conf
-   */
-  public DiskBalancer(Configuration conf) {
-    super(conf);
-  }
-
-  /**
    * NameNodeURI can point to either a real namenode, or a json file that
    * contains the diskBalancer data in json form, that jsonNodeConnector knows
    * how to deserialize.
@@ -66,12 +58,10 @@ public class DiskBalancer extends Configured implements Tool {
    * hdfs://namenode.uri or file:///data/myCluster.json
    */
   public static final String NAMENODEURI = "uri";
-
   /**
    * Computes a plan for a given set of nodes.
    */
   public static final String PLAN = "plan";
-
   /**
    * Output file name, for commands like report, plan etc. This is an optional
    * argument, by default diskbalancer will write all its output to
@@ -79,51 +69,56 @@ public class DiskBalancer extends Configured implements Tool {
    * against.
    */
   public static final String OUTFILE = "out";
-
   /**
    * Help for the program.
    */
   public static final String HELP = "help";
-
   /**
    * Percentage of data unevenness that we are willing to live with. For example
    * - a value like 10 indicates that we are okay with 10 % +/- from
    * idealStorage Target.
    */
   public static final String THRESHOLD = "thresholdPercentage";
-
   /**
    * Specifies the maximum disk bandwidth to use per second.
    */
   public static final String BANDWIDTH = "bandwidth";
-
   /**
    * Specifies the maximum errors to tolerate.
    */
   public static final String MAXERROR = "maxerror";
-
   /**
-   * Node name or IP against which Disk Balancer is being run.
+   * Executes a given plan file on the target datanode.
+   */
+  public static final String EXECUTE = "execute";
+  /**
+   * Name or address of the node to execute against.
    */
   public static final String NODE = "node";
-
   /**
    * Runs the command in verbose mode.
    */
   public static final String VERBOSE = "v";
-
+  public static final int PLAN_VERSION = 1;
   /**
    * Template for the Before File. It is node.before.json.
    */
   public static final String BEFORE_TEMPLATE = "%s.before.json";
-
   /**
    * Template for the plan file. it is node.plan.json.
    */
   public static final String PLAN_TEMPLATE = "%s.plan.json";
-
   private static final Logger LOG =
       LoggerFactory.getLogger(DiskBalancer.class);
+
+  /**
+   * Construct a DiskBalancer.
+   *
+   * @param conf
+   */
+  public DiskBalancer(Configuration conf) {
+    super(conf);
+  }
 
   /**
    * Main for the  DiskBalancer Command handling.
@@ -164,16 +159,16 @@ public class DiskBalancer extends Configured implements Tool {
    */
   private Options getOpts() {
     Options opts = new Options();
-    addCommands(opts);
+    addPlanCommands(opts);
     return opts;
   }
 
   /**
-   * Adds commands that we handle to opts.
+   * Adds commands for plan command.
    *
-   * @param opt - Optins
+   * @param opt - Options
    */
-  private void addCommands(Options opt) {
+  private void addPlanCommands(Options opt) {
 
     Option nameNodeUri =
         new Option(NAMENODEURI, true, "NameNode URI. e.g http://namenode" +
@@ -187,7 +182,8 @@ public class DiskBalancer extends Configured implements Tool {
             "e.g -out outfile.txt");
     opt.addOption(outFile);
 
-    Option plan = new Option(PLAN, false, "write plan to the default file");
+    Option plan = new Option(PLAN, true , "create a plan for the given node. " +
+        "e.g -plan <nodename> | <nodeIP> | <nodeUUID>");
     opt.addOption(plan);
 
     Option bandwidth = new Option(BANDWIDTH, true, "Maximum disk bandwidth to" +
@@ -204,13 +200,19 @@ public class DiskBalancer extends Configured implements Tool {
         "can be tolerated while copying between a pair of disks.");
     opt.addOption(maxErrors);
 
-    Option node = new Option(NODE, true, "Node Name or IP");
-    opt.addOption(node);
-
     Option help =
         new Option(HELP, true, "Help about a command or this message");
     opt.addOption(help);
+  }
 
+  /**
+   * Adds execute command options.
+   * @param opt Options
+   */
+  private void addExecuteCommands(Options opt) {
+    Option execute = new Option(EXECUTE, true , "Takes a plan file and " +
+        "submits it for execution to the datanode. e.g -execute <planfile>");
+    opt.addOption(execute);
   }
 
   /**
@@ -238,18 +240,23 @@ public class DiskBalancer extends Configured implements Tool {
     Command currentCommand = null;
 
     try {
+
       if (cmd.hasOption(DiskBalancer.PLAN)) {
         currentCommand = new PlanCommand(getConf());
-      } else {
+      }
+
+      if(cmd.hasOption(DiskBalancer.EXECUTE)) {
+        currentCommand = new ExecuteCommand(getConf());
+      }
+
+      if(currentCommand == null) {
         HelpFormatter helpFormatter = new HelpFormatter();
         helpFormatter.printHelp(80, "hdfs diskbalancer -uri [args]",
             "disk balancer commands", opts,
             "Please correct your command and try again.");
         return 1;
       }
-
       currentCommand.execute(cmd);
-
     } catch (Exception ex) {
       System.err.printf(ex.getMessage());
       return 1;
