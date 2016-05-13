@@ -1154,6 +1154,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
       addService(distSchedulerEventDispatcher);
       rmDispatcher.register(SchedulerEventType.class,
           distSchedulerEventDispatcher);
+      this.rmContext.setContainerQueueLimitCalculator(
+          distributedSchedulingService.getNodeManagerQueueLimitCalculator());
       return distributedSchedulingService;
     }
     return new ApplicationMasterService(this.rmContext, scheduler);

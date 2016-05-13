@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
@@ -83,6 +84,7 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
   private Queue<AllocatedContainerInfo> queuedOpportunisticContainers;
 
   private Set<ContainerId> opportunisticContainersToKill;
+  private final ContainerQueuingLimit queuingLimit;
 
   public QueuingContainerManagerImpl(Context context, ContainerExecutor exec,
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
@@ -95,6 +97,7 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
     this.queuedOpportunisticContainers = new ConcurrentLinkedQueue<>();
     this.opportunisticContainersToKill = Collections.synchronizedSet(
         new HashSet<ContainerId>());
+    this.queuingLimit = ContainerQueuingLimit.newInstance();
   }
 
   @Override
@@ -468,7 +471,7 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
           + "will be added to the queued containers.");
 
       AllocatedContainerInfo allocatedContInfo = new AllocatedContainerInfo(
-          token, null, rcs.getStartRequest(), token.getExecutionType(),
+          token, rcs.getStartRequest(), token.getExecutionType(),
               token.getResource(), getConfig());
 
       this.context.getQueuingContext().getQueuedContainers().put(
@@ -525,6 +528,41 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
       this.applicationEventDispatcher.handle(event);
     }
   }
+
+  @Override
+  public void updateQueuingLimit(ContainerQueuingLimit limit) {
+    this.queuingLimit.setMaxQueueLength(limit.getMaxQueueLength());
+    // TODO: Include wait time as well once it is implemented
+    if (this.queuingLimit.getMaxQueueLength() > -1) {
+      shedQueuedOpportunisticContainers();
+    }
+  }
+
+  private void shedQueuedOpportunisticContainers() {
+    int numAllowed = this.queuingLimit.getMaxQueueLength();
+    Iterator<AllocatedContainerInfo> containerIter =
+        queuedOpportunisticContainers.iterator();
+    while (containerIter.hasNext()) {
+      AllocatedContainerInfo cInfo = containerIter.next();
+      if (numAllowed <= 0) {
+        containerIter.remove();
+        ContainerTokenIdentifier containerTokenIdentifier = this.context
+            .getQueuingContext().getQueuedContainers().remove(
+                cInfo.getContainerTokenIdentifier().getContainerID());
+        // The Container might have already started while we were
+        // iterating..
+        if (containerTokenIdentifier != null) {
+          this.context.getQueuingContext().getKilledQueuedContainers()
+              .putIfAbsent(cInfo.getContainerTokenIdentifier(),
+                  "Container De-queued to meet global queuing limits. "
+                      + "Max Queue length["
+                      + this.queuingLimit.getMaxQueueLength() + "]");
+        }
+      }
+      numAllowed--;
+    }
+  }
+
 
   static class AllocatedContainerInfo {
     private final ContainerTokenIdentifier containerTokenIdentifier;

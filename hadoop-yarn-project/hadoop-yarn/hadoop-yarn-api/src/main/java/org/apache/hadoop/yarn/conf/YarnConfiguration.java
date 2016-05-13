@@ -344,16 +344,46 @@ public class YarnConfiguration extends Configuration {
       YARN_PREFIX + "distributed-scheduling.top-k";
   public static final int DIST_SCHEDULING_TOP_K_DEFAULT = 10;
 
-  /** Frequency for computing Top K Best Nodes */
-  public static final String DIST_SCHEDULING_TOP_K_COMPUTE_INT_MS =
-      YARN_PREFIX + "distributed-scheduling.top-k-compute-interval-ms";
-  public static final long DIST_SCHEDULING_TOP_K_COMPUTE_INT_MS_DEFAULT = 1000;
+  /** Frequency for computing least loaded NMs. */
+  public static final String NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS =
+      YARN_PREFIX + "nm-container-queuing.sorting-nodes-interval-ms";
+  public static final long
+      NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS_DEFAULT = 1000;
 
-  /** Comparator for determining Node Load for Distributed Scheduling */
-  public static final String DIST_SCHEDULING_TOP_K_COMPARATOR =
-      YARN_PREFIX + "distributed-scheduling.top-k-comparator";
-  public static final String DIST_SCHEDULING_TOP_K_COMPARATOR_DEFAULT =
+  /** Comparator for determining Node Load for Distributed Scheduling. */
+  public static final String NM_CONTAINER_QUEUING_LOAD_COMPARATOR =
+      YARN_PREFIX + "nm-container-queuing.load-comparator";
+  public static final String NM_CONTAINER_QUEUING_LOAD_COMPARATOR_DEFAULT =
       "QUEUE_LENGTH";
+
+  /** Value of standard deviation used for calculation of queue limit
+   * thresholds. */
+  public static final String NM_CONTAINER_QUEUING_LIMIT_STDEV =
+      YARN_PREFIX + "nm-container-queuing.queue-limit-stdev";
+  public static final float NM_CONTAINER_QUEUING_LIMIT_STDEV_DEFAULT =
+      1.0f;
+
+  /** Min length of container queue at NodeManager. */
+  public static final String NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH =
+      YARN_PREFIX + "nm-container-queuing.min-queue-length";
+  public static final int NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH_DEFAULT = 1;
+
+  /** Max length of container queue at NodeManager. */
+  public static final String NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH =
+      YARN_PREFIX + "nm-container-queuing.max-queue-length";
+  public static final int NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH_DEFAULT = 10;
+
+  /** Min wait time of container queue at NodeManager. */
+  public static final String NM_CONTAINER_QUEUING_MIN_QUEUE_WAIT_TIME_MS =
+      YARN_PREFIX + "nm-container-queuing.min-queue-wait-time-ms";
+  public static final int NM_CONTAINER_QUEUING_MIN_QUEUE_WAIT_TIME_MS_DEFAULT =
+      1;
+
+  /** Max wait time of container queue at NodeManager. */
+  public static final String NM_CONTAINER_QUEUING_MAX_QUEUE_WAIT_TIME_MS =
+      YARN_PREFIX + "nm-container-queuing.max-queue-wait-time-ms";
+  public static final int NM_CONTAINER_QUEUING_MAX_QUEUE_WAIT_TIME_MS_DEFAULT =
+      10;
 
   /**
    * Enable/disable intermediate-data encryption at YARN level. For now, this

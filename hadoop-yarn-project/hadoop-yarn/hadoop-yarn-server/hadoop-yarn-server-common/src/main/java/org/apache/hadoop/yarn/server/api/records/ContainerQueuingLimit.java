@@ -16,25 +16,29 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager;
+package org.apache.hadoop.yarn.server.api.records;
 
-import org.apache.hadoop.yarn.api.records.ResourceOption;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-
-import java.util.List;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
- * Implementations of this class are notified of changes to the cluster's state,
- * such as node addition, removal and updates.
+ * Used to hold max wait time / queue length information to be
+ * passed back to the NodeManager.
  */
-public interface ClusterMonitor {
+public abstract class ContainerQueuingLimit {
 
-  void addNode(List<NMContainerStatus> containerStatuses, RMNode rmNode);
+  public static ContainerQueuingLimit newInstance() {
+    ContainerQueuingLimit containerQueuingLimit =
+        Records.newRecord(ContainerQueuingLimit.class);
+    containerQueuingLimit.setMaxQueueLength(-1);
+    containerQueuingLimit.setMaxQueueWaitTimeInMs(-1);
+    return containerQueuingLimit;
+  }
 
-  void removeNode(RMNode removedRMNode);
+  public abstract int getMaxQueueLength();
 
-  void updateNode(RMNode rmNode);
+  public abstract void setMaxQueueLength(int queueLength);
 
-  void updateNodeResource(RMNode rmNode, ResourceOption resourceOption);
+  public abstract int getMaxQueueWaitTimeInMs();
+
+  public abstract void setMaxQueueWaitTimeInMs(int waitTime);
 }
