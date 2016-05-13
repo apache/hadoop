@@ -121,7 +121,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
       cls = tokenKindMap.get(kind);
     }
     if (cls == null) {
-      LOG.warn("Cannot find class for token kind " + kind);
+      LOG.debug("Cannot find class for token kind " + kind);
       return null;
     }
     return cls;
