@@ -19,10 +19,11 @@
 package org.apache.hadoop.fs.contract.s3a;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
 
 /**
- * The contract of S3A: only enabled if the test bucket is provided
+ * The contract of S3A: only enabled if the test bucket is provided.
  */
 public class S3AContract extends AbstractBondedFSContract {
 
@@ -40,4 +41,10 @@ public class S3AContract extends AbstractBondedFSContract {
     return "s3a";
   }
 
+  @Override
+  public Path getTestPath() {
+    String testUniqueForkId = System.getProperty("test.unique.fork.id");
+    return testUniqueForkId == null ? super.getTestPath() :
+        new Path("/" + testUniqueForkId, "test");
+  }
 }

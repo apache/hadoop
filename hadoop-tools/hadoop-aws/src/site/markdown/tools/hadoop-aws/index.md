@@ -733,3 +733,25 @@ or in batch runs.
 
 Smaller values should result in faster test runs, especially when the object
 store is a long way away.
+
+### Running the Tests
+
+After completing the configuration, execute the test run through Maven.
+
+    mvn clean test
+
+It's also possible to execute multiple test suites in parallel by enabling the
+`parallel-tests` Maven profile.  The tests spend most of their time blocked on
+network I/O with the S3 service, so running in parallel tends to complete full
+test runs faster.
+
+    mvn -Pparallel-tests clean test
+
+Some tests must run with exclusive access to the S3 bucket, so even with the
+`parallel-tests` profile enabled, several test suites will run in serial in a
+separate Maven execution step after the parallel tests.
+
+By default, the `parallel-tests` profile runs 4 test suites concurrently.  This
+can be tuned by passing the `testsThreadCount` argument.
+
+    mvn -Pparallel-tests -DtestsThreadCount=8 clean test
