@@ -19,8 +19,12 @@
 package org.apache.hadoop.fs.contract.s3;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
 
+/**
+ * The contract of S3: only enabled if the test bucket is provided.
+ */
 public class S3Contract extends AbstractBondedFSContract {
 
   public static final String CONTRACT_XML = "contract/s3.xml";
@@ -37,4 +41,10 @@ public class S3Contract extends AbstractBondedFSContract {
     return "s3";
   }
 
+  @Override
+  public Path getTestPath() {
+    String testUniqueForkId = System.getProperty("test.unique.fork.id");
+    return testUniqueForkId == null ? super.getTestPath() :
+        new Path("/" + testUniqueForkId, "test");
+  }
 }

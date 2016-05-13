@@ -127,7 +127,9 @@ public class S3AScaleTestBase extends Assert {
   }
 
   protected Path getTestPath() {
-    return new Path("/tests3a");
+    String testUniqueForkId = System.getProperty("test.unique.fork.id");
+    return testUniqueForkId == null ? new Path("/tests3a") :
+        new Path("/" + testUniqueForkId, "tests3a");
   }
 
   protected long getOperationCount() {
