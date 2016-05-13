@@ -113,7 +113,7 @@ public abstract class AbstractContractCreateTest extends
                              e);
     } catch (IOException e) {
       handleRelaxedException("overwriting a dir with a file ",
-                             "IOException",
+                             "FileAlreadyExistsException",
                              e);
     }
     assertIsDirectory(path);
@@ -154,11 +154,11 @@ public abstract class AbstractContractCreateTest extends
       handleExpectedException(expected);
     } catch (FileNotFoundException e) {
       handleRelaxedException("overwriting a dir with a file ",
-          "FileAlreadyExistsException",
-          e);
+                             "FileAlreadyExistsException",
+                             e);
     } catch (IOException e) {
       handleRelaxedException("overwriting a dir with a file ",
-                             "IOException",
+                             "FileAlreadyExistsException",
                              e);
     }
     assertIsDirectory(path);
@@ -182,7 +182,7 @@ public abstract class AbstractContractCreateTest extends
           skip("This Filesystem delays visibility of newly created files");
         }
         assertPathExists("expected path to be visible before anything written",
-            path);
+                         path);
       }
     }
   }
@@ -252,17 +252,14 @@ public abstract class AbstractContractCreateTest extends
         status.getBlockSize() > 0);
     
     long defaultBlockSize = fs.getDefaultBlockSize(path);
-    assertTrue("fs.getDefaultBlockSize(path) size is invalid "+ defaultBlockSize,
+    assertTrue("fs.getDefaultBlockSize(path) size is invalid " + defaultBlockSize,
         defaultBlockSize > 0);
   }
-
   
   @Test
   public void testFileStatusBlocksizeEmptyFile() throws Throwable {
     describe("check that an empty file may return a 0-byte blocksize");
     FileSystem fs = getFileSystem();
-
-
     Path path = path("testFileStatusBlocksizeEmptyFile");
     ContractTestUtils.touch(fs, path);
 
@@ -275,7 +272,5 @@ public abstract class AbstractContractCreateTest extends
     assertTrue("fs.getDefaultBlockSize(path) size is invalid "+ defaultBlockSize,
         defaultBlockSize >= 0);
   }
-
-  
   
 }

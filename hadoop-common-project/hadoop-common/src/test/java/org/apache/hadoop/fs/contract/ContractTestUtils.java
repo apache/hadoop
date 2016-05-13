@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.StopWatch;
 import org.junit.Assert;
 import org.junit.internal.AssumptionViolatedException;
 import org.slf4j.Logger;
