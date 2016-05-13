@@ -84,6 +84,9 @@ Release 2.7.3 - UNRELEASED
     MAPREDUCE-6513. Job got hanged forever when one NM unstable for some
     time. Contributed by Varun Saxena & Wangda Tan
 
+    MAPREDUCE-6558. multibyte delimiters with compressed input files generate
+    duplicate records (Wilfred Spiegelenburg via jlowe)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
