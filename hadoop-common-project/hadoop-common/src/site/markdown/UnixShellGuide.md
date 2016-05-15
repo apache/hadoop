@@ -115,7 +115,7 @@ would go into `.hadooprc`
 
 Utilizing the Shell API, it is possible for third parties to add their own subcommands to the primary Hadoop shell scripts (hadoop, hdfs, mapred, yarn).
 
-Prior to executing a subcommand, the primary scripts will check for the existence of a (scriptname)_subcommand_(subcommand) function.  This function gets executed with the parameters set to all remaining command line arguments.  For example, if the following function is defined:
+Prior to executing a subcommand, the primary scripts will check for the existence of a (scriptname)\_subcommand\_(subcommand) function.  This function gets executed with the parameters set to all remaining command line arguments.  For example, if the following function is defined:
 
 ```bash
 function yarn_subcommand_hello
@@ -190,4 +190,4 @@ If this command can be executed as a daemon, set this to true.
 
 This is the full content of the command line, prior to any parsing done. It will contain flags such as `--debug`.  It MAY NOT be manipulated.
 
-The Apache Hadoop runtime facilities require functions exit if no further processing is required.  For example, in the hello example above, Java and other facilities were not required so a simple `exit $?` was sufficient.  However, if the function were to utilize `HADOOP\_CLASSNAME`, then program execution must continue so that Java with the Apache Hadoop-specific parameters will be launched against the given Java class. Another example would be in the case of an unrecoverable error.  It is the function's responsibility to print an appropriate message (preferably using the hadoop_error API call) and exit appropriately.
+The Apache Hadoop runtime facilities require functions exit if no further processing is required.  For example, in the hello example above, Java and other facilities were not required so a simple `exit $?` was sufficient.  However, if the function were to utilize `HADOOP_CLASSNAME`, then program execution must continue so that Java with the Apache Hadoop-specific parameters will be launched against the given Java class. Another example would be in the case of an unrecoverable error.  It is the function's responsibility to print an appropriate message (preferably using the hadoop_error API call) and exit appropriately.
