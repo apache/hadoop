@@ -41,6 +41,12 @@ hadoop_subcommand_envcheck ()
   echo ${HADOOP_SHELL_EXECNAME}
   exit 0
 }
+
+hadoop_subcommand_multi ()
+{
+  echo $2
+  exit 0
+}
 TOKEN
   chmod a+rx "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
 }
@@ -63,4 +69,10 @@ TOKEN
   subcommandsetup
   run "${BATS_TEST_DIRNAME}/../../main/bin/hadoop" envcheck
   [ "${output}" = hadoop ]
+}
+
+@test "hadoop_subcommand (multiparams)" {
+  subcommandsetup
+  run "${BATS_TEST_DIRNAME}/../../main/bin/hadoop" multi 1 2
+  [ "${output}" = 2 ]
 }
