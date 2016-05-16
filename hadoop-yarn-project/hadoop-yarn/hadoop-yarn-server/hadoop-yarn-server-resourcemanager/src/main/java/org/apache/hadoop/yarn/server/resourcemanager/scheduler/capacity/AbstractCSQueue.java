@@ -504,4 +504,27 @@ public abstract class AbstractCSQueue implements CSQueue {
     // non-empty
     return false;
   }
+
+  /**
+   * @param nodePartition node label to check for accessibility
+   * @return true if queue can access nodes with specified label, false if not.
+   */
+  public final boolean accessibleToPartition(final String nodePartition) {
+    // if queue's label is *, it can access any node
+    if (accessibleLabels != null
+        && accessibleLabels.contains(RMNodeLabelsManager.ANY)) {
+      return true;
+    }
+    // any queue can access to a node without label
+    if (nodePartition == null
+        || nodePartition.equals(RMNodeLabelsManager.NO_LABEL)) {
+      return true;
+    }
+    // a queue can access to a node only if it contains any label of the node
+    if (accessibleLabels != null && accessibleLabels.contains(nodePartition)) {
+      return true;
+    }
+    // sorry, you cannot access
+    return false;
+  }
 }

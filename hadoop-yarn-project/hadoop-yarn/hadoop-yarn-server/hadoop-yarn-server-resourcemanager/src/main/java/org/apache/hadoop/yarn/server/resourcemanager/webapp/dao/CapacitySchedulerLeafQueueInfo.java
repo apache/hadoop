@@ -43,8 +43,12 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   CapacitySchedulerLeafQueueInfo() {
   };
 
-  CapacitySchedulerLeafQueueInfo(LeafQueue q) {
-    super(q);
+  /*
+   * @param q leaf queue
+   * @param nodeLabel node partition
+   */
+  CapacitySchedulerLeafQueueInfo(final LeafQueue q, final String nodeLabel) {
+    super(q, nodeLabel);
     numActiveApplications = q.getNumActiveApplications();
     numPendingApplications = q.getNumPendingApplications();
     numContainers = q.getNumContainers();
