@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler;
 
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
+
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.eq;
@@ -84,7 +87,7 @@ public class TestNonAggregatingLogHandler {
   DeletionService mockDelService;
   Configuration conf;
   DrainDispatcher dispatcher;
-  EventHandler<ApplicationEvent> appEventHandler;
+  private ApplicationEventHandler appEventHandler;
   String user = "testuser";
   ApplicationId appId;
   ApplicationAttemptId appAttemptId;
@@ -97,7 +100,7 @@ public class TestNonAggregatingLogHandler {
     mockDelService = mock(DeletionService.class);
     conf = new YarnConfiguration();
     dispatcher = createDispatcher(conf);
-    appEventHandler = mock(EventHandler.class);
+    appEventHandler = new ApplicationEventHandler();
     dispatcher.register(ApplicationEventType.class, appEventHandler);
     appId = BuilderUtils.newApplicationId(1234, 1);
     appAttemptId = BuilderUtils.newApplicationAttemptId(appId, 1);
@@ -345,6 +348,9 @@ public class TestNonAggregatingLogHandler {
 
     dirsHandler.init(conf);
 
+    appEventHandler.resetLogHandlingEvent();
+    assertFalse(appEventHandler.receiveLogHandlingFinishEvent());
+
     NMStateStoreService stateStore = new NMMemoryStateStoreService();
     stateStore.init(conf);
     stateStore.start();
@@ -377,8 +383,21 @@ public class TestNonAggregatingLogHandler {
     logHandler.start();
     verify(logHandler.mockSched, never()).schedule(any(Runnable.class),
         anyLong(), any(TimeUnit.class));
+
+    // wait events get drained.
+    this.dispatcher.await();
+    assertTrue(appEventHandler.receiveLogHandlingFinishEvent());
+
+    appEventHandler.resetLogHandlingEvent();
+    assertFalse(appEventHandler.receiveLogHandlingFailedEvent());
+    // send an app finish event against a removed app
+    logHandler.handle(new LogHandlerAppFinishedEvent(appId));
+    this.dispatcher.await();
+    // verify to receive a log failed event.
+    assertTrue(appEventHandler.receiveLogHandlingFailedEvent());
+    assertFalse(appEventHandler.receiveLogHandlingFinishEvent());
     logHandler.close();
-   }
+  }
 
   /**
    * Function to run a log handler with directories failing the getFileStatus
@@ -536,4 +555,37 @@ public class TestNonAggregatingLogHandler {
     }
     return dirs;
   }
+
+  class ApplicationEventHandler implements EventHandler<ApplicationEvent> {
+
+    private boolean logHandlingFinished = false;
+    private boolean logHandlingFailed = false;
+
+    @Override
+    public void handle(ApplicationEvent event) {
+      switch (event.getType()) {
+      case APPLICATION_LOG_HANDLING_FINISHED:
+        logHandlingFinished = true;
+        break;
+      case APPLICATION_LOG_HANDLING_FAILED:
+        logHandlingFailed = true;
+      default:
+        // do nothing.
+      }
+    }
+
+    public boolean receiveLogHandlingFinishEvent() {
+      return logHandlingFinished;
+    }
+
+    public boolean receiveLogHandlingFailedEvent() {
+      return logHandlingFailed;
+    }
+
+    public void resetLogHandlingEvent() {
+      logHandlingFinished = false;
+      logHandlingFailed = false;
+    }
+  }
+
 }
