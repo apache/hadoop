@@ -170,6 +170,10 @@ public class NonAggregatingLogHandler extends AbstractService implements
         String user = appOwners.remove(appId);
         if (user == null) {
           LOG.error("Unable to locate user for " + appId);
+          // send LOG_HANDLING_FAILED out
+          NonAggregatingLogHandler.this.dispatcher.getEventHandler().handle(
+              new ApplicationEvent(appId,
+                  ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED));
           break;
         }
         LogDeleterRunnable logDeleter = new LogDeleterRunnable(user, appId);
