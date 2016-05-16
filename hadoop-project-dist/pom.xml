@@ -325,22 +325,23 @@
                   <goal>exec</goal>
                 </goals>
                 <configuration>
-                    <executable>${project.parent.basedir}/../dev-support/bin/dist-copynativelibs</executable>
-                    <workingDirectory>${project.build.directory}</workingDirectory>
-                    <requiresOnline>false</requiresOnline>
-                    <arguments>
-                       <argument>--version=${project.version}</argument>
-                       <argument>--builddir=${project.build.directory}</argument>
-                       <argument>--artifactid=${project.artifactId}</argument>
-                       <argument>--isalbundle=${bundle.isal}</argument>
-                       <argument>--isallib=${isal.lib}</argument>
-                       <argument>--openssllib=${openssl.lib}</argument>
-                       <argument>--opensslbinbundle=${bundle.openssl.in.bin}</argument>
-                       <argument>--openssllibbundle=${bundle.openssl}</argument>
-                       <argument>--snappybinbundle=${bundle.snappy.in.bin}</argument>
-                       <argument>--snappylib=${snappy.lib}</argument>
-                       <argument>--snappylibbundle=${bundle.snappy}</argument>
-                    </arguments>
+                  <executable>${shell-executable}</executable>
+                  <workingDirectory>${project.build.directory}</workingDirectory>
+                  <requiresOnline>false</requiresOnline>
+                  <arguments>
+                    <argument>${project.parent.basedir}/../dev-support/bin/dist-copynativelibs</argument>
+                    <argument>--version=${project.version}</argument>
+                    <argument>--builddir=${project.build.directory}</argument>
+                    <argument>--artifactid=${project.artifactId}</argument>
+                    <argument>--isalbundle=${bundle.isal}</argument>
+                    <argument>--isallib=${isal.lib}</argument>
+                    <argument>--openssllib=${openssl.lib}</argument>
+                    <argument>--opensslbinbundle=${bundle.openssl.in.bin}</argument>
+                    <argument>--openssllibbundle=${bundle.openssl}</argument>
+                    <argument>--snappybinbundle=${bundle.snappy.in.bin}</argument>
+                    <argument>--snappylib=${snappy.lib}</argument>
+                    <argument>--snappylibbundle=${bundle.snappy}</argument>
+                  </arguments>
                 </configuration>
               </execution>
             </executions>
