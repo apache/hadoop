@@ -554,7 +554,7 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
         if (containerTokenIdentifier != null) {
           this.context.getQueuingContext().getKilledQueuedContainers()
               .putIfAbsent(cInfo.getContainerTokenIdentifier(),
-                  "Container De-queued to meet global queuing limits. "
+                  "Container de-queued to meet NM queuing limits. "
                       + "Max Queue length["
                       + this.queuingLimit.getMaxQueueLength() + "]");
         }
