@@ -1140,7 +1140,8 @@ public class TestFifoScheduler {
     waitCount = 0;
     while (waitCount++ != 20) {
       report_nm1 = rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
-      if (report_nm1.getAvailableResource().getMemory() != 0) {
+      if (null != report_nm1 &&
+          report_nm1.getAvailableResource().getMemory() != 0) {
         break;
       }
       LOG.info("Waiting for RMNodeResourceUpdateEvent to be handled... Tried "
