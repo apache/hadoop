@@ -179,11 +179,11 @@ class StripedReconstructor implements Runnable {
       // block replication.
     } catch (Throwable e) {
       LOG.warn("Failed to reconstruct striped block: {}", blockGroup, e);
+      datanode.getMetrics().incrECFailedReconstructionTasks();
     } finally {
       datanode.decrementXmitsInProgress();
-
+      datanode.getMetrics().incrECReconstructionTasks();
       stripedReader.close();
-
       stripedWriter.close();
     }
   }
