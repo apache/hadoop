@@ -37,9 +37,20 @@ public interface FailoverProxyProvider<T> extends Closeable {
      * provides information for debugging purposes.
      */
     public final String proxyInfo;
+
     public ProxyInfo(T proxy, String proxyInfo) {
       this.proxy = proxy;
       this.proxyInfo = proxyInfo;
+    }
+
+    public String getString(String methodName) {
+      return proxy.getClass().getSimpleName() + "." + methodName
+          + " over " + proxyInfo;
+    }
+
+    @Override
+    public String toString() {
+      return proxy.getClass().getSimpleName() + " over " + proxyInfo;
     }
   }
 

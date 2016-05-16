@@ -18,55 +18,32 @@
 
 package org.apache.hadoop.io.retry;
 
-import static org.apache.hadoop.io.retry.RetryPolicies.RETRY_FOREVER;
-import static org.apache.hadoop.io.retry.RetryPolicies.TRY_ONCE_THEN_FAIL;
-import static org.apache.hadoop.io.retry.RetryPolicies.retryByException;
-import static org.apache.hadoop.io.retry.RetryPolicies.retryByRemoteException;
-import static org.apache.hadoop.io.retry.RetryPolicies.retryOtherThanRemoteException;
-import static org.apache.hadoop.io.retry.RetryPolicies.retryUpToMaximumCountWithFixedSleep;
-import static org.apache.hadoop.io.retry.RetryPolicies.retryUpToMaximumCountWithProportionalSleep;
-import static org.apache.hadoop.io.retry.RetryPolicies.retryUpToMaximumTimeWithFixedSleep;
-import static org.apache.hadoop.io.retry.RetryPolicies.retryForeverWithFixedSleep;
-import static org.apache.hadoop.io.retry.RetryPolicies.exponentialBackoffRetry;
-
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import static org.junit.Assert.*;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-
+import org.apache.hadoop.io.retry.RetryPolicies.*;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction.RetryDecision;
-import org.apache.hadoop.io.retry.RetryPolicies.RetryUpToMaximumCountWithFixedSleep;
-import org.apache.hadoop.io.retry.RetryPolicies.RetryUpToMaximumTimeWithFixedSleep;
-import org.apache.hadoop.io.retry.RetryPolicies.TryOnceThenFail;
 import org.apache.hadoop.io.retry.UnreliableInterface.FatalException;
 import org.apache.hadoop.io.retry.UnreliableInterface.UnreliableException;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RemoteException;
-
+import org.junit.Before;
+import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import org.junit.Before;
-import org.junit.Test;
-
+import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.util.Collections;
+import java.util.Map;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.apache.hadoop.io.retry.RetryPolicies.*;
+import static org.junit.Assert.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.*;
 
 public class TestRetryProxy {
   
@@ -131,25 +108,21 @@ public class TestRetryProxy {
     final UnreliableInterface unreliable = (UnreliableInterface)
       RetryProxy.create(UnreliableInterface.class, unreliableImpl, RETRY_FOREVER);
     assertTrue(RetryInvocationHandler.isRpcInvocation(unreliable));
-    
+
+    final AtomicInteger count = new AtomicInteger();
     // Embed the proxy in ProtocolTranslator
     ProtocolTranslator xlator = new ProtocolTranslator() {
-      int count = 0;
       @Override
       public Object getUnderlyingProxyObject() {
-        count++;
+        count.getAndIncrement();
         return unreliable;
-      }
-      @Override
-      public String toString() {
-        return "" + count;
       }
     };
     
     // For a proxy wrapped in ProtocolTranslator method should return true
     assertTrue(RetryInvocationHandler.isRpcInvocation(xlator));
     // Ensure underlying proxy was looked at
-    assertEquals(xlator.toString(), "1");
+    assertEquals(1, count.get());
     
     // For non-proxy the method must return false
     assertFalse(RetryInvocationHandler.isRpcInvocation(new Object()));
