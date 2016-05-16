@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -1341,21 +1342,28 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
       // Process running containers
       if (remoteContainer.getState() == ContainerState.RUNNING) {
-        if (!launchedContainers.contains(containerId)) {
-          // Just launched container. RM knows about it the first time.
-          launchedContainers.add(containerId);
-          newlyLaunchedContainers.add(remoteContainer);
-          // Unregister from containerAllocationExpirer.
-          containerAllocationExpirer.unregister(
-              new AllocationExpirationInfo(containerId));
+        // Process only GUARANTEED containers in the RM.
+        if (remoteContainer.getExecutionType() == ExecutionType.GUARANTEED) {
+          if (!launchedContainers.contains(containerId)) {
+            // Just launched container. RM knows about it the first time.
+            launchedContainers.add(containerId);
+            newlyLaunchedContainers.add(remoteContainer);
+            // Unregister from containerAllocationExpirer.
+            containerAllocationExpirer
+                .unregister(new AllocationExpirationInfo(containerId));
+          }
         }
       } else {
-        // A finished container
-        launchedContainers.remove(containerId);
+        if (remoteContainer.getExecutionType() == ExecutionType.GUARANTEED) {
+          // A finished container
+          launchedContainers.remove(containerId);
+          // Unregister from containerAllocationExpirer.
+          containerAllocationExpirer
+              .unregister(new AllocationExpirationInfo(containerId));
+        }
+        // Completed containers should also include the OPPORTUNISTIC containers
+        // so that the AM gets properly notified.
         completedContainers.add(remoteContainer);
-        // Unregister from containerAllocationExpirer.
-        containerAllocationExpirer.unregister(
-            new AllocationExpirationInfo(containerId));
       }
     }
     if (newlyLaunchedContainers.size() != 0 || completedContainers.size() != 0) {
