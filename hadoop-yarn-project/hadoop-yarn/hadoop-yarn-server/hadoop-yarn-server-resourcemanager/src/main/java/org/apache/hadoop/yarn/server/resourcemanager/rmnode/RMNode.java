@@ -170,10 +170,10 @@ public interface RMNode {
   
   public List<Container> pullNewlyIncreasedContainers();
 
+  QueuedContainersStatus getQueuedContainersStatus();
+
   long getUntrackedTimeStamp();
 
   void setUntrackedTimeStamp(long timeStamp);
-
-  public QueuedContainersStatus getQueuedContainersStatus();
 
 }
