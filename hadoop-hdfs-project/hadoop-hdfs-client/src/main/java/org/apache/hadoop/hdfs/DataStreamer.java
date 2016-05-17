@@ -32,10 +32,12 @@ import java.net.Socket;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -395,6 +397,7 @@ class DataStreamer extends Daemon {
   private volatile boolean appendChunk = false;
   // both dataQueue and ackQueue are protected by dataQueue lock
   protected final LinkedList<DFSPacket> dataQueue = new LinkedList<>();
+  private final Map<Long, Long> packetSendTime = new HashMap<>();
   private final LinkedList<DFSPacket> ackQueue = new LinkedList<>();
   private final AtomicReference<CachingStrategy> cachingStrategy;
   private final ByteArrayManager byteArrayManager;
@@ -644,6 +647,7 @@ class DataStreamer extends Daemon {
             scope = null;
             dataQueue.removeFirst();
             ackQueue.addLast(one);
+            packetSendTime.put(one.getSeqno(), Time.monotonicNow());
             dataQueue.notifyAll();
           }
         }
@@ -957,15 +961,21 @@ class DataStreamer extends Daemon {
         // process responses from datanodes.
         try {
           // read an ack from the pipeline
-          long begin = Time.monotonicNow();
           ack.readFields(blockReplyStream);
-          long duration = Time.monotonicNow() - begin;
-          if (duration > dfsclientSlowLogThresholdMs
-              && ack.getSeqno() != DFSPacket.HEART_BEAT_SEQNO) {
-            LOG.warn("Slow ReadProcessor read fields took " + duration
-                + "ms (threshold=" + dfsclientSlowLogThresholdMs + "ms); ack: "
-                + ack + ", targets: " + Arrays.asList(targets));
-          } else {
+          if (ack.getSeqno() != DFSPacket.HEART_BEAT_SEQNO) {
+            Long begin = packetSendTime.get(ack.getSeqno());
+            if (begin != null) {
+              long duration = Time.monotonicNow() - begin;
+              if (duration > dfsclientSlowLogThresholdMs) {
+                LOG.info("Slow ReadProcessor read fields for block " + block
+                    + " took " + duration + "ms (threshold="
+                    + dfsclientSlowLogThresholdMs + "ms); ack: " + ack
+                    + ", targets: " + Arrays.asList(targets));
+              }
+            }
+          }
+
+          if (LOG.isDebugEnabled()) {
             LOG.debug("DFSClient {}", ack);
           }
 
@@ -1047,6 +1057,7 @@ class DataStreamer extends Daemon {
             lastAckedSeqno = seqno;
             pipelineRecoveryCount = 0;
             ackQueue.removeFirst();
+            packetSendTime.remove(seqno);
             dataQueue.notifyAll();
 
             one.releaseBuffer(byteArrayManager);
@@ -1105,6 +1116,7 @@ class DataStreamer extends Daemon {
     synchronized (dataQueue) {
       dataQueue.addAll(0, ackQueue);
       ackQueue.clear();
+      packetSendTime.clear();
     }
 
     // If we had to recover the pipeline five times in a row for the
