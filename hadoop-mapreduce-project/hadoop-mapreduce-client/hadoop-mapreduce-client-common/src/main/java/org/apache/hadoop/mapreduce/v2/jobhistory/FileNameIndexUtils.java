@@ -311,7 +311,7 @@ public class FileNameIndexUtils {
       String encodedString, int limitLength) {
     assert(limitLength >= 0) : "limitLength should be positive integer";
 
-    if (encodedString.length() < limitLength) {
+    if (encodedString.length() <= limitLength) {
       return encodedString;
     }
 
