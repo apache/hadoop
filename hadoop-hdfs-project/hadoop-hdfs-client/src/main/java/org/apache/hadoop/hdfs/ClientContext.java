@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED_DEFAULT;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -113,9 +114,8 @@ public class ClientContext {
    */
   private boolean printedConfWarning = false;
 
-  private final NetworkTopology topology;
-  private final NodeBase clientNode;
-  private final Map<NodeBase, Integer> nodeToDistance;
+  private NodeBase clientNode;
+  private boolean topologyResolutionEnabled;
 
   private ClientContext(String name, DfsClientConf conf,
       Configuration config) {
@@ -133,19 +133,29 @@ public class ClientContext {
 
     this.byteArrayManager = ByteArrayManager.newInstance(
         conf.getWriteByteArrayManagerConf());
+    initTopologyResolution(config);
+  }
 
+  private void initTopologyResolution(Configuration config) {
+    topologyResolutionEnabled = config.getBoolean(
+        FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED,
+        FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED_DEFAULT);
+    if (!topologyResolutionEnabled) {
+      return;
+    }
     DNSToSwitchMapping dnsToSwitchMapping = ReflectionUtils.newInstance(
         config.getClass(
             CommonConfigurationKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
             ScriptBasedMapping.class, DNSToSwitchMapping.class), config);
-    List<String> nodes = new ArrayList<>();
     String clientHostName = NetUtils.getLocalHostname();
+    List<String> nodes = new ArrayList<>();
     nodes.add(clientHostName);
-    clientNode = new NodeBase(clientHostName,
-        dnsToSwitchMapping.resolve(nodes).get(0));
-    this.topology = NetworkTopology.getInstance(config);
-    this.topology.add(clientNode);
-    this.nodeToDistance = new ConcurrentHashMap<>();
+    List<String> resolvedHosts = dnsToSwitchMapping.resolve(nodes);
+    if (resolvedHosts != null && !resolvedHosts.isEmpty() &&
+        !resolvedHosts.get(0).equals(NetworkTopology.DEFAULT_RACK)) {
+      // The client machine is able to resolve its own network location.
+      this.clientNode = new NodeBase(clientHostName, resolvedHosts.get(0));
+    }
   }
 
   public static ClientContext get(String name, DfsClientConf conf,
@@ -229,14 +239,15 @@ public class ClientContext {
   }
 
   public int getNetworkDistance(DatanodeInfo datanodeInfo) {
+    // If applications disable the feature or the client machine can't
+    // resolve its network location, clientNode will be set to null.
+    if (clientNode == null) {
+      return DFSUtilClient.isLocalAddress(NetUtils.
+          createSocketAddr(datanodeInfo.getXferAddr())) ? 0 :
+          Integer.MAX_VALUE;
+    }
     NodeBase node = new NodeBase(datanodeInfo.getHostName(),
         datanodeInfo.getNetworkLocation());
-    Integer distance = nodeToDistance.get(node);
-    if (distance == null) {
-      topology.add(node);
-      distance = topology.getDistance(clientNode, node);
-      nodeToDistance.put(node, distance);
-    }
-    return distance;
+    return NetworkTopology.getDistanceByPath(clientNode, node);
   }
 }

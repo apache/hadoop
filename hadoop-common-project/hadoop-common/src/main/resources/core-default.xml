@@ -2143,4 +2143,17 @@
     <name>hadoop.http.logs.enabled</name>
     <value>true</value>
   </property>
+
+  <property>
+    <name>fs.client.resolve.topology.enabled</name>
+    <value>false</value>
+    <description>Whether the client machine will use the class specified by
+      property net.topology.node.switch.mapping.impl to compute the network
+      distance between itself and remote machines of the FileSystem. Additional
+      properties might need to be configured depending on the class specified
+      in net.topology.node.switch.mapping.impl. For example, if
+      org.apache.hadoop.net.ScriptBasedMapping is used, a valid script file
+      needs to be specified in net.topology.script.file.name.
+    </description>
+  </property>
 </configuration>
