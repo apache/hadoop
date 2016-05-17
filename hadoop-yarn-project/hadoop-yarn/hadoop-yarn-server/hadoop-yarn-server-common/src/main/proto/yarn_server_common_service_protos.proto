@@ -48,6 +48,7 @@ message RegisterNodeManagerResponseProto {
   optional string diagnostics_message = 5;
   optional string rm_version = 6;
   optional bool areNodeLabelsAcceptedByRM = 7 [default = false];
+  optional ResourceProto resource = 8;
 }
 
 message UnRegisterNodeManagerRequestProto {
@@ -85,6 +86,7 @@ message NodeHeartbeatResponseProto {
   optional bool areNodeLabelsAcceptedByRM = 11 [default = false];
   repeated ContainerProto containers_to_decrease = 12;
   repeated SignalContainerRequestProto containers_to_signal = 13;
+  optional ResourceProto resource = 14;
 }
 
 message SystemCredentialsForAppsProto {

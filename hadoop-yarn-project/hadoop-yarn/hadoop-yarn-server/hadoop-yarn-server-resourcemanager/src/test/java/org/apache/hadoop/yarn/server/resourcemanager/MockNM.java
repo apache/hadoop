@@ -156,9 +156,14 @@ public class MockNM {
         }
       }
     }
+    Resource newResource = registrationResponse.getResource();
+    if (newResource != null) {
+      memory = newResource.getMemory();
+      vCores = newResource.getVirtualCores();
+    }
     return registrationResponse;
   }
-  
+
   public NodeHeartbeatResponse nodeHeartbeat(boolean isHealthy) throws Exception {
     return nodeHeartbeat(Collections.<ContainerStatus>emptyList(),
         Collections.<Container>emptyList(), isHealthy, ++responseId);
@@ -235,6 +240,12 @@ public class MockNM {
         && masterKeyFromRM.getKeyId() != this.currentNMTokenMasterKey
             .getKeyId()) {
       this.currentNMTokenMasterKey = masterKeyFromRM;
+    }
+
+    Resource newResource = heartbeatResponse.getResource();
+    if (newResource != null) {
+      memory = newResource.getMemory();
+      vCores = newResource.getVirtualCores();
     }
 
     return heartbeatResponse;

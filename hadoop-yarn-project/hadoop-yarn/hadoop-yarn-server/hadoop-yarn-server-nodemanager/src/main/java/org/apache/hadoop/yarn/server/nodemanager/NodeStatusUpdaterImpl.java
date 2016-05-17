@@ -83,6 +83,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.Contai
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -392,8 +393,17 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
     StringBuilder successfullRegistrationMsg = new StringBuilder();
     successfullRegistrationMsg.append("Registered with ResourceManager as ")
-        .append(this.nodeId).append(" with total resource of ")
-        .append(this.totalResource);
+        .append(this.nodeId);
+
+    Resource newResource = regNMResponse.getResource();
+    if (newResource != null) {
+      updateNMResource(newResource);
+      successfullRegistrationMsg.append(" with updated total resource of ")
+          .append(this.totalResource);
+    } else {
+      successfullRegistrationMsg.append(" with total resource of ")
+          .append(this.totalResource);
+    }
 
     successfullRegistrationMsg.append(nodeLabelsHandler
         .verifyRMRegistrationResponseForNodeLabels(regNMResponse));
@@ -487,6 +497,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       this.context.getIncreasedContainers().remove(container.getId());
     }
     return increasedContainers;
+  }
+
+  // Update NM's Resource.
+  private void updateNMResource(Resource resource) {
+    metrics.addResource(Resources.subtract(resource, totalResource));
+    this.totalResource = resource;
   }
 
   // Iterate through the NMContext and clone and get all the containers'
@@ -828,6 +844,15 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             if (containersToSignal.size() != 0) {
               dispatcher.getEventHandler().handle(
                   new CMgrSignalContainersEvent(containersToSignal));
+            }
+            // Handling node resource update case.
+            Resource newResource = response.getResource();
+            if (newResource != null) {
+              updateNMResource(newResource);
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Node's resource is updated to " +
+                    newResource.toString());
+              }
             }
           } catch (ConnectException e) {
             //catch and throw the exception if tried MAX wait time to connect RM

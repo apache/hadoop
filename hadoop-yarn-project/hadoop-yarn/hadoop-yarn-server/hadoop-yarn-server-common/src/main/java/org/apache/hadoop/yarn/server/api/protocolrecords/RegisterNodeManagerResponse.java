@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords;
 
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 
@@ -45,7 +46,10 @@ public interface RegisterNodeManagerResponse {
   void setRMVersion(String version);
 
   String getRMVersion();
-  
+
+  Resource getResource();
+  void setResource(Resource resource);
+
   boolean getAreNodeLabelsAcceptedByRM();
   void setAreNodeLabelsAcceptedByRM(boolean areNodeLabelsAcceptedByRM);
 }
