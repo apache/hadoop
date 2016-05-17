@@ -206,11 +206,6 @@ public class DecayRpcScheduler implements RpcScheduler,
     this.backOffResponseTimeThresholds =
         parseBackOffResponseTimeThreshold(ns, conf, numLevels);
 
-    // Setup delay timer
-    Timer timer = new Timer();
-    DecayTask task = new DecayTask(this, timer);
-    timer.scheduleAtFixedRate(task, decayPeriodMillis, decayPeriodMillis);
-
     // Setup response time metrics
     responseTimeTotalInCurrWindow = new AtomicLongArray(numLevels);
     responseTimeCountInCurrWindow = new AtomicLongArray(numLevels);
@@ -222,6 +217,11 @@ public class DecayRpcScheduler implements RpcScheduler,
             DECAYSCHEDULER_METRICS_TOP_USER_COUNT_DEFAULT);
     Preconditions.checkArgument(topUsersCount > 0,
         "the number of top users for scheduler metrics must be at least 1");
+
+    // Setup delay timer
+    Timer timer = new Timer();
+    DecayTask task = new DecayTask(this, timer);
+    timer.scheduleAtFixedRate(task, decayPeriodMillis, decayPeriodMillis);
 
     MetricsProxy prox = MetricsProxy.getInstance(ns, numLevels);
     prox.setDelegate(this);
@@ -821,9 +821,10 @@ public class DecayRpcScheduler implements RpcScheduler,
     final int topCallerCount = 10;
     TopN topNCallers = getTopCallers(topCallerCount);
     Map<Object, Integer> decisions = scheduleCacheRef.get();
-    for (int i=0; i < topNCallers.size(); i++) {
+    final int actualCallerCount = topNCallers.size();
+    for (int i = 0; i < actualCallerCount; i++) {
       NameValuePair entry =  topNCallers.poll();
-      String topCaller = "Top." + (topCallerCount - i) + "." +
+      String topCaller = "Top." + (actualCallerCount - i) + "." +
           "Caller(" + entry.getName() + ")";
       String topCallerVolume = topCaller + ".Volume";
       String topCallerPriority = topCaller + ".Priority";
