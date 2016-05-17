@@ -31,14 +31,17 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.SignalContainerRequest
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
+import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SignalContainerRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeActionProto;
@@ -51,17 +54,17 @@ import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 
 
-    
 public class NodeHeartbeatResponsePBImpl extends
     ProtoBase<NodeHeartbeatResponseProto> implements NodeHeartbeatResponse {
   NodeHeartbeatResponseProto proto = NodeHeartbeatResponseProto.getDefaultInstance();
   NodeHeartbeatResponseProto.Builder builder = null;
   boolean viaProto = false;
-  
+
   private List<ContainerId> containersToCleanup = null;
   private List<ContainerId> containersToBeRemovedFromNM = null;
   private List<ApplicationId> applicationsToCleanup = null;
   private Map<ApplicationId, ByteBuffer> systemCredentials = null;
+  private Resource resource = null;
 
   private MasterKey containerTokenMasterKey = null;
   private MasterKey nmTokenMasterKey = null;
@@ -76,7 +79,7 @@ public class NodeHeartbeatResponsePBImpl extends
     this.proto = proto;
     viaProto = true;
   }
-  
+
   public NodeHeartbeatResponseProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
@@ -111,6 +114,9 @@ public class NodeHeartbeatResponsePBImpl extends
     if (this.containersToSignal != null) {
       addContainersToSignalToProto();
     }
+    if (this.resource != null) {
+      builder.setResource(convertToProtoFormat(this.resource));
+    }
   }
 
   private void addSystemCredentialsToProto() {
@@ -138,8 +144,8 @@ public class NodeHeartbeatResponsePBImpl extends
     }
     viaProto = false;
   }
-    
-  
+
+
   @Override
   public int getResponseId() {
     NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
@@ -150,6 +156,28 @@ public class NodeHeartbeatResponsePBImpl extends
   public void setResponseId(int responseId) {
     maybeInitBuilder();
     builder.setResponseId((responseId));
+  }
+
+  @Override
+  public Resource getResource() {
+    NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.resource != null) {
+      return this.resource;
+    }
+    if (!p.hasResource()) {
+      return null;
+    }
+    this.resource = convertFromProtoFormat(p.getResource());
+    return this.resource;
+  }
+
+  @Override
+  public void setResource(Resource resource) {
+    maybeInitBuilder();
+    if (resource == null) {
+      builder.clearResource();
+    }
+    this.resource = resource;
   }
 
   @Override
@@ -531,6 +559,14 @@ public class NodeHeartbeatResponsePBImpl extends
 
   private ContainerIdProto convertToProtoFormat(ContainerId t) {
     return ((ContainerIdPBImpl) t).getProto();
+  }
+
+  private ResourcePBImpl convertFromProtoFormat(ResourceProto p) {
+    return new ResourcePBImpl(p);
+  }
+
+  private ResourceProto convertToProtoFormat(Resource t) {
+    return ((ResourcePBImpl)t).getProto();
   }
 
   private ApplicationIdPBImpl convertFromProtoFormat(ApplicationIdProto p) {
