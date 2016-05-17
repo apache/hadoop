@@ -83,7 +83,7 @@ public class TestUnnecessaryBlockingOnHistoryFileInfo {
    * blocked by the other while the other thread is holding the lock on its
    * associated job files and hanging up parsing the files.
    */
-  @Test(timeout = 20000)
+  @Test(timeout = 600000)
   public void testTwoThreadsQueryingDifferentJobOfSameUser()
       throws InterruptedException, IOException {
     final Configuration config = new Configuration();
