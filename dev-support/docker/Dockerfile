@@ -28,9 +28,11 @@ ENV DEBCONF_TERSE true
 
 ######
 # Install common dependencies from packages
+#
+# WARNING: DO NOT PUT JAVA APPS HERE! Otherwise they will install default
+# Ubuntu Java.  See Java section below!
 ######
 RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
-    ant \
     build-essential \
     bzip2 \
     cmake \
@@ -42,17 +44,14 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     git \
     gnupg-agent \
     make \
-    maven \
     libbz2-dev \
     libcurl4-openssl-dev \
     libfuse-dev \
-    libjansson-dev \
     libprotobuf-dev \
     libprotoc-dev \
     libsnappy-dev \
     libssl-dev \
     libtool \
-    openjdk-7-jdk \
     pinentry-curses \
     pkg-config \
     protobuf-compiler \
@@ -62,10 +61,6 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     python-pip \
     snappy \
     zlib1g-dev
-
-# Fixing the Apache commons / Maven dependency problem under Ubuntu:
-# See http://wiki.apache.org/commons/VfsProblems
-RUN cd /usr/share/maven/lib && ln -s ../../java/commons-lang.jar .
 
 ######
 # Install ISA-L library
@@ -87,12 +82,19 @@ RUN add-apt-repository -y ppa:webupd8team/java
 RUN apt-get -q update
 
 # Auto-accept the Oracle JDK license
-RUN echo oracle-java7-installer shared/accepted-oracle-license-v1-1 select true | sudo /usr/bin/debconf-set-selections
-RUN apt-get -q install --no-install-recommends -y oracle-java7-installer
-
-# Auto-accept the Oracle JDK license
 RUN echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | sudo /usr/bin/debconf-set-selections
 RUN apt-get -q install --no-install-recommends -y oracle-java8-installer
+
+####
+# Apps that require Java
+###
+RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
+    ant \
+    maven
+
+# Fixing the Apache commons / Maven dependency problem under Ubuntu:
+# See http://wiki.apache.org/commons/VfsProblems
+RUN cd /usr/share/maven/lib && ln -s ../../java/commons-lang.jar .
 
 ######
 # Install findbugs
