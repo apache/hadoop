@@ -1380,7 +1380,9 @@ public class S3AFileSystem extends FileSystem {
     sb.append(", partSize=").append(partSize);
     sb.append(", enableMultiObjectsDelete=").append(enableMultiObjectsDelete);
     sb.append(", maxKeys=").append(maxKeys);
-    sb.append(", cannedACL=").append(cannedACL.toString());
+    if (cannedACL != null) {
+      sb.append(", cannedACL=").append(cannedACL.toString());
+    }
     sb.append(", readAhead=").append(readAhead);
     sb.append(", blockSize=").append(getDefaultBlockSize());
     sb.append(", multiPartThreshold=").append(multiPartThreshold);
