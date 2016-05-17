@@ -443,7 +443,8 @@ public class CacheAdmin extends Configured implements Tool {
     @Override
     public String getShortUsage() {
       return "[" + getName()
-          + " [-stats] [-path <path>] [-pool <pool>] [-id <id>]\n";
+          + " [-stats] [-path <path>] [-pool <pool>] [-id <id>]"
+          + "]\n";
     }
 
     @Override
@@ -554,7 +555,8 @@ public class CacheAdmin extends Configured implements Tool {
     public String getShortUsage() {
       return "[" + NAME + " <name> [-owner <owner>] " +
           "[-group <group>] [-mode <mode>] [-limit <limit>] " +
-          "[-maxTtl <maxTtl>]\n";
+          "[-maxTtl <maxTtl>]" +
+          "]\n";
     }
 
     @Override
