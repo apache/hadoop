@@ -101,8 +101,8 @@ message NodeHeartbeatResponseProto {
   optional bool areNodeLabelsAcceptedByRM = 11 [default = false];
   repeated ContainerProto containers_to_decrease = 12;
   repeated SignalContainerRequestProto containers_to_signal = 13;
-  optional ContainerQueuingLimitProto container_queuing_limit = 14;
-  optional ResourceProto resource = 15;
+  optional ResourceProto resource = 14;
+  optional ContainerQueuingLimitProto container_queuing_limit = 15;
 }
 
 message ContainerQueuingLimitProto {
