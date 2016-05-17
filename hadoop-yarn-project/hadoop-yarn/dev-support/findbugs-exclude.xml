@@ -327,7 +327,7 @@
     <Bug pattern="DM_EXIT" />
   </Match>
   <Match>
-    <Class name="org.apache.hadoop.yarn.server.resourcemanager.ResourceManager$SchedulerEventDispatcher$EventProcessor" />
+    <Class name="org.apache.hadoop.yarn.event.EventDispatcher$EventProcessor" />
     <Method name="run" />
     <Bug pattern="DM_EXIT" />
   </Match>

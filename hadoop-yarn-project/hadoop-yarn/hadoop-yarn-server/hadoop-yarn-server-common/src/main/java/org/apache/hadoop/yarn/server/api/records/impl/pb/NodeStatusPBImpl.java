@@ -38,10 +38,10 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
-import org.apache.hadoop.yarn.proto.YarnServerCommonProtos;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeHealthStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.QueuedContainersStatusProto;
 
 import org.apache.hadoop.yarn.server.api.records.QueuedContainersStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
@@ -404,7 +404,7 @@ public class NodeStatusPBImpl extends NodeStatus {
   }
 
   @Override
-  public QueuedContainersStatus getQueuedContainersStatus() {
+  public synchronized QueuedContainersStatus getQueuedContainersStatus() {
     NodeStatusProtoOrBuilder p =
         this.viaProto ? this.proto : this.builder;
     if (!p.hasQueuedContainerStatus()) {
@@ -414,7 +414,8 @@ public class NodeStatusPBImpl extends NodeStatus {
   }
 
   @Override
-  public void setQueuedContainersStatus(QueuedContainersStatus queuedContainersStatus) {
+  public synchronized void setQueuedContainersStatus(
+      QueuedContainersStatus queuedContainersStatus) {
     maybeInitBuilder();
     if (queuedContainersStatus == null) {
       this.builder.clearQueuedContainerStatus();
@@ -457,7 +458,8 @@ public class NodeStatusPBImpl extends NodeStatus {
     return ((ApplicationIdPBImpl)c).getProto();
   }
 
-  private YarnProtos.ResourceUtilizationProto convertToProtoFormat(ResourceUtilization r) {
+  private YarnProtos.ResourceUtilizationProto convertToProtoFormat(
+      ResourceUtilization r) {
     return ((ResourceUtilizationPBImpl) r).getProto();
   }
 
@@ -466,13 +468,13 @@ public class NodeStatusPBImpl extends NodeStatus {
     return new ResourceUtilizationPBImpl(p);
   }
 
-  private YarnServerCommonProtos.QueuedContainersStatusProto convertToProtoFormat(
+  private QueuedContainersStatusProto convertToProtoFormat(
       QueuedContainersStatus r) {
     return ((QueuedContainersStatusPBImpl) r).getProto();
   }
 
   private QueuedContainersStatus convertFromProtoFormat(
-      YarnServerCommonProtos.QueuedContainersStatusProto p) {
+      QueuedContainersStatusProto p) {
     return new QueuedContainersStatusPBImpl(p);
   }
 

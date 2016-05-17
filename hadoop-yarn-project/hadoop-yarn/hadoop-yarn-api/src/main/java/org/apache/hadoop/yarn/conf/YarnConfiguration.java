@@ -339,7 +339,7 @@ public class YarnConfiguration extends Configuration {
       600000;
 
   /** K least loaded nodes to be provided to the LocalScheduler of a
-   * NodeManager for Distributed Scheduling */
+   * NodeManager for Distributed Scheduling. */
   public static final String DIST_SCHEDULING_TOP_K =
       YARN_PREFIX + "distributed-scheduling.top-k";
   public static final int DIST_SCHEDULING_TOP_K_DEFAULT = 10;
