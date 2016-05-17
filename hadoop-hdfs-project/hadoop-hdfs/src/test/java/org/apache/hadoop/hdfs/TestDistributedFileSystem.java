@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CONTEXT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -80,7 +82,10 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager.Op;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
+import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.ScriptBasedMapping;
+import org.apache.hadoop.net.StaticMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
@@ -798,39 +803,77 @@ public class TestDistributedFileSystem {
 
   @Test
   public void testLocalHostReadStatistics() throws Exception {
-    testReadFileSystemStatistics(0);
+    testReadFileSystemStatistics(0, false, false);
   }
 
   @Test
   public void testLocalRackReadStatistics() throws Exception {
-    testReadFileSystemStatistics(2);
+    testReadFileSystemStatistics(2, false, false);
   }
 
   @Test
   public void testRemoteRackOfFirstDegreeReadStatistics() throws Exception {
-    testReadFileSystemStatistics(4);
+    testReadFileSystemStatistics(4, false, false);
+  }
+
+  @Test
+  public void testInvalidScriptMappingFileReadStatistics() throws Exception {
+    // Even though network location of the client machine is unknown,
+    // MiniDFSCluster's datanode is on the local host and thus the network
+    // distance is 0.
+    testReadFileSystemStatistics(0, true, true);
+  }
+
+  @Test
+  public void testEmptyScriptMappingFileReadStatistics() throws Exception {
+    // Network location of the client machine is resolved to
+    // {@link NetworkTopology#DEFAULT_RACK} when there is no script file
+    // defined. This is equivalent to unknown network location.
+    // MiniDFSCluster's datanode is on the local host and thus the network
+    // distance is 0.
+    testReadFileSystemStatistics(0, true, false);
   }
 
   /** expectedDistance is the expected distance between client and dn.
    * 0 means local host.
    * 2 means same rack.
    * 4 means remote rack of first degree.
+   * invalidScriptMappingConfig is used to test
    */
-  private void testReadFileSystemStatistics(int expectedDistance)
+  private void testReadFileSystemStatistics(int expectedDistance,
+      boolean useScriptMapping, boolean invalidScriptMappingFile)
       throws IOException {
     MiniDFSCluster cluster = null;
+    StaticMapping.addNodeToRack(NetUtils.getLocalHostname(), "/rackClient");
     final Configuration conf = getTestConfiguration();
+    conf.setBoolean(FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED, true);
+    // ClientContext is cached globally by default thus we will end up using
+    // the network distance computed by other test cases.
+    // Use different value for DFS_CLIENT_CONTEXT in each test case so that it
+    // can compute network distance independently.
+    conf.set(DFS_CLIENT_CONTEXT, "testContext_" + expectedDistance);
 
     // create a cluster with a dn with the expected distance.
-    if (expectedDistance == 0) {
+    // MiniDFSCluster by default uses StaticMapping unless the test
+    // overrides it.
+    if (useScriptMapping) {
+      conf.setClass(DFSConfigKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+          ScriptBasedMapping.class, DNSToSwitchMapping.class);
+      if (invalidScriptMappingFile) {
+        conf.set(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY,
+            "invalidScriptFile.txt");
+      }
+      cluster = new MiniDFSCluster.Builder(conf).
+          useConfiguredTopologyMappingClass(true).build();
+    } else if (expectedDistance == 0) {
       cluster = new MiniDFSCluster.Builder(conf).
           hosts(new String[] {NetUtils.getLocalHostname()}).build();
     } else if (expectedDistance == 2) {
       cluster = new MiniDFSCluster.Builder(conf).
-          hosts(new String[] {"hostFoo"}).build();
+          racks(new String[]{"/rackClient"}).build();
     } else if (expectedDistance == 4) {
       cluster = new MiniDFSCluster.Builder(conf).
-          racks(new String[] {"/rackFoo"}).build();
+          racks(new String[]{"/rackFoo"}).build();
     }
 
     // create a file, read the file and verify the metrics

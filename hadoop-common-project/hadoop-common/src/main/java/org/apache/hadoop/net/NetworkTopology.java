@@ -655,6 +655,41 @@ public class NetworkTopology {
     return dis+2;
   }
 
+  /** Return the distance between two nodes by comparing their network paths
+   * without checking if they belong to the same ancestor node by reference.
+   * It is assumed that the distance from one node to its parent is 1
+   * The distance between two nodes is calculated by summing up their distances
+   * to their closest common ancestor.
+   * @param node1 one node
+   * @param node2 another node
+   * @return the distance between node1 and node2
+   */
+  static public int getDistanceByPath(Node node1, Node node2) {
+    if (node1 == null && node2 == null) {
+      return 0;
+    }
+    if (node1 == null || node2 == null) {
+      LOG.warn("One of the nodes is a null pointer");
+      return Integer.MAX_VALUE;
+    }
+    String[] paths1 = NodeBase.getPathComponents(node1);
+    String[] paths2 = NodeBase.getPathComponents(node2);
+    int dis = 0;
+    int index = 0;
+    int minLevel = Math.min(paths1.length, paths2.length);
+    while (index < minLevel) {
+      if (!paths1[index].equals(paths2[index])) {
+        // Once the path starts to diverge,  compute the distance that include
+        // the rest of paths.
+        dis += 2 * (minLevel - index);
+        break;
+      }
+      index++;
+    }
+    dis += Math.abs(paths1.length - paths2.length);
+    return dis;
+  }
+
   /** Check if two nodes are on the same rack
    * @param node1 one node (can be null)
    * @param node2 another node (can be null)

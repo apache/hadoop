@@ -189,7 +189,8 @@ public class MiniDFSCluster {
     private boolean checkDataNodeHostConfig = false;
     private Configuration[] dnConfOverlays;
     private boolean skipFsyncForTesting = true;
-    
+    private boolean useConfiguredTopologyMappingClass = false;
+
     public Builder(Configuration conf) {
       this.conf = conf;
       this.storagesPerDatanode =
@@ -433,7 +434,14 @@ public class MiniDFSCluster {
       this.skipFsyncForTesting = val;
       return this;
     }
-    
+
+    public Builder useConfiguredTopologyMappingClass(
+        boolean useConfiguredTopologyMappingClass) {
+      this.useConfiguredTopologyMappingClass =
+          useConfiguredTopologyMappingClass;
+      return this;
+    }
+
     /**
      * Construct the actual MiniDFSCluster
      */
@@ -501,7 +509,8 @@ public class MiniDFSCluster {
                        builder.checkDataNodeAddrConfig,
                        builder.checkDataNodeHostConfig,
                        builder.dnConfOverlays,
-                       builder.skipFsyncForTesting);
+                       builder.skipFsyncForTesting,
+                       builder.useConfiguredTopologyMappingClass);
   }
   
   public class DataNodeProperties {
@@ -756,12 +765,13 @@ public class MiniDFSCluster {
                        operation, null, racks, hosts,
                        null, simulatedCapacities, null, true, false,
                        MiniDFSNNTopology.simpleSingleNN(nameNodePort, 0),
-                       true, false, false, null, true);
+                       true, false, false, null, true, false);
   }
 
   private void initMiniDFSCluster(
       Configuration conf,
-      int numDataNodes, StorageType[][] storageTypes, boolean format, boolean manageNameDfsDirs,
+      int numDataNodes, StorageType[][] storageTypes, boolean format,
+      boolean manageNameDfsDirs,
       boolean manageNameDfsSharedDirs, boolean enableManagedDfsDirsRedundancy,
       boolean manageDataDfsDirs, StartupOption startOpt,
       StartupOption dnStartOpt, String[] racks,
@@ -772,7 +782,8 @@ public class MiniDFSCluster {
       boolean checkDataNodeAddrConfig,
       boolean checkDataNodeHostConfig,
       Configuration[] dnConfOverlays,
-      boolean skipFsyncForTesting)
+      boolean skipFsyncForTesting,
+      boolean useConfiguredTopologyMappingClass)
   throws IOException {
     boolean success = false;
     try {
@@ -797,9 +808,11 @@ public class MiniDFSCluster {
           DFS_NAMENODE_SAFEMODE_EXTENSION_TESTING_KEY, 0);
       conf.setInt(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, safemodeExtension);
       conf.setInt(DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 3); // 3 second
-      conf.setClass(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY, 
-                     StaticMapping.class, DNSToSwitchMapping.class);
-    
+      if (!useConfiguredTopologyMappingClass) {
+        conf.setClass(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+            StaticMapping.class, DNSToSwitchMapping.class);
+      }
+
       // In an HA cluster, in order for the StandbyNode to perform checkpoints,
       // it needs to know the HTTP port of the Active. So, if ephemeral ports
       // are chosen, disable checkpoints for the test.
