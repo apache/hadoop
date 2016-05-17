@@ -182,7 +182,7 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
         return;
       }
 
-      FileAction action = checkUpdate(sourceFS, sourceCurrStatus, target);
+      FileAction action = checkUpdate(sourceFS, sourceCurrStatus, target, targetStatus);
       if (action == FileAction.SKIP) {
         LOG.info("Skipping copy of " + sourceCurrStatus.getPath()
                  + " to " + target);
@@ -270,13 +270,7 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
   }
 
   private FileAction checkUpdate(FileSystem sourceFS, FileStatus source,
-      Path target) throws IOException {
-    final FileStatus targetFileStatus;
-    try {
-      targetFileStatus = targetFS.getFileStatus(target);
-    } catch (FileNotFoundException e) {
-      return FileAction.OVERWRITE;
-    }
+      Path target, FileStatus targetFileStatus) throws IOException {
     if (targetFileStatus != null && !overWrite) {
       if (canSkip(sourceFS, source, targetFileStatus)) {
         return FileAction.SKIP;
