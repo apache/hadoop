@@ -25,7 +25,10 @@ import java.io.RandomAccessFile;
 import java.lang.management.ManagementFactory;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
@@ -345,9 +348,12 @@ public abstract class Storage extends StorageInfo {
      */
     public void clearDirectory() throws IOException {
       File curDir = this.getCurrentDir();
-      if (curDir.exists())
+      if (curDir.exists()) {
+        File[] files = FileUtil.listFiles(curDir);
+        LOG.info("Will remove files: " + Arrays.toString(files));
         if (!(FileUtil.fullyDelete(curDir)))
           throw new IOException("Cannot remove current directory: " + curDir);
+      }
       if (!curDir.mkdirs())
         throw new IOException("Cannot create directory " + curDir);
     }
@@ -470,16 +476,60 @@ public abstract class Storage extends StorageInfo {
     }
 
     /**
-     * Check consistency of the storage directory
+     * Check to see if current/ directory is empty. This method is used
+     * before determining to format the directory.
+     *
+     * @throws InconsistentFSStateException if not empty.
+     * @throws IOException if unable to list files under the directory.
+     */
+    private void checkEmptyCurrent() throws InconsistentFSStateException,
+        IOException {
+      File currentDir = getCurrentDir();
+      if(!currentDir.exists()) {
+        // if current/ does not exist, it's safe to format it.
+        return;
+      }
+      try(DirectoryStream<java.nio.file.Path> dirStream =
+          Files.newDirectoryStream(currentDir.toPath())) {
+        if (dirStream.iterator().hasNext()) {
+          throw new InconsistentFSStateException(root,
+              "Can't format the storage directory because the current/ "
+                  + "directory is not empty.");
+        }
+      }
+    }
+
+    /**
+     * Check consistency of the storage directory.
+     *
+     * @param startOpt a startup option.
+     * @param storage The Storage object that manages this StorageDirectory.
+     *
+     * @return state {@link StorageState} of the storage directory
+     * @throws InconsistentFSStateException if directory state is not
+     * consistent and cannot be recovered.
+     * @throws IOException
+     */
+    public StorageState analyzeStorage(StartupOption startOpt, Storage storage)
+        throws IOException {
+      return analyzeStorage(startOpt, storage, false);
+    }
+
+    /**
+     * Check consistency of the storage directory.
      * 
      * @param startOpt a startup option.
+     * @param storage The Storage object that manages this StorageDirectory.
+     * @param checkCurrentIsEmpty if true, make sure current/ directory
+     *                            is empty before determining to format it.
      *  
      * @return state {@link StorageState} of the storage directory 
      * @throws InconsistentFSStateException if directory state is not 
      * consistent and cannot be recovered.
      * @throws IOException
      */
-    public StorageState analyzeStorage(StartupOption startOpt, Storage storage)
+    public StorageState analyzeStorage(StartupOption startOpt, Storage storage,
+        boolean checkCurrentIsEmpty)
         throws IOException {
       assert root != null : "root is null";
       boolean hadMkdirs = false;
@@ -516,8 +566,12 @@ public abstract class Storage extends StorageInfo {
       // If startOpt is HOTSWAP, it returns NOT_FORMATTED for empty directory,
       // while it also checks the layout version.
       if (startOpt == HdfsServerConstants.StartupOption.FORMAT ||
-          (startOpt == StartupOption.HOTSWAP && hadMkdirs))
+          (startOpt == StartupOption.HOTSWAP && hadMkdirs)) {
+        if (checkCurrentIsEmpty) {
+          checkEmptyCurrent();
+        }
         return StorageState.NOT_FORMATTED;
+      }
 
       if (startOpt != HdfsServerConstants.StartupOption.IMPORT) {
         storage.checkOldLayoutStorage(this);
@@ -542,6 +596,9 @@ public abstract class Storage extends StorageInfo {
         if (hasPrevious)
           throw new InconsistentFSStateException(root,
                               "version file in current directory is missing.");
+        if (checkCurrentIsEmpty) {
+          checkEmptyCurrent();
+        }
         return StorageState.NOT_FORMATTED;
       }
 
