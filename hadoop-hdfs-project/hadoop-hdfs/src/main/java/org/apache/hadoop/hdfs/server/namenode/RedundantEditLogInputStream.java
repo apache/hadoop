@@ -37,7 +37,8 @@ import com.google.common.primitives.Longs;
  * different subset of the available edits.
  */
 class RedundantEditLogInputStream extends EditLogInputStream {
-  public static final Log LOG = LogFactory.getLog(EditLogInputStream.class.getName());
+  public static final Log LOG = LogFactory.getLog(
+      RedundantEditLogInputStream.class.getName());
   private int curIdx;
   private long prevTxId;
   private final EditLogInputStream[] streams;
