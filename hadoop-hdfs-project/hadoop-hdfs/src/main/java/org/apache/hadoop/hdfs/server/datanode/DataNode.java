@@ -1717,7 +1717,8 @@ public class DataNode extends ReconfigurableBase
       throw new AccessControlException(
           "Can't continue with getBlockLocalPathInfo() "
               + "authorization. The user " + currentUser
-              + " is not allowed to call getBlockLocalPathInfo");
+              + " is not configured in "
+              + DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY);
     }
   }
 
