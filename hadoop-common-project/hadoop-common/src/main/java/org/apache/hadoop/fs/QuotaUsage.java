@@ -296,7 +296,7 @@ public class QuotaUsage {
       quotaStr = formatSize(quota, hOption);
       quotaRem = formatSize(quota-fileAndDirectoryCount, hOption);
     }
-    if (spaceQuota > 0) {
+    if (spaceQuota >= 0) {
       spaceQuotaStr = formatSize(spaceQuota, hOption);
       spaceQuotaRem = formatSize(spaceQuota - spaceConsumed, hOption);
     }
@@ -314,7 +314,7 @@ public class QuotaUsage {
       String quotaStr = QUOTA_NONE;
       String quotaRem = QUOTA_INF;
 
-      if (typeQuota > 0) {
+      if (typeQuota >= 0) {
         quotaStr = formatSize(typeQuota, hOption);
         quotaRem = formatSize(typeQuota - typeConsumed, hOption);
       }
