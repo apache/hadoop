@@ -1518,12 +1518,12 @@ class DataStreamer extends Daemon {
       success = createBlockOutputStream(nodes, storageTypes, 0L, false);
 
       if (!success) {
-        LOG.info("Abandoning " + block);
+        LOG.warn("Abandoning " + block);
         dfsClient.namenode.abandonBlock(block, stat.getFileId(), src,
             dfsClient.clientName);
         block = null;
         final DatanodeInfo badNode = nodes[errorState.getBadNodeIndex()];
-        LOG.info("Excluding datanode " + badNode);
+        LOG.warn("Excluding datanode " + badNode);
         excludedNodes.put(badNode, badNode);
       }
     } while (!success && --count >= 0);
