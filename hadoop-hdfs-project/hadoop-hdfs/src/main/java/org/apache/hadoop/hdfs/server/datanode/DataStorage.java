@@ -267,7 +267,7 @@ public class DataStorage extends Storage {
       List<Callable<StorageDirectory>> callables) throws IOException {
     StorageDirectory sd = new StorageDirectory(dataDir, null, false);
     try {
-      StorageState curState = sd.analyzeStorage(startOpt, this);
+      StorageState curState = sd.analyzeStorage(startOpt, this, true);
       // sd is locked but not opened
       switch (curState) {
       case NORMAL:
