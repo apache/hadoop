@@ -142,7 +142,7 @@ public class HsJobBlock extends HtmlBlock {
               td().a(".nodelink", url(MRWebAppUtil.getYARNWebappScheme(),
                   attempt.getNodeHttpAddress()),
                   attempt.getNodeHttpAddress())._().
-              td().a(".logslink", url(attempt.getShortLogsLink()), 
+              td().a(".logslink", url(attempt.getLogsLink()),
                       "logs")._().
             _();
           }
