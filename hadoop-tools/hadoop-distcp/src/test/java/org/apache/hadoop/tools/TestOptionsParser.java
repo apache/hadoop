@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.tools;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import org.junit.Assert;
@@ -400,7 +401,7 @@ public class TestOptionsParser {
     String val = "DistCpOptions{atomicCommit=false, syncFolder=false, "
         + "deleteMissing=false, ignoreFailures=false, overwrite=false, "
         + "skipCRC=false, blocking=true, numListstatusThreads=0, maxMaps=20, "
-        + "mapBandwidth=100.0, sslConfigurationFile='null', "
+        + "mapBandwidth=100, sslConfigurationFile='null', "
         + "copyStrategy='uniformsize', preserveStatus=[], "
         + "preserveRawXattrs=false, atomicWorkPath=null, logPath=null, "
         + "sourceFileListing=abc, sourcePaths=null, targetPath=xyz, "
@@ -704,11 +705,25 @@ public class TestOptionsParser {
     }
 
     try {
-      OptionsParser.parse(new String[] { "-diff", "s1", "s2", "-update", "-delete",
-          "hdfs://localhost:8020/source/first",
-          "hdfs://localhost:8020/target/" });
-      fail("-diff should fail if -delete option is specified");
+      options = OptionsParser.parse(new String[] {
+          "-diff", "s1", "s2", "-update", "-delete",
+          "hdfs://localhost:9820/source/first",
+          "hdfs://localhost:9820/target/" });
+      assertFalse("-delete should be ignored when -diff is specified",
+          options.shouldDeleteMissing());
     } catch (IllegalArgumentException e) {
+      fail("Got unexpected IllegalArgumentException: " + e.getMessage());
+    }
+
+    try {
+      options = OptionsParser.parse(new String[] {
+          "-diff", "s1", "s2", "-delete",
+          "hdfs://localhost:9820/source/first",
+          "hdfs://localhost:9820/target/" });
+      fail("-diff should fail if -update option is not specified");
+    } catch (IllegalArgumentException e) {
+      assertFalse("-delete should be ignored when -diff is specified",
+          options.shouldDeleteMissing());
       GenericTestUtils.assertExceptionContains(
           "Diff is valid only with update options", e);
     }

@@ -41,7 +41,7 @@ import com.google.common.base.Preconditions;
  */
 public class OptionsParser {
 
-  private static final Log LOG = LogFactory.getLog(OptionsParser.class);
+  static final Log LOG = LogFactory.getLog(OptionsParser.class);
 
   private static final Options cliOptions = new Options();
 
@@ -88,14 +88,26 @@ public class OptionsParser {
 
     DistCpOptions option = parseSourceAndTargetPaths(command);
 
-    //Process all the other option switches and set options appropriately
-    if (command.hasOption(DistCpOptionSwitch.IGNORE_FAILURES.getSwitch())) {
-      option.setIgnoreFailures(true);
-    }
+    option.setIgnoreFailures(
+        command.hasOption(DistCpOptionSwitch.IGNORE_FAILURES.getSwitch()));
 
-    if (command.hasOption(DistCpOptionSwitch.ATOMIC_COMMIT.getSwitch())) {
-      option.setAtomicCommit(true);
-    }
+    option.setAtomicCommit(
+        command.hasOption(DistCpOptionSwitch.ATOMIC_COMMIT.getSwitch()));
+
+    option.setSyncFolder(
+        command.hasOption(DistCpOptionSwitch.SYNC_FOLDERS.getSwitch()));
+
+    option.setOverwrite(
+        command.hasOption(DistCpOptionSwitch.OVERWRITE.getSwitch()));
+
+    option.setAppend(
+        command.hasOption(DistCpOptionSwitch.APPEND.getSwitch()));
+
+    option.setDeleteMissing(
+        command.hasOption(DistCpOptionSwitch.DELETE_MISSING.getSwitch()));
+
+    option.setSkipCRC(
+        command.hasOption(DistCpOptionSwitch.SKIP_CRC.getSwitch()));
 
     if (command.hasOption(DistCpOptionSwitch.WORK_PATH.getSwitch()) &&
         option.shouldAtomicCommit()) {
@@ -111,25 +123,6 @@ public class OptionsParser {
       option.setLogPath(new Path(getVal(command, DistCpOptionSwitch.LOG_PATH.getSwitch())));
     }
 
-    if (command.hasOption(DistCpOptionSwitch.SYNC_FOLDERS.getSwitch())) {
-      option.setSyncFolder(true);
-    }
-
-    if (command.hasOption(DistCpOptionSwitch.OVERWRITE.getSwitch())) {
-      option.setOverwrite(true);
-    }
-
-    if (command.hasOption(DistCpOptionSwitch.APPEND.getSwitch())) {
-      option.setAppend(true);
-    }
-
-    if (command.hasOption(DistCpOptionSwitch.DELETE_MISSING.getSwitch())) {
-      option.setDeleteMissing(true);
-    }
-
-    if (command.hasOption(DistCpOptionSwitch.SKIP_CRC.getSwitch())) {
-      option.setSkipCRC(true);
-    }
 
     if (command.hasOption(DistCpOptionSwitch.BLOCKING.getSwitch())) {
       option.setBlocking(false);
@@ -168,6 +161,8 @@ public class OptionsParser {
       option.setFiltersFile(getVal(command,
           DistCpOptionSwitch.FILTERS.getSwitch()));
     }
+
+    option.validate();
 
     return option;
   }

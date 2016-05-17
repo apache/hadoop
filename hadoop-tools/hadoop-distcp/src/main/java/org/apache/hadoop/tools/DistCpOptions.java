@@ -163,7 +163,6 @@ public class DistCpOptions {
    * @param atomicCommit - boolean switch
    */
   public void setAtomicCommit(boolean atomicCommit) {
-    validate(DistCpOptionSwitch.ATOMIC_COMMIT, atomicCommit);
     this.atomicCommit = atomicCommit;
   }
 
@@ -182,7 +181,6 @@ public class DistCpOptions {
    * @param syncFolder - boolean switch
    */
   public void setSyncFolder(boolean syncFolder) {
-    validate(DistCpOptionSwitch.SYNC_FOLDERS, syncFolder);
     this.syncFolder = syncFolder;
   }
 
@@ -201,7 +199,6 @@ public class DistCpOptions {
    * @param deleteMissing - boolean switch
    */
   public void setDeleteMissing(boolean deleteMissing) {
-    validate(DistCpOptionSwitch.DELETE_MISSING, deleteMissing);
     this.deleteMissing = deleteMissing;
   }
 
@@ -257,7 +254,6 @@ public class DistCpOptions {
    * @param overwrite - boolean switch
    */
   public void setOverwrite(boolean overwrite) {
-    validate(DistCpOptionSwitch.OVERWRITE, overwrite);
     this.overwrite = overwrite;
   }
 
@@ -273,7 +269,6 @@ public class DistCpOptions {
    * update option and CRC is not skipped.
    */
   public void setAppend(boolean append) {
-    validate(DistCpOptionSwitch.APPEND, append);
     this.append = append;
   }
 
@@ -290,7 +285,6 @@ public class DistCpOptions {
   }
 
   public void setUseDiff(boolean useDiff, String fromSnapshot, String toSnapshot) {
-    validate(DistCpOptionSwitch.DIFF, useDiff);
     this.useDiff = useDiff;
     this.fromSnapshot = fromSnapshot;
     this.toSnapshot = toSnapshot;
@@ -317,7 +311,6 @@ public class DistCpOptions {
    * @param skipCRC - boolean switch
    */
   public void setSkipCRC(boolean skipCRC) {
-    validate(DistCpOptionSwitch.SKIP_CRC, skipCRC);
     this.skipCRC = skipCRC;
   }
 
@@ -572,20 +565,15 @@ public class DistCpOptions {
     this.filtersFile = filtersFilename;
   }
 
-  public void validate(DistCpOptionSwitch option, boolean value) {
-
-    boolean syncFolder = (option == DistCpOptionSwitch.SYNC_FOLDERS ?
-        value : this.syncFolder);
-    boolean overwrite = (option == DistCpOptionSwitch.OVERWRITE ?
-        value : this.overwrite);
-    boolean deleteMissing = (option == DistCpOptionSwitch.DELETE_MISSING ?
-        value : this.deleteMissing);
-    boolean atomicCommit = (option == DistCpOptionSwitch.ATOMIC_COMMIT ?
-        value : this.atomicCommit);
-    boolean skipCRC = (option == DistCpOptionSwitch.SKIP_CRC ?
-        value : this.skipCRC);
-    boolean append = (option == DistCpOptionSwitch.APPEND ? value : this.append);
-    boolean useDiff = (option == DistCpOptionSwitch.DIFF ? value : this.useDiff);
+  void validate() {
+    if (useDiff && deleteMissing) {
+      // -delete and -diff are mutually exclusive. For backward compatibility,
+      // we ignore the -delete option here, instead of throwing an
+      // IllegalArgumentException. See HDFS-10397 for more discussion.
+      OptionsParser.LOG.warn("-delete and -diff are mutually exclusive. " +
+          "The -delete option will be ignored.");
+      setDeleteMissing(false);
+    }
 
     if (syncFolder && atomicCommit) {
       throw new IllegalArgumentException("Atomic commit can't be used with " +
@@ -614,7 +602,7 @@ public class DistCpOptions {
       throw new IllegalArgumentException(
           "Append is disallowed when skipping CRC");
     }
-    if ((!syncFolder || deleteMissing) && useDiff) {
+    if (!syncFolder && useDiff) {
       throw new IllegalArgumentException(
           "Diff is valid only with update options");
     }
