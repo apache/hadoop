@@ -322,6 +322,6 @@ public class TestDelegationToken {
         "SomeUser"), new Text("JobTracker"), null);
     Assert.assertEquals("HDFS_DELEGATION_TOKEN token 0" +
         " for SomeUser with renewer JobTracker",
-        dtId.toString());
+        dtId.toStringStable());
   }
 }

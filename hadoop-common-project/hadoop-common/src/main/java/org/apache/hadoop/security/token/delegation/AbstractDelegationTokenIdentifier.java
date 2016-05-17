@@ -232,10 +232,35 @@ extends TokenIdentifier {
   public String toString() {
     StringBuilder buffer = new StringBuilder();
     buffer
-        .append("owner=" + owner + ", renewer=" + renewer + ", realUser="
-            + realUser + ", issueDate=" + issueDate + ", maxDate=" + maxDate
-            + ", sequenceNumber=" + sequenceNumber + ", masterKeyId="
-            + masterKeyId);
+        .append(getKind())
+        .append(" owner=").append(owner)
+        .append(", renewer=").append(renewer)
+        .append(", realUser=").append(realUser)
+        .append(", issueDate=").append(issueDate)
+        .append(", maxDate=").append(maxDate)
+        .append(", sequenceNumber=").append(sequenceNumber)
+        .append(", masterKeyId=").append(masterKeyId);
+    return buffer.toString();
+  }
+  /*
+   * A frozen version of toString() to be used to be backward compatible.
+   * When backward compatibility is not needed, use toString(), which provides
+   * more info and is supposed to evolve, see HDFS-9732.
+   * Don't change this method except for major revisions.
+   *
+   * NOTE:
+   * Currently this method is used by CLI for backward compatibility.
+   */
+  public String toStringStable() {
+    StringBuilder buffer = new StringBuilder();
+    buffer
+        .append("owner=").append(owner)
+        .append(", renewer=").append(renewer)
+        .append(", realUser=").append(realUser)
+        .append(", issueDate=").append(issueDate)
+        .append(", maxDate=").append(maxDate)
+        .append(", sequenceNumber=").append(sequenceNumber)
+        .append(", masterKeyId=").append(masterKeyId);
     return buffer.toString();
   }
 }
