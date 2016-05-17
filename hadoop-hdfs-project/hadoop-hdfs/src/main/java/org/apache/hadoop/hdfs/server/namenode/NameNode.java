@@ -516,6 +516,10 @@ public class NameNode extends ReconfigurableBase implements
     return role.equals(that);
   }
 
+  public static String composeNotStartedMessage(NamenodeRole role) {
+    return role + " still not started";
+  }
+
   /**
    * Given a configuration get the address of the lifeline RPC server.
    * If the lifeline RPC is not configured returns null.
