@@ -23,6 +23,7 @@ import java.util.NavigableMap;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
@@ -55,7 +56,7 @@ public enum GlobalStorageStatistics {
    *                      null if there is none.
    */
   public synchronized StorageStatistics get(String name) {
-    return map.get(name);
+    return name == null ? null : map.get(name);
   }
 
   /**
@@ -70,6 +71,8 @@ public enum GlobalStorageStatistics {
    */
   public synchronized StorageStatistics put(String name,
       StorageStatisticsProvider provider) {
+    Preconditions.checkNotNull(name,
+        "Storage statistics can not have a null name!");
     StorageStatistics stats = map.get(name);
     if (stats != null) {
       return stats;
