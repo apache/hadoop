@@ -712,16 +712,6 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
           "Cannot specify more than two node labels"
               + " in a single node label expression");
     }
-    
-    // Don't allow specify node label against ANY request
-    if ((containerRequest.getRacks() != null && 
-        (!containerRequest.getRacks().isEmpty()))
-        || 
-        (containerRequest.getNodes() != null && 
-        (!containerRequest.getNodes().isEmpty()))) {
-      throw new InvalidContainerRequestException(
-          "Cannot specify node label with rack and node");
-    }
   }
 
   private void validateContainerResourceChangeRequest(
