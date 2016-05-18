@@ -92,7 +92,7 @@ public class TestStorageReport {
 
     // Insert a spy object for the NN RPC.
     DatanodeProtocolClientSideTranslatorPB nnSpy =
-        DataNodeTestUtils.spyOnBposToNN(dn, nn);
+        InternalDataNodeTestUtils.spyOnBposToNN(dn, nn);
 
     // Trigger a heartbeat so there is an interaction with the spy
     // object.

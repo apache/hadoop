@@ -106,7 +106,7 @@ public class TestIncrementalBlockReports {
    * @return spy object that can be used for Mockito verification.
    */
   DatanodeProtocolClientSideTranslatorPB spyOnDnCallsToNn() {
-    return DataNodeTestUtils.spyOnBposToNN(singletonDn, singletonNn);
+    return InternalDataNodeTestUtils.spyOnBposToNN(singletonDn, singletonNn);
   }
 
   /**
