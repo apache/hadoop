@@ -62,7 +62,7 @@ public final class TestTriggerBlockReport {
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
     DatanodeProtocolClientSideTranslatorPB spy =
-        DataNodeTestUtils.spyOnBposToNN(
+        InternalDataNodeTestUtils.spyOnBposToNN(
             cluster.getDataNodes().get(0), cluster.getNameNode());
     DFSTestUtil.createFile(fs, new Path("/abc"), 16, (short) 1, 1L);
 

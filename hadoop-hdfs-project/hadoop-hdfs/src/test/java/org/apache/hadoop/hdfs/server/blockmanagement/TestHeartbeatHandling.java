@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
@@ -66,7 +66,8 @@ public class TestHeartbeatHandling {
           ).getDatanodeManager().getHeartbeatManager();
       final String poolId = namesystem.getBlockPoolId();
       final DatanodeRegistration nodeReg =
-        DataNodeTestUtils.getDNRegistrationForBP(cluster.getDataNodes().get(0), poolId);
+        InternalDataNodeTestUtils.
+        getDNRegistrationForBP(cluster.getDataNodes().get(0), poolId);
       final DatanodeDescriptor dd = NameNodeAdapter.getDatanode(namesystem, nodeReg);
       final String storageID = DatanodeStorage.generateUuid();
       dd.updateStorage(new DatanodeStorage(storageID));
@@ -149,15 +150,18 @@ public class TestHeartbeatHandling {
           ).getDatanodeManager().getHeartbeatManager();
       final String poolId = namesystem.getBlockPoolId();
       final DatanodeRegistration nodeReg1 =
-        DataNodeTestUtils.getDNRegistrationForBP(cluster.getDataNodes().get(0), poolId);
+        InternalDataNodeTestUtils.
+        getDNRegistrationForBP(cluster.getDataNodes().get(0), poolId);
       final DatanodeDescriptor dd1 = NameNodeAdapter.getDatanode(namesystem, nodeReg1);
       dd1.updateStorage(new DatanodeStorage(DatanodeStorage.generateUuid()));
       final DatanodeRegistration nodeReg2 =
-        DataNodeTestUtils.getDNRegistrationForBP(cluster.getDataNodes().get(1), poolId);
+        InternalDataNodeTestUtils.
+        getDNRegistrationForBP(cluster.getDataNodes().get(1), poolId);
       final DatanodeDescriptor dd2 = NameNodeAdapter.getDatanode(namesystem, nodeReg2);
       dd2.updateStorage(new DatanodeStorage(DatanodeStorage.generateUuid()));
       final DatanodeRegistration nodeReg3 = 
-        DataNodeTestUtils.getDNRegistrationForBP(cluster.getDataNodes().get(2), poolId);
+        InternalDataNodeTestUtils.
+        getDNRegistrationForBP(cluster.getDataNodes().get(2), poolId);
       final DatanodeDescriptor dd3 = NameNodeAdapter.getDatanode(namesystem, nodeReg3);
       dd3.updateStorage(new DatanodeStorage(DatanodeStorage.generateUuid()));
 

@@ -37,7 +37,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -86,9 +86,9 @@ public class TestDeadDatanode {
     String poolId = cluster.getNamesystem().getBlockPoolId();
     // wait for datanode to be marked live
     DataNode dn = cluster.getDataNodes().get(0);
-    DatanodeRegistration reg = 
-      DataNodeTestUtils.getDNRegistrationForBP(cluster.getDataNodes().get(0), poolId);
-      
+    DatanodeRegistration reg = InternalDataNodeTestUtils.
+      getDNRegistrationForBP(cluster.getDataNodes().get(0), poolId);
+
     DFSTestUtil.waitForDatanodeState(cluster, reg.getDatanodeUuid(), true, 20000);
 
     // Shutdown and wait for datanode to be marked dead
@@ -147,8 +147,8 @@ public class TestDeadDatanode {
     String poolId = cluster.getNamesystem().getBlockPoolId();
     // wait for datanode to be marked live
     DataNode dn = cluster.getDataNodes().get(0);
-    DatanodeRegistration reg = DataNodeTestUtils.getDNRegistrationForBP(cluster
-        .getDataNodes().get(0), poolId);
+    DatanodeRegistration reg = InternalDataNodeTestUtils.
+        getDNRegistrationForBP(cluster.getDataNodes().get(0), poolId);
     // Get the updated datanode descriptor
     BlockManager bm = cluster.getNamesystem().getBlockManager();
     DatanodeManager dm = bm.getDatanodeManager();
