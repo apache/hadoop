@@ -26,11 +26,13 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Writer;
@@ -41,8 +43,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
@@ -180,6 +183,10 @@ public class TestLogsCLI {
     pw.println("                                 container log files. Use \"ALL\" to fetch");
     pw.println("                                 all the log files for the container.");
     pw.println(" -nodeAddress <Node Address>     NodeAddress in the format nodename:port");
+    pw.println(" -out <Local Directory>          Local directory for storing individual");
+    pw.println("                                 container logs. The container logs will");
+    pw.println("                                 be stored based on the node the container");
+    pw.println("                                 ran on.");
     pw.println(" -show_meta_info                 Show the log metadata, including log-file");
     pw.println("                                 names, the size of the log files. You can");
     pw.println("                                 combine this with --containerId to get");
@@ -489,6 +496,103 @@ public class TestLogsCLI {
     } finally {
       fs.delete(new Path(remoteLogRootDir), true);
       fs.delete(new Path(rootLogDir), true);
+    }
+  }
+
+  @Test (timeout = 15000)
+  public void testSaveContainerLogsLocally() throws Exception {
+    String remoteLogRootDir = "target/logs/";
+    String rootLogDir = "target/LocalLogs";
+    String localDir = "target/SaveLogs";
+    Path localPath = new Path(localDir);
+
+    Configuration configuration = new Configuration();
+    configuration.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
+    configuration
+        .set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogRootDir);
+    configuration.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+    configuration.set(YarnConfiguration.YARN_ADMIN_ACL, "admin");
+
+    FileSystem fs = FileSystem.get(configuration);
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    List<ContainerId> containerIds = new ArrayList<ContainerId>();
+    ContainerId containerId1 = ContainerId.newContainerId(
+        appAttemptId, 1);
+    ContainerId containerId2 = ContainerId.newContainerId(
+        appAttemptId, 2);
+    containerIds.add(containerId1);
+    containerIds.add(containerId2);
+
+    List<NodeId> nodeIds = new ArrayList<NodeId>();
+    NodeId nodeId = NodeId.newInstance("localhost", 1234);
+    NodeId nodeId2 = NodeId.newInstance("test", 4567);
+    nodeIds.add(nodeId);
+    nodeIds.add(nodeId2);
+
+    try {
+      createContainerLogs(configuration, remoteLogRootDir, rootLogDir, fs,
+          appId, containerIds, nodeIds);
+
+      YarnClient mockYarnClient =
+          createMockYarnClient(YarnApplicationState.FINISHED,
+          UserGroupInformation.getCurrentUser().getShortUserName());
+      LogsCLI cli = new LogsCLIForTest(mockYarnClient);
+      cli.setConf(configuration);
+      int exitCode = cli.run(new String[] {"-applicationId",
+          appId.toString(),
+          "-out" , localPath.toString()});
+      assertTrue(exitCode == 0);
+
+      // make sure we created a dir named as node id
+      FileStatus[] nodeDir = fs.listStatus(localPath);
+      Arrays.sort(nodeDir);
+      assertTrue(nodeDir.length == 2);
+      assertTrue(nodeDir[0].getPath().getName().contains(
+          LogAggregationUtils.getNodeString(nodeId)));
+      assertTrue(nodeDir[1].getPath().getName().contains(
+          LogAggregationUtils.getNodeString(nodeId2)));
+
+      FileStatus[] container1Dir = fs.listStatus(nodeDir[0].getPath());
+      assertTrue(container1Dir.length == 1);
+      assertTrue(container1Dir[0].getPath().getName().equals(
+          containerId1.toString()));
+      String container1= readContainerContent(container1Dir[0].getPath(), fs);
+      assertTrue(container1.contains("Hello " + containerId1
+          + " in syslog!"));
+
+      FileStatus[] container2Dir = fs.listStatus(nodeDir[1].getPath());
+      assertTrue(container2Dir.length == 1);
+      assertTrue(container2Dir[0].getPath().getName().equals(
+          containerId2.toString()));
+      String container2= readContainerContent(container2Dir[0].getPath(), fs);
+      assertTrue(container2.contains("Hello " + containerId2
+          + " in syslog!"));
+    } finally {
+      fs.delete(new Path(remoteLogRootDir), true);
+      fs.delete(new Path(rootLogDir), true);
+      fs.delete(localPath, true);
+    }
+  }
+
+  private String readContainerContent(Path containerPath,
+      FileSystem fs) throws IOException {
+    assertTrue(fs.exists(containerPath));
+    StringBuffer inputLine = new StringBuffer();
+    BufferedReader reader = null;
+    try {
+      reader = new BufferedReader(new InputStreamReader(
+          fs.open(containerPath)));
+      String tmp;
+      while ((tmp = reader.readLine()) != null) {
+        inputLine.append(tmp);
+      }
+      return inputLine.toString();
+    } finally {
+      if (reader != null) {
+        IOUtils.closeQuietly(reader);
+      }
     }
   }
 
